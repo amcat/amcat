@@ -1,0 +1,1094 @@
+Opening connection with database
+Connected
+Trying to retrieve project list
+Projectlist retrieved:
+
+===========================================================================
+pid  project              bid batch                  (#articles)
+---------------------------------------------------------------------------
+  1  test                   1 test                
+  1  test                  49 test_steak          
+  1  test                  50 test_steak          
+  1  test                 116 eersteinvoer        
+  2  prullenbak           709 duitsland immigratie
+  2  prullenbak           710 duitsland immigratie
+  2  prullenbak           711 duitsland immigratie
+  2  prullenbak           712 duitsland immigratie
+  2  prullenbak           713 duitsland immigratie
+  2  prullenbak           714 rotzooi             
+  2  prullenbak           715 rotzooi             
+  2  prullenbak           716 rotzooi             
+  2  prullenbak           717 rotzooi             
+  2  prullenbak           718 rotzooi             
+  2  prullenbak           719 rotzooi             
+  2  prullenbak           720 rotzooi             
+  2  prullenbak           721 rotzooi             
+  2  prullenbak           722 duitsland immigratie
+  2  prullenbak           723 duitsland immigratie
+  2  prullenbak           724 rotzoo              
+  2  prullenbak           725 duitsland immigratie
+  2  prullenbak           726 rotzoo              
+  2  prullenbak           727 rotzoo              
+  2  prullenbak           728 duitsland immigratie
+  2  prullenbak           729 rotzoo              
+  2  prullenbak           730 rotzoo              
+  2  prullenbak           731 rotzoo              
+  2  prullenbak           732 rotzoo              
+  2  prullenbak           733 rotzoo              
+  2  prullenbak           734 rotzoo              
+  2  prullenbak           735 lsatest             
+  2  prullenbak           736 duitsland immigratie
+  2  prullenbak           737 duitsland immigratie
+  2  prullenbak           738 duitsland immigratie
+  2  prullenbak           739 troep               
+  2  prullenbak           742 uk en vs irak       
+  2  prullenbak           743 rotzooi             
+  2  prullenbak           744 rotzooi             
+  2  prullenbak           745 rotzooi             
+  2  prullenbak           748 rotzooi             
+  2  prullenbak           749 rotzooi             
+  2  prullenbak           750 rotzooi             
+  2  prullenbak           751 rotzooi             
+  2  prullenbak           752 rotzooi             
+  2  prullenbak           753 NL debatten         
+  2  prullenbak           754 rotzooi             
+  2  prullenbak           755 rotzooi             
+  2  prullenbak           756 rotzooi             
+  2  prullenbak           757 rotzooi             
+  2  prullenbak           758 rotzooi             
+  2  prullenbak           759 rotzooi             
+  2  prullenbak           760 rotzooi             
+  2  prullenbak           761 rotzooi             
+  2  prullenbak           762 rotzooi             
+  2  prullenbak           794 NL1                 
+  2  prullenbak           795 NL1                 
+  2  prullenbak           796 NL1                 
+  2  prullenbak           797 NL1                 
+  2  prullenbak           798 NL1                 
+  2  prullenbak           799 NL1                 
+  2  prullenbak           843 testje              
+  2  prullenbak           844 testje              
+  2  prullenbak           845 testje              
+  2  prullenbak           846 testje              
+  2  prullenbak           902 uk milieu 1990      
+  2  prullenbak           903 uk milieu 1990      
+  2  prullenbak           904 uk milieu 1990      
+  2  prullenbak           905 milieu UK 1990      
+  2  prullenbak           906 test                
+  2  prullenbak           908 test                
+  2  prullenbak           909 milieu UK 1990      
+  2  prullenbak           910 milieu UK 1990      
+  2  prullenbak           911 milieu UK 1990      
+  2  prullenbak           912 milieu UK 1990      
+  2  prullenbak           913 %s                  
+  2  prullenbak           914 milieu UK 1990      
+  2  prullenbak           1152 testje4             
+  2  prullenbak           1153 testje4             
+  2  prullenbak           1154 testje4             
+  2  prullenbak           1157 testje4             
+  2  prullenbak           1160 testje4             
+  2  prullenbak           1161 nlpolitiek1004      
+  2  prullenbak           1162 nlpolitiek1004      
+  2  prullenbak           1175 nlpolitiek1004      
+  2  prullenbak           1178 newsgr1test         
+  2  prullenbak           1179 newsgr1test         
+  2  prullenbak           1180 newsgr1test         
+  2  prullenbak           1181 newsgr1test         
+  2  prullenbak           1182 newsgr1test         
+  2  prullenbak           1183 newsgr1test         
+  2  prullenbak           1184 newsgr1test         
+  2  prullenbak           1185 newsgr1test         
+  2  prullenbak           1186 newsgr1test         
+  2  prullenbak           1187 newsgr1test         
+  2  prullenbak           1188 newsgr1test         
+  2  prullenbak           1189 newsgr1test         
+  2  prullenbak           1190 newsgr1test         
+  2  prullenbak           1191 newsgr1test         
+  2  prullenbak           1192 newsgr1test         
+  2  prullenbak           1193 nlpolitiek1004      
+  2  prullenbak           1194 nlpolitiek1004      
+  2  prullenbak           1195 nlpolitiek1004      
+  2  prullenbak           1196 test                
+  2  prullenbak           1197 test                
+  2  prullenbak           1198 test                
+  2  prullenbak           1199 test                
+  2  prullenbak           1200 test                
+  2  prullenbak           1201 test                
+  2  prullenbak           1202 test                
+  2  prullenbak           1203 test                
+  2  prullenbak           1204 test                
+  2  prullenbak           1205 test                
+  2  prullenbak           1206 test                
+  2  prullenbak           1207 test                
+  2  prullenbak           1208 test                
+  2  prullenbak           1209 test                
+  2  prullenbak           1210 test                
+  2  prullenbak           1211 test                
+  2  prullenbak           1212 test                
+  2  prullenbak           1213 test                
+  2  prullenbak           1214 test                
+  2  prullenbak           1215 test                
+  2  prullenbak           1216 test                
+  2  prullenbak           1217 test                
+  2  prullenbak           1218 nlpolitiek1004      
+  2  prullenbak           1219 nlpolitiek1004      
+  2  prullenbak           1220 nlpolitiek1004      
+  2  prullenbak           1221 nlpolitiek1004      
+  2  prullenbak           1222 nlpolitiek1004      
+  2  prullenbak           1223 nlpolitiek1004      
+  2  prullenbak           1235 inleeswva           
+  2  prullenbak           1236 inleeswva           
+  2  prullenbak           1237 inleeswva           
+  2  prullenbak           1238 inleeswva           
+  2  prullenbak           1239 inleeswva           
+  2  prullenbak           1240 inleeswva           
+  2  prullenbak           1241 inleeswva           
+  2  prullenbak           1242 inleeswva           
+  2  prullenbak           1243 inleeswva           
+  2  prullenbak           1244 inleeswva           
+  2  prullenbak           1245 inleeswva           
+  2  prullenbak           1246 inleeswva           
+  2  prullenbak           1249 test                
+  2  prullenbak           1250 test                
+  2  prullenbak           1251 test                
+  2  prullenbak           1252 test                
+  2  prullenbak           1253 test                
+  2  prullenbak           1254 test                
+  2  prullenbak           1255 test                
+  2  prullenbak           1256 test                
+  2  prullenbak           1257 test                
+  2  prullenbak           1258 test                
+  2  prullenbak           1311 neltest             
+  2  prullenbak           1312 neltest             
+  2  prullenbak           1313 neltest             
+  2  prullenbak           1314 neltest             
+  2  prullenbak           1322 nlpolitiek0703      
+  2  prullenbak           1323 nlpolitiek0703nr4   
+  2  prullenbak           1324 nlpolitiek0703nr5   
+  2  prullenbak           1334 nlpolitiek0703test20
+  2  prullenbak           1335 nlpolitiek0703test20
+  2  prullenbak           1336 nlpolitiek0703      
+  2  prullenbak           1337 nlpolitiek0703      
+  2  prullenbak           1338 nlpolitiek0703      
+  2  prullenbak           1339 nlpolitiek0703      
+  2  prullenbak           1340 nlpolitiek0703      
+  2  prullenbak           1341 nlpolitiek0703      
+  2  prullenbak           1342 nlpolitiek0703      
+  2  prullenbak           1343 nlpolitiek0703      
+  2  prullenbak           1344 nlpolitiek0703      
+  2  prullenbak           1345 nlpolitiek0703      
+  2  prullenbak           1346 nlpolitiek0703      
+  2  prullenbak           1347 nlpolitiek0703      
+  2  prullenbak           1348 nlpolitiek0703      
+  2  prullenbak           1349 nlpolitiek0703      
+  2  prullenbak           1350 nlpolitiek0703      
+  2  prullenbak           1351 nlpolitiek0703      
+  2  prullenbak           1352 nlpolitiek0703      
+  2  prullenbak           1353 nlpolitiek0703      
+  2  prullenbak           1354 nlpolitiek0703      
+  2  prullenbak           1355 nlpolitiek0703      
+  2  prullenbak           1356 nlpolitiek0703      
+  2  prullenbak           1357 nlpolitiek0703      
+  2  prullenbak           1358 nlpolitiek0703      
+  2  prullenbak           1359 nlpolitiek0703      
+  2  prullenbak           1360 nlpolitiek0703      
+  2  prullenbak           1361 nlpolitiek0703      
+  2  prullenbak           1362 nlpolitiek0703      
+  2  prullenbak           1363 nlpolitiek0703      
+  2  prullenbak           1393 marokko test        
+  2  prullenbak           1394 marokko test        
+  2  prullenbak           1395 marokko test        
+  2  prullenbak           1396 marokko test        
+  2  prullenbak           1397 marokko test        
+  2  prullenbak           1398 marokko test        
+  2  prullenbak           1399 marokko test        
+  2  prullenbak           1400 marokko test        
+  2  prullenbak           1401 marokko test        
+  2  prullenbak           1402 marokko test        
+  2  prullenbak           1403 marokko test        
+  2  prullenbak           1404 marokko test        
+  2  prullenbak           1405 marokko test        
+  2  prullenbak           1406 marokko test        
+  2  prullenbak           1407 marokko test        
+  2  prullenbak           1408 marokko test        
+  3  Actiegroepen           2 herinvoer mislukten 
+  3  Actiegroepen           3 herinvoer na language
+  3  Actiegroepen           4 invoer 1991         
+  3  Actiegroepen           5 invoer 1992ad       
+  3  Actiegroepen           6 invoer 1993         
+  3  Actiegroepen           7 invoer 1994         
+  3  Actiegroepen           8 invoer lextream     
+  3  Actiegroepen           9 invoer rich text    
+  3  Actiegroepen          23 laatste invoer      
+  3  Actiegroepen         228 oxford1             
+  3  Actiegroepen         229 oxford1             
+  3  Actiegroepen         230 oxford1             
+  3  Actiegroepen         231 oxford1             
+  3  Actiegroepen         232 oxford1             
+  3  Actiegroepen         233 oxford1             
+  3  Actiegroepen         234 oxford1             
+  3  Actiegroepen         235 oxford1             
+  3  Actiegroepen         236 oxford1             
+  3  Actiegroepen         237 oxford1             
+  3  Actiegroepen         238 oxford1             
+  3  Actiegroepen         239 oxford1             
+  3  Actiegroepen         240 oxford1             
+  3  Actiegroepen         241 oxford1             
+  3  Actiegroepen         242 oxford2             
+  3  Actiegroepen         243 oxford21            
+  3  Actiegroepen         244 oxford21            
+  3  Actiegroepen         245 oxford3             
+  3  Actiegroepen         246 oxford31            
+  3  Actiegroepen         831 oxford 2004         
+  3  Actiegroepen         832 oxford 2004         
+  3  Actiegroepen         898 milieu 2004         
+  3  Actiegroepen         899 milieu2004          
+  3  Actiegroepen         900 milieu2004          
+  3  Actiegroepen         1126 maymayrens          
+  3  Actiegroepen         1127 maymayrens          
+  3  Actiegroepen         1128 maymayrens          
+  3  Actiegroepen         1129 mmrensok            
+  3  Actiegroepen         1145 proefcodering maymay rens
+  7  Vredesbeweging        10 platform invoer     
+  7  Vredesbeweging       518 rens asa            
+ 10  rvd                   14 asielzoekers        
+ 10  rvd                   15 rest                
+ 10  rvd                   17 nog een keer asielzoekers
+ 10  rvd                   18 definitieve invoer asielzoekers
+ 10  rvd                   41 WvA invoer vw       
+ 10  rvd                   42 WvA invoer minist   
+ 10  rvd                   43 WvA invoer minist2  
+ 10  rvd                   47 steekproef          
+ 10  rvd                   48 artikelen nel       
+ 11  Kall                  19 invoer              
+ 11  Kall                  20 invoer2             
+ 12  debates               21 oral debates        
+ 12  debates              361 nl/mmdt/immigratie/Volkskrant
+ 12  debates              362 nl/mmdt/landbouw/Volkskrant
+ 12  debates              363 nl/mmdt/drugsbeleid/Volkskrant
+ 12  debates              376 nl/mmdt/immigratie/Volkskrant
+ 12  debates              377 nl/mmdt/landbouw/Volkskrant
+ 12  debates              378 nl/mmdt/drugsbeleid/Volkskrant
+ 12  debates              379 nl/mmdt/milieu/volkskrant
+ 12  debates              393 nl/mmdt/immigratie/Algemeen\ Dagblad
+ 12  debates              394 nl/mmdt/immigratie/NRC\ Handelsblad
+ 12  debates              395 nl/mmdt/landbouw/algemeen\ dagblad
+ 12  debates              396 nl/mmdt/landbouw/nrc handelsblad
+ 12  debates              397 nl/mmdt/drugsbeleid/NRC\ handelsblad
+ 12  debates              398 nl/mmdt/drugsbeleid/algemeen\ dagblad
+ 12  debates              399 nl/mmdt/milieu/nrc handelsblad
+ 12  debates              400 nl/mmdt/milieu/algemeen\ dagblad
+ 12  debates              427 gb/mmdt/milieu/Guardian
+ 12  debates              428 gb/mmdt/milieu/Independent
+ 12  debates              429 gb/mmdt/milieu/Times
+ 12  debates              430 gb/mmdt/drugsbeleid/Times
+ 12  debates              431 gb/mmdt/drugsbeleid/Guardian
+ 12  debates              432 gb/mmdt/drugsbeleid/Independent
+ 12  debates              433 gb/mmdt/immigratie/Times
+ 12  debates              434 gb/mmdt/immigratie/Independent
+ 12  debates              435 gb/mmdt/immigratie/Guardian
+ 12  debates              442 gb/mmdt/landbouw/Times
+ 12  debates              443 UK debates 1        
+ 12  debates              444 UK debates 2        
+ 12  debates              445 gb/mmdt/landbouw/Independent
+ 12  debates              446 gb/mmdt/landbouw/Guardian
+ 12  debates              526 UK debates 2 poging 2
+ 12  debates              698 gb/mmdt/drugsbeleid/IndependentV2
+ 12  debates              699 gb/mmdt/landbouw/GuardianV2
+ 12  debates              701 gb/mmdt/landbouw/GuardianV3
+ 12  debates              702 gb/mmdt/landbouw/GuardianV3
+ 12  debates              703 gb/mmdt/landbouw/GuardianV5
+ 12  debates              704 gb/mmdt/landbouw/GuardianV5
+ 12  debates              705 nl/mmdt/immigratie/NRC\HandelsbladV2
+ 12  debates              706 nl/mmdt/immigratie/NRC\HandelsbladV2
+ 12  debates              763 NL debatten         
+ 13  'platformoorlog'      22 platform            
+ 16  RVD r1 vv             51 VV1a                
+ 16  RVD r1 vv             52 VV1a                
+ 16  RVD r1 vv             76 issue1 van Lonneke def
+ 16  RVD r1 vv             78 VV2 files wegenbouw 
+ 16  RVD r1 vv             79 VV45 veiligheid en regels
+ 16  RVD r1 vv             80 VV45b veiligheid en regels
+ 16  RVD r1 vv             81 VV45c veiligheid en regels
+ 16  RVD r1 vv             82 VVmin VV ministers  
+ 16  RVD r1 vv            143 vv1                 
+ 16  RVD r1 vv            144 VV1a                
+ 16  RVD r1 vv            145 vv45c1              
+ 16  RVD r1 vv            146 vv2                 
+ 16  RVD r1 vv            147 vvminister          
+ 16  RVD r1 vv            148 vv45cminister2      
+ 16  RVD r1 vv            199 ow1a Onderwijs 28jun
+ 16  RVD r1 vv            200 ow1b Onderwijs 28jun
+ 16  RVD r1 vv            201 ow2a Onderwijs 28jun
+ 16  RVD r1 vv            202 ow2b Onderwijs 28jun
+ 17  RVD im                84 eerste invoer immigratie
+ 17  RVD im                85 regionale invoer immigratie 1
+ 17  RVD im               100 regionale invoer immigratie 2
+ 17  RVD im               101 regionale invoer fd 
+ 17  RVD im               118 immigratie 2003 landelijk
+ 17  RVD im               121 immigratie 2003 regionaal1
+ 17  RVD im               122 immigratie 2003 landelijk2
+ 17  RVD im               123 immigratie 2003 regionaal2
+ 17  RVD im               124 immigratie 2003 regionaal3
+ 19  eu dagbladen nl      111 nrc                 
+ 19  eu dagbladen nl      112 nrc                 
+ 22  RVD r1 ow            113 Onderwijs1          
+ 22  RVD r1 ow            115 Onderwijs2          
+ 22  RVD r1 ow            117 invoerocw2          
+ 22  RVD r1 ow            125 Onderwijs1b         
+ 22  RVD r1 ow            126 Onderwijs1baanv     
+ 22  RVD r1 ow            127 Onderwijs2b         
+ 22  RVD r1 ow            128 Onderwijs2baanv     
+ 23  RVD r1 cr            102 Criminaliteit1      
+ 23  RVD r1 cr            130 crreg1b_1           
+ 23  RVD r1 cr            131 crreg1_1            
+ 23  RVD r1 cr            134 crreg2b_1           
+ 23  RVD r1 cr            135 crreg2b_2           
+ 23  RVD r1 cr            136 crreg2b_3           
+ 23  RVD r1 cr            137 crreg1c_1           
+ 23  RVD r1 cr            138 crreg1d_1           
+ 23  RVD r1 cr            180 cri2 criminal aanvul ll 2003
+ 24  RVD r1 ve            139 Veiligheid1 ve1     
+ 24  RVD r1 ve            140 Veiligheid1 ve1b    
+ 24  RVD r1 ve            141 Veiligheid1 ve2b    
+ 24  RVD r1 ve            142 Veiligheid1 ve2a    
+ 24  RVD r1 ve            153 ve2a                
+ 24  RVD r1 ve            154 ve2a                
+ 24  RVD r1 ve            161 vv2kr2              
+ 24  RVD r1 ve            162 vv1a                
+ 24  RVD r1 ve            163 vv1a                
+ 24  RVD r1 ve            181 ve1a veiligheid extra2
+ 24  RVD r1 ve            182 ve1a veiligheid extra1
+ 24  RVD r1 ve            183 ve1a veiligheid extra1
+ 24  RVD r1 ve            184 ve1a veiligheid extra1
+ 24  RVD r1 ve            185 ve1a veiligheid extra1
+ 24  RVD r1 ve            186 ve2a veiligheid extra1
+ 24  RVD r1 ve            188 ve2a veiligheid extra1
+ 24  RVD r1 ve            190 ve2b veiligheid extra1
+ 24  RVD r1 ve            191 ve2a veiligheid extra1
+ 24  RVD r1 ve            193 ve2a veiligheid extra2
+ 24  RVD r1 ve            194 ve1b veiligheid extra1
+ 25  RVD r1 mi            164 lnv1lon             
+ 25  RVD r1 mi            165 lnv1vk              
+ 25  RVD r1 mi            166 lnv2jk              
+ 25  RVD r1 mi            167 lnv2lon             
+ 25  RVD r1 mi            168 lnv2vk              
+ 25  RVD r1 mi            169 LNV1ax1 milieu      
+ 25  RVD r1 mi            170 Lnv1bx1 milieu      
+ 25  RVD r1 mi            171 Lnv2ax1 milieu      
+ 25  RVD r1 mi            172 Lnv2bx1 milieu      
+ 25  RVD r1 mi            173 Lnv2bx1 milieu      
+ 25  RVD r1 mi            174 Lnv2bx1 milieu      
+ 25  RVD r1 mi            175 Lnv2bx1extra milieu 
+ 25  RVD r1 mi            195 lnv1a milieu extra 28jun
+ 25  RVD r1 mi            196 lnv1b milieu extra 28jun
+ 25  RVD r1 mi            197 lnv2a milieu extra 28jun
+ 25  RVD r1 mi            198 lnv2b milieu extra 28jun
+ 25  RVD r1 mi            486 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            487 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            488 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            489 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            490 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            491 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            492 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            493 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            494 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            495 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            496 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            497 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            498 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            499 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            500 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            501 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            502 MI4 LNV vierde ronde deel I
+ 25  RVD r1 mi            519 MI4 LNV vierde ronde deel II
+ 25  RVD r1 mi            520 MI4 LNV vierde ronde deel II
+ 25  RVD r1 mi            521 MI4 LNV vierde ronde deel II
+ 25  RVD r1 mi            522 MI4 LNV vierde ronde deel II
+ 25  RVD r1 mi            523 MI4 LNV vierde ronde deel II
+ 25  RVD r1 mi            524 MI4 LNV vierde ronde deel II
+ 25  RVD r1 mi            525 MI4 LNV vierde ronde deel II
+ 27  RVD r2 lnv           176 BUZA1 internationaal
+ 27  RVD r2 lnv           177 BUZA1 internationaal
+ 27  RVD r2 lnv           178 BUZA1 internationaal
+ 27  RVD r2 lnv           179 BUZAb internationaal
+ 27  RVD r2 lnv           207 BZ set A internationaal
+ 27  RVD r2 lnv           208 B set B  internationaal
+ 27  RVD r2 lnv           209 B set B2  internationaal
+ 27  RVD r2 lnv           459 bz4 buitenlandse zaken vierde ronde deel I
+ 27  RVD r2 lnv           460 bz4 buitenlandse zaken vierde ronde deel I
+ 27  RVD r2 lnv           461 bz4 buitenlandse zaken vierde ronde deel I
+ 27  RVD r2 lnv           462 bz4 buitenlandse zaken vierde ronde deel I
+ 27  RVD r2 lnv           463 bz4 buitenlandse zaken vierde ronde deel I
+ 27  RVD r2 lnv           464 bz4 buitenlandse zaken vierde ronde deel I
+ 27  RVD r2 lnv           465 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           466 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           467 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           468 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           469 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           470 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           471 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           472 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           473 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           474 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           475 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           476 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           477 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           478 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           479 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           480 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           481 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           482 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           483 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           484 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           485 sz4 sociale zaken vierde ronde deel I
+ 27  RVD r2 lnv           537 bz4 buitenlandse zaken vierde ronde deel II 16novev
+ 27  RVD r2 lnv           538 bz4 buitenlandse zaken vierde ronde deel II 16novev
+ 27  RVD r2 lnv           539 sz4 sociale zaken vierde ronde deel II 16novev
+ 27  RVD r2 lnv           540 sz4 sociale zaken vierde ronde deel II 16novev
+ 27  RVD r2 lnv           541 sz4 sociale zaken vierde ronde deel II 16novev
+ 27  RVD r2 lnv           542 sz4 sociale zaken vierde ronde deel II 16novev
+ 27  RVD r2 lnv           543 sz4 sociale zaken vierde ronde deel II 16novev
+ 27  RVD r2 lnv           544 sz4 sociale zaken vierde ronde deel II 16novev
+ 28  RVD r2 buza          203 sz1a Sociale zaken 29jun
+ 29  RVD r2 buza2         204 sz1b Sociale zaken 29jun
+ 29  RVD r2 buza2         205 sz2a Sociale zaken 29jun
+ 29  RVD r2 buza2         206 sz2b Sociale zaken 29jun
+ 29  RVD r2 buza2         249 VW vw1a             
+ 29  RVD r2 buza2         250 VW vw1b             
+ 29  RVD r2 buza2         251 VW vw2b             
+ 29  RVD r2 buza2         252 VW vw2a             
+ 29  RVD r2 buza2         253 VW vw2ax            
+ 29  RVD r2 buza2         503 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         504 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         505 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         506 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         507 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         508 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         509 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         510 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         511 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         512 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         513 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         514 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         515 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         516 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         517 VW4 VWS vierde ronde deel I
+ 29  RVD r2 buza2         531 VW4b VWS vierde ronde deel II
+ 29  RVD r2 buza2         532 VW4b VWS vierde ronde deel II
+ 29  RVD r2 buza2         533 VW4b VWS vierde ronde deel II
+ 29  RVD r2 buza2         534 VW4b VWS vierde ronde deel II
+ 30  RVD r2 sz            210 FZ  1               
+ 30  RVD r2 sz            211 FZ  1               
+ 30  RVD r2 sz            212 FZ  1B fib          
+ 30  RVD r2 sz            213 FZ  1B fib          
+ 30  RVD r2 sz            214 FZ  2 fi            
+ 30  RVD r2 sz            215 FZ  3 finko         
+ 30  RVD r2 sz            216 FZ  3 finko         
+ 30  RVD r2 sz            217 FZ  3 ez1a          
+ 30  RVD r2 sz            220 EZ  2 ez1b          
+ 30  RVD r2 sz            221 EZ  2b ez1b         
+ 30  RVD r2 sz            222 EZ  2b ez1b         
+ 30  RVD r2 sz            224 EZ  3 ez1b          
+ 30  RVD r2 sz            225 VW  2 vw1a vw1b vw2a ez1b
+ 30  RVD r2 sz            226 VW  2 vw1a vw1b vw2a ez1b
+ 30  RVD r2 sz            227 VW  2 vw1a vw1b vw2a ez1b
+ 30  RVD r2 sz            247 VW vw2b             
+ 30  RVD r2 sz            254 OW3 ocw derde ronde 
+ 32  RVD r2 fz            357 fz4 economische zaken vierde ronde deel I
+ 32  RVD r2 fz            358 fz4 economische zaken vierde ronde deel I
+ 32  RVD r2 fz            359 fz4 economische zaken vierde ronde deel I
+ 32  RVD r2 fz            360 fz4 economische zaken vierde ronde deel I
+ 32  RVD r2 fz            452 fz4 financien vierde ronde deel Ib
+ 32  RVD r2 fz            453 fz4 financien vierde ronde deel Ib
+ 32  RVD r2 fz            454 fz4 financien vierde ronde deel Ib
+ 32  RVD r2 fz            455 fz4 financien vierde ronde deel Ib
+ 32  RVD r2 fz            456 fz4 financien vierde ronde deel Ib
+ 32  RVD r2 fz            457 fz4 financien vierde ronde deel Ib
+ 32  RVD r2 fz            458 fz4 financien vierde ronde deel Ib
+ 32  RVD r2 fz            535 fz4 financien vierde ronde deel II 16novev
+ 32  RVD r2 fz            536 fz4 financien vierde ronde deel II 16novev
+ 33  RVD r2 ez            354 EZ4 economische zaken vierde ronde deel I
+ 33  RVD r2 ez            355 EZ4 economische zaken vierde ronde deel I
+ 33  RVD r2 ez            356 EZ4 economische zaken vierde ronde deel I
+ 33  RVD r2 ez            448 EZ4 economische zaken vierde ronde deel IB
+ 33  RVD r2 ez            449 EZ4 economische zaken vierde ronde deel IB
+ 33  RVD r2 ez            450 EZ4 economische zaken vierde ronde deel IB
+ 33  RVD r2 ez            451 EZ4 economische zaken vierde ronde deel IB
+ 33  RVD r2 ez            527 EZ4 economische zaken vierde ronde novdec
+ 33  RVD r2 ez            528 EZ4 economische zaken vierde ronde novdec
+ 33  RVD r2 ez            529 EZ4 economische zaken vierde ronde novdec
+ 33  RVD r2 ez            530 EZ4 economische zaken vierde ronde novdec
+ 36  RVD r3 vv            265 VV3 V&W derde ronde 
+ 36  RVD r3 vv            266 VV3 V&W derde ronde 
+ 36  RVD r3 vv            267 VV3 V&W derde ronde 
+ 36  RVD r3 vv            268 VV3 V&W derde ronde 
+ 36  RVD r3 vv            269 VV3 V&W derde ronde 
+ 36  RVD r3 vv            270 VV3 V&W derde ronde 
+ 36  RVD r3 vv            317 VV3b V&W derde ronde september
+ 36  RVD r3 vv            318 VV3b V&W derde ronde september
+ 36  RVD r3 vv            319 VV3b V&W derde ronde september
+ 36  RVD r3 vv            320 VV3b V&W derde ronde september
+ 36  RVD r3 vv            321 VV3b V&W derde ronde september
+ 36  RVD r3 vv            322 VV3b V&W derde ronde september
+ 36  RVD r3 vv            323 VV3b V&W derde ronde september
+ 36  RVD r3 vv            324 VV3b V&W derde ronde september
+ 36  RVD r3 vv            325 VV3b V&W derde ronde september
+ 37  RVD r3 im            273 IM3 Immigratie derde ronde
+ 37  RVD r3 im            312 IM3 immigratie derde ronde
+ 37  RVD r3 im            313 IM3 immigratie derde ronde
+ 37  RVD r3 im            314 IM3 immigratie derde ronde
+ 37  RVD r3 im            315 IM3 immigratie derde ronde
+ 37  RVD r3 im            316 IM3 immigratie derde ronde
+ 37  RVD r3 im            348 IMa immigratie 2003 tm maart
+ 37  RVD r3 im            349 IMb immigratie 2003 tm maart
+ 37  RVD r3 im            350 IMa immigratie 2003 tm maart
+ 37  RVD r3 im            351 IMb immigratie 2003 tm maart
+ 38  RVD r3 cr            274 CR3 criminaliteit derde ronde
+ 38  RVD r3 cr            275 CR3 criminaliteit derde ronde
+ 38  RVD r3 cr            346 CR3b criminaliteit derde ronde september 
+ 38  RVD r3 cr            347 CR3b criminaliteit derde ronde september 
+ 39  RVD r3 ve            259 VE3 bzk derde ronde 
+ 39  RVD r3 ve            260 VE3 bzk derde ronde 
+ 39  RVD r3 ve            261 VE3 bzk derde ronde 
+ 39  RVD r3 ve            262 VE3 bzk derde ronde 
+ 39  RVD r3 ve            263 VE3 bzk derde ronde 
+ 39  RVD r3 ve            326 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            327 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            328 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            329 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            330 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            331 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            332 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            333 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            334 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            335 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            336 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            337 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            338 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            339 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            340 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            341 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            342 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            343 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            344 VE3b bzk derde ronde september 
+ 39  RVD r3 ve            345 VE3b bzk derde ronde september 
+ 40  RVD r3 ow            255 OW3 ocw derde ronde 
+ 40  RVD r3 ow            256 OW3 ocw derde ronde 
+ 40  RVD r3 ow            257 OW3 ocw derde ronde 
+ 40  RVD r3 ow            258 OW3 ocw derde ronde 
+ 40  RVD r3 ow            308 OW3b ocw derde ronde september
+ 40  RVD r3 ow            309 OW3b ocw derde ronde september
+ 40  RVD r3 ow            310 OW3b ocw derde ronde september
+ 40  RVD r3 ow            311 OW3b ocw derde ronde september
+ 41  brentspar            264 nederland           
+ 41  brentspar            276 Tweede invoer shell greenpeace niet bs
+ 41  brentspar            277 Handmatige invoer samengevoegde artikelen
+ 42  forum                280 Usenet Fortuyn I.txt
+ 42  forum                295 nlpolitiek.txt      
+ 42  forum                297 tweede poging fortuyn II
+ 42  forum                306 Inlees krantenartikelen forum wva
+ 42  forum                307 Inlees krantenartikelen forum wva
+ 43  tijdreeks            545 tijdreeks1          
+ 43  tijdreeks            546 tijdreeks1          
+ 43  tijdreeks            547 tijdreeks1          
+ 43  tijdreeks            548 tijdreeks1          
+ 43  tijdreeks            549 tijdreeks1          
+ 45  RVD2 HA              553 HA1a                
+ 45  RVD2 HA              554 HA1a                
+ 45  RVD2 HA              575 HA1b                
+ 45  RVD2 HA              576 HA1c                
+ 45  RVD2 HA              577 HA1c                
+ 45  RVD2 HA              578 HA1d                
+ 45  RVD2 HA              579 HA1e                
+ 45  RVD2 HA              580 HA1e                
+ 45  RVD2 HA              581 HA1e                
+ 45  RVD2 HA              582 HA1e                
+ 45  RVD2 HA              583 HA1Y                
+ 45  RVD2 HA              584 HA1LazrakA          
+ 45  RVD2 HA              585 HA1LazrakB          
+ 45  RVD2 HA              586 HA1WildersA         
+ 45  RVD2 HA              587 HA1WildersB         
+ 45  RVD2 HA              588 herinlees 1 set     
+ 46  RVD2 OW              589 OW1a                
+ 46  RVD2 OW              590 OW2a                
+ 46  RVD2 OW              591 OW2b                
+ 46  RVD2 OW              592 OW1b                
+ 48  RVD2 DG              593 DG4 De Graaf        
+ 48  RVD2 DG              594 DG4 De Graaf        
+ 48  RVD2 DG              595 DG4 De Graaf        
+ 48  RVD2 DG              596 DG4 De Graaf        
+ 48  RVD2 DG              597 DG4 De Graaf        
+ 48  RVD2 DG              598 DG4 De Graaf        
+ 48  RVD2 DG              599 DG4 De Graaf        
+ 48  RVD2 DG              600 DG4 De Graaf        
+ 48  RVD2 DG              601 DG4 De Graaf        
+ 48  RVD2 DG              602 DG4 De Graaf        
+ 48  RVD2 DG              603 DG4 De Graaf        
+ 48  RVD2 DG              604 DG4 De Graaf        
+ 48  RVD2 DG              605 DG4 De Graaf        
+ 48  RVD2 DG              631 DG4minister De Graaf
+ 48  RVD2 DG              632 DG4minister De Graaf
+ 48  RVD2 DG              633 DG4minister De Graaf
+ 48  RVD2 DG              634 DG4minister De Graaf
+ 48  RVD2 DG              635 DG4minister De Graaf
+ 48  RVD2 DG              636 DG4minister De Graaf
+ 48  RVD2 DG              637 DG4minister De Graaf
+ 48  RVD2 DG              638 DG4minister De Graaf
+ 49  RVD2 CR              606 CR1b                
+ 49  RVD2 CR              607 CR2b                
+ 49  RVD2 CR              608 CR1a                
+ 49  RVD2 CR              609 CR2a                
+ 50  RVD2 DG              610 DG1a                
+ 50  RVD2 DG              611 DG1b                
+ 50  RVD2 DG              612 DG2a                
+ 50  RVD2 DG              613 DG2a2               
+ 50  RVD2 DG              614 DG2b                
+ 50  RVD2 DG              615 DG3a                
+ 50  RVD2 DG              616 DG3b                
+ 50  RVD2 DG              617 DG4a                
+ 50  RVD2 DG              618 DG4b                
+ 50  RVD2 DG              619 DG5a                
+ 50  RVD2 DG              620 DG5b                
+ 51  RVD2 IM              621 IM1a                
+ 51  RVD2 IM              622 IM1b                
+ 51  RVD2 IM              623 IM2a                
+ 51  RVD2 IM              624 IM2b                
+ 52  RVD2 VE              625 VE1a                
+ 52  RVD2 VE              626 VE1b                
+ 52  RVD2 VE              627 VE2a                
+ 52  RVD2 VE              628 VE2b                
+ 52  RVD2 VE              629 VE3a                
+ 52  RVD2 VE              630 VE3b                
+ 53  RVD2 BZ              639 inlees              
+ 53  RVD2 BZ              640 inlees              
+ 53  RVD2 BZ              641 inlees              
+ 53  RVD2 BZ              642 inlees              
+ 54  RVD2 EZ              643 inlees              
+ 54  RVD2 EZ              644 inlees              
+ 54  RVD2 EZ              645 inlees              
+ 54  RVD2 EZ              646 inlees              
+ 55  RVD2 FZ              647 inlees              
+ 55  RVD2 FZ              648 inlees              
+ 55  RVD2 FZ              649 inlees              
+ 55  RVD2 FZ              650 inlees              
+ 56  RVD2 SZ              651 inlees              
+ 56  RVD2 SZ              652 inlees              
+ 56  RVD2 SZ              653 inlees              
+ 57  RVD2 VV              654 inlees              
+ 57  RVD2 VV              655 inlees              
+ 57  RVD2 VV              656 inlees              
+ 57  RVD2 VV              657 inlees              
+ 57  RVD2 VV              658 inlees              
+ 57  RVD2 VV              659 inlees              
+ 57  RVD2 VV              660 inlees              
+ 57  RVD2 VV              661 inlees              
+ 57  RVD2 VV              662 inlees              
+ 57  RVD2 VV              663 inlees              
+ 57  RVD2 VV              664 inlees              
+ 57  RVD2 VV              665 inlees              
+ 57  RVD2 VV              666 inlees              
+ 58  RVD2 VW              667 inlees              
+ 58  RVD2 VW              668 inlees              
+ 58  RVD2 VW              669 inlees              
+ 58  RVD2 VW              670 inlees              
+ 59  RVD2 MI              682 inlees              
+ 59  RVD2 MI              683 inlees              
+ 59  RVD2 MI              684 inlees              
+ 59  RVD2 MI              685 inlees              
+ 59  RVD2 MI              686 inlees              
+ 60  RVD2 DGZ             671 inlees              
+ 60  RVD2 DGZ             672 inlees              
+ 60  RVD2 DGZ             673 inlees              
+ 60  RVD2 DGZ             674 inlees              
+ 60  RVD2 DGZ             675 inlees              
+ 60  RVD2 DGZ             676 inlees              
+ 60  RVD2 DGZ             677 inlees              
+ 60  RVD2 DGZ             678 inlees              
+ 60  RVD2 DGZ             679 inlees              
+ 60  RVD2 DGZ             680 inlees              
+ 60  RVD2 DGZ             681 inlees              
+ 62  RVD2 MI2             688 inlees              
+ 62  RVD2 MI2             689 inlees              
+ 62  RVD2 MI2             690 inlees              
+ 62  RVD2 MI2             691 inlees              
+ 62  RVD2 MI2             692 inlees              
+ 62  RVD2 MI2             693 inlees              
+ 62  RVD2 MI2             694 inlees              
+ 62  RVD2 MI2             695 inlees2             
+ 62  RVD2 MI2             697 inlees2             
+ 63  duitsim              740 duitsland immigratie
+ 63  duitsim              741 duitsland immigratie
+ 64  lsatest              746 uk en vs irak       
+ 64  lsatest              747 uk en vs irak       
+ 65  irakbl               901 duitsland iraq      
+ 68  EURefNL              816 NL1                 
+ 68  EURefNL              817 NL1                 
+ 68  EURefNL              818 NL1                 
+ 68  EURefNL              819 NL1                 
+ 68  EURefNL              820 NL1                 
+ 68  EURefNL              821 NL1                 
+ 68  EURefNL              822 NL1                 
+ 68  EURefNL              823 NL1                 
+ 68  EURefNL              824 NL1                 
+ 68  EURefNL              825 NL1                 
+ 68  EURefNL              826 NL1                 
+ 68  EURefNL              827 NL1                 
+ 68  EURefNL              828 NL1                 
+ 68  EURefNL              829 NL1                 
+ 68  EURefNL              830 NL1                 
+ 69  DMC                  833 test eetbui         
+ 69  DMC                  834 test eetbui         
+ 69  DMC                  835 emails              
+ 69  DMC                  836 fortuyn2test        
+ 69  DMC                  837 fortuyn2test        
+ 69  DMC                  838 emailtest           
+ 69  DMC                  839 fortuyn2test        
+ 69  DMC                  840 fortuyn2test        
+ 69  DMC                  841 emailtest           
+ 69  DMC                  847 werk                
+ 69  DMC                  848 vrienden            
+ 69  DMC                  849 vrienden            
+ 69  DMC                  850 fortuyn2testxx      
+ 69  DMC                  851 emailtest           
+ 69  DMC                  852 nlsportvoetbal      
+ 69  DMC                  853 emails alles        
+ 69  DMC                  854 emails alles        
+ 69  DMC                  855 nlsupportborderline 
+ 69  DMC                  856 werk                
+ 69  DMC                  857 werk                
+ 69  DMC                  858 werk                
+ 69  DMC                  859 werk                
+ 69  DMC                  860 email werk          
+ 69  DMC                  861 email vriend        
+ 69  DMC                  862 email lief          
+ 69  DMC                  863 eetstoortest        
+ 69  DMC                  864 eetstoortest        
+ 69  DMC                  865 eetstoortest        
+ 69  DMC                  866 eetstoortest        
+ 69  DMC                  867 eetstoortest        
+ 69  DMC                  868 eetstoortest        
+ 69  DMC                  869  eethulpgids2       
+ 69  DMC                  870  eethulpgids2       
+ 69  DMC                  871  eethulpgids2       
+ 69  DMC                  874 email lief          
+ 69  DMC                  875 email lief          
+ 69  DMC                  876 email lief5         
+ 69  DMC                  877 email lief5         
+ 69  DMC                  878 email vriend        
+ 69  DMC                  879 email werk          
+ 69  DMC                  880  eethulpgids        
+ 69  DMC                  881 email vriend        
+ 69  DMC                  882 email werk          
+ 69  DMC                  883  eethsabnnl         
+ 69  DMC                  884 rel viva            
+ 69  DMC                  885 rel vrouwenpower    
+ 69  DMC                  886 rel vriendin        
+ 69  DMC                  887 relbepster          
+ 69  DMC                  888 eetmsngroepen       
+ 69  DMC                  889  eetsabnnl          
+ 69  DMC                  890  eethulpgids        
+ 69  DMC                  891 viva forum alle teksten.txt
+ 69  DMC                  892 Gamer_nl Forum - (Theo voor 01).txt
+ 69  DMC                  893 Marokko Community - (Theo na 01).txt
+ 69  DMC                  894 Marokko Community - (Theo voor 01).txt
+ 69  DMC                  895 Pim Fortuyn Forum - (Theo na 01).txt
+ 69  DMC                  896 Pim Fortuyn Forum - (Theo voor 01).txt
+ 69  DMC                  897 Gamer_nl Forum - (01).txt
+ 71  AEX                  873 AEX bedrijven set 1 
+ 71  AEX                  1124 AEX bedrijven set 2 
+ 71  AEX                  1125 AEX bedrijven set 2 
+ 73  ukmilieu             915 milieu UK 1990      
+ 73  ukmilieu             916 milieu UK 1991      
+ 73  ukmilieu             917 milieu UK 1992      
+ 73  ukmilieu             918 milieu UK 1993      
+ 73  ukmilieu             919 milieu UK 1994      
+ 73  ukmilieu             920 milieu UK 1995      
+ 73  ukmilieu             921 milieu UK 1996      
+ 73  ukmilieu             922 milieu UK 1997      
+ 73  ukmilieu             923 milieu UK 1998      
+ 73  ukmilieu             924 milieu UK 1999      
+ 73  ukmilieu             925 milieu UK 2000      
+ 73  ukmilieu             926 milieu UK 2001      
+ 73  ukmilieu             927 milieu UK 2002      
+ 73  ukmilieu             928 milieu UK 2003      
+ 73  ukmilieu             929 milieu UK 2004      
+ 73  ukmilieu             930 milieu UK 2004      
+ 73  ukmilieu             931 milieu UK 2004      
+ 73  ukmilieu             932 milieu UK 2004      
+ 73  ukmilieu             933 milieu UK 2004      
+ 75  duitsiraq            934 irak duitsland      
+ 76  duitsmilieu          935 duits milieu 1      
+ 76  duitsmilieu          936 duits milieu 2      
+ 76  duitsmilieu          937 duits milieu 3      
+ 76  duitsmilieu          938 duits milieu 3      
+ 76  duitsmilieu          939 duits milieu 4      
+ 76  duitsmilieu          940 duits milieu 4      
+ 77  uk us irak           941 uk en us iraq       
+ 78  milieu us            942 us milieu 1         
+ 78  milieu us            943 us milieu 1         
+ 78  milieu us            944 us milieu 2         
+ 78  milieu us            945 us milieu 2         
+ 79  peace 5 landen       946 peace algemeen      
+ 79  peace 5 landen       947 peace algemeen      
+ 79  peace 5 landen       948 peace algemeen      
+ 79  peace 5 landen       949 peace algemeen      
+ 79  peace 5 landen       950 peace algemeen      
+ 79  peace 5 landen       951 peace algemeen      
+ 79  peace 5 landen       952 peace algemeen      
+ 79  peace 5 landen       953 peace algemeen      
+ 79  peace 5 landen       954 peace algemeen      
+ 79  peace 5 landen       955 peace algemeen      
+ 79  peace 5 landen       956 peace algemeen      
+ 79  peace 5 landen       957 peace algemeen      
+ 79  peace 5 landen       958 peace algemeen      
+ 79  peace 5 landen       959 peace algemeen      
+ 79  peace 5 landen       960 peace algemeen      
+ 79  peace 5 landen       961 peace algemeen      
+ 79  peace 5 landen       962 peace algemeen      
+ 79  peace 5 landen       963 peace algemeen      
+ 79  peace 5 landen       964 peace algemeen      
+ 79  peace 5 landen       965 peace algemeen      
+ 79  peace 5 landen       966 peace algemeen      
+ 79  peace 5 landen       967 peace algemeen      
+ 79  peace 5 landen       968 peace algemeen      
+ 79  peace 5 landen       969 peace algemeen      
+ 79  peace 5 landen       970 peace algemeen      
+ 79  peace 5 landen       971 peace algemeen      
+ 79  peace 5 landen       972 peace algemeen      
+ 79  peace 5 landen       973 peace algemeen      
+ 79  peace 5 landen       974 peace algemeen      
+ 79  peace 5 landen       975 peace algemeen      
+ 79  peace 5 landen       976 peace algemeen      
+ 79  peace 5 landen       977 peace algemeen      
+ 79  peace 5 landen       978 peace algemeen      
+ 79  peace 5 landen       979 peace algemeen      
+ 79  peace 5 landen       980 peace algemeen      
+ 79  peace 5 landen       981 peace algemeen      
+ 79  peace 5 landen       982 peace algemeen      
+ 79  peace 5 landen       983 peace algemeen      
+ 79  peace 5 landen       984 peace algemeen      
+ 79  peace 5 landen       985 peace algemeen      
+ 79  peace 5 landen       986 peace algemeen      
+ 79  peace 5 landen       987 peace algemeen      
+ 79  peace 5 landen       988 peace algemeen      
+ 79  peace 5 landen       989 peace algemeen      
+ 79  peace 5 landen       990 peace algemeen      
+ 79  peace 5 landen       991 peace algemeen      
+ 79  peace 5 landen       992 peace algemeen      
+ 79  peace 5 landen       993 peace algemeen      
+ 79  peace 5 landen       994 peace algemeen      
+ 79  peace 5 landen       995 peace algemeen      
+ 79  peace 5 landen       996 peace algemeen      
+ 79  peace 5 landen       997 peace algemeen      
+ 79  peace 5 landen       998 peace algemeen      
+ 79  peace 5 landen       999 peace algemeen      
+ 79  peace 5 landen       1000 peace algemeen      
+ 79  peace 5 landen       1001 peace algemeen      
+ 79  peace 5 landen       1002 peace algemeen      
+ 79  peace 5 landen       1003 peace algemeen      
+ 79  peace 5 landen       1004 peace algemeen      
+ 79  peace 5 landen       1005 peace algemeen      
+ 79  peace 5 landen       1006 peace algemeen      
+ 79  peace 5 landen       1007 peace algemeen      
+ 79  peace 5 landen       1008 peace algemeen      
+ 79  peace 5 landen       1009 peace algemeen      
+ 79  peace 5 landen       1010 peace algemeen      
+ 79  peace 5 landen       1011 peace algemeen      
+ 79  peace 5 landen       1012 peace algemeen      
+ 79  peace 5 landen       1013 peace algemeen      
+ 79  peace 5 landen       1014 peace algemeen      
+ 79  peace 5 landen       1015 peace algemeen      
+ 79  peace 5 landen       1016 peace algemeen      
+ 79  peace 5 landen       1017 peace algemeen      
+ 79  peace 5 landen       1018 peace algemeen      
+ 79  peace 5 landen       1019 peace algemeen      
+ 79  peace 5 landen       1020 peace algemeen      
+ 79  peace 5 landen       1021 peace algemeen      
+ 79  peace 5 landen       1022 peace algemeen      
+ 79  peace 5 landen       1023 peace algemeen      
+ 79  peace 5 landen       1024 peace algemeen      
+ 79  peace 5 landen       1025 peace algemeen      
+ 79  peace 5 landen       1026 peace algemeen      
+ 79  peace 5 landen       1027 peace algemeen      
+ 79  peace 5 landen       1028 peace algemeen      
+ 79  peace 5 landen       1029 peace algemeen      
+ 79  peace 5 landen       1030 peace algemeen      
+ 79  peace 5 landen       1031 peace algemeen      
+ 79  peace 5 landen       1032 peace algemeen      
+ 79  peace 5 landen       1033 peace algemeen      
+ 79  peace 5 landen       1034 peace algemeen      
+ 79  peace 5 landen       1035 peace algemeen      
+ 79  peace 5 landen       1036 peace algemeen      
+ 79  peace 5 landen       1037 peace algemeen      
+ 79  peace 5 landen       1038 peace algemeen      
+ 79  peace 5 landen       1039 peace algemeen      
+ 79  peace 5 landen       1040 peace algemeen      
+ 79  peace 5 landen       1041 peace algemeen      
+ 79  peace 5 landen       1042 peace algemeen      
+ 79  peace 5 landen       1043 peace algemeen      
+ 79  peace 5 landen       1044 peace algemeen      
+ 79  peace 5 landen       1045 peace algemeen      
+ 79  peace 5 landen       1046 peace algemeen      
+ 79  peace 5 landen       1047 peace algemeen      
+ 79  peace 5 landen       1048 peace algemeen      
+ 79  peace 5 landen       1049 peace algemeen      
+ 79  peace 5 landen       1050 peace algemeen      
+ 79  peace 5 landen       1051 peace algemeen      
+ 79  peace 5 landen       1052 peace algemeen      
+ 79  peace 5 landen       1053 peace algemeen      
+ 79  peace 5 landen       1054 peace algemeen      
+ 79  peace 5 landen       1055 peace algemeen      
+ 79  peace 5 landen       1056 peace algemeen      
+ 79  peace 5 landen       1057 peace algemeen      
+ 79  peace 5 landen       1058 peace algemeen      
+ 79  peace 5 landen       1059 peace algemeen      
+ 79  peace 5 landen       1060 peace algemeen      
+ 79  peace 5 landen       1061 peace algemeen      
+ 79  peace 5 landen       1062 peace algemeen      
+ 79  peace 5 landen       1063 peace algemeen      
+ 79  peace 5 landen       1064 peace algemeen      
+ 79  peace 5 landen       1065 peace algemeen      
+ 79  peace 5 landen       1066 peace algemeen      
+ 79  peace 5 landen       1067 peace algemeen      
+ 79  peace 5 landen       1068 peace algemeen      
+ 79  peace 5 landen       1069 peace algemeen      
+ 79  peace 5 landen       1070 peace algemeen      
+ 79  peace 5 landen       1071 peace algemeen      
+ 79  peace 5 landen       1072 peace algemeen      
+ 79  peace 5 landen       1073 peace algemeen      
+ 79  peace 5 landen       1074 peace algemeen      
+ 79  peace 5 landen       1075 peace algemeen      
+ 79  peace 5 landen       1076 peace algemeen      
+ 79  peace 5 landen       1077 peace algemeen      
+ 79  peace 5 landen       1078 peace algemeen      
+ 79  peace 5 landen       1079 peace algemeen      
+ 79  peace 5 landen       1080 peace algemeen      
+ 79  peace 5 landen       1081 peace algemeen      
+ 79  peace 5 landen       1082 peace algemeen      
+ 79  peace 5 landen       1083 peace algemeen      
+ 79  peace 5 landen       1084 peace algemeen      
+ 79  peace 5 landen       1085 peace algemeen      
+ 79  peace 5 landen       1086 peace algemeen      
+ 79  peace 5 landen       1087 peace algemeen      
+ 79  peace 5 landen       1088 peace algemeen      
+ 79  peace 5 landen       1089 peace algemeen      
+ 79  peace 5 landen       1090 peace algemeen      
+ 79  peace 5 landen       1091 peace algemeen      
+ 79  peace 5 landen       1092 peace algemeen      
+ 79  peace 5 landen       1093 peace algemeen      
+ 79  peace 5 landen       1094 peace algemeen      
+ 79  peace 5 landen       1095 peace algemeen      
+ 79  peace 5 landen       1096 peace algemeen      
+ 79  peace 5 landen       1097 peace algemeen      
+ 79  peace 5 landen       1098 peace algemeen      
+ 79  peace 5 landen       1099 peace algemeen      
+ 79  peace 5 landen       1100 peace algemeen      
+ 79  peace 5 landen       1101 peace algemeen      
+ 79  peace 5 landen       1102 peace algemeen      
+ 79  peace 5 landen       1103 peace algemeen      
+ 79  peace 5 landen       1104 peace algemeen      
+ 79  peace 5 landen       1105 peace algemeen      
+ 79  peace 5 landen       1106 peace algemeen      
+ 79  peace 5 landen       1107 peace algemeen      
+ 79  peace 5 landen       1108 peace algemeen      
+ 79  peace 5 landen       1109 peace algemeen      
+ 79  peace 5 landen       1110 peace algemeen      
+ 79  peace 5 landen       1111 peace algemeen      
+ 79  peace 5 landen       1112 peace algemeen      
+ 79  peace 5 landen       1113 peace algemeen      
+ 79  peace 5 landen       1114 peace algemeen      
+ 79  peace 5 landen       1115 peace algemeen      
+ 79  peace 5 landen       1116 peace algemeen      
+ 79  peace 5 landen       1117 peace algemeen      
+ 79  peace 5 landen       1118 peace algemeen      
+ 79  peace 5 landen       1119 peace algemeen      
+ 79  peace 5 landen       1120 peace algemeen      
+ 79  peace 5 landen       1121 peace algemeen      
+ 79  peace 5 landen       1122 peace algemeen      
+ 79  peace 5 landen       1123 peace algemeen      
+ 80  NLpolitiek           1131 NLpolitiek 2005 t/m 1507
+ 80  NLpolitiek           1132 NLpolitiek 2005 t/m 1507 v2
+ 80  NLpolitiek           1133 NLpolitiek testje1  
+ 80  NLpolitiek           1134 NLpolitiek testje1  
+ 80  NLpolitiek           1135 testje3             
+ 80  NLpolitiek           1136 testje3             
+ 80  NLpolitiek           1137 testje3             
+ 80  NLpolitiek           1138 testje3             
+ 80  NLpolitiek           1139 testje3             
+ 80  NLpolitiek           1140 testje3             
+ 80  NLpolitiek           1141 testje3             
+ 80  NLpolitiek           1142 testje3             
+ 80  NLpolitiek           1143 testje3             
+ 80  NLpolitiek           1144 testje3             
+ 80  NLpolitiek           1146 testje4             
+ 80  NLpolitiek           1147 testje4             
+ 80  NLpolitiek           1148 testje4             
+ 80  NLpolitiek           1149 testje4             
+ 80  NLpolitiek           1150 testje4             
+ 80  NLpolitiek           1151 testje4             
+ 80  NLpolitiek           1155 testje4             
+ 80  NLpolitiek           1156 testje4             
+ 80  NLpolitiek           1158 nlpolitiek0703      
+ 80  NLpolitiek           1159 nlpolitiek0703      
+ 80  NLpolitiek           1224 nlpolitiek1004      
+ 80  NLpolitiek           1225 nlpolitiek1004      
+ 80  NLpolitiek           1226 nlpolitiek0703      
+ 80  NLpolitiek           1227 nlpolitiek0703      
+ 80  NLpolitiek           1228 nlpolitiek0204      
+ 80  NLpolitiek           1229 nlpolitiek00405     
+ 80  NLpolitiek           1230 nlpolitiek00405     
+ 80  NLpolitiek           1315 newsgr1             
+ 80  NLpolitiek           1316 newsgr1             
+ 80  NLpolitiek           1317 newsgr1             
+ 80  NLpolitiek           1318 nlpolitiek0703      
+ 80  NLpolitiek           1319 nlpolitiek0703      
+ 80  NLpolitiek           1320 newsgr1             
+ 80  NLpolitiek           1321 nlpolitiek0703      
+ 80  NLpolitiek           1372 nlpolitiek0703      
+ 80  NLpolitiek           1373 nlpolitiek0204      
+ 80  NLpolitiek           1374 nlpolitiek1004      
+ 80  NLpolitiek           1375 nlpolitiek0405      
+ 80  NLpolitiek           1376 nlpolitiek0204      
+ 80  NLpolitiek           1377 nlpolitiek0703      
+ 80  NLpolitiek           1378 nlpolitiek0204      
+ 80  NLpolitiek           1379 nlpolitiek1004      
+ 80  NLpolitiek           1380 nlpolitiek0405      
+ 80  NLpolitiek           1381 nlpolitiek0204      
+ 80  NLpolitiek           1382 nlpolitiek1004      
+ 80  NLpolitiek           1383 nlpolitiek0405      
+ 80  NLpolitiek           1384 nlpolitiek0703      
+ 80  NLpolitiek           1389 nlpolitiekall       
+ 85  test                 1303 inlees              
+ 85  test                 1304 inlees              
+ 85  test                 1305 inlees              
+ 85  test                 1306 inlees              
+ 85  test                 1307 inlees              
+ 85  test                 1308 inlees              
+ 85  test                 1309 inlees              
+ 85  test                 1310 inlees              
+ 85  test                 1385 cm190905            
+ 85  test                 1386 cm190905            
+ 85  test                 1387 cm190905            
+ 85  test                 1388 cm190905            
+ 85  test                 1390 190905nrc.txt       
+ 85  test                 1391 190905nrc.txt       
+ 85  test                 1392 190905nrc.txt       
+ 86  kall2                1325 Kall1990-1993       
+ 86  kall2                1326 Kall1990-1993       
+ 86  kall2                1327 Kall1998-2001       
+ 86  kall2                1328 Kall2000-2001       
+ 86  kall2                1329 Kall1998-2001       
+ 86  kall2                1330 Kall2002-2003       
+ 86  kall2                1331 verkiezing_1998-2002
+ 86  kall2                1332 verkiezing_2002-2003
+ 86  kall2                1333 verkiezing_regionaal
+ 86  kall2                1364 Kall1994-1997       
+ 86  kall2                1365 verkiezingen_1994-1998
+ 86  kall2                1366 verkiezingen_1994-1998
+ 86  kall2                1367 Kall2000-2001       
+ 86  kall2                1368 correctie           
+ 86  kall2                1369 correctie           
+ 86  kall2                1370 correctie           
+ 86  kall2                1371 correctie           
+===========================================================================
