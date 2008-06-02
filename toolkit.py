@@ -5,8 +5,6 @@ from threading import Thread
 
 _USE_CURSES = 1
 
-#dit is een test
-
 def valuesAroundIndex(seq, index):
     n = len(seq)
     rels = flatten([(0,)] + zip(range(1,n), range(-1, -n, -1)))
