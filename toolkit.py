@@ -936,6 +936,9 @@ def choose(seq, scorer, returnscore=False):
         return best, bestscore
     return best
 
+def test():
+    return "test!"
+
 if __name__ == "__main__":
     import sys
     print choose(["123","45","999"], lambda x: int(x)*-1, True)
