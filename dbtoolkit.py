@@ -30,9 +30,7 @@ class anokoDB(object):
             configuration=config.default()
         
         _debug(3,"Connecting to database '%(database)s' on '%(username)s@%(host)s' using driver %(drivername)s... " % configuration.__dict__, 0)
-        this.conn = configuration.driver.connect(configuration.host, configuration.username,
-                                                 configuration.password, database=configuration.database,
-                                                 datetime="mx", auto_commit=auto_commit)
+        this.conn = configuration.connect()# datetime="mx", auto_commit=auto_commit)
         _debug(3,"OK!", 2)
 
         this._articlecache = {}
@@ -478,10 +476,11 @@ class anokoDB(object):
 if __name__ == '__main__':
     print "Opening connection with database"
     db = anokoDB()
-    print "Trying to upload image from sys.argv[1] for article sys.argv[2] with optional caption sys.argv[3]"
-    import sys
-    caption = None
-    if len(sys.argv) > 3:
-        caption = sys.argv[3]
-    db.uploadimage(int(sys.argv[2]), 0, 0, 0, filename=sys.argv[1], caption=caption)
-    
+    #print "Trying to upload image from sys.argv[1] for article sys.argv[2] with optional caption sys.argv[3]"
+    #import sys
+    #caption = None
+    #if len(sys.argv) > 3:
+    #    caption = sys.argv[3]
+    #db.uploadimage(int(sys.argv[2]), 0, 0, 0, filename=sys.argv[1], caption=caption)
+    print "Reading project name"
+    print db.doQuery("select top 1 * from projects")
