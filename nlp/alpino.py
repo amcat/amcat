@@ -126,12 +126,13 @@ def tokenize(sent, alpinohome="/home/wva/toolkits/Alpino_new", errhandler=warn):
     return out
 
 def parse(sent, alpinohome="/home/wva/toolkits/Alpino_new", errhandler=warn):
-    cmd = "ALPINO_HOME=%s %s/create_bin/Alpino demo=off end_hook=triples_with_full_postags -parse" % (alpinohome, alpinohome)
+    cmd = "LD_LIBRARY_PATH=%s/create_bin ALPINO_HOME=%s %s/create_bin/Alpino demo=off end_hook=dependencies -parse" % (alpinohome, alpinohome, alpinohome)
     if not sent: return None
+    #print cmd
     out, err = execute(cmd, sent)
     if err and errhandler: errhandler(err)
     #print out
-    return fromTriples(out)
+    return fromFullTriples(out)
 
 def fromdb(db, sid):
     sql = """select wordbegin, word, lemma, pos, major, minor 
