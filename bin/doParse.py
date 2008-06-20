@@ -68,6 +68,7 @@ def parse(aid, db):
     if not sids:
         debug("article not in sentences table, performing SBD")
         article.splitArticles([aid], db)
+        db.conn.commit()
 
     sids = db.doQuery("select sentenceid, sentence from sentences where articleid=%i %s" % (aid, extrawhere))
 
