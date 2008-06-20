@@ -2,6 +2,8 @@ import xml.sax.handler, xml.sax
 import types
 from toolkit import execute, warn
 
+ALPINO = "/home/amcat/resources/Alpino"
+
 class Pos:
     def __init__(self, main, major, minor):
         self.main = main
@@ -117,7 +119,7 @@ def fromFullTriples(str):
         
     return result
 
-def tokenize(sent, alpinohome="/home/wva/toolkits/Alpino_new", errhandler=warn):
+def tokenize(sent, alpinohome=ALPINO, errhandler=warn):
     cmd = "%s/Tokenization/tok" % alpinohome
     if not sent: return None
     out, err = execute(cmd, sent)
@@ -125,13 +127,18 @@ def tokenize(sent, alpinohome="/home/wva/toolkits/Alpino_new", errhandler=warn):
     out = out.replace("\n"," ")
     return out
 
-def parse(sent, alpinohome="/home/wva/toolkits/Alpino_new", errhandler=warn):
+def parse(sent, alpinohome=ALPINO, errhandler=warn):
     cmd = "LD_LIBRARY_PATH=%s/create_bin ALPINO_HOME=%s %s/create_bin/Alpino demo=off end_hook=dependencies -parse" % (alpinohome, alpinohome, alpinohome)
     if not sent: return None
     #print cmd
     out, err = execute(cmd, sent)
     if err and errhandler: errhandler(err)
     #print out
+    return out
+
+def parseTriples(sent, alpinohome=ALPINO, errhandler=warn):
+    out = parse(sent, alpinohome, errhandler)
+    if not out: return None
     return fromFullTriples(out)
 
 def fromdb(db, sid):

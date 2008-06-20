@@ -1,7 +1,6 @@
 #!/bin/env python2.2
 
-import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse
-from threading import Thread
+import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading
 
 _USE_CURSES = 1
 
@@ -140,6 +139,7 @@ def warn(string, newline = 1, colour = None):
 
 global _DEBUG
 _DEBUG = 0
+_DEBUG_THREADNAME = False
 _DEBUG_COLOURS = 'red', 'yellow', 'purple', 'green','blue','blue','blue'
 
 class Debug:
@@ -150,7 +150,7 @@ class Debug:
         if level <= this.debuglevel:
             col = _DEBUG_COLOURS[level-1]
             if newline <> 2: # print prefix
-                warn("[%-10s %s] " % (this.module[:10], time.strftime("%Y-%m-%d %H:%M")), 0, col)
+                warn("[%-10s %s %s] " % (this.module[:10], threading.currentThread.getName(), time.strftime("%Y-%m-%d %H:%M")), 0, col)
             warn(message, newline, col)
     def ok(this, level):
         this(level, " OK!", newline=2)
@@ -868,9 +868,9 @@ class Popen3:
     
 
 
-class Reader(Thread):
+class Reader(threading.Thread):
     def __init__(self, stream, name, listener = None):
-        Thread.__init__(self)
+        threading.Thread.__init__(self)
         self.stream = stream
         self.name = name
         self.out = ""
@@ -937,7 +937,7 @@ def choose(seq, scorer, returnscore=False):
     return best
 
 def test():
-    return "test!"
+    return "test! dev2"
 
 if __name__ == "__main__":
     import sys

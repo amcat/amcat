@@ -58,21 +58,24 @@ class Converter:
         self.poss[key] = posid
         return posid
 
-    def convert(self, sentid, jobid=4):
-        #print "Doing %i" % sentid
+    def convertFromDB(self, sentid, jobid=4):
         triples = self.db.getValue("SELECT parse FROM sentences_parses WHERE parsejobid=%i AND sentenceid=%i" % (jobid, sentid))
         s = alpino.fromFullTriples(triples)
+        self.convert(sentid, s)
+
+    def convert(self, sentid, parse):
+        s = parse
 
         for node in s.nodeindex.values():
             l = self._wordid(node)
             p = self._posid(node)
-            db.insert("parses_words", {"sentenceid": sentid, "wordbegin" : node.begin,
+            self.db.insert("parses_words", {"sentenceid": sentid, "wordbegin" : node.begin,
                                        "wordid" : l, "posid" : p}, retrieveIdent=False)
         for node in s.nodeindex.values():
             for rel, children in node.children.items():
                 r = self._relid(rel)
                 for child in children:
-                    db.insert("parses_triples", {"sentenceid": sentid, "relation" : r, "parentbegin" : node.begin,
+                    self.db.insert("parses_triples", {"sentenceid": sentid, "relation" : r, "parentbegin" : node.begin,
                                                  "childbegin" : child.begin}, retrieveIdent=False)
         #print "Done %i" % sentid
             
@@ -90,7 +93,7 @@ if __name__== '__main__':
         for sid, in sids:
             #toolkit.ticker.tick()
             try:
-                c.convert(sid, jobid)
+                c.convertFromDB(sid, jobid)
             except Exception, e:
                 print "Error on converting %i" % sid
                 print e

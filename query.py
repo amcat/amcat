@@ -65,4 +65,10 @@ def connect_table(sql, table, tables):
 
 if __name__ == '__main__':
     q = Query(["name","headline","fulltext"], ["articles","projects","texts","batches"])
-    print q.sql()
+    import dbtoolkit
+    db = dbtoolkit.anokoDB()
+    res = db.doQuery(q.sql())
+    if res:
+        for row in res:
+            print "\t".join("%s" % x for x in row)
+                    
