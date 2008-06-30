@@ -27,8 +27,11 @@ class Storer(Thread):
             try:
                 sid, parse = self.q.get(True, 5)
                 debug("[%s] Parse found for sentence %i, adding to db" % (self.getName(), sid))
-                self.c.convert(sid, parse)
-                self.db.conn.commit()
+                try:
+                    self.c.convert(sid, parse)
+                    self.db.conn.commit()
+                except Exception, e:
+                    debug("[%s] Exception on adding parse %i to db: %s\n%r" % (self.getName(), sid, e, parse))
             except Empty:
                 debug("[%s] No parse found, finish=%s" % (self.getName(), self.finish))
                 if self.finish: return
@@ -70,7 +73,7 @@ def parse(aid, db):
         article.splitArticles([aid], db)
         db.conn.commit()
 
-    sids = db.doQuery("select sentenceid, sentence from sentences where articleid=%i %s" % (aid, extrawhere))
+    sids = db.doQuery("select sentenceid, sentence from sentences where articleid=%i and sentenceid not in (select sentenceid from parses_words) and (len(sentence) > 5) %s" % (aid, extrawhere))
 
     if not sids:
         debug("SBD failed for article %i, skipping" % aid)
@@ -88,6 +91,7 @@ def parse(aid, db):
         def errhandler(e): err = e
         try:
             sent = alpino.tokenize(sent)
+            if not " " in sent: continue
             p = alpino.parseTriples(sent, errhandler=errhandler)
             if not p: raise Exception(err)
             parses.append((sid, p))

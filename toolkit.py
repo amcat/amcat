@@ -150,7 +150,7 @@ class Debug:
         if level <= this.debuglevel:
             col = _DEBUG_COLOURS[level-1]
             if newline <> 2: # print prefix
-                warn("[%-10s %s %s] " % (this.module[:10], threading.currentThread.getName(), time.strftime("%Y-%m-%d %H:%M")), 0, col)
+                warn("[%-10s %s %s] " % (this.module[:10], threading.currentThread().getName(), time.strftime("%Y-%m-%d %H:%M")), 0, col)
             warn(message, newline, col)
     def ok(this, level):
         this(level, " OK!", newline=2)
