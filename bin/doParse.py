@@ -108,7 +108,9 @@ for line in sys.stdin:
     aid = int(line)
     inputqueue.put(aid)
 
-NPROC = 9
+
+sys.argv += [9]
+NPROC = int(sys.argv[1])
 debug("[MAIN] Set up parsing queue with %i items, starting %i worker threads" % (inputqueue.qsize(), NPROC))
 
 threads = set()

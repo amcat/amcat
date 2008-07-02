@@ -35,6 +35,10 @@ import urllib2, urllib,re
 import datetime, types
 import decimal
 
+MIME = {"rdf" : "application/rdf+xml",
+        "n3" : "text/rdf+n3"}
+
+
 class _TableHandler(object):
     """Iterable parser for the sesame binary table format
     http://www.openrdf.org/doc/sesame/api/org/openrdf/sesame/query/BinaryTableResultConstants.html
@@ -216,10 +220,10 @@ class Connection(object):
         self._checkHasDB()
         return self._get(_Constants.STATEMENTS, repo=self.repo, output = output)
 
-    def add(self, rdf):
+    def add(self, rdf, contenttype="application/rdf+xml"):
         """Add the given data (assumes RDF/XML)"""
         self._checkHasDB()
-        self._get(_Constants.STATEMENTS, repo=self.repo, output=Output.NONE, params = rdf, gettype=GETType.POST, contenttype="application/rdf+xml")
+        self._get(_Constants.STATEMENTS, repo=self.repo, output=Output.NONE, params = rdf, gettype=GETType.POST, contenttype=contenttype)
 
     def delete(self):
         """Delete all data in the repository"""
@@ -570,18 +574,23 @@ if __name__ == '__main__':
 
     server, repo = _Constants.DEFAULT_SERVER, _Constants.DEFAULT_REPO
     args = sys.argv[1:]
+    print args
     if args[0][:2] == '-S':
         server = args[0][2:]
         del(args[0])
     if args[0][:2] == '-R':
         repo = args[0][2:]
         del(args[0])
+    if args[0] == 'N3':
+        N3 = True
+        del(args[0])
+    else:
+        N3 = False
     cmd = args[0]
     del(args[0])
 
     print >>sys.stderr, "Connecting to %s/%s" % (server, repo)
-    db = connect(server)
-    db.use(repo)
+    db = connect(server, database = repo)
     if cmd == "QUERY" and args:
         print >>sys.stderr, "Executing query"
         for row in db.execute(" ".join(args)):
@@ -593,8 +602,13 @@ if __name__ == '__main__':
         print rdf
     elif cmd == "UPLOAD":
         rdf = sys.stdin.read()
+        if N3:
+            print >>sys.stderr, "Using N3 format"
+            ctype= MIME['n3']
+        else:
+            ctype = MIME['rdf']
         print >>sys.stderr, "Adding %i bytes" % len(rdf)
-        db.add(rdf)
+        db.add(rdf, contenttype=ctype)
     elif cmd == "CLEAR":
         import time
         print >>sys.stderr, "Clearing repository in 3 seconds"
