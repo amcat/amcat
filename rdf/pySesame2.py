@@ -291,7 +291,9 @@ class Connection(object):
     def _get(self, file, params = {}, accept = None, repo = None, output = Output.RDFXML, gettype = GETType.GET, contenttype=None):
 
         #build uri
-        if repo: file = "repositories/%s/%s" % (repo, file)        
+        if repo:
+            if file: file = "/%s" % file
+            file = "repositories/%s%s" % (repo, file)
         query, data = "", None
         if params:
             if gettype == GETType.POST:

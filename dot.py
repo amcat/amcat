@@ -83,7 +83,7 @@ def dot2img(dot, format="jpg", errListener = printError):
     return img
 
 def dot2object(dot):
-    png = dot2img.getImage(dot, format="png")
+    png = dot2img(dot, format="png")
     data = base64.b64encode(png)
     return "<object type='image/png' data='data:image/png;base64,%s'></object>" % data
 
