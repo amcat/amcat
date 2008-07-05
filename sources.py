@@ -4,53 +4,54 @@ def clean(s):
     return toolkit.clean(s,1,1)
 
 class Source:
-    def __init__(this, id, name, circulation, language, type, abbrev):
-        this.id = id
-        this.name = clean(name)
-        this.prettyname = toolkit.clean(name,1)
-        this.circulation = circulation
-        this.language = language
-        this.type = type
-        this.abbrev = abbrev
-    def __str__(this):
-        return this.name
+    def __init__(self, id, name, circulation, language, type, abbrev):
+        self.id = id
+        self.name = clean(name)
+        self.prettyname = toolkit.clean(name,1)
+        self.circulation = circulation
+        self.language = language
+        self.type = type
+        self.abbrev = abbrev
+    def __str__(self):
+        return self.name
 
 class Sources:
-    def __init__(this, connection):
-        this.index_name = {}
-        this.sources = {}
+    def __init__(self, connection):
+        self.index_name = {}
+        self.sources = {}
+
         
         for id,name in connection.doQuery("select mediumid, name from media_dict"):
-            this.index_name[clean(name)] = id
+            self.index_name[clean(name)] = id
         for info in connection.doQuery("select mediumid, name, circulation, language, type, isnull(abbrev, name) from media where mediumid>0"):
             source = Source(*info)
-            this.index_name[source.name] = source.id
-            this.sources[source.id] = source
+            self.index_name[source.name] = source.id
+            self.sources[source.id] = source
 
-    def lookupID(this, id):
+    def lookupID(self, id):
         if id is None:
             return None
-        elif id in this.sources:
-            return this.sources[id]
+        elif id in self.sources:
+            return self.sources[id]
         else:
-            #print this.sources
+            #print self.sources
             raise Exception("No source with id '%s'?" % id)
 
-    def lookupName(this, source, lax=0):
+    def lookupName(self, source, lax=0):
         source = clean(source)
-        if source in this.index_name:
-            return this.sources[this.index_name[source]]
+        if source in self.index_name:
+            return self.sources[self.index_name[source]]
         else:
             if lax: return None
             raise Exception('Could not find source "%s"' % source)
 
-    def name(this,id):
-        src = this.lookupID(id)
+    def name(self,id):
+        src = self.lookupID(id)
         if src: return src.name
         else: return 'None'
 
-    def asDict(this):
+    def asDict(self):
         res = {}
-        for k,v in this.sources.items():
+        for k,v in self.sources.items():
             res[k] = v.name
         return res

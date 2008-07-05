@@ -73,9 +73,7 @@ class Graph(object):
     def getImage(self, *args, **kargs):
         return dot2img(self.getDot(), *args, **kargs)
     def getHTMLObject(self):
-        png = self.getImage(format="png")
-        data = base64.b64encode(png)
-        return "<object type='image/png' data='data:image/png;base64,%s'></object>" % data
+        return dot2object(self.getDot())
     def getHTMLDoc(self):
         return '<html><body><p>%s</p><pre>%s</pre></body></html>' % (self.getHTMLObject(), self.getDot())
 
@@ -83,6 +81,12 @@ def dot2img(dot, format="jpg", errListener = printError):
     cmd = 'dot -T%s' % format
     img, err = toolkit.execute(cmd, dot, listener=errListener)
     return img
+
+def dot2object(dot):
+    png = dot2img.getImage(dot, format="png")
+    data = base64.b64encode(png)
+    return "<object type='image/png' data='data:image/png;base64,%s'></object>" % data
+
 
 if __name__ == '__main__':
     g = Graph()
