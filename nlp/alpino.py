@@ -122,7 +122,8 @@ def fromFullTriples(str):
 def tokenize(sent, alpinohome=ALPINO, errhandler=warn):
     cmd = "%s/Tokenization/tok" % alpinohome
     if not sent: return None
-    out, err = execute(cmd, sent)
+    out, err = execute(cmd, sent+" ")
+    print "%r -> %r" % (sent, out)
     if err and errhandler: errhandler(err)
     out = out.replace("\n"," ")
     return out
