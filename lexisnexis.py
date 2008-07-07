@@ -7,19 +7,22 @@ import article
 
 # Regular expressions on text file level:
 RE_ARTICLESPLIT = re.compile(r'^\s+(?:FOCUS - )?\d+ of \d+ DOCUMENTS?\s*$', re.M)
-RE_TITLEPAGE    = re.compile(r'^\s*Print Request:\s+Selected Document\(s\):.*$',re.M)
-RE_TITLEPAGE2   = re.compile(r'^\s*Printopdracht: Alle documenten: \d+-\d+\s*$', re.M)
+RE_TITLEPAGE    = re.compile(r'^\s*Print Request:\s+(Selected|Select) (Items|Document\(s\)):.*$',re.M)
+RE_TITLEPAGE2   = re.compile(r'^\s*Printopdracht: (Alle|Selecteer|Aangevinkte) documenten: [\d, -]+\s*$', re.M)
 RE_TITLEPAGE3  = re.compile(r'^Zoektermen: .*$')
 #RE_QUERY        = re.compile(r'^\s*Research Information:(.*)date[\s\n]*\(geq[\s\n]*\(\d+[/-]\d+[-/]\d+\)[\s\n]+and[\s\n]+leq[\s\n]*\(\d+[/-]\d+[/-]\d+\)+[\s\n]*^\s*$',re.M|re.DOTALL|re.IGNORECASE)
-RE_QUERY        = re.compile(r'^\s*(?:Research Information|Zoektermen):(.*)date[\s\n]*\(?(geq|is|=)[\s\n]*\(?\d+\\?[/-]\d+\\?[-/]\d+\)?([\s\n]+and[\s\n]+leq[\s\n]*\(\d+[/-]\d+[/-]\d+\)+)?\)*[\s\n]*(AND[\s\n]+pub\(|^\s*$)',re.M|re.DOTALL|re.IGNORECASE)
+RE_QUERY        = re.compile(r'^\s*(?:Research Information|Terms|Zoektermen):(.*)date[\s\n]*\(?(geq|is|=)[\s\n]*\(?\d+\\?[/-]\d+\\?[-/]\d+\)?([\s\n]+and[\s\n]+leq[\s\n]*\(\d+[/-]\d+[/-]\d+\)+)?\)*[\s\n]*(AND[\s\n]+pub\(|^\s*$)',re.M|re.DOTALL|re.IGNORECASE)
 RE_QUERY2        = re.compile(r'^Zoektermen:(.*?)( AND pub.*)?$',re.M|re.IGNORECASE)
+RE_QUERY3        = re.compile(r'^Terms: (.*)\s*$', re.M|re.IGNORECASE)
 # On Article string level
 umlauts = '\xfc\xe4\xdc\xc4\xf6\xd6'
+
 RE_EXTRACTMETA  = re.compile(r'(.*)^\s*BODY:\s*$(.*)^\s*([A-Z\-]+:.*)', re.M | re.S |re.U)
 RE_EXTRACTMETA2  = re.compile(r'(.*)^\s*(?:BODY|VOLLEDIGE TEKST):\s*$(.*)()', re.M | re.S |re.U)
 RE_EXTRACTMETA3  = re.compile(r'(.*)^\s*GRAPHIC: (.*)()', re.M | re.S |re.U)
-RE_EXTRACTMETA3  = re.compile(r'(.*)^\s*LENGTH: \d+ (?:woorden|words)$(.*)()', re.M | re.S |re.U)
+RE_EXTRACTMETA3  = re.compile(r'(.*)^\s*LENGTH: \d+ +(?:woorden|words)$(.*)()', re.M | re.S |re.U)
 RE_EXTRACTMETA4 = re.compile(r'(.*^\s*[A-Z\-]+:.*?)$(.*)^\s*([A-Z\-]+:.*)', re.M | re.S |re.U)
+
 RE_SPLITMETA    = re.compile(r'^([A?-Z-%s]+):'%umlauts, re.M |re.U)
 RE_LENGTH       = re.compile(r'(\d+) (?:words|woorden)', re.U)
 RE_HEADLINEINBODY = re.compile(r'([\w .,:;\'"%s]{5,200})\n\n(.*)' % umlauts, re.M | re.U | re.S)
@@ -28,14 +31,16 @@ def extractQuery(str):
     """Extracts the 'query' part from the LN header"""
     m = RE_QUERY.search(str)
     if not m: m = RE_QUERY2.search(str)
-    if m:
-        q = m.group(1)
-        q = re.sub("\s+"," ", q)
-        q = re.sub("([()])\s+([()])","\\1\\2", q)
-        q = q.strip()
-        return q
-    else:
+    if not m: m = RE_QUERY3.search(str)
+    if not m:
+        toolkit.warn("Could not extract query from:\n%s" % str[:200])
         return None
+
+    q = m.group(1)
+    q = re.sub("\s+"," ", q)
+    q = re.sub("([()])\s+([()])","\\1\\2", q)
+    q = q.strip()
+    return q
 
 def istitlepage(str):
     """Checks whether the given LN string appears to be the title page"""
@@ -62,6 +67,8 @@ def parseArticle(articleString, db, batchid):
     
     (prolog, body, meta) = parseLexisNexis(articleString)
     (date1, medium, possibleheadline) = interpretProlog(prolog, db.sources)
+
+    #print `prolog`, '\n', `body`, '\n', `meta`
 
     if (medium == 8):
         #print "Doing AD split for %s" % meta.get ('headline', 'missing')[:40]
@@ -231,7 +238,7 @@ def readfiles(db, projectid, batchname, files, verbose=False, commit=True):
     query, batchid = None, -1
     n = 0
     for file in files:
-        if verbose: print "Reading file.."
+        if verbose: print "Reading file.. %s" % file
         txt = toolkit.stripAccents(file.read()).strip().replace('\r\n', '\n')
         q = extractQuery(txt)
         if not q: raise Exception('Could not extract query!')

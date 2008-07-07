@@ -355,6 +355,7 @@ _MONTHS3 = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','d
 _MONTHS4 = ['jan','feb','maa','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by jcjacobi for texel-plaza
 _MONTHS6 = ['jan','feb','mae','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by wva for sueddeutsche zeitung
 _MONTHS5 = ['janv','fevr','mars','avri','mai','juin','juil','aout','sept','octo','nove','dece']; #Added by Lonneke voor fr
+_MONTHS6 = ['ener', 'febr', 'marz', 'abri', 'mayo', 'juni', 'juli', 'agos', 'sept', 'octu', 'novi','dici']
 
 def average(seq):
     return float(sum(seq)) / len(seq)
@@ -371,8 +372,26 @@ def stripAccents(s, map = None):
     #s = str(s)
     if type(s) <> unicode:
         s = unicode(s, "latin-1")
-    if not map: map = {'a': u'\xe1\xe0\xe2\xe4', 'i': u'\xed\xec\xee\xef', 'u':u'\xfa\xf9\xfb\xfc',
-                       'e':u'\xe9\xe8\xea\xeb','o':u'\xf3\xf2\xf4\xf6','c':u'\xe7', 'C' : u'\xc7'}
+    if not map: map = {'a': u'\xe0\xe1\xe2\xe3\xe4\xe5',
+                       'c': u'\xe7',
+                       'e':u'\xe9\xe8\xea\xeb',
+                       'i': u'\xec\xed\xee\xef',
+                       'n': u'\xf1',
+                       'o' : u'\xf3\xf2\xf4\xf6',
+                       'u': u'\xf9\xfa\xfb\xfc',
+                       'y': u'\xfd\xff',
+                       
+                       'A' : u'\xc0\xc1\xc2\xc3\xc4\xc5',
+                       'C' : u'\xc7',
+                       'E' : u'\xc8\xc9\xca\xcb',
+                       'I' : u'\xcc\xcd\xce\xcf',
+                       'N' : u'\xd1',
+                       'O' : u'\xd2\xd3\xd4\xd5\xd6',
+                       'U' : u'\xd9\xda\xdb\xdc',
+                       'Y' : u'\xdd\xdf',
+                       'ss' : u'\xdf',
+                       '?' : u'\xbf',
+                       }
     for key, val in map.items():
         for trg in val:
             try:
@@ -391,8 +410,9 @@ def monthnr(str):
     if strShort in _MONTHS4: return _MONTHS4.index(strShort) + 1
     if strShort in _MONTHS6: return _MONTHS6.index(strShort) + 1
     if strLonger in _MONTHS5: return _MONTHS5.index(strLonger) + 1
+    if strLonger in _MONTHS6: return _MONTHS6.index(strLonger) + 1
     return None
-    
+
 
 def readDate(str, lax=False, rejectPre1970=False):
     if str == None: return None
