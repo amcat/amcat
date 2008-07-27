@@ -528,7 +528,7 @@ def openfile(file, mode = None, skipheader=0):
 def filesInDir(path):
     return map(lambda x: path + os.sep + x ,os.listdir(path))
 
-def readCSVTable(file, sep="\t"):
+def readCSVTable(file, sep="\t", strip=False):
     # interpret header
     n = 0
     titles = file.readline()[:-1].split(sep)
@@ -539,6 +539,8 @@ def readCSVTable(file, sep="\t"):
     # read data        
     for line in file:
         vals = line.strip().split(sep)
+        if strip:
+            vals = [x and x.strip() for x in vals]
         vals += [None] * (len(titles) - len(vals))
         yield dict(zip(titles, vals))
 
