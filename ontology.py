@@ -8,6 +8,18 @@ class Node(object):
         if not self._uri:
             self.ont.loadURIs()
         return self._uri
+    def hasAncestor(self, node):
+        for p in self.getParents():
+            if p == node: return True
+            if p.hasAncestor(node): return True
+        return False
+    def getParents(self):
+        return tuple()
+    def __cmp__(self, other):
+        if not isinstance(other, Node): return -1
+        return cmp(self.label.lower(), other.label.lower())
+    def __str__(self):
+        return "[%s %s:%s]" % (type(self).__name__, self.oid, self.label)
             
 
 class Relation(object):
@@ -22,6 +34,8 @@ class Role(Node, Relation):
         Relation.__init__(self, rsubj, pred, robj)
         self.datefrom = datefrom
         self.dateto = dateto
+        rsubj.outgoing.add(self)
+        robj.incoming.add(self)
 
 class Instance(Node):
     def __init__(self, *args, **kargs):
@@ -38,21 +52,28 @@ class Instance(Node):
     def setLiteral(self, predicate, value):
         assert predicate.literal
         self.literal[predicate] = value
+    def getParents(self):
+        for c in self.classes:
+            yield c
+        for rel in self.outgoing:
+            yield rel.object
+        
 class Klass(Node):
     def __init__(self, *args, **kargs):
         Node.__init__(self, *args, **kargs)
         self.subclasses = set()
         self.superclasses = set()
         self.instances = set()
-
     def addInstance(self, i):
         self.instances.add(i)
         i.classes.add(self)
-
     def addSubclass(self, c):
         self.subclasses.add(c)
         c.superclasses.add(self)
-
+    def getParents(self):
+        for c in self.superclasses:
+            yield c
+        
 class Predicate(Node):
     def __init__(self, domain, range, temporal, *args, **kargs):
         Node.__init__(self, *args, **kargs)
@@ -70,14 +91,24 @@ class Ontology(object):
         self.labels = {} # label : node
         self.db = db
     def addNode(self, node):
-        if node.label in self.labels: raise Exception("Duplicate label: %s" % node.label)
+        if node.label.lower() in self.labels: raise Exception("Duplicate label: %s" % node.label)
         if node.oid in self.nodes: raise Exception("Duplicate oid: %s" % node.oid)
         self.nodes[node.oid] = node
-        self.labels[node.label] = node
+        self.labels[node.label.lower()] = node
     def loadURIs(self):
         SQL = "SELECT objectid, uri from ont_objects o"
         for oid, uri in self.db.doQuery(SQL):
             self.nodes[oid]._uri = uri
+    def getNodeByLabel(self, label, strict=True):
+        if strict:
+            return self.labels[label.lower()]
+        else:
+            return self.labels.get(label.lower())
+    def getRoots(self):
+        for n in self.nodes.values():
+            if type(n) == Klass:
+                if not list(n.getParents()):
+                    yield n
         
 
 def fromDB(db):
