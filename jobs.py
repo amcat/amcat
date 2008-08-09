@@ -9,7 +9,7 @@ def updateSetCoder(jobid, setnr, coder):
 
 
 def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, params=None, 
-                batchid=None, inetversion=None, priority=0, db=None):
+                batchid=None, inetversion=None, priority=0, db=None, projectid=None):
 
     if not db:
         db = dbtoolkit.anokoDB()
@@ -29,7 +29,7 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
 
 
     toolkit.warn("Creating codingjob.. ", newline=False)
-    vals = {'name': name, 'unitschemaid' : arrowschema, 'articleschemaid' : artschema}
+    vals = {'name': name, 'unitschemaid' : arrowschema, 'articleschemaid' : artschema, 'projectid':projectid}
     if params: vals['params'] = params
     if inetversion: vals['inetversion'] = inetversion
     if priority: vals['priority'] = priority
@@ -55,6 +55,9 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
         ncur += 1
         ntot += 1
     if ncur: toolkit.warn("%i articles" % ncur)
+    
+    db.conn.commit()
+    
     
     return (setnr, ntot, jobid)
 
