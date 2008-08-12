@@ -58,7 +58,7 @@ class anokoDB(object):
 
         #import time
         #print "%10.5f : %s" % (time.time(), sql)
-        
+        c = None
         if select is None:
             select=sql.lower().strip().startswith("select")
         _debug(5,sql)
@@ -98,6 +98,8 @@ class anokoDB(object):
         except Exception, details:
             _debug.fail(4)
             _debug(1,"Error while executing: "+sql)
+            if c:
+                c.close()
             raise details
             
     def doCall(this, proc, params):
