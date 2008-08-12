@@ -236,7 +236,7 @@ def isCallable(obj):
 
 def isDate(obj):
     # kan beter!
-    return type(obj) == mx.DateTime.DateTime
+    return isinstance(obj, mx.DateTime.DateTimeType)
 
 def istrue(x):
     return not not x
@@ -668,6 +668,8 @@ def quotesql(strOrSeq):
     """
     if strOrSeq is None:
         return 'null'
+    elif isDate(strOrSeq):
+        return "'%s'" % writeDate(strOrSeq)
     elif isString(strOrSeq):
         #strOrSeq = re.sub(r"\\", r"\\\\", strOrSeq)
         strOrSeq = re.sub("'", "''", strOrSeq)
