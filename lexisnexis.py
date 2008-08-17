@@ -59,7 +59,7 @@ def parseSection(section):
 
 multilang = {'section':['section','rubrique'], 'headline':['\xdcberschrift','titre'],'length':['longeur']}
 
-def parseArticle(articleString, db, batchid):
+def parseArticle(articleString, db, batchid, commit):
     """
     Creates a new Article by parsing a Lexis Nexis plain text format article string
     """
@@ -112,9 +112,23 @@ def parseArticle(articleString, db, batchid):
 
     #print "hl:",headline, "\nbody:", len(body), "\n", `body[:100]`, "\n>>>>>>>>>>"
 
+    meta = `meta`
+    try:
+        if type(headline) == str:
+            headline = unicode(headline, 'latin-1')
+        if type(meta) == str:
+            meta = unicode(meta, 'latin-1')
+        if type(byline) == str:
+            byline = unicode(byline, 'latin-1')
+        if type(body) == str:
+            body = unicode(body, 'latin-1')
+    except Exception, e:
+        raise Exception('unicode problem %s %s %s: %s' % (headline, meta, byline, e))
+    
     #print headline, section
-
-    return article.Article(db, None, batchid, medium, date1, headline, byline, length, pagenr, section, meta, body)
+    article.createArticle(db, headline, date1, medium, batchid, body, texttype=2,
+                  length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta)
+    #article.Article(db, None, batchid, medium, date1, headline, byline, length, pagenr, section, meta, body)
 
 def parseLexisNexis(text):
     """
@@ -224,13 +238,12 @@ def readfile(txt, db, batchid, commit):
     for text in texts:
         if not text.strip(): continue
         try:
-            art = parseArticle(text, db, batchid)
+            parseArticle(text, db, batchid, commit)
         except:
-            print text
+            print `text`
             raise
-        if commit:
-            art.toDatabase()
         i += 1
+    db.conn.commit()
     return i
 
 def readfiles(db, projectid, batchname, files, verbose=False, commit=True):

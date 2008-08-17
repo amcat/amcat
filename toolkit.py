@@ -293,12 +293,16 @@ def sum(seq):
     
 ############## HASHMAPS      ##############
 
-def dictFromStr(str):
+def dictFromStr(str, unicode=False):
     try:
-        exec("dict="+str)
-        return dict
+        dict = eval(str)
     except:
         return None
+    if unicode and dict:
+        for k,v in dict.items():
+            if type(dict[k]) == str:
+                dict[k] = dict[k].decode('utf-8')
+    return dict
         
 
 def sortByValue(dict, reverse=0):
@@ -669,7 +673,7 @@ def quotesql(strOrSeq):
     if strOrSeq is None:
         return 'null'
     elif isDate(strOrSeq):
-        return "'%s'" % writeDate(strOrSeq)
+        return "'%s'" % writeDateTime(strOrSeq)
     elif isString(strOrSeq):
         #strOrSeq = re.sub(r"\\", r"\\\\", strOrSeq)
         strOrSeq = re.sub("'", "''", strOrSeq)
@@ -962,6 +966,13 @@ def choose(seq, scorer, returnscore=False):
 
 def test():
     return "test! dev2"
+
+def intlist(seq):
+    for el in seq:
+        if type(el) in (str, unicode):el = el.strip()
+        if not el: continue
+        yield int(el)
+
 
 if __name__ == "__main__":
     import sys

@@ -9,6 +9,12 @@ import sources
 
 _debug = toolkit.Debug('dbtoolkit',2)
 
+_encoding = {
+    1 : 'UTF-7',
+    2 : 'ascii',
+    3 : 'latin-1',
+    }
+
 def Articles(**kargs):
     db = anokoDB()
     return db.articles(**kargs)
@@ -20,7 +26,7 @@ class anokoDB(object):
     and storage of data
     """
 
-    def __init__(this, configuration=None, auto_commit=1):
+    def __init__(self, configuration=None, auto_commit=1):
         """
         Initialise the connection to the anoko (SQL Server) database using
         either the given configuration object or config.default
@@ -30,27 +36,27 @@ class anokoDB(object):
             configuration=config.default()
         
         _debug(3,"Connecting to database '%(database)s' on '%(username)s@%(host)s' using driver %(drivername)s... " % configuration.__dict__, 0)
-        this.conn = configuration.connect()# datetime="mx", auto_commit=auto_commit)
+        self.conn = configuration.connect()# datetime="mx", auto_commit=auto_commit)
         _debug(3,"OK!", 2)
 
-        this._articlecache = {}
+        self._articlecache = {}
 
 
-    def _getsources(this):
+    def _getsources(self):
         """
         Returns a cached sources object. If it does not exist,
         creates and caches it before returning.
         """
-        if not this._sources:
-            this._sources = sources.Sources(this)
-        return this._sources
+        if not self._sources:
+            self._sources = sources.Sources(self)
+        return self._sources
     _sources = None
     sources = property(_getsources)
 
-    def cursor(this):
-        return this.conn.cursor()
+    def cursor(self):
+        return self.conn.cursor()
 
-    def doQuery(this, sql, cursor = None, colnames = False, select=None):
+    def doQuery(self, sql, cursor = None, colnames = False, select=None):
         """
         Execute the query sql on the database and return the result.
         If cursor is given, use that cursor and return the cursor instead
@@ -73,7 +79,7 @@ class anokoDB(object):
                 return cursor
             else:
                 #if colnames:
-                    c = this.cursor()
+                    c = self.cursor()
                     if type(sql) == unicode:
                         c.execute(sql.encode('latin-1', 'replace'))
                     else:
@@ -91,7 +97,7 @@ class anokoDB(object):
                         _debug.ok(4)
                         return res
                 #else:
-                #    res = this.conn.execute(sql)
+                #    res = self.conn.execute(sql)
                 #    _debug.ok(4)
                 #    if res:
                 #        return res[0]
@@ -102,29 +108,29 @@ class anokoDB(object):
                 c.close()
             raise details
             
-    def doCall(this, proc, params):
+    def doCall(self, proc, params):
         """
         calls the procedure with the given params (tuple). Returns
         (paramvalues, result), where paramvalues is the list of
         params with output params updates, while result is the
         result of c.fetchall() after the call
         """
-        c = this.cursor()
+        c = self.cursor()
         values = c.callproc(proc, params)
         res = c.fetchall()
         c.close()
         return values, res
 
 
-    def doInsert(this, sql, retrieveIdent=1):
+    def doInsert(self, sql, retrieveIdent=1):
         """
         Executes the INSERT sql and returns the inserted IDENTITY value
         """
         _debug(4, "Inserting new value")
-        this.doQuery(sql)
+        self.doQuery(sql)
         _debug(4, "Retrieving SCOPE_IDENTITY")
         if not retrieveIdent: return
-        res = this.doQuery("select SCOPE_IDENTITY()")
+        res = self.doQuery("select SCOPE_IDENTITY()")
         _debug(4, "Extracting SCOPE_IDENTITY from %s" % res)
         try:
             id = int(res[0][0])
@@ -134,19 +140,23 @@ class anokoDB(object):
             id=None
         return id
 
-    def article(this, artid, type=2):
+    def article(self, artid):
         """
         Builds an Article object from the database
         """
-        if (artid, type) not in this._articlecache:
-            this._articlecache[artid, type] = article.fromDB(this, artid, type)
-        return this._articlecache[artid, type]
+        if artid not in self._articlecache:
+            self._articlecache[artid] = article.fromDB(self, artid)
+        return self._articlecache[artid]
+    
+    def articles(self, aids):
+        for a in article.articlesFromDB(self, aids):
+            yield a
 
-    def update(this, table, col, newval, where):
-        this.doQuery("UPDATE %s set %s=%s WHERE (%s)" % (
+    def update(self, table, col, newval, where):
+        self.doQuery("UPDATE %s set %s=%s WHERE (%s)" % (
             table, col, toolkit.quotesql(newval), where))
     
-    def insert(this, table, dict, idcolumn="For backwards compatibility", retrieveIdent=1):  
+    def insert(self, table, dict, idcolumn="For backwards compatibility", retrieveIdent=1):  
         """
         Inserts a new row in <table> using the key/value pairs from dict
         Returns the id value of that table.
@@ -155,25 +165,25 @@ class anokoDB(object):
         values = dict.values()
         fieldsString = ", ".join(fields)
         valuesString = ", ".join(map(toolkit.quotesql, values)) 
-        id = this.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
+        id = self.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
                            retrieveIdent=retrieveIdent)
         return id
 
-    def newBatch(this, projectid, batchname, query, verbose=0):
-        batchid = this.insert('batches', {'projectid':projectid, 'name':batchname, 'query':query})
+    def newBatch(self, projectid, batchname, query, verbose=0):
+        batchid = self.insert('batches', {'projectid':projectid, 'name':batchname, 'query':query})
         _debug(4-3*verbose,"Created new batch with id %d" % batchid)
         return batchid
 
 
-    def newProject(this, name, description, owner=None, verbose=0):
+    def newProject(self, name, description, owner=None, verbose=0):
         name, description = map(toolkit.quotesql, (name, description))
         owner = toolkit.num(owner, lenient=1)
         if toolkit.isString(owner):
-            this.doQuery('exec newProject %s, %s, @ownerstr=%s' % (name, description,toolkit.quotesql(owner)))
+            self.doQuery('exec newProject %s, %s, @ownerstr=%s' % (name, description,toolkit.quotesql(owner)))
         else:
-            this.doQuery('exec newProject %s, %s, @ownerid=%s' % (name, description,owner))
+            self.doQuery('exec newProject %s, %s, @ownerid=%s' % (name, description,owner))
             
-        res = this.doQuery('select @@identity')
+        res = self.doQuery('select @@identity')
         try:
             id = int(res[0][0])
         except Exception, details:
@@ -184,40 +194,40 @@ class anokoDB(object):
         _debug(4-3*verbose,"Created new project with id %s" % id)
         return id
 
-    def updateProject(this, projectid, newName=None, newDescription=None, newOwner=None):
+    def updateProject(self, projectid, newName=None, newDescription=None, newOwner=None):
         params=['@id=%s'%projectid]
         if newName: params.append('@newname=%s' % toolkit.quotesql(newName))
         if newDescription: params.append('@newdescription=%s' % toolkit.quotesql(newDescription))
         if newOwner: params.append('@newowner=%s' % newOwner)
         if len(params)==1: raise Exception('Nonsensical call of updateProject without changes')
         
-        this.doQuery('exec updateProject %s' % (', '.join(params)))
+        self.doQuery('exec updateProject %s' % (', '.join(params)))
 
 
-    def updateBatch(this, batchid, newName=None, newProject=None):
+    def updateBatch(self, batchid, newName=None, newProject=None):
         params=['@id=%s'%batchid]
         if newName: params.append('@newname=%s' % toolkit.quotesql(newName))
         if newProject: params.append('@newproject=%s' % newProject)
         if len(params)==1: raise Exception('Nonsensical call of updatBatch without changes')
 
-        this.doQuery('exec updateBatch %s' % (', '.join(params)))
+        self.doQuery('exec updateBatch %s' % (', '.join(params)))
 
-    def deleteBatch(this, batchid):
+    def deleteBatch(self, batchid):
         params=['@id=%s'%batchid]
-        this.doQuery('exec deleteBatch %s' % (', '.join(params)))
+        self.doQuery('exec deleteBatch %s' % (', '.join(params)))
         
-    def deleteProject(this, projectid):
+    def deleteProject(self, projectid):
         params=['@id=%s'%projectid]
-        this.doQuery('exec deleteProject %s' % (', '.join(params)))
+        self.doQuery('exec deleteProject %s' % (', '.join(params)))
 
-    def createCodingJob(this, jobname, coderid, aids):
-        jobid = this.insert("codingjobs", {'name':jobname, 'coder_userid':coderid})
+    def createCodingJob(self, jobname, coderid, aids):
+        jobid = self.insert("codingjobs", {'name':jobname, 'coder_userid':coderid})
         for aid in aids:
-            this.insert("codingjobs_articles", {'codingjobid':jobid, 'articleid':aid}, retrieveIdent=0)
+            self.insert("codingjobs_articles", {'codingjobid':jobid, 'articleid':aid}, retrieveIdent=0)
         return jobid
         
 
-    def exists(this, articleid, type=2, allowempty=True, explain="DEPRECATED"):
+    def exists(self, articleid, type=2, allowempty=True, explain="DEPRECATED"):
         """
         Checks whether a text exists in the database.
         Returns None if the text does not exist at all. If allowempty, returns 'non-null' otherwise.
@@ -225,7 +235,7 @@ class anokoDB(object):
         Since both None and the empty string evaluate to false, 'if (exists(..))' makes sense usually
         """
         # work with len(cast) to allow len of text and find out exist in one query
-        res = this.doQuery("select len(cast(text as varchar(20))) from texts where articleid=%s and type=%s" % (articleid, type))
+        res = self.doQuery("select len(cast(text as varchar(20))) from texts where articleid=%s and type=%s" % (articleid, type))
         if res:
             if allowempty: return "non-null"
             else:
@@ -236,27 +246,23 @@ class anokoDB(object):
             return None
 
 
-    def articles(this, **kargs):
-        import sys
-        return article.Articles(sys.stdin, this, **kargs)
-
-    def isMyProject(this, projectid):
+    def isMyProject(self, projectid):
         query = "select dbo.anoko_user()-ownerid from projects where projectid=%s"  % projectid
-        res = this.doQuery(query)
+        res = self.doQuery(query)
         if not res: return None
         if res[0][0]==0: return True
         return False
         
-    def returnAnokoUsers(this):
+    def returnAnokoUsers(self):
         query = """SELECT userid
         from sysmembers s
         inner join sysusers i on s.memberuid = i.uid
         inner join users u on i.name = u.username
         where groupuid=16400"""
-        data = this.doQuery(query)
+        data = self.doQuery(query)
         return [item[0] for item in data]
         
-    def getProjectInfo(this, projectid=None):
+    def getProjectInfo(self, projectid=None):
         if projectid=="-s":
             query = "select projectid, ownerid, name from projects"
         elif projectid=="-d":
@@ -268,9 +274,9 @@ class anokoDB(object):
         else:
             query = "select * from vw_batches"
 
-        return this.doQuery(query, colnames=1)
+        return self.doQuery(query, colnames=1)
 
-    def projectList(this, owner=0, projectid=None, colnames=1, detailed=1):
+    def projectList(self, owner=0, projectid=None, colnames=1, detailed=1):
         where = []
         if owner: where.append("ownerid = dbo.anoko_user()")
         if projectid: where.append("projectid = %s" % projectid)
@@ -281,24 +287,24 @@ class anokoDB(object):
             
         if where:
             query += " WHERE " + " AND ".join(where)
-        return this.doQuery(query, colnames=colnames)
+        return self.doQuery(query, colnames=colnames)
         
-    def getProjectName(this, projectid):
+    def getProjectName(self, projectid):
         query = "select name from projects where projectid=%s" % projectid
-        data = this.doQuery(query, colnames=0)
+        data = self.doQuery(query, colnames=0)
         if data:
             return data[0][0]
         return None
         
-    def getSelections(this, owner=0):
+    def getSelections(self, owner=0):
         if owner != 0:
             where =  'where ownerid = %s' % owner
         else:
             where = ''
         query = "SELECT storedresultid, name, ownerid FROM storedresults %s" % where
-        return this.doQuery(query, colnames=0)
+        return self.doQuery(query, colnames=0)
         
-    def getCodingJobs(this, own=0, detailed=0, colnames=1, jobid=None):
+    def getCodingJobs(self, own=0, detailed=0, colnames=1, jobid=None):
         where = []
         if own:
             where.append("owner_userid = dbo.anoko_user()")
@@ -321,10 +327,10 @@ class anokoDB(object):
                         FROM codingjobs
                         %s
                         ORDER BY codingjobid DESC""" % where
-        return this.doQuery(query, colnames=colnames)
+        return self.doQuery(query, colnames=colnames)
         
         
-    def getCodingJobSets(this, codingjobid, setnr=None):
+    def getCodingJobSets(self, codingjobid, setnr=None):
         wherestr = ' AND setnr = %s' % setnr if setnr else ''
         query = """SELECT setnr, username as coder, count(articleid) articles, 
                         sum(ISNULL(CAST(irrelevant as INTEGER), 0)) irrelevant,
@@ -334,68 +340,68 @@ class anokoDB(object):
         %s
         GROUP BY setnr, username
         ORDER BY setnr""" % (codingjobid, wherestr)
-        return this.doQuery(query, colnames=1)
+        return self.doQuery(query, colnames=1)
         
-    def isMyCodingJob(this, codingjobid):
+    def isMyCodingJob(self, codingjobid):
         query = "SELECT dbo.anoko_user()-owner_userid FROM codingjobs WHERE codingjobid=%s" % codingjobid
-        data = this.doQuery(query, colnames=0)
+        data = self.doQuery(query, colnames=0)
         if not data:
             return None
         if data[0][0] == 0:
             return True
         return False
         
-    def getCoder(this, codingjobid, setnr):
+    def getCoder(self, codingjobid, setnr):
         query = 'SELECT coder_userid FROM codingjobs_sets WHERE codingjobid=%s AND setnr=%s' % \
                                                                                     (codingjobid, setnr)
-        data = this.doQuery(query, colnames=0)
+        data = self.doQuery(query, colnames=0)
         if data:
             return data[0][0]
         else:
             return None
             
-    def changeCoder(this, codingjobid, setnr, coderid):
+    def changeCoder(self, codingjobid, setnr, coderid):
         params=['@jobid=%s'%codingjobid]
         params.append('@setnr=%s'%setnr)
         params.append('@newcoderid=%s'%coderid)
-        this.doQuery('exec changecodingjobsetcoder %s' % (', '.join(params)))
+        self.doQuery('exec changecodingjobsetcoder %s' % (', '.join(params)))
     
-    def changeJobOwner(this, codingjobid, ownerid):
+    def changeJobOwner(self, codingjobid, ownerid):
         params=['@jobid=%s'%codingjobid]
         params.append('@newownerid=%s'%ownerid)
-        this.doQuery('exec changecodingjobowner %s' % (', '.join(params)))
+        self.doQuery('exec changecodingjobowner %s' % (', '.join(params)))
         
-    def deleteJob(this, codingjobid):
+    def deleteJob(self, codingjobid):
         params=['@jobid=%s'%codingjobid]
-        this.doQuery('exec deletecodingjob %s' % (', '.join(params)))
+        self.doQuery('exec deletecodingjob %s' % (', '.join(params)))
         
-    def deleteCodingSet(this, codingjobid, setnr):
+    def deleteCodingSet(self, codingjobid, setnr):
         params=['@jobid=%s'%codingjobid]
         params.append('@setnr=%s'%setnr)
-        this.doQuery('exec deletecodingjob_set %s' % (', '.join(params)))
+        self.doQuery('exec deletecodingjob_set %s' % (', '.join(params)))
         
-    def getSelectionInfo(this, selectionid):
+    def getSelectionInfo(self, selectionid):
         query = "SELECT query, config FROM storedresults where storedresultid = %s" % selectionid
-        return this.doQuery(query, colnames=0)
+        return self.doQuery(query, colnames=0)
         
-    def batchList(this, projectid, colnames=1):
+    def batchList(self, projectid, colnames=1):
         query = """SELECT batchid, batch as batchname, project, narticles as articles 
                     FROM vw_batches_counts
                     WHERE projectid=%s and batchid is not null
                     ORDER BY batchid""" % projectid
-        return this.doQuery(query, colnames=colnames)
+        return self.doQuery(query, colnames=colnames)
         
-    def getBatchInfo(this, batchid, details=None):
+    def getBatchInfo(self, batchid, details=None):
         if details:
             extra = ', project' 
         else:
             extra = ''
         query = "select batchid, batch as batchname, projectid, owner%s from vw_batches_counts where batchid=%s" % (extra,batchid)
-        return this.doQuery(query, colnames=1)
+        return self.doQuery(query, colnames=1)
 
-    """def returnUserSelect(this, currentOwner=0, multiple=0, name="ownerid"):
+    """def returnUserSelect(self, currentOwner=0, multiple=0, name="ownerid"):
         html = '<select name=%s %s>' % (name, multiple and 'multiple size=10' or '')
-        data = this.doQuery('select userid, fullname from users')
+        data = self.doQuery('select userid, fullname from users')
         for userid, fullname in data:
             if userid == currentOwner:
                 html += '<option value="%s" selected>%s</option>' % (userid,fullname)
@@ -404,31 +410,31 @@ class anokoDB(object):
         html += '</select>'
         return html"""
         
-    def getIndices(this, colnames=0, done=1, started=1):
+    def getIndices(self, colnames=0, done=1, started=1):
         query = """SELECT directory, indexid, name, owner_userid
                     FROM indices
                     WHERE done = %(done)s AND started = %(started)s
                     ORDER BY indexid DESC""" % locals()
-        data = this.doQuery(query, colnames=colnames)
+        data = self.doQuery(query, colnames=colnames)
         return [ (row[0], '%s - %s' % (row[1], row[2]), row[3]) for row in data]
         
-    def getUserList(this):
-        return this.doQuery('SELECT userid, fullname FROM users ORDER BY fullname', colnames=0)
+    def getUserList(self):
+        return self.doQuery('SELECT userid, fullname FROM users ORDER BY fullname', colnames=0)
 
-    def getUserInitials(this, userid):
-        return this.getValue('SELECT initials FROM users WHERE userid=%i' % userid)
+    def getUserInitials(self, userid):
+        return self.getValue('SELECT initials FROM users WHERE userid=%i' % userid)
     
-    def getValue(this, sql):
-        data = this.doQuery(sql)
+    def getValue(self, sql):
+        data = self.doQuery(sql)
         if data:
             return data[0][0]
         return None
 
-    def getColumn(this, sql, colindex=0):
-        for col in this.doQuery(sql):
+    def getColumn(self, sql, colindex=0):
+        for col in self.doQuery(sql):
             yield col[colindex]
 
-    def uploadimage(this, articleid, length, breadth, abovefold, type=None, data=None, filename=None, caption=None):
+    def uploadimage(self, articleid, length, breadth, abovefold, type=None, data=None, filename=None, caption=None):
         """
         Uploads the specified image and links it with the specified article
         Data should be a string containing the binary data.
@@ -447,7 +453,7 @@ class anokoDB(object):
         
         # create sentence for image
         try:
-            p = this.doQuery("SELECT min(parnr) FROM sentences WHERE articleid=%i" % articleid)[0][0]
+            p = self.doQuery("SELECT min(parnr) FROM sentences WHERE articleid=%i" % articleid)[0][0]
         except:
             p = None
         
@@ -458,7 +464,7 @@ class anokoDB(object):
         else: newp = p - 1
 
         ins = {"articleid" : articleid, "parnr" : newp, "sentnr": 1, "sentence" : "[PICTURE]"}
-        sid = this.insert("sentences", ins)
+        sid = self.insert("sentences", ins)
 
         if not sid:
             raise Exception("Could not create sentence")
@@ -467,22 +473,89 @@ class anokoDB(object):
             for i, line in enumerate(sbd.split(caption)):
                 if not line.strip(): continue
                 ins = {"articleid" : articleid, "parnr" : newp, "sentnr": 2 + i, "sentence" : line.strip()}
-                this.insert("sentences", ins, retrieveIdent=0)
+                self.insert("sentences", ins, retrieveIdent=0)
 
         fold = abovefold and 1 or 0
         ins =  {"sentenceid" : sid, "length" :length, "breadth" : breadth,
                 "abovefold" : fold, "imgdata" : data, "imgType" : type}
-        this.insert("articles_images", ins, retrieveIdent=0)
+        self.insert("articles_images", ins, retrieveIdent=0)
         return sid
 
+    def getText(self, aid, type):
+        sql = "select text, encoding from texts where articleid=%i and type=%i" % (aid, type)
+        txt, enc = self.doQuery(sql)[0]
+        return decode(txt, enc)
+
+    def updateText(self, aid_or_tid, type_or_None, text):
+        if type_or_None is None:
+            where = "textid = %i" % aid_or_tid
+        else:
+            where = "articleid=%i and type=%i" % (aid_or_tid, type_or_None
+                                                  )
+        text, encoding = encodeText(text)
+        text = toolkit.quotesql(text)
+        sql = "update texts set text=%s where %s" % (text, where)
+        self.doQuery(sql)
+        sql = "update texts set encoding=%i where %s" % (encoding, where)
+        self.doQuery(sql)
+        return encoding
+
+def decode(text, encodingid):
+    if not text: return text # avoid problem with None that does not have the decode function
+    if not encodingid: encodingid = 3 # assume latin-1
+    return text.decode(_encoding[encodingid])
+
+def checklatin1(txt):
+    for p, c in enumerate(txt):
+        i = ord(c)
+        if (i < 0x20 or (i > 0x7e and i < 0xa0) or i > 0xff) and i not in (0x0a,0x09):
+            #toolkit.warn("Character %i (%r) at position %i is not latin-1" % (i, c, p))
+            return False
+    return True
+
+
+def encodeText(text):
+    if type(text) <> unicode:
+        text = text.decode('latin-1')
+    try:
+        txt = text.encode('ascii')
+        return txt, 2
+    except UnicodeEncodeError, e: pass
+    try:
+        txt = text.encode('latin-1')
+        if checklatin1(txt):
+            return txt, 3
+    except UnicodeEncodeError, e: pass
+    txt = text.encode('utf-7')
+    return txt, 1
+
+def encode(s, enc):
+    if s is None: return s
+    if type(s) <> unicode: s = s.decode('latin-1')
+    return s.encode(_encoding[enc])
+
+def encodeTexts(texts):
+    encoding = 2
+    for text in texts:
+        if not text: continue
+        t, enc = encodeText(text)
+        if enc==1:
+            encoding = 1
+            break
+        if enc==3: encoding = 3
+    return [encode(t, encoding) for t in texts], encoding
+
+
 if __name__ == '__main__':
-    print "Opening connection with database"
-    db = anokoDB()
+    #print "Opening connection with database"
+    #db = anokoDB()
     #print "Trying to upload image from sys.argv[1] for article sys.argv[2] with optional caption sys.argv[3]"
     #import sys
     #caption = None
     #if len(sys.argv) > 3:
     #    caption = sys.argv[3]
     #db.uploadimage(int(sys.argv[2]), 0, 0, 0, filename=sys.argv[1], caption=caption)
-    print "Reading project name"
-    print db.doQuery("select top 1 * from projects")
+    #print "Reading project name"
+    #print db.doQuery("select top 1 * from projects")
+    print encodeTexts([u'abc\xe8', u'def'])
+    

@@ -1,4 +1,4 @@
-import toolkit, lexisnexis, dbtoolkit, re, sbd, ctokenizer
+import toolkit, lexisnexis, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources
 _debug = toolkit.Debug('article',1)
 _xmltemplatefile = '/home/anoko/resources/files/article_template.xml'
 
@@ -8,72 +8,93 @@ class Article:
     """
     xmltemplate = None
 
-    def __init__(this, db, id, batchid, medium, date, headline, byline,length, pagenr, section, fullmeta,text,type=2):
-        this.db         = db
-        this.id         = id
-        this.batchid    = batchid
-        this.medium     = medium
-        this.date       = date
-        this.headline   = headline
-        this.byline     = byline
-        this.length     = length
-        this.section    = section
-        this.pagenr     = pagenr
-        this.fullmeta   = fullmeta
-        this.text       = text
-        this.type       = type
+    def __init__(self, db, id, batchid, medium, date, headline, length, pagenr, encoding = None):
+        self.db         = db
+        self.id         = id
+        self.batchid    = batchid
+        self.medium     = medium
+        self.date       = date
+        self.headline   = headline
+        self.length     = length
+        self.pagenr     = pagenr
+
+        self.encoding = encoding
+        if encoding: self.headline = dbtoolkit.decode(self.headline, encoding)
+        elif headline: self.headline = self.headline.decode('latin-1')
         
-        if toolkit.isString(this.fullmeta):
-            this.fullmeta = toolkit.dictFromStr(this.fullmeta)
+        self._meta      = None # stores byline, section, fullmeta
 
-    def toText(this):
-        return this.fulltext()
+    def __getattr__(self, name):
+        if name in ("byline", "section", "fullmeta"):
+            if not self._meta: self._getMeta()
+            return self._meta[name]
+        if name == "text":
+            return self.getText()
+        raise AttributeError(name)
 
-    def toHTML(this, limitpars = None, includeMeta = False):
-        res = "<h1>%s</h1>" % this.headline
-        if this.byline:
-            res += "\n<h2>%s</h2>" % this.byline
+    def _getMeta(self):
+        b,s,m = self.db.doQuery("select byline, section, metastring from articles where articleid=%i" % self.id)[0]
+        b = dbtoolkit.decode(b, self.encoding)
+        m = dbtoolkit.decode(m, self.encoding)
+        self.setMeta(b,s,m)
+
+    def setMeta(self, byline, section, fullmeta):
+        if toolkit.isString(fullmeta):
+            fullmeta = toolkit.dictFromStr(fullmeta, unicode=True)
+        self._meta = {"byline": byline, "section": section, "fullmeta" : fullmeta}
+
+    def getText(self, type=2):
+        if not self.id: return ''
+        return self.db.getText(self.id, type)
+    
+    def toText(self):
+        return self.fulltext()
+
+    def toHTML(self, limitpars = None, includeMeta = False):
+        res = "<h1>%s</h1>" % self.headline
+        if self.byline:
+            res += "\n<h2>%s</h2>" % self.byline
         if includeMeta:
-            source = this.db.sources.lookupID(this.medium)
+            source = self.db.sources.lookupID(self.medium)
             res += '''<table class="meta">
             <tr><td>Source:</td><td>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>%s</td></tr>
             <tr><td>Date:</td><td></td><td>%s</td></tr>
             <tr><td>Page:</td><td></td><td>%s</td></tr>
             <tr><td>Section:</td><td></td><td>%s</td></tr>
-            </table>''' % (source, toolkit.writeDate(this.date), this.pagenr, this.section)
-        if this.text: 
+            </table>''' % (source, toolkit.writeDate(self.date), self.pagenr, self.section)
+        if self.text: 
             if limitpars:
-                res += "<p>%s</p>" % "</p><p>".join(this.text.split("\n\n")[:limitpars])
+                res += "<p>%s</p>" % "</p><p>".join(self.text.split("\n\n")[:limitpars])
             else:
-                res += "<p>%s</p>" % "</p><p>".join(this.text.split("\n\n"))
+                res += "<p>%s</p>" % "</p><p>".join(self.text.split("\n\n"))
         return res
 
-    def toXML2(this):
-        if not this.xmltemplate:
-            this.xmltemplate = open(_xmltemplatefile).read()
+    def toXML2(self):
+        if not self.xmltemplate:
+            self.xmltemplate = open(_xmltemplatefile).read()
 
-        text = toolkit.clean(this.headline, level=1)
-        for par in sbd.splitPars(this.text, type=this.type, returnSents=False):
+        text = toolkit.clean(self.headline, level=1)
+        for par in sbd.splitPars(self.text, type=self.type, returnSents=False):
             text += "\n\n%s" % toolkit.clean(par, level=1)
-        src = this.db.sources.lookupID(this.medium)
-        dct = this.__dict__
-        dct.update({'source':src.prettyname,'lang':src.language.strip(),'date':toolkit.writeDate(this.date),'text':text})
-        return this.xmltemplate % dct
+        src = self.db.sources.lookupID(self.medium)
+        dct = self.__dict__
+        dct.update({'source':src.prettyname,'lang':src.language.strip(),'date':toolkit.writeDate(self.date),'text':text})
+        return self.xmltemplate % dct
 
-    def toXML(this):
+    def toXML(self):
         # gebruik sentences als die er zijn??
-        if not this.xmltemplate:
-            this.xmltemplate = open(_xmltemplatefile).read()
-        src = this.db.sources.lookupID(this.medium)
+        if not self.xmltemplate:
+            self.xmltemplate = open(_xmltemplatefile).read()
+        src = self.db.sources.lookupID(self.medium)
         text = '''
         <p n="0" function="headline">
            <s id="0">%(headline)s</s>
-        </p>''' % this.headline
+        </p>''' % self.headline
         np=2; ns = 1;
-        if this.byline:
-            text += '\n  <p n="1" function="byline">\n   <s id="%s">%s</s>\n  </p>' % (ns, this.byline)
+        if self.byline:
+            text += '\n  <p n="1" function="byline">\n   <s id="%s">%s</s>\n  </p>' % (ns, self.byline)
             ns+=1
-        content=this.text.replace("q11 \n","\n\n")
+        content=self.text.replace("q11 \n","\n\n")
         if len(content.strip().split("\n")[0])>100: content = content.replace("\n","\n\n")
         content = re.sub(r"(.{,50}\.)\n",r"\1\n\n",content)
         
@@ -88,11 +109,11 @@ class Article:
             text += '\n  </p>'
             np += 1
             
-        dct = this.__dict__
-        dct.update({'source':src.prettyname,'lang':src.language.strip(),'date':toolkit.writeDate(this.date),'text':text})
+        dct = self.__dict__
+        dct.update({'source':src.prettyname,'lang':src.language.strip(),'date':toolkit.writeDate(self.date),'text':text})
         
         
-        xml = this.xmltemplate % dct
+        xml = self.xmltemplate % dct
         return '<?xml-stylesheet type="text/xsl" href="http://www.cs.vu.nl/~wva/anoko/article.xsl"?>\n%s'% xml
         
 
@@ -101,73 +122,46 @@ class Article:
         Returns the pagenr of the article. If None, invokes parseSection
         on the section and returns the pagenr (if found)
         """
-        if this.pagenr:
-            return this.pagenr
-        elif this.section:
-            p = lexisnexis.parseSection(this.section)
+        if self.pagenr:
+            return self.pagenr
+        elif self.section:
+            p = lexisnexis.parseSection(self.section)
             if p:
-                this.pagenr = p[1]
-                return this.pagenr
+                self.pagenr = p[1]
+                return self.pagenr
             else:
-                _debug('Could not parse section "%s" (aid=%s)'  % (this.section, this.id))
+                _debug('Could not parse section "%s" (aid=%s)'  % (self.section, self.id))
                 return None
         else:
-            _debug(2,'No pagenr or section known for article %s' % this.id)
+            _debug(2,'No pagenr or section known for article %s' % self.id)
             return None
 
-    def source(this):
+    def source(self):
         """
         Looks up the medium (source id) and returns the name
         """
-        if this.medium:
-            return this.db.sources.lookupID(this.medium).name
+        if self.medium:
+            return self.db.sources.lookupID(self.medium).name
 
-    def toDatabase(this):
-        """
-        Writes the article object to the database
-        """
+    def __str__(self):
+        return ('<article id="%(id)s" date="%(date)s" source="%(medium)s" length="%(length)s">' +
+                '\n  <headline>%(headline)s</headline>\n</article>') % self.__dict__
 
-        if this.id:
-            raise Exception("Article is from database (id %s), refusing to duplicate!" % this.id)
-        
-        q = {'date' : toolkit.writeDateTime(this.date, 1),
-             'length' : this.length,
-             'metastring' : `this.fullmeta`,
-             'headline' : this.headline,
-             'byline' : this.byline,
-             'section' : this.section and this.section[:100],
-             'pagenr': this.pagenr,
-             'batchid' : this.batchid,
-             'mediumid' : this.medium}
-        aid = this.db.insert('articles',q)
-         
-        q = {'articleid' : aid,
-             'type' : 2,
-             'text' : this.text}
-        this.db.insert('texts',q)
-
-        this.id = aid
-        return aid
-
-    def __str__(this):
-        return ('<article id="%(id)s" date="%(date)s" source="%(medium)s" section="%(section)s" length="%(length)s">' +
-                '\n  <headline>%(headline)s</headline>\n</article>') % this.__dict__
-
-    def fulltext(this):
-        if this.type == 4:
-            result = this.text # (parsed headline is included in text)
-            if this.text:
+    def fulltext(self):
+        if self.type == 4:
+            result = self.text # (parsed headline is included in text)
+            if self.text:
                 result = result.replace("\\r/N(soort,ev,neut)/\\r","")
             else:
-                #toolkit.warn("No text for article %s?" % this.id)
+                #toolkit.warn("No text for article %s?" % self.id)
                 return None
         else:
-            result = (this.headline or '') +"\n\n"+ (this.byline or "")+"\n\n"+(this.text or "")
+            result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")
         return result.replace("\\r","").replace("\r","\n")
 
-    def sentences(this, split = False, onlyWords = False):
-        text = this.text
-        if this.type == 4:
+    def sentences(self, split = False, onlyWords = False):
+        text = self.text
+        if self.type == 4:
             text = re.sub("\s+", " ", text)
             sents = re.split(r"(?<!./N\(eigen,ev,neut\)/.) [\.?!]/Punc\([^)]*\)/[\.?!] ",text)
         else:
@@ -181,25 +175,59 @@ class Article:
                 else:
                     yield(sentence)
 
-    def words(this, onlyWords = False, lemma=0): #lemma: 1=lemmaP, 2=lemma, 3=word
-        text = this.text
+    def words(self, onlyWords = False, lemma=0): #lemma: 1=lemmaP, 2=lemma, 3=word
+        text = self.text
         if not text: return []
-        if this.type <> 4:
+        if self.type <> 4:
             text = ctokenizer.tokenize(text)
-        #toolkit.warn("Yielding words for %i : %s" % (this.id, text and len(text) or `text`))
+        #toolkit.warn("Yielding words for %i : %s" % (self.id, text and len(text) or `text`))
         text = re.sub("\s+", " ", text)
         return words(text, onlyWords, lemma)
 
-    def uploadimage(this, *args, **kargs):
-        db.uploadImage(this.id, *args, **kargs)
+    def uploadimage(self, *args, **kargs):
+        db.uploadImage(self.id, *args, **kargs)
 
-    def getImages(this):
+    def getImages(self):
         """
-        returns the images belonging to this article (if any)
+        returns the images belonging to self article (if any)
         """
-        SQL = "SELECT ai.sentenceid, length, breadth, abovefold, imgType FROM articles_images ai inner join sentences s on ai.sentenceid=s.sentenceid WHERE articleid=%i" % this.id
-        return [Image(this, getCapt=True, *data) for data in this.db.doQuery(SQL)]
+        SQL = "SELECT ai.sentenceid, length, breadth, abovefold, imgType FROM articles_images ai inner join sentences s on ai.sentenceid=s.sentenceid WHERE articleid=%i" % self.id
+        return [Image(self, getCapt=True, *data) for data in self.db.doQuery(SQL)]
         
+
+def createArticle(db, headline, date, source, batchid, text, texttype=2,
+                  length=None, byline=None, section=None, pagenr=None, fullmeta=None):
+    """
+    Writes the article object to the database
+    """
+
+    if toolkit.isDate(date): date = toolkit.writeDateTime(date, 1)
+    if type(source) == sources.Source: source = source.id
+    if type(fullmeta) == dict: fullmeta = `fullmeta`
+
+    [headline, byline, fullmeta], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta])
+    
+    q = {'date' : date,
+         'length' : length,
+         'metastring' : fullmeta,
+         'headline' : headline,
+         'byline' : byline,
+         'section' : section,
+         'pagenr': pagenr,
+         'batchid' : batchid,
+         'mediumid' : source,
+         'encoding' : encoding}
+    aid = db.insert('articles',q)
+
+    text, encoding = dbtoolkit.encodeText(text)
+    
+    q = {'articleid' : aid,
+         'type' : texttype,
+         'encoding' : encoding,
+         'text' : text}
+    db.insert('texts',q)
+
+    return fromDB(db, aid)
 
 
 
@@ -230,107 +258,48 @@ def fromXML2(str):
 
     return articles
 
-def fromDB2(id, db=None, type=2):
-    return fromDB(db, id, type)
+def fromDB(db, id):
+    return list(articlesFromDB(db,(id,)))[0]
 
-
-def fromDB(db, id, type=2):
+def articlesFromDB(db, ids):
     """
     Article Factory method to create an article from the database
     """
-
+    if not ids:
+        return 
     if not db:
         db = dbtoolkit.anokoDB()
 
     data = None; text = None
-    try:
-        d = db.doQuery("SELECT articleid, batchid, mediumid, date, headline, byline, length, pagenr, section, metastring "+
-                     " FROM articles WHERE articleid=%s" % id)
-        try:
-            text = db.doQuery("SELECT text FROM texts WHERE articleid=%s AND type=%s" % (id, type))
-            if text: text = text[0][0]
-            else: text = None
-        except Exception, e:
-            # Problem getting text, might be too large for python_sybase, try java
-            #print "java!"
-            text = javatext(id, type)
-        data = list(d[0]) + [text]
-        return Article(db,*data, **{'type':type}) 
-    except Exception, e:
-        _debug(1,"Error on reading article %s"% id)
-        toolkit.warn(e)
-        return None
+    sql = """SELECT articleid, batchid, mediumid, date, headline, length, pagenr, encoding
+             FROM articles WHERE articleid in (%s)""" % ",".join(str(id) for id in ids)
+    for d in db.doQuery(sql):
+        yield Article(db,*d)
 
-
-
-def javatext(id, type):
-    import os
-    CMD = 'java -cp .:/home/anoko/libjava/msbase.jar:/home/anoko/libjava/mssqlserver.jar:/home/anoko/libjava/msutil.jar:/home/anoko/libjava AnokoDB "select text from texts where articleid=%s and type=%s"' % (id, type)
-    #print CMD
-    i,o = os.popen2(CMD)
-    i.close()
-    return o.read()
-                    
-
-class Articles:
+CACHE_SIZE = 100
+def Articles(aidlist, db, tick=False):
     """
-    Iterator class containing a list of article id's
-    Will return the (text of) an article on each iteration
-    The aidlist must be an iterable sequence of objects that
-      can be converted to integers using int(object), such as
-      a file containing article ids
-    If the aidlist is an exhaustive iterator (such as a file)
-      and it needs to be iterator over more than once, use
-      cache_aidlist
+    Generator that yields articles using caching to minimize db roundtrips
     """
-    
-    def __init__(this, aidlist, db, cache_aidlist=0, textonly=False, type=2, tick=False):
-        this.aidlist = aidlist
-        this.db = db
-        this.textonly = textonly
-        this.type=type
-        this.tick = tick
-        
-        if tick or cache_aidlist:
-            this.aidlist = list(this.aidlist)
-        if tick:   
-            this.ticker = toolkit.Ticker()
-            this.ticker.warn("Iterating over articles", estimate=len(this.aidlist))
-            #this.ticker.interval=10
-        
-    def __iter__(this):
-        this.reset() # creates this.iterator
-        return this
-    
-    def next(this):
-        if this.tick:
-            this.ticker.tick()
-        token = this.iterator.next()
-        if toolkit.isString(token): token=token.strip()
-        if not token: return this.next()
-        article = this.db.article(int(token), type=this.type)
-        if not article:
-            _debug(2, "Could not find article %s" % token)
-            return this.next()
-        elif this.textonly:
-            return article.fulltext()
-        else:
-            return article
-
-    def reset(this):
-        this.iterator = iter(this.aidlist)
+    aidlist = list(aidlist)
+    while aidlist:
+        where = "articleid in (%s)" % ",".join(str(aid) for aid in aidlist[:CACHE_SIZE])
+        cache = db.getArticles(where)
+        for a in cache:
+            yield a
+        aidlist = aidlist[CACHE_SIZE:]
 
 class Image:
-    def __init__(this, article, sentid, length, breadth, abovefold, typ, caption=None, getCapt=False):
-        this.article = article
-        this.sentid = int(sentid)
-        this.length = int(length)
-        this.breadth = int(breadth)
-        this.abovefold = bool(abovefold)
-        this.typ = typ
-        this.caption = caption
+    def __init__(self, article, sentid, length, breadth, abovefold, typ, caption=None, getCapt=False):
+        self.article = article
+        self.sentid = int(sentid)
+        self.length = int(length)
+        self.breadth = int(breadth)
+        self.abovefold = bool(abovefold)
+        self.typ = typ
+        self.caption = caption
         if getCapt:
-            this.caption = getCaption(this.article.db, sentid)
+            self.caption = getCaption(self.article.db, sentid)
 
 def getCaption(db, sentid):
     aid, parnr = db.doQuery("SELECT articleid, parnr FROM sentences WHERE sentenceid=%i"%sentid)[0]
@@ -394,6 +363,8 @@ def splitArticles(aids, db, tv=False):
 
 if __name__ == '__main__':
     import sys, dbtoolkit
-    sys.argv += [35407547, 2]
-    a = fromDB(dbtoolkit.anokoDB(), sys.argv[1], sys.argv[2])
-    print a.text
+    sys.argv += [36542349]
+    a = fromDB(dbtoolkit.anokoDB(), int(sys.argv[1]))
+    print `a.headline`
+    print a.getText()[:200]
+    
