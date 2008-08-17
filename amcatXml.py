@@ -1,0 +1,118 @@
+import toolkit,dbtoolkit,article, traceback, sys
+import xml.sax
+
+class ArticleWriter:
+    def __init__(self, db, batchid):
+        self.db = db
+        self.batchid = batchid
+        self.articleCount = 0
+
+    def writeArticle(self, batchid, text, meta):
+        if not text.strip():
+            raise Exception('Missing text')
+        if not meta.get('headline', '').strip():
+            raise Exception('Missing headline')
+        
+        #toolkit.ticker.tick(interval=1000)
+        #toolkit.warn('Attempting to write article %s' % meta.get('headline', '?'))
+        if 'date' in meta:
+            date = toolkit.readDate(meta['date'])
+        else:
+            raise Exception('Invalid date %s' % meta['date'])
+
+        mediumid = meta.get('mediumid',None)
+        headline = meta.get('headline')
+        byline = meta.get('byline', None)
+        section = meta.get('section',None)
+        pagenr = meta.get('pagenr',None)
+        length = len(text.split(' '))
+        meta = `meta`
+        try:
+            if type(headline) == str:
+                headline = unicode(headline, 'latin-1')
+            if type(meta) == str:
+                meta = unicode(meta, 'latin-1')
+            if type(byline) == str:
+                byline = unicode(byline, 'latin-1')
+            if type(text) == str:
+                text = unicode(text, 'latin-1')
+        except Exception, e:
+            raise Exception('unicode problem %s %s %s: %s' % (headline, meta, byline, e))
+        
+        article.createArticle(self.db, headline, date, mediumid, batchid, text, texttype=2,
+                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta)
+        self.articleCount += 1
+
+
+    def doArticle(self,text, meta):
+        self.writeArticle(self.batchid, text, meta)
+
+
+
+class XMLArticleHandler(xml.sax.ContentHandler):
+
+    def __init__(self, articleHandler):
+        self.meta = {}
+        self.persistentMeta = {}
+        self.handler = articleHandler
+        self.activeMeta = None
+        self.text = ""
+        self.errors = u''
+
+    def newArticle(self):
+        self.meta = self.persistentMeta.copy()
+        self.text = ""
+        self.activeMeta = None
+
+    def writeArticle(self):
+        self.handler.doArticle(self.text, self.meta)
+
+    def startElement(self, name, attrs):
+        if name=='article':
+            self.newArticle()
+        elif name=='articles':
+            self.persistentMeta.update(attrs)
+        else:
+            self.meta[name] = ""
+            self.activeMeta = name
+
+    def endElement(self, name):
+        #toolkit.warn("Ending %s" % name)
+        if name=='article':
+            try:
+                self.writeArticle()
+            except Exception, e:
+                trace = ''.join(traceback.format_exception(*sys.exc_info()))
+                toolkit.warn('Exception near article %s\n%s' % (self.meta.get('headline', '?'), trace))
+                self.errors += '\n%s\n' % trace
+        else:
+            self.activeMeta = None
+
+    def characters(self, text):
+        if self.activeMeta:
+            self.meta[self.activeMeta] += text
+        else:
+            self.text += text
+
+
+def readfiles(db, projectid, batchname, files):
+    batchid = db.newBatch(projectid, batchname, 'N/A (imported from XML)')
+    toolkit.warn("Created batch with id %d" % batchid)        
+
+    articleCount = 0
+    errors = u''
+    for file in files:
+        try:
+            articleHandler = ArticleWriter(db, batchid)
+            xmlHandler = XMLArticleHandler(articleHandler)
+            toolkit.warn("Reading file %s..."% file)
+            xml.sax.parse(file, xmlHandler)
+            articleCount += articleHandler.articleCount
+            errors += '\n%s\n' % xmlHandler.errors
+        except Exception, e:
+            print e
+            errors += '\n%s\n' % e
+            continue
+    if articleCount > 0:
+        db.conn.commit()
+    return articleCount, batchid, errors
