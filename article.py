@@ -205,7 +205,9 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if type(source) == sources.Source: source = source.id
     if type(fullmeta) == dict: fullmeta = `fullmeta`
 
+    #print `headline`, `byline`, `fullmeta`
     [headline, byline, fullmeta], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta])
+    #print `headline`, `byline`, `fullmeta`
     
     q = {'date' : date,
          'length' : length,
@@ -217,6 +219,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
          'batchid' : batchid,
          'mediumid' : source,
          'encoding' : encoding}
+    #print `q`
     aid = db.insert('articles',q)
 
     text, encoding = dbtoolkit.encodeText(text)

@@ -1,6 +1,6 @@
 import toolkit
 
-STOPLIST = "/home/anoko/resources/files/stoplist_dutch_2.txt"
+STOPLIST = "/home/amcat/resources/files/stoplist_dutch_2.txt"
 
 F_THRES = 5
 C_THRES = 6.63 # assuming 1df

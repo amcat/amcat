@@ -8,10 +8,8 @@ class ArticleWriter:
         self.articleCount = 0
 
     def writeArticle(self, batchid, text, meta):
-        if not text.strip():
-            raise Exception('Missing text')
-        if not meta.get('headline', '').strip():
-            raise Exception('Missing headline')
+        if not text.strip() and not meta.get('headline', '').strip():
+            raise Exception('Missing text and headline')
         
         #toolkit.ticker.tick(interval=1000)
         #toolkit.warn('Attempting to write article %s' % meta.get('headline', '?'))
@@ -21,6 +19,8 @@ class ArticleWriter:
             raise Exception('Invalid date %s' % meta['date'])
 
         mediumid = meta.get('mediumid',None)
+        if not mediumid:
+            raise Exception('Missing mediumid')
         headline = meta.get('headline')
         byline = meta.get('byline', None)
         section = meta.get('section',None)

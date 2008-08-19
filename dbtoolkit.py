@@ -1,5 +1,3 @@
-#!/bin/env python2.2
-
 import sbd
 import toolkit
 import base64
@@ -14,6 +12,9 @@ _encoding = {
     2 : 'ascii',
     3 : 'latin-1',
     }
+
+_MAXTEXTCHARS = 8000
+
 
 def Articles(**kargs):
     db = anokoDB()
@@ -164,7 +165,8 @@ class anokoDB(object):
         fields = dict.keys()
         values = dict.values()
         fieldsString = ", ".join(fields)
-        valuesString = ", ".join(map(toolkit.quotesql, values)) 
+        quoted = [toolkit.quotesql(str(value)) for value in values]
+        valuesString = ", ".join(quoted)
         id = self.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
                            retrieveIdent=retrieveIdent)
         return id
@@ -481,9 +483,24 @@ class anokoDB(object):
         self.insert("articles_images", ins, retrieveIdent=0)
         return sid
 
+    def getLongText(db, aid, type):
+        # workaround to prevent cutting off at texts longer than 65k chars which can crash decoding
+        bytes = ""; i=1
+        while True:
+            add = db.doQuery("select substring(text, %i, %i) from texts where articleid = %i and type = %i" % (i, _MAXTEXTCHARS, aid, type))
+            if not add: break
+            add = add[0][0]
+            bytes += add
+            if len(add) < _MAXTEXTCHARS: break
+            i += _MAXTEXTCHARS
+        return bytes
+
+
     def getText(self, aid, type):
         sql = "select text, encoding from texts where articleid=%i and type=%i" % (aid, type)
         txt, enc = self.doQuery(sql)[0]
+        if len(txt) > 64000:
+            txt = self.getLongText(aid, type)
         return decode(txt, enc)
 
     def updateText(self, aid_or_tid, type_or_None, text):
