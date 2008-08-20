@@ -4,6 +4,7 @@ import base64
 import config
 import article
 import sources
+import sys
 
 _debug = toolkit.Debug('dbtoolkit',2)
 
@@ -149,8 +150,10 @@ class anokoDB(object):
             self._articlecache[artid] = article.fromDB(self, artid)
         return self._articlecache[artid]
     
-    def articles(self, aids):
-        for a in article.articlesFromDB(self, aids):
+    def articles(self, aids=None):
+        if not aids:
+            aids = toolkit.intlist(sys.stdin)
+        for a in article.Articles(aids, self):
             yield a
 
     def update(self, table, col, newval, where):
@@ -165,7 +168,11 @@ class anokoDB(object):
         fields = dict.keys()
         values = dict.values()
         fieldsString = ", ".join(fields)
-        quoted = [toolkit.quotesql(str(value)) for value in values]
+        def quote(x):
+            if type(x) == bool: x = int(x)
+            if x: x = str(x)
+            return toolkit.quotesql(x)
+        quoted = [quote(value) for value in values]
         valuesString = ", ".join(quoted)
         id = self.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
                            retrieveIdent=retrieveIdent)

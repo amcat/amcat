@@ -90,6 +90,7 @@ def parse(aid, db):
         err = None
         def errhandler(e): err = e
         try:
+            sent = toolkit.stripAccents(sent)
             sent = alpino.tokenize(sent)
             if not " " in sent: continue
             p = alpino.parseTriples(sent, errhandler=errhandler)

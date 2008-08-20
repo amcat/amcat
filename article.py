@@ -279,15 +279,14 @@ def articlesFromDB(db, ids):
     for d in db.doQuery(sql):
         yield Article(db,*d)
 
-CACHE_SIZE = 100
+CACHE_SIZE = 20
 def Articles(aidlist, db, tick=False):
     """
     Generator that yields articles using caching to minimize db roundtrips
     """
     aidlist = list(aidlist)
     while aidlist:
-        where = "articleid in (%s)" % ",".join(str(aid) for aid in aidlist[:CACHE_SIZE])
-        cache = db.getArticles(where)
+        cache = articlesFromDB(db, aidlist[:CACHE_SIZE])
         for a in cache:
             yield a
         aidlist = aidlist[CACHE_SIZE:]
