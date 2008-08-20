@@ -58,10 +58,11 @@ def newnr(node):
     return nr
 
 class Node(object):
-    def __init__(self, ont, oid, label):
+    def __init__(self, ont, oid, label, ontologid=None):
         self.ont = ont
         self.oid = oid
         self.label = label
+        self.ontologyid = ontologid
         self._uri = None
     def getNr(self):
         if not '_nr' in dir(self):
@@ -221,14 +222,14 @@ class Ontology(object):
 
 def fromDB(db):
     o = Ontology(db)
-    SQL = """SELECT o.objectid, label FROM ont_objects o
+    SQL = """SELECT o.objectid, label, ontologyid FROM ont_objects o
           INNER JOIN ont_instances i on o.objectid = i.objectid"""
-    for oid, label in db.doQuery(SQL):
-        o.addNode(Instance(o, oid, label))
-    SQL = """SELECT o.objectid, label FROM ont_objects o
+    for oid, label, ontid in db.doQuery(SQL):
+        o.addNode(Instance(o, oid, label, ontid))
+    SQL = """SELECT o.objectid, label, ontologyid FROM ont_objects o
           INNER JOIN ont_classes c on o.objectid = c.objectid"""
-    for oid, label in db.doQuery(SQL):
-        o.addNode(Class(o, oid, label))
+    for oid, label,ontid in db.doQuery(SQL):
+        o.addNode(Class(o, oid, label, ontid))
     SQL = "SELECT superclassid, subclassid FROM ont_classes_subclasses"
     for sup, sub in db.doQuery(SQL):
         sup = o.nodes[sup]
@@ -239,13 +240,13 @@ def fromDB(db):
         c = o.nodes[c]
         i = o.nodes[i]
         c.addInstance(i)
-    SQL = """SELECT o.objectid, label, domainid, rangeid, temporal 
+    SQL = """SELECT o.objectid, label, domainid, rangeid, temporal, ontologyid
           FROM ont_objects o INNER JOIN ont_predicates p 
           ON o.objectid = p.objectid"""
-    for oid, label, d, r, temp in db.doQuery(SQL):
+    for oid, label, d, r, temp, ontid in db.doQuery(SQL):
         d = o.nodes[d]
         r = o.nodes[r] if r else None
-        o.addNode(Predicate(d, r, temp, o, oid, label))
+        o.addNode(Predicate(d, r, temp, o, oid, label, ontid))
     SQL = "SELECT role_subjectid, role_objectid, predicateid FROM ont_relations"
     for rs, ro, p in db.doQuery(SQL):
         rs = o.nodes[rs]
