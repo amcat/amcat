@@ -188,6 +188,7 @@ class Ontology(object):
         if self.uris: return
         SQL = "SELECT objectid, uri from ont_objects o"
         for oid, uri in self.db.doQuery(SQL):
+            if not uri: continue
             if uri.lower() in self.uris: raise Exception("Duplicate uri: %s" % uri)
             self.nodes[oid]._uri = uri
             self.uris[uri.lower()] = self.nodes[oid]
