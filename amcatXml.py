@@ -115,4 +115,6 @@ def readfiles(db, projectid, batchname, files):
             continue
     if articleCount > 0:
         db.conn.commit()
+    else:
+        db.conn.rollback() # werkt dit?
     return articleCount, batchid, errors

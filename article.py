@@ -355,8 +355,9 @@ def splitArticles(aids, db, tv=False):
                     sent = sent[:450] + '[...]'
                 else:
                     longsent = None
+                [sent, longsent], encoding = dbtoolkit.encodeTexts([sent, longsent])
                 try:
-                    db.insert("sentences", {"articleid":article.id, "parnr" : parnr, "sentnr" : sentnr, "sentence" : sent, 'longsentence': longsent})
+                    db.insert("sentences", {"articleid":article.id, "parnr" : parnr, "sentnr" : sentnr, "sentence" : sent, 'longsentence': longsent, 'encoding': encoding})
                 except Exception, e:
                     error += '%s: %s\n' % (article.id , e)
     return error
