@@ -36,6 +36,7 @@ class Article:
         b,s,m = self.db.doQuery("select byline, section, metastring from articles where articleid=%i" % self.id)[0]
         b = dbtoolkit.decode(b, self.encoding)
         m = dbtoolkit.decode(m, self.encoding)
+        s = dbtoolkit.decode(s, self.encoding)
         self.setMeta(b,s,m)
 
     def setMeta(self, byline, section, fullmeta):
@@ -206,7 +207,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if type(fullmeta) == dict: fullmeta = `fullmeta`
 
     #print `headline`, `byline`, `fullmeta`
-    [headline, byline, fullmeta], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta])
+    [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])
     #print `headline`, `byline`, `fullmeta`
     
     q = {'date' : date,
