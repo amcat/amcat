@@ -179,8 +179,9 @@ class Article:
     def words(self, onlyWords = False, lemma=0): #lemma: 1=lemmaP, 2=lemma, 3=word
         text = self.text
         if not text: return []
-        if self.type <> 4:
-            text = ctokenizer.tokenize(text)
+        text = toolkit.stripAccents(text)
+        text = text.encode('ascii', 'replace')
+        text = ctokenizer.tokenize(text)
         #toolkit.warn("Yielding words for %i : %s" % (self.id, text and len(text) or `text`))
         text = re.sub("\s+", " ", text)
         return words(text, onlyWords, lemma)
@@ -366,9 +367,9 @@ def splitArticles(aids, db, tv=False):
     
 
 if __name__ == '__main__':
-    import sys, dbtoolkit
-    sys.argv += [36542349]
-    a = fromDB(dbtoolkit.anokoDB(), int(sys.argv[1]))
-    print `a.headline`
-    print a.getText()[:200]
+    import sys, dbtoolkit, toolkit
+    aids = toolkit.intlist(sys.stdin)
+    db = dbtoolkit.anokoDB()
+    splitArticles(aids, db)
+    db.conn.commit()
     
