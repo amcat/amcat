@@ -52,7 +52,7 @@ class Article:
         return self.fulltext()
 
     def toHTML(self, limitpars = None, includeMeta = False):
-        res = "<h1>%s</h1>" % self.headline
+        res = u"<h1>%s</h1>" % self.headline
         if self.byline:
             res += "\n<h2>%s</h2>" % self.byline
         if includeMeta:
@@ -60,9 +60,10 @@ class Article:
             res += '''<table class="meta">
             <tr><td>Source:</td><td>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>%s</td></tr>
             <tr><td>Date:</td><td></td><td>%s</td></tr>
+            <tr><td>Articleid:</td><td></td><td>%s</td></tr>
             <tr><td>Page:</td><td></td><td>%s</td></tr>
             <tr><td>Section:</td><td></td><td>%s</td></tr>
-            </table>''' % (source, toolkit.writeDate(self.date), self.pagenr, self.section)
+            </table>''' % (source, toolkit.writeDate(self.date), self.id, self.pagenr, self.section)
         if self.text: 
             if limitpars:
                 res += "<p>%s</p>" % "</p><p>".join(self.text.split("\n\n")[:limitpars])
