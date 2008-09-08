@@ -188,7 +188,7 @@ class Article:
         return words(text, onlyWords, lemma)
 
     def uploadimage(self, *args, **kargs):
-        db.uploadImage(self.id, *args, **kargs)
+        self.db.uploadimage(self.id, *args, **kargs)
 
     def getImages(self):
         """

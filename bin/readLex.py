@@ -11,23 +11,32 @@ if __name__ == '__main__':
     
     batchname = None
     commit = 1
+    query=None
 
     for i, arg in enumerate(sys.argv[:5]):
         if arg.startswith("name="):
             batchname = arg[5:]
             del sys.argv[i]
+            break
+    for i, arg in enumerate(sys.argv[:5]):
+        if arg.startswith("query="):
+            query = arg[5:]
+            del sys.argv[i]
+            break
     for i, arg in enumerate(sys.argv[:5]):
         if arg == "--commit":
             commit = 1
             del sys.argv[i]
+            break
     for i, arg in enumerate(sys.argv[:5]):
         if arg == "--test":
             commit = 0
             del sys.argv[i]
+            break
 
     if len(sys.argv) < 2:
         print """
-        Usage: readLex [--test] PROJECTID [name=BATCHNAME] [FILENAMES]
+        Usage: readLex [--test] PROJECTID [name=BATCHNAME] [query==QUERY] [FILENAMES]
         Creates new batch with the given name and inserts the listed files.
         Be sure to use quotes if using multiword BATCHNAME.
 
@@ -61,7 +70,7 @@ if __name__ == '__main__':
 
 
     files = map(open, filenames)
-    n, batches = lexisnexis.readfiles(db, projectid, batchname, files, True, commit)
+    n, batches = lexisnexis.readfiles(db, projectid, batchname, files, True, commit, fixedquery=query)
 
     print "Committing ..."
 

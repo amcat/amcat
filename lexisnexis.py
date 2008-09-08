@@ -246,14 +246,17 @@ def readfile(txt, db, batchid, commit):
     db.conn.commit()
     return i
 
-def readfiles(db, projectid, batchname, files, verbose=False, commit=True):
+def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixedquery=None):
     batches = []
     query, batchid = None, -1
     n = 0
     for file in files:
         if verbose: print "Reading file.. %s" % file
         txt = toolkit.stripAccents(file.read()).strip().replace('\r\n', '\n')
-        q = extractQuery(txt)
+        if fixedquery:
+            q = fixedquery
+        else:
+            q = extractQuery(txt)
         if not q: raise Exception('Could not extract query!')
         if q <> query:
             query = q
