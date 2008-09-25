@@ -208,6 +208,8 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if type(source) == sources.Source: source = source.id
     if type(fullmeta) == dict: fullmeta = `fullmeta`
 
+    if len(section) > 80: section = section[:80] + "..."
+
     #print `headline`, `byline`, `fullmeta`
     [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])
     #print `headline`, `byline`, `fullmeta`
@@ -282,7 +284,7 @@ def articlesFromDB(db, ids):
     for d in db.doQuery(sql):
         yield Article(db,*d)
 
-CACHE_SIZE = 20
+CACHE_SIZE = 200
 def Articles(aidlist, db, tick=False):
     """
     Generator that yields articles using caching to minimize db roundtrips

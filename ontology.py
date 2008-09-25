@@ -269,6 +269,25 @@ def fromDB(db):
         o.addNode(Role(rs, p, ro, df, dt,o, oid, label))
     return o
 
+def createNode(db, label, ontologyid, nr=None):
+    return db.insert("ont_objects", dict(label=label, ontologyid=ontologyid, nr=nr))
+
+def createClass(db, label, ontologyid, nr=None, superclass=None):
+    oid = createNode(db, label, ontologyid, nr)
+    db.insert("ont_classes", dict(objectid=oid), retrieveIdent=False)
+    if superclass:
+        if isinstance(superclass, Node): superclass = superclass.oid
+        db.insert("ont_classes_subclasses", dict(superclassid=superclass, subclassid=oid), retrieveIdent=False)
+    return oid
+
+def createInstance(db, label, ontologyid, nr=None, clas=None):
+    oid = createNode(db, label, ontologyid, nr)
+    db.insert("ont_instances", dict(objectid=oid), retrieveIdent=False)
+    if clas:
+        if isinstance(clas, Node): clas = clas.oid
+        db.insert("ont_classes_instances", dict(classid=clas, instanceid=oid), retrieveIdent=False)
+    return oid
+
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.anokoDB()

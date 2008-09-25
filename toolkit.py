@@ -1,6 +1,6 @@
 #!/bin/env python2.2
 
-import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading
+import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv
 
 _USE_CURSES = 1
 
@@ -532,21 +532,30 @@ def openfile(file, mode = None, skipheader=0):
 def filesInDir(path):
     return map(lambda x: path + os.sep + x ,os.listdir(path))
 
-def readCSVTable(file, sep="\t", strip=False):
-    # interpret header
-    n = 0
-    titles = file.readline()[:-1].split(sep)
-    for n in range(len(titles)):
-        if not titles[n]:
-            titles[n] = "var%s"%n
-            
-    # read data        
-    for line in file:
-        vals = line.strip().split(sep)
-        if strip:
-            vals = [x and x.strip() for x in vals]
-        vals += [None] * (len(titles) - len(vals))
-        yield dict(zip(titles, vals))
+def readCSVTable(file, strip=False, **kargs):
+
+    if "sep" in kargs:
+        kargs["delimiter"] = sep
+        del(kargs["sep"])
+
+    reader = csv.reader(file, **kargs)
+
+    titles = None
+    for line in reader:
+        if not titles:
+            # interpret header
+            titles = line
+            for i, title in enumerate(titles):
+                if not title:
+                    titles[i] = "var%i" % i
+        else:
+            # read data        
+            vals = line
+            if strip:
+                
+                vals = [x and x.strip() for x in vals]
+            vals += [None] * (len(titles) - len(vals))
+            yield dict(zip(titles, vals))
 
 
 
