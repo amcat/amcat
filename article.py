@@ -208,7 +208,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if type(source) == sources.Source: source = source.id
     if type(fullmeta) == dict: fullmeta = `fullmeta`
 
-    if len(section) > 80: section = section[:80] + "..."
+    if section and len(section) > 80: section = section[:80] + "..."
 
     #print `headline`, `byline`, `fullmeta`
     [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])

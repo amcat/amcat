@@ -33,9 +33,26 @@ class Network:
                 if maxn > 5: n = math.sqrt(float(n) / maxn * 20)
                 e.setlinewidth(n)
                 
-        result[g] = d
+            result[g] = d
         return result
-                
+
+#interface LabelProvider:
+#   def getColumns(): returns sequence of column name suffixes (string)
+#   def getLabel(object, column): returns string
+
+
+class SimpleLabelProvider:
+    def getColumns(self): return [""]
+    def getLabel(self, object, column): return object.label
+
+def HTMLHeader(lprovider, predicate=False):
+    cs = []
+    for x in "source", "subject", "predicate", "type", "quality", "object":
+        if (not predicate) and x=="predicate": continue
+        for y in lprovider.getColumns():
+            cs.append("<th>%s%s</th>" % (x,y))
+    return "".join(cs)
+    
 class Arrow:
     def __init__(self, subj, obj, qual, type, article):
         self.subj = subj
@@ -43,6 +60,13 @@ class Arrow:
         self.qual = qual
         self.type = type
         self.article = article
+
+def ArrowFromDict(dict, ont, art):
+    subj = ont.nodes[dict["subject"]]
+    obj = ont.nodes[dict["object"]]
+    qual = dict["quality"]
+    type = dict["arrowtype"]
+    return Arrow(subj, obj, qual, type, art)
 
 def getArrows(arrowids_or_sql, aggregate=None):
     header = [] # list of column headings
