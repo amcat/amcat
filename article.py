@@ -209,6 +209,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if type(fullmeta) == dict: fullmeta = `fullmeta`
 
     if section and len(section) > 80: section = section[:80] + "..."
+    if headline and len(headline) > 700: headline = headline[:700] + "..."
 
     #print `headline`, `byline`, `fullmeta`
     [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])
@@ -267,7 +268,10 @@ def fromXML2(str):
     return articles
 
 def fromDB(db, id):
-    return list(articlesFromDB(db,(id,)))[0]
+    try:
+        return list(articlesFromDB(db,(id,)))[0]
+    except IndexError:
+        raise Exception('articleid not found')
 
 def articlesFromDB(db, ids):
     """

@@ -126,8 +126,9 @@ def parseArticle(articleString, db, batchid, commit):
         raise Exception('unicode problem %s %s %s: %s' % (headline, meta, byline, e))
     
     #print headline, section
-    article.createArticle(db, headline, date1, medium, batchid, body, texttype=2,
-                  length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta)
+    if commit:
+        article.createArticle(db, headline, date1, medium, batchid, body, texttype=2,
+                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta)
     #article.Article(db, None, batchid, medium, date1, headline, byline, length, pagenr, section, meta, body)
 
 def parseLexisNexis(text):
@@ -233,23 +234,27 @@ def splitad(text):
 
 def readfile(txt, db, batchid, commit):
     texts = split(txt)
+    errors = u''
     i = 0
     if istitlepage(texts[0]): del texts[0]
     for text in texts:
         if not text.strip(): continue
         try:
             parseArticle(text, db, batchid, commit)
-        except:
+            i += 1
+        except Exception, e:
             print `text`
-            raise
-        i += 1
-    db.conn.commit()
-    return i
+            #raise
+            errors += '\n%s\n' % e
+    if commit:
+        db.conn.commit()
+    return i, errors
 
 def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixedquery=None):
     batches = []
     query, batchid = None, -1
-    n = 0
+    articleCount = 0
+    errors = u''
     for file in files:
         if verbose: print "Reading file.. %s" % file
         txt = toolkit.stripAccents(file.read()).strip().replace('\r\n', '\n')
@@ -266,8 +271,10 @@ def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixed
             if commit:
                 batchid = db.newBatch(projectid, batchname, query, verbose=1)
             batches.append(batchid)
-        n += readfile(txt, db, batchid, commit)
+        articleCountFile, errorsFile = readfile(txt, db, batchid, commit)
+        articleCount += articleCountFile
+        errors += errorsFile
 
-    return n, batches
+    return articleCount, batches, errors
 
     
