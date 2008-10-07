@@ -105,8 +105,7 @@ def parse(aid, db):
 inputqueue = Queue()
 outputqueue = Queue()
 
-for line in sys.stdin:
-    aid = int(line)
+for aid in toolkit.intlist(sys.stdin):
     inputqueue.put(aid)
 
 
