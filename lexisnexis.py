@@ -20,8 +20,10 @@ umlauts = '\xfc\xe4\xdc\xc4\xf6\xd6'
 RE_EXTRACTMETA  = re.compile(r'(.*)^\s*BODY:\s*$(.*)^\s*([A-Z\-]+:.*)', re.M | re.S |re.U)
 RE_EXTRACTMETA2  = re.compile(r'(.*)^\s*(?:BODY|VOLLEDIGE TEKST):\s*$(.*)()', re.M | re.S |re.U)
 RE_EXTRACTMETA3  = re.compile(r'(.*)^\s*GRAPHIC: (.*)()', re.M | re.S |re.U)
-RE_EXTRACTMETA3  = re.compile(r'(.*)^\s*LENGTH: \d+ +(?:woorden|words)$(.*)()', re.M | re.S |re.U)
+RE_EXTRACTMETA3  = re.compile(r'(.*)^\s*LENGTH: \d+ +(?:woorden|words|palabras)$(.*)()', re.M | re.S |re.U)
 RE_EXTRACTMETA4 = re.compile(r'(.*^\s*[A-Z\-]+:.*?)$(.*)^\s*([A-Z\-]+:.*)', re.M | re.S |re.U)
+
+RE_ENDBODY = re.compile(r'(.*)^\s*(LOAD-DATE: .*)', re.M | re.S | re.U)
 
 RE_SPLITMETA    = re.compile(r'^([A?-Z-%s]+):'%umlauts, re.M |re.U)
 RE_LENGTH       = re.compile(r'(\d+) (?:words|woorden)', re.U)
@@ -64,9 +66,13 @@ def parseArticle(articleString, db, batchid, commit):
     Creates a new Article by parsing a Lexis Nexis plain text format article string
     """
     # Parse string, extract metadata, interpret prolog
+
+    #print `articleString`
+    #print "******************"
     
     (prolog, body, meta) = parseLexisNexis(articleString)
     (date1, medium, possibleheadline) = interpretProlog(prolog, db.sources)
+
 
     #print `prolog`, '\n', `body`, '\n', `meta`
 
@@ -143,13 +149,15 @@ def parseLexisNexis(text):
     if not match: match = re.match(RE_EXTRACTMETA4, text)
     if not match: print "text: '%s'" % text; raise Exception("Could not parse article")
 
-    body = match.group(2)
-    body = body.replace("\r\n", "\n")
-    body = body.replace("\r", "\n")
-    body = body.replace(u"\xa0", "\t")
-    body = body.strip()
-    
-    fields = re.split(RE_SPLITMETA, match.group(1) + match.group(3))
+    body = match.group(2).strip()
+    meta = match.group(1) + match.group(3)
+
+    match = re.match(RE_ENDBODY, body)
+    if match:
+        body = match.group(1)
+        meta += "\n\n"+match.group(2)
+
+    fields = re.split(RE_SPLITMETA, meta)
     # fields contains [prolog, key0, val0, key1, val1,...]
 
     prolog = fields[0]
@@ -257,7 +265,12 @@ def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixed
     errors = u''
     for file in files:
         if verbose: print "Reading file.. %s" % file
-        txt = toolkit.stripAccents(file.read()).strip().replace('\r\n', '\n')
+        txt = file.read().strip()
+        txt = txt.decode('windows-1252') # ik gok dat dat hun encoding is
+        txt = txt.replace(u'\r\n', u'\n')
+        txt = txt.replace(u'\xa0', u' ') # nbsp --> normal space
+        
+        #toolkit.stripAccents(file.read()).strip().replace('\r\n', '\n')
         if fixedquery:
             q = fixedquery
         else:
