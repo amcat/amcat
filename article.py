@@ -47,6 +47,10 @@ class Article:
     def getText(self, type=2):
         if not self.id: return ''
         return self.db.getText(self.id, type)
+
+    def getSection(self):
+        if not self._meta: self._getMeta
+        return self._meta["section"]
     
     def toText(self):
         return self.fulltext()
