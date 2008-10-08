@@ -983,6 +983,7 @@ def intlist(seq):
         yield int(el)
 
 
+
 if __name__ == "__main__":
     import sys
     print choose(["123","45","999"], lambda x: int(x)*-1, True)

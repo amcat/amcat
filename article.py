@@ -49,8 +49,8 @@ class Article:
         return self.db.getText(self.id, type)
 
     def getSection(self):
-        if not self._meta: self._getMeta
-        return self._meta["section"]
+        if not self._meta: self._getMeta()
+        return self._meta.get("section")
     
     def toText(self):
         return self.fulltext()
@@ -349,7 +349,7 @@ def splitArticles(aids, db, tv=False):
     error = ''
     for article in Articles(aids, db, tick=True):
         if db.doQuery("SELECT TOP 1 articleid FROM sentences WHERE articleid = %s and parnr >= 0" % article.id):
-            toolkit.warn("Article %s already split, skipping!" % article.id)
+            #toolkit.warn("Article %s already split, skipping!" % article.id)
             continue
         text = article.text
         if not text:
@@ -363,12 +363,15 @@ def splitArticles(aids, db, tv=False):
             for sentnr, sent in izip(count(1), par):
                 #return `{"articleid":article.id, "parnr" : parnr, "sentnr" : sentnr, "sentence" : sent.strip()[:7000]}`
                 sent = sent.strip()
+                orig = sent
+                [sent], encoding = dbtoolkit.encodeTexts([sent])
                 if len(sent) > 450:
-                    longsent = sent
-                    sent = sent[:450] + '[...]'
+                    longsent = orig
+                    sent = orig[:50] + '[...]'
+                    [sent, longsent], encoding = dbtoolkit.encodeTexts([sent, longsent])
                 else:
                     longsent = None
-                [sent, longsent], encoding = dbtoolkit.encodeTexts([sent, longsent])
+
                 try:
                     db.insert("sentences", {"articleid":article.id, "parnr" : parnr, "sentnr" : sentnr, "sentence" : sent, 'longsentence': longsent, 'encoding': encoding})
                 except Exception, e:

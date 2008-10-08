@@ -55,8 +55,16 @@ def split(str):
 def parseSection(section):
     """Splits a LexisNexis section into a section and pagenr"""
     if not section: return None
-    m = re.match(r'(.*?)(?:pg\.?\s*)?(\d+)(.*)', section, re.IGNORECASE)
-    if m: return (m.group(1) + m.group(3)).strip(), int(m.group(2))
+    m = re.match(r'(.*?)(?:pg\.?\s*)(\d+)(.*)', section, re.IGNORECASE)
+    #print `section`
+    #print ">>>>>>>>>>", m and m.groups()
+    #print "<<<<<<<<<<", m and int(m.group(2))
+    if not m:
+        print "@#$%@#$%"
+        re.match(r'(.*?)(\d+)(.*)', section, re.IGNORECASE).groups()
+    if m:
+        print `section`, " --> ", m.groups(), int(m.group(2))
+        return (m.group(1) + m.group(3)).strip(), int(m.group(2))
     return None
 
 multilang = {'section':['section','rubrique'], 'headline':['\xdcberschrift','titre'],'length':['longeur']}
