@@ -364,6 +364,13 @@ _MONTHS6 = ['ener', 'febr', 'marz', 'abri', 'mayo', 'juni', 'juli', 'agos', 'sep
 def average(seq):
     return float(sum(seq)) / len(seq)
 
+def stdev(seq):
+    avg = average(seq)
+    s = 0.0
+    for e in seq:
+        s += (e - avg)**2
+    return (s / (len(seq) - 1)) ** .5 
+
 def dayofweek(date):
     return date.Format('%D')
 

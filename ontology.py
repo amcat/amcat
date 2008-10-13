@@ -288,6 +288,16 @@ def createInstance(db, label, ontologyid, nr=None, clas=None):
         db.insert("ont_classes_instances", dict(classid=clas, instanceid=oid), retrieveIdent=False)
     return oid
 
+def createRole(db, label, su, rel, obj, dfrom=None, dto=None):
+    oid = createNode(db, label, None)
+    db.insert("ont_roles", dict(objectid=oid, role_subjectid=su, role_objectid=obj,
+                                predicateid=rel, datefrom=dfrom, dateto=dto),
+              retrieveIdent=False)
+
+def createRelation(db, su, rel, obj):
+    db.insert("ont_relations", dict(role_subjectid=su, role_objectid=obj, predicateid=rel),
+              retrieveIdent=False)
+
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.anokoDB()
