@@ -35,10 +35,10 @@ class Table:
     def toText(self):
         result = ""
         if self.header:
-            result += toolkit.output(self.header, delimiter="\t| ", floatformat="%1.2f") + "\n"
+            result += toolkit.output(self.header, delimiter="\t| ", floatformat="%1.1f") + "\n"
             result += "-" + "+".join(["-------"] * len(self.header)) + "\n"
         for row in self.rows:
-            result += toolkit.output(row, delimiter="\t| ", floatformat="%1.2f") + "\n"
+            result += toolkit.output(row, delimiter="\t| ", floatformat="%1.1f") + "\n"
         return result
 
 

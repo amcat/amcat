@@ -15,14 +15,22 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
         db = dbtoolkit.anokoDB()
     if batchid:
         ids = [x[0] for x in db.doQuery("select articleid from articles where batchid=%i" % batchid)]
-        if not ids: toolkit.warn("Batch %i is empty or does not exist" % batchid)
+        if not ids:
+            toolkit.warn("Batch %i is empty or does not exist" % batchid)
+            return
         if name == "-":
             name = db.doQuery("select name from batches where batchid=%i" % batchid)[0][0]
-
+    if not ids:
+        raise Exception('No article ids defined')
+    if not coders:
+        raise Exception('Missing coders')
+            
     random.shuffle(ids)
 
-    if len(coders)>1 and not setsize:
+    if not setsize:
         setsize = len(ids) / len(coders) + 1
+    if len(ids) / setsize > 250:
+        raise Exception('This job would use too many sets. Please decrease the job size or increase the set size')
 
     toolkit.warn("Creating job %s with %i articles to coders %s%s" %
                  (name, len(ids), coders, setsize and "in sets of %i" % setsize or ""))
@@ -39,25 +47,27 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
     curcoder = 0
     setnr = 0
 
+    
 
     ntot = 0
     ncur = 0
     for id in ids:
-        if not setnr or setsize and ncur >= setsize:
+        if not setnr or ncur >= setsize:
             if ncur: toolkit.warn("%i articles" % ncur)
             setnr += 1
             toolkit.warn("Creating codingset %i for user %i.. " % (setnr, coders[curcoder]), newline = False)
-            db.insert('codingjobs_sets', {'codingjobid':jobid, 'setnr' : setnr, 'coder_userid' : coders[curcoder]}, retrieveIdent = False)
+            db.insert('codingjobs_sets', {'codingjobid':jobid, 'setnr' : setnr, 'coder_userid' : coders[curcoder]},
+                            retrieveIdent = False)
             curcoder += 1
             if curcoder >= len(coders): curcoder = 0
             ncur = 0
-        db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : id}, retrieveIdent = False)
+        db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : id}, 
+                    retrieveIdent = False)
         ncur += 1
         ntot += 1
-    if ncur: toolkit.warn("%i articles" % ncur)
+    toolkit.warn("%i articles" % ncur)
     
     db.conn.commit()
-    
     
     return (setnr, ntot, jobid)
 

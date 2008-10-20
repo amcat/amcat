@@ -200,7 +200,11 @@ class Article:
         """
         SQL = "SELECT ai.sentenceid, length, breadth, abovefold, imgType FROM articles_images ai inner join sentences s on ai.sentenceid=s.sentenceid WHERE articleid=%i" % self.id
         return [Image(self, getCapt=True, *data) for data in self.db.doQuery(SQL)]
-        
+
+    def getSentences(self):
+        data = self.db.doQuery("select sentenceid, parnr, sentnr from sentences where articleid=%i order by parnr, sentnr" % self.id)
+        for sid, parnr, sentnr in data:
+            yield Sentence(sid, parnr, sentnr, self)
 
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
                   length=None, byline=None, section=None, pagenr=None, fullmeta=None):
@@ -378,6 +382,30 @@ def splitArticles(aids, db, tv=False):
                     error += '%s: %s\n' % (article.id , e)
     return error
     
+
+class Sentence(object):
+    def __init__(self, sid, parnr, sentnr, article):
+        self.sid = sid
+        self.parnr = parnr
+        self.sentnr = sentnr
+        self.article = article
+    def getSentence(self):
+        db = self.article.db
+        text, long, enc = db.doQuery("select sentence, longsentence, encoding from sentences where sentenceid = %i" % self.sid)[0]
+        if long: text = long
+        if enc:
+            text = dbtoolkit.decode(text, enc)
+        else:
+            text = text.decode('ascii')
+        return text
+        
+
+def sentFromDB(db, sid):
+    data = db.doQuery("select sentenceid, parnr, sentnr, articleid from sentences where sentenceid=%i" % sid)
+    if not data: return None
+    sid, parnr, sentnr, aid = data[0]
+    a = fromDB(db,aid)
+    return Sentence(sid, parnr, sentnr, a)
     
 
 if __name__ == '__main__':

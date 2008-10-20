@@ -64,6 +64,11 @@ class Node(object):
         self.label = label
         self.ontologyid = ontologid
         self._uri = None
+    def getLabel(self, language=None):
+        if language:
+            label = self.ont.db.getValue("select label from ont_labels where objectid=%i and language=%i" % (self.oid, language))
+            if label:return label
+        return self.label
     def getNr(self):
         if not '_nr' in dir(self):
             self.ont.loadNrs()
@@ -93,6 +98,20 @@ class Node(object):
         if self._nr: raise Exception("Already has number")
         self._nr = nr
         self.ont.nrs[nr] = self
+    def categorize(self, catid, date):
+        date = "'%s'" % toolkit.writeDate(date)
+        sql = """select root_objectid, cat_objectid, omklap from ont_objects_categorizations
+                 where categorizationid=%i and objectid=%i
+                 AND (validfrom is null OR validfrom <= %s)
+                 AND (validto is null OR validto > %s)
+                 """ % (catid, self.oid, date, date)
+        cats = self.ont.db.doQuery(sql)
+        if len(cats) == 0: return None, None, None
+        if len(cats) > 1: raise Exception("Ambiguous categorizaition!")
+        roid, coid, omklap = cats[0]
+        return self.ont.nodes[roid], self.ont.nodes[coid], 1 - omklap * 2 
+
+        
 
 class Relation(object):
     def __init__(self, subject, predicate, object):
@@ -297,6 +316,12 @@ def createRole(db, label, su, rel, obj, dfrom=None, dto=None):
 def createRelation(db, su, rel, obj):
     db.insert("ont_relations", dict(role_subjectid=su, role_objectid=obj, predicateid=rel),
               retrieveIdent=False)
+
+def getInstance(db, label, classid=None):
+    sql = "select objectid from ont_objects where label = %s and objectid in (select objectid from ont_instances) " % toolkit.quotesql(label)
+    if classid: sql += " and objectid in (select instanceid from ont_classes_instances where classid=%i)" % classid
+    return db.getValue(sql)
+    
 
 if __name__ == '__main__':
     import dbtoolkit

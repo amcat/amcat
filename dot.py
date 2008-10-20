@@ -42,6 +42,7 @@ class Graph(object):
     def __init__(self):
         self.nodes = {} # id : Node
         self.edges = {} # subjNode, objNode : Edge
+        self.dotheader = ""
 
     def addNode(self, node, **kargs):
         if type(node) <> Node:
@@ -68,7 +69,10 @@ class Graph(object):
             entries.append(node.getDot())
         for edge in self.edges.values():
             entries.append(edge.getDot())
-        return "digraph G {\n%s\n}" % ("\n".join(e for e in entries if e))
+        return "digraph G {%s\n%s\n}" % (self.dotheader, "\n".join(e for e in entries if e))
+
+    def setHeader(self, header):
+        self.dotheader = header
 
     def getImage(self, *args, **kargs):
         return dot2img(self.getDot(), *args, **kargs)
@@ -76,6 +80,8 @@ class Graph(object):
         return dot2object(self.getDot())
     def getHTMLDoc(self):
         return '<html><body><p>%s</p><pre>%s</pre></body></html>' % (self.getHTMLObject(), self.getDot())
+
+HEADER_SMALL = "node [fontsize=10,height=.1]; graph [ranksep=.25]; edge [fontsize=10];"
 
 def dot2img(dot, format="jpg", errListener = printError):
     cmd = 'dot -T%s' % format
