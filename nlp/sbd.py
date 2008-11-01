@@ -1,4 +1,9 @@
-import re,os
+import re,os, toolkit
+
+abbrevs = ["ir","mr","dr","dhr","ing","drs","mrs","sen","sens","gov","st","jr","rev","vs","gen","adm","sr","lt","sept"]
+months = "Jan Feb Mar Apr Jun Jul Aug Sep Oct Nov Dec".split()
+
+expr = None
 
 def split(text, type=2):
     """python gaat op zoek naar einde van een regel dmv zoeken naar een punt.
@@ -10,7 +15,21 @@ def split(text, type=2):
         return re.split(r"(?<!./N\(eigen,ev,neut\)/.) [\.?!]/Punc\([^)]*\)/[\.?!] ",text)
     else:
         text = text.replace(".'", "'.")
-        sents = re.split(r"(?<!\b[A-Za-z])(?<!\b(?:ir|mr|dr|Dr|Mr))(?<!\b(?:dhr|Dhr|Ing|ing|drs|mrs|Mrs))[\.?!](?!\w)|\n\n",text)
+        global expr
+        if expr is None:
+            lenmap = toolkit.DefaultDict(list)
+            for a in abbrevs+months:
+                lenmap[len(a)].append(a)
+                lenmap[len(a)].append(a.title())
+            expr = r"(?<!\b[A-Za-z])"
+            for x in lenmap.values(): expr += r"(?<!\b(?:%s))" % "|".join(x)
+            #expr += r"(?<Nov(?=. \d))"
+            expr += r"[\.?!](?!\w|,)(?!\s[a-z])|\n\n"
+            expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
+            print expr
+            expr = re.compile(expr)
+            
+        sents = expr.split(text)
         sents = [sent for sent in sents if sent.strip()]
         return sents
         
@@ -41,7 +60,7 @@ def splitParsJava(text, tv = False):
 
 if __name__ == '__main__':
     import sys
-    #print splitPars(sys.stdin.read())
-    print splitParsJava(sys.stdin.read())
-
+    print splitPars(sys.stdin.read())
+    #print splitParsJava(sys.stdin.read())
+    
 
