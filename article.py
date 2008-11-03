@@ -218,6 +218,12 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
 
     if section and len(section) > 80: section = section[:80] + "..."
     if headline and len(headline) > 700: headline = headline[:700] + "..."
+    
+    if headline: headline = headline.strip()
+    if byline: byline = byline.strip()
+    if section: section = section.strip()
+    if pagenr: pagenr = pagenr.strip()
+    if text: text = text.strip()
 
     #print `headline`, `byline`, `fullmeta`
     [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])

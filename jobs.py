@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-import dbtoolkit, random, toolkit
+import dbtoolkit, random, toolkit, re
 
 
 def updateSetCoder(jobid, setnr, coder):
@@ -9,7 +9,7 @@ def updateSetCoder(jobid, setnr, coder):
 
 
 def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, params=None, 
-                batchid=None, inetversion=None, priority=0, db=None, projectid=None):
+                batchid=None, inetversion=None, priority=0, db=None, projectid=None, overlap=None):
 
     if not db:
         db = dbtoolkit.anokoDB()
@@ -26,7 +26,20 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
         raise Exception('Missing coders')
             
     random.shuffle(ids)
-
+    if overlap:
+        if overlap.endswith('%'):
+            overlap = int( float(re.sub('[^0-9]', '', overlap)) / 100.0 * len(ids) )
+        elif overlap.isdigit():
+            overlap = int(overlap)
+        if type(overlap) == int:
+            overlapIds = ids[0:overlap]
+            ids = ids[overlap:]
+        else:
+            raise Exception('Invalid overlap specified')
+    else:
+        overlapIds = []
+        
+        
     if not setsize:
         setsize = len(ids) / len(coders) + 1
     if len(ids) / setsize > 250:
@@ -45,30 +58,49 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
     toolkit.warn(jobid)
 
     curcoder = 0
-    setnr = 0
-
-    
-
-    ntot = 0
-    ncur = 0
-    for id in ids:
-        if not setnr or ncur >= setsize:
-            if ncur: toolkit.warn("%i articles" % ncur)
-            setnr += 1
-            toolkit.warn("Creating codingset %i for user %i.. " % (setnr, coders[curcoder]), newline = False)
-            db.insert('codingjobs_sets', {'codingjobid':jobid, 'setnr' : setnr, 'coder_userid' : coders[curcoder]},
-                            retrieveIdent = False)
-            curcoder += 1
-            if curcoder >= len(coders): curcoder = 0
-            ncur = 0
-        db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : id}, 
-                    retrieveIdent = False)
-        ncur += 1
-        ntot += 1
-    toolkit.warn("%i articles" % ncur)
+    numberOfSets = max( len(ids) / float(setsize) + 0.5, len(coders) )
+    ntot = len(ids) + len(overlapIds)
+    for setnr in range(1, numberOfSets + 1):
+        toolkit.warn("Creating codingset %i for user %i.. " % (setnr, coders[curcoder]), newline = False)
+        db.insert('codingjobs_sets', {'codingjobid':jobid, 'setnr' : setnr, 'coder_userid' : coders[curcoder]},
+                        retrieveIdent = False)
+        curcoder += 1
+        if curcoder >= len(coders): curcoder = 0
+        for overlapId in overlapIds:
+            db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : overlapId}, 
+                retrieveIdent = False)
+        for aid in ids[0:setsize]:
+            db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : aid}, 
+                retrieveIdent = False)
+        ids = ids[setsize:]
+    if len(ids) > 0:
+        raise Exception('Still ids available. Please report this error. %s %s %s %s' % (len(ids), len(overlapIds), numberOfSets, len(coders)))
+                    
+    # curcoder = 0
+    # setnr = 0
+    # ntot = 0
+    # ncur = 0
+    # for id in ids:
+        # if not setnr or ncur >= setsize:
+            # if ncur: toolkit.warn("%i articles" % ncur)
+            # setnr += 1
+            # toolkit.warn("Creating codingset %i for user %i.. " % (setnr, coders[curcoder]), newline = False)
+            # db.insert('codingjobs_sets', {'codingjobid':jobid, 'setnr' : setnr, 'coder_userid' : coders[curcoder]},
+                            # retrieveIdent = False)
+            # curcoder += 1
+            # if curcoder >= len(coders): curcoder = 0
+            # ncur = 0
+            # for overlapId in overlapIds:
+                # db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : overlapId}, 
+                    # retrieveIdent = False)
+        # db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : id}, 
+                    # retrieveIdent = False)
+        # ncur += 1
+        # ntot += 1
+    # toolkit.warn("%i articles" % ncur)
     
     db.conn.commit()
     
-    return (setnr, ntot, jobid)
+    return (numberOfSets, ntot, jobid)
 
     
