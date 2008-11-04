@@ -261,7 +261,10 @@ def readfile(txt, db, batchid, commit):
         except Exception, e:
             print `text`
             #raise
-            errors += '\n%s\n' % e
+            import traceback, sys
+            tb = sys.exc_info()[2]
+            errmsg = "%s at %s" % (e, " / ".join(traceback.format_tb(tb, 3)))
+            errors += '\n%s\n' % errmsg
     if commit:
         db.conn.commit()
     return i, errors

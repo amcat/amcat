@@ -1,4 +1,4 @@
-import toolkit, lexisnexis, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources
+import toolkit, lexisnexis, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types
 _debug = toolkit.Debug('article',1)
 _xmltemplatefile = '/home/anoko/resources/files/article_template.xml'
 
@@ -222,7 +222,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if headline: headline = headline.strip()
     if byline: byline = byline.strip()
     if section: section = section.strip()
-    if pagenr: pagenr = pagenr.strip()
+    if pagenr and type(pagenr) in (types.StringTypes): pagenr = pagenr.strip()
     if text: text = text.strip()
 
     #print `headline`, `byline`, `fullmeta`
