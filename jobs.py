@@ -1,6 +1,6 @@
 #! /usr/bin/python
 
-import dbtoolkit, random, toolkit, re
+import dbtoolkit, random, toolkit, re, math
 
 
 def updateSetCoder(jobid, setnr, coder):
@@ -28,7 +28,7 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
     random.shuffle(ids)
     if overlap:
         if overlap.endswith('%'):
-            overlap = int( float(re.sub('[^0-9]', '', overlap)) / 100.0 * len(ids) )
+            overlap = int(math.ceil( float(re.sub('[^0-9]', '', overlap)) / 100.0 * len(ids) ))
         elif overlap.isdigit():
             overlap = int(overlap)
         if type(overlap) == int:
@@ -41,7 +41,7 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
         
         
     if not setsize:
-        setsize = len(ids) / len(coders) + 1
+        setsize = int(math.ceil(len(ids) / float(len(coders))))
     if len(ids) / setsize > 250:
         raise Exception('This job would use too many sets. Please decrease the job size or increase the set size')
 
@@ -58,7 +58,7 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
     toolkit.warn(jobid)
 
     curcoder = 0
-    numberOfSets = max( len(ids) / float(setsize) + 0.5, len(coders) )
+    numberOfSets = max( int(math.ceil(len(ids) / float(setsize))), len(coders) )
     ntot = len(ids) + len(overlapIds)
     for setnr in range(1, numberOfSets + 1):
         toolkit.warn("Creating codingset %i for user %i.. " % (setnr, coders[curcoder]), newline = False)
@@ -75,29 +75,7 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
         ids = ids[setsize:]
     if len(ids) > 0:
         raise Exception('Still ids available. Please report this error. %s %s %s %s' % (len(ids), len(overlapIds), numberOfSets, len(coders)))
-                    
-    # curcoder = 0
-    # setnr = 0
-    # ntot = 0
-    # ncur = 0
-    # for id in ids:
-        # if not setnr or ncur >= setsize:
-            # if ncur: toolkit.warn("%i articles" % ncur)
-            # setnr += 1
-            # toolkit.warn("Creating codingset %i for user %i.. " % (setnr, coders[curcoder]), newline = False)
-            # db.insert('codingjobs_sets', {'codingjobid':jobid, 'setnr' : setnr, 'coder_userid' : coders[curcoder]},
-                            # retrieveIdent = False)
-            # curcoder += 1
-            # if curcoder >= len(coders): curcoder = 0
-            # ncur = 0
-            # for overlapId in overlapIds:
-                # db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : overlapId}, 
-                    # retrieveIdent = False)
-        # db.insert('codingjobs_articles', {'codingjobid' : jobid, 'setnr' : setnr, 'articleid' : id}, 
-                    # retrieveIdent = False)
-        # ncur += 1
-        # ntot += 1
-    # toolkit.warn("%i articles" % ncur)
+    
     
     db.conn.commit()
     
