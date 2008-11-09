@@ -251,6 +251,7 @@ def splitad(text):
 def readfile(txt, db, batchid, commit):
     texts = split(txt)
     errors = u''
+    errorCount = 0
     i = 0
     if istitlepage(texts[0]): del texts[0]
     for text in texts:
@@ -265,15 +266,17 @@ def readfile(txt, db, batchid, commit):
             tb = sys.exc_info()[2]
             errmsg = "%s at %s" % (e, " / ".join(traceback.format_tb(tb, 3)))
             errors += '\n%s\n' % errmsg
+            errorCount += 1
     if commit:
         db.conn.commit()
-    return i, errors
+    return i, errors, errorCount
 
 def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixedquery=None):
     batches = []
     query, batchid = None, -1
     articleCount = 0
     errors = u''
+    errorCount = 0
     for file in files:
         if verbose: print "Reading file.. %s" % file
         txt = file.read().strip()
@@ -286,7 +289,10 @@ def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixed
             q = fixedquery
         else:
             q = extractQuery(txt)
-        if not q: raise Exception('Could not extract query!')
+        if not q: raise Exception('Could not extract lexisnexis query from file %s!' % file.name)
+            # errors += 'Could not extract lexisnexis query from file %s!!\n'
+            # errorCount += 1
+            # continue
         if q <> query:
             query = q
             if verbose:
@@ -295,10 +301,11 @@ def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixed
             if commit:
                 batchid = db.newBatch(projectid, batchname, query, verbose=1)
             batches.append(batchid)
-        articleCountFile, errorsFile = readfile(txt, db, batchid, commit)
+        articleCountFile, errorsFile, fileErrorCount = readfile(txt, db, batchid, commit)
         articleCount += articleCountFile
         errors += errorsFile
+        errorCount += fileErrorCount
 
-    return articleCount, batches, errors
+    return articleCount, batches, errors, errorCount
 
     

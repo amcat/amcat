@@ -58,6 +58,7 @@ class XMLArticleHandler(xml.sax.ContentHandler):
         self.activeMeta = None
         self.text = ""
         self.errors = u''
+        self.errorCount = 0
 
     def newArticle(self):
         self.meta = self.persistentMeta.copy()
@@ -85,6 +86,7 @@ class XMLArticleHandler(xml.sax.ContentHandler):
                 trace = ''.join(traceback.format_exception(*sys.exc_info()))
                 toolkit.warn('Exception near article %s\n%s' % (self.meta.get('headline', '?'), trace))
                 self.errors += '\n%s\n' % trace
+                self.errorCount += 1
         else:
             self.activeMeta = None
 
@@ -101,6 +103,7 @@ def readfiles(db, projectid, batchname, files):
 
     articleCount = 0
     errors = u''
+    errorCount = 0
     for file in files:
         try:
             articleHandler = ArticleWriter(db, batchid)
@@ -109,12 +112,15 @@ def readfiles(db, projectid, batchname, files):
             xml.sax.parse(file, xmlHandler)
             articleCount += articleHandler.articleCount
             errors += '\n%s\n' % xmlHandler.errors
+            errorCount += xmlHandler.errorCount
         except Exception, e:
             print e
             errors += '\n%s\n' % e
+            errorCount += 1
             continue
+    #errors += '\nTotal Error Count: %s articles' % errorCount
     if articleCount > 0:
         db.conn.commit()
     else:
         db.conn.rollback() # werkt dit?
-    return articleCount, batchid, errors
+    return articleCount, batchid, errors, errorCount
