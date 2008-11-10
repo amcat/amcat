@@ -42,6 +42,8 @@ def addJob(coders, name="-", ids=[], setsize=None, artschema=3, arrowschema=1, p
         
     if not setsize:
         setsize = int(math.ceil(len(ids) / float(len(coders))))
+    if setsize < 1:
+        setsize = 1 # avoid divide by zero
     if len(ids) / setsize > 250:
         raise Exception('This job would use too many sets. Please decrease the job size or increase the set size')
 
