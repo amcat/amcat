@@ -8,14 +8,15 @@ class CodedArticle:
         self.arrows = []
         self.db = db
         self.cjaid = cjaid
-        aid = db.getValue("select articleid from codingjobs_articles where codingjob_articleid=%i" % cjaid)
-        self.article = article.fromDB(db, aid)
-        relcom = db.doQuery("select irrelevant, comments from articles_annotations where codingjob_articleid = %i" % cjaid)
-        if relcom:
-            self.irrelevant = relcom[0][0]
-            self.comments = relcom[0][1]
-        else:
-            self.irrelevant, self.comments = None, None
+        if cjaid:
+            aid = db.getValue("select articleid from codingjobs_articles where codingjob_articleid=%i" % cjaid)
+            self.article = article.fromDB(db, aid)
+            relcom = db.doQuery("select irrelevant, comments from articles_annotations where codingjob_articleid = %i" % cjaid)
+            if relcom:
+                self.irrelevant = relcom[0][0]
+                self.comments = relcom[0][1]
+            else:
+                self.irrelevant, self.comments = None, None
     def add(self, arrow):
         self.arrows.append(arrow)
     def getdot(self, aggregator = oneimage, relfthreshold = None, absfthreshold = None, includef = False, labeler = lambda x : x):

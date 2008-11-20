@@ -2,8 +2,8 @@ import toolkit
 
 class CSVFile(object):
 
-    def __init__(this, file_or_string, sep='\t'):
-        
+    def __init__(this, file_or_string, sep='\t', strip=True):
+        this.strip = strip
         if toolkit.isString(file_or_string):
             this.file = iter(open(file_or_string))
         else:
@@ -20,7 +20,10 @@ class CSVFile(object):
         return this
 
     def next(this):
-        row = this.file.next().strip().split(this.sep)
+        txt = this.file.next()
+        if this.strip: txt = txt.strip()
+        elif txt[-1] == '\n': txt = txt[:-1]
+        row = txt.split(this.sep)
         return Row(row, this)
 
 class Row(dict):

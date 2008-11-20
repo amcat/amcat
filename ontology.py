@@ -217,7 +217,8 @@ class Ontology(object):
         SQL = "SELECT objectid, cast(nr as varchar(255)) from ont_objects"
         for oid, nr in self.db.doQuery(SQL):
             nr = str2nr(nr)
-            n = self.nodes[oid]
+            n = self.nodes.get(oid)
+            if not n: continue
             n._nr = nr
             if nr:
                 if nr in self.nrs: raise Exception("Duplicate nr: %s" % nr)
