@@ -21,6 +21,7 @@ if __name__=='__main__':
     fn = sys.argv[3:]
     if not fn: fn = sys.stdin.readlines()
     db = dbtoolkit.anokoDB()
-    articleCount, batchid, errors = amcatXml.readfiles(db, sys.argv[1], sys.argv[2], fn)
+    articleCount, batchid, errors, errorCount = amcatXml.readfiles(db, sys.argv[1], sys.argv[2], fn)
     if articleCount > 0:
         print 'Finished adding %s articles to batch %s' % (articleCount, batchid)
+    print "Error count: ", errorCount
