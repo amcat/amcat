@@ -199,7 +199,8 @@ class Ontology(object):
         self.nrs = {}
         self.db = db
     def addNode(self, node):
-        if node.label.lower() in self.labels: raise Exception("Duplicate label: %s" % node.label)
+        if node.label.lower() in self.labels:
+            print >>sys.stderr, "Duplicate label: %s" % node.label
         if node.oid in self.nodes: raise Exception("Duplicate oid: %s" % node.oid)
         self.nodes[node.oid] = node
         self.labels[node.label.lower()] = node

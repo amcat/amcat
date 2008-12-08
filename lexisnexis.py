@@ -62,7 +62,6 @@ def parseSection(section):
     if not m:
         m = re.match(r'(.*?)(\d+)(.*)', section, re.IGNORECASE)
     if m:
-        print `section`, " --> ", m.groups(), int(m.group(2))
         return (m.group(1) + m.group(3)).strip(), int(m.group(2))
     return None
 

@@ -68,7 +68,6 @@ class Reliability:
         return coin
 
     def getConfusion(self, obsA, obsB):
-        if not observers: observers = self.observers
         confusion = toolkit.DefaultDict(0)
         for unit in self.units:
             valA = self.data.get((unit, obsA), None)
@@ -79,7 +78,7 @@ class Reliability:
 
     def percentage(self, obsA, obsB):
         c = self.getConfusion(obsA, obsB)
-        ok, n = 0
+        ok, n = 0, 0
         for (a,b), count in c.items():
             if a==b: ok += count
             n += count
