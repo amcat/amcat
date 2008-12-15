@@ -5,6 +5,7 @@ import config
 import article
 import sources
 import sys
+import user
 
 _debug = toolkit.Debug('dbtoolkit',2)
 
@@ -54,6 +55,18 @@ class anokoDB(object):
         return self._sources
     _sources = None
     sources = property(_getsources)
+
+
+    def _getusers(self):
+        """
+        Returns a cached users object. If it does not exist,
+        creates and caches it before returning.
+        """
+        if not self._users:
+            self._users = user.Users(self)
+        return self._users
+    _users = None
+    users = property(_getusers)
 
     def cursor(self):
         return self.conn.cursor()

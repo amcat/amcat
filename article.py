@@ -1,4 +1,4 @@
-import toolkit, lexisnexis, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types
+import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types
 _debug = toolkit.Debug('article',1)
 _xmltemplatefile = '/home/anoko/resources/files/article_template.xml'
 
@@ -131,7 +131,7 @@ class Article:
         if self.pagenr:
             return self.pagenr
         elif self.section:
-            p = lexisnexis.parseSection(self.section)
+            p = toolkit.parseSection(self.section)
             if p:
                 self.pagenr = p[1]
                 return self.pagenr
@@ -142,7 +142,13 @@ class Article:
             _debug(2,'No pagenr or section known for article %s' % self.id)
             return None
 
+
+    @property
     def source(self):
+        if self.medium:
+            return self.db.sources.lookupID(self.medium)
+        
+    def getSourceName(self):
         """
         Looks up the medium (source id) and returns the name
         """

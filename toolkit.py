@@ -305,17 +305,24 @@ def dictFromStr(str, unicode=False):
     return dict
         
 
+def sortDict(dict, reverse=False, byValue = False):
+    i = byValue and 1 or 0
+    list = dict.items()
+    list.sort(lambda a,b:cmp(a[i],b[i]))
+    if reverse: list.reverse()
+    return list
+    
+
 def sortByValue(dict, reverse=0):
+    return sortDict(dict, reverse, byValue=True)
     list = dict.items()
     list.sort(lambda a,b:cmp(a[1],b[1]))
     if reverse: list.reverse()
     return list
 
 def sortByKeys(dict, reverse=0):
-    list = dict.items()
-    list.sort(lambda a,b:cmp(a[0],b[0]))
-    if reverse: list.reverse()
-    return list
+    return sortDict(dict, reverse, byValue=False)
+
 
 def sorted(seq):
     if isDict(seq):
@@ -1015,7 +1022,29 @@ def intlist(seq):
         if not el: continue
         yield int(el)
 
+def tabulate(seq, transformer = None, sortByValue=False, weight=None):
+    result = DefaultDict(int)
+    for s in seq:
+        n = 1
+        if weight: n = weight(s)
+        if transformer: s = transformer(s)
+        result[s] += n
+    return sortDict(result, sortByValue, sortByValue)
+    
+def parseSection(section):
+    """Splits a LexisNexis section into a section and pagenr"""
+    if not section: return None
+    m = re.match(r'(.*?)(?:pg\.?\s*|blz\.?\s*)(\d+)(.*)', section, re.IGNORECASE)
+    #print `section`
+    #print ">>>>>>>>>>", m and m.groups()
+    #print "<<<<<<<<<<", m and int(m.group(2))
+    if not m:
+        m = re.match(r'(.*?)(\d+)(.*)', section, re.IGNORECASE)
+    if m:
+        return (m.group(1) + m.group(3)).strip(), int(m.group(2))
+    return None
 
+            
 
 if __name__ == "__main__":
     import sys

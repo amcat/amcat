@@ -52,19 +52,6 @@ def split(str):
     """Splits a LN file into seperate article chunks"""
     return re.split(RE_ARTICLESPLIT, str)
 
-def parseSection(section):
-    """Splits a LexisNexis section into a section and pagenr"""
-    if not section: return None
-    m = re.match(r'(.*?)(?:pg\.?\s*|blz\.?\s*)(\d+)(.*)', section, re.IGNORECASE)
-    #print `section`
-    #print ">>>>>>>>>>", m and m.groups()
-    #print "<<<<<<<<<<", m and int(m.group(2))
-    if not m:
-        m = re.match(r'(.*?)(\d+)(.*)', section, re.IGNORECASE)
-    if m:
-        return (m.group(1) + m.group(3)).strip(), int(m.group(2))
-    return None
-
 multilang = {'section':['section','rubrique'], 'headline':['\xdcberschrift','titre'],'length':['longeur']}
 
 def parseArticle(articleString, db, batchid, commit):
@@ -93,7 +80,7 @@ def parseArticle(articleString, db, batchid, commit):
             for tran in trans:
                 if tran in meta: meta[orig] = meta[tran]
                 
-    sectionpage = parseSection(meta.get('section', None))
+    sectionpage = toolkit.parseSection(meta.get('section', None))
     if sectionpage is not None:
         meta['section'] = sectionpage[0]
         meta['pagenr'] = sectionpage[1]

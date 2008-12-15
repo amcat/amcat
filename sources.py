@@ -3,7 +3,7 @@ import toolkit
 def clean(s):
     return toolkit.clean(s,1,1)
 
-class Source:
+class Source(object):
     def __init__(self, id, name, circulation, language, type, abbrev):
         self.id = id
         self.name = clean(name)
@@ -15,7 +15,7 @@ class Source:
     def __str__(self):
         return self.name
 
-class Sources:
+class Sources(object):
     def __init__(self, connection):
         self.index_name = {}
         self.sources = {}
