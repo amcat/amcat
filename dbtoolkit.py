@@ -29,7 +29,7 @@ class anokoDB(object):
     and storage of data
     """
 
-    def __init__(self, configuration=None, auto_commit=1):
+    def __init__(self, configuration=None, auto_commit=0):
         """
         Initialise the connection to the anoko (SQL Server) database using
         either the given configuration object or config.default
@@ -70,6 +70,9 @@ class anokoDB(object):
 
     def cursor(self):
         return self.conn.cursor()
+        
+    def commit(self):
+        self.conn.commit()
 
     def doQuery(self, sql, cursor = None, colnames = False, select=None):
         """
