@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
 
     files = map(open, filenames)
-    n, batches, errors = lexisnexis.readfiles(db, projectid, batchname, files, True, commit, fixedquery=query)
+    n, batches, errors, errorcount = lexisnexis.readfiles(db, projectid, batchname, files, True, commit, fixedquery=query)
     if errors:
         print "Errors:", errors
 

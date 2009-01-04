@@ -39,6 +39,9 @@ class Article:
         s = dbtoolkit.decode(s, self.encoding)
         self.setMeta(b,s,m)
 
+    def getProjectid(self):
+        return self.db.getValue("select projectid from batches where batchid=%i" % self.batchid)
+
     def setMeta(self, byline, section, fullmeta):
         if toolkit.isString(fullmeta):
             fullmeta = toolkit.dictFromStr(fullmeta, unicode=True)
