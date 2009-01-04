@@ -213,7 +213,7 @@ class Article:
             yield Sentence(sid, parnr, sentnr, self)
 
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
-                  length=None, byline=None, section=None, pagenr=None, fullmeta=None):
+                  length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None):
     """
     Writes the article object to the database
     """
@@ -222,8 +222,9 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if type(source) == sources.Source: source = source.id
     if type(fullmeta) == dict: fullmeta = `fullmeta`
 
-    if section and len(section) > 80: section = section[:80] + "..."
-    if headline and len(headline) > 700: headline = headline[:700] + "..."
+    if section and len(section) > 90: section = section[:90] + "..."
+    if headline and len(headline) > 740: headline = headline[:740] + "..."
+    if url and len(url) > 490: url = url[:490] + "..."
     
     if headline: headline = headline.strip()
     if byline: byline = byline.strip()
@@ -244,6 +245,8 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
          'pagenr': pagenr,
          'batchid' : batchid,
          'mediumid' : source,
+         'url':url,
+         'externalid':externalid,
          'encoding' : encoding}
     #print `q`
     aid = db.insert('articles',q)

@@ -16,7 +16,7 @@ class ArticleWriter:
         if 'date' in meta:
             date = toolkit.readDate(meta['date'])
         else:
-            raise Exception('Invalid date %s' % meta['date'])
+            raise Exception('Missing date')
 
         mediumid = meta.get('mediumid',None)
         if not mediumid:
@@ -25,7 +25,12 @@ class ArticleWriter:
         byline = meta.get('byline', None)
         section = meta.get('section',None)
         pagenr = meta.get('pagenr',None)
+        url = meta.get('url',None)
+        id = meta.get('id',None)
         length = len(text.split(' '))
+        for key in meta.keys():
+            if key in ('headline', 'byline', 'section', 'pagenr', 'mediumid', 'date', 'url', 'id'):
+                del meta[key]
         meta = `meta`
         try:
             if type(headline) == str:
@@ -40,7 +45,7 @@ class ArticleWriter:
             raise Exception('unicode problem %s %s %s: %s' % (headline, meta, byline, e))
         
         article.createArticle(self.db, headline, date, mediumid, batchid, text, texttype=2,
-                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta)
+                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta, url=url, externalid=id)
         self.articleCount += 1
 
 
