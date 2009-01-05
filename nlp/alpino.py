@@ -129,7 +129,7 @@ def tokenize(sent, alpinohome=ALPINO, errhandler=warn):
     return out
 
 def parse(sent, alpinohome=ALPINO, errhandler=warn):
-    cmd = "LD_LIBRARY_PATH=%s/create_bin ALPINO_HOME=%s %s/create_bin/Alpino demo=off end_hook=dependencies -parse" % (alpinohome, alpinohome, alpinohome)
+    cmd = "LD_LIBRARY_PATH=%s/create_bin ALPINO_HOME=%s %s/create_bin/Alpino demo=off user_max=180000 end_hook=dependencies -parse" % (alpinohome, alpinohome, alpinohome)
     if not sent: return None
     #print cmd
     out, err = execute(cmd, sent)

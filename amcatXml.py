@@ -45,7 +45,8 @@ class ArticleWriter:
             raise Exception('unicode problem %s %s %s: %s' % (headline, meta, byline, e))
         
         article.createArticle(self.db, headline, date, mediumid, batchid, text, texttype=2,
-                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta, url=url, externalid=id)
+                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta, 
+                      url=url, externalid=id, retrieveArticle=0)
         self.articleCount += 1
 
 

@@ -90,6 +90,14 @@ class CodingjobSet(object):
         return self._articles
     _articles = None
 
+    @property
+    def articleids(self):
+        if self._articleids is None:
+            SQL = "select articleid from codingjobs_articles where %s" % self._where
+            self._articleids = [row[0] for row in self.job.db.doQuery(SQL)]
+        return self._articleids
+    _articleids = None
+
     def getNArticleCodings(self):
         SQL = """select count(*) from %s x
               inner join codingjobs_articles ca on x.codingjob_articleid = ca.codingjob_articleid

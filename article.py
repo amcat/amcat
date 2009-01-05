@@ -216,7 +216,7 @@ class Article:
             yield Sentence(sid, parnr, sentnr, self)
 
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
-                  length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None):
+                  length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, retrieveArticle=1):
     """
     Writes the article object to the database
     """
@@ -260,9 +260,10 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
          'type' : texttype,
          'encoding' : encoding,
          'text' : text}
-    db.insert('texts',q)
-
-    return fromDB(db, aid)
+    db.insert('texts',q, retrieveIdent=0)
+    
+    if retrieveArticle:
+        return fromDB(db, aid)
 
 
 

@@ -127,7 +127,7 @@ def parseArticle(articleString, db, batchid, commit):
     #print headline, section
     if commit:
         article.createArticle(db, headline, date1, medium, batchid, body, texttype=2,
-                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta)
+                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta, retrieveArticle=0)
     #article.Article(db, None, batchid, medium, date1, headline, byline, length, pagenr, section, meta, body)
 
 def parseLexisNexis(text):

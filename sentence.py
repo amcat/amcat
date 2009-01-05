@@ -7,11 +7,11 @@ def sentences(db, sentenceids):
 
 
 class Sentence(object):
-    _fields = False
     
     def __init__(self, db, id):
         self.db = db
         self.id = id
+        self._fields = False
         
     def _getFields(self):
         if self._fields: return
@@ -22,12 +22,20 @@ class Sentence(object):
         """ % self.id
         data = self.db.doQuery(SQL)
         if not data: raise Exception('sentence %d not found' % self.id)
-        self._articleid, self._parnr, self._sentnr, text, longsentence, encoding = data[0]
+        articleid, parnr, sentnr, text, longsentence, encoding = data[0]
+        
+        self.setFields(articleid, parnr, sentnr, text, longsentence, encoding)
+        
+        #self._article = self.db.article(articleid)
+        
+        
+    def setFields(self, articleid, parnr, sentnr, text, longsentence, encoding):
+        self._articleid = articleid
+        self._parnr = parnr
+        self._sentnr = sentnr
         if longsentence: text = longsentence
         text = dbtoolkit.decode(text, encoding)
         self._text = text
-        
-        #self._article = self.db.article(articleid)
         self._fields = True
         
     @property
