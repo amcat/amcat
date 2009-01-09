@@ -1,4 +1,5 @@
-import user, toolkit, project
+import user, toolkit, project, ontology
+from toolkit import cached
 
 class Codingjob(object):
 
@@ -18,6 +19,9 @@ class Codingjob(object):
         self._insertdate = insertdate
         self._fields = True
     _fields = False
+
+    def getLink(self):
+        return "codingjobDetails?codingjobid=%i" % self.id
 
     @property
     def name(self):
@@ -67,9 +71,73 @@ class Codingjob(object):
         return "%i - %s" % (self.id, self.name)
 
 
+class CodedArticle(object):
+    def __init__(self, set, cjaid, aid):
+        self.set = set
+        self.cjaid = cjaid
+        self.aid = aid
+        self.db = set.db
+
+    @property
+    def article(self):
+        if self._article is None:
+            self._article = self.db.article(self.aid)
+        return self._article
+    _article = None
+
+    @property
+    @cached
+    def sentences(self):
+        SQL = ("select arrowid, sentenceid from %s where codingjob_articleid = %i"
+               % (self.set.job.unitSchema.table, self.cjaid))    
+        return [CodedSentence(self, id, self.getSentence(sid)) for (id,sid) in self.set.job.db.doQuery(SQL)]
+
+    def getSentence(self, sid):
+        for s in self.article.sentences:
+            if s.sid == sid:
+                return s
+        raise Exception("Cannot find sentence %i in article %i" % (sid, self.article.id))
+
+    @property
+    @cached
+    def values(self):
+        schema = self.set.job.articleSchema
+        fields = [f.fieldname for f in schema.fields]
+        SQL = "select %s from %s where codingjob_articleid = %i" % (",".join(fields), schema.table, self.cjaid)
+        data = self.db.doQuery(SQL)
+        if data:
+            return dict(zip(fields, data[0]))
+        else:
+            return None
+
+    def getValue(self, field):
+        if self.values is None: return None
+        return self.values.get(field.fieldname, None)
+        
+class CodedSentence(object):
+    def __init__(self, codedArticle, arrowid, sentence):
+        self.arrowid = arrowid
+        self.ca = codedArticle
+        self.db = self.ca.db
+        self.sentence = sentence
+
+    @property
+    @cached
+    def values(self):
+        schema = self.ca.set.job.unitSchema
+        fields = list(f.fieldname for f in schema.fields)
+        SQL = "select %s from %s where arrowid = %i" % (",".join(fields), schema.table, self.arrowid)
+        return dict(zip(fields, self.db.doQuery(SQL)[0]))
+
+    def getValue(self, field):
+        if type(field) == AnnotationSchemaField:
+            field = field.fieldname
+        return self.values.get(field, None)
+
 class CodingjobSet(object):
     def __init__(self, job, setnr):
         self.job = job
+        self.db = job.db
         self.setnr = setnr
         self._articles = None
         self._where = "codingjobid = %i and setnr = %i" % (self.job.id, self.setnr)
@@ -85,18 +153,13 @@ class CodingjobSet(object):
     @property
     def articles(self):
         if self._articles is None:
-            SQL = "select articleid from codingjobs_articles where %s" % self._where
-            self._articles = [self.job.db.article(aid) for (aid,) in self.job.db.doQuery(SQL)]
+            SQL = "select codingjob_articleid, articleid from codingjobs_articles where %s" % self._where
+            self._articles = [CodedArticle(self, *data) for data in self.job.db.doQuery(SQL)]
         return self._articles
     _articles = None
 
-    @property
-    def articleids(self):
-        if self._articleids is None:
-            SQL = "select articleid from codingjobs_articles where %s" % self._where
-            self._articleids = [row[0] for row in self.job.db.doQuery(SQL)]
-        return self._articleids
-    _articleids = None
+    def getArticleIDS(self):
+        return set([a.article.id for a in self.articles])
 
     def getNArticleCodings(self):
         SQL = """select count(*) from %s x
@@ -109,6 +172,7 @@ class CodingjobSet(object):
               inner join codingjobs_articles ca on x.codingjob_articleid = ca.codingjob_articleid
               where %s""" % (self.job.unitSchema.table, self._where)
         return self.job.db.doQuery(SQL)[0]
+
         
 
 class AnnotationSchema(object):
@@ -137,30 +201,34 @@ class AnnotationSchema(object):
         return self._name
 
     @property
+    @cached
     def fields(self):
-        if self._fields is None:
-            self._fields = []
-            SQL = """select fieldnr, fieldname, label, fieldtypeid, params
-            from annotationschemas_fields where annotationschemaid=%i
-            order by fieldnr""" % self.id
-            for vals in self.db.doQuery(SQL):
-                self._fields.append(AnnotationSchemaField(self, *vals))
-        return self._fields
-    _fields = None
-                                    
+        SQL = """select fieldnr, fieldname, label, fieldtypeid, params
+        from annotationschemas_fields where annotationschemaid=%i
+        order by fieldnr""" % self.id
+        return [AnnotationSchemaField(self, *vals) for vals in self.db.doQuery(SQL)]
 
+    def getField(self, fieldname):
+        for f in self.fields:
+            if f.fieldname == fieldname: return f
+                                    
     def idname(self):
         return "%i - %s" % (self.id, self.name)
+
+    def __hash__(self):
+        return hash(self.id)
+    def __eq__(self, other):
+        return type(other) == AnnotationSchema and other.id == self.id
             
 def paramdict(paramstr):
     d = {}
+    if not paramstr: return d
     for kv in paramstr.split(","):
         k,v = kv.split("=")
         d[k] = v
     return d
 
 class AnnotationSchemaField(object):
-
     def __init__(self, schema, fieldnr, fieldname, label, fieldtype, params):
         self.schema = schema
         self.fieldnr = fieldnr
@@ -169,6 +237,9 @@ class AnnotationSchemaField(object):
         self.fieldtype = fieldtype
         self.params = paramdict(params)
         self._labels = None
+
+    def hasLabel(self):
+        return self.fieldtype in (3,4,5,8)
 
     def getLabel(self, value):
         if self._labels is None:
@@ -196,7 +267,12 @@ class AnnotationSchemaField(object):
                 for k, l in self.schema.db.doQuery(sql):
                     self._labels[k] = l
                                         
-        return self._labels.get(value, value)
+        return self._labels.get(value, None)
         
                 
 
+    def __hash__(self):
+        return hash(self.schema) ^ hash(self.fieldnr)
+    def __eq__(self, other):
+        return type(other) == AnnotationSchemaField and self.schema == other.schema and self.fieldnr == other.fieldnr
+    

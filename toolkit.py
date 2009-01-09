@@ -1044,7 +1044,25 @@ def parseSection(section):
         return (m.group(1) + m.group(3)).strip(), int(m.group(2))
     return None
 
-            
+class CachedValue(object):
+    def __init__(self):
+        self.init = False
+    def isInitialized(self):
+        return self.init
+    def set(self, value):
+        self.value = value
+        self.init = True
+    def get(self):
+        return self.value
+
+#simple decorator to cache methods without arguments
+def cached(func):
+    vals = {}
+    def inner(self):
+        if not self in vals:
+            vals[self] = func(self)
+        return vals[self]
+    return inner            
 
 if __name__ == "__main__":
     import sys

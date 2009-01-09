@@ -14,6 +14,9 @@ class Source(object):
         self.abbrev = abbrev
     def __str__(self):
         return self.name
+    def __cmp__(self, other):
+        if type(other) <> Source: return -1
+        return cmp(self.id, other.id)
 
 class Sources(object):
     def __init__(self, connection):

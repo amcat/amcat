@@ -26,7 +26,7 @@ def split(text, type=2):
             #expr += r"(?<Nov(?=. \d))"
             expr += r"[\.?!](?!\w|,)(?!\s[a-z])|\n\n"
             expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
-            print expr
+            #print expr
             expr = re.compile(expr)
             
         sents = expr.split(text)

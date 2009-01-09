@@ -17,10 +17,13 @@ class User(object):
     def __init__(self, db, id, username = None):
         self.db = db
         self.id = id
-        self.username = username
-    def getUsername(self):
-        if not self.username:
-            self.username = self.db.getValue("select username from users where userid = %i" % self.id)
-        return self.username
+        self._username = username
+
+    @property
+    def username(self):
+        if not self._username:
+            self._username = self.db.getValue("select username from users where userid = %i" % self.id)
+        return self._username
+    
     def idname(self):
         return "%i - %s" % (self.id, self.username)

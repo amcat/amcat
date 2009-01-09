@@ -3,23 +3,12 @@ import toolkit, dot, base64, math, article
 def oneimage(arrow): return "Whole set"
 def literal(arrow): return arrow.article
 
-class CodedArticle:
-    def __init__(self, db, cjaid):
+class Network:
+    def __init__(self):
         self.arrows = []
-        self.db = db
-        self.cjaid = cjaid
-        if cjaid:
-            aid = db.getValue("select articleid from codingjobs_articles where codingjob_articleid=%i" % cjaid)
-            self.article = article.fromDB(db, aid)
-            relcom = db.doQuery("select irrelevant, comments from articles_annotations where codingjob_articleid = %i" % cjaid)
-            if relcom:
-                self.irrelevant = relcom[0][0]
-                self.comments = relcom[0][1]
-            else:
-                self.irrelevant, self.comments = None, None
     def add(self, arrow):
         self.arrows.append(arrow)
-    def getdot(self, aggregator = oneimage, relfthreshold = None, absfthreshold = None, includef = False, labeler = lambda x : x):
+    def getdot(self, aggregator = oneimage, relfthreshold = None, absfthreshold = None, includef = False):
         graphs = toolkit.DefaultDict(lambda : toolkit.DefaultDict(list))
         result = {}
         for arrow in self.arrows:
@@ -36,8 +25,8 @@ class CodedArticle:
                 q = sum(arrow.qual for arrow in arrows)
                 q = float(q) / n
 
-                subj = labeler(subj)
-                obj = labeler(obj)
+                subj = subj.label
+                obj = obj.label
                 
                 e = d.addEdge(subj, obj)
                 lbl = "%+1.1f" % q
@@ -63,27 +52,16 @@ class Arrow:
     def getArrowTypeLabel(self):
         return self.sentence.article.db.getValue("select name from net_arrowtypes where arrowtypeid = %i" % self.type)
 
-def getArticle(db, cjaid, ont):
-    def gt(oid):
-        if oid is None: return oid
-        return ont.nodes[oid]
-    n = CodedArticle(db, cjaid)
-    sql = "select source, subject, object, predicate, quality, arrowtype, angle, sentenceid from net_arrows where codingjob_articleid = %i" % cjaid
-    for src, subject, object, predicate, quality, atype, angle, sid in db.doQuery(sql):
-        sent =article.sentFromDB(db, sid)
-        src, subject, object, angle = (gt(x) for x in (src, subject, object, angle))
-        r = Arrow(subject, object, quality, atype, sent, src=src, angle=angle, predicate=predicate)
-        n.add(r)
-    return n
-
-def getArrows(arrowids_or_sql, aggregate=None):
-    header = [] # list of column headings
-    data = []  # list of tuple of rows
-    return data, header
-
-def getArrowImage(arrowids_or_sql, aggregate=None, format="png"):
-    return None # binary image data
-
+def fromCodedSentence(codedSentence, ontology):
+    s = codedSentence
+    su = ontology.nodes[s.getValue("subject")]
+    obj = ontology.nodes[s.getValue("object")]
+    srcid = s.getValue("source")
+    src = srcid and ontology.nodes[srcid] or None
+    qual = s.getValue("quality")
+    type = s.getValue("atype")
+    sentence = s.sentence
+    return Arrow(su, obj, qual, type, sentence, src)
 
 if __name__ == '__main__':
     n = Network()

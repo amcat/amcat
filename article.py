@@ -1,4 +1,5 @@
 import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types
+from toolkit import cached
 _debug = toolkit.Debug('article',1)
 _xmltemplatefile = '/home/anoko/resources/files/article_template.xml'
 
@@ -174,7 +175,7 @@ class Article:
             result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")
         return result.replace("\\r","").replace("\r","\n")
 
-    def sentences(self, split = False, onlyWords = False):
+    def splitSentences(self, split = False, onlyWords = False):
         text = self.text
         if self.type == 4:
             text = re.sub("\s+", " ", text)
@@ -211,9 +212,20 @@ class Article:
         return [Image(self, getCapt=True, *data) for data in self.db.doQuery(SQL)]
 
     def getSentences(self):
+        return self.sentences
+
+    @property
+    @cached
+    def sentences(self):
         data = self.db.doQuery("select sentenceid, parnr, sentnr from sentences where articleid=%i order by parnr, sentnr" % self.id)
-        for sid, parnr, sentnr in data:
-            yield Sentence(sid, parnr, sentnr, self)
+        return [Sentence(self, *row) for row in data]
+
+    def getLink(self):
+        return "articleDetails?articleid=%i" % self.id
+
+    def getWeekNr(self):
+        y,w,d = self.date.iso_week
+        return "%s-%s" % (y,w)
 
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
                   length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, retrieveArticle=1):
@@ -403,12 +415,17 @@ def splitArticles(aids, db, tv=False):
     
 
 class Sentence(object):
-    def __init__(self, sid, parnr, sentnr, article):
+    def __init__(self, article, sid, parnr, sentnr):
         self.sid = sid
         self.parnr = parnr
         self.sentnr = sentnr
         self.article = article
     def getSentence(self):
+        return self.text
+
+    @property
+    @cached
+    def text(self):
         db = self.article.db
         text, long, enc = db.doQuery("select sentence, longsentence, encoding from sentences where sentenceid = %i" % self.sid)[0]
         if long: text = long
