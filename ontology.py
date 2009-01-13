@@ -99,7 +99,8 @@ class Node(object):
         self._nr = nr
         self.ont.nrs[nr] = self
     def categorize(self, catid, date):
-        date = "'%s'" % toolkit.writeDate(date)
+        if type(date) not in (str, unicode):
+            date = "'%s'" % toolkit.writeDate(date)
         sql = """select root_objectid, cat_objectid, omklap from ont_objects_categorizations
                  where categorizationid=%i and objectid=%i
                  AND (validfrom is null OR validfrom <= %s)

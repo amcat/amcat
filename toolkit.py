@@ -1062,8 +1062,16 @@ def cached(func):
         if not self in vals:
             vals[self] = func(self)
         return vals[self]
+    inner._vals = vals
     return inner            
 
+def setcached(func, obj, value):
+    func._vals[obj] = value
+
+def setCachedProp(obj, propname, value):
+    func = obj.__class__.__dict__[propname].fget
+    setcached(func, obj, value)
+    
 if __name__ == "__main__":
     import sys
     print choose(["123","45","999"], lambda x: int(x)*-1, True)
