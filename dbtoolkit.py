@@ -7,6 +7,8 @@ import sources
 import sys
 import user
 
+from toolkit import cached
+
 _debug = toolkit.Debug('dbtoolkit',2)
 
 _encoding = {
@@ -57,16 +59,10 @@ class anokoDB(object):
     sources = property(_getsources)
 
 
-    def _getusers(self):
-        """
-        Returns a cached users object. If it does not exist,
-        creates and caches it before returning.
-        """
-        if not self._users:
-            self._users = user.Users(self)
-        return self._users
-    _users = None
-    users = property(_getusers)
+    @property
+    @cached
+    def users(self):
+        return user.Users(self)
 
     def cursor(self):
         return self.conn.cursor()

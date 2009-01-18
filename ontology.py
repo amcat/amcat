@@ -64,6 +64,7 @@ class Node(object):
         self.label = label
         self.ontologyid = ontologid
         self._uri = None
+        self._categories = {}
     def getLabel(self, language=None):
         if language:
             label = self.ont.db.getValue("select label from ont_labels where objectid=%i and language=%i" % (self.oid, language))
@@ -98,9 +99,27 @@ class Node(object):
         if self._nr: raise Exception("Already has number")
         self._nr = nr
         self.ont.nrs[nr] = self
+    def getCategories(self, catid):
+        if catid not in self._categories:
+            sql = """select root_objectid, cat_objectid, omklap, validfrom, validto
+            from ont_objects_categorizations
+            where categorizationid=%i and objectid=%i""" % (catid, self.oid)
+            self._categories[catid] = [
+                (self.ont.nodes[roid], self.ont.nodes[coid], 1 - omklap * 2, vfrom, vto)
+                for (roid, coid, omklap, vfrom, vto)
+                in self.ont.db.doQuery(sql)
+                ]
+        return self._categories[catid]
+
     def categorize(self, catid, date):
-        if type(date) not in (str, unicode):
-            date = "'%s'" % toolkit.writeDate(date)
+        for roid, coid, omklap, vfrom, vto in self.getCategories(catid):
+            if (((vfrom is None) or (vfrom <= date)) and
+                ((vto is None) or (vto > date))):
+                return roid, coid, omklap
+        return None, None, None
+        
+    def categorize_oud(self, catid, date):
+        date = "'%s'" % toolkit.writeDate(date)
         sql = """select root_objectid, cat_objectid, omklap from ont_objects_categorizations
                  where categorizationid=%i and objectid=%i
                  AND (validfrom is null OR validfrom <= %s)
@@ -241,10 +260,12 @@ class Ontology(object):
             if type(n) == Class:
                 if not list(n.getParents()):
                     yield n
-        
 
+_cache = {}
 def fromDB(db):
+    if db in _cache: return _cache[db]
     o = Ontology(db)
+    _cache[db] = o
     SQL = """SELECT o.objectid, label, ontologyid FROM ont_objects o
           INNER JOIN ont_instances i on o.objectid = i.objectid"""
     for oid, label, ontid in db.doQuery(SQL):
@@ -291,10 +312,14 @@ def fromDB(db):
         o.addNode(Role(rs, p, ro, df, dt,o, oid, label))
     return o
 
-def createNode(db, label, ontologyid, nr=None):
-    return db.insert("ont_objects", dict(label=label, ontologyid=ontologyid, nr=nr))
+def createNode(db, label, ontologyid, ver, nr=None, isinstance=True, languageid=2):
+    oid = db.insert("on_objects", dict(created_version=ver))
+    db.insert("on_nodes", dict(objectid=oid, created_version=ver, number=nr, isinstance=isinstance, ontologyid=ontologyid), retrieveIdent=False)
+    db.insert("on_labels", dict(objectid=oid, languageid=languageid, created_version=ver, label=label), retrieveIdent=False)
+    return oid
 
 def createClass(db, label, ontologyid, nr=None, superclass=None):
+    raise Exception("Not implemented")
     oid = createNode(db, label, ontologyid, nr)
     db.insert("ont_classes", dict(objectid=oid), retrieveIdent=False)
     if superclass:
@@ -302,22 +327,23 @@ def createClass(db, label, ontologyid, nr=None, superclass=None):
         db.insert("ont_classes_subclasses", dict(superclassid=superclass, subclassid=oid), retrieveIdent=False)
     return oid
 
-def createInstance(db, label, ontologyid, nr=None, clas=None):
-    oid = createNode(db, label, ontologyid, nr)
-    db.insert("ont_instances", dict(objectid=oid), retrieveIdent=False)
+
+def createInstance(db, label, ontologyid, ver, nr=None, clas=None, languageid=2):
+    oid = createNode(db, label, ontologyid, ver, nr, isinstance=True, languageid=languageid)
     if clas:
         if isinstance(clas, Node): clas = clas.oid
-        db.insert("ont_classes_instances", dict(classid=clas, instanceid=oid), retrieveIdent=False)
+        db.insert("on_hierarchy", dict(parentid=clas, childid=oid, created_version=ver), retrieveIdent=False)
     return oid
 
 def createRole(db, label, su, rel, obj, dfrom=None, dto=None):
+    raise Exception("Not implemented")
     oid = createNode(db, label, None)
     db.insert("ont_roles", dict(objectid=oid, role_subjectid=su, role_objectid=obj,
                                 predicateid=rel, datefrom=dfrom, dateto=dto),
               retrieveIdent=False)
 
-def createRelation(db, su, rel, obj):
-    db.insert("ont_relations", dict(role_subjectid=su, role_objectid=obj, predicateid=rel),
+def createRelation(db, su, rel, obj, ver):
+    db.insert("on_relations", dict(subjectid=su, predicateid=rel, objectid=obj, created_version=ver),
               retrieveIdent=False)
 
 def getInstance(db, label, classid=None):

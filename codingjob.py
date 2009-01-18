@@ -1,5 +1,12 @@
-import user, toolkit, project, ontology
+import user, toolkit, project, ontology, article
 from toolkit import cached
+
+def getCodedArticle(db, cjaid):
+    data = db.doQuery("select codingjobid, setnr from codingjobs_articles where codingjob_articleid=%i"% cjaid)
+    if not data: return None
+    cjid, setnr = data[0]
+    return Codingjob(db, cjid).getSet(setnr).getArticle(cjaid)
+    
 
 class Codingjob(object):
 
@@ -39,13 +46,10 @@ class Codingjob(object):
         return self._unitschema
 
     @property
+    @cached
     def sets(self):
-        if self._sets is None:
-            self._sets = {}
-            SQL = "select setnr from codingjobs_sets where codingjobid=%i" % self.id
-            self._sets = [CodingjobSet(self, setnr) for (setnr,) in  self.db.doQuery(SQL)]
-        return self._sets
-    _sets = None
+        SQL = "select setnr from codingjobs_sets where codingjobid=%i" % self.id
+        return [CodingjobSet(self, setnr) for (setnr,) in  self.db.doQuery(SQL)]
 
     @property
     def owner(self):
@@ -67,9 +71,111 @@ class Codingjob(object):
             if set.setnr == setnr:
                 return set
 
+    def findCodedArticle(self, art, coder):
+        for set in self.sets:
+            if set.coder == coder:
+                for ca in set.articles:
+                    if ca.article == art:
+                        return ca
+
     def idname(self):
         return "%i - %s" % (self.id, self.name)
 
+    def cacheValues(self, artannots = False, arrows = False, sentences = False, headlines=True):
+        #nog mogelijke optimalisaties:
+        # categorize 1x ophalen voor meer objecten
+        # niet alle sentences ophalen (maar lastig om verwacht gedrag article.sentences niet te breken...)
+        
+        # cache article-level values if needed
+        # do this first to allow caching (null) values for articles without annotations
+        if artannots:
+            aavalues = {}
+            SQL = self.articleSchema.SQLSelect(extra=["codingjob_articleid"])
+            SQL += " WHERE codingjob_articleid in (select codingjob_articleid from codingjobs_articles where codingjobid=%i)" % (self.id)
+            for row in self.db.doQuery(SQL):
+                cjaid = row[0]
+                row = row[1:]
+                aavalues[cjaid] = row
+
+        #create articles
+        ids = "select articleid from codingjobs_articles where codingjobid=%i" % (self.id,)
+        articles = {}
+        for a in article.articlesFromDB(self.db, ids, headline=headlines):
+            articles[a.id] = a
+
+        # create sets and codedarticles
+        SQL = """select setnr, codingjob_articleid, articleid
+        from codingjobs_articles where codingjobid=%i""" % self.id
+        sets = []
+        setsbynr = {}
+        articlesperset = {}
+        codedarticles = {}
+        csperca = {}
+        for setnr, cjaid, aid in self.db.doQuery(SQL):
+            if setnr in setsbynr:
+                s = setsbynr[setnr]
+            else:
+                s = CodingjobSet(self, setnr)
+                sets.append(s)
+                setsbynr[setnr] = s
+                a = []
+                articlesperset[setnr] = a
+                toolkit.setCachedProp(s, "articles", a)
+
+            ca = CodedArticle(s, cjaid, aid)
+            articlesperset[setnr].append(ca)
+            codedarticles[cjaid] = ca
+            toolkit.setCachedProp(ca, "article", articles[aid])
+            cs = []
+            csperca[ca] = cs
+            toolkit.setCachedProp(ca, "sentences", cs)
+            
+            if artannots:
+                values = aavalues.get(cjaid, None)
+                if values: values = self.articleSchema.asDict(values)
+                toolkit.setCachedProp(ca, "values", values)
+
+        if arrows:
+            #create sentences
+            sentsperart = {}
+            sents = {}
+            SQL = """select articleid, sentenceid, parnr, sentnr from sentences s
+                     where articleid in (select articleid from codingjobs_articles where codingjobid = %i)""" % (self.id,)
+            for aid, sid, parnr, sentnr in self.db.doQuery(SQL):
+                a = articles[aid]
+                if not a in sentsperart:
+                    l = []
+                    sentsperart[a] = l
+                    toolkit.setCachedProp(a, "sentences", l)
+                s = article.Sentence(a, sid, parnr, sentnr)
+                sents[sid] = s
+                sentsperart[a].append(s)
+            
+            SQL = self.unitSchema.SQLSelect(extra=["arrowid","codingjob_articleid", "sentenceid"])
+            SQL += " WHERE codingjob_articleid in (select codingjob_articleid from codingjobs_articles where codingjobid=%i)" % (self.id)
+            for row in self.db.doQuery(SQL):
+                arrowid, cjaid, sid = row[:3]
+                row = row[3:]
+                ca = codedarticles[cjaid]
+                sent = sents[sid]
+                cs = CodedSentence(ca, arrowid, sent)
+                values = self.unitSchema.asDict(row)
+                toolkit.setCachedProp(cs, "values", values)
+                csperca[ca].append(cs)
+
+            if sentences:
+                #cache sentences for articles with arrows
+                SQL = """select sentenceid, isnull(longsentence, sentence), encoding from sentences
+                where sentenceid in (select sentenceid from net_arrows r inner join codingjobs_articles a on r.codingjob_articleid = a.codingjob_articleid
+                                     where codingjobid=%i)""" % self.id
+                for sid, sent, encoding in self.db.doQuery(SQL):
+                    text = article.decode(sent, encoding)
+                    toolkit.setCachedProp(sents[sid], "text", text)
+                    
+                                                
+
+        toolkit.setCachedProp(self, "sets", sets)
+        
 
 class CodedArticle(object):
     def __init__(self, set, cjaid, aid):
@@ -79,11 +185,9 @@ class CodedArticle(object):
         self.db = set.db
 
     @property
+    @cached
     def article(self):
-        if self._article is None:
-            self._article = self.db.article(self.aid)
-        return self._article
-    _article = None
+        return self.db.article(self.aid)
 
     @property
     @cached
@@ -102,17 +206,16 @@ class CodedArticle(object):
     @cached
     def values(self):
         schema = self.set.job.articleSchema
-        fields = [f.fieldname for f in schema.fields]
-        SQL = "select %s from %s where codingjob_articleid = %i" % (",".join(fields), schema.table, self.cjaid)
+        SQL = schema.SQLSelect() + " where codingjob_articleid = %i" % self.cjaid
         data = self.db.doQuery(SQL)
-        if data:
-            return dict(zip(fields, data[0]))
-        else:
-            return None
+        if data: return schema.asDict(data[0])
+        else: return None
 
     def getValue(self, field):
         if self.values is None: return None
-        return self.values.get(field.fieldname, None)
+        if isinstance(field, AnnotationSchemaField):
+            field = field.fieldname
+        return self.values.get(field, None)
         
 class CodedSentence(object):
     def __init__(self, codedArticle, arrowid, sentence):
@@ -125,12 +228,11 @@ class CodedSentence(object):
     @cached
     def values(self):
         schema = self.ca.set.job.unitSchema
-        fields = list(f.fieldname for f in schema.fields)
-        SQL = "select %s from %s where arrowid = %i" % (",".join(fields), schema.table, self.arrowid)
-        return dict(zip(fields, self.db.doQuery(SQL)[0]))
+        SQL = schema.SQLSelect() + " where arrowid = %i" % (self.arrowid,)
+        return schema.asDict(self.db.doQuery(SQL)[0])
 
     def getValue(self, field):
-        if type(field) == AnnotationSchemaField:
+        if isinstance(field, AnnotationSchemaField):
             field = field.fieldname
         return self.values.get(field, None)
 
@@ -139,24 +241,24 @@ class CodingjobSet(object):
         self.job = job
         self.db = job.db
         self.setnr = setnr
-        self._articles = None
         self._where = "codingjobid = %i and setnr = %i" % (self.job.id, self.setnr)
         
     @property
+    @cached
     def coder(self):
-        if self._coder is None:
-            SQL = "select coder_userid from codingjobs_sets where %s" % self._where
-            self._coder = self.job.db.users.getUser(self.job.db.getValue(SQL))
-        return self._coder
-    _coder = None
+        SQL = "select coder_userid from codingjobs_sets where %s" % self._where
+        return self.job.db.users.getUser(self.job.db.getValue(SQL))
 
     @property
+    @cached
     def articles(self):
-        if self._articles is None:
-            SQL = "select codingjob_articleid, articleid from codingjobs_articles where %s" % self._where
-            self._articles = [CodedArticle(self, *data) for data in self.job.db.doQuery(SQL)]
-        return self._articles
-    _articles = None
+        SQL = "select codingjob_articleid, articleid from codingjobs_articles where %s" % self._where
+        return [CodedArticle(self, *data) for data in self.job.db.doQuery(SQL)]
+
+    def getArticle(self, cjaid):
+        for a in self.articles:
+            if a.cjaid == cjaid:
+                return a
 
     def getArticleIDS(self):
         return set([a.article.id for a in self.articles])
@@ -206,11 +308,19 @@ class AnnotationSchema(object):
         SQL = """select fieldnr, fieldname, label, fieldtypeid, params
         from annotationschemas_fields where annotationschemaid=%i
         order by fieldnr""" % self.id
-        return [AnnotationSchemaField(self, *vals) for vals in self.db.doQuery(SQL)]
+        ont = ontology.fromDB(self.db)
+        return [getField(self, ont, *vals) for vals in self.db.doQuery(SQL)]
 
     def getField(self, fieldname):
         for f in self.fields:
             if f.fieldname == fieldname: return f
+
+    def SQLSelect(self, extra = []):
+        fields = extra + [f.fieldname for f in self.fields]
+        return "select %s from %s " % (",".join(fields), self.table)
+
+    def asDict(self, values):
+        return dict(zip([f.fieldname for f in self.fields], values))
                                     
     def idname(self):
         return "%i - %s" % (self.id, self.name)
@@ -236,43 +346,62 @@ class AnnotationSchemaField(object):
         self.label = label
         self.fieldtype = fieldtype
         self.params = paramdict(params)
-        self._labels = None
-
+    def deserialize(self, value):
+        return value
     def hasLabel(self):
-        return self.fieldtype in (3,4,5,8)
-
-    def getLabel(self, value):
-        if self._labels is None:
-            self._labels = {}
-            if self.fieldtype == 4:
-                vals = self.params['values']
-                for i, val in enumerate(vals.split(";")):
-                    if ":" in val:
-                        i, val = val.split(":")
-                        i = int(i)
-                    self._labels[i] = val
-            elif self.fieldtype in (3, 8):
-                #table=net_arrowtypes,key=arrowtypeid,label=name
-                #table=dnn_vw_katernenperkrant,key=katernid,label=label
-                table = self.params['table']
-                key = self.params['key']
-                label = self.params['label']
-                sql = "SELECT %s, %s FROM %s" % (key, label, table)
-                for k, l in self.schema.db.doQuery(sql):
-                    self._labels[k] = l
-            elif self.fieldtype == 5:
-                ids = self.params.get('ids', None)
-                if not ids: ids = self.params['ontologyid']
-                sql = "select objectid, label from ont_objects where ontologyid in (%s)" % ids.replace(";",",")
-                for k, l in self.schema.db.doQuery(sql):
-                    self._labels[k] = l
-                                        
-        return self._labels.get(value, None)
-        
-                
-
+        return False
     def __hash__(self):
         return hash(self.schema) ^ hash(self.fieldnr)
     def __eq__(self, other):
-        return type(other) == AnnotationSchemaField and self.schema == other.schema and self.fieldnr == other.fieldnr
+        try:
+            return self.schema == other.schema and self.fieldnr == other.fieldnr
+        except AttributeError, e:
+            return False
+
+class LookupAnnotationSchemaField(AnnotationSchemaField):
+    def __init__(self, *vals):
+        AnnotationSchemaField.__init__(self, *vals)
+    def deserialize(self, value):
+        if value is None: return None
+        return LookupValue(value, self.labels.get(value, None))
+    def hasLabel(self):
+        return True
+    @property
+    @cached
+    def labels(self):
+        if self.fieldtype == 4:
+            labels = {}
+            for i, val in enumerate(self.params['values'].split(";")):
+                if ":" in val:
+                    i, val = val.split(":")
+                    i = int(i)
+                labels[i] = val
+            return labels
+        else:
+            sql = "SELECT %(key)s, %(label)s FROM %(table)s" % self.params
+            return dict(self.schema.db.doQuery(sql))
+               
+class LookupValue(object):
+    def __init__(self, id, label):
+        self.id = id
+        self.label = label
+        
+class OntologyAnnotationSchemaField(AnnotationSchemaField):
+    def __init__(self, ont, *vals):
+        AnnotationSchemaField.__init__(self, *vals)
+        self.ont = ont
+    def deserialize(self, value):
+        if value is None: return None
+        return self.ont.nodes[value]
+    def hasLabel(self):
+        return True
+
+def getField(schema, ont, fieldnr, fieldname, label, fieldtype, params):
+    if fieldtype in (5,):
+        return OntologyAnnotationSchemaField(ont, schema, fieldnr, fieldname, label, fieldtype, params)
+    if fieldtype in (3,4,8):
+        return LookupAnnotationSchemaField(schema, fieldnr, fieldname, label, fieldtype, params)
+    else:
+        return AnnotationSchemaField(schema, fieldnr, fieldname, label, fieldtype, params)
     
+

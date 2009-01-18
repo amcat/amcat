@@ -4,6 +4,67 @@ def m_nominal(a,b): return int(a<>b)
 def m_interval(a,b): return (a-b)**2
 def m_ratio(a,b): return (float(a-b)/(a+b))**2
 
+def trans_n(x):
+    if x is None: return 0
+    return len(x)
+def trans_avg(x):
+    if x is None: return None
+    return float(sum(x)) / len(x)
+
+
+class MultisetReliability:
+    def __init__(self):
+        self.data = toolkit.DefaultDict(list) # (unit, observer) -> value
+        self.units = set()
+        self.observers = set()
+
+    def addEntry(self, unit, observer, value):
+        self.data[unit, observer].append(value)
+        self.units.add(unit)
+        self.observers.add(observer)
+
+    def getReliability(self, func):
+        r = Reliability()
+        for u in self.units:
+            for o in self.observers:
+                val = self.data.get((u, o))
+                val = func(val)
+                if val is not None:
+                    r.addEntry(u,o, val)
+        return r
+
+    def fscore(self, obsa, obsb, multiset):
+        tp = 0
+        fp = 0
+        fn = 0
+        for u in self.units:
+            va = count(self.data.get((u, obsa)))
+            vb = count(self.data.get((u, obsb)))
+            values = set(va.keys()) | set(vb.keys())
+            for v in values:
+                ca = va[v]
+                cb = vb[v]
+                if not multiset:
+                    ca = min(ca, 1)
+                    cb = min(cb, 1)
+                if ca > cb:
+                    tp += cb
+                    fn += ca - cb
+                else:
+                    tp += ca
+                    fp += cb - ca
+        if not tp: return None, None, None
+        pr = float(tp) / (tp + fp)
+        re = float(tp) / (tp + fn)
+        f = 2*pr*re / (pr + re)
+        return pr, re, f
+
+            
+def count(seq):
+    l = toolkit.DefaultDict(int)
+    if seq:
+        for s in seq: l[s] += 1
+    return l
 
 class Reliability:
 
@@ -214,3 +275,4 @@ if __name__ == '__main__':
     alpha, calc = a.alpha(returncalc=True, metric=m_ratio)
     print "\n"+calc
     print "\nRatio alpha: %1.3f" % (alpha)
+

@@ -1,3 +1,5 @@
+from toolkit import cached
+
 class Users(object):
     def __init__(self, db):
         self.db = db
@@ -17,13 +19,28 @@ class User(object):
     def __init__(self, db, id, username = None):
         self.db = db
         self.id = id
-        self._username = username
 
     @property
+    @cached
     def username(self):
-        if not self._username:
-            self._username = self.db.getValue("select username from users where userid = %i" % self.id)
-        return self._username
+        return self.db.getValue("select username from users where userid = %i" % self.id)
     
     def idname(self):
         return "%i - %s" % (self.id, self.username)
+
+    @property
+    @cached
+    def fullname(self):
+        return self.db.getValue("select fullname from users where userid = %i" % self.id)
+
+    @property
+    @cached
+    def affiliation(self):
+        return self.db.getValue("select affiliation from users where userid = %i" % self.id)
+
+    @property
+    @cached
+    def email(self):
+        return self.db.getValue("select email from users where userid = %i" % self.id)
+
+    

@@ -312,7 +312,7 @@ def fromDB(db, id):
     except IndexError:
         raise Exception('articleid not found')
 
-def articlesFromDB(db, ids):
+def articlesFromDB(db, ids, headline=True):
     """
     Article Factory method to create an article from the database
     """
@@ -322,8 +322,10 @@ def articlesFromDB(db, ids):
         db = dbtoolkit.anokoDB()
 
     data = None; text = None
+    if toolkit.isSequence(ids, True):
+        ids = ",".join(str(id) for id in ids)
     sql = """SELECT articleid, batchid, mediumid, date, headline, length, pagenr, encoding
-             FROM articles WHERE articleid in (%s)""" % ",".join(str(id) for id in ids)
+             FROM articles WHERE articleid in (%s)""" % ids
     for d in db.doQuery(sql):
         yield Article(db,*d)
 
@@ -427,13 +429,18 @@ class Sentence(object):
     @cached
     def text(self):
         db = self.article.db
-        text, long, enc = db.doQuery("select sentence, longsentence, encoding from sentences where sentenceid = %i" % self.sid)[0]
-        if long: text = long
+        text, enc = db.doQuery("select isnull(longsentence,sentence), encoding from sentences where sentenceid = %i" % self.sid)[0]
         if enc:
             text = dbtoolkit.decode(text, enc)
         else:
             text = text.decode('ascii')
         return text
+    
+def decode(text, enc):
+    if enc:
+        return dbtoolkit.decode(text, enc)
+    else:
+        return text.decode('ascii')
         
 
 def sentFromDB(db, sid):

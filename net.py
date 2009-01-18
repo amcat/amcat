@@ -1,3 +1,4 @@
+
 import toolkit, dot, base64, math, article
 
 def oneimage(arrow): return "Whole set"
@@ -25,8 +26,8 @@ class Network:
                 q = sum(arrow.qual for arrow in arrows)
                 q = float(q) / n
 
-                subj = subj.label
-                obj = obj.label
+                subj = subj and subj.label
+                obj = obj and obj.label
                 
                 e = d.addEdge(subj, obj)
                 lbl = "%+1.1f" % q
@@ -49,6 +50,23 @@ class Arrow:
         self.angle = angle
         self.predicate = predicate
         self.sentence = sentence
+    def posnegneut(self):
+        if qual < 0: return -1
+        if qual == 0: return 0
+        if qual > 0: return 1
+    def categorize(self,catid,root=False):
+        date = self.sentence.sentence.article.date
+        sur, suc, suo = self.subj.categorize(catid, date)
+        objr, objc, objo = self.obj.categorize(catid, date)
+        if root:
+            self.subj = sur
+            self.obj = objr
+        else:
+            self.subj = suc
+            self.obj = objc
+        suo = suo or 1
+        objo = objo or 1
+        self.qual *= suo * objo
     def getArrowTypeLabel(self):
         return self.sentence.article.db.getValue("select name from net_arrowtypes where arrowtypeid = %i" % self.type)
 
@@ -60,8 +78,7 @@ def fromCodedSentence(codedSentence, ontology):
     src = srcid and ontology.nodes[srcid] or None
     qual = s.getValue("quality")
     type = s.getValue("atype")
-    sentence = s.sentence
-    return Arrow(su, obj, qual, type, sentence, src)
+    return Arrow(su, obj, qual, type, s, src)
 
 if __name__ == '__main__':
     n = Network()
