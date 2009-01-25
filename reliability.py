@@ -33,13 +33,13 @@ class MultisetReliability:
                     r.addEntry(u,o, val)
         return r
 
-    def fscore(self, obsa, obsb, multiset):
+    def fscore(self, obsa, obsb, multiset, transform=None):
         tp = 0
         fp = 0
         fn = 0
         for u in self.units:
-            va = count(self.data.get((u, obsa)))
-            vb = count(self.data.get((u, obsb)))
+            va = count(self.data.get((u, obsa)), transform)
+            vb = count(self.data.get((u, obsb)), transform)
             values = set(va.keys()) | set(vb.keys())
             for v in values:
                 ca = va[v]
@@ -60,10 +60,12 @@ class MultisetReliability:
         return pr, re, f
 
             
-def count(seq):
+def count(seq, transform = None):
     l = toolkit.DefaultDict(int)
     if seq:
-        for s in seq: l[s] += 1
+        for s in seq:
+            if transform: s = transform(s)
+            l[s] += 1
     return l
 
 class Reliability:

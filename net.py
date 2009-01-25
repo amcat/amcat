@@ -39,7 +39,13 @@ class Network:
                 
             result[g] = d
         return result
-                
+    def judgementExtrapolation(self, ont):
+        ideal = ont.nodes[1625]
+        media = ont.nodes[1277]
+        for r in self.arrows:
+            r.judgementExtrapolation(ideal, media)
+        
+        
 class Arrow:
     def __init__(self, subj, obj, qual, type, sentence, src=None, angle=None, predicate=None):
         self.src = src
@@ -67,6 +73,11 @@ class Arrow:
         suo = suo or 1
         objo = objo or 1
         self.qual *= suo * objo
+    def judgementExtrapolation(self, ideal, media):
+        if self.obj == ideal:
+            self.obj = self.subj
+            self.subj = self.src or media
+        
     def getArrowTypeLabel(self):
         return self.sentence.article.db.getValue("select name from net_arrowtypes where arrowtypeid = %i" % self.type)
 

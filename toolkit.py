@@ -1071,6 +1071,12 @@ def setcached(func, obj, value):
 def setCachedProp(obj, propname, value):
     func = obj.__class__.__dict__[propname].fget
     setcached(func, obj, value)
+
+def perc(num, denom, decimals):
+    if not denom: return "-"
+    f = float(num * 100) / denom
+    if not decimals: return "%i%%" % int(f)
+    return ("%%1.%if%%%%" % decimals) % f
     
 if __name__ == "__main__":
     import sys

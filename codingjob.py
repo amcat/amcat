@@ -348,6 +348,10 @@ class AnnotationSchemaField(object):
         self.params = paramdict(params)
     def deserialize(self, value):
         return value
+    def getLabel(self, value):
+        if type(value) == float:
+            return "%1.2f"  % value
+        return value
     def hasLabel(self):
         return False
     def __hash__(self):
@@ -380,7 +384,10 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
         else:
             sql = "SELECT %(key)s, %(label)s FROM %(table)s" % self.params
             return dict(self.schema.db.doQuery(sql))
-               
+    def getLabel(self, value):
+        v = self.deserialize(value)
+        if not v: return None
+        return v.label
 class LookupValue(object):
     def __init__(self, id, label):
         self.id = id
@@ -393,6 +400,10 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
     def deserialize(self, value):
         if value is None: return None
         return self.ont.nodes[value]
+    def getLabel(self, value):
+        v = self.deserialize(value)
+        if not v: return None
+        return v.label
     def hasLabel(self):
         return True
 
