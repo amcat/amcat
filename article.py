@@ -226,7 +226,7 @@ class Article:
         if data:
             return [Sentence(self, *row) for row in data]
         else:
-            return self.splitSentences()
+            return list(self.splitSentences())
 
     def getLink(self):
         return "articleDetails?articleid=%i" % self.id
