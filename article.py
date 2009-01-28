@@ -1,5 +1,6 @@
-import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types
+import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types, project
 from toolkit import cached
+from itertools import izip, count
 _debug = toolkit.Debug('article',1)
 _xmltemplatefile = '/home/anoko/resources/files/article_template.xml'
 
@@ -40,8 +41,15 @@ class Article:
         s = dbtoolkit.decode(s, self.encoding)
         self.setMeta(b,s,m)
 
+
+    @property
+    @cached
+    def project(self):
+        pid = self.db.getValue("select projectid from batches where batchid=%i" % self.batchid)
+        return project.Project(self.db, pid)
+
     def getProjectid(self):
-        return self.db.getValue("select projectid from batches where batchid=%i" % self.batchid)
+        return self.project.id
 
     def setMeta(self, byline, section, fullmeta):
         if toolkit.isString(fullmeta):
@@ -59,10 +67,12 @@ class Article:
     def toText(self):
         return self.fulltext()
 
-    def toHTML(self, limitpars = None, includeMeta = False):
-        res = u"<h1>%s</h1>" % self.headline
-        if self.byline:
-            res += "\n<h2>%s</h2>" % self.byline
+    def toHTML(self, limitpars = None, includeMeta = False, includeHeadline = True):
+        res = u""
+        if includeHeadline:
+            res = u"<h1>%s</h1>" % self.headline
+            if self.byline:
+                res += "\n<h2>%s</h2>" % self.byline
         if includeMeta:
             source = self.db.sources.lookupID(self.medium)
             res += '''<table class="meta">
@@ -175,21 +185,16 @@ class Article:
             result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")
         return result.replace("\\r","").replace("\r","\n")
 
-    def splitSentences(self, split = False, onlyWords = False):
+    def splitSentences(self):
         text = self.text
-        if self.type == 4:
-            text = re.sub("\s+", " ", text)
-            sents = re.split(r"(?<!./N\(eigen,ev,neut\)/.) [\.?!]/Punc\([^)]*\)/[\.?!] ",text)
-        else:
-            text = ctokenizer.tokenize(text)
-            text = re.sub("\s+", " ", text)
-            sents = text.split(" . ")
-        for sentence in sents:
-            if sentence.strip():
-                if split:
-                    yield(words(sentence, onlyWords))
-                else:
-                    yield(sentence)
+        if not text:
+            text = ""
+        text = re.sub(r"q11\s*\n", "\n\n",text)
+        if self.headline: text = self.headline.replace(";",".")+ "\n\n" + text
+        spl = sbd.splitPars(text)
+        for parnr, par in izip(count(1), spl):
+            for sentnr, sent in izip(count(1), par):
+                yield Sentence(self, None, parnr, sentnr,  sentence=sent)
 
     def words(self, onlyWords = False, lemma=0): #lemma: 1=lemmaP, 2=lemma, 3=word
         text = self.text
@@ -218,7 +223,10 @@ class Article:
     @cached
     def sentences(self):
         data = self.db.doQuery("select sentenceid, parnr, sentnr from sentences where articleid=%i order by parnr, sentnr" % self.id)
-        return [Sentence(self, *row) for row in data]
+        if data:
+            return [Sentence(self, *row) for row in data]
+        else:
+            return self.splitSentences()
 
     def getLink(self):
         return "articleDetails?articleid=%i" % self.id
@@ -226,6 +234,7 @@ class Article:
     def getWeekNr(self):
         y,w,d = self.date.iso_week
         return "%s-%s" % (y,w)
+
 
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
                   length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, retrieveArticle=1):
@@ -417,17 +426,19 @@ def splitArticles(aids, db, tv=False):
     
 
 class Sentence(object):
-    def __init__(self, article, sid, parnr, sentnr):
+    def __init__(self, article, sid, parnr, sentnr, sentence = None):
         self.sid = sid
         self.parnr = parnr
         self.sentnr = sentnr
         self.article = article
+        self._sentence = sentence
     def getSentence(self):
         return self.text
 
     @property
     @cached
     def text(self):
+        if self._sentence: return self._sentence
         db = self.article.db
         text, enc = db.doQuery("select isnull(longsentence,sentence), encoding from sentences where sentenceid = %i" % self.sid)[0]
         if enc:
@@ -453,8 +464,10 @@ def sentFromDB(db, sid):
 
 if __name__ == '__main__':
     import sys, dbtoolkit, toolkit
-    aids = toolkit.intlist(sys.stdin)
     db = dbtoolkit.anokoDB()
-    splitArticles(aids, db)
-    db.conn.commit()
+    aid = int(sys.argv[1])
+    art = fromDB(db, aid)
+    sents = list(art.sentences)
+    for sent in sents[:3]:
+        print sent.sid, sent.parnr, sent.sentnr, sent.text
     

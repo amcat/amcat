@@ -30,7 +30,7 @@ def split(text, type=2):
             expr = re.compile(expr)
             
         sents = expr.split(text)
-        sents = [sent for sent in sents if sent.strip()]
+        sents = [sent.strip() for sent in sents if sent.strip()]
         return sents
         
 
