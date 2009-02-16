@@ -1,10 +1,10 @@
-import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types, project
+import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types, project, weakref
 from toolkit import cached
 from itertools import izip, count
 _debug = toolkit.Debug('article',1)
 _xmltemplatefile = '/home/anoko/resources/files/article_template.xml'
 
-class Article:
+class Article(object):
     """
     Class representing a newspaper article
     """
@@ -24,23 +24,35 @@ class Article:
         if encoding: self.headline = dbtoolkit.decode(self.headline, encoding)
         elif headline: self.headline = self.headline.decode('latin-1')
         
-        self._meta      = None # stores byline, section, fullmeta
+        self._byline, self._section, self._fullmeta, self._url = None, None, None, None
 
-    def __getattr__(self, name):
-        if name in ("byline", "section", "fullmeta"):
-            if not self._meta: self._getMeta()
-            return self._meta[name]
-        if name == "text":
-            return self.getText()
-        raise AttributeError(name)
+    @property
+    def url(self):
+        if not self._url: self._getMeta()
+        return self._url
+    @property
+    def section(self):
+        if not self._section: self._getMeta()
+        return self._section
+    @property
+    def byline(self):
+        if not self._byline: self._getMeta()
+        return self._byline
+    @property
+    def fullmeta(self):
+        if not self._fullmeta: self._getMeta()
+        return self._fullmeta
+    @property
+    def text(self):
+        return self.getText()
 
     def _getMeta(self):
-        b,s,m = self.db.doQuery("select byline, section, metastring from articles where articleid=%i" % self.id)[0]
-        b = dbtoolkit.decode(b, self.encoding)
+        b,s,m,u = self.db.doQuery("select byline, section, metastring, url from articles where articleid=%i" % self.id)[0]
+        self._byline = dbtoolkit.decode(b, self.encoding)
+        self._section = dbtoolkit.decode(s, self.encoding)
         m = dbtoolkit.decode(m, self.encoding)
-        s = dbtoolkit.decode(s, self.encoding)
-        self.setMeta(b,s,m)
-
+        self._fullmeta = toolkit.dictFromStr(m, unicode=True)
+        self._url = u
 
     @property
     @cached
@@ -61,8 +73,7 @@ class Article:
         return self.db.getText(self.id, type)
 
     def getSection(self):
-        if not self._meta: self._getMeta()
-        return self._meta.get("section")
+        return self.section
     
     def toText(self):
         return self.fulltext()
@@ -167,7 +178,7 @@ class Article:
         Looks up the medium (source id) and returns the name
         """
         if self.medium:
-            return self.db.sources.lookupID(self.medium).name
+            return self.source.name
 
     def __str__(self):
         return ('<article id="%(id)s" date="%(date)s" source="%(medium)s" length="%(length)s">' +
@@ -194,7 +205,8 @@ class Article:
         spl = sbd.splitPars(text)
         for parnr, par in izip(count(1), spl):
             for sentnr, sent in izip(count(1), par):
-                yield Sentence(self, None, parnr, sentnr,  sentence=sent)
+                s = Sentence(self, None, parnr, sentnr,  sentence=sent)
+                yield s
 
     def words(self, onlyWords = False, lemma=0): #lemma: 1=lemmaP, 2=lemma, 3=word
         text = self.text
@@ -226,15 +238,24 @@ class Article:
         if data:
             return [Sentence(self, *row) for row in data]
         else:
-            return list(self.splitSentences())
+            sents = list(self.splitSentences())
+            return sents
 
     def getLink(self):
         return "articleDetails?articleid=%i" % self.id
 
-    def getWeekNr(self):
-        y,w,d = self.date.iso_week
-        return "%s-%s" % (y,w)
+    def getWeekNr(self): return toolkit.getYW(self.date)
 
+    def __id__(self):
+        return self.id
+
+    def __del__(self):
+        toolkit.delCachedProp(self, "sentences")
+
+    def __eq__(self, other):
+        return isinstance(other, Article) and other.id == self.id
+    def __hash__(self):
+        return hash(type(self)) ^ hash(self.id) 
 
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
                   length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, retrieveArticle=1):
@@ -422,6 +443,8 @@ def splitArticles(aids, db, tv=False):
                     db.insert("sentences", {"articleid":article.id, "parnr" : parnr, "sentnr" : sentnr, "sentence" : sent, 'longsentence': longsent, 'encoding': encoding})
                 except Exception, e:
                     error += '%s: %s\n' % (article.id , e)
+        toolkit.warn("Parsed article %i"% article.id)
+        db.conn.commit()
     return error
     
 
@@ -430,10 +453,22 @@ class Sentence(object):
         self.sid = sid
         self.parnr = parnr
         self.sentnr = sentnr
-        self.article = article
+        self._article = weakref.ref(article)
         self._sentence = sentence
     def getSentence(self):
         return self.text
+
+    def __id__(self):
+        if self.sid:
+            return self.sid
+        else:
+            return "%s:%s:%s" % (self.article.id, self.parnr, self.sentnr)
+
+    @property
+    def article(self):
+        a = self._article()
+        if a is None: raise Exception("Article already finalized!")
+        return a
 
     @property
     @cached
@@ -444,14 +479,14 @@ class Sentence(object):
         if enc:
             text = dbtoolkit.decode(text, enc)
         else:
-            text = text.decode('ascii')
+            text = text.decode('ascii', 'replace')
         return text
     
 def decode(text, enc):
     if enc:
         return dbtoolkit.decode(text, enc)
     else:
-        return text.decode('ascii')
+        return text.decode('ascii', 'replace')
         
 
 def sentFromDB(db, sid):
@@ -465,9 +500,6 @@ def sentFromDB(db, sid):
 if __name__ == '__main__':
     import sys, dbtoolkit, toolkit
     db = dbtoolkit.anokoDB()
-    aid = int(sys.argv[1])
-    art = fromDB(db, aid)
-    sents = list(art.sentences)
-    for sent in sents[:3]:
-        print sent.sid, sent.parnr, sent.sentnr, sent.text
+    aids = list(toolkit.intlist(sys.stdin))
+    splitArticles(aids, db)
     

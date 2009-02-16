@@ -521,7 +521,10 @@ class anokoDB(object):
 
     def getText(self, aid, type):
         sql = "select text, encoding from texts where articleid=%i and type=%i" % (aid, type)
-        txt, enc = self.doQuery(sql)[0]
+        try:
+            txt, enc = self.doQuery(sql)[0]
+        except IndexError:
+            raise Exception("text not found: articleid=%i and type=%i" % (aid, type))
         if len(txt) > 64000:
             txt = self.getLongText(aid, type)
         return decode(txt, enc)

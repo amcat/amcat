@@ -17,14 +17,12 @@ class Network:
             graphs[g][arrow.subj, arrow.obj].append(arrow)
         for g,graph in graphs.items():
             d = dot.Graph()
-            maxn = len(toolkit.choose(graph.values(), len))
-            totn = sum([len(x) for x in graph.values()])
+            maxn = len(toolkit.choose(graph.values(), lambda x:len(list(x))))
             for (subj, obj), arrows in graph.items():
                 n = len(arrows)
-                if relfthreshold and float(n)/totn < relfthreshold: continue
+                if relfthreshold and float(n)/maxn < relfthreshold: continue
                 if absfthreshold and n < absfthreshold: continue
-                q = sum(arrow.qual for arrow in arrows)
-                q = float(q) / n
+                q = toolkit.average([arrow.qual for arrow in arrows])
 
                 subj = subj and subj.label
                 obj = obj and obj.label
@@ -32,11 +30,9 @@ class Network:
                 e = d.addEdge(subj, obj)
                 lbl = "%+1.1f" % q
                 if includef: lbl = "%s %i" % (lbl, n)
-                e.setlabel(lbl)
-                e.setcolor(.67-.33*q,1,.5)
-                if maxn > 5: n = math.sqrt(float(n) / maxn * 20)
-                e.setlinewidth(n)
-                
+                e.label = lbl
+                e.weight = n
+                e.sign = q
             result[g] = d
         return result
     def judgementExtrapolation(self, ont):
@@ -45,7 +41,9 @@ class Network:
         for r in self.arrows:
             r.judgementExtrapolation(ideal, media)
         
-        
+
+DONTCATEGORIZE= []#["societalgroup"]
+
 class Arrow:
     def __init__(self, subj, obj, qual, type, sentence, src=None, angle=None, predicate=None):
         self.src = src
@@ -65,11 +63,11 @@ class Arrow:
         sur, suc, suo = self.subj.categorize(catid, date)
         objr, objc, objo = self.obj.categorize(catid, date)
         if root:
-            self.subj = sur
+            self.subj = sur 
             self.obj = objr
         else:
-            self.subj = suc
-            self.obj = objc
+            self.subj = suc if (suc.label not in DONTCATEGORIZE) else self.subj
+            self.obj = objc if (objc.label not in DONTCATEGORIZE) else self.obj
         suo = suo or 1
         objo = objo or 1
         self.qual *= suo * objo

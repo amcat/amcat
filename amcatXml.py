@@ -27,20 +27,20 @@ class ArticleWriter:
         pagenr = meta.get('pagenr',None)
         url = meta.get('url',None)
         id = meta.get('id',None)
-        length = len(text.split(' '))
+        length = len(text.split())
         for key in meta.keys():
             if key in ('headline', 'byline', 'section', 'pagenr', 'mediumid', 'date', 'url', 'id'):
                 del meta[key]
         meta = `meta`
         try:
             if type(headline) == str:
-                headline = unicode(headline, 'latin-1')
+                headline = unicode(headline.strip(), 'latin-1')
             if type(meta) == str:
                 meta = unicode(meta, 'latin-1')
             if type(byline) == str:
-                byline = unicode(byline, 'latin-1')
+                byline = unicode(byline.strip(), 'latin-1')
             if type(text) == str:
-                text = unicode(text, 'latin-1')
+                text = unicode(text.strip(), 'latin-1')
         except Exception, e:
             raise Exception('unicode problem %s %s %s: %s' % (headline, meta, byline, e))
         

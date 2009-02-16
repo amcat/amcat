@@ -146,7 +146,9 @@ def fromdb(db, sid):
     sql = """select wordbegin, word, lemma, pos, major, minor 
              from vw_parses_words_pos where sentenceid = %i""" % sid
     s = Sentence()
-    for b,w,l,p,mj,mn in db.doQuery(sql):
+    data = db.doQuery(sql)
+    if not data: raise Exception('Parse not found in db')
+    for b,w,l,p,mj,mn in data:
         pos = Pos(p, mj,mn)
         node = Node(b,w,l, pos)
         s.add(node, b)

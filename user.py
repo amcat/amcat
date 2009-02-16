@@ -1,4 +1,5 @@
 from toolkit import cached
+import toolkit
 
 class Users(object):
     def __init__(self, db):
@@ -46,4 +47,4 @@ class User(object):
     def email(self):
         return self.db.getValue("select email from users where userid = %i" % self.id)
 
-    
+

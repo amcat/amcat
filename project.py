@@ -1,3 +1,5 @@
+from toolkit import cached
+
 class Project(object):
     def __init__(self, db, id):
         self.db = db
@@ -23,4 +25,11 @@ class Project(object):
 
     def href(self):
         return '<a href="projectDetails?projectid=%i">%i - %s</a>' % (self.id, self.id, self.name)
-    
+        
+    #@cached
+    @property
+    def batches(self):
+        data = self.db.doQuery("""SELECT b.batchid
+                     FROM batches AS b
+                     WHERE b.projectid = %d""" % self.id, colnames=0)
+        return [row[0] for row in data]

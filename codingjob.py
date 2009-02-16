@@ -71,12 +71,28 @@ class Codingjob(object):
             if set.setnr == setnr:
                 return set
 
-    def findCodedArticle(self, art, coder):
-        for set in self.sets:
-            if set.coder == coder:
+    def findCodedArticle(self, art=None, coder=None, cjaid=None):
+        if art and coder:
+            for set in self.sets:
+                if set.coder == coder:
+                    for ca in set.articles:
+                        if ca.article == art:
+                            return ca
+        elif cjaid:
+            for set in self.sets:
                 for ca in set.articles:
-                    if ca.article == art:
+                    if ca.cjaid == cjaid:
                         return ca
+        else:
+            raise Exception("Need either art and coder OR cjaid")
+
+    def findCodedArticles(self, art=None, coder=None):
+        raise Exception([art, coder])
+        for set in self.sets:
+            if coder and set.coder <> coder: continue
+            for ca in set.articles:
+                if art and ca.article <> art: continue
+                yield ca
 
     def idname(self):
         return "%i - %s" % (self.id, self.name)
@@ -141,7 +157,8 @@ class Codingjob(object):
             sents = {}
             SQL = """select articleid, sentenceid, parnr, sentnr from sentences s
                      where articleid in (select articleid from codingjobs_articles where codingjobid = %i)""" % (self.id,)
-            for aid, sid, parnr, sentnr in self.db.doQuery(SQL):
+            data = list(self.db.doQuery(SQL))
+            for aid, sid, parnr, sentnr in data:
                 a = articles[aid]
                 if not a in sentsperart:
                     l = []
@@ -235,6 +252,19 @@ class CodedSentence(object):
         if isinstance(field, AnnotationSchemaField):
             field = field.fieldname
         return self.values.get(field, None)
+
+_cache = {}
+def getCodingJob(db, cjid):
+    if (db, cjid) not in _cache:
+        _cache[db, cjid] = Codingjob(db, cjid)
+    return _cache[db, cjid]
+        
+    
+
+def getCodedArticle(db, cjaid):
+    cjid = db.getValue("select codingjobid from codingjobs_articles where codingjob_articleid = %i"  % cjaid)
+    job = getCodingJob(db, cjid)
+    return job.findCodedArticle(cjaid = cjaid)
 
 class CodingjobSet(object):
     def __init__(self, job, setnr):
@@ -406,6 +436,12 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
         return v.label
     def hasLabel(self):
         return True
+
+def getCAJobs(cas):
+    return sorted(set([ca.set.job for ca in cas]))
+def getCACoders(cas):
+    return sorted(set(ca.set.coder for ca in cas))
+
 
 def getField(schema, ont, fieldnr, fieldname, label, fieldtype, params):
     if fieldtype in (5,):

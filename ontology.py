@@ -318,13 +318,11 @@ def createNode(db, label, ontologyid, ver, nr=None, isinstance=True, languageid=
     db.insert("on_labels", dict(objectid=oid, languageid=languageid, created_version=ver, label=label), retrieveIdent=False)
     return oid
 
-def createClass(db, label, ontologyid, nr=None, superclass=None):
-    raise Exception("Not implemented")
-    oid = createNode(db, label, ontologyid, nr)
-    db.insert("ont_classes", dict(objectid=oid), retrieveIdent=False)
+def createClass(db, label, ontologyid, ver, nr=None, superclass=None):
+    oid = createNode(db, label, ontologyid, ver, nr, isinstance=False, languageid=2)
     if superclass:
         if isinstance(superclass, Node): superclass = superclass.oid
-        db.insert("ont_classes_subclasses", dict(superclassid=superclass, subclassid=oid), retrieveIdent=False)
+        db.insert("on_hierarchy", dict(parentid=superclass, childid=oid, created_version=ver), retrieveIdent=False)
     return oid
 
 
@@ -335,11 +333,9 @@ def createInstance(db, label, ontologyid, ver, nr=None, clas=None, languageid=2)
         db.insert("on_hierarchy", dict(parentid=clas, childid=oid, created_version=ver), retrieveIdent=False)
     return oid
 
-def createRole(db, label, su, rel, obj, dfrom=None, dto=None):
-    raise Exception("Not implemented")
-    oid = createNode(db, label, None)
-    db.insert("ont_roles", dict(objectid=oid, role_subjectid=su, role_objectid=obj,
-                                predicateid=rel, datefrom=dfrom, dateto=dto),
+def createRole(db, label, su, rel, obj, dfrom=None, dto=None,ver=None):
+    db.insert("on_relations", dict(subjectid=su, objectid=obj,
+                                    predicateid=rel, fromdate=dfrom, todate=dto, created_version=ver),
               retrieveIdent=False)
 
 def createRelation(db, su, rel, obj, ver):

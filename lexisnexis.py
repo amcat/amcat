@@ -92,7 +92,7 @@ def parseArticle(articleString, db, batchid, commit):
     if 'length' in meta:
         if toolkit.rematch(RE_LENGTH, meta['length']): 
             length = int(toolkit._MATCH.group(1))
-    if not length: length = len(body.split(" "))
+    if not length: length = len(body.split())
 
     # extract crucial meta info
     headline = meta.get ('headline', 'missing')[:740]

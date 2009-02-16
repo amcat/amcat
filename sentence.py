@@ -12,6 +12,9 @@ class Sentence(object):
         self.db = db
         self.id = id
         self._fields = False
+
+    def __id__(self):
+        return self.id
         
     def _getFields(self):
         if self._fields: return

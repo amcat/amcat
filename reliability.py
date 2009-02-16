@@ -53,13 +53,34 @@ class MultisetReliability:
                 else:
                     tp += ca
                     fp += cb - ca
-        if not tp: return None, None, None
+        if not (tp or fp or fn): return None, None, None
+        if not tp: return 0., 0., 0.
         pr = float(tp) / (tp + fp)
         re = float(tp) / (tp + fn)
         f = 2*pr*re / (pr + re)
         return pr, re, f
 
-            
+    def confusion(self, observers=None):
+        result = toolkit.DefaultDict(int)
+        for u in self.units:
+            for i, o in enumerate(self.observers):
+                if observers and (o not in observers): continue
+                for j, o2 in enumerate(self.observers):
+                    if j <= i: continue
+                    if observers and (o2 not in observers): continue
+                    va = set(self.data.get((u, o), []))
+                    vb = set(self.data.get((u, o2), []))
+                    ad = va - vb
+                    bd = vb - va
+                    w = 1#1.0 / (len(ad) * len(bd))
+                    for obj in ad:
+                        for obj2 in bd:
+                            if obj.oid > obj2.oid: key = obj, obj2
+                            else: key = obj2, obj
+                            result[key] += w
+        return result
+                
+    
 def count(seq, transform = None):
     l = toolkit.DefaultDict(int)
     if seq:

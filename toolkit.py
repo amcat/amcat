@@ -1,6 +1,6 @@
 #!/bin/env python2.2
 
-import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs
+import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict
 
 _USE_CURSES = 1
 
@@ -24,6 +24,19 @@ def readids(file):
 
 class DefaultDict(dict):
     def __init__(self,default):
+        dict.__init__(self)
+        self.default = default
+    def __getitem__(self, key):
+        if not key in self:
+            default = self.default
+            if isCallable(default): default=default()
+            self[key]=default
+            return default
+        return self.get(key)
+
+class DefaultOrderedDict(odict.OrderedDict):
+    def __init__(self,default):
+        odict.OrderedDict.__init__(self)
         self.default = default
     def __getitem__(self, key):
         if not key in self:
@@ -208,7 +221,7 @@ ticker = Ticker()
 
 ############## TESTING TYPES ##############
 def isDict(obj):
-    return type(obj) == types.DictType
+    return isinstance(obj, dict)
 
 def isSequence(obj, excludeStrings = False):
     if excludeStrings and isString(obj): return False
@@ -360,13 +373,15 @@ def count(pattern, text, useRE=1):
       
 ############# DATETIME ROUTINES #############
 
-_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-_MONTHS2 = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','dez'];
-_MONTHS3 = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by jcjacobi for iex.nl
-_MONTHS4 = ['jan','feb','maa','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by jcjacobi for texel-plaza
-_MONTHS6 = ['jan','feb','mae','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by wva for sueddeutsche zeitung
-_MONTHS5 = ['janv','fevr','mars','avri','mai','juin','juil','aout','sept','octo','nove','dece']; #Added by Lonneke voor fr
-_MONTHS6 = ['ener', 'febr', 'marz', 'abri', 'mayo', 'juni', 'juli', 'agos', 'sept', 'octu', 'novi','dici']
+def getYW(date):
+    y,w,d = date.iso_week
+    return y + w/100.0
+
+def getYM(date):
+    return date.year + date.month / 100.0
+
+def getYQ(date):
+    return date.year + (int((date.month-1)/3)+1)/10.0
 
 def average(seq):
     return float(sum(seq)) / len(seq)
@@ -377,6 +392,14 @@ def stdev(seq):
     for e in seq:
         s += (e - avg)**2
     return (s / (len(seq) - 1)) ** .5 
+
+def correlate(as,bs):
+    ma = average(as)
+    mb = average(bs)
+    teller =sum([(a-ma) * (b-mb) for (a,b) in zip(as, bs)])
+    noemer = (len(as) - 1 ) * stdev(as) * stdev(bs)
+    if not noemer : return None
+    return teller / noemer
 
 def dayofweek(date):
     return date.Format('%D')
@@ -443,6 +466,14 @@ def unescapeHtml(text):
     return re.sub("&#?\w+;", fixup, text)
 
 
+
+_MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+_MONTHS2 = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','dez'];
+_MONTHS3 = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by jcjacobi for iex.nl
+_MONTHS4 = ['jan','feb','maa','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by jcjacobi for texel-plaza
+_MONTHS6 = ['jan','feb','mae','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by wva for sueddeutsche zeitung
+_MONTHS5 = ['janv','fevr','mars','avri','mai','juin','juil','aout','sept','octo','nove','dece']; #Added by Lonneke voor fr
+_MONTHS6 = ['ener', 'febr', 'marz', 'abri', 'mayo', 'juni', 'juli', 'agos', 'sept', 'octu', 'novi','dici']
 
 
 def monthnr(str):
@@ -997,6 +1028,11 @@ def execute(cmd, input=None, listener=None, listenOut=False):
     return outr.out, errr.out
 
 
+def ps2pdf(ps):
+    out, err = execute("ps2pdf - -", ps)
+    if err: raise Exception(err)
+    return out
+
 def splitlist(list, chunksize):
     for i in range(0, len(list), chunksize):
         yield list[i:i+chunksize]
@@ -1044,24 +1080,19 @@ def parseSection(section):
         return (m.group(1) + m.group(3)).strip(), int(m.group(2))
     return None
 
-class CachedValue(object):
-    def __init__(self):
-        self.init = False
-    def isInitialized(self):
-        return self.init
-    def set(self, value):
-        self.value = value
-        self.init = True
-    def get(self):
-        return self.value
 
 #simple decorator to cache methods without arguments
 def cached(func):
     vals = {}
     def inner(self):
-        if not self in vals:
-            vals[self] = func(self)
-        return vals[self]
+        try:
+            id = self.__id__()
+        except AttributeError:
+            id = self
+        if not id in vals:
+            vals[id] = func(self)
+            #toolkit.warn("Adding [%s] to cache, len now %i" % (id, len(vals)))
+        return vals[id]
     inner._vals = vals
     return inner            
 
@@ -1072,13 +1103,39 @@ def setCachedProp(obj, propname, value):
     func = obj.__class__.__dict__[propname].fget
     setcached(func, obj, value)
 
+def delCachedProp(obj, propname):
+    func = obj.__class__.__dict__[propname].fget
+    try:
+        id = obj.__id__()
+    except AttributeError:
+        id = obj
+    if id in func._vals:
+        del func._vals[id]
+
 def perc(num, denom, decimals):
     if not denom: return "-"
     f = float(num * 100) / denom
     if not decimals: return "%i%%" % int(f)
     return ("%%1.%if%%%%" % decimals) % f
+
+def href(link, text):
+    if isIterable(text, True): text = " : ".join(text)
+    if link:
+        link = "<a href='%s'>%%s</a>" % link
+        if text: return link % text
+        return link
+    return text
+
+def apply(collection, function):
+    if isDict(collection): 
+        for key in collection:
+            collection[key] = function(collection[key])
+    else:
+        for i, val in enumerate(collection):
+            collection[i] = function(val)
+    return collection
+
     
 if __name__ == "__main__":
-    import sys
-    print choose(["123","45","999"], lambda x: int(x)*-1, True)
-    
+    print correlate([3,4,5,2], [2,1,4,1])
+
