@@ -81,10 +81,12 @@ class Arrow:
 
 def fromCodedSentence(codedSentence, ontology):
     s = codedSentence
-    su = ontology.nodes[s.getValue("subject")]
-    obj = ontology.nodes[s.getValue("object")]
+    #raise Exception(`s.getValue("subject")`)
+    #raise Exception(`ontology.nodes`)
+    su = ontology.nodes.get(s.getValue("subject"))
+    obj = ontology.nodes.get(s.getValue("object"))
     srcid = s.getValue("source")
-    src = srcid and ontology.nodes[srcid] or None
+    src = srcid and ontology.nodes.get(srcid) or None
     qual = s.getValue("quality")
     type = s.getValue("atype")
     return Arrow(su, obj, qual, type, s, src)

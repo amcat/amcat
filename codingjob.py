@@ -412,16 +412,21 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
                 labels[i] = val
             return labels
         else:
-            sql = "SELECT %(key)s, %(label)s FROM %(table)s" % self.params
+            return {}
+            # this code does not work, table is incorrect...
+            sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.schema.table)
             return dict(self.schema.db.doQuery(sql))
     def getLabel(self, value):
         v = self.deserialize(value)
         if not v: return None
         return v.label
+        
+        
 class LookupValue(object):
     def __init__(self, id, label):
         self.id = id
         self.label = label
+        
         
 class OntologyAnnotationSchemaField(AnnotationSchemaField):
     def __init__(self, ont, *vals):
