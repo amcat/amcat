@@ -70,9 +70,9 @@ class Table(object):
         if not self.conf: self.conf = CSVConf()
         outfile = StringIO.StringIO()
         w = csv.writer(outfile, self.conf.dialect)
-        w.writerow(self.header())
-        for obj, row in self.data():
-            w.writerow([self.conf.format(x.value) for x in row])
+        w.writerow(self.header().cells)
+        for row in self.data():
+            w.writerow([self.conf.format(x.value) for x in row.cells])
         return outfile.getvalue()
 
     def getHTML(self):
@@ -86,8 +86,9 @@ class Table(object):
             html2 = rowHTML(row)
             html += html2
             if rowCount > 500: # for performance issues
-                html += '<p><strong>Row limit reached</strong></p>'
-                break
+                html += '</table>'
+                html += '<div class="message">Row limit reached (500 rows)</div>'
+                return html
         if rowCount == 0:
             html += '<tr><td colspan="%d" class="no-data">No data found</td></tr>' % len(self.header().cells)
         html += "</table>\n"
@@ -139,6 +140,8 @@ class CSVConf(TableConf):
     def format(self, x):
         if type(x) in (float, decimal.Decimal) and self.eu:
             return str(x).replace(".",",")
+        if type(x) == unicode:
+            x = x.encode('utf-8')
         return x
         
 
