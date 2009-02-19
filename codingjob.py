@@ -252,6 +252,9 @@ class CodedSentence(object):
         if isinstance(field, AnnotationSchemaField):
             field = field.fieldname
         return self.values.get(field, None)
+        
+    def getLink(self):
+        return 'sentenceDetails?sentenceid=%d' % self.sentence.id
 
 _cache = {}
 def getCodingJob(db, cjid):
@@ -335,6 +338,7 @@ class AnnotationSchema(object):
     @property
     @cached
     def fields(self):
+        if self.id == 0: return []
         SQL = """select fieldnr, fieldname, label, fieldtypeid, params
         from annotationschemas_fields where annotationschemaid=%i
         order by fieldnr""" % self.id
@@ -434,7 +438,7 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
         self.ont = ont
     def deserialize(self, value):
         if value is None: return None
-        return self.ont.nodes[value]
+        return self.ont.nodes.get(value)
     def getLabel(self, value):
         v = self.deserialize(value)
         if not v: return None

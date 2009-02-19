@@ -23,6 +23,7 @@ class Project(object):
         self._getFields()
         return self._owner
 
+    @property
     def href(self):
         return '<a href="projectDetails?projectid=%i">%i - %s</a>' % (self.id, self.id, self.name)
         

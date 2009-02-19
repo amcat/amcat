@@ -481,6 +481,11 @@ class Sentence(object):
         else:
             text = text.decode('ascii', 'replace')
         return text
+        
+    
+    def getLink(self):
+        return 'sentenceDetails?sentenceid=%d' % self.sid
+
     
 def decode(text, enc):
     if enc:

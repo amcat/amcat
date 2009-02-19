@@ -83,8 +83,7 @@ class Table(object):
         rowCount = 0
         for row in self.data():
             rowCount += 1
-            html2 = rowHTML(row)
-            html += html2
+            html += rowHTML(row)
             if rowCount > 500: # for performance issues
                 html += '</table>'
                 html += '<div class="message">Row limit reached (500 rows)</div>'
@@ -105,6 +104,7 @@ class Table(object):
             for c in row.cells:
                 v = c.value
                 if type(v) in (int, float):
+                    if max - min == 0: continue
                     v = float(v - min) / (max - min)
                     h = .666 + .167 * v
                     s = .5#1- v/2
@@ -169,7 +169,11 @@ class CellInfo(object):
         clas = " class='%s' "%clas if clas else ""
         style= " style='%s' "%style if style else ""
         tdstyle = " style='background-color:%s' " % self.color if self.color else ""
-        text = unicode(self.label)
+        try:
+            #text = unicode(str(self.label), 'latin-1')
+            text = str(self.label).decode('latin-1') if type(self.label) != unicode else self.label
+        except Exception, e:
+            raise Exception(`self.label` + str(e))
         title = ""
         if conf.maxlen and len(text) > conf.maxlen:
             title = " title='%s'" % text
