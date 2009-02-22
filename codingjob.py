@@ -416,9 +416,8 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
                 labels[i] = val
             return labels
         else:
-            return {}
-            # this code does not work, table is incorrect...
-            sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.schema.table)
+            sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.params['table'])
+
             return dict(self.schema.db.doQuery(sql))
     def getLabel(self, value):
         v = self.deserialize(value)
