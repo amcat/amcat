@@ -78,7 +78,7 @@ class Article(object):
     def toText(self):
         return self.fulltext()
 
-    def toHTML(self, limitpars = None, includeMeta = False, includeHeadline = True):
+    def toHTML(self, limitpars = None, includeMeta = False, includeHeadline = True, includeText = True):
         res = u""
         if includeHeadline:
             res = u"<h1>%s</h1>" % self.headline
@@ -93,7 +93,7 @@ class Article(object):
             <tr><td>Page:</td><td></td><td>%s</td></tr>
             <tr><td>Section:</td><td></td><td>%s</td></tr>
             </table>''' % (source, toolkit.writeDate(self.date), self.id, self.pagenr, self.section)
-        if self.text: 
+        if includeText and self.text: 
             if limitpars:
                 res += "<p>%s</p>" % "</p><p>".join(self.text.split("\n\n")[:limitpars])
             else:

@@ -1,11 +1,14 @@
 from toolkit import cached
 import toolkit
 
+
 class Users(object):
-    def __init__(self, db):
+    def __init__(self, db, projectid=None):
         self.db = db
         self.byid, self.byname = {}, {}
-        SQL = "select username, userid from users"
+        SQL = "select u.username, u.userid from users AS u"
+        if projectid:
+            SQL += ' WHERE exists (SELECT ppu.userid FROM permissions_projects_users AS ppu WHERE u.userid = ppu.userid AND ppu.projectid = %d)' % projectid
         for un, uid in db.doQuery(SQL):
             u = User(db, uid, un)
             self.byid[uid] = u

@@ -1,4 +1,5 @@
 from toolkit import cached
+import user
 
 class Project(object):
     def __init__(self, db, id):
@@ -34,3 +35,9 @@ class Project(object):
                      FROM batches AS b
                      WHERE b.projectid = %d""" % self.id, colnames=0)
         return [row[0] for row in data]
+
+    @property
+    def users(self):
+        users = user.Users(self.db, self.id)
+        for u in users.byid.values():
+            yield u
