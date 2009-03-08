@@ -489,7 +489,7 @@ def monthnr(str):
     return None
 
 
-def readDate(str, lax=False, rejectPre1970=False):
+def readDate(str, lax=False, rejectPre1970=False, american=False):
     if str == None: return None
     
     orig = str
@@ -509,6 +509,7 @@ def readDate(str, lax=False, rejectPre1970=False):
         m = 1
     elif research("(\d{1,2})[-/](\d{1,2})[-/](\d{4})",str):
         ymd = [_MATCH.group(3),_MATCH.group(2),_MATCH.group(1)]
+        if american: ymd[2], ymd[1] = ymd[1], ymd[2]
         m = 2
     elif research("(\w+),?\s+(\d{1,2})\s*,?\s+(\d{4})",str) and monthnr(_MATCH.group(1)):
         ymd = [_MATCH.group(3), monthnr(_MATCH.group(1)), _MATCH.group(2)]
@@ -525,9 +526,9 @@ def readDate(str, lax=False, rejectPre1970=False):
     elif research("(\d{1,2})\.?\s+(\w*)\s+(\d{4})",str) and monthnr(_MATCH.group(2)):
         ymd = [_MATCH.group(3), monthnr(_MATCH.group(2)), _MATCH.group(1)]
         m = 7
-    elif research("(\d{2}) (\w+) (\d{4})",str) and monthnr(_MATCH.group(2)):
+    elif research("(\d{1,2})[- ](\w+)[- ](\d{2,4})",str) and monthnr(_MATCH.group(2)):
         ymd = [_MATCH.group(3), monthnr(_MATCH.group(2)), _MATCH.group(1)]
-        m = 8  
+        m = 8
     else:
         m = 99
         if lax: return None
@@ -550,12 +551,16 @@ def readDate(str, lax=False, rejectPre1970=False):
         if time: ymd += hms
         ymd = map(int, ymd)
 
+        if ymd[0] < 1900:
+            if ymd[0] < 40: ymd[0] += 2000
+            else: ymd[0] += 1900
+            print "date: %s %s -> %s" % (str, m, ymd)
+
+
         if ymd[0]<1970 and rejectPre1970:
             print ("Rejecting datetime string %s -> %s -> %s"% (str, m, ymd))
             if lax: return None
             raise ValueError("Rejecting datetime string %s -> %s -> %s"% (str, m, ymd))
-
-        if ymd[0] < 1900: print "date: %s %s -> %s" % (str, m, ymd)
 
         return mx.DateTime.DateTime(*ymd)
     except Exception,e :

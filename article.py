@@ -2,7 +2,7 @@ import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types, pro
 from toolkit import cached
 from itertools import izip, count
 _debug = toolkit.Debug('article',1)
-_xmltemplatefile = '/home/anoko/resources/files/article_template.xml'
+#_xmltemplatefile = '/home/anoko/resources/files/article_template.xml'
 
 class Article(object):
     """
@@ -91,8 +91,9 @@ class Article(object):
             <tr><td>Date:</td><td></td><td>%s</td></tr>
             <tr><td>Articleid:</td><td></td><td>%s</td></tr>
             <tr><td>Page:</td><td></td><td>%s</td></tr>
+            <tr><td>Length:</td><td></td><td>%s</td></tr>
             <tr><td>Section:</td><td></td><td>%s</td></tr>
-            </table>''' % (source, toolkit.writeDate(self.date), self.id, self.pagenr, self.section)
+            </table>''' % (source, toolkit.writeDate(self.date), self.id, self.pagenr, self.length, self.section)
         if includeText and self.text: 
             if limitpars:
                 res += "<p>%s</p>" % "</p><p>".join(self.text.split("\n\n")[:limitpars])
@@ -100,6 +101,7 @@ class Article(object):
                 res += "<p>%s</p>" % "</p><p>".join(self.text.split("\n\n"))
         return res
 
+    """
     def toXML2(self):
         if not self.xmltemplate:
             self.xmltemplate = open(_xmltemplatefile).read()
@@ -146,7 +148,7 @@ class Article(object):
         
         xml = self.xmltemplate % dct
         return '<?xml-stylesheet type="text/xsl" href="http://www.cs.vu.nl/~wva/anoko/article.xsl"?>\n%s'% xml
-        
+    """
 
     def getPagenr(article):
         """
@@ -257,6 +259,8 @@ class Article(object):
     def __hash__(self):
         return hash(type(self)) ^ hash(self.id) 
 
+        
+        
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
                   length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, retrieveArticle=1):
     """
@@ -277,9 +281,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if pagenr and type(pagenr) in (types.StringTypes): pagenr = pagenr.strip()
     if text: text = text.strip()
 
-    #print `headline`, `byline`, `fullmeta`
     [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])
-    #print `headline`, `byline`, `fullmeta`
     
     q = {'date' : date,
          'length' : length,
@@ -293,8 +295,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
          'url':url,
          'externalid':externalid,
          'encoding' : encoding}
-    #print `q`
-    aid = db.insert('articles',q)
+    aid = db.insert('articles', q)
 
     text, encoding = dbtoolkit.encodeText(text)
     
@@ -302,7 +303,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
          'type' : texttype,
          'encoding' : encoding,
          'text' : text}
-    db.insert('texts',q, retrieveIdent=0)
+    db.insert('texts', q, retrieveIdent=0)
     
     if retrieveArticle:
         return fromDB(db, aid)
@@ -318,6 +319,7 @@ def words(text, onlyWords=False, lemma=0): #lemma: 1=lemmaP, 2=lemma,3 =word
         if (not onlyWords) or w.isalpha():#re.search("\w", w):
             yield w
 
+'''
 def fromXML2(str):
     import xml.dom.minidom
     articles = []
@@ -335,6 +337,7 @@ def fromXML2(str):
         articles.append(a)
 
     return articles
+'''
 
 def fromDB(db, id):
     try:
@@ -342,6 +345,7 @@ def fromDB(db, id):
     except IndexError:
         raise Exception('articleid not found')
 
+        
 def articlesFromDB(db, ids, headline=True):
     """
     Article Factory method to create an article from the database
@@ -354,11 +358,13 @@ def articlesFromDB(db, ids, headline=True):
     data = None; text = None
     if toolkit.isSequence(ids, True):
         ids = ",".join(str(id) for id in ids)
+        
     sql = """SELECT articleid, batchid, mediumid, date, headline, length, pagenr, encoding
              FROM articles WHERE articleid in (%s)""" % ids
     for d in db.doQuery(sql):
         yield Article(db,*d)
 
+        
 CACHE_SIZE = 200
 def Articles(aidlist, db, tick=False):
     """
@@ -371,6 +377,9 @@ def Articles(aidlist, db, tick=False):
             yield a
         aidlist = aidlist[CACHE_SIZE:]
 
+        
+        
+        
 class Image:
     def __init__(self, article, sentid, length, breadth, abovefold, typ, caption=None, getCapt=False):
         self.article = article
@@ -391,7 +400,7 @@ def getCaption(db, sentid):
     else:
         return None
                       
-
+'''
 def fromXML2(str):
     import xml.dom.minidom
     articles = []
@@ -409,6 +418,7 @@ def fromXML2(str):
         articles.append(a)
 
     return articles
+    '''
 
 
 def splitArticles(aids, db, tv=False):
@@ -475,24 +485,26 @@ class Sentence(object):
     def text(self):
         if self._sentence: return self._sentence
         db = self.article.db
-        text, enc = db.doQuery("select isnull(longsentence,sentence), encoding from sentences where sentenceid = %i" % self.sid)[0]
-        if enc:
-            text = dbtoolkit.decode(text, enc)
-        else:
-            text = text.decode('ascii', 'replace')
-        return text
-        
-    
+        try:
+            text, enc = db.doQuery("select isnull(longsentence,sentence), encoding from sentences where sentenceid = %i" % self.sid)[0]
+            if enc: return dbtoolkit.decode(text, enc)
+            else: return text.decode('ascii', 'replace')
+        except Exception, e:
+            if "could not be converted" in str(e):
+                _debug(1, 'Encoding problem in sentence nr %i'  % (self.sid))
+                return "?????" 
+            raise e
+
     def getLink(self):
         return 'sentenceDetails?sentenceid=%d' % self.sid
 
-    
+'''
 def decode(text, enc):
     if enc:
         return dbtoolkit.decode(text, enc)
     else:
         return text.decode('ascii', 'replace')
-        
+'''        
 
 def sentFromDB(db, sid):
     data = db.doQuery("select sentenceid, parnr, sentnr, articleid from sentences where sentenceid=%i" % sid)

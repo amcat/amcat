@@ -1,12 +1,6 @@
-import sbd
-import toolkit
-import base64
-import config
-import article
-import sources
-import sys
-import user
-
+import base64, sys
+import toolkit, config, sbd
+import article, sources, user
 from toolkit import cached
 
 _debug = toolkit.Debug('dbtoolkit',2)
@@ -15,15 +9,11 @@ _encoding = {
     1 : 'UTF-7',
     2 : 'ascii',
     3 : 'latin-1',
-    }
+}
 
 _MAXTEXTCHARS = 8000
 
-
-def Articles(**kargs):
-    db = anokoDB()
-    return db.articles(**kargs)
-
+    
 class anokoDB(object):
     """
     Wrapper around a connection to the anoko SQL Server database with a number
@@ -46,30 +36,21 @@ class anokoDB(object):
 
         self._articlecache = {}
 
-
-    def _getsources(self):
-        """
-        Returns a cached sources object. If it does not exist,
-        creates and caches it before returning.
-        """
-        if not self._sources:
-            self._sources = sources.Sources(self)
-        return self._sources
-    _sources = None
-    sources = property(_getsources)
-
-
-    @property
-    @cached
-    def users(self):
-        return user.Users(self)
-
+        
+      
+    def quote(self, value):
+        return "'%s'" % str(value).replace("'", "''")   
+        
+        
+        
     def cursor(self):
         return self.conn.cursor()
+        
         
     def commit(self):
         self.conn.commit()
 
+        
     def doQuery(self, sql, cursor = None, colnames = False, select=None):
         """
         Execute the query sql on the database and return the result.
@@ -122,6 +103,7 @@ class anokoDB(object):
                 c.close()
             raise details
             
+            
     def doCall(self, proc, params):
         """
         calls the procedure with the given params (tuple). Returns
@@ -134,6 +116,11 @@ class anokoDB(object):
         res = c.fetchall()
         c.close()
         return values, res
+
+        
+    def update(self, table, col, newval, where):
+        self.doQuery("UPDATE %s set %s=%s WHERE (%s)" % (
+            table, col, toolkit.quotesql(newval), where))
 
 
     def doInsert(self, sql, retrieveIdent=1):
@@ -152,25 +139,8 @@ class anokoDB(object):
             _debug(2,"Could not retrieve identity value?")
             _debug(2,details)
             id=None
-        return id
-
-    def article(self, artid):
-        """
-        Builds an Article object from the database
-        """
-        if artid not in self._articlecache:
-            self._articlecache[artid] = article.fromDB(self, artid)
-        return self._articlecache[artid]
+        return id    
     
-    def articles(self, aids=None):
-        if not aids:
-            aids = toolkit.intlist(sys.stdin)
-        for a in article.Articles(aids, self):
-            yield a
-
-    def update(self, table, col, newval, where):
-        self.doQuery("UPDATE %s set %s=%s WHERE (%s)" % (
-            table, col, toolkit.quotesql(newval), where))
     
     def insert(self, table, dict, idcolumn="For backwards compatibility", retrieveIdent=1):  
         """
@@ -194,6 +164,74 @@ class anokoDB(object):
                            retrieveIdent=retrieveIdent)
         return id
 
+        
+    def getValue(self, sql):
+        data = self.doQuery(sql)
+        if data:
+            return data[0][0]
+        return None
+
+        
+    def getColumn(self, sql, colindex=0):
+        for col in self.doQuery(sql):
+            yield col[colindex]
+        
+
+        
+    def article(self, artid):
+        """
+        Builds an Article object from the database
+        """
+        if artid not in self._articlecache:
+            self._articlecache[artid] = article.fromDB(self, artid)
+        return self._articlecache[artid]
+    
+    
+    def articles(self, aids=None):
+        if not aids:
+            aids = toolkit.intlist(sys.stdin)
+        for a in article.Articles(aids, self):
+            yield a
+
+    
+    def exists(self, articleid, type=2, allowempty=True, explain="DEPRECATED"):
+        """
+        Checks whether a text exists in the database.
+        Returns None if the text does not exist at all. If allowempty, returns 'non-null' otherwise.
+        If not allowempty, returns 'non-empty' if len(text)>0 and and empty string otherwise.
+        Since both None and the empty string evaluate to false, 'if (exists(..))' makes sense usually
+        """
+        # work with len(cast) to allow len of text and find out exist in one query
+        res = self.doQuery("select len(cast(text as varchar(20))) from texts where articleid=%s and type=%s" % (articleid, type))
+        if res:
+            if allowempty: return "non-null"
+            else:
+                length = res[0][0]
+                if res[0][0] > 0: return "non-empty"
+                else: return ""
+        else:
+            return None  
+    
+
+    def _getsources(self):
+        """
+        Returns a cached sources object. If it does not exist,
+        creates and caches it before returning.
+        """
+        if not self._sources:
+            self._sources = sources.Sources(self)
+        return self._sources
+    _sources = None
+    sources = property(_getsources)
+
+
+    @property
+    @cached
+    def users(self):
+        return user.Users(self)
+
+        
+            
     def newBatch(self, projectid, batchname, query, verbose=0):
         batchid = self.insert('batches', {'projectid':projectid, 'name':batchname, 'query':query})
         _debug(4-3*verbose,"Created new batch with id %d" % batchid)
@@ -219,58 +257,45 @@ class anokoDB(object):
         _debug(4-3*verbose,"Created new project with id %s" % id)
         return id
 
+    '''
     def updateProject(self, projectid, newName=None, newDescription=None, newOwner=None):
-        params=['@id=%s'%projectid]
+        params=['@id=%d'%projectid]
         if newName: params.append('@newname=%s' % toolkit.quotesql(newName))
         if newDescription: params.append('@newdescription=%s' % toolkit.quotesql(newDescription))
-        if newOwner: params.append('@newowner=%s' % newOwner)
+        if newOwner: params.append('@newowner=%d' % newOwner)
         if len(params)==1: raise Exception('Nonsensical call of updateProject without changes')
         
         self.doQuery('exec updateProject %s' % (', '.join(params)))
 
 
     def updateBatch(self, batchid, newName=None, newProject=None):
-        params=['@id=%s'%batchid]
+        params=['@id=%d'%batchid]
         if newName: params.append('@newname=%s' % toolkit.quotesql(newName))
-        if newProject: params.append('@newproject=%s' % newProject)
+        if newProject: params.append('@newproject=%d' % newProject)
         if len(params)==1: raise Exception('Nonsensical call of updatBatch without changes')
 
         self.doQuery('exec updateBatch %s' % (', '.join(params)))
 
+        
     def deleteBatch(self, batchid):
-        params=['@id=%s'%batchid]
+        params=['@id=%d'%batchid]
         self.doQuery('exec deleteBatch %s' % (', '.join(params)))
         
+        
     def deleteProject(self, projectid):
-        params=['@id=%s'%projectid]
+        params=['@id=%d'%projectid]
         self.doQuery('exec deleteProject %s' % (', '.join(params)))
 
+        
     def createCodingJob(self, jobname, coderid, aids):
         jobid = self.insert("codingjobs", {'name':jobname, 'coder_userid':coderid})
         for aid in aids:
             self.insert("codingjobs_articles", {'codingjobid':jobid, 'articleid':aid}, retrieveIdent=0)
         return jobid
-        
-
-    def exists(self, articleid, type=2, allowempty=True, explain="DEPRECATED"):
-        """
-        Checks whether a text exists in the database.
-        Returns None if the text does not exist at all. If allowempty, returns 'non-null' otherwise.
-        If not allowempty, returns 'non-empty' if len(text)>0 and and empty string otherwise.
-        Since both None and the empty string evaluate to false, 'if (exists(..))' makes sense usually
-        """
-        # work with len(cast) to allow len of text and find out exist in one query
-        res = self.doQuery("select len(cast(text as varchar(20))) from texts where articleid=%s and type=%s" % (articleid, type))
-        if res:
-            if allowempty: return "non-null"
-            else:
-                length = res[0][0]
-                if res[0][0] > 0: return "non-empty"
-                else: return ""
-        else:
-            return None
+    '''
 
 
+    '''
     def isMyProject(self, projectid):
         query = "select dbo.anoko_user()-ownerid from projects where projectid=%s"  % projectid
         res = self.doQuery(query)
@@ -384,27 +409,32 @@ class anokoDB(object):
             return data[0][0]
         else:
             return None
-            
+    '''
+        
+    '''   
     def changeCoder(self, codingjobid, setnr, coderid):
-        params=['@jobid=%s'%codingjobid]
-        params.append('@setnr=%s'%setnr)
-        params.append('@newcoderid=%s'%coderid)
+        params=['@jobid=%d'%codingjobid]
+        params.append('@setnr=%d'%setnr)
+        params.append('@newcoderid=%d'%coderid)
         self.doQuery('exec changecodingjobsetcoder %s' % (', '.join(params)))
     
     def changeJobOwner(self, codingjobid, ownerid):
-        params=['@jobid=%s'%codingjobid]
-        params.append('@newownerid=%s'%ownerid)
+        params=['@jobid=%d'%codingjobid]
+        params.append('@newownerid=%d'%ownerid)
         self.doQuery('exec changecodingjobowner %s' % (', '.join(params)))
         
     def deleteJob(self, codingjobid):
-        params=['@jobid=%s'%codingjobid]
+        params=['@jobid=%d'%codingjobid]
         self.doQuery('exec deletecodingjob %s' % (', '.join(params)))
         
     def deleteCodingSet(self, codingjobid, setnr):
-        params=['@jobid=%s'%codingjobid]
-        params.append('@setnr=%s'%setnr)
+        params=['@jobid=%d'%codingjobid]
+        params.append('@setnr=%d'%setnr)
         self.doQuery('exec deletecodingjob_set %s' % (', '.join(params)))
-        
+    '''
+    
+    
+    '''
     def getSelectionInfo(self, selectionid):
         query = "SELECT query, config FROM storedresults where storedresultid = %s" % selectionid
         return self.doQuery(query, colnames=0)
@@ -448,16 +478,8 @@ class anokoDB(object):
 
     def getUserInitials(self, userid):
         return self.getValue('SELECT initials FROM users WHERE userid=%i' % userid)
+    '''
     
-    def getValue(self, sql):
-        data = self.doQuery(sql)
-        if data:
-            return data[0][0]
-        return None
-
-    def getColumn(self, sql, colindex=0):
-        for col in self.doQuery(sql):
-            yield col[colindex]
 
     def uploadimage(self, articleid, length, breadth, abovefold, type=None, data=None, filename=None, caption=None):
         """
@@ -505,6 +527,7 @@ class anokoDB(object):
                 "abovefold" : fold, "imgdata" : data, "imgType" : type}
         self.insert("articles_images", ins, retrieveIdent=0)
         return sid
+        
 
     def getLongText(db, aid, type):
         # workaround to prevent cutting off at texts longer than 65k chars which can crash decoding
@@ -529,6 +552,7 @@ class anokoDB(object):
             txt = self.getLongText(aid, type)
         return decode(txt, enc)
 
+        
     def updateText(self, aid_or_tid, type_or_None, text):
         if type_or_None is None:
             where = "textid = %i" % aid_or_tid
@@ -543,11 +567,20 @@ class anokoDB(object):
         self.doQuery(sql)
         return encoding
 
+        
+
+
+def Articles(**kargs):
+    db = anokoDB()
+    return db.articles(**kargs)
+        
+        
 def decode(text, encodingid):
     if not text: return text # avoid problem with None that does not have the decode function
     if not encodingid: encodingid = 3 # assume latin-1
     return text.decode(_encoding[encodingid])
 
+    
 def checklatin1(txt):
     for p, c in enumerate(txt):
         i = ord(c)
@@ -572,11 +605,13 @@ def encodeText(text):
     txt = text.encode('utf-7')
     return txt, 1
 
+    
 def encode(s, enc):
     if s is None: return s
     if type(s) <> unicode: s = s.decode('latin-1')
     return s.encode(_encoding[enc])
 
+    
 def encodeTexts(texts):
     encoding = 2
     for text in texts:

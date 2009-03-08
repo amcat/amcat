@@ -70,6 +70,22 @@ class Codingjob(object):
         for set in self.sets:
             if set.setnr == setnr:
                 return set
+                
+        
+    def getNonCodedArticleids(self):
+        sql = """
+        select articleid from vw_codingjobs_articles_done where codingjobid = %d and has_arrow = 0 and has_artannot = 0 and (irrelevant IS NULL or irrelevant = 0)
+        """ % self.id
+        
+        data = self.db.doQuery(sql)
+        aids = [row[0] for row in data]
+        # return aids
+        result = []
+        for aid in aids:
+            if aids.count(aid) == 1:
+                result.append(aid)
+        return result
+        
 
     def findCodedArticle(self, art=None, coder=None, cjaid=None):
         if art and coder:
@@ -308,7 +324,6 @@ class CodingjobSet(object):
               where %s""" % (self.job.unitSchema.table, self._where)
         return self.job.db.doQuery(SQL)[0]
 
-        
 
 class AnnotationSchema(object):
 
@@ -369,7 +384,7 @@ def paramdict(paramstr):
     if not paramstr: return d
     for kv in paramstr.split(","):
         k,v = kv.split("=")
-        d[k] = v
+        d[k.strip()] = v.strip()
     return d
 
 class AnnotationSchemaField(object):
@@ -417,7 +432,6 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
             return labels
         else:
             sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.params['table'])
-
             return dict(self.schema.db.doQuery(sql))
     def getLabel(self, value):
         v = self.deserialize(value)
