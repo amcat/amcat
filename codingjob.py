@@ -79,17 +79,19 @@ class Codingjob(object):
         
     def getNonCodedArticleids(self):
         sql = """
-        select articleid from vw_codingjobs_articles_done where codingjobid = %d and has_arrow = 0 and has_artannot = 0 and (irrelevant IS NULL or irrelevant = 0)
+        select articleid
+        from vw_codingjobs_articles_done
+        where codingjobid = %d and has_arrow = 0 and has_artannot = 0 and (irrelevant IS NULL or irrelevant = 0)
         """ % self.id
         
         data = self.db.doQuery(sql)
         aids = [row[0] for row in data]
-        # return aids
-        result = []
-        for aid in aids:
-            if aids.count(aid) == 1:
-                result.append(aid)
-        return result
+        return aids
+        # result = []
+        # for aid in aids:
+            # if aids.count(aid) == 1:
+                # result.append(aid)
+        # return result
         
 
     def findCodedArticle(self, art=None, coder=None, cjaid=None):
@@ -118,6 +120,18 @@ class Codingjob(object):
     def idname(self):
         return "%i - %s" % (self.id, self.name)
 
+        
+    def addSet(self, userid, aids):
+        setnr = len(self.sets) + 1
+        self.db.insert('codingjobs_sets', {'codingjobid':self.id, 'setnr': setnr, 'coder_userid' : userid}, 
+                    retrieveIdent = False)
+        for aid in aids:
+            self.db.insert('codingjobs_articles', {'codingjobid' : self.id, 'setnr' : setnr, 'articleid' : aid}, 
+                retrieveIdent = False)
+        self.db.commit()
+        
+        
+        
     def cacheValues(self, artannots = False, arrows = False, sentences = False, headlines=True):
         #nog mogelijke optimalisaties:
         # categorize 1x ophalen voor meer objecten
