@@ -793,7 +793,7 @@ def clean(str, level=0, lower=0,droptags=0, escapehtml=0, keeptabs=0):
     any leading or trailing whitespace
     """
     if not str: return str
-    if droptags: str=re.sub("<[^>]{,20}>","",str)
+    if droptags: str=re.sub("<[^>]{,30}>","",str)
     if keeptabs:
         str = re.sub("[ \\n]+", " ", str)
     else:

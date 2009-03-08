@@ -174,8 +174,8 @@ class Instance(Node):
             yield (rel.subject, rel) if relations else rel.subject 
     def relatedToInstanceOf(self, klass):
         for rel in self.outgoing:
-            if klass in rel.object.classes:
-                return True
+            if klass in rel.object.classes: return True
+            if rel.object.relatedToInstanceOf(klass): return True
         return False
         
 class Class(Node):
