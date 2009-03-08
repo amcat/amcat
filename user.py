@@ -43,12 +43,15 @@ class User(object):
         self._username, self._fullname, self._affiliation, self._active, self._email = self.db.doQuery(SQL)[0]
         self._field = True
     _field = False
+    
+    def _getPermissionLevel(self):
+        if self._permissionLevel is None:
+            self._permissionLevel = permissions.userPermission(self.db, self.id)
         
     @property
     #@cached
     def username(self):
-        if not self._username:
-            self._getFields()
+        self._getFields()
         return self._username
     
     def idname(self):
@@ -78,58 +81,59 @@ class User(object):
         self._getFields()
         return self._active
 
+        
+    @property
+    def permissionLevel(self):
+        self._getPermissionLevel()
+        return self._permissionLevel
+        
+    @property
+    def permissionLevelName(self):
+        for l, name in permissions.USER_PERMISSION:
+            if l == self.permissionLevel: return name
+        raise Exception('permission level not found for %s' % self.id)
+        
     
     def projects(self, own):
         return project.projects(self.db, self.id, own=own)
         
     @property
     def canCreateNewProject(self):
-        level = permissions.userPermission(self.db, self.id)
-        if level == permissions.CODER:
+        if self.permissionLevel == permissions.CODER:
             return False
         return True
     
     @property
     def canViewAllProjects(self):
-        level = permissions.userPermission(self.db, self.id)
-        if level == permissions.CODER:
+        if self.permissionLevel == permissions.CODER:
             return False
         return True
     
     @property
     def canViewAffiliationUserList(self):
-        level = permissions.userPermission(self.db, self.id)
-        if level == permissions.CODER:
+        if self.permissionLevel == permissions.CODER:
             return False
         return True
         
     @property
     def canViewUserList(self):
-        level = permissions.userPermission(self.db, self.id)
-        if level != permissions.SUPER_ADMIN:
+        if self.permissionLevel != permissions.SUPER_ADMIN:
             return False
         return True 
     
     @property
     def canAddNewUserToAffiliation(self):
-        level = permissions.userPermission(self.db, self.id)
-        if level == permissions.SUPER_ADMIN or level == permissions.ADMIN:
+        if self.permissionLevel == permissions.SUPER_ADMIN or self.permissionLevel == permissions.ADMIN:
             return True
         return False
     
     @property
     def isSuperAdmin(self):
-        level = permissions.userPermission(self.db, self.id)
-        if level == permissions.SUPER_ADMIN:
+        if self.permissionLevel == permissions.SUPER_ADMIN:
             return True
         return False
         
         
-    @property
-    def permissionLevel(self):
-        level = permissions.userPermission(self.db, self.id)
-        for l, name in permissions.USER_PERMISSION:
-            if l == level: return name
-        raise Exception('permission level not found for %s' % self.id)
+    
         
         

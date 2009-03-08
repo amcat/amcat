@@ -7,6 +7,11 @@ def getCodedArticle(db, cjaid):
     cjid, setnr = data[0]
     return Codingjob(db, cjid).getSet(setnr).getArticle(cjaid)
     
+def getCodedArticleIdsFromArticleId(db, articleid):
+    data = db.doQuery("select codingjob_articleid from codingjobs_articles where articleid=%i"% articleid)
+    if not data: return None
+    return (row[0] for row in data)
+    
 
 class Codingjob(object):
 
