@@ -77,7 +77,7 @@ class Project(object):
         data = self.db.doQuery("""SELECT b.batchid
                      FROM batches AS b
                      WHERE b.projectid = %d""" % self.id, colnames=0)
-        return (row[0] for row in data)
+        return [row[0] for row in data]
 
     @property
     def users(self):

@@ -347,6 +347,15 @@ def getInstance(db, label, classid=None):
     if classid: sql += " and objectid in (select instanceid from ont_classes_instances where classid=%i)" % classid
     return db.getValue(sql)
     
+def deleteNode(db, oid):
+    db.doQuery("delete from on_labels where objectid = %i" % oid)
+    db.doQuery("delete from on_hierarchy where parentid = %i" % oid)
+    db.doQuery("delete from on_hierarchy where childid = %i" % oid)
+    db.doQuery("delete from on_relations where objectid = %i" % oid)
+    db.doQuery("delete from on_relations where subjectid = %i" % oid)
+    db.doQuery("delete from on_nodes where objectid = %i" % oid)
+    db.doQuery("delete from on_objects where objectid = %i" % oid)
+                
 
 if __name__ == '__main__':
     import dbtoolkit
