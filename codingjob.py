@@ -21,7 +21,7 @@ class Codingjob(object):
         
     def _getFields(self):
         SQL = """select name, unitschemaid, articleschemaid, params, owner_userid, insertdate, projectid from codingjobs
-              where codingjobid=%i"""%self.id
+              where codingjobid=%i""" % self.id
         if self._fields: return
         self._name, ua, aa, self._params, ownerid, insertdate, projectid = self.db.doQuery(SQL)[0]
         self._unitschema = AnnotationSchema(self.db, ua)
@@ -385,7 +385,7 @@ class AnnotationSchema(object):
 
     def SQLSelect(self, extra = []):
         fields = extra + [f.fieldname for f in self.fields]
-        return "select %s from %s " % (",".join(fields), self.table)
+        return "select [%s] from %s " % ("],[".join(fields), self.table)
 
     def asDict(self, values):
         return dict(zip([f.fieldname for f in self.fields], values))
@@ -470,7 +470,9 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
         self.ont = ont
     def deserialize(self, value):
         if value is None: return None
-        return self.ont.nodes.get(value)
+        val = self.ont.nodes.get(value)
+        if val is None: return value
+        return val
     def getLabel(self, value):
         v = self.deserialize(value)
         if not v: return None
