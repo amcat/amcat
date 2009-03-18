@@ -60,14 +60,16 @@ class Arrow:
         if qual > 0: return 1
     def categorize(self,catid,root=False):
         date = self.sentence.sentence.article.date
+        if not self.subj: return # added by jouke
         sur, suc, suo = self.subj.categorize(catid, date)
+        if not self.obj: return # added by jouke
         objr, objc, objo = self.obj.categorize(catid, date)
         if root:
             self.subj = sur 
             self.obj = objr
         else:
-            self.subj = suc if (suc.label not in DONTCATEGORIZE) else self.subj
-            self.obj = objc if (objc.label not in DONTCATEGORIZE) else self.obj
+            if suc: self.subj = suc if (suc.label not in DONTCATEGORIZE) else self.subj
+            if objc: self.obj = objc if (objc.label not in DONTCATEGORIZE) else self.obj
         suo = suo or 1
         objo = objo or 1
         self.qual *= suo * objo
