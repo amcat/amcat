@@ -77,12 +77,16 @@ class Codingjob(object):
                 return set
                 
         
-    def getNonCodedArticleids(self):
+    @cached
+    def getNonCodedArticleids(self): # articlids that do not have any codings in this job
         sql = """
-        select articleid
-        from vw_codingjobs_articles_done
-        where codingjobid = %d and has_arrow = 0 and has_artannot = 0 and (irrelevant IS NULL or irrelevant = 0)
-        """ % self.id
+        select v.articleid
+        from vw_codingjobs_articles_done as v
+        where v.codingjobid = %d and v.has_arrow = 0 and v.has_artannot = 0 and (v.irrelevant IS NULL or v.irrelevant = 0)
+        and not exists (
+            select * from vw_codingjobs_articles_done as vw where vw.codingjobid = %d and vw.has_arrow > 0 and vw.has_artannot > 0 and vw.articleid = v.articleid
+        )
+        """ % (self.id, self.id)
         
         data = self.db.doQuery(sql)
         aids = [row[0] for row in data]
