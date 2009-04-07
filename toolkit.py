@@ -393,11 +393,11 @@ def stdev(seq):
         s += (e - avg)**2
     return (s / (len(seq) - 1)) ** .5 
 
-def correlate(as,bs):
-    ma = average(as)
+def correlate(aa,bs):
+    ma = average(aa)
     mb = average(bs)
-    teller =sum([(a-ma) * (b-mb) for (a,b) in zip(as, bs)])
-    noemer = (len(as) - 1 ) * stdev(as) * stdev(bs)
+    teller =sum([(a-ma) * (b-mb) for (a,b) in zip(aa, bs)])
+    noemer = (len(aa) - 1 ) * stdev(aa) * stdev(bs)
     if not noemer : return None
     return teller / noemer
 
