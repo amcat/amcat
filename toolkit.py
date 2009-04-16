@@ -1,6 +1,6 @@
 #!/bin/env python2.2
 
-import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict
+import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools
 
 _USE_CURSES = 1
 
@@ -12,27 +12,14 @@ def valuesAroundIndex(seq, index):
         yield seq[i]
 
 def product(seq):
-    result = 1
-    for x in seq:
-        result *= x
-    return result
+    return reduce(operator.mul, seq)
 
 def readids(file):
     if isString(file):
         file = open(file)
     return [int(line) for line in file if line.strip()]
 
-class DefaultDict(dict):
-    def __init__(self,default):
-        dict.__init__(self)
-        self.default = default
-    def __getitem__(self, key):
-        if not key in self:
-            default = self.default
-            if isCallable(default): default=default()
-            self[key]=default
-            return default
-        return self.get(key)
+DefaultDict = collections.defaultdict
 
 class DefaultOrderedDict(odict.OrderedDict):
     def __init__(self,default):
@@ -138,15 +125,13 @@ def error(string):
 
 def warn(string, newline = 1, colour = None):
     if colour and _USE_CURSES: string = coloured(colour, string, 1)
-
-    
     if isString(string):
         if type(string) == unicode:
             sys.stderr.write(string.encode('latin-1', 'replace'))
         else:
             sys.stderr.write(string)
     else:
-        sys.stderr.write(string.__str__())
+        sys.stderr.write(str(string))
     if newline: sys.stderr.write('\n')
     
 
@@ -155,16 +140,30 @@ _DEBUG = 0
 _DEBUG_THREADNAME = False
 _DEBUG_COLOURS = 'red', 'yellow', 'purple', 'green','blue','blue','blue'
 
+_HTML_COLOURS = {'yellow' : '#daa520'}
+
+def HTMLDebug(writer, message, newline=1, colour=None):
+    style = " style='color:%s'" % _HTML_COLOURS.get(colour, colour) if colour else ""
+    if newline <> 2: writer.write("<div class='debug' %s>" % style)
+    writer.write(str(message))
+    if newline: writer.write("</div>")
+    writer.req.flush()
+
+def HTMLDebugger(writer):
+    return functools.partial(HTMLDebug, writer)
+
 class Debug:
-    def __init__(this, modulename, debuglevel):
+    def __init__(this, modulename, debuglevel, printer=warn):
         this.module = modulename
         this.debuglevel = debuglevel
+        this.printer = printer
     def __call__(this, level, message, newline=1):
+        if not this.printer: return
         if level <= this.debuglevel:
             col = _DEBUG_COLOURS[level-1]
             if newline <> 2: # print prefix
-                warn("[%-10s %s %s] " % (this.module[:10], threading.currentThread().getName(), time.strftime("%Y-%m-%d %H:%M")), 0, col)
-            warn(message, newline, col)
+                this.printer("[%-10s %s %s] " % (this.module[:10], threading.currentThread().getName(), time.strftime("%Y-%m-%d %H:%M")), 0, col)
+            this.printer(message, newline and 2, col)
     def ok(this, level):
         this(level, " OK!", newline=2)
     def fail(this, level):
@@ -474,7 +473,7 @@ _MONTHS4 = ['jan','feb','maa','apr','mei','jun','jul','aug','sep','okt','nov','d
 _MONTHS6 = ['jan','feb','mae','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by wva for sueddeutsche zeitung
 _MONTHS5 = ['janv','fevr','mars','avri','mai','juin','juil','aout','sept','octo','nove','dece']; #Added by Lonneke voor fr
 _MONTHS6 = ['ener', 'febr', 'marz', 'abri', 'mayo', 'juni', 'juli', 'agos', 'sept', 'octu', 'novi','dici']
-
+           
 
 def monthnr(str):
     strShort = str.lower().strip()[:3]
@@ -529,6 +528,9 @@ def readDate(str, lax=False, rejectPre1970=False, american=False):
     elif research("(\d{1,2})[- ](\w+)[- ](\d{2,4})",str) and monthnr(_MATCH.group(2)):
         ymd = [_MATCH.group(3), monthnr(_MATCH.group(2)), _MATCH.group(1)]
         m = 8
+    elif research("(\w+) (\d{1,2}), (\d{4})",str) and monthnr(_MATCH.group(1)):
+        ymd = [_MATCH.group(3), monthnr(_MATCH.group(1)), _MATCH.group(2)]
+        m = 9
     else:
         m = 99
         if lax: return None
@@ -1030,6 +1032,8 @@ def execute(cmd, input=None, listener=None, listenOut=False):
     #print "waiting for threads to exit"
     outr.join()
     errr.join()
+    stdout.close()
+    stderr.close()
     return outr.out, errr.out
 
 
@@ -1140,7 +1144,12 @@ def apply(collection, function):
             collection[i] = function(val)
     return collection
 
-    
+
+def format(x, defaultformat="%s", floatformat="%1.3f", intformat="%i"):
+    if type(x) == float: return floatformat % x
+    if type(x) == int: return intformat % x
+    return defaultformat % x
+
 if __name__ == "__main__":
     print correlate([3,4,5,2], [2,1,4,1])
 
