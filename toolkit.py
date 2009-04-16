@@ -1,6 +1,6 @@
 #!/bin/env python2.2
 
-import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools
+import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess
 
 _USE_CURSES = 1
 
@@ -1020,20 +1020,19 @@ def execute(cmd, input=None, listener=None, listenOut=False):
     These calls will come from the worker threads, so (especially if
     listenOut is True) this might cause multithreading issues.
     """
-    stdin, stdout, stderr = os.popen3(cmd)
-    outr = Reader(stdout, "out", listenOut and listener)
-    errr = Reader(stderr, "err", listener)
+    #stdin, stdout, stderr = os.popen3(cmd)
+    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    outr = Reader(p.stdout, "out", listenOut and listener)
+    errr = Reader(p.stderr, "err", listener)
     outr.start()
     errr.start()
     #print "writing input"
     if input:
-        stdin.write(input)
-    stdin.close()
+        p.stdin.write(input)
+    p.stdin.close()
     #print "waiting for threads to exit"
     outr.join()
     errr.join()
-    stdout.close()
-    stderr.close()
     return outr.out, errr.out
 
 
