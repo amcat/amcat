@@ -1030,9 +1030,12 @@ def execute(cmd, input=None, listener=None, listenOut=False):
     try:
         if input:
             p.stdin.write(input)
-    except:
+    except: # no idea if this is useful, but it looks like things are not closed properly when writing fails
+        outr.join(0.1)
+        errr.join(0.1)
         p.stdout.close()
         p.stderr.close()
+        p.stdin.close()
         raise
     finally:
         p.stdin.close()
@@ -1156,5 +1159,11 @@ def format(x, defaultformat="%s", floatformat="%1.3f", intformat="%i"):
     return defaultformat % x
 
 if __name__ == "__main__":
-    print correlate([3,4,5,2], [2,1,4,1])
+    #print correlate([3,4,5,2], [2,1,4,1])
+    try:
+        a, b = execute('ls', u'\xab')
+        print a, b
+    except Exception, e:
+        print e
+    time.sleep(100)
 
