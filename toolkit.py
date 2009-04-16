@@ -1031,11 +1031,8 @@ def execute(cmd, input=None, listener=None, listenOut=False):
         if input:
             p.stdin.write(input)
     except:
-        print "except"
         p.stdout.close()
         p.stderr.close()
-        outr.join(0)
-        errr.join(0)
         raise
     finally:
         p.stdin.close()
