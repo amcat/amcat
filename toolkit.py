@@ -1027,9 +1027,18 @@ def execute(cmd, input=None, listener=None, listenOut=False):
     outr.start()
     errr.start()
     #print "writing input"
-    if input:
-        p.stdin.write(input)
-    p.stdin.close()
+    try:
+        if input:
+            p.stdin.write(input)
+    except:
+        print "except"
+        p.stdout.close()
+        p.stderr.close()
+        outr.join()
+        errr.join()
+        raise
+    finally:
+        p.stdin.close()
     #print "waiting for threads to exit"
     outr.join()
     errr.join()
