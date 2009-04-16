@@ -1031,11 +1031,11 @@ def execute(cmd, input=None, listener=None, listenOut=False):
         if input:
             p.stdin.write(input)
     except: # no idea if this is useful, but it looks like things are not closed properly when writing fails
-        outr.join(0.1)
-        errr.join(0.1)
-        p.stdout.close()
-        p.stderr.close()
-        p.stdin.close()
+        # outr.join(0.1)
+        # errr.join(0.1)
+        # p.stdout.close()
+        # p.stderr.close()
+        # p.stdin.close()
         raise
     finally:
         p.stdin.close()
