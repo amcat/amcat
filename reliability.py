@@ -135,7 +135,7 @@ class Reliability:
             
     def getCoinTable(self, observers = None):
         if not observers: observers = self.observers
-        coin = toolkit.DefaultDict(0)
+        coin = toolkit.DefaultDict(int)
         for unit in self.units:
             vals = [self.data.get((unit, observer), None) for observer in observers]
 
@@ -152,7 +152,7 @@ class Reliability:
         return coin
 
     def getConfusion(self, obsA, obsB):
-        confusion = toolkit.DefaultDict(0)
+        confusion = toolkit.DefaultDict(int)
         for unit in self.units:
             valA = self.data.get((unit, obsA), None)
             valB = self.data.get((unit, obsB), None)
@@ -182,7 +182,7 @@ class Reliability:
         return result
 
     def getValueCounts(self, observer):
-        result = toolkit.DefaultDict(0)
+        result = toolkit.DefaultDict(int)
         for unit in self.units:
             value = self.data.get((unit, observer), None)
             result[value] += 1
@@ -192,7 +192,7 @@ class Reliability:
         coin = self.getCoinTable(observers)
         values = sorted(self.values)
 
-        sums = toolkit.DefaultDict(0)
+        sums = toolkit.DefaultDict(int)
         for row in self.values:
             for column in self.values:
                 sums[row] += coin[row, column]
