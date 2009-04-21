@@ -14,7 +14,7 @@ _encoding = {
 _MAXTEXTCHARS = 8000
 
     
-class anokoDB(object):
+class amcatDB(object):
     """
     Wrapper around a connection to the anoko SQL Server database with a number
     of general and specialized methods to facilitate easy retrieval
@@ -568,6 +568,7 @@ class anokoDB(object):
         return encoding
 
         
+anokoDB = amcatDB
 
 
 def Articles(**kargs):
