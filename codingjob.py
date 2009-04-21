@@ -1,4 +1,4 @@
-import user, toolkit, project, ontology, article
+import user, toolkit, project, ontology, article, dbtoolkit
 from toolkit import cached
 
 def getCodedArticle(db, cjaid):
@@ -225,7 +225,7 @@ class Codingjob(object):
                 where sentenceid in (select sentenceid from net_arrows r inner join codingjobs_articles a on r.codingjob_articleid = a.codingjob_articleid
                                      where codingjobid=%i)""" % self.id
                 for sid, sent, encoding in self.db.doQuery(SQL):
-                    text = article.decode(sent, encoding)
+                    text = dbtoolkit.decode(sent, encoding)
                     toolkit.setCachedProp(sents[sid], "text", text)
                     
                                                 
