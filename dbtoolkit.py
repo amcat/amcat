@@ -12,8 +12,12 @@ _encoding = {
 }
 
 _MAXTEXTCHARS = 8000
-
     
+def reportDB():
+    import MySQLdb
+    conf = config.Configuration('app', 'eno=hoty', 'localhost', 'report', MySQLdb)
+    return amcatDB(conf)
+
 class amcatDB(object):
     """
     Wrapper around a connection to the anoko SQL Server database with a number

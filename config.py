@@ -13,11 +13,13 @@ class Configuration:
         this.drivername = driver.__name__
 
     def connect(this, *args, **kargs):
-        return this.driver.connect(this.host, this.username, this.password, *args, **kargs)
+        return this.driver.connect(this.host, this.username, this.password, db=this.database, *args, **kargs)
+        
         
         
 def default():
     homedir = os.getenv('HOME')
+
     if not homedir:
         if 'SERVER_SOFTWARE' in os.environ:
             return amcatConfig()
@@ -32,12 +34,10 @@ def default():
     if os.name == 'nt':
         raise Exception("Windows currently not supported -- ask Wouter!")
     else:
-        if host:
-            return amcatConfig(un, password, host)
-        else:
-            return amcatConfig(un, password)
+        return amcatConfig(un, password, host, driver)
 
-def amcatConfig(username = "app", password = "eno=hoty", host="AmcatDB"):
+def amcatConfig(username = "app", password = "eno=hoty", host=None):
+    if not host: host = "AmcatDB"
     import mx.ODBC.iODBC as driver
     return Configuration(username, password, "AmcatDB", driver=driver)
 
