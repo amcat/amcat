@@ -13,7 +13,7 @@ class Configuration:
         this.drivername = driver.__name__
 
     def connect(this, *args, **kargs):
-        return this.driver.connect(this.host, this.username, this.password, db=this.database, *args, **kargs)
+        return this.driver.connect(this.host, this.username, this.password, *args, **kargs)
         
         
         
