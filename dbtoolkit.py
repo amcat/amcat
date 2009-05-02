@@ -18,6 +18,7 @@ def reportDB():
     conf = config.Configuration('app', 'eno=hoty', 'localhost', 'report', MySQLdb)
     db = amcatDB(conf)
     db.conn.select_db('report')
+    db.conn.autocommit(False)
     return db
 
 class amcatDB(object):
@@ -169,6 +170,10 @@ class amcatDB(object):
                            retrieveIdent=retrieveIdent)
         return id
 
+    def insertmany(self, table, headers, dataseq):
+        sql = 'insert into %s (%s) values (%s)' % (table, ','.join(headers), ','.join(['%s'] * len(headers)))
+        self.cursor().executemany(sql, dataseq)
+        
         
     def getValue(self, sql):
         data = self.doQuery(sql)
