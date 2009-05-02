@@ -34,7 +34,7 @@ def default():
     if os.name == 'nt':
         raise Exception("Windows currently not supported -- ask Wouter!")
     else:
-        return amcatConfig(un, password, host, driver)
+        return amcatConfig(un, password, host)
 
 def amcatConfig(username = "app", password = "eno=hoty", host=None):
     if not host: host = "AmcatDB"

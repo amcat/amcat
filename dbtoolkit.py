@@ -16,7 +16,9 @@ _MAXTEXTCHARS = 8000
 def reportDB():
     import MySQLdb
     conf = config.Configuration('app', 'eno=hoty', 'localhost', 'report', MySQLdb)
-    return amcatDB(conf)
+    db = amcatDB(conf)
+    db.conn.select_db('report')
+    return db
 
 class amcatDB(object):
     """
@@ -60,7 +62,6 @@ class amcatDB(object):
         Execute the query sql on the database and return the result.
         If cursor is given, use that cursor and return the cursor instead
         """
-
         #import time
         #print "%10.5f : %s" % (time.time(), sql)
         c = None
@@ -585,7 +586,6 @@ def decode(text, encodingid):
     if not encodingid: encodingid = 3 # assume latin-1
     return text.decode(_encoding[encodingid])
 
-    
 def checklatin1(txt):
     for p, c in enumerate(txt):
         i = ord(c)
