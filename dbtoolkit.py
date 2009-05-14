@@ -171,7 +171,8 @@ class amcatDB(object):
         return id
 
     def insertmany(self, table, headers, dataseq):
-        sql = 'insert into %s (%s) values (%s)' % (table, ','.join(headers), ','.join(['%s'] * len(headers)))
+        if len(dataseq) == 0: return
+        sql = 'insert into %s (%s) values (%s)' % (table, ','.join(headers), ','.join(['?'] * len(headers)))
         self.cursor().executemany(sql, dataseq)
         
         
