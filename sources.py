@@ -26,7 +26,12 @@ class Sources(object):
         
         for id,name in connection.doQuery("select mediumid, name from media_dict"):
             self.index_name[clean(name)] = id
-        for info in connection.doQuery("select mediumid, name, circulation, language, type, isnull(abbrev, name) from media where mediumid>0"):
+        try:
+            data = connection.doQuery("select mediumid, name, circulation, language, type, isnull(abbrev, name) from media where mediumid>0")
+        except:
+            data = connection.doQuery("select mediumid, name, circulation, language, type, ifnull(abbrev, name) from media where mediumid>0")
+            
+        for info in data:
             source = Source(*info)
             self.index_name[source.name] = source.id
             self.sources[source.id] = source

@@ -44,6 +44,10 @@ class amcatDB(object):
         self._articlecache = {}
         
         self.dbType = configuration.drivername
+        
+        if self.dbType == "MySQLdb":
+            self.conn.select_db('report')
+            self.conn.autocommit(False)
 
         
       
