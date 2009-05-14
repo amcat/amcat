@@ -42,6 +42,8 @@ class amcatDB(object):
         _debug(3,"OK!", 2)
 
         self._articlecache = {}
+        
+        self.dbType = configuration.drivername
 
         
       
@@ -172,7 +174,8 @@ class amcatDB(object):
 
     def insertmany(self, table, headers, dataseq):
         if len(dataseq) == 0: return
-        sql = 'insert into %s (%s) values (%s)' % (table, ','.join(headers), ','.join(['?'] * len(headers)))
+        seperator = '%s' if self.dbType == 'MySQLdb' else '?'
+        sql = 'insert into %s (%s) values (%s)' % (table, ','.join(headers), ','.join([seperator] * len(headers)))
         self.cursor().executemany(sql, dataseq)
         
         
