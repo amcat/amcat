@@ -1,6 +1,6 @@
 #!/bin/env python2.2
 
-import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess
+import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess, colorsys
 
 _USE_CURSES = 1
 
@@ -336,11 +336,11 @@ def sortByKeys(dict, reverse=0):
     return sortDict(dict, reverse, byValue=False)
 
 
-def sorted(seq):
-    if isDict(seq):
-        seq = seq.keys()
-    seq.sort()
-    return seq
+#def sorted(seq):
+#    if isDict(seq):
+#        seq = seq.keys()
+#    seq.sort()
+#    return seq
 
 ############# REGULAR EXPRESSIONS ##########
 
@@ -429,8 +429,14 @@ def stripAccents(s, map = None):
                        'O' : u'\xd2\xd3\xd4\xd5\xd6',
                        'U' : u'\xd9\xda\xdb\xdc',
                        'Y' : u'\xdd\xdf',
+                       's' : u'\u0161',
                        'ss' : u'\xdf',
                        '?' : u'\xbf',
+                       "'" : u'\x91\x92\x82',
+                       '"' : u'\x93\x94\x84',
+                       '-' : u'\x96\x97',
+                       '|' : u'\xa6',
+                       '...' : u'\x85',
                        }
     for key, val in map.items():
         for trg in val:
@@ -1030,13 +1036,6 @@ def execute(cmd, input=None, listener=None, listenOut=False):
     try:
         if input:
             p.stdin.write(input)
-    except: # no idea if this is useful, but it looks like things are not closed properly when writing fails
-        # outr.join(0.1)
-        # errr.join(0.1)
-        # p.stdout.close()
-        # p.stderr.close()
-        # p.stdin.close()
-        raise
     finally:
         p.stdin.close()
     #print "waiting for threads to exit"
@@ -1158,6 +1157,10 @@ def format(x, defaultformat="%s", floatformat="%1.3f", intformat="%i"):
     if type(x) == int: return intformat % x
     return defaultformat % x
 
+def isnull(x, alt):
+    if x is None: return alt
+    return x
+
 if __name__ == "__main__":
     #print correlate([3,4,5,2], [2,1,4,1])
     try:
@@ -1167,3 +1170,31 @@ if __name__ == "__main__":
         print e
     time.sleep(100)
 
+def naturalSort(list): 
+    """ Sort the given list in the way that humans expect. """ 
+    convert = lambda text: int(text) if text.isdigit() else text 
+    alphanum_key = lambda key: map(convert, re.split('([0-9]+)', str(key) if type(key) != unicode else key))
+    return sorted(list, key=alphanum_key) 
+
+
+def antiword(wordfile):
+    out, err = execute('antiword -', wordfile)
+    err = err.replace("I can't find the name of your HOME directory", "")
+    if err.strip():
+        raise Exception(err)
+    try:
+        return out.decode('utf-8')
+    except:
+        return out.decode('latin-1')
+
+def returnTraceback():
+    import traceback
+    return ''.join(traceback.format_exception(*sys.exc_info()))
+
+def HSVtoHTML(h,s,v):
+    rgb = colorsys.hsv_to_rgb(h,s,v)
+    return RGBtoHTML(*rgb)
+
+def RGBtoHTML(r,g,b):
+    hexcolor = '#%02x%02x%02x' % (r*255,g*255,b*255)
+    return hexcolor

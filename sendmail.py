@@ -6,9 +6,9 @@ class Sendmail(object):
         self.smtp = smtplib.SMTP('content-analysis.org', 587, 'amcat.fsw.vu.nl')
         self.smtp.login('helpdesk@contentanalysis.nl','knzhrm!!')
 
-    def sendmail(self, addressee, subject, msg):
-        msg = "Subject: %s\n\n%s" % (subject, msg)
-        self.smtp.sendmail('helpdesk@contentanalysis.nl', addressee, msg)
+    def sendmail(self, addressee, subject, msg, fromaddr='helpdesk@contentanalysis.nl'):
+        msg = "Subject: %s\nFrom: %s\nTo: %s\n\n%s" % (subject, fromaddr, addressee, msg)
+        self.smtp.sendmail(fromaddr, addressee, msg)
 
     def quit(self):
         self.smtp.quit()

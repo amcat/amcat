@@ -47,10 +47,13 @@ class Enum(object):
         if isinstance(obj, EnumValue) and obj.enum == self: return obj
         if obj in self.lookup: return self.lookup[obj]
         if obj in self.reverseLookup: return self.reverseLookup[obj]
+        print `obj, self.lookup, self.reverseLookup`
         raise KeyError(obj)
 
     def getNames(self):
         return [val.name for val in self.values]
+    getName=get
+    getValue=get
 
 class EnumValue(object):
     def __init__(self, name, label=None, value=None, enum=None, data={}):
@@ -80,9 +83,15 @@ if __name__ == '__main__':
     print x.getName(2)
     print x.getValue("green")
 
-    x = Enum(EnumValue("red", 0, "The Red Option"),
-             EnumValue("green", 1, "The Green Option"),
-             EnumValue("blue", 2, "The Blue Option"),
+    x = Enum(red=3, green=5,blue=7)
+    print x.red
+    print ">>>", x.getName(5)
+    print x.getValue("green").value
+    
+
+    x = Enum(EnumValue("red", "The Red Option", 0),
+             EnumValue("green", "The Green Option", 1),
+             EnumValue("blue", "The Blue Option", 2),
              )
              
     print x.red.value, x.red

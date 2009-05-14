@@ -264,10 +264,14 @@ def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixed
     errorCount = 0
     for file in files:
         if verbose: print "Reading file.. %s" % file
-        txt = file.read().strip()
-        txt = txt.decode('windows-1252') # ik gok dat dat hun encoding is
-        txt = txt.replace(u'\r\n', u'\n')
-        txt = txt.replace(u'\xa0', u' ') # nbsp --> normal space
+        if type(file) in (str, unicode):
+            txt = file
+        else:
+            txt = file.read().strip()
+        if type(txt) == str:
+            txt = txt.decode('windows-1252') # ik gok dat dat hun encoding is
+            txt = txt.replace(u'\r\n', u'\n')
+            txt = txt.replace(u'\xa0', u' ') # nbsp --> normal space
         
         #toolkit.stripAccents(file.read()).strip().replace('\r\n', '\n')
         if fixedquery:

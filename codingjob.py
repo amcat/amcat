@@ -1,5 +1,6 @@
-import user, toolkit, project, ontology, article, dbtoolkit
-from toolkit import cached
+import user, toolkit, project, ont2, article, dbtoolkit
+from cachable import Cachable
+from functools import partial
 
 def getCodedArticle(db, cjaid):
     data = db.doQuery("select codingjobid, setnr from codingjobs_articles where codingjob_articleid=%i"% cjaid)
@@ -13,71 +14,29 @@ def getCodedArticleIdsFromArticleId(db, articleid):
     return (row[0] for row in data)
     
 
-class Codingjob(object):
-
+class Codingjob(Cachable):
+    __table__ = 'codingjobs'
+    __idcolumn__ = 'codingjobid'
     def __init__(self, db, id):
-        self.db = db
-        self.id = id
+        Cachable.__init__(self, db, id)
+        for prop, field, func in (
+            ("name", None, None),
+            ("insertdate", None, None),
+            ("unitSchema", "unitschemaid", partial(AnnotationSchema, self.db)),
+            ("articleSchema", "articleschemaid", partial(AnnotationSchema, self.db)),
+            ("project", "projectid", partial(project.Project, self.db)),
+            ("owner", "owner_userid", self.db.users.getUser)):
+            self.addDBProperty(prop, field, func)
+        self.addDBFKProperty("sets", "codingjobs_sets", "setnr", function=partial(CodingjobSet, self))
         
-    def _getFields(self):
-        SQL = """select name, unitschemaid, articleschemaid, params, owner_userid, insertdate, projectid from codingjobs
-              where codingjobid=%i""" % self.id
-        if self._fields: return
-        self._name, ua, aa, self._params, ownerid, insertdate, projectid = self.db.doQuery(SQL)[0]
-        self._unitschema = AnnotationSchema(self.db, ua)
-        self._artschema = AnnotationSchema(self.db, aa)
-        self._owner = self.db.users.getUser(ownerid)
-        self._project = project.Project(self.db, projectid)
-        self._insertdate = insertdate
-        self._fields = True
-    _fields = False
-
     def getLink(self):
         return "codingjobDetails?codingjobid=%i" % self.id
 
-    @property
-    def name(self):
-        self._getFields()
-        return self._name
-
-    @property
-    def articleSchema(self):
-        self._getFields()
-        return self._artschema
-
-    @property
-    def unitSchema(self):
-        self._getFields()
-        return self._unitschema
-
-    @property
-    @cached
-    def sets(self):
-        SQL = "select setnr from codingjobs_sets where codingjobid=%i" % self.id
-        return [CodingjobSet(self, setnr) for (setnr,) in  self.db.doQuery(SQL)]
-
-    @property
-    def owner(self):
-        self._getFields()
-        return self._owner
-            
-    @property
-    def insertdate(self):
-        self._getFields()
-        return self._insertdate
-
-    @property
-    def project(self):
-        self._getFields()
-        return self._project
-    
     def getSet(self, setnr):
         for set in self.sets:
             if set.setnr == setnr:
                 return set
-                
-        
-    @cached
+
     def getNonCodedArticleids(self): # articlids that do not have any codings in this job
         sql = """
         select v.articleid
@@ -91,12 +50,6 @@ class Codingjob(object):
         data = self.db.doQuery(sql)
         aids = [row[0] for row in data]
         return aids
-        # result = []
-        # for aid in aids:
-            # if aids.count(aid) == 1:
-                # result.append(aid)
-        # return result
-        
 
     def findCodedArticle(self, art=None, coder=None, cjaid=None):
         if art and coder:
@@ -137,6 +90,7 @@ class Codingjob(object):
         
         
     def cacheValues(self, artannots = False, arrows = False, sentences = False, headlines=True):
+        return
         #nog mogelijke optimalisaties:
         # categorize 1x ophalen voor meer objecten
         # niet alle sentences ophalen (maar lastig om verwacht gedrag article.sentences niet te breken...)
@@ -233,24 +187,19 @@ class Codingjob(object):
         toolkit.setCachedProp(self, "sets", sets)
         
 
-class CodedArticle(object):
-    def __init__(self, set, cjaid, aid):
-        self.set = set
+class CodedArticle(Cachable):
+    __table__ = 'codingjobs_articles'
+    __idcolumn__ = 'codingjob_articleid'
+    def __init__(self, set, cjaid, aid=None):
+        Cachable.__init__(self, set.db, cjaid)
         self.cjaid = cjaid
-        self.aid = aid
-        self.db = set.db
-
-    @property
-    @cached
-    def article(self):
-        return self.db.article(self.aid)
-
-    @property
-    @cached
-    def sentences(self):
-        SQL = ("select arrowid, sentenceid from %s where codingjob_articleid = %i"
-               % (self.set.job.unitSchema.table, self.cjaid))    
-        return [CodedSentence(self, id, self.getSentence(sid)) for (id,sid) in self.set.job.db.doQuery(SQL)]
+        self.set = set
+        self.addDBProperty("aid", "articleid")
+        if aid: self.cacheValues(aid=aid)
+        self.addFunctionProperty("article", lambda : self.db.article(self.aid))
+        self.addFunctionProperty("values", self.getValues)
+        self.addDBFKProperty("sentences", self.set.job.unitSchema.table, ["arrowid", "sentenceid"],
+                             function=lambda id, sid : CodedSentence(self, id, self.getSentence(sid)))
 
     def getSentence(self, sid):
         for s in self.article.sentences:
@@ -258,9 +207,7 @@ class CodedArticle(object):
                 return s
         raise Exception("Cannot find sentence %i in article %i" % (sid, self.article.id))
 
-    @property
-    @cached
-    def values(self):
+    def getValues(self):
         schema = self.set.job.articleSchema
         SQL = schema.SQLSelect() + " where codingjob_articleid = %i" % self.cjaid
         data = self.db.doQuery(SQL)
@@ -272,17 +219,18 @@ class CodedArticle(object):
         if isinstance(field, AnnotationSchemaField):
             field = field.fieldname
         return self.values.get(field, None)
-        
-class CodedSentence(object):
+    def __str__(self):
+        return "Article %s coded by %s" % (self.article, self.set.coder)
+    
+class CodedSentence(Cachable):
     def __init__(self, codedArticle, arrowid, sentence):
+        Cachable.__init__(self, codedArticle.db, arrowid)
         self.arrowid = arrowid
         self.ca = codedArticle
-        self.db = self.ca.db
         self.sentence = sentence
+        self.addFunctionProperty("values", self.getValues)
 
-    @property
-    @cached
-    def values(self):
+    def getValues(self):
         schema = self.ca.set.job.unitSchema
         SQL = schema.SQLSelect() + " where arrowid = %i" % (self.arrowid,)
         return schema.asDict(self.db.doQuery(SQL)[0])
@@ -308,24 +256,16 @@ def getCodedArticle(db, cjaid):
     job = getCodingJob(db, cjid)
     return job.findCodedArticle(cjaid = cjaid)
 
-class CodingjobSet(object):
+class CodingjobSet(Cachable):
+    __table__ = 'codingjobs_sets'
+    __idcolumn__ = ['codingjobid', 'setnr']
+    
     def __init__(self, job, setnr):
+        Cachable.__init__(self, job.db, (job.id, setnr))
         self.job = job
-        self.db = job.db
         self.setnr = setnr
-        self._where = "codingjobid = %i and setnr = %i" % (self.job.id, self.setnr)
-        
-    @property
-    @cached
-    def coder(self):
-        SQL = "select coder_userid from codingjobs_sets where %s" % self._where
-        return self.job.db.users.getUser(self.job.db.getValue(SQL))
-
-    @property
-    @cached
-    def articles(self):
-        SQL = "select codingjob_articleid, articleid from codingjobs_articles where %s" % self._where
-        return [CodedArticle(self, *data) for data in self.job.db.doQuery(SQL)]
+        self.addDBProperty("coder", "coder_userid", self.db.users.getUser)
+        self.addDBFKProperty("articles", "codingjobs_articles", "codingjob_articleid", function=partial(CodedArticle, self))
 
     def getArticle(self, cjaid):
         for a in self.articles:
@@ -348,40 +288,25 @@ class CodingjobSet(object):
         return self.job.db.doQuery(SQL)[0]
 
 
-class AnnotationSchema(object):
-
+class AnnotationSchema(Cachable):
+    __idcolumn__ = 'annotationschemaid'
+    __table__ = 'annotationschemas'
+    
     def __init__(self, db, id):
-        self.db = db
-        self.id = id
+        Cachable.__init__(self, db, id)
+        self.ont = ont2.fromDB(self.db)
+        self.addDBProperty("table", "location", lambda loc : loc.split(":")[0])
+        self.addDBProperty("name")
+        self.addDBFKProperty("fields", "annotationschemas_fields", ["fieldnr", "fieldname", "label", "fieldtypeid", "params"], function=self.createField)
 
-    def _getInfo(self):
-        if self._info: return
-        SQL = """select name, location, articleschema, params from annotationschemas
-              where annotationschemaid=%i""" % self.id
-        self._name, loc, self._articleschema, self._params = self.db.doQuery(SQL)[0]
-        self._table = loc.split(":")[0]
-        self._info = True
-    _info = False
-
-    @property
-    def table(self):
-        self._getInfo()
-        return self._table
-
-    @property
-    def name(self):
-        self._getInfo()
-        return self._name
-
-    @property
-    @cached
-    def fields(self):
-        if self.id == 0: return []
-        SQL = """select fieldnr, fieldname, label, fieldtypeid, params
-        from annotationschemas_fields where annotationschemaid=%i
-        order by fieldnr""" % self.id
-        ont = ontology.fromDB(self.db)
-        return [getField(self, ont, *vals) for vals in self.db.doQuery(SQL)]
+    def createField(self, fieldnr, fieldname, label, fieldtype, params):
+        if fieldtype in (5,):
+            return OntologyAnnotationSchemaField(self.ont, self, fieldnr, fieldname, label, fieldtype, params)
+        if fieldtype in (3,4,8):
+            return LookupAnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params)
+        else:
+            return AnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params)
+    
 
     def getField(self, fieldname):
         for f in self.fields:
@@ -437,25 +362,25 @@ class AnnotationSchemaField(object):
 class LookupAnnotationSchemaField(AnnotationSchemaField):
     def __init__(self, *vals):
         AnnotationSchemaField.__init__(self, *vals)
+        self._labels = None
     def deserialize(self, value):
         if value is None: return None
-        return LookupValue(value, self.labels.get(value, None))
+        return LookupValue(value, self.getLabels().get(value, None))
     def hasLabel(self):
         return True
-    @property
-    @cached
-    def labels(self):
-        if self.fieldtype == 4:
-            labels = {}
-            for i, val in enumerate(self.params['values'].split(";")):
-                if ":" in val:
-                    i, val = val.split(":")
-                    i = int(i)
-                labels[i] = val
-            return labels
-        else:
-            sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.params['table'])
-            return dict(self.schema.db.doQuery(sql))
+    def getLabels(self):
+        if self._labels is None:
+            if self.fieldtype == 4:
+                self._labels = {}
+                for i, val in enumerate(self.params['values'].split(";")):
+                    if ":" in val:
+                        i, val = val.split(":")
+                        i = int(i)
+                    self._labels[i] = val
+            else:
+                sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.params['table'])
+                self._labels =  dict(self.schema.db.doQuery(sql))
+        return self._labels
     def getLabel(self, value):
         v = self.deserialize(value)
         if not v: return None
@@ -475,7 +400,8 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
     def deserialize(self, value):
         if value is None: return None
         val = self.ont.nodes.get(value)
-        if val is None: return value
+        if val is None:
+            return value
         return val
     def getLabel(self, value):
         v = self.deserialize(value)
@@ -490,12 +416,16 @@ def getCACoders(cas):
     return sorted(set(ca.set.coder for ca in cas))
 
 
-def getField(schema, ont, fieldnr, fieldname, label, fieldtype, params):
-    if fieldtype in (5,):
-        return OntologyAnnotationSchemaField(ont, schema, fieldnr, fieldname, label, fieldtype, params)
-    if fieldtype in (3,4,8):
-        return LookupAnnotationSchemaField(schema, fieldnr, fieldname, label, fieldtype, params)
-    else:
-        return AnnotationSchemaField(schema, fieldnr, fieldname, label, fieldtype, params)
-    
 
+if __name__ == '__main__':
+    import dbtoolkit, adapter
+    db = dbtoolkit.amcatDB()
+    cj = Codingjob(db, 1859)
+    print adapter.getLabel(cj, strict=True), cj.unitSchema
+    set = list(cj.sets)[0]
+    print set, set.coder
+    for art in list(set.articles)[:5]:
+        print art, art.cjaid, art.article.headline
+        for sent in list(art.sentences)[:2]:
+            print sent.id, sent.sentence
+    

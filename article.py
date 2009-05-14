@@ -1,4 +1,4 @@
-import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types, project, weakref
+import toolkit, dbtoolkit, re, sbd, ctokenizer, mx.DateTime, sources, types, project, weakref, binascii
 from toolkit import cached
 from itertools import izip, count
 _debug = toolkit.Debug('article',1)
@@ -252,14 +252,30 @@ class Article(object):
         return self.id
 
     def __del__(self):
-        toolkit.delCachedProp(self, "sentences")
+        if toolkit:
+            toolkit.delCachedProp(self, "sentences")
 
     def __eq__(self, other):
         return isinstance(other, Article) and other.id == self.id
     def __hash__(self):
         return hash(type(self)) ^ hash(self.id) 
 
-        
+    def storeImage(self, imgdata, format):
+        SQL = "DELETE FROM articles_image WHERE articleid=%i" % (self.id,)
+        self.db.doQuery(SQL)
+        imgdata = binascii.hexlify(imgdata)
+        SQL = "INSERT INTO articles_image VALUES (%i, 0x%s, %s)" % (self.id, imgdata, toolkit.quotesql(format))
+        self.db.doQuery(SQL)
+
+    def getImage(self):
+        SQL = "SELECT image, datalength(image), format FROM articles_image WHERE articleid=%i" % self.id
+        data = self.db.doQuery(SQL)
+        if not data: return None, None
+        bytes2, l, format = data[0]
+        while l > len(bytes2):
+            SQL = "SELECT substring(image, %i, 8000) from articles_image WHERE articleid=%i" % (len(bytes2)+1, self.id)
+            bytes2 += self.db.doQuery(SQL)[0][0]
+        return bytes2, format
         
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
                   length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, retrieveArticle=1):
@@ -280,6 +296,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if section: section = section.strip()
     if pagenr and type(pagenr) in (types.StringTypes): pagenr = pagenr.strip()
     if text: text = text.strip()
+    if length == None: length = len(text.split())
 
     [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])
     
@@ -515,8 +532,10 @@ def sentFromDB(db, sid):
     
 
 if __name__ == '__main__':
-    import sys, dbtoolkit, toolkit
+    import sys, dbtoolkit, toolkit, binascii
     db = dbtoolkit.anokoDB()
-    aids = list(toolkit.intlist(sys.stdin))
-    splitArticles(aids, db)
+    a = fromDB(db, 41479453)
+    imgdata, format = a.getImage()
+    print format, len(imgdata)
+    open('/tmp/test.jpg', 'wb').write(imgdata)
     

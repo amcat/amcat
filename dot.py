@@ -1,4 +1,4 @@
-import os, sys, toolkit, base64, odict
+import os, sys, toolkit, base64, odict, collections, re
 
 def printError(name, msg):
     toolkit.warn(msg)
@@ -26,13 +26,17 @@ class Edge(object):
     def __str__(self):
         return "[Edge %s-%s]" % (self.subj.id, self.obj.id)
 
+
+MAIN_GRAPH = 1
+
 class Graph(object):
     def __init__(self, digraph=True, label=None, theme=None):
         self.nodes = odict.OrderedDict() # id : Node
-        self.edges = odict.OrderedDict() # subjNode, objNode : Edge
+        self.edges = odict.OrderedDict() # subjNode, objNode : [Edge, ..]
         self.digraph = digraph
         self.label = label
         self.theme = theme or DotTheme()
+        self.subgraphs = collections.defaultdict(list)
 
     def addNode(self, node, **kargs):
         if type(node) <> Node:
@@ -46,11 +50,13 @@ class Graph(object):
         if create:
             return self.addNode(nodeid, **kargs)
 
-    def addEdge(self, subj, obj, **kargs):
+    def addEdge(self, subj, obj, graph=None, **kargs):
         if type(subj) <> Node: subj = self.getNode(subj)
         if type(obj) <> Node: obj = self.getNode(obj)
         edge = Edge(subj, obj, **kargs)
-        self.edges[subj, obj] = edge
+        if (subj, obj) not in self.edges: self.edges[subj, obj] = []
+        self.edges[subj, obj].append(edge)
+        self.subgraphs[graph].append(edge)
         return edge
 
     def addLabel(self, label):
@@ -58,20 +64,32 @@ class Graph(object):
 
     def getDot(self):
         entries = []
-        for node in self.nodes.values():
-            entries.append(self.theme.getNodeDot(node, self))
-        for edge in self.edges.values():
-            entries.append(self.theme.getEdgeDot(edge, self))
+        #for node in self.nodes.values():
+        #    entries.append(self.theme.getNodeDot(node, self))
+        for i, subgraph in enumerate(self.subgraphs):
+            if subgraph: entries.append('subgraph cluster_%i {\nlabel="%s"' % (i, subgraph))
+            n = set()
+            for edge in self.subgraphs[subgraph]:
+                entries.append(self.theme.getEdgeDot(edge, self, subgraph))
+                n.add(edge.subj)
+                n.add(edge.obj)
+            for node in n:
+                entries.append(self.theme.getNodeDot(node, self, subgraph))
+            if subgraph: entries.append("}")
         graphtype = "digraph" if self.digraph else "graph"
         header = self.theme.getGraphHeader(self)
         return "%s G {%s\n%s\n}" % (graphtype, header, "\n".join(e for e in entries if e))
 
     def getEdgesFrom(self, node):
-        for (subj, obj), edge in self.edges.iteritems():
-            if subj == node: yield edge
+        for (subj, obj), edges in self.edges.iteritems():
+            if subj == node:
+                for edge in edges:
+                    yield edge
     def getEdgesTo(self, node):
-        for (subj, obj), edge in self.edges.iteritems():
-            if obj == node: yield edge
+        for (subj, obj), edges in self.edges.iteritems():
+            if obj == node:
+                for edge in edges:
+                    yield edge
                         
         
 
@@ -81,27 +99,26 @@ class Graph(object):
         return dot2object(self.getDot(), *args, **kargs)
     def getHTMLDoc(self):
         return '<html><body><p>%s</p><pre>%s</pre></body></html>' % (self.getHTMLObject(), self.getDot())
-
+    def getHTMLSVG(self, *args, **kargs):
+        kargs['format']='svg'
+        svg = self.getImage(*args, **kargs)
+        svg = re.match('.*?(<svg.*</svg>)', svg, re.DOTALL).group(1)
+        return svg
+    
     def normalizeWeights(self):
         wmin, wmax = 1, 10
-        for objs in (self.edges.values(), self.nodes.values()):
-            max, min = None, None
-            for obj in objs:
-                w = float(obj.weight)
+        max, min = None, None
+        for edges in self.edges.values():
+            for edge in edges:
+                w = float(edge.weight)
                 if max is None or w > max: max = w
                 if min is None or w < min: min = w
-            if max is None or max == min:
-                for obj in objs:
-                    obj.weight = 3
-            else:
-                scale = (wmax - wmin) / (max - min)
-                add = wmin - (min*scale)
-                for obj in objs:
-                    obj.weight = add + obj.weight * scale
-
+        if max <> min:
+            self.theme.scale = (wmax - wmin) / (max - min)
+            self.theme.base = wmin - (min*self.theme.scale)
 
 class DotTheme(object):
-    def __init__(self, edgelabels=True, shape="ellipse", isolated=False, edgefont="Helvetica", nodefont="Helvetica",header="", scale=1):
+    def __init__(self, edgelabels=True, shape="ellipse", isolated=False, edgefont="Helvetica", nodefont="Helvetica",header="", scale=1, base=0):
         self.edgelabels = edgelabels
         self.shape = shape
         self.isolated=  isolated
@@ -110,7 +127,8 @@ class DotTheme(object):
         self.header = header
         self.scale = scale
         self.graphattrs = {"center" : "true"}
-    def getEdgeDot(self, edge, graph):
+        self.base = base
+    def getEdgeDot(self, edge, graph, subgraph):
         style = dict(edge.style)
         attrs = dict(edge.attrs)
         hsb = self.getEdgeColor(edge, graph)
@@ -118,12 +136,12 @@ class DotTheme(object):
         w = self.getEdgeWidth(edge, graph)
         if w: style['setlinewidth'] = "%1.3f" % w
         l = self.getEdgeLabel(edge, graph)
-        if l: attrs['label'] = l 
+        if l: attrs['label'] = l
         l = self.getEdgeLen(edge, graph)
         if l: attrs['len'] = l 
         a = dotattrs(attrs, style)
         c = self.getConnector(edge, graph)
-        return '%s %s %s [%s];' % (self.getNodeID(edge.subj, graph), c, self.getNodeID(edge.obj, graph), a)
+        return '%s %s %s [%s];' % (self.getNodeID(edge.subj, graph, subgraph), c, self.getNodeID(edge.obj, graph, subgraph), a)
     def getEdgeWeight(self, edge, graph):
         return edge.weight * self.scale
     def getEdgeColor(self, edge, graph):
@@ -140,7 +158,7 @@ class DotTheme(object):
     def getConnector(self, edge, graph):
         return graph.digraph and "->" or "--"
 
-    def getNodeDot(self, node, graph):
+    def getNodeDot(self, node, graph, subgraph):
         if not (self.isolated or list(graph.getEdgesFrom(node)) or list(graph.getEdgesTo(node))):
             return ""
         style = dict(node.style)
@@ -153,9 +171,12 @@ class DotTheme(object):
         if f: attrs['fontname'] = f
         s = self.getNodeShape(node, graph)
         if s: attrs['shape'] = s
+        attrs['label'] = node.id
         a = dotattrs(attrs, style)
-        return '%s [%s];' % (self.getNodeID(node, graph), a)
-    def getNodeID(self, node, graph):
+        return '%s [%s];' % (self.getNodeID(node, graph, subgraph), a)
+    def getNodeID(self, node, graph, subgraph=None):
+        if subgraph:
+            return '"%s %s"' % (node.id, subgraph)
         return '"%s"' % node.id
     def getNodeShape(self, node, graph):
         return None
@@ -166,7 +187,7 @@ class DotTheme(object):
     def getNodeFontname(self, node, graph):
         return None
     def getNodeWeight(self, node, graph):
-        return self.scale * node.weight
+        return self.scale * node.weight + self.base
     def getGraphHeader(self, graph):
         header = ""
         a = self.getGraphAttrs(graph)

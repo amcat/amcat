@@ -47,7 +47,10 @@ class User(object):
     def _getPermissionLevel(self):
         if self._permissionLevel is None:
             self._permissionLevel = permissions.userPermission(self.db, self.id)
-        
+
+    def __str__(self):
+        return self.username
+            
     @property
     #@cached
     def username(self):
