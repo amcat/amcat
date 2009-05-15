@@ -36,6 +36,7 @@ class amcatDB(object):
         
         if not configuration:
             configuration=config.default()
+        self.dbType = configuration.drivername
         
         _debug(3,"Connecting to database '%(database)s' on '%(username)s@%(host)s' using driver %(drivername)s... " % configuration.__dict__, 0)
         self.conn = configuration.connect()# datetime="mx", auto_commit=auto_commit)
@@ -43,12 +44,18 @@ class amcatDB(object):
 
         self._articlecache = {}
         
-        self.dbType = configuration.drivername
+        
         
         if self.dbType == "MySQLdb":
+            import MySQLdb.converters
+            conv_dict = MySQLdb.converters.conversions
+            conv_dict[0] = float
+            conv_dict[246] = float
+            self.conn = configuration.connect(conv=conv_dict)
             self.conn.select_db('report')
             self.conn.autocommit(False)
-
+        else:
+            self.conn = configuration.connect()
         
       
     def quote(self, value):
