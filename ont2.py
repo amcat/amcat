@@ -105,6 +105,7 @@ class Object(Base, Cachable):
         if not self.labels: return None
         l = self.labels
         if lang and lang in l: return l[lang]
+        if 2 in l: return l[2]
         keys = l.keys()
         keys.sort()
         return l[keys[0]]

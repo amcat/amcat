@@ -406,7 +406,7 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
     def getLabel(self, value):
         v = self.deserialize(value)
         if not v: return None
-        return v.label
+        return v.getLabel()
     def hasLabel(self):
         return True
 

@@ -1,5 +1,6 @@
 from functools import partial
 from enum import Enum
+import toolkit
 
 levels = Enum(ciritical=1, error=2, warning=3, notice=4, info=5, debug=6)
 
@@ -39,7 +40,7 @@ def send_reports(db):
     for (id, level, last), email in zip(ids, emails):
         logs = getLogs(db, level, last)
         if logs:
-            msg = "\n".join(["%s (%s) %s: %s" % (writeDateTime(a[5]), levels[a[2]], a[1], a[3]) for a in logs])
+            msg = "\n".join(["%s (%s) %s: %s" % (toolkit.writeDateTime(a[5]), levels[a[2]], a[1], a[3]) for a in logs])
             sendmail.sendmail(email, "log report %d - %d" % (last, logs[-1][0]), header + msg)
             #update last reported id: (1=1 because where clause is not optional)
             last = logs[-1][0]
@@ -63,7 +64,7 @@ error = partial(log, level=levels.error)
 
 if __name__ == '__main__':
     import dbtoolkit, sendmail
-    from toolkit import writeDateTime
+    
     db = dbtoolkit.amcatDB()
     send_reports(db)
     #l = Logger(db, "TEST_LOG", 6)

@@ -142,7 +142,7 @@ class Network(object):
 
 DONTCATEGORIZE= []#["societalgroup"]
 
-class Arrow:
+class Arrow(object):
     def __init__(self, subj, obj, qual, type, context, angle=None, predicate=None, weight=1, divergence=0, ambivalence=0, src=None):
         self.subj = subj
         self.obj = obj
@@ -190,6 +190,24 @@ class Arrow:
     def getArrowTypeLabel(self):
         return self.sentence.article.db.getValue("select name from net_arrowtypes where arrowtypeid = %i" % self.type)
 
+    def getSentence(self):
+        c = self.context
+        if type(c) == codingjob.CodedSentence: return c.sentence
+        if type(c) == article.Sentence: return c
+        raise Exception("Cannot get sentence from context %s : %s" % (type(c), c))
+
+    def getCodedSentence(self):
+        c = self.context
+        if type(c) == codingjob.CodedSentence: return c
+        raise Exception("Cannot get CodedSentence from context %s : %s" % (type(c), c))
+
+    def getCodedArticle(self):
+        c = self.context
+        if type(c) == codingjob.CodedSentence: return c.ca
+        if type(c) == codingjob.CodedArticle: return c
+        raise Exception("Cannot get CodedArticle from context %s : %s" % (type(c), c))
+
+    
     def getArticle(self):
         c = self.context
         if type(c) == article.Article: return c

@@ -75,7 +75,7 @@ class MultisetReliability:
                     w = 1#1.0 / (len(ad) * len(bd))
                     for obj in ad:
                         for obj2 in bd:
-                            if obj.oid > obj2.oid: key = obj, obj2
+                            if obj.id > obj2.id: key = obj, obj2
                             else: key = obj2, obj
                             result[key] += w
         return result
