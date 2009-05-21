@@ -1198,3 +1198,17 @@ def HSVtoHTML(h,s,v):
 def RGBtoHTML(r,g,b):
     hexcolor = '#%02x%02x%02x' % (r*255,g*255,b*255)
     return hexcolor
+
+def getCaller(depth=2):
+    import inspect
+    stack = inspect.stack()
+    try:
+        if len(stack) <= depth:
+            return None, None, None
+        frame = stack[depth][0]
+        try:
+            return inspect.getframeinfo(frame)[:3]
+        finally:
+            del frame
+    finally:
+        del stack

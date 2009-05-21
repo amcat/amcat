@@ -278,13 +278,13 @@ class CodingjobSet(Cachable):
     def getNArticleCodings(self):
         SQL = """select count(*) from %s x
               inner join codingjobs_articles ca on x.codingjob_articleid = ca.codingjob_articleid
-              where %s""" % (self.job.articleSchema.table, self._where)
+              where codingjobid = %d and setnr = %d""" % (self.job.articleSchema.table, self.job.id, self.setnr)
         return self.job.db.getValue(SQL)
         
     def getNUnitCodings(self):
         SQL = """select count(distinct articleid), count(*) from %s x
               inner join codingjobs_articles ca on x.codingjob_articleid = ca.codingjob_articleid
-              where %s""" % (self.job.unitSchema.table, self._where)
+              where codingjobid = %d and setnr = %d""" % (self.job.unitSchema.table, self.job.id, self.setnr)
         return self.job.db.doQuery(SQL)[0]
 
 
@@ -406,7 +406,10 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
     def getLabel(self, value):
         v = self.deserialize(value)
         if not v: return None
-        return v.getLabel()
+        try:
+            return v.getLabel()
+        except AttributeError:
+            return v
     def hasLabel(self):
         return True
 
