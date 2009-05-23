@@ -166,7 +166,6 @@ class Arrow(object):
         date = self.getArticle().date
         if not (self.subj and self.obj):
             raise Exception
-            return # added by jouke
         suc, suo = self.subj.categorize(catid, date=date, depth=depth)
         objc, objo = self.obj.categorize(catid, date=date, depth=depth)
         if suc is None: raise Exception(self.subj.id)
