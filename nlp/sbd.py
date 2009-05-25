@@ -36,9 +36,10 @@ def split(text, type=2):
 
 def splitPars(text, type=2, returnSents=True, flatten=False):
     if type==4:
-        pars = re.split(r"\n\n|(?:\s*(?![\*\[\]+])\W/N\(soort,ev,neut\)/\W)+",text)
+        pars = re.split(r"\n\s*\n|(?:\s*(?![\*\[\]+])\W/N\(soort,ev,neut\)/\W)+",text)
     else:
-        pars = text.strip().split("\n\n")
+        pars = re.split(r"\n\s*\n", text.strip())#.split("\n\n")
+        #print `pars`
     if returnSents:
         if not flatten: return  map(lambda x:split(x,type), pars)
         sents = []
@@ -54,7 +55,7 @@ def splitParsJava(text, tv = False):
     i,o = os.popen2(command)
     i.write(text)
     i.close()
-    pars = o.read().replace("\xa0","").split("\n\n")
+    pars = o.read().replace("\xa0","").split(r"\n\s*\n")
     pars = [par.split("\n") for par in pars if par.strip()]
     return pars
 
