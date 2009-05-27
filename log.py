@@ -28,6 +28,7 @@ class Logger(object):
 
         self.db.insert("log", dict(level=level.value, application=application, message=message))
         self.db.conn.commit()
+        toolkit.warn( "[%s] %s" % (application, message))
 
 #compile daily log reports and mail to subscribed users
 def send_reports(db):
