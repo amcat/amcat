@@ -1189,7 +1189,7 @@ def antiword(wordfile):
 
 def returnTraceback():
     import traceback
-    return ''.join(traceback.format_exception(*sys.exc_info()))
+    return traceback.format_exc()
 
 def HSVtoHTML(h,s,v):
     rgb = colorsys.hsv_to_rgb(h,s,v)
