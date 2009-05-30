@@ -69,9 +69,14 @@ class SimpleOrderedSet(list):
         self.append(object)
 
 class ChartGenerator(object):
-    def __init__(self, type=None):
+    def __init__(self, type=None, valfunc = None):
         self.type = type or 'line'
-
+        self.valfunc = valfunc
+    def getVal(self, val):
+            if self.valfunc:
+                return self.valfunc(val)
+            else:
+                return float(val or 0)
     def chartData(self, table):
         # columns -> labels
         labels = [
@@ -81,7 +86,7 @@ class ChartGenerator(object):
         data = {}
         for r in table.rows:
             key = " - ".join(rh.getHeader(r) for rh in table.rowheaders)
-            data[key] = [float(table.cellfunc(r,c) or 0) for c in table.columns]
+            data[key] = [self.getVal(table.cellfunc(r,c)) for c in table.columns]
         return data, labels
 
     def generateTempFile(self, table, tempDir):
@@ -94,9 +99,11 @@ class ChartGenerator(object):
         return ("<object type='image/png' data='data:image/png;base64,%s'></object>" % data), map
         
 class NetworkGenerator(object):
-    def __init__(self):
-        pass
+    def __init__(self, qwfunc=None):
+        self.qwfunc = qwfunc
     def getVal(self, val):
+        if self.qwfunc:
+            return self.qwfunc(val)
         if type(val) in (tuple, list):
             return val
         else:
@@ -114,9 +121,12 @@ class NetworkGenerator(object):
                 val = table.cellfunc(r,c)
                 if val is None: continue
                 q,w = self.getVal(val)
+                if w is None: continue
+                if type(w) not in (int, float):
+                    raise Exception(w)
                 e = g.addEdge(rlbl,clbl)
                 e.weight = w
-                if q is not None: e.sign = q/100.
+                if q is not None: e.sign = q
 
         g.normalizeWeights()
                 
@@ -127,15 +137,31 @@ class NetworkGenerator(object):
 
 
 class HTMLGenerator(object):
-    def __init__(self, writer, tdfunc=None):
+    def __init__(self, writer, tdfunc=None, thfunc=None, trclassfunc=None):
         self.writer = writer
         self.tdfunc = tdfunc
+        self.thfunc = thfunc
+        self.trclassfunc = trclassfunc
     
     def toHTML(self, table):
         self.startTable()
         # column headers
+        for i in range(len(table.rowheaders)):
+            cls = "headcol"
+            if i == 0: cls += "first"
+            if i == len(table.rowheaders) - 1: cls += "last"
+            self.col(cls)
+        for i in range(len(table.columns)):
+            cls = "datacol"
+            if i == 0: cls += "first"
+            if i == len(table.columns) - 1: cls += "last"
+            self.col(clas=cls)
+            
         for i, ch in enumerate(table.colheaders):
-            self.startRow()
+            cls = "headrow"
+            if i == 0: cls += "first"
+            if i == len(table.colheaders) - 1: cls += "last"
+            self.startRow(clas=cls)
             for j, rh in enumerate(table.rowheaders):
                 header = []
                 if i == len(table.colheaders) -1: # last header row, print row header title
@@ -143,28 +169,33 @@ class HTMLGenerator(object):
                 if j == len(table.rowheaders) -1: # last header col, print col header title
                     header.append(ch.getLabel())
                 header = "&nbsp;\&nbsp;".join(header)
-                self.headercell(header)
+                self.headercell(header, clas="colrow")
             cheads = map(ch.getHeader, table.columns)
-            for chead, span in zip(cheads, spans(cheads)):
+            for j, (chead, span) in enumerate(zip(cheads, spans(cheads))):
                 if span is None: continue
-                self.headercell(chead, colspan=span)
+                self.headercell(chead, colspan=span, clas="col")
             self.endRow()
         # normal rows, first cache all row headers and spans
         rowheaders = map(lambda rh : map(rh.getHeader, table.rows), table.rowheaders)
         rowheaders = map(lambda rh : zip(rh, spans(rh)), rowheaders)
         for i, r in enumerate(table.rows):
-            self.startRow()
+            cls = None
+            if self.trclassfunc: cls = self.trclassfunc(r)
+            self.startRow(clas=cls)
             for rh in rowheaders:
                 rhead, span = rh[i]
                 if span is not None:
-                    self.headercell(rhead, rowspan=span)
+                    self.headercell(rhead, rowspan=span, clas="row")
             for c in table.columns:
                 self.cell(table.cellfunc(r, c))
             self.endRow()
         self.endTable()
         
-    def startRow(self):
-        self.writer.write(" <tr>\n")
+    def startRow(self, clas=None):
+        s = " class='%s'" % clas if clas else ""
+        self.writer.write(" <tr%s>\n" % s)
+    def col(self, clas):
+        self.writer.write(" <col class='%s'></col>" % clas)
     def startTable(self):
         self.writer.write("<table>\n")
     def endRow(self):
@@ -172,19 +203,27 @@ class HTMLGenerator(object):
     def endTable(self):
         self.writer.write("</table>\n")
     def headercell(self, text, **attr):
-        self.elem("th", text, attr)
+        if "clas" in attr:
+            attr["class"] = attr["clas"]
+            del attr["clas"]
+        if self.thfunc:
+            th = self.thfunc(text, attr)
+        else:
+            th = element("th", text, **attr)
+        self.writer.write(th)            
     def cell(self, text):
         if self.tdfunc:
             td = self.tdfunc(text)
         else:
-            td = "  <td>%s</td>\n" % text
+            td = element("td", text)
         self.writer.write(td)
-    def elem(self, tag, content, attrs={}):
-        if attrs:
-            astr = " " + attr2str(attrs)
-        else:
-            astr = ""
-        self.writer.write("<%s%s>%s</%s>" % (tag, astr, content, tag))
+def element(tag, content, **attrs):
+    if attrs:
+        astr = " " + attr2str(attrs)
+    else:
+        astr = ""
+    return "<%s%s>%s</%s>" % (tag, astr, content, tag)
+                
 
         
 def attr2str(attr):

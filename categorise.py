@@ -19,7 +19,9 @@ class Categorisation(Cachable):
 
     def categorise(self, obj, date=None, depth=[0,1,2], ret=RETURN.BOTH):
         def getSortKey(path):
-            return [self.objects.get(x, maxint) for x in path]
+            #print [self.objects.get(x[0], maxint) for x in path]
+            return [self.objects.get(x[0], maxint) for x in path]
+
 
         result = None
         for clas in self.classes:
@@ -63,16 +65,16 @@ if __name__ == '__main__':
     t = time.time()
     
     ont = ont2.fromDB(dbtoolkit.amcatDB())
-    f = ont.categorisations[1001]
-    c = f.categorise(ont.objects[11087])
+    f = ont.categorisations[101]
+    c = f.categorise(ont.objects[2423])
     for clas in ont.classes.values():
-        p = getPathsToRoot(ont.objects[11087], clas)
+        p = getPathsToRoot(ont.objects[2423], clas)
         for q in p:
-            print clas.label, " - ".join("%s (%s)" % (x[0].getLabel(), x[1]) for x in q)
+            print clas.label, " - ".join("%s:%s (%s)" % (x[0].id, x[0].getLabel(), x[1]) for x in q)
         
     if c[0][0] is None:
         print "None!"
     else:
-        print " - ".join("%s (%s)" % (x[0].getLabel(), x[1]) for x in c)
-        print " - ".join(x.getLabel() for x in f.categorise(ont.objects[2583], ret=RETURN.OBJECT))
-        print " - ".join(str(x) for x in f.categorise(ont.objects[2583], ret=RETURN.OMKLAP))
+        print " - ".join("%s:%s (%s)" % (x[0].id, x[0].getLabel(), x[1]) for x in c)
+        print " - ".join(x.getLabel() for x in f.categorise(ont.objects[2423], ret=RETURN.OBJECT))
+        print " - ".join(str(x) for x in f.categorise(ont.objects[2423], ret=RETURN.OMKLAP))
