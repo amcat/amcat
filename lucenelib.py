@@ -1,5 +1,5 @@
 import toolkit, time, re
-
+from cachable import Cachable
 
 classpath = '/home/amcat/resources/jars/lucene-core-2.3.2.jar:/home/amcat/resources/jars/msbase.jar:/home/amcat/resources/jars/mssqlserver.jar:/home/amcat/resources/jars/msutil.jar:/home/amcat/libjava:/home/amcat/resources/jars/lucene-highlighter-2.3.2.jar:/home/amcat/resources/jars/jutf7-0.9.0.jar'
 
@@ -88,4 +88,88 @@ def search(indexLocation, queryList, startNum=0, endNum=-1, startDate=None, endD
     return aidsDict, totalTime, totalHits
     
     
+def wf(index, operation, aids = None):
+    input = aids and "\n".join(str(a) for a in aids)
+    cmd = 'java WordFrequency "%s" %s' % (index, operation)
+    o, e = toolkit.execute(cmd)
+    if e and e.strip(): raise Exception("Error on executing: %s\n%s"% (cmd, e))
+    for line in o.split("\n"):
+        if not line.strip(): continue
+        data = list(line.split("\t"))
+        for i in range(1, len(data)):
+            data[i] = int(data[i])
+        yield data
+
+
+class Index(Cachable):
+    __table__ = 'indices'
+    __idcolumn__ = 'indexid'
+    def __init__(self, db, id, location = None):
+        Cachable.__init__(self, db, id)
+        self.addDBProperty("location", "directory")
+        if location:
+            self.cacheValues(location = location)
+
+    def count(self, objects, *args, **kargs):
+        objects = clean(objects)
+        query = objects.items()
+        aidsDict, totalTime, totalHits = search(self.location, query, *args, **kargs)
+        for oid, hits in aidsDict.iteritems():
+            #o = os[oid]
+            for a, info in hits.iteritems():
+                if self.db is not None:
+                    a = self.db.article(a)
+                hits = info['hits']
+                yield (oid, a, hits)
+
+    def wordfreqs(self, aids=None, thres=None, sort=False):
+        counts = wf(self.location, "COUNTALL", aids)
+        if sort:
+            counts = list(counts)
+            counts.sort(key = lambda x:x[-1], reverse=True)
+        for f in counts:
+            if f[-1] < thres: continue
+            yield f[0], f[-1] 
+
+    def n(self):
+        out = dict(wf(self.location, "INFO"))
+        return out["#Documents"], out["#Terms"]
+
+def clean(query):
+    if type(query) == dict:
+        result = {}
+        for k, v in query.iteritems():
+            result[k] = clean(v)
+        return result
+    else:
+        if type(query) == str:
+            try:
+                query = query.decode('utf-8')
+            except:
+                query = query.decode('latin-1')
+        query = toolkit.stripAccents(query)
+        query = re.sub("\s+"," ", query)
+        query = query.strip()
+        return query
+        
+
+    
+def testQueries(queries, index=None):
+    if index is None: index = Index(None, None, location="/home/amcat/indices/testindex")
+    toolkit.ticker.warn("Starting test", estimate=len(queries))
+    errors = []
+    for q in queries.values():
+        toolkit.ticker.tick()
+        try:
+            list(index.count({1:q}))
+        except Exception, e:
+            errors.append((q, e))
+    if errors:
+        raise Exception("Errors in queries:\n%s" % "\n".join("[%s] %s" % x for x in errors))
+        
+if __name__ == '__main__':
+    import dbtoolkit
+    i = Index(dbtoolkit.amcatDB(), 435)
+    for wf in i.wordfreqs(thres=5, sort=True):
+        print wf
 

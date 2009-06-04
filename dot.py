@@ -15,7 +15,7 @@ class Node(object):
         return "[Node %s]" % self.id
 
 class Edge(object):
-    def __init__(self, subj, obj, label=None, weight=1, sign=None):
+    def __init__(self, subj, obj, label=None, weight=1, sign=None, color=None):
         self.subj = subj
         self.obj = obj
         self.attrs = {}
@@ -23,6 +23,7 @@ class Edge(object):
         self.weight = weight
         self.label = label
         self.sign = sign
+        self.color = color
     def __str__(self):
         return "[Edge %s-%s]" % (self.subj.id, self.obj.id)
 
@@ -126,12 +127,15 @@ class DotTheme(object):
         self.edgefont = edgefont
         self.header = header
         self.scale = scale
-        self.graphattrs = {"center" : "true"}
+        self.graphattrs = {"center" : "true", "size" : "7.5,10"}
         self.base = base
     def getEdgeDot(self, edge, graph, subgraph):
         style = dict(edge.style)
         attrs = dict(edge.attrs)
-        hsb = self.getEdgeColor(edge, graph)
+        if edge.color is not None:
+            hsb = edge.color
+        else:
+            hsb = self.getEdgeColor(edge, graph)
         if hsb: attrs['color'] = "%1.4f,%1.4f,%1.4f" % hsb
         w = self.getEdgeWidth(edge, graph)
         if w: style['setlinewidth'] = "%1.3f" % w

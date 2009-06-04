@@ -25,7 +25,7 @@ class Dataset(object):
     def add(self, arrow):
         debug(3, arrow)
         self.arrows.append(arrow)
-    def getChains(self, chainunit=PER_ARTICLE, splitter=None, extrapolate=False):
+    def getChains(self, chainunit=PER_ARTICLE, splitter=None, extrapolate=False, stripSources=False):
         networks = collections.defaultdict(Network)
         data = self.getLinks(splitter=chainunit).items()
         debug(1, "Calculating chains per article (%i articles)" % len(data))
@@ -44,7 +44,7 @@ class Dataset(object):
             mainnet = chain(mainnet, context=context)
             distribute(mainnet.arrows, networks, splitter=splitter)
             for sourcenet in sourcenets:
-                distribute(sourcenet.arrows, networks, splitter=splitter)
+                distribute(sourcenet.arrows, networks, splitter=splitter, stripSources=stripSources)
         debug(1, "Returning splits(%r, %r)"% (networks, splitter))
         return splits(networks, splitter)
         
@@ -73,12 +73,13 @@ def filter(arrows, filter):
     return n
                                    
                                  
-def distribute(arrows, networks=None, splitter=None):
+def distribute(arrows, networks=None, splitter=None, stripSources=False):
     if networks is None: networks = {}
     for r in arrows:
         v = splitter(r) if splitter else True 
         if v:
             if v not in networks: networks[v] = Network()
+            if stripSources: r.src = None
             networks[v].add(r)
     return splits(networks, splitter)
                   
@@ -233,7 +234,7 @@ def fromCodedSentence(codedSentence, ontology):
 
 
     
-def doExtrapolate(main, sources, ideal=[1625, 200]):
+def doExtrapolate(main, sources, ideal=[1625, 200, 14361,14364,14391,14394,14396,14397,14399,14402,14404,14405,14407]):
     for source in sources:
         for r in source.arrows:
             if r.src and r.obj.id in ideal:

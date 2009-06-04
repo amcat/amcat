@@ -2,6 +2,7 @@ from toolkit import isnull
 import StringIO
 import chartlib, base64
 import dot
+import toolkit
 
 
 class Header(object):
@@ -36,6 +37,8 @@ class Table(object):
         return ChartGenerator(*args, **kargs).generateHTMLObject(self)
     def toHTMLNetworkObject(self, *args, **kargs):
         return NetworkGenerator(*args, **kargs).generateHTMLObject(self)
+    def toNetworkPDF(self, *args, **kargs):
+        return NetworkGenerator(*args, **kargs).generatePDF(self)
     def transpose(self):
         self.rows, self.columns = self.columns, self.rows
         self.colheaders, self.rowheaders = self.rowheaders, self.colheaders
@@ -99,8 +102,9 @@ class ChartGenerator(object):
         return ("<object type='image/png' data='data:image/png;base64,%s'></object>" % data), map
         
 class NetworkGenerator(object):
-    def __init__(self, qwfunc=None):
+    def __init__(self, qwfunc=None, colorfunc = None):
         self.qwfunc = qwfunc
+        self.colorfunc = colorfunc
     def getVal(self, val):
         if self.qwfunc:
             return self.qwfunc(val)
@@ -124,9 +128,11 @@ class NetworkGenerator(object):
                 if w is None: continue
                 if type(w) not in (int, float):
                     raise Exception(w)
-                e = g.addEdge(rlbl,clbl)
+                e = g.addEdge(clbl,rlbl)
                 e.weight = w
                 if q is not None: e.sign = q
+                if self.colorfunc:
+                    e.color = self.colorfunc(w, q)
 
         g.normalizeWeights()
                 
@@ -134,6 +140,11 @@ class NetworkGenerator(object):
     def generateHTMLObject(self, table):
         g = self.generateDot(table)
         return g.getHTMLObject()
+    def generatePDF(self, table):
+        g = self.generateDot(table)
+        img = g.getImage(format='ps')
+        img = toolkit.ps2pdf(img)
+        return img
 
 
 class HTMLGenerator(object):
