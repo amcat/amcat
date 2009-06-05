@@ -1,6 +1,6 @@
-from toolkit import cached
-import user, permissions
-
+from cachable import Cachable
+import user, permissions, article
+from functools import partial
 
 def projects(db, userid, own=1):
     if own:
@@ -28,62 +28,41 @@ def projects(db, userid, own=1):
         yield Project(db, row[0])
 
 
-class Project(object):
-    def __init__(self, db, id):
-        self.db = db
-        self.id = id
-
-    def _getFields(self):
-        if self._field: return
-        SQL = "select name, ownerid, description, insertdate, insertuserid FROM projects WHERE projectid=%i" % self.id
-        self._name, ownerid, self._description, self._insertDate, insertid = self.db.doQuery(SQL)[0]
-        #self._owner = self.db.users.getUser(ownerid)
-        self._insertUser = self.db.users.getUser(insertid)
-        self._field = True
-    _field = False
-
-    @property
-    def name(self):
-        self._getFields()
-        return self._name
+class Project(Cachable):
+    __table__ = 'projects'
+    __idcolumn__ = 'projectid'
     
-    @property
-    def insertDate(self):
-        self._getFields()
-        return self._insertDate
-
-    @property
-    def insertUser(self):
-        self._getFields()
-        return self._insertUser
-
-    @property
-    def description(self):
-        self._getFields()
-        return self._description
-
-    # @property
-    # def owner(self):
-        # self._getFields()
-        # return self._owner
+    def __init__(self, db, id):
+        Cachable.__init__(self, db, id)
+        for prop in "name", "insertDate", "description":
+            self.addDBProperty(prop)
+        self.addDBFKProperty("batches", "batches", "batchid", function=partial(Batch, db, project=self))
+        self.addDBProperty("visibility", func=permissions.ProjectVisibility.get, table="project_visibility")
+        self.addDBProperty("insertUser", "insertuserid", user.users(self.db).getUser)
+        self.addDBFKProperty("users", "permissions_projects_users", "userid", function=user.users(self.db).getUser)
 
     @property
     def href(self):
         return '<a href="projectDetails?projectid=%i">%i - %s</a>' % (self.id, self.id, self.name)
-        
-    #@cached
-    @property
-    def batches(self):
-        data = self.db.doQuery("""SELECT b.batchid
-                     FROM batches AS b
-                     WHERE b.projectid = %d""" % self.id, colnames=0)
-        return [row[0] for row in data]
 
-    @property
-    def users(self):
-        return user.users(self.db, self.id)
             
-    @property
-    def visibility(self):
-        return permissions.projectVisibility(self.db, self.id)
-        
+class Batch(Cachable):
+    __table__ = 'batches'
+    __idcolumn__ = 'batchid'
+    def __init__(self, db, id, project=None):
+        Cachable.__init__(self, db, id)
+        for prop in "name", "insertDate", "query":
+            self.addDBProperty(prop)
+        self.addDBProperty("insertUser", "insertuserid", user.users(self.db).getUser)
+        self.addDBProperty("project", "projectid", func=partial(Project, db))
+        self.addDBFKProperty("articles", "articles", "articleid", function=lambda aid: article.fromDB(self.db, aid))
+        if project is not None:
+            self.cacheValues(project=project)
+
+if __name__ == '__main__':
+    import dbtoolkit
+    p = Batch(dbtoolkit.amcatDB(), 4613)
+    print p.name
+    print p.project.name
+    print list(p.articles)[:30]
+

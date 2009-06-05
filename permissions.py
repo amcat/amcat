@@ -1,50 +1,45 @@
+from enum import Enum, EnumValue
 
-class PermissionLevel(object):
-    def __init__(self, id, name, fullName):
-        self.id = id
-        self.name = name
-        self.fullName = fullName
+UserPermission = Enum(
+    EnumValue("CODER", "Coder", 1),
+    EnumValue("USER", "Normal User", 2),
+    EnumValue("ADMIN", "Admin", 3),
+    EnumValue("SUPER_ADMIN", "Super Admin", 4),
+)
 
-CODER = 1#PermissionLevel(1, 'coder', 'Coder')
-USER = 2
-ADMIN = 3
-SUPER_ADMIN = 4
+ProjectVisibility = Enum(
+    EnumValue("HIDDEN", "Hidden", 1),
+    EnumValue("META", "Metadata Visible", 2),
+    EnumValue("FULL", "Fully visible", 3),
+)
 
-HIDDEN_VISIBILITY = 1
-META_VISIBILITY = 2
-FULL_VISIBILITY = 3
+ProjectPermission = Enum(
+    EnumValue("CODER", "Coder", 1),
+    EnumValue("READ", "Read only", 2),
+    EnumValue("READ_WRITE", "Read/Write", 3),
+    EnumValue("ADMIN", "Admin", 4),
 
-PROJECT_CODER = 1
-PROJECT_READ = 2
-PROJECT_READ_WRITE = 3
-PROJECT_ADMIN = 4
+)
 
-VISIBILITY = ((HIDDEN_VISIBILITY, 'hidden'), (META_VISIBILITY, 'metadata visible'), (FULL_VISIBILITY, 'full visibility'))
-USER_PERMISSION = ((CODER, 'coder'), (USER, 'normal user'), (ADMIN, 'admin'), (SUPER_ADMIN, 'super admin'))
-
-
-
-
-
-
-
-def projectVisibility(db, projectid):
-    data = db.doQuery("""
-        SELECT TOP 1 visibility FROM project_visibility
-        WHERE projectid = %d""" % projectid)
-    return data[0][0]
+# def projectVisibility(db, projectid):
+#     data = db.doQuery("""
+#         SELECT TOP 1 visibility FROM project_visibility
+#         WHERE projectid = %d""" % projectid)
+#     return data[0][0]
     
     
-def userPermission(db, userid):
-    data = db.doQuery("""
-        SELECT TOP 1 permissionid FROM permissions_users WHERE userid = %d""" % userid)
-    return data[0][0]
+# def userPermission(db, userid):
+#     data = db.doQuery("""
+#         SELECT TOP 1 permissionid FROM permissions_users WHERE userid = %d""" % userid)
+#     return data[0][0]
     
     
-def projectUserPermission(db, projectid, userid):
-    data = db.doQuery("""
-        SELECT TOP 1 permissionid FROM permissions_projects_users WHERE userid = %d AND projectid = %d""" % (userid, projectid))
-    return data[0][0] if data else None
+# def projectUserPermission(db, projectid, userid):
+#     data = db.doQuery("""
+#         SELECT TOP 1 permissionid FROM permissions_projects_users WHERE userid = %d AND projectid = %d""" % (userid, projectid))
+#     return data[0][0] if data else None
     
     
-    
+if __name__ == '__main__':
+    print ProjectPermission.CODER.label
+    print ProjectVisibility.get(3).name
