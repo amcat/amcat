@@ -44,7 +44,7 @@ class amcatDB(object):
 
         self._articlecache = {}
         
-        
+        self.mysql = False
         
         if self.dbType == "MySQLdb":
             import MySQLdb.converters
@@ -591,6 +591,10 @@ class amcatDB(object):
         sql = "update texts set encoding=%i where %s" % (encoding, where)
         self.doQuery(sql)
         return encoding
+
+    def isnull(self):
+        return "ifnull" if self.mysql else "isnull"
+        
 
         
 anokoDB = amcatDB
