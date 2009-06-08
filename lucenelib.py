@@ -96,8 +96,12 @@ def wf(index, operation, aids = None):
     for line in o.split("\n"):
         if not line.strip(): continue
         data = list(line.split("\t"))
-        for i in range(1, len(data)):
-            data[i] = int(data[i])
+        for i in range(len(data)):
+            try:
+                if not data[i]: data[i] = None
+                data[i] = int(data[i])
+            except:
+                pass # hey, at least I tried!
         yield data
 
 
@@ -122,8 +126,16 @@ class Index(Cachable):
                 hits = info['hits']
                 yield (oid, a, hits)
 
-    def wordfreqs(self, aids=None, thres=None, sort=False):
-        counts = wf(self.location, "COUNTALL", aids)
+    def articlewordfreqs(self, aids=None, thres=None):
+        for a, obj, hits in wf(self.location, "COUNT", aids):
+            if self.db is not None:
+                a = self.db.article(a)
+            if hits < thres: continue
+            yield a, obj, hits
+                
+    def wordfreqs(self, aids=None, thres=None, sort=False, ns=False):
+        operation = "COUNTALLNS" if ns else "COUNTALL"
+        counts = wf(self.location, operation, aids)
         if sort:
             counts = list(counts)
             counts.sort(key = lambda x:x[-1], reverse=True)

@@ -79,7 +79,7 @@ class DBFKProperty(FunctionProperty):
         self.endfunc = endfunc or trivial
         self.orderby = orderby
     def retrieve(self):
-        print self.reffield, self.cachable.id
+        #print self.reffield, self.cachable.id
         SQL = "SELECT %s FROM %s WHERE %s" % (selectlist(self.targetfields), self.table, sqlWhere(self.reffield, self.cachable.id))
         if self.orderby: SQL += " ORDER BY %s" % selectlist(self.orderby)
         return self.endfunc([self.function(*x) for x in self.cachable.db.doQuery(SQL)])
