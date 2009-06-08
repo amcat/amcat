@@ -21,6 +21,9 @@ class Users(object):
         return self.byid[userid]
     def getByName(self, username):
         return self.byname[username]
+    def __iter__(self):
+        for user in self.byid.values():
+            yield user
 
 class User(Cachable):
     __table__ = 'users'
