@@ -45,6 +45,27 @@ class Table(object):
         x = self.cellfunc
         self.cellfunc = lambda a,b : x(b,a)
 
+class ObjectColumn(object):
+    def __init__(self, header, cellfunc):
+        self.header = header
+        self.cellfunc = cellfunc
+    def getHeader(self):
+        return self.header
+    def getCell(self, row):
+        return self.cellfunc(row)
+    
+class ObjectTable(Table):
+    def __init__(self, rows = None, columns = None):
+        self.rows = rows or []
+        self.columns = columns or []
+        self.rowheaders = []
+        self.colheaders = [Header("", lambda x:x.getHeader())]
+        self.cellfunc = lambda row, col : col.getCell(row)
+    def addColumn(self, col):
+        self.columns.append(col)
+    def getHTML(self, *args, **kargs):
+        return self.toHTML(*args, **kargs)
+        
 class DataTable(Table):
     """
     Convenience subclass of Table that creates a dict to hold the cell values,
@@ -83,12 +104,12 @@ class ChartGenerator(object):
     def chartData(self, table):
         # columns -> labels
         labels = [
-            " - ".join(ch.getHeader(c) for ch in table.colheaders)
+            " - ".join(str(ch.getHeader(c)) for ch in table.colheaders)
             for c in table.columns]
         # rows -> series, so rows+cells -> data dict
         data = {}
         for r in table.rows:
-            key = " - ".join(rh.getHeader(r) for rh in table.rowheaders)
+            key = " - ".join(str(rh.getHeader(r)) for rh in table.rowheaders)
             data[key] = [self.getVal(table.cellfunc(r,c)) for c in table.columns]
         return data, labels
 
@@ -312,9 +333,15 @@ def testGraph():
     t.transpose()
     print ChartGenerator().generateHTMLObject(t)
 
-if __name__ == '__main__':
-    testGraph()
+def testObjectTable():
+    t = ObjectTable()
+    t.rows = [4,5,6]
+    t.addColumn(ObjectColumn("x", lambda x: x))
+    t.addColumn(ObjectColumn("x^2", lambda x:x*x))
+    t.addColumn(ObjectColumn("x^3", lambda x:x*x*x))
+    print t.getHTML()       
     
-             
-
+if __name__ == '__main__':
+    #testGraph()
+    testObjectTable()
     
