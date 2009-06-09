@@ -45,6 +45,12 @@ class Project(Cachable):
     def href(self):
         return '<a href="projectDetails?projectid=%i">%i - %s</a>' % (self.id, self.id, self.name)
 
+    def userPermission(self, user):
+        p = self.db.getValue("select permissionid from permissions_projects_users where projectid=%i and userid=%i" % (self.id, user.id))
+        if not p: return None
+        else:
+            return permissions.ProjectPermission.get(p)
+                        
             
 class Batch(Cachable):
     __table__ = 'batches'

@@ -1068,7 +1068,9 @@ def choose(seq, scorer, returnscore=False):
 def test():
     return "test! dev2"
 
-def intlist(seq):
+def intlist(seq=None):
+    if seq is None:
+        seq = sys.stdin
     for el in seq:
         if type(el) in (str, unicode):el = el.strip()
         if not el: continue

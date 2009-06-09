@@ -35,6 +35,8 @@ class Table(object):
         return w.getvalue()
     def toHTMLGraphObject(self, *args, **kargs):
         return ChartGenerator(*args, **kargs).generateHTMLObject(self)
+    def toGraphTempFile(self, *args, **kargs):
+        return ChartGenerator(*args, **kargs).generateTempFile(self)
     def toHTMLNetworkObject(self, *args, **kargs):
         return NetworkGenerator(*args, **kargs).generateHTMLObject(self)
     def toNetworkPDF(self, *args, **kargs):
@@ -113,7 +115,7 @@ class ChartGenerator(object):
             data[key] = [self.getVal(table.cellfunc(r,c)) for c in table.columns]
         return data, labels
 
-    def generateTempFile(self, table, tempDir):
+    def generateTempFile(self, table, tempDir="/tmp"):
         data, labels = self.chartData(table)
         fn, map = chartlib.chart(self.type, data, labels, tempDir)
         return fn, map
@@ -135,7 +137,7 @@ class NetworkGenerator(object):
             return None, val
         
     def getLabel(self, headers, object):
-        return " - ".join(header.getHeader(object) for header in headers) 
+        return " - ".join(str(header.getHeader(object)) for header in headers) 
         headers = table.rowheaders if row else table.col
     def generateDot(self, table):
         g = dot.Graph()
