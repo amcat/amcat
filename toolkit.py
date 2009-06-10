@@ -70,11 +70,12 @@ def mkdir(newdir):
             if tail:
                 os.mkdir(newdir)
 
-def tempfilename(suffix = None,prefix="temp-"):
+def tempfilename(suffix = None,prefix="temp-",tempdir=None):
     i = 0
+    if tempdir is None: tempdir = tmp()
     while i < 1000:
         i += 1
-        fn = "%s/%s%s%s"% (tmp(), prefix, int(random.random() * 1000000000), suffix or "")
+        fn = "%s/%s%s%s"% (tempdir, prefix, int(random.random() * 1000000000), suffix or "")
         if not os.path.exists(fn): return fn
     raise Exception("Could not create temp file!")
 

@@ -2,8 +2,11 @@ from toolkit import isnull
 import StringIO
 import chartlib, base64
 import dot
-import toolkit
+import toolkit, os
 
+
+TEMPDIR = os.path.dirname(__file__) + '/../www-tmp'
+WWWTEMPDIR = 'tmp'
 
 class Header(object):
     def __init__(self, label, headerfunc):
@@ -95,9 +98,10 @@ class SimpleOrderedSet(list):
         self.append(object)
 
 class ChartGenerator(object):
-    def __init__(self, type=None, valfunc = None):
+    def __init__(self, type=None, valfunc = None, tempfile=False):
         self.type = type or 'line'
         self.valfunc = valfunc
+        self.tempfile = tempfile
     def getVal(self, val):
             if self.valfunc:
                 return self.valfunc(val)
@@ -121,13 +125,18 @@ class ChartGenerator(object):
         return fn, map
     def generateHTMLObject(self, table):
         png, map = chartlib.chart(self.type, *self.chartData(table))
-        data = base64.b64encode(png)
-        return ("<object type='image/png' data='data:image/png;base64,%s'></object>" % data), map
+        if self.tempfile:
+            return tmpimg(png), map
+        else:
+            data = base64.b64encode(png)
+            return ("<object type='image/png' data='data:image/png;base64,%s'></object>" % data), map
         
 class NetworkGenerator(object):
-    def __init__(self, qwfunc=None, colorfunc = None):
+    def __init__(self, qwfunc=None, colorfunc = None, tempfile=False, linkpdf = False):
         self.qwfunc = qwfunc
         self.colorfunc = colorfunc
+        self.tempfile = tempfile
+        self.linkpdf = linkpdf
     def getVal(self, val):
         if self.qwfunc:
             return self.qwfunc(val)
@@ -162,13 +171,30 @@ class NetworkGenerator(object):
         return g
     def generateHTMLObject(self, table):
         g = self.generateDot(table)
-        return g.getHTMLObject()
+        if self.tempfile:
+            png = g.getImage(format='png')
+            html = tmpimg(png)
+            if self.linkpdf:
+                pdf = self.generatePDF(table)
+                html = tmpimg(pdf, ".pdf", "Open as PDF") + "<br/>" + html
+            return html
+        else:
+            return g.getHTMLObject()
     def generatePDF(self, table):
         g = self.generateDot(table)
         img = g.getImage(format='ps')
         img = toolkit.ps2pdf(img)
         return img
 
+def tmpimg(png, suffix=".png", ahref=None):
+    fn = toolkit.tempfilename(suffix=suffix, prefix="figure-", tempdir=TEMPDIR)            
+    f = open(fn, 'wb')
+    f.write(png)
+    f.close()
+    if ahref is not None:
+        return "<a href='%s'>%s</a>" % (fn.replace(TEMPDIR, WWWTEMPDIR) , ahref)
+    else:
+        return "<img src='%s'></img>" % fn.replace(TEMPDIR, WWWTEMPDIR) 
 
 class HTMLGenerator(object):
     def __init__(self, writer, tdfunc=None, thfunc=None, trclassfunc=None):
