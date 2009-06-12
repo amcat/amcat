@@ -158,8 +158,9 @@ class NetworkGenerator(object):
                 if val is None: continue
                 q,w = self.getVal(val)
                 if w is None: continue
+                if type(w) == long: w = int(w)
                 if type(w) not in (int, float):
-                    raise Exception(w)
+                    raise Exception([w, type(w)])
                 e = g.addEdge(clbl,rlbl)
                 e.weight = w
                 if q is not None: e.sign = q
