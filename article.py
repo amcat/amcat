@@ -392,7 +392,7 @@ def articleExistsInDB(db,title,date,batchid):
         raise Exception('batchid not given')
 
     sql = "SELECT articleid FROM articles WHERE title=title AND date=date AND batchid=batchid"
-    //query = db.doQuery(sql)
+    #query = db.doQuery(sql)
     print sql
 
 
