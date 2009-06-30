@@ -294,9 +294,10 @@ class AnnotationSchema(Cachable):
     
     def __init__(self, db, id):
         Cachable.__init__(self, db, id)
-        self.ont = ont2.fromDB(self.db)
+        self.ont = ont2.getOntology(self.db)
         self.addDBProperty("table", "location", lambda loc : loc.split(":")[0])
         self.addDBProperty("name")
+        self.addDBProperty("articleschema")
         self.addDBFKProperty("fields", "annotationschemas_fields", ["fieldnr", "fieldname", "label", "fieldtypeid", "params"], function=self.createField)
 
     def createField(self, fieldnr, fieldname, label, fieldtype, params):
@@ -326,7 +327,13 @@ class AnnotationSchema(Cachable):
         return hash(self.id)
     def __eq__(self, other):
         return type(other) == AnnotationSchema and other.id == self.id
-            
+
+def getAnnotationschemas(db):
+    """ Iterate over all annotation schema objects """
+    ids = db.doQuery("SELECT annotationschemaid FROM annotationschemas")
+    for a in ids:
+        yield AnnotationSchema(db, a[0])
+
 def paramdict(paramstr):
     d = {}
     if not paramstr: return d

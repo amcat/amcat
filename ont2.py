@@ -214,7 +214,12 @@ class Ontology(Cachable):
     def getCategorisation(self, catid):
         return self.categorisations[catid]
     
-                                   
+_ontology = None
+def getOntology(db):
+    global _ontology
+    if _ontology is None:
+        _ontology = fromDB(db)
+    return _ontology
         
 def fromDB(db):
     o = Ontology(db)
