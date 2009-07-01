@@ -1231,6 +1231,8 @@ class Identity(object):
         if other is None: return False
         if not isinstance(other, Identity): return False
         return self.identity() == other.identity()
+    def __cmp__(self, other):
+        return cmp(self.identity(), other.identity())
 
 class IDLabel(Identity):
     """
@@ -1243,7 +1245,12 @@ class IDLabel(Identity):
     def identity(self):
         return (self.__class__, self.id)
     def __str__(self):
-        return self.label
+        return str(self.label)
     def __repr__(self):
         return "%s(%s, %s, ..)" % (self.__class__.__name__, self.id, self.label)
 
+def getGroup1(regExp, text, flags=re.DOTALL):
+    match = re.search(regExp, text, flags)
+    if match:
+        return match.group(1)
+    return None
