@@ -1215,3 +1215,35 @@ def getCaller(depth=2):
             del frame
     finally:
         del stack
+
+class Identity(object):
+    """
+    Simple class representing an object which can be compared to
+    other Identity objects based on an identity() function
+    """
+    def __repr__(self):
+        return "%s%s" % (self.__class__.__name__, self.identity())
+    def __str__(self):
+        return repr(self)
+    def __hash__(self):
+        return hash(self.identity())
+    def __eq__(self, other):
+        if other is None: return False
+        if not isinstance(other, Identity): return False
+        return self.identity() == other.identity()
+
+class IDLabel(Identity):
+    """
+    Simple class representing objects with a label and ID. Identity checks equality
+    on class + ID; str( ) returns the label, repr( ) return class(id, label, ..)
+    """
+    def __init__(self, id, label):
+        self.id = id
+        self.label = label
+    def identity(self):
+        return (self.__class__, self.id)
+    def __str__(self):
+        return self.label
+    def __repr__(self):
+        return "%s(%s, %s, ..)" % (self.__class__.__name__, self.id, self.label)
+

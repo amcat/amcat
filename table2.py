@@ -278,6 +278,17 @@ class HTMLGenerator(object):
         else:
             td = element("td", text)
         self.writer.write(td)
+
+
+class Value(object):
+    def __init__(self, value, direction=None, url=None):
+        self.value = value
+        self.direction = direction
+        self.relative = None
+        self.url = url
+    def __str__(self):
+        return str(self.value)
+        
 def element(tag, content, **attrs):
     if attrs:
         astr = " " + attr2str(attrs)
