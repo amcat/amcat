@@ -263,20 +263,20 @@ class HTMLGenerator(object):
         self.writer.write(" </tr>\n")
     def endTable(self):
         self.writer.write("</table>\n")
-    def headercell(self, text, **attr):
+    def headercell(self, value, **attr):
         if "clas" in attr:
             attr["class"] = attr["clas"]
             del attr["clas"]
         if self.thfunc:
-            th = self.thfunc(text, attr)
+            th = self.thfunc(value, attr)
         else:
-            th = element("th", text, **attr)
+            th = element("th", value, **attr)
         self.writer.write(th)            
-    def cell(self, text):
+    def cell(self, value):
         if self.tdfunc:
-            td = self.tdfunc(text)
+            td = self.tdfunc(value)
         else:
-            td = element("td", text)
+            td = element("td", value)
         self.writer.write(td)
 
 
@@ -290,11 +290,19 @@ class Value(object):
         return str(self.value)
         
 def element(tag, content, **attrs):
+
+    if isinstance(content, Value):
+        text = str(content.value)
+        if content.url:
+            text = "<a href='%s'>%s</a>" % (content.url, text)
+    else:
+        text = str(content)
+        
     if attrs:
         astr = " " + attr2str(attrs)
     else:
         astr = ""
-    return "<%s%s>%s</%s>" % (tag, astr, content, tag)
+    return "<%s%s>%s</%s>" % (tag, astr, text, tag)
                 
 
         
@@ -376,7 +384,7 @@ def testGraph():
 def testObjectTable():
     t = ObjectTable()
     t.rows = [4,5,6]
-    t.addColumn(ObjectColumn("x", lambda x: x))
+    t.addColumn(ObjectColumn("x", lambda x : Value(x, url="bla.html")))
     t.addColumn(ObjectColumn("x^2", lambda x:x*x))
     t.addColumn(ObjectColumn("x^3", lambda x:x*x*x))
     print t.getHTML()       
