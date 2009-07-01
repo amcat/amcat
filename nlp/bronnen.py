@@ -1,4 +1,5 @@
-import os, re, toolkit, prolog, alpino, Levenshtein
+import os, re, toolkit, prolog, alpino
+import editdist as Levenshtein
 
 class Segment:
     def __init__(self, nodeids, text):
