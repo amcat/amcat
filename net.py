@@ -79,7 +79,9 @@ def distribute(arrows, networks=None, splitter=None, stripSources=False):
         v = splitter(r) if splitter else True 
         if v:
             if v not in networks: networks[v] = Network()
-            if stripSources: r.src = None
+            if stripSources and r.src:
+                if r.obj.id in IDEAL: continue
+                r.src = None
             networks[v].add(r)
     return splits(networks, splitter)
                   
@@ -232,9 +234,9 @@ def fromCodedSentence(codedSentence, ontology):
     atype = s.getValue("arrowtype")
     return Arrow(su, obj, qual, type=atype, context=s, src=src)
 
-
+IDEAL = [1625, 200, 14361,14364,14391,14394,14396,14397,14399,14402,14404,14405,14407]
     
-def doExtrapolate(main, sources, ideal=[1625, 200, 14361,14364,14391,14394,14396,14397,14399,14402,14404,14405,14407]):
+def doExtrapolate(main, sources, ideal=IDEAL):
     for source in sources:
         for r in source.arrows:
             if r.src and r.obj.id in ideal:
