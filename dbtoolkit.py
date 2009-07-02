@@ -282,6 +282,14 @@ class amcatDB(object):
         _debug(4-3*verbose,"Created new project with id %s" % id)
         return id
 
+        
+    def createStoredResult(self, name, aids, projectid):
+        storedresultid = self.insert('storedresults', {'name':name, 'query':None, 'config':None, 
+                                                            'projectid':projectid})
+        data = [(storedresultid, int(aid)) for aid in aids]
+        self.insertmany('storedresults_articles', ('storedresultid', 'articleid'), data)
+        return storedresultid
+        
     '''
     def updateProject(self, projectid, newName=None, newDescription=None, newOwner=None):
         params=['@id=%d'%projectid]
