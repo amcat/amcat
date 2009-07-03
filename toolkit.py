@@ -449,6 +449,12 @@ def stripAccents(s, map = None):
     return s
 
 
+ENTITY_MAP = {
+    '&quot;' : "'",
+    '&lt;' : "<",
+    '&gt;' : ">",
+    }
+
 def unescapeHtml(text):
     """ From http://effbot.org/zone/re-sub.htm#unescape-html """
     def fixup(m):
@@ -469,7 +475,10 @@ def unescapeHtml(text):
             except KeyError:
                 pass
         return text # leave as is
-    return re.sub("&#?\w+;", fixup, text)
+    text = re.sub("&#?\w+;", fixup, text)
+    for k, v in ENTITY_MAP.items():
+        text = text.replace(k,v)
+    return text
 
 
 
