@@ -258,7 +258,7 @@ class HTMLGenerator(object):
     def col(self, clas):
         self.writer.write(" <col class='%s'></col>" % clas)
     def startTable(self):
-        self.writer.write("<table>\n")
+        self.writer.write("<table class=\"data-table\">\n")
     def endRow(self):
         self.writer.write(" </tr>\n")
     def endTable(self):

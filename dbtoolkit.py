@@ -660,6 +660,14 @@ def encodeTexts(texts):
         if enc==3: encoding = 3
     return [encode(t, encoding) for t in texts], encoding
 
+def tablecolumns(db):
+    """ do a funky query to obtain a dict of ids mapping to column names """
+    return dict(db.doQuery("""select top 100 s.name, t.name from sysobjects o 
+    inner join syscolumns s on o.id = s.id 
+    inner join systypes t on s.xtype = t.xtype
+    where o.name = 'net_arrows'
+    and s.name not in ('arrowid','sentenceid','codingjob_articleid')
+    order by colid"""))
 
 if __name__ == '__main__':
     #print "Opening connection with database"
