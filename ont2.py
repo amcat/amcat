@@ -274,7 +274,7 @@ def fromDB(db):
         o.sets[setid].objects.add(o.objects[oid])
     return o
         
-
+NUMBER_SECOND_PERIOD = "."
 class Number(Identity):
     def __init__(self, string_or_clas, major=0, minor=0):
         if type(string_or_clas) in (str, unicode):
@@ -297,7 +297,7 @@ class Number(Identity):
     def __add__(self, other):
         return Number(self.clas + other.clas, self.major + other.major, self.minor + other.minor)
     def __str__(self):
-        return "%s.%03i.%07i" % (self.clas, self.major, self.minor)
+        return "%s.%03i%s%07i" % (self.clas, self.major, NUMBER_SECOND_PERIOD, self.minor)
     def identity(self):
         return (self.__class__, self.clas, self.major, self.minor)
     def toSQLString(self):

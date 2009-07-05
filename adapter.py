@@ -44,7 +44,7 @@ def getID(obj, strict=False, default=None):
 def getNr(obj, strict = False, default=None):
     if obj is None: return None
     try:
-        return obj.getNr()
+        return obj.getNr().toSQLString()
     except AttributeError: pass
     if default: return default
     if strict: raise AdapterException("Cannot get number for %s, type=%s" % (obj, type(obj)))
