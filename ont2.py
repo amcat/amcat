@@ -1,15 +1,13 @@
 from cachable import Cachable
 import collections, mx.DateTime, toolkit, enum, categorise
+from toolkit import Identity, IDLabel
 
-class Base(object):
+class Base(IDLabel):
     def __init__(self, ont, id, label=None):
+        IDLabel.__init__(self, id, label)
         self.ont = ont
-        self.id = id
-        self.label = label
     def __str__(self):
         return self.getLabel()
-    def __repr__(self):
-        return "%s(%s, %i, %s, ...)" % (str(self.__class__), self.ont, self.id, self.getLabel())
     def getLabel(self):
         return self.label
 
@@ -77,6 +75,10 @@ class Object(Base, Cachable):
         self.addDBProperty("firstname", "firstname", table="o_politicians")
     def getNr(self):
         return self.nr
+    def setNr(self, nr):
+        old = self.nr
+        self.nr = nr
+        self.ont.setNodeNr(self, nr, old)
     def setParent(self, clas, parent, omklap=1):
         #if self.id == 2583: print clas, parent, omklap
         if type(parent) == Class: parent = self.parents[parent][0]
@@ -109,6 +111,9 @@ class Object(Base, Cachable):
         keys = l.keys()
         keys.sort()
         return l[keys[0]]
+    def setLabel(self, lang, label):
+        self.labels[lang] = label
+        if self.label is None: self.label = label
         
     def getParties(self, date=None):
         SQL = "select party_objectid, fromdate, todate from o_politicians_parties where objectid=%i" % self.id
@@ -120,8 +125,6 @@ class Object(Base, Cachable):
         if date: SQL += "and fromdate < %s and (todate is null or todate > %s)""" % (toolkit.quotesql(date), toolkit.quotesql(date))
         for f, p, fro, to in self.db.doQuery(SQL):
             yield f, self.ont.objects[p], fro, to
-        
-        
     def getSearchString(self, date=None):
         if not date: date = mx.DateTime.now()
         if self.keyword: return self.keyword.replace("\n"," ")
@@ -146,12 +149,30 @@ class Object(Base, Cachable):
             else:
                 kw = ln
             return kw.replace("\n"," ")
-
     def categorise(self, cat, *args, **kargs):
         if type(cat) == int: cat = self.ont.categorisations[cat]
         return cat.categorise(self, *args, **kargs)
     categorize=categorise
-
+    def generateNr(self):
+        if self.nr: return self.nr
+        if not self.parents:
+            toolkit.warn("Node has no parents??? %s" % self.getLabel())
+            return False
+        parents = set()
+        for c, (p,o) in self.parents.items():
+            nr = p.getNr() if p else Number(c.id)
+            hasp = True
+            if nr: 
+                parents.add(nr)
+        if not parents:
+            toolkit.warn("All parent nodes have no number?? %s" % self.getLabel())
+            return False
+        lowest = sorted(parents)[0]
+        nr = nextnr(lowest, set(self.ont.bynr.keys()))
+        print "%s\t%s\t%s" % (self.label, ",".join(str(x) for x in parents), nr)
+        self.setNr(nr)
+        return nr
+    
 def function2conds(func, office):
     if office.id in (380, 707, 729, 1146, 1536, 1924, 2054, 2405, 2411, 2554, 2643):
         if func == 2:
@@ -190,13 +211,22 @@ class Ontology(Cachable):
         self.objects = {} # oid : object
         self.classes = {} # classid : class
         self.sets = {} # setid : set
+        self.bynr = {} # nr : object
         self.nodes = self.objects
         self.addFunctionProperty("functions", lambda : Functions(self))
         self.addFunctionProperty("categorisations", self.getCategorisations)
+    def setNodeNr(self, node, newnr, oldnr=None):
+        if oldnr and oldnr in self.bynr:
+            del self.bynr[oldnr]
+        if newnr in self.bynr:
+            raise Exception()
+        self.bynr[newnr] = node
     def createObject(self, oid, nr):
         if oid in self.objects: raise Exception()
         o = Object(self, oid, nr)
         self.objects[oid] = o
+        if nr:
+            self.setNodeNr(o, nr)
         return o
     def createClass(self, cid, lbl):
         if cid in self.classes: raise Exception()
@@ -227,7 +257,7 @@ def fromDB(db):
         if nr: nr = Number(nr)
         o.createObject(oid, nr)
     for oid, lang, lbl in db.doQuery("SELECT objectid, languageid, label FROM o_labels"):
-        o.objects[oid].labels[lang] = lbl
+        o.objects[oid].setLabel(lang, lbl)
     for cid, lbl in db.doQuery("SELECT classid, label FROM o_classes"):
         o.createClass(cid, lbl)
     for cid, childid, parentid, linkid, reverse in db.doQuery("SELECT classid, childid, parentid, link_classid, reverse FROM o_hierarchy"):
@@ -245,32 +275,33 @@ def fromDB(db):
     return o
         
 
-class Number(object):
-    def __init__(self, string):
-        self.major, self.minor, self.clas = 0,0,0
-        comps = string.split(".")
+class Number(Identity):
+    def __init__(self, string_or_clas, major=0, minor=0):
+        if type(string_or_clas) in (str, unicode):
+            self.major, self.minor, self.clas = 0,0,0
+            comps = string_or_clas.split(".")
 
-        self.clas = int(comps[0])
-        if len(comps) == 2:
-            mami = comps[1]
-            if len(mami) > 3:
-                self.major = int(mami[:3])
-                self.minor = int(mami[3:10])
-            else:
-                self.major = int(mami)
-        elif len(comps) == 3:
-            self.major, self.minor = int(comps[1]), int(comps[2])
+            self.clas = int(comps[0])
+            if len(comps) == 2:
+                mami = comps[1]
+                if len(mami) > 3:
+                    self.major = int(mami[:3])
+                    self.minor = int(mami[3:10])
+                else:
+                    self.major = int(mami)
+            elif len(comps) == 3:
+                self.major, self.minor = int(comps[1]), int(comps[2])
+        else:
+            self.clas, self.major, self.minor = int(string_or_clas), int(major), int(minor) 
 
-        
+    def __add__(self, other):
+        return Number(self.clas + other.clas, self.major + other.major, self.minor + other.minor)
     def __str__(self):
         return "%s.%03i.%07i" % (self.clas, self.major, self.minor)
-    def __cmp__(self, other):
-        return (cmp(self.__class__, other.__class__) or cmp(self.clas, other.clas)
-                or cmp(self.major, other.major) or cmp(self.minor, other.minor))
-    def __hash__(self):
-        return hash(self.__class__) ^ hash(self.clas) ^ hash(self.major) ^ hash(self.minor)
-    def __repr__(self):
-        return "Number(%s)" % self
+    def identity(self):
+        return (self.__class__, self.clas, self.major, self.minor)
+    def toSQLString(self):
+        return "%s.%03i%07i" % (self.clas, self.major, self.minor)
 
 def catlabel(x):
     if x is None: return None
@@ -329,8 +360,58 @@ def printSet(ont, setid, cat):
         for o in cat.sort(c.getRoots()):
             recurse(o, c, 1, cat=cat)
             
-        
+
+# number business
+
+_NR_EXP1 = 3 # 1000
+_NR_EXP2 = 3 # .001
+_NR_EXP3 = 7 # .0010000001
+
+_NR_INC1 = Number("1%s" % ("0"*_NR_EXP1)) # 4000
+_NR_INC2 = Number("0.%s1" % ("0"*(_NR_EXP2 - 1))) # 0.001
+_NR_INC3 = Number("0.%s1" % ("0"*(_NR_EXP2 + _NR_EXP3 - 1))) # 0.0000000001
+
+def nextnr(nr, inuse):
+    if nr.major: inc = Number(0,0,1)
+    else: inc = Number(0,1,0)
+    while nr in inuse: nr += inc
+    return nr
+
+
+
+
 if __name__ == '__main__':
+    print _NR_INC1, _NR_INC2, _NR_INC3
+    x = Number("6011.001")
+    print x + _NR_INC1
+    print x + _NR_INC1 == Number(5001, 1, 0)
+    print x + _NR_INC1 < Number(5001, 1, 1)
+    print x + _NR_INC1 > Number(5001, 0, 1)
+    print x
+    print nextnr(x, set([x, x+_NR_INC3]))
+    x = Number(4001)
+    print
+    print nextnr(x, set([x, x+_NR_INC2]))
+    x = Number(4001, 1, 5)
+    print
+    print nextnr(x, set([x]))
+    print nextnr(x, set([x, x+_NR_INC3]))
+    
+    import dbtoolkit
+    db = dbtoolkit.anokoDB()
+    ont = fromDB(db)
+
+    x = Number("6011.001")
+    o = ont.bynr[x]
+    o.nr = None
+    newnr(o)
+
+    o = ont.bynr[Number(4001,1,8)]
+    o.nr = None
+    newnr(o)
+    
+    import sys; sys.exit(1)
+    
     import dbtoolkit
     db = dbtoolkit.anokoDB()
     ont = fromDB(db)

@@ -1,5 +1,7 @@
 import ontology, user, article, exceptions
 
+# volgens mij slaat deze module helemaal nergens op??
+
 class AdapterException(exceptions.Exception):pass
 
 def getLink(obj, strict=False):
@@ -38,4 +40,12 @@ def getID(obj, strict=False, default=None):
     if default: return default
     if strict: raise AdapterException("Cannot get ID for %s, type=%s" % (obj, type(obj)))
     
+    
+def getNr(obj, strict = False, default=None):
+    if obj is None: return None
+    try:
+        return obj.getNr()
+    except AttributeError: pass
+    if default: return default
+    if strict: raise AdapterException("Cannot get number for %s, type=%s" % (obj, type(obj)))
     
