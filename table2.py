@@ -198,11 +198,12 @@ def tmpimg(png, suffix=".png", ahref=None):
         return "<img src='%s'></img>" % fn.replace(TEMPDIR, WWWTEMPDIR) 
 
 class HTMLGenerator(object):
-    def __init__(self, writer, tdfunc=None, thfunc=None, trclassfunc=None):
+    def __init__(self, writer, tdfunc=None, thfunc=None, trclassfunc=None, tableclass='data-table'):
         self.writer = writer
         self.tdfunc = tdfunc
         self.thfunc = thfunc
         self.trclassfunc = trclassfunc
+        self.tableclass = tableclass
     
     def toHTML(self, table):
         self.startTable()
@@ -258,7 +259,8 @@ class HTMLGenerator(object):
     def col(self, clas):
         self.writer.write(" <col class='%s'></col>" % clas)
     def startTable(self):
-        self.writer.write("<table class=\"data-table\">\n")
+        attrstr = " class='%s'" % self.tableclass if self.tableclass else ""
+        self.writer.write("<table%s>\n" % attrstr)
     def endRow(self):
         self.writer.write(" </tr>\n")
     def endTable(self):
