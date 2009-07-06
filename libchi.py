@@ -7,14 +7,14 @@ C_THRES = 6.63 # assuming 1df
 
 def chi2(a,b,c,d):
     def ooe(o, e):
-        print "ooe(%s,%s)=%s" % (o,e,(o-e)*(o-e) / e)
+        #print "ooe(%s,%s)=%s" % (o,e,(o-e)*(o-e) / e)
         return (o-e)*(o-e) / e
     chi2 = 0
     tot = 0.0 + a+b+c+d
-    print a,b,c,d
+    #print a,b,c,d
     chi2 += ooe(a, (a+c)*(a+b)/tot)
     chi2 += ooe(b, (b+d)*(a+b)/tot)
-    print "%s * %s / %s = %s" % (a+c, c+d, tot, ((a+c)*(c+d)/tot))
+    #print "%s * %s / %s = %s" % (a+c, c+d, tot, ((a+c)*(c+d)/tot))
     chi2 += ooe(c, (a+c)*(c+d)/tot)
     chi2 += ooe(d, (d+b)*(c+d)/tot)
     return chi2

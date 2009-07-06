@@ -66,7 +66,9 @@ class ObjectTable(Table):
         self.rowheaders = []
         self.colheaders = [Header("", lambda x:x.getHeader())]
         self.cellfunc = lambda row, col : col.getCell(row)
-    def addColumn(self, col):
+    def addColumn(self, col, func=None):
+        if type(col) in (str, unicode) and func:
+            col = ObjectColumn(col, func)
         self.columns.append(col)
     def getHTML(self, *args, **kargs):
         return self.toHTML(*args, **kargs)
