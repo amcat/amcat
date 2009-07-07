@@ -306,7 +306,7 @@ def element(tag, content, **attrs):
         astr = " " + attr2str(attrs)
     else:
         astr = ""
-    return "<%s%s>%s</%s>" % (tag, astr, text, tag)
+    return "<%s%s>%s</%s>\n" % (tag, astr, text, tag)
                 
 
         
