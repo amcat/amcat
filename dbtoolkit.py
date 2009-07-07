@@ -603,14 +603,14 @@ class amcatDB(object):
     def isnull(self):
         return "ifnull" if self.mysql else "isnull"
 
-    def tablecolumns(self):
+    def tablecolumns(self, table):
         """ do a funky query to obtain column names and xtypes """
         return self.doQuery("""select s.name, t.name from sysobjects o 
         inner join syscolumns s on o.id = s.id 
         inner join systypes t on s.xtype = t.xtype
-        where o.name = 'net_arrows'
+        where o.name = '%s'
         and s.name not in ('arrowid','sentenceid','codingjob_articleid')
-        order by colid""")
+        order by colid""" % table)
          
 anokoDB = amcatDB
 
