@@ -81,12 +81,14 @@ class Table(object):
         html = "<table%s>\n"  % clas
         html += rowHTML(self.header())
         rowCount = 0
+        rowLimit = 2000
         for row in self.data():
             rowCount += 1
             html += rowHTML(row)
-            if rowCount > 500: # for performance issues
+            
+            if rowCount > rowLimit: # for performance issues
                 html += '</table>'
-                html += '<div class="message">Row limit reached (500 rows)</div>'
+                html += '<div class="message">Row limit reached (%d rows)</div>' % rowLimit
                 return html
         if rowCount == 0:
             html += '<tr><td colspan="%d" class="no-data">No data found</td></tr>' % len(self.header().cells)
