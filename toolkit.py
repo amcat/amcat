@@ -767,6 +767,10 @@ def strip(obj):
         return map(strip, obj)
         
 
+class RawSQL(object):
+    def __init__(self, sql):
+        self.sql = sql
+    
 def quotesql(strOrSeq):
     """
     if str is seq: return tuple of quotesql(values)
@@ -775,10 +779,14 @@ def quotesql(strOrSeq):
     """
     if strOrSeq is None:
         return 'null'
+    elif isinstance(strOrSeq, RawSQL):
+        return strOrSeq.sql
     elif isDate(strOrSeq):
         return "'%s'" % writeDateTime(strOrSeq)
-    elif isString(strOrSeq):
-        #strOrSeq = re.sub(r"\\", r"\\\\", strOrSeq)
+    elif type(strOrSeq) in (str, unicode):
+        if type(strOrSeq) == str:
+            strOrSeq = strOrSeq.decode('ascii')
+        strOrSeq = strOrSeq.encode('latin-1')
         strOrSeq = re.sub("'", "''", strOrSeq)
         return "'%s'" % strOrSeq
     elif isSequence(strOrSeq):

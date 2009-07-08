@@ -166,19 +166,11 @@ class amcatDB(object):
         Inserts a new row in <table> using the key/value pairs from dict
         Returns the id value of that table.
         """
+        # I moved the quote / decode logic to toolkit.quotesql, it seems to belong there?
         fields = dict.keys()
         values = dict.values()
         fieldsString = ", ".join(fields)
-        def quote(x):
-            if type(x) == bool: x = int(x)
-            if x:
-                if type(x) == unicode:
-                    x = x.encode('latin-1')
-                else:
-                    x = str(x).decode('latin-1').encode('latin-1') # make sure the string is in latin-1 else query will fail anyway, right?
-            return toolkit.quotesql(x)
-        quoted = [quote(value) for value in values]
-        valuesString = ", ".join(quoted)
+        valuesString = ", ".join([toolkit.quotesql(value) for value in values])
         id = self.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
                            retrieveIdent=retrieveIdent)
         return id
