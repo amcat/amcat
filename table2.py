@@ -285,11 +285,13 @@ class HTMLGenerator(object):
 
 
 class Value(object):
-    def __init__(self, value, direction=None, url=None):
+    def __init__(self, value, direction=None, url=None, direction2=None, value2=None):
         self.value = value
         self.direction = direction
+        self.direction2 = direction2
         self.relative = None
         self.url = url
+        self.value2 = value2
     def __str__(self):
         return str(self.value)
         

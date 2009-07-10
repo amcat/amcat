@@ -132,7 +132,8 @@ class SPSSFile(object):
                 for varname in varnames:
                     self.getvar(varname).valuelabels = labels
             if action == 'F': # data
-                if self.skipdata is True: return
+                if self.skipdata is True:
+                    return
                 keep = keep[1:]
                 while True:
                     row = []
@@ -157,7 +158,8 @@ class SPSSFile(object):
                             x, keep = splitstring(slen, r.consumeOne())
                             row.append(x)
                     self.data.append(tuple(row))
-                    if len(self.data) >= self.skipdata: return 
+                    if self.skipdata and len(self.data) >= self.skipdata:
+                        return 
 
             if action == 'Z': # data
                 print "Done!"

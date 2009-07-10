@@ -378,8 +378,16 @@ def nextnr(nr, inuse):
     return nr
 
 
-
-
+def createObject(db, classid, parentid, label, lang=2, sets=[]):
+    oid = db.insert("o_objects", dict(nr=None))
+    db.insert("o_hierarchy", dict(childid=oid, parentid=parentid, classid=classid), retrieveIdent=False)
+    if type(label) == str: label = label.decode('ascii')
+    label = label.encode('ascii')
+    db.insert("o_labels", dict(objectid=oid, languageid=lang, label=label), retrieveIdent=False)
+    for set in sets:
+        db.insert("o_sets_objects", dict(objectid=oid, setid=set),  retrieveIdent=False)
+    return oid
+        
 if __name__ == '__main__':
     print _NR_INC1, _NR_INC2, _NR_INC3
     x = Number("6011.001")
@@ -428,3 +436,4 @@ if __name__ == '__main__':
         print date
         for func in n.getParents(includeFunctions=True, functionsDate=date):
             print "  %s" % func
+
