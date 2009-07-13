@@ -453,6 +453,7 @@ ENTITY_MAP = {
     '&quot;' : "'",
     '&lt;' : "<",
     '&gt;' : ">",
+    '&amp;' : "&",
     }
 
 def unescapeHtml(text):

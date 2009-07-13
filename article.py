@@ -381,19 +381,15 @@ def articlesFromDB(db, ids, headline=True):
     for d in db.doQuery(sql):
         yield Article(db,*d)
 
-def articleExistsInDB(db,title,date,batchid):
+def articleExistsInDB(db,batchid,url):
     if not db:
         db = dbtoolkit.anokoDB()
-    if not title:
-        raise Exception('title not given')
-    if not date:
-        raise Exception('date not given')
     if not batchid:
         raise Exception('batchid not given')
 
-    sql = "SELECT articleid FROM articles WHERE title=title AND date=date AND batchid=batchid"
-    #query = db.doQuery(sql)
-    print sql
+    sql = """SELECT articleid FROM articles WHERE url = '%s' AND batchid=%s""" % (url, batchid)
+    result = db.doQuery(sql)
+    return result
 
 
 CACHE_SIZE = 200
