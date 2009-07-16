@@ -2,6 +2,7 @@ import base64, sys
 import toolkit, config, sbd
 import article, sources, user
 from toolkit import cached
+import re
 
 _debug = toolkit.Debug('dbtoolkit',2)
 
@@ -641,7 +642,7 @@ def quotesql(strOrSeq):
             raise Exception("Offered bytes (or latin-1 encoded unicode) %r not in safe subset!" % strOrSeq)
         strOrSeq = re.sub("'", "''", strOrSeq)
         return "'%s'" % strOrSeq
-    elif toolit.isSequence(strOrSeq):
+    elif toolkit.isSequence(strOrSeq):
         return tuple(map(quotesql, strOrSeq))
     elif type(strOrSeq) == bool:
         return strOrSeq and "1" or "0"
