@@ -632,7 +632,7 @@ def quotesql(strOrSeq):
         return 'null'
     elif isinstance(strOrSeq, RawSQL):
         return strOrSeq.sql
-    elif isDate(strOrSeq):
+    elif toolkit.isDate(strOrSeq):
         return "'%s'" % writeDateTime(strOrSeq)
     elif type(strOrSeq) in (str, unicode):
         if type(strOrSeq) == unicode:
@@ -641,7 +641,7 @@ def quotesql(strOrSeq):
             raise Exception("Offered bytes (or latin-1 encoded unicode) %r not in safe subset!" % strOrSeq)
         strOrSeq = re.sub("'", "''", strOrSeq)
         return "'%s'" % strOrSeq
-    elif isSequence(strOrSeq):
+    elif toolit.isSequence(strOrSeq):
         return tuple(map(quotesql, strOrSeq))
     elif type(strOrSeq) == bool:
         return strOrSeq and "1" or "0"
