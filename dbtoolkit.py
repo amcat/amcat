@@ -235,7 +235,7 @@ class amcatDB(object):
         Returns a cached sources object. If it does not exist,
         creates and caches it before returning.
         """
-        if n\ot self._sources:
+        if not self._sources:
             self._sources = sources.Sources(self)
         return self._sources
     _sources = None
