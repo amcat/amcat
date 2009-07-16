@@ -763,12 +763,6 @@ def strip(obj):
         return map(strip, obj)
         
 
-class RawSQL(object):
-    def __init__(self, sql):
-        self.sql = sql
-
-
-        
 def quotesql(strOrSeq):
     import dbtoolkit
     return dbtoolkit.quotesql(strOrSeq)

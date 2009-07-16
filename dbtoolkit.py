@@ -618,6 +618,10 @@ def decode(text, encodingid):
     if not encodingid: encodingid = 3 # assume latin-1
     return text.decode(_encoding[encodingid])
 
+class RawSQL(object):
+    def __init__(self, sql):
+        self.sql = sql
+
 def quotesql(strOrSeq):
     """
     if str is seq: return tuple of quotesql(values)
