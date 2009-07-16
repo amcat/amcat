@@ -1072,7 +1072,7 @@ def tabulate(seq, transformer = None, sortByValue=False, weight=None):
         if weight: n = weight(s)
         if transformer: s = transformer(s)
         result[s] += n
-    return sortDict(result, sortByValue, sortByValue)
+    return sortItems(result.items(), sortByValue, sortByValue)
     
 def parseSection(section):
     """Splits a LexisNexis section into a section and pagenr"""
