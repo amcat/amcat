@@ -360,7 +360,7 @@ def fromDB(db, id):
     try:
         return list(articlesFromDB(db,(id,)))[0]
     except IndexError:
-        raise Exception('articleid not found')
+        raise Exception('articleid %r not found' % id)
 
         
 def articlesFromDB(db, ids, headline=True):

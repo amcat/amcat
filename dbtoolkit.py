@@ -235,7 +235,7 @@ class amcatDB(object):
         Returns a cached sources object. If it does not exist,
         creates and caches it before returning.
         """
-        if not self._sources:
+        if n\ot self._sources:
             self._sources = sources.Sources(self)
         return self._sources
     _sources = None
@@ -595,7 +595,7 @@ class amcatDB(object):
     def isnull(self):
         return "ifnull" if self.mysql else "isnull"
 
-    def tablecolumns(self, table):
+    def getTableColumns(self, table):
         """ do a funky query to obtain column names and xtypes """
         return self.doQuery("""select s.name, t.name from sysobjects o 
         inner join syscolumns s on o.id = s.id 
@@ -603,6 +603,7 @@ class amcatDB(object):
         where o.name = '%s'
         and s.name not in ('arrowid','sentenceid','codingjob_articleid')
         order by colid""" % table)
+    tablecolumn=getTableColumns
          
 anokoDB = amcatDB
 
@@ -616,6 +617,32 @@ def decode(text, encodingid):
     if not text: return text # avoid problem with None that does not have the decode function
     if not encodingid: encodingid = 3 # assume latin-1
     return text.decode(_encoding[encodingid])
+
+def quotesql(strOrSeq):
+    """
+    if str is seq: return tuple of quotesql(values)
+    if str is string: escapes any quotes and backslashes in the string and returns the string in quotes
+    otherwise: returns `str`
+    """
+    if strOrSeq is None:
+        return 'null'
+    elif isinstance(strOrSeq, RawSQL):
+        return strOrSeq.sql
+    elif isDate(strOrSeq):
+        return "'%s'" % writeDateTime(strOrSeq)
+    elif type(strOrSeq) in (str, unicode):
+        if type(strOrSeq) == unicode:
+            strOrSeq = strOrSeq.encode('latin-1')
+        if not checklatin1(strOrSeq):
+            raise Exception("Offered bytes (or latin-1 encoded unicode) %r not in safe subset!" % strOrSeq)
+        strOrSeq = re.sub("'", "''", strOrSeq)
+        return "'%s'" % strOrSeq
+    elif isSequence(strOrSeq):
+        return tuple(map(quotesql, strOrSeq))
+    elif type(strOrSeq) == bool:
+        return strOrSeq and "1" or "0"
+    else:
+        return "%s"%strOrSeq
 
 def checklatin1(txt):
     for p, c in enumerate(txt):

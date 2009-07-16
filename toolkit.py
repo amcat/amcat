@@ -318,23 +318,17 @@ def dictFromStr(str, unicode=False):
     return dict
         
 
-def sortDict(dict, reverse=False, byValue = False):
+def sortItems(list, reverse=False, byValue = False):
     i = byValue and 1 or 0
-    list = dict.items()
     list.sort(lambda a,b:cmp(a[i],b[i]))
     if reverse: list.reverse()
     return list
     
-
 def sortByValue(dict, reverse=0):
-    return sortDict(dict, reverse, byValue=True)
-    list = dict.items()
-    list.sort(lambda a,b:cmp(a[1],b[1]))
-    if reverse: list.reverse()
-    return list
+    return sortItems(dict.items(), reverse, byValue=True)
 
 def sortByKeys(dict, reverse=0):
-    return sortDict(dict, reverse, byValue=False)
+    return sortItems(dict.items(), reverse, byValue=False)
 
 
 #def sorted(seq):
@@ -433,11 +427,12 @@ def stripAccents(s, map = None):
                        's' : u'\u0161',
                        'ss' : u'\xdf',
                        '?' : u'\xbf',
-                       "'" : u'\x91\x92\x82\u2018\u2019\u201a\u201b',
+                       "'" : u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb',
                        '"' : u'\x93\x94\x84\u201c\u201d\u201e\u201f',
                        '-' : u'\x96\x97',
                        '|' : u'\xa6',
                        '...' : u'\x85',
+                       ' ' : u'\x0c',
                        }
     for key, val in map.items():
         for trg in val:
@@ -771,31 +766,12 @@ def strip(obj):
 class RawSQL(object):
     def __init__(self, sql):
         self.sql = sql
-    
+
+
+        
 def quotesql(strOrSeq):
-    """
-    if str is seq: return tuple of quotesql(values)
-    if str is string: escapes any quotes and backslashes in the string and returns the string in quotes
-    otherwise: returns `str`
-    """
-    if strOrSeq is None:
-        return 'null'
-    elif isinstance(strOrSeq, RawSQL):
-        return strOrSeq.sql
-    elif isDate(strOrSeq):
-        return "'%s'" % writeDateTime(strOrSeq)
-    elif type(strOrSeq) in (str, unicode):
-        if type(strOrSeq) == str:
-            strOrSeq = strOrSeq.decode('ascii')
-        strOrSeq = strOrSeq.encode('latin-1')
-        strOrSeq = re.sub("'", "''", strOrSeq)
-        return "'%s'" % strOrSeq
-    elif isSequence(strOrSeq):
-        return tuple(map(quotesql, strOrSeq))
-    elif type(strOrSeq) == bool:
-        return strOrSeq and "1" or "0"
-    else:
-        return "%s"%strOrSeq
+    import dbtoolkit
+    return dbtoolkit.quotesql(strOrSeq)
 
 def quotesql_psql(strOrSeq):
     """
@@ -1272,3 +1248,12 @@ def getGroup1(regExp, text, flags=re.DOTALL):
     if match:
         return match.group(1)
     return None
+
+class Counter(collections.defaultdict):
+    def __init__(self):
+        collections.defaultdict.__init__(self, int)
+    def count(self, object, count=1):
+        self[object] += count
+    def items(self):
+        return sortItems(collections.defaultdict.items(self), reverse=True, byValue=True)
+    

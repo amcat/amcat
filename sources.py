@@ -3,10 +3,10 @@ import toolkit
 def clean(s):
     return toolkit.clean(s,1,1)
 
-class Source(object):
-    def __init__(self, id, name, circulation, language, type, abbrev):
-        self.id = id
-        self.name = clean(name)
+class Source(toolkit.IDLabel):
+    def __init__(self, id, name, circulation=None, language=None, type=None, abbrev=None):
+        toolkit.IDLabel.__init__(self, id, clean(name))
+        self.name = self.label # legacy
         self.prettyname = toolkit.clean(name,1)
         self.circulation = circulation
         self.language = language
@@ -22,19 +22,21 @@ class Sources(object):
     def __init__(self, connection):
         self.index_name = {}
         self.sources = {}
-
-        
         for id,name in connection.doQuery("select mediumid, name from media_dict"):
-            self.index_name[clean(name)] = id
+            self.addAlias(name, id)
         try:
             data = connection.doQuery("select mediumid, name, circulation, language, type, isnull(abbrev, name) from media where mediumid>0")
         except:
             data = connection.doQuery("select mediumid, name, circulation, language, type, ifnull(abbrev, name) from media where mediumid>0")
             
         for info in data:
-            source = Source(*info)
-            self.index_name[source.name] = source.id
-            self.sources[source.id] = source
+            self.addSource(Source(*info))
+
+    def addAlias(self, alias, id):
+        self.index_name[clean(alias)] = id
+    def addSource(self, source):
+        self.sources[source.id] = source
+        self.addAlias(source.name, source.id)
 
     def lookupID(self, id):
         if id is None:
