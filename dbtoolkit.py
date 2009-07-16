@@ -139,7 +139,7 @@ class amcatDB(object):
         
     def update(self, table, col, newval, where):
         self.doQuery("UPDATE %s set %s=%s WHERE (%s)" % (
-            table, col, toolkit.quotesql(newval), where))
+            table, col, quotesql(newval), where))
 
 
     def doInsert(self, sql, retrieveIdent=1):
@@ -170,7 +170,7 @@ class amcatDB(object):
         fields = dict.keys()
         values = dict.values()
         fieldsString = ", ".join(fields)
-        valuesString = ", ".join([toolkit.quotesql(value) for value in values])
+        valuesString = ", ".join([quotesql(value) for value in values])
         id = self.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
                            retrieveIdent=retrieveIdent)
         return id
@@ -256,10 +256,10 @@ class amcatDB(object):
 
 
     def newProject(self, name, description, owner=None, verbose=0):
-        name, description = map(toolkit.quotesql, (name, description))
+        name, description = map(quotesql, (name, description))
         owner = toolkit.num(owner, lenient=1)
         if toolkit.isString(owner):
-            self.doQuery('exec newProject %s, %s, @ownerstr=%s' % (name, description,toolkit.quotesql(owner)))
+            self.doQuery('exec newProject %s, %s, @ownerstr=%s' % (name, description,quotesql(owner)))
         else:
             self.doQuery('exec newProject %s, %s, @ownerid=%s' % (name, description,owner))
             
@@ -585,7 +585,7 @@ class amcatDB(object):
             where = "articleid=%i and type=%i" % (aid_or_tid, type_or_None
                                                   )
         text, encoding = encodeText(text)
-        text = toolkit.quotesql(text)
+        text = quotesql(text)
         sql = "update texts set text=%s where %s" % (text, where)
         self.doQuery(sql)
         sql = "update texts set encoding=%i where %s" % (encoding, where)

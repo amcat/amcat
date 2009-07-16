@@ -264,7 +264,7 @@ class Article(object):
         SQL = "DELETE FROM articles_image WHERE articleid=%i" % (self.id,)
         self.db.doQuery(SQL)
         imgdata = binascii.hexlify(imgdata)
-        SQL = "INSERT INTO articles_image VALUES (%i, 0x%s, %s)" % (self.id, imgdata, toolkit.quotesql(format))
+        SQL = "INSERT INTO articles_image VALUES (%i, 0x%s, %s)" % (self.id, imgdata, dbtoolkit.quotesql(format))
         self.db.doQuery(SQL)
 
     def getImage(self):
@@ -320,6 +320,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
          'type' : texttype,
          'encoding' : encoding,
          'text' : text}
+    
     db.insert('texts', q, retrieveIdent=0)
     
     if retrieveArticle:
