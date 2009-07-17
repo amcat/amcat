@@ -596,7 +596,7 @@ def writeMonth(month, lenient=0):
     return mx.DateTime.DateTime(1,int(month)).Format("%B")
 
 def writeDateTime(datetimeObj, lenient=0, year=True, seconds=True):
-    if lenient and (datetimeobj is None): return None
+    if lenient and (datetimeObj is None): return None
     if lenient and type(datetimeObj) in types.StringTypes: return datetimeObj
     format = year and "%Y-%m-%d" or "%m-%d"
     format += seconds and " %H:%M:%S" or " %H:%M"
