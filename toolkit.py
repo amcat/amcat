@@ -1,6 +1,7 @@
 #!/bin/env python2.2
 
 import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess, colorsys
+from datetime import datetime
 
 _USE_CURSES = 1
 
@@ -248,8 +249,9 @@ def isCallable(obj):
     return type(obj) in (types.MethodType, types.FunctionType, types.ClassType, types.TypeType)
 
 def isDate(obj):
-    # kan beter!
-    return isinstance(obj, mx.DateTime.DateTimeType)
+    # wva: kan beter!
+    # andreas: zoiets?
+    return isinstance(obj, mx.DateTime.DateTimeType) or isinstance(obj, datetime)
 
 def istrue(x):
     return not not x
@@ -585,7 +587,7 @@ def readDate(str, lax=False, rejectPre1970=False, american=False):
 
 def writeDate(datetime, lenient=0):
     if lenient and (datetime is None): return None
-    return datetime.Format("%Y-%m-%d")
+    return datetime.strftime("%Y-%m-%d")
 
 def writeMonth(month, lenient=0):
     if lenient and (month is None): return None
@@ -593,12 +595,16 @@ def writeMonth(month, lenient=0):
         return month.Format("%B")
     return mx.DateTime.DateTime(1,int(month)).Format("%B")
 
-def writeDateTime(datetime, lenient=0, year=True, seconds=True):
-    if lenient and (datetime is None): return None
-    if lenient and type(datetime) in types.StringTypes: return datetime 
+def writeDateTime(datetimeObj, lenient=0, year=True, seconds=True):
+    if lenient and (datetimeobj is None): return None
+    if lenient and type(datetimeObj) in types.StringTypes: return datetimeObj
     format = year and "%Y-%m-%d" or "%m-%d"
     format += seconds and " %H:%M:%S" or " %H:%M"
-    return datetime.Format(format)
+    return datetimeObj.strftime(format)
+    #if you want to make this function incompatible with datetime from the
+    #standard library, use this (no sarcasm intended, datetime might cause
+    #difficult to find bugs I'm not aware of):
+    #return datetimeObj.Format(format)
 
 ############### FILE I/O            #################
 

@@ -627,7 +627,7 @@ def quotesql(strOrSeq):
     """
     if str is seq: return tuple of quotesql(values)
     if str is string: escapes any quotes and backslashes in the string and returns the string in quotes
-    otherwise: returns `str`
+    otherwise: coerce to str and recurse.
     """
     if strOrSeq is None:
         return 'null'
@@ -647,7 +647,7 @@ def quotesql(strOrSeq):
     elif type(strOrSeq) == bool:
         return strOrSeq and "1" or "0"
     else:
-        return "%s"%strOrSeq
+        return quotesql(str(strOrSeq))
 
 def checklatin1(txt):
     for p, c in enumerate(txt):
