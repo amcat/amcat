@@ -40,8 +40,8 @@ class Table(object):
         return ChartGenerator(*args, **kargs).generateHTMLObject(self)
     def toGraphTempFile(self, *args, **kargs):
         return ChartGenerator(*args, **kargs).generateTempFile(self)
-    def toHTMLNetworkObject(self, *args, **kargs):
-        return NetworkGenerator(*args, **kargs).generateHTMLObject(self)
+    def toHTMLNetworkObject(self, *args,  **kargs):
+        return NetworkGenerator(*args, **kargs).generateHTMLObject(self, openaspdf=kargs.get('openaspdf'))
     def toNetworkPDF(self, *args, **kargs):
         return NetworkGenerator(*args, **kargs).generatePDF(self)
     def transpose(self):
@@ -134,7 +134,7 @@ class ChartGenerator(object):
             return ("<object type='image/png' data='data:image/png;base64,%s'></object>" % data), map
         
 class NetworkGenerator(object):
-    def __init__(self, qwfunc=None, colorfunc = None, tempfile=False, linkpdf = False):
+    def __init__(self, qwfunc=None, colorfunc = None, tempfile=False, linkpdf = False, **kargs):
         self.qwfunc = qwfunc
         self.colorfunc = colorfunc
         self.tempfile = tempfile
@@ -172,14 +172,15 @@ class NetworkGenerator(object):
         g.normalizeWeights()
                 
         return g
-    def generateHTMLObject(self, table):
+    def generateHTMLObject(self, table, openaspdf=True):
         g = self.generateDot(table)
         if self.tempfile:
             png = g.getImage(format='png')
             html = tmpimg(png)
             if self.linkpdf:
                 pdf = self.generatePDF(table)
-                html = tmpimg(pdf, ".pdf", "Open as PDF") + "<br/>" + html
+                if openaspdf:
+                    html = tmpimg(pdf, ".pdf", "Open as PDF") + "<br/>" + html
             return html
         else:
             return g.getHTMLObject()
