@@ -634,7 +634,7 @@ def quotesql(strOrSeq):
     elif isinstance(strOrSeq, RawSQL):
         return strOrSeq.sql
     elif toolkit.isDate(strOrSeq):
-        return "'%s'" % writeDateTime(strOrSeq)
+        return "'%s'" % toolkit.writeDateTime(strOrSeq)
     elif type(strOrSeq) in (str, unicode):
         if type(strOrSeq) == unicode:
             strOrSeq = strOrSeq.encode('latin-1')
