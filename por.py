@@ -1,3 +1,5 @@
+import toolkit
+
 DEL = '/'
 class PorReader(object):
     def __init__(self, file):
@@ -32,6 +34,7 @@ FLOAT, STR, INT = 0,1,2
 class SPSSVariable(object):
     def __init__(self, name, label=None, numeric=True, decimals=0):
         self.name = name
+        label = toolkit.stripAccents(label.decode('latin-1'))
         self.label = label
         self.numeric = numeric
         self.decimals = decimals

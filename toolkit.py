@@ -407,34 +407,36 @@ BROUWERS_CMAP = {'e': u'\xeb\x84\x89\x82\x8a\x88', 'i': u'\x8b\x8c', 'u' : u'\x8
 
 def stripAccents(s, map = None):
     #s = str(s)
+    if not s: return s
     if type(s) <> unicode:
         s = unicode(s, "latin-1")
-    if not map: map = {'a': u'\xe0\xe1\xe2\xe3\xe4\xe5',
-                       'c': u'\xe7',
-                       'e':u'\xe9\xe8\xea\xeb',
-                       'i': u'\xec\xed\xee\xef',
-                       'n': u'\xf1',
-                       'o' : u'\xf3\xf2\xf4\xf6',
-                       'u': u'\xf9\xfa\xfb\xfc',
-                       'y': u'\xfd\xff',
+    if not map: map = {u'a': u'\xe0\xe1\xe2\xe3\xe4\xe5',
+                       u'c': u'\xe7',
+                       u'e':u'\xe9\xe8\xea\xeb',
+                       u'i': u'\xec\xed\xee\xef',
+                       u'n': u'\xf1',
+                       u'o' : u'\xf3\xf2\xf4\xf6',
+                       u'u': u'\xf9\xfa\xfb\xfc',
+                       u'y': u'\xfd\xff',
                        
-                       'A' : u'\xc0\xc1\xc2\xc3\xc4\xc5',
-                       'C' : u'\xc7',
-                       'E' : u'\xc8\xc9\xca\xcb',
-                       'I' : u'\xcc\xcd\xce\xcf',
-                       'N' : u'\xd1',
-                       'O' : u'\xd2\xd3\xd4\xd5\xd6',
-                       'U' : u'\xd9\xda\xdb\xdc',
-                       'Y' : u'\xdd\xdf',
-                       's' : u'\u0161',
-                       'ss' : u'\xdf',
-                       '?' : u'\xbf',
-                       "'" : u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb',
-                       '"' : u'\x93\x94\x84\u201c\u201d\u201e\u201f',
-                       '-' : u'\x96\x97',
-                       '|' : u'\xa6',
-                       '...' : u'\x85',
-                       ' ' : u'\x0c',
+                       u'A' : u'\xc0\xc1\xc2\xc3\xc4\xc5',
+                       u'C' : u'\xc7',
+                       u'E' : u'\xc8\xc9\xca\xcb',
+                       u'I' : u'\xcc\xcd\xce\xcf',
+                       u'N' : u'\xd1',
+                       u'O' : u'\xd2\xd3\xd4\xd5\xd6',
+                       u'U' : u'\xd9\xda\xdb\xdc',
+                       u'Y' : u'\xdd\xdf',
+                       u's' : u'\u0161',
+                       u'ss' : u'\xdf',
+                       u'?' : u'\xbf',
+                       u"'" : u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb',
+                       u'"' : u'\x93\x94\x84\u201c\u201d\u201e\u201f',
+                       u'-' : u'\x96\x97',
+                       u'|' : u'\xa6',
+                       u'...' : u'\x85',
+                       u' ' : u'\x0c',
+                       u'\n' : u'\r',
                        }
     for key, val in map.items():
         for trg in val:
@@ -1215,8 +1217,13 @@ class Identity(object):
     Simple class representing an object which can be compared to
     other Identity objects based on an identity() function
     """
+    def __init__(self, *identity):
+        self.__identity__ = tuple([self.__class__] + list(identity)) if identity else None
+    def identity(self):
+        if self.__identity__ is None: raise Exception("Identity object without identity")
+        return self.__identity__
     def __repr__(self):
-        return "%s%s" % (self.__class__.__name__, self.identity())
+        return "%s%s" % (self.identity())
     def __str__(self):
         return repr(self)
     def __hash__(self):
@@ -1234,6 +1241,7 @@ class IDLabel(Identity):
     on class + ID; str( ) returns the label, repr( ) return class(id, label, ..)
     """
     def __init__(self, id, label):
+        Identity.__init__(self, self.__class__, id)
         self.id = id
         self.label = label
     def identity(self):

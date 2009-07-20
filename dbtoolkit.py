@@ -167,7 +167,6 @@ class amcatDB(object):
         Inserts a new row in <table> using the key/value pairs from dict
         Returns the id value of that table.
         """
-        # I moved the quote / decode logic to toolkit.quotesql, it seems to belong there?
         fields = dict.keys()
         values = dict.values()
         fieldsString = ", ".join(fields)
@@ -649,11 +648,11 @@ def quotesql(strOrSeq):
     else:
         return quotesql(str(strOrSeq))
 
-def checklatin1(txt):
+def checklatin1(txt, verbose=False):
     for p, c in enumerate(txt):
         i = ord(c)
         if (i < 0x20 or (i > 0x7e and i < 0xa0) or i > 0xff) and i not in (0x0a,0x09):
-            #toolkit.warn("Character %i (%r) at position %i is not latin-1" % (i, c, p))
+            if verbose: toolkit.warn("Character %i (%r) at position %i is not latin-1" % (i, c, p))
             return False
     return True
 
@@ -670,7 +669,9 @@ def encodeText(text):
         if checklatin1(txt):
             return txt, 3
     except UnicodeEncodeError, e: pass
-    txt = text.encode('utf-7')
+    txt = text.replace('\r', '\n')
+    txt = text.replace(u'\x07', '')
+    txt = txt.encode('utf-7')
     return txt, 1
 
     

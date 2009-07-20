@@ -296,7 +296,7 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if section: section = section.strip()
     if pagenr and type(pagenr) in (types.StringTypes): pagenr = pagenr.strip()
     if text: text = text.strip()
-    if length == None: length = len(text.split())
+    if length == None and text: length = len(text.split())
 
     [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])
     
