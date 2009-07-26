@@ -122,7 +122,11 @@ class Index(Cachable):
             #o = os[oid]
             for a, info in hits.iteritems():
                 if self.db is not None:
-                    a = self.db.article(a)
+                    try:
+                        a = self.db.article(a)
+                    except Exception, e:
+                        toolkit.warn(e)
+                        continue
                 hits = info['hits']
                 yield (oid, a, hits)
 

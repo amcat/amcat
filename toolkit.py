@@ -804,6 +804,7 @@ def clean(str, level=0, lower=0,droptags=0, escapehtml=0, keeptabs=0):
     else:
         str = re.sub("\s+" ," ", str)
     if level==3: str = re.sub(r"\W","",str)
+    if level==25: str = re.sub(r"[^\w ]","",str)
     if level==2: str = re.sub(r"[^\w,\. ]","",str)
     elif level==1:
         if keeptabs:
@@ -1160,15 +1161,6 @@ def isnull(x, alt):
     if x is None: return alt
     return x
 
-if __name__ == "__main__":
-    #print correlate([3,4,5,2], [2,1,4,1])
-    try:
-        a, b = execute('ls', u'\xab')
-        print a, b
-    except Exception, e:
-        print e
-    time.sleep(100)
-
 def naturalSort(list): 
     """ Sort the given list in the way that humans expect. """ 
     convert = lambda text: int(text) if text.isdigit() else text 
@@ -1262,6 +1254,31 @@ class Counter(collections.defaultdict):
         collections.defaultdict.__init__(self, int)
     def count(self, object, count=1):
         self[object] += count
+    def countmany(self, objects):
+        if 'keys' in dir(objects):
+            for o,c in objects.items():
+                self.count(o, count=c)
+        else:
+            for o in objects:
+                self.count(o)
+        
     def items(self):
         return sortItems(collections.defaultdict.items(self), reverse=True, byValue=True)
     
+def convertImage(image, informat, outformat=None, quality=None, scale=None):
+    cmd = 'convert '
+    if scale: cmd += ' -geometry %1.2f%%x%1.2f%% ' % (scale*100, scale*100)
+    if quality: cmd += ' -quality %i ' % int(quality*100)
+    
+    cmd += ' %s:- %s:-' % (informat, outformat or informat)
+    out, err = execute(cmd, image)
+    if err and err.strip():
+        warn(err)
+    return out
+    
+    
+if __name__ == '__main__':
+    img = open('/tmp/fp.jpeg').read()
+    img2 = convertImage(img, 'jpeg', scale=.75, quality=.3)
+    print len(img), len(img2)
+    open('/tmp/fp2.jpeg', 'w').write(img2)
