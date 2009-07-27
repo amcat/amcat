@@ -181,6 +181,18 @@ def setDebug(level = 1):
     global _DEBUG
     _DEBUG = level
 
+def tickerate(seq, msg=None, getlen=True, ticker=None):
+    if msg is None: msg = "Starting iteration"
+    if ticker is None: ticker = Ticker()
+    if getlen:
+        l = list(seq)
+        ticker.warn(msg, estimate=len(l))
+    else:
+        ticker.warn(msg)
+    for x in seq:
+        ticker.tick()
+        yield x
+    
 class Ticker:
     def __init__(this, interval = 10):
         this.interval = interval

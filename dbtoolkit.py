@@ -121,7 +121,7 @@ class amcatDB(object):
             _debug(1,"Error while executing: "+sql)
             if c:
                 c.close()
-            raise details
+            raise "Exception on executing: %r: %s" % (sql, details)
             
             
     def doCall(self, proc, params):
@@ -637,6 +637,9 @@ def quotesql(strOrSeq):
     elif type(strOrSeq) in (str, unicode):
         if type(strOrSeq) == unicode:
             strOrSeq = strOrSeq.encode('latin-1')
+        strOrSeq = strOrSeq.replace("\r\n","\n")
+        strOrSeq = strOrSeq.replace("\n\r","\n")
+        strOrSeq = strOrSeq.replace("\r","\n")
         if not checklatin1(strOrSeq):
             raise Exception("Offered bytes (or latin-1 encoded unicode) %r not in safe subset!" % strOrSeq)
         strOrSeq = re.sub("'", "''", strOrSeq)
