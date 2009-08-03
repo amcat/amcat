@@ -73,6 +73,7 @@ class Object(Base, Cachable):
         self.addDBProperty("keyword", table="o_keywords")
         self.addDBProperty("lastname", "name", table="o_politicians")
         self.addDBProperty("firstname", "firstname", table="o_politicians")
+        self.addDBProperty("prefix", table="o_politicians")
     def getNr(self):
         return self.nr
     def setNr(self, nr):

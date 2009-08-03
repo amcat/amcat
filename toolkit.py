@@ -1276,6 +1276,9 @@ class Counter(collections.defaultdict):
         
     def items(self):
         return sortItems(collections.defaultdict.items(self), reverse=True, byValue=True)
+    def prnt(self):
+        for k,v in self.items():
+            print "%4i\t%s" % (v, k)
     
 def convertImage(image, informat, outformat=None, quality=None, scale=None):
     cmd = 'convert '
