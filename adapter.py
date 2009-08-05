@@ -13,6 +13,8 @@ def getLink(obj, strict=False):
 
 def getLabel(obj, strict=False):
     if obj is None: return None
+    if type(obj) in (float, int, str):
+        return obj
     if type(obj) in (str, float, int): return str(obj)
     if type(obj) == user.User: return obj.username
     if type(obj) == article.Article: return obj.headline
@@ -31,6 +33,8 @@ def getLabel(obj, strict=False):
 
 def getID(obj, strict=False, default=None):
     if obj is None: return None
+    if type(obj) in (float, int, str):
+        return obj
     if isinstance(obj, ontology.Node):
         return obj.getNr()
     try: return obj.__id__()

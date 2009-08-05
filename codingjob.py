@@ -298,15 +298,17 @@ class AnnotationSchema(Cachable):
         self.addDBProperty("table", "location", lambda loc : loc.split(":")[0])
         self.addDBProperty("name")
         self.addDBProperty("articleschema")
-        self.addDBFKProperty("fields", "annotationschemas_fields", ["fieldnr", "fieldname", "label", "fieldtypeid", "params"], function=self.createField)
+        self.addDBFKProperty("fields", "annotationschemas_fields", ["fieldnr", "fieldname", "label", "fieldtypeid", "params", "deflt"], function=self.createField)
 
-    def createField(self, fieldnr, fieldname, label, fieldtype, params):
+    def createField(self, fieldnr, fieldname, label, fieldtype, params, deflt):
         if fieldtype in (5,):
-            return OntologyAnnotationSchemaField(self.ont, self, fieldnr, fieldname, label, fieldtype, params)
-        if fieldtype in (3,4,8):
-            return LookupAnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params)
+            return OntologyAnnotationSchemaField(self.ont, self, fieldnr, fieldname, label, fieldtype, params, deflt)
+        elif fieldtype in (3,4,8):
+            return LookupAnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params, deflt)
+        elif fieldtype == 12:
+            return FromAnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params, deflt)
         else:
-            return AnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params)
+            return AnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params, deflt)
     
 
     def getField(self, fieldname):
@@ -343,16 +345,17 @@ def paramdict(paramstr):
     return d
 
 class AnnotationSchemaField(object):
-    def __init__(self, schema, fieldnr, fieldname, label, fieldtype, params):
+    def __init__(self, schema, fieldnr, fieldname, label, fieldtype, params, default):
         self.schema = schema
         self.fieldnr = fieldnr
         self.fieldname = fieldname
         self.label = label
         self.fieldtype = fieldtype
         self.params = paramdict(params)
+        self.default = default
     def deserialize(self, value):
         return value
-    def getLabel(self, value):
+    def getLabel(self, value, annotation):
         if type(value) == float:
             return "%1.2f"  % value
         return value
@@ -388,7 +391,7 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
                 sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.params['table'])
                 self._labels =  dict(self.schema.db.doQuery(sql))
         return self._labels
-    def getLabel(self, value):
+    def getLabel(self, value, annotation):
         v = self.deserialize(value)
         if not v: return None
         return v.label
@@ -398,6 +401,28 @@ class LookupValue(object):
     def __init__(self, id, label):
         self.id = id
         self.label = label
+
+class FromAnnotationSchemaField(AnnotationSchemaField):
+    def __init__(self, *vals):
+        AnnotationSchemaField.__init__(self, *vals)
+    def getLabel(self, value, codedsentence):
+        froms = []
+        for s in codedsentence.ca.sentences:
+            if s.sentence == codedsentence.sentence:
+                val = s.getValue(self.fieldname)
+                if not val: val = 0
+                froms.append(val)
+        froms.sort()
+        if not value: value = 0
+        i = froms.index(value)
+        
+        if i == len(froms)-1: to = None
+        else: to = froms[i+1]
+
+        return " ".join(codedsentence.sentence.text.split()[value:to])
+
+    def hasLabel(self):
+        return True
         
         
 class OntologyAnnotationSchemaField(AnnotationSchemaField):
@@ -410,8 +435,9 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
         if val is None:
             return value
         return val
-    def getLabel(self, value):
+    def getLabel(self, value, codedsentence):
         v = self.deserialize(value)
+       
         if not v: return None
         try:
             return v.getLabel()
