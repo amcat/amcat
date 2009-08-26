@@ -375,7 +375,11 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
         self._labels = None
     def deserialize(self, value):
         if value is None: return None
-        return LookupValue(value, self.getLabels().get(value, None))
+        label = self.getLabels().get(value, None)
+        result = toolkit.IDLabel(value, label)
+        return result
+        # raise Exception([value, self.getLabels().get(value, None), self.getLabels()])
+        #return LookupValue(value, self.getLabels().get(value, None))
     def hasLabel(self):
         return True
     def getLabels(self):
@@ -392,15 +396,16 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
                 self._labels =  dict(self.schema.db.doQuery(sql))
         return self._labels
     def getLabel(self, value, annotation):
-        v = self.deserialize(value)
-        if not v: return None
-        return v.label
+        if value is None: return None
+        return value.label
+        #v = self.deserialize(value)
+        #if not v: return None
+        #return "@@ %r / %r / %r / %r $$" % (value, v, v.id, v.label)
+        #return v.label
         
         
-class LookupValue(object):
-    def __init__(self, id, label):
-        self.id = id
-        self.label = label
+class LookupValue(toolkit.IDLabel):
+    pass
 
 class FromAnnotationSchemaField(AnnotationSchemaField):
     def __init__(self, *vals):
