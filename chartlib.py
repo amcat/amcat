@@ -1,5 +1,5 @@
 import sys, re, datetime, toolkit
-sys.path.append('/home/wva/toolkits/chartdir2/ChartDirector/lib')
+sys.path.append('/home/amcat/resources/ChartDirector/lib')
 from pychartdir import *
 
 formats = {'png' : PNG, 'svg' : SVG}
