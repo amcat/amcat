@@ -5,7 +5,7 @@ from pychartdir import *
 formats = {'png' : PNG, 'svg' : SVG}
           
 
-def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=None, isArticleCount=1, extraJsParameters=None, isPercentage=False, format='png'):
+def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=None, isArticleCount=1, extraJsParameters=None, isPercentage=False, format='png', title=None):
     
     chart = XYChart(770, 450)
     format = formats[format]
@@ -65,8 +65,9 @@ def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=Non
     elif chartType == 'line':
         layer = chart.addLineLayer()
         chart.yAxis().setAutoScale(0.05, 0.1, 1)
+        chart.yAxis().setAutoScale(0.0, 0.0, False)
         layer.setLineWidth(2)
-        
+     
         for key in toolkit.naturalSort(dataDict.keys()):
             datesDict = dict(zip(labels, dataDict[key]))
             data = [datesDict.get(label, 0) for label in labels]
@@ -74,7 +75,7 @@ def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=Non
             if type(key) == unicode: key = key.encode('utf-8')
             layer.addDataSet(data, -1, key)
             
-        chart.yAxis().setMinTickInc(1)
+        #chart.yAxis().setMinTickInc(1)
         
         label = chart.xAxis().setLabels(labels)
         label.setFontAngle(-45)
@@ -83,11 +84,12 @@ def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=Non
         chart.xAxis().setLabelStep(len(labels) / 20.0)
     else:
         raise Exception('invalid chart chartType')
-    
-    if isPercentage:
-        title = "Association (%)"
-    else:
-        title = "Number of %s" % ('Articles' if isArticleCount else 'Hits')
+
+    if title is None:
+        if isPercentage:
+            title = "Association (%)"
+        else:
+            title = "Number of %s" % ('Articles' if isArticleCount else 'Hits')
     chart.yAxis().setTitle(title, "arialbd.ttf", 10)
 
     if tempDir:

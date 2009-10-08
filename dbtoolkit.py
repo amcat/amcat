@@ -77,6 +77,7 @@ class amcatDB(object):
         Execute the query sql on the database and return the result.
         If cursor is given, use that cursor and return the cursor instead
         """
+
         #import time
         #print "%10.5f : %s" % (time.time(), sql)
         c = None
@@ -640,6 +641,7 @@ def quotesql(strOrSeq):
         strOrSeq = strOrSeq.replace("\r\n","\n")
         strOrSeq = strOrSeq.replace("\n\r","\n")
         strOrSeq = strOrSeq.replace("\r","\n")
+        strOrSeq = strOrSeq.replace("\x00","")
         if not checklatin1(strOrSeq):
             raise Exception("Offered bytes (or latin-1 encoded unicode) %r not in safe subset!" % strOrSeq)
         strOrSeq = re.sub("'", "''", strOrSeq)

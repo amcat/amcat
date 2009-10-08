@@ -26,12 +26,13 @@ class SimpleHeader(Header):
         Header.__init__(self, label, str)
 
 class Table(object):
-    def __init__(self, columns = None, rows = None, cellfunc = None, colheaders = None, rowheaders = None):
+    def __init__(self, columns = None, rows = None, cellfunc = None, colheaders = None, rowheaders = None, cellheader = None):
         self.columns    = isnull(columns, []) # data objects representing columns
         self.rows       = isnull(rows, [])    # data objects representing row
         self.cellfunc   = isnull(cellfunc, lambda row, col : "%s/%s" % (row, col)) # map col/row onto value`
         self.colheaders = isnull(colheaders, []) # Header objects
         self.rowheaders = isnull(rowheaders, []) # Header objects
+        self.cellheader = cellheader
     def toHTML(self, *args, **kargs):
         w = StringIO.StringIO()
         HTMLGenerator(w, *args, **kargs).toHTML(self)
@@ -100,10 +101,11 @@ class SimpleOrderedSet(list):
         self.append(object)
 
 class ChartGenerator(object):
-    def __init__(self, type=None, valfunc = None, tempfile=False):
+    def __init__(self, type=None, valfunc = None, tempfile=False, libOptions={}):
         self.type = type or 'line'
         self.valfunc = valfunc
         self.tempfile = tempfile
+        self.libOptions = libOptions
     def getVal(self, val):
             if self.valfunc:
                 return self.valfunc(val)
@@ -126,7 +128,8 @@ class ChartGenerator(object):
         fn, map = chartlib.chart(self.type, data, labels, tempDir)
         return fn, map
     def generateHTMLObject(self, table):
-        png, map = chartlib.chart(self.type, *self.chartData(table))
+        if 'title' not in self.libOptions: self.libOptions['title'] = table.cellheader or ''
+        png, map = chartlib.chart(self.type, *self.chartData(table), **self.libOptions)
         if self.tempfile:
             return tmpimg(png), map
         else:
