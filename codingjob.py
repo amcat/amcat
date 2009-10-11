@@ -14,7 +14,7 @@ def getCodedArticleIdsFromArticleId(db, articleid):
     return (row[0] for row in data)
     
 
-class Codingjob(Cachable):
+class CodingJob(Cachable):
     __table__ = 'codingjobs'
     __idcolumn__ = 'codingjobid'
     def __init__(self, db, id):
@@ -186,7 +186,8 @@ class Codingjob(Cachable):
 
         toolkit.setCachedProp(self, "sets", sets)
         
-
+Codingjob = CodingJob
+        
 class CodedArticle(Cachable):
     __table__ = 'codingjobs_articles'
     __idcolumn__ = 'codingjob_articleid'
@@ -256,7 +257,7 @@ def getCodedArticle(db, cjaid):
     job = getCodingJob(db, cjid)
     return job.findCodedArticle(cjaid = cjaid)
 
-class CodingjobSet(Cachable):
+class CodingJobSet(Cachable):
     __table__ = 'codingjobs_sets'
     __idcolumn__ = ['codingjobid', 'setnr']
     
@@ -287,6 +288,7 @@ class CodingjobSet(Cachable):
               where codingjobid = %d and setnr = %d""" % (self.job.unitSchema.table, self.job.id, self.setnr)
         return self.job.db.doQuery(SQL)[0]
 
+CodingjobSet = CodingJobSet
 
 class AnnotationSchema(Cachable):
     __idcolumn__ = 'annotationschemaid'

@@ -185,8 +185,8 @@ def tickerate(seq, msg=None, getlen=True, ticker=None):
     if msg is None: msg = "Starting iteration"
     if ticker is None: ticker = Ticker()
     if getlen:
-        l = list(seq)
-        ticker.warn(msg, estimate=len(l))
+        seq = list(seq)
+        ticker.warn(msg, estimate=len(seq))
     else:
         ticker.warn(msg)
     for x in seq:
