@@ -29,6 +29,7 @@ class PorReader(object):
             
 HEAD = 'SPSS for Microsoft Windows Release 15.04'
 HEAD = 'PASW Statistics 17.04'
+#HEAD = 'SPSS for Microsoft Windows Release 16.04'
 FLOAT, STR, INT = 0,1,2
         
 class SPSSVariable(object):
@@ -158,7 +159,8 @@ class SPSSFile(object):
                                 keep = ""
                         else:
                             slen = keep
-                            x, keep = splitstring(slen, r.consumeOne())
+                            # x, keep = splitstring(slen, r.consumeOne())
+                            x, keep = splitstring(slen, r.consumeOne(), reader=r )
                             row.append(x)
                     self.data.append(tuple(row))
                     if self.skipdata and len(self.data) >= self.skipdata:
