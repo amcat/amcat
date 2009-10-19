@@ -46,16 +46,20 @@ class FeatureFileAlgorithm(Algorithm):
         tmpfn = toolkit.tempfilename(prefix="ml-features-")
         tmp = open(tmpfn, 'w')
         #print "Writing features to %s" % tmpfn
-        for u in units:
+        for u in units:#toolkit.tickerate(units, msg="Writing feature file"):
             self.writeUnitFeatures(u, featureset, tmp, targetfunc)
         return tmpfn
 
     def train(self, units, featureset, targetfunc):
+        toolkit.ticker.warn("Training...")
         f = self.writeFeatures(units, featureset, targetfunc)
+        toolkit.ticker.warn("Running learner")
         m = self.getModel(f)
+        toolkit.ticker.warn("Training done")
         return m
 
     def predict(self, units, featureset, model):
+        toolkit.ticker.warn("Predicting...")
         units = list(units)
         f = self.writeFeatures(units, featureset)
         mfn = toolkit.tempfilename("ml-model")
@@ -63,7 +67,10 @@ class FeatureFileAlgorithm(Algorithm):
         m.write(model)
         m.close()
 
-        for u, p in zip(units, self.doPredict(f, mfn)):
+        toolkit.ticker.warn("Running learner")
+        predictions = self.doPredict(f, mfn)
+        toolkit.ticker.warn("Returning results")
+        for u, p in zip(units, predictions):
             yield u, p
 
 MAXENT_TRAIN = "maxent -b -m%(model)s %(input)s"
@@ -83,7 +90,9 @@ class MaxentAlgorithm(FeatureFileAlgorithm):
         mfn = toolkit.tempfilename(prefix="ml-maxent-model-")
         #print "Writing model to %s" % mfn
         CMD = MAXENT_TRAIN % dict(model=mfn, input=fn)
-        toolkit.execute(CMD)
+        toolkit.ticker.warn(CMD)
+        o, e = toolkit.execute(CMD)
+        if e: raise Exception("Maxent Exception!\nCMD=%r\n%s" % (CMD, e))
         model = open(mfn).read()
         return model
     def doPredict(self, fn, mfn):

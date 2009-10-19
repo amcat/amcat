@@ -1,4 +1,4 @@
-import codingjob, mlfeature, collections
+import codingjob, mlfeature, collections, toolkit
 
 class MachineLearner(object):
     """
@@ -9,13 +9,15 @@ class MachineLearner(object):
     - mlalgo.py objects to conduct the machine learning
     """
     
-    def __init__(self, units=None, field=None, featureset=None, algorithm=None, testunits=None, fieldname=None):
+    def __init__(self, units=None, field=None, featureset=None, algorithm=None,
+                 testunits=None, fieldname=None, targetfunc = None):
         self.units = set(units or [])
         self.field = field
         self.featureset = featureset or mlfeature.FeatureSet()
         self.algorithm = algorithm
         self.testunits = set(testunits or [])
         self.fieldname = fieldname
+        self.targetfunc = targetfunc
 
     def isUnitLevel(self):
         if not self.field: return None
@@ -41,8 +43,11 @@ class MachineLearner(object):
         if not schema.getField(self.field.fieldname):
             raise Exception("Job does not have field %s in schema %s" % (self.field.fieldname, schema))
         
-    def getTargetClass(self, unit):        
-        result =  str(unit.getValue(self.field.fieldname))
+    def getTargetClass(self, unit):
+        fn = self.field.fieldname if self.field else self.fieldname
+        result =  str(unit.getValue(fn))
+        if self.targetfunc:
+            result = self.targetfunc(result)
         return result
                     
     def train(self, units=None):
@@ -57,11 +62,12 @@ class MachineLearner(object):
         model = self.train(units=trainunits)
         result = collections.defaultdict(int)
         for u, c in self.predict(model, units=testunits):
-            c2 = ml.getTargetClass(u)
+            c2 = self.getTargetClass(u)
             result[c2, c] += 1
         return result
     def nfold(self, n=10):
         for i in range(n):
+            toolkit.ticker.warn("Iteration %i" % (i+1))
             train = []
             test = []
             for j, u in enumerate(self.units):
@@ -131,19 +137,21 @@ if __name__ == '__main__':
     db = dbtoolkit.amcatDB()
 
     fn, unit = "irrelevant", False
-    fn, unit = "arrowtype", True
+    fn, unit = "topic", False
 
     
     ml = MachineLearner()
     ml.fieldname = fn
     ml.algorithm = mlalgo.MaxentAlgorithm()
-    ml.addData(codingjob.CodingJob(db, 268), unitLevel=unit)
+    ml.addData(codingjob.CodingJob(db, 2499), unitLevel=unit)
+    print "%i articles loaded" % len(ml.units)
     ml.featureset.features += list(mlfeature.getWordFeatures(ml.units, 2))
 
     print "Total: %1.0f%%" % (accuracy(ml.combinedNFold())*100)
         
+    ml.targetfunc = lambda topic: str(topic)[:-2]
 
-
+    print "Total supertopic: %1.0f%%" % (accuracy(ml.combinedNFold())*100)
 
     
     

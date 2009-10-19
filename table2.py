@@ -233,9 +233,11 @@ class HTMLGenerator(object):
             for j, rh in enumerate(table.rowheaders):
                 header = []
                 if i == len(table.colheaders) -1: # last header row, print row header title
-                    header.append(rh.getLabel())
+                    if rh.getLabel() is not None:
+                        header.append(rh.getLabel())
                 if j == len(table.rowheaders) -1: # last header col, print col header title
-                    header.append(ch.getLabel())
+                    if ch.getLabel() is not None:
+                        header.append(ch.getLabel())
                 header = "&nbsp;\&nbsp;".join(header)
                 self.headercell(header, clas="colrow")
             cheads = map(ch.getHeader, table.columns)
