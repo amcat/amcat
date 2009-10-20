@@ -1,18 +1,30 @@
 import sys, re, datetime, toolkit
 sys.path.append('/home/amcat/resources/ChartDirector/lib')
-from pychartdir import *
 
-formats = {'png' : PNG, 'svg' : SVG}
+formats = dict()
+
+try:
+    from pychartdir import PNG
+    formats['png'] = PNG
+except:
+    pass
+
+try:
+    from pychartdir import SVG
+    formats['svg'] = SVG
+except:
+    pass
+
+from pychartdir import XYChart
           
 
 def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=None, isArticleCount=1, extraJsParameters=None, isPercentage=False, format='png', title=None):
     
     chart = XYChart(770, 450)
-    format = formats[format]
-    if format == SVG:
+    if format == 'svg':
         chart.enableVectorOutput()
-        
-        
+    format = formats[format]
+    
     labels = map(lambda s:s.encode('utf-8'), labels)
 
     # Set plotarea, size, background and grid lines
