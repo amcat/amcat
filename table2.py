@@ -130,6 +130,7 @@ class ChartGenerator(object):
     def generateHTMLObject(self, table):
         if 'title' not in self.libOptions: self.libOptions['title'] = table.cellheader or ''
         png, map = chartlib.chart(self.type, *self.chartData(table), **self.libOptions)
+        png = chartlib.cropData(png)
         if self.tempfile:
             return tmpimg(png), map
         else:

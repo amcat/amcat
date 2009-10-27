@@ -15,11 +15,12 @@ try:
 except:
     pass
 
-from pychartdir import XYChart
+from pychartdir import XYChart, Side
           
 
 def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=None, isArticleCount=1, extraJsParameters=None, isPercentage=False, format='png', title=None):
-    
+
+
     chart = XYChart(770, 450)
     if format == 'svg':
         chart.enableVectorOutput()
@@ -117,9 +118,17 @@ def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=Non
     chartHtmlImageMap = chart.getHTMLImageMap("javascript:showGraphArticles('{dataSetName}','{xLabel}','{value}'%s);" % extraJsParameters, " ",
         "title='{dataSetName} - {xLabel}: {value|0} articles'")
     chartHtmlImageMap = chartHtmlImageMap.replace('>','/>')
-                                                  
+
     return chartFileName, chartHtmlImageMap
     
+
+
+def cropData(data):
+    CMD = 'convert -trim - -'
+    out, err = toolkit.execute(CMD, data)
+    if err:
+        raise Exception(err)
+    return out
     
 
 def getDates(labels, interval):
