@@ -75,20 +75,19 @@ class Table(object):
             w.writerow([self.conf.format(x.value) for x in row.cells])
         return outfile.getvalue()
 
-    def getHTML(self):
+    def getHTML(self, rowLimit=2000, limitmsg="Row limit reached (%d rows)"):
         if not self.conf: self.conf = HTMLTableConf()
         clas = " class='%s' " % self.conf.tableClass if self.conf.tableClass else ""
         html = "<table%s>\n"  % clas
         html += rowHTML(self.header())
         rowCount = 0
-        rowLimit = 2000
         for row in self.data():
             rowCount += 1
             html += rowHTML(row)
             
-            if rowCount > rowLimit: # for performance issues
+            if rowLimit and (rowCount > rowLimit): # for performance issues
                 html += '</table>'
-                html += '<div class="message">Row limit reached (%d rows)</div>' % rowLimit
+                html += '<div class="message">%s</div>' % (limitmsg % rowLimit)
                 return html
         if rowCount == 0:
             html += '<tr><td colspan="%d" class="no-data">No data found</td></tr>' % len(self.header().cells)

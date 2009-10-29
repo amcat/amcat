@@ -276,7 +276,22 @@ class Article(object):
             SQL = "SELECT substring(image, %i, 8000) from articles_image WHERE articleid=%i" % (len(bytes2)+1, self.id)
             bytes2 += self.db.doQuery(SQL)[0][0]
         return bytes2, format
+
+def encodeAndLimitLength(variables, lengths):
+    originals = map(lambda x: x and x.strip(), variables)
+    numchars = 5
+    while True:
+        variables, enc = dbtoolkit.encodeTexts(variables)
+        done = True
+        for i, (var, maxlen, original) in enumerate(zip(variables, lengths, originals)):
+            if var and (len(var) > maxlen):
+                done = False
+                variables[i] = original[:maxlen-numchars] + " ..."
+        if done: return variables, enc
+        numchars += 5
+                
         
+
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
                   length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, retrieveArticle=1):
     """
@@ -287,18 +302,14 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
     if type(source) == sources.Source: source = source.id
     if type(fullmeta) == dict: fullmeta = `fullmeta`
 
-    if section and len(section) > 90: section = section[:90] + "..."
-    if headline and len(headline) > 740: headline = headline[:740] + "..."
     if url and len(url) > 490: url = url[:490] + "..."
+
+    (headline, byline, fullmeta, section), encoding = encodeAndLimitLength([headline, byline, fullmeta, section], [740, 999999, 999999, 90])
     
-    if headline: headline = headline.strip()
-    if byline: byline = byline.strip()
-    if section: section = section.strip()
     if pagenr and type(pagenr) in (types.StringTypes): pagenr = pagenr.strip()
     if text: text = text.strip()
     if length == None and text: length = len(text.split())
 
-    [headline, byline, fullmeta, section], encoding = dbtoolkit.encodeTexts([headline, byline, fullmeta, section])
     
     q = {'date' : date,
          'length' : length,
@@ -545,8 +556,16 @@ def sentFromDB(db, sid):
 if __name__ == '__main__':
     import sys, dbtoolkit, toolkit, binascii
     db = dbtoolkit.anokoDB()
-    a = fromDB(db, 41479453)
-    imgdata, format = a.getImage()
-    print format, len(imgdata)
-    open('/tmp/test.jpg', 'wb').write(imgdata)
+    #a = fromDB(db, 41479453)
+    #imgdata, format = a.getImage()
+    #print format, len(imgdata)
+    #open('/tmp/test.jpg', 'wb').write(imgdata)
+    y = u'Financi\xebn | Inkomensbeleid|Financi\xebn | Belasting|Economie | Ondernemen|Sociale zekerheid | Inkomensbeleid|Financi\xebn '
+    def encoder(vars):
+        var = vars[0]
+        var = var.encode('utf-7')
+        return [var]
+    print encodeAndLimitLength([y], [100], encoder)
+    
+    
     
