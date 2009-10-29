@@ -1175,9 +1175,11 @@ def isnull(x, alt):
 
 def naturalSort(list): 
     """ Sort the given list in the way that humans expect. """ 
+    return sorted(list, key=naturalSortKey) 
+def naturalSortKey(key):
+    key = str(key) if type(key) != unicode else key
     convert = lambda text: int(text) if text.isdigit() else text 
-    alphanum_key = lambda key: map(convert, re.split('([0-9]+)', str(key) if type(key) != unicode else key))
-    return sorted(list, key=alphanum_key) 
+    return map(convert, re.split('([0-9]+)', key))
 
 
 def antiword(wordfile):

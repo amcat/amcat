@@ -18,7 +18,7 @@ except:
 from pychartdir import XYChart, Side
           
 
-def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=None, isArticleCount=1, extraJsParameters=None, isPercentage=False, format='png', title=None):
+def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=None, isArticleCount=1, extraJsParameters=None, isPercentage=False, format='png', title=None, orderkey=toolkit.naturalSortKey):
 
 
     chart = XYChart(770, 450)
@@ -32,6 +32,8 @@ def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=Non
     chart.setPlotArea(55, 10, 500, 280, 0xffffff, -1, -1, 0xcccccc, 0xcccccc)
 
     chart.addLegend2(560, 10, -2, "", 8)
+
+    keys = sorted(dataDict.keys(), key=orderkey)
     
     if chartType in ('date', 'stacked-date'):
         if not interval: raise Exception('interval parameter missing')
@@ -43,7 +45,7 @@ def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=Non
             chart.yAxis().setAutoScale(0.05, 0.1, 1)
         layer.setLineWidth(2)
         
-        for key in toolkit.naturalSort(dataDict.keys()):
+        for key in keys:
             datesDict = dict(zip(labels, dataDict[key]))
             data = [datesDict.get(date, 0) for date in allDates]
             if type(key) == unicode: key = key.encode('utf-8')
@@ -62,7 +64,7 @@ def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=Non
         else:
             layer = chart.addBarLayer2(Side)
             chart.yAxis().setAutoScale(0.05, 0.1, 1)
-        for key in toolkit.naturalSort(dataDict.keys()):
+        for key in keys:
             name = key
             if type(name) == unicode: name = name.encode('utf-8')
             try:
@@ -81,7 +83,7 @@ def chart(chartType, dataDict, labels, tempDir=None, interval=None, keywords=Non
         chart.yAxis().setAutoScale(0.0, 0.0, False)
         layer.setLineWidth(2)
      
-        for key in toolkit.naturalSort(dataDict.keys()):
+        for key in keys:
             datesDict = dict(zip(labels, dataDict[key]))
             data = [datesDict.get(label, 0) for label in labels]
             #raise Exception(`data`)
