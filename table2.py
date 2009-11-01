@@ -242,13 +242,13 @@ class HTMLGenerator(object):
                 header = "&nbsp;\&nbsp;".join(header)
                 self.headercell(header, clas="colrow")
             cheads = map(ch.getHeader, table.columns)
-            for j, (chead, span) in enumerate(zip(cheads, spans(cheads))):
+            for j, (chead, span) in enumerate(zip(cheads, spans(map(str, cheads)))):
                 if span is None: continue
                 self.headercell(chead, colspan=span, clas="col")
             self.endRow()
         # normal rows, first cache all row headers and spans
         rowheaders = map(lambda rh : map(rh.getHeader, table.rows), table.rowheaders)
-        rowheaders = map(lambda rh : zip(rh, spans(rh)), rowheaders)
+        rowheaders = map(lambda rh : zip(rh, spans(map(str, rh))), rowheaders)
         for i, r in enumerate(table.rows):
             cls = None
             if self.trclassfunc: cls = self.trclassfunc(r)
@@ -292,7 +292,7 @@ class HTMLGenerator(object):
 
 
 class Value(object):
-    def __init__(self, value, direction=None, url=None, direction2=None, value2=None, lineval=None):
+    def __init__(self, value, direction=None, url=None, direction2=None, value2=None, lineval=None, istotal=False):
         self.value = value
         self.direction = direction
         self.direction2 = direction2
@@ -300,6 +300,7 @@ class Value(object):
         self.url = url
         self.value2 = value2
         self.lineval = lineval or value
+        self.istotal=istotal
     def __str__(self):
         return str(self.value)
         
