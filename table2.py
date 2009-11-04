@@ -69,6 +69,8 @@ class ObjectTable(Table):
         self.rowheaders = []
         self.colheaders = [Header("", lambda x:x.getHeader())]
         self.cellfunc = lambda row, col : col.getCell(row)
+        self.coltotals = []
+        self.rowtotals = []
     def addColumn(self, col, func=None):
         if type(col) in (str, unicode) and func:
             col = ObjectColumn(col, func)
