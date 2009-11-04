@@ -32,6 +32,8 @@ class Table(object):
         self.cellfunc   = isnull(cellfunc, lambda row, col : "%s/%s" % (row, col)) # map col/row onto value`
         self.colheaders = isnull(colheaders, []) # Header objects
         self.rowheaders = isnull(rowheaders, []) # Header objects
+        self.coltotals  = [] # Header objects
+        self.rowtotals  = [] # Header objects
         self.cellheader = cellheader
     def toHTML(self, *args, **kargs):
         w = StringIO.StringIO()
@@ -260,10 +262,25 @@ class HTMLGenerator(object):
             for c in table.columns:
                 self.cell(table.cellfunc(r, c))
             self.endRow()
+
+        for i, ct in enumerate(table.coltotals):
+            cls = "totalrow"
+            if i == 0: cls += "first"
+            if i == len(table.coltotals): cls += "last"
+            self.startRow(clas=cls)
+            for j, rh in enumerate(table.rowheaders):
+                if j == 0:
+                    self.headercell(ct.getLabel(), clas="totalrowheader")
+                else:
+                    self.headercell("", clas="totalrowempty")
+            for c in table.columns:
+                self.headercell(ct.getHeader(c), clas="totalrowcell")
+            self.endRow()
         self.endTable()
         
     def startRow(self, clas=None):
         s = " class='%s'" % clas if clas else ""
+        import pivot; pivot.addComment("STARTROW %s" % s)
         self.writer.write(" <tr%s>\n" % s)
     def col(self, clas):
         self.writer.write(" <col class='%s'></col>" % clas)
