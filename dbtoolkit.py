@@ -71,6 +71,10 @@ class amcatDB(object):
     def commit(self):
         self.conn.commit()
 
+    def queryDict(self, sql, **kargs):
+        res, colnames = self.doQuery(sql, colnames=True, **kargs)
+        for row in res:
+            yield dict(zip(colnames, row))
         
     def doQuery(self, sql, cursor = None, colnames = False, select=None):
         """
@@ -170,7 +174,7 @@ class amcatDB(object):
         """
         fields = dict.keys()
         values = dict.values()
-        fieldsString = ", ".join(fields)
+        fieldsString = ", ".join("[%s]" % f for f in fields)
         valuesString = ", ".join([quotesql(value) for value in values])
         id = self.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
                            retrieveIdent=retrieveIdent)
