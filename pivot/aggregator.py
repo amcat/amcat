@@ -144,42 +144,6 @@ def findrows(data, index, values):
             if row[index] in values:
                 yield row
 
-#def combine (nodea, nodeb, nodemapping):
-#    mnodea, mnodeb = nodemapping.mapping.getNodes()
-#    print "mnodea: %s" % mnodea
-#    print "mnodeb: %s" % mnodeb
-#    print nodemapping.mapping.a
-#    print nodemapping.mapping.b
-#    if mnodea not in nodea.getFields():
-#        mnode = mnodea
-#        mnodea = mnodeb
-#        mnodeb = mnode
-#    print "mnodea: %s" % mnodea
-#    print "mnodeb: %s" % mnodeb
-#    if isinstance(mnodea, Field) and isinstance(mnodeb, Field): # not isinstance Field = concept
-#        print "combine action"
-#        print nodea
-#        print nodeb
-#        print nodemapping.mapping
-#    elif isinstance(mnodea, Field) and not isinstance(mnodeb, Field):
-#        print "combine action"
-#        print nodea
-#        print nodeb
-#        print nodemapping.mapping
-#        print mnodea.datasource
-#    elif not isinstance(mnodea, Field) and isinstance(mnodeb, Field):
-#        print "combine action"
-#        print nodea
-#        print nodeb
-#        print nodemapping.mapping
-#        print mnodea.datasource
-#    elif not isinstance(mnodea, Field) and not isinstance(mnodeb, Field):
-#        print "combine action"
-#        print nodea
-#        print nodeb
-#        print nodemapping.mapping
-        
-
 def createNewNode(field):
     """
     Function createNewNode is used to create a new node with only one Field. It is a initial Node creation
@@ -189,7 +153,12 @@ def createNewNode(field):
 
 class startState(object):
     """
-    Class startstate is a class
+    Class startstate is a class which creates in the constructor a state to start with before reducing the graph
+    
+    nodes is a list that contains all nodes that are mapped
+    nodemappings is a list that contains all mappings between the nodes
+    
+    method removeItems removes the combined nodes from the list, and replaces these with a new node. Also it removes the mapping between the old nodes from the list.
     """
     def __init__(self, nodes, mappings, filters):
         newnodes = collections.defaultdict(Node)
@@ -261,6 +230,11 @@ def getMappings(state, nodea):
             yield mapping.b, mapping
             
 class Aggregator(object):
+    """
+    Class Aggregator creates the actual aggregator object. The aggregator initiates itself with mappings and filters
+    
+    the getData method creates the graph, creates the nodes, creates a state, and reduces it until only data is left. The data will be returned.
+    """
     def __init__(self, mappings, filters):
         self.mappings = mappings
         self.filters = filters
@@ -276,20 +250,6 @@ class Aggregator(object):
 
         print "create startstate"
         state = startState(self.nodes, self.mappings, self.filters) # state = collection nodes
-
-#        for filter in self.filters.keys():
-#            for mapping in self.mappings:
-#                for node in mapping.getNodes():
-#                    if isinstance(node, Field):
-#                        if node.concept is filter:
-#                            if mapping not in filtermappings:
-#                                filtermappings.append(mapping)
-#                    else:
-#                        if filter is node:
-#                            if mapping not in filtermappings:
-#                                filtermappings.append(mapping)           
-                                
-#        while len(state) > 1:
 
         print state.filters.keys()
 
