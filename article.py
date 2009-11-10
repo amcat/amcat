@@ -46,11 +46,18 @@ class Article(object):
     def text(self):
         return self.getText()
 
+    def decode(self, s):
+        try:
+            return dbtoolkit.decode(s, self.encoding)
+        except Exception, e:
+            return s.decode('latin-1')
+            
+    
     def _getMeta(self):
         b,s,m,u = self.db.doQuery("select byline, section, metastring, url from articles where articleid=%i" % self.id)[0]
-        self._byline = dbtoolkit.decode(b, self.encoding)
-        self._section = dbtoolkit.decode(s, self.encoding)
-        m = dbtoolkit.decode(m, self.encoding)
+        self._byline = self.decode(b)
+        self._section = self.decode(s)
+        m = self.decode(m)
         self._fullmeta = toolkit.dictFromStr(m, unicode=True)
         self._url = u
 
@@ -187,15 +194,15 @@ class Article(object):
                 '\n  <headline>%(headline)s</headline>\n</article>') % self.__dict__
 
     def fulltext(self):
-        if self.type == 4:
-            result = self.text # (parsed headline is included in text)
-            if self.text:
-                result = result.replace("\\r/N(soort,ev,neut)/\\r","")
-            else:
-                #toolkit.warn("No text for article %s?" % self.id)
-                return None
-        else:
-            result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")
+        #if self.type == 4:
+        #    result = self.text # (parsed headline is included in text)
+        #    if self.text:
+        #        result = result.replace("\\r/N(soort,ev,neut)/\\r","")
+        #    else:
+        #        #toolkit.warn("No text for article %s?" % self.id)
+        #        return None
+        #else:
+        result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")
         return result.replace("\\r","").replace("\r","\n")
 
     def splitSentences(self):
@@ -410,7 +417,9 @@ def Articles(aidlist, db, tick=False):
     Generator that yields articles using caching to minimize db roundtrips
     """
     aidlist = list(aidlist)
-    while aidlist:
+    if tick: toolkit.ticker.warn("Iterating over articles", estimate = len(aidlist))
+    for aid in iter(aidlist):
+        toolkit.ticker.tick()
         cache = articlesFromDB(db, aidlist[:CACHE_SIZE])
         for a in cache:
             yield a

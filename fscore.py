@@ -1,7 +1,7 @@
 import toolkit
 avg = toolkit.average
 
-class Scorer:
+class Scorer(object):
     def __init__(self):
        self._tp = 0
        self._tn = 0
@@ -37,7 +37,7 @@ class Scorer:
         r = self.recall()
         return (2*p*r) / (p+r+0.00000000000000000000000000000000000001)
 
-class Scorers:
+class Scorers(object):
     def __init__(self, tags):
         self.scorers = {}
         self.confmatrix = {} # {true, pred : n}
@@ -62,6 +62,9 @@ class Scorers:
                     self.scorers[tag].fn()
                 if guess == tag:
                     self.scorers[tag].fp()
+    def observeUnit(self, unit, correct, guess):
+        # to allow use as sink
+        self.observe(correct, guess)
 
     def n(self, tag=None):
         if tag:

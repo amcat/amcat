@@ -209,10 +209,10 @@ class amcatDB(object):
         return self._articlecache[artid]
     
     
-    def articles(self, aids=None):
+    def articles(self, aids=None, **kargs):
         if not aids:
             aids = toolkit.intlist(sys.stdin)
-        for a in article.Articles(aids, self):
+        for a in article.Articles(aids, self, **kargs):
             yield a
 
     

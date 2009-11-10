@@ -44,8 +44,11 @@ class ArticleDescriptor(object):
         return "ArticleDescriptor(%r, %r, %r, ..)" % (self.body and self.body[:5]+"...", self.headline, self.date)
     __repr__ = __str__
 
-def convertImage(imgData, scale=.67):
-    return convertImage(imgData, scale=scale, quality=.2)
+
+def convertImage(img, scale=.67, quality=.2):
+    img2 = toolkit.convertImage(img, 'jpeg', scale=scale, quality=quality)
+    #print "Reduced image size from %i to %i bytes (%1.2f%%)" % (len(img), len(img2), float(len(img2)) * 100. / len(img))
+    return img2
 
 class ArticleScraper(object):
     def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
@@ -181,7 +184,7 @@ class ArticleScraper(object):
                 body += '[%s->%s]\n' % (coords, a.id)
         a = article.createArticle(self.db, "[INDEX] page %s" % pagenr, date, self.mediumid, self.batch, body, section=section, url=url, pagenr=pagenr)
         if imagebytes:
-            a.storeImage(self.convertImage(imagebytes), imagetype)
+            a.storeImage(convertImage(imagebytes), imagetype)
         return a
 
     def logStatistics(self):
@@ -239,8 +242,4 @@ def removeTags(text):
     if not text: return text
     return tagsRegExp.sub("", text)  
 
-def convertImage(img, scale, quality):
-    img2 = toolkit.convertImage(img, 'jpeg', scale=scale, quality=quality)
-    #print "Reduced image size from %i to %i bytes (%1.2f%%)" % (len(img), len(img2), float(len(img2)) * 100. / len(img))
-    return img2
     
