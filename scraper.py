@@ -58,7 +58,7 @@ class ArticleScraper(object):
         self.log = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
         self.limit_page = None
         self.limit_articlesperpage = None
-        self.force = False
+        self.force = True
         self.imagescale = imagescale
 
     def urlExists(self, url):
