@@ -7,7 +7,7 @@ from datetime import datetime, date
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
 class ArticleDescriptor(object):
-    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, **args):
+    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None,**args):
         self.body = body
         self.headline = headline
         self.date = date
@@ -18,6 +18,7 @@ class ArticleDescriptor(object):
         self.args = args
         self.imagebytes = imagebytes
         self.imagetype = imagetype
+        self.fullmeta = fullmeta
     def createArticle(self, db, batchid, mediumid, date, imagescale=.67):
         body = stripText(self.body)
         byline = stripText(self.byline)
@@ -35,7 +36,7 @@ class ArticleDescriptor(object):
         
         a = article.createArticle(db, headline, self.date, mediumid, batchid, body, 
                                   pagenr=self.pagenr, byline=self.byline, url=self.url,
-                                  section=self.section)
+                                  section=self.section, fullmeta=self.fullmeta)
         if self.imagebytes:
             imagebytes = convertImage(self.imagebytes, imagescale)
             a.storeImage(imagebytes, self.imagetype)
@@ -63,6 +64,7 @@ class ArticleScraper(object):
         self.limit_articlesperpage = None
         self.force = False
         self.imagescale = imagescale
+        self.commitPage = False
 
     def urlExists(self, url):
         sql = "select top 1 url from articles where batchid=%i and mediumid=%i and url=%s" % (self.batch, self.mediumid, dbtoolkit.quotesql(url))
@@ -109,7 +111,8 @@ class ArticleScraper(object):
         """ date format as used in most URLs, override as appropriate """
         return date.strftime("%Y%m%d")
     def endPage(self, context, page):
-        pass
+        if self.commitPage:
+            self.db.commit()
     def login(self):
         pass
     def getPages(self, context):
@@ -154,14 +157,19 @@ class ArticleScraper(object):
         return result
 
         
-    def download(self, url, allowRedirect=False, useSoup=False, postdata=None):
+    def download(self, url, allowRedirect=False, useSoup=False, postdata=None, canretry=True):
         self.logInfo('downloading %s' % url)
         if postdata:
             response = self.session.open(url, urllib.urlencode(postdata))
         else:
             response = self.session.open(url)
         if not allowRedirect and response.url != url:
-            raise Exception('disallowed redirect from %s to %s' % (url, response.url))
+            if canretry:
+                self.logInfo('Redirect attempted, logging in again (-> %r)' % (response.url))
+                self.login()
+                self.download(url, allowRedirect, useSoup, postdata, canretry=False)
+            else:
+                raise Exception('disallowed redirect from %s to %s' % (url, response.url))
         self.downloadCount += 1
         if useSoup:
             return BeautifulSoup(response)
@@ -191,7 +199,8 @@ class ArticleScraper(object):
         self.logInfo('Downloaded %i urls. Added %i articles' % (self.downloadCount, self.articleCount))
     def resetStatistics(self):
         self.articleCount, self.downloadCount = 0,0
-    
+    def convertImage(self, image, *args, **kargs):
+        return convertImage(image, *args, **kargs)
     
 stripRegExpTuple = (
     (re.compile(r'<(script|style).*?</(script|style)>', re.IGNORECASE | re.DOTALL), u''),

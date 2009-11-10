@@ -298,3 +298,11 @@ def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixed
     return articleCount, batches, errors, errorCount
 
     
+if __name__ == '__main__':
+    import dbtoolkit, sys
+    projectid = int(sys.argv[1])
+    files = sys.argv[2:]
+    db = dbtoolkit.amcatDB()
+    batchname = files[0].split(".")[0].split("/")[-1]
+    files = map(open, files)
+    readfiles(db, projectid, batchname, files, verbose=False)

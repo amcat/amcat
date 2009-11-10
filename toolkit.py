@@ -559,6 +559,12 @@ def readDate(str, lax=False, rejectPre1970=False, american=False):
     elif research("(\w+) (\d{1,2}), (\d{4})",str) and monthnr(_MATCH.group(1)):
         ymd = [_MATCH.group(3), monthnr(_MATCH.group(1)), _MATCH.group(2)]
         m = 9
+    elif research("(\d{1,2})[-/](\d{1,2})[-/](\d{2})",str):
+        ymd = [_MATCH.group(3),_MATCH.group(2),_MATCH.group(1)]
+        if int(ymd[0]) < 40: ymd[0] = "20" + ymd[0]
+        else: ymd[0] = "19" + ymd[0]
+        if american: ymd[2], ymd[1] = ymd[1], ymd[2]
+        m = 10
     else:
         m = 99
         if lax: return None
