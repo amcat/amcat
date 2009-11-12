@@ -1,7 +1,5 @@
 #!/bin/env python2.2
 
-#onzin edit om svn te testen
-
 import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess, colorsys
 from datetime import datetime
 
