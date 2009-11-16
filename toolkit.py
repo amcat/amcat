@@ -295,14 +295,41 @@ def outerjoin(seq1, seq2):
 
 def remove(wall, brick):
     return [x for x in wall if x not in brick]
-    
-def flatten(seq):
 
+def addToSeq(seq, element_or_seq, copy=False):
+    # Why o why does python not have a uniform collection interface?
+    # Must there be something that is better in java than in python?
+    e = element_or_seq
+    if type(seq) == list:
+        if copy: seq = list(seq)
+        if type(e) == list:
+            seq += e
+        elif isSequence(e):
+            seq += list(e)
+        else:
+            seq.append(e)
+    elif type(seq) == set:
+        if copy: seq = set(seq)
+        if type(e) == set:
+            seq |= e
+        elif isSequence(e):
+            seq |= set(e)
+        else:
+            seq.add(e)
+    else:
+        raise Exception("Cannot add to type %s" % type(seq))
+    return seq
+    
+
+def flatten(seq, toSet=False):
     if isString(seq) or not isSequence(seq):
       return [seq]
-    result = []
+    result = set() if toSet else []
     for x in seq:
-      result += flatten(x)
+        if toSet:
+            result |= flatten(x, toSet=True)
+        else:
+            result += flatten(x)
     return result     
 
 def shift(seq, default=None):
@@ -498,10 +525,17 @@ _MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
 _MONTHS2 = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','dez'];
 _MONTHS3 = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by jcjacobi for iex.nl
 _MONTHS4 = ['jan','feb','maa','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by jcjacobi for texel-plaza
-_MONTHS6 = ['jan','feb','mae','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by wva for sueddeutsche zeitung
-_MONTHS5 = ['janv','fevr','mars','avri','mai','juin','juil','aout','sept','octo','nove','dece']; #Added by Lonneke voor fr
-_MONTHS6 = ['ener', 'febr', 'marz', 'abri', 'mayo', 'juni', 'juli', 'agos', 'sept', 'octu', 'novi','dici']
-           
+_MONTHS5 = ['jan','feb','mae','apr','mei','jun','jul','aug','sep','okt','nov','dec']; #Added by wva for sueddeutsche zeitung
+_MONTHS6 = ['janv','fevr','mars','avri','mai','juin','juil','aout','sept','octo','nove','dece']; #Added by Lonneke voor fr
+_MONTHS7 = ['ener', 'febr', 'marz', 'abri', 'mayo', 'juni', 'juli', 'agos', 'sept', 'octu', 'novi','dici']
+
+
+def germanmonth(s):
+    print ">", s
+    strShort = s.lower().strip()[:3]
+    if strShort in _MONTHS6:
+        return _MONTHS5.index(strShort) + 1
+    return None
 
 def monthnr(str):
     strShort = str.lower().strip()[:3]
@@ -510,9 +544,9 @@ def monthnr(str):
     if strShort in _MONTHS2: return _MONTHS2.index(strShort) + 1
     if strShort in _MONTHS3: return _MONTHS3.index(strShort) + 1
     if strShort in _MONTHS4: return _MONTHS4.index(strShort) + 1
-    if strShort in _MONTHS6: return _MONTHS6.index(strShort) + 1
-    if strLonger in _MONTHS5: return _MONTHS5.index(strLonger) + 1
+    if strShort in _MONTHS5: return _MONTHS5.index(strShort) + 1
     if strLonger in _MONTHS6: return _MONTHS6.index(strLonger) + 1
+    if strLonger in _MONTHS7: return _MONTHS7.index(strLonger) + 1
     return None
 
 
@@ -1302,7 +1336,16 @@ def convertImage(image, informat, outformat=None, quality=None, scale=None):
     
     
 if __name__ == '__main__':
-    img = open('/tmp/fp.jpeg').read()
-    img2 = convertImage(img, 'jpeg', scale=.75, quality=.3)
-    print len(img), len(img2)
-    open('/tmp/fp2.jpeg', 'w').write(img2)
+    print "a", addToSeq(set([1,2,3]), 4)
+    print "b", addToSeq([1,2,3], 4)
+    print "c", addToSeq(set([1,2]), set([3,4]))
+    print "d", addToSeq(set([1,2]), [3,4])
+    print "e", addToSeq([1,2], set([3,4]))
+    print "f", addToSeq([1,2], [3,4])
+
+    print "g", reduce(addToSeq, [1, 2, 3, 4], set())
+    print "h", reduce(addToSeq, [[1, 2], set([3]), (4,)], set())
+    print "i", reduce(addToSeq, [[1, 2], set([3]), (4,)], [])
+
+    print "j", reduce(addToSeq, [[1, 2], set([3]), (4,)])
+    print "k", reduce(addToSeq, [set([1, 2]), set([3]), (4,)])

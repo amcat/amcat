@@ -32,6 +32,8 @@ def search(indexLocation, queryList, startNum=0, endNum=-1, startDate=None, endD
         if not (startDate or endDate):
             cmd += ' 19000101 21000101'
         cmd += ' %s' % ':'.join(map(str, mediumids))
+
+    print "@@@@@@@@@@@@",startDate, endDate, cmd
     
     if type(queryList) == str:
         raise Exception('invalid query type, should be iterable')
@@ -41,12 +43,12 @@ def search(indexLocation, queryList, startNum=0, endNum=-1, startDate=None, endD
     inputText = inputText.encode('utf-8')
         
     startTime = time.time()
-    
+
     out, errorMsg = toolkit.execute(cmd, input=inputText)
     
     endTime = time.time()
     totalTime = endTime - startTime
-    
+
     if errorMsg.find('Exception') > -1:
         errorMsg = re.sub('org.apache.lucene.queryParser.', '', errorMsg) # make the error message more user readable
         errorMsg = re.sub('<EOF>', '<End of Line>', errorMsg) # make the error message more user readable

@@ -1,4 +1,4 @@
-import xapian, article
+import xapian, article, toolkit
 
 class Index(object):
     def __init__(self, location, db, stem=True):
@@ -59,14 +59,40 @@ class Index(object):
             if term in map:
                 map[term] = freq
 
+def createIndex(indexloc, articles, db=None, stemmer="dutch"):
+    
+    database = xapian.WritableDatabase(indexloc, xapian.DB_CREATE_OR_OVERWRITE)
+    indexer = xapian.TermGenerator()
+    if stemmer:
+        indexer.set_stemmer(xapian.Stem(stemmer))
+    for a in articles:
+        if type(a) == int:
+            a = article.fromDB(db, a)
+        txt = toolkit.stripAccents(a.toText()).encode('ascii', 'replace')
+        doc = xapian.Document()
+        doc.set_data(str(a.id))
+        indexer.set_document(doc)
+        indexer.index_text(txt)
+        database.add_document(doc)
+    return Index(indexloc, db)
+
+                
 if __name__ == '__main__':
     import sys, dbtoolkit
-    i = Index(sys.argv[1], dbtoolkit.amcatDB())
-    #a = article.fromDB(i.db, 42577134)
-    #print "Database content: \n----\n%s\n-----" % a.toText()
-    #map = {'Zfraud' : 0, 'Zgevall' : 0}
-    #i.mapFrequencies(a, map)
-    #print map
-    for t, f in i.getFrequencies(raw=True):
-        print t, f
-    
+    if len(sys.argv) <= 1:
+        toolkit.warn("Usage: python amcatxapian.py INDEXLOC [QUERY] [< ARTICLEIDS]\n\nIf QUERY is giving, query exsting index; otherwise, build new index from ARTICLEIDS")
+        sys.exit(1)
+        
+    indexloc = sys.argv[1]
+    query = " ".join(sys.argv[2:])
+    if query.strip():
+        toolkit.warn("Querying index %s with %r" % (indexloc, query))
+        i = Index(indexloc, dbtoolkit.amcatDB())
+        for term, freq in list(i.getFrequencies())[:10]:
+            print term, freq
+    else:
+        toolkit.warn("Creating new xapian index (database) at %s" % indexloc)
+        articles = toolkit.tickerate(toolkit.intlist())
+        i = createIndex(indexloc, articles)
+        toolkit.warn("Created index %s" % i)
+

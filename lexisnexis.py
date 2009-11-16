@@ -7,7 +7,7 @@ import article
 
 # Regular expressions on text file level:
 RE_ARTICLESPLIT = re.compile(r'^\s+(?:FOCUS - )?\d+ of \d+ DOCUMENTS?\s*$', re.M)
-RE_TITLEPAGE    = re.compile(r'^\s*Print Request:\s+(Selected|Select) (Items|Document\(s\)):.*$',re.M)
+RE_TITLEPAGE    = re.compile(r'^\s*Print Request:\s+(Selected|Select|All) (Items|Document\(?s\)?):.*$',re.M)
 RE_TITLEPAGE2   = re.compile(r'^\s*Printopdracht: (Alle|Selecteer|Aangevinkte) documenten: [\d, -]+\s*$', re.M)
 RE_TITLEPAGE3  = re.compile(r'^Zoektermen: .*$')
 #RE_QUERY        = re.compile(r'^\s*Research Information:(.*)date[\s\n]*\(geq[\s\n]*\(\d+[/-]\d+[-/]\d+\)[\s\n]+and[\s\n]+leq[\s\n]*\(\d+[/-]\d+[/-]\d+\)+[\s\n]*^\s*$',re.M|re.DOTALL|re.IGNORECASE)
@@ -140,7 +140,7 @@ def parseLexisNexis(text):
     if not match: match = re.match(RE_EXTRACTMETA2, text)
     if not match: match = re.match(RE_EXTRACTMETA3, text)
     if not match: match = re.match(RE_EXTRACTMETA4, text)
-    if not match: print "text: '%s'" % text; raise Exception("Could not parse article")
+    if not match: print "<text exception='lexisnexis.py:143 could not parse article'>\n%s\n</text>" % text.encode('ascii','replace'); raise Exception("Could not parse article")
 
     body = match.group(2).strip()
     meta = match.group(1) + match.group(3)
@@ -197,7 +197,7 @@ def interpretProlog(text, sources):
         medium = sources.lookupName(source, 1)
 
     if not medium:
-        print text
+        print text.encode('ascii','replace')
         raise Exception('Could not find source "%s"' % mostlikelysource)
     if medium.id < 0:
         toolkit.warn('Source <0: %s : %s' % (source, medium))
@@ -305,4 +305,6 @@ if __name__ == '__main__':
     db = dbtoolkit.amcatDB()
     batchname = files[0].split(".")[0].split("/")[-1]
     files = map(open, files)
-    readfiles(db, projectid, batchname, files, verbose=False)
+    ac, batches, errors, ec = readfiles(db, projectid, batchname, files, verbose=False)
+    print "%i articles "% ac
+    print "errors:\n%s" % (errors,)
