@@ -97,8 +97,11 @@ class ArticleScraper(object):
                 if self.limit_articlesperpage: articles = list(articles)[:self.limit_articlesperpage]
                 for address in articles:
                     try:
-                        artdesc = self.getArticle(context, page, address)
-                        if artdesc is not None:
+                        artdescs = self.getArticle(context, page, address)
+                        if artdescs is None: continue
+                        if isinstance(artdescs, ArticleDescriptor):
+                            artdescs = [artdescs]
+                        for artdesc in artdescs:
                             self.createArticle(artdesc)
                     except:
                         self.logException('Article exception %s' % address)
