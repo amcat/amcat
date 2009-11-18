@@ -27,9 +27,7 @@ class PorReader(object):
         for i in range(n):
             self.consumeOne(skip=True)
             
-HEAD = 'SPSS for Microsoft Windows Release 15.04'
-HEAD = 'PASW Statistics 17.04'
-HEAD = 'SPSS for Microsoft Windows Release 16.04'
+HEADERS = ['SPSS for Microsoft Windows Release 15.04', 'PASW Statistics 17.04', 'SPSS for Microsoft Windows Release 16.04']
 FLOAT, STR, INT = 0,1,2
         
 class SPSSVariable(object):
@@ -95,8 +93,11 @@ class SPSSFile(object):
         r = PorReader(file)
         r.skip(5)
         h = r.consumeOne()
-        if not h.startswith(HEAD): raise Exception("Cannot read .por")
-        numvars = readnum(h[len(HEAD):])
+        for version in HEADERS:
+            if h.startswith(version): 
+                head = version
+        if not head: raise Exception("Cannot read .por")
+        numvars = readnum(h[len(head):])
         h = r.skip(1)
         keep = r.consumeOne()
         while True:
