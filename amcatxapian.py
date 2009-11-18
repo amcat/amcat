@@ -13,6 +13,7 @@ class Index(object):
             self._aidmap = {}
             for d in self.documents:
                 self._aidmap[int(d.get_data())] = d.get_docid()
+        print self._aidmap
         return self._aidmap
     
     def getDocumentID(self, article):
@@ -31,8 +32,14 @@ class Index(object):
     @property
     def articles(self):
         for d in self.documents:
-            aid = int(d.get_data())
-            yield article.fromDB(self.db, aid)
+            yield self.getArticle(d)
+
+    def getArticle(self, document):
+        if type(document) == int:
+            document = self.index.get_document(document)
+        aid = int(document.get_data())
+        return article.fromDB(self.db, aid)
+        
 
     def getFrequencies(self, article=None, raw=False):
         if article:
@@ -54,19 +61,17 @@ class Index(object):
             else:
                 yield term, t.termfreq
 
-    def query(self,  query):
-        d = {} # article : weight
-        
-        dat_results = dbtoolkit.anokoDB().queryDict(query)
-
-        for row in dat_results:
-            docid = row['articleid']
-            art = dbtoolkit.anokoDB().article(docid)
-            freq = self.getFrequencies(art)
-            print freq.next()
-            d[art] = freq
-        
-        return d
+    def query(self,  query, returnWeights=False):
+        q = xapian.Query(query)
+        enquire = xapian.Enquire(self.index)
+        enquire.set_query(q)
+        matches = enquire.get_mset(0,self.index.get_doccount())
+        for m in matches:
+            a = self.getArticle(m.docid)
+            if returnWeights:
+                yield a, m.weight
+            else:
+                yield a
         
 
     def mapFrequencies(self, article, map):
@@ -94,24 +99,20 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch"):
                 
 if __name__ == '__main__':
     import sys, dbtoolkit
-##     if len(sys.argv) <= 1:
-##         toolkit.warn("Usage: python amcatxapian.py INDEXLOC [QUERY] [< ARTICLEIDS]\n\nIf QUERY is giving, query exsting index; otherwise, build new index from ARTICLEIDS")
-##         sys.exit(1)
+    if len(sys.argv) <= 1:
+        toolkit.warn("Usage: python amcatxapian.py INDEXLOC [QUERY] [< ARTICLEIDS]\n\nIf QUERY is giving, query exsting index; otherwise, build new index from ARTICLEIDS")
+        sys.exit(1)
         
-##     indexloc = sys.argv[1]
-##     query = " ".join(sys.argv[2:])
-##     if query.strip():
-##         toolkit.warn("Querying index %s with %r" % (indexloc, query))
-##         i = Index(indexloc, dbtoolkit.amcatDB())
-##         for term, freq in list(i.getFrequencies())[:10]:
-##             print term, freq
-##     else:
-##         toolkit.warn("Creating new xapian index (database) at %s" % indexloc)
-##         articles = toolkit.tickerate(toolkit.intlist())
-##         i = createIndex(indexloc, articles)
-##         toolkit.warn("Created index %s" % i)
-    i = Index('/home/wva/tmp/xapian-antwerpen', dbtoolkit.anokoDB())
-    aidmap= i._getAidmap()
-    q = "select * from dbo.articles where batchid=5307"
-    
-    i.query(q)
+    indexloc = sys.argv[1]
+    query = " ".join(sys.argv[2:])
+    if query.strip():
+        toolkit.warn("Querying index %s with %r" % (indexloc, query))
+        i = Index(indexloc, dbtoolkit.amcatDB())
+        for a, weight in i.query(query, returnWeights=True):
+            print a.id, weight
+    else:
+        toolkit.warn("Creating new xapian index (database) at %s" % indexloc)
+        articles = toolkit.tickerate(toolkit.intlist())
+        i = createIndex(indexloc, articles)
+        toolkit.warn("Created index %s" % i)
+

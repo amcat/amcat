@@ -7,7 +7,7 @@ from datetime import datetime, date
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
 class ArticleDescriptor(object):
-    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None,**args):
+    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, **args):
         self.body = body
         self.headline = headline
         self.date = date
@@ -19,6 +19,7 @@ class ArticleDescriptor(object):
         self.imagebytes = imagebytes
         self.imagetype = imagetype
         self.fullmeta = fullmeta
+        self.aid = None
     def createArticle(self, db, batchid, mediumid, date, imagescale=.67):
         body = stripText(self.body)
         byline = stripText(self.byline)
@@ -40,6 +41,7 @@ class ArticleDescriptor(object):
         if self.imagebytes:
             imagebytes = convertImage(self.imagebytes, imagescale)
             a.storeImage(imagebytes, self.imagetype)
+        self.aid = a.id
         return a
     def __str__(self):
         return "ArticleDescriptor(%r, %r, %r, ..)" % (self.body and self.body[:5]+"...", self.headline, self.date)
