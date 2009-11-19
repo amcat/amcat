@@ -111,10 +111,10 @@ class ChartGenerator(object):
         self.tempfile = tempfile
         self.libOptions = libOptions
     def getVal(self, val):
-            if self.valfunc:
-                return self.valfunc(val)
-            else:
-                return float(val or 0)
+        if self.valfunc:
+            return self.valfunc(val)
+        else:
+            return float(val or 0)
     def chartData(self, table):
         # columns -> labels
         labels = [
