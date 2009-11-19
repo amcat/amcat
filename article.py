@@ -545,14 +545,16 @@ class Sentence(object):
 
     def getLink(self):
         return 'sentenceDetails?sentenceid=%d' % self.sid
-
-'''
-def decode(text, enc):
-    if enc:
-        return dbtoolkit.decode(text, enc)
-    else:
-        return text.decode('ascii', 'replace')
-'''        
+    
+    def __str__(self):
+        return "(%i, %i)" % (self.parnr, self.sentnr)
+    def __repr__(self):
+        return "Sentence(%r, %i, %i, %i)" % (self.article, self.sid, self.parnr, self.sentnr)
+    def __cmp__(self, other):
+        c = cmp(self.parnr, other.parnr)
+        if not c: c = cmp(self.sentnr, other.sentnr)
+        return c
+        
 
 def sentFromDB(db, sid):
     data = db.doQuery("select sentenceid, parnr, sentnr, articleid from sentences where sentenceid=%i" % sid)

@@ -12,7 +12,15 @@ def getCodedArticleIdsFromArticleId(db, articleid):
     data = db.doQuery("select codingjob_articleid from codingjobs_articles where articleid=%i"% articleid)
     if not data: return None
     return (row[0] for row in data)
-    
+
+def getCodedArticlesFromArticleId(db, articleid):
+    for cjaid in getCodedArticleIdsFromArticleId(db, articleid):
+        yield getCodedArticle(db, cjaid)
+
+def getCodedSentencesFromArticleId(db, articleid):
+    for ca in getCodedArticlesFromArticleId(db, articleid):
+        for cs in ca.sentences:
+            yield cs
 
 class CodingJob(Cachable):
     __table__ = 'codingjobs'

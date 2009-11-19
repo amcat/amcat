@@ -282,7 +282,6 @@ class HTMLGenerator(object):
         
     def startRow(self, clas=None):
         s = " class='%s'" % clas if clas else ""
-        import pivot; pivot.addComment("STARTROW %s" % s)
         self.writer.write(" <tr%s>\n" % s)
     def col(self, clas):
         self.writer.write(" <col class='%s'></col>" % clas)
