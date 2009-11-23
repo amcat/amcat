@@ -44,35 +44,34 @@ def getSolution(edges, goal):
     goal : collection of nodes (comparable using == to the result of the getNodes() of the edges)
     """
     neighbours = getNeighbours(edges)
-#    print "neighbours:"
-    for a, bs in neighbours.items():
-        print "  %s : [%s]" % (a, ",".join(map(str, bs)))
+    # print "neighbours:"
+    # for a, bs in neighbours.items():
+    #     print "  %s : [%s]" % (a, ",".join(map(str, bs)))
     states = []
     for g in goal:
         states.append(State([StartEdge(g)], 0))
     solution = None # best state so far
-#    print "states:"
-    print states
+    # print "states:"
+    # print states
     while True:
-#        print "Next iteration, states=%s, solution so far=%s" % (states, solution)
+        # print "Next iteration, states=%s, solution so far=%s" % (states, solution)
         if not states: break
         newstates = []
         for state in states:
-            
-#            print "state=%s" % state
+            # print "state=%s" % state
             if solution and state.cost >= solution.cost: continue    
             nodes = state.getNodes()
-#            print "  nodes: %r" % nodes
+            # print "  nodes: %r" % nodes
             for node in nodes:
-#                print "    node: %r, neighbours = %r" % (node, neighbours[node])
+                # print "    node: %r, neighbours = %r" % (node, neighbours[node])
                 for edge in neighbours.get(node, []):
                     newnodes = set(edge.getNodes()) - nodes 
                     if newnodes:
                         newstate = state.appendToState(edge)
-                        print "      Adding %s to %s: --> new state %s" % (edge, state, newstate)
+                        # print " Adding %s to %s: --> new state %s" % (edge, state, newstate)
                         if solution and newstate.cost >= solution.cost: continue 
                         if newstate.isSolution(goal):
-                            print "SOLUTION!!!!!!"
+                            #print "SOLUTION!!!!!!"
                             solution = newstate
                         else:
                             newstates.append(newstate)

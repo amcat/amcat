@@ -26,30 +26,7 @@ Interface DataModel
 """
 
 import collections
-
-class Identity(object):
-    """
-    GET ME OUT OF HERE!                                                                                                                                                                                                                                                                              
-    """
-    def __init__(self, *identity):
-        self.__identity__ = tuple([self.__class__] + list(identity)) if identity else None
-    def identity(self):
-        if self.__identity__ is None: raise Exception("Identity object without identity")
-        return self.__identity__
-    def __repr__(self):
-        return "%s%s" % (self.__class__.__name__, self.identity())
-    def __str__(self):
-        return repr(self)
-    def __hash__(self):
-        return hash(self.identity())
-    def __eq__(self, other):
-        if other is None: return False
-        if not isinstance(other, Identity): return False
-        return self.identity() == other.identity()
-    def __cmp__(self, other):
-        if other is None: return False
-        else: return cmp(self.identity(), other.identity())
-
+from toolkit import Identity
 
 ################### Base implementations ##############################
 
@@ -60,6 +37,8 @@ class Field(Identity):
         self.concept = concept
     def __repr__(self):
         return 'Field(%s, %s)' % (self.datasource, self.concept)
+    def __str__(self):
+        return '%s::%s' % (self.datasource, self.concept)
 
         
 class Mapping(Identity):
