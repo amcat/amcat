@@ -1,41 +1,3 @@
-import toolkit
-import operation
-    
-class Aggregator(object):
-    """
-    Class Aggregator creates the actual aggregator object. The
-    aggregator initiates itself with mappings and filters
-    the getData method creates the graph, creates the nodes, creates a
-    state, and reduces it until only data is left. The data will be
-    returned.
-    """
-    def __init__(self, mappings, filters):
-        self.mappings = mappings
-        self.filters = filters
-        self.nodes = []
-        self.operationsFactories = operation.OperationsFactory()
-    def getData(self):
-        state = State(self.mappings, self.filters) 
-        while state.solution is None:
-            best = toolkit.choose(self.operationsFactories.getOperations(state),
-                                  lambda op: op.getUtility(state))
-            #print "len(state)=%i, applying best operation: %s" % (len(state), best)
-            state = best.apply(state)
-        return state.solution
-
-def mappings2edges(mappings, filters):
-    nodes = {} # temp field -> Node map
-    def getNode(field):
-        if field not in nodes:
-            flters = [[x] for x in filters[field]] if field in filters else None
-            nodes[field] = Node([field], flters)
-        return nodes[field]
-    for mapping in mappings:
-        yield Edge(
-            getNode(mapping.a),
-            getNode(mapping.b),
-            mapping)
-
 class State(object):
     """
     The State of the data tabulation/aggregation algorithm consisting of
@@ -43,14 +5,15 @@ class State(object):
     but as Operations are applied the state is reduced by combining different Nodes
     to form Nodes consisting of multiple Fields. 
     """
-    def __init__(self, mappings, filters):
+    def __init__(self, tabulator, mappings, filters):
         """
         mappings is a list of Mapping objects representing the initial state
         filters {field: list-of-values} are seen as a priori data structures on the nodes
         """
+        self.tabulator = tabulator
         self.edges = set(mappings2edges(mappings, filters))
         self.solution = None
-    def removeEdge(self, oldedge, newnode):
+    def collapse(self, oldedge, newnode):
         """
         Removes the given Edge oldedge from this state, replacing its nodes
         by the given Node newnode. Removing the last edge will set the solution
@@ -66,6 +29,7 @@ class State(object):
                     edge.a = newnode
                 if edge.b in oldnodes:
                     edge.b = newnode
+        self.tabulator.clean(self, newnode)
     def getNodes(self):
         nodes = set()
         for edge in self.edges: nodes |= set([edge.a, edge.b])
@@ -74,10 +38,22 @@ class State(object):
         for edge in self.edges:
             if edge.a == fromnode:
                 yield edge
-        
     def __len__(self):
         return len(self.edges)    
 
+
+def mappings2edges(mappings, filters):
+    nodes = {} # temp field -> Node map
+    def getNode(field):
+        if field not in nodes:
+            flters = [[x] for x in filters[field]] if field in filters else None
+            nodes[field] = Node([field], flters)
+        return nodes[field]
+    for mapping in mappings:
+        yield Edge(
+            getNode(mapping.a),
+            getNode(mapping.b),
+            mapping)
 
 class Node(object):
     """
@@ -107,9 +83,3 @@ class Edge(object):
         return "Edge(%r,%r)" % (self.a, self.b)
     __repr__ = __str__
             
-
-#def combineFieldMapping(nodea, nodeb):
-#    mapping = getMapping(nodea, nodeb)
-#    result = Node(nodea.fields + nodeb.fields)
-#    result.data = combinedata(mapping, nodea, nodeb)
-

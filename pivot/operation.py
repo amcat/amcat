@@ -1,4 +1,4 @@
-from aggregatorstate import Node
+from tabulatorstate import Node
 
 class Operation(object):
     """Interface for operations"""
@@ -33,8 +33,8 @@ class ReduceEdgeOperation(Operation):
         the combine function to map the data, and calls the removeEdge
         method of the state to update the state.
         """
-        newnode =  combine(self.edge)
-        state.removeEdge(self.edge, newnode)
+        newnode = combine(self.edge)
+        state.collapse(self.edge, newnode)
         return state
     def __str__(self):
         return "ReduceEdgeOperation(%r)" % self.edge
@@ -76,13 +76,13 @@ def combine(edge):
 
     if reverse: # undo reverse
         nodea, nodeb = nodeb, nodea
-    newnode = Node(nodea.fields + nodeb.fields, newdata)
-    return newnode
+    newfields = nodea.fields + nodeb.fields
+    return Node(newfields, newdata)
 
 def buildrow(arow, brow, reverse=False):
     if reverse: 
         brow, arow = arow, brow
-    return tuple(list(arow) + list(brow))
+    return list(arow) + list(brow)
 
 def findrows(data, index, values):
     if data is None:

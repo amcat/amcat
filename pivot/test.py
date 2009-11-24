@@ -1,7 +1,7 @@
 from datasource import DataSource, FunctionalDataModel, FunctionalMapping, Field, Identity
 from functools import partial
 from mst import getSolution
-from aggregator import Aggregator
+import tabulator
 import table2
 
 def getter(mapdict, b, reverse=False):
@@ -45,15 +45,14 @@ dm = FunctionalDataModel(getSolution)
 dm.register(SillyDataSource("AMCAT", AMCAT_DB))
 dm.register(SillyDataSource("LUCENE", LUCENE_DB))
 
-filters = { "date" : [40, 34]  }
-state = dm.getRoute("date", "nhits")
-                  
-ag = Aggregator(state.getEdges(), filters)
+filters = { "date" : [34]  }
+select = ["nhits", "date","nhits"]
 
-n = ag.getData()
-print " | ".join(map(lambda x: "%-15s" % x, n.fields))
-print "-+-".join(["-"*15 for x in n.fields])
-for row in n.data:
+data = tabulator.tabulate(dm, select, filters)
+
+print " | ".join(map(lambda x: "%-15s" % x, select))
+print "-+-".join(["-"*15 for x in select])
+for row in data:
     print " | ".join(map(lambda x: "%-15s" % x, row))
 
             

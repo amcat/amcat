@@ -78,5 +78,4 @@ def getSolution(edges, goal):
         states = newstates
     
     if solution:
-        solution.edges = [edge for edge in solution.edges if not isinstance(edge, StartEdge)]
-    return solution 
+        return [edge for edge in solution.edges if not isinstance(edge, StartEdge)]
