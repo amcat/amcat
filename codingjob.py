@@ -10,7 +10,7 @@ def getCodedArticle(db, cjaid):
     
 def getCodedArticleIdsFromArticleId(db, articleid):
     data = db.doQuery("select codingjob_articleid from codingjobs_articles where articleid=%i"% articleid)
-    if not data: return None
+    if not data: return []
     return (row[0] for row in data)
 
 def getCodedArticlesFromArticleId(db, articleid):

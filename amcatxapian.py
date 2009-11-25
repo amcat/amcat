@@ -13,7 +13,6 @@ class Index(object):
             self._aidmap = {}
             for d in self.documents:
                 self._aidmap[int(d.get_data())] = d.get_docid()
-        print self._aidmap
         return self._aidmap
     
     def getDocumentID(self, article):

@@ -330,7 +330,10 @@ def element(tag, content, **attrs):
         if content.url:
             text = "<a href='%s'>%s</a>" % (content.url, text)
     else:
-        text = str(content)
+        if type(content) == unicode:
+            text= content.encode('ascii', 'replace')
+        else:
+            text = str(content)
         
     if attrs:
         astr = " " + attr2str(attrs)
