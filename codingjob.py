@@ -22,6 +22,14 @@ def getCodedSentencesFromArticleId(db, articleid):
         for cs in ca.sentences:
             yield cs
 
+def getCodedSentencesFromCodingjobIds(db, codingjobids):
+    for cjid in codingjobids:
+        cj = CodingJob(db, cjid)
+        for s in cj.sets:
+            for ca in s.articles:
+                for cs in ca.sentences:
+                    yield cs
+            
 class CodingJob(Cachable):
     __table__ = 'codingjobs'
     __idcolumn__ = 'codingjobid'
@@ -467,6 +475,19 @@ def getCACoders(cas):
     return sorted(set(ca.set.coder for ca in cas))
 
 
+def getValue(row, schemafield):
+    val = row.getValue(schemafield)
+    val = schemafield.deserialize(val)
+    return val
+
+def getCodingTable(units, valfunc=getValue, coder=True):
+    units.sort(key = lambda r:(r.ca.set.coder, r.sentence))
+    t = table2.ObjectTable(rows=units)
+    t.addColumn("Coder", lambda r: r.ca.set.coder)
+    t.addColumn("Sentence", lambda r: "%i.%i : %s" % (r.sentence.parnr, r.sentence.sentnr, r.sentence.text[:20]))
+    for c in units[0].ca.set.job.unitSchema.fields:
+        t.addColumn(c.label, functools.partial(valfunc, schemafield=c))
+    return t
 
 if __name__ == '__main__':
     import dbtoolkit, adapter

@@ -123,7 +123,7 @@ class Network(object):
             e.sign = q
             result.append(e)
         return result
-
+    
     def judgementExtrapolation(self, ont):
         # deprecated
         ideal = ont.nodes[1625]
@@ -335,6 +335,18 @@ class Sent:
     def __init__(self, art):
         self.article = art
 
+def fromCodingjobs(db, codingjobids, ont=None):
+    if not ont:
+        import ont2
+        ont = ont2.fromDB(db)
+    d = Dataset()
+    for cs in codingjob.getCodedSentencesFromCodingjobIds(db, codingjobids):
+        d.add(fromCodedSentence(cs, ont))
+    return d
+
+def networkFromCodingjobs(db, codingjobids, ont=None):
+    return fromCodingjobs(db, codingjobids, ont).getArrows()
+                    
 if __name__ == '__main__':
     import dbtoolkit, ont2, sys
     debug = toolkit.Debug("net",2)

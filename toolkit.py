@@ -1269,7 +1269,9 @@ class Identity(object):
         if self.__identity__ is None: raise Exception("Identity object without identity")
         return self.__identity__
     def __repr__(self):
-        return "%s%s" % (self.identity())
+        i = self.identity()
+        if i[0] == self.__class__: i = i[1:]
+        return "%s%r" % (self.__class__.__name__, i)
     def __str__(self):
         return repr(self)
     def __hash__(self):
