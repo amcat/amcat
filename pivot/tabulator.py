@@ -52,6 +52,7 @@ class Tabulator(object):
             if edge.b == node:
                 keep.add(edge.mapping.b)
         dellist = [i for (i, field) in enumerate(node.fields) if field not in keep]
+        dellist.sort(reverse=True)
         for row in node.data:                                    
             for i in dellist:
                 del row[i]

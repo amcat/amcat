@@ -53,11 +53,13 @@ class OperationsFactory(object):
             
 def combine(edge):
     """
-    The combine function combines the two nodes of the given edge
+    The combine function combines t
+    he two nodes of the given edge
     Returns a new node resulting from the combination
     """
     nodea, nodeb, mapping = edge.a, edge.b, edge.mapping
-
+    if nodea.data is None and nodeb.data is None:
+        raise Exception("No data!")
     
     # Get index of mapping in Fields list of node
     indexa = nodea.fields.index(mapping.a)

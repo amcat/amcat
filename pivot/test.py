@@ -45,8 +45,8 @@ dm = FunctionalDataModel(getSolution)
 dm.register(SillyDataSource("AMCAT", AMCAT_DB))
 dm.register(SillyDataSource("LUCENE", LUCENE_DB))
 
-filters = { "date" : [34]  }
-select = ["nhits", "date","nhits"]
+filters = { "date" : [34, 40]  }
+select = ["nhits", "date","medium"]
 
 data = tabulator.tabulate(dm, select, filters)
 
