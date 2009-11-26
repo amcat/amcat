@@ -1,4 +1,5 @@
 import toolkit
+import collections
 avg = toolkit.average
 
 class Scorer(object):
@@ -38,30 +39,23 @@ class Scorer(object):
         return (2*p*r) / (p+r+0.00000000000000000000000000000000000001)
 
 class Scorers(object):
-    def __init__(self, tags):
-        self.scorers = {}
-        self.confmatrix = {} # {true, pred : n}
-        for tag in tags:
-            self.scorers[tag] = Scorer()
+    def __init__(self, tags="dummy"):
+        self.scorers = collections.defaultdict(Scorer)
+        self.confmatrix = collections.defaultdict(int) # {true, pred : n}
         self._nok = 0
         self._n = 0
 
     def observe(self, correct, guess):
         self._n += 1
-        if (correct, guess) in self.confmatrix:
-            self.confmatrix[correct, guess] += 1
-        else:
-            self.confmatrix[correct, guess] = 1
+        self.confmatrix[correct, guess] += 1
 
         if correct == guess:
             self.scorers[correct].tp()
             self._nok += 1
         else:
-            for tag in self.scorers:
-                if correct == tag:
-                    self.scorers[tag].fn()
-                if guess == tag:
-                    self.scorers[tag].fp()
+            self.scorers[correct].fn()
+            self.scorers[guess].fp()
+
     def observeUnit(self, unit, correct, guess):
         # to allow use as sink
         self.observe(correct, guess)
@@ -72,10 +66,7 @@ class Scorers(object):
         else:
             return self._n
     def accuracy(self):
-#        if tag:
-#            return self.scorers[tag].accuracy()
-#        else:
-            return float(self._nok) / self._n
+        return float(self._nok) / self._n
     def recall(self, tag):
         return self.scorers[tag].recall()
     def precision(self, tag):

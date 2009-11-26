@@ -22,13 +22,17 @@ def getCodedSentencesFromArticleId(db, articleid):
         for cs in ca.sentences:
             yield cs
 
-def getCodedSentencesFromCodingjobIds(db, codingjobids):
+def getCodedArticlesFromCodingjobIds(db, codingjobids):
     for cjid in codingjobids:
         cj = CodingJob(db, cjid)
         for s in cj.sets:
             for ca in s.articles:
-                for cs in ca.sentences:
-                    yield cs
+                yield ca
+                    
+def getCodedSentencesFromCodingjobIds(db, codingjobids):
+    for ca in getCodedArticlesFromCodingjobIds(db, codingjobids):
+        for cs in ca.sentences:
+            yield cs
             
 class CodingJob(Cachable):
     __table__ = 'codingjobs'

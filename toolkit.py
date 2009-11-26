@@ -1305,6 +1305,9 @@ def getGroup1(regExp, text, flags=re.DOTALL):
         return match.group(1)
     return None
 
+def prnt(str):
+    print str
+ 
 class Counter(collections.defaultdict):
     def __init__(self):
         collections.defaultdict.__init__(self, int)
@@ -1318,13 +1321,13 @@ class Counter(collections.defaultdict):
             for o in objects:
                 self.count(o)
         
-    def items(self):
-        return sortItems(collections.defaultdict.items(self), reverse=True, byValue=True)
-    def prnt(self, threshold=None):
-        for k,v in self.items():
-            if threshold and v < threshold:
-                print "%4i\t%s" % (v, k)
-    
+    def items(self, reverse=True, byValue=True):
+        return sortItems(collections.defaultdict.items(self), reverse=reverse, byValue=byValue)
+    def prnt(self, threshold=None, outfunc=prnt, reverse=True, byValue=True):
+        for k,v in self.items(reverse=reverse, byValue=byValue):
+            if (not threshold) or  v < threshold:
+                outfunc("%4i\t%s" % (v, k))
+                        
 def convertImage(image, informat, outformat=None, quality=None, scale=None):
     cmd = 'convert '
     if scale: cmd += ' -geometry %1.2f%%x%1.2f%% ' % (scale*100, scale*100)
