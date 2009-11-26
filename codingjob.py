@@ -377,7 +377,7 @@ class AnnotationSchemaField(object):
         self.default = default
     def deserialize(self, value):
         return value
-    def getLabel(self, value, annotation):
+    def getLabel(self, value, annotation=None):
         if type(value) == float:
             return "%1.2f"  % value
         return value
@@ -417,8 +417,10 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
                 sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.params['table'])
                 self._labels =  dict(self.schema.db.doQuery(sql))
         return self._labels
-    def getLabel(self, value, annotation):
+    def getLabel(self, value, annotation=None):
         if value is None: return None
+        if type(value) in (int, float, str, unicode):
+            return str(value)
         return value.label
         #v = self.deserialize(value)
         #if not v: return None
@@ -432,7 +434,7 @@ class LookupValue(toolkit.IDLabel):
 class FromAnnotationSchemaField(AnnotationSchemaField):
     def __init__(self, *vals):
         AnnotationSchemaField.__init__(self, *vals)
-    def getLabel(self, value, codedsentence):
+    def getLabel(self, value, codedsentence=None):
         froms = []
         for s in codedsentence.ca.sentences:
             if s.sentence == codedsentence.sentence:
@@ -462,7 +464,7 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
         if val is None:
             return value
         return val
-    def getLabel(self, value, codedsentence):
+    def getLabel(self, value, codedsentence=None):
         v = self.deserialize(value)
        
         if not v: return None
