@@ -1,10 +1,3 @@
-sentiment-bearing adjectives (Cornetto-based)
-november 2009
-seed synsets list : 1000
-2571 negative/ 2005 positive/ 1456 neutral/ 238 posneg
-confidence score (cf-score) ranging from 1.0 (best) to 0.2
-**********************************************************
-
 cf-score/word/pos/sentiment
 1.0/aanbiddelijk/a/positive
 1.0/aandachtig/a/positive

@@ -5,34 +5,36 @@ db = dbtoolkit.amcatDB()
 lines = file.readlines()
 startwords = sys.maxint
 
+sentmap = {
+    'positive' : 100,
+    'negative' : -100,
+    'neutral'  : 0,
+    'posneg'   : 0,
+}
+
+
 #sql = "select * from words_lemmata where pos = 'A'" 
 #res = db.doQuery(sql)
 
 for nr, line in enumerate(lines):
     line = line.strip("\n")
-    line = line.split("/")
-    if line[0] == "cf-score": 
-        startwords = nr 
-    if startwords < nr:
-        confidence = int(float(line[0].replace(',','.'))*100)
-        sentiment = None
-        if line[3] == 'positive':
-            sentiment = 100
-        elif line[3] == 'negative':
-            sentiment = -100
-        elif line[3] == 'neutral':
-            sentiment = 0
-        else:
-            sentiment = 0
-        sql = "select * from words_lemmata where lemma = '%s' AND pos = 'A'" %(line[1])
-        res = db.doQuery(sql)
-        randomvalue = None
-        if res:
-            insertintodb = "insert into words_sentiment values (%s, %s, %s)"% (res[0][0], sentiment, confidence)
-            db.doInsert(insertintodb)
-        else:
-            randomvalue = random.randint(250000,251000)
-            insertintodb = "insert into words_lemmata values (%s, %s, 'A',1,2)"% (randomvalue,line[1],sentiment)
-            insertsentiment = "insert into words_sentiment values (%s, %s, %s)"% (randomvalue, sentiment, confidence)
+    confidence, lemma, pos, sentiment  = line.split("/")
 
-file.close()
+    if confidence == "cf-score":
+        continue
+        
+    confidence = int(float(confidence.replace(",",".")) * 100)
+    sentiment = sentmap[sentiment]
+    print sentiment
+
+    sql = "select lemmaid from words_lemmata where lemma = '%s' AND pos = 'A'" %(lemma)
+    lid = db.getValue(sql)
+    if not lid:
+        lid = db.insert("words_lemmata", dict(lemma=lemma, pos='A', celex=0,languageid=2))
+        print "Creatied new lemma %i for %s" % (lid, lemma)
+
+    print "Inserting %s / %i / %s / %s" % (lemma, lid, sentiment, confidence)
+    db.insert("words_sentiment", dict(lemmaid=lid, sentiment=sentiment, confidence=confidence), retrieveIdent=False)
+    
+
+db.conn.commit()
