@@ -1,4 +1,4 @@
-import dbtoolkit, sys
+import dbtoolkit, sys, random
 
 file = open("sentiment-adj.txt")
 db = dbtoolkit.amcatDB()
@@ -26,10 +26,13 @@ for nr, line in enumerate(lines):
             sentiment = 0
         sql = "select * from words_lemmata where lemma = '%s' AND pos = 'A'" %(line[1])
         res = db.doQuery(sql)
+        randomvalue = None
         if res:
             insertintodb = "insert into words_sentiment values (%s, %s, %s)"% (res[0][0], sentiment, confidence)
             db.doInsert(insertintodb)
         else:
-            insertinto
+            randomvalue = random.randint(250000,251000)
+            insertintodb = "insert into words_lemmata values (%s, %s, 'A',1,2)"% (randomvalue,line[1],sentiment)
+            insertsentiment = "insert into words_sentiment values (%s, %s, %s)"% (randomvalue, sentiment, confidence)
 
 file.close()
