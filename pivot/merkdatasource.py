@@ -22,11 +22,11 @@ class MerkDataMapping(Mapping):
         Mapping.__init__(self, a, b)
     def map(self, value, reverse):
         #print a,b
-        #if reverse:
-        print value
-        return self.getMerkenPerArticle(value)
-        #else:
-        #    return self.getArtikelenPerMerk(value)
+        if reverse:
+            return self.getMerkenPerArticle(value)
+        else:
+            return self.getArtikelenPerMerk(value)
+        
     def getMerkenPerArticle(self,value):
         index = self.a.datasource.index
         brands = self.a.datasource.brands
