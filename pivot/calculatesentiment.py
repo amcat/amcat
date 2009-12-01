@@ -1,6 +1,6 @@
+import datasource
 
-
-class ArticleSentiment(object):
+class ArticleSentiment(o):
     import dbtoolkit
     import amcatxapian, xapian, aggregator
     
@@ -11,14 +11,17 @@ class ArticleSentiment(object):
 
     def calculateSentimentArticle(self, article):
         docid = self.index.getDocumentID(article)
-        words_sentiment = "select lemma, lemmaid, sentiment from words_lemmata, words_sentiment where words_sentiment.lemmaid = words_lemmata.lemmaid"
-        #words_sentiment = "select lemmaid from words_lemmata"
-        sentiments = self.db.doQuery(words_sentiment)
-        #print sentiments
+        words_sentiment = "select lemma, sentiment/100 from words_lemmata l inner join wva.words_sentiment s on l.lemmaid = s.lemmaid"
+        sdict = dict(self.db.doQuery(words_sentiment))
+        print sdict
+        return
         sumsentiment=0
-        for lemma in sentiments[2]:
-            sumsentiment+=int(lemma)
-
+        for lemma, lemmaid, sentiment in sentiments:
+            if not lemma:
+                print lemma
+                break
+            if lemma in article.getText():
+                sumsentiment+=int(sentiment)
         return sumsentiment
     
     def calculateSentiments(self):
@@ -42,7 +45,8 @@ if __name__ == '__main__':
     i = amcatxapian.Index("/home/marcel/amcatindex",dbtoolkit.amcatDB())
     db = dbtoolkit.amcatDB()
     artsent = ArticleSentiment(i, db, "yakult")
-    print artsent.calculateSentiments()
+    for a in artsent.calculateSentiments():
+        print a
 
 ## class ArticleAggregateFunction(AggregateFunction):
 ##     def __init__(self, article):
