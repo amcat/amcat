@@ -1,9 +1,11 @@
-import collections 
+import collections, toolkit
 
-class State(object):
+class State(toolkit.Identity):
     def __init__(self, edges=None, cost=0):
         self.edges = set(edges) or set()
         self.cost = cost
+    def identity(self):
+        return tuple(sorted(self.edges))
     def __str__(self):
         return "State([%s], %i)" % (",".join(map(str, self.edges)), self.cost)
     def getEdges(self):
@@ -29,11 +31,14 @@ def getNeighbours(edges):
             neighbours[node].add(edge)
     return neighbours
     
-class StartEdge(object):
+class StartEdge(toolkit.Identity):
     def __init__(self, node):
         self.node = node
+    def identity(self):
+        return self.node
     def getNodes(self): return [self.node]
     def getCost(self): return 0
+    def __str__(self): return str(self.node)
     
 def getSolution(edges, goal):
     """
@@ -53,8 +58,11 @@ def getSolution(edges, goal):
     solution = None # best state so far
     # print "states:"
     # print states
+    i = 0
     while True:
-        # print "Next iteration, states=%s, solution so far=%s" % (states, solution)
+        i += 1
+        toolkit.warn("Iteration %i, solution so far=%s, %i states" % (i, solution, len(states)))
+        #print "Next iteration, solution so far=%s, states:\n %s" % (solution, "\n  ".join(map(str,states)))
         if not states: break
         newstates = []
         for state in states:
@@ -75,7 +83,6 @@ def getSolution(edges, goal):
                             solution = newstate
                         else:
                             newstates.append(newstate)
-        states = newstates
-    
+        states = set(newstates)
     if solution:
         return [edge for edge in solution.edges if not isinstance(edge, StartEdge)]

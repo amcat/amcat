@@ -1,4 +1,5 @@
 from tabulatorstate import Node
+import toolkit
 
 class Operation(object):
     """Interface for operations"""
@@ -26,6 +27,7 @@ class ReduceEdgeOperation(Operation):
                if self.edge.a.data else None)
         u2 = (-1 * len(self.edge.b.data) * self.edge.mapping.getCost(reverse=True)
                if self.edge.b.data else None)
+        toolkit.warn("Utility max(%s,%s)=%s for %s" % (u1, u2, max(u1, u2), self))
         return max(u1, u2)
     def apply(self, state):
         """
@@ -33,11 +35,12 @@ class ReduceEdgeOperation(Operation):
         the combine function to map the data, and calls the removeEdge
         method of the state to update the state.
         """
+        toolkit.warn("Applying map %s" % str(self))
         newnode = combine(self.edge)
         state.collapse(self.edge, newnode)
         return state
     def __str__(self):
-        return "ReduceEdgeOperation(%r)" % self.edge
+        return "Reduce(%s (%s) -> (%s) %s)" % (self.edge.a.fields, self.edge.a.data and len(self.edge.a.data), self.edge.b.data and len(self.edge.b.data), self.edge.b.fields)
     __repr__ = __str__
         
 class OperationsFactory(object):
@@ -59,7 +62,7 @@ def combine(edge):
     """
     nodea, nodeb, mapping = edge.a, edge.b, edge.mapping
     if nodea.data is None and nodeb.data is None:
-        raise Exception("No data!")
+        raise Exception("No data! in mapping %s to %s" % (nodea, nodeb))
     
     # Get index of mapping in Fields list of node
     indexa = nodea.fields.index(mapping.a)
