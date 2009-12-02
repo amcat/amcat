@@ -35,6 +35,8 @@ class Table(object):
         self.coltotals  = [] # Header objects
         self.rowtotals  = [] # Header objects
         self.cellheader = cellheader
+    def getValue(self, row, column):
+        return self.cellfunc(row, column)
     def toHTML(self, *args, **kargs):
         w = StringIO.StringIO()
         HTMLGenerator(w, *args, **kargs).toHTML(self)

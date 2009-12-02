@@ -8,11 +8,13 @@ class Index(object):
         self._aidmap = None
         self.stem=stem
 
+
     def _getAidmap(self):
         if self._aidmap is None:
             self._aidmap = {}
             for d in self.documents:
                 self._aidmap[int(d.get_data())] = d.get_docid()
+        #print self._aidmap
         return self._aidmap
     
     def getDocumentID(self, article):
@@ -61,9 +63,10 @@ class Index(object):
                 yield term, t.termfreq
 
     def query(self,  query, returnWeights=False):
-        q = xapian.Query(query)
+        if type(query) in (str, unicode):
+            query = self.parse(query)
         enquire = xapian.Enquire(self.index)
-        enquire.set_query(q)
+        enquire.set_query(query)
         matches = enquire.get_mset(0,self.index.get_doccount())
         for m in matches:
             a = self.getArticle(m.docid)
@@ -71,12 +74,24 @@ class Index(object):
                 yield a, m.weight
             else:
                 yield a
+                
+    def queryCount(self,  query):
+        i = 0
+        for x in self.query(query):
+            i += 1
+        return i
         
-
     def mapFrequencies(self, article, map):
         for term, freq in self.getFrequencies(article, raw=True):
             if term in map:
                 map[term] = freq
+
+    def parse(self, query):
+        qp = xapian.QueryParser()
+        qp.set_database(self.index)
+        return qp.parse_query(query, xapian.QueryParser.FLAG_WILDCARD)
+                
+
 
 def createIndex(indexloc, articles, db=None, stemmer="dutch"):
     
@@ -87,7 +102,11 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch"):
     for a in articles:
         if type(a) == int:
             a = article.fromDB(db, a)
-        txt = toolkit.stripAccents(a.toText()).encode('ascii', 'replace')
+        try:
+            txt = toolkit.stripAccents(a.toText()).encode('ascii', 'replace')
+        except Exception, e:
+            toolkit.warn("Error on indexing %i: %s" % (a.id, e))
+            continue
         doc = xapian.Document()
         doc.set_data(str(a.id))
         indexer.set_document(doc)
@@ -95,7 +114,6 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch"):
         database.add_document(doc)
     return Index(indexloc, db)
 
-                
 if __name__ == '__main__':
     import sys, dbtoolkit
     if len(sys.argv) <= 1:

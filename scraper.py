@@ -220,6 +220,7 @@ def stripText(text, removeSpecial=False):
     if not text: return text
 
     for regExp, replacement in stripRegExpTuple:
+        print regExp
         text = regExp.sub(replacement, text)
 
     if removeSpecial:
