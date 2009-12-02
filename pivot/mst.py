@@ -61,7 +61,7 @@ def getSolution(edges, goal):
     i = 0
     while True:
         i += 1
-        toolkit.warn("Iteration %i, solution so far=%s, %i states" % (i, solution, len(states)))
+        #toolkit.warn("Iteration %i, solution so far=%s, %i states" % (i, solution, len(states)))
         #print "Next iteration, solution so far=%s, states:\n %s" % (solution, "\n  ".join(map(str,states)))
         if not states: break
         newstates = []

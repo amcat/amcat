@@ -49,11 +49,13 @@ class Mapping(Identity):
         self._reversecost = reversecost
     def getCost(self, reverse=False):
         return self._reversecost if reverse else self._cost
-    def map(self, value, reverse=False):
+    def map(self, value, reverse=False, memo=None):
         abstract
     def startMapping(self, values, reverse=False):
-        pass
-    def endMapping(self):
+        """
+        Allows a mapping to prepare the mapping of the given values and
+        return a 'memo' object that will be passed on to the map call
+        """
         pass
     def getNodes(self):
         "to implement IEdge"
@@ -72,7 +74,7 @@ class DataSource(object):
 class FieldConceptMapping(Mapping):
     def __init__(self, concept, field):
         Mapping.__init__(self, concept, field, 1.0, 1.0)
-    def map(self, value, reverse="dummy"):
+    def map(self, value, reverse="dummy", memo=None):
         return [value]
     def __str__(self):
         return "%s => %s" % (self.a, self.b)
@@ -109,7 +111,7 @@ class FunctionalMapping(Mapping):
         Mapping.__init__(self, a, b)
         self._mapfunc = mapfunc
         self._reversefunc = reversefunc
-    def map(self, a, reverse=False):
+    def map(self, a, reverse=False, memo=None):
         f = self._reversefunc if reverse else self._mapfunc
         return f(a)
     

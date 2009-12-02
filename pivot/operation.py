@@ -28,7 +28,7 @@ class ReduceEdgeOperation(Operation):
                if self.edge.a.data else None)
         u2 = (-1 * len(self.edge.b.data) * self.edge.mapping.getCost(reverse=True)
                if self.edge.b.data else None)
-        toolkit.warn("Utility max(%s,%s)=%s for %s" % (u1, u2, max(u1, u2), self))
+        #toolkit.warn("Utility max(%s,%s)=%s for %s" % (u1, u2, max(u1, u2), self))
         return max(u1, u2)
     def apply(self, state):
         """
@@ -36,7 +36,7 @@ class ReduceEdgeOperation(Operation):
         the combine function to map the data, and calls the removeEdge
         method of the state to update the state.
         """
-        toolkit.warn("Applying map %s" % str(self))
+        #toolkit.warn("Applying map %s" % str(self))
         newnode = combine(self.edge)
         state.collapse(self.edge, newnode)
         return state
@@ -76,12 +76,11 @@ def combine(edge):
 
     newdata = []
 
-    mapping.startMapping(arow[indexa] for arow in nodea.data)
+    memo = mapping.startMapping((arow[indexa] for arow in nodea.data), reverse=reverse)
     for arow in nodea.data:
-        mappedvalues = mapping.map(arow[indexa], reverse=reverse)
+        mappedvalues = mapping.map(arow[indexa], reverse=reverse, memo=memo)
         for brow in findrows(nodeb.data, indexb, mappedvalues):
             newdata.append(buildrow(arow, brow, reverse=reverse))
-    mapping.endMapping()
     
     if reverse: # undo reverse
         nodea, nodeb = nodeb, nodea
