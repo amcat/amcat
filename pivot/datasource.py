@@ -35,10 +35,9 @@ class Field(Identity):
         Identity.__init__(self, datasource, concept)
         self.datasource = datasource
         self.concept = concept
-    def __repr__(self):
-        return 'Field(%s, %s)' % (self.datasource, self.concept)
     def __str__(self):
         return '%s::%s' % (self.datasource, self.concept)
+    __repr__ = __str__
 
         
 class Mapping(Identity):
@@ -52,9 +51,17 @@ class Mapping(Identity):
         return self._reversecost if reverse else self._cost
     def map(self, value, reverse=False):
         abstract
+    def startMapping(self, values, reverse=False):
+        pass
+    def endMapping(self):
+        pass
     def getNodes(self):
         "to implement IEdge"
         return [self.a, self.b]
+    def __str__(self):
+        return "%s -> %s" % (self.a, self.b)
+    __repr__ = __str__
+    
     
 class DataSource(object):
     def __init__(self, mappings = None):
@@ -66,7 +73,10 @@ class FieldConceptMapping(Mapping):
     def __init__(self, concept, field):
         Mapping.__init__(self, concept, field, 1.0, 1.0)
     def map(self, value, reverse="dummy"):
-        return [value]        
+        return [value]
+    def __str__(self):
+        return "%s => %s" % (self.a, self.b)
+    __repr__ = __str__
 
 class DataModel(object):
     def __init__(self, datasources = None):

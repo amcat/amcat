@@ -1,5 +1,6 @@
 from tabulatorstate import Node
 import toolkit
+from itertools import izip
 
 class Operation(object):
     """Interface for operations"""
@@ -53,7 +54,7 @@ class OperationsFactory(object):
         Currently returns a ReduceEdgeOperation for each edge
         """
         return map(ReduceEdgeOperation, state.edges)
-            
+       
 def combine(edge):
     """
     The combine function combines t
@@ -74,11 +75,14 @@ def combine(edge):
         nodea, nodeb, indexa, indexb = nodeb, nodea, indexb, indexa
 
     newdata = []
+
+    mapping.startMapping(arow[indexa] for arow in nodea.data)
     for arow in nodea.data:
         mappedvalues = mapping.map(arow[indexa], reverse=reverse)
         for brow in findrows(nodeb.data, indexb, mappedvalues):
             newdata.append(buildrow(arow, brow, reverse=reverse))
-
+    mapping.endMapping()
+    
     if reverse: # undo reverse
         nodea, nodeb = nodeb, nodea
     newfields = nodea.fields + nodeb.fields
