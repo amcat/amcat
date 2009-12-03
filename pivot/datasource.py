@@ -26,7 +26,7 @@ Interface DataModel
 """
 
 import collections
-from toolkit import Identity
+from toolkit import Identity, IDLabel
 
 ################### Base implementations ##############################
 
@@ -80,18 +80,22 @@ class FieldConceptMapping(Mapping):
         return "%s => %s" % (self.a, self.b)
     __repr__ = __str__
 
+class Concept(object):
+    def __init__(self, datamodel):
+        self.datamodel = datamodel
+
 class DataModel(object):
     def __init__(self, datasources = None):
         self._datasources = datasources or set()
+        self._concepts = {} # identifier -> concept
     def register(self, datasource):
         self._datasources.add(datasource)
+    def getConcept(self, identifier):
+        if identifier not in self._concepts:
+            self._concepts[identifier] = Concept(self)
+        return self._concepts[identifier] 
     def getConcepts(self):
-        c = set()
-        for ds in self._datasources:
-            for m in ds.getMappings(): 
-                c.add(m.a.concept)
-                c.add(m.b.concept)
-        return c   
+        return self._concepts.values()
     def getRoute(self):
         abstract
     def getFieldConceptMappings(self):

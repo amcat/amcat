@@ -5,16 +5,16 @@ from datasource import DataSource, Mapping, Field
 from itertools import imap, izip
 
 class AmcatMetadataSource(DataSource):
-    def __init__(self, db):
-        DataSource.__init__(self, self.createMappings())
+    def __init__(self, db, datamodel):
+        DataSource.__init__(self, self.createMappings(datamodel))
         self.db = db
-    def createMappings(self):
-        article = AmcatMetadataField(self, "article", ["articles"], "articleid")
-        batch = AmcatMetadataField(self, "batch", ["articles", "batches"], "batchid")
-        date = AmcatMetadataField(self, "date", ["articles"], "date")
-        source = AmcatMetadataField(self, "source", ["articles"], "mediumid")
-        url = AmcatMetadataField(self, "url", ["articles"], "url")
-        project = AmcatMetadataField(self, "project",["batches"], "projectid")
+    def createMappings(self, datamodel):
+        article = AmcatMetadataField(self, datamodel.getConcept("article"), ["articles"], "articleid")
+        batch = AmcatMetadataField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid")
+        date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], "date")
+        source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles"], "mediumid")
+        url = AmcatMetadataField(self, datamodel.getConcept("url"), ["articles"], "url")
+        project = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid")
         return [
           AmcatMetadataMapping(article, batch),
           AmcatMetadataMapping(article, date),
@@ -76,17 +76,21 @@ class AmcatMetadataMapping(Mapping):
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB()
-    ads = AmcatMetadataSource(db)
     
     from mst import getSolution
     from datasource import FunctionalDataModel
     import tabulator
     
     dm = FunctionalDataModel(getSolution)
+    ads = AmcatMetadataSource(db, dm)
     dm.register(ads)
     
-    filters = { "project" : [368], "article" : [44134082,44135035, 44126401]  }
-    select = ["project","article","date", "batch"]
+    print dm.getConcepts()
+    
+    project = dm.getConcept("project")
+    art = dm.getConcept("article")
+    filters = {project : [368], art : [44134082,44135035, 44126401]  }
+    select = [art, project]
 
     data = tabulator.tabulate(dm, select, filters)
 
