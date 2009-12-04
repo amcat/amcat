@@ -13,7 +13,7 @@ class Table(object):
     def getRows(self):
         return self.rows
     def getColumns(self):
-        return self.colunms
+        return self.columns
 
 class ObjectColumn(object):
     def __init__(self, cellfunc):
