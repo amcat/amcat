@@ -1,4 +1,4 @@
-import table3
+import table3, associations
 
 """ 
 Uitdagingen:
@@ -10,7 +10,7 @@ Uitdagingen:
 def aggregate(table, selectcolumns, aggregatecolumns):
     dict = {}
     for row in table.getRows():
-        key = tuple(row[i] for i in selectcolumns)
+        key = tuple(table.getValue(row, col) for col in selectcolumns)
         if not dict.has_key(key):
             vals = tuple(a.getAggregateFunction() for a in aggregatecolumns)
             dict[key] = vals
@@ -61,6 +61,15 @@ class Average(AggregateFunction):
             self.total += value
     def final(self):
         return self.total / float(self.count)
+    
+class Associate(AggregateFunction):
+    def __init__(self):
+        self.association = None
+    def running(self, value):
+        if value is not None:
+            self.association = associations.BrandAssociation(db, index).getAssociationsBrand(value)
+    def final(self):
+        return self.association
             
 class AggregateColumn(object):
     def __init__(self, factory=None):
@@ -73,6 +82,8 @@ class AggregateColumn(object):
         abstract
     def final(self, function):
         return function.final()
+    def getConcepts(self):
+	return []
 
 class SimpleAggregateColumn(AggregateColumn):
     def __init__(self, column, aggregateFactory):
@@ -80,6 +91,8 @@ class SimpleAggregateColumn(AggregateColumn):
         self.column = column
     def getValue(self, table, row):
         return table.getValue(row, self.column)
+    def getConcepts(self):
+	return [self.column]
     
 class ListTable(object):
     def __init__(self, lst):

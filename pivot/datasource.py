@@ -81,8 +81,11 @@ class FieldConceptMapping(Mapping):
     __repr__ = __str__
 
 class Concept(object):
-    def __init__(self, datamodel):
+    def __init__(self, datamodel, label):
         self.datamodel = datamodel
+        self.label = label
+    def __str__(self):
+        return self.label
 
 class DataModel(object):
     def __init__(self, datasources = None):
@@ -92,7 +95,7 @@ class DataModel(object):
         self._datasources.add(datasource)
     def getConcept(self, identifier):
         if identifier not in self._concepts:
-            self._concepts[identifier] = Concept(self)
+            self._concepts[identifier] = Concept(self, identifier)
         return self._concepts[identifier] 
     def getConcepts(self):
         return self._concepts.values()
