@@ -30,6 +30,9 @@ class Property(object):
     def retrieve(self): abstract
     def prepareCache(self, cacher): pass
     def doCache(self, cacher): pass
+    def uncache(self):
+        self.value = None
+        self.cached = False
 
 class DBProperty(Property):
     def __init__(self, cachable, fieldname, func=None, table=None):
@@ -127,6 +130,8 @@ class Cachable(object):
     def cacheValues(self, **values):
         for prop, val in values.iteritems():
             self.__properties__[prop].cache(val)
+    def removeCached(self, prop):
+        self.__properties__[prop].uncache()
     def cacheProperties(self, *propnames):
         cacheMultiple([self], propnames)
     def sqlFrom(self, table=None):

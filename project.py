@@ -65,10 +65,33 @@ class Batch(Cachable):
         if project is not None:
             self.cacheValues(project=project)
 
+def getAid(art):
+    if type(art) == int: return art
+    return art.id
+
+class StoredResult(Cachable):
+    __table__ = 'storedresults'
+    __idcolumn__ = 'storedresultid'
+    def __init__(self, db, id):
+        Cachable.__init__(self, db, id)
+        self.addDBProperty("name")
+        self.addDBProperty("project", "projectid", func=partial(Project, db))
+        self.addDBProperty("owner", "ownerid", user.users(self.db).getUser)
+        self.addDBFKProperty("articles", "storedresults_articles","articleid", function=lambda aid: article.fromDB(self.db, aid))
+    def addArticles(self, articles):
+        self.db.insertmany("storedresults_articles", ["storedresultid", "articleid"],
+                           [(self.id, getAid(a)) for a in articles])
+        self.removeCached("articles")
+        
+        
+
+        
 if __name__ == '__main__':
     import dbtoolkit
-    p = Batch(dbtoolkit.amcatDB(), 4613)
+    p = StoredResult(dbtoolkit.amcatDB(), 688)
     print p.name
     print p.project.name
-    print list(p.articles)[:30]
-
+    print len(p.articles)
+    p.addArticles([42615480, 42660818, 42549384, 42691728, 42526488])
+    print len(p.articles)
+    p.db.conn.commit()

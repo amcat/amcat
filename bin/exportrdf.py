@@ -12,6 +12,8 @@ SKOS_PREFLABEL = NS_SKOS[u"prefLabel"]
 SKOS_ALTLABEL = NS_SKOS[u"altLabel"]
 SKOS_BROADER = NS_SKOS[u"broader"]
 
+NET_OMKLAP = NS_NET[u"broader_opposite"]
+
 RDFS_SUBPROP = NS_RDFS["subPropertyOf"]
 RDF_TYPE = NS_RDF["type"]
 
@@ -41,8 +43,12 @@ def ont2skos(ont, graph=None, subprops=True):
             
         for cls, (parent, omklap) in node.parents.items():
             if parent:
+                omklap = omklap == -1
                 n2 = rdfnode(parent)
-                cls = skoslink(cls) if subprops else SKOS_BROADER
+                if subprops:
+                    cls = skoslink(cls, omklap)
+                else:
+                    cls = NET_OMKLAP if omklap else SKOS_BROADER
                 classes.add(cls)
                 graph.add((rn, cls, n2))
     if subprops:
@@ -51,10 +57,11 @@ def ont2skos(ont, graph=None, subprops=True):
                 
     return graph
             
-def skoslink(cls):
+def skoslink(cls, omklap=False):
     l = cls.label
     l = l.replace(" ","_")
     l = re.sub("\W","", l)
+    if omklap: l+= "_opposite"
     return NS_ONT[l]
             
 def rdfnode(n):
