@@ -61,15 +61,6 @@ class Average(AggregateFunction):
             self.total += value
     def final(self):
         return self.total / float(self.count)
-    
-class Associate(AggregateFunction):
-    def __init__(self):
-        self.association = None
-    def running(self, value):
-        if value is not None:
-            self.association = associations.BrandAssociation(db, index).getAssociationsBrand(value)
-    def final(self):
-        return self.association
             
 class AggregateColumn(object):
     def __init__(self, factory=None):

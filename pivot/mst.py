@@ -1,5 +1,8 @@
 import collections, toolkit
 
+def profile(s):
+    toolkit.ticker.warn(s)
+
 class State(toolkit.Identity):
     def __init__(self, edges=None, cost=0):
         self.edges = set(edges) or set()
@@ -48,6 +51,7 @@ def getSolution(edges, goal):
               getCost()
     goal : collection of nodes (comparable using == to the result of the getNodes() of the edges)
     """
+    profile("Getting solution %s" % (goal,))
     neighbours = getNeighbours(edges)
     # print "neighbours:"
     # for a, bs in neighbours.items():
@@ -55,13 +59,14 @@ def getSolution(edges, goal):
     states = []
     for g in goal:
         states.append(State([StartEdge(g)], 0))
+        break
     solution = None # best state so far
     # print "states:"
     # print states
     i = 0
     while True:
         i += 1
-        #toolkit.warn("Iteration %i, solution so far=%s, %i states" % (i, solution, len(states)))
+        profile("Iteration %i, solution so far=%s, %i states" % (i, solution, len(states)))
         #print "Next iteration, solution so far=%s, states:\n %s" % (solution, "\n  ".join(map(str,states)))
         if not states: break
         newstates = []
@@ -83,6 +88,9 @@ def getSolution(edges, goal):
                             solution = newstate
                         else:
                             newstates.append(newstate)
+        profile("Merging states")
         states = set(newstates)
     if solution:
+        profile("Got olution %s cost=%s" % (goal,solution.cost))
         return [edge for edge in solution.edges if not isinstance(edge, StartEdge)]
+    profile("No solution for %s" % (goal,))

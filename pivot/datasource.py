@@ -86,7 +86,9 @@ class Concept(object):
         self.label = label
     def __str__(self):
         return self.label
-
+    def __repr__(self):
+        return "Concept(%s)" % self.label
+    
 class DataModel(object):
     def __init__(self, datasources = None):
         self._datasources = datasources or set()
