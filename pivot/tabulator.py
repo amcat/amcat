@@ -27,7 +27,6 @@ class Tabulator(object):
             best = toolkit.choose(self.operationsFactory.getOperations(state),
                                   lambda op: op.getUtility(state))
             state = best.apply(state)
-        
         return self._getColumns(state.solution)
     def _getColumns(self, node):
         if node.fields == self.select: return node.data

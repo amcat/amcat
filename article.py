@@ -390,7 +390,6 @@ def articlesFromDB(db, ids, headline=True):
         return 
     if not db:
         db = dbtoolkit.anokoDB()
-
     data = None; text = None
     if toolkit.isSequence(ids, True):
         ids = ",".join(str(id) for id in ids)

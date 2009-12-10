@@ -51,7 +51,6 @@ def getSolution(edges, goal):
               getCost()
     goal : collection of nodes (comparable using == to the result of the getNodes() of the edges)
     """
-    profile("Getting solution %s" % (goal,))
     neighbours = getNeighbours(edges)
     # print "neighbours:"
     # for a, bs in neighbours.items():
@@ -66,7 +65,6 @@ def getSolution(edges, goal):
     i = 0
     while True:
         i += 1
-        profile("Iteration %i, solution so far=%s, %i states" % (i, solution, len(states)))
         #print "Next iteration, solution so far=%s, states:\n %s" % (solution, "\n  ".join(map(str,states)))
         if not states: break
         newstates = []
@@ -88,9 +86,6 @@ def getSolution(edges, goal):
                             solution = newstate
                         else:
                             newstates.append(newstate)
-        profile("Merging states")
         states = set(newstates)
     if solution:
-        profile("Got olution %s cost=%s" % (goal,solution.cost))
         return [edge for edge in solution.edges if not isinstance(edge, StartEdge)]
-    profile("No solution for %s" % (goal,))
