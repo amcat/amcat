@@ -57,7 +57,6 @@ class AmcatMetadataMapping(Mapping):
 
     def startMapping(self, values,reverse):
         tables = set(self.a.tables) & set(self.b.tables)
-        #print tables
         if len(tables) <> 1: raise Exception("Intersection not one!")
         table = tables.pop()
 
