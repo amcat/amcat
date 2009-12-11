@@ -65,6 +65,7 @@ def getSolution(edges, goal):
     i = 0
     while True:
         i += 1
+        profile("Iteration %i, #states %i, solutions? %s" % (i, len(states), bool(solution)))
         #print "Next iteration, solution so far=%s, states:\n %s" % (solution, "\n  ".join(map(str,states)))
         if not states: break
         newstates = []

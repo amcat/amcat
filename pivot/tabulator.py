@@ -22,6 +22,7 @@ class Tabulator(object):
         Returns a Node object containing fields and data representing the solution
         """
         route = self.datamodel.getRoute(*self.select)
+        print "Got Route"
         state = State(self, route, self.filters)
         while state.solution is None:
             best = toolkit.choose(self.operationsFactory.getOperations(state),
