@@ -25,7 +25,7 @@ class AmcatMetadataSource(DataSource):
         source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles","media"], "mediumid")
         url = AmcatMetadataField(self, datamodel.getConcept("url"), ["articles"], "url")
         project = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid")
-        sourcetype = AmcatMetadataField(self, datamodel.getConcept("sourcetype"),["media"], "sourcetypeid")
+        sourcetype = AmcatMetadataField(self, datamodel.getConcept("sourcetype"),["media"], "type")
         return [
           AmcatMetadataMapping(article, batch),
           AmcatMetadataMapping(article, date),
