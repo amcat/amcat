@@ -8,6 +8,7 @@ WEEKSQL = "cast(datepart(year, date) as varchar) + '/' + REPLICATE(0,2-LEN(cast(
 DATESQL = "convert(varchar(10), date, 102)"
 DATESQL = "convert(int, convert(varchar(10), date, 112)) "
 WEEKSQL = "datepart(year,date) * 100 + datepart(week, date)"
+YEARSQL = "datepart(year, date)"
 
 class AmcatMetadataSource(DataSource):
     def __init__(self, db, datamodel):
@@ -20,6 +21,7 @@ class AmcatMetadataSource(DataSource):
         quote = AmcatMetadataField(self, datamodel.getConcept("quote"), ["articles"], "headline")
         date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], DATESQL)
         week = AmcatMetadataField(self, datamodel.getConcept("week"), ["articles"], WEEKSQL)
+        year = AmcatMetadataField(self, datamodel.getConcept("year"), ["articles"], YEARSQL)
         source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles"], "mediumid")
         url = AmcatMetadataField(self, datamodel.getConcept("url"), ["articles"], "url")
         project = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid")
@@ -27,6 +29,7 @@ class AmcatMetadataSource(DataSource):
           AmcatMetadataMapping(article, batch),
           AmcatMetadataMapping(article, date),
           AmcatMetadataMapping(article, week),
+          AmcatMetadataMapping(article, year, 1000),
           AmcatMetadataMapping(article, source),
           AmcatMetadataMapping(article, url),
           AmcatMetadataMapping(batch, project),
@@ -43,8 +46,8 @@ class AmcatMetadataField(Field):
         self.column = column
 
 class AmcatMetadataMapping(Mapping):
-    def __init__(self, a, b):
-        Mapping.__init__(self, a, b)
+    def __init__(self, a, b, cost=1.0):
+        Mapping.__init__(self, a, b, cost, cost)
     def map(self, value, reverse, memo=None):
         if memo is None:
             memo = self.startMapping([value], reverse=reverse)
@@ -61,7 +64,7 @@ class AmcatMetadataMapping(Mapping):
 
         valuestr = ",".join(map(str, values))
         sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, valuestr)
-        #print sql_query
+        #print sql_query[:200], len(values)
         result_dict = collections.defaultdict(list)
         for k, v in self.a.datasource.db.doQuery(sql_query):
             result_dict[k].append(v)
@@ -78,10 +81,10 @@ class AmcatMetadataMapping(Mapping):
         selectcol = self.a.column if reverse else self.b.column
         filtercol = self.b.column if reverse else self.a.column
 
-        sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, toolkit.quotesql(values))
+        #sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, toolkit.quotesql(values))
         print sql_query
         result_dict = dict(self.a.datasource.db.doQuery(sql_query))
-        print "done!"
+        #print "done!"
         
         for k, v in result_dict.iteritems():
             self.map(v, reverse)
