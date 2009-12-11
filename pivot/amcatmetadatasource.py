@@ -22,9 +22,10 @@ class AmcatMetadataSource(DataSource):
         date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], DATESQL)
         week = AmcatMetadataField(self, datamodel.getConcept("week"), ["articles"], WEEKSQL)
         year = AmcatMetadataField(self, datamodel.getConcept("year"), ["articles"], YEARSQL)
-        source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles"], "mediumid")
+        source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles","media"], "mediumid")
         url = AmcatMetadataField(self, datamodel.getConcept("url"), ["articles"], "url")
         project = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid")
+        sourcetype = AmcatMetadataField(self, datamodel.getConcept("sourcetype"),["media"], "sourcetypeid")
         return [
           AmcatMetadataMapping(article, batch),
           AmcatMetadataMapping(article, date),
@@ -35,6 +36,7 @@ class AmcatMetadataSource(DataSource):
           AmcatMetadataMapping(batch, project),
           AmcatMetadataMapping(article, headline),
           AmcatMetadataMapping(article, quote),
+          AmcatMetadataMapping(source, sourcetype),
           ]
     def __str__(self):
         return "Amcat"
@@ -55,6 +57,7 @@ class AmcatMetadataMapping(Mapping):
 
     def startMapping(self, values,reverse):
         tables = set(self.a.tables) & set(self.b.tables)
+        print tables
         if len(tables) <> 1: raise Exception("Intersection not one!")
         table = tables.pop()
 
@@ -106,8 +109,10 @@ if __name__ == '__main__':
     
     project = dm.getConcept("project")
     art = dm.getConcept("article")
+    medium = dm.getConcept("source")
+    mediumtype = dm.getConcept("sourcetype")
     filters = {project : [368], art : [44134082,44135035, 44126401]  }
-    select = [art, project]
+    select = [art, project, mediumtype]
 
     data = tabulator.tabulate(dm, select, filters)
 
