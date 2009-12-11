@@ -4,6 +4,11 @@ import collections
 from datasource import DataSource, Mapping, Field
 from itertools import imap, izip
 
+WEEKSQL = "cast(datepart(year, date) as varchar) + '/' + REPLICATE(0,2-LEN(cast(datepart(week, date) as varchar)))+ CONVERT(VARCHAR,cast(datepart(week, date) as varchar))"
+DATESQL = "convert(varchar(10), date, 102)"
+DATESQL = "convert(int, convert(varchar(10), date, 112)) "
+WEEKSQL = "datepart(year,date) * 100 + datepart(week, date)"
+
 class AmcatMetadataSource(DataSource):
     def __init__(self, db, datamodel):
         DataSource.__init__(self, self.createMappings(datamodel))
@@ -13,8 +18,8 @@ class AmcatMetadataSource(DataSource):
         batch = AmcatMetadataField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid")
         headline = AmcatMetadataField(self, datamodel.getConcept("headline"), ["articles"], "headline")
         quote = AmcatMetadataField(self, datamodel.getConcept("quote"), ["articles"], "headline")
-        date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], "convert(varchar(10), date, 102)")
-        week = AmcatMetadataField(self, datamodel.getConcept("week"), ["articles"], "cast(datepart(year, date) as varchar) + '/' + cast(datepart(week, date) as varchar)")
+        date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], DATESQL)
+        week = AmcatMetadataField(self, datamodel.getConcept("week"), ["articles"], WEEKSQL)
         source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles"], "mediumid")
         url = AmcatMetadataField(self, datamodel.getConcept("url"), ["articles"], "url")
         project = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid")
@@ -56,10 +61,11 @@ class AmcatMetadataMapping(Mapping):
 
         valuestr = ",".join(map(str, values))
         sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, valuestr)
-
+        #print sql_query
         result_dict = collections.defaultdict(list)
         for k, v in self.a.datasource.db.doQuery(sql_query):
             result_dict[k].append(v)
+        #print "OK"
 
         return result_dict
     
