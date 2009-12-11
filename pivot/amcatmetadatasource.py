@@ -11,16 +11,22 @@ class AmcatMetadataSource(DataSource):
     def createMappings(self, datamodel):
         article = AmcatMetadataField(self, datamodel.getConcept("article"), ["articles"], "articleid")
         batch = AmcatMetadataField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid")
-        date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], "date")
+        headline = AmcatMetadataField(self, datamodel.getConcept("headline"), ["articles"], "headline")
+        quote = AmcatMetadataField(self, datamodel.getConcept("quote"), ["articles"], "headline")
+        date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], "convert(varchar(10), date, 102)")
+        week = AmcatMetadataField(self, datamodel.getConcept("week"), ["articles"], "cast(datepart(year, date) as varchar) + '/' + cast(datepart(week, date) as varchar)")
         source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles"], "mediumid")
         url = AmcatMetadataField(self, datamodel.getConcept("url"), ["articles"], "url")
         project = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid")
         return [
           AmcatMetadataMapping(article, batch),
           AmcatMetadataMapping(article, date),
+          AmcatMetadataMapping(article, week),
           AmcatMetadataMapping(article, source),
           AmcatMetadataMapping(article, url),
           AmcatMetadataMapping(batch, project),
+          AmcatMetadataMapping(article, headline),
+          AmcatMetadataMapping(article, quote),
           ]
     def __str__(self):
         return "Amcat"
@@ -67,8 +73,10 @@ class AmcatMetadataMapping(Mapping):
         filtercol = self.b.column if reverse else self.a.column
 
         sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, toolkit.quotesql(values))
+        print sql_query
         result_dict = dict(self.a.datasource.db.doQuery(sql_query))
-
+        print "done!"
+        
         for k, v in result_dict.iteritems():
             self.map(v, reverse)
         return 
