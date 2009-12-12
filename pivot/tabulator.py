@@ -21,6 +21,7 @@ class Tabulator(object):
         """
         Returns a Node object containing fields and data representing the solution
         """
+        #TODO: input check: filters -> selcet en select deduplicate
         route = self.datamodel.getRoute(*self.select)
         print "Got Route"
         state = State(self, route, self.filters)
