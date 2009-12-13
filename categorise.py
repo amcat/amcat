@@ -65,8 +65,13 @@ if __name__ == '__main__':
     t = time.time()
     
     ont = ont2.fromDB(dbtoolkit.amcatDB())
-    f = ont.categorisations[101]
-    c = f.categorise(ont.objects[2423])
+    f = ont.categorisations[1]
+    o = ont.objects[9601]
+    c = f.categorise(o)
+    print c
+    import sys;sys.exit(1)
+
+    
     for clas in ont.classes.values():
         p = getPathsToRoot(ont.objects[2423], clas)
         for q in p:

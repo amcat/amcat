@@ -1,8 +1,8 @@
-import collections, toolkit
+import collections, toolkit, datasource
 
 def profile(s):
     toolkit.ticker.warn(s)
-
+ 
 class State(toolkit.Identity):
     def __init__(self, edges=None, cost=0):
         self.edges = set(edges) or set()
@@ -28,6 +28,7 @@ def getNodes(edges):
     return s
 
 def getNeighbours(edges):
+    "Returns a dict of concept : edges)"
     neighbours = collections.defaultdict(set)
     for edge in edges:
         for node in edge.getNodes():
@@ -42,6 +43,7 @@ class StartEdge(toolkit.Identity):
     def getNodes(self): return [self.node]
     def getCost(self): return 0
     def __str__(self): return str(self.node)
+
     
 def getSolution(edges, goal):
     """
@@ -60,33 +62,25 @@ def getSolution(edges, goal):
         states.append(State([StartEdge(g)], 0))
         break
     solution = None # best state so far
-    # print "states:"
-    # print states
     i = 0
     while True:
         i += 1
         profile("Iteration %i, #states %i, solutions? %s" % (i, len(states), bool(solution)))
-        #print "Next iteration, solution so far=%s, states:\n %s" % (solution, "\n  ".join(map(str,states)))
         if not states: break
         newstates = []
         for state in states:
-            # print "state=%s" % state
             if solution and state.cost >= solution.cost: continue    
             nodes = state.getNodes()
-            # print "  nodes: %r" % nodes
             for node in nodes:
-                # print "    node: %r, neighbours = %r" % (node, neighbours[node])
                 for edge in neighbours.get(node, []):
-                    newnodes = set(edge.getNodes()) - nodes 
-                    if newnodes:
+                    hasnewnodes = set(edge.getNodes()) - nodes 
+                    if hasnewnodes:
                         newstate = state.appendToState(edge)
-                        # print " Adding %s to %s: --> new state %s" % (edge, state, newstate)
                         if solution and newstate.cost >= solution.cost: continue 
                         if newstate.isSolution(goal):
-                            #print "SOLUTION!!!!!!"
                             solution = newstate
                         else:
                             newstates.append(newstate)
         states = set(newstates)
-        if solution:
-            return [edge for edge in solution.edges if not isinstance(edge, StartEdge)]
+    if solution:
+        return [edge for edge in solution.edges if not isinstance(edge, StartEdge)]

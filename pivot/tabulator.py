@@ -19,10 +19,12 @@ class Tabulator(object):
         self.filters = filters
     def getData(self):
         """
-        Returns a Node object containing fields and data representing the solution
+        Returns a list of lists representing the solution
         """
-        #TODO: input check: filters -> selcet en select deduplicate
-        route = self.datamodel.getRoute(*self.select)
+        select = set(self.select)
+        select |= set(self.filters.keys())
+            
+        route = self.datamodel.getRoute(*select)
         print "Got Route"
         state = State(self, route, self.filters)
         while state.solution is None:

@@ -36,7 +36,7 @@ class ReduceEdgeOperation(Operation):
         the combine function to map the data, and calls the removeEdge
         method of the state to update the state.
         """
-        #toolkit.warn("Applying map %s" % str(self))
+        toolkit.warn("Applying map %s" % str(self))
         newnode = combine(self.edge)
         state.collapse(self.edge, newnode)
         return state

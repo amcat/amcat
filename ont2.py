@@ -390,51 +390,13 @@ def createObject(db, classid, parentid, label, lang=2, sets=[]):
     return oid
         
 if __name__ == '__main__':
-    print _NR_INC1, _NR_INC2, _NR_INC3
-    x = Number("6011.001")
-    print x + _NR_INC1
-    print x + _NR_INC1 == Number(5001, 1, 0)
-    print x + _NR_INC1 < Number(5001, 1, 1)
-    print x + _NR_INC1 > Number(5001, 0, 1)
-    print x
-    print nextnr(x, set([x, x+_NR_INC3]))
-    x = Number(4001)
-    print
-    print nextnr(x, set([x, x+_NR_INC2]))
-    x = Number(4001, 1, 5)
-    print
-    print nextnr(x, set([x]))
-    print nextnr(x, set([x, x+_NR_INC3]))
-    
     import dbtoolkit
     db = dbtoolkit.anokoDB()
     ont = fromDB(db)
 
-    x = Number("6011.001")
-    o = ont.bynr[x]
-    o.nr = None
-    newnr(o)
+    o = ont.nodes[15619]
+    print o
 
-    o = ont.bynr[Number(4001,1,8)]
-    o.nr = None
-    newnr(o)
-    
-    import sys; sys.exit(1)
-    
-    import dbtoolkit
-    db = dbtoolkit.anokoDB()
-    ont = fromDB(db)
-    
-    
-    print ont.getCategorisation(101,2).objects
-    print map(catlabel, ont.getCategorisation(101,2).getCategorisation(ont.nodes[2423]))
-    f = Functions(ont)
-    n = ont.objects[11546]
-    print n.getSearchString()
-    import sys; sys.exit(1)
-    for year in [2001, 2003, 2005, 2006, 2007]:
-        date = mx.DateTime.DateTime(year, 12, 1)
-        print date
-        for func in n.getParents(includeFunctions=True, functionsDate=date):
-            print "  %s" % func
+    print ont.getCategorisation(1)
 
+    print o.categorise(1)

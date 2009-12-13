@@ -1338,19 +1338,37 @@ def convertImage(image, informat, outformat=None, quality=None, scale=None):
     if err and err.strip():
         warn(err)
     return out
-    
+
+def splitlist(list, itemsperbatch):
+    for i in range(0, len(list), itemsperbatch):
+        yield list[i:i+itemsperbatch]
+
+class Indexer(object):
+    def __init__(self):
+        self.objects = [] # nr -> obj
+        self.index = {} # obj -> nr
+    def getNumber(self, obj):
+        return self.getNumbers(obj)[0]
+    def getNumbers(self, *objs):
+        result = []
+        for obj in objs:
+            nr = self.index.get(obj)
+            if nr is None:
+                nr = len(self.objects)
+                self.objects.append(obj)
+                self.index[obj] = nr
+            result.append(nr)
+        return result
+        
     
 if __name__ == '__main__':
-    print "a", addToSeq(set([1,2,3]), 4)
-    print "b", addToSeq([1,2,3], 4)
-    print "c", addToSeq(set([1,2]), set([3,4]))
-    print "d", addToSeq(set([1,2]), [3,4])
-    print "e", addToSeq([1,2], set([3,4]))
-    print "f", addToSeq([1,2], [3,4])
+    i = Indexer()
+    for x in "afghjaabfgi":
+        print x, i.getNumber(x)
+    print i.objects
 
-    print "g", reduce(addToSeq, [1, 2, 3, 4], set())
-    print "h", reduce(addToSeq, [[1, 2], set([3]), (4,)], set())
-    print "i", reduce(addToSeq, [[1, 2], set([3]), (4,)], [])
+    i = Indexer()
+    xs = list("afghjaabfgi")
+    print xs, i.getNumbers(*xs)
+    print i.objects
 
-    print "j", reduce(addToSeq, [[1, 2], set([3]), (4,)])
-    print "k", reduce(addToSeq, [set([1, 2]), set([3]), (4,)])

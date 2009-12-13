@@ -18,7 +18,6 @@ class AmcatMetadataSource(DataSource):
         article = AmcatMetadataField(self, datamodel.getConcept("article"), ["articles"], "articleid")
         batch = AmcatMetadataField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid")
         headline = AmcatMetadataField(self, datamodel.getConcept("headline"), ["articles"], "headline")
-        quote = AmcatMetadataField(self, datamodel.getConcept("quote"), ["articles"], "headline")
         date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], DATESQL)
         week = AmcatMetadataField(self, datamodel.getConcept("week"), ["articles"], WEEKSQL)
         year = AmcatMetadataField(self, datamodel.getConcept("year"), ["articles"], YEARSQL)
@@ -35,7 +34,6 @@ class AmcatMetadataSource(DataSource):
           AmcatMetadataMapping(article, url),
           AmcatMetadataMapping(batch, project),
           AmcatMetadataMapping(article, headline),
-          AmcatMetadataMapping(article, quote),
           AmcatMetadataMapping(source, sourcetype),
           ]
     def __str__(self):
@@ -63,34 +61,15 @@ class AmcatMetadataMapping(Mapping):
         selectcol = self.a.column if reverse else self.b.column
         filtercol = self.b.column if reverse else self.a.column
         values = list(values)
-
-        valuestr = ",".join(map(str, values))
-        sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, valuestr)
-        #print sql_query[:200], len(values)
+        
         result_dict = collections.defaultdict(list)
-        for k, v in self.a.datasource.db.doQuery(sql_query):
-            result_dict[k].append(v)
-        #print "OK"
+        for values in toolkit.splitlist(values, 1000):
+            valuestr = ",".join(map(str, values))
+            sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, valuestr)
+            for k, v in self.a.datasource.db.doQuery(sql_query):
+                result_dict[k].append(v)
 
         return result_dict
-    
-    def mapmultiple(self, values, reverse):
-        tables = set(self.a.tables) & set(self.b.tables)
-        if len(tables) <> 1: raise Exception("Intersection not one!")
-        table = tables.pop()
-
-        result_dict = dict()
-        selectcol = self.a.column if reverse else self.b.column
-        filtercol = self.b.column if reverse else self.a.column
-
-        #sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, toolkit.quotesql(values))
-        print sql_query
-        result_dict = dict(self.a.datasource.db.doQuery(sql_query))
-        #print "done!"
-        
-        for k, v in result_dict.iteritems():
-            self.map(v, reverse)
-        return 
         
 if __name__ == '__main__':
     import dbtoolkit
