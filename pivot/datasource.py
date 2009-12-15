@@ -85,6 +85,7 @@ class FieldConceptMapping(Mapping):
 conceptmap = {
     "project" : project.Project,
     "batch" : project.Batch,
+    "source" : lambda db, id: db.sources.lookupID(id),
     }
 
 class Concept(object):
