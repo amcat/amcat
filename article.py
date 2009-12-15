@@ -306,7 +306,7 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
             dist = abs(w - pos)
             nbs += int(dist > 0 and dist <= quotelen)
         positions[pos] = nbs
-    
+    if not positions: return None
     quotewords = set() # wordids
     boldwords = set()
     while len(quotewords) < totalwords:
