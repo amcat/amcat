@@ -1,18 +1,24 @@
 import xapian, dbtoolkit, toolkit
-import collections, sources, project
+import collections, sources, project, article, datetime, mx.DateTime
 
 from datasource import DataSource, Mapping, Field, FieldConceptMapping
 from itertools import imap, izip
 
 WEEKSQL = "cast(datepart(year, date) as varchar) + '/' + REPLICATE(0,2-LEN(cast(datepart(week, date) as varchar)))+ CONVERT(VARCHAR,cast(datepart(week, date) as varchar))"
-DATESQL = "convert(varchar(10), date, 102)"
-DATESQL = "convert(int, convert(varchar(10), date, 112)) "
+DATESQL = "convert(datetime, convert(int, date))"
 WEEKSQL = "datepart(year,date) * 100 + datepart(week, date)"
 YEARSQL = "datepart(year, date)"
 
 
 def sourceFactory(db, id):
     return db.sources.lookupID(id)
+
+class DateMapper(object):
+    def map(self, date, reverse):
+        if reverse:
+            return datetime.date(date.year, date.month, date.day)
+        else:
+            return mx.DateTime.Date(date.year, date.month, date.day)
 
 class ConceptMapper(object):
     def __init__(self, db, targetclass):
@@ -27,10 +33,10 @@ class AmcatMetadataSource(DataSource):
         self.db = db
 	DataSource.__init__(self, self.createMappings(datamodel))
     def createMappings(self, datamodel):
-        article = AmcatMetadataField(self, datamodel.getConcept("article"), ["articles"], "articleid")#, ConceptMapper(self.db, article.fromDB))
+        articlefield = AmcatMetadataField(self, datamodel.getConcept("article"), ["articles"], "articleid", ConceptMapper(self.db, article.fromDB))
         batch = AmcatMetadataField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid", ConceptMapper(self.db, project.Batch))
         headline = AmcatMetadataField(self, datamodel.getConcept("headline"), ["articles"], "headline")
-        date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], DATESQL)
+        date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], DATESQL, DateMapper())
         week = AmcatMetadataField(self, datamodel.getConcept("week"), ["articles"], WEEKSQL)
         year = AmcatMetadataField(self, datamodel.getConcept("year"), ["articles"], YEARSQL)
         source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles","media"], "mediumid", ConceptMapper(self.db, sourceFactory))
@@ -38,14 +44,14 @@ class AmcatMetadataSource(DataSource):
         projectfield = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid", ConceptMapper(self.db, project.Project))
         sourcetype = AmcatMetadataField(self, datamodel.getConcept("sourcetype"),["media"], "type")
         return [
-          AmcatMetadataMapping(article, batch),
-          AmcatMetadataMapping(article, date),
-          AmcatMetadataMapping(article, week),
-          AmcatMetadataMapping(article, year, 1000),
-          AmcatMetadataMapping(article, source),
-          AmcatMetadataMapping(article, url),
+          AmcatMetadataMapping(articlefield, batch),
+          AmcatMetadataMapping(articlefield, date, 1, 9999),
+          AmcatMetadataMapping(articlefield, week),
+          AmcatMetadataMapping(articlefield, year, 1, 99999),
+          AmcatMetadataMapping(articlefield, source),
+          AmcatMetadataMapping(articlefield, url),
           AmcatMetadataMapping(batch, projectfield),
-          AmcatMetadataMapping(article, headline),
+          AmcatMetadataMapping(articlefield, headline),
           AmcatMetadataMapping(source, sourcetype),
           ]
     def __str__(self):
@@ -65,8 +71,8 @@ class AmcatMetadataField(Field):
         return value
 
 class AmcatMetadataMapping(Mapping):
-    def __init__(self, a, b, cost=1.0):
-        Mapping.__init__(self, a, b, cost, cost)
+    def __init__(self, a, b, cost=1.0, reversecost=None):
+        Mapping.__init__(self, a, b, cost, reversecost or cost)
     def map(self, value, reverse, memo=None):
         if memo is None:
             memo = self.startMapping([value], reverse=reverse)
@@ -83,7 +89,7 @@ class AmcatMetadataMapping(Mapping):
         
         result_dict = collections.defaultdict(list)
         for values in toolkit.splitlist(values, 1000):
-            valuestr = ",".join(map(str, values))
+            valuestr = ",".join(map(toolkit.quotesql, values))
             sql_query = "select %s, %s  from %s where %s in (%s)" % (filtercol,selectcol, table, filtercol, valuestr)
             for k, v in self.a.datasource.db.doQuery(sql_query):
                 result_dict[k].append(v)

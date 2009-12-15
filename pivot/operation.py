@@ -37,7 +37,7 @@ class ReduceEdgeOperation(Operation):
         the combine function to map the data, and calls the removeEdge
         method of the state to update the state.
         """
-        #toolkit.warn("Applying map %s" % str(self))
+        toolkit.warn("Applying map %s" % str(self))
         newnode = combine(self.edge)
         state.collapse(self.edge, newnode)
         return state
@@ -65,7 +65,7 @@ def combine(edge):
     nodea, nodeb, mapping = edge.a, edge.b, edge.mapping
     if nodea.data is None and nodeb.data is None:
         raise Exception("No data! in mapping %s to %s" % (nodea, nodeb))
-    
+
     # Get index of mapping in Fields list of node
     indexa = nodea.fields.index(mapping.a)
     indexb = nodeb.fields.index(mapping.b)

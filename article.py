@@ -190,8 +190,11 @@ class Article(object):
             return self.source.name
 
     def __str__(self):
-        return ('<article id="%(id)s" date="%(date)s" source="%(medium)s" length="%(length)s">' +
-                '\n  <headline>%(headline)s</headline>\n</article>') % self.__dict__
+        hl = self.headline
+        if type(hl) == str: hl = hl.decode('latin-1')
+        return hl.encode('ascii', 'replace')
+    def __repr__(self):
+        return "Article(%i)" % (self.id)
 
     def fulltext(self):
         #if self.type == 4:
