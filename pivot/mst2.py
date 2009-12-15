@@ -2,7 +2,8 @@
 import toolkit
 
 def profile(s):
-    toolkit.ticker.warn(s)
+    pass
+    #toolkit.ticker.warn(s)
     
 class MSTProblem(object):
     def __init__(self):
