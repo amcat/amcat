@@ -284,6 +284,50 @@ class Article(object):
             bytes2 += self.db.doQuery(SQL)[0][0]
         return bytes2, format
 
+    def quote(self, words_or_wordfilter, **kargs):
+        return quote(list(self.words()), words_or_wordfilter, **kargs)
+    
+def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lambda w : "<b>%s</b>" % w):
+    if callable(words_or_wordfilter):
+        filt = words_or_wordfilter
+    else:
+        filt = lambda x: int(x in words_or_wordfilter)
+        
+    positions = {}
+    for i, w in enumerate(words):
+        if filt(w):
+            positions[i] = 0
+    for pos in sorted(positions.keys()):
+        nbs = 0
+        for w in positions:
+            dist = abs(w - pos)
+            nbs += int(dist > 0 and dist <= quotelen)
+        positions[pos] = nbs
+    
+    quotewords = set() # wordids
+    boldwords = set()
+    while len(quotewords) < totalwords:
+        pos, nbs = toolkit.sortByValue(positions, reverse=True)[0]
+        boldwords.add(pos)
+        quote = range(max(0, pos - quotelen), min(len(words), pos + quotelen + 1))
+        quotewords |= set(quote)
+        del positions[pos]
+        if not positions: break
+    if not quotewords: return None
+    lag = -1
+    result = []
+    quotewords = sorted(quotewords)
+    for i in quotewords:
+        if i > lag+1: result += ["..."]
+        result += [boldfunc(words[i])] if (i in boldwords and boldfunc) else [words[i]]
+        lag = i
+    if quotewords[-1] <> len(words) - 1:
+        result += ["..."]
+    
+    return " ".join(result)
+
+        
+
 def encodeAndLimitLength(variables, lengths):
     originals = map(lambda x: x and x.strip(), variables)
     numchars = 5
@@ -564,18 +608,8 @@ def sentFromDB(db, sid):
     
 
 if __name__ == '__main__':
-    import sys, dbtoolkit, toolkit, binascii
-    db = dbtoolkit.anokoDB()
-    #a = fromDB(db, 41479453)
-    #imgdata, format = a.getImage()
-    #print format, len(imgdata)
-    #open('/tmp/test.jpg', 'wb').write(imgdata)
-    y = u'Financi\xebn | Inkomensbeleid|Financi\xebn | Belasting|Economie | Ondernemen|Sociale zekerheid | Inkomensbeleid|Financi\xebn '
-    def encoder(vars):
-        var = vars[0]
-        var = var.encode('utf-7')
-        return [var]
-    print encodeAndLimitLength([y], [100], encoder)
-    
-    
+    import dbtoolkit
+    a = fromDB(dbtoolkit.amcatDB(), 44133956)
+    print a.quote(["yakult"], boldfunc=None)
+
     
