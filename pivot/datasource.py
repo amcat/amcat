@@ -67,10 +67,14 @@ class DataSource(object):
         return self._mappings
         
 class FieldConceptMapping(Mapping):
-    def __init__(self, concept, field):
+    def __init__(self, concept, field, func=None):
         Mapping.__init__(self, concept, field, 1.0, 1.0)
-    def map(self, value, reverse="dummy", memo=None):
-        return [value]
+        self.func = func
+    def map(self, value, reverse=False, memo=None):
+        if self.func:
+            return [self.func(value, reverse)]
+        else:
+            return [value]
     def __str__(self):
         return "%s => %s" % (self.a, self.b)
     __repr__ = __str__
