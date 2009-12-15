@@ -55,9 +55,6 @@ class Mapping(Identity):
         return a 'memo' object that will be passed on to the map call
         """
         pass
-    def getNodes(self):
-        "to implement IEdge"
-        return [self.a, self.b]
     def __str__(self):
         return "%s -> %s" % (self.a, self.b)
     __repr__ = __str__
