@@ -290,7 +290,7 @@ class Article(object):
     def quote(self, words_or_wordfilter, **kargs):
         return quote(list(self.words()), words_or_wordfilter, **kargs)
     
-def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lambda w : "<b>%s</b>" % w):
+def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lambda w : "<em>%s</em>" % w):
     if callable(words_or_wordfilter):
         filt = words_or_wordfilter
     else:
