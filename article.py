@@ -294,7 +294,8 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
     if callable(words_or_wordfilter):
         filt = words_or_wordfilter
     else:
-        filt = lambda x: int(x in words_or_wordfilter)
+        wordset = set(x.lower() for x in words_or_wordfilter)
+        filt = lambda x: int(x.lower() in wordset)
         
     positions = {}
     for i, w in enumerate(words):
@@ -613,6 +614,6 @@ def sentFromDB(db, sid):
 if __name__ == '__main__':
     import dbtoolkit
     a = fromDB(dbtoolkit.amcatDB(), 44133956)
-    print a.quote(["yakult"], boldfunc=None)
+    print a.quote(["YAKULT"], boldfunc=None)
 
     
