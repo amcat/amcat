@@ -5,6 +5,7 @@ of the DataSource and related objects
 Interface Field
   datasource : DataSource
   concept : Concept
+  getConceptMapping : Mapping
 
 Interface Mapping
   a, b : Field
@@ -25,7 +26,7 @@ Interface Concept:
 
 import collections
 from toolkit import Identity, IDLabel
-
+import project
 ################### Base implementations ##############################
 
 class Field(Identity):
@@ -33,6 +34,8 @@ class Field(Identity):
         Identity.__init__(self, datasource, concept)
         self.datasource = datasource
         self.concept = concept
+    def getConceptMapping(self):
+        return FieldConceptMapping(self.concept, self)
     def __str__(self):
         return '%s::%s' % (self.datasource, self.concept)
     __repr__ = __str__
@@ -79,10 +82,19 @@ class FieldConceptMapping(Mapping):
         return "%s => %s" % (self.a, self.b)
     __repr__ = __str__
 
+conceptmap = {
+    "project" : project.Project,
+    "batch" : project.Batch,
+    }
+
 class Concept(object):
     def __init__(self, datamodel, label):
         self.datamodel = datamodel
         self.label = label
+    def getObject(self, db, id):
+        if self.label in conceptmap:
+            return conceptmap[self.label](db, id)
+        return id
     def __str__(self):
         return self.label
     def __repr__(self):
@@ -110,7 +122,9 @@ class DataModel(object):
                     fieldmap[field.concept].add(field)
         for concept, fields in fieldmap.items():
             for field in fields:
-                yield FieldConceptMapping(concept, field)
+                yield field.getConceptMapping()
+            
+                
     def getMappings(self):
         for datasource in self._datasources:
             for mapping in datasource.getMappings():

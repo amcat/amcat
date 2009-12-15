@@ -50,7 +50,10 @@ class Project(Cachable):
         if not p: return None
         else:
             return permissions.ProjectPermission.get(p)
-                        
+    def __str__(self):
+        return self.name   
+    def __repr__(self):
+        return "Project(%i)" % self.id                        
             
 class Batch(Cachable):
     __table__ = 'batches'
@@ -64,6 +67,10 @@ class Batch(Cachable):
         self.addDBFKProperty("articles", "articles", "articleid", function=lambda aid: article.fromDB(self.db, aid))
         if project is not None:
             self.cacheValues(project=project)
+    def __str__(self):
+        return self.name
+    def __repr__(self):
+        return "Batch(%i)" % self.id                
 
 def getAid(art):
     if type(art) == int: return art

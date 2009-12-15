@@ -1,7 +1,7 @@
 import xapian, dbtoolkit, toolkit
-import collections
+import collections, sources, project
 
-from datasource import DataSource, Mapping, Field
+from datasource import DataSource, Mapping, Field, FieldConceptMapping
 from itertools import imap, izip
 
 WEEKSQL = "cast(datepart(year, date) as varchar) + '/' + REPLICATE(0,2-LEN(cast(datepart(week, date) as varchar)))+ CONVERT(VARCHAR,cast(datepart(week, date) as varchar))"
@@ -10,20 +10,32 @@ DATESQL = "convert(int, convert(varchar(10), date, 112)) "
 WEEKSQL = "datepart(year,date) * 100 + datepart(week, date)"
 YEARSQL = "datepart(year, date)"
 
-class AmcatMetadataSource(DataSource):
-    def __init__(self, db, datamodel):
-        DataSource.__init__(self, self.createMappings(datamodel))
+
+def sourceFactory(db, id):
+    return db.sources.lookupID(id)
+
+class ConceptMapper(object):
+    def __init__(self, db, targetclass):
         self.db = db
+        self.targetclass = targetclass
+    def map(self, value, reverse):
+        if not reverse: return value.id
+        return self.targetclass(self.db, value)    
+	
+class AmcatMetadataSource(DataSource):
+    def __init__(self, db, datamodel): 
+        self.db = db
+	DataSource.__init__(self, self.createMappings(datamodel))
     def createMappings(self, datamodel):
-        article = AmcatMetadataField(self, datamodel.getConcept("article"), ["articles"], "articleid")
-        batch = AmcatMetadataField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid")
+        article = AmcatMetadataField(self, datamodel.getConcept("article"), ["articles"], "articleid")#, ConceptMapper(self.db, article.fromDB))
+        batch = AmcatMetadataField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid", ConceptMapper(self.db, project.Batch))
         headline = AmcatMetadataField(self, datamodel.getConcept("headline"), ["articles"], "headline")
         date = AmcatMetadataField(self, datamodel.getConcept("date"), ["articles"], DATESQL)
         week = AmcatMetadataField(self, datamodel.getConcept("week"), ["articles"], WEEKSQL)
         year = AmcatMetadataField(self, datamodel.getConcept("year"), ["articles"], YEARSQL)
-        source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles","media"], "mediumid")
+        source = AmcatMetadataField(self, datamodel.getConcept("source"), ["articles","media"], "mediumid", ConceptMapper(self.db, sourceFactory))
         url = AmcatMetadataField(self, datamodel.getConcept("url"), ["articles"], "url")
-        project = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid")
+        projectfield = AmcatMetadataField(self, datamodel.getConcept("project"),["batches"], "projectid", ConceptMapper(self.db, project.Project))
         sourcetype = AmcatMetadataField(self, datamodel.getConcept("sourcetype"),["media"], "type")
         return [
           AmcatMetadataMapping(article, batch),
@@ -32,7 +44,7 @@ class AmcatMetadataSource(DataSource):
           AmcatMetadataMapping(article, year, 1000),
           AmcatMetadataMapping(article, source),
           AmcatMetadataMapping(article, url),
-          AmcatMetadataMapping(batch, project),
+          AmcatMetadataMapping(batch, projectfield),
           AmcatMetadataMapping(article, headline),
           AmcatMetadataMapping(source, sourcetype),
           ]
@@ -40,10 +52,17 @@ class AmcatMetadataSource(DataSource):
         return "Amcat"
 
 class AmcatMetadataField(Field):
-    def __init__(self, datasource, concept, tables, column):
+    def __init__(self, datasource, concept, tables, column, conceptmapper=None):
         Field.__init__(self, datasource, concept)
         self.tables = tables
         self.column = column
+        self.conceptmapper = conceptmapper
+    def getConceptMapping(self):
+        return FieldConceptMapping(self.concept, self, self.mapConcept)
+    def mapConcept(self, value, reverse):
+        if self.conceptmapper:
+            return self.conceptmapper.map(value, reverse)
+        return value
 
 class AmcatMetadataMapping(Mapping):
     def __init__(self, a, b, cost=1.0):
