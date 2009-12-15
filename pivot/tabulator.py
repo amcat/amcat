@@ -1,7 +1,7 @@
 import toolkit
 import operation
 from tabulatorstate import State
-    
+
 class Tabulator(object):
     """
     Class Tabulator creates a tabular data structure from a datamodel,
@@ -33,7 +33,7 @@ class Tabulator(object):
             state = best.apply(state)
         return self._getColumns(state.solution)
     def _getColumns(self, node):
-        if node.fields == self.select: return node.data
+        if not node.data or node.fields == self.select: return node.data
         indices = map(node.fields.index, self.select)
         result = []
         for row in node.data:

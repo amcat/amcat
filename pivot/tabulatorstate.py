@@ -20,7 +20,7 @@ class State(object):
         variable to the data of the newnode.
         """
         self.edges.remove(oldedge)
-        if not self.edges:
+        if not self.edges or not newnode.data:
             self.solution = newnode
         else: # Replace references to old nodes, by reference to new node
             oldnodes = [oldedge.a, oldedge.b]
