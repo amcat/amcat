@@ -7,22 +7,20 @@ Interface Field
   concept : Concept
 
 Interface Mapping
-  a. b : Field
+  a, b : Field
   geCost(bool reverse=False) : float
-  map(a', bool reverse=False) : 0..n b'   # a' = object corresponding to concept a
+  map(a', bool reverse=False) : sequence of b'   # a' = object corresponding to concept a
  
 Interface DataSource
-  getMappings yields* mappings
+  getMappings : sequence of Mapping
   
 Interface DataModel
   register(datasource) 
-  getConcepts()
-  getRoute(*concepts) yields* mappings
-  
-*) yields Xs = return something that is an iterator/generator/collection etc of X
+  getConcepts() : Concept
+  getMappings(): sequence of Mapping
 
-
-# txt = open("file.txt").read().decode("utf-8") 
+Interface Concept:
+  pass (opaque)
 """
 
 import collections
@@ -112,6 +110,13 @@ class DataModel(object):
         for concept, fields in fieldmap.items():
             for field in fields:
                 yield FieldConceptMapping(concept, field)
+    def getMappings(self):
+        for datasource in self._datasources:
+            for mapping in datasource.getMappings():
+                yield mapping
+        for mapping in self.getFieldConceptMappings():
+            yield mapping
+        
         
 ################### Simple implementations ##############################
 
@@ -123,14 +128,3 @@ class FunctionalMapping(Mapping):
     def map(self, a, reverse=False, memo=None):
         f = self._reversefunc if reverse else self._mapfunc
         return f(a)
-    
-class FunctionalDataModel(DataModel):
-    def __init__(self, solverfunc):
-        DataModel.__init__(self)
-        self._solverfunc = solverfunc
-    def getRoute(self, *concepts):
-        mappings= set()
-        for datasource in self._datasources:
-            mappings |= set(datasource.getMappings())
-        mappings |= set(self.getFieldConceptMappings())
-        return self._solverfunc(mappings, concepts)

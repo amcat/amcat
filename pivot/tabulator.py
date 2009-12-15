@@ -1,6 +1,7 @@
 import toolkit
 import operation
 from tabulatorstate import State
+import mst2
 
 class Tabulator(object):
     """
@@ -17,14 +18,18 @@ class Tabulator(object):
         self.operationsFactory = operationfactory or operation.OperationsFactory()
         self.select = select
         self.filters = filters
+
+    def getRoute(self, concepts):
+        return mst2.getSolution(self.datamodel.getMappings(), concepts)
+                 
     def getData(self):
         """
         Returns a list of lists representing the solution
         """
         select = set(self.select)
         select |= set(self.filters.keys())
-            
-        route = self.datamodel.getRoute(*select)
+        
+        route = self.getRoute(select)
         print "Got Route"
         state = State(self, route, self.filters)
         while state.solution is None:
