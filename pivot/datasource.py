@@ -30,6 +30,12 @@ import project
 ################### Base implementations ##############################
 
 class Field(Identity):
+    """
+    Fields represent fields within datasources, ie concrete instantiations of Concepts
+    A field has a datasource and concept, and it creates the Mapping from this Concept to itself.
+    This mappping allows a conversion between Concept values (ie Article objects) and datasource
+    specific values (ie article ids)
+    """
     def __init__(self, datasource, concept):
         Identity.__init__(self, datasource, concept)
         self.datasource = datasource
@@ -42,6 +48,12 @@ class Field(Identity):
 
         
 class Mapping(Identity):
+    """
+    Mappings represent the edges in the data graph and link two Fields or a
+    Field and a Concepts (see FieldConceptMapping). A mapping has references
+    to two Field/Concepts (a and b) and can give the estimated cost for
+    traversing it. It can also execute the mapping of concrete values
+    """
     def __init__(self, a, b, cost=1.0, reversecost=10.0):
         Identity.__init__(self, a, b)
         self.a = a

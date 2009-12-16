@@ -39,7 +39,7 @@ def default():
 def amcatConfig(username = "app", password = "eno=hoty", host=None):
     if not host: host = "AmcatDB"
     import mx.ODBC.iODBC as driver
-    return Configuration(username, password, "AmcatDB", driver=driver)
+    return Configuration(username, password, host, driver=driver)
 
 if __name__ == '__main__':
     c = default()

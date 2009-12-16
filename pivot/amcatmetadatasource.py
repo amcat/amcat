@@ -46,7 +46,7 @@ class AmcatMetadataSource(DataSource):
         return [
           AmcatMetadataMapping(articlefield, batch),
           AmcatMetadataMapping(articlefield, date, 1, 9999),
-          AmcatMetadataMapping(articlefield, week),
+          AmcatMetadataMapping(articlefield, week, 1, 999999),
           AmcatMetadataMapping(articlefield, year, 1, 99999),
           AmcatMetadataMapping(articlefield, source),
           AmcatMetadataMapping(articlefield, url),
