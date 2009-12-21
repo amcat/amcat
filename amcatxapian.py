@@ -1,5 +1,7 @@
 import xapian, article, toolkit, sqlalchemy, dbtoolkit 
 
+VALUE_AID = 1
+
 class Index(object):
     def __init__(self, location, db, stem=True):
         self.location = location
@@ -35,11 +37,13 @@ class Index(object):
         for d in self.documents:
             yield self.getArticle(d)
 
-    def getArticle(self, document):
+    def getAid(self, document):
         if type(document) == int:
             document = self.index.get_document(document)
-        aid = int(document.get_data())
-        return article.fromDB(self.db, aid)
+        return int(document.get_data())        
+            
+    def getArticle(self, document):
+        return article.Article(self.db, self.getAid(document))
         
 
     def getFrequencies(self, article=None, raw=False):
@@ -62,14 +66,15 @@ class Index(object):
             else:
                 yield term, t.termfreq
 
-    def query(self,  query, returnWeights=False):
+    def query(self,  query, returnWeights=False, returnAID=False, subset=None):
         if type(query) in (str, unicode):
             query = self.parse(query)
         enquire = xapian.Enquire(self.index)
         enquire.set_query(query)
         matches = enquire.get_mset(0,self.index.get_doccount())
+        articlefunc = self.getAid if returnAID else self.getArticle
         for m in matches:
-            a = self.getArticle(m.docid)
+            a = articlefunc(m.docid)
             if returnWeights:
                 yield a, m.weight
             else:
@@ -109,6 +114,7 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch"):
             continue
         doc = xapian.Document()
         doc.set_data(str(a.id))
+        doc.add_value(VALUE_AID, "%020i" % a.id)
         indexer.set_document(doc)
         indexer.index_text(txt)
         database.add_document(doc)

@@ -36,7 +36,7 @@ class Project(Cachable):
         Cachable.__init__(self, db, id)
         for prop in "name", "insertDate", "description":
             self.addDBProperty(prop)
-        self.addDBFKProperty("batches", "batches", "batchid", function=partial(Batch, db, project=self))
+        self.addDBFKProperty("batches", "batches", "batchid", function=db.getObjectFactory(Batch, project=self))
         self.addDBProperty("visibility", func=permissions.ProjectVisibility.get, table="project_visibility")
         self.addDBProperty("insertUser", "insertuserid", user.users(self.db).getUser)
         self.addDBFKProperty("users", "permissions_projects_users", "userid", function=user.users(self.db).getUser)
@@ -64,7 +64,7 @@ class Batch(Cachable):
             self.addDBProperty(prop)
         self.addDBProperty("insertUser", "insertuserid", user.users(self.db).getUser)
         self.addDBProperty("project", "projectid", func=partial(Project, db))
-        self.addDBFKProperty("articles", "articles", "articleid", function=lambda aid: article.fromDB(self.db, aid))
+        self.addDBFKProperty("articles", "articles", "articleid", function=db.getObjectFactory(article.Article))
         if project is not None:
             self.cacheValues(project=project)
     def __str__(self):

@@ -107,9 +107,8 @@ def cacheMultiple(cachables, propnames):
     for cachable in cachables:
         for prop in propnames:
             cachable.__properties__[prop].doCache(cacher)
-    
-            
-class Cachable(object):
+
+class Cachable(toolkit.IDLabel):
     def __init__(self, db, id):
         self.db = db
         self.id = id
@@ -117,6 +116,14 @@ class Cachable(object):
     def __getattr__(self, attr):
         if attr in self.__properties__:
             return self.__properties__[attr].get()
+        # implement IDLabel.label in case no 'label' property exists.
+        # Try __labelprop__ first, then try 'name'
+        if attr == "label":
+            try:
+                attr = self.__labelprop__
+            except AttributeError:
+                attr = "name"
+            return self.__getattr__(attr)
         raise AttributeError(attr)
     def addDBProperty(self, property, fieldname=None, func=None, table=None):
         if fieldname == None: fieldname = property

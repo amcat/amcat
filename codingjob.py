@@ -57,6 +57,11 @@ class CodingJob(Cachable):
             if set.setnr == setnr:
                 return set
 
+    def getAllCodedArticles(self):
+        for s in self.sets:
+            for ca in s.articles:
+                yield ca
+    
     def getNonCodedArticleids(self): # articlids that do not have any codings in this job
         sql = """
         select v.articleid
@@ -224,7 +229,7 @@ class CodedArticle(Cachable):
 
     def getSentence(self, sid):
         for s in self.article.sentences:
-            if s.sid == sid:
+            if s.id == sid:
                 return s
         raise Exception("Cannot find sentence %i in article %i" % (sid, self.article.id))
 
@@ -494,6 +499,14 @@ def getCodingTable(units, valfunc=getValue, coder=True):
     for c in units[0].ca.set.job.unitSchema.fields:
         t.addColumn(c.label, functools.partial(valfunc, schemafield=c))
     return t
+
+def countUnits(*jobs):
+    tot, coded = 0,0
+    for job in jobs:
+        for ca in job.getAllCodedArticles():
+            tot += 1
+            if ca.values is not None: coded += 1
+    return tot, coded
 
 if __name__ == '__main__':
     import dbtoolkit, adapter

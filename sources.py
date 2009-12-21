@@ -1,22 +1,17 @@
 import toolkit
+from cachable import Cachable
 
 def clean(s):
     return toolkit.clean(s,1,1)
 
-class Source(toolkit.IDLabel):
-    def __init__(self, id, name, circulation=None, language=None, type=None, abbrev=None):
-        toolkit.IDLabel.__init__(self, id, clean(name))
-        self.name = self.label # legacy
-        self.prettyname = toolkit.clean(name,1)
-        self.circulation = circulation
-        self.language = language
-        self.type = type
-        self.abbrev = abbrev
-    def __str__(self):
-        return self.name
-    def __cmp__(self, other):
-        if type(other) <> Source: return -1
-        return cmp(self.id, other.id)
+class Source(Cachable):
+    __table__ = 'media'
+    __idcolumn__ = 'mediumid'
+
+    def __init__(self, db, id):
+        Cachable.__init__(self, db, id)
+        for prop in "name", "circulation", "language", "type", "abbrev":
+            self.addDBProperty(prop)
 
 class Sources(object):
     def __init__(self, connection):
@@ -24,13 +19,9 @@ class Sources(object):
         self.sources = {}
         for id,name in connection.doQuery("select mediumid, name from media_dict"):
             self.addAlias(name, id)
-        try:
-            data = connection.doQuery("select mediumid, name, circulation, language, type, isnull(abbrev, name) from media where mediumid>0")
-        except:
-            data = connection.doQuery("select mediumid, name, circulation, language, type, ifnull(abbrev, name) from media where mediumid>0")
-            
-        for info in data:
-            self.addSource(Source(*info))
+        data = connection.doQuery("select mediumid from media where mediumid>0")
+        for mediumid, in data:
+            self.addSource(Source(connection, mediumid))
 
     def addAlias(self, alias, id):
         self.index_name[clean(alias)] = id

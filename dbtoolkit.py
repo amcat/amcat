@@ -198,22 +198,20 @@ class amcatDB(object):
         for col in self.doQuery(sql):
             yield col[colindex]
         
-
-        
     def article(self, artid):
         """
         Builds an Article object from the database
         """
         if artid not in self._articlecache:
-            self._articlecache[artid] = article.fromDB(self, artid)
+            self._articlecache[artid] = article.Article(self, artid)
         return self._articlecache[artid]
     
     
     def articles(self, aids=None, **kargs):
         if not aids:
             aids = toolkit.intlist(sys.stdin)
-        for a in article.Articles(aids, self, **kargs):
-            yield a
+        for aid in aids:
+            yield self.article(aid)
 
     
     def exists(self, articleid, type=2, allowempty=True, explain="DEPRECATED"):
@@ -557,7 +555,9 @@ class amcatDB(object):
                 "abovefold" : fold, "imgdata" : data, "imgType" : type}
         self.insert("articles_images", ins, retrieveIdent=0)
         return sid
-        
+
+    def getObjectFactory(self, clas, **kargs):
+        return lambda id: clas(self, id, **kargs)
 
     def getLongText(db, aid, type):
         # workaround to prevent cutting off at texts longer than 65k chars which can crash decoding
@@ -618,10 +618,13 @@ def Articles(**kargs):
     return db.articles(**kargs)
         
         
-def decode(text, encodingid):
+def decode(text, encodingid, lenient=True):
     if not text: return text # avoid problem with None that does not have the decode function
     if not encodingid: encodingid = 3 # assume latin-1
-    return text.decode(_encoding[encodingid])
+    try:
+        return text.decode(_encoding[encodingid])
+    except  UnicodeDecodeError, e:
+       return text.decode('latin-1')
 
 class RawSQL(object):
     def __init__(self, sql):
