@@ -2,14 +2,18 @@
 
 import dbtoolkit
 import sys
+import tableoutput
 
 db = dbtoolkit.anokoDB()
 
 sql = " ".join(sys.argv[1:])
 
-res = db.doQuery(sql)
-if res:
-    for row in res:
-        print "\t".join("%s" % x for x in row)
-
+select = sql.strip().lower().startswith("select")
+if select:
+    res, colnames = db.doQuery(sql, colnames=True)
+    print tableoutput.table2ascii(res, colnames)
+else:
+    db.doQuery(sql)
+    print "Executed successfully"
+    
 db.conn.commit()

@@ -6,7 +6,7 @@ class Cacher(object):
     def getData(self, cachables):
         SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__,
                                       ",".join("[%s]" % f for f in self.dbfields), sqlFrom(cachables))
-        print SQL
+        print "-->", SQL
         self.data = {} # --> database query
     def addDBField(self, field):
         if field not in self.dbfields: self.dbfields.append(field)
@@ -95,7 +95,11 @@ def sqlWhere(fields, ids):
         
 def sqlFrom(cachables, table = None):
     c = cachables[0] # prototype, assume all cachables are alike
-    where = "((%s))" % ") or (".join(sqlWhere(x.__idcolumn__, x.id) for x in cachables)
+    if type(c.__idcolumn__) in (str, unicode):
+        where = "(%s in (%s))" % (c.__idcolumn__, ",".join(str(x.id) for x in cachables))
+    else:
+        where = "((%s))" % ") or (".join(sqlWhere(x.__idcolumn__, x.id) for x in cachables)
+
     return " FROM %s WHERE %s" % (table or c.__table__, where)
 
 def cacheMultiple(cachables, propnames):
@@ -144,56 +148,29 @@ class Cachable(toolkit.IDLabel):
     def sqlFrom(self, table=None):
         return sqlFrom([self], table)
 
-        
-class TEST_Article(Cachable):
-    __table__ = 'articles'
-    __idcolumn__ = 'articleid'
-    
-    def __init__(self, db, id, **values):
-        Cachable.__init__(self, db, id)
-        self.addDBProperty("headline")
-        self.addDBProperty("datum", "date")
-        self.addDBProperty("batch", "batchid", self.getBatch)
-        self.addFunctionProperty("sentences", self._getSentences)
-        self.cacheValues(**values)
 
-    def getBatch(self, batchid):
-        print "CREATE BATCH FROM DB %s FOR BATCHID %s" % (self.db, batchid)
-        return "[Batch %s]" % batchid
-
-    def _getSentences(self):
-        print "Getting sentences from DB"
-        return "[Sentences %i]" % self.id
-
-    
     
 if __name__ == '__main__':
-    print "Creating object 123"
-    a = TEST_Article("MyDB", 123, headline="Dit is een test")
-    print "Accessing attributes"
-    print ">>> %s" % a.headline
-    print ">>> %s" % a.headline
-    print ">>> %s" % a.datum
-    print ">>> %s" % a.datum
-    print ">>> %s" % a.batch
-    print ">>> %s" % a.batch
-    print ">>> %s" % a.sentences
-    print ">>> %s" % a.sentences
-    a = TEST_Article("MyDB2", 124)
-    a.cacheProperties("headline", "datum", "batch", "sentences")
-    print ">>> %s" % a.headline
-    print ">>> %s" % a.datum
-    print ">>> %s" % a.batch
-    print ">>> %s" % a.sentences
+    import dbtoolkit, article
+    db  = dbtoolkit.amcatDB()
+    db.beforeQueryListeners.append(toolkit.ticker.warn)
+    p = dbtoolkit.ProfilingAfterQueryListener()
+    db.afterQueryListeners.append(p)
+    aids = 353570, 364425, 815672
 
-    a = TEST_Article("MyDB2", 125)
-    b = TEST_Article("MyDB2", 126)
-    cacheMultiple([a,b], ["headline", "datum", "batch", "sentences"])
-    print ">>> %s" % a.headline
-    print ">>> %s" % b.headline
-    print ">>> %s" % a.datum
-    print ">>> %s" % b.datum
-    print ">>> %s" % a.batch
-    print ">>> %s" % b.batch
-    print ">>> %s" % a.sentences
-    print ">>> %s" % b.sentences
+    for aid in aids:
+        a = article.Article(db, aid)
+        print "Created article %i: %s" % (aid, id(a))
+        print "  a.headline = %r" % a.headline
+        print "  |a.sentences| = %i" % toolkit.count(a.sentences)
+
+    for aid in aids:
+        a = article.Article(db, aid)
+        print "Created article %i: %s" % (aid, id(a))
+        a.cacheProperties("headline", "date")
+        print "cached properties"
+        print "  a.headline = %r" % a.headline
+        print "  a.date = %r" % a.date
+
+    print "\nQueries used:"
+    p.printreport()

@@ -3,6 +3,7 @@ import toolkit, config
 import article, sources, user
 import re, collections, time
 from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
+import table3
 
 _encoding = {
     1 : 'UTF-7',
@@ -109,19 +110,20 @@ class amcatDB(object):
         t = time.time()
         try:
             c = self.cursor()
-            self.doQuery(sql, c)
-            res = c.fetchall() if select else None
-        except Exception, e:
-            raise SQLException(sql, e)
+            try:
+                self.doQuery(sql, c)
+                res = c.fetchall() if select else None
+            except Exception, e:
+                raise SQLException(sql, e)
+            self.fireAfterQuery(sql, time.time() - t, res)
+            if select and colnames:
+                info = c.description
+                colnames = [entry[0] for entry in info]
+                return res, colnames            
+            return res
         finally:
             if c and not c.closed: c.close()
 
-        self.fireAfterQuery(sql, time.time() - t, res)
-        if select and colnames:
-            info = c.description
-            colnames = [entry[0] for entry in info]
-            return res, colnames            
-        return res
 
 
             
@@ -465,18 +467,17 @@ class ProfilingAfterQueryListener(object):
     def __call__(self, query, time, resultset):
         l = len(resultset) if resultset else 0
         self.queries[query].append((time, l))
-    def printreport(self, *args, **kargs):
-        print toolkit.join(["%-40s" % "Query", "    N", "  Time", "AvgTime", " AvgLen"], sep=" | ")
-        print toolkit.join(map(lambda i:"-"*i, [40,5,6,7,7]), sep="-+-")
-        def prnt(sql, n, tottime, totlen):
-            print toolkit.join(["%-40s" % sql, "%5i" % n, "%1.4f" % tottime, "%1.5f" % (tottime/n), "%7.1f" % (float(totlen)/n)], sep=" | ")            
-        data = self.report(*args, **kargs)
-        data = sorted(data.iteritems(), key=lambda (sql, (n,tottime, totlen)) : tottime, reverse=True)
-        cumn, cumtime, cumlen = 0, 0., 0
-        for sql, (n, tottime, totlen) in data:
-            cumn += n; cumtime += tottime; cumlen += totlen
-            prnt(sql, n, tottime, totlen)
-        prnt("Total", cumn, cumtime, cumlen)
+    def printreport(self, sort="time", *args, **kargs):
+        data = self.reportTable(*args, **kargs)
+        if sort:
+            if type(sort) in (str, unicode): sort = sort.lower()
+            for col in data.getColumns():
+                if col == sort or col.id == sort or col.label.lower() == sort:
+                    data = table3.SortedTable(data, (col, False))
+        import tableoutput
+        print tableoutput.table2ascii(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"])
+    def reportTable(self, *args, **kargs):
+        return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
     def report(self, replacenumbers=True):
         data = collections.defaultdict(lambda : [0, 0., 0]) # {sql : [n, totaltime, totallength]}
         for sql, timelens in self.queries.iteritems():
@@ -485,6 +486,7 @@ class ProfilingAfterQueryListener(object):
                 data[sql][0] += 1
                 data[sql][1] += time
                 data[sql][2] += length
+        data = [(s, n, t, t/n, float(l)/n) for (s, (n,t,l)) in data.iteritems()]
         return data
 
 if __name__ == '__main__':

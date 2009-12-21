@@ -1297,7 +1297,7 @@ class IDLabel(Identity):
     def __str__(self):
         return str(self.label)
     def __repr__(self):
-        return "%s(%s, %s, ..)" % (self.__class__.__name__, self.id, self.label)
+        return "%s(%s, %r)" % (self.__class__.__name__, self.id, self.label)
 
 def getGroup1(regExp, text, flags=re.DOTALL):
     match = re.search(regExp, text, flags)
@@ -1369,17 +1369,6 @@ def head(seq):
         return val
 
     
-if __name__ == '__main__':
-    i = Indexer()
-    for x in "afghjaabfgi":
-        print x, i.getNumber(x)
-    print i.objects
-
-    i = Indexer()
-    xs = list("afghjaabfgi")
-    print xs, i.getNumbers(*xs)
-    print i.objects
-
 def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lambda w : "<em>%s</em>" % w):
     if callable(words_or_wordfilter):
         filt = words_or_wordfilter
@@ -1419,3 +1408,14 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
         result += ["..."]
     
     return " ".join(result)
+
+if __name__ == '__main__':
+    i = Indexer()
+    for x in "afghjaabfgi":
+        print x, i.getNumber(x)
+    print i.objects
+
+    i = Indexer()
+    xs = list("afghjaabfgi")
+    print xs, i.getNumbers(*xs)
+    print i.objects
