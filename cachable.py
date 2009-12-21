@@ -3,17 +3,19 @@ import toolkit
 class Cacher(object):
     def __init__(self):
         self.dbfields = []
-    def getData(self, db, cachables):
+    def getData(self, cachables):
+        if not cachables: return
         SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__,
                                       ",".join("[%s]" % f for f in self.dbfields), sqlFrom(cachables))
         self.data = {}
-        for row in self.db.doQuery(SQL):
+        for row in cachables[0].db.doQuery(SQL):
             self.data[row[0]] = row[1:]
     def addDBField(self, field):
         if field not in self.dbfields: self.dbfields.append(field)
         
     def getDBData(self, cachable, field):
-        return self.data.get(cachable.id)
+        row = self.data.get(cachable.id)
+        if row: return row[self.dbfields.index(field)]
 
 class Property(object):
     def __init__(self, cachable):
@@ -158,19 +160,29 @@ if __name__ == '__main__':
     db.afterQueryListeners.append(p)
     aids = 353570, 364425, 815672
 
+    print "--------- simple attribute getting ---------------"
     for aid in aids:
         a = article.Article(db, aid)
         print "Created article %i: %s" % (aid, id(a))
         print "  a.headline = %r" % a.headline
         print "  |a.sentences| = %i" % toolkit.count(a.sentences)
-
+        
+    print "--------- caching multiple properties, one article ---------------"
     for aid in aids:
         a = article.Article(db, aid)
         print "Created article %i: %s" % (aid, id(a))
-        a.cacheProperties("headline", "date")
+        a.cacheProperties("date", "headline", "encoding")
         print "cached properties"
-        print "  a.headline = %r" % a.headline
         print "  a.date = %r" % a.date
+        print "  a.headline = %r" % a.headline
 
+    print "--------- caching multiple properties, multiple cachables ---------------"
+    arts = [article.Article(db, aid) for aid in aids]
+    cacheMultiple(arts, ["date", "headline", "encoding"])
+    for a in arts:
+        print "Article %i: %s" % (aid, id(a))
+        print "  a.date = %r" % a.date
+        print "  a.headline = %r" % a.headline
+        
     print "\nQueries used:"
     p.printreport()
