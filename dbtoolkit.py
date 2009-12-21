@@ -466,13 +466,17 @@ class ProfilingAfterQueryListener(object):
         l = len(resultset) if resultset else 0
         self.queries[query].append((time, l))
     def printreport(self, *args, **kargs):
+        print toolkit.join(["%-40s" % "Query", "    N", "  Time", "AvgTime", " AvgLen"], sep=" | ")
+        print toolkit.join(map(lambda i:"-"*i, [40,5,6,7,7]), sep="-+-")
+        def prnt(sql, n, tottime, totlen):
+            print toolkit.join(["%-40s" % sql, "%5i" % n, "%1.4f" % tottime, "%1.5f" % (tottime/n), "%7.1f" % (float(totlen)/n)], sep=" | ")            
         data = self.report(*args, **kargs)
         data = sorted(data.iteritems(), key=lambda (sql, (n,tottime, totlen)) : tottime, reverse=True)
         cumn, cumtime, cumlen = 0, 0., 0
         for sql, (n, tottime, totlen) in data:
             cumn += n; cumtime += tottime; cumlen += totlen
-            print toolkit.join([sql, n, tottime, tottime/n, float(totlen)/n])
-        print toolkit.join(["Total", cumn, cumtime, cumtime/n, float(cumlen)/n])
+            prnt(sql, n, tottime, totlen)
+        prnt("Total", cumn, cumtime, cumlen)
     def report(self, replacenumbers=True):
         data = collections.defaultdict(lambda : [0, 0., 0]) # {sql : [n, totaltime, totallength]}
         for sql, timelens in self.queries.iteritems():
@@ -485,6 +489,7 @@ class ProfilingAfterQueryListener(object):
 
 if __name__ == '__main__':
     db = anokoDB()
+    db.beforeQueryListeners.append(toolkit.warn)
     p = ProfilingAfterQueryListener()
     db.afterQueryListeners.append(p)
     db.doQuery("select top 10 * from articles")
@@ -492,6 +497,7 @@ if __name__ == '__main__':
     db.doQuery("select top 10 * from articles")
     db.doQuery("select top 10 * from projects")
 
+    print
     p.printreport()
 
     
