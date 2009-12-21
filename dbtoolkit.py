@@ -1,10 +1,8 @@
-import base64, sys
-import toolkit, config, sbd
+import base64, sbd # only needed for image processing, move to other module>?
+import toolkit, config
 import article, sources, user
-from toolkit import cached
-import re
-
-_debug = toolkit.Debug('dbtoolkit',2)
+import re, collections, time
+from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
 
 _encoding = {
     1 : 'UTF-7',
@@ -13,7 +11,11 @@ _encoding = {
 }
 
 _MAXTEXTCHARS = 8000
-    
+
+class SQLException(Exception):
+    def __init__(self, sql, exception):
+        Exception.__init__(self, "Error on executing %r: %s" % (sql, exception))
+
 def reportDB():
     import MySQLdb
     conf = config.Configuration('app', 'eno=hoty', 'localhost', 'report', MySQLdb)
@@ -35,18 +37,10 @@ class amcatDB(object):
         either the given configuration object or config.default
         """
         
-        if not configuration:
-            configuration=config.default()
-        self.dbType = configuration.drivername
+        if not configuration: configuration=config.default()
         
-        _debug(3,"Connecting to database '%(database)s' on '%(username)s@%(host)s' using driver %(drivername)s... " % configuration.__dict__, 0)
-        self.conn = configuration.connect()# datetime="mx", auto_commit=auto_commit)
-        _debug(3,"OK!", 2)
-
-        self._articlecache = {}
-        
-        self.mysql = False
-        
+        self.dbType = configuration.drivername    
+        self.mysql = False #????
         if self.dbType == "MySQLdb":
             import MySQLdb.converters
             conv_dict = MySQLdb.converters.conversions
@@ -57,7 +51,16 @@ class amcatDB(object):
             self.conn.autocommit(False)
         else:
             self.conn = configuration.connect()
+
         
+        self._articlecache = {}
+        
+        # should be function(string SQL): None or string.
+        # Returning string will cause SQL to be changed
+        self.beforeQueryListeners = OrderedSet()
+        
+        # should be function(string SQL, double time, list-of-lists data): None
+        self.afterQueryListeners = OrderedSet()
       
     def quote(self, value):
         return "'%s'" % str(value).replace("'", "''")   
@@ -75,59 +78,52 @@ class amcatDB(object):
         res, colnames = self.doQuery(sql, colnames=True, **kargs)
         for row in res:
             yield dict(zip(colnames, row))
-        
+
+    def fireBeforeQuery(self, sql):
+        for func in self.beforeQueryListeners:
+            s = func(sql)
+            if s: sql = s
+        return sql
+    def fireAfterQuery(self, sql, time, results):
+        for func in self.afterQueryListeners:
+            func(sql, time, results)
+            
     def doQuery(self, sql, cursor = None, colnames = False, select=None):
         """
         Execute the query sql on the database and return the result.
         If cursor is given, use that cursor and return the cursor instead
+        Otherwise, pre- and postprocess around a call with a new cursor
         """
-
-        #import time
-        #print "%10.5f : %s" % (time.time(), sql)
-        c = None
+        if type(sql) == unicode: sql = sql.encode('latin-1', 'replace')
+        if cursor:
+            sql  = self.fireBeforeQuery(sql)
+            try:
+                cursor.execute(sql)
+            except Exception, e:
+                raise SQLException(sql, e)
+            return cursor
+        
         if select is None:
             select=sql.lower().strip().startswith("select")
-        _debug(5,sql)
-        if select:
-            _debug(4,"selecting: %s... " % sql[:10].replace('\n',' '), 0)
-        else:
-            _debug(4,"executing: %s... " % sql[:10].replace('\n',' '), 0)
+        c = None
+        t = time.time()
         try:
-            if cursor:
-                cursor.execute(sql)
-                _debug.ok(4)
-                return cursor
-            else:
-                #if colnames:
-                    c = self.cursor()
-                    if type(sql) == unicode:
-                        c.execute(sql.encode('latin-1', 'replace'))
-                    else:
-                        c.execute(sql)
-                    if not select:
-                        _debug.ok(4)
-                        return
-                    res = c.fetchall()
-                    if colnames:
-                        info = c.description
-                        colnames = [entry[0] for entry in info]
-                        _debug.ok(4)
-                        return res, colnames
-                    else:
-                        _debug.ok(4)
-                        return res
-                #else:
-                #    res = self.conn.execute(sql)
-                #    _debug.ok(4)
-                #    if res:
-                #        return res[0]
-        except Exception, details:
-            _debug.fail(4)
-            _debug(1,"Error while executing: "+sql)
-            if c:
-                c.close()
-            raise "Exception on executing: %r: %s" % (sql, details)
-            
+            c = self.cursor()
+            self.doQuery(sql, c)
+            res = c.fetchall() if select else None
+        except Exception, e:
+            raise SQLException(sql, e)
+        finally:
+            if c and not c.closed: c.close()
+
+        self.fireAfterQuery(sql, time.time() - t, res)
+        if select and colnames:
+            info = c.description
+            colnames = [entry[0] for entry in info]
+            return res, colnames            
+        return res
+
+
             
     def doCall(self, proc, params):
         """
@@ -152,20 +148,9 @@ class amcatDB(object):
         """
         Executes the INSERT sql and returns the inserted IDENTITY value
         """
-        _debug(4, "Inserting new value")
         self.doQuery(sql)
-        _debug(4, "Retrieving SCOPE_IDENTITY")
-        if not retrieveIdent: return
-        res = self.doQuery("select SCOPE_IDENTITY()")
-        _debug(4, "Extracting SCOPE_IDENTITY from %s" % res)
-        try:
-            id = int(res[0][0])
-        except Exception, details:
-            _debug(2,"Could not retrieve identity value?")
-            _debug(2,details)
-            id=None
-        return id    
-    
+        if retrieveIdent: 
+            return self.getValue("select SCOPE_IDENTITY()")
     
     def insert(self, table, dict, idcolumn="For backwards compatibility", retrieveIdent=1):  
         """
@@ -209,6 +194,7 @@ class amcatDB(object):
     
     def articles(self, aids=None, **kargs):
         if not aids:
+            import sys
             aids = toolkit.intlist(sys.stdin)
         for aid in aids:
             yield self.article(aid)
@@ -246,15 +232,14 @@ class amcatDB(object):
 
 
     @property
-    @cached
     def users(self):
+        #TODO get rid of this!
         return user.Users(self)
 
         
             
     def newBatch(self, projectid, batchname, query, verbose=0):
         batchid = self.insert('batches', {'projectid':projectid, 'name':batchname, 'query':query})
-        _debug(4-3*verbose,"Created new batch with id %d" % batchid)
         return batchid
 
 
@@ -266,17 +251,7 @@ class amcatDB(object):
         else:
             self.doQuery('exec newProject %s, %s, @ownerid=%s' % (name, description,owner))
             
-        res = self.doQuery('select @@identity')
-        try:
-            id = int(res[0][0])
-        except Exception, details:
-            _debug(2,"Could not retrieve identity value?")
-            _debug(2,details)
-            id=None
-
-        _debug(4-3*verbose,"Created new project with id %s" % id)
-        return id
-
+        return self.getValue('select @@identity')
         
     def createStoredResult(self, name, aids, projectid):
         storedresultid = self.insert('storedresults', {'name':name, 'query':None, 'config':None, 
@@ -285,230 +260,7 @@ class amcatDB(object):
         self.insertmany('storedresults_articles', ('storedresultid', 'articleid'), data)
         return storedresultid
         
-    '''
-    def updateProject(self, projectid, newName=None, newDescription=None, newOwner=None):
-        params=['@id=%d'%projectid]
-        if newName: params.append('@newname=%s' % toolkit.quotesql(newName))
-        if newDescription: params.append('@newdescription=%s' % toolkit.quotesql(newDescription))
-        if newOwner: params.append('@newowner=%d' % newOwner)
-        if len(params)==1: raise Exception('Nonsensical call of updateProject without changes')
-        
-        self.doQuery('exec updateProject %s' % (', '.join(params)))
-
-
-    def updateBatch(self, batchid, newName=None, newProject=None):
-        params=['@id=%d'%batchid]
-        if newName: params.append('@newname=%s' % toolkit.quotesql(newName))
-        if newProject: params.append('@newproject=%d' % newProject)
-        if len(params)==1: raise Exception('Nonsensical call of updatBatch without changes')
-
-        self.doQuery('exec updateBatch %s' % (', '.join(params)))
-
-        
-    def deleteBatch(self, batchid):
-        params=['@id=%d'%batchid]
-        self.doQuery('exec deleteBatch %s' % (', '.join(params)))
-        
-        
-    def deleteProject(self, projectid):
-        params=['@id=%d'%projectid]
-        self.doQuery('exec deleteProject %s' % (', '.join(params)))
-
-        
-    def createCodingJob(self, jobname, coderid, aids):
-        jobid = self.insert("codingjobs", {'name':jobname, 'coder_userid':coderid})
-        for aid in aids:
-            self.insert("codingjobs_articles", {'codingjobid':jobid, 'articleid':aid}, retrieveIdent=0)
-        return jobid
-    '''
-
-
-    '''
-    def isMyProject(self, projectid):
-        query = "select dbo.anoko_user()-ownerid from projects where projectid=%s"  % projectid
-        res = self.doQuery(query)
-        if not res: return None
-        if res[0][0]==0: return True
-        return False
-        
-    def returnAnokoUsers(self):
-        query = """SELECT userid
-        from sysmembers s
-        inner join sysusers i on s.memberuid = i.uid
-        inner join users u on i.name = u.username
-        where groupuid=16400"""
-        data = self.doQuery(query)
-        return [item[0] for item in data]
-        
-    def getProjectInfo(self, projectid=None):
-        if projectid=="-s":
-            query = "select projectid, ownerid, name from projects"
-        elif projectid=="-d":
-            query = "select projectid, name, ownerid, description, convert(varchar,insertdate,105) as insertdate from projects"
-        elif projectid[:2]=="-e":
-            query = "select projectid, ownerid, name, description, convert(varchar,insertdate,105) as insertdate from projects where projectid=%s" % projectid[3:]
-        elif projectid:
-            query = "select * from vw_batches_counts where projectid=%s" % projectid
-        else:
-            query = "select * from vw_batches"
-
-        return self.doQuery(query, colnames=1)
-
-    def projectList(self, owner=0, projectid=None, colnames=1, detailed=1):
-        where = []
-        if owner: where.append("ownerid = dbo.anoko_user()")
-        if projectid: where.append("projectid = %s" % projectid)
-        if detailed:
-            query = "SELECT projectid, name, description, owner, convert(varchar,insertdate,105) as insertdate FROM vw_projectinfo"
-        else:
-            query = "SELECT projectid, name, ownerid FROM projects"
-            
-        if where:
-            query += " WHERE " + " AND ".join(where)
-        return self.doQuery(query, colnames=colnames)
-        
-    def getProjectName(self, projectid):
-        query = "select name from projects where projectid=%s" % projectid
-        data = self.doQuery(query, colnames=0)
-        if data:
-            return data[0][0]
-        return None
-        
-    def getSelections(self, owner=0):
-        if owner != 0:
-            where =  'where ownerid = %s' % owner
-        else:
-            where = ''
-        query = "SELECT storedresultid, name, ownerid FROM storedresults %s" % where
-        return self.doQuery(query, colnames=0)
-        
-    def getCodingJobs(self, own=0, detailed=0, colnames=1, jobid=None):
-        where = []
-        if own:
-            where.append("owner_userid = dbo.anoko_user()")
-        if jobid:
-            where.append("codingjobid = %s" % jobid)
-        where = where and (" WHERE " + " AND ".join(where)) or ''
-        if detailed:
-            if jobid:
-                extraSelect = ', codingjobs.unitschemaid, codingjobs.articleschemaid'
-            else:
-                extraSelect = ''
-            query = """SELECT codingjobs.codingjobid, codingjobs.name, users.username, codingjobs.insertdate %s
-                        FROM codingjobs
-                        INNER JOIN users
-                        ON users.userid = codingjobs.owner_userid
-                        %s
-                        ORDER BY codingjobs.codingjobid DESC""" % (extraSelect, where)
-        else:
-            query = """SELECT codingjobid, name, owner_userid
-                        FROM codingjobs
-                        %s
-                        ORDER BY codingjobid DESC""" % where
-        return self.doQuery(query, colnames=colnames)
-        
-        
-    def getCodingJobSets(self, codingjobid, setnr=None):
-        wherestr = ' AND setnr = %s' % setnr if setnr else ''
-        query = """SELECT setnr, username as coder, count(articleid) articles, 
-                        sum(ISNULL(CAST(irrelevant as INTEGER), 0)) irrelevant,
-                        sum(has_arrow) 'with arrows', sum(done) done
-        FROM vw_codingjobs_articles_done
-        WHERE codingjobid=%s
-        %s
-        GROUP BY setnr, username
-        ORDER BY setnr""" % (codingjobid, wherestr)
-        return self.doQuery(query, colnames=1)
-        
-    def isMyCodingJob(self, codingjobid):
-        query = "SELECT dbo.anoko_user()-owner_userid FROM codingjobs WHERE codingjobid=%s" % codingjobid
-        data = self.doQuery(query, colnames=0)
-        if not data:
-            return None
-        if data[0][0] == 0:
-            return True
-        return False
-        
-    def getCoder(self, codingjobid, setnr):
-        query = 'SELECT coder_userid FROM codingjobs_sets WHERE codingjobid=%s AND setnr=%s' % \
-                                                                                    (codingjobid, setnr)
-        data = self.doQuery(query, colnames=0)
-        if data:
-            return data[0][0]
-        else:
-            return None
-    '''
-        
-    '''   
-    def changeCoder(self, codingjobid, setnr, coderid):
-        params=['@jobid=%d'%codingjobid]
-        params.append('@setnr=%d'%setnr)
-        params.append('@newcoderid=%d'%coderid)
-        self.doQuery('exec changecodingjobsetcoder %s' % (', '.join(params)))
     
-    def changeJobOwner(self, codingjobid, ownerid):
-        params=['@jobid=%d'%codingjobid]
-        params.append('@newownerid=%d'%ownerid)
-        self.doQuery('exec changecodingjobowner %s' % (', '.join(params)))
-        
-    def deleteJob(self, codingjobid):
-        params=['@jobid=%d'%codingjobid]
-        self.doQuery('exec deletecodingjob %s' % (', '.join(params)))
-        
-    def deleteCodingSet(self, codingjobid, setnr):
-        params=['@jobid=%d'%codingjobid]
-        params.append('@setnr=%d'%setnr)
-        self.doQuery('exec deletecodingjob_set %s' % (', '.join(params)))
-    '''
-    
-    
-    '''
-    def getSelectionInfo(self, selectionid):
-        query = "SELECT query, config FROM storedresults where storedresultid = %s" % selectionid
-        return self.doQuery(query, colnames=0)
-        
-    def batchList(self, projectid, colnames=1):
-        query = """SELECT batchid, batch as batchname, project, narticles as articles 
-                    FROM vw_batches_counts
-                    WHERE projectid=%s and batchid is not null
-                    ORDER BY batchid""" % projectid
-        return self.doQuery(query, colnames=colnames)
-        
-    def getBatchInfo(self, batchid, details=None):
-        if details:
-            extra = ', project' 
-        else:
-            extra = ''
-        query = "select batchid, batch as batchname, projectid, owner%s from vw_batches_counts where batchid=%s" % (extra,batchid)
-        return self.doQuery(query, colnames=1)
-
-    """def returnUserSelect(self, currentOwner=0, multiple=0, name="ownerid"):
-        html = '<select name=%s %s>' % (name, multiple and 'multiple size=10' or '')
-        data = self.doQuery('select userid, fullname from users')
-        for userid, fullname in data:
-            if userid == currentOwner:
-                html += '<option value="%s" selected>%s</option>' % (userid,fullname)
-            else:
-                html += '<option value="%s">%s</option>' % (userid,fullname)
-        html += '</select>'
-        return html"""
-        
-    def getIndices(self, colnames=0, done=1, started=1):
-        query = """SELECT directory, indexid, name, owner_userid
-                    FROM indices
-                    WHERE done = %(done)s AND started = %(started)s
-                    ORDER BY indexid DESC""" % locals()
-        data = self.doQuery(query, colnames=colnames)
-        return [ (row[0], '%s - %s' % (row[1], row[2]), row[3]) for row in data]
-        
-    def getUserList(self):
-        return self.doQuery('SELECT userid, fullname FROM users ORDER BY fullname', colnames=0)
-
-    def getUserInitials(self, userid):
-        return self.getValue('SELECT initials FROM users WHERE userid=%i' % userid)
-    '''
-    
-
     def uploadimage(self, articleid, length, breadth, abovefold, type=None, data=None, filename=None, caption=None):
         """
         Uploads the specified image and links it with the specified article
@@ -704,16 +456,42 @@ def encodeTexts(texts):
         if enc==3: encoding = 3
     return [encode(t, encoding) for t in texts], encoding
 
+def doreplacenumbers(sql):
+    sql = re.sub(r"\d[\d ,]*", "# ", sql)
+    return sql
+class ProfilingAfterQueryListener(object):
+    def __init__(self):
+        self.queries = collections.defaultdict(list)
+    def __call__(self, query, time, resultset):
+        l = len(resultset) if resultset else 0
+        self.queries[query].append((time, l))
+    def printreport(self, *args, **kargs):
+        data = self.report(*args, **kargs)
+        data = sorted(data.iteritems(), key=lambda (sql, (n,tottime, totlen)) : tottime, reverse=True)
+        cumn, cumtime, cumlen = 0, 0., 0
+        for sql, (n, tottime, totlen) in data:
+            cumn += n; cumtime += tottime; cumlen += totlen
+            print toolkit.join([sql, n, tottime, tottime/n, float(totlen)/n])
+        print toolkit.join(["Total", cumn, cumtime, cumtime/n, float(cumlen)/n])
+    def report(self, replacenumbers=True):
+        data = collections.defaultdict(lambda : [0, 0., 0]) # {sql : [n, totaltime, totallength]}
+        for sql, timelens in self.queries.iteritems():
+            if replacenumbers: sql = doreplacenumbers(sql)
+            for time, length in timelens:
+                data[sql][0] += 1
+                data[sql][1] += time
+                data[sql][2] += length
+        return data
+
 if __name__ == '__main__':
-    #print "Opening connection with database"
-    #db = anokoDB()
-    #print "Trying to upload image from sys.argv[1] for article sys.argv[2] with optional caption sys.argv[3]"
-    #import sys
-    #caption = None
-    #if len(sys.argv) > 3:
-    #    caption = sys.argv[3]
-    #db.uploadimage(int(sys.argv[2]), 0, 0, 0, filename=sys.argv[1], caption=caption)
-    #print "Reading project name"
-    #print db.doQuery("select top 1 * from projects")
-    print encodeTexts([u'abc\xe8', u'def'])
+    db = anokoDB()
+    p = ProfilingAfterQueryListener()
+    db.afterQueryListeners.append(p)
+    db.doQuery("select top 10 * from articles")
+    db.doQuery("select top 15 * from articles")
+    db.doQuery("select top 10 * from articles")
+    db.doQuery("select top 10 * from projects")
+
+    p.printreport()
+
     
