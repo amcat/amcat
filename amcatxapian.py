@@ -69,16 +69,25 @@ class Index(object):
     def query(self,  query, returnWeights=False, returnAID=False, subset=None):
         if type(query) in (str, unicode):
             query = self.parse(query)
+        articlefunc = self.getAid if returnAID else self.getArticle
         enquire = xapian.Enquire(self.index)
         enquire.set_query(query)
         matches = enquire.get_mset(0,self.index.get_doccount())
-        articlefunc = self.getAid if returnAID else self.getArticle
-        for m in matches:
-            a = articlefunc(m.docid)
-            if returnWeights:
-                yield a, m.weight
-            else:
-                yield a
+        if subset:
+            for article in subset:
+                if self.getDocument(article) in matches:
+                    yield a
+        else:
+            enquire = xapian.Enquire(self.index)
+            enquire.set_query(query)
+            matches = enquire.get_mset(0,self.index.get_doccount())
+        
+            for m in matches:
+                a = articlefunc(m.docid)
+                if returnWeights:
+                    yield a, m.weight
+                else:
+                    yield a
                 
     def queryCount(self,  query):
         i = 0
