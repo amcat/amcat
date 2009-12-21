@@ -3,17 +3,17 @@ import toolkit
 class Cacher(object):
     def __init__(self):
         self.dbfields = []
-    def getData(self, cachables):
+    def getData(self, db, cachables):
         SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__,
                                       ",".join("[%s]" % f for f in self.dbfields), sqlFrom(cachables))
-        print "-->", SQL
-        self.data = {} # --> database query
+        self.data = {}
+        for row in self.db.doQuery(SQL):
+            self.data[row[0]] = row[1:]
     def addDBField(self, field):
         if field not in self.dbfields: self.dbfields.append(field)
         
     def getDBData(self, cachable, field):
-        return "[%s::%s]" % (cachable.id, field)
-        return self.data[self.dbfields.index(field)+1]
+        return self.data.get(cachable.id)
 
 class Property(object):
     def __init__(self, cachable):
