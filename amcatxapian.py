@@ -37,14 +37,7 @@ class Index(object):
         for d in self.documents:
             yield self.getArticle(d)
 
-    def getAid(self, document):
-        if type(document) == int:
-            document = self.index.get_document(document)
-        return int(document.get_data())        
-            
-    def getArticle(self, document):
-        return article.Article(self.db, self.getAid(document))
-        
+         
 
     def getFrequencies(self, article=None, raw=False):
         if article:
@@ -65,30 +58,41 @@ class Index(object):
                 yield term, t.wdf
             else:
                 yield term, t.termfreq
+                
+    def getAid(self, document):
+        if type(document) == int:
+            document = self.index.get_document(document)
+        return int(document.get_data())        
+            
+    def getArticle(self, document):
+        return article.Article(self.db, self.getAid(document))
 
-    def query(self,  query, returnWeights=False, returnAID=False, subset=None):
+    def query(self,  query, returnWeights=False, returnAID=False, subset=None):  
         if type(query) in (str, unicode):
             query = self.parse(query)
-        articlefunc = self.getAid if returnAID else self.getArticle
         enquire = xapian.Enquire(self.index)
         enquire.set_query(query)
         matches = enquire.get_mset(0,self.index.get_doccount())
-        if subset:
-            for article in subset:
-                if self.getDocument(article) in matches:
-                    yield a
-        else:
-            enquire = xapian.Enquire(self.index)
-            enquire.set_query(query)
-            matches = enquire.get_mset(0,self.index.get_doccount())
-        
-            for m in matches:
-                a = articlefunc(m.docid)
-                if returnWeights:
-                    yield a, m.weight
+        if subset: subset = set((a if type(a)==int else a.id) for a in subset)
+        for m in matches:
+            aid = self.getAid(m.docid)
+            #aid = int(self.index.get_document(m.docid).get_data()) 
+            if subset and aid not in subset: continue
+            if not returnAID: aid = article.Article(self.db, aid)
+            if returnWeights:
+                yield aid, m.weight
+            else:
+                yield aid
+                   
+    def queries(self, queries, subset=None, **options):
+        if subset: subset = set((a if type(a)==int else a.id) for a in subset)
+        for q in queries:
+            for a in self.query(q, subset=subset, **options):
+                if type(a) == tuple:
+                    yield (q,) + a
                 else:
-                    yield a
-                
+                    yield q, a         
+       
     def queryCount(self,  query):
         i = 0
         for x in self.query(query):
@@ -115,9 +119,9 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch"):
         indexer.set_stemmer(xapian.Stem(stemmer))
     for a in articles:
         if type(a) == int:
-            a = article.fromDB(db, a)
+            a = article.Article(db, a)
         try:
-            txt = toolkit.stripAccents(a.toText()).encode('ascii', 'replace')
+            txt = toolkit.stripAccents(a.text).encode('ascii', 'replace')
         except Exception, e:
             toolkit.warn("Error on indexing %i: %s" % (a.id, e))
             continue
@@ -130,21 +134,13 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch"):
     return Index(indexloc, db)
 
 if __name__ == '__main__':
-    import sys, dbtoolkit
-    if len(sys.argv) <= 1:
-        toolkit.warn("Usage: python amcatxapian.py INDEXLOC [QUERY] [< ARTICLEIDS]\n\nIf QUERY is giving, query exsting index; otherwise, build new index from ARTICLEIDS")
-        sys.exit(1)
+    import sys, dbtoolkit, project
+    db = dbtoolkit.amcatDB()
+    i = Index("/home/amcat/indices/draft", db)
+    b = project.Batch(db, 4796)
+    subset = b.articles
+    queries = "yakult", "dsb", "heineken", "liander"
+    for q, a, w in i.queries(queries, returnWeights=True, subset=subset):
+        print q, `a`, w
         
-    indexloc = sys.argv[1]
-    query = " ".join(sys.argv[2:])
-    if query.strip():
-        toolkit.warn("Querying index %s with %r" % (indexloc, query))
-        i = Index(indexloc, dbtoolkit.amcatDB())
-        for a, weight in i.query(query, returnWeights=True):
-            print a.id, weight
-    else:
-        toolkit.warn("Creating new xapian index (database) at %s" % indexloc)
-        articles = toolkit.tickerate(toolkit.intlist())
-        i = createIndex(indexloc, articles)
-        toolkit.warn("Created index %s" % i)
 
