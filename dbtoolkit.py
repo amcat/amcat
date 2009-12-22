@@ -118,6 +118,8 @@ class amcatDB(object):
                 res = c.fetchall() if select else None
             except Exception, e:
                 raise SQLException(sql, e)
+
+            
             self.fireAfterQuery(sql, time.time() - t, res)
             if select and colnames:
                 info = c.description
@@ -155,7 +157,9 @@ class amcatDB(object):
         """
         self.doQuery(sql)
         if retrieveIdent: 
-            return self.getValue("select SCOPE_IDENTITY()")
+            id = self.getValue("select SCOPE_IDENTITY()")
+            if id: id = int(id)
+            return id
     
     def insert(self, table, dict, idcolumn="For backwards compatibility", retrieveIdent=1):  
         """
