@@ -64,11 +64,12 @@ class Object(Base, Cachable):
     __table__ = 'o_objects'
     __idcolumn__ = 'objectid'
     def __init__(self, ont, id, nr):
-        Base.__init__(self, ont, id)
         Cachable.__init__(self, ont.db, id)
+        Base.__init__(self, ont, id)
         self.parents = {} # clas : (parent or None, omklap?)
         self.children = collections.defaultdict(set) # clas : [parenr, reverse]
         self.labels = {} # language : label
+        self.label = None
         self.nr = nr
         self.addDBProperty("keyword", table="o_keywords")
         self.addDBProperty("lastname", "name", table="o_politicians")

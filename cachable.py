@@ -1,21 +1,31 @@
-import toolkit
+import toolkit, collections
+from functools import partial
+import weakref
+
+def quotefield(s):
+    if "(" in s: return s
+    return "[%s]" % s
 
 class Cacher(object):
     def __init__(self):
-        self.dbfields = []
+        self.dbfields = collections.defaultdict(set) # table : fields
     def getData(self, cachables):
         if not cachables: return
-        SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__,
-                                      ",".join("[%s]" % f for f in self.dbfields), sqlFrom(cachables))
         self.data = {}
-        for row in cachables[0].db.doQuery(SQL):
-            self.data[row[0]] = row[1:]
-    def addDBField(self, field):
-        if field not in self.dbfields: self.dbfields.append(field)
+        for table, fields in self.dbfields.items():
+            fields = list(fields)
+            SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__, ",".join(map(quotefield, fields)),
+                                            sqlFrom(cachables, table=table))
+            for row in cachables[0].db.doQuery(SQL):
+                self.data[table, row[0]] = dict(zip(fields, row[1:]))
+    def addDBField(self, field, table=None):
+        self.dbfields[table].add(field)
         
-    def getDBData(self, cachable, field):
-        row = self.data.get(cachable.id)
-        if row: return row[self.dbfields.index(field)]
+    def getDBData(self, cachable, field, table=None):
+        row = self.data.get((table, cachable.id))
+        if row:
+            if field not in row: print table, row
+            return row[field]
 
 class Property(object):
     def __init__(self, cachable):
@@ -37,30 +47,49 @@ class Property(object):
         self.cached = False
 
 class DBProperty(Property):
-    def __init__(self, cachable, fieldname, func=None, table=None):
+    def __init__(self, cachable, fieldname, func=None, table=None, objfunc=None, dbfunc=None):
         Property.__init__(self, cachable)
         self.fieldname = fieldname
         self.func = func
-        self.processedValue = None
-        self.processedCached = False
+        self.objfunc = objfunc
+        self.dbfunc = dbfunc
         self.table = table
-    def get(self):
-        if not self.processedCached:
-            val = Property.get(self)
-            if self.func: val = self.func(val)
-            self.processedValue = val
-            self.processedCached = True
-        return self.processedValue
+    def process(self, *values):
+        if self.func: return self.func(*values)
+        if self.objfunc: return self.objfunc(self.cachable, *values)
+        if self.dbfunc: return self.dbfunc(self.cachable.db, *values)
+        return values[0]
     def retrieve(self):
-        SQL = "SELECT %s %s" % (self.fieldname, self.cachable.sqlFrom(self.table))
-        val = self.cachable.db.getValue(SQL)
-        return val
+        seq = type(self.fieldname) in (list, tuple)
+        if seq:
+            field = ",".join(map(quotefield, self.fieldname))
+        else:
+            field = quotefield(self.fieldname)
+
+        SQL = "SELECT %s %s" % (field, self.cachable.sqlFrom(self.table))
+        d = self.cachable.db.doQuery(SQL)
+        if d: return self.process(*d[0])
     def prepareCache(self, cacher):
-        cacher.addDBField(self.fieldname)
+        cacher.addDBField(self.fieldname, table=self.table)
     def doCache(self, cacher):
-        val = cacher.getDBData(self.cachable, self.fieldname)
-        self.cache(val)
-    
+        val = cacher.getDBData(self.cachable, self.fieldname, self.table)
+        self.cache(self.process(val))
+
+class PropertyFactory(object):
+    def __init__(self, klass, *args, **kargs):
+        self.klass = klass
+        self.args = args
+        self.kargs = kargs
+    def createProperty(self, object, property):
+        return self.klass(object, *self.args, **self.kargs)
+        
+class DBPropertyFactory(PropertyFactory):
+    def __init__(self, *args, **kargs):
+        PropertyFactory.__init__(self, DBProperty, *args, **kargs)
+    def createProperty(self, object, property):
+        if not self.args and not "fieldname" in self.kargs:
+            self.args = (property,)
+        return super(DBPropertyFactory, self).createProperty(object, property)        
 class FunctionProperty(Property):
      def __init__(self, cachable, func):
         Property.__init__(self, cachable)
@@ -75,11 +104,23 @@ def selectlist(fields):
     else: return ",".join("[%s]" % f for f in fields)
 
 class DBFKProperty(FunctionProperty):
-    def __init__(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None):
+    def __init__(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None):
         FunctionProperty.__init__(self, cachable, self.retrieve)
         self.table = table
         self.targetfields = targetfields
-        self.function = function or trivial
+        if function:
+            self.function = function
+        elif dbfunc:
+            self.function = partial(dbfunc, self.cachable.db)
+        elif factory:
+            if uplink is None: uplink = type(cachable).__name__.lower()
+            factory = factory()
+            if type(targetfields) in (str, unicode):
+                self.function = lambda id : factory(self.cachable.db, id, **{uplink: self.cachable})
+            else:
+                self.function = lambda *ids : factory(self.cachable.db, ids, **{uplink: self.cachable})
+        else:
+            self.function = trivial
         self.reffield = reffield or cachable.__idcolumn__
         self.endfunc = endfunc or trivial
         self.orderby = orderby
@@ -88,6 +129,14 @@ class DBFKProperty(FunctionProperty):
         SQL = "SELECT %s FROM %s WHERE %s" % (selectlist(self.targetfields), self.table, sqlWhere(self.reffield, self.cachable.id))
         if self.orderby: SQL += " ORDER BY %s" % selectlist(self.orderby)
         return self.endfunc([self.function(*x) for x in self.cachable.db.doQuery(SQL)])
+
+class DBFKPropertyFactory(PropertyFactory):
+    def __init__(self, *args, **kargs):
+        PropertyFactory.__init__(self, DBFKProperty, *args, **kargs)
+    def createProperty(self, object, property):
+        if not self.args and not "fieldname" in self.kargs:
+            self.args = (property,)
+        return super(DBFKPropertyFactory, self).createProperty(object, property)
 
 def sqlWhere(fields, ids):
     if type(fields) in (str, unicode):
@@ -98,42 +147,77 @@ def sqlWhere(fields, ids):
 def sqlFrom(cachables, table = None):
     c = cachables[0] # prototype, assume all cachables are alike
     if type(c.__idcolumn__) in (str, unicode):
-        where = "(%s in (%s))" % (c.__idcolumn__, ",".join(str(x.id) for x in cachables))
+        where  = toolkit.intselectionSQL(c.__idcolumn__, (x.id for x in cachables))
     else:
         where = "((%s))" % ") or (".join(sqlWhere(x.__idcolumn__, x.id) for x in cachables)
 
     return " FROM %s WHERE %s" % (table or c.__table__, where)
 
 def cacheMultiple(cachables, propnames):
+    if not toolkit.isSequence(propnames, excludeStrings=True):
+        propnames = [propnames]
     cacher = Cacher()
     for cachable in cachables:
         for prop in propnames:
-            cachable.__properties__[prop].prepareCache(cacher)
+            cachable._getProperty(prop).prepareCache(cacher)
     cacher.getData(cachables)
     for cachable in cachables:
         for prop in propnames:
-            cachable.__properties__[prop].doCache(cacher)
+            cachable._getProperty(prop).doCache(cacher)
+            
+_CACHE = {}
+class CachingMeta(type):
+    def __call__(cls, id, *args, **kargs):
+        cancache = cls.__dict__.get('__cacheme__')
+        if cancache and (cls, id) in _CACHE:
+            obj = _CACHE[cls, id]()
+            if obj is not None: return obj
+        obj = type.__call__(cls, id, *args, **kargs)
+        if cancache: _CACHE[cls, id] = weakref.ref(obj)
+        return obj
 
 class Cachable(toolkit.IDLabel):
-    def __init__(self, db, id):
+    __metaclass__ = CachingMeta
+    def __init__(self, db, id, **cache):
         self.db = db
         self.id = id
         self.__properties__ = {}
-    def __getattr__(self, attr):
-        if attr in self.__properties__:
-            return self.__properties__[attr].get()
-        # implement IDLabel.label in case no 'label' property exists.
-        # Try __labelprop__ first, then try 'name'
-        if attr == "label":
+        for k,v in cache.iteritems():
+            if k is not None:
+                self.cacheValues(**{k:v})
+        
+    def _getProperty(self, attr):
+        prop = self.__properties__.get(attr)
+        if prop is not None: return prop
+        factory = type(self).__dict__.get(attr)
+        if isinstance(factory, PropertyFactory):
+            prop = factory.createProperty(self, attr)
+        if not prop:
+            dbprops = type(self).__dict__.get("__dbproperties__", ())
+            if attr in dbprops:
+                prop = DBProperty(self, attr)
+        if prop:
+            self.__properties__[attr] = prop
+            return prop
+    def __getattribute__(self, attr):
+        if attr <> "__properties__" and attr <> '_getProperty':
+            prop = self._getProperty(attr)
+            if prop:
+                return prop.get()
+        try:
+            return toolkit.IDLabel.__getattribute__(self, attr)
+        #return super(Cachable, self).__getattribute__(attr)
+        except AttributeError, e:
+            if attr <> "label": raise
             try:
                 attr = self.__labelprop__
             except AttributeError:
                 attr = "name"
-            return self.__getattr__(attr)
-        raise AttributeError(attr)
+            if attr:
+                return self.__getattribute__(attr)
+                
     def addDBProperty(self, property, fieldname=None, func=None, table=None):
-        if fieldname == None: fieldname = property
-        self.addProperty(property, DBProperty(self, fieldname, func, table))
+        self.addProperty(property, DBProperty(self, fieldname or property, func, table))
     def addFunctionProperty(self, property, func):
         self.addProperty(property, FunctionProperty(self, func))
     def addDBFKProperty(self, property, *args, **kargs):
@@ -142,9 +226,11 @@ class Cachable(toolkit.IDLabel):
         self.__properties__[propname] = prop
     def cacheValues(self, **values):
         for prop, val in values.iteritems():
-            self.__properties__[prop].cache(val)
+            p = self._getProperty(prop)
+            if not p: raise AttributeError("Cannot find property %s of %r" % (prop, self))
+            p.cache(val)
     def removeCached(self, prop):
-        self.__properties__[prop].uncache()
+        self._getProperties(prop).uncache()
     def cacheProperties(self, *propnames):
         cacheMultiple([self], propnames)
     def sqlFrom(self, table=None):

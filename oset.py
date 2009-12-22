@@ -3,7 +3,7 @@
 # from http://code.activestate.com/recipes/528878/
 # original license unclear
 
-# Edited WvA: allow_move->False, add=append
+# Edited WvA: allow_move->False, add=append, lenient for duplicate
 
 import weakref
 
@@ -120,7 +120,8 @@ class OrderedSet(object):
             if self._allow_move:
                 self.remove(element)
             else:
-                raise ValueError("element already exists")
+                return
+                #raise ValueError("element already exists")
 
         newnode = _Node()
         newnode.content = element

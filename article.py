@@ -1,9 +1,16 @@
-import toolkit, dbtoolkit, re, ctokenizer, project, sentence, sources
+import toolkit, dbtoolkit, re, ctokenizer, project, sources
 from itertools import izip, count
 from functools import partial
 _debug = toolkit.Debug('article',1)
-from cachable import Cachable
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 
+def decode(article, string):
+    return dbtoolkit.decode(string, article.encoding)
+
+def createArticle(db, aid, **cache):
+    return Article(db, aid, **cache)
+import sentence
+    
 class Article(Cachable):
     """
     Class representing a newspaper article
@@ -11,25 +18,22 @@ class Article(Cachable):
     __table__ = 'articles'
     __idcolumn__ = 'articleid'
     __labelprop__ = 'headline'
-    
-    def __init__(self, db, id):
-        Cachable.__init__(self, db, id)
-        for prop in "date", "length", "pagenr", "url", "encoding":
-            self.addDBProperty(prop)
-        for prop in "headline", "byline", "metastring", "section":
-            self.addDBProperty(prop, func=self.decode)
-        self.addDBProperty("text", table="texts", func=self.decode)
-        self.addDBProperty("batch", "batchid", func=partial(project.Batch, db))
-        self.addDBProperty("source", "mediumid", func=partial(sources.Source, db))
-        self.addFunctionProperty("project", lambda : self.batch.project)
-        self.addDBFKProperty("sentences", "sentences", "sentenceid", function=partial(sentence.Sentence, db, article=self))
-
-    def decode(self, s):
-        return dbtoolkit.decode(s, self.encoding)
+    __dbproperties__ = ["date", "length", "pagenr", "url", "encoding"]
+    headline = DBPropertyFactory(objfunc = decode)
+    byline = DBPropertyFactory(objfunc = decode)
+    metastring = DBPropertyFactory(objfunc = decode)
+    section = DBPropertyFactory(objfunc = decode)
+    text = DBPropertyFactory(table="texts", objfunc = decode)
+    batch = DBPropertyFactory("batchid", dbfunc=lambda db, id: project.Batch(db, id))
+    source = DBPropertyFactory("mediumid", dbfunc=sources.Source)
+    sentences = DBFKPropertyFactory("sentences", "sentenceid", dbfunc=sentence.Sentence)
 
     @property
     def fullmeta(self):
         return toolkit.dictFromStr(self.metastring)
+    @property
+    def project(self):
+        return self.batch.project
 
     def fulltext(self):
         result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")

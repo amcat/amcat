@@ -8,10 +8,11 @@ RETURN = Enum(BOTH=-1, OBJECT=0, OMKLAP=1)
 class Categorisation(Cachable):
     __table__ = 'o_categorisations'
     __idcolumn__ = 'categorisationid'
+    __labelprop__ = "name"
     def __init__(self, ont, id):
         Cachable.__init__(self, ont.db, id)
         self.ont = ont
-        self.addDBProperty("label")
+        self.addDBProperty("name")
 
         self.addDBFKProperty("classes", "o_categorisations_classes", "classid", function=ont.classes.get, orderby="order")
         self.addDBFKProperty("objects", "o_categorisations_objects", ("objectid", "order"),

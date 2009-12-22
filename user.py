@@ -1,4 +1,4 @@
-from cachable import Cachable
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 import toolkit, permissions, project
 
 _users = None
@@ -12,9 +12,9 @@ class Users(object):
     def __init__(self, db):
         self.db = db
         self.byid, self.byname = {}, {}
-        SQL = "select userid, username from users"
-        for uid, username in db.doQuery(SQL):
-            u = User(db, uid, username=username)
+        SQL = "select userid from users"
+        for uid, in db.doQuery(SQL):
+            u = User(db, uid)
             self.byid[uid] = u
             self.byname[u.username] = u
     def getUser(self, userid):
@@ -26,27 +26,21 @@ class Users(object):
             yield user
 
 class User(Cachable):
+    __cacheme__ = True
     __table__ = 'users'
     __idcolumn__ = 'userid'
-    def __init__(self, db, id, username=None):
-        Cachable.__init__(self, db, id)
-        for prop in "username", "fullname", "affiliation", "active", "email":
-            self.addDBProperty(prop)
-        self.addDBProperty("permissionLevel", "permissionid", table="permissions_users", func=permissions.UserPermission.get)
-        if username is not None:
-            self.cacheValues(username=username)
-
-    def __str__(self):
-        return self.username
+    __labelprop__ = 'username'
     
-    def idname(self):
-        return "%i - %s" % (self.id, self.username)
+
+    __dbproperties__ = ["username", "fullname", "affiliation", "active", "email"]
+    permissionLevel = DBPropertyFactory("permissionid", table="permissions_users", func=permissions.UserPermission.get)
+    projects = DBFKPropertyFactory("permissions_projects_users", "projectid", dbfunc=lambda db, id : project.Project(db, id))
 
     @property
     def permissionLevelName(self):
         return self.permissionLevel.label
     
-    def projects(self, own):
+    def getProjects(self, own):
         return project.projects(self.db, self.id, own=own)
         
     @property
@@ -77,3 +71,15 @@ class User(Cachable):
     
         
         
+if __name__ == '__main__':
+    import dbtoolkit
+    db = dbtoolkit.amcatDB()
+    p = dbtoolkit.ProfilingAfterQueryListener()
+    db.afterQueryListeners.append(p)
+    for i in range(4):
+        u = User(db, 2)
+        print u.permissionLevel
+        print u.fullname
+        print u.label
+    p.printreport()
+

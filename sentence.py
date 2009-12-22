@@ -1,20 +1,20 @@
 import dbtoolkit
-from cachable import Cachable
+from cachable import Cachable, DBPropertyFactory
 from functools import partial
-import article as articlemodule
+import article
 
 class Sentence(Cachable):
     __table__ = 'sentences'
     __idcolumn__ = 'sentenceid'
     __labelprop__ = 'text'
+
+    __dbproperties__ = ["parnr", "sentnr", "encoding"]
+    text = DBPropertyFactory("isnull(longsentence, sentence)", objfunc=article.decode)
+    article = DBPropertyFactory("articleid", dbfunc=article.createArticle)
     
-    def __init__(self, db, id, article=None):
-        Cachable.__init__(self, db, id)
-        self.addDBProperty("article", "articleid", func=partial(articlemodule.Article, db))
-        for prop in "parnr", "sentnr", "encoding":
-            self.addDBProperty(prop)
-        self.addDBProperty("text", "isnull(longsentence, sentence)", self.decode)
-        if article is not None: self.cacheValues(article = article)
+    def __init__(self, db, id, **cache):
+        Cachable.__init__(self, db, id, **cache)
         
-    def decode(self, s):
-        return dbtoolkit.decode(s, self.encoding)
+if __name__ == '__main__':
+    s = Sentence(dbtoolkit.amcatDB(),280600)
+    print s.parnr, s.sentnr, s.text

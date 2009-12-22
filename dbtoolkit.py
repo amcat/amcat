@@ -15,7 +15,10 @@ _MAXTEXTCHARS = 8000
 
 class SQLException(Exception):
     def __init__(self, sql, exception):
-        Exception.__init__(self, "Error on executing %r: %s" % (sql, exception))
+        self.sql = sql
+        self.exception = exception
+    def __str__(self):
+        return"SQLException: Error on executing %r: %s" % (self.sql, self.exception)
 
 def reportDB():
     import MySQLdb
@@ -88,30 +91,30 @@ class amcatDB(object):
     def fireAfterQuery(self, sql, time, results):
         for func in self.afterQueryListeners:
             func(sql, time, results)
+
+    def doQueryOnCursor(self, sql, cursor):
+        sql  = self.fireBeforeQuery(sql)
+        try:
+            cursor.execute(sql)
+        except Exception, e:
+            raise SQLException(sql, e)
+        return cursor
             
-    def doQuery(self, sql, cursor = None, colnames = False, select=None):
+    def doQuery(self, sql, colnames = False, select=None):
         """
         Execute the query sql on the database and return the result.
         If cursor is given, use that cursor and return the cursor instead
         Otherwise, pre- and postprocess around a call with a new cursor
         """
         if type(sql) == unicode: sql = sql.encode('latin-1', 'replace')
-        if cursor:
-            sql  = self.fireBeforeQuery(sql)
-            try:
-                cursor.execute(sql)
-            except Exception, e:
-                raise SQLException(sql, e)
-            return cursor
-        
         if select is None:
             select=sql.lower().strip().startswith("select")
         c = None
         t = time.time()
         try:
             c = self.cursor()
+            self.doQueryOnCursor(sql, c)
             try:
-                self.doQuery(sql, c)
                 res = c.fetchall() if select else None
             except Exception, e:
                 raise SQLException(sql, e)
@@ -478,10 +481,11 @@ class ProfilingAfterQueryListener(object):
         print tableoutput.table2ascii(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"])
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
-    def report(self, replacenumbers=True):
+    def report(self, replacenumbers=True, maxsqlen=100):
         data = collections.defaultdict(lambda : [0, 0., 0]) # {sql : [n, totaltime, totallength]}
         for sql, timelens in self.queries.iteritems():
             if replacenumbers: sql = doreplacenumbers(sql)
+            if len(sql) > maxsqlen: sql = sql[:maxsqlen-2]+".."
             for time, length in timelens:
                 data[sql][0] += 1
                 data[sql][1] += time
@@ -489,6 +493,7 @@ class ProfilingAfterQueryListener(object):
         data = [(s, n, t, t/n, float(l)/n) for (s, (n,t,l)) in data.iteritems()]
         return data
 
+    
 if __name__ == '__main__':
     db = anokoDB()
     db.beforeQueryListeners.append(toolkit.warn)

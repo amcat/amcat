@@ -1271,7 +1271,7 @@ class Identity(object):
     def __repr__(self):
         i = self.identity()
         if i[0] == self.__class__: i = i[1:]
-        return "%s%r" % (self.__class__.__name__, i)
+        return "%s%r" % (type(self).__name__, i)
     def __str__(self):
         return repr(self)
     def __hash__(self):
@@ -1297,7 +1297,7 @@ class IDLabel(Identity):
     def __str__(self):
         return str(self.label)
     def __repr__(self):
-        return "%s(%s, %r)" % (self.__class__.__name__, self.id, self.label)
+        return "%s(%s)" % (type(self).__name__, self.id)
 
 def getGroup1(regExp, text, flags=re.DOTALL):
     match = re.search(regExp, text, flags)
@@ -1409,6 +1409,27 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
     
     return " ".join(result)
 
+def ints2ranges(ids):
+    start = None
+    prev = None
+    for i in sorted(ids):
+        if start is None: start = i
+        elif i > prev + 1:
+            yield start, prev
+            start = i
+        prev = i
+    yield start, i
+
+def intselectionSQL(colname, ints):
+    conds = []
+    remainder = []
+    for i,j in ints2ranges(ints):
+        if i <> j: conds.append("(%s between %i and %i)" % (colname, i,j))
+        else: remainder.append(str(i))
+    if remainder: conds.append("(%s in (%s))" % (colname, ",".join(remainder)))
+    return "(%s)" % " OR ".join(conds)
+
+    
 if __name__ == '__main__':
     i = Indexer()
     for x in "afghjaabfgi":
