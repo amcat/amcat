@@ -1,7 +1,7 @@
 import log, toolkit, dbtoolkit, re, urllib2, article, urllib
 from BeautifulSoup import BeautifulSoup
 from PIL import Image
-import cStringIO
+import cStringIO, articlecreator
 from datetime import datetime, date
 
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
@@ -35,12 +35,12 @@ class ArticleDescriptor(object):
             return None
         elif not headline: l.notice('Missing headline %s' % self.url)
         
-        a = article.createArticle(db, headline, self.date, mediumid, batchid, body, 
+        a = articlecreator.createArticle(db, headline, self.date, mediumid, batchid, body, 
                                   pagenr=self.pagenr, byline=self.byline, url=self.url,
                                   section=self.section, fullmeta=self.fullmeta)
         if self.imagebytes:
             imagebytes = convertImage(self.imagebytes, imagescale)
-            a.storeImage(imagebytes, self.imagetype)
+            articlecreator.storeImage(db,a.id,imagebytes, self.imagetype)
         self.aid = a.id
         return a
     def __str__(self):
@@ -195,9 +195,9 @@ class ArticleScraper(object):
             for coords in articleDict[a]:
                 coords = ", ".join(str(int(c * self.imagescale)) for c in coords)
                 body += '[%s->%s]\n' % (coords, a.id)
-        a = article.createArticle(self.db, "[INDEX] page %s" % pagenr, date, self.mediumid, self.batch, body, section=section, url=url, pagenr=pagenr)
+        a = articlecreator.createArticle(self.db, "[INDEX] page %s" % pagenr, date, self.mediumid, self.batch, body, section=section, url=url, pagenr=pagenr)
         if imagebytes:
-            a.storeImage(convertImage(imagebytes), imagetype)
+            articlecreator.storeImage(self.db,a.id,convertImage(imagebytes), imagetype)
         return a
 
     def logStatistics(self):
