@@ -406,20 +406,7 @@ def countUnits(jobs, field=None):
 if __name__ == '__main__':
     import dbtoolkit, adapter
     db = dbtoolkit.amcatDB()
-    cj = Codingjob(db, 1859)
-    print cj.label
-    print cj.unitSchema
-    print "----------"
-    set = list(cj.sets)[0]
-    print set, set.coder
-    print set.job
-    print set.job is cj
+    cj = Codingjob(db, 2572)
+    cj2 = Codingjob(db, 2681)
 
-    art = list(set.articles)[0]
-    print `art`
-    print `art.set`
-    print art.set.coder
-    print art.article
-    print art.set is set
-    
-    
+    print `cj`, `cj2`

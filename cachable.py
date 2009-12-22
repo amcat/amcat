@@ -167,13 +167,15 @@ def cacheMultiple(cachables, propnames):
             
 _CACHE = {}
 class CachingMeta(type):
-    def __call__(cls, id, *args, **kargs):
-        cancache = cls.__dict__.get('__cacheme__')
-        if cancache and (cls, id) in _CACHE:
+    def __call__(cls, db, *args, **kargs):
+        if not args or not cls.__dict__.get('__cacheme__'):
+            return type.__call__(cls, db, *args, **kargs)
+        id = args[0]
+        if (cls, id) in _CACHE:
             obj = _CACHE[cls, id]()
             if obj is not None: return obj
-        obj = type.__call__(cls, id, *args, **kargs)
-        if cancache: _CACHE[cls, id] = weakref.ref(obj)
+        obj = type.__call__(cls, db, *args, **kargs)
+        _CACHE[cls, id] = weakref.ref(obj)
         return obj
 
 class Cachable(toolkit.IDLabel):

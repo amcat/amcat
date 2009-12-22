@@ -35,7 +35,7 @@ class amcatDB(object):
     and storage of data
     """
 
-    def __init__(self, configuration=None, auto_commit=0):
+    def __init__(self, configuration=None, auto_commit=0, profile=False):
         """
         Initialise the connection to the anoko (SQL Server) database using
         either the given configuration object or config.default
@@ -65,6 +65,10 @@ class amcatDB(object):
         
         # should be function(string SQL, double time, list-of-lists data): None
         self.afterQueryListeners = OrderedSet()
+
+        if profile:
+            self.profiler = ProfilingAfterQueryListener()
+            self.afterQueryListeners.append(self.profiler)
       
     def quote(self, value):
         return "'%s'" % str(value).replace("'", "''")   

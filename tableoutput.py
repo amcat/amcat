@@ -64,7 +64,7 @@ def table2ascii(table, colnames=None, formats=None, useunicode=True, box=True):
 
 ########################### table2html #######################################
 
-def SimpleTable2HTML(table, colnames=None):
+def table2html(table, colnames=None):
     table = getTable(table, colnames)
     result = "\n<table border='1'>"
     result += "\n  <tr>\n    <th></th>%s\n  </tr>" % "".join("\n    <th>%s</th>" % (col,) for col in table.getColumns())
