@@ -128,6 +128,7 @@ class amcatDB(object):
             if select and colnames:
                 info = c.description
                 colnames = [entry[0] for entry in info]
+                print ">>>>>>>>>>>>>>>>",res, colnames
                 return res, colnames            
             return res
         finally:
