@@ -1390,7 +1390,7 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
     quotewords = set() # wordids
     boldwords = set()
     while len(quotewords) < totalwords:
-        pos, nbs = toolkit.sortByValue(positions, reverse=True)[0]
+        pos, nbs = sortByValue(positions, reverse=True)[0]
         boldwords.add(pos)
         quote = range(max(0, pos - quotelen), min(len(words), pos + quotelen + 1))
         quotewords |= set(quote)

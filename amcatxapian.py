@@ -73,7 +73,7 @@ class Index(object):
         enquire = xapian.Enquire(self.index)
         enquire.set_query(query)
         matches = enquire.get_mset(0,self.index.get_doccount())
-        if subset: subset = set((a if type(a)==int else a.id) for a in subset)
+        #if subset: subset = set((a if type(a)==int else a.id) for a in subset)
         for m in matches:
             aid = self.getAid(m.docid) 
             if subset and aid not in subset: continue
