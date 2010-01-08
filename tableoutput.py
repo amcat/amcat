@@ -1,7 +1,7 @@
 import table3, toolkit
 
 def getTable(table, colnames=None):
-    if not isinstance(table, table3.Table):
+    if isinstance(table, (list, tuple)):
         table = table3.ListTable(table, colnames)
     return table
 
@@ -28,36 +28,47 @@ def sep(collengths, con = "+-++"):
     return (((l+c) if l <> " " else "")
             +(c+m+c).join(c*i for i in collengths)
             +((c+r) if r <> " " else "")+"\n")
-def line(values, formats, collengths, con="|||"):
+def line(values, collengths, con="|||"):
     l, m, r = con
     return (((l+" ") if l <> " " else "")
-            +(" "+m+" ").join(("%%-%is" % length) % (fmt % value) for (length, fmt, value) in zip(collengths, formats, values))
+            +(" "+m+" ").join(("%%-%is" % length) % (value,) for (length, value) in zip(collengths, values))
             +" " + r + "\n")   
 
 def table2ascii(table, colnames=None, formats=None, useunicode=True, box=True):
     table = getTable(table, colnames)
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
     cols, rows = table.getColumns(), table.getRows()
-    hdrformats = [u"%s"] * len(cols)
-    if formats is None: formats = hdrformats
+    if formats is None: formats = [u"%s"] * len(cols)
     headers = cols
-    if isinstance(table, table3.SortedTable):
+    sortcols = None
+    try: sortcols = dict(table.sort)
+    except AttributeError: pass
+    if sortcols:
         headers = []
-        sortcols = dict(table.sort)
         for col in cols:
             if isinstance(col, toolkit.IDLabel) and col in sortcols:
                 headers.append(u"%s %s" % (col.label, SORTINDICATORS[useunicode, sortcols[col]]))
             else:
                 headers.append(col.label)
-    collengths = [max([len(fmt % table.getValue(r,c)) for r in rows] + [len(unicode(hdr))]) for (fmt, c, hdr) in zip(formats, cols, headers)]
+    def cell(row, col, fmt):
+        val = table.getValue(row, col)
+        return fmt%val if (val is not None) else ""
 
+    data = []
+    collengths = [len(unicode(hdr)) for hdr in headers]
+    for row in rows:
+        data.append([])
+        for i, col in enumerate(cols):
+            value = cell(row, col, formats[i])
+            collengths[i] = max(collengths[i], len(value))
+            data[-1].append(value)
     
     result = ""
     result += sep(collengths, con_sep2t)
-    result += line(headers, hdrformats, collengths, con_line)
+    result += line(headers, collengths, con_line)
     result += sep(collengths, con_sep)
-    for r in rows:
-        result += line(map(lambda c : table.getValue(r,c), cols), formats, collengths, con_line)
+    for r in data:
+        result += line(r, collengths, con_line)
     result += sep(collengths, con_sep2b)
     return result
 

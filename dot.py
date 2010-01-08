@@ -234,8 +234,7 @@ def dot2img(dot, format="jpg", errListener = printError, layout="dot"):
 def dot2object(dot,*args,**kargs):
     kargs['format'] = 'png'
     png = dot2img(dot, *args, **kargs)
-    data = base64.b64encode(png)
-    return "<object type='image/png' data='data:image/png;base64,%s'></object>" % data
+    return toolkit.htmlImageObject(png)
 
 
 if __name__ == '__main__':

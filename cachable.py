@@ -232,7 +232,7 @@ class Cachable(toolkit.IDLabel):
             if not p: raise AttributeError("Cannot find property %s of %r" % (prop, self))
             p.cache(val)
     def removeCached(self, prop):
-        self._getProperties(prop).uncache()
+        self._getProperty(prop).uncache()
     def cacheProperties(self, *propnames):
         cacheMultiple([self], propnames)
     def sqlFrom(self, table=None):

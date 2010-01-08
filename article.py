@@ -1,4 +1,4 @@
-import toolkit, dbtoolkit, re, ctokenizer, project, sources, types
+import toolkit, dbtoolkit, re, project, sources, types
 from itertools import izip, count
 from functools import partial
 _debug = toolkit.Debug('article',1)
@@ -40,6 +40,7 @@ class Article(Cachable):
         return result.replace("\\r","").replace("\r","\n")
 
     def words(self, onlyWords = False, lemma=0): #lemma: 1=lemmaP, 2=lemma, 3=word
+        import ctokenizer
         text = self.text
         if not text: return []
         text = toolkit.stripAccents(text)
@@ -69,10 +70,4 @@ def encodeAndLimitLength(variables, lengths):
 if __name__ == '__main__':
     import dbtoolkit
     a = Article(dbtoolkit.amcatDB(), 33308863)
-    print a.id
-    print a.label
-    print a.text[:100]
-    for s in a.sentences:
-        print s.id, s.parnr, s.sentnr, s.label
-
-    
+    print a.quote(["de"])

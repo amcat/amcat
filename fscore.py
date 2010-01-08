@@ -2,6 +2,10 @@ import toolkit
 import collections
 avg = toolkit.average
 
+def safediv(a, b):
+    if not b: return None
+    return float(a)/b
+
 class Scorer(object):
     def __init__(self):
        self._tp = 0
@@ -28,15 +32,15 @@ class Scorer(object):
 #        return float(self._tp + self._tn) / (self._tp + self._fp + self._tn + self._fn)
 
     def recall(self):
-        return float(self._tp) / (self._tp + self._fn + 0.00000000000000000000000000000000001)
+        return safediv(self._tp, self._tp + self._fn)
 
     def precision(self):
-        return float(self._tp) / (self._tp + self._fp + 0.00000000000000000000000000000000001)
+        return safediv(self._tp, self._tp + self._fp)
 
     def fscore(self):
-        p = self.precision()
-        r = self.recall()
-        return (2*p*r) / (p+r+0.00000000000000000000000000000000000001)
+        p = self.precision() or 0
+        r = self.recall() or 0
+        return safediv(2*p*r, p+r) or 0
 
 class Scorers(object):
     def __init__(self, tags="dummy"):
@@ -66,7 +70,7 @@ class Scorers(object):
         else:
             return self._n
     def accuracy(self):
-        return float(self._nok) / self._n
+        return safediv(self._nok, self._n)
     def recall(self, tag):
         return self.scorers[tag].recall()
     def precision(self, tag):

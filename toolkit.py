@@ -1,6 +1,6 @@
 #!/bin/env python2.2
 
-import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess, colorsys
+import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess, colorsys, base64
 from datetime import datetime
 
 _USE_CURSES = 1
@@ -129,7 +129,7 @@ def warn(string, newline = 1, colour = None):
     if colour and _USE_CURSES: string = coloured(colour, string, 1)
     if isString(string):
         if type(string) == unicode:
-            sys.stderr.write(string.encode('latin-1', 'replace'))
+            sys.stderr.write(string.encode('utf-8'))
         else:
             sys.stderr.write(string)
     else:
@@ -418,15 +418,26 @@ def getYM(date):
 def getYQ(date):
     return date.year + (int((date.month-1)/3)+1)/10.0
 
+def safediv(a, b):
+    if not b: return None
+    return float(a)/b
+
 def average(seq):
-    return float(sum(seq)) / len(seq)
+    s, n = 0., 0
+    for e in seq:
+        if e is not None:
+            s += e; n += 1
+    return safediv(s, n)
 
 def stdev(seq):
+    seq = list(seq)
     avg = average(seq)
-    s = 0.0
+    s, n = 0.0, 0
     for e in seq:
-        s += (e - avg)**2
-    return (s / (len(seq) - 1)) ** .5 
+        if e is not None:
+            s += (e - avg)**2
+    var = safediv(s, n-1)
+    if var: return var ** .5
 
 def correlate(aa,bs):
     ma = average(aa)
@@ -1281,6 +1292,7 @@ class Identity(object):
         if not isinstance(other, Identity): return False
         return self.identity() == other.identity()
     def __cmp__(self, other):
+        if not isinstance(other, Identity): return -1
         return cmp(self.identity(), other.identity())
 
 class IDLabel(Identity):
@@ -1294,6 +1306,8 @@ class IDLabel(Identity):
         self.label = label
     def identity(self):
         return (self.__class__, self.id)
+    def idlabel(self):
+        return "%s %s: %s" % (type(self).__name__, self.id, self.label)
     def __str__(self):
         return str(self.label)
     def __repr__(self):
@@ -1429,7 +1443,11 @@ def intselectionSQL(colname, ints):
     if remainder: conds.append("(%s in (%s))" % (colname, ",".join(remainder)))
     return "(%s)" % " OR ".join(conds)
 
-    
+def htmlImageObject(bytes, format='png'):
+    data = base64.b64encode(bytes)
+    return "<object type='image/%s' data='data:image/%s;base64,%s'></object>" % (format, format, data)
+
+
 if __name__ == '__main__':
     i = Indexer()
     for x in "afghjaabfgi":

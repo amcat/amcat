@@ -35,6 +35,11 @@ class Project(Cachable):
     @property
     def href(self):
         return '<a href="projectDetails?projectid=%i">%i - %s</a>' % (self.id, self.id, self.name)
+    @property
+    def articles(self):
+        for b in self.batches:
+            for a in b.articles:
+                yield a
 
     def userPermission(self, user):
         p = self.db.getValue("select permissionid from permissions_projects_users where projectid=%i and userid=%i" % (self.id, user.id))
@@ -51,7 +56,13 @@ class Batch(Cachable):
     articles = DBFKPropertyFactory("articles", "articleid", dbfunc= lambda db, id : article.Article(db, id))
     def __init__(self, *args, **kargs):
         Cachable.__init__(self, *args, **kargs)
+
+def getArticles(*objects):
+    for object in objects:
+        for a in object.articles:
+            yield a
     
+        
 def getAid(art):
     if type(art) == int: return art
     return art.id

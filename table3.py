@@ -72,17 +72,21 @@ class ListTable(Table):
     """
     Convenience subclass of Table that is based on a list-of-lists
     such as output by dbapi::cursor.fetchall()
-    if colnames is not given, toolkit.head(data) is used to determine #columns, so this will
-       probably cause an undesired result for generators
+    if colnames is not given, len(rows[0]) is used to determine #columns, causing an error
+       if the data is not subscriptable
     """
-    def __init__(self, data, colnames = None):
-        Table.__init__(self, rows=data, cellfunc = lambda row, col: row[col.id])
-        if data: 
-            if not colnames: colnames = range(len(toolkit.head(data)))
-            self.columns = [toolkit.IDLabel(i, colname) for (i, colname) in enumerate(colnames)]
-        else:
-            self.columns = []
-
+    def __init__(self, data=None, colnames=None):
+        Table.__init__(self, rows=data or [])
+        self.colnames = colnames
+    def getColumns(self):
+        if not self.rows: return []
+        colnames = self.colnames or range(len(toolkit.head(self.rows)))
+        return [toolkit.IDLabel(i, colname) for (i, colname) in enumerate(colnames)]
+    def addRow(self, *row):
+        self.rows.append(row)
+    def getValue(self, row, col):
+        if col.id >= len(row): return None
+        return row[col.id]
 
 class SortedTable(Table):
     """
@@ -100,9 +104,6 @@ class SortedTable(Table):
             if toolkit.isSequence(col): self.sort.append((col[0], col[1]))
             else: self.sort.append((col, True))
     def getColumns(self):
-        """
-        addindicator only works if columns are IDLabels
-        """
         return self.table.getColumns()
     def cmp(self, a, b):
         for col, asc in self.sort:
@@ -111,3 +112,73 @@ class SortedTable(Table):
         return 0
     def getRows(self):
         return sorted(self.table.getRows(), cmp=self.cmp)
+
+class MergedTable(Table):
+    """
+    Encapsulates two table objects, displaying columns side-by-side
+    """
+    def __init__(self, *tables):
+        """
+        tables can be any number of Table objects
+        """
+        self.tables = list(tables)
+        self.columnfilter = lambda t, c: True # table, column -> bool
+    def getColumns(self):
+        result = []
+        for table in self.tables:
+            result += [toolkit.IDLabel((table, c), c)
+                       for c in table.getColumns()
+                       if self.columnfilter(table, c)]
+        return result
+    def getRows(self):
+        # Iterators would be good here!
+        rowss = [t.getRows() for t in self.tables]
+        for i in range(max(map(len, rowss))):
+            row = []
+            for rows in rowss:
+                if len(rows) <= i: row.append(None)
+                else: row.append(rows[i])
+            yield row
+    def getValue(self, row, col):
+        table, col = col.id
+        row = row[self.tables.index(table)]
+        if not row: return None
+        return table.getValue(row, col)
+    
+def getColumnByLabel(table, label):
+    stringify = unicode if type(label) == unicode else str
+    for c in table.getColumns():
+        if stringify(c) == label: return c
+
+            
+        
+if __name__ == '__main__':
+    import tableoutput
+    t = ListTable(colnames = ["a1", "a2", "a3"],
+                  data = [[1,2,3],
+                          [7,8,9],
+                          [4,5,6],
+                          ])
+ 
+    print tableoutput.table2ascii(t)
+
+    s = SortedTable(t, getColumnByLabel(t, "a2"))
+    print tableoutput.table2ascii(s)
+    
+    t2 = ListTable(colnames = ["b1", "b2"],
+                   data = [['a','A'],
+                           ['c','C'],
+                           ['d','D'],
+                           ['b','B'],
+                           ])
+    
+    print tableoutput.table2ascii(t2)
+    m = MergedTable(t, t2)
+    m.columnfilter = lambda tab,col : col.label <> "a1"
+    print tableoutput.table2ascii(m)
+
+    l = getColumnByLabel(m, "b1")
+    print l
+    s = SortedTable(m, getColumnByLabel(m, "b1")) 
+    print tableoutput.table2ascii(s)
+
