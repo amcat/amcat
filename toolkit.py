@@ -1306,8 +1306,10 @@ class IDLabel(Identity):
         self.label = label
     def identity(self):
         return (self.__class__, self.id)
+    def clsidlabel(self):
+        return "%s %s" % (type(self).__name__, self.idlabel())
     def idlabel(self):
-        return "%s %s: %s" % (type(self).__name__, self.id, self.label)
+        return "%s: %s" % (self.id, self.label)
     def __str__(self):
         return str(self.label)
     def __repr__(self):

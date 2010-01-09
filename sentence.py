@@ -10,11 +10,9 @@ class Sentence(Cachable):
 
     __dbproperties__ = ["parnr", "sentnr", "encoding"]
     text = DBPropertyFactory("isnull(longsentence, sentence)", objfunc=article.decode)
-    article = DBPropertyFactory("articleid", dbfunc=article.createArticle)
+    article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
     
-    def __init__(self, db, id, **cache):
-        Cachable.__init__(self, db, id, **cache)
-        
 if __name__ == '__main__':
     s = Sentence(dbtoolkit.amcatDB(),280600)
     print s.parnr, s.sentnr, s.text
+    print `s.article`

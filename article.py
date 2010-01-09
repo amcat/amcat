@@ -7,8 +7,9 @@ from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 def decode(article, string):
     return dbtoolkit.decode(string, article.encoding)
 
-def createArticle(db, aid, **cache):
+def doCreateArticle(db, aid, **cache):
     return Article(db, aid, **cache)
+
 import sentence
     
 class Article(Cachable):
@@ -53,6 +54,8 @@ class Article(Cachable):
     def quote(self, words_or_wordfilter, **kargs):
         return toolkit.quote(list(self.words()), words_or_wordfilter, **kargs)
 
+def Articles(aids, db):
+    return [Article(db, aid) for aid in aids]
 
 def encodeAndLimitLength(variables, lengths):
     originals = map(lambda x: x and x.strip(), variables)
