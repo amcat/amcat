@@ -3,7 +3,7 @@ Helper methods to interpret/parse LexisNexis textual data
 """
 
 import re,toolkit
-import article
+import articlecreator
 
 # Regular expressions on text file level:
 RE_ARTICLESPLIT = re.compile(r'^\s+(?:FOCUS - )?\d+ of \d+ DOCUMENTS?\s*$', re.M)
@@ -126,8 +126,8 @@ def parseArticle(articleString, db, batchid, commit):
     
     #print headline, section
     if commit:
-        article.createArticle(db, headline, date1, medium, batchid, body, texttype=2,
-                      length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta, retrieveArticle=0)
+        articlecreator.createArticle(db, headline, date1, medium, batchid, body, texttype=2,
+                                     length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta, retrieveArticle=0)
     #article.Article(db, None, batchid, medium, date1, headline, byline, length, pagenr, section, meta, body)
 
 def parseLexisNexis(text):
