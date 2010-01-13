@@ -1311,7 +1311,10 @@ class IDLabel(Identity):
     def idlabel(self):
         return "%s: %s" % (self.id, self.label)
     def __str__(self):
-        return str(self.label)
+        if type(self.label) == unicode:
+            return self.label.encode('ascii', 'replace')
+        else:
+            return str(self.label)
     def __repr__(self):
         return "%s(%s)" % (type(self).__name__, self.id)
 
