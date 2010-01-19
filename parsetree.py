@@ -110,7 +110,9 @@ def fromDB(db, sid):
     SQL = "select wordbegin, wordid, word, lemmaid, lemma, pos from vw_parses_words where sentenceid = %i" % sid
     words = {}
     p = ParseTree(sid)
-    for data in db.doQuery(SQL):
+    rels = db.doQuery(SQL)
+    if not rels: return
+    for data in rels:
         i, wdata = data[0], data[1:]
         words[i] = ParseNode(p, getWord(*wdata), i)
     rels = getRels(db)
@@ -156,6 +158,11 @@ def printGraph(graph, output=None, labelattr="nx_label", edgelabelattr="nx_edgel
         s = StringIO.StringIO()
         plt.savefig(s, format="png")
         return s.getvalue()
+        
+def getSentencePicture(db, sid):
+    t = fromDB(db, sid)
+    if not t: return
+    return t.printTree()
         
 
 ############## DRIVER ######################
