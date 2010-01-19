@@ -1,181 +1,112 @@
-import xml.sax.handler, xml.sax
-import types
-from toolkit import execute, warn
+import toolkit
+import lemmata
 
 ALPINO = "/home/amcat/resources/Alpino"
 
-class Pos:
-    def __init__(self, main, major, minor):
-        self.main = main
-        self.major = major
-        self.minor = minor
+TOKENIZE = "%s/Tokenization/tok" % ALPINO
+PARSE = "ALPINO_HOME=%s %s/bin/Alpino end_hook=dependencies -notk -parse" % (ALPINO, ALPINO)
 
-class Node:
-    def __init__(self, begin, word, lemma, pos):
-        self.word = word
-        self.lemma = lemma
-        self.pos = pos
-        self.children = {}
-        self.parents = {}
-        self.begin = begin
-    def addchild(self, child, rel):
-        self.children[rel] = self.children.get(rel, set()) | set([child])
-        child.parents[rel] = child.parents.get(rel, set()) | set([self])
+POSMAP = {"pronoun" : 'O',
+          "verb" : 'V',
+          "noun" : 'N',
+          "preposition" : 'P',
+          "determiner" : "D",
+          "comparative" : "C",
+          "adverb" : "B",
+          "adjective" : "A",
+          "complementizer" : "C",
+          "punct" : ".",
+          "conj" : "C",
+          "tag" : "?",
+          "particle": "R",
+          }
 
-    def prnt(self, indent="", rel="", blacklist=set()):
-        if rel: rel = "(%s) " % rel
-        print "%s%s%s (%s / %s / %s)" % (indent, rel, self.word,self.lemma, self.pos.major, self.pos.minor)
-        if self in blacklist:
-            print "%s  ..." % indent
-        else:
-            blacklist.add(self)
-            for rel, child in self.getchildren(True):
-                child.prnt(indent+"  ", rel,blacklist)
+def data2token(lemma, word, begin, end, dummypos, dummypos2, pos):
+    if "(" in pos:
+        major, minor = pos.split("(", 1)
+        minor = minor[:-1]
+    else:
+        major, minor = pos, None
+    if "_" in major:
+        m2 = major.split("_")[-1]
+    else:
+        m2 = major
+    cat = POSMAP.get(m2)
+    if not cat:
+        raise Exception("Unknown POS: %r (%s/%s/%s)" % (major, begin, word, pos))
+    return lemmata.Token(int(begin), word, lemma, cat, major, minor) 
 
-    def __str__(self):
-        return "%s (%s / %s / %s)" % (self.word,self.lemma, self.pos.major, self.pos.minor)
+def line2tokens(line):
+    data =line.split("|")
+    token1 = data[:7]
+    rel = data[7]
+    rel = rel.split("/")[-1]
+    token2 = data[8:15]
+    sid = data[15]
+    return data2token(*token1), rel, data2token(*token2), int(sid)
 
-    def getchildren(self, includerel = False):
-        for rel, children in self.children.items():
-            for child in children:
-                if includerel:
-                    yield rel, child
-                else:
-                    yield child
-                
-
-class Sentence:
-    def __init__(self):
-        self.nodeindex = {}
-
-    def get(self, nodeid, *args, **kargs):
-        return self.nodeindex.get(nodeid, None)
-
-    def add(self, node, nodeid):
-        if nodeid in self.nodeindex: raise Exception("Node %s already exists!" % nodeid)
-        self.nodeindex[nodeid] = node
-
-    def roots(self):
-        roots = set()
-        for node in self.nodeindex.values():
-            if not node.parents:
-                roots.add(node)
-        return roots
-
-    def dot(self, nodedefs = {}):
-        rels, nodes = [], []
-        style= 'graph [rankdir="TB",ranksep="0"];edge[dir="back",arrowsize=".4",fontsize="10",fontcolor="1,0,.4",fontname="arial"];node[fontname="arial",fontsize="9",height=".2",shape="box",color="1,0,1"]'
-        def id(node): return "%s_%i" % (node.lemma, node.begin)
-        for node in self.nodeindex.values():
-            nstyle = {'label' : "%s\\n(%s)" % (node.lemma, node.pos.major)}
-            nstyle.update(nodedefs.get(node.begin, {}))
-            nodedef = ",".join('%s="%s"' % ab for ab in nstyle.items())
-            nodes.append('"%s" [%s];' % (id(node), nodedef))
-            for rel, child in node.getchildren(True):
-                rels.append('"%s" -> "%s" [label="%s"];' % (id(node), id(child), rel))
-        dot = "digraph G{\n%s\n\n%s\n\n%s\n}" % (style, "\n".join(nodes), "\n".join(rels))
-        return dot
-                       
-
-    def nodes(self):
-        visited = set()
-
-        stack = list(self.roots())
-        while stack:
-            node = stack.pop(0)
-            if node in visited: continue
-            visited.add(node)
-            yield node
-            stack += list(node.getchildren())
-
-    def prnt(self):
-        for root in self.roots():
-            root.prnt()
-    
-def fromFullTriples(str):
-    result = Sentence()
-    def getnode(begin,word, lemma, pos, pos2, pos3):
-        res = result.get(begin)
-        if not res:
-            if "(" in pos3:
-                major, minor = pos3.split("(",1)
-                minor = minor[:-1]
-            else:
-                major, minor = pos3,""
-            pos = Pos(pos, major, minor)
-            res = Node(begin, word, lemma, pos)
-            result.add(res, begin)
-        return res
-    if _isString(str): str = str.split("\n")
-    for line in str:
+def parseSentence(sent, errorhook=None):
+    if not (sent and sent.strip()): return
+    out, err = toolkit.execute(PARSE, sent, listener=errorhook)
+    for line in out.split("\n"):
         if not line.strip(): continue
-        fields = line.strip().split("|")
-        if len(fields) <> 16: raise Exception("Cannot parse %r" % fields)
-        plem, pword, pbegin, pend, ppos, ppos2, ppos3, rel, clem, cword, cbegin, cend, cpos, cpos2, cpos3,sid = fields
-        pnode = getnode(pbegin, pword, plem, ppos, ppos2, ppos3)
-        cnode = getnode(cbegin, cword, clem, cpos, cpos2, cpos3)
-        r1, rel = rel.split("/")
-        pnode.addchild(cnode, rel)
-        
-    return result
+        t1, rel, t2, sid = line2tokens(line)
+        yield t1, rel, t2
 
-def tokenize(sent, alpinohome=ALPINO, errhandler=warn):
-    cmd = "%s/Tokenization/tok" % alpinohome
-    if not sent: return None
-    out, err = execute(cmd, sent+" ")
-    #print "%r -> %r" % (sent, out)
-    if err and errhandler: errhandler(err)
-    out = out.replace("\n"," ")
-    return out
+def addText(art, text, lem=None):
+    if lem is None: lem = lemmata.Lemmata(art.db)
+    sents = tokenizeText(text + " ")
+    sid = None
+    for sent in sents:
+        sid = sid or addSentence(art, lem, sent)
+    art.db.commit()
+    return sid
+                                    
 
-def parse(sent, alpinohome=ALPINO, errhandler=warn):
-    cmd = "LD_LIBRARY_PATH=%s/create_bin ALPINO_HOME=%s %s/create_bin/Alpino demo=off user_max=180000 end_hook=dependencies -parse" % (alpinohome, alpinohome, alpinohome)
-    if not sent: return None
-    #print cmd
-    out, err = execute(cmd, sent)
-    if err and errhandler: errhandler(err)
-    #print out
-    return out
+def addSentence(art, lem, sent):
+    if not (sent and sent.strip()): return
+    sid = lemmata.addSentence(art, sent)
+    tokens = {}
+    rels = []
+    for t1, rel, t2 in parseSentence(sent):
+        tokens[t1.position] = t1
+        tokens[t2.position] = t2
+        rels.append((t1.position, t2.position, rel))
+    for token in tokens.values():
+        lem.addParseWord(sid, token)
+    for ppos, cpos, rel in rels:
+        relid = lem.relcache.getRelID(rel)
+        art.db.insert("parses_triples", dict(sentenceid=sid, parentbegin=ppos, childbegin=cpos, relation=relid), retrieveIdent=False)
+        #print add, t1, rel, t2
+    return sid
+                                     
 
-def parseTriples(sent, alpinohome=ALPINO, errhandler=warn):
-    out = parse(sent, alpinohome, errhandler)
-    if not out: return None
-    return fromFullTriples(out)
+def tokenizeText(text):
+    out, err = toolkit.execute(TOKENIZE, text)
+    if err:
+        raise Exception(err)
+    return out.split("\n")
 
-def fromdb(db, sid):
-    sql = """select wordbegin, word, lemma, pos, major, minor 
-             from vw_parses_words_pos where sentenceid = %i""" % sid
-    s = Sentence()
-    data = db.doQuery(sql)
-    if not data: raise Exception('Parse not found in db')
-    for b,w,l,p,mj,mn in data:
-        pos = Pos(p, mj,mn)
-        node = Node(b,w,l, pos)
-        s.add(node, b)
-        
-    sql = """select t.parentbegin, t.childbegin, r.name
-             from parses_triples t inner join parses_rels r on t.relation = r.relid
-             where sentenceid=%i """ % sid
+AID = 44569371
 
-    for p, c, rel in db.doQuery(sql):
-        pn = s.get(p)
-        cn = s.get(c)
-        pn.addchild(cn, rel)
-        
-    return s
-
-        
-        
-
-################## AUXILLIARY FUNCTIONS ####################
-
-def _isString(obj):
-    return type(obj) in types.StringTypes
-
-################## TEST DRIVER METHOD ######################
-    
 if __name__ == '__main__':
-    import sys, dbtoolkit
-    triples = dbtoolkit.anokoDB().getValue("SELECT parse FROM sentences_parses WHERE parsejobid>9 AND sentenceid=%i" % int(sys.argv[1]))
-    s = fromFullTriples(triples)
-    s.prnt()
+    import sys, dbtoolkit, article
+    if len(sys.argv) <= 1:
+        print "Usage: alpino.py [--add] sentence"
+        sys.exit()
+    add = sys.argv[1] == "--add"
+    if add:
+        del sys.argv[1]
+        db = dbtoolkit.amcatDB(easysoft=True)
+        art = article.Article(db, AID)
+        lem = lemmata.Lemmata(db)
+    sent = " ".join(sys.argv[1:])+" "
+    sents = tokenizeText(sent)
+    for sent in sents:
+        if add:
+            addSentence(art, lem, sent)
+            db.commit()
+        else:
+            for t1, rel, t2 in parseSentence(sent):
+                print add, t1, rel, t2
+        
