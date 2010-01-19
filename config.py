@@ -3,21 +3,23 @@ import os, os.path
 __PASSWD_FILE = '.sqlpasswd'
 
 class Configuration:
-    def __init__(this, username, password, host="anoko", database="anoko", driver=None):
+    def __init__(self, username, password, host="anoko", database="anoko", driver=None, kargs=False):
         if not driver: raise Exception("No driver!")
-        this.host = host
-        this.username = username
-        this.password = password
-        this.database = database
-        this.driver = driver
-        this.drivername = driver.__name__
+        self.host = host
+        self.username = username
+        self.password = password
+        self.database = database
+        self.driver = driver
+        self.drivername = driver.__name__
+        self.kargs = kargs
 
-    def connect(this, *args, **kargs):
-        return this.driver.connect(this.host, this.username, this.password, *args, **kargs)
+    def connect(self, *args, **kargs):
+        if self.kargs:
+            return self.driver.connect("DSN=%s" % self.host, user=self.username, password=self.password, *args, **kargs)
+        else:
+            return self.driver.connect(self.host, self.username, self.password, *args, **kargs)
         
-        
-        
-def default():
+def default(**kargs):
     homedir = os.getenv('HOME')
 
     if not homedir:
@@ -30,16 +32,22 @@ def default():
 
     fields = open(passwdfile).read().strip().split(':')
     un, password = fields[:2]
-    host = len(fields) > 2 and fields[2] or None
     if os.name == 'nt':
         raise Exception("Windows currently not supported -- ask Wouter!")
     else:
-        return amcatConfig(un, password, host)
+        return amcatConfig(un, password,  **kargs)
 
-def amcatConfig(username = "app", password = "eno=hoty", host=None):
-    if not host: host = "AmcatDB"
-    import mx.ODBC.iODBC as driver
-    return Configuration(username, password, host, driver=driver)
+def amcatConfig(username = "app", password = "eno=hoty", easysoft=False):
+    
+    if easysoft:
+        host = "Easysoft-AmcatDB"
+        import pyodbc as driver
+        import dbtoolkit
+        dbtoolkit.ENCODE_UTF8 = True
+    else:
+        host = "AmcatDB"
+        import mx.ODBC.iODBC as driver
+    return Configuration(username, password, host, driver=driver, kargs=easysoft)
 
 if __name__ == '__main__':
     c = default()

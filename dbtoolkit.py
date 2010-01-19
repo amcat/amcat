@@ -35,13 +35,13 @@ class amcatDB(object):
     and storage of data
     """
 
-    def __init__(self, configuration=None, auto_commit=0, profile=False):
+    def __init__(self, configuration=None, auto_commit=0, profile=False, **kargs):
         """
         Initialise the connection to the anoko (SQL Server) database using
         either the given configuration object or config.default
         """
         
-        if not configuration: configuration=config.default()
+        if not configuration: configuration=config.default(**kargs)
         
         self.dbType = configuration.drivername    
         self.mysql = False #????
@@ -81,6 +81,8 @@ class amcatDB(object):
         
     def commit(self):
         self.conn.commit()
+    def rollback(self):
+        self.conn.rollback()
 
     def queryDict(self, sql, **kargs):
         res, colnames = self.doQuery(sql, colnames=True, **kargs)
@@ -128,14 +130,22 @@ class amcatDB(object):
             if select and colnames:
                 info = c.description
                 colnames = [entry[0] for entry in info]
-                print ">>>>>>>>>>>>>>>>",res, colnames
                 return res, colnames            
             return res
         finally:
-            if c and not c.closed: c.close()
+            if c:
+                try:
+                    c.close()
+                except:
+                    pass
 
 
 
+    def printProfile(self):
+        for l in self.afterQueryListeners:
+            if type(l) == ProfilingAfterQueryListener:
+                l.printreport()
+                return
             
     def doCall(self, proc, params):
         """
@@ -187,7 +197,7 @@ class amcatDB(object):
         
         
     def getValue(self, sql):
-        data = self.doQuery(sql)
+        data = self.doQuery(sql, select=True)
         if data:
             return data[0][0]
         return None
@@ -396,18 +406,27 @@ class RawSQL(object):
     def __init__(self, sql):
         self.sql = sql
 
+
+ENCODE_UTF8 = False
 def quotesql(strOrSeq):
     """
     if str is seq: return tuple of quotesql(values)
     if str is string: escapes any quotes and backslashes in the string and returns the string in quotes
     otherwise: coerce to str and recurse.
     """
+    #print `strOrSeq`, ENCODE_UTF8
     if strOrSeq is None:
         return 'null'
     elif isinstance(strOrSeq, RawSQL):
         return strOrSeq.sql
     elif toolkit.isDate(strOrSeq):
         return "'%s'" % toolkit.writeDateTime(strOrSeq)
+    elif type(strOrSeq) == unicode and ENCODE_UTF8:
+        try:
+            ascii = strOrSeq.encode('ascii')
+            return "'%s'" % ascii
+        except:
+            return "cast(0x%s as varchar)" % strOrSeq.encode('utf-8').encode('hex')
     elif type(strOrSeq) in (str, unicode):
         if type(strOrSeq) == unicode:
             strOrSeq = strOrSeq.encode('latin-1')
