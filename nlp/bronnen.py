@@ -13,7 +13,7 @@ def getBron_1(node):
     return su, q
 
 def isVZeg(word):
-    return word.lemma.label in ["schrijven", "voorstellen", "zeggen"]
+    return word.lemma.label in ["schrijven", "voorstellen", "zeggen", "vind", "zeg"]
 
 ################# Relations #################
 
