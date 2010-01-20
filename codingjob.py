@@ -1,5 +1,5 @@
 import user, toolkit, project, ont2, article, dbtoolkit
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
 from functools import partial
 
 def getCodedArticle(db, cjaid):
@@ -37,9 +37,9 @@ def getCodedSentencesFromCodingjobIds(db, codingjobids):
             yield cs
             
 class CodingJob(Cachable):
+    __metaclass__ = CachingMeta
     __table__ = 'codingjobs'
     __idcolumn__ = 'codingjobid'
-    __cacheme__ = True
     __dbproperties__ = ["name", "insertdate"]
     
     unitSchema = DBPropertyFactory("unitschemaid", dbfunc = lambda db, id: AnnotationSchema(db, id))
