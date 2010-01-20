@@ -480,13 +480,16 @@ def stripAccents(s, map = None):
                        u's' : u'\u0161',
                        u'ss' : u'\xdf',
                        u'?' : u'\xbf',
-                       u"'" : u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb',
-                       u'"' : u'\x93\x94\x84\u201c\u201d\u201e\u201f',
+                       u"'" : u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb\xb0',
+                       u'"' : u'\x93\x94\x84\u201c\u201d\u201e\u201f\xa8',
                        u'-' : u'\x96\x97',
                        u'|' : u'\xa6',
                        u'...' : u'\x85',
                        u' ' : u'\x0c',
                        u'\n' : u'\r',
+                       u"2" : u'\xb2',
+                       u"3" : u'\xb3',
+                       
                        }
     for key, val in map.items():
         for trg in val:
@@ -1451,6 +1454,15 @@ def intselectionSQL(colname, ints):
 def htmlImageObject(bytes, format='png'):
     data = base64.b64encode(bytes)
     return "<object type='image/%s' data='data:image/%s;base64,%s'></object>" % (format, format, data)
+
+class SingletonMeta(type):
+    def __init__(cls,name,bases,dic):
+        super(Singleton,cls).__init__(name,bases,dic)
+        cls.instance=None
+    def __call__(cls,*args,**kw):
+        if cls.instance is None:
+            cls.instance=super(Singleton,cls).__call__(*args,**kw)
+        return cls.instance
 
 
 if __name__ == '__main__':
