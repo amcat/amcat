@@ -1,4 +1,4 @@
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
 import toolkit, permissions, project
 
 _users = None
@@ -26,7 +26,7 @@ class Users(object):
             yield user
 
 class User(Cachable):
-    __cacheme__ = True
+    __metaclass__ = CachingMeta
     __table__ = 'users'
     __idcolumn__ = 'userid'
     __labelprop__ = 'username'
@@ -36,6 +36,10 @@ class User(Cachable):
     permissionLevel = DBPropertyFactory("permissionid", table="permissions_users", func=permissions.UserPermission.get)
     projects = DBFKPropertyFactory("permissions_projects_users", "projectid", dbfunc=lambda db, id : project.Project(db, id))
 
+    def __init__(self, db, id):
+        print "Creating user %i" % id
+        Cachable.__init__(self, db, id)
+    
     @property
     def permissionLevelName(self):
         return self.permissionLevel.label
