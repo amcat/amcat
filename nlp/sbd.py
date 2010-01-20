@@ -37,6 +37,8 @@ def split(text, type=2, maxsentlength=800):
                 for sent in sent.split("\n"):
                     sent = sent.strip()
                     if not sent: continue
+                    if len(sent) > maxsentlength:
+                        raise Exception("Sentence too long! %r" % sent)
                     sents.append(sent)
             else:
                 sents.append(sent)

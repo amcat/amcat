@@ -1,4 +1,5 @@
-import xapian, article, toolkit, sqlalchemy, dbtoolkit 
+import xapian, article, toolkit, sqlalchemy, dbtoolkit, re, word
+from functools import partial
 
 VALUE_AID = 1
 
@@ -108,9 +109,47 @@ class Index(object):
         qp.set_database(self.index)
         return qp.parse_query(query, xapian.QueryParser.FLAG_WILDCARD)
                 
+# TermGenerators: move this out of the class?
+    
+class BrouwersGenerator(object):
+    def __init__(self, db, prop=None):
+        self.wordcache = word.WordCache(db)
+        self.wg = WordGenerator()
+        self.prop = prop
+    def getTerms(self, article):
+        for word in self.wg.getTerms(article):
+            for b in self.wordcache.getBrouwersCats(word, self.prop):
+                if not b: continue
+                if self.prop is None:
+                    yield str(b.id)
+                else:
+                    yield b.replace(" ","_")
+    
+            
+class WordGenerator(object):
+    def getTerms(self, article):
+        for word in article.words():
+            word = toolkit.stripAccents(word).encode('ascii', 'replace').lower()
+            if not re.match("[A-Za-z]+", word): word = "#"
+            yield word
+            
+class NGramGenerator(object):
+    def __init__(self, n, wordgenerator=None):
+        self.n = n
+        self.wordgenerator = wordgenerator or WordGenerator()
+    def getTerms(self, article):
+        last = [""] * (self.n)
+        for word in self.wordgenerator.getTerms(article):
+            last.append(word)
+            del(last[0])
+            if self.n == 1:
+                yield last[0]
+            else:
+                yield "N%i_%s" % (self.n, "_".join(last))
 
+# until here?
 
-def createIndex(indexloc, articles, db=None, stemmer="dutch"):
+def createIndex(indexloc, articles, db=None, stemmer="dutch", termgenerators=None):
     
     database = xapian.WritableDatabase(indexloc, xapian.DB_CREATE_OR_OVERWRITE)
     indexer = xapian.TermGenerator()
@@ -128,18 +167,26 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch"):
         doc.set_data(str(a.id))
         doc.add_value(VALUE_AID, "%020i" % a.id)
         indexer.set_document(doc)
-        indexer.index_text(txt)
+        if termgenerators:
+            if type(termgenerators) not in (list, tuple, set):
+                termgenerators = [termgenerators]
+            for tg in termgenerators:
+                txt = ' '.join(tg.getTerms(a))
+                indexer.index_text(txt)
+        else:
+            indexer.index_text(txt)
+        
         database.add_document(doc)
+    database.flush()
     return Index(indexloc, db)
 
 if __name__ == '__main__':
-    import sys, dbtoolkit, project
+    import sys, dbtoolkit, project, article
     db = dbtoolkit.amcatDB()
-    i = Index("/home/amcat/indices/draft", db)
-    b = project.Batch(db, 4796)
-    subset = b.articles
-    queries = "yakult", "dsb", "heineken", "liander"
-    for q, a, w in i.queries(queries, returnWeights=True, subset=subset):
-        print q, `a`, w
-        
-
+    a = article.Article(db, 44454073)
+    b = BrouwersGenerator(db, None)
+    for wg in [b, b]:
+        print wg
+        words = list(wg.getTerms(a))[:20]
+        print " ".join(words)
+        b.prop = "scat"
