@@ -1,10 +1,12 @@
 from itertools import izip, count
-import sbd, re, dbtoolkit
+import sbd, re, dbtoolkit, toolkit
+import tadpole
+
 
 
 def splitArticle(art):
     if art.sentences: return
-    text = art.text
+    text = art.db.getText(art.id)
     if not text:
         toolkit.warn("Article %s empty, adding headline only" % art.id)
         text = ""                                                                                                             
@@ -31,10 +33,13 @@ def splitArticles(articles):
         except Exception, e:
             error += '%s: %s\n' % (article.id , e)    
     return error or None
+    
 
 if __name__ == '__main__':
     import dbtoolkit, article
-    a = article.Article(dbtoolkit.amcatDB(), 44532714)
-    print a.sentences
-    print splitArticles([a])
-    print a.sentences
+    db  = dbtoolkit.amcatDB()
+    a = article.Article(db, 42447344)#634584)
+    #a = article.Article(db, 634584)
+    #print a.sentences
+    lemmatise(a)
+

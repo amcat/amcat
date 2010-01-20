@@ -348,7 +348,7 @@ class amcatDB(object):
         return bytes
 
 
-    def getText(self, aid, type):
+    def getText(self, aid, type=2):
         sql = "select text, encoding from texts where articleid=%i and type=%i" % (aid, type)
         try:
             txt, enc = self.doQuery(sql)[0]
