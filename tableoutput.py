@@ -34,6 +34,12 @@ def line(values, collengths, con="|||"):
             +(" "+m+" ").join(("%%-%is" % length) % (value,) for (length, value) in zip(collengths, values))
             +" " + r + "\n")   
 
+def printTable(table):
+    table = getTable(table)
+    cols = table.getColumns()
+    for r in table.getRows():
+        print toolkit.join([table.getValue(r,c) for c in cols])
+
 def table2ascii(table, colnames=None, formats=None, useunicode=True, box=True):
     table = getTable(table, colnames)
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
