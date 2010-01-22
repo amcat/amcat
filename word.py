@@ -8,12 +8,20 @@ class BrouwersCat(Cachable):
     __labelprop__ = "cat"
     __dbproperties__ = ["cat", "scat", "sscat"]
 
+class String(Cachable):
+    __metaclass__ = CachingMeta
+    __table__ = "words_strings"
+    __idcolumn__ = "stringid"
+    __labelprop__ = "string"
+    __dbproperties__ = ["string"]
+
 class Lemma(Cachable):
     __metaclass__ = CachingMeta
     __table__ = 'words_lemmata'
     __idcolumn__ = 'lemmaid'
     __labelprop__ = "lemma"
-    __dbproperties__ = ["lemma", "pos"]
+    __dbproperties__ = ["pos"]
+    lemma = DBPropertyFactory("stringid", dbfunc=String)
     brouwers = DBFKPropertyFactory("words_brouwers","cat", dbfunc=BrouwersCat)
     
 
@@ -22,7 +30,8 @@ class Word(Cachable):
     __table__ = 'words_words'
     __idcolumn__ = 'wordid'
     __labelprop__ = "word"
-    __dbproperties__ = ["word", "freq", "celex"]
+    __dbproperties__ = ["freq", "celex"]
+    word = DBPropertyFactory("stringid", dbfunc=String)
     lemma = DBPropertyFactory("lemmaid", dbfunc=Lemma)
 
 def clean(s):
@@ -115,4 +124,6 @@ class POSCache(object):
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)
-    print LemmaCache(db).getLemmaID(":", ".")
+    w = Word(db, 110)
+    print `w`, w, `w.word`, w.word
+    print `w.lemma`, w.lemma
