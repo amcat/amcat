@@ -31,8 +31,8 @@ def default(**kargs):
         raise Exception('Could not find or read password file in "%s"!' % passwdfile)
 
     fields = open(passwdfile).read().strip().split(':')
-    kargs['username'] = fields[0]
-    kargs['password'] = fields[1]
+    if 'username' not in kargs: kargs['username'] = fields[0]
+    if 'password' not in kargs: kargs['password'] = fields[1]
     if os.name == 'nt':
         raise Exception("Windows currently not supported -- ask Wouter!")
     else:
