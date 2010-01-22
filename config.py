@@ -23,34 +23,35 @@ def default(**kargs):
     homedir = os.getenv('HOME')
 
     if not homedir:
-        if 'SERVER_SOFTWARE' in os.environ:
-            return amcatConfig()
+        if 'SERVER_SOFTWARE' in os.environ or 'username' in kargs:
+            return amcatConfig(**kargs)
         raise Exception('Could not determine home directory! Please specify the HOME environemnt variable')
     passwdfile = os.path.join(homedir, __PASSWD_FILE)
     if not os.access(passwdfile, os.R_OK):
         raise Exception('Could not find or read password file in "%s"!' % passwdfile)
 
     fields = open(passwdfile).read().strip().split(':')
-    un, password = fields[:2]
+    kargs['username'] = fields[0]
+    kargs['password'] = fields[1]
     if os.name == 'nt':
         raise Exception("Windows currently not supported -- ask Wouter!")
     else:
-        return amcatConfig(un, password,  **kargs)
+        return amcatConfig(**kargs)
 
 def amcatConfig(username = "app", password = "eno=hoty", easysoft=False):
     
     if easysoft:
         host = "Easysoft-AmcatDB"
-        import pyodbc as driver
+        #import pyodbc as driver
+        import mx.ODBC.unixODBC as driver
         import dbtoolkit
         dbtoolkit.ENCODE_UTF8 = True
     else:
         host = "AmcatDB"
         import mx.ODBC.iODBC as driver
-    return Configuration(username, password, host, driver=driver, kargs=easysoft)
+    return Configuration(username, password, host, driver=driver)#, kargs=easysoft)
 
 if __name__ == '__main__':
     c = default()
-    print "Config: host %s, username %s, passwd %s.., attempting to connect" % (c.host, c.username, c.password[:2])
     db = c.connect()
     print db
