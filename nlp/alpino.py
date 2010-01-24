@@ -21,6 +21,7 @@ POSMAP = {"pronoun" : 'O',
           "tag" : "?",
           "particle": "R",
           "name" : "M",
+          "part" : "R",
           }
 
 def data2token(lemma, word, begin, end, dummypos, dummypos2, pos):
@@ -35,7 +36,7 @@ def data2token(lemma, word, begin, end, dummypos, dummypos2, pos):
         m2 = major
     cat = POSMAP.get(m2)
     if not cat:
-        raise Exception("Unknown POS: %r (%s/%s/%s)" % (major, begin, word, pos))
+        raise Exception("Unknown POS: %r (%s/%s/%s/%s)" % (m2, major, begin, word, pos))
     return lemmata.Token(int(begin), word, lemma, cat, major, minor) 
 
 def line2tokens(line):
