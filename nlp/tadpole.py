@@ -28,10 +28,11 @@ def TadpoleToken( position, word, lemma, morph, pos, *args):
     position = int(position)
     word = toolkit.stripAccents(word)
     lemma = toolkit.stripAccents(lemma)
+    #print position-1, word, lemma, poscat, major, minor
     return lemmata.Token(position-1, word, lemma, poscat, major, minor)
 
 class TadpoleClient(object):
-    def __init__(self,host="localhost",port="12345", tadpole_encoding="iso-8859-1", client_encoding="utf-8"):
+    def __init__(self,host="localhost",port="12345", tadpole_encoding="utf-8", client_encoding="utf-8"):
         self.BUFSIZE = 1024
         self.socket = socket(AF_INET,SOCK_STREAM)
         self.socket.connect( (host,port) )
@@ -47,7 +48,7 @@ class TadpoleClient(object):
         buffer = ""
         done = False
         while not done:
-            data = self.socket.recv(self.BUFSIZE).decode(self.tadpole_encoding)
+            data = self.socket.recv(self.BUFSIZE)
             if not data: raise Exception("No data received but READY not given?")
             buffer += data
 
@@ -60,7 +61,9 @@ class TadpoleClient(object):
                 buffer = ""
 
             for line in lines:
-                if line == "READY":
+                line = line.decode(self.tadpole_encoding)
+                line = line.replace(u"\ufffd", u"\xeb")
+                if line == u"READY":
                     done = True
                 elif line:
                     yield TadpoleToken(*line.split("\t"))
@@ -70,7 +73,7 @@ class TadpoleClient(object):
 
 if __name__ == '__main__':
     import sys
-    port = 12345
+    port = 9998
     host = "localhost"
     
     if len(sys.argv) <= 1:
@@ -99,7 +102,8 @@ if __name__ == '__main__':
     for sentence in sentences:
         lagpos = None
         for token in client.process(sentence):
-            if not lagpos or (token.position <> lagpos+1):
+            #print lagpos, token.position
+            if (lagpos is not None) and (token.position <> lagpos+1):
                 print
             lagpos = token.position
             print token,
