@@ -36,94 +36,63 @@ class Word(Cachable):
 
 def clean(s):
     if s is None: return ""
-    if type(s) == str:
-        s = s.decode('latin-1')
+    #if type(s) == str:
+    #    s = s.decode('latin-1')
     #s = toolkit.stripAccents(s)
     return s.lower().strip()
 
-class RelCache(object):
-    def __init__(self, db):
-        self.db = db
-        SQL = "select name, relid from parses_rels"
-        self.rels = dict(db.doQuery(SQL))
-    def getRelID(self, rel):
-        return self.rels[rel]
+def getOrCreate(db, dic, key, table, cols):
+    id = dic.get(key)
+    if id is None:
+        if type(key) in (list, tuple):
+            data = dict(zip(cols, key))
+        else:
+            data = {cols:key}
+        id = db.insert(table, data)
+        dic[key] = id
+    return id
 
-class LemmaCache(object):
-    def __init__(self, db, languageid=2):
-        self.db = db
-        SQL = "select lemmaid, lemma, pos from words_lemmata"# where languageid=%i" % languageid
-        self.words = {}
-        self.languageid = languageid
-        for lid, lemma, pos in db.doQuery(SQL):
-            lemma, pos = clean(lemma), clean(pos)
-            self.words[lemma, pos] = lid
-    def getLemmaID(self, lemma, pos, create=False):
-        lemma2, pos2 = clean(lemma), clean(pos)
-        lid = self.words.get((lemma2, pos2))
-        if not lid and create:
-            lid = self.db.insert("words_lemmata", dict(lemma=lemma, pos=pos, languageid=self.languageid))
-            self.words[lemma2, pos2] = lid
-        return lid
 
-    
-class WordLemmaCache(object):
-    def __init__(self, db):
-        self.db = db
-        SQL = "select wordid, lemmaid, word from words_words"
-        self.words = {}
-        for wid, lid, word in db.doQuery(SQL):
-            word = clean(word)
-            self.words[lid, word] = wid
-    def getWordID(self, lid, word, create=False):
-        word2 = clean(word)
-        wid = self.words.get((lid, word2))
-        if not wid and create:
-            wid = self.db.insert("words_words", dict(word=word, lemmaid=lid))
-            self.words[lid, word2] = wid
-        return wid
-        
-    
-class WordCache(object):
-    def __init__(self, db):
-        self.db = db
-        SQL = "select word, wordid from words_words"
-        self.words = collections.defaultdict(list)
-        for word, wordid in self.db.doQuery(SQL):
-            self.words[word].append(wordid)
-    def lookup(self, word):
-        return [Word(db, wid) for wid in self.words[word]]
-    def getLemmata(self, word):
-        return set(Word(self.db, wid).lemma for wid in self.words[word])
-    def getBrouwersCats(self, word, prop=None):
-        result = set()
-        for lemma in self.getLemmata(word):
-            for b in lemma.brouwers:
-                if prop:
-                    result.add(b.__getattribute__(prop))
-                else:
-                    result.add(b)
-        return result
+_WordCreators = {}
+def WordCreator(db, language=2):
+    global _WordCreators
+    if language not in _WordCreators:
+        _WordCreators[language] = _WordCreator(db, language)
+    return _WordCreators[language]
 
-class POSCache(object):
-    def __init__(self, db):
+class _WordCreator(object):
+    def __init__(self, db, language=2):
         self.db = db
-        SQL= "select posid, major, minor, pos from parses_pos"
-        self.poss = {}
-        for posid, major, minor, pos in db.doQuery(SQL):
-            major, minor, pos = clean(major), clean(minor), clean(pos)
-            self.poss[major, minor, pos] = posid
-    def getPosID(self, major, minor, pos, create=False):
-        major2, minor2, pos2 = clean(major), clean(minor), clean(pos)
-        posid = self.poss.get((major2, minor2, pos2))
-        if not posid and create:
-            posid = self.db.insert("parses_pos", dict(major=major, minor=minor, pos=pos))
-            self.poss[major2, minor2, pos2] = posid
-        return posid
+        self.words = dict(((lid, sid), wid) for (lid, sid, wid) in db.doQuery(
+            "SELECT lemmaid, stringid, wordid FROM words_words"))
+        self.lemmata = dict(((sid, clean(pos)), lid) for (sid, pos, lid) in db.doQuery(
+            "SELECT stringid, pos, lemmaid FROM words_lemmata where languageid=%i" % language))
+        self.strings = dict((clean(w), wid) for (w,wid) in db.doQuery(
+            "SELECT string, stringid FROM words_strings"))
+        self.pos = dict(((clean(maj), clean(min), clean(pos)), pid) for (maj, min, pos, pid) in db.doQuery(
+            "SELECT major, minor, pos, posid FROM parses_pos"))
+        self.rels = dict((clean(name), relid) for (name, relid) in db.doQuery(
+            "SELECT name, relid FROM parses_rels"))
+    def getString(self, string):
+        return getOrCreate(self.db, self.strings, clean(string), "words_strings", "string")
+    def getLemma(self, string, pos):
+        sid = self.getString(string)
+        return getOrCreate(self.db, self.lemmata, (sid,  clean(pos)), "words_lemmata", ("stringid","pos"))
+    def getWord(self, string, lemma_or_id, pos=None):
+        if type(lemma_or_id) <> int:
+            lemma_or_id = self.getLemma(lemma_or_id, pos)
+        sid = self.getString(string)
+        return getOrCreate(self.db, self.words, (lemma_or_id, sid), "words_words", ("lemmaid", "stringid"))
+    def getPos(self, major, minor, pos):
+        return getOrCreate(self.db, self.pos, (clean(major), clean(minor), clean(pos)), "parses_pos", ("major","minor","pos"))
+    def getRel(self, name):
+        return getOrCreate(self.db, self.rels, clean(name), "parses_rels", "name")
 
 if __name__ == '__main__':
     import dbtoolkit
-    db = dbtoolkit.amcatDB(profile=True)
-    w = Word(db, 110)
-    print `w`, w, `w.word`, w.word
-    print `w.lemma`, w.lemma
+    db = dbtoolkit.amcatDB(profile=True, easysoft=True)
+    c = WordCreator(db)
+    print c.getPos("punct","komma",".")
+    db.printProfile()
+    db.conn.commit()
+

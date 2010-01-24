@@ -3,7 +3,7 @@ import amcatxapian, sys, dbtoolkit, toolkit
 db = dbtoolkit.amcatDB()
 
 if len(sys.argv) <= 1:
-    toolkit.warn("Usage: python amcatxapian.py INDEXLOC [-nXX] [QUERY] [< ARTICLEIDS]\n\nIf QUERY is given, query exsting index; otherwise, build new index from ARTICLEIDS. -g determines one or more term generators: 1-4 for n-grams, b for brouwers, s for brouwers-supercat")
+    toolkit.warn("Usage: python amcatxapian.py INDEXLOC [-nXX] [-lLANG] [QUERY] [< ARTICLEIDS]\n\nIf QUERY is given, query exsting index; otherwise, build new index from ARTICLEIDS. -n determines one or more term generators: 1-4 for n-grams, b for brouwers, s for brouwers-supercat; -l defines language for stemming: None and Dutch work")
     sys.exit(1)
 
 def getGenerator(x):
@@ -22,6 +22,13 @@ if len(sys.argv) > 2 and sys.argv[2].startswith("-n"):
 else:
     generators = None
 
+if len(sys.argv) > 2 and sys.argv[2].startswith("-l"):
+    lang = sys.argv[2][2:].lower()
+    if lang == "none": lang = None
+    del(sys.argv[2])
+else:
+    lang = "dutch"
+
     
 query = " ".join(sys.argv[2:])
 if query.strip():
@@ -32,7 +39,7 @@ if query.strip():
 else:
     toolkit.warn("Creating new xapian index (database) at %s, generators=%s" % (indexloc, generators))
     articles = toolkit.tickerate(toolkit.intlist())
-    i = amcatxapian.createIndex(indexloc, articles, db, termgenerators=generators)
+    i = amcatxapian.createIndex(indexloc, articles, db, termgenerators=generators, stemmer=lang)
     toolkit.warn("Created index %s" % i)
 
 docs = list(i.articles)

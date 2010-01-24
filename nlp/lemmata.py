@@ -16,21 +16,14 @@ class Token(object):
 
 
 class Lemmata(object):
-    def __init__(self, db):
+    def __init__(self, db, analysisid):
         self.db = db
-        toolkit.ticker.warn("Getting lemmata")
-        self.lemmacache = word.LemmaCache(db)
-        toolkit.ticker.warn("Getting words")
-        self.wordcache = word.WordLemmaCache(db)
-        toolkit.ticker.warn("Getting pos")
-        self.poscache = word.POSCache(db)
-        toolkit.ticker.warn("Getting rels")
-        self.relcache = word.RelCache(db)
-    def addParseWord(self, sid, token): 
-        lid = self.lemmacache.getLemmaID(token.lemma, token.poscat, create=True)
-        wid = self.wordcache.getWordID(lid, token.word, create=True)
-        posid = self.poscache.getPosID(token.posmajor, token.posminor, token.poscat, create=True)
-        self.db.insert("parses_words", dict(sentenceid=sid, wordbegin=token.position, posid=posid, wordid=wid), retrieveIdent=False)
+        self.creator = word.WordCreator(db)
+        self.analysisid = analysisid
+    def addParseWord(self, sid, token):
+        wid = self.creator.getWord(token.word, token.lemma, token.poscat)
+        posid = self.creator.getPos(token.posmajor, token.posminor, token.poscat)
+        self.db.insert("parses_words", dict(analysisid=self.analysisid, sentenceid=sid, wordbegin=token.position, posid=posid, wordid=wid), retrieveIdent=False)
 
     
 def addSentence(art, text, parno=1, sentno=None, retokenize=True):

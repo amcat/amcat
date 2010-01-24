@@ -125,7 +125,6 @@ class amcatDB(object):
             except Exception, e:
                 raise SQLException(sql, e)
 
-            
             self.fireAfterQuery(sql, time.time() - t, res)
             if select and colnames:
                 info = c.description
@@ -216,10 +215,12 @@ class amcatDB(object):
         return self._articlecache[artid]
     
     
-    def articles(self, aids=None, **kargs):
+    def articles(self, aids=None, tick=False, **kargs):
         if not aids:
             import sys
             aids = toolkit.intlist(sys.stdin)
+        if tick:
+            aids = toolkit.tickerate(aids)
         for aid in aids:
             yield self.article(aid)
 
@@ -357,8 +358,26 @@ class amcatDB(object):
         if len(txt) > 64000:
             txt = self.getLongText(aid, type)
         return decode(txt, enc)
-
+    
+    def setText(self, aid, text, type=2):
+        bytes, remainder = None, None
+        try:
+            ascii = text.encode('ascii')
+            print "ASCII encoded!"
+        except:
+            pass
         
+        if not bytes:
+            bytes = text.encode('utf-8')
+            bytes, remainder = bytes[:7000], bytes[7000:]
+            print "%i bytes, %i remainder" % (len(bytes), len(remainder))
+
+        self.doQuery("update texts set text = %s where articleid=%i and type=%i" % (quotesql(bytes.decode('utf-8')), aid, type))
+        while remainder:
+            bytes, remainder = remainder[:7000], remainder[7000:]
+            print "%i bytes, %i remainder" % (len(bytes), len(remainder))
+            self.doQuery("exec append_text_bytes @articleid=%i, @data=%s" % (aid, sqlbytes(bytes)))
+            
     def updateText(self, aid_or_tid, type_or_None, text):
         if type_or_None is None:
             where = "textid = %i" % aid_or_tid
@@ -406,6 +425,8 @@ class RawSQL(object):
     def __init__(self, sql):
         self.sql = sql
 
+def sqlbytes(bytes):
+    return "0x%s" % bytes.encode('hex')
 
 ENCODE_UTF8 = False
 def quotesql(strOrSeq):
@@ -424,9 +445,13 @@ def quotesql(strOrSeq):
     elif type(strOrSeq) == unicode and ENCODE_UTF8:
         try:
             ascii = strOrSeq.encode('ascii')
+            ascii = re.sub("'", "''", ascii)
             return "'%s'" % ascii
         except:
-            return "cast(0x%s as varchar)" % strOrSeq.encode('utf-8').encode('hex')
+            bytes = strOrSeq.encode('utf-8')
+            if len(bytes) > 7900:
+                raise Exception("Cannot directly insert utf-8 bytes longer than 7900 bytes")
+            return "cast(%s as varchar(8000))" % sqlbytes(bytes)
     elif type(strOrSeq) in (str, unicode):
         if type(strOrSeq) == unicode:
             strOrSeq = strOrSeq.encode('latin-1')
@@ -496,6 +521,7 @@ class ProfilingAfterQueryListener(object):
     def __init__(self):
         self.queries = collections.defaultdict(list)
     def __call__(self, query, time, resultset):
+        #print ">>>", query, time, len(resultset)
         l = len(resultset) if resultset else 0
         self.queries[query].append((time, l))
     def printreport(self, sort="time", *args, **kargs):

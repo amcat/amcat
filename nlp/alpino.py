@@ -19,6 +19,7 @@ POSMAP = {"pronoun" : 'O',
           "conj" : "C",
           "tag" : "?",
           "particle": "R",
+          "name" : "M",
           }
 
 def data2token(lemma, word, begin, end, dummypos, dummypos2, pos):
@@ -75,7 +76,7 @@ def addSentence(art, lem, sent):
     for token in tokens.values():
         lem.addParseWord(sid, token)
     for ppos, cpos, rel in rels:
-        relid = lem.relcache.getRelID(rel)
+        relid = lem.creator.getRel(rel)
         art.db.insert("parses_triples", dict(sentenceid=sid, parentbegin=ppos, childbegin=cpos, relation=relid), retrieveIdent=False)
         #print add, t1, rel, t2
     return sid

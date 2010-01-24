@@ -3,7 +3,7 @@
 
 from socket import *
 import re
-import lemmata
+import lemmata, toolkit
 
 
 TADPOLE_POSMAP = {"VZ" : "P",
@@ -22,10 +22,13 @@ TADPOLE_POSMAP = {"VZ" : "P",
                   }
 def TadpoleToken( position, word, lemma, morph, pos, *args):
     # *args catches stuff like dependency info which we ignore
-    major, minor = token.pos.split("(")
+    major, minor = pos.split("(")
     minor = minor.split(")")[0]
-    pos = TADPOLE_POSMAP[major]
-    return lemmata.Token(position-1, word, lemma, poscat, posmajor, posminor)
+    poscat = TADPOLE_POSMAP[major]
+    position = int(position)
+    word = toolkit.stripAccents(word)
+    lemma = toolkit.stripAccents(lemma)
+    return lemmata.Token(position-1, word, lemma, poscat, major, minor)
 
 class TadpoleClient(object):
     def __init__(self,host="localhost",port="12345", tadpole_encoding="iso-8859-1", client_encoding="utf-8"):
