@@ -208,23 +208,23 @@ class ArticleScraper(object):
         return convertImage(image, *args, **kargs)
     
 stripRegExpTuple = (
-    (re.compile(r'<(script|style).*?</(script|style)>', re.IGNORECASE | re.DOTALL), u''),
-    (re.compile(r'<br ?/?>|</?p>|</div>', re.IGNORECASE), u'\n'),
-    (re.compile(r'<[^>]*>|\r'), u''),
-    (re.compile(r'[ \t]+'), u' '),
-    (re.compile(r'^ +\n|\n +$', re.MULTILINE), u'\n'),
-    (re.compile(r'\n\n+'), u'\n\n'),
+    (re.compile(ur'<(script|style).*?</(script|style)>', re.IGNORECASE | re.DOTALL), u''),
+    (re.compile(ur'<br ?/?>|</?p>|</div>', re.IGNORECASE), u'\n'),
+    (re.compile(ur'<[^>]*>|\r'), u''),
+    (re.compile(ur'[ \t]+'), u' '),
+    (re.compile(ur'^ +\n|\n +$', re.MULTILINE), u'\n'),
+    (re.compile(ur'\n\n+'), u'\n\n'),
 )
                 
 def stripText(text, removeSpecial=False):
     if not text: return text
 
     for regExp, replacement in stripRegExpTuple:
-        print regExp
+        #print regExp
         text = regExp.sub(replacement, text)
 
     if removeSpecial:
-        text = re.sub(r'[^\w \-,\.\!\?\:/]+', '', text)
+        text = re.sub(ur'[^\w \-,\.\!\?\:/]+', '', text)
 
     text = toolkit.unescapeHtml(text)
     text = toolkit.stripAccents(text)
