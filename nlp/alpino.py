@@ -2,6 +2,7 @@ import toolkit
 import lemmata
 
 ALPINO = "/home/amcat/resources/Alpino"
+ALPINO_ANALYSISID = 2
 
 TOKENIZE = "%s/Tokenization/tok" % ALPINO
 PARSE = "ALPINO_HOME=%s %s/bin/Alpino end_hook=dependencies -notk -parse" % (ALPINO, ALPINO)
@@ -55,7 +56,7 @@ def parseSentence(sent, errorhook=None):
         yield t1, rel, t2
 
 def addText(art, text, lem=None):
-    if lem is None: lem = lemmata.Lemmata(art.db)
+    if lem is None: lem = lemmata.Lemmata(art.db, ALPINO_ANALYSISID)
     sents = tokenizeText(text + " ")
     sid = None
     for sent in sents:
@@ -77,7 +78,7 @@ def addSentence(art, lem, sent):
         lem.addParseWord(sid, token)
     for ppos, cpos, rel in rels:
         relid = lem.creator.getRel(rel)
-        art.db.insert("parses_triples", dict(sentenceid=sid, parentbegin=ppos, childbegin=cpos, relation=relid), retrieveIdent=False)
+        art.db.insert("parses_triples", dict(sentenceid=sid, parentbegin=ppos, childbegin=cpos, relation=relid, analysisid=ALPINO_ANALYSISID), retrieveIdent=False)
         #print add, t1, rel, t2
     return sid
                                      
@@ -100,7 +101,7 @@ if __name__ == '__main__':
         del sys.argv[1]
         db = dbtoolkit.amcatDB(easysoft=True)
         art = article.Article(db, AID)
-        lem = lemmata.Lemmata(db)
+        lem = lemmata.Lemmata(db, ALPINO_ANALYSISID)
     sent = " ".join(sys.argv[1:])+" "
     sents = tokenizeText(sent)
     for sent in sents:

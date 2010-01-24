@@ -1,5 +1,5 @@
 from cachable import *
-import toolkit
+import toolkit, re
 
 class BrouwersCat(Cachable):
     __metaclass__ = CachingMeta
@@ -41,13 +41,14 @@ def clean(s):
     #s = toolkit.stripAccents(s)
     return s.lower().strip()
 
-def getOrCreate(db, dic, key, table, cols):
+def getOrCreate(db, dic, key, table, cols, **extra):
     id = dic.get(key)
     if id is None:
         if type(key) in (list, tuple):
             data = dict(zip(cols, key))
         else:
             data = {cols:key}
+        data.update(extra)
         id = db.insert(table, data)
         dic[key] = id
     return id
@@ -74,7 +75,8 @@ class _WordCreator(object):
         self.rels = dict((clean(name), relid) for (name, relid) in db.doQuery(
             "SELECT name, relid FROM parses_rels"))
     def getString(self, string):
-        return getOrCreate(self.db, self.strings, clean(string), "words_strings", "string")
+        isword = bool(re.match("^[A-Za-z_]+$", string))
+        return getOrCreate(self.db, self.strings, clean(string), "words_strings", "string", isword=isword)
     def getLemma(self, string, pos):
         sid = self.getString(string)
         return getOrCreate(self.db, self.lemmata, (sid,  clean(pos)), "words_lemmata", ("stringid","pos"))
