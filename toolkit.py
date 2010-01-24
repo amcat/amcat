@@ -482,10 +482,11 @@ def stripAccents(s, map = None):
                        u'?' : u'\xbf',
                        u"'" : u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb\xb0',
                        u'"' : u'\x93\x94\x84\u201c\u201d\u201e\u201f\xa8',
-                       u'-' : u'\x96\x97',
+                       u'-' : u'\x96\x97\u2010\u2011\u2012\u2013\u2014\u2015',
                        u'|' : u'\xa6',
-                       u'...' : u'\x85',
-                       u' ' : u'\x0c',
+                       u'...' : u'\x85\u2026\u2025',
+                       u'.' : u'\u2024',
+                       u' ' : u'\x0c\xa0',
                        u'\n' : u'\r',
                        u"2" : u'\xb2',
                        u"3" : u'\xb3',
@@ -1440,7 +1441,8 @@ def ints2ranges(ids):
             yield start, prev
             start = i
         prev = i
-    yield start, i
+    if ids:
+        yield start, i
 
 def intselectionSQL(colname, ints):
     conds = []
