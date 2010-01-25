@@ -6,6 +6,7 @@ from oset import OrderedSet # for listeners, replace with proper orderedset when
 import table3
 
 _encoding = {
+    0 : 'utf-8',
     1 : 'UTF-7',
     2 : 'ascii',
     3 : 'latin-1',
@@ -414,8 +415,10 @@ def Articles(**kargs):
         
         
 def decode(text, encodingid, lenient=True):
+    if type(text) == unicode:
+        return text
     if not text: return text # avoid problem with None that does not have the decode function
-    if not encodingid: encodingid = 3 # assume latin-1
+    if encodingid is None: encodingid = 3 # assume latin-1
     try:
         return text.decode(_encoding[encodingid])
     except  UnicodeDecodeError, e:

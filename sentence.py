@@ -7,9 +7,10 @@ class Sentence(Cachable):
     __table__ = 'sentences'
     __idcolumn__ = 'sentenceid'
     __labelprop__ = 'text'
-
     __dbproperties__ = ["parnr", "sentnr", "encoding"]
-    text = DBPropertyFactory("isnull(longsentence, sentence)", objfunc=article.decode)
+    __encodingprop__ = 'encoding'
+    
+    text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
     article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
     
 if __name__ == '__main__':

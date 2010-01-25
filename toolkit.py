@@ -490,6 +490,8 @@ def stripAccents(s, map = None):
                        u'\n' : u'\r',
                        u"2" : u'\xb2',
                        u"3" : u'\xb3',
+                       #u"(c)" : u'\xa9',
+                       
                        
                        }
     for key, val in map.items():

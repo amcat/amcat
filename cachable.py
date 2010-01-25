@@ -143,7 +143,7 @@ class DBProperty(Property):
     Property representing (normally) a column in the
     row defining an object.
     """
-    def __init__(self, cachable, fieldname, func=None, table=None, objfunc=None, dbfunc=None):
+    def __init__(self, cachable, fieldname, func=None, table=None, objfunc=None, dbfunc=None, decode=False):
         """
         Fieldname is the name of the field to retrieve. It can be a
         tuple, in which case multiple values will be passed to the
@@ -159,11 +159,16 @@ class DBProperty(Property):
         self.objfunc = objfunc
         self.dbfunc = dbfunc
         self.table = table
+        self.decode = decode
     def process(self, *values):
         # decode UTF, remove guard if all is ok
         import dbtoolkit
-        if dbtoolkit.ENCODE_UTF8:
-            values = tuple(v.decode('utf-8') if type(v) == str else v
+        if self.decode:
+            if '__encodingprop__' in dir(self.cachable):
+                encoding = self.cachable.__getattribute__(self.cachable.__encodingprop__)
+            else:
+                encoding = None
+            values = tuple(dbtoolkit.decode(v, encoding) if type(v) == str else v
                            for v in values)
         if self.func: return self.func(*values)
         if self.objfunc: return self.objfunc(self.cachable, *values)

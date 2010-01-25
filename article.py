@@ -4,9 +4,6 @@ from functools import partial
 _debug = toolkit.Debug('article',1)
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 
-def decode(article, string):
-    return dbtoolkit.decode(string, article.encoding)
-
 def doCreateArticle(db, aid, **cache):
     return Article(db, aid, **cache)
 
@@ -19,12 +16,13 @@ class Article(Cachable):
     __table__ = 'articles'
     __idcolumn__ = 'articleid'
     __labelprop__ = 'headline'
+    __encodingprop__ = 'encoding'
     __dbproperties__ = ["date", "length", "pagenr", "url", "encoding"]
-    headline = DBPropertyFactory(objfunc = decode)
-    byline = DBPropertyFactory(objfunc = decode)
-    metastring = DBPropertyFactory(objfunc = decode)
-    section = DBPropertyFactory(objfunc = decode)
-    text = DBPropertyFactory(table="texts", objfunc = decode)
+    headline = DBPropertyFactory(decode=True)
+    byline = DBPropertyFactory(decode=True)
+    metastring = DBPropertyFactory(decode=True)
+    section = DBPropertyFactory(decode=True)
+    text = DBPropertyFactory(table="texts", decode=True)
     batch = DBPropertyFactory("batchid", dbfunc=lambda db, id: project.Batch(db, id))
     source = DBPropertyFactory("mediumid", dbfunc=sources.Source)
     sentences = DBFKPropertyFactory("sentences", "sentenceid", dbfunc=sentence.Sentence)

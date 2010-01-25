@@ -18,16 +18,21 @@ TADPOLE_POSMAP = {"VZ" : "P",
                   "BW" : "B",
                   "VG" : "C",
                   "TSW" : "I",
-                  "MWU" : "U"
+                  "MWU" : "U",
+                  "" : "?",
                   }
 def TadpoleToken( position, word, lemma, morph, pos, *args):
     # *args catches stuff like dependency info which we ignore
-    major, minor = pos.split("(")
-    minor = minor.split(")")[0]
-    poscat = TADPOLE_POSMAP[major]
+    try:
+        major, minor = pos.split("(")
+        minor = minor.split(")")[0]
+        poscat = TADPOLE_POSMAP[major]
+    except:
+        toolkit.warn("Could not parse pos %r" % pos)
+        raise
     position = int(position)
-    word = toolkit.stripAccents(word)
-    lemma = toolkit.stripAccents(lemma)
+    word = toolkit.stripAccents(word).encode('ascii', 'replace')
+    lemma = toolkit.stripAccents(lemma).encode('ascii', 'replace')
     #print position-1, word, lemma, poscat, major, minor
     return lemmata.Token(position-1, word, lemma, poscat, major, minor)
 
@@ -43,12 +48,15 @@ class TadpoleClient(object):
         input_data = input_data.strip(' \t\n')
         if not isinstance(input_data, unicode):
             input_data = input_data.decode(self.client_encoding)
+        input_data = input_data.replace("/","|")
+        #print "Sending to tadpole: %r" % input_data
         self.socket.send(input_data.encode(self.tadpole_encoding) +'\n')
 
         buffer = ""
         done = False
         while not done:
             data = self.socket.recv(self.BUFSIZE)
+            #print "Received %r" % data
             if not data: raise Exception("No data received but READY not given?")
             buffer += data
 
@@ -102,7 +110,6 @@ if __name__ == '__main__':
     for sentence in sentences:
         lagpos = None
         for token in client.process(sentence):
-            #print lagpos, token.position
             if (lagpos is not None) and (token.position <> lagpos+1):
                 print
             lagpos = token.position

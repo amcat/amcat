@@ -1,4 +1,5 @@
-import toolkit, word
+import toolkit, word, threading
+
 
 class Token(object):
     def __init__(self, position, word, lemma, poscat, posmajor, posminor):
@@ -8,10 +9,11 @@ class Token(object):
         self.poscat = poscat
         self.posmajor = posmajor
         self.posminor = posminor
+        self.label = word
     def __repr__(self):
-        return "Token(%i, %r, %r, %r, %r, %r, %r)" % (self.position, self.word, self.lemma, self.morph, self.poscat, self.posmajor, self.posminor)
+        return "Token(%i, %r, %r, %r, %r, %r)" % (self.position, self.word, self.lemma, self.poscat, self.posmajor, self.posminor)
     def __str__(self):
-        return "%s/%s" % (self.lemma, self.poscat)
+        return "%s/%s/%s" % (self.word, self.lemma, self.poscat)
 
 
 
@@ -43,7 +45,7 @@ def addSentence(art, text, parno=1, sentno=None, retokenize=True):
             text += token
     if type(text) == unicode:
         text = text.encode("utf-8")
-    print "Inserting aid %i par %i sent %i text %r" % (art.id, parno, sentno, text)
+    #print "Inserting aid %i par %i sent %i text %r" % (art.id, parno, sentno, text)
     return art.db.insert("sentences", dict(articleid=art.id, parnr=parno, sentnr=sentno, sentence=text, encoding=0))
 
     
