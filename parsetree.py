@@ -53,6 +53,10 @@ class ParseNode(IDLabel):
         for dummy, child in self.tree.graph.out_edges(self):
             d = self.tree.graph.get_edge_data(self, child)
             yield child, d.get("rel")
+    def getParents(self):
+        for parent, dummy in self.tree.graph.in_edges(self):
+            d = self.tree.graph.get_edge_data(parent, self)
+            yield parent, d.get("rel")
     def addData(self, key, value):
         self.data[key] = value
     def getRelation(self, other):

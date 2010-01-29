@@ -6,14 +6,46 @@ from toolkit import Identity
 ################
 
 def getBron_1(node):
-    if not isVZeg(node.word): return
+    if isVZeg(node.word): act="zeg"
+    elif isVOrder(node.word): act="order"
+    elif isVVraag(node.word): act="vraag"
+    else: return
+    if isNiet(node): act = "ontken"
     su = getSu(node)
     q = getComplOrObj(node)
     if not (su and q): return
-    return su, q
+    return su, q, act 
+
+def getBron_N(node):
+    if not isNGezegde(node.word): return
+    q = getChild(node, "vc")
+    hebben = getAncestor(node, "V")
+    if not hebben: return
+    su = getChild(hebben, "su")
+    if not (su and q): return
+    return su, q, "zeg"
+    
+
+def isNiet(node):
+    mod = getChild(node, "mod")
+    if not mod: return False
+    if mod.word.lemma.label in ["niet"]: return True
+    return False
+	
+
+
+def isNGezegde(word):
+    return word.lemma.label in ["stelling", "stellingname", "mening", "gedachte"]
 
 def isVZeg(word):
-    return word.lemma.label in ["schrijven", "voorstellen", "zeggen", "vind", "zeg"]
+    return word.lemma.label in ["schrijven", "voorstellen", "zeggen", "vind", "zeg", "vinden", "vermoed"]
+
+def isVOrder(word):
+    return word.lemma.label in ["beveel", "verordonneer", "adviseer"]
+    
+def isVVraag(word):
+    return word.lemma.label in ["vraag"]
+
 
 ################# Relations #################
 
@@ -36,17 +68,25 @@ def getChild(node, rel):
     for n, r in node.getRelations():
         if r in rel:
             return n
+    
+def getAncestor(node, pos):
+    for n2, rel in node.getParents():
+      if n2.word.lemma.pos == pos: return n2
+      result = getAncestor(n2, pos)
+      if result: return result
+        
 
 ################# Interface ################
 
 
 class Bron(Identity):
-    def __init__(self, tree, key, source, quote):
-        Identity.__init__(self,  tree, key, source, quote)
+    def __init__(self, tree, key, source, quote, speechAct="zeg"):
+        Identity.__init__(self,  tree, key, source, quote, speechAct)
         self.tree = tree
         self.key = key
         self.source = source
         self.quote = quote
+        self.speechAct = speechAct
 
 def findBronnen(tree):
     for node in tree.getNodes():
@@ -54,8 +94,8 @@ def findBronnen(tree):
             if name.startswith('getBron_'):
                 r = func(node)
                 if r:
-                    su, q = r
-                    yield Bron(tree, node, su, q)
+                    su, q, speechAct = r
+                    yield Bron(tree, node, su, q, speechAct)
                     break
 
 

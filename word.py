@@ -1,5 +1,5 @@
 from cachable import *
-import toolkit, re
+import toolkit, re, sentence
 
 class BrouwersCat(Cachable):
     __metaclass__ = CachingMeta
@@ -56,6 +56,7 @@ def getOrCreate(db, dic, key, table, cols, **extra):
 
 _WordCreators = {}
 def WordCreator(db, language=2):
+    return _WordCreator(db, language)
     global _WordCreators
     if language not in _WordCreators:
         _WordCreators[language] = _WordCreator(db, language)

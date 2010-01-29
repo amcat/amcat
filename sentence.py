@@ -1,7 +1,7 @@
 import dbtoolkit
-from cachable import Cachable, DBPropertyFactory
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 from functools import partial
-import article
+import article, word
 
 class Sentence(Cachable):
     __table__ = 'sentences'
@@ -12,8 +12,8 @@ class Sentence(Cachable):
     
     text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
     article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
+    words = DBFKPropertyFactory("parses_words", "wordid", dbfunc=word.Word)
     
 if __name__ == '__main__':
-    s = Sentence(dbtoolkit.amcatDB(),280600)
-    print s.parnr, s.sentnr, s.text
-    print `s.article`
+    s = Sentence(dbtoolkit.amcatDB(),30031005)
+    print " ".join("%s/%s" % (w.lemma, w.lemma.pos) for w in  s.words)

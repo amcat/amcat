@@ -221,11 +221,11 @@ def lemmatiseArticles(db, aids, threads=6):
             toolkit.ticker.warn("Done?")
     toolkit.ticker.warn("Done!")
     
-            
+
 if __name__ == '__main__':
     import dbtoolkit, article, toolkit, sys
 
-    BATCH = "(5452,5451,5450,5447,5446,5444,5429,5417,5389,5383,5334,5331,5329,5257,5256,5255,5254)"
+    #BATCH = "(5452,5451,5450,5447,5446,5444,5429,5417,5389,5383,5334,5331,5329,5257,5256,5255,5254,4354,4159,4158)"
     #BATCH = "(5452)"
     BATCH = "(4354,4159,4158)"
     toolkit.ticker.warn("Setting up lemmatiser")
