@@ -194,11 +194,12 @@ def tickerate(seq, msg=None, getlen=True, ticker=None):
         yield x
     
 class Ticker:
-    def __init__(this, interval = 10):
+    def __init__(this, interval = 10, markThread=True):
         this.interval = interval
         this.i = 0
         this.start = time.time()
         this.last = time.time()
+        this.markThread = markThread
 
     def warn(this, msg, reset=False, interval = None, estimate=None, newline=True, detail=0):
         if interval: this.interval = interval
@@ -210,6 +211,9 @@ class Ticker:
             this.interval = 10**(int(ovg))
             
             msg += " (%s steps / %s)" % (estimate, this.interval)
+
+        if this.markThread and threading.currentThread().getName() <> 'MainThread':
+            msg = "[%s] %s" % ( threading.currentThread().getName(), msg)
             
         now = time.time()
         warn("%10f\t%10f\t%d\t%s" % (now-this.last, now-this.start, this.i, msg), newline=newline)

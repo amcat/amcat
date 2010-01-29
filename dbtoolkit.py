@@ -4,6 +4,7 @@ import article, sources, user
 import re, collections, time
 from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
 import table3
+import threading
 
 _encoding = {
     0 : 'utf-8',
@@ -28,6 +29,8 @@ def reportDB():
     db.conn.select_db('report')
     db.conn.autocommit(False)
     return db
+
+GLOBAL_DB_LOCK = threading.Lock()
 
 class amcatDB(object):
     """
@@ -119,6 +122,7 @@ class amcatDB(object):
         c = None
         t = time.time()
         try:
+            GLOBAL_DB_LOCK.acquire()
             c = self.cursor()
             self.doQueryOnCursor(sql, c)
             try:
@@ -138,6 +142,8 @@ class amcatDB(object):
                     c.close()
                 except:
                     pass
+            GLOBAL_DB_LOCK.release()
+                        
 
 
 
