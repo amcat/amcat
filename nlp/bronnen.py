@@ -107,3 +107,4 @@ if __name__ == '__main__':
     b.prnt("/home/amcat/www-plain/test.png")
     
     
+

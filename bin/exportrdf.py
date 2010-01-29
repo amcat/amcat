@@ -130,16 +130,18 @@ def units2RDF(units, graph=None):
         
 FORMATS = ('n3','xml')
 
+def usage():
+    import sys
+    print "Usage: python %s WHAT [FORMAT] CODINGJOBS\n\nWHAT can be sentence, article, both, or network.\nFORMAT can be one of %s" % (sys.argv[0], FORMATS)
+    sys.exit()
+    
+
 if __name__ == '__main__':
     import dbtoolkit, net, ont2, sys, codingjob, toolkit
 
-    if len(sys.argv) < 3:
-        print "Usage: python netrdf.py WHAT [FORMAT] CODINGJOBS\n\nWHAT can be sentence, article, or network."
-        sys.exit()
+    if len(sys.argv) < 3: usage()
     what = sys.argv[1]
-    if what not in ("sentence", "article", "network", "both"):
-        print "Usage: python netrdf.py WHAT [FORMAT] CODINGJOBS\n\nWHAT can be sentence, article, both, or network."
-        sys.exit()
+    if what not in ("sentence", "article", "network", "both"): usage()
 
     format = sys.argv[2]
     ids = sys.argv[3:]
