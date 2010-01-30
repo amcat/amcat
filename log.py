@@ -72,7 +72,8 @@ if __name__ == '__main__':
     import dbtoolkit, sendmail
     
     db = dbtoolkit.amcatDB()
-    send_reports(db)
+    info(db, "Dit is een test", "draft")
+    #send_reports(db)
     #l = Logger(db, "TEST_LOG", 6)
     #l.log("test1")
     #l.warning("testwarning")

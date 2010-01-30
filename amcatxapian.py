@@ -181,12 +181,20 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch", termgenerators=Non
     return Index(indexloc, db)
 
 if __name__ == '__main__':
-    import sys, dbtoolkit, project, article
-    db = dbtoolkit.amcatDB()
-    a = article.Article(db, 44454073)
-    b = BrouwersGenerator(db, None)
-    for wg in [b, b]:
-        print wg
-        words = list(wg.getTerms(a))[:20]
-        print " ".join(words)
-        b.prop = "scat"
+    import sys, dbtoolkit
+    if len(sys.argv) <= 1:
+        toolkit.warn("Usage: python amcatxapian.py INDEXLOC [QUERY] [< ARTICLEIDS]\n\nIf QUERY is giving, query exsting index; otherwise, build new index from ARTICLEIDS")
+        sys.exit(1)
+
+    indexloc = sys.argv[1]
+    query = " ".join(sys.argv[2:])
+    if query.strip():
+        toolkit.warn("Querying index %s with %r" % (indexloc, query))
+        i = Index(indexloc, dbtoolkit.amcatDB())
+        for a, weight in i.query(query, returnWeights=True):
+            print a.id, weight
+    else:
+        toolkit.warn("Creating new xapian index (database) at %s" % indexloc)
+        articles = toolkit.tickerate(toolkit.intlist())
+        i = createIndex(indexloc, articles,dbtoolkit.amcatDB())
+        toolkit.warn("Created index %s" % i)
