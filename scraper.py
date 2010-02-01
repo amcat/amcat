@@ -53,8 +53,8 @@ def convertImage(img, scale=.67, quality=.2):
     #print "Reduced image size from %i to %i bytes (%1.2f%%)" % (len(img), len(img2), float(len(img2)) * 100. / len(img))
     return img2
 
-class ArticleScraper(object):
-    def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
+class Scraper(object):
+    def __init__(self, db, batch, mediumid, name, date=None, imagescale=.67):
         self.db = db
         self.batch = batch
         self.mediumid = mediumid
@@ -62,12 +62,7 @@ class ArticleScraper(object):
         self.name = name
         self.date = date
         self.log = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
-        self.limit_page = None
-        self.limit_articlesperpage = None
-        self.force = False
         self.imagescale = imagescale
-        self.commitPage = False
-
     def urlExists(self, url):
         sql = "select top 1 url from articles where batchid=%i and mediumid=%i and url=%s" % (self.batch, self.mediumid, dbtoolkit.quotesql(url))
         data = self.db.doQuery(sql)
@@ -83,8 +78,46 @@ class ArticleScraper(object):
                 raise Exception("Refusing to scrape, %s articles already exist in batch %i, medium %i, date %s" % tuple([d]+list(bmd)))
         else:
             toolkit.warn(type(context))
+    def dateStr(self, date):
+        """ date format as used in most URLs, override as appropriate """
+        return date.strftime("%Y%m%d")
                                 
-        
+    def logInfo(self, msg):
+        l.info(msg, application=self.name)    
+    def logException(self, msg=""):
+        l.error(msg + '\n' + toolkit.returnTraceback(), application=self.name)
+    def createArticle(self, artdesc):
+        url = artdesc.url
+        if url and self.urlExists(url):
+            self.logInfo('Skipping duplicate url %r' % url)
+            return
+        result = artdesc.createArticle(self.db, self.batch, self.mediumid, self.date, imagescale = self.imagescale)
+        if result: self.articleCount += 1
+        return result
+    def logStatistics(self):
+        self.logInfo('Downloaded %i urls. Added %i articles' % (self.downloadCount, self.articleCount))
+    def resetStatistics(self):
+        self.articleCount, self.downloadCount = 0,0
+    def convertImage(self, image, *args, **kargs):
+        return convertImage(image, *args, **kargs)
+
+    def startScrape(self):
+        self.resetStatistics()
+    def endScrape(self, context):
+        self.logStatistics()
+        self.db.commit()
+
+class ArticleScraper(Scraper):
+    def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
+        Sraper.__init__(self, db, batch, mediumid, name, date, imagescale):
+        self.limit_page = None
+        self.limit_articlesperpage = None
+        self.force = False
+        self.commitPage = False
+
+    #######################################################
+    ## Main scraping logic and aux methods               ##
+    #######################################################        
     def scrape(self, context=None):
         self.checkDate(context)
         self.startScrape()
@@ -111,57 +144,17 @@ class ArticleScraper(object):
             except:
                 self.logException('Page exception %s' % str(page))
         self.endScrape(context)
-    
-    def dateStr(self, date):
-        """ date format as used in most URLs, override as appropriate """
-        return date.strftime("%Y%m%d")
-    def endPage(self, context, page):
-        if self.commitPage:
-            self.db.commit()
-    def login(self):
-        pass
-    def getPages(self, context):
-        return [None]
-    def getArticles(self, context, page):
-        abstract
-        return [address1, address2]
-    def getArticle(self, context, page, address):
-        abstract
-        return ArticleDescriptor()
-    def init(self, context):
-        pass
-
-    def logInfo(self, msg):
-        l.info(msg, application=self.name)
-        
-    def logException(self, msg=""):
-        l.error(msg + '\n' + toolkit.returnTraceback(), application=self.name)
-
     def startScrape(self):
-        self.resetStatistics()
+        Scraper.startScrape(self)
         self.createSession()
         self.login()
-    def endScrape(self, context):
-        self.logStatistics()
-        self.db.commit()
-      
     def createSession(self):
         self.session = urllib2.build_opener(urllib2.HTTPCookieProcessor())
         urllib2.install_opener(self.session)
         self.session.addheaders = [ ('user-agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.0; en-GB; rv:1.8.1.4) Gecko/20070515 Firefox/2.0.0.4') ]  
-        
-    
-
-    def createArticle(self, artdesc):
-        url = artdesc.url
-        if url and self.urlExists(url):
-            self.logInfo('Skipping duplicate url %r' % url)
-            return
-        result = artdesc.createArticle(self.db, self.batch, self.mediumid, self.date, imagescale = self.imagescale)
-        if result: self.articleCount += 1
-        return result
-
-        
+    def endPage(self, context, page):
+        if self.commitPage:
+            self.db.commit()
     def download(self, url, allowRedirect=False, useSoup=False, postdata=None, canretry=True):
         self.logInfo('downloading %s' % url)
         if postdata:
@@ -200,12 +193,80 @@ class ArticleScraper(object):
             articlecreator.storeImage(self.db,a.id,convertImage(imagebytes), imagetype)
         return a
 
-    def logStatistics(self):
-        self.logInfo('Downloaded %i urls. Added %i articles' % (self.downloadCount, self.articleCount))
-    def resetStatistics(self):
-        self.articleCount, self.downloadCount = 0,0
-    def convertImage(self, image, *args, **kargs):
-        return convertImage(image, *args, **kargs)
+    #########################################################
+    ## Methods to override by subclass to control scraping ##
+    #########################################################
+    def login(self):
+        "Login at the site if needed. Subclass may override"
+        pass
+    def getPages(self, context):
+        """Get pages for the given context (ie date); return sequence of 'page' objects.
+        Subclass may override if there is more than one page"""
+        return [None]
+    def getArticles(self, context, page):
+        """Get the articles on the given context and page; return sequence of 'article' objects.
+        Subclasses *must* override. """
+        abstract
+    def getArticle(self, context, page, address):
+        """Get the article(s) corresponding to the given address, page, and context.
+        Return (a sequence of) ArticleDescriptor.
+        Subclasses *must* override."""
+        abstract
+        return ArticleDescriptor()
+    def init(self, context):
+        "Initialize the given context. WvA: Unclear when it is called, if at all???"
+        pass
+
+
+class TextImporter(Scraper):
+    def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
+        Sraper.__init__(self, db, batch, mediumid, name, date, imagescale):
+
+    #######################################################
+    ## Main scraping logic and aux methods               ##
+    #######################################################        
+    def scrape(self, context=None):
+        self.startScrape()
+        files = list(set(self.getFiles(context)))
+        if not files:
+            self.logException('No files found for scraper %s / %s, date %s' % (self.__class__, self.name, context))
+            return
+        for file in files:
+            try:
+                if type(file) in (str, unicode): file = open(file)
+                documents = self.splitFile(context, file)
+                for doc in documents:
+                    try:
+                        artdescs = self.getArticle(context, file, doc)
+                        if artdescs is None: continue
+                        if isinstance(artdescs, ArticleDescriptor):
+                            artdescs = [artdescs]
+                        for artdesc in artdescs:
+                            self.createArticle(artdesc)
+                    except:
+                        self.logException('Article exception %s' % address)
+            except:
+                self.logException('Page exception %s' % str(page))
+        self.endScrape(context)
+        
+    #########################################################
+    ## Methods to override by subclass to control scraping ##
+    #########################################################
+    def getFiles(self, context):
+        """Return a sequence of filenames or files to be scraped.
+        If strings are returned, they will be opened using open(.), otherwise
+        they will be passed on to splitFile as-is.
+        Subclasses *must* override"""
+        abstract
+    def splitFile(self, context, file):
+        """Split the given file into documents, returning document objects
+        (eg strings) that will be passed onto getArticle(.).
+        Subclasses *may* override. Default returns entire file as one string"""
+        return [file.read()]
+    def getArticle(self, context, file, doc):
+        """Convert the given document into one or more ArticleDescriptors
+        Subclasses *must* override"""
+        abstract
     
 stripRegExpTuple = (
     (re.compile(ur'<(script|style).*?</(script|style)>', re.IGNORECASE | re.DOTALL), u''),
