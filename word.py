@@ -1,5 +1,5 @@
 from cachable import *
-import toolkit, re, sentence
+import toolkit, re
 
 class BrouwersCat(Cachable):
     __metaclass__ = CachingMeta

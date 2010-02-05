@@ -6,8 +6,9 @@ from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 
 def doCreateArticle(db, aid, **cache):
     return Article(db, aid, **cache)
-
-import sentence
+def doCreateSentence(db, aid, **cache):
+    import sentence
+    return sentence.Sentence(db, aid, **cache)
     
 class Article(Cachable):
     """
@@ -25,7 +26,7 @@ class Article(Cachable):
     text = DBPropertyFactory(table="texts", decode=True)
     batch = DBPropertyFactory("batchid", dbfunc=lambda db, id: project.Batch(db, id))
     source = DBPropertyFactory("mediumid", dbfunc=sources.Source)
-    sentences = DBFKPropertyFactory("sentences", "sentenceid", dbfunc=sentence.Sentence)
+    sentences = DBFKPropertyFactory("sentences", "sentenceid", dbfunc=doCreateSentence)
 
     @property
     def fullmeta(self):

@@ -30,7 +30,7 @@ def reportDB():
     db.conn.autocommit(False)
     return db
 
-GLOBAL_DB_LOCK = threading.Lock()
+#GLOBAL_DB_LOCK = threading.Lock()
 
 class amcatDB(object):
     """
@@ -122,7 +122,8 @@ class amcatDB(object):
         c = None
         t = time.time()
         try:
-            GLOBAL_DB_LOCK.acquire()
+            #GLOBAL_DB_LOCK.acquire()
+            #toolkit.ticker.warn("ACQUIRE LOCK for %r" % sql)
             c = self.cursor()
             self.doQueryOnCursor(sql, c)
             try:
@@ -142,7 +143,8 @@ class amcatDB(object):
                     c.close()
                 except:
                     pass
-            GLOBAL_DB_LOCK.release()
+            #toolkit.ticker.warn("RELEASE LOCK for %r" % sql)
+            #GLOBAL_DB_LOCK.release()
                         
 
 
