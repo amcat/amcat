@@ -109,7 +109,7 @@ class Scraper(object):
 
 class ArticleScraper(Scraper):
     def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
-        Sraper.__init__(self, db, batch, mediumid, name, date, imagescale):
+        Scraper.__init__(self, db, batch, mediumid, name, date, imagescale)
         self.limit_page = None
         self.limit_articlesperpage = None
         self.force = False
@@ -220,7 +220,7 @@ class ArticleScraper(Scraper):
 
 class TextImporter(Scraper):
     def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
-        Sraper.__init__(self, db, batch, mediumid, name, date, imagescale):
+        Scraper.__init__(self, db, batch, mediumid, name, date, imagescale)
 
     #######################################################
     ## Main scraping logic and aux methods               ##

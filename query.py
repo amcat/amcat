@@ -1,6 +1,6 @@
 import toolkit
 
-TABLES = ["projects", "batches", "articles", "texts"]
+TABLES = ["projects", "batches", "articles", "texts","storedresults"]
 KEYS = {"articles" : {"batches"  : ("id", "batchid")},
         "batches"  : {"projects" : ("id", "projectid")},
         "texts"    : {"articles" : ("id", "articleid")}
