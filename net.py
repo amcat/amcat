@@ -98,9 +98,12 @@ class Network(object):
         d = dot.Graph()
         self.addEdges(d, **kargs)
         return d
-    def addEdges(self, graph, relfthreshold = None, absfthreshold = None, includef = False, label=None, dropsource=False):
+    def addEdges(self, graph, relfthreshold = None, absfthreshold = None, includef = False, label=None, dropsource=False, wfmt="%1.2f"):
         if label is None: label = LBL_Q | LBL_W if includef else LBL_Q
         result = []
+        if relfthreshold:
+            som = sum(arrow.weight for arrow in self.arrows)
+            absfthreshold = som * relfthreshold
         for arrow in self.arrows:
             w = arrow.weight
             if absfthreshold and w < absfthreshold: continue
@@ -112,7 +115,7 @@ class Network(object):
 
             l = []
             if LBL_Q & label: l += ["%+1.1f" % arrow.qual]
-            if LBL_W & label: l += ["%1.2f" % w]
+            if LBL_W & label: l += [wfmt % w]
             if LBL_D & label: l += ["%1.2f" % arrow.divergence]
             if LBL_A & label: l += ["%1.2f" % arrow.ambivalence]
             if LBL_V & label: l += ["%1.2f" % arrow.var()]

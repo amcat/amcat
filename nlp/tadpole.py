@@ -36,29 +36,36 @@ def TadpoleToken( position, word, lemma, morph, pos, *args):
     #print position-1, word, lemma, poscat, major, minor
     return lemmata.Token(position-1, word, lemma, poscat, major, minor)
 
+
+import threading
+LOCK = threading.Lock()
 class TadpoleClient(object):
     def __init__(self,host="localhost",port="12345", tadpole_encoding="utf-8", client_encoding="utf-8"):
         self.BUFSIZE = 1024
-        self.socket = socket(AF_INET,SOCK_STREAM)
-        self.socket.connect( (host,port) )
         self.tadpole_encoding = tadpole_encoding
         self.client_encoding = client_encoding
+        self.host = host
+        self.port = port
 
     def process(self, input_data):
+      sock = socket(AF_INET,SOCK_STREAM)
+      sock.connect( (self.host,self.port) )
+      try:
         input_data = input_data.strip(' \t\n')
         if not isinstance(input_data, unicode):
             input_data = input_data.decode(self.client_encoding)
         input_data = input_data.replace("/","|")
         #print "Sending to tadpole: %r" % input_data
-        self.socket.send(input_data.encode(self.tadpole_encoding) +'\n')
+        sock.send(input_data.encode(self.tadpole_encoding) +'\n')
 
         buffer = ""
         done = False
         while not done:
-            data = self.socket.recv(self.BUFSIZE)
-            #print "Received %r" % data
+            data = sock.recv(self.BUFSIZE)
+            #print "Buffer=%r, Received %r" % (buffer, data)
             if not data: raise Exception("No data received but READY not given?")
             buffer += data
+            #print "Buffer now: %r" % buffer
 
             # get completed lines from buffer, add last (incomplete?) line to buffer
             lines = buffer.split("\n")
@@ -68,16 +75,27 @@ class TadpoleClient(object):
             else:
                 buffer = ""
 
+            #print "Lines:\n%s\nBuffer:%r" % ("\n".join(map(repr, lines)), buffer)
+            
             for line in lines:
+                #print "Processing line %r" % line
                 line = line.decode(self.tadpole_encoding)
                 line = line.replace(u"\ufffd", u"\xeb")
                 if line == u"READY":
                     done = True
                 elif line:
-                    yield TadpoleToken(*line.split("\t"))
-
-    def __del__(self):
-        self.socket.close()
+                    fields = line.split("\t")
+                    #print "Fields: %r" % fields
+                    try:
+                        yield TadpoleToken(*line.split("\t"))
+                    except Exception, e:
+                        toolkit.warn("Error on lemmatising line: %s\n%r\nInput data:\n%r\nfields: %r" % (
+                                e, line, input_data, fields))
+                        raise
+      finally:
+        try:
+            sock.close()
+        except: pass
 
 if __name__ == '__main__':
     import sys

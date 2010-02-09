@@ -23,7 +23,7 @@ the Property at the moment it is needed.
 """
 
 
-import toolkit, collections
+import toolkit, collections, inspect
 from functools import partial
 import weakref
 
@@ -61,16 +61,17 @@ class Cachable(toolkit.IDLabel):
     def _getProperty(self, attr):
         prop = self.__properties__.get(attr)
         if prop is not None: return prop
-        factory = type(self).__dict__.get(attr)
-        if isinstance(factory, PropertyFactory):
-            prop = factory.createProperty(self, attr)
-        if not prop:
-            dbprops = type(self).__dict__.get("__dbproperties__", ())
-            if attr in dbprops:
-                prop = DBProperty(self, attr)
-        if prop:
-            self.__properties__[attr] = prop
-            return prop
+        for base in inspect.getmro(type(self)):  # get class properties of base classes as well
+            factory = base.__dict__.get(attr)
+            if isinstance(factory, PropertyFactory):
+                prop = factory.createProperty(self, attr)
+            if not prop:
+                dbprops = base.__dict__.get("__dbproperties__", ())
+                if attr in dbprops:
+                    prop = DBProperty(self, attr)
+            if prop:
+                self.__properties__[attr] = prop
+                return prop
     def __getattribute__(self, attr):
         if attr <> "__properties__" and attr <> '_getProperty':
             prop = self._getProperty(attr)

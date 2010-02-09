@@ -1,5 +1,5 @@
 import base64, sbd # only needed for image processing, move to other module>?
-import toolkit, config
+import toolkit, config, sys
 import article, sources, user
 import re, collections, time
 from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
@@ -149,10 +149,10 @@ class amcatDB(object):
 
 
 
-    def printProfile(self):
+    def printProfile(self, *args, **kargs):
         for l in self.afterQueryListeners:
             if type(l) == ProfilingAfterQueryListener:
-                l.printreport()
+                l.printreport(*args, **kargs)
                 return
             
     def doCall(self, proc, params):
@@ -535,7 +535,7 @@ class ProfilingAfterQueryListener(object):
         #print ">>>", query, time, len(resultset)
         l = len(resultset) if resultset else 0
         self.queries[query].append((time, l))
-    def printreport(self, sort="time", *args, **kargs):
+    def printreport(self, sort="time", stream=sys.stdout, *args, **kargs):
         data = self.reportTable(*args, **kargs)
         if sort:
             if type(sort) in (str, unicode): sort = sort.lower()
@@ -543,7 +543,7 @@ class ProfilingAfterQueryListener(object):
                 if col == sort or col.id == sort or col.label.lower() == sort:
                     data = table3.SortedTable(data, (col, False))
         import tableoutput
-        print tableoutput.table2ascii(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"])
+        print >>stream, tableoutput.table2ascii(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"])
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
     def report(self, replacenumbers=True, maxsqlen=100):
@@ -551,6 +551,7 @@ class ProfilingAfterQueryListener(object):
         for sql, timelens in self.queries.iteritems():
             if replacenumbers: sql = doreplacenumbers(sql)
             if len(sql) > maxsqlen: sql = sql[:maxsqlen-2]+".."
+            sql = `sql`
             for time, length in timelens:
                 data[sql][0] += 1
                 data[sql][1] += time

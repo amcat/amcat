@@ -181,12 +181,13 @@ def setDebug(level = 1):
     global _DEBUG
     _DEBUG = level
 
-def tickerate(seq, msg=None, getlen=True, ticker=None):
+def tickerate(seq, msg=None, getlen=True, ticker=None, detail=0):
     if msg is None: msg = "Starting iteration"
     if ticker is None: ticker = Ticker()
     if getlen:
-        seq = list(seq)
-        ticker.warn(msg, estimate=len(seq))
+        if type(seq) not in (list, tuple, set):
+            seq = list(seq)
+        ticker.warn(msg, estimate=len(seq), detail=detail)
     else:
         ticker.warn(msg)
     for x in seq:

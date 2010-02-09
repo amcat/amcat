@@ -130,7 +130,7 @@ class DotTheme(object):
         self.graphattrs = {"center" : "true", "size" : "7.5,10"}
         self.base = base
     def getEdgeDot(self, edge, graph, subgraph):
-        style = dict(edge.style)
+        style = self.getEdgeStyle(edge)
         attrs = dict(edge.attrs)
         if edge.color is not None:
             hsb = edge.color
@@ -146,6 +146,8 @@ class DotTheme(object):
         a = dotattrs(attrs, style)
         c = self.getConnector(edge, graph)
         return '%s %s %s [%s];' % (self.getNodeID(edge.subj, graph, subgraph), c, self.getNodeID(edge.obj, graph, subgraph), a)
+    def getEdgeStyle(self, edge):
+        return dict(edge.style)
     def getEdgeWeight(self, edge, graph):
         return edge.weight * self.scale
     def getEdgeColor(self, edge, graph):
@@ -213,13 +215,26 @@ class DotTheme(object):
         a = dict(fontname=self.nodefont,shape=self.shape)
         return a
         
-    
+class BWDotTheme(DotTheme):
+    def getEdgeColor(self, edge, graph):
+        if edge.sign:
+            return (1,0, .8*(1-abs(edge.sign)))
+        return None
+    def getEdgeStyle(self, edge):
+        style = dict(edge.style)
+        if edge.sign < 0:
+            style["dashed"] = None
+        return style
     
 
 
 def dotattrs(attrs, style):
+    styles = []
     if style:
-        attrs['style'] = ",".join("%s(%s)" % i for i in style.items())
+        for style, attr in style.items():
+            if attr is None: styles.append(str(style))
+            else: styles.append("%s(%s)"  % (style, attr))
+            attrs['style'] = ",".join(styles)
     return ",".join('%s="%s"' % i for i in attrs.items())
 
 

@@ -190,11 +190,12 @@ class StorerThread(threading.Thread):
             self.db.rollback()
             toolkit.ticker.warn("Thread %s, Article %i, Exception on storing: %s" % (threading.currentThread().getName(), aid, e))
             traceback.print_exc()
+            raise
         finally:
             DBLOCK.release()
 
       
-def lemmatiseArticles(db, aids, threads=6):
+def lemmatiseArticles(db, aids, threads=5):
     aidq = Queue.Queue()
     resultq = Queue.Queue()
     for aid in aids:
@@ -205,6 +206,7 @@ def lemmatiseArticles(db, aids, threads=6):
         t.start()
     storer = StorerThread(db, resultq)
     storer.start()
+
     while threads:
         time.sleep(5)
         for t in threads[:]:
@@ -227,12 +229,15 @@ if __name__ == '__main__':
 
     #BATCH = "(5452,5451,5450,5447,5446,5444,5429,5417,5389,5383,5334,5331,5329,5257,5256,5255,5254,4354,4159,4158)"
     #BATCH = "(5452)"
-    BATCH = "(4354,4159,4158)"
+    BATCH = "batchid in (4354,4159,4158)"
     toolkit.ticker.warn("Setting up lemmatiser")
-    SQL = """select articleid from articles where batchid in %s and articleid not in 
+    SQL = """select articleid from storedresults_articles where storedresultid=763 and articleid not in 
              (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)
-             order by newid()""" % (BATCH)
-    db  = dbtoolkit.amcatDB(easysoft=True)
+             order by newid()"""
+    SQL = """select articleid from articles where batchid=5551 and articleid not in 
+             (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)
+             order by newid()""" 
+    db  = dbtoolkit.amcatDB()
     aids = [aid for (aid,) in db.doQuery(SQL)]
     #aids.remove(44554827)
     #aids = [44554695, 44554696, 44554697, 44554698, 44554699]
