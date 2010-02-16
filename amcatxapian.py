@@ -68,7 +68,7 @@ class Index(object):
     def getArticle(self, document):
         return article.Article(self.db, self.getAid(document))
 
-    def query(self,  query, returnWeights=False, returnAID=False, subset=None):  
+    def query(self,  query, returnWeights=False, returnAID=False, subset=None):
         if type(query) in (str, unicode):
             query = self.parse(query)
         enquire = xapian.Enquire(self.index)
@@ -86,7 +86,7 @@ class Index(object):
                 yield aid, m.weight
             else:
                 yield aid
-                   
+
     def queries(self, queries, subset=None, **options):
         if subset: subset = set((a if type(a)==int else a.id) for a in subset)
         for q in queries:

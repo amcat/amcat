@@ -1403,13 +1403,22 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
     if callable(words_or_wordfilter):
         filt = words_or_wordfilter
     else:
-        wordset = set(x.lower() for x in words_or_wordfilter)
+        wordset = set(re.sub('[^\w\d ]+', '', x.lower()) for x in words_or_wordfilter)
+        # Transform this to a beautiful pythonic piece of code. Now, I'm using a very elaborate version. But it works.
+        __wordset = []
+        for word in wordset:
+            __wordset.extend(word.split(' '))
+        wordset = __wordset
+        del __wordset
         filt = lambda x: int(x.lower() in wordset)
-        
+
+    print wordset
+
     positions = {}
     for i, w in enumerate(words):
         if filt(w):
             positions[i] = 0
+
     for pos in sorted(positions.keys()):
         nbs = 0
         for w in positions:
