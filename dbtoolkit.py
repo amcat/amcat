@@ -16,7 +16,7 @@ _encoding = {
 _MAXTEXTCHARS = 8000
 
 class SQLException(Exception):
-    def __init__(self, sql, exception):
+    def __init__(self, sql=None, exception=None):
         self.sql = sql
         self.exception = exception
     def __str__(self):
@@ -39,14 +39,16 @@ class amcatDB(object):
     and storage of data
     """
 
-    def __init__(self, configuration=None, auto_commit=0, profile=False, **kargs):
+    def __init__(self, configuration=None, auto_commit=0, profile=False, **configargs):
         """
         Initialise the connection to the anoko (SQL Server) database using
         either the given configuration object or config.default
         """
-        
-        if not configuration: configuration=config.default(**kargs)
-        
+        self.connect(configuration, auto_commit, **configargs)
+        self.init(profile)
+
+    def connect(self, configuration, auto_commit, **configargs):
+        if not configuration: configuration=config.default(**configargs)
         self.dbType = configuration.drivername    
         self.mysql = False #????
         if self.dbType == "MySQLdb":
@@ -60,6 +62,7 @@ class amcatDB(object):
         else:
             self.conn = configuration.connect()
 
+    def init(self, profile=False):
         
         self._articlecache = {}
         
@@ -527,6 +530,8 @@ def encodeTexts(texts):
 
 def doreplacenumbers(sql):
     sql = re.sub(r"\d[\d ,]*", "# ", sql)
+    sql = re.sub(r"'#['#, ]*'", "'#' ", sql)
+
     return sql
 class ProfilingAfterQueryListener(object):
     def __init__(self):
