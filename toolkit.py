@@ -1412,8 +1412,6 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
         del __wordset
         filt = lambda x: int(x.lower() in wordset)
 
-    print wordset
-
     positions = {}
     for i, w in enumerate(words):
         if filt(w):
