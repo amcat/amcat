@@ -26,6 +26,7 @@ class ArticleDescriptor(object):
         headline = stripText(self.headline)
         if date is None: date = self.date
         if date is None: raise Exception("No date for article %s" % self.url)
+      
 
         if not body and not headline:
             l.notice('missing body and headline %s' % self.url)
@@ -219,7 +220,7 @@ class ArticleScraper(Scraper):
 
 
 class TextImporter(Scraper):
-    def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
+    def __init__(self, db, batch=None, mediumid=None, name="TextImporter", date=None, imagescale = .67):
         Scraper.__init__(self, db, batch, mediumid, name, date, imagescale)
 
     #######################################################
@@ -243,10 +244,10 @@ class TextImporter(Scraper):
                             artdescs = [artdescs]
                         for artdesc in artdescs:
                             self.createArticle(artdesc)
-                    except:
-                        self.logException('Article exception %s' % address)
+                    except Exception, e:
+                        self.logException('Article exception file %s doc %r' % (file, doc[:40]))
             except:
-                self.logException('Page exception %s' % str(page))
+                self.logException('SplitFile exception %s' % str(file))
         self.endScrape(context)
         
     #########################################################
