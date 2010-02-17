@@ -190,12 +190,11 @@ class StorerThread(threading.Thread):
             self.db.rollback()
             toolkit.ticker.warn("Thread %s, Article %i, Exception on storing: %s" % (threading.currentThread().getName(), aid, e))
             traceback.print_exc()
-            raise
         finally:
             DBLOCK.release()
 
       
-def lemmatiseArticles(db, aids, threads=5):
+def lemmatiseArticles(db, aids, threads=4):
     aidq = Queue.Queue()
     resultq = Queue.Queue()
     for aid in aids:
@@ -208,12 +207,12 @@ def lemmatiseArticles(db, aids, threads=5):
     storer.start()
 
     while threads:
-        time.sleep(5)
+        time.sleep(10)
         for t in threads[:]:
             if not t.isAlive():
                 toolkit.ticker.warn("Thread died: %s" % t.getName())
                 threads.remove(t)
-        toolkit.ticker.warn("Queue now contains %i articles, %i results" % (aidq.qsize(), resultq.qsize()))
+        toolkit.ticker.warn("Queue now contains %i articles, %i results; %i lemmatize threads alive, storer thread alive? %s " % (aidq.qsize(), resultq.qsize(), len(threads), storer.isAlive()))
     toolkit.ticker.warn("Lemmatising done, waiting for storer to exit!")
     storer.canstop = True
     while storer.isAlive():
@@ -239,6 +238,9 @@ if __name__ == '__main__':
              order by newid()""" 
     db  = dbtoolkit.amcatDB()
     aids = [aid for (aid,) in db.doQuery(SQL)]
+    nthreads = 4
+    if len(sys.argv) > 1:
+        nthreads = int(sys.argv[1])
     #aids.remove(44554827)
     #aids = [44554695, 44554696, 44554697, 44554698, 44554699]
-    lemmatiseArticles(db, aids)
+    lemmatiseArticles(db, aids, threads=nthreads)

@@ -5,7 +5,7 @@ months = "Jan Feb Mar Apr Jun Jul Aug Sep Oct Nov Dec".split()
 
 expr = None
 
-def split(text, type=2, maxsentlength=800):
+def split(text, type=2, maxsentlength=2000, abbreviateIfTooLong=False):
     """python gaat op zoek naar einde van een regel dmv zoeken naar een punt.
     echter hij sluit uit dat het gaat om eigennamen,
     waardoor bv A.den Doolaard niet als einde van een zin wordt gezien.
@@ -38,7 +38,10 @@ def split(text, type=2, maxsentlength=800):
                     sent = sent.strip()
                     if not sent: continue
                     if len(sent) > maxsentlength:
-                        raise Exception("Sentence too long! %r" % sent)
+                        if abbreviateIfTooLong:
+                            sent = sent[:maxsentlength-3] + "..."
+                        else:
+                            raise Exception("Sentence too long! %r" % sent)
                     sents.append(sent)
             else:
                 sents.append(sent)

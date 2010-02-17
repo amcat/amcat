@@ -13,7 +13,7 @@ def splitArticle(art):
     text = re.sub(r"q11\s*\n", "\n\n",text)                                                                                   
     #if article.byline: text = article.byline + "\n\n" + text                                                                 
     if art.headline: text = art.headline.replace(";",".")+ "\n\n" + text                                              
-    spl = sbd.splitPars(text)                                                                                                 
+    spl = sbd.splitPars(text,  maxsentlength=2000, abbreviateIfTooLong=True)                                                                                                 
     for parnr, par in izip(count(1), spl):                                                                                    
         for sentnr, sent in izip(count(1), par):                                                                              
             sent = sent.strip()                                                                                               
