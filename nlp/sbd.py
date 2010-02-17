@@ -55,7 +55,7 @@ def splitPars(text, type=2, returnSents=True, flatten=False, **kargs):
         pars = re.split(r"\n\s*\n", text.strip())#.split("\n\n")
         #print `pars`
     if returnSents:
-        if not flatten: return  map(lambda x:split(x,type), pars)
+        if not flatten: return  map(lambda x:split(x,type,**kargs), pars)
         sents = []
         for par in pars:
             sents += split(par, type, **kargs)
