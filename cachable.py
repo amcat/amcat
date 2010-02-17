@@ -20,6 +20,10 @@ PropertyFactories can be used as class attributes that will create
 the Property at the moment it is needed.
 
 (C) 2009-2010 Wouter van Atteveldt
+
+    #TODO: - maybe use __dict__ instead of __properties__, and catch the
+    # settattribute and getattribute to display the correct behaviour?
+    # - allow caching by setting e.g. article.headline = "bla"
 """
 
 
@@ -50,35 +54,56 @@ class CachingMeta(type):
         return obj
 
 class Cachable(toolkit.IDLabel):
+    """
+    Base class for all 'cachable' objects. Allows the registration of
+    'properties' that will be accessible just like normal properties, but
+    behind the screens will use the db to get their values and cache these
+    values. See usage in the __name__==__main__ driver section
+    """
     def __init__(self, db, id, **cache):
+        """Create the Cachable with the given database and id
+        Optionally, provide property=value pairs to cache immediately as **cache"""
         self.db = db
         self.id = id
         self.__properties__ = {}
-        for k,v in cache.iteritems():
-            if k is not None:
-                self.cacheValues(**{k:v})
-        
+        if cache:
+            self.cacheValues(**cache)
+        #for k,v in cache.iteritems():
+        #    if k is not None:
+        #        self.cacheValues(**{k:v})
+
+    def _getPropertyNames(self):
+        for attr in self.__properties__: yield attr
+        for name, factory in self._getPropertyFactories():
+            if name not in self.__properties__:
+                yield name 
     def _getProperty(self, attr):
+        """Find the property attr, either in __properties__, or as a class attribute property factory"""
         prop = self.__properties__.get(attr)
         if prop is not None: return prop
-        for base in inspect.getmro(type(self)):  # get class properties of base classes as well
-            factory = base.__dict__.get(attr)
-            if isinstance(factory, PropertyFactory):
+        for name, factory in self._getPropertyFactories():
+            if name == attr:
                 prop = factory.createProperty(self, attr)
-            if not prop:
-                dbprops = base.__dict__.get("__dbproperties__", ())
-                if attr in dbprops:
-                    prop = DBProperty(self, attr)
-            if prop:
                 self.__properties__[attr] = prop
                 return prop
+    def _getPropertyFactories(self):
+        """Generate all property factories from class (and superclass) attributes"""
+        for base in inspect.getmro(type(self)):  # get class properties of base classes as well
+            for propname, factory in base.__dict__.iteritems():
+                if isinstance(factory, PropertyFactory):
+                    yield propname, factory
+            for propname in base.__dict__.get("__dbproperties__", ()):
+                yield propname, DBPropertyFactory(propname)
+
     def __getattribute__(self, attr):
-        if attr <> "__properties__" and attr <> '_getProperty':
+        """Main magic: if attr is a property: return its .get().
+        Otherwise, call superclass __getattribute__"""
+        if  attr not in ("__properties__", "_getProperty", "_getPropertyFactories"):
             prop = self._getProperty(attr)
             if prop:
                 return prop.get()
         try:
-            return toolkit.IDLabel.__getattribute__(self, attr)
+            return toolkit.IDLabel.__getattribute__(self, attr) #superclass
         #return super(Cachable, self).__getattribute__(attr)
         except AttributeError, e:
             if attr <> "label": raise
@@ -90,21 +115,28 @@ class Cachable(toolkit.IDLabel):
                 return self.__getattribute__(attr)
                 
     def addDBProperty(self, property, fieldname=None, func=None, table=None):
+        "Convenience function to add a DB Property"
         self.addProperty(property, DBProperty(self, fieldname or property, func, table))
     def addFunctionProperty(self, property, func):
+        "Convenience function to add a function Property"
         self.addProperty(property, FunctionProperty(self, func))
     def addDBFKProperty(self, property, *args, **kargs):
+        "Convenience function to add a DBFK Property"
         self.addProperty(property, DBFKProperty(self, *args, **kargs))
     def addProperty(self, propname, prop):
+        "Add the given property to the __properties__ dict"
         self.__properties__[propname] = prop
     def cacheValues(self, **values):
+        """Cache the property:value pairs given in **values"""
         for prop, val in values.iteritems():
             p = self._getProperty(prop)
             if not p: raise AttributeError("Cannot find property %s of %r" % (prop, self))
             p.cache(val)
     def removeCached(self, prop):
+        """Remove the cached value from the given property"""
         self._getProperty(prop).uncache()
     def cacheProperties(self, *propnames):
+        """Ask the given properties to get() their values and cache themselves"""
         cacheMultiple([self], propnames)
     def sqlFrom(self, table=None):
         return sqlFrom([self], table)
@@ -342,38 +374,61 @@ def cacheMultiple(cachables, propnames):
 ########################################
 #          Driver                      #
 ########################################
-    
+
 if __name__ == '__main__':
     import dbtoolkit, article
-    db  = dbtoolkit.amcatDB()
-    db.beforeQueryListeners.append(toolkit.ticker.warn)
-    p = dbtoolkit.ProfilingAfterQueryListener()
-    db.afterQueryListeners.append(p)
+    db  = dbtoolkit.amcatDB(profile=True)
+    db.beforeQueryListeners.append(toolkit.warn)
     aids = 353570, 364425, 815672
 
+    def illegalQuery(*args, **kargs): raise Exception("DB is disabled! Attempted to do:\ndoQuery(%s, %s)" % (map(str, args), kargs))
+    _q = illegalQuery
+    def toggleDB():
+        global _q
+        _q, db.doQuery = db.doQuery, _q
+        
     print "--------- simple attribute getting ---------------"
     for aid in aids:
+        toggleDB()
         a = article.Article(db, aid)
+        print "Created article %i: %s" % (aid, id(a))
+        toggleDB()
+        print "  a.headline = %r" % a.headline
+        print "  |a.sentences| = %i" % toolkit.count(a.sentences)
+
+    print "--------- caching on init ---------------"
+    for aid in aids:
+        toggleDB()
+        a = article.Article(db, aid, headline="TEST", sentences=[])
         print "Created article %i: %s" % (aid, id(a))
         print "  a.headline = %r" % a.headline
         print "  |a.sentences| = %i" % toolkit.count(a.sentences)
+        toggleDB()
         
     print "--------- caching multiple properties, one article ---------------"
     for aid in aids:
+        toggleDB()
         a = article.Article(db, aid)
+        toggleDB()
         print "Created article %i: %s" % (aid, id(a))
-        a.cacheProperties("date", "headline", "encoding")
+        a.cacheProperties("encoding", "date", "headline")
         print "cached properties"
+        toggleDB()
         print "  a.date = %r" % a.date
         print "  a.headline = %r" % a.headline
+        toggleDB()
 
     print "--------- caching multiple properties, multiple cachables ---------------"
+    toggleDB()
     arts = [article.Article(db, aid) for aid in aids]
-    cacheMultiple(arts, ["date", "headline", "encoding"])
+    toggleDB()
+    cacheMultiple(arts, ["encoding", "date", "headline"])
+    toggleDB()
     for a in arts:
         print "Article %i: %s" % (aid, id(a))
         print "  a.date = %r" % a.date
         print "  a.headline = %r" % a.headline
+    toggleDB()
         
     print "\nQueries used:"
-    p.printreport()
+    db.printProfile()
