@@ -30,9 +30,12 @@ class Logger(object):
             if len(message) > 4990:
                 message = message[:4990] + "..."
             self.db.insert("log", dict(level=level.value, application=application, message=message))
-            self.db.conn.commit()
+            self.db.commit()
             toolkit.warn( "[%s] %s" % (application, message))
         except Exception, e:
+            import traceback
+            traceback.print_exc()
+            
             toolkit.warn( "[%s] %s generated error: \n%s" % (application, message, e))
 
 #compile daily log reports and mail to subscribed users
