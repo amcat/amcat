@@ -30,7 +30,7 @@ def reportDB():
     db.conn.autocommit(False)
     return db
 
-#GLOBAL_DB_LOCK = threading.Lock()
+GLOBAL_DB_LOCK = threading.Lock()
 
 class amcatDB(object):
     """
@@ -124,8 +124,9 @@ class amcatDB(object):
             select=sql.lower().strip().startswith("select")
         c = None
         t = time.time()
+        canlock = GLOBAL_DB_LOCK.acquire(False)
+        if not canlock: raise Exception("Cannot lock?")
         try:
-            #GLOBAL_DB_LOCK.acquire()
             #toolkit.ticker.warn("ACQUIRE LOCK for %r" % sql)
             c = self.cursor()
             self.doQueryOnCursor(sql, c)
@@ -147,7 +148,7 @@ class amcatDB(object):
                 except:
                     pass
             #toolkit.ticker.warn("RELEASE LOCK for %r" % sql)
-            #GLOBAL_DB_LOCK.release()
+            GLOBAL_DB_LOCK.release()
                         
 
 
@@ -219,12 +220,12 @@ class amcatDB(object):
             yield col[colindex]
         
     def article(self, artid):
-        """
-        Builds an Article object from the database
-        """
-        if artid not in self._articlecache:
-            self._articlecache[artid] = article.Article(self, artid)
-        return self._articlecache[artid]
+        #if artid not in self._articlecache:
+        #    self._articlecache[artid] = article.Article(self, artid)
+        #return self._articlecache[artid]
+        return article.Article(self, artid)
+
+
     
     
     def articles(self, aids=None, tick=False, **kargs):
