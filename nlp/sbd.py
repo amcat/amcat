@@ -48,7 +48,7 @@ def split(text, type=2, maxsentlength=2000, abbreviateIfTooLong=False):
         return sents
         
 
-def splitPars(text, type=2, returnSents=True, flatten=False):
+def splitPars(text, type=2, returnSents=True, flatten=False, **kargs):
     if type==4:
         pars = re.split(r"\n\s*\n|(?:\s*(?![\*\[\]+])\W/N\(soort,ev,neut\)/\W)+",text)
     else:
@@ -58,7 +58,7 @@ def splitPars(text, type=2, returnSents=True, flatten=False):
         if not flatten: return  map(lambda x:split(x,type), pars)
         sents = []
         for par in pars:
-            sents += split(par, type)
+            sents += split(par, type, **kargs)
         return sents
             
     else:
