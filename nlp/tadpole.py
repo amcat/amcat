@@ -78,7 +78,8 @@ class TadpoleClient(object):
             #print "Lines:\n%s\nBuffer:%r" % ("\n".join(map(repr, lines)), buffer)
             
             for line in lines:
-                #print "Processing line %r" % line
+                
+                print "Processing line %r" % line
                 line = line.decode(self.tadpole_encoding)
                 line = line.replace(u"\ufffd", u"\xeb")
                 if line == u"READY":

@@ -145,12 +145,14 @@ if __name__ == '__main__':
 
     format = sys.argv[2]
     ids = sys.argv[3:]
-
     if format not in FORMATS:
         ids += [format]
         format = 'n3'
-        
-    ids = map(int, ids)
+
+    if ids[0] == 'K06':
+        ids = 'K06'
+    else:
+        ids = map(int, ids)
 
     toolkit.warn("Setting up...")
     db = dbtoolkit.amcatDB()
@@ -167,11 +169,14 @@ if __name__ == '__main__':
         net2RDF(n, graph=graph)
     else:
         toolkit.warn("Getting data")
-        units = []
-        if what <> "sentence":
-            units += list(codingjob.getCodedArticlesFromCodingjobIds(db, ids))
-        if what <> "article":
-            units += list(codingjob.getCodedSentencesFromCodingjobIds(db, ids))
+        if ids == 'K06':
+            units = list(codingjob.getk06CodedSentences(db))
+        else:
+            units = []
+            if what <> "sentence":
+                units += list(codingjob.getCodedArticlesFromCodingjobIds(db, ids))
+            if what <> "article":
+                units += list(codingjob.getCodedSentencesFromCodingjobIds(db, ids))
         toolkit.warn("Creating RDF")
         units2RDF(units, graph=graph)
               

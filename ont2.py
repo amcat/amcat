@@ -127,7 +127,7 @@ class Object(Base, Cachable):
         if date: SQL += "and fromdate < %s and (todate is null or todate > %s)""" % (toolkit.quotesql(date), toolkit.quotesql(date))
         for f, p, fro, to in self.db.doQuery(SQL):
             yield f, self.ont.objects[p], fro, to
-    def getSearchString(self, date=None):
+    def getSearchString(self, date=None, xapian=False):
         if not date: date = mx.DateTime.now()
         if self.keyword: return self.keyword.replace("\n"," ")
         if self.lastname:
@@ -147,7 +147,10 @@ class Object(Base, Cachable):
                 conds.append(k)
                 conds += function2conds(f, p)
             if conds:
-                kw = "%s AND (%s)" % (ln, " OR ".join("%s^0" % x.strip() for x in conds),)
+                if xapian:
+                    kw = "%s AND (%s)" % (ln, " OR ".join("%s" % x.strip() for x in conds),)
+                else:
+                    kw = "%s AND (%s)" % (ln, " OR ".join("%s^0" % x.strip() for x in conds),)
             else:
                 kw = ln
             return kw.replace("\n"," ")

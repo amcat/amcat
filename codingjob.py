@@ -403,6 +403,15 @@ def countUnits(jobs, field=None):
             if values is not None: coded += 1
     return tot, coded
 
+
+def getk06CodedSentences(db):
+    SQL = """select codingjob_articleid from codingjobs_groups g inner join codingjobs_articles a on g.codingjobid = a.codingjobid
+             where normative=1 and g.groupid=1"""
+    for cjaid, in db.doQuery(SQL):
+        ca = CodedArticle(db, cjaid)
+        for cs in ca.sentences:
+            yield cs
+
 if __name__ == '__main__':
     import dbtoolkit, adapter
     db = dbtoolkit.amcatDB()

@@ -32,10 +32,13 @@ class Table(object):
         return self.columns
 
 class ObjectColumn(object):
-    def __init__(self, cellfunc):
-        self.cell = cellfunc
+    def __init__(self, label, cellfunc):
+        self.label = label
+        self.cellfunc = cellfunc
     def getCell(self, row):
         return self.cellfunc(row)
+    def __str__(self):
+        return self.label
     
 class ObjectTable(Table):
     """
@@ -155,6 +158,20 @@ class MergedTable(Table):
         row = row[self.tables.index(table)]
         if not row: return None
         return table.getValue(row, col)
+
+class ColumnViewTable(Table):
+    def __init__(self, table, columns, uselabel=True):
+        self.table = table
+        self.columns = set(columns)
+        self.uselabel = uselabel
+    def getColumns(self):
+        for col in self.table.getColumns():
+            if col in self.columns or (self.uselabel and isinstance(col, toolkit.IDLabel) and col.label in self.columns):
+                yield col
+    def getRows(self):
+        return self.table.getRows()
+    def getValue(self, row, col):
+        return self.table.getValue(row, col)
     
 def getColumnByLabel(table, label):
     stringify = unicode if type(label) == unicode else str
@@ -193,3 +210,13 @@ if __name__ == '__main__':
     s = SortedTable(m, getColumnByLabel(m, "b1")) 
     print tableoutput.table2ascii(s)
 
+    import article, dbtoolkit
+    a = article.Article(dbtoolkit.amcatDB(), 33308863)
+    a2 = article.Article(dbtoolkit.amcatDB(), 33308864)
+
+    hl = ObjectColumn("headline", lambda a: a.headline)
+    id = ObjectColumn("id", lambda a: a.id)
+    
+    l = ObjectTable([a,a2], [hl, id])
+    print tableoutput.table2ascii(l)
+    

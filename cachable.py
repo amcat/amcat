@@ -26,12 +26,10 @@ the Property at the moment it is needed.
     # - allow caching by setting e.g. article.headline = "bla"
 """
 
-
 import toolkit, collections, inspect
 from functools import partial
 import weakref
-
-            
+        
 _CACHE = {}
 class CachingMeta(type):
     """
@@ -141,7 +139,7 @@ class Cachable(toolkit.IDLabel):
     def sqlFrom(self, table=None):
         return sqlFrom([self], table)
 
-
+        
 
 
 ##################################
@@ -265,6 +263,24 @@ class DBFKProperty(FunctionProperty):
         if self.orderby: SQL += " ORDER BY %s" % _selectlist(self.orderby)
         return self.endfunc(self.function(*x) for x in self.cachable.db.doQuery(SQL))
 
+    # TODO: cache! not as easy as I thought# !
+    # def prepareCache(self, cacher):
+    #     # TODO: does not guarantee order!
+    #     if type(self.targetfields) in (str, unicode):
+    #         cacher.addDBField(self.targetfields, table=self.table)
+    #     else:
+    #         for field in self.targetfields:
+    #             cacher.addDBField(field, table=self.table)
+
+    # def doCache(self, cacher):
+    #     if type(self.targetfields) in (str, unicode): 
+    #         x = cacher.getDBData(self.cachable, self.targetfields, self.table)
+    #     else:
+    #         x = [cacher.getDBData(self.cachable, field, self.table) for field in self.targetfields]
+    #     val = cacher.getDBData(self.cachable, self.fieldname, self.table)
+    #     return self.endfunc(self.function(*x) for x in self.cachable.db.doQuery(SQL))
+
+        
 def _trivial(*args):
     if len(args) == 1: return args[0]
     return args

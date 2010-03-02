@@ -11,6 +11,7 @@ class Index(object):
         self._aidmap = None
         self.stem=stem
 
+
     @property
     def index(self):
         if '_index' not in self.__dict__ or self._index is None:
