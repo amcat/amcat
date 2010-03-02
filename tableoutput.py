@@ -1,4 +1,4 @@
-import table3, toolkit
+import table3, toolkit, sys, csv
 
 def getTable(table, colnames=None):
     if isinstance(table, (list, tuple)):
@@ -44,6 +44,7 @@ def table2ascii(table, colnames=None, formats=None, useunicode=True, box=True):
     table = getTable(table, colnames)
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
     cols, rows = table.getColumns(), table.getRows()
+    if type(cols) not in (list, tuple): cols = list(cols)
     if formats is None: formats = [u"%s"] * len(cols)
     headers = cols
     sortcols = None
@@ -92,3 +93,27 @@ def table2html(table, colnames=None):
             )
     result += "\n</table>"
     return result
+
+####################### table2csv ###################################
+
+def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False):
+    table = getTable(table, colnames)
+    if csvwriter is None: csvwriter = csv.writer(outfile)
+    cols = list(table.getColumns())
+    if writecolnames == True: writecolnames = str 
+    if writerownames == True: writerownames = str            
+    if writecolnames:
+        c = [""] + cols if writerownames else cols
+        csvwriter.writerow(map(writecolnames, c))
+    for row in table.getRows():
+        values = [writerownames(row)] if writerownames else []
+        values += map(str, (table.getValue(row,col) for col in cols))
+        csvwriter.writerow(values)
+
+
+if __name__ == '__main__':
+    t = table3.DictTable(default=0)
+    t.addValue(("bla","x"), "piet", 3)
+    t.addValue(("bla","y"), "jan", 4)
+    t.addValue(("bla","y"), "piet", 5)
+    table2csv(t, writerownames=lambda s : "/".join(map(str, s)))
