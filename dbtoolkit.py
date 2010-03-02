@@ -2,9 +2,13 @@ import base64, sbd # only needed for image processing, move to other module>?
 import toolkit, config, sys
 import article, sources, user
 import re, collections, time
-from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
+#from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
+OrderedSet = set # OrderedSet gaat mis bij pickle, dan maar geen order op de listeners...?
 import table3
 import threading
+import cPickle
+from cStringIO import StringIO
+import functools
 
 _encoding = {
     0 : 'utf-8',
@@ -30,7 +34,6 @@ def reportDB():
     db.conn.autocommit(False)
     return db
 
-GLOBAL_DB_LOCK = threading.Lock()
 
 class amcatDB(object):
     """
@@ -46,8 +49,9 @@ class amcatDB(object):
         """
         self.connect(configuration, auto_commit, **configargs)
         self.init(profile)
+        
 
-    def connect(self, configuration, auto_commit, **configargs):
+    def connect(self, configuration=None, auto_commit=0, **configargs):
         if not configuration: configuration=config.default(**configargs)
         self.dbType = configuration.drivername    
         self.mysql = False #????
@@ -76,6 +80,20 @@ class amcatDB(object):
         if profile:
             self.profiler = ProfilingAfterQueryListener()
             self.afterQueryListeners.append(self.profiler)
+        self.DB_LOCK = threading.Lock()
+
+    def __getstate__(self):
+        if 'DB_LOCK' in self.__dict__ and self.DB_LOCK:
+            self.DB_LOCK.acquire()
+        d = self.__dict__
+        for delprop in 'DB_LOCK', 'conn':
+            if delprop in d: del d[delprop]
+        if 'DB_LOCK' in self.__dict__ and self.DB_LOCK:
+            self.DB_LOCK.release()
+        return d
+    def __setstate__(self, d):
+        self.__dict__ = d
+        self.DB_LOCK = threading.Lock()
       
     def quote(self, value):
         return "'%s'" % str(value).replace("'", "''")   
@@ -83,6 +101,8 @@ class amcatDB(object):
         
         
     def cursor(self):
+        if self.conn is None:
+            raise Exception("Cannot query without database connection")
         return self.conn.cursor()
         
         
@@ -124,7 +144,7 @@ class amcatDB(object):
             select=sql.lower().strip().startswith("select")
         c = None
         t = time.time()
-        canlock = GLOBAL_DB_LOCK.acquire(False)
+        canlock = self.DB_LOCK.acquire(False)
         if not canlock: raise Exception("Cannot lock?")
         try:
             #toolkit.ticker.warn("ACQUIRE LOCK for %r" % sql)
@@ -148,7 +168,7 @@ class amcatDB(object):
                 except:
                     pass
             #toolkit.ticker.warn("RELEASE LOCK for %r" % sql)
-            GLOBAL_DB_LOCK.release()
+            self.DB_LOCK.release()
                         
 
 
@@ -565,6 +585,31 @@ class ProfilingAfterQueryListener(object):
         data = [(s, n, t, t/n, float(l)/n) for (s, (n,t,l)) in data.iteritems()]
         return data
 
+def persistent_id(obj):
+    if type(obj) == amcatDB:
+        return "dbtoolkit.py::amcatDB"
+
+def get_persistent_load(db):
+    def persistent_load(id):
+        if id == "dbtoolkit.py::amcatDB":
+            return db
+        raise Exception("Unknown persistent id: %r" % id)
+    return persistent_load
+    
+def persistent_dumps(obj, module=cPickle):
+    s = StringIO()
+    p = module.Pickler(s)
+    p.persistent_id = persistent_id
+    p.dump(obj)
+    return s.getvalue()
+    
+def persistent_loads(bytes, db, module=cPickle):
+    s = StringIO(bytes)
+    u = module.Unpickler(s)
+    u.persistent_load = get_persistent_load(db)
+    return u.load()
+
+    
     
 if __name__ == '__main__':
     db = anokoDB()

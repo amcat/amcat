@@ -98,7 +98,7 @@ class Cachable(toolkit.IDLabel):
     def __getattribute__(self, attr):
         """Main magic: if attr is a property: return its .get().
         Otherwise, call superclass __getattribute__"""
-        if  attr not in ("__properties__", "_getProperty", "_getPropertyFactories"):
+        if  attr not in ("__properties__", "_getProperty", "_getPropertyFactories", "__dict__"):
             prop = self._getProperty(attr)
             if prop:
                 return prop.get()

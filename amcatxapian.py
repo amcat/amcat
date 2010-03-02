@@ -6,11 +6,23 @@ VALUE_AID = 1
 class Index(object):
     def __init__(self, location, db, stem=True):
         self.location = location
-        self.index = xapian.Database(location)
+        self._index = None
         self.db = db
         self._aidmap = None
         self.stem=stem
 
+    @property
+    def index(self):
+        if '_index' not in self.__dict__ or self._index is None:
+            self._index = xapian.Database(self.location)
+        return self._index
+    
+        
+    def __getstate__(self):
+        d = self.__dict__
+        for delprop in '_index', '_aidmap':
+            if delprop in d: del d[delprop]
+        return d
 
     def _getAidmap(self):
         if self._aidmap is None:

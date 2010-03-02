@@ -52,7 +52,7 @@ class ObjectTable(Table):
         if type(col) == types.FunctionType:
             col = ObjectColumn(col)
         self.columns.append(col)
-        
+
 class DictTable(Table):
     """
     Convenience subclass of Table that creates a dict to hold the cell values,
@@ -60,12 +60,23 @@ class DictTable(Table):
     """
     def __init__(self, default=None):
         Table.__init__(self, OrderedSet(), OrderedSet(),
-                       lambda row, col: self.data.get((row, col), default))
+                       self.getValue)
         self.data = {}
+        self.default = default
     def addValue(self,row, col, value):
         self.data[row, col] = value
         self.columns.add(col)
         self.rows.add(row)
+    def getValue(self, row, col):
+        return self.data.get((row, col), self.default)
+    def __getstate__(self):
+        d = self.__dict__
+        if d['cellfunc'] == self.getValue: del d['cellfunc']
+        return d
+    def __setstate__(self, d):
+        if 'cellfunc' not in d: d['cellfunc'] = self.getValue
+        self.__dict__ = d
+    
 DataTable = DictTable
 
 class ListTable(Table):
