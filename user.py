@@ -42,7 +42,10 @@ class User(Cachable):
     
     @property
     def permissionLevelName(self):
-        return self.permissionLevel.label
+        if self.permissionLevel is None:
+            return "None"
+        else:
+            return self.permissionLevel.label
     
     def getProjects(self, own):
         return project.projects(self.db, self.id, own=own)
@@ -79,7 +82,7 @@ if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB()
     p = dbtoolkit.ProfilingAfterQueryListener()
-    db.afterQueryListeners.append(p)
+    db.afterQueryListeners.add(p)
     for i in range(4):
         u = User(db, 2)
         print u.permissionLevel
