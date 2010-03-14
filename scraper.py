@@ -7,7 +7,7 @@ from datetime import datetime, date
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
 class ArticleDescriptor(object):
-    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, **args):
+    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None,**args):
         self.body = body
         self.headline = headline
         self.date = date
@@ -20,14 +20,15 @@ class ArticleDescriptor(object):
         self.imagetype = imagetype
         self.fullmeta = fullmeta
         self.aid = None
+        self.batch = batch
     def createArticle(self, db, batchid, mediumid, date, imagescale=.67):
         body = stripText(self.body)
         byline = stripText(self.byline)
         headline = stripText(self.headline)
         if date is None: date = self.date
         if date is None: raise Exception("No date for article %s" % self.url)
-      
-
+        
+        if not self.batch: self.batch = batchid
         if not body and not headline:
             l.notice('missing body and headline %s' % self.url)
             return None
@@ -36,7 +37,7 @@ class ArticleDescriptor(object):
             return None
         elif not headline: l.notice('Missing headline %s' % self.url)
         
-        a = articlecreator.createArticle(db, headline, self.date, mediumid, batchid, body, 
+        a = articlecreator.createArticle(db, headline, self.date, mediumid, self.batch, body, 
                                   pagenr=self.pagenr, byline=self.byline, url=self.url,
                                   section=self.section, fullmeta=self.fullmeta)
         if self.imagebytes:

@@ -70,7 +70,7 @@ def table2ascii(table, colnames=None, formats=None, useunicode=True, box=True):
             collengths[i] = max(collengths[i], len(value))
             data[-1].append(value)
     
-    result = ""
+    result = u""
     result += sep(collengths, con_sep2t)
     result += line(headers, collengths, con_line)
     result += sep(collengths, con_sep)

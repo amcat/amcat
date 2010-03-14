@@ -1,4 +1,4 @@
-from cachable import Cachable
+from cachable import Cachable, DBPropertyFactory
 import collections, mx.DateTime, toolkit, enum, categorise
 from toolkit import Identity, IDLabel
 
@@ -63,18 +63,19 @@ def functionEnumFromDB(db):
 class Object(Base, Cachable):
     __table__ = 'o_objects'
     __idcolumn__ = 'objectid'
-    def __init__(self, ont, id, nr):
-        Cachable.__init__(self, ont.db, id)
+    keyword = DBPropertyFactory(table="o_keywords")
+    lastname = DBPropertyFactory(fieldname="name", table="o_politicians")
+    firstname = DBPropertyFactory(table="o_politicians")
+    prefix = DBPropertyFactory(table="o_politicians")
+    nr = DBPropertyFactory()
+    
+    def __init__(self, ont, id, **cache):
+        Cachable.__init__(self, ont.db, id, **cache)
         Base.__init__(self, ont, id)
         self.parents = {} # clas : (parent or None, omklap?)
         self.children = collections.defaultdict(set) # clas : [parenr, reverse]
         self.labels = {} # language : label
         self.label = None
-        self.nr = nr
-        self.addDBProperty("keyword", table="o_keywords")
-        self.addDBProperty("lastname", "name", table="o_politicians")
-        self.addDBProperty("firstname", "firstname", table="o_politicians")
-        self.addDBProperty("prefix", table="o_politicians")
     def getNr(self):
         return self.nr
     def setNr(self, nr):
@@ -228,7 +229,7 @@ class Ontology(Cachable):
         self.bynr[newnr] = node
     def createObject(self, oid, nr):
         if oid in self.objects: raise Exception()
-        o = Object(self, oid, nr)
+        o = Object(self, oid, nr=nr)
         self.objects[oid] = o
         if nr:
             self.setNodeNr(o, nr)
@@ -400,7 +401,5 @@ if __name__ == '__main__':
 
     o = ont.nodes[15619]
     print o
-
-    print ont.getCategorisation(1)
-
-    print o.categorise(1)
+    print o.label
+    print o.nr

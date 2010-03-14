@@ -1,5 +1,6 @@
 import user, toolkit, project, ont2, article, dbtoolkit
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
+import cachable
 from functools import partial
 
 def getCodedArticle(db, cjaid):
@@ -198,8 +199,11 @@ class CodingJobSet(Cachable):
             if a.id == cjaid:
                 return a
 
+    def getArticles(self):
+        cachable.cacheMultiple(self.articles, "article")
+        return [a.article for a in self.articles]
     def getArticleIDS(self):
-        return set([a.article.id for a in self.articles])
+        return set(a.id for a in self.getArticles())
 
     def getNArticleCodings(self):
         SQL = """select count(*) from %s x
@@ -221,12 +225,15 @@ class AnnotationSchema(Cachable):
     
     def __init__(self, db, id):
         Cachable.__init__(self, db, id)
-        self.ont = ont2.getOntology(self.db)
         self.addDBProperty("table", "location", lambda loc : loc.split(":")[0])
         self.addDBProperty("name")
         self.addDBProperty("articleschema")
         self.addDBFKProperty("fields", "annotationschemas_fields", ["fieldnr", "fieldname", "label", "fieldtypeid", "params", "deflt"], function=self.createField)
 
+    @property
+    def ont(self):
+        return ont2.getOntology(self.db)
+        
     def createField(self, fieldnr, fieldname, label, fieldtype, params, deflt):
         if fieldtype in (5,):
             return OntologyAnnotationSchemaField(self.ont, self, fieldnr, fieldname, label, fieldtype, params, deflt)

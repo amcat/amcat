@@ -79,7 +79,7 @@ class amcatDB(object):
 
         if profile:
             self.profiler = ProfilingAfterQueryListener()
-            self.afterQueryListeners.append(self.profiler)
+            self.afterQueryListeners.add(self.profiler)
         self.DB_LOCK = threading.Lock()
 
     def __getstate__(self):
@@ -552,8 +552,11 @@ def encodeTexts(texts):
 def doreplacenumbers(sql):
     sql = re.sub(r"\d[\d ,]*", "# ", sql)
     sql = re.sub(r"'#['#, ]*'", "'#' ", sql)
+    sql = sql.replace("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED","")
+    sql = sql.replace("SET TRANSACTION ISOLATION LEVEL READ COMMITTED","")
+    sql = re.sub("\s+", " ", sql)
 
-    return sql
+    return sql.strip()
 class ProfilingAfterQueryListener(object):
     def __init__(self):
         self.queries = collections.defaultdict(list)
@@ -561,7 +564,7 @@ class ProfilingAfterQueryListener(object):
         #print ">>>", query, time, len(resultset)
         l = len(resultset) if resultset else 0
         self.queries[query].append((time, l))
-    def printreport(self, sort="time", stream=sys.stdout, *args, **kargs):
+    def printreport(self, sort="time", stream=sys.stdout, useunicode=True, *args, **kargs):
         data = self.reportTable(*args, **kargs)
         if sort:
             if type(sort) in (str, unicode): sort = sort.lower()
@@ -569,10 +572,10 @@ class ProfilingAfterQueryListener(object):
                 if col == sort or col.id == sort or col.label.lower() == sort:
                     data = table3.SortedTable(data, (col, False))
         import tableoutput
-        print >>stream, tableoutput.table2ascii(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"])
+        print >>stream, tableoutput.table2ascii(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
-    def report(self, replacenumbers=True, maxsqlen=100):
+    def report(self, replacenumbers=True, maxsqlen=150):
         data = collections.defaultdict(lambda : [0, 0., 0]) # {sql : [n, totaltime, totallength]}
         for sql, timelens in self.queries.iteritems():
             if replacenumbers: sql = doreplacenumbers(sql)

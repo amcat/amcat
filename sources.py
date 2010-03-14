@@ -1,20 +1,21 @@
 import toolkit
-from cachable import Cachable
+from cachable import Cachable, CachingMeta
+import time
 
 def clean(s):
     return toolkit.clean(s,1,1)
 
 class Source(Cachable):
+    __metaclass__ = CachingMeta
     __table__ = 'media'
     __idcolumn__ = 'mediumid'
+    __labelprop__ = 'name'
+    __dbproperties__ = ["name", "circulation", "language", "type", "abbrev"]
 
-    def __init__(self, db, id):
-        Cachable.__init__(self, db, id)
-        for prop in "name", "circulation", "language", "type", "abbrev":
-            self.addDBProperty(prop)
-    
 class Sources(object):
     def __init__(self, connection):
+        raise Exception("!")
+
         self.index_name = {}
         self.sources = {}
         for id,name in connection.doQuery("select mediumid, name from media_dict"):

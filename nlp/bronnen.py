@@ -9,9 +9,20 @@ import sys, parsetree
 # traversed in alphabetical order
 ################
 
+def rule_bron_6_directerede(node):
+    if isVZeg(node): debug("kij.....")
+    dubbelepunt = getParent(node," --")
+    if dubbelepunt:
+        if dubbelepunt.word.lemma.label in (" : "):   #39417433 
+            frame=BronFrame("direde", key=dubbelepunt)
+            frame.source = node
+            frame.quote = getChild(node,"nucl") or getChild(node,"sat")
+            debug ("xxxxx ",frame.key, frame.source, frame.quote)
+            return frame
 
 
-def rule_bron_1_V(node):
+      
+def rule_bron_2_V(node):
     if isVZeg(node) or isVPassief(node): act="zeg"
     elif isVOrder(node): act="order"
     elif isVVraag(node): act="vraag"
@@ -37,11 +48,17 @@ def rule_bron_1_V(node):
     else:
         frame.source = getChild(node, "su")
         frame.quote = getChild(node, ("vc","obj1","nucl"))
-    if not isDat(frame.quote): return
+    if frame.source:   #39400763, uitbreidende isVzeg bijzin: Timmermans (mod) die (su) zei, had ook met getResolveSource gekund
+        if frame.source.word.lemma.label in ("die","dat","welke","dewelke") and getParent(frame.source, "mod"):
+            frame.source = getParent(frame.source, "mod")
+#   dubieus of je isDat moet eisen, bv te stringent in Bos zei nee 39417441, daarom niet geeist als getChild "obj1"
+    if isNGezegde(frame.source): #39417595
+        frame.source,frame.quote = frame.quote,frame.source
+    if not isDat(frame.quote) and getChild(node, ("vc","nucl")): return
     return frame
 
 
-def rule_bron_2_N(node):
+def rule_bron_3_N(node):
     if isNGezegde(node): act="zeg"
     elif isNVraag(node): act="vraag"
     elif isNBelofte(node): act="belofte"
@@ -64,7 +81,7 @@ def rule_bron_2_N(node):
     if not isDat(frame.quote): return
     return frame
 
-def rule_bron_3_volgens(node): # zie 39396066
+def rule_bron_4_volgens(node): # zie 39396066
     if not isVolgens(node): return
     frame = BronFrame("volgens", key=node)    
     frame.source = getChild(node, "obj1")
@@ -74,7 +91,7 @@ def rule_bron_3_volgens(node): # zie 39396066
     if rootverb: frame.quote = rootverb
     return frame
 
-def rule_bron_4_ervan(node): # zie 38667309
+def rule_bron_5_ervan(node): # zie 38667309
     if not isVoltooid(node): return
     frame = BronFrame("ervan", key=node)
     frame.source = (getChild(node, "obj1")
@@ -86,7 +103,7 @@ def isVnotZeg(node):
     return (node.word.lemma.pos == 'V'
             and not (isVZeg(node) or isVPassief(node) or isVOrder(node) or isVVraag(node) or isVBelofte(node)))
 
-    
+
 def rule_SPO_1actief(node):
     # example subject/predicate/object function
     if not isVnotZeg(node): return
@@ -98,6 +115,7 @@ def rule_SPO_1actief(node):
     if not frame.object: frame.object = getChild(node, "obj2") #object = MV
     if not frame.object: frame.object = getChild(getChild(node, "mod"),"obj1") #object=modMV 
     if not frame.object: frame.object = getChild(node, "obj1")
+    if not frame.object: frame.object = getChild(node, "predc")
     #pdoel=getChild(frame.object, "mod") #om-constructie hangt aan object, zie 39403134
     #if not pdoel: pdoel = getChild(node, "mod")
     #if pdoel:
@@ -141,10 +159,13 @@ def getDoelObject(pdoel):
     object = getChild(getChild(pdoel,"body"),"body")
     if not object: #met het oog op, met P, 39404297
         object = getChild(pdoel,"obj1")
+        debug("1.......",pdoel,object)
     if not object: #zodat, met C, 39405692 
         object = getChild(getChild(pdoel,"body"),"vc")
-    if not object: #zodat, met C, als geen werkwoord onder body 
+        debug("2.......",pdoel,object)
+    if not object: #zodat, met C, als geen werkwoord onder body, of werkwoord onder "te" 
         object = getChild(pdoel,"body")
+        debug("3.......",pdoel,object)
     return object
 
 
@@ -176,7 +197,7 @@ def hasLemma(node, lemmata):
     return node and node.word.lemma.label in lemmata
 
 def isNGezegde(node):
-    return hasLemma(node, ["aankondiging","aanwijzing","achtergrondinformatie","affirmatie","anekdote","argument","argumentatie","assertie","begripsbepaling","bekendmaking","bekentenis","belijdenis","beoordeling","bericht","bescheid","bevestiging","bevinding","beweegreden ","bewering","bewijsvoering","bezegeling","biecht","boodschap","communicatie","communis opinio","conclusie","consequentie","constatering","convictie","dienstbericht","dienstmededeling","diepte-informatie","dispositie","drijfveer","eed","eindconclusie","eindindruk","eindmening","eindoordeel","erkentenis","expressie","geest","geheim","gelukstijding","gerucht","geste","getuigenis","gevoelen","gevolgtrekking","gezichtspunt","gimmick","herinnering","hoofdargument","hoofdconclusie","impuls","indicatie","indruk","info","informatie","inlichting","inside-informatie","intuitie","jobspost","jobstijding","kreet","legende","levensbiecht","lezing","mare","mededeling","melding","meineed.","melding","mening","motivering","nieuws","nieuwstijding","nieuwtje","notificatie","observatie","ondervinden","oordeel","openbaarmaking","openbaring","opinie","opmerking","opstelling","opvatting","overtuiging","overweging","positie","predictie","proclamatie.","profetie","punt","rede","reden","relaas","repliek","revelatie","schuldbekentenis","schuldbelijdenis","slogan","slotbepaling.","slotconclusie","slotindruk","slotsom","soundbite","spoedboodschap","standpunt","staving","stelling","stellingname","stokpaardje","suggestie","tegenbericht","tijding","tip.","topic","totaalindruk","treurmare","uitdrukking","uiting","uitspraak","verdediging","vergezicht","verhaal","verklaring","vertelling","vertolking","verwijzing","verwoording","verzekering","vingerwijzing","visie","volksovertuiging","voorspelling","voorstellingswijze","waarneming","weerwoord","wending","wereldopinie","woord","zienswijze","zinsnede","zinsuiting","abstractie","axioma","bedenksel","beginsel","benul","bewijs","bijgedachte","brainwave","concept","conceptie","deductie","denkbeeld","denkpatroon","denkrichting","denktrant","denkwereld","denkwijze","droom","feit","gedachte","gedachtegang","gedachteloop","gedachtesprong","gegeven","geloof","gril","grondbeginsel","grondbegrip","grondbeschouwing","grondgedachte","grondregel","grondstelling","hoofdlijn","idee","inductie","intellect","inval","inzicht","kerngedachte","maxime","notie","onderstelling","overlegging","perspectief","postulaat","premisse","principe","propositie","redenatie","redenering","syllogisme","theorema","uitgangspunt","verbazing","vermoeden","veronderstelling","verstand","verwondering","vondst","voorgevoel","begeestering","bezieling","emotie","feeling","gevoel","gevoelen","sentiment"])
+    return hasLemma(node, ["aankondiging","aanwijzing","achtergrondinformatie","affirmatie","anekdote","argument","argumentatie","assertie","begripsbepaling","bekendmaking","bekentenis","belijdenis","beoordeling","bericht","bescheid","bevestiging","bevinding","beweegreden ","bewering","bewijsvoering","bezegeling","biecht","boodschap","communicatie","communis opinio","conclusie","consequentie","constatering","convictie","denkbeeld","dienstbericht","dienstmededeling","diepte-informatie","dispositie","droombeeld","drijfveer","eed","eindconclusie","eindindruk","eindmening","eindoordeel","erkentenis","expressie","geest","geheim","gelukstijding","gerucht","geste","getuigenis","gevoelen","gevolgtrekking","gezichtspunt","gimmick","herinnering","hoofdargument","hoofdconclusie","impuls","indicatie","indruk","info","informatie","inlichting","inside-informatie","intuitie","jobspost","jobstijding","kreet","legende","levensbiecht","lezing","mare","mededeling","melding","meineed","melding","mening","motivering","nieuws","nieuwstijding","nieuwtje","notificatie","observatie","ondervinden","oordeel","openbaarmaking","openbaring","opinie","opmerking","opstelling","opvatting","overtuiging","overweging","positie","predictie","proclamatie","profetie","punt","rede","reden","relaas","repliek","revelatie","schuldbekentenis","schuldbelijdenis","slogan","slotbepaling","slotconclusie","slotindruk","slotsom","soundbite","spoedboodschap","standpunt","staving","stelling","stellingname","stokpaardje","suggestie","tegenbericht","tijding","tip","topic","totaalindruk","treurmare","uitdrukking","uiting","uitspraak","verdediging","vergezicht","verhaal","verklaring","vertelling","vertolking","verwijzing","verwoording","verzekering","vingerwijzing","visie","volksovertuiging","voorspelling","voorstellingswijze","waarneming","weerwoord","wending","wereldopinie","woord","zienswijze","zinsnede","zinsuiting","abstractie","axioma","bedenksel","beginsel","benul","bewijs","bijgedachte","brainwave","concept","conceptie","deductie","denkbeeld","denkpatroon","denkrichting","denktrant","denkwereld","denkwijze","droom","feit","gedachte","gedachtegang","gedachteloop","gedachtesprong","gegeven","geloof","gril","grondbeginsel","grondbegrip","grondbeschouwing","grondgedachte","grondregel","grondstelling","hoofdlijn","idee","inductie","intellect","inval","inzicht","kerngedachte","maxime","notie","onderstelling","overlegging","perspectief","postulaat","premisse","principe","propositie","redenatie","redenering","syllogisme","theorema","uitgangspunt","verbazing","vermoeden","veronderstelling","verstand","verwondering","vondst","voorgevoel","begeestering","bezieling","emotie","feeling","gevoel","gevoelen","sentiment"])
 
 def isVZeg(node):
     return hasLemma(node, ["voel","voel_aan","observeer","neem_waar","zie","hoor","beluister","ruik","bedenk","bereken","beschouw","denk","geloof","verbaas","veronderstel","verwonder","accepteer","antwoord","bedoel","begrijp","beken","beklemtoon","bekrachtig","belijd","beschrijf","besef","bericht","betuig","bevestig","bevroed","beweer","bewijs","bezweer","biecht","breng","brul","concludeer","confirmeer","constateer","debiteer","declareer","demonstreer","denk","email","erken","expliceer","expliciteer","fantaseer","formuleer","geef_aan","hamer","herinner","houd_vol","kondig_aan","kwetter","licht_toe","maak_bekend","maak_hard","meld","merk","merk_op","motiveer","noem","nuanceer","onthul","ontsluier","ontval","ontvouw","oordeel","parafraseer","postuleer","preciseer","presumeer","pretendeer","publiceer","rapporteer","realiseer","redeneer","refereer","reken","roep","roer_aan","schat","schets","schilder","schreeuw","schrijf","signaleer","snap","snater","specificeer","spreek_uit","staaf","stel","stip_aan","suggereer","tater","teken_aan","toon_aan","twitter","verhaal","verklaar","verklap","verkondig","vermoed","verraad","vertel","vertel_na","verwacht","verwittig","verzeker","vind","waarschuw","wed","weet","wijs_aan","wind","zeg","zet_uiteen","twitter"])
@@ -314,7 +335,7 @@ def findBronnen(tree):
                 if type(frames) not in (list, set, tuple): frames = (frames,)
                 for frame in frames:
                     if frame and frame.isComplete():
-                        debug("Yielding", frame=frame)
+                        debug("YIELDING===>", frame=frame)
                         yield frame
                     elif frame:
                         debug("Skipping incomplete frame:", frame)

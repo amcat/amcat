@@ -371,30 +371,67 @@ class Cacher(object):
             return row[field]
 
 
-def cacheMultiple(cachables, propnames):
+def cacheMultiple(cachables, *propnames):
     """
     Cache the given propnames for the given cachables. If possible,
     uses a single SQL statement to cache for all objects.
     """
-    if not toolkit.isSequence(propnames, excludeStrings=True):
-        propnames = [propnames]
+    if len(propnames)==1 and toolkit.isSequence(propnames[0], excludeStrings=True): propnames = propnames[0]
+    if type(cachables) not in (list, tuple):
+        if toolkit.isIterable(cachables, excludeStrings=True): cachables = list(cachables)
+        else: cachables = [cachables]
     cacher = Cacher()
     for cachable in cachables:
-        for prop in propnames:
-            cachable._getProperty(prop).prepareCache(cacher)
+        for propname in propnames:
+            prop = cachable._getProperty(propname)
+            if not prop: raise Exception("Cachable %r has not property %s" % (cachable, propname))
+            prop.prepareCache(cacher)
     cacher.getData(cachables)
     for cachable in cachables:
         for prop in propnames:
             cachable._getProperty(prop).doCache(cacher)
 
+def cache(cachables, *properties, **structure):
+    """
+    Cache properties and properties of (foreign key) properties
+    Structure is a dict where the keys are properties of the cachable,
+    If the property itself returns a (sequence of) cachable,
+    the value in the structure can be a structure dict which is
+    cached recursively on the retrieved cachable object(s).
+    If the structure dictionary value is False (None, {}, ...), only
+    the property itself is retrieved. *properties are treated as structure
+    keys with a False value.
+    example: cache([article1, article2], "headline", source=["name"])
+             Caches the headline and source of these articles, and also
+             caches the name of the source(s). 
+    """
+    # insert bare properties into structure, make surce cachables is iterable
+    if len(properties)==1 and toolkit.isSequence(properties[0], excludeStrings=True): properties = properties[0]
+    for prop in properties: structure[prop] = None
+    if not toolkit.isIterable(cachables, excludeStrings=True): cachables = [cachables]
+    # cache first layer
+    cacheMultiple(cachables, structure.keys())
+    # recurse into next layer
+    for prop, struct in structure.iteritems():
+        if struct:
+            objects = set()
+            for c in cachables:
+                addendum = c.__getattribute__(prop)
+                if not toolkit.isIterable(addendum, excludeStrings=False): addendum=[addendum]
+                objects |= set(a for a in addendum if a)
+            if type(struct) <> dict: struct = dict((k, False) for k in struct)
+            cache(objects, **struct)
+    
+            
+            
 ########################################
 #          Driver                      #
 ########################################
 
 if __name__ == '__main__':
-    import dbtoolkit, article
+    import dbtoolkit, article, project
     db  = dbtoolkit.amcatDB(profile=True)
-    db.beforeQueryListeners.append(toolkit.warn)
+    db.beforeQueryListeners.add(toolkit.warn)
     aids = 353570, 364425, 815672
 
     def illegalQuery(*args, **kargs): raise Exception("DB is disabled! Attempted to do:\ndoQuery(%s, %s)" % (map(str, args), kargs))
@@ -438,13 +475,30 @@ if __name__ == '__main__':
     toggleDB()
     arts = [article.Article(db, aid) for aid in aids]
     toggleDB()
-    cacheMultiple(arts, ["encoding", "date", "headline"])
+    cache(arts, ["encoding", "date", "headline"])
     toggleDB()
     for a in arts:
         print "Article %i: %s" % (aid, id(a))
         print "  a.date = %r" % a.date
         print "  a.headline = %r" % a.headline
     toggleDB()
+
+    print "--------- caching structure, multiple cachables ---------------"
+    
+    toggleDB()
+    batch = project.Batch(db, 5563)
+    toggleDB()
+    cache(batch, "name", articles=dict(encoding={}, headline={}, source=["name"]))
+    toggleDB()
+
+    print "Batch.name: %s" % (batch.name)
+    print "# Articles=%i" % len(batch.articles)
+    for a in batch.articles:
+        print "Article %i: %s" % (aid, id(a))
+        print "  a.headline = %r" % a.headline
+        print "  a.source = %s, .name=%s" % (a.source, a.source.name)
+    toggleDB()
+        
         
     print "\nQueries used:"
     db.printProfile()
