@@ -312,7 +312,7 @@ class HTMLGenerator(object):
 
 
 class Value(object):
-    def __init__(self, value, direction=None, url=None, direction2=None, value2=None, lineval=None, istotal=False, nospan=True):
+    def __init__(self, value, direction=None, url=None, direction2=None, value2=None, lineval=None, istotal=False, nospan=True, suffix=None):
         self.value = value
         self.direction = direction
         self.direction2 = direction2
@@ -322,6 +322,7 @@ class Value(object):
         self.lineval = lineval or value
         self.istotal=istotal
         self.nospan = nospan
+        self.suffix = suffix
     def __str__(self):
         return str(self.value)
         
