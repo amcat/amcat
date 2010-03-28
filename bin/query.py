@@ -20,7 +20,7 @@ if select:
     if output == "plain":
         tableoutput.printTable(res)
     else:
-        print tableoutput.table2ascii(res, colnames)
+        print tableoutput.table2unicode(res, colnames)
 else:
     db.doQuery(sql)
     print "Executed successfully"

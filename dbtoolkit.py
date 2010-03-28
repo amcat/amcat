@@ -564,7 +564,7 @@ class ProfilingAfterQueryListener(object):
         #print ">>>", query, time, len(resultset)
         l = len(resultset) if resultset else 0
         self.queries[query].append((time, l))
-    def printreport(self, sort="time", stream=sys.stdout, useunicode=True, *args, **kargs):
+    def printreport(self, sort="time", stream=sys.stdout, useunicode=True, encoding="utf-8", *args, **kargs):
         data = self.reportTable(*args, **kargs)
         if sort:
             if type(sort) in (str, unicode): sort = sort.lower()
@@ -572,7 +572,9 @@ class ProfilingAfterQueryListener(object):
                 if col == sort or col.id == sort or col.label.lower() == sort:
                     data = table3.SortedTable(data, (col, False))
         import tableoutput
-        print >>stream, tableoutput.table2ascii(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
+        result = tableoutput.table2unicode(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
+        if type(result) == unicode: result = result.encode(encoding)
+        print >>stream, result
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
     def report(self, replacenumbers=True, maxsqlen=150):
