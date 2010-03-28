@@ -40,7 +40,10 @@ def printTable(table):
     for r in table.getRows():
         print toolkit.join([table.getValue(r,c) for c in cols])
 
-def table2ascii(table, colnames=None, formats=None, useunicode=True, box=True):
+def table2ascii(table, colnames=None, formats=None, useunicode=False, box=False):
+    return table2unicode(table, colnames, formats, useunicode, box)
+        
+def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True):
     table = getTable(table, colnames)
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
     cols, rows = table.getColumns(), table.getRows()
@@ -82,6 +85,53 @@ def table2ascii(table, colnames=None, formats=None, useunicode=True, box=True):
 
 ########################### table2html #######################################
 
+class HTMLGenerator(object):
+    # use some sort of templating???
+    def __init__(self, tclass=None, rownames=False):
+        self.tclass = tclass
+        self.rownames = rownames
+
+    def generate(self, table, stream=sys.stdout):
+        self.startTable(table, stream)
+        self.generateHeader(table, stream)
+        for row in table.getRows():
+            self.generateContent(table, stream, row)
+        self.endTable(table, stream)
+
+    def generateHeader(self, table, stream):
+        self.open(stream, "tr")
+        if self.rownames: self.element(stream, "", "th")
+        for col in table.getColumns():
+            self.element(stream, str(col), "th")
+        self.close(stream, "tr")
+    def generateContent(self, table, stream, row):
+        self.open(stream, "tr")
+        if self.rownames: self.element(stream, str(row), "th")
+        for col in table.getColumns():
+            val = table.getValue(row, col)
+            if val is None: val = ""
+            if type(val) == unicode: val = val.encode('utf-8')
+            elif type(val) == float: val = "%1.3f" % val
+            elif type(val) <> str: val = str(val)
+            self.element(stream, val, "td")
+        self.close(stream, "tr")
+    def startTable(self, table, stream):
+        self.open(stream, "table", self.tclass)
+    def endTable(self, table, stream):
+        self.close(stream, "table")
+    def open(self, stream, element, classname=None, **attrs):
+        if classname: attrs["class"] = classname
+        stream.write("<%s %s>" % (
+            element, " ".join("%s='%s'" % kv for kv in attrs.iteritems())))
+    def close(self, stream, element):
+        stream.write("</%s>\n" % element)
+    def element(self, stream, contents, element, *openargs, **openkargs):
+        self.open(stream, element, *openargs, **openkargs)
+        stream.write(contents)
+        self.close(stream, element)
+
+        
+
 def table2html(table, colnames=None):
     table = getTable(table, colnames)
     result = "\n<table border='1'>"
@@ -96,6 +146,12 @@ def table2html(table, colnames=None):
 
 ####################### table2csv ###################################
 
+def getstr(val):
+    if val is None: return ""
+    if type(val) == str: return val
+    if type(val) == unicode: return val.encode('utf-8')
+    return str(val)
+
 def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False):
     table = getTable(table, colnames)
     if csvwriter is None: csvwriter = csv.writer(outfile)
@@ -107,7 +163,7 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
         csvwriter.writerow(map(writecolnames, c))
     for row in table.getRows():
         values = [writerownames(row)] if writerownames else []
-        values += map(str, (table.getValue(row,col) for col in cols))
+        values += map(getstr, (table.getValue(row,col) for col in cols))
         csvwriter.writerow(values)
 
 
