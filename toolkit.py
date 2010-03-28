@@ -195,12 +195,13 @@ def tickerate(seq, msg=None, getlen=True, ticker=None, detail=0):
         yield x
     
 class Ticker:
-    def __init__(this, interval = 10, markThread=True):
+    def __init__(this, interval = 10, markThread=True, stream=sys.stderr):
         this.interval = interval
         this.i = 0
         this.start = time.time()
         this.last = time.time()
         this.markThread = markThread
+        this.stream = stream
 
     def warn(this, msg, reset=False, interval = None, estimate=None, newline=True, detail=0):
         if interval: this.interval = interval
@@ -217,7 +218,8 @@ class Ticker:
             msg = "[%s] %s" % ( threading.currentThread().getName(), msg)
             
         now = time.time()
-        warn("%10f\t%10f\t%d\t%s" % (now-this.last, now-this.start, this.i, msg), newline=newline)
+        this.stream.write("%10f\t%10f\t%d\t%s" % (now-this.last, now-this.start, this.i, msg))
+        if newline: this.stream.write("\n")
         this.last = now
         if reset: this.reset()
 
@@ -1314,7 +1316,8 @@ class IDLabel(Identity):
     def __init__(self, id, label):
         Identity.__init__(self, self.__class__, id)
         self.id = id
-        self.label = label
+        if label is not None:
+            self.label = label
     def identity(self):
         return (self.__class__, self.id)
     def clsidlabel(self):
@@ -1480,7 +1483,13 @@ class SingletonMeta(type):
             cls.instance=super(Singleton,cls).__call__(*args,**kw)
         return cls.instance
 
-
+def multidict(seq):
+    """returns a mapping of {key : set(values)} from a sequence of (key, value) tuples with duplicates"""
+    result = collections.defaultdict(set)
+    for k, v in seq:
+        result[k].add(v)
+    return result
+    
 if __name__ == '__main__':
     i = Indexer()
     for x in "afghjaabfgi":
