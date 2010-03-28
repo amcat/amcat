@@ -36,9 +36,6 @@ class User(Cachable):
     permissionLevel = DBPropertyFactory("permissionid", table="permissions_users", func=permissions.UserPermission.get)
     projects = DBFKPropertyFactory("permissions_projects_users", "projectid", dbfunc=lambda db, id : project.Project(db, id))
 
-    def __init__(self, db, id):
-        print "Creating user %i" % id
-        Cachable.__init__(self, db, id)
     
     @property
     def permissionLevelName(self):

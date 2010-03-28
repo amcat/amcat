@@ -231,7 +231,7 @@ class DBFKProperty(FunctionProperty):
     """
     Property representing a one-to-many relation
     """
-    def __init__(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None):
+    def __init__(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None, objfunc=None, distinct=False):
         """
         Table is the foreign key table, target fields the fields to retrieve.
         Reffield is the field to select on, defaulting to the idcolumn of the cachable.
@@ -246,6 +246,8 @@ class DBFKProperty(FunctionProperty):
             self.function = function
         elif dbfunc:
             self.function = partial(dbfunc, self.cachable.db)
+        elif objfunc:
+            self.function = partial(objfunc, self.cachable)
         elif factory:
             if uplink is None: uplink = type(cachable).__name__.lower()
             factory = factory()
@@ -258,8 +260,10 @@ class DBFKProperty(FunctionProperty):
         self.reffield = reffield or cachable.__idcolumn__
         self.endfunc = endfunc or list
         self.orderby = orderby
+        self.distinct = distinct
     def retrieve(self):
-        SQL = "SELECT %s FROM %s WHERE %s" % (_selectlist(self.targetfields), self.table, sqlWhere(self.reffield, self.cachable.id))
+        distinctstr = "distinct " if self.distinct else ""
+        SQL = "SELECT %s%s FROM %s WHERE %s" % (distinctstr, _selectlist(self.targetfields), self.table, sqlWhere(self.reffield, self.cachable.id))
         if self.orderby: SQL += " ORDER BY %s" % _selectlist(self.orderby)
         return self.endfunc(self.function(*x) for x in self.cachable.db.doQuery(SQL))
 

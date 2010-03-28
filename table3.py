@@ -32,11 +32,13 @@ class Table(object):
         return self.columns
 
 class ObjectColumn(object):
-    def __init__(self, label, cellfunc):
+    def __init__(self, label, cellfunc=None):
         self.label = label
         self.cellfunc = cellfunc
     def getCell(self, row):
-        return self.cellfunc(row)
+        if self.cellfunc:
+            return self.cellfunc(row)
+        raise Exception("Not Implemented: ObjectColumn instance should provide cellfunc or override getCell")
     def __str__(self):
         return self.label
     
@@ -53,7 +55,7 @@ class ObjectTable(Table):
         self.cellfunc = lambda row, col : col.getCell(row)
     def addColumn(self, col):
         if type(col) == types.FunctionType:
-            col = ObjectColumn(col)
+            col = ObjectColumn(col.__name__, col)
         self.columns.append(col)
 
 class DictTable(Table):

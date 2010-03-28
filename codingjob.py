@@ -36,6 +36,11 @@ def getCodedSentencesFromCodingjobIds(db, codingjobids):
     for ca in getCodedArticlesFromCodingjobIds(db, codingjobids):
         for cs in ca.sentences:
             yield cs
+
+def getCodedSentencesFromCodingjobs(codingjobs):
+    for ca in getCodedArticlesFromCodingjobs(codingjobids):
+        for cs in ca.sentences:
+            yield cs
             
 class CodingJob(Cachable):
     __metaclass__ = CachingMeta
