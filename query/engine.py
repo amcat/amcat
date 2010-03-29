@@ -2,7 +2,7 @@
 Query Engine
 """
 
-import operation, mst2, tabulatorstate
+import operation, mst, tabulatorstate
 import os, time, sys
 import toolkit
 import table3, tableoutput
@@ -114,7 +114,7 @@ def aggregate(table, selectcolumns, aggregatecolumns):
 
 def getRoute(model, concepts, filters):
     concepts = set(concepts) | set(f.concept for f in filters)
-    return mst2.getSolution(model.getMappings(), concepts)
+    return mst.getSolution(model.getMappings(), concepts)
 
 def clean(state, goal):
     # we keep columns that (1) are in goal or (2) are contained in mappings
