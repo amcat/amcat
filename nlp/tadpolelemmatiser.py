@@ -5,7 +5,7 @@ ANALYSISID = 3
 
 class TadpoleLemmatiser(object):
     def __init__(self, articleprovider):
-        self.tadpoleclient = tadpole.TadpoleClient(port=9998)
+        self.tadpoleclient = tadpole.TadpoleClient(port=9999)
         self.articleprovider = articleprovider
  
     def lemmatiseSentences(self, sentences):
@@ -228,17 +228,17 @@ if __name__ == '__main__':
 
     #BATCH = "(5452,5451,5450,5447,5446,5444,5429,5417,5389,5383,5334,5331,5329,5257,5256,5255,5254,4354,4159,4158)"
     #BATCH = "(5452)"
-    BATCH = "batchid in (4354,4159,4158)"
+    BATCH = "batchid in (5762)"
     toolkit.ticker.warn("Setting up lemmatiser")
-    SQL = """select articleid from storedresults_articles where storedresultid=763 and articleid not in 
+    SQL = """select articleid from storedresults_articles where storedresultid=765 and articleid not in 
              (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)
              order by newid()"""
-    SQL = """select articleid from articles where batchid=5551 and articleid not in 
-             (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)
-             order by newid()""" 
+    #SQL = """select articleid from articles where batchid=5762 and articleid not in 
+    #         (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)
+    #         order by newid()""" 
     db  = dbtoolkit.amcatDB()
     aids = [aid for (aid,) in db.doQuery(SQL)]
-    nthreads = 4
+    nthreads = 3
     if len(sys.argv) > 1:
         nthreads = int(sys.argv[1])
     #aids.remove(44554827)

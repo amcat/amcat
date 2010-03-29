@@ -1,6 +1,8 @@
 from toolkit import Identity
 import sys, parsetree
 
+_DB = None
+
 #TODO: flexibere selectie-opties op get*(), bv lemma/rel/pos
 #TODO: makkelijker debuggen
 
@@ -14,7 +16,7 @@ def rule_bron_6_directerede(node):
     dubbelepunt = getParent(node," --")
     if dubbelepunt:
         if dubbelepunt.word.lemma.label in (" : "):   #39417433 
-            frame=BronFrame("direde", key=dubbelepunt)
+            frame=Bron("direde", key=dubbelepunt)
             frame.source = node
             frame.quote = getChild(node,"nucl") or getChild(node,"sat")
             debug ("xxxxx ",frame.key, frame.source, frame.quote)
@@ -28,8 +30,9 @@ def rule_bron_2_V(node):
     elif isVVraag(node): act="vraag"
     elif isVBelofte(node): act="belofte"
     else: return
-    frame = BronFrame(act, key=node)
+    frame = Bron(act, key=node)
     frame.negation=getChild(node, "mod", lemma="niet")
+
 
     if isVPassief(node): # passief: src=meewerkend vw., quote=subject
         frame.source = getChild(node, "obj2")
@@ -40,11 +43,11 @@ def rule_bron_2_V(node):
     elif getChild(node,"dp"):  #zinnen zonder , of : om citaat af te bakenen, 39404298 (zeg papa)
         frame.source = getChild(node,"su")
         frame.quote  = getChild(node,"dp")
-        return frame
+        #return frame
     elif getParent(node,"dp"):  #zinnen zonder , of : om citaat af te bakenen, 39397365 (zeg kind)
         frame.source = getChild(node,"su")
         frame.quote  = getParent(node,"dp")
-        return frame
+        #return frame
     else:
         frame.source = getChild(node, "su")
         frame.quote = getChild(node, ("vc","obj1","nucl"))
@@ -54,6 +57,7 @@ def rule_bron_2_V(node):
 #   dubieus of je isDat moet eisen, bv te stringent in Bos zei nee 39417441, daarom niet geeist als getChild "obj1"
     if isNGezegde(frame.source): #39417595
         frame.source,frame.quote = frame.quote,frame.source
+    if getChild(frame.quote,"body",lemma="moet"): act="order" #39397178, moet in quote maakt het een bevel WERKT NOG NIET
     if not isDat(frame.quote) and getChild(node, ("vc","nucl")): return
     return frame
 
@@ -63,7 +67,7 @@ def rule_bron_3_N(node):
     elif isNVraag(node): act="vraag"
     elif isNBelofte(node): act="belofte"
     else: return
-    frame = BronFrame(act, key=node)
+    frame = Bron(act, key=node)
     # determine quote:
     # (1) vc "stelling dat ...",
     # (2) obj1, dp (hoe alpino abuisieelijk te werk gaat bij stellinganme),
@@ -83,7 +87,7 @@ def rule_bron_3_N(node):
 
 def rule_bron_4_volgens(node): # zie 39396066
     if not isVolgens(node): return
-    frame = BronFrame("volgens", key=node)    
+    frame = Bron("volgens", key=node)    
     frame.source = getChild(node, "obj1")
     frame.quote = (getParent(node, "mod")
                    or getParent(node, "tag"))
@@ -93,7 +97,7 @@ def rule_bron_4_volgens(node): # zie 39396066
 
 def rule_bron_5_ervan(node): # zie 38667309
     if not isVoltooid(node): return
-    frame = BronFrame("ervan", key=node)
+    frame = Bron("ervan", key=node)
     frame.source = (getChild(node, "obj1")
                     or getSibling(node, "predc", "su"))
     frame.quote = getChild(getChild(node, "pc"), "vc")
@@ -107,15 +111,17 @@ def isVnotZeg(node):
 def rule_SPO_1actief(node):
     # example subject/predicate/object function
     if not isVnotZeg(node): return
-    frame = SPOFrame("spo", predicate=node)
+    frame = SPO("spo", predicate=node)
     frame.subject = getSubjectResolveDie(node)
 
     obj2p = getChild(node, "obj2", pos="P")
     frame.object = getChild(obj2p, "obj1")
+    debug (frame.object)
     if not frame.object: frame.object = getChild(node, "obj2") #object = MV
-    if not frame.object: frame.object = getChild(getChild(node, "mod"),"obj1") #object=modMV 
     if not frame.object: frame.object = getChild(node, "obj1")
     if not frame.object: frame.object = getChild(node, "predc")
+    if not frame.object: frame.object = getChild(getChild(node, "mod"),"obj1") #object=modMV
+    if not frame.object: frame.object = getChild(node, "vc")
     #pdoel=getChild(frame.object, "mod") #om-constructie hangt aan object, zie 39403134
     #if not pdoel: pdoel = getChild(node, "mod")
     #if pdoel:
@@ -130,7 +136,7 @@ def rule_SPO_1actief(node):
 
 def rule_SPO_2passiefdoor(node):
     if not isVnotZeg(node): return
-    frame = SPOFrame("spo_door", predicate=node)
+    frame = SPO("spo_door", predicate=node)
     hmod = getChild(node, rel="mod", pos="P")
     frame.subject = getChild(hmod,"obj1")
     frame.object  = getChild(node,"obj1")
@@ -140,7 +146,7 @@ def rule_SPO_2passiefdoor(node):
 #################### Hulpprocedures ########################dfasd
 
 def getDoel(node, subject):
-    frame = SPOFrame("purp", subject=subject)
+    frame = SPO("purp", subject=subject)
     pdoel=getChild(node, "mod")
     if hasLemma(pdoel, ["met het oog op", "om","omwille","opdat","zodat","waardoor","teneinde","voor"]): #39404297
         frame.predicate = pdoel
@@ -193,23 +199,37 @@ def getSubjectResolveDie(node):
 def isDat(node):
     return hasLemma(node, ["dat","of","te","wat","waardoor","waarom","waartoe","waarvoor"])
 
-def hasLemma(node, lemmata):
-    return node and node.word.lemma.label in lemmata
+lemma_set_dict = {}
+
+LEMMA_SQL = """select distinct l.lemmaid from words_lemmata l inner join words_words w on l.lemmaid = w.lemmaid inner join words_strings s on s.stringid = w.stringid where string in (%s)"""
+
+
+def hasLemma(node, lemmata, pos=None):
+    if not node: return
+    key = (pos, tuple(lemmata))
+    lset = lemma_set_dict.get(key)
+    if not lset:
+        SQL = LEMMA_SQL % (",".join("'%s'" % w for w in lemmata))
+        if pos: SQL += "and pos ='%s'" % pos
+        lset = set(lid for (lid,) in _DB.doQuery(SQL))
+        lemma_set_dict[key] = lset
+    return node.word.lemma.id in lset
 
 def isNGezegde(node):
-    return hasLemma(node, ["aankondiging","aanwijzing","achtergrondinformatie","affirmatie","anekdote","argument","argumentatie","assertie","begripsbepaling","bekendmaking","bekentenis","belijdenis","beoordeling","bericht","bescheid","bevestiging","bevinding","beweegreden ","bewering","bewijsvoering","bezegeling","biecht","boodschap","communicatie","communis opinio","conclusie","consequentie","constatering","convictie","denkbeeld","dienstbericht","dienstmededeling","diepte-informatie","dispositie","droombeeld","drijfveer","eed","eindconclusie","eindindruk","eindmening","eindoordeel","erkentenis","expressie","geest","geheim","gelukstijding","gerucht","geste","getuigenis","gevoelen","gevolgtrekking","gezichtspunt","gimmick","herinnering","hoofdargument","hoofdconclusie","impuls","indicatie","indruk","info","informatie","inlichting","inside-informatie","intuitie","jobspost","jobstijding","kreet","legende","levensbiecht","lezing","mare","mededeling","melding","meineed","melding","mening","motivering","nieuws","nieuwstijding","nieuwtje","notificatie","observatie","ondervinden","oordeel","openbaarmaking","openbaring","opinie","opmerking","opstelling","opvatting","overtuiging","overweging","positie","predictie","proclamatie","profetie","punt","rede","reden","relaas","repliek","revelatie","schuldbekentenis","schuldbelijdenis","slogan","slotbepaling","slotconclusie","slotindruk","slotsom","soundbite","spoedboodschap","standpunt","staving","stelling","stellingname","stokpaardje","suggestie","tegenbericht","tijding","tip","topic","totaalindruk","treurmare","uitdrukking","uiting","uitspraak","verdediging","vergezicht","verhaal","verklaring","vertelling","vertolking","verwijzing","verwoording","verzekering","vingerwijzing","visie","volksovertuiging","voorspelling","voorstellingswijze","waarneming","weerwoord","wending","wereldopinie","woord","zienswijze","zinsnede","zinsuiting","abstractie","axioma","bedenksel","beginsel","benul","bewijs","bijgedachte","brainwave","concept","conceptie","deductie","denkbeeld","denkpatroon","denkrichting","denktrant","denkwereld","denkwijze","droom","feit","gedachte","gedachtegang","gedachteloop","gedachtesprong","gegeven","geloof","gril","grondbeginsel","grondbegrip","grondbeschouwing","grondgedachte","grondregel","grondstelling","hoofdlijn","idee","inductie","intellect","inval","inzicht","kerngedachte","maxime","notie","onderstelling","overlegging","perspectief","postulaat","premisse","principe","propositie","redenatie","redenering","syllogisme","theorema","uitgangspunt","verbazing","vermoeden","veronderstelling","verstand","verwondering","vondst","voorgevoel","begeestering","bezieling","emotie","feeling","gevoel","gevoelen","sentiment"])
+    return hasLemma(node, ["aankondiging","aanwijzing","achtergrondinformatie","affirmatie","anekdote","argument","argumentatie","assertie","begripsbepaling","bekendmaking","bekentenis","belijdenis","beoordeling","bericht","bescheid","bevestiging","bevinding","beweegreden ","bewering","bewijsvoering","bezegeling","biecht","boodschap","communicatie","communis opinio","conclusie","consequentie","constatering","convictie","denkbeeld","dienstbericht","dienstmededeling","diepte-informatie","dispositie","droombeeld","drijfveer","eed","eindconclusie","eindindruk","eindmening","eindoordeel","erkentenis","expressie","geest","geheim","gelukstijding","gerucht","geste","getuigenis","gevoelen","gevolgtrekking","gezichtspunt","gimmick","herinnering","hoofdargument","hoofdconclusie","impuls","indicatie","indruk","info","informatie","inlichting","inside-informatie","intuitie","jobspost","jobstijding","kreet","legende","levensbiecht","lezing","mare","mededeling","melding","meineed","melding","mening","motivering","nieuws","nieuwstijding","nieuwtje","notificatie","observatie","ondervinden","oordeel","openbaarmaking","openbaring","opinie","opmerking","opstelling","opvatting","overtuiging","overweging","positie","predictie","proclamatie","profetie","punt","rede","reden","relaas","repliek","revelatie","schuldbekentenis","schuldbelijdenis","slogan","slotbepaling","slotconclusie","slotindruk","slotsom","soundbite","spoedboodschap","standpunt","staving","stelling","stellingname","stokpaardje","suggestie","tegenbericht","tijding","tip","topic","totaalindruk","treurmare","uitdrukking","uiting","uitspraak","verdediging","vergezicht","verhaal","verklaring","vertelling","vertolking","verwijzing","verwoording","verzekering","vingerwijzing","visie","volksovertuiging","voorspelling","voorstellingswijze","waarneming","weerwoord","wending","wereldopinie","woord","zienswijze","zinsnede","zinsuiting","abstractie","axioma","bedenksel","beginsel","benul","bewijs","bijgedachte","brainwave","concept","conceptie","deductie","denkbeeld","denkpatroon","denkrichting","denktrant","denkwereld","denkwijze","droom","feit","gedachte","gedachtegang","gedachteloop","gedachtesprong","gegeven","geloof","gril","grondbeginsel","grondbegrip","grondbeschouwing","grondgedachte","grondregel","grondstelling","hoofdlijn","idee","inductie","intellect","inval","inzicht","kerngedachte","maxime","notie","onderstelling","overlegging","perspectief","postulaat","premisse","principe","propositie","redenatie","redenering","syllogisme","theorema","uitgangspunt","verbazing","vermoeden","veronderstelling","verstand","verwondering","vondst","voorgevoel","begeestering","bezieling","emotie","feeling","gevoel","gevoelen","sentiment"], pos='N')
+
 
 def isVZeg(node):
-    return hasLemma(node, ["voel","voel_aan","observeer","neem_waar","zie","hoor","beluister","ruik","bedenk","bereken","beschouw","denk","geloof","verbaas","veronderstel","verwonder","accepteer","antwoord","bedoel","begrijp","beken","beklemtoon","bekrachtig","belijd","beschrijf","besef","bericht","betuig","bevestig","bevroed","beweer","bewijs","bezweer","biecht","breng","brul","concludeer","confirmeer","constateer","debiteer","declareer","demonstreer","denk","email","erken","expliceer","expliciteer","fantaseer","formuleer","geef_aan","hamer","herinner","houd_vol","kondig_aan","kwetter","licht_toe","maak_bekend","maak_hard","meld","merk","merk_op","motiveer","noem","nuanceer","onthul","ontsluier","ontval","ontvouw","oordeel","parafraseer","postuleer","preciseer","presumeer","pretendeer","publiceer","rapporteer","realiseer","redeneer","refereer","reken","roep","roer_aan","schat","schets","schilder","schreeuw","schrijf","signaleer","snap","snater","specificeer","spreek_uit","staaf","stel","stip_aan","suggereer","tater","teken_aan","toon_aan","twitter","verhaal","verklaar","verklap","verkondig","vermoed","verraad","vertel","vertel_na","verwacht","verwittig","verzeker","vind","waarschuw","wed","weet","wijs_aan","wind","zeg","zet_uiteen","twitter"])
+    return hasLemma(node, ["voel","voel_aan","observeer","neem_waar","zie","hoor","beluister","ruik","bedenk","bereken","beschouw","denk","geloof","verbaas","veronderstel","verwonder","accepteer","antwoord","bedoel","begrijp","beken","beklemtoon","bekrachtig","belijd","beschrijf","besef","bericht","betuig","bevestig","bevroed","beweer","bewijs","bezweer","biecht","breng","brul","concludeer","confirmeer","constateer","debiteer","declareer","demonstreer","denk","email","erken","expliceer","expliciteer","fantaseer","formuleer","geef_aan","hamer","herinner","houd_vol","kondig_aan","kwetter","licht_toe","maak_bekend","maak_hard","meld","merk","merk_op","motiveer","noem","nuanceer","onthul","ontsluier","ontval","ontvouw","oordeel","parafraseer","postuleer","preciseer","presumeer","pretendeer","publiceer","rapporteer","realiseer","redeneer","refereer","reken","roep","roer_aan","schat","schets","schilder","schreeuw","schrijf","signaleer","snap","snater","specificeer","spreek_uit","staaf","stel","stip_aan","suggereer","tater","teken_aan","toon_aan","twitter","verhaal","verklaar","verklap","verkondig","vermoed","verraad","vertel","vertel_na","verwacht","verwittig","verzeker","vind","waarschuw","wed","weet","wijs_aan","wind","zeg","zet_uiteen","twitter"], pos='V')
 
-def isVPassief(node): return hasLemma(node, ["dunk","lijk","kom_voor","schijn_toe","val_op"])
-def isVEquiv(node):   return hasLemma(node, ["duid_aan", "duid", "karakteriseer","kenschets"])
-def isVMoet(node):    return hasLemma(node, ["moet","behoor","dien"])
-def isVBelofte(node): return hasLemma(node, ["beloof","zeg_toe","zweer"])
+def isVPassief(node): return hasLemma(node, ["dunk","lijk","kom_voor","schijn_toe","val_op"], pos='V')
+def isVEquiv(node):   return hasLemma(node, ["duid_aan", "duid", "karakteriseer","kenschets"], pos='V')
+def isVMoet(node):    return hasLemma(node, ["moet","behoor","dien"], pos='V')
+def isVBelofte(node): return hasLemma(node, ["beloof","zeg_toe","zweer"], pos='V')
 def isVolgens(node):  return hasLemma(node, ["volgens", "aldus"])
 def isVoltooid(node): return hasLemma(node, ["doordring", "overtuigd", "bewust"])
 def isBijzin(node):   return hasLemma(node, ["die","dat"])
-def isSOdraai(node):  return hasLemma(node, ["krijg","ontvang"])
+def isSOdraai(node):  return hasLemma(node, ["krijg","ontvang"], pos='V')
 def isNBelofte(node):
     return hasLemma(node, ["belofte","toezegging","afspraak","gelofte","erewoord","overeenkomst","verbond","verbintenis","regeling","verdrag", "akkoord","contract","convenant","regeerakkoord","conventie"])
 def isVVraag(node):
@@ -287,11 +307,13 @@ def getSibling(node, uprel, *downcond, **kwdowncond):
 ################# Frame Definitions ########
 
 class Frame(Identity):
-    def __init__(self, name, **constituents):
+    def __init__(self, name, *args, **kargs):
         self.name = name
-        for k,v in constituents.items():
-            if k:
-                self.__dict__[k] = v
+        for i, k in enumerate(self.__class__.ARGS):
+            v = args[i] if i < len(args) else None
+            self.__dict__[k] = v
+        for k,v in kargs.items():
+            self.__dict__[k] = v
         debug(self)
                     
     def isComplete(self):
@@ -305,22 +327,35 @@ class Frame(Identity):
     def getConstituents(self):
         return tuple(sorted((k,v) for (k,v) in self.__dict__.items()
                             if isinstance(v, parsetree.ParseNode)))
+    def getArgs(self):
+        for argname in self.__class__.ARGS:
+            arg = self.__dict__.get(argname)
+            if not arg: break
+            yield arg
 
     def identity(self):
         return self.__class__, self.name, self.getConstituents()
     def __str__(self):
         return "%s(%s, %s)" % (self.__class__.__name__, self.name,
                                ", ".join("%s=%s" % kv for kv in self.getConstituents()))
+    def __repr__(self):
+        args = [arg.position for arg in self.getArgs()]
+        kargs = {}
+        for k,v in self.getConstituents():
+            if v.position not in args:
+                kargs[k] = v.position
+        args = map(str, args)
+        args += ["%s=%i" % (kv) for kv in kargs.items()]
+        args = ",".join(args)
+        return "%s(%s,%s)" % (self.__class__.__name__, `self.name`, args)
     
-class BronFrame(Frame):
-    def __init__(self, name, key=None, source=None, quote=None, addressee=None):
-        Frame.__init__(self, name, key=key, source=source, quote=quote, addressee=addressee)
+class Bron(Frame):
+    ARGS = ["key","source","quote","addressee","negation"]
     def isComplete(self):
         return self.has('key', 'source', 'quote')
 
-class SPOFrame(Frame):
-    def __init__(self, name, subject=None, predicate=None, object=None, doelkey=None, doelobject=None):
-        Frame.__init__(self, name, subject=subject, predicate=predicate, object=object, doelkey=doelkey, doelobject=doelobject)
+class SPO(Frame):
+    ARGS = ["subject","predicate","object","doelkey","doelobject"]
     def isComplete(self):
         #if self.has('doelkey') ^ self.has('doelobject'): return false # ^ = XOR
         return self.has('subject','predicate','object')
