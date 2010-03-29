@@ -1,6 +1,3 @@
-import table3, associations
-import sys
-
 class AggregateFunction(object):
     """abstract class for creating an aggregate function; update the total by using running; final returns the final value """
     def running(self, value):

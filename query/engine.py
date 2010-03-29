@@ -7,6 +7,8 @@ import os, time, sys
 import toolkit
 import table3, tableoutput
 
+import filter, aggregator # not used, import to allow indirect access
+
 class QueryEngine(object):
     def __init__(self, datamodel, log=False, profile=False):
         self.log = log
