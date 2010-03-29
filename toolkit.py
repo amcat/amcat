@@ -1127,12 +1127,14 @@ def splitlist(list, chunksize):
     for i in range(0, len(list), chunksize):
         yield list[i:i+chunksize]
 
-def choose(seq, scorer, returnscore=False):
+def choose(seq, scorer, returnscore=False, verbose=False):
     best = None
     bestscore = None
     for e in seq:
         score = scorer(e)
-        if bestscore is None or score > bestscore:
+        better = bestscore is None or score > bestscore
+        if verbose: print "%s %r, score=%s, best so far=%s" % (better and "accepting" or "rejecting", e, score, bestscore)
+        if better:
             best = e
             bestscore = score
     if returnscore:
@@ -1465,8 +1467,10 @@ def intselectionSQL(colname, ints):
     conds = []
     remainder = []
     for i,j in ints2ranges(ints):
-        if i <> j: conds.append("(%s between %i and %i)" % (colname, i,j))
-        else: remainder.append(str(i))
+        if j - i > 2: conds.append("(%s between %i and %i)" % (colname, i,j))
+        elif j - i == 2: remainder += [str(i), str(i+1), str(j)]
+        elif i==j: remainder.append(str(i))
+        else: remainder += [str(i),str(j)]
     if remainder: conds.append("(%s in (%s))" % (colname, ",".join(remainder)))
     return "(%s)" % " OR ".join(conds)
 
@@ -1483,13 +1487,16 @@ class SingletonMeta(type):
             cls.instance=super(Singleton,cls).__call__(*args,**kw)
         return cls.instance
 
+def filterTrue(seq):
+    return (x for x in seq if x)
+
 def multidict(seq):
     """returns a mapping of {key : set(values)} from a sequence of (key, value) tuples with duplicates"""
     result = collections.defaultdict(set)
     for k, v in seq:
         result[k].add(v)
     return result
-    
+
 if __name__ == '__main__':
     i = Indexer()
     for x in "afghjaabfgi":

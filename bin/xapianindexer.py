@@ -34,12 +34,12 @@ query = " ".join(sys.argv[2:])
 if query.strip():
     toolkit.warn("Querying index %s with %r" % (indexloc, query))
     i = amcatxapian.Index(indexloc, db)
-    for a, weight in i.query(query, returnWeights=True):
+    for a, weight in i.query(query, returnWeights=True, acceptPhrase=True):
         print a.id, weight
 else:
     toolkit.warn("Creating new xapian index (database) at %s, generators=%s" % (indexloc, generators))
     articles = toolkit.tickerate(toolkit.intlist())
-    i = amcatxapian.createIndex(indexloc, articles, db, termgenerators=generators, stemmer=lang)
+    i = amcatxapian.createIndex(indexloc, articles, db, termgenerators=generators, stemmer=lang, append=True)
     toolkit.warn("Created index %s" % i)
 
 docs = list(i.articles)

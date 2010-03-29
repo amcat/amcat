@@ -51,15 +51,13 @@ class Index(object):
         for d in self.documents:
             yield self.getArticle(d)
 
-         
-
     def getFrequencies(self, article=None, raw=False):
         if article:
             docid = self.getDocumentID(article)
             list = self.index.termlist(docid)
         else:
             list = self.index.allterms()
-                
+
         for t in list:
             term = t.term
             if not raw:
@@ -81,13 +79,14 @@ class Index(object):
     def getArticle(self, document):
         return article.Article(self.db, self.getAid(document))
 
-    def query(self,  query, returnWeights=False, returnAID=False, subset=None):
+    def query(self,  query, returnWeights=False, returnAID=False, subset=None, acceptPhrase=False):
         if type(query) in (str, unicode):
-            query = self.parse(query)
+            query = self.parse(query, acceptPhrase)
+
         enquire = xapian.Enquire(self.index)
         enquire.set_query(query)
         matches = enquire.get_mset(0,self.index.get_doccount())
-        #if subset: subset = set((a if type(a)==int else a.id) for a in subset)
+        if subset: subset = set((a if type(a)==int else a.id) for a in subset)
         for m in matches:
             try:
                 aid = self.getAid(m.docid)
@@ -120,10 +119,15 @@ class Index(object):
             if term in map:
                 map[term] = freq
 
-    def parse(self, query):
+    def parse(self, query, acceptPhrase=False):
         qp = xapian.QueryParser()
         qp.set_database(self.index)
-        return qp.parse_query(query, xapian.QueryParser.FLAG_WILDCARD)
+        flags = xapian.QueryParser.FLAG_WILDCARD
+        flags |= xapian.QueryParser.FLAG_BOOLEAN
+        flags |= xapian.QueryParser.FLAG_LOVEHATE
+        if acceptPhrase:
+            flags |= xapian.QueryParser.FLAG_PHRASE
+        return qp.parse_query(query, flags)
                 
 # TermGenerators: move this out of the class?
     
@@ -165,9 +169,12 @@ class NGramGenerator(object):
 
 # until here?
 
-def createIndex(indexloc, articles, db=None, stemmer="dutch", termgenerators=None):
-    
-    database = xapian.WritableDatabase(indexloc, xapian.DB_CREATE_OR_OVERWRITE)
+def createIndex(indexloc, articles, db=None, stemmer="dutch", termgenerators=None, append=False):
+    if not append:
+        database = xapian.WritableDatabase(indexloc, xapian.DB_CREATE_OR_OVERWRITE)
+    else:
+        database = xapian.WritableDatabase(indexloc, xapian.DB_CREATE_OR_OPEN)
+
     indexer = xapian.TermGenerator()
     if stemmer:
         indexer.set_stemmer(xapian.Stem(stemmer))

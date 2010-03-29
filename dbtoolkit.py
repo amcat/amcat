@@ -171,13 +171,15 @@ class amcatDB(object):
             self.DB_LOCK.release()
                         
 
-
-
-    def printProfile(self, *args, **kargs):
+    def getProfiler(self):
         for l in self.afterQueryListeners:
             if type(l) == ProfilingAfterQueryListener:
-                l.printreport(*args, **kargs)
-                return
+                return l
+        
+            
+    def printProfile(self, *args, **kargs):
+        l = self.getProfiler()
+        if l: l.printreport(*args, **kargs)
             
     def doCall(self, proc, params):
         """
@@ -557,6 +559,7 @@ def doreplacenumbers(sql):
     sql = re.sub("\s+", " ", sql)
 
     return sql.strip()
+
 class ProfilingAfterQueryListener(object):
     def __init__(self):
         self.queries = collections.defaultdict(list)
@@ -564,7 +567,7 @@ class ProfilingAfterQueryListener(object):
         #print ">>>", query, time, len(resultset)
         l = len(resultset) if resultset else 0
         self.queries[query].append((time, l))
-    def printreport(self, sort="time", stream=sys.stdout, useunicode=True, encoding="utf-8", *args, **kargs):
+    def printreport(self, sort="time", stream=sys.stdout, useunicode=True, htmlgenerator=False, encoding="utf-8", *args, **kargs):
         data = self.reportTable(*args, **kargs)
         if sort:
             if type(sort) in (str, unicode): sort = sort.lower()
@@ -572,9 +575,13 @@ class ProfilingAfterQueryListener(object):
                 if col == sort or col.id == sort or col.label.lower() == sort:
                     data = table3.SortedTable(data, (col, False))
         import tableoutput
-        result = tableoutput.table2unicode(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
-        if type(result) == unicode: result = result.encode(encoding)
-        print >>stream, result
+        if htmlgenerator:
+            if htmlgenerator == True: htmlgenerator = tableoutput.HTMLGenerator()
+            htmlgenerator.generate(data, stream)
+        else:
+            result = tableoutput.table2unicode(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
+            if type(result) == unicode: result = result.encode(encoding)
+            print >>stream, result
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
     def report(self, replacenumbers=True, maxsqlen=150):

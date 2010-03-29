@@ -15,7 +15,6 @@ class Source(Cachable):
 class Sources(object):
     def __init__(self, connection):
         raise Exception("!")
-
         self.index_name = {}
         self.sources = {}
         for id,name in connection.doQuery("select mediumid, name from media_dict"):

@@ -89,6 +89,8 @@ class Object(Base, Cachable):
         if parent: parent.children[clas].add((self, omklap))
         clas.addObject(self)
     def getChildren(self, clas, includeFunctions=False, functionsDate=None):
+        if type(clas) == int:
+            clas = self.ont.classes[clas]
         for o, r in self.children[clas]:
             yield o
         if includeFunctions:
@@ -105,6 +107,8 @@ class Object(Base, Cachable):
             yield (f.office, 1) if includeReverse else f.office
         
     def getParent(self, clas):
+        if type(clas) == int:
+            clas = self.ont.classes[clas]
         return self.parents.get(clas, (None, None))[0]
     def getLabel(self, lang=None):
         if not self.labels: return None
@@ -393,7 +397,7 @@ def createObject(db, classid, parentid, label, lang=2, sets=[]):
     for set in sets:
         db.insert("o_sets_objects", dict(objectid=oid, setid=set),  retrieveIdent=False)
     return oid
-        
+
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.anokoDB()

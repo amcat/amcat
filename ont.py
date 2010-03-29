@@ -41,8 +41,10 @@ class BoundObject(toolkit.IDLabel):
     def children(self):
         # try/catch to avoid triggering __getattr__ on deeper AttributeError
         try:
-            for child in self.objekt.children[self.klasse]:
-                yield BoundObject(self.klasse, child)
+            children = self.objekt.children[self.klasse]
+            if children:
+                for child in children:
+                    yield BoundObject(self.klasse, child)
         except AttributeError, e:
             raise Exception(e)
     @property
@@ -68,14 +70,15 @@ class Set(Cachable):
     
 
 if __name__ == '__main__':
-    import dbtoolkit
+    import dbtoolkit, pickle
     db = dbtoolkit.amcatDB(profile=True)
-
-
+    import dbpoolclient
+    db = dbpoolclient.ProxyDB()
+    
     s = Class(db, 5001)
-    o = BoundObject(4000, 1296, db)
-    print o.label
-    print map(str, o.children)
-    print o.parent
-    print map(str, o.parent.children)
+    o = BoundObject(10002, 16222, db)
+    print pickle.dumps(o)
+    print pickle.dumps(s)
+    
+
     
