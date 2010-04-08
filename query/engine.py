@@ -233,31 +233,24 @@ def getArticleValue(article, field, db = None):
     except:
         pass
     functions = {
-        CONCEPT_ARTICLE: lambda a:a.id,
-        CONCEPT_HEADLINE: lambda a:a.headline,
-        CONCEPT_URL: lambda a:a.url,
-        CONCEPT_DATE: lambda a:a.date,
+        "article": lambda a:a.id,
+        "headline": lambda a:a.headline,
+        "url": lambda a:a.url,
+        "date": lambda a:a.date,
         "project": lambda a:a.batch.project,
         "batch": lambda a:a.batch,
-        CONCEPT_SOURCE: lambda a:a.source,
+        "source": lambda a:a.source,
         "year": lambda a:y,
         "week": lambda a:w,
         "day": lambda a:d
         }
     if field in functions:
         return functions[field](article)
-    if field == CONCEPT_SOURCETYPE:
+    if field == "sourcetype":
         sourcetype = db.doQuery("select type from media where mediumid = "+str(article.source.id))
         return sourcetype
-    
     if field == "sentiment":
-        if not db:
-            return "sentiment requires amcatDB() argument"
-        values = db.doQuery('select npos, nneg from articles_sentiment where articleid='+str(article.id))
-        if not values:
-            return "Article does not exist in db.articles_sentiment"
-        positives,negatives = values[0]
-        return positives - negatives
+        return db.getValue('select sentiment from articles_sentiment where articleid=%i' % article.id)
 
 def getQuote(article, keyword, nwords): 
     """
