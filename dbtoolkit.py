@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 import base64, sbd # only needed for image processing, move to other module>?
 import toolkit, config, sys
 import article, sources, user
@@ -9,6 +11,8 @@ import threading
 import cPickle
 from cStringIO import StringIO
 import functools
+from contextlib import contextmanager
+
 
 _encoding = {
     0 : 'utf-8',
@@ -47,7 +51,7 @@ class amcatDB(object):
         Initialise the connection to the anoko (SQL Server) database using
         either the given configuration object or config.default
         """
-        self.connect(configuration, auto_commit, **configargs)
+        self.conn = self.connect(configuration, auto_commit, **configargs)
         self.init(profile)
         
 
@@ -60,12 +64,13 @@ class amcatDB(object):
             conv_dict = MySQLdb.converters.conversions
             conv_dict[0] = float
             conv_dict[246] = float
-            self.conn = configuration.connect(conv=conv_dict)
-            self.conn.select_db('report')
-            self.conn.autocommit(False)
+            conn = configuration.connect(conv=conv_dict)
+            conn.select_db('report')
+            conn.autocommit(False)
         else:
-            self.conn = configuration.connect()
+            conn = configuration.connect()
         self.database = configuration.database
+        return conn
 
     def init(self, profile=False):
         
@@ -83,6 +88,8 @@ class amcatDB(object):
             self.afterQueryListeners.add(self.profiler)
         self.DB_LOCK = threading.Lock()
 
+
+    ################ picklability #####################
     def __getstate__(self):
         if 'DB_LOCK' in self.__dict__ and self.DB_LOCK:
             self.DB_LOCK.acquire()
@@ -98,14 +105,32 @@ class amcatDB(object):
       
     def quote(self, value):
         return "'%s'" % str(value).replace("'", "''")   
-        
-        
-        
+
+    ############### cursor acquisition ###############
+    
+    @contextmanager
     def cursor(self):
+        c = None
+        try:
+            c = self._getCursor()
+            yield c
+        finally:
+            self._releaseCursor(c)
+        
+    def _getCursor(self):
         if self.conn is None:
             raise Exception("Cannot query without database connection")
+        if not self.DB_LOCK.acquire(False):
+            raise Exception("Cannot lock database, try again later")
         return self.conn.cursor()
-        
+    def _releaseCursor(self, cursor):
+        if cursor is not None: 
+            try:
+                cursor.close()
+            except:
+                pass
+        if self.DB_LOCK.locked():
+            self.DB_LOCK.release()
         
     def commit(self):
         self.conn.commit()
@@ -117,15 +142,9 @@ class amcatDB(object):
         for row in res:
             yield dict(zip(colnames, row))
 
-    def fireBeforeQuery(self, sql):
-        for func in self.beforeQueryListeners:
-            s = func(sql)
-            if s: sql = s
-        return sql
-    def fireAfterQuery(self, sql, time, results):
-        for func in self.afterQueryListeners:
-            func(sql, time, results)
 
+    ############## Main query logic #####################
+    
     def doQueryOnCursor(self, sql, cursor):
         sql  = self.fireBeforeQuery(sql)
         try:
@@ -145,43 +164,19 @@ class amcatDB(object):
             select=sql.lower().strip().startswith("select")
         c = None
         t = time.time()
-        canlock = self.DB_LOCK.acquire(False)
-        if not canlock: raise Exception("Cannot lock?")
-        try:
-            #toolkit.ticker.warn("ACQUIRE LOCK for %r" % sql)
-            c = self.cursor()
+        with self.cursor() as c:
             self.doQueryOnCursor(sql, c)
             try:
                 res = c.fetchall() if select else None
             except Exception, e:
                 raise SQLException(sql, e)
-
             self.fireAfterQuery(sql, time.time() - t, res)
             if select and colnames:
                 info = c.description
                 colnames = [entry[0] for entry in info]
                 return res, colnames            
             return res
-        finally:
-            if c:
-                try:
-                    c.close()
-                except:
-                    pass
-            #toolkit.ticker.warn("RELEASE LOCK for %r" % sql)
-            self.DB_LOCK.release()
-                        
 
-    def getProfiler(self):
-        for l in self.afterQueryListeners:
-            if type(l) == ProfilingAfterQueryListener:
-                return l
-        
-            
-    def printProfile(self, *args, **kargs):
-        l = self.getProfiler()
-        if l: l.printreport(*args, **kargs)
-            
     def doCall(self, proc, params):
         """
         calls the procedure with the given params (tuple). Returns
@@ -195,6 +190,27 @@ class amcatDB(object):
         c.close()
         return values, res
 
+        
+    def fireBeforeQuery(self, sql):
+        for func in self.beforeQueryListeners:
+            s = func(sql)
+            if s: sql = s
+        return sql
+    def fireAfterQuery(self, sql, time, results):
+        for func in self.afterQueryListeners:
+            func(sql, time, results)
+
+    def getProfiler(self):
+        for l in self.afterQueryListeners:
+            if type(l) == ProfilingAfterQueryListener:
+                return l
+        
+            
+    def printProfile(self, *args, **kargs):
+        l = self.getProfiler()
+        if l: l.printreport(*args, **kargs)
+            
+    
         
     def update(self, table, col, newval, where):
         self.doQuery("UPDATE %s set %s=%s WHERE (%s)" % (

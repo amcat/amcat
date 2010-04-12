@@ -11,8 +11,14 @@ class Filter(object):
 class ValuesFilter(Filter):
     def __init__(self, concept, *values):
         Filter.__init__(self, concept)
-        self.values = tuple(concept.getObject(value) for value in values)
+        self.deserialized = False
+        self.values = values
+    def deserialize(self):
+        if not self.deserialized:
+            self.values = tuple(self.concept.getObject(value) for value in self.values)
+            self.deserialized=True
     def getValues(self):
+        self.deserialize()
         return self.values
     def __str__(self):
         return "%s in (%s)" % (self.concept, ",".join(map(str, self.values)))

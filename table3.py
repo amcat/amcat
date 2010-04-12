@@ -15,6 +15,19 @@ from toolkit import isnull
 from oset import OrderedSet
 def trivialCellFunc(row, col): return "%s/%s" % (row, col)
 
+class NamedRow(object):
+    def __init__(self, table, row):
+        self.table = table
+        self.row = row
+    def __getattr__(self, attr):
+        for col in self.table.getColumns():
+            if str(col) == attr:
+                return self.table.getValue(self.row, col)
+        return super(self.__class__, self).__getattr__(attr)
+    def __iter__(self):
+        for c in self.table.getColumns():
+            yield self.table.getValue( self.row, c)
+
 class Table(object):
     def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc):
         """
@@ -28,8 +41,13 @@ class Table(object):
         return self.cellfunc(row, column)
     def getRows(self):
         return self.rows
+    def getNamedRows(self):
+        for r in self.getRows():
+            yield NamedRow(self, r)
     def getColumns(self):
         return self.columns
+    def __iter__(self):
+        return iter(self.getNamedRows())
 
 class ObjectColumn(object):
     def __init__(self, label, cellfunc=None):
@@ -95,7 +113,7 @@ class ListTable(Table):
         Table.__init__(self, rows=data or [])
         self.colnames = colnames
     def getColumns(self):
-        if not self.rows: return []
+        if not (self.colnames or self.rows): return []
         colnames = self.colnames or range(len(toolkit.head(self.rows)))
         return [toolkit.IDLabel(i, colname) for (i, colname) in enumerate(colnames)]
     def addRow(self, *row):
@@ -189,7 +207,8 @@ if __name__ == '__main__':
                           [7,8,9],
                           [4,5,6],
                           ])
- 
+
+
     print tableoutput.table2ascii(t)
 
     s = SortedTable(t, getColumnByLabel(t, "a2"))

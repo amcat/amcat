@@ -295,12 +295,10 @@ class ConceptTable(table3.Table):
 
 
 if __name__ == '__main__':
-    import dbtoolkit
-    print "<html><body>"
-    db = dbtoolkit.amcatDB()
-    filters = {CONCEPT_PROJECT : [368] }
-    t = getTable(db, [CONCEPT_BRAND], [CONCEPT_EIGENSCHAP], [AGR_NARTICLES], filters)
-    print "</body></html>"
+    c = ConceptTable(["a","b","c"], [[1,2,3],[4,5,6]])
+    import cPickle
+    print cPickle.dumps(c)
+    
         
 
     
