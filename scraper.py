@@ -3,6 +3,7 @@ from BeautifulSoup import BeautifulSoup
 from PIL import Image
 import cStringIO, articlecreator
 from datetime import datetime, date
+import wordfrequency
 
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
@@ -65,11 +66,16 @@ class Scraper(object):
         self.date = date
         self.log = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
         self.imagescale = imagescale
+
+        query = "select url from articles where batchid = '%i' and mediumid = '%i'" % (self.batch, self.mediumid)
+        data = self.db.doQuery(query)
+        self.urls = set()
+        for url in data:
+            self.urls.add(url[0])
+
     def urlExists(self, url):
-        sql = "select top 1 url from articles where batchid=%i and mediumid=%i and url=%s" % (self.batch, self.mediumid, dbtoolkit.quotesql(url))
-        data = self.db.doQuery(sql)
-        return bool(data)
-        
+        return url in self.urls
+
     def checkDate(self, context):
         if isinstance(context, datetime) or isinstance(context, date):
             bmd = self.batch, self.mediumid, dbtoolkit.quotesql(context)
@@ -85,16 +91,18 @@ class Scraper(object):
         return date.strftime("%Y%m%d")
                                 
     def logInfo(self, msg):
-        l.info(msg, application=self.name)    
+        self.log.info(msg, application=self.name)    
     def logException(self, msg=""):
-        l.error(msg + '\n' + toolkit.returnTraceback(), application=self.name)
+        self.log.error(msg + '\n' + toolkit.returnTraceback(), application=self.name)
     def createArticle(self, artdesc):
         url = artdesc.url
         if url and self.urlExists(url):
             self.logInfo('Skipping duplicate url %r' % url)
             return
         result = artdesc.createArticle(self.db, self.batch, self.mediumid, self.date, imagescale = self.imagescale)
-        if result: self.articleCount += 1
+        if result:
+            self.articleCount += 1
+            self.urls.append(url)
         return result
     def logStatistics(self):
         self.logInfo('Downloaded %i urls. Added %i articles' % (self.downloadCount, self.articleCount))
@@ -108,6 +116,7 @@ class Scraper(object):
     def endScrape(self, context):
         self.logStatistics()
         self.db.commit()
+        wordfrequency.save()
 
 class ArticleScraper(Scraper):
     def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
