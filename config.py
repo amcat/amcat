@@ -38,7 +38,7 @@ def default(**kargs):
     else:
         return amcatConfig(**kargs)
 
-def amcatConfig(username = "app", password = "eno=hoty", easysoft=False):
+def amcatConfig(username = "app", password = "eno=hoty", easysoft=False, database="anoko"):
     
     if easysoft:
         host = "Easysoft-AmcatDB"
@@ -49,7 +49,7 @@ def amcatConfig(username = "app", password = "eno=hoty", easysoft=False):
     else:
         host = "AmcatDB"
         import mx.ODBC.iODBC as driver
-    return Configuration(username, password, host, driver=driver)#, kargs=easysoft)
+    return Configuration(username, password, host, driver=driver, database=database)#, kargs=easysoft)
 
 if __name__ == '__main__':
     c = default()

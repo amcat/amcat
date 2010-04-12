@@ -65,6 +65,7 @@ class amcatDB(object):
             self.conn.autocommit(False)
         else:
             self.conn = configuration.connect()
+        self.database = configuration.database
 
     def init(self, profile=False):
         
