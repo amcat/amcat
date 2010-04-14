@@ -112,31 +112,34 @@ class FieldConceptMapping(Mapping):
         return "%s => %s" % (self.a, self.b)
     __repr__ = __str__
 
-class Concept(object):
+class Concept(IDLabel):
     """ 
     Concept represents the concepts in the datamodel. The concepts can be used to create mappings between datasources.
     """
-    def __init__(self, datamodel, label):
+    def __init__(self, datamodel, label, id):
+        IDLabel.__init__(self, id, label)
         self.datamodel = datamodel
-        self.label = label
     def getObject(self, id):
         return self.datamodel.deserialize(self, id)
-    def __str__(self):
-        return self.label
     def __repr__(self):
         return "Concept(%s)" % self.label
+
+# TODO: identifier -> id (list index) mapping for concepts. This is pretty ugly and should be either decentralized
+#       (but we need to guarantee consistency across datasources/models) or put into database?
+CONCEPTS = ["article", "batch", "headline",  "date", "week", "year", "source", "url", "project", "sourcetype", "storedresult", "sentiment", "search", "brand", "property", "brandproperty", "associationcooc"]
 
 class DataModel(object):
     """ 
     The datamodel contains all the datasources, 
     which in their turn contain fields and concepts that can be either mapped or not. 
-    The model also contains a state, which is a directed graph, 
-    with the optimal route between mapped fields and concepts. 
     """
-    def __init__(self, datasources = None, db = None):
+    def __init__(self, datasources = None):
         self._datasources = datasources or set()
         self._concepts = {} # identifier -> concept
-        self.db = db
+        for id, label in enumerate(CONCEPTS):
+            c =  Concept(self, label, id)
+            self._concepts[label] = c
+            self.__dict__[label] = c
 
     def deserialize(self, concept, identifier):
         for datasource in self._datasources:
@@ -148,13 +151,8 @@ class DataModel(object):
         self._datasources.add(datasource)
 
     def getConcept(self, identifier):
-        c = self._concepts.get(identifier)
-        if c is None:
-            if identifier in self.__dict__: raise Exception("Identifier already in dict! %s" % identifier)
-            c = Concept(self, identifier)
-            self._concepts[identifier] = c
-            self.__dict__[identifier] = c
-        return c 
+        if isinstance(identifier, Concept): identifier = identifier.label
+        return self._concepts[identifier]
 
     def getConcepts(self):
         return self._concepts.values()

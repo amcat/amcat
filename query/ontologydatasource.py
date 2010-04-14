@@ -134,7 +134,7 @@ class SetOntologyField(OntologyField):
 class HierarchyOntologyField(OntologyField):
     def __init__(self, ds, concept, objectid, classid, depth=1, queryIncludesSelf=True):
         OntologyField.__init__(self, ds, concept)
-        self.object = ont.BoundObject(classid, objectid, ds.db)
+        self.object = ont.BoundObject(classid, objectid, ds.db) if ds.db else None
         self.depth = depth
         self.queryIncludesSelf = queryIncludesSelf
     def getObjects(self):

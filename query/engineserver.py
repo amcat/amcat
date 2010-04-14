@@ -1,14 +1,18 @@
 import  socket, sys, threading, Queue, hashlib, functools, time, traceback
+import uuid
 from dbpool import readi, sendi
 import filter
 import pickle
-
+import datasource
+    
 PORT = 7000
 NWORKERS = 5
-PASSPHRASE = 'ZDFGB#$523vFDSB@$^UwryjnsgfQ$#TRZD25246ythrgf'
-PASSBYTES = hashlib.md5(PASSPHRASE).digest()
+KEY = '<\xdbW\x1bv9A\x8a\xb1\xf6{\x0f\xd1nN\x9e'
+#PASSBYTES = hashlib.md5(PASSPHRASE).digest()
 
 def deserialize(engine, obj):
+    if isinstance(obj, datasource.Concept):
+        return engine.model.getConcept(obj)
     if type(obj) == str:
         return engine.model.getConcept(obj)
     if type(obj) in (list, tuple):
@@ -22,7 +26,9 @@ def deserialize(engine, obj):
 
 def RequestHandler(engine, request):
     print "engine: %r\nrequest:%r" % (engine, request)
+    print `request`
     args, kargs = deserialize(engine, request)
+    print `args`, `kargs`
     return engine.getList(*args, **kargs)
 
 def readobj(conn):
@@ -33,12 +39,19 @@ def sendobj(conn, obj):
     s = pickle.dumps(obj)
     sendi(conn, s)
 
-def sendauth(conn):
-    conn.send(PASSBYTES)
+def hash(s):
+    return hashlib.md5(KEY+s).digest()
+    
+def authenticateToServer(conn):
+    challenge = readi(conn)
+    response = hash(challenge)
+    sendi(conn, response)
 
-def checkauth(conn):
-    bytes = conn.recv(len(PASSBYTES))
-    if bytes <> PASSBYTES:
+def authenticateClient(conn):
+    challenge = uuid.uuid4().bytes
+    sendi(conn, challenge)
+    response = readi(conn)
+    if hash(challenge) <> response:
         raise Exception("Access denied")
 
     
@@ -56,7 +69,7 @@ class WorkerThread(threading.Thread):
                 if self.stop: return
                 continue
             try:
-                checkauth(conn)
+                authenticateClient(conn)
                 request = readobj(conn)
                 print str(self), request
                 result = self.handler(request)

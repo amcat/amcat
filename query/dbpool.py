@@ -120,6 +120,7 @@ READBUF = 4096
 
 def readi(conn):
     i = conn.recv(STRUCTLEN)
+    if not i: raise Exception("Connection closed")
     i, = struct.unpack(STRUCTFMT, i)
     #toolkit.warn("receiving %i bytes" % i)
     data = ""

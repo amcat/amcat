@@ -10,10 +10,8 @@ class PooledDB(dbtoolkit.amcatDB):
         self.init(profile=profile)
     def init(self, *args, **kargs):
         self.pool = ResourcePool(self.createConnection, self.nconnections)
-        print ">> pool created"
         dbtoolkit.amcatDB.init(self, *args, **kargs)
     def createConnection(self):
-        print "Creating new connection"
         return self.connect(self.configuration)
     
     @contextmanager
@@ -39,13 +37,11 @@ class PooledDB(dbtoolkit.amcatDB):
         abstract
 
     def __getstate__(self):
-        print ">>>> __getstate__"
         d = dict(self.__dict__.items())
         for delprop in 'pool', 'DB_LOCK':
             if delprop in d: del d[delprop]
         return d
     def __setstate__(self, d):
-        print ">>>> __setstate__"
         self.__dict__ = d
         self.init()
 

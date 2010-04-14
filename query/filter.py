@@ -1,7 +1,8 @@
 import toolkit
 
-class Filter(object):
+class Filter(toolkit.Identity):
     def __init__(self, concept):
+        toolkit.Identity.__init__(self)
         self.concept = concept
     def getValues(self):
         return None
@@ -22,6 +23,8 @@ class ValuesFilter(Filter):
         return self.values
     def __str__(self):
         return "%s in (%s)" % (self.concept, ",".join(map(str, self.values)))
+    def identity(self):
+        return self.__class__, self.concept, self.values
 
 class IntervalFilter(Filter):
     def __init__(self, concept, fromValue=None, toValue=None):
@@ -46,3 +49,6 @@ class IntervalFilter(Filter):
             return "%s > %s" % (self.concept, self.fromValue)
         else:
             return "%s < %s" % (self.concept, self.toValue)
+    def __identity__(self):
+        return self.__class__, self.concept, self.fromValue, self.toValue
+                     

@@ -9,6 +9,25 @@ import table3, tableoutput
 
 import filter, aggregator # not used, import to allow indirect access
 
+def postprocess(table, sortfields, limit, offset):
+    if sortfields:
+        def comparator(x,y):
+            for concept, asc in sortfields:
+                if concept in table.concepts:
+                    c = cmp(x[table.concepts.index(concept)],y[table.concepts.index(concept)])
+                    if c: return c * (1 if asc else -1)
+            return 0
+        table.data.sort(comparator)
+
+    if limit or offset:
+        if not offset:
+            offset = 0
+        if limit:
+            table.data = table.data[offset:offset+limit]
+        else:
+            table.data = table.data[offset:]
+
+
 class QueryEngine(object):
     def __init__(self, datamodel, log=False, profile=False):
         self.log = log
@@ -31,29 +50,12 @@ class QueryEngine(object):
         toolkit.ticker.warn("Done")
         solution = getColumns(state.solution, concepts)
         T1 = time.time()
-
         t = ConceptTable(concepts,solution)
-        if sortfields:
-            def comparator(x,y):
-                for concept, asc in sortfields:
-                    if concept in t.concepts:
-                        c = cmp(x[t.concepts.index(concept)],y[t.concepts.index(concept)])
-                        if c: return c * (1 if asc else -1)
-                return 0
-            t.data.sort(comparator)
-
-        if limit or offset:
-            if not offset:
-                offset = 0
-            if limit:
-                t.data = t.data[offset:offset+limit]
-            else:
-                t.data = t.data[offset:]
+        postprocess(t, sortfields, limit, offset)
 
         if type(self.profile) == list:
             T9 = time.time()
             self.profile.append([tostr(concepts), tostr(filters), tostr(sortfields, sort=True), limit, offset, T1-T0, T9-T1])
-            
         return t
 
     def getTable(self, rows, columns, cellagr, filters=None):
