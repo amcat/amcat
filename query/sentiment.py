@@ -7,6 +7,8 @@ def sentiment2db(db, articles):
     and store it into the sentiment_articles database.
     """
     datamodel = draftdatamodel.getDatamodel(db)
+    ###FIXME
+    # Shouldn't this point at config['data_index'] instead of a hardcoded path?
     index = amcatxapian.Index("/home/marcel/finaldraftindex", db)
     sent_words = sentimentdatasource.SentimentDataSource(db,datamodel,index)
     words_sentiment = "select lemma, sentiment/100 from parses_lemmas inner join wva.words_sentiment on parses_lemmas.lemmaid=wva.words_sentiment.lemmaid"

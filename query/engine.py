@@ -197,6 +197,19 @@ def getPossibleValues(db=None,field=None,customer=None, storedresult=759):
         """ % (storedresult,)
         return db.doQuery(qry)
 
+    if field == "source+type":
+        qry = """
+        SELECT DISTINCT media.mediumid, media.name, media.sourcetypeid, media.type
+        FROM            media
+        INNER JOIN      articles
+            ON          (articles.mediumid = media.mediumid)
+        INNER JOIN      storedresults_articles
+            ON          (storedresults_articles.articleid = articles.articleid)
+        WHERE           storedresults_articles.storedresultid = %d
+        ORDER BY        media.name
+        """ % (storedresult,)
+        return db.doQuery(qry)
+
     if field == "alternativebrands":
         alternatives = []
 

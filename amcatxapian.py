@@ -182,7 +182,8 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch", termgenerators=Non
         if type(a) == int:
             a = article.Article(db, a)
         try:
-            txt = toolkit.stripAccents(a.text).encode('ascii', 'replace')
+            #txt = toolkit.stripAccents(a.text).encode('ascii', 'replace')
+            txt = toolkit.stripAccents(a.fulltext()).encode('ascii', 'replace')
         except Exception, e:
             toolkit.warn("Error on indexing %i: %s" % (a.id, e))
             continue
