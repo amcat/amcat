@@ -62,6 +62,8 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True)
                 headers.append(col.label)
     def cell(row, col, fmt):
         val = table.getValue(row, col)
+        if type(val) == str: val = val.decode('latin-1')
+        if not useunicode and type(val) == unicode: val = val.encode('ascii' , 'replace')
         return fmt%val if (val is not None) else ""
 
     data = []
