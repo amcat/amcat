@@ -8,7 +8,7 @@ import wordfrequency
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
 class ArticleDescriptor(object):
-    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None,**args):
+    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, externalid=None, **args):
         self.body = body
         self.headline = headline
         self.date = date
@@ -22,6 +22,7 @@ class ArticleDescriptor(object):
         self.fullmeta = fullmeta
         self.aid = None
         self.batch = batch
+        self.externalid = externalid
     def createArticle(self, db, batchid, mediumid, date, imagescale=.67):
         body = stripText(self.body)
         byline = stripText(self.byline)
@@ -40,7 +41,7 @@ class ArticleDescriptor(object):
         
         a = articlecreator.createArticle(db, headline, self.date, mediumid, self.batch, body, 
                                   pagenr=self.pagenr, byline=self.byline, url=self.url,
-                                  section=self.section, fullmeta=self.fullmeta)
+                                  section=self.section, fullmeta=self.fullmeta, externalid=self.externalid)
         if self.imagebytes:
             imagebytes = convertImage(self.imagebytes, imagescale)
             articlecreator.storeImage(db,a.id,imagebytes, self.imagetype)
