@@ -5,7 +5,7 @@ import filter
 import pickle
 import datasource
     
-PORT = 7000
+PORT = 26228
 NWORKERS = 5
 KEY = '<\xdbW\x1bv9A\x8a\xb1\xf6{\x0f\xd1nN\x9e'
 #PASSBYTES = hashlib.md5(PASSPHRASE).digest()
@@ -83,7 +83,7 @@ def serve(queue):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     while True:
         try:
-            s.bind(('127.0.0.1', PORT))
+            s.bind(('', PORT))
             break
         except Exception, e:
             if "Address already in use" in str(e):

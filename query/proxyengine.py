@@ -9,11 +9,13 @@ import sqlite3
 import cPickle as pickle
 import table3
 
+HOST = 'amcat.vu.nl'
+
 class ProxyEngine(QueryEngine):
     def getList(self, *args, **kargs):
         print "Querying remote server..."
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect(('127.0.0.1',PORT))
+        s.connect((HOST,PORT))
         authenticateToServer(s)
         sendobj(s, (args, kargs))
         x = readobj(s)
