@@ -125,8 +125,10 @@ def readi(conn):
     #toolkit.warn("receiving %i bytes" % i)
     data = ""
     while len(data) < i:
-        data += conn.recv(READBUF)
+        remainder = min(READBUF, i - len(data))
+        data += conn.recv(remainder)
         #toolkit.warn("received %i bytes" % len(data))
+    #print "Received %i bytes: %i:%r" % (i, len(data), data)
     return data
 
 def sendi(conn, str):

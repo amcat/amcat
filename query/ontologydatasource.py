@@ -66,6 +66,14 @@ class OntArtCoocMapping(datasource.Mapping):
             raise Exception("Not supported")
         return [value.cooc]
 
+class HierarchyMapping(datasource.Mapping):
+    def map(self, value, reverse, memo):
+        if reverse: # map child -> parent
+            return [value.parent]
+        else: # map parent -> child
+            return value.children
+            
+    
 class ArticleOntArtMapping(datasource.Mapping):
     def map(self, value, reverse, memo=None):
         if reverse:
@@ -106,6 +114,7 @@ class OntologyField(datasource.Field):
     @property
     def ont(self):
         return self.datasource.ont
+
     
 class SetOntologyField(OntologyField):
     def __init__(self, ds, concept, setid, supersetid, catid):
@@ -134,15 +143,16 @@ class SetOntologyField(OntologyField):
 class HierarchyOntologyField(OntologyField):
     def __init__(self, ds, concept, objectid, classid, depth=1, queryIncludesSelf=True):
         OntologyField.__init__(self, ds, concept)
-        self.object = ont.BoundObject(classid, objectid, ds.db) if ds.db else None
+        self.object = ont.BoundObject(classid, objectid, ds.db) if (objectid and ds.db) else None
         self.depth = depth
         self.queryIncludesSelf = queryIncludesSelf
+        self.classid = classid
     def getObjects(self):
         return getDescendants(self.object, self.depth)    
     def getQuery(self, object):
         return " OR ".join("(%s)" % o for o in getDescendants(object))
     def getObject(self, id):
-        return ont.BoundObject(self.object.klasse.id, id, self.datasource.db)
+        return ont.BoundObject(self.classid, id, self.datasource.db)
         
 def getDescendants(root, depth=None):
     for child in root.children:

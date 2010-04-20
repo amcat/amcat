@@ -25,10 +25,10 @@ def deserialize(engine, obj):
     
 
 def RequestHandler(engine, request):
-    print "engine: %r\nrequest:%r" % (engine, request)
-    print `request`
+    #print "engine: %r\nrequest:%r" % (engine, request)
+    #print `request`
     args, kargs = deserialize(engine, request)
-    print `args`, `kargs`
+    #print `args`, `kargs`
     return engine.getList(*args, **kargs)
 
 def readobj(conn):
@@ -49,9 +49,11 @@ def authenticateToServer(conn):
 
 def authenticateClient(conn):
     challenge = uuid.uuid4().bytes
+    hashed = hash(challenge)
     sendi(conn, challenge)
     response = readi(conn)
-    if hash(challenge) <> response:
+    if hashed <> response:
+        #print "Sent challenge %r, hashed with key %r, received response %r<>%r" % (challenge, KEY, response, hashed)
         raise Exception("Access denied")
 
     
@@ -71,7 +73,7 @@ class WorkerThread(threading.Thread):
             try:
                 authenticateClient(conn)
                 request = readobj(conn)
-                print str(self), request
+                #print str(self), request
                 result = self.handler(request)
                 sendobj(conn, result)
             except Exception, e:
