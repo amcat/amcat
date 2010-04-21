@@ -8,7 +8,7 @@ import wordfrequency
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
 class ArticleDescriptor(object):
-    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, externalid=None, **args):
+    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, mediumid=None, externalid=None, **args):
         self.body = body
         self.headline = headline
         self.date = date
@@ -22,7 +22,9 @@ class ArticleDescriptor(object):
         self.fullmeta = fullmeta
         self.aid = None
         self.batch = batch
+        self.mediumid = mediumid
         self.externalid = externalid
+
     def createArticle(self, db, batchid, mediumid, date, imagescale=.67):
         body = stripText(self.body)
         byline = stripText(self.byline)
@@ -31,6 +33,7 @@ class ArticleDescriptor(object):
         if date is None: raise Exception("No date for article %s" % self.url)
         
         if not self.batch: self.batch = batchid
+        if not self.mediumid: self.mediumid = mediumid
         if not body and not headline:
             l.notice('missing body and headline %s' % self.url)
             return None
@@ -39,7 +42,7 @@ class ArticleDescriptor(object):
             return None
         elif not headline: l.notice('Missing headline %s' % self.url)
         
-        a = articlecreator.createArticle(db, headline, self.date, mediumid, self.batch, body, 
+        a = articlecreator.createArticle(db, headline, self.date, self.mediumid, self.batch, body, 
                                   pagenr=self.pagenr, byline=self.byline, url=self.url,
                                   section=self.section, fullmeta=self.fullmeta, externalid=self.externalid)
         if self.imagebytes:
@@ -67,7 +70,6 @@ class Scraper(object):
         self.date = date
         self.log = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
         self.imagescale = imagescale
-
         query = "select url from articles where batchid = '%i' and mediumid = '%i'" % (self.batch, self.mediumid)
         data = self.db.doQuery(query)
         self.urls = set()
@@ -97,8 +99,8 @@ class Scraper(object):
         self.log.error(msg + '\n' + toolkit.returnTraceback(), application=self.name)
     def createArticle(self, artdesc):
         url = artdesc.url
-        if url and self.urlExists(url):
-            self.logInfo('Skipping duplicate url %r' % url)
+        if artdesc.url and self.urlExists(artdesc):
+            self.logInfo('Skipping duplicate url %r' % artdesc.url)
             return
         result = artdesc.createArticle(self.db, self.batch, self.mediumid, self.date, imagescale = self.imagescale)
         if result:
@@ -117,7 +119,7 @@ class Scraper(object):
     def endScrape(self, context):
         self.logStatistics()
         self.db.commit()
-        wordfrequency.save()
+        #wordfrequency.save() rob?
 
 class ArticleScraper(Scraper):
     def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
@@ -249,6 +251,7 @@ class TextImporter(Scraper):
                 documents = self.splitFile(context, file)
                 for doc in documents:
                     try:
+
                         artdescs = self.getArticle(context, file, doc)
                         if artdescs is None: continue
                         if isinstance(artdescs, ArticleDescriptor):
