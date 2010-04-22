@@ -184,9 +184,9 @@ def setDebug(level = 1):
     global _DEBUG
     _DEBUG = level
 
-def tickerate(seq, msg=None, getlen=True, ticker=None, detail=0):
+def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0):
     if msg is None: msg = "Starting iteration"
-    if ticker is None: ticker = Ticker()
+    if useticker is None: useticker = ticker
     if getlen:
         if type(seq) not in (list, tuple, set):
             seq = list(seq)
@@ -1302,9 +1302,13 @@ class Identity(object):
         if self.__identity__ is None: raise Exception("Identity object without identity")
         return self.__identity__
     def __repr__(self):
-        i = self.identity()
-        if i[0] == self.__class__: i = i[1:]
-        return "%s%r" % (type(self).__name__, i)
+        try:
+            i = self.identity()
+            if i[0] == self.__class__: i = i[1:]
+            return "%s%r" % (type(self).__name__, i)
+        except Exception, e:
+            import traceback; traceback.print_exc()
+            return "#ERROR on __repr__: %s" % e
     def __str__(self):
         return repr(self)
     def __hash__(self):
@@ -1500,8 +1504,11 @@ def filterTrue(seq):
 def multidict(seq):
     """returns a mapping of {key : set(values)} from a sequence of (key, value) tuples with duplicates"""
     result = collections.defaultdict(set)
-    for k, v in seq:
-        result[k].add(v)
+    if seq:
+        for kv in seq:
+            if kv:
+                k, v = kv
+                result[k].add(v)
     return result
 
 if __name__ == '__main__':
