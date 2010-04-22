@@ -87,6 +87,13 @@ class QueryEngine(object):
             result = tableoutput.table2unicode(data, formats=["%s", "%s", "%s", "%s", "%s", "%4.2f", "%4.2f"], useunicode=useunicode)
             if type(result) == unicode: result = result.encode(encoding)
             print >>stream, result
+
+    def getQuote(self, article, *args, **kargs):
+
+        #import dbtoolkit
+        #article.db = dbtoolkit.amcatDB()
+        return article.quote(*args, **kargs)
+        
             
 def tostr(seq, sort=False):
     if seq:

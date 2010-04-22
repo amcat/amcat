@@ -12,7 +12,7 @@ class PooledDB(dbtoolkit.amcatDB):
         self.pool = ResourcePool(self.createConnection, self.nconnections)
         dbtoolkit.amcatDB.init(self, *args, **kargs)
     def createConnection(self):
-        return self.connect(self.configuration)
+        return self.connect(self.configuration, easysoft=True)
     
     @contextmanager
     def cursor(self):

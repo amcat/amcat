@@ -25,8 +25,10 @@ def deserialize(engine, obj):
     
 
 def RequestHandler(engine, request):
-    call, args, kargs = deserialize(engine, request)
+    call, args, kargs = request
+    #print `call, args, kargs`
     if call == "getList":
+        args, kargs = deserialize(engine, [args, kargs])
         l = engine.getList(*args, **kargs)
         # call str(.) to allow pickling label
         # maybe gather all cachables and call cache("label") in one go?
@@ -34,7 +36,6 @@ def RequestHandler(engine, request):
         return l
     elif call == "getQuote":
         return engine.getQuote(*args, **kargs)
-
 
 def readobj(conn):
     s = readi(conn)
