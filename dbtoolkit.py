@@ -73,7 +73,7 @@ class amcatDB(object):
         return conn
 
     def init(self, profile=False):
-        
+        self.DB_LOCK = threading.Lock()        
         self._articlecache = {}
         
         # should be function(string SQL): None or string.
@@ -86,14 +86,13 @@ class amcatDB(object):
         if profile:
             self.profiler = ProfilingAfterQueryListener()
             self.afterQueryListeners.add(self.profiler)
-        self.DB_LOCK = threading.Lock()
 
 
     ################ picklability #####################
     def __getstate__(self):
         if 'DB_LOCK' in self.__dict__ and self.DB_LOCK:
             self.DB_LOCK.acquire()
-        d = self.__dict__
+        d = dict(self.__dict__.items())
         for delprop in 'DB_LOCK', 'conn':
             if delprop in d: del d[delprop]
         if 'DB_LOCK' in self.__dict__ and self.DB_LOCK:
@@ -245,16 +244,19 @@ class amcatDB(object):
         fields = dict.keys()
         values = dict.values()
         fieldsString = ", ".join(map(self.escapeFieldName, fields))
-        if self.dbType == "psycopg2":
+        if False or self.dbType == "psycopg2":
             # use parameters for insert. Test whether this works for mssql as well
             paramstr = ",".join(self.parametermark() for i in range(len(fields)))
             SQL = "INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, paramstr)
-            if retrieveIdent: SQL += " RETURNING id"
+            if retrieveIdent and self.dbType=="psycopg2": SQL += " RETURNING id"
             with self.cursor() as c:
+                values = map(str, values)
                 c.execute(SQL, values)
                 if retrieveIdent:
-                    data = c.fetchall()
-                    if data: return data[0][0]
+                    if self.dbType == "psycopg2":
+                        data = c.fetchall()
+                        if data: return data[0][0]
+                    
                 return
         
         valuesString = ", ".join([quotesql(value) for value in values])
@@ -266,7 +268,8 @@ class amcatDB(object):
         if len(dataseq) == 0: return
         seperator = '%s' if self.dbType == 'MySQLdb' else '?'
         sql = 'insert into %s (%s) values (%s)' % (table, ','.join(headers), ','.join([seperator] * len(headers)))
-        self.cursor().executemany(sql, dataseq)
+        with self.cursor() as c:
+            c.executemany(sql, dataseq)
         
         
     def getValue(self, sql):
@@ -478,7 +481,16 @@ class amcatDB(object):
         and s.name not in ('arrowid','sentenceid','codingjob_articleid')
         order by colid""" % table)
     tablecolumn=getTableColumns
-         
+
+    def hasTable(self, name):
+        if self.dbType == "psycopg2":
+            return self.getValue("SELECT tablename FROM pg_tables WHERE tablename=%s" % quotesql(name))
+        elif self.dbType == "sqlite":
+            return self.getValue("SELECT name FROM sqlite_master WHERE name=%s" % quotesql(name))
+        else:
+            return self.getValue("SELECT name FROM sysobjects WHERE xtype='U' and name=%s" % quotesql(name)) 
+        raise Exception(self.dbType)
+    
 anokoDB = amcatDB
 
 
@@ -512,6 +524,8 @@ def quotesql(strOrSeq):
     otherwise: coerce to str and recurse.
     """
     #print `strOrSeq`, ENCODE_UTF8
+    if type(strOrSeq) == buffer:
+        strOrSeq = str(strOrSeq)
     if strOrSeq is None:
         return 'null'
     elif isinstance(strOrSeq, RawSQL):
