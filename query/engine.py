@@ -27,6 +27,12 @@ def postprocess(table, sortfields, limit, offset):
         else:
             table.data = table.data[offset:]
 
+def makedistinct(rows):
+    seen = set()
+    for row in rows:
+        if row in seen: continue
+        yield row
+        seen.add(row)
 
 class QueryEngine(object):
     def __init__(self, datamodel, log=False, profile=False):
@@ -35,7 +41,7 @@ class QueryEngine(object):
         self.model = datamodel
         self.operationsFactory = operation.OperationsFactory()
 
-    def getList(self, concepts, filters, sortfields=None, limit=None, offset=None):
+    def getList(self, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False):
         T0 = time.time()
         route = getRoute(self.model, concepts, filters)
         state = tabulatorstate.State(None, route, filters)
@@ -49,6 +55,8 @@ class QueryEngine(object):
             clean(state, concepts)
         toolkit.ticker.warn("Done")
         solution = getColumns(state.solution, concepts)
+
+        if distinct: solution = list(makedistinct(solution))
         T1 = time.time()
         t = ConceptTable(concepts,solution)
         postprocess(t, sortfields, limit, offset)

@@ -47,39 +47,46 @@ class CachingEngineWrapper(QueryEngine):
         self.cachedb = cachedb
         self.initcache()
         self.caching = caching
-    def getList(self, concepts, filters, sortfields=None, limit=None, offset=None):
-        result = self.getCachedList(concepts, filters)
+    def getList(self, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False):
+        result = self.getCachedList(concepts, filters, distinct)
         if not result:
-            result = self.engine.getList(concepts, filters)
-            if self.caching: self.cacheList(result, concepts, filters)
+            result = self.engine.getList(concepts, filters, distinct=distinct)
+            if self.caching: self.cacheList(result, concepts, filters, distinct)
         engine.postprocess(result, sortfields, limit, offset)
         return result
+    def serializefilters(self, filters):
+        return self.serialize(filters)
+    def deserializefilters(self, bytes):
+        return self.deserialize(bytes)
     def serialize(self, obj):
         b = pickle.dumps(obj)
         return buffer(b)
     def deserialize(self, bytes):
         b = str(bytes)
         return pickle.loads(b)
-    def getCachedList(self, concepts, filters):
+    def getCachedList(self, concepts, filters, distinct):
         cflags = conceptflags(concepts)
         # use flags to check concepts are a subset of cached concepts
         # use >= check to allow index use, then check subset using A & B = A 
-        for id, filters2 in self.cachedb.doQuery("select id, filters from listcache where concepts >= %i and concepts & %i = %i" % (cflags, cflags, cflags)): 
-            filters2 = self.deserialize(filters2)
+        for id, filters2, distinct2 in self.cachedb.doQuery("select id, filters, distnct from listcache where concepts >= %i and concepts & %i = %i" % (cflags, cflags, cflags)):
+            if distinct2 <> distinct: continue
+            filters2 = self.deserializefilters(filters2)
+            print filters, filters2, filters==filters2
             if filters <> filters2: continue
             print "Getting cached result"
             result = self.cachedb.getValue("select result from listcache where id=%i" % id)
             result = self.deserialize(result)
             result = postcache(result, concepts)
             return result
-    def cacheList(self, result, concepts, filters):
-        result, filters = map(self.serialize, (result, filters))
+    def cacheList(self, result, concepts, filters, distinct):
+        result, filters = self.serialize(result), self.serializefilters(filters)
+        #result, filters = map(self.serialize, (result, filters))
         concepts = conceptflags(concepts)
-        cacheid = self.cachedb.insert("listcache", dict(concepts=concepts, filters=filters, result=result))
+        cacheid = self.cachedb.insert("listcache", dict(concepts=concepts, filters=filters, result=result, distnct=distinct))
         self.cachedb.commit()
         
     def initcache(self):
-        if not self.cachedb.doQuery("SELECT tablename FROM pg_tables WHERE tablename='listcache'"):
+        if not self.cachedb.hasTable("listcache"):
             print "Creating cache tables"
             for cmd in CACHE_INIT_SQL:
                 self.cachedb.doQuery(cmd)
@@ -116,6 +123,7 @@ CACHE_INIT_SQL = [
 id serial primary key,
 concepts integer,
 filters bytea,
+distnct boolean,
 result bytea)""",
     "create index ix_listcache_concepts on listcache (concepts)"]
 

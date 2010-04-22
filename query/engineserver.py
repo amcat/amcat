@@ -42,7 +42,15 @@ def readobj(conn):
     return pickle.loads(s)
 
 def sendobj(conn, obj):
-    s = pickle.dumps(obj)
+    print "Sending object of type %r" % (obj,)
+    try:
+        s = pickle.dumps(obj)
+    except Exception, e:
+        print "Exception on pickling object\n============"
+        import traceback
+        traceback.print_exc()
+        print "=============================\nSending exception: %s" % e
+        s = pickle.dumps(Exception(str(e)))
     sendi(conn, s)
 
 def hash(s):
@@ -85,11 +93,12 @@ class WorkerThread(threading.Thread):
                 sendobj(conn, result)
             except Exception, e:
                 traceback.print_exc(file=sys.stdout)
-                sendobj(conn, e)
+                sendobj(conn, Exception(repr(e)))
             finally:
                 conn.close()
 def serve(queue):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     while True:
         try:
             s.bind(('', PORT))
