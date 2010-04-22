@@ -3,7 +3,7 @@ from BeautifulSoup import BeautifulSoup
 from PIL import Image
 import cStringIO, articlecreator
 from datetime import datetime, date
-import wordfrequency
+#import wordfrequency
 
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
@@ -105,7 +105,7 @@ class Scraper(object):
         result = artdesc.createArticle(self.db, self.batch, self.mediumid, self.date, imagescale = self.imagescale)
         if result:
             self.articleCount += 1
-            self.urls.append(url)
+            self.urls.add(url)
         return result
     def logStatistics(self):
         self.logInfo('Downloaded %i urls. Added %i articles' % (self.downloadCount, self.articleCount))
@@ -259,6 +259,8 @@ class TextImporter(Scraper):
                         for artdesc in artdescs:
                             self.createArticle(artdesc)
                     except Exception, e:
+                        import traceback
+                        traceback.print_exc()
                         self.logException('Article exception file %s doc %r' % (file, doc[:40]))
             except:
                 self.logException('SplitFile exception %s' % str(file))
