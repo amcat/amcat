@@ -63,9 +63,11 @@ class BoundObject(toolkit.IDLabel):
         return self.objekt.label
     def __str__(self):
         return str(self.objekt)
-    def __getattr__(self, attr):
-        if attr == "objekt": return super(self.__class__, self).__getattr__('objekt')
-        return self.objekt.__getattribute__(attr)
+#    def __getattr__(self, attr):
+#        return self.objekt.__getattribute__(attr)
+#    def __getattr__(self, attr):
+#        if attr == "objekt": return super(self.__class__, self).__getattr__('objekt')
+#        return self.objekt.__getattribute__(attr)
 
 
 class Class(Cachable):
@@ -88,6 +90,10 @@ if __name__ == '__main__':
     
     db = dbtoolkit.amcatDB(profile=True)
     
+    s = Class(db, 5001)
+    o = BoundObject(10002, 16222, db)
+    print o.children
+
     o = BoundObject(10002, 16595, db)
     list(o.children)
     for k, v in o.__properties__.items():
@@ -103,11 +109,13 @@ if __name__ == '__main__':
         print "OK"
                           
     pickle.dumps(o.__properties__)
+
+    #print pickle.dumps(o)
+    #print pickle.dumps(s)
     
+
     pickle.dumps(o)
     #print pickle.dumps(s)
     #print o.label
     #print list(o.children)
-    
-
     

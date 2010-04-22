@@ -221,11 +221,21 @@ class amcatDB(object):
         """
         Executes the INSERT sql and returns the inserted IDENTITY value
         """
+        
+            
         self.doQuery(sql)
-        if retrieveIdent: 
+        if retrieveIdent:
             id = self.getValue("select SCOPE_IDENTITY()")
             if id: id = int(id)
             return id
+    
+    def escapeFieldName(self, f):
+        if self.dbType == "psycopg2":
+            return f
+        return "[%s]"% f
+
+    def parametermark(self):
+        return "%s" if self.dbType == "psycopg2" else "?"
     
     def insert(self, table, dict, idcolumn="For backwards compatibility", retrieveIdent=1):  
         """
@@ -234,7 +244,19 @@ class amcatDB(object):
         """
         fields = dict.keys()
         values = dict.values()
-        fieldsString = ", ".join("[%s]" % f for f in fields)
+        fieldsString = ", ".join(map(self.escapeFieldName, fields))
+        if self.dbType == "psycopg2":
+            # use parameters for insert. Test whether this works for mssql as well
+            paramstr = ",".join(self.parametermark() for i in range(len(fields)))
+            SQL = "INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, paramstr)
+            if retrieveIdent: SQL += " RETURNING id"
+            with self.cursor() as c:
+                c.execute(SQL, values)
+                if retrieveIdent:
+                    data = c.fetchall()
+                    if data: return data[0][0]
+                return
+        
         valuesString = ", ".join([quotesql(value) for value in values])
         id = self.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
                            retrieveIdent=retrieveIdent)
@@ -513,8 +535,8 @@ def quotesql(strOrSeq):
         strOrSeq = strOrSeq.replace("\n\r","\n")
         strOrSeq = strOrSeq.replace("\r","\n")
         strOrSeq = strOrSeq.replace("\x00","")
-        if not checklatin1(strOrSeq):
-            raise Exception("Offered bytes (or latin-1 encoded unicode) %r not in safe subset!" % strOrSeq)
+        #if self.dbType <> "psycopg2" and (not checklatin1(strOrSeq)):
+        #    raise Exception("Offered bytes (or latin-1 encoded unicode) %r not in safe subset!" % strOrSeq)
         strOrSeq = re.sub("'", "''", strOrSeq)
         return "'%s'" % strOrSeq
     elif toolkit.isSequence(strOrSeq):

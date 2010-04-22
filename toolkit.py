@@ -1,6 +1,9 @@
 #!/bin/env python2.2
 
-import types,re,mx.DateTime,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess, colorsys, base64
+import types,re,sys,time,os,random,math,gzip,pickle,optparse, threading, csv, htmlentitydefs, odict, collections, operator, functools, subprocess, colorsys, base64
+try:
+    import mx.DateTime
+except: print "Ik kon mx>DateTime niet importeren"
 from datetime import datetime
 
 _USE_CURSES = 1
@@ -270,7 +273,11 @@ def isCallable(obj):
 def isDate(obj):
     # wva: kan beter!
     # andreas: zoiets?
-    return isinstance(obj, mx.DateTime.DateTimeType) or isinstance(obj, datetime)
+    if 'mx'  in globals():
+        return isinstance(obj, mx.DateTime.DateTimeType) or isinstance(obj, datetime)
+    else:
+        return isinstance(obj, datetime)
+
 
 def istrue(x):
     return not not x

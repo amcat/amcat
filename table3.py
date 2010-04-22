@@ -23,7 +23,10 @@ class NamedRow(object):
         for col in self.table.getColumns():
             if str(col) == attr:
                 return self.table.getValue(self.row, col)
-        return super(self.__class__, self).__getattr__(attr)
+        return super(NamedRow, self).__getattribute__(attr)
+    def __getitem__(self, index):
+        col = list(self.table.getColumns())[index]
+        return self.table.getValue(self.row, col)
     def __iter__(self):
         for c in self.table.getColumns():
             yield self.table.getValue( self.row, c)

@@ -1,5 +1,9 @@
 from cachable import Cachable, DBPropertyFactory
-import collections, mx.DateTime, toolkit, enum, categorise
+import collections, toolkit, enum, categorise
+try:
+    import mx.DateTime as my_datetime
+except:
+    from datetime import datetime as my_datetime
 from toolkit import Identity, IDLabel
 
 class Base(IDLabel):
@@ -42,10 +46,10 @@ class Functions(object):
             self.byperson[oid].append(f)
             self.byoffice[office].append(f)
     def getChildren(self, office, date=None):
-        if date is None: date = mx.DateTime.now()
+        if date is None: date = my_datetime.now()
         return selectFunctionsByDate(date, self.byoffice[office])
     def getParents(self, person, date=None):
-        if date is None: date = mx.DateTime.now()
+        if date is None: date = my_datetime.now()
         return selectFunctionsByDate(date, self.byperson[person])
 
 def selectFunctionsByDate(date, functions):
@@ -133,7 +137,7 @@ class Object(Base, Cachable):
         for f, p, fro, to in self.db.doQuery(SQL):
             yield f, self.ont.objects[p], fro, to
     def getSearchString(self, date=None, xapian=False):
-        if not date: date = mx.DateTime.now()
+        if not date: date = my_datetime.now()
         if self.keyword: return self.keyword.replace("\n"," ")
         if self.lastname:
             ln = self.lastname

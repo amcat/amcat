@@ -3,7 +3,7 @@ import os, os.path
 __PASSWD_FILE = '.sqlpasswd'
 
 class Configuration:
-    def __init__(self, username, password, host="anoko", database="anoko", driver=None, kargs=False):
+    def __init__(self, username, password, host="anoko", database="anoko", driver=None, useDSN=False, keywordargs=False):
         if not driver: raise Exception("No driver!")
         self.host = host
         self.username = username
@@ -11,11 +11,14 @@ class Configuration:
         self.database = database
         self.driver = driver
         self.drivername = driver.__name__
-        self.kargs = kargs
+        self.useDSN = useDSN 
+        self.keywordargs = keywordargs
 
     def connect(self, *args, **kargs):
-        if self.kargs:
-            return self.driver.connect("DSN=%s" % self.host, user=self.username, password=self.password, *args, **kargs)
+        if self.useDSN:
+            return self.driver.connect("DSN=%s" % self.host, user=self.username, password=self.password, *args, **kargs) 
+        elif self.keywordargs:
+            return self.driver.connect(user=self.username, password=self.password, database=self.database, host=self.host)
         else:
             return self.driver.connect(self.host, self.username, self.password, *args, **kargs)
         
