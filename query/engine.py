@@ -267,20 +267,8 @@ def getArticleValue(article, field, db = None):
     if field == "sentiment":
         return db.getValue('select sentiment from articles_sentiment where articleid=%i' % article.id)
 
-def getQuote(article, keyword, nwords): 
-    """
-    article := An article object from the amcatdatabase
-    keyword := A word in the body of an article, must be a stringobject
-    nwords := The number of words to the left and right of the keyword, must be an integer
-    
-    Returns the string of words that were found for keyword
-    """
-    if type(keyword) == list:
-        keyword_li = keyword
-    else:
-        keyword_li = [keyword]
-    quote = article.quote(keyword_li,quotelen = nwords)
-    return quote
+def getQuote(article, keyword, nwords):
+    return "Dit mag dus niet meer"
 
 class ConceptTable(table3.Table):
     """Input: A list with concepts and data represented by a list"""

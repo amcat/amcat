@@ -4,7 +4,12 @@ of articles in the amcat database, and the articles.
 """
 
 
-import collections, datetime, mx.DateTime
+import collections, datetime
+try:
+    import mx.DateTime
+    nomx = False
+except:
+    nomx = True
 import xapian, dbtoolkit, toolkit, sources, project, article 
 
 from datasource import DataSource, Mapping, Field, FieldConceptMapping
@@ -19,7 +24,7 @@ WEEKSQL = "DATEADD(wk, DATEDIFF(wk, 0, %(table)s.date), 0)"
 
 class DateMapper(object):
     def map(self, date, reverse):
-        if reverse:
+        if reverse or nomx:
             return datetime.date(date.year, date.month, date.day)
         else:
             return mx.DateTime.Date(date.year, date.month, date.day)

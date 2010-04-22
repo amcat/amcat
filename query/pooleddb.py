@@ -66,6 +66,7 @@ class ResourcePool(object):
         self.pool[resource].release()
     @contextmanager
     def get(self):
+        res = None
         try:
             res = self.getResource()
             yield res

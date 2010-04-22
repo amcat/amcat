@@ -25,12 +25,16 @@ def deserialize(engine, obj):
     
 
 def RequestHandler(engine, request):
-    args, kargs = deserialize(engine, request)
-    l = engine.getList(*args, **kargs)
-    # call str(.) to allow pickling label
-    # maybe gather all cachables and call cache("label") in one go?
-    for r in l: map(str, r)
-    return l
+    call, args, kargs = deserialize(engine, request)
+    if call == "getList":
+        l = engine.getList(*args, **kargs)
+        # call str(.) to allow pickling label
+        # maybe gather all cachables and call cache("label") in one go?
+        for r in l: map(str, r)
+        return l
+    elif call == "getQuote":
+        return engine.getQuote(*args, **kargs)
+
 
 def readobj(conn):
     s = readi(conn)
@@ -46,6 +50,7 @@ def hash(s):
 def authenticateToServer(conn):
     challenge = readi(conn)
     response = hash(challenge)
+    #print "Received challenge %r, hashed with key %r, response is %r" % (challenge, KEY, response)
     sendi(conn, response)
 
 def authenticateClient(conn):

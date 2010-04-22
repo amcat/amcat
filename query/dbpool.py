@@ -133,7 +133,6 @@ def readi(conn):
 
 def sendi(conn, str):
     conn.send(struct.pack(STRUCTFMT, len(str)))
-    #toolkit.warn("sending %i bytes" % len(str))
     conn.send(str)
 
 def usage():
