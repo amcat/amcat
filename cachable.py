@@ -27,7 +27,7 @@ the Property at the moment it is needed.
 """
 
 import toolkit, collections, inspect
-from functools import partial
+#from functools import partial
 import weakref
         
 _CACHE = {}
@@ -226,8 +226,15 @@ class FunctionProperty(Property):
         Property.__init__(self, cachable)
         self.retrieve =  func
 
+
+class Partial(object):
+    def __init__(self, function, arg):
+        self.function = function
+        self.arg = arg
+    def __call__(self, *args, **kargs):
+        return self.function(self.arg, *args, **kargs)
         
-class DBFKProperty(FunctionProperty):
+class DBFKProperty(Property):
     """
     Property representing a one-to-many relation
     """
@@ -239,15 +246,15 @@ class DBFKProperty(FunctionProperty):
         endfunc (default: list) are used on the resulting sequence
         orderby can be a database field to ORDER BY
         """
-        FunctionProperty.__init__(self, cachable, self.retrieve)
+        Property.__init__(self, cachable)
         self.table = table
         self.targetfields = targetfields
         if function:
             self.function = function
         elif dbfunc:
-            self.function = partial(dbfunc, self.cachable.db)
+            self.function = Partial(dbfunc, self.cachable.db)
         elif objfunc:
-            self.function = partial(objfunc, self.cachable)
+            self.function = Partial(objfunc, self.cachable)
         elif factory:
             if uplink is None: uplink = type(cachable).__name__.lower()
             factory = factory()
@@ -265,7 +272,8 @@ class DBFKProperty(FunctionProperty):
         distinctstr = "distinct " if self.distinct else ""
         SQL = "SELECT %s%s FROM %s WHERE %s" % (distinctstr, _selectlist(self.targetfields), self.table, sqlWhere(self.reffield, self.cachable.id))
         if self.orderby: SQL += " ORDER BY %s" % _selectlist(self.orderby)
-        return self.endfunc(self.function(*x) for x in self.cachable.db.doQuery(SQL))
+        data = self.cachable.db.doQuery(SQL)
+        return self.endfunc(self.function(*x) for x in data)
 
     # TODO: cache! not as easy as I thought# !
     # def prepareCache(self, cacher):

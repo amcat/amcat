@@ -1,8 +1,13 @@
-from cachable import Cachable, DBFKPropertyFactory
+from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory
 import toolkit
 
 def getParent(db, cid, pid):
-    return Class(db, cid), pid and Object(db, pid)
+    cl = Class(db, cid)
+    if pid is None:
+        return cl, None
+    return cl, Object(db, pid)
+
+    #return Class(db, cid), pid and Object(db, pid)
 
 class Object(Cachable):
     __table__ = 'o_objects'
@@ -11,12 +16,18 @@ class Object(Cachable):
     labels = DBFKPropertyFactory("o_labels", ("languageid", "label"), endfunc=dict)
     parents = DBFKPropertyFactory("o_hierarchy", ("classid", "parentid"), reffield="childid", dbfunc = getParent, endfunc=dict)
     children = DBFKPropertyFactory("o_hierarchy", ("classid", "childid"), reffield="parentid", dbfunc = getParent, endfunc=toolkit.multidict)
+
+    name = DBPropertyFactory("name", table="o_politicians")
+    firstname = DBPropertyFactory("firstname", table="o_politicians")
+    prefix = DBPropertyFactory("prefix", table="o_politicians")
+
+    label = DBPropertyFactory("label", table="o_labels")
     
-    @property
-    def label(self):
-        l = self.labels
-        if not l: return None
-        return sorted(l.items())[0][1]
+    #@property
+    #def label(self):
+    #    l = self.labels
+    #    if not l: return None
+    #    return sorted(l.items())[0][1]
 
 class BoundObject(toolkit.IDLabel):
     def __init__(self, klasse, objekt, db=None):
@@ -53,6 +64,7 @@ class BoundObject(toolkit.IDLabel):
     def __str__(self):
         return str(self.objekt)
     def __getattr__(self, attr):
+        if attr == "objekt": return super(self.__class__, self).__getattr__('objekt')
         return self.objekt.__getattribute__(attr)
 
 
@@ -71,14 +83,31 @@ class Set(Cachable):
 
 if __name__ == '__main__':
     import dbtoolkit, pickle
-    db = dbtoolkit.amcatDB(profile=True)
-    import dbpoolclient
-    db = dbpoolclient.ProxyDB()
+
+    pickle.dumps(getParent)
     
-    s = Class(db, 5001)
-    o = BoundObject(10002, 16222, db)
-    print pickle.dumps(o)
-    print pickle.dumps(s)
+    db = dbtoolkit.amcatDB(profile=True)
+    
+    o = BoundObject(10002, 16595, db)
+    list(o.children)
+    for k, v in o.__properties__.items():
+        print `k`, `v`
+
+        for k2, v2 in v.__dict__.items():
+            print `k2`, `v2`
+            pickle.dumps(v2)
+            print "OK"
+        
+        pickle.dumps(v)
+        
+        print "OK"
+                          
+    pickle.dumps(o.__properties__)
+    
+    pickle.dumps(o)
+    #print pickle.dumps(s)
+    #print o.label
+    #print list(o.children)
     
 
     
