@@ -75,7 +75,8 @@ class DatabaseOperation(Operation):
                              for (i,(f,t)) in enumerate(sortedfields))
         
         wherestr = " AND ".join("(%s)" % f for f in getFilters(self.edges))
-        sql = "SELECT %s FROM %s WHERE %s" % (selectstr, fromstr, wherestr)
+        distinctstr = " DISTINCT " if state.distinct else ""
+        sql = "SELECT %s %s FROM %s WHERE %s" % (distinctstr, selectstr, fromstr, wherestr)
 
         toolkit.ticker.warn(`sql`)#[:100])
         data = self.db.doQuery(sql) or []

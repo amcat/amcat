@@ -152,6 +152,7 @@ class DataModel(object):
 
     def getConcept(self, identifier):
         if isinstance(identifier, Concept): identifier = identifier.label
+        if isinstance(identifier, int): identifier = CONCEPTS[identifier]
         return self._concepts[identifier]
 
     def getConcepts(self):

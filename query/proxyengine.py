@@ -8,6 +8,7 @@ import dbtoolkit
 import sqlite3
 #import cPickle as pickle
 import pickle
+import filter
 
 import table3
 
@@ -54,10 +55,30 @@ class CachingEngineWrapper(QueryEngine):
             if self.caching: self.cacheList(result, concepts, filters, distinct)
         engine.postprocess(result, sortfields, limit, offset)
         return result
+
+    def serializeValue(self, val):
+        return val.id
+    
     def serializefilters(self, filters):
-        return self.serialize(filters)
+        filterlist = []
+        for f in filters:
+            cid= f.concept.id
+            if type(f) == filter.ValuesFilter:
+                filterlist += [("Values", cid) + tuple(map(self.serializeValue, f.values))]
+            else:
+                raise Exception("!")
+        return self.serialize(filterlist)
     def deserializefilters(self, bytes):
-        return self.deserialize(bytes)
+        filterlist = self.deserialize(bytes)
+        result = []
+        for t in filterlist:
+            filtertype, cid = t[:2]
+            concept = self.engine.model.getConcept(cid)
+            if filtertype == "Values":
+                 result += [filter.ValuesFilter(concept, *t[2:])]
+            else:
+                raise Exception("!")
+        return result
     def serialize(self, obj):
         b = pickle.dumps(obj)
         return buffer(b)
@@ -71,7 +92,7 @@ class CachingEngineWrapper(QueryEngine):
         for id, filters2, distinct2 in self.cachedb.doQuery("select id, filters, distnct from listcache where concepts >= %i and concepts & %i = %i" % (cflags, cflags, cflags)):
             if distinct2 <> distinct: continue
             filters2 = self.deserializefilters(filters2)
-            print filters, filters2, filters==filters2
+            print `filters`, `filters2`, filters == filters2
             if filters <> filters2: continue
             print "Getting cached result"
             result = self.cachedb.getValue("select result from listcache where id=%i" % id)
@@ -79,6 +100,8 @@ class CachingEngineWrapper(QueryEngine):
             result = postcache(result, concepts)
             return result
     def cacheList(self, result, concepts, filters, distinct):
+        for row in result:
+            map(str, row)
         result, filters = self.serialize(result), self.serializefilters(filters)
         #result, filters = map(self.serialize, (result, filters))
         concepts = conceptflags(concepts)
@@ -122,7 +145,7 @@ CACHE_INIT_SQL = [
     """create table listcache (
 id serial primary key,
 concepts integer,
-filters bytea,
+filters text,
 distnct boolean,
 result bytea)""",
     "create index ix_listcache_concepts on listcache (concepts)"]

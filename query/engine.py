@@ -44,7 +44,7 @@ class QueryEngine(object):
     def getList(self, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False):
         T0 = time.time()
         route = getRoute(self.model, concepts, filters)
-        state = tabulatorstate.State(None, route, filters)
+        state = tabulatorstate.State(None, route, filters, distinct)
         toolkit.ticker.warn("Starting reduction")
         while state.solution is None:
             best = toolkit.choose(self.operationsFactory.getOperations(state),

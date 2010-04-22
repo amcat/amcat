@@ -8,12 +8,14 @@ class State(object):
     but as Operations are applied the state is reduced by combining different Nodes
     to form Nodes consisting of multiple Fields. 
     """
-    def __init__(self, tabulator, mappings, filters):
+    def __init__(self, tabulator, mappings, filters, distinct=False):
         """
         mappings is a list of Mapping objects representing the initial state
         filters {field: list-of-values} are seen as a priori data structures on the nodes
+        distinct is a boolean representing whether distinct values are required
         """
         self.tabulator = tabulator
+        self.distinct = distinct
         if mappings:
             self.edges = set(mappings2edges(mappings, filters))
             self.solution = None
