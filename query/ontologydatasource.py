@@ -78,7 +78,8 @@ class SetObjectsMapping(datasource.Mapping):
         datasource.Mapping.__init__(self, a, b, 1.0, 99999999)
     def map(self, value, reverse, memo):
         if reverse: raise Exception("object -> set mapping not implemented")
-        if type(value) == int: value = self.ont.sets[value]
+        if type(value) == int: value = self.a.getObject(value)
+        print `value`
         return value.objects
         
     
@@ -125,7 +126,7 @@ class OntologyField(datasource.Field):
 
 class SetField(OntologyField):
     def getObject(self, id):
-        return self.ont.sets[id]
+        return ont.Set(self.datasource.db, id)
 
     
 class SetOntologyField(OntologyField):
