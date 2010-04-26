@@ -1,6 +1,10 @@
 from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory
 import toolkit
-
+try:
+    import mx.DateTime as my_datetime
+except:
+    from datetime import datetime as my_datetime
+    
 def getParent(db, cid, pid):
     cl = Class(db, cid)
     if pid is None:
@@ -20,14 +24,72 @@ class Object(Cachable):
     name = DBPropertyFactory("name", table="o_politicians")
     firstname = DBPropertyFactory("firstname", table="o_politicians")
     prefix = DBPropertyFactory("prefix", table="o_politicians")
+    keyword = DBPropertyFactory(table="o_keywords")
 
     label = DBPropertyFactory("label", table="o_labels")
-    
+
+    def getSearchString(self, date=None, xapian=False):
+        if not date: date = my_datetime.now()
+        if self.keyword: return self.keyword.replace("\n"," ")
+        if self.name:
+            ln = self.name
+            if "-" in ln or " " in ln:
+                ln = '"%s"' % ln.replace("-", " ")
+            conds = []
+            if self.firstname:
+                conds.append(self.firstname)
+            for p, fro, to in self.getParties(date):
+                k = p.getSearchString()
+                if not k: k = '"%s"' % str(p).replace("-"," ")
+                conds.append(k)
+            for f, p, fro, to in self.getFunctions(date):
+                k = p.getSearchString()
+                if not k: k = '"%s"' % str(p).replace("-"," ")
+                conds.append(k)
+                conds += function2conds(f, p)
+            if conds:
+                if xapian:
+                    kw = "%s AND (%s)" % (ln, " OR ".join("%s" % x.strip() for x in conds),)
+                else:
+                    kw = "%s AND (%s)" % (ln, " OR ".join("%s^0" % x.strip() for x in conds),)
+            else:
+                kw = ln
+            return kw.replace("\n"," ")
+
+    # anders??
+    def getParties(self, date=None):
+        SQL = "select party_objectid, fromdate, todate from o_politicians_parties where objectid=%i" % self.id
+        if date: SQL += " and fromdate < %s and (todate is null or todate > %s)" % (toolkit.quotesql(date), toolkit.quotesql(date))
+        for p, fro, to in self.db.doQuery(SQL):
+            yield Object(self.db, p), fro, to
+    def getFunctions(self, date=None):
+        SQL = "select functionid, office_objectid, fromdate, todate from o_politicians_functions where objectid=%i" % self.id
+        if date: SQL += "and fromdate < %s and (todate is null or todate > %s)""" % (toolkit.quotesql(date), toolkit.quotesql(date))
+        for f, p, fro, to in self.db.doQuery(SQL):
+            yield f, Object(self.db, p), fro, to
+            
     #@property
     #def label(self):
     #    l = self.labels
     #    if not l: return None
     #    return sorted(l.items())[0][1]
+
+# anders!
+def function2conds(func, office):
+    if office.id in (380, 707, 729, 1146, 1536, 1924, 2054, 2405, 2411, 2554, 2643):
+        if func == 2:
+            return ["bewinds*", "minister*"]
+        else:
+            return ["bewinds*", "staatssecret*"]
+    if office.id == 901:
+        return ["premier", '"minister president"']
+    if office.id == 548:
+        return ["senator", '"eerste kamer*"']
+    if office.id == 1608:
+        return ["parlement*", '"tweede kamer*"']
+    if office.id == 2087:
+        return ['"europ* parlement*"', "europarle*"]
+    return []
 
 class BoundObject(toolkit.IDLabel):
     def __init__(self, klasse, objekt, db=None):
