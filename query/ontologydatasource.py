@@ -72,7 +72,15 @@ class HierarchyMapping(datasource.Mapping):
             return [value.parent]
         else: # map parent -> child
             return value.children
-            
+
+class SetObjectsMapping(datasource.Mapping):
+    def __init(self, a, b):
+        datasource.Mapping.__init__(self, a, b, 1.0, 99999999)
+    def map(self, value, reverse, memo):
+        if reverse: raise Exception("object -> set mapping not implemented")
+        if type(value) == int: value = self.ont.sets[value]
+        return value.objects
+        
     
 class ArticleOntArtMapping(datasource.Mapping):
     def map(self, value, reverse, memo=None):
@@ -114,6 +122,10 @@ class OntologyField(datasource.Field):
     @property
     def ont(self):
         return self.datasource.ont
+
+class SetField(OntologyField):
+    def getObject(self, id):
+        return self.ont.sets[id]
 
     
 class SetOntologyField(OntologyField):

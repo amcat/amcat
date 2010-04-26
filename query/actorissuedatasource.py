@@ -16,12 +16,16 @@ class ActorIssueDataSource(OntologyDataSource):
         coocissue = datasource.Field(self, dm.getConcept("coocissue"))
         issuecooc = datasource.Field(self, dm.getConcept("issuecooc"))
 
+        set = SetField(self, dm.getConcept("set"))
+
         mappings = [
             ObjectArticleMapping(issue, article, db),
             ObjectArticleMapping(actor, article, db),
             ArticleOntArtMapping(article, issuearticle),
             OntArtObjectMapping(issuearticle, coocissue),
             OntArtCoocMapping(issuearticle, issuecooc),
+            SetObjectsMapping(set, issue),
+            SetObjectsMapping(set, actor),
             ]
         OntologyDataSource.__init__(self, dm, db, index, mappings)
 
