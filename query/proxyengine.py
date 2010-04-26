@@ -49,7 +49,12 @@ class CachingEngineWrapper(QueryEngine):
         self.initcache()
         self.caching = caching
     def getList(self, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False):
-        result = self.getCachedList(concepts, filters, distinct)
+        result = None
+        try:
+            result = self.getCachedList(concepts, filters, distinct)
+        except Exception, e:
+            import traceback
+            traceback.print_exc()
         if not result:
             result = self.engine.getList(concepts, filters, distinct=distinct)
             if self.caching: self.cacheList(result, concepts, filters, distinct)
@@ -57,18 +62,21 @@ class CachingEngineWrapper(QueryEngine):
         return result
 
     def serializeValue(self, val):
+        if type(val) == int: return val
         return val.id
     
     def serializefilters(self, filters):
+        return self.serialize(filters)
         filterlist = []
         for f in filters:
             cid= f.concept.id
             if type(f) == filter.ValuesFilter:
                 filterlist += [("Values", cid) + tuple(map(self.serializeValue, f.values))]
             else:
-                raise Exception("!")
+                raise Exception("Unknown filter type: %s" % type(f))
         return self.serialize(filterlist)
     def deserializefilters(self, bytes):
+        return self.deserialize(bytes)
         filterlist = self.deserialize(bytes)
         result = []
         for t in filterlist:
@@ -114,9 +122,27 @@ class CachingEngineWrapper(QueryEngine):
             for cmd in CACHE_INIT_SQL:
                 self.cachedb.doQuery(cmd)
             self.cachedb.commit()
-    def getQuote(self, *args, **kargs):
-        return self.engine.getQuote(*args, **kargs)
 
+            
+    def getQuote(self, article, words):
+        words = " ".join(toolkit.getQuoteWords(words))
+        try:
+            q = self.getCachedQuote(article, words)
+            if q:
+                toolkit.warn("Retrieved quote from cache")
+            else:
+                toolkit.warn("Querying underlying engine for quote")
+                q = self.engine.getQuote(article, [words])
+                self.cacheQuote(article, words, q)
+            return q
+        except:
+            return self.engine.getQuote(article, [words])
+
+    def getCachedQuote(self, article, words):
+        return self.cachedb.getValue("select quote from quotecache where aid = %i and words='%s'" % (article.id, words)) 
+    def cacheQuote(self, article, words, quote):
+        self.cachedb.insert("quotecache", dict(aid=article.id, words=words, quote=quote), retrieveIdent=False)
+        self.cachedb.commit()
             
 
 class ConceptSubTable(table3.Table):
@@ -145,8 +171,14 @@ CACHE_INIT_SQL = [
     """create table listcache (
 id serial primary key,
 concepts integer,
-filters text,
+filters bytea,
 distnct boolean,
 result bytea)""",
-    "create index ix_listcache_concepts on listcache (concepts)"]
+    "create index ix_listcache_concepts on listcache (concepts)",
+"""create table quotecache (
+aid integer,
+words varchar(4000),
+quote varchar(4000),
+primary key (aid, words))"""
+]
 

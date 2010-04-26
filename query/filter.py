@@ -49,6 +49,6 @@ class IntervalFilter(Filter):
             return "%s > %s" % (self.concept, self.fromValue)
         else:
             return "%s < %s" % (self.concept, self.toValue)
-    def __identity__(self):
+    def identity(self):
         return self.__class__, self.concept, self.fromValue, self.toValue
                      

@@ -12,7 +12,7 @@ class ActorIssueDataSource(OntologyDataSource):
         article = datasource.Field(self, dm.getConcept("article") )
         issue = SetOntologyField(self, dm.getConcept("issue"), 309, 307, 1)
         actor = SetOntologyField(self,dm.getConcept("actor"), 308, 307, 1)
-        issuearticle = OntArtField(self, dm.getConcept("issuearticle"), self.issue)
+        issuearticle = OntArtField(self, dm.getConcept("issuearticle"), issue)
         coocissue = datasource.Field(self, dm.getConcept("coocissue"))
         issuecooc = datasource.Field(self, dm.getConcept("issuecooc"))
 
