@@ -1419,13 +1419,11 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
     if callable(words_or_wordfilter):
         filt = words_or_wordfilter
     else:
-        wordset = set(re.sub('[^\w\d ]+', '', x.lower()) for x in words_or_wordfilter)
-        # Transform this to a beautiful pythonic piece of code. Now, I'm using a very elaborate version. But it works.
-        __wordset = []
-        for word in wordset:
-            __wordset.extend(word.split(' '))
-        wordset = __wordset
-        del __wordset
+        w = words_or_wordfilter
+        if type(w) not in (str, unicode): w = " ".join(w)
+        w = re.sub(r'[^\w\s]+', '', w)
+        wordset = set(re.split(r'\s+', w.lower()))
+
         filt = lambda x: int(x.lower() in wordset)
 
     positions = {}
@@ -1433,6 +1431,8 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
         if filt(w):
             positions[i] = 0
 
+    default = " ".join(words[:totalwords] + ["..."])
+            
     for pos in sorted(positions.keys()):
         nbs = 0
         for w in positions:
@@ -1512,12 +1512,10 @@ def multidict(seq):
     return result
 
 if __name__ == '__main__':
-    i = Indexer()
-    for x in "afghjaabfgi":
-        print x, i.getNumber(x)
-    print i.objects
-
-    i = Indexer()
-    xs = list("afghjaabfgi")
-    print xs, i.getNumbers(*xs)
-    print i.objects
+    import dbtoolkit, article
+    AIDS = 45143636,45564121,44783534,45560808,44783539,45560791
+    AIDS = 45560808,
+    for aid in AIDS:
+        a = article.Article(dbtoolkit.amcatDB(),aid)
+        print aid, a.headline, `a.text`
+        print a.quote(['Sky Radio'])
