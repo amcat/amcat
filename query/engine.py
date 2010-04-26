@@ -96,11 +96,15 @@ class QueryEngine(object):
             if type(result) == unicode: result = result.encode(encoding)
             print >>stream, result
 
-    def getQuote(self, article, *args, **kargs):
-
+    def getQuote(self, art, *args, **kargs):
         #import dbtoolkit
         #article.db = dbtoolkit.amcatDB()
-        return article.quote(*args, **kargs)
+        q = art.quote(*args, **kargs)
+        if not q:
+            toolkit.warn("No quote for article %r, args=%s, kargs=%s" % (art, args, kargs))
+            return " ".join(art.words()[:25]) + " .."
+
+        return q
         
             
 def tostr(seq, sort=False):

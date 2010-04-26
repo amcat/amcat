@@ -90,7 +90,7 @@ class ArticleOntArtMapping(datasource.Mapping):
         return lucenelib.search(TEST_INDEX, query.items())[0]
     
     def getArticles(self, query, subset=None):
-        print "Query", query
+        #print "Query", query
         if self.a.datasource.index is None:
             return self.lucenehack(query)
         else:
@@ -173,8 +173,8 @@ class ObjectArticleMapping(datasource.Mapping):
 
     def getArticles(self, query):
         #raise Exception(query)
-        print "Query", query
-        print "Index", self.a.datasource.index and self.a.datasource.index.location
+        toolkit.warn("Query: %s" % query)
+        #print "Index", self.a.datasource.index and self.a.datasource.index.location
         if self.a.datasource.index is None:
             return self.lucenehack(query)
         else:

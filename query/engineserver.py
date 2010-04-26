@@ -96,22 +96,22 @@ class WorkerThread(threading.Thread):
                 sendobj(conn, Exception(repr(e)))
             finally:
                 conn.close()
-def serve(queue):
+def serve(queue, port=PORT):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     #s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     while True:
         try:
-            s.bind(('', PORT))
+            s.bind(('', port))
             break
         except Exception, e:
             if "Address already in use" in str(e):
-                print "Waiting for port %i to become available" % PORT
+                print "Waiting for port %i to become available" % port
                 time.sleep(2)
             else:
                 raise
     try:
         s.listen(1)
-        print >>sys.stderr, ("Listening to port %i" % PORT)
+        print >>sys.stderr, ("Listening to port %i" % port)
         while True:
             conn, addr = s.accept()
             queue.put(conn)
@@ -126,4 +126,4 @@ def createServer(engine, port=PORT, nworkers=NWORKERS):
     h = functools.partial(RequestHandler, engine)
     for i in range(NWORKERS):
         WorkerThread(requestq, h).start()
-    serve(requestq)
+    serve(requestq, port=port)

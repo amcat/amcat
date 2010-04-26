@@ -15,13 +15,18 @@ import table3
 HOST = 'amcat.vu.nl'
 
 class ProxyEngine(QueryEngine):
+    def __init__(self, datamodel, log=False, profile=False, port=PORT):
+        self.port = port
+        QueryEngine.__init__(self, datamodel, log, profile)
+    
     def getList(self, *args, **kargs):
         print "Querying remote server..."
         return self.remoteCall("getList", args, kargs)
 
     def remoteCall(self, call, args, kargs):
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.connect((HOST,PORT))
+        print "CONNECTING TO %s" % self.port
+        s.connect((HOST,self.port))
         authenticateToServer(s)
         sendobj(s, (call, args, kargs))
         x = readobj(s)
