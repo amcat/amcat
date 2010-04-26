@@ -53,14 +53,14 @@ class OntArt(object):
         
 class OntArtObjectMapping(datasource.Mapping):
     def __init__(self,a,b):
-        datasource.Mapping.__init__(self, a, b, 1.0, 99999999)
+        datasource.Mapping.__init__(self, a, b, 100.0, 99999999)
     def map(self, value, reverse, memo=None):
         if reverse:
             raise Exception("Not supported")
         return [value.obj]
 class OntArtCoocMapping(datasource.Mapping):
     def __init__(self,a,b):
-        datasource.Mapping.__init__(self, a, b, 1.0, 99999999)
+        datasource.Mapping.__init__(self, a, b, 100.0, 99999999)
     def map(self, value, reverse, memo=None):
         if reverse:
             raise Exception("Not supported")
@@ -176,7 +176,7 @@ def getDescendants(root, depth=None):
 
 class ObjectArticleMapping(datasource.Mapping):
     def __init__(self, a, b, db):
-        datasource.Mapping.__init__(self, a, b, -10)
+        datasource.Mapping.__init__(self, a, b, 100, 100000000)
         self.db = db
 
     def lucenehack(self, query):
