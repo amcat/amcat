@@ -21,6 +21,12 @@ def getAllAncestors(object, stoplist=None):
         stoplist.add(p)
         for o2 in getAllAncestors(p, stoplist):
             yield o2
+    for p, f, t in object.getParties(my_datetime.now()):
+        if (p is None) or (p in stoplist): continue
+        yield p
+        stoplist.add(p)
+        for o2 in getAllAncestors(p, stoplist):
+            yield o2
 
 
 class Object(Cachable):
@@ -158,36 +164,10 @@ class Set(Cachable):
 if __name__ == '__main__':
     import dbtoolkit, pickle
 
-    pickle.dumps(getParent)
-    
     db = dbtoolkit.amcatDB(profile=True)
-    
-    s = Class(db, 5001)
-    o = BoundObject(10002, 16222, db)
-    print o.children
 
-    o = BoundObject(10002, 16595, db)
-    list(o.children)
-    for k, v in o.__properties__.items():
-        print `k`, `v`
-
-        for k2, v2 in v.__dict__.items():
-            print `k2`, `v2`
-            pickle.dumps(v2)
-            print "OK"
-        
-        pickle.dumps(v)
-        
-        print "OK"
-                          
-    pickle.dumps(o.__properties__)
-
-    #print pickle.dumps(o)
-    #print pickle.dumps(s)
-    
-
-    pickle.dumps(o)
-    #print pickle.dumps(s)
-    #print o.label
-    #print list(o.children)
+    o = Object(db, 889)
+    print o
+    for anc in getAllAncestors(o):
+        print anc
     
