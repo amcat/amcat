@@ -13,6 +13,16 @@ def getParent(db, cid, pid):
 
     #return Class(db, cid), pid and Object(db, pid)
 
+def getAllAncestors(object, stoplist=None):
+    if stoplist is None: stoplist = set()
+    for p in object.parents.values():
+        if (p is None) or (p in stoplist): continue
+        yield p
+        stoplist.add(p)
+        for o2 in getAllAncestors(p, stoplist):
+            yield o2
+
+
 class Object(Cachable):
     __table__ = 'o_objects'
     __idcolumn__ = 'objectid'

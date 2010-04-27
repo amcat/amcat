@@ -1,10 +1,11 @@
 import datasource
 import article
-import ont2
+#import ont2
 import ont
 import lucenelib
 import toolkit
 import collections
+import categorise
 
 TEST_INDEX = "/home/amcat/indices/Test politiek nieuws 2010-02-15T12:35:36"
 
@@ -16,11 +17,11 @@ class OntologyDataSource(datasource.DataSource):
         self._ont = None
         self.index = index
 
-    @property
-    def ont(self):
-        if self._ont == None:
-            self._ont = ont2.fromDB(self.db)
-        return self._ont
+#    @property
+#    def ont(self):
+#        if self._ont == None:
+#            self._ont = ont2.fromDB(self.db)
+#        return self._ont
     
     def getOntologyField(self, concept):
         for mapping in self.getMappings():
@@ -120,9 +121,9 @@ class OntologyField(datasource.Field):
     def getQuery(self, object):
         "given an ont2.Object, return the xapian query to search it"
         abstract
-    @property
-    def ont(self):
-        return self.datasource.ont
+#    @property
+#    def ont(self):
+ #       return self.datasource.ont
 
 class SetField(OntologyField):
     def getObject(self, id):
@@ -136,12 +137,10 @@ class SetOntologyField(OntologyField):
         self.supersetid = supersetid
         self.catid = catid
     def getObjects(self):
-        return self.ont.sets[self.setid].objects
+        return ont.Set(self.datasource.db, self.setid).objects
     def getAllObjects(self, object):
-        c = self.ont.categorisations[self.catid]
-        for o2 in self.ont.sets[self.supersetid].objects:
-            parents = c.categorise(o2, depth=[0,1,2,3,4,5,6,7,8,9], ret=categorise.RETURN.OBJECT)
-            if object in parents:
+        for o2 in ont.Set(self.datasource.db, self.supersetid).objects:
+            if object in ont.getAllAncestors(o2):
                 yield o2
     def getQuery(self, object):
         objects = set(self.getAllObjects(object))
@@ -151,7 +150,7 @@ class SetOntologyField(OntologyField):
         query = query.encode('ascii','replace')
         return query
     def getObject(self, id):
-        return self.ont.objects[id]
+        return ont.Object(self.datasource.db, id)
 
 class HierarchyOntologyField(OntologyField):
     def __init__(self, ds, concept, objectid, classid, depth=1, queryIncludesSelf=True):
