@@ -14,8 +14,8 @@ class SentimentDataSource(DataSource):
         DataSource.__init__(self, self.createMappings(datamodel))
         
     def createMappings(self,datamodel):
-        art = DatabaseField(self, datamodel.getConcept("article"), ["articles", "articles_sentiment"], "articleid", ConceptMapper(self.db, article.Article))
-        sentiment = DatabaseField(self, datamodel.getConcept("sentiment"), ["articles_sentiment"], "sentiment")
+        art = DatabaseField(self, datamodel.getConcept("article"), ["articles", "vw_all_articles_sentiment"], "articleid", ConceptMapper(self.db, article.Article))
+        sentiment = DatabaseField(self, datamodel.getConcept("sentiment"), ["vw_all_articles_sentiment"], "sentiment")
         return [
             DatabaseMapping(art, sentiment)
             ]
