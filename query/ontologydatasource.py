@@ -90,10 +90,12 @@ class ArticleOntArtMapping(datasource.Mapping):
             yield value.article
             return
         if memo is None: memo = self.startMapping([value])
+        if type(memo) != dict:
+            memo = dict(memo)
         of = self.b.ontfield
         objects = of.getObjects()
         for object in objects:
-            cooc = int(value.id in memo.get(object.id, {}))
+            cooc = int(value in memo.get(object.id, {}))
             yield OntArt(object, value, cooc)
 
     def startMapping(self, values, reverse=False):

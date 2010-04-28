@@ -19,11 +19,14 @@ class LuceneFinder(ObjectFinder):
     def search(self, object):
         query = object.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
         print "search", object, object.id , query
+        print "obj:", object
+        print "lang:", self.languageid, "query:", query
         results = lucenelib.search(self.index, {"X" : query}.items())
         return results[0]["X"].iterkeys()
 
     def searchMultiple(self, objects):
         query = dict((o.id, o.getSearchString(xapian=False, languageid=self.languageid)) for o in objects)
+        print "lang:", self.languageid, "query:", query
         for k,v in (lucenelib.search(self.index, query.items())[0]).iteritems():
             yield k, v.keys()
 
