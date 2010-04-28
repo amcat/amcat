@@ -22,7 +22,7 @@ class LuceneFinder(ObjectFinder):
     def search(self, object):
         query = object.getSearchString(xapian=False, languageid=self.languageid)
         results = lucenelib.search(self.index, {"X" : query}.items())
-        return results[0]["X"].keys()
+        return results[0]["X"].iterkeys()
 
     def searchMultiple(self, objects):
         query = dict((o.id, o.getSearchString(xapian=False, languageid=self.languageid)) for o in objects)
