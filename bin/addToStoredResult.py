@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import sys, dbtoolkit, toolkit
 if len(sys.argv) == 1:
     print "Usage: python %s projectid name < articleids" % sys.argv[0]

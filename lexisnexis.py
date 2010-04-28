@@ -64,7 +64,7 @@ def parseArticle(articleString, db, batchid, commit):
     #print "******************"
     
     (prolog, body, meta) = parseLexisNexis(articleString)
-    (date1, medium, possibleheadline) = interpretProlog(prolog, db.sources)
+    (date1, medium, possibleheadline) = interpretProlog(prolog, db.sources, meta)
 
 
     #print `prolog`, '\n', `body`, '\n', `meta`
@@ -163,7 +163,7 @@ def parseLexisNexis(text):
     
     return (prolog, body, meta)
 
-def interpretProlog(text, sources):
+def interpretProlog(text, sources, meta):
     """
     Interprets a Lexis Nexis article prolog and extracts date and source
     """
@@ -197,6 +197,12 @@ def interpretProlog(text, sources):
         medium = sources.lookupName(source, 1)
 
     if not medium:
+        if 'Newstex Web Blogs' in meta.get('publication-type'):
+            medium = sources.lookupName('Newstex Web Blogs')
+
+    if not medium:
+        if mostlikelysource is None:
+            raise Exception("Could not find source in %s\n\n%s" % (text, meta))
         print text.encode('ascii','replace')
         raise Exception('Could not find source "%s"' % mostlikelysource)
     if medium.id < 0:

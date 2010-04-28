@@ -21,7 +21,7 @@ DC_REFERENCE = NS_DC["Reference"]
 DC_SOURCE = NS_DC["Source"]
 DC_PUBLISHER = NS_DC["Publisher"]
 DC_TITLE = NS_DC["Title"]
-DC_DATE = NS_DC["Title"]
+DC_DATE = NS_DC["Date"]
 
 
 PREFLANG = 1
@@ -124,7 +124,16 @@ def units2RDF(units, graph=None):
             val = field.deserialize(val)
             if type(val) == ont2.Object:
                 obj = rdfnode(val)
+            elif "subject" in str(pred) or "object" in str(pred):
+                obj = NS_ONT[unicode(val)]
             else:
+                if "subject" in str(pred):
+                    raise Exception((pred, val))
+                if type(val) == str:
+                    try:
+                        val = val.decode('utf-8')
+                    except:
+                        val = val.decode('latin-1')
                 obj = rdflib.Literal(val)
             graph.add((an, pred, obj))
         

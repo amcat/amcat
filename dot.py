@@ -127,7 +127,7 @@ class DotTheme(object):
         self.edgefont = edgefont
         self.header = header
         self.scale = scale
-        self.graphattrs = {"center" : "true", "size" : "7.5,10"}
+        self.graphattrs = {"center" : "true", "size" : "30,40"}
         self.base = base
     def getEdgeDot(self, edge, graph, subgraph):
         style = self.getEdgeStyle(edge)
