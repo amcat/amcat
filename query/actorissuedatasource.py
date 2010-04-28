@@ -10,8 +10,8 @@ from ontologydatasource import *
 class ActorIssueDataSource(OntologyDataSource):
     def __init__(self, dm, db, index):
         article = datasource.Field(self, dm.getConcept("article") )
-        issue = SetOntologyField(self, dm.getConcept("issue"), 309, 307, 1)
-        actor = SetOntologyField(self,dm.getConcept("actor"), 308, 307, 1)
+        issue = SetOntologyField(self, dm.getConcept("issue"), 5002, 5000, 1)
+        actor = SetOntologyField(self,dm.getConcept("actor"), 5003, 5000, 1)
         issuearticle = OntArtField(self, dm.getConcept("issuearticle"), issue)
         coocissue = datasource.Field(self, dm.getConcept("coocissue"))
         issuecooc = datasource.Field(self, dm.getConcept("issuecooc"))

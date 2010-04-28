@@ -4,7 +4,7 @@ from dbpool import readi, sendi
 import filter
 import pickle
 import datasource
-    
+
 PORT = 26228
 NWORKERS = 5
 KEY = '<\xdbW\x1bv9A\x8a\xb1\xf6{\x0f\xd1nN\x9e'
@@ -22,7 +22,7 @@ def deserialize(engine, obj):
     if isinstance(obj, filter.Filter):
         obj.concept = deserialize(engine, obj.concept)
     return obj
-    
+
 
 def RequestHandler(engine, request):
     call, args, kargs = request

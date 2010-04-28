@@ -96,23 +96,11 @@ class ArticleOntArtMapping(datasource.Mapping):
             cooc = int(value.id in memo.get(object.id, {}))
             yield OntArt(object, value, cooc)
 
-    def lucenehack(self, query):
-        return lucenelib.search(TEST_INDEX, query.items())[0]
-    
-    def getArticles(self, query, subset=None):
-        #print "Query", query
-        if self.a.datasource.index is None:
-            return self.lucenehack(query)
-        else:
-            i = self.a.datasource.index
-            return dict((k, set(i.query(v, returnAID=True, subset=subset))) for (k,v) in query.iteritems())
-
     def startMapping(self, values, reverse=False):
         if reverse: return
         of = self.b.ontfield
         objects = of.getObjects()
-        query = dict((o.id, of.getQuery(o)) for o in objects)
-        return self.getArticles(query, subset=values)
+        return self.a.datasource.index.searchMultiple(objects)
 
 class OntologyField(datasource.Field):
     def getObjects(self):
@@ -178,23 +166,8 @@ class ObjectArticleMapping(datasource.Mapping):
         datasource.Mapping.__init__(self, a, b, 100, 100000000)
         self.db = db
 
-    def lucenehack(self, query):
-        results = lucenelib.search(TEST_INDEX, {"X" : q}.items())
-        for aid in results[0]["X"].keys():
-            yield article.Article(self.db, aid)
-
-    def getArticles(self, query):
-        #raise Exception(query)
-        toolkit.warn("Query: %s" % query)
-        #print "Index", self.a.datasource.index and self.a.datasource.index.location
-        if self.a.datasource.index is None:
-            return self.lucenehack(query)
-        else:
-            return self.a.datasource.index.query(query, acceptPhrase=True)
-
     def map(self, value, reverse, memo=None):
         if reverse:
             raise Exception("Article -> Ontology Object mapping not implemented")
-        q = self.a.getQuery(value)
-        return self.getArticles(q)
+        return self.a.datasource.index.search(value)
 
