@@ -44,9 +44,19 @@ class Object(Cachable):
 
     label = DBPropertyFactory("label", table="o_labels")
 
-    def getSearchString(self, date=None, xapian=False):
+    def getSearchString(self, date=None, xapian=False, languageid=None):
+        """Returns the search string for this object.
+        date: if given, use only functions active on this date
+        xapian: if true, do not use ^0 weights
+        languageid: if given, use labels.get(languageid) rather than o_keywords"""
+        
         if not date: date = my_datetime.now()
-        if self.keyword: return self.keyword.replace("\n"," ")
+        if languageid:
+            kw = self.labels.get(languageid)
+        else:
+            kw = self.keyword
+        
+        if kw: return kw.replace("\n"," ")
         if self.name:
             ln = self.name
             if "-" in ln or " " in ln:
@@ -166,8 +176,7 @@ if __name__ == '__main__':
 
     db = dbtoolkit.amcatDB(profile=True)
 
-    o = Object(db, 889)
-    print o
-    for anc in getAllAncestors(o):
-        print anc
+    o = Object(db, 1249)
+    print o.getSearchString(languageid=13)
+    db.printProfile()
     
