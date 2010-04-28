@@ -17,7 +17,8 @@ class ObjectFinder(object):
 
 class LuceneFinder(ObjectFinder):
     def search(self, object):
-        query = object.getSearchString(xapian=False, languageid=self.languageid)
+        query = object.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
+        print "search", object, object.id , query
         results = lucenelib.search(self.index, {"X" : query}.items())
         return results[0]["X"].iterkeys()
 
@@ -40,7 +41,8 @@ if __name__ == '__main__':
 
     db = dbtoolkit.amcatDB()
     lf = LuceneFinder("/home/amcat/indices/AEX kranten JK 2007-09-24T10:32:18/", 13)
-    o = ont.Object(db, 1249)
+    o = ont.Object(db, 1545)
+    print o
     print list(lf.search(o))
-    o2 = ont.Object(db, 2423)
-    print list(lf.searchMultiple([o, o2]))
+    #o2 = ont.Object(db, 2423)
+    #print list(lf.searchMultiple([o, o2]))

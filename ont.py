@@ -44,7 +44,7 @@ class Object(Cachable):
 
     label = DBPropertyFactory("label", table="o_labels")
 
-    def getSearchString(self, date=None, xapian=False, languageid=None):
+    def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):
         """Returns the search string for this object.
         date: if given, use only functions active on this date
         xapian: if true, do not use ^0 weights
@@ -53,10 +53,12 @@ class Object(Cachable):
         if not date: date = my_datetime.now()
         if languageid:
             kw = self.labels.get(languageid)
-        else:
+
+        if (not languageid) or (fallback and kw is None):
             kw = self.keyword
         
         if kw: return kw.replace("\n"," ")
+        
         if self.name:
             ln = self.name
             if "-" in ln or " " in ln:
