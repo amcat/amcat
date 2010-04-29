@@ -1,6 +1,12 @@
 import dbtoolkit, sys
 
-projectid = int(sys.argv[1])
+arg = sys.argv[1]
+if arg[0] == "s":
+    srid = int(arg[1:])
+    where = " articleid in (select articleid from storedresults_articles where storedresultid=%i)" % srid
+else:
+    projectid = int(sys.argv[1])
+    where = " batchid in (select batchid from batches where projectid=%i)" % projectid
 
 print "Querying for duplicate articles"
 
@@ -10,31 +16,35 @@ db.doQuery("create table #tempmax (n int not null, mx int not null)")
 N=[3,4,5]
 
 for i in N:
-    db.doQuery("""insert into #tempmax
+    SQL = """insert into #tempmax
     select %i,  max(articleid) from articles
-    where batchid in (select batchid from batches where projectid=%i)
+    where %s
     and articleid not in (select mx from #tempmax)
     group by mediumid, date, section, headline, pagenr
-    having count(*) > 2""" % (i, projectid))
+    having count(*) > 2""" % (i, where)
+    print SQL
+    db.doQuery(SQL)
 
 cols = ", ".join('a%i' % i for i in N)
 SQL = """select t1.n, t1.a1, t1.a2, %s from (
   select min(articleid) as a1, max(articleid) as a2, count(*) as n from articles
-  where batchid in (select batchid from batches where projectid=%i)
+  where %s
   group by mediumid, date, section, headline, pagenr
   having count(*) > 1
-) t1""" % (cols, projectid)
+) t1""" % (cols, where)
 
 for i in N:
     t = "t%i" % i
     a = "a%i" % i
     SQL += """  left join (
     select min(articleid) as a1, max(articleid) as %(a)s from articles
-    where batchid in (select batchid from batches where projectid=%(projectid)s)
+    where %(where)s
     and articleid not in (select mx from #tempmax where n <= %(i)s)
     group by mediumid, date, section, headline, pagenr
     having count(*) > 1
     ) %(t)s on t1.a1 = %(t)s.a1""" % locals()
+
+print "\n\n", SQL
 data = db.doQuery(SQL)
 
 db.doQuery("drop table #tempmax")

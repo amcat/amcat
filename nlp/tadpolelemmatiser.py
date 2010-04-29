@@ -222,25 +222,40 @@ def lemmatiseArticles(db, aids, threads=4):
             toolkit.ticker.warn("Done?")
     toolkit.ticker.warn("Done!")
     
+NTHREADS = 4
 
+def lemmatiseNewArticles(db, aids_or_sql, nthreads=NTHREADS):
+    
+    aids = aids_or_sql
+    toolkit.ticker.warn("Determining unlemmatised articles from %i input articles " % len(aids))
+    db.doQuery("CREATE TABLE #temp (articleid int primary key)")
+    db.insertmany("#temp", ["articleid"], [[aid,] for aid in set(aids)])
+    SQL = "select distinct articleid from #temp where articleid not in  (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)"
+    toolkit.ticker.warn("Querying %s" % SQL)
+    aids = [aid for (aid,) in db.doQuery(SQL)]
+    toolkit.ticker.warn("Lemmatising %i articles" % len(aids))
+    lemmatiseArticles(db, aids, threads=nthreads)
+    
 if __name__ == '__main__':
     import dbtoolkit, article, toolkit, sys
+    db  = dbtoolkit.amcatDB()
 
     #BATCH = "(5452,5451,5450,5447,5446,5444,5429,5417,5389,5383,5334,5331,5329,5257,5256,5255,5254,4354,4159,4158)"
     #BATCH = "(5452)"
     BATCH = "batchid in (5762)"
-    toolkit.ticker.warn("Setting up lemmatiser")
     SQL = """select articleid from storedresults_articles where storedresultid=765 and articleid not in 
              (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)
              order by newid()"""
+    toolkit.warn(SQL)
+    #aids = [aid for (aid,) in db.doQuery(SQL)]
+    #lemmatiseArticles(db, aids, threads=NTHREADS)
+    #sys.exit()
+    
     #SQL = """select articleid from articles where batchid=5762 and articleid not in 
     #         (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)
-    #         order by newid()""" 
-    db  = dbtoolkit.amcatDB()
+    #         order by newid()"""
+    print "Querying..."
     aids = [aid for (aid,) in db.doQuery(SQL)]
-    nthreads = 3
-    if len(sys.argv) > 1:
-        nthreads = int(sys.argv[1])
-    #aids.remove(44554827)
-    #aids = [44554695, 44554696, 44554697, 44554698, 44554699]
-    lemmatiseArticles(db, aids, threads=nthreads)
+    print "Lemmatising..."
+    #aids = list(toolkit.intlist(sys.stdin))
+    lemmatiseNewArticles(db, aids)

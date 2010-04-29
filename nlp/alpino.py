@@ -1,5 +1,5 @@
 import toolkit
-import lemmata
+import lemmata, sentence
 
 ALPINO = "/home/amcat/resources/Alpino"
 ALPINO_ANALYSISID = 2
@@ -22,6 +22,9 @@ POSMAP = {"pronoun" : 'O',
           "particle": "R",
           "name" : "M",
           "part" : "R",
+          "intensifier" : "B",
+          "number" : "Q",
+          "reflexive":  'O',
           }
 
 def data2token(lemma, word, begin, end, dummypos, dummypos2, pos):
@@ -57,59 +60,52 @@ def parseSentence(sent, errorhook=None):
         yield t1, rel, t2
 
 def addText(art, text, lem=None):
-    if lem is None: lem = lemmata.Lemmata(art.db, ALPINO_ANALYSISID)
     sents = tokenizeText(text + " ")
-    sid = None
-    for sent in sents:
-        sid = sid or addSentence(art, lem, sent)
+    if lem is None: lem = lemmata.Lemmata(art.db, ALPINO_ANALYSISID)
+    sent = None
+    for text in sents:
+        sent = sent or addSentence(art, lem, text)
     art.db.commit()
-    return sid
+    return sent
                                     
 
 def addSentence(art, lem, sent):
     if not (sent and sent.strip()): return
     sid = lemmata.addSentence(art, sent)
+    s = sentence.Sentence(art.db, sid)
+    parseAndStoreSentence(lem, s)
+    return s
+
+def parseAndStoreSentence(lem, sent):
     tokens = {}
     rels = []
-    for t1, rel, t2 in parseSentence(sent):
+    for t1, rel, t2 in parseSentence(sent.text):
         tokens[t1.position] = t1
         tokens[t2.position] = t2
         rels.append((t1.position, t2.position, rel))
     for token in tokens.values():
-        lem.addParseWord(sid, token)
+        lem.addParseWord(sent.id, token)
+    duperels = {} # ppos, cpos : rel (to detect dupes)
     for ppos, cpos, rel in rels:
+        oldrel = duperels.get((ppos, cpos))
+        if oldrel is not None:
+            if oldrel == rel: continue
+            raise Exception("Cannot store sentence %i: duplicate relation %s->%s (%s <> %s)" % (send.id, ppos, cpos, oldrel, rel))
+        duperels[ppos, cpos] = rel
         relid = lem.creator.getRel(rel)
-        art.db.insert("parses_triples", dict(sentenceid=sid, parentbegin=ppos, childbegin=cpos, relation=relid, analysisid=ALPINO_ANALYSISID), retrieveIdent=False)
-        #print add, t1, rel, t2
-    return sid
-                                     
+        sent.db.insert("parses_triples", dict(sentenceid=sent.id, parentbegin=ppos, childbegin=cpos, relation=relid, analysisid=ALPINO_ANALYSISID), retrieveIdent=False)
 
 def tokenizeText(text):
     out, err = toolkit.execute(TOKENIZE, text)
     if err:
         raise Exception(err)
-    return out.split("\n")
+    return [x for x in out.split("\n") if x.strip()]
 
 AID = 44569371
 
 if __name__ == '__main__':
     import sys, dbtoolkit, article
-    if len(sys.argv) <= 1:
-        print "Usage: alpino.py [--add] sentence"
-        sys.exit()
-    add = sys.argv[1] == "--add"
-    if add:
-        del sys.argv[1]
-        db = dbtoolkit.amcatDB(easysoft=True)
-        art = article.Article(db, AID)
-        lem = lemmata.Lemmata(db, ALPINO_ANALYSISID)
-    sent = " ".join(sys.argv[1:])+" "
-    sents = tokenizeText(sent)
-    for sent in sents:
-        if add:
-            addSentence(art, lem, sent)
-            db.commit()
-        else:
-            for t1, rel, t2 in parseSentence(sent):
-                print add, t1, rel, t2
+    db = dbtoolkit.amcatDB()
+    sql = """select sentenceid from sentences s inner join articles a on s.articleid = a.articleid on where batchid=706 and sentenceid not in
+             (select sentenceid from parses_words where analysisid=%i)""" % ALPINO_ANALYSISISID
         

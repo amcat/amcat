@@ -39,6 +39,7 @@ def getCodedSentencesFromCodingjobIds(db, codingjobids):
 
 def getCodedSentencesFromCodingjobs(codingjobs):
     for ca in getCodedArticlesFromCodingjobs(codingjobids):
+        print ca.id
         for cs in ca.sentences:
             yield cs
             

@@ -12,7 +12,7 @@ class Sentence(Cachable):
     
     text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
     article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
-    words = DBFKPropertyFactory("parses_words", "wordid", dbfunc=word.Word)
+    words = DBFKPropertyFactory("parses_words", "wordid", dbfunc=word.Word, orderby="wordbegin")
 
     def cacheWords(self, *args, **kargs):
         cacheWords([self], *args, **kargs)
