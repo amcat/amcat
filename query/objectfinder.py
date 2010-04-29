@@ -15,15 +15,17 @@ class ObjectFinder(object):
     def searchMultiple(self, objects):
         abstract
 
-LTIME = 0.
+    def getQueries(self, objects):
+        if type(objects) in (ont.Object, ont.BoundObject): query = self.getQuery(objects)
+        queries = map(self.getQuery, objects)
+        queries = [q for q in queries if q]
+        if not queries: return None
+        return "(%s)" % ") OR (".join(queries)
+        
 class LuceneFinder(ObjectFinder):
-    def search(self, object):
-        query = object.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
-        #print "search", object, object.id , query
-        #print "obj:", object
-        #print "lang:", self.languageid, "query:", query
+    def search(self, objects):
+        query = self.getQueries(objects)
         results, time, n = lucenelib.search(self.index, {"X" : query}.items())
-        global LTIME; LTIME +=  time
         return results["X"].iterkeys()
 
     def searchMultiple(self, objectlist):
@@ -31,31 +33,27 @@ class LuceneFinder(ObjectFinder):
         for o, objects in objectlist:
             q = self.getQueries(objects)
             if q: query[o.id] = q
-
-        #print "lang:", self.languageid, "query:", query
         results, time, n = lucenelib.search(self.index, query.items())
-        global LTIME; LTIME +=  time            
         for k,v in results.iteritems():
             yield k, v.keys()
 
-    def getQueries(self, objects):
-        if type(objects) == ont.Object: query = self.getQuery(objects)
-        queries = map(self.getQuery, objects)
-        queries = [q for q in queries if q]
-        if not queries: return None
-        return "(%s)" % ") OR (".join(queries)
     def getQuery(self, obj):
         return obj.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
 
 
 class XapianFinder(ObjectFinder):
-    def search(self, object):
-        query = object.getSearchString(xapian=True, languageid=self.languageid)
-        return self.index.query(query, acceptPhrase=True)
+    def search(self, objects):
+        objects=list(objects)
+        query = self.getQueries(objects)
+        print object, query
+        if not query: raise("Empty query for %r/%s" % (objects, objects))
+        return self.index.query(query, acceptPhrase=True, returnAID=True)
 
     def searchMultiple(self, objects):
-        return dict((o.id, set(self.index.query(o.getSearchString(xapian=True, languageid=self.languageid), returnAID=True))) for o in objects)
+        return ((o.id, set(self.index.query(o.getSearchString(xapian=True, languageid=self.languageid), returnAID=True))) for o in objects)
 
+    def getQuery(self, obj):
+        return obj.getSearchString(xapian=True, languageid=self.languageid, fallback=True)
     
 if __name__ == '__main__':
     import ont, dbtoolkit

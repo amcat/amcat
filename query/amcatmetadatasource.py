@@ -86,20 +86,27 @@ class AmcatMetadataSource(DataSource):
                 if isinstance(field, DatabaseField) and field.concept == concept:
                     return field
 
-
-class DatabaseField(Field):
-    def __init__(self, datasource, concept, tables, column, conceptmapper=None, sqlmethod=False):
-        Field.__init__(self, datasource, concept)
-        self.tables = tables
-        self.column = column
-        self.conceptmapper = conceptmapper
-        self.sqlmethod = sqlmethod
+class MappedField(Field):
+    def __init__(self, datasource, concept, conceptmapper=None):
+         Field.__init__(self, datasource, concept)
+         self.conceptmapper = conceptmapper
     def getConceptMapping(self):
         return FieldConceptMapping(self.concept, self, self.mapConcept)
     def mapConcept(self, value, reverse):
         if self.conceptmapper:
             return self.conceptmapper.map(value, reverse)
         return value
+    def deserialize(self, value):
+        if type(value) == int and self.conceptmapper:
+            return self.conceptmapper.map(value, True)
+
+class DatabaseField(MappedField):
+    def __init__(self, datasource, concept, tables, column, conceptmapper=None, sqlmethod=False):
+        MappedField.__init__(self, datasource, concept, conceptmapper)
+        self.tables = tables
+        self.column = column
+        self.conceptmapper = conceptmapper
+        self.sqlmethod = sqlmethod
     def getColumn(self, table):
         if "%(table)s" in self.column or self.sqlmethod:
             return self.column % dict(table=table)
@@ -109,9 +116,6 @@ class DatabaseField(Field):
         for i, t in enumerate(self.tables):
             for t2 in self.tables[i+1:]:
                 yield (t, t2, self.column)
-    def deserialize(self, value):
-        if type(value) == int and self.conceptmapper:
-            return self.conceptmapper.map(value, True)
 
 class DatabaseMapping(Mapping):
     def __init__(self, a, b, cost=1.0, reversecost=None):

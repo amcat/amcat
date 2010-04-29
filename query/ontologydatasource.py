@@ -183,7 +183,9 @@ class HierarchyOntologyField(OntologyField):
         self.queryIncludesSelf = queryIncludesSelf
         self.classid = classid
     def getObjects(self):
-        return getDescendants(self.object, self.depth)    
+        return getDescendants(self.object, self.depth)
+    def getAllObjects(self, object):
+        return getDescendants(object)
     def getQuery(self, object):
         return " OR ".join("(%s)" % o for o in getDescendants(object))
     def getObject(self, id):
@@ -204,7 +206,8 @@ class ObjectArticleMapping(datasource.Mapping):
     def map(self, value, reverse, memo=None):
         if reverse:
             raise Exception("Article -> Ontology Object mapping not implemented")
-        return self.a.datasource.index.search(value)
+        objects = self.a.getAllObjects(value)
+        return self.a.datasource.index.search(objects)
 
 if __name__ == '__main__':
     import dbtoolkit, toolkit

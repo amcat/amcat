@@ -7,9 +7,11 @@ import lucenelib
 import dbtoolkit
 from ontologydatasource import *
 
+from amcatmetadatasource import ConceptMapper
+
 class ActorIssueDataSource(OntologyDataSource):
     def __init__(self, dm, db, index):
-        article = datasource.Field(self, dm.getConcept("article") )
+        article = datasource.Field(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
         issue = SetOntologyField(self, dm.getConcept("issue"), 5002, 5000, 1)
         actor = SetOntologyField(self,dm.getConcept("actor"), 5003, 5000, 1)
         issuearticle = OntArtField(self, dm.getConcept("issuearticle"), issue)

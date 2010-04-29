@@ -74,7 +74,7 @@ class DatabaseOperation(Operation):
         selectstr = ",".join("%s as v%i" % (f.getColumn(t), i)
                              for (i,(f,t)) in enumerate(sortedfields))
         
-        wherestr = " AND ".join("(%s)" % f for f in getFilters(self.edges))
+        wherestr = " AND ".join("(%s)" % f for f in getFilters(self.db, self.edges))
         distinctstr = " DISTINCT " if state.distinct else ""
         sql = "SELECT %s %s FROM %s WHERE %s" % (distinctstr, selectstr, fromstr, wherestr)
 
@@ -139,7 +139,7 @@ def getAllNeighbours(state, edges):
                 if edge2 not in edges:
                     yield edge2
 
-def getFilters(edges):
+def getFilters(db, edges):
     valuefilters = collections.defaultdict(set)
     for e in edges:
         for field, node in ((e.mapping.a, e.a), (e.mapping.b, e.b)):
