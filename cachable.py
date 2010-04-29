@@ -45,8 +45,10 @@ class CachingMeta(type):
             # return cached instance, call weakref to see
             # whether it still exists
             obj = _CACHE[cls, id]()
+            #print "FROM CACHE", cls, id
             if obj is not None: return obj
         # cache and return new instance
+        #print "NOT FROM CACHE", `cls`, `id`
         obj = type.__call__(cls, db, *args, **kargs)
         _CACHE[cls, id] = weakref.ref(obj)
         return obj
@@ -96,7 +98,7 @@ class Cachable(toolkit.IDLabel):
     def __getattribute__(self, attr):
         """Main magic: if attr is a property: return its .get().
         Otherwise, call superclass __getattribute__"""
-        if  attr not in ("__properties__", "_getProperty", "_getPropertyFactories", "__dict__"):
+        if  attr not in ("__properties__", "_getProperty", "_getPropertyFactories", "__dict__", "id"):
             prop = self._getProperty(attr)
             if prop:
                 return prop.get()
@@ -215,8 +217,10 @@ class DBProperty(Property):
         d = self.cachable.db.doQuery(SQL)
         if d: return self.process(*d[0])
     def prepareCache(self, cacher):
+        if self.cached: return
         cacher.addDBField(self.fieldname, table=self.table)
     def doCache(self, cacher):
+        if self.cached: return
         val = cacher.getDBData(self.cachable, self.fieldname, self.table)
         self.cache(self.process(val))
 
@@ -238,7 +242,7 @@ class DBFKProperty(Property):
     """
     Property representing a one-to-many relation
     """
-    def __init__(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None, objfunc=None, distinct=False):
+    def __init__(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None, objfunc=None, distinct=False, filter=None):
         """
         Table is the foreign key table, target fields the fields to retrieve.
         Reffield is the field to select on, defaulting to the idcolumn of the cachable.
@@ -268,13 +272,32 @@ class DBFKProperty(Property):
         self.endfunc = endfunc or list
         self.orderby = orderby
         self.distinct = distinct
+        self.filter = filter
     def retrieve(self):
         distinctstr = "distinct " if self.distinct else ""
         SQL = "SELECT %s%s FROM %s WHERE %s" % (distinctstr, _selectlist(self.targetfields), self.table, sqlWhere(self.reffield, self.cachable.id))
+        if self.filter: SQL += " AND (%s)" % self.filter
         if self.orderby: SQL += " ORDER BY %s" % _selectlist(self.orderby)
         data = self.cachable.db.doQuery(SQL)
         return self.endfunc(self.function(*x) for x in data)
 
+    def prepareCache(self,cacher):
+        if self.cached: return
+        fields = self.targetfields
+        if type(fields) in (str, unicode): fields = [fields]
+        cacher.addFKField(fields, self.table, self.reffield)
+
+    def doCache(self, cacher):
+        if self.cached: return
+        fields = self.targetfields
+        if type(fields) in (str, unicode): fields = [fields]
+        data = cacher.getFKData(fields, self.table, self.cachable, self.reffield)
+        val = self.endfunc(self.function(*x) for x in data)
+        self.cache(val)
+
+        
+        
+    
     # TODO: cache! not as easy as I thought# !
     # def prepareCache(self, cacher):
     #     # TODO: does not guarantee order!
@@ -344,12 +367,13 @@ def sqlWhere(fields, ids):
     return "(%s)" % " and ".join("(%s = %s)" % (field, toolkit.quotesql(id))
                                  for (field, id) in zip(fields, ids))
         
-def sqlFrom(cachables, table = None):
+def sqlFrom(cachables, table = None, reffield=None):
     c = cachables[0] # prototype, assume all cachables are alike
-    if type(c.__idcolumn__) in (str, unicode):
-        where  = toolkit.intselectionSQL(c.__idcolumn__, (x.id for x in cachables))
+    if reffield is None: reffield = c.__idcolumn__
+    if type(reffield) in (str, unicode):
+        where  = toolkit.intselectionSQL(reffield, (x.id for x in cachables))
     else:
-        where = "((%s))" % ") or (".join(sqlWhere(x.__idcolumn__, x.id) for x in cachables)
+        where = "((%s))" % ") or (".join(sqlWhere(reffield, x.id) for x in cachables)
 
     return " FROM %s WHERE %s" % (table or c.__table__, where)
 
@@ -364,15 +388,26 @@ class Cacher(object):
     """
     def __init__(self):
         self.dbfields = collections.defaultdict(set) # table : fields
+        self.dbfkfields = set() # (table, reffield, fields)
     def getData(self, cachables):
         if not cachables: return
-        self.data = {}
+        self.data = {} # {table, id} : {field : value}
         for table, fields in self.dbfields.items():
             fields = list(fields)
             SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__, ",".join(map(quotefield, fields)),
                                             sqlFrom(cachables, table=table))
             for row in cachables[0].db.doQuery(SQL):
-                self.data[table, row[0]] = dict(zip(fields, row[1:]))
+                id, values = row[0], row[1:]
+                self.data[table, id] = dict(zip(fields, values))
+
+        self.fkdata = collections.defaultdict(lambda  : collections.defaultdict(list)) # {table, reffield, fields} : {id : values}
+
+        for table, reffield, fields in self.dbfkfields:
+            SQL = "SELECT [%s], %s %s " % (reffield, ",".join(map(quotefield, fields)), sqlFrom(cachables, table, reffield))
+            for row in cachables[0].db.doQuery(SQL):
+                id, values = row[0], row[1:]
+                self.fkdata[table, reffield,fields][id].append(values)
+            
     def addDBField(self, field, table=None):
         self.dbfields[table].add(field)
         
@@ -382,6 +417,12 @@ class Cacher(object):
             if field not in row: print table, row
             return row[field]
 
+    def addFKField(self, fields, table,  reffield):
+        fields = tuple(fields)
+        self.dbfkfields.add((table, reffield, fields))
+    def getFKData(self, fields, table, cachable, reffield):
+        fields = tuple(fields)
+        return self.fkdata[table, reffield, fields].get(cachable.id, [])
 
 def cacheMultiple(cachables, *propnames):
     """
@@ -398,7 +439,10 @@ def cacheMultiple(cachables, *propnames):
             prop = cachable._getProperty(propname)
             if not prop: raise Exception("Cachable %r has not property %s" % (cachable, propname))
             prop.prepareCache(cacher)
+
+    #toolkit.ticker.warn("Getting data")
     cacher.getData(cachables)
+    #toolkit.ticker.warn("CAching values")
     for cachable in cachables:
         for prop in propnames:
             cachable._getProperty(prop).doCache(cacher)
