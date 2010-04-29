@@ -1,4 +1,4 @@
-from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory
+from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory, CachingMeta
 import toolkit
 try:
     import mx.DateTime as my_datetime
@@ -13,25 +13,37 @@ def getParent(db, cid, pid):
 
     #return Class(db, cid), pid and Object(db, pid)
 
-def getAllAncestors(object, stoplist=None):
+def getAllAncestors(object, stoplist=None, golist=None):
     if stoplist is None: stoplist = set()
-    for p in object.parents.values():
+    for p in object.getAllParents():
         if (p is None) or (p in stoplist): continue
+        if (golist and p not in golist): continue
         yield p
         stoplist.add(p)
-        for o2 in getAllAncestors(p, stoplist):
-            yield o2
-    for p, f, t in object.getParties(my_datetime.now()):
-        if (p is None) or (p in stoplist): continue
-        yield p
-        stoplist.add(p)
-        for o2 in getAllAncestors(p, stoplist):
+        for o2 in getAllAncestors(p, stoplist, golist):
             yield o2
 
+def getObject(db, id):
+    return Object(db, id)
+
+DATEFILTER = "fromdate < %s and (todate is null or todate > %s)" % (toolkit.quotesql(my_datetime.now()), toolkit.quotesql(my_datetime.now()))
+
+class Function(object):
+    def __init__(self, db, functionid, office_objectid, fromdate, todate):
+        self.functionid = functionid
+        self.office = Object(db, office_objectid)
+        if fromdate.year == 1753: fromdate = None
+        self.fromdate = fromdate
+        self.todate = todate
+    def __str__(self):
+        return "Function(%s, %s, %s, %s)" % (self.functionid, self.office, self.fromdate and toolkit.writeDate(self.fromdate), self.todate and toolkit.writeDate(self.todate))
+    __repr__ = __str__
 
 class Object(Cachable):
     __table__ = 'o_objects'
     __idcolumn__ = 'objectid'
+    __metaclass__ = CachingMeta
+
 
     labels = DBFKPropertyFactory("o_labels", ("languageid", "label"), endfunc=dict)
     parents = DBFKPropertyFactory("o_hierarchy", ("classid", "parentid"), reffield="childid", dbfunc = getParent, endfunc=dict)
@@ -44,6 +56,21 @@ class Object(Cachable):
 
     label = DBPropertyFactory("label", table="o_labels")
 
+    functions = DBFKPropertyFactory("o_politicians_functions", ("functionid", "office_objectid", "fromdate", "todate"), dbfunc = Function)
+
+    def getAllParents(self, date=None):
+        for p in self.parents.values():
+            if p:
+                yield p
+        for f in self.currentFunctions(date):
+            yield f.office
+        
+    def currentFunctions(self, date=None):
+        for f in self.functions:
+            if f.fromdate and date < f.fromdate: continue
+            if f.todate and date >= f.todate: continue
+            yield f
+    
     def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):
         """Returns the search string for this object.
         date: if given, use only functions active on this date
@@ -57,24 +84,18 @@ class Object(Cachable):
         if (not languageid) or (fallback and kw is None):
             kw = self.keyword
         
-        if kw: return kw.replace("\n"," ")
-        
-        if self.name:
+        if not kw and self.name:
             ln = self.name
             if "-" in ln or " " in ln:
                 ln = '"%s"' % ln.replace("-", " ")
             conds = []
             if self.firstname:
                 conds.append(self.firstname)
-            for p, fro, to in self.getParties(date):
-                k = p.getSearchString()
-                if not k: k = '"%s"' % str(p).replace("-"," ")
+            for function in self.currentFunctions(date):
+                k = function.office.getSearchString()
+                if not k: k = '"%s"' % str(function.office).replace("-"," ")
                 conds.append(k)
-            for f, p, fro, to in self.getFunctions(date):
-                k = p.getSearchString()
-                if not k: k = '"%s"' % str(p).replace("-"," ")
-                conds.append(k)
-                conds += function2conds(f, p)
+                conds += function2conds(function)
             if conds:
                 if xapian:
                     kw = "%s AND (%s)" % (ln, " OR ".join("%s" % x.strip() for x in conds),)
@@ -82,40 +103,26 @@ class Object(Cachable):
                     kw = "%s AND (%s)" % (ln, " OR ".join("%s^0" % x.strip() for x in conds),)
             else:
                 kw = ln
+        if kw:
+            if type(kw) == str: kw = kw.decode('latin-1')
             return kw.replace("\n"," ")
 
-    # anders??
-    def getParties(self, date=None):
-        SQL = "select party_objectid, fromdate, todate from o_politicians_parties where objectid=%i" % self.id
-        if date: SQL += " and fromdate < %s and (todate is null or todate > %s)" % (toolkit.quotesql(date), toolkit.quotesql(date))
-        for p, fro, to in self.db.doQuery(SQL):
-            yield Object(self.db, p), fro, to
-    def getFunctions(self, date=None):
-        SQL = "select functionid, office_objectid, fromdate, todate from o_politicians_functions where objectid=%i" % self.id
-        if date: SQL += "and fromdate < %s and (todate is null or todate > %s)""" % (toolkit.quotesql(date), toolkit.quotesql(date))
-        for f, p, fro, to in self.db.doQuery(SQL):
-            yield f, Object(self.db, p), fro, to
-            
-    #@property
-    #def label(self):
-    #    l = self.labels
-    #    if not l: return None
-    #    return sorted(l.items())[0][1]
 
-# anders!
-def function2conds(func, office):
-    if office.id in (380, 707, 729, 1146, 1536, 1924, 2054, 2405, 2411, 2554, 2643):
-        if func == 2:
+def function2conds(function):
+    officeid = function.office.id
+    if officeid in (380, 707, 729, 1146, 1536, 1924, 2054, 2405, 2411, 2554, 2643):
+        if function.functionid == 2:
             return ["bewinds*", "minister*"]
         else:
             return ["bewinds*", "staatssecret*"]
-    if office.id == 901:
+
+    if officeid == 901:
         return ["premier", '"minister president"']
-    if office.id == 548:
+    if officeid == 548:
         return ["senator", '"eerste kamer*"']
-    if office.id == 1608:
+    if officeid == 1608:
         return ["parlement*", '"tweede kamer*"']
-    if office.id == 2087:
+    if officeid == 2087:
         return ['"europ* parlement*"', "europarle*"]
     return []
 
@@ -170,15 +177,22 @@ class Set(Cachable):
     __table__ = 'o_sets'
     __idcolumn__ = 'setid'
     __dbproperties__ = ["name"]
+    __metaclass__ = CachingMeta
     objects = DBFKPropertyFactory("o_sets_objects", "objectid", dbfunc=Object)
     
 
 if __name__ == '__main__':
-    import dbtoolkit, pickle
+    import dbtoolkit, pickle, cachable
 
     db = dbtoolkit.amcatDB(profile=True)
 
-    o = Object(db, 1249)
-    print o.getSearchString(languageid=13)
+    o1 = Object(db, 1914)
+    o2 = Object(db, 2148)
+
+    cachable.cache([o1,o2], "functions", "keyword", "labels", "name", "firstname")
+    cachable.cache([o1,o2], "functions", "keyword", "labels", "name", "firstname")
+
+    print o1.getSearchString(languageid=13, fallback=True)
+    print o2.getSearchString(languageid=13, fallback=True)
+
     db.printProfile()
-    

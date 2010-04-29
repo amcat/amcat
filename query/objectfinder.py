@@ -2,7 +2,7 @@
 Objectfinder module. Helps using several kinds of indices through one common interface.
 """
 
-import lucenelib, article
+import lucenelib, article, ont
 
 class ObjectFinder(object):
     def __init__(self, index, languageid=101):
@@ -15,20 +15,38 @@ class ObjectFinder(object):
     def searchMultiple(self, objects):
         abstract
 
+LTIME = 0.
 class LuceneFinder(ObjectFinder):
     def search(self, object):
         query = object.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
-        print "search", object, object.id , query
-        print "obj:", object
-        print "lang:", self.languageid, "query:", query
-        results = lucenelib.search(self.index, {"X" : query}.items())
-        return results[0]["X"].iterkeys()
+        #print "search", object, object.id , query
+        #print "obj:", object
+        #print "lang:", self.languageid, "query:", query
+        results, time, n = lucenelib.search(self.index, {"X" : query}.items())
+        global LTIME; LTIME +=  time
+        return results["X"].iterkeys()
 
-    def searchMultiple(self, objects):
-        query = dict((o.id, o.getSearchString(xapian=False, languageid=self.languageid)) for o in objects)
-        print "lang:", self.languageid, "query:", query
-        for k,v in (lucenelib.search(self.index, query.items())[0]).iteritems():
+    def searchMultiple(self, objectlist):
+        query = {}
+        for o, objects in objectlist:
+            q = self.getQueries(objects)
+            if q: query[o.id] = q
+
+        #print "lang:", self.languageid, "query:", query
+        results, time, n = lucenelib.search(self.index, query.items())
+        global LTIME; LTIME +=  time            
+        for k,v in results.iteritems():
             yield k, v.keys()
+
+    def getQueries(self, objects):
+        if type(objects) == ont.Object: query = self.getQuery(objects)
+        queries = map(self.getQuery, objects)
+        queries = [q for q in queries if q]
+        if not queries: return None
+        return "(%s)" % ") OR (".join(queries)
+    def getQuery(self, obj):
+        return obj.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
+
 
 class XapianFinder(ObjectFinder):
     def search(self, object):

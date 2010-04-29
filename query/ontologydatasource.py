@@ -6,6 +6,7 @@ import lucenelib
 import toolkit
 import collections
 import categorise
+import cachable
 
 TEST_INDEX = "/home/amcat/indices/Test politiek nieuws 2010-02-15T12:35:36"
 
@@ -80,7 +81,6 @@ class SetObjectsMapping(datasource.Mapping):
     def map(self, value, reverse, memo):
         if reverse: raise Exception("object -> set mapping not implemented")
         if type(value) == int: value = self.a.getObject(value)
-        print `value`
         return value.objects
         
     
@@ -102,7 +102,8 @@ class ArticleOntArtMapping(datasource.Mapping):
         if reverse: return
         of = self.b.ontfield
         objects = of.getObjects()
-        return self.a.datasource.index.searchMultiple(objects)
+        target = list((o, of.getAllObjects(o)) for o in objects)
+        return list(self.a.datasource.index.searchMultiple(target))
 
 class OntologyField(datasource.Field):
     def getObjects(self):
@@ -119,19 +120,51 @@ class SetField(OntologyField):
     def getObject(self, id):
         return ont.Set(self.datasource.db, id)
 
-    
 class SetOntologyField(OntologyField):
-    def __init__(self, ds, concept, setid, supersetid, catid):
+    def __init__(self, ds, concept, setid, supersetid, catid=None):
         OntologyField.__init__(self, ds, concept)
         self.setid = setid
         self.supersetid = supersetid
-        self.catid = catid
+        self._set = None
+        self._superset = None
+        self.objectsPerObject = None
+    @property
+    def superset(self):
+        if self._superset is None:
+            self._superset = ont.Set(self.datasource.db, self.supersetid)
+        return self._superset
+    @property
+    def set(self):
+        if self._set is None:
+            self._set = ont.Set(self.datasource.db, self.setid)
+        return self._set
     def getObjects(self):
-        return ont.Set(self.datasource.db, self.setid).objects
+        return self.set.objects
     def getAllObjects(self, object):
-        for o2 in ont.Set(self.datasource.db, self.supersetid).objects:
-            if object in ont.getAllAncestors(o2):
-                yield o2
+        if self.objectsPerObject is None:
+            toolkit.ticker.warn("Setting up")
+            children = collections.defaultdict(list)
+
+            objects = set(self.superset.objects)
+            target = set(self.set.objects)
+            toolkit.ticker.warn("Caching")
+            #cachable.cacheMultiple(objects, "functions", "keyword", "labels", "name", "firstname", "parents")
+            cachable.cacheMultiple(objects | target, "functions", "keyword", "labels", "name", "firstname", "parents")
+            toolkit.ticker.warn("Computing children")
+            for o in objects:
+                if o in target: continue
+                parents = list(o.getAllParents())
+                for p in parents:
+                    if p in objects or p in target:
+                        children[p].append(o)
+                        break
+            def allchildren(o):
+                yield o
+                for o2 in children.get(o, []):
+                    for c in allchildren(o2):
+                        yield c
+            self.objectsPerObject = dict((o,list(allchildren(o))) for o in target)                        
+        return self.objectsPerObject[object]
     def getQuery(self, object):
         objects = set(self.getAllObjects(object))
         objects.add(object)
@@ -173,3 +206,29 @@ class ObjectArticleMapping(datasource.Mapping):
             raise Exception("Article -> Ontology Object mapping not implemented")
         return self.a.datasource.index.search(value)
 
+if __name__ == '__main__':
+    import dbtoolkit, toolkit
+    class X(object): pass
+    ds = X()
+    ds.db = dbtoolkit.amcatDB(profile=True)
+    #ds.db.beforeQueryListeners.add(toolkit.ticker.warn)
+    f = SetOntologyField(ds, None, 5002, 5000)
+
+    import lucenelib
+    INDEX = "/home/jpakraal/dnnluc"
+    import objectfinder
+    lf = objectfinder.LuceneFinder(ds.db, 13)
+    for o in f.getObjects():
+        if o.id <> 14243: continue
+        s =  lf.getQueries(f.getAllObjects(o))
+        print s
+        
+        try:
+            lucenelib.search(INDEX, dict(s=s).items())
+        except Exception, e:
+            print f.getAllObjects(o)
+            print s
+            print o.id
+            print e
+    ds.db.printProfile()
+    

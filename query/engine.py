@@ -6,7 +6,6 @@ import operation, mst, tabulatorstate
 import os, time, sys
 import toolkit
 import table3, tableoutput
-
 import filter, aggregator # not used, import to allow indirect access
 
 def postprocess(table, sortfields, limit, offset):
@@ -74,13 +73,17 @@ class QueryEngine(object):
 
         aggTable = aggregate(table, groupby, cellagr)
         result = table3.DataTable()
+        aggTable = list(aggTable)
+                
         num_rows = len(rows)
         for k,v in aggTable:
             row = k[:num_rows]
             col = k[num_rows:]
             result.addValue(row, col, v)
+
         result.rows = sorted(result.rows)
         result.columns = sorted(result.columns)
+                
         return result
 
     def getProfileTable(self):
@@ -122,16 +125,20 @@ def aggregate(table, selectcolumns, aggregatecolumns):
     Returns a Generator with the tupled selected columns as key, and the aggregated values as the values
     """
     dict = {}
+    ids2objs = {}
+    def getid(o): return o.id if isinstance(o, toolkit.IDLabel) else o
     for row in table.getRows():
-        key = tuple(table.getValue(row, col) for col in selectcolumns)
+        objs = tuple(table.getValue(row, col) for col in selectcolumns)
+        key = tuple(getid(o) for o in objs)
         if not dict.has_key(key):
             vals = tuple(a.getAggregateFunction() for a in aggregatecolumns)
             dict[key] = vals
+            ids2objs[key] = objs
         for col, func in zip(aggregatecolumns, dict[key]):
             col.running(table, row, func)
     for key,funcs in dict.iteritems():
         values = tuple(col.final(func) for (col, func) in zip(aggregatecolumns, funcs))
-        yield key, values
+        yield ids2objs[key], values
 
 def getRoute(model, concepts, filters):
     concepts = set(concepts) | set(f.concept for f in filters)

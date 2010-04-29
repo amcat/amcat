@@ -34,7 +34,9 @@ class ConceptMapper(object):
         self.db = db
         self.targetclass = targetclass
     def map(self, value, reverse):
-        if not reverse: return value.id
+        if not reverse:
+            if type(value) == int: return value
+            return value.id
         return self.targetclass(self.db, value)    
 	
 class AmcatMetadataSource(DataSource):
