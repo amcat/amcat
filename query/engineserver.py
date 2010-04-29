@@ -2,7 +2,7 @@ import  socket, sys, threading, Queue, hashlib, functools, time, traceback
 import uuid
 from dbpool import readi, sendi
 import filter
-import pickle
+import cPickle as pickle
 import datasource
 
 PORT = 26228

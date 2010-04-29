@@ -16,7 +16,8 @@ class ObjectFinder(object):
         abstract
 
     def getQueries(self, objects):
-        if type(objects) in (ont.Object, ont.BoundObject): query = self.getQuery(objects)
+        if type(objects) in (ont.Object, ont.BoundObject):
+            return self.getQuery(objects)
         queries = map(self.getQuery, objects)
         queries = [q for q in queries if q]
         if not queries: return None
@@ -43,14 +44,16 @@ class LuceneFinder(ObjectFinder):
 
 class XapianFinder(ObjectFinder):
     def search(self, objects):
-        objects=list(objects)
         query = self.getQueries(objects)
-        print object, query
         if not query: raise("Empty query for %r/%s" % (objects, objects))
         return self.index.query(query, acceptPhrase=True, returnAID=True)
 
-    def searchMultiple(self, objects):
-        return ((o.id, set(self.index.query(o.getSearchString(xapian=True, languageid=self.languageid), returnAID=True))) for o in objects)
+    def searchMultiple(self, objectlist):
+        
+        for o, objects in objectlist:
+            yield o.id, self.search(o)
+            
+        #return ((o.id, set(self.index.query(o.getSearchString(xapian=True, languageid=self.languageid), returnAID=True))) for o in objects)
 
     def getQuery(self, obj):
         return obj.getSearchString(xapian=True, languageid=self.languageid, fallback=True)

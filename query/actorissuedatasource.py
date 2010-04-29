@@ -7,11 +7,12 @@ import lucenelib
 import dbtoolkit
 from ontologydatasource import *
 
-from amcatmetadatasource import ConceptMapper
+from amcatmetadatasource import ConceptMapper, MappedField
+
 
 class ActorIssueDataSource(OntologyDataSource):
     def __init__(self, dm, db, index):
-        article = datasource.Field(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
+        artfield = MappedField(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
         issue = SetOntologyField(self, dm.getConcept("issue"), 5002, 5000, 1)
         actor = SetOntologyField(self,dm.getConcept("actor"), 5003, 5000, 1)
         issuearticle = OntArtField(self, dm.getConcept("issuearticle"), issue)
@@ -21,9 +22,9 @@ class ActorIssueDataSource(OntologyDataSource):
         set = SetField(self, dm.getConcept("set"))
 
         mappings = [
-            ObjectArticleMapping(issue, article, db),
-            ObjectArticleMapping(actor, article, db),
-            ArticleOntArtMapping(article, issuearticle),
+            ObjectArticleMapping(issue, artfield, db),
+            ObjectArticleMapping(actor, artfield, db),
+            ArticleOntArtMapping(artfield, issuearticle),
             OntArtObjectMapping(issuearticle, coocissue),
             OntArtCoocMapping(issuearticle, issuecooc),
             SetObjectsMapping(set, issue),

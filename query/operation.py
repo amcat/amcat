@@ -59,7 +59,6 @@ class DatabaseOperation(Operation):
         return 1
     
     def apply(self, state):
-        print "Applying %r" % self
         fields = getFields(self.edges) # {field : table}
 
         fromstr = ""
