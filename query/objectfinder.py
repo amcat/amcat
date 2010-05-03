@@ -15,6 +15,9 @@ class ObjectFinder(object):
     def searchMultiple(self, objects):
         abstract
 
+    def getTerms(self, document):
+        abstract
+
     def getQueries(self, objects):
         if type(objects) in (ont.Object, ont.BoundObject):
             return self.getQuery(objects)
@@ -22,7 +25,7 @@ class ObjectFinder(object):
         queries = [q for q in queries if q]
         if not queries: return None
         return "(%s)" % ") OR (".join(queries)
-        
+
 class LuceneFinder(ObjectFinder):
     def search(self, objects):
         query = self.getQueries(objects)
@@ -41,6 +44,13 @@ class LuceneFinder(ObjectFinder):
     def getQuery(self, obj):
         return obj.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
 
+    def getTerms(self, document):
+        raise Exception("Not yet implemented")
+
+    def searchOnTerm(self, query):
+        results, time, n = lucenelib.search(self.index, {"X" : query}.items())
+        print "num results:", len(list(results['X'].iterkeys()))
+        return results["X"].iterkeys()
 
 class XapianFinder(ObjectFinder):
     def search(self, objects):
@@ -49,15 +59,24 @@ class XapianFinder(ObjectFinder):
         return self.index.query(query, acceptPhrase=True, returnAID=True)
 
     def searchMultiple(self, objectlist):
-        
         for o, objects in objectlist:
             yield o.id, self.search(o)
-            
+
         #return ((o.id, set(self.index.query(o.getSearchString(xapian=True, languageid=self.languageid), returnAID=True))) for o in objects)
 
     def getQuery(self, obj):
         return obj.getSearchString(xapian=True, languageid=self.languageid, fallback=True)
-    
+
+    def getTerms(self, document):
+        for term in self.index.getDocument(document).termlist():
+            yield term[0]
+
+    def searchOnTerm(self, query):
+        terms = [x.lower() for x in query.split()]
+        query = xapian.Query(xapian.Query.OP_AND, terms)
+        for art in self.index.query(query):
+            yield art
+
 if __name__ == '__main__':
     import ont, dbtoolkit
 

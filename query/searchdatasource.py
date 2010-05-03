@@ -29,21 +29,16 @@ class SearchDataMapping(Mapping):
         if reverse:
             return self.getTermsPerArticle(value)
         else:
-            return self.getArtikelenPerSearchterm(value)   
-        
+            return self.getArtikelenPerSearchterm(value)
+
     def getTermsPerArticle(self,value):
-        inx = self.a.datasource.index
-        document = inx.getDocument(value)
-        for term in document.termlist():
-            yield term[0]
-                    
+        for term in self.a.datasource.index.getTerms(value):
+            yield term
+
     def getArtikelenPerSearchterm(self,value):
-        terms = [x.lower() for x in value.split()]
-        query = xapian.Query(xapian.Query.OP_AND, terms)
-        index = self.a.datasource.index.query(query)
-        for art in index:
-            yield art
-            
+        for aid in self.a.datasource.index.searchOnTerm(value):
+            yield aid
+
 if __name__ == '__main__':
     import dbtoolkit, tabulator
     from sourceinterface import *
