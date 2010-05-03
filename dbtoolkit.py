@@ -250,7 +250,7 @@ class amcatDB(object):
             SQL = "INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, paramstr)
             if retrieveIdent and self.dbType=="psycopg2": SQL += " RETURNING id"
             with self.cursor() as c:
-                values = map(str, values)
+                #values = map(str, values)
                 c.execute(SQL, values)
                 if retrieveIdent:
                     if self.dbType == "psycopg2":
@@ -637,7 +637,7 @@ class ProfilingAfterQueryListener(object):
             print >>stream, result
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
-    def report(self, replacenumbers=True, maxsqlen=150):
+    def report(self, replacenumbers=True, maxsqlen=100):
         data = collections.defaultdict(lambda : [0, 0., 0]) # {sql : [n, totaltime, totallength]}
         for sql, timelens in self.queries.iteritems():
             if replacenumbers: sql = doreplacenumbers(sql)

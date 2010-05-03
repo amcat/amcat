@@ -1511,6 +1511,17 @@ def multidict(seq):
                 result[k].add(v)
     return result
 
+def getTermColumns():
+    try:
+        import termios, fcntl, struct, sys
+        
+        s = struct.pack("HHHH", 0, 0, 0, 0)
+        fd_stdout = sys.stdout.fileno()
+        x = fcntl.ioctl(fd_stdout, termios.TIOCGWINSZ, s)
+        return struct.unpack("HHHH", x)[1]
+    except:
+        return None
+
 if __name__ == '__main__':
     import dbtoolkit, article
     AIDS = 45143636,45564121,44783534,45560808,44783539,45560791
