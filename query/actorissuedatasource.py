@@ -9,12 +9,16 @@ from ontologydatasource import *
 
 from amcatmetadatasource import ConceptMapper, MappedField
 
+def getActor(db, obj):
+    lbl = obj.labels.get(15)
+    if not lbl: lbl = str(obj)
+    return toolkit.IDLabel(obj.id, lbl)
 
 class ActorIssueDataSource(OntologyDataSource):
     def __init__(self, dm, db, index):
         artfield = MappedField(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
         issue = SetOntologyField(self, dm.getConcept("issue"), 5002, 5000, 1)
-        actor = SetOntologyField(self,dm.getConcept("actor"), 5003, 5000, 1)
+        actor = SetOntologyField(self,dm.getConcept("actor"), 5003, 5000, 1, conceptmapper=ConceptMapper(db, getActor))
         issuearticle = OntArtField(self, dm.getConcept("issuearticle"), issue)
         coocissue = datasource.Field(self, dm.getConcept("coocissue"))
         issuecooc = datasource.Field(self, dm.getConcept("issuecooc"))
@@ -31,7 +35,7 @@ class ActorIssueDataSource(OntologyDataSource):
             SetObjectsMapping(set, actor),
             ]
         OntologyDataSource.__init__(self, dm, db, index, mappings)
-
+        
 if __name__ == '__main__':
     import dbtoolkit, ont2
     db = dbtoolkit.amcatDB()

@@ -7,16 +7,17 @@ import toolkit
 import collections
 import categorise
 import cachable
-
+import amcatmetadatasource # mappedfield
 TEST_INDEX = "/home/amcat/indices/Test politiek nieuws 2010-02-15T12:35:36"
 
 class OntologyDataSource(datasource.DataSource):
-    def __init__(self, dm, db, index, mappings=None):
+    def __init__(self, dm, db, index, mappings=None, idlabellang=None):
         # kargs = dict(username='draft', password='l0weL)WE')
         self.db = db
         datasource.DataSource.__init__(self, mappings)
         self._ont = None
         self.index = index
+        self.idlabellang=idlabellang
 
 #    @property
 #    def ont(self):
@@ -37,8 +38,9 @@ class OntologyDataSource(datasource.DataSource):
     def deserialize(self, concept, id):
         f = self.getOntologyField(concept)
         if f:
-            if type(id) <> int: return id
-            return f.getObject(id)
+            if type(id) == int: 
+                id = f.getObject(id)
+            return id
 
 
 class OntArtField(datasource.Field):
@@ -105,7 +107,7 @@ class ArticleOntArtMapping(datasource.Mapping):
         target = list((o, of.getAllObjects(o)) for o in objects)
         return list(self.a.datasource.index.searchMultiple(target))
 
-class OntologyField(datasource.Field):
+class OntologyField(amcatmetadatasource.MappedField):
     def getObjects(self):
         "return sequence of ont2.Objects visible in this field"
         abstract
@@ -121,8 +123,8 @@ class SetField(OntologyField):
         return ont.Set(self.datasource.db, id)
 
 class SetOntologyField(OntologyField):
-    def __init__(self, ds, concept, setid, supersetid, catid=None):
-        OntologyField.__init__(self, ds, concept)
+    def __init__(self, ds, concept, setid, supersetid, catid=None, conceptmapper=None):
+        OntologyField.__init__(self, ds, concept, conceptmapper=conceptmapper)
         self.setid = setid
         self.supersetid = supersetid
         self._set = None

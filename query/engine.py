@@ -44,7 +44,7 @@ class QueryEngine(object):
         T0 = time.time()
         route = getRoute(self.model, concepts, filters)
         state = tabulatorstate.State(None, route, filters, distinct)
-        toolkit.ticker.warn("Starting reduction")
+        toolkit.ticker.warn("Starting reduction, concepts=%s, filters=%s" % (concepts, filters))
         while state.solution is None:
             best = toolkit.choose(self.operationsFactory.getOperations(state),
                                   lambda op: op.getUtility(state))
@@ -52,7 +52,7 @@ class QueryEngine(object):
             state = best.apply(state)
             #toolkit.ticker.warn("Cleaning...")
             clean(state, concepts)
-        toolkit.ticker.warn("Done")
+        toolkit.ticker.warn("Done, %i results" % (len(state.solution.data)))
         solution = getColumns(state.solution, concepts)
 
         if distinct: solution = list(makedistinct(solution))
