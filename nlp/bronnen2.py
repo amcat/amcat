@@ -62,46 +62,40 @@ def getIdentifier(db, debug=None):
 
         # hoe 39397415 te vangen?frame.object = getChild(getChild(getChild(node, "mod"), "pc"),"obj1") #39397415 Van Bommel verrast
         
-        DeclarativeRule(i, SPO, name="spo", condition=[isVNotZeg, isHighestV], postprocess=negation,
-                        subject=Serial(childOfLowestV("su"), Pattern(resolveDie)),
-                        object=FirstMatch(Serial(Child("obj2", pos="P"), Child("obj1")),
-                                          Child("obj2"),
-                                          Child("obj1"),
-                                          Child("predc"),
-                                          Serial(childOfLowestV("mod"), Child("obj1")),
-                                          Serial(childOfLowestV("pc"), Child("obj1")),
-                                          Serial(childOfLowestV("ld"), Child("obj1")),
-                                          ),
-                        predicate=Self()), # passief bij lowest(mod).lemma=door
+        SPORule(i, condition=[isVNotZeg, isHighestV], postprocess=draai,
+                subject=Serial(childOfLowestV("su"), Pattern(resolveDie), Pattern(bijzin)),
+                object=Serial(FirstMatch(Serial(Child("obj2", pos="P"), Child("obj1")),
+                                         Child("obj2"),
+                                         Child("obj1"),
+                                         Child("predc"),
+                                         Serial(childOfLowestV("mod"), Child("obj1")),
+                                         Serial(childOfLowestV("mod"), Child("pc"), Child("obj1")),
+                                         Serial(childOfLowestV("pc"), Child("obj1")),
+                                         Serial(childOfLowestV("ld"), Child("obj1")),
+                                         ),
+                              Pattern(bijzin)),
+                negation = Child("mod", lemma=NEGATORS),
+                ),
+        SPORule(i, condition=[isVNotZeg], 
+                subject=Serial(Child("mod", pos="P"), Child("obj1")),
+                object=Child("obj1")) # passief (geen check op lemma='door'?)
         
     ]:
         i.rules.append(r)
     return i
 
-def negation(identifier, frame):
-    frame.negation = getChild(frame.predicate, "mod")
+def bijzin(node):
+    if node.word.lemma.label in ["die", "dat"]: 
+        m = getParent(node, "mod")
+        if m: return m
+    return node
+
+def draai(identifier, frame):
+    p = frame.predicate
+    if p.word.lemma.pos == "V" and identifier.hasLemma(p, V_DRAAI):        
+        frame.subject, frame.object = frame.object, frame.subject
     return frame
 
-def rule_spo_1actief(node):
-
-    if not frame.object:
-        #debug("xxxxxxxxxxxxxxxxxxx..............",getChild(node,"mod"))
-        frame.object = getChild(getChild(getChild(node, "mod"), "pc"),"obj1") #39397415 Van Bommel verrast
-    #if not frame.object and getDescendant(getChild(node, "vc"), "obj1"): frame.object = getChild(node, "vc")   
-    if not frame.object: frame.object = getChild(getChild(node,"ld"),"obj1")
-    #pdoel=getChild(frame.object, "mod") #om-constructie hangt aan object, zie 39403134
-    #if not pdoel: pdoel = getChild(node, "mod")
-    #if pdoel:
-    #    if pdoel.word.lemma.label in ("met het oog op", "om","omwille","opdat","zodat","waardoor","teneinde","voor"):
-    #        frame2 = getPurpose(node,pdoel,frame.subject) # 39404297
-    #        return [frame, frame2]
-    #    elif pdoel.word.lemma.label in ("met"):  #met als isGoal, 39405708
-    #        pkey = isGoal(getDescendant(pdoel,pos="N"))
-    if isNiet(getChild(node, "mod")): frame.negation = getChild(node, "mod")  
-    doBijzinSODraai(frame)
-    doelframe = getDoel(frame.object, frame.predicate) or getDoel(frame.predicate, frame.predicate)
-    return [frame, doelframe]  
-    
 def childOfLowestV(*args, **kargs):
     return Serial(Lowest("vc"), Child(*args, **kargs))
 
@@ -109,25 +103,6 @@ def resolveDie(node):
     if node and node.word.lemma.label in ("die","dat","welke","dewelke"): #39400763, beperkende bijzin: Verhagen (mod) die (su) node
         return getParent(node, "mod")
     return node
-    
-
-class FirstMatch(object):
-    def __init__(self, *rules):
-        self.rules = rules
-    def getNode(self, node):
-        for rule in self.rules:
-            n = rule.getNode(node)
-            if n: return n
-
-class Lowest(Conditional):
-    def __init__(self, rel):
-        self.rel = rel
-    def getNode(self, node):
-        lowest = node
-        while getChild(lowest, self.rel):
-            lowest = getChild(lowest, self.rel)
-        return lowest
-
 
 def isHighestV(rule, frame):
     node = frame.predicate
@@ -135,7 +110,6 @@ def isHighestV(rule, frame):
     if su and getChild(getParent(node,"vc"), "su") == su: return False
     return True
     
-
 def isVNotZeg(rule, frame):
     for pos, acts in (V_PASSIVE_SPEECH_ACTS, V_SPEECH_ACTS):
         for lemmata in acts.values():

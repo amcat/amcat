@@ -95,6 +95,23 @@ class Serial(Pattern):
     
 
 
+class FirstMatch(Pattern):
+    def __init__(self, *rules):
+        self.rules = rules
+    def getNode(self, node):
+        for rule in self.rules:
+            n = rule.getNode(node)
+            if n: return n
+
+class Lowest(Pattern):
+    def __init__(self, rel):
+        self.rel = rel
+    def getNode(self, node):
+        lowest = node
+        while getChild(lowest, self.rel):
+            lowest = getChild(lowest, self.rel)
+        return lowest
+
 class Identifier(object):
     def __init__(self, db, debug=None):
         self.rules = []
@@ -125,7 +142,11 @@ class Identifier(object):
 
 ################### Specific rules ########################
 
-
+class SPORule(DeclarativeRule):
+    def __init__(self, identifier, postprocess=None, predicate=Self(), name="spo", **roles):
+        roles['predicate'] = predicate
+        DeclarativeRule.__init__(self, identifier, SPO, postprocess=postprocess, name=name, **roles)
+    
 class BronRule(DeclarativeRule):
     def __init__(self, identifier,  match=None, key=Self(), checks=None, postprocess=None, verbose=False, **roles):
         roles['key'] = key

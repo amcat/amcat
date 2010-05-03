@@ -27,6 +27,7 @@ N_SPEECH_ACTS = ('N', {
         "belofte" : ("belofte","toezegging","afspraak","gelofte","erewoord","overeenkomst","verbond","verbintenis","regeling","verdrag", "akkoord","contract","convenant","regeerakkoord","conventie"),
         })
 
+V_DRAAI = "krijg","ontvang"
 
 #     "equiv" : ('V', ("duid_aan", "duid", "karakteriseer","kenschets")),
 #     "moet" : ('V', ("moet","behoor","dien")),
