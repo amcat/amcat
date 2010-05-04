@@ -4,7 +4,7 @@ from dbpool import readi, sendi
 import filter
 import cPickle as pickle
 import datasource
-import cachable, article, sources
+import cachable, article, sources, ont
 
 PORT = 26228
 NWORKERS = 5
@@ -31,6 +31,7 @@ def cachelabels(table):
             if isinstance(cell, article.Article): articles.add(cell)
             elif isinstance(cell, sources.Source): srces.add(cell)
             elif isinstance(cell, cachable.Cachable): cachables.add(cell)
+            elif isinstance(cell, ont.BoundObject): cachables.add(cell.objekt)
     cachable.cacheMultiple(articles, "encoding", "headline")
     cachable.cacheMultiple(srces, "name")
     cachable.cache(cachables, "label")
