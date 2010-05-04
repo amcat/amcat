@@ -1,18 +1,23 @@
 from engineserver import readobj, sendobj, authenticateToServer, PORT
 import socket
+import cachable, article
 import engine
 from engine import QueryEngine
 import toolkit
 import pooleddb
 import dbtoolkit
 import sqlite3
-#import cPickle as pickle
-import pickle
+import cPickle as pickle
+#import pickle
 import filter
 
 import table3
 
 HOST = 'amcat.vu.nl'
+
+def serialize(x):
+    print type(x)
+    return x
 
 class ProxyEngine(QueryEngine):
     def __init__(self, datamodel, log=False, profile=False, port=PORT):
@@ -101,25 +106,42 @@ class CachingEngineWrapper(QueryEngine):
     def getCachedList(self, concepts, filters, distinct):
         cflags = conceptflags(concepts)
         # use flags to check concepts are a subset of cached concepts
-        # use >= check to allow index use, then check subset using A & B = A 
-        for id, filters2, distinct2 in self.cachedb.doQuery("select id, filters, distnct from listcache where concepts >= %i and concepts & %i = %i" % (cflags, cflags, cflags)):
+        # use >= check to allow index use, then check subset using A & B = A
+        toolkit.ticker.warn("Querying cache")
+        cached = self.cachedb.doQuery("select id, filters, distnct from listcache where concepts >= %i and concepts & %i = %i" % (cflags, cflags, cflags))
+        toolkit.ticker.warn("Iterating over %i promising candidates" % (len(cached)))
+        for id, filters2, distinct2 in cached:
             if distinct2 <> distinct: continue
             filters2 = self.deserializefilters(filters2)
             print `filters`, `filters2`, filters == filters2
             if filters <> filters2: continue
-            print "Getting cached result"
+            toolkit.ticker.warn("Found direct match: %i" % (id))
             result = self.cachedb.getValue("select result from listcache where id=%i" % id)
+            toolkit.ticker.warn("Deserializing")
             result = self.deserialize(result)
+            toolkit.ticker.warn("Postcache")
             result = postcache(result, concepts)
+            toolkit.ticker.warn("Done")
             return result
     def cacheList(self, result, concepts, filters, distinct):
+        toolkit.ticker.warn("Applying str")
+        articles, cachables = set(), set()
         for row in result:
-            map(str, row)
+            for cell in row:
+                if isinstance(cell, article.Article):
+                    articles.add(cell)
+                elif isinstance(cell, cachable.Cachable):
+                    cachables.add(cell)
+        cachable.cacheMultiple(articles, "encoding", "headline")
+        cachable.cache(cachables, "label")
+
+        toolkit.ticker.warn("Serializing")
         result, filters = self.serialize(result), self.serializefilters(filters)
-        #result, filters = map(self.serialize, (result, filters))
         concepts = conceptflags(concepts)
+        toolkit.ticker.warn("Inserting")
         cacheid = self.cachedb.insert("listcache", dict(concepts=concepts, filters=filters, result=result, distnct=distinct))
         self.cachedb.commit()
+        toolkit.ticker.warn("Done")
         
     def initcache(self):
         if not self.cachedb.hasTable("listcache"):

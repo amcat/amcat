@@ -29,6 +29,7 @@ class ObjectFinder(object):
 class LuceneFinder(ObjectFinder):
     def search(self, objects):
         query = self.getQueries(objects)
+        print query
         results, time, n = lucenelib.search(self.index, {"X" : query}.items())
         return results["X"].iterkeys()
 
@@ -37,6 +38,7 @@ class LuceneFinder(ObjectFinder):
         for o, objects in objectlist:
             q = self.getQueries(objects)
             if q: query[o.id] = q
+        print query
         results, time, n = lucenelib.search(self.index, query.items())
         for k,v in results.iteritems():
             yield k, v.keys()

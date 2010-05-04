@@ -165,7 +165,8 @@ class SetOntologyField(OntologyField):
                 for o2 in children.get(o, []):
                     for c in allchildren(o2):
                         yield c
-            self.objectsPerObject = dict((o,list(allchildren(o))) for o in target)                        
+            self.objectsPerObject = dict((o.id,list(allchildren(o))) for o in target)
+        if type(object) <> int: object = object.id
         return self.objectsPerObject[object]
     def getQuery(self, object):
         objects = set(self.getAllObjects(object))

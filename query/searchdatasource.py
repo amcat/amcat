@@ -3,6 +3,7 @@ from datasource import DataSource, Mapping, Field
 from itertools import imap, izip
 from amcatxapian import Index
 import article
+from amcatmetadatasource import ConceptMapper, MappedField
 
 class SearchDataSource(DataSource):
     """
@@ -10,14 +11,14 @@ class SearchDataSource(DataSource):
     indx:=index of the articles for draft
     Returns a mapping of search to articles, to find articles in which searchterms are mentioned
     """
-    def __init__(self, datamodel,indx):
-        DataSource.__init__(self, self.createMappings(datamodel))
+    def __init__(self, datamodel,indx, db):
+        DataSource.__init__(self, self.createMappings(datamodel, db))
         self.index = indx
-    def createMappings(self, dm):
-        article = Field(self, dm.getConcept("article") )
+    def createMappings(self, dm, db):
+        artfield = MappedField(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
         searchterm = Field(self, dm.getConcept("search"))
         return [
-            SearchDataMapping(searchterm, article)
+            SearchDataMapping(searchterm, artfield)
             ]
     def __str__(self):
         return "Search"
