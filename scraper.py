@@ -70,7 +70,8 @@ class Scraper(object):
         self.date = date
         self.log = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
         self.imagescale = imagescale
-        query = "select url from articles where batchid = '%i' and mediumid = '%i'" % (self.batch, self.mediumid)
+        query = "select url from articles where batchid = '%i'" % self.batch
+        if self.mediumid: query += " and mediumid = '%i'" % self.mediumid
         data = self.db.doQuery(query)
         self.urls = set()
         for url in data:
