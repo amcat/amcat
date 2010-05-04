@@ -26,6 +26,9 @@ class ObjectFinder(object):
         if not queries: return None
         return "(%s)" % ") OR (".join(queries)
 
+    def searchOnTerm(self, query):
+        abstract
+
 class LuceneFinder(ObjectFinder):
     def search(self, objects):
         query = self.getQueries(objects)
