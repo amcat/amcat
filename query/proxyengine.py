@@ -1,6 +1,5 @@
 from engineserver import readobj, sendobj, authenticateToServer, PORT
 import socket
-import cachable, article
 import engine
 from engine import QueryEngine
 import toolkit
@@ -10,7 +9,7 @@ import sqlite3
 import cPickle as pickle
 #import pickle
 import filter
-
+import engineserver
 import table3
 
 HOST = 'amcat.vu.nl'
@@ -124,16 +123,7 @@ class CachingEngineWrapper(QueryEngine):
             toolkit.ticker.warn("Done")
             return result
     def cacheList(self, result, concepts, filters, distinct):
-        toolkit.ticker.warn("Applying str")
-        articles, cachables = set(), set()
-        for row in result:
-            for cell in row:
-                if isinstance(cell, article.Article):
-                    articles.add(cell)
-                elif isinstance(cell, cachable.Cachable):
-                    cachables.add(cell)
-        cachable.cacheMultiple(articles, "encoding", "headline")
-        cachable.cache(cachables, "label")
+        engineserver.cachelabels(result)
 
         toolkit.ticker.warn("Serializing")
         result, filters = self.serialize(result), self.serializefilters(filters)

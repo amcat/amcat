@@ -4,6 +4,7 @@ from dbpool import readi, sendi
 import filter
 import cPickle as pickle
 import datasource
+import cachable, article, sources
 
 PORT = 26228
 NWORKERS = 5
@@ -23,6 +24,17 @@ def deserialize(engine, obj):
         obj.concept = deserialize(engine, obj.concept)
     return obj
 
+def cachelabels(table):
+    articles, cachables, srces = set(), set(), set()
+    for row in table:
+        for cell in row:
+            if isinstance(cell, article.Article): articles.add(cell)
+            elif isinstance(cell, sources.Source): srces.add(cell)
+            elif isinstance(cell, cachable.Cachable): cachables.add(cell)
+    cachable.cacheMultiple(articles, "encoding", "headline")
+    cachable.cacheMultiple(srces, "name")
+    cachable.cache(cachables, "label")
+
 
 def RequestHandler(engine, request):
     call, args, kargs = request
@@ -32,7 +44,7 @@ def RequestHandler(engine, request):
         l = engine.getList(*args, **kargs)
         # call str(.) to allow pickling label
         # maybe gather all cachables and call cache("label") in one go?
-        for r in l: map(str, r)
+        cachelabels(l)
         return l
     elif call == "getQuote":
         return engine.getQuote(*args, **kargs)
