@@ -1425,7 +1425,6 @@ def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lamb
         filt = words_or_wordfilter
     else:
         wordset = getQuoteWords(words_or_wordfilter)
-        print wordset
         filt = lambda x: int(x.lower() in wordset)
 
     positions = {}
