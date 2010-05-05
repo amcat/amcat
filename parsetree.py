@@ -71,6 +71,15 @@ class ParseNode(IDLabel):
     def __repr__(self):
         return "ParseNode(%r, %r)" % (self.word, self.position)
 
+    def getDescendants(self, stoplist=set()):
+        yield self
+        stoplist.add(self)
+        for child in self.getChildren():
+            if child in stoplist: continue
+            for desc in child.getDescendants(stoplist):
+                yield desc
+    
+    
 class ParseTree(IDLabel):
     def __init__(self, id):
         IDLabel.__init__(self, id, str(id))
@@ -135,7 +144,9 @@ def getAttr(obj, attr):
 
 def printGraph(graph, output=None, labelattr="nx_label", edgelabelattr="nx_edgelabeler", nodeattr="nx_node_attributes"):
     plt.clf()
+    plt.figure(figsize=(10,10))
     pos=graphviz_layout(graph,prog='dot')
+    pos = dict((k, (x*50,y*50)) for (k,(x,y)) in pos.items())
     draw_networkx_edges(graph, pos, width=1,alpha=0.2,edge_color='b')
 
     labels = {}
