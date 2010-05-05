@@ -1414,16 +1414,18 @@ def head(seq):
     for val in seq:
         return val
 
+def getQuoteWords(words):
+    if type(words) not in (str, unicode): words = " ".join(words)
+    words = re.sub(r'[^\w\s]+', '', words)
+    wordset = set(re.split(r'\s+', words.lower()))
+    return wordset
     
 def quote(words, words_or_wordfilter, quotelen=4, totalwords=25, boldfunc = lambda w : "<em>%s</em>" % w):
     if callable(words_or_wordfilter):
         filt = words_or_wordfilter
     else:
-        w = words_or_wordfilter
-        if type(w) not in (str, unicode): w = " ".join(w)
-        w = re.sub(r'[^\w\s]+', '', w)
-        wordset = set(re.split(r'\s+', w.lower()))
-
+        wordset = getQuoteWords(words_or_wordfilter)
+        print wordset
         filt = lambda x: int(x.lower() in wordset)
 
     positions = {}
@@ -1474,7 +1476,13 @@ def ints2ranges(ids):
     if ids:
         yield start, i
 
-def intselectionSQL(colname, ints):
+def intselectionTempTable(db, colname, ints):
+    table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
+    db.doQuery("CREATE TABLE %s (i int)" % table)
+    db.insertmany(table, "i", [(i,) for i in ints])
+    return "(%s in (select i from %s))" % (colname, table)
+        
+def intselectionSQL(colname, ints, allowtemp=False):
     conds = []
     remainder = []
     for i,j in ints2ranges(ints):
