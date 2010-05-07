@@ -134,15 +134,18 @@ class HTMLGenerator(object):
 
         
 
-def table2html(table, colnames=None):
+def table2html(table, colnames=None, printRowNames = True):
     table = getTable(table, colnames)
     result = "\n<table border='1'>"
-    result += "\n  <tr>\n    <th></th>%s\n  </tr>" % "".join("\n    <th>%s</th>" % (col,) for col in table.getColumns())
+    result += "\n  <tr>"
+    if printRowNames: result += "\n    <th></th>"
+    result += "%s\n  </tr>" % "".join("\n    <th>%s</th>" % (col,) for col in table.getColumns())
     for row in table.getRows():
-        result += "\n  <tr>\n    <th>%s</th>%s\n  </tr>" % (
-            row,
-            "".join("\n    <td>%s</td>" % table.getValue(row, col) for col in table.getColumns())
-            )
+        result += "\n  <tr>"
+        if printRowNames: result += "\n    <th>%s</th>" % row
+        
+        result += "".join("\n    <td>%s</td>" % table.getValue(row, col) for col in table.getColumns())
+        result += "</tr>"
     result += "\n</table>"
     return result
 
