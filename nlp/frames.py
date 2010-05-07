@@ -104,12 +104,13 @@ class FirstMatch(Pattern):
             if n: return n
 
 class Lowest(Pattern):
-    def __init__(self, rel):
+    def __init__(self, rel, pos):
         self.rel = rel
+        self.pos = pos
     def getNode(self, node):
         lowest = node
-        while getChild(lowest, self.rel):
-            lowest = getChild(lowest, self.rel)
+        while getChild(lowest, self.rel, pos=self.pos):
+            lowest = getChild(lowest, self.rel, pos=self.pos)
         return lowest
 
 class Identifier(object):
@@ -146,6 +147,7 @@ class SPORule(DeclarativeRule):
     def __init__(self, identifier, postprocess=None, predicate=Self(), name="spo", **roles):
         roles['predicate'] = predicate
         DeclarativeRule.__init__(self, identifier, SPO, postprocess=postprocess, name=name, **roles)
+    
     
 class BronRule(DeclarativeRule):
     def __init__(self, identifier,  match=None, key=Self(), checks=None, postprocess=None, verbose=False, **roles):
@@ -232,12 +234,16 @@ class Bron(Frame):
     def isComplete(self):
         return self.has('key', 'source', 'quote')
 
+class Goal(Frame):
+    ARGS = ["middel", "doel", "key"]
+    def isComplete(self):
+        return self.has("middel", "doel", "key")
+
 class SPO(Frame):
     ARGS = ["subject","predicate","object","doelkey","doelobject"]
     def isComplete(self):
         #if self.has('doelkey') ^ self.has('doelobject'): return false # ^ = XOR
         if self.has('subject','predicate','object'): return True
-        return False
         if self.has('subject', 'predicate'):
             self.name = 'SPO_su'
             return True

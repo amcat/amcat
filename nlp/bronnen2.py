@@ -63,10 +63,11 @@ def getIdentifier(db, debug=None):
         # hoe 39397415 te vangen?frame.object = getChild(getChild(getChild(node, "mod"), "pc"),"obj1") #39397415 Van Bommel verrast
         
         SPORule(i, condition=[isVNotZeg, isHighestV], postprocess=draai,
-                subject=Serial(childOfLowestV("su"), Pattern(resolveDie), Pattern(bijzin)),
+                subject=FirstMatch(Serial(childOfLowestV("su"), Pattern(resolveDie), Pattern(bijzin)),
+                                   Serial(childOfLowestV("mod", lemma="door", pos="P"), Child("obj1"))),
                 object=Serial(FirstMatch(Serial(Child("obj2", pos="P"), Child("obj1")),
                                          Child("obj2"),
-                                         Child("obj1"),
+                                         childOfLowestV("obj1"),
                                          Child("predc"),
                                          Serial(childOfLowestV("mod"), Child("obj1")),
                                          Serial(childOfLowestV("mod"), Child("pc"), Child("obj1")),
@@ -76,13 +77,18 @@ def getIdentifier(db, debug=None):
                               Pattern(bijzin)),
                 negation = Child("mod", lemma=NEGATORS),
                 ),
-        SPORule(i, condition=[isVNotZeg], 
-                subject=Serial(Child("mod", pos="P"), Child("obj1")),
-                object=Child("obj1")) # passief (geen check op lemma='door'?)
+
+        DeclarativeRule(i, Goal, condition=[isDoelPredicate],
+                        key = Self(),
+                        doel = Child("body"),
+                        middel = Parent("mod")),
+        
         
     ]:
         i.rules.append(r)
     return i
+
+
 
 def bijzin(node):
     if node.word.lemma.label in ["die", "dat"]: 
@@ -97,7 +103,7 @@ def draai(identifier, frame):
     return frame
 
 def childOfLowestV(*args, **kargs):
-    return Serial(Lowest("vc"), Child(*args, **kargs))
+    return Serial(Lowest("vc",pos="V"), Child(*args, **kargs))
 
 def resolveDie(node):
     if node and node.word.lemma.label in ("die","dat","welke","dewelke"): #39400763, beperkende bijzin: Verhagen (mod) die (su) node
@@ -106,18 +112,53 @@ def resolveDie(node):
 
 def isHighestV(rule, frame):
     node = frame.predicate
+    if getParent(node, "vc"): return False
+    return True
     su = getChild(node, "su")
     if su and getChild(getParent(node,"vc"), "su") == su: return False
     return True
-    
+
+def isDoelPredicate(rule, frame):
+    return rule.identifier.hasLemma(frame.key, ["met het oog op","om","omwille","opdat","zodat","waardoor","teneinde","voor"])
+
+
 def isVNotZeg(rule, frame):
     for pos, acts in (V_PASSIVE_SPEECH_ACTS, V_SPEECH_ACTS):
         for lemmata in acts.values():
             if rule.identifier.hasLemma(frame.predicate, lemmata, pos):
                 return False
-    return True
+    return frame.predicate.word.lemma.pos == "V"
     
 
+def getDoel(node, subject):
+    frame = SPO("purp", subject=subject)
+    pdoel=getChild(node, "mod")
+    if not pdoel: pdoel = getChild(getAncestor(node,"vc",pos="V"),"mod")
+    if hasLemma(pdoel, ["met het oog op", "om","omwille","opdat","zodat","waardoor","teneinde","voor"]): #39404297
+        frame.predicate = pdoel
+        objecthook = pdoel
+    elif hasLemma(pdoel, ["met"]):  #met als isGoal, 39405708
+        doelkey = getDescendant(pdoel,pos="N")
+        if not isGoal(doelkey): return
+        frame.predicate = doelkey
+        objecthook = getChild(pdoel, "vc")
+    else: return
+    frame.object = getDoelObject(objecthook)
+    if not frame.isComplete(): frame = None
+    return frame
+
+def getDoelObject(pdoel):
+    object = getChild(getChild(pdoel,"body"),"body")
+    if not object: #met het oog op, met P, 39404297
+        object = getChild(pdoel,"obj1")
+        debug("1.......",pdoel,object)
+    if not object: #zodat, met C, 39405692 
+        object = getChild(getChild(pdoel,"body"),"vc")
+        debug("2.......",pdoel,object)
+    if not object: #zodat, met C, als geen werkwoord onder body, of werkwoord onder "te" 
+        object = getChild(pdoel,"body")
+        debug("3.......",pdoel,object)
+    return object
     
 def VPostProcess(identifier, frame):
     mod = getChild(frame.key, "mod")
