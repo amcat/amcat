@@ -58,9 +58,6 @@ def getIdentifier(db, debug=None):
                               Pattern(bijzin)),
                 negation = Child("mod", lemma=NEGATORS),
                 ),
-        SPORule(i, 'passive', condition=[isVNotZeg], 
-                subject=Serial(Child("mod", pos="P"), Child("obj1")),
-                object=Child("obj1")) # passief (geen check op lemma='door'?)
         
     ]:
         i.rules.append(r)
@@ -88,10 +85,9 @@ def resolveDie(node):
 
 def isHighestV(rule, frame):
     node = frame.predicate
-    su = getChild(node, "su")
-    if su and getChild(getParent(node,"vc"), "su") == su: return False
+    if getParent(node,"vc"): return False
     return True
-    
+
 def isVNotZeg(rule, frame):
     for pos, acts in (V_PASSIVE_SPEECH_ACTS, V_SPEECH_ACTS):
         for lemmata in acts.values():
