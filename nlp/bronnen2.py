@@ -79,7 +79,7 @@ def draai(identifier, frame):
     return frame
 
 def childOfLowestV(*args, **kargs):
-    return Serial(Lowest("vc"), Child(*args, **kargs))
+    return Serial(Lowest("vc", pos="V"), Child(*args, **kargs))
 
 def resolveDie(node):
     if node and node.word.lemma.label in ("die","dat","welke","dewelke"): #39400763, beperkende bijzin: Verhagen (mod) die (su) node
