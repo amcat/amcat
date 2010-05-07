@@ -14,16 +14,19 @@ class Rule(object):
     def debug(self, *args, **kargs):
         if self.verbose: self.identifier.debug(*args, **kargs)
 class DeclarativeRule(Rule):
-    def __init__(self, identifier, frame, condition=None, postprocess=None, verbose=False, name=None, **roles):
+    def __init__(self, identifier, frame, condition=None, postprocess=None, verbose=None, name=None, rulename=None, **roles):
+        if verbose is None: verbose = not str(rulename).startswith("_")
         Rule.__init__(self, identifier, verbose)
         self.frame = frame
         self.condition = condition
         self.postprocess = postprocess
         self.roles = roles
         self.name = name
+        self.rulename = rulename or "?"
     def getFrame(self, node):
         return self.frame(name=self.name)
     def matches(self, node):
+        self.debug("  Applying rule %s"% self)
         frame = self.getFrame(node)
         if not frame: return
         for role, pattern in self.roles.iteritems():
@@ -45,6 +48,8 @@ class DeclarativeRule(Rule):
                 if not cond(self, frame):
                     return None
         return frame
+    def __str__(self):
+        return "%s(%s, %s)" % (self.__class__.__name__, self.frame.__name__, self.rulename) 
           
 class FunctionRule(object):
     def __init__(self, db, function):
@@ -124,11 +129,15 @@ class Identifier(object):
         s = "%s: %s" % (sys._getframe(2).f_code.co_name, ", ".join(map(str, args) + ["%s=%s" % kv for kv in kargs.iteritems()]))
         self.debugfunc(s)
     def findFrames(self, tree):
-        return toolkit.filterTrue(map(self.getFrame, tree.getNodes()))
+        for node in tree.getNodes():
+            f = self.getFrame(node)
+            if f: yield f
     def getFrame(self, node):
+        self.debug("Finding frames in %s"% node)
         for rule in self.rules:
             frame = rule.matches(node)
             if frame and frame.isComplete():
+                self.debug("-->  Frame %s found in rule %s!"% (frame, rule))
                 return frame
     def hasLemma(self, node, lemmata, pos=None):
         if not node: return
@@ -144,15 +153,15 @@ class Identifier(object):
 ################### Specific rules ########################
 
 class SPORule(DeclarativeRule):
-    def __init__(self, identifier, postprocess=None, predicate=Self(), name="spo", **roles):
+    def __init__(self, identifier, rulename, postprocess=None, predicate=Self(), name="spo",  **roles):
         roles['predicate'] = predicate
-        DeclarativeRule.__init__(self, identifier, SPO, postprocess=postprocess, name=name, **roles)
+        DeclarativeRule.__init__(self, identifier, SPO, postprocess=postprocess, name=name, rulename=rulename, **roles)
     
     
 class BronRule(DeclarativeRule):
-    def __init__(self, identifier,  match=None, key=Self(), checks=None, postprocess=None, verbose=False, **roles):
+    def __init__(self, identifier, rulename,  match=None, key=Self(), checks=None, postprocess=None, verbose=None, **roles):
         roles['key'] = key
-        DeclarativeRule.__init__(self, identifier, Bron, postprocess=postprocess, verbose=verbose, **roles)
+        DeclarativeRule.__init__(self, identifier, Bron, postprocess=postprocess, verbose=verbose, rulename=rulename, **roles)
         self.match = match
         self.checks = checks
     def getFrame(self, node):
