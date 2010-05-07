@@ -39,7 +39,7 @@ def getIdentifier(db, debug=None):
 
         # klopt 39417595 wel?
         BronRule(i, '_13', DIREDE_ACTS, source=Child("--"), quote=Serial(Child("--"), Child(["nucl","sat"]))), #39417433
-        BronRule(i, '_14', DIREDE_ACTS, source=Child("--"), quote=Serial(Child("--"), Child("dp", check=hassu))), #39397408
+        BronRule(i, '14', DIREDE_ACTS, source=Child("--"), quote=Serial(Child("--"), Child("dp", check=hassu))), #39397408
 
         # hoe 39397415 te vangen?frame.object = getChild(getChild(getChild(node, "mod"), "pc"),"obj1") #39397415 Van Bommel verrast
         
@@ -58,10 +58,19 @@ def getIdentifier(db, debug=None):
                               Pattern(bijzin)),
                 negation = Child("mod", lemma=NEGATORS),
                 ),
+
+                                                                                                               
+        DeclarativeRule(i, Goal, condition=[isDoelPredicate],                                                                                         
+                        key = Self(),                                                                                                                 
+                        doel = Serial(Child("body"), Child("body")),
+                        middel = Serial(Parent("mod"), HighestV())),  
         
     ]:
         i.rules.append(r)
     return i
+                      
+def isDoelPredicate(rule, frame):                                                                                                                     
+    return rule.identifier.hasLemma(frame.key, ["met het oog op","om","omwille","opdat","zodat","waardoor","teneinde","voor"])   
 
 def bijzin(node):
     if node.word.lemma.label in ["die", "dat"]: 
@@ -78,6 +87,9 @@ def draai(identifier, frame):
 def childOfLowestV(*args, **kargs):
     return Serial(Lowest("vc", pos="V"), Child(*args, **kargs))
 
+def HighestV():
+    return Highest("vc",pos="V")
+        
 def resolveDie(node):
     if node and node.word.lemma.label in ("die","dat","welke","dewelke"): #39400763, beperkende bijzin: Verhagen (mod) die (su) node
         return getParent(node, "mod")
@@ -89,10 +101,9 @@ def isHighestV(rule, frame):
     return True
 
 def isVNotZeg(rule, frame):
-    for pos, acts in (V_PASSIVE_SPEECH_ACTS, V_SPEECH_ACTS):
-        for lemmata in acts.values():
-            if rule.identifier.hasLemma(frame.predicate, lemmata, pos):
-                return False
+    #TODO: niet alleen zeg-lemmata
+    if rule.identifier.hasLemma(frame.predicate, ZEG_LEMMATA, "V"):
+        return False
     return frame.predicate.word.lemma.pos == "V"
     
 

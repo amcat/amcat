@@ -2,11 +2,21 @@ from toolkit import Identity
 import toolkit
 import parsetree
 import sys
+from contextlib import contextmanager
 
 ############# INTERFACE ETC. ################
 
 LEMMA_SQL = """select distinct l.lemmaid from words_lemmata l inner join words_words w on l.lemmaid = w.lemmaid inner join words_strings s on s.stringid = w.stringid where string in (%s)"""
-    
+
+
+@contextmanager
+def debugindent(debug, msg):
+    try:
+        debug(msg, indent=1)
+        yield None
+    finally:
+        debug(indent=-1)
+
 class Rule(object):
     def __init__(self, identifier, verbose=False):
         self.identifier = identifier
@@ -30,22 +40,27 @@ class DeclarativeRule(Rule):
         frame = self.getFrame(node)
         if not frame: return
         for role, pattern in self.roles.iteritems():
-            n = pattern.getNode(node)
+            n = pattern.getNode(self, node)
+            self.debug("  Found node %s for role %s" % (n, role))
             if n: frame.__dict__[role] = n
         frame = self.doPostProcess(frame)
         frame = self.doCheck(frame)
         return frame
 
     def doPostProcess(self, frame):
+        self.debug("Postproces: %s "% frame)
         if self.postprocess: frame = self.postprocess(self.identifier, frame)
+        self.debug("Postproces: ---> %s "% frame)
         return frame
       
     def doCheck(self, frame):
         if self.condition:
+            self.debug("Condition: %s "% frame)
             conds = self.condition
             if callable(conds): conds = [conds]
             for cond in conds:
                 if not cond(self, frame):
+                    self.debug("Condition: FALSE ")
                     return None
         return frame
     def __str__(self):
@@ -63,14 +78,14 @@ class FunctionRule(object):
 class Pattern(object):
     def __init__(self, func=None):
         self.func = func
-    def getNode(self, node):
+    def getNode(self, rule, node):
         return self.func(node)
 class Conditional(Pattern):
     def __init__(self, func, *cond, **kwcond):
         self.func = func
         self.cond = cond
         self.kwcond = kwcond
-    def getNode(self, node):
+    def getNode(self, rule, node):
         return self.func(node, *self.cond, **self.kwcond)
 class Child(Conditional):
     def __init__(self, *cond, **kwcond):
@@ -88,14 +103,14 @@ class Ancestor(Conditional):
     def __init__(self, *cond, **kwcond):
         Conditional.__init__(self, getAncestor, *cond, **kwcond)
 class Self(Pattern):
-    def getNode(self, node): return node
+    def getNode(self, rule, node): return node
 class Serial(Pattern):
     def __init__(self, *conditionals):
         self.conditionals = conditionals
-    def getNode(self, node):
+    def getNode(self, rule, node):
         for c in self.conditionals:
             if not node: return
-            node = c.getNode(node)
+            node = c.getNode(rule, node)
         return node
     
 
@@ -103,42 +118,60 @@ class Serial(Pattern):
 class FirstMatch(Pattern):
     def __init__(self, *rules):
         self.rules = rules
-    def getNode(self, node):
-        for rule in self.rules:
-            n = rule.getNode(node)
-            if n: return n
+    def getNode(self, rule, node):
+        rule.debug("Applying FirstMatch", indent=1)
+        for r in self.rules:
+            n = r.getNode(rule, node)
+            if n:
+                rule.debug("FirstMatch found %s" % node, indent=-1)
+                return n
 
 class Lowest(Pattern):
     def __init__(self, rel, pos):
         self.rel = rel
         self.pos = pos
-    def getNode(self, node):
+    def getNode(self, rule, node):
         lowest = node
         while getChild(lowest, self.rel, pos=self.pos):
             lowest = getChild(lowest, self.rel, pos=self.pos)
         return lowest
 
+class Highest(Pattern):
+    def __init__(self, rel, pos):
+        self.rel = rel
+        self.pos = pos
+    def getNode(self, rule, node):
+        highest = node
+        while getParent(highest, self.rel, pos=self.pos):
+            highest = getParent(highest, self.rel, pos=self.pos)
+        return highest
+    
 class Identifier(object):
     def __init__(self, db, debug=None):
         self.rules = []
         self.db = db
         self.debugfunc = debug
         self.lemma_set_dict = {}
-    def debug(self, *args, **kargs):
+    def debug(self, msg=None, indent=None):
         if not self.debugfunc: return
-        s = "%s: %s" % (sys._getframe(2).f_code.co_name, ", ".join(map(str, args) + ["%s=%s" % kv for kv in kargs.iteritems()]))
-        self.debugfunc(s)
+        func = sys._getframe(2).f_code.co_name
+        self.debugfunc(msg, func, indent)
     def findFrames(self, tree):
         for node in tree.getNodes():
             f = self.getFrame(node)
             if f: yield f
     def getFrame(self, node):
-        self.debug("Finding frames in %s"% node)
-        for rule in self.rules:
-            frame = rule.matches(node)
-            if frame and frame.isComplete():
-                self.debug("-->  Frame %s found in rule %s!"% (frame, rule))
-                return frame
+        self.debug("Finding frames in %s"% node, indent=1)
+        try:
+            for rule in self.rules:
+                frame = rule.matches(node)
+                if frame and frame.isComplete():
+                    self.debug("-->  Frame %s found in rule %s!"% (frame, rule))
+                    return frame
+                self.debug("Found frame %s, not complete" % frame)
+
+        finally:
+            self.debug(indent=-1)
     def hasLemma(self, node, lemmata, pos=None):
         if not node: return
         key = (pos, tuple(lemmata))
@@ -165,7 +198,6 @@ class BronRule(DeclarativeRule):
         self.match = match
         self.checks = checks
     def getFrame(self, node):
-        self.debug(node.word.lemma, self.match)
         if self.match:
             pos, entries = self.match
             if pos and (node.word.lemma.pos <> pos): return
@@ -180,7 +212,7 @@ class BronRule(DeclarativeRule):
         if self.checks:
             if type(self.checks) not in (tuple, list): self.checks = [self.checks]
             for check in self.checks:
-                if not check.getNode(frame.key): return None
+                if not check.getNode(self, frame.key): return None
         return super(BronRule, self).doCheck(frame)
 
     
