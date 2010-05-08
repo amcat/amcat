@@ -156,6 +156,7 @@ class Identifier(object):
         if not self.debugfunc: return
         func = sys._getframe(2).f_code.co_name
         self.debugfunc(msg, func, indent)
+        #self.debugfunc(func)
     def findFrames(self, tree):
         for node in tree.getNodes():
             f = self.getFrame(node)
