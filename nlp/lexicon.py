@@ -21,8 +21,9 @@ VOLTOOID_ACTS = (None, {"weet" : ("doordring","overtuigd", "bewust")})
 DIREDE_ACTS = ('.', {"zeg": (":",)})
 
 DOELWOORDEN =  ("om","omwille","opdat","zodat","waardoor","teneinde","voor")
+MIDDELWOORDEN = ("door","door middel van","via")
 DETERMINERS = ("de", "het", "een", "dit", "dat", "deze", "die")
-NEGATORS = ("geen","geenszins","nauwelijks","nergens","niet","nimmer","nooit","zonder")
+NEGATORS = ("geen","geenszins","nauwelijks","nergens","niet","nimmer","noch","nooit","zonder")
 
 N_SPEECH_ACTS = ('N', {
         "zeg" : N_GEZEGDE_LEMMATA,

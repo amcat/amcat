@@ -1,7 +1,7 @@
 from frames import *
 from lexicon import *
 
-########## RULE DEFINITIONS ###################
+##########RULE DEFINITIONS ###################
 
 
 def nZegSource(node):
@@ -33,7 +33,7 @@ def getIdentifier(db, debug=None):
 
         BronRule(i, '_7', N_SPEECH_ACTS, quote=Child("vc"), source=Pattern(nZegSource)), #34763507
         BronRule(i, '_8', N_SPEECH_ACTS, quote=Sibling("obj1", "dp"), source=Pattern(nZegSource)), #34763507
-        BronRule(i, '15', N_SPEECH_ACTS, quote=Pattern(nZegQuote), source=Pattern(nZegSource)), #39397415
+        BronRule(i, '_15', N_SPEECH_ACTS, quote=Pattern(nZegQuote), source=Pattern(nZegSource)), #39397415
         BronRule(i, '_9', N_SPEECH_ACTS, quote=Serial(Parent("obj1"), Child("su")),
                  source=Serial(Parent("obj1"), Child("mod", pos="P"), Child("obj1"))), #31310 maar ook onterechte match hoofdww
 
@@ -46,30 +46,67 @@ def getIdentifier(db, debug=None):
 
         # hoe 39397415 te vangen?frame.object = getChild(getChild(getChild(node, "mod"), "pc"),"obj1") #39397415 Van Bommel verrast
         
-        SPORule(i, 'general', condition=[isVNotZeg, isHighestV], postprocess=draai,
-                subject=FirstMatch(Serial(childOfLowestV("su"), Pattern(resolveDie), Pattern(bijzin)),
-                                   Serial(childOfLowestV("mod", lemma="door", pos="P"), Child("obj1"))),
+ 
+        SPORule(i, 'passief', condition=[isVNotZeg, isHighestV], postprocess=draai,
+                 subject=FirstMatch(Serial(childOfLowestV("mod", lemma=["door","bij"], pos="P"), Child("obj1")),  #passief
+                                    Serial(childOfLowestV("predc"),Child("mod", lemma=["door","bij"], pos="P"), Child("obj1")), #44501304
+                                   ), #passief
+                 object=Serial(FirstMatch(childOfLowestVPassive("su"),  #passief 39403127
+                                          childOfLowestV("obj1"), #passief 44499664 welke eerst?
+                                          ),
+                               Pattern(bijzin)),
+                 negation = Child("mod", lemma=NEGATORS),
+                 ),  #probleem:  passief SPOrule mag geen halve spo_su en spo_obj kernzinnen afleveren!
+     
+ 
+ 
+        SPORule(i, 'actief', condition=[isVNotZeg, isHighestV], postprocess=draai,
+                subject=Serial(childOfLowestV("su"), Pattern(resolveDie), Pattern(bijzin)), #actief
                 object=Serial(FirstMatch(Serial(Child("obj2", pos="P"), Child("obj1")),
-                                         Child("obj2"),
-                                         Serial(childOfLowestV("mod"), Child("obj1")), #39405696 geld uitlenen aan BANK
-                                         childOfLowestV("obj1"),
-                                         Serial(Child("predc"),Child("pc"),Child("obj1")),   #44499676
-                                         Child("predc"),
+                                         childOfLowestV("obj2"),   #meewerkend voorwerp zonder aan of voor      
+                                         Serial(childOfLowestV("mod",word=["aan","voor"]), Child("obj1")), #39405696 geld uitlenen aan BANK, meewerkend voorwerpconstructie
+                                         childOfLowestV("obj1"), #passief 44499664 welke eerst?
+                                         Serial(childOfLowestV("pc"), Child("obj1")),   # 32777
+                                         Serial(childOfLowestV("predc"),Child("pc"),Child("obj1")),   #44499676
+                                         Serial(childOfLowestV("mod"), Child("obj1")), #39405696 welke eerst?
                                          Serial(childOfLowestV("mod"), Child("pc"), Child("obj1")),
-                                         Serial(childOfLowestV("pc"), Child("obj1")),
                                          Serial(childOfLowestV("ld"), Child("obj1")),
+                                         Child("predc")
                                          ),
                               Pattern(bijzin)),
                 negation = Child("mod", lemma=NEGATORS),
                 ),
-
                                                                                                                
         DeclarativeRule(i, Goal, condition=[isDoelPredicate],                                                                                         
                         key = Self(),                                                                                                                 
                         doel = FirstMatch(Serial(Child("body"), Child("vc")),     #eigenlijk fout, dat er een vc is een hulpwerkwoord-test, body=hulpwerkwoord moet dan doel zijn
                                           Serial(Child("body"), Child("body"))),  #44499900 te-constructie
                         middel = Serial(Parent(["mod","vc"]), HighestV())),  
-        
+        DeclarativeRule(i, Goal, condition=[isMeansPredicate,notPassiveVoice],                                                                                         
+                        key = Self(),                                                                                                                 
+                        middel = FirstMatch(Serial(Child("body"), Child("vc")),     #eigenlijk fout, dat er een vc is een hulpwerkwoord-test, body=hulpwerkwoord moet dan doel zijn
+                                            Serial(Child("body"), Child("body")),
+                                            Child("obj1"),  #44499900 te-constructie
+                                            Child("mod",pos="V")), #44501308 waartoe-constructie
+                        doel = FirstMatch(Serial(Parent(["mod","vc"]),HighestV()),
+                                          Serial(Parent("mod"),Parent("obj1"),HighestV()))),
+        DeclarativeRule(i, Cause, condition=[isConsistent],                                                                                         
+                        key = Self(),                                                                                                                 
+                        dueTo = FirstMatch(Child("cnj"),Parent("mod")),
+                        consequence = FirstMatch(Child("cnj"),Child("body")) ),
+        DeclarativeRule(i, NegCause, condition=[isInconsistent],                                                                                         
+                        key = Self(),                                                                                                                 
+                        consequence = Parent("mod"),
+                        despite = Child("body") ),
+        DeclarativeRule(i, Assume, condition=[isPrecondition],                                                                                         
+                        key = Self(),                                                                                                                 
+                        consequence = FirstMatch(Parent("mod"), Parent("predm"), Child("nucl"),
+                                          Serial(Parent("body"),Parent("mod")) ),   #44505248 dekt ook negative condities, uitgezonderd wanneer, behalve als
+                        assumption = Child("body") ),                        
+        DeclarativeRule(i, Succession, condition=[isTimelyOrder],                                                                                         
+                        key = Self(),                                                                                                                 
+                        consequence = Parent("mod"),
+                        precedent = Child("body") ),
     ]:
         i.rules.append(r)
     return i
@@ -77,7 +114,22 @@ def getIdentifier(db, debug=None):
     
 def isDoelPredicate(rule, frame):                                                                                                                     
     return rule.identifier.hasLemma(frame.key, ["met het oog op","om","omwille","opdat","zodat","waardoor","teneinde","voor"])   
+def isMeansPredicate(rule, frame):  
+    return rule.identifier.hasLemma(frame.key, ["door","door middel van","middels","via","waartoe","waarvoor"]) 
+def notPassiveVoice(rule,frame):           # 39403129 voorkomt doel-middelconstructies als PassiveVoice
+    if (Child("obj1") and Serial(Parent("mod",pos="V"), Child(["obj1","su"])) ): return False
+    return True
+def isConsistent(rule, frame):                                                                                                                     
+    return rule.identifier.hasLemma(frame.key, ["omdat","aangezien","want","daar","doordat"])   
+def isInconsistent(rule, frame):                                                                                                                     
+    return rule.identifier.hasLemma(frame.key, ["maar","doch","echter","niettemin","desalniettemin","hoewel","ofschoon"])  
+def isPrecondition(rule, frame):                                                                                                                     
+    return rule.identifier.hasLemma(frame.key, ["als","indien","mits","tenzij","vermits","wanneer","zodra"])                               
+def isTimelyOrder(rule, frame):                                                                                                                     
+    return rule.identifier.hasLemma(frame.key, ["alvorens","daarna","daarvoor","erna","ervoor","nadat","na","nadien","sinds","sedert","terwijl","toen","totdat","voor","voordat","voordien","waarna"])
 
+
+    
 def bijzin(node):
     if node.word.lemma.label in ["die", "dat"]: 
         m = getParent(node, "mod")
@@ -92,6 +144,10 @@ def draai(identifier, frame):
 
 def childOfLowestV(*args, **kargs):
     return Serial(Lowest("vc", pos="V"), Child(*args, **kargs))
+def childOfLowestVPassive(*args, **kargs):
+    if Serial(childOfLowestV("mod", lemma="door", pos="P"), Child("obj1")):
+        return Serial(Lowest("vc", pos="V"), Child(*args, **kargs))
+
 
 def HighestV():
     return Highest("vc",pos="V")

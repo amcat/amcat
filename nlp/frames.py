@@ -279,17 +279,39 @@ class Bron(Frame):
 class Goal(Frame):
     ARGS = ["middel", "doel", "key"]
     def isComplete(self):
-        return self.has("middel", "doel", "key")
+        return self.has("middel", "doel", "key") 
+
+class Cause(Frame):
+    ARGS = ["dueTo", "consequence", "key"]
+    def isComplete(self):
+        return self.has("dueTo", "consequence", "key")
+
+class NegCause(Frame):
+    ARGS = ["despite", "consequence", "key"]
+    def isComplete(self):
+        return self.has("despite", "consequence", "key")
+
+class Succession(Frame):
+    ARGS = ["precedent", "consequence", "key"]
+    def isComplete(self):
+        return self.has("precedent", "consequence", "key")
+        
+
+class Assume(Frame):
+    ARGS = ["assumption", "consequence", "key"]
+    def isComplete(self):
+        return self.has("assumption", "consequence", "key")
+
 
 class SPO(Frame):
     ARGS = ["subject","predicate","object","doelkey","doelobject"]
     def isComplete(self):
         #if self.has('doelkey') ^ self.has('doelobject'): return false # ^ = XOR
         if self.has('subject','predicate','object'): return True
-        if self.has('subject', 'predicate'):
+        if (self.has('subject', 'predicate') and self.name='actief'):
             self.name = 'SPO_su'
             return True
-        if self.has('object', 'predicate'):
+        if self.has('object', 'predicate') and self.name='actief':
             self.name = 'SPO_obj'
             return True
         return False
