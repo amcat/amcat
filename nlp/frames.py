@@ -308,10 +308,10 @@ class SPO(Frame):
     def isComplete(self):
         #if self.has('doelkey') ^ self.has('doelobject'): return false # ^ = XOR
         if self.has('subject','predicate','object'): return True
-        if (self.has('subject', 'predicate') and self.name='actief'):
+        if self.has('subject', 'predicate'):
             self.name = 'SPO_su'
             return True
-        if self.has('object', 'predicate') and self.name='actief':
+        if self.has('object', 'predicate'):
             self.name = 'SPO_obj'
             return True
         return False
