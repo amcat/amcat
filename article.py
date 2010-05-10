@@ -2,7 +2,7 @@ import toolkit, dbtoolkit, re, project, sources, types
 from itertools import izip, count
 from functools import partial
 _debug = toolkit.Debug('article',1)
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
 
 def doCreateArticle(db, aid, **cache):
     return Article(db, aid, **cache)
@@ -19,6 +19,7 @@ class Article(Cachable):
     __labelprop__ = 'headline'
     __encodingprop__ = 'encoding'
     __dbproperties__ = ["date", "length", "pagenr", "url", "encoding"]
+    __metaclass__ = CachingMeta
     headline = DBPropertyFactory(decode=True)
     byline = DBPropertyFactory(decode=True)
     metastring = DBPropertyFactory(decode=True)
@@ -39,9 +40,10 @@ class Article(Cachable):
         result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")
         return result.replace("\\r","").replace("\r","\n")
 
-    def words(self, onlyWords = False, lemma=0): #lemma: 1=lemmaP, 2=lemma, 3=word
+    def words(self, onlyWords = False, lemma=0, headline=False): #lemma: 1=lemmaP, 2=lemma, 3=word
         import ctokenizer
         text = self.text
+        if headline and self.headline: text = self.headline + "\n\n" + text
         if not text: return []
         text = toolkit.stripAccents(text)
         text = text.encode('ascii', 'replace')
@@ -51,7 +53,7 @@ class Article(Cachable):
         return text.split(" ")
 
     def quote(self, words_or_wordfilter, **kargs):
-        return toolkit.quote(list(self.words()), words_or_wordfilter, **kargs)
+        return toolkit.quote(list(self.words(headline = True)), words_or_wordfilter, **kargs)
 
 def Articles(aids, db):
     return [Article(db, aid) for aid in aids]

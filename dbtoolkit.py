@@ -338,7 +338,9 @@ class amcatDB(object):
         #TODO get rid of this!
         return user.Users(self)
 
-        
+    def getUser(self):
+        uid = self.getValue("select dbo.anoko_user()")
+        return user.User(self, uid)
             
     def newBatch(self, projectid, batchname, query, verbose=0):
         batchid = self.insert('batches', {'projectid':projectid, 'name':batchname, 'query':query})
@@ -620,7 +622,7 @@ class ProfilingAfterQueryListener(object):
         #print ">>>", query, time, len(resultset)
         l = len(resultset) if resultset else 0
         self.queries[query].append((time, l))
-    def printreport(self, sort="time", stream=sys.stdout, useunicode=True, htmlgenerator=False, encoding="utf-8", *args, **kargs):
+    def printreport(self, sort="time", stream=sys.stdout, useunicode=True, htmlgenerator=False, encoding="utf-8", clear=True, *args, **kargs):
         data = self.reportTable(*args, **kargs)
         if sort:
             if type(sort) in (str, unicode): sort = sort.lower()
@@ -635,6 +637,7 @@ class ProfilingAfterQueryListener(object):
             result = tableoutput.table2unicode(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
             if type(result) == unicode: result = result.encode(encoding)
             print >>stream, result
+        if clear:         self.queries = collections.defaultdict(list)
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
     def report(self, replacenumbers=True, maxsqlen=100):

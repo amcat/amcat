@@ -15,6 +15,8 @@ class Index(object):
     @property
     def index(self):
         if '_index' not in self.__dict__ or self._index is None:
+            if not self.location: raise Exception("No index present and no location given")
+            #print ">>>>>>", `self.location`
             self._index = xapian.Database(self.location)
         return self._index
     
@@ -51,6 +53,9 @@ class Index(object):
         for d in self.documents:
             yield self.getArticle(d)
 
+    def expand(self, prefix):
+        return xapian.Query(xapian.Query.OP_OR, [t.term for t in self.index.allterms(prefix)])
+
     def getFrequencies(self, article=None, raw=False):
         if article:
             docid = self.getDocumentID(article)
@@ -79,7 +84,7 @@ class Index(object):
     def getArticle(self, document):
         return article.Article(self.db, self.getAid(document))
 
-    def query(self,  query, returnWeights=False, returnAID=False, subset=None, acceptPhrase=False):
+    def query(self,  query, returnWeights=False, returnAID=False, subset=None, acceptPhrase=True):
         if type(query) in (str, unicode):
             query = self.parse(query, acceptPhrase)
 
@@ -203,6 +208,8 @@ def createIndex(indexloc, articles, db=None, stemmer="dutch", termgenerators=Non
         database.add_document(doc)
     database.flush()
     return Index(indexloc, db)
+
+
 
 if __name__ == '__main__':
     import sys, dbtoolkit

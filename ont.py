@@ -1,4 +1,4 @@
-from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory, CachingMeta
+from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory, CachingMeta, cache
 import toolkit
 try:
     import mx.DateTime as my_datetime
@@ -21,6 +21,16 @@ def getAllAncestors(object, stoplist=None, golist=None):
         yield p
         stoplist.add(p)
         for o2 in getAllAncestors(p, stoplist, golist):
+            yield o2
+
+def getAllDescendants(object, stoplist=None, golist=None):
+    if stoplist is None: stoplist = set()
+    for p in object.children:
+        if (p is None) or (p in stoplist): continue
+        if (golist and p not in golist): continue
+        yield p
+        stoplist.add(p)
+        for o2 in getAllDescendants(p, stoplist, golist):
             yield o2
 
 def getObject(db, id):
@@ -54,9 +64,12 @@ class Object(Cachable):
     prefix = DBPropertyFactory("prefix", table="o_politicians")
     keyword = DBPropertyFactory(table="o_keywords")
 
-    label = DBPropertyFactory("label", table="o_labels")
 
     functions = DBFKPropertyFactory("o_politicians_functions", ("functionid", "office_objectid", "fromdate", "todate"), dbfunc = Function)
+
+    def __init__(self, db, id, languageid=2, **cache):
+        Cachable.__init__(self, db, id, **cache)
+        self.addDBProperty("label", table="dbo.fn_o_labels(%i)" % languageid)
 
     def getAllParents(self, date=None):
         for p in self.parents.values():
@@ -155,11 +168,13 @@ class BoundObject(toolkit.IDLabel):
                     yield BoundObject(self.klasse, child)
         except AttributeError, e:
             raise Exception(e)
-    @property
-    def label(self):
+
+    def label(self, languageid=None):
         return self.objekt.label
     def __str__(self):
         return str(self.objekt)
+    def getSearchString(self, *args, **kargs):
+        return self.objekt.getSearchString( *args, **kargs)
 #    def __getattr__(self, attr):
 #        return self.objekt.__getattribute__(attr)
 #    def __getattr__(self, attr):
@@ -173,6 +188,13 @@ class Class(Cachable):
     __dbproperties__ = ["label"]
     objects = DBFKPropertyFactory("o_hierarchy", "childid", objfunc=BoundObject)
 
+    def getRoots(self, cachefirst=True):
+        objs = self.objects
+        if cachefirst: cache([o.objekt for o in objs], "parents")
+        for o in objs:
+            if not o.parent:
+                yield o
+        
 class Set(Cachable):
     __table__ = 'o_sets'
     __idcolumn__ = 'setid'
@@ -186,13 +208,6 @@ if __name__ == '__main__':
 
     db = dbtoolkit.amcatDB(profile=True)
 
-    o1 = Object(db, 1914)
-    o2 = Object(db, 2148)
-
-    cachable.cache([o1,o2], "functions", "keyword", "labels", "name", "firstname")
-    cachable.cache([o1,o2], "functions", "keyword", "labels", "name", "firstname")
-
-    print o1.getSearchString(languageid=13, fallback=True)
-    print o2.getSearchString(languageid=13, fallback=True)
-
+    for i in [1,2,5,13]:
+        print i, Object(db, 412, i)
     db.printProfile()

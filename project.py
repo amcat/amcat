@@ -2,11 +2,14 @@ from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 import user, permissions, article
 from functools import partial
 
-def projects(db, userid, own=1):
+def projects(db, usr, own=1):
     if own:
-        for project in user.User(db, userid).projects:
+        if type(usr) == int:
+            usr = user.User(db, usr)
+        for project in usr.projects:
             yield project
     else: # all projects
+        userid = usr if type(usr) == int else usr.id
         sql = """
             SELECT DISTINCT p.projectid
             FROM projects AS p

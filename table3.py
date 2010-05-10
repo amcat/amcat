@@ -20,9 +20,10 @@ class NamedRow(object):
         self.table = table
         self.row = row
     def __getattr__(self, attr):
-        for col in self.table.getColumns():
-            if str(col) == attr:
-                return self.table.getValue(self.row, col)
+        if attr <> 'table':
+            for col in self.table.getColumns():
+                if str(col) == attr:
+                    return self.table.getValue(self.row, col)
         return super(NamedRow, self).__getattribute__(attr)
     def __getitem__(self, index):
         col = list(self.table.getColumns())[index]

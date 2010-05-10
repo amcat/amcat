@@ -64,7 +64,11 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True)
         val = table.getValue(row, col)
         if type(val) == str: val = val.decode('latin-1')
         if not useunicode and type(val) == unicode: val = val.encode('ascii' , 'replace')
-        return fmt%val if (val is not None) else ""
+        try:
+            val = fmt%val if (val is not None) else ""
+            return val
+        except Exception, e:
+            return str(e)
 
     data = []
     collengths = [len(unicode(hdr)) for hdr in headers]

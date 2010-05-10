@@ -71,6 +71,11 @@ class Cachable(toolkit.IDLabel):
         #for k,v in cache.iteritems():
         #    if k is not None:
         #        self.cacheValues(**{k:v})
+        #sanity check on idcolumn/id
+        if id and '__idcolumn__' in self.__class__.__dict__:
+            if type(self.__idcolumn__) in (str, unicode) and type(id) <> int:
+                raise TypeError("Type Mismatch between icolumn %r and id %r on object %r" % (self.__idcolumn__, id, self.__class__.__name__))
+        else: print self.__class__.__name__
 
     def _getPropertyNames(self):
         for attr in self.__properties__: yield attr
@@ -116,16 +121,17 @@ class Cachable(toolkit.IDLabel):
                 
     def addDBProperty(self, property, fieldname=None, func=None, table=None):
         "Convenience function to add a DB Property"
-        self.addProperty(property, DBProperty(self, fieldname or property, func, table))
+        return self.addProperty(property, DBProperty(self, fieldname or property, func, table))
     def addFunctionProperty(self, property, func):
         "Convenience function to add a function Property"
-        self.addProperty(property, FunctionProperty(self, func))
+        return self.addProperty(property, FunctionProperty(self, func))
     def addDBFKProperty(self, property, *args, **kargs):
         "Convenience function to add a DBFK Property"
-        self.addProperty(property, DBFKProperty(self, *args, **kargs))
+        return self.addProperty(property, DBFKProperty(self, *args, **kargs))
     def addProperty(self, propname, prop):
         "Add the given property to the __properties__ dict"
         self.__properties__[propname] = prop
+        return prop
     def cacheValues(self, **values):
         """Cache the property:value pairs given in **values"""
         for prop, val in values.iteritems():
@@ -283,12 +289,14 @@ class DBFKProperty(Property):
 
     def prepareCache(self,cacher):
         if self.cached: return
+        if type(self.reffield) in (list, tuple): return
         fields = self.targetfields
         if type(fields) in (str, unicode): fields = [fields]
         cacher.addFKField(fields, self.table, self.reffield)
 
     def doCache(self, cacher):
         if self.cached: return
+        if type(self.reffield) in (list, tuple): return
         fields = self.targetfields
         if type(fields) in (str, unicode): fields = [fields]
         data = cacher.getFKData(fields, self.table, self.cachable, self.reffield)
@@ -371,6 +379,8 @@ def sqlFrom(cachables, table = None, reffield=None):
     c = cachables[0] # prototype, assume all cachables are alike
     if reffield is None: reffield = c.__idcolumn__
     if type(reffield) in (str, unicode):
+        if type(c.id) <> int:
+            raise TypeError("Singular reffield with non-int id! Reffield: %r, cachable: %r, id: %r" % (reffield, c, c.id))
         where  = toolkit.intselectionSQL(reffield, (x.id for x in cachables))
     else:
         where = "((%s))" % ") or (".join(sqlWhere(reffield, x.id) for x in cachables)
@@ -390,23 +400,29 @@ class Cacher(object):
         self.dbfields = collections.defaultdict(set) # table : fields
         self.dbfkfields = set() # (table, reffield, fields)
     def getData(self, cachables):
-        if not cachables: return
         self.data = {} # {table, id} : {field : value}
+        if type(cachables) not in (list, set):
+            cachables = list(cachables)
+        if not cachables: return
+        db = cachables[0].db
+        if not cachables: return
         for table, fields in self.dbfields.items():
             fields = list(fields)
-            SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__, ",".join(map(quotefield, fields)),
-                                            sqlFrom(cachables, table=table))
-            for row in cachables[0].db.doQuery(SQL):
-                id, values = row[0], row[1:]
-                self.data[table, id] = dict(zip(fields, values))
+            for batch in toolkit.splitlist(cachables, 5000):
+                SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__, ",".join(map(quotefield, fields)),
+                                              sqlFrom(batch, table=table))
+                for row in db.doQuery(SQL):
+                    id, values = row[0], row[1:]
+                    self.data[table, id] = dict(zip(fields, values))
 
         self.fkdata = collections.defaultdict(lambda  : collections.defaultdict(list)) # {table, reffield, fields} : {id : values}
 
         for table, reffield, fields in self.dbfkfields:
-            SQL = "SELECT [%s], %s %s " % (reffield, ",".join(map(quotefield, fields)), sqlFrom(cachables, table, reffield))
-            for row in cachables[0].db.doQuery(SQL):
-                id, values = row[0], row[1:]
-                self.fkdata[table, reffield,fields][id].append(values)
+            for batch in toolkit.splitlist(cachables, 5000):
+                SQL = "SELECT [%s], %s %s " % (reffield, ",".join(map(quotefield, fields)), sqlFrom(batch, table, reffield))
+                for row in cachables[0].db.doQuery(SQL):
+                    id, values = row[0], row[1:]
+                    self.fkdata[table, reffield,fields][id].append(values)
             
     def addDBField(self, field, table=None):
         self.dbfields[table].add(field)
@@ -419,6 +435,7 @@ class Cacher(object):
 
     def addFKField(self, fields, table,  reffield):
         fields = tuple(fields)
+        if type(reffield) == list: raise Exception(reffield)
         self.dbfkfields.add((table, reffield, fields))
     def getFKData(self, fields, table, cachable, reffield):
         fields = tuple(fields)
