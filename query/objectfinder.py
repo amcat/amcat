@@ -2,7 +2,7 @@
 Objectfinder module. Helps using several kinds of indices through one common interface.
 """
 
-import lucenelib, article, ont
+import lucenelib, article, ont, toolkit, xapian
 
 class ObjectFinder(object):
     def __init__(self, index, languageid=101):
@@ -32,7 +32,6 @@ class ObjectFinder(object):
 class LuceneFinder(ObjectFinder):
     def search(self, objects):
         query = self.getQueries(objects)
-        print query
         results, time, n = lucenelib.search(self.index, {"X" : query}.items())
         return results["X"].iterkeys()
 
@@ -41,7 +40,6 @@ class LuceneFinder(ObjectFinder):
         for o, objects in objectlist:
             q = self.getQueries(objects)
             if q: query[o.id] = q
-        print query
         results, time, n = lucenelib.search(self.index, query.items())
         for k,v in results.iteritems():
             yield k, v.keys()
@@ -54,13 +52,18 @@ class LuceneFinder(ObjectFinder):
 
     def searchOnTerm(self, query):
         results, time, n = lucenelib.search(self.index, {"X" : query}.items())
-        print "num results:", len(list(results['X'].iterkeys()))
         return results["X"].iterkeys()
 
 class XapianFinder(ObjectFinder):
     def search(self, objects):
+        try:
+            objects = list(objects)
+        except:
+            objects = [objects]
         query = self.getQueries(objects)
-        if not query: raise("Empty query for %r/%s" % (objects, objects))
+        if not query:
+            toolkit.warn("Empty query for %r/%s" % (objects, objects))
+            return []
         return self.index.query(query, acceptPhrase=True, returnAID=True)
 
     def searchMultiple(self, objectlist):
@@ -78,8 +81,9 @@ class XapianFinder(ObjectFinder):
 
     def searchOnTerm(self, query):
         terms = [x.lower() for x in query.split()]
+        
         query = xapian.Query(xapian.Query.OP_AND, terms)
-        for art in self.index.query(query):
+        for art in self.index.query(query, returnAID=True):
             yield art
 
 if __name__ == '__main__':

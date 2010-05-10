@@ -150,7 +150,10 @@ def getFilters(db, edges):
                 yield node.filter.getSQL(field.getColumn(table))
     for col, values in valuefilters.iteritems():
         if all(type(v) == int for v in values):
-            yield toolkit.intselectionSQL(col, values)
+            if len(values) > 10000:
+                yield toolkit.intselectionTempTable(db, col, values)
+            else:
+                yield toolkit.intselectionSQL(col, values)
         else:
             yield "%s in (%s)" % (col, ",".join(map(toolkit.quotesql, values)))
         

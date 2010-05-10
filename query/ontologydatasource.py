@@ -203,12 +203,14 @@ def getDescendants(root, depth=None):
 
 class ObjectArticleMapping(datasource.Mapping):
     def __init__(self, a, b, db):
-        datasource.Mapping.__init__(self, a, b, 100, 100000000)
+        datasource.Mapping.__init__(self, a, b, -10, 100000000)
         self.db = db
 
     def map(self, value, reverse, memo=None):
         if reverse:
             raise Exception("Article -> Ontology Object mapping not implemented")
+        #toolkit.warn("ObjectArticleMapping value=%s" % value)
+        
         objects = self.a.getAllObjects(value)
         return self.a.datasource.index.search(objects)
 

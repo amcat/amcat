@@ -45,10 +45,11 @@ class AmcatMetadataSource(DataSource):
     datamodel := the draft datamodel
     Returns a mapping of all metadatafields of an article
     """
-    def __init__(self, db, datamodel): 
+    def __init__(self, db, datamodel, sourcetypecolumn="type"): 
         self.db = db
-	DataSource.__init__(self, self.createMappings(datamodel))
-    def createMappings(self, datamodel):
+	DataSource.__init__(self, self.createMappings(datamodel, sourcetypecolumn))
+        
+    def createMappings(self, datamodel, sourcetypecolumn):
         articlefield = DatabaseField(self, datamodel.getConcept("article"), ["articles", "storedresults_articles"], "articleid", ConceptMapper(self.db, article.Article))
         batch = DatabaseField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid", ConceptMapper(self.db, project.Batch))
         headline = DatabaseField(self, datamodel.getConcept("headline"), ["articles"], "headline")
@@ -58,7 +59,7 @@ class AmcatMetadataSource(DataSource):
         source = DatabaseField(self, datamodel.getConcept("source"), ["articles","media"], "mediumid", ConceptMapper(self.db, sources.Source))
         url = DatabaseField(self, datamodel.getConcept("url"), ["articles"], "url")
         projectfield = DatabaseField(self, datamodel.getConcept("project"),["batches"], "projectid", ConceptMapper(self.db, project.Project))
-        sourcetype = DatabaseField(self, datamodel.getConcept("sourcetype"),["media"], "type")
+        sourcetype = DatabaseField(self, datamodel.getConcept("sourcetype"),["media"], sourcetypecolumn)
         storedresult = DatabaseField(self,datamodel.getConcept("storedresult"),["storedresults_articles"],"storedresultid")
         
         return [
