@@ -8,6 +8,11 @@ import project
 import toolkit
 import cachable
 
+PARTIES = [514,2045,2653,952,1019,1052,1098,1142,1156,1373,1545,1857,1906,1934]
+IDEAL = 1625
+REALITY = 2547
+
+
 class NETDataSource(datasource.DataSource):
     def __init__(self, dm, db):
         artfield = MappedField(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
