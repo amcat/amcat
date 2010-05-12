@@ -1,14 +1,16 @@
+def doCreateArticle(db, aid, **cache):
+    return Article(db, aid, **cache)
+def doCreateSentence(db, aid, **cache):
+    import sentence
+    return sentence.Sentence(db, aid, **cache)
+
 import toolkit, dbtoolkit, re, project, sources, types
 from itertools import izip, count
 from functools import partial
 _debug = toolkit.Debug('article',1)
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
 
-def doCreateArticle(db, aid, **cache):
-    return Article(db, aid, **cache)
-def doCreateSentence(db, aid, **cache):
-    import sentence
-    return sentence.Sentence(db, aid, **cache)
+
     
 class Article(Cachable):
     """

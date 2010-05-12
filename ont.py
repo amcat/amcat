@@ -37,8 +37,6 @@ def getAllDescendants(object, stoplist=None, golist=None):
 def getObject(db, id):
     return Object(db, id)
 
-DATEFILTER = "fromdate < %s and (todate is null or todate > %s)" % (toolkit.quotesql(my_datetime.now()), toolkit.quotesql(my_datetime.now()))
-
 class Function(object):
     def __init__(self, db, functionid, office_objectid, fromdate, todate):
         self.functionid = functionid

@@ -97,6 +97,7 @@ class ArticleArrowMapping(datasource.Mapping):
         memo = collections.defaultdict(set)
         sql = UGLY_SQL % (self.project.id, toolkit.intselectionTempTable(self.db, "articleid", values))
         for art, subject, quality, object in self.db.doQuery(sql):
+            print subject, object
             subject = self.getObject(subject)
             object = self.getObject(object)
             quality = quality
