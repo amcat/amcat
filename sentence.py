@@ -1,5 +1,5 @@
 import dbtoolkit, toolkit, collections
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
 from functools import partial
 import article, word
 
@@ -9,6 +9,7 @@ class Sentence(Cachable):
     __labelprop__ = 'text'
     __dbproperties__ = ["parnr", "sentnr", "encoding"]
     __encodingprop__ = 'encoding'
+    __metaclass__ = CachingMeta
     
     text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
     article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)

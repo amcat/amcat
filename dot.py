@@ -119,7 +119,7 @@ class Graph(object):
             self.theme.base = wmin - (min*self.theme.scale)
 
 class DotTheme(object):
-    def __init__(self, edgelabels=True, shape="ellipse", isolated=False, edgefont="Helvetica", nodefont="Helvetica",header="", scale=1, base=0):
+    def __init__(self, edgelabels=True, shape="ellipse", isolated=False, edgefont="Helvetica", nodefont="Helvetica",header="", scale=1, base=0, green=False):
         self.edgelabels = edgelabels
         self.shape = shape
         self.isolated=  isolated
@@ -129,6 +129,7 @@ class DotTheme(object):
         self.scale = scale
         self.graphattrs = {"center" : "true", "size" : "30,40"}
         self.base = base
+        self.green = green
     def getEdgeDot(self, edge, graph, subgraph):
         style = self.getEdgeStyle(edge)
         attrs = dict(edge.attrs)
@@ -152,7 +153,9 @@ class DotTheme(object):
         return edge.weight * self.scale
     def getEdgeColor(self, edge, graph):
         if edge.sign:
-            return (.833-.167*edge.sign,1,.5)
+            if self.green: return (.167 + .167 * edge.sign,1,1)
+            else: return (.833-.167*edge.sign,1,.5)
+        
         return None
     def getEdgeWidth(self, edge, graph):
         return 1 + float(self.getEdgeWeight(edge, graph)) * .3333

@@ -23,6 +23,7 @@ class ActorIssueDataSource(OntologyDataSource):
         coocissue = datasource.Field(self, dm.getConcept("coocissue"))
         issuecooc = datasource.Field(self, dm.getConcept("issuecooc"))
 
+
         set = SetField(self, dm.getConcept("set"))
 
         mappings = [

@@ -34,7 +34,7 @@ class DeclarativeRule(Rule):
         self.name = name
         self.rulename = rulename or "?"
     def getFrame(self, node):
-        return self.frame(name=self.name)
+        return self.frame(name=self.name, rulename=self.rulename)
     def matches(self, node):
         self.debug("  Applying rule %s"% self)
         frame = self.getFrame(node)
@@ -308,6 +308,7 @@ class SPO(Frame):
     def isComplete(self):
         #if self.has('doelkey') ^ self.has('doelobject'): return false # ^ = XOR
         if self.has('subject','predicate','object'): return True
+        if self.rulename == "passief": return
         if self.has('subject', 'predicate'):
             self.name = 'SPO_su'
             return True

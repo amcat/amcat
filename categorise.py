@@ -67,7 +67,7 @@ if __name__ == '__main__':
     
     ont = ont2.fromDB(dbtoolkit.amcatDB())
     f = ont.categorisations[1]
-    o = ont.objects[9601]
+    o = ont.objects[536]
     c = f.categorise(o)
     print c
     import sys;sys.exit(1)

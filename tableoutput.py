@@ -43,7 +43,7 @@ def printTable(table):
 def table2ascii(table, colnames=None, formats=None, useunicode=False, box=False):
     return table2unicode(table, colnames, formats, useunicode, box)
         
-def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True):
+def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True, rownames=False):
     table = getTable(table, colnames)
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
     cols, rows = table.getColumns(), table.getRows()
@@ -65,23 +65,33 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True)
         if type(val) == str: val = val.decode('latin-1')
         if not useunicode and type(val) == unicode: val = val.encode('ascii' , 'replace')
         try:
-            val = fmt%val if (val is not None) else ""
+            val = fmt%(val,) if (val is not None) else ""
             return val
         except Exception, e:
             return str(e)
+    def formatheader(h):
+        if not h: return h
+        if type(h) in (list, tuple, set): return ",".join(map(unicode, h))
+        return unicode(h)
+            
 
     data = []
     collengths = [len(unicode(hdr)) for hdr in headers]
     for row in rows:
         data.append([])
+        if rownames:
+            data[-1].append(formatheader(row))
         for i, col in enumerate(cols):
             value = cell(row, col, formats[i])
             collengths[i] = max(collengths[i], len(value))
             data[-1].append(value)
-    
+
     result = u""
+    if rownames:
+        collengths.insert(0, 15)
+        headers.insert(0, "")
     result += sep(collengths, con_sep2t)
-    result += line(headers, collengths, con_line)
+    result += line(map(formatheader, headers), collengths, con_line)
     result += sep(collengths, con_sep)
     for r in data:
         result += line(r, collengths, con_line)

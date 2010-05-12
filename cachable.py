@@ -63,6 +63,7 @@ class Cachable(toolkit.IDLabel):
     def __init__(self, db, id, **cache):
         """Create the Cachable with the given database and id
         Optionally, provide property=value pairs to cache immediately as **cache"""
+        if id is None: raise TypeError("ID should not be None!")
         self.db = db
         self.id = id
         self.__properties__ = {}
@@ -74,7 +75,8 @@ class Cachable(toolkit.IDLabel):
         #sanity check on idcolumn/id
         if id and '__idcolumn__' in self.__class__.__dict__:
             if type(self.__idcolumn__) in (str, unicode) and type(id) <> int:
-                raise TypeError("Type Mismatch between icolumn %r and id %r on object %r" % (self.__idcolumn__, id, self.__class__.__name__))
+                raise TypeError("Type Mismatch between icolumn %r and id %r on object %r" %
+                                (self.__idcolumn__, id, self.__class__.__name__))
         #else: print self.__class__.__name__
 
     def _getPropertyNames(self):
@@ -292,14 +294,14 @@ class DBFKProperty(Property):
         if type(self.reffield) in (list, tuple): return
         fields = self.targetfields
         if type(fields) in (str, unicode): fields = [fields]
-        cacher.addFKField(fields, self.table, self.reffield)
+        cacher.addFKField(fields, self.table, self.reffield, self.orderby)
 
     def doCache(self, cacher):
         if self.cached: return
         if type(self.reffield) in (list, tuple): return
         fields = self.targetfields
         if type(fields) in (str, unicode): fields = [fields]
-        data = cacher.getFKData(fields, self.table, self.cachable, self.reffield)
+        data = cacher.getFKData(fields, self.table, self.cachable, self.reffield, self.orderby)
         val = self.endfunc(self.function(*x) for x in data)
         self.cache(val)
 
@@ -367,6 +369,9 @@ class DBFKPropertyFactory(PropertyFactory):
 def quotefield(s):
     if "(" in s: return s
     return "[%s]" % s
+def quotefields(s):
+    if type(s) in (str, unicode): s = [s]
+    return ",".join(map(quotefield, s))
 
     
 def sqlWhere(fields, ids):
@@ -404,42 +409,48 @@ class Cacher(object):
         if type(cachables) not in (list, set):
             cachables = list(cachables)
         if not cachables: return
-        db = cachables[0].db
+        prototype = cachables[0]
+        db = prototype.db
         if not cachables: return
         for table, fields in self.dbfields.items():
             fields = list(fields)
             for batch in toolkit.splitlist(cachables, 5000):
-                SQL = "SELECT [%s], %s %s" % (cachables[0].__idcolumn__, ",".join(map(quotefield, fields)),
+                idcol = prototype.__idcolumn__
+                if type(idcol) in (str, unicode): idcol = [idcol]
+                SQL = "SELECT %s, %s %s" % (quotefields(prototype.__idcolumn__), quotefields(fields),
                                               sqlFrom(batch, table=table))
                 for row in db.doQuery(SQL):
-                    id, values = row[0], row[1:]
+                    id, values = row[:len(idcol)], row[len(idcol):]
                     self.data[table, id] = dict(zip(fields, values))
 
-        self.fkdata = collections.defaultdict(lambda  : collections.defaultdict(list)) # {table, reffield, fields} : {id : values}
+        self.fkdata = collections.defaultdict(lambda  : collections.defaultdict(list)) # {table, reffield, fields, orderby} : {id : values}
 
-        for table, reffield, fields in self.dbfkfields:
+        for table, reffield, fields, orderby in self.dbfkfields:
             for batch in toolkit.splitlist(cachables, 5000):
                 SQL = "SELECT [%s], %s %s " % (reffield, ",".join(map(quotefield, fields)), sqlFrom(batch, table, reffield))
+                if orderby: SQL += " ORDER BY %s" % orderby
                 for row in cachables[0].db.doQuery(SQL):
                     id, values = row[0], row[1:]
-                    self.fkdata[table, reffield,fields][id].append(values)
+                    self.fkdata[table, reffield,fields,orderby][id].append(values)
             
     def addDBField(self, field, table=None):
         self.dbfields[table].add(field)
         
     def getDBData(self, cachable, field, table=None):
-        row = self.data.get((table, cachable.id))
+        id = cachable.id
+        if type(id) <> tuple: id = (id,)
+        row = self.data.get((table, id))
         if row:
             if field not in row: print table, row
             return row[field]
 
-    def addFKField(self, fields, table,  reffield):
+    def addFKField(self, fields, table,  reffield, orderby):
         fields = tuple(fields)
         if type(reffield) == list: raise Exception(reffield)
-        self.dbfkfields.add((table, reffield, fields))
-    def getFKData(self, fields, table, cachable, reffield):
+        self.dbfkfields.add((table, reffield, fields, orderby))
+    def getFKData(self, fields, table, cachable, reffield, orderby):
         fields = tuple(fields)
-        return self.fkdata[table, reffield, fields].get(cachable.id, [])
+        return self.fkdata[table, reffield, fields, orderby].get(cachable.id, [])
 
 def cacheMultiple(cachables, *propnames):
     """

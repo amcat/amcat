@@ -1478,7 +1478,9 @@ def ints2ranges(ids):
     if ids:
         yield start, i
 
-def intselectionTempTable(db, colname, ints):
+def intselectionTempTable(db, colname, ints, minIntsForTemp=5000):
+    if type(ints) not in (set, tuple, list): ints = tuple(ints)
+    if len(ints) < minIntsForTemp: return intselectionSQL(colname, ints)
     table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
     db.doQuery("CREATE TABLE %s (i int)" % table)
     db.insertmany(table, "i", [(i,) for i in ints])
@@ -1532,6 +1534,18 @@ def getTermColumns():
     except:
         return None
 
+def buffer(sequence, buffercall, buffersize=100):
+    buffer = []
+    for s in sequence:
+        buffer.append(s)
+        if len(buffer) >= buffersize:
+            buffercall(buffer)
+            for b in buffer: yield b
+            buffer = []
+    if buffer:
+        buffercall(buffer)
+        for b in buffer: yield b
+    
 if __name__ == '__main__':
     import dbtoolkit, article
     AIDS = 45143636,45564121,44783534,45560808,44783539,45560791

@@ -102,7 +102,9 @@ def getIdentifier(db, debug=None):
                         key = Self(),                                                                                                                 
                         consequence = FirstMatch(Parent("mod"), Parent("predm"), Child("nucl"),
                                           Serial(Parent("body"),Parent("mod")) ),   #44505248 dekt ook negative condities, uitgezonderd wanneer, behalve als
-                        assumption = Child("body") ),                        
+                        assumption = Child("body") ,
+                       # conditionality = Child("mod", lemma="behalve")
+                        ),                        
         DeclarativeRule(i, Succession, condition=[isTimelyOrder],                                                                                         
                         key = Self(),                                                                                                                 
                         consequence = Parent("mod"),

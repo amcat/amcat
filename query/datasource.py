@@ -126,7 +126,7 @@ class Concept(IDLabel):
 
 # TODO: identifier -> id (list index) mapping for concepts. This is pretty ugly and should be either decentralized
 #       (but we need to guarantee consistency across datasources/models) or put into database?
-CONCEPTS = ["article", "batch", "headline",  "date", "week", "year", "source", "url", "project", "sourcetype", "storedresult", "sentiment", "search", "brand", "property", "brandproperty", "associationcooc", "customer", "propertycluster", "actor", "issue", "issuearticle", "coocissue", "issuecooc", "set"]
+CONCEPTS = ["article", "batch", "headline",  "date", "week", "year", "source", "url", "project", "sourcetype", "storedresult", "sentiment", "search", "brand", "property", "brandproperty", "associationcooc", "customer", "propertycluster", "actor", "issue", "issuearticle", "coocissue", "issuecooc", "set", "subject", "object", "arrow", "quality"]
 
 class DataModel(object):
     """ 
