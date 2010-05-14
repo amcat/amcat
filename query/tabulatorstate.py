@@ -1,5 +1,6 @@
 import datasource
 import toolkit
+from datamodel import Concept
 
 class State(object):
     """
@@ -77,7 +78,7 @@ def mappings2edges(mappings, filters):
         nodeb = getNode(mapping.b)
 
         for a,b in ([nodea,nodeb], [nodeb,nodea]):
-            if isinstance(a.fields[0], datasource.Concept) and a.filter and not a.data:
+            if isinstance(a.fields[0], Concept) and a.filter and not a.data:
                 b.filter = a.filter
 
         yield Edge(nodea, nodeb, mapping)

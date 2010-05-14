@@ -11,7 +11,7 @@ import cachable
 PARTIES = [514,2045,2653,952,1019,1052,1098,1142,1156,1373,1545,1857,1906,1934]
 IDEAL = 1625
 REALITY = 2547
-
+IDEAL_ATYPE = 2
 
 class NETDataSource(datasource.DataSource):
     def __init__(self, dm, db):
@@ -68,7 +68,7 @@ class ArrowQualityMapping(datasource.Mapping):
         return [value.quality]
 
 
-UGLY_SQL = """select articleid, subject, quality, object
+UGLY_SQL = """select articleid, source, subject, arrowtype, quality, object
 from net_arrows r 
 inner join codingjobs_articles ca on r.codingjob_articleid = ca.codingjob_articleid
 inner join codingjobs j on ca.codingjobid = j.codingjobid
@@ -101,8 +101,11 @@ class ArticleArrowMapping(datasource.Mapping):
         if reverse:return
         memo = collections.defaultdict(set)
         sql = UGLY_SQL % (self.project.id, toolkit.intselectionTempTable(self.db, "articleid", values))
-        for art, subject, quality, object in self.db.doQuery(sql):
-            print subject, object
+        for art, source, subject,  atype, quality, object in self.db.doQuery(sql):
+            # oordeelextrapolatie
+            if source and atype == IDEAL_ATYPE:
+                subject, object = source, subject
+            #print subject, object
             subject = self.getObject(subject)
             object = self.getObject(object)
             quality = quality

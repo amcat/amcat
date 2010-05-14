@@ -181,10 +181,14 @@ class SetOntologyField(OntologyField):
 class HierarchyOntologyField(OntologyField):
     def __init__(self, ds, concept, objectid, classid, depth=1, queryIncludesSelf=True):
         OntologyField.__init__(self, ds, concept)
-        self.object = ont.BoundObject(classid, objectid, ds.db) if (objectid and ds.db) else None
+        self.classid = classid
+        if ds.db and objectid:
+            self.klass = ont.Class(ds.db, classid)
+            self.object = ont.BoundObject(self.klass, ont.Object(ds.db, objectid))
+        else:
+            self.klass, self.object = None, None
         self.depth = depth
         self.queryIncludesSelf = queryIncludesSelf
-        self.classid = classid
     def getObjects(self):
         return getDescendants(self.object, self.depth)
     def getAllObjects(self, object):

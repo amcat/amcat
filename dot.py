@@ -106,8 +106,7 @@ class Graph(object):
         svg = re.match('.*?(<svg.*</svg>)', svg, re.DOTALL).group(1)
         return svg
     
-    def normalizeWeights(self):
-        wmin, wmax = 1, 10
+    def normalizeWeights(self, wmin=1, wmax=10):
         max, min = None, None
         for edges in self.edges.values():
             for edge in edges:
@@ -150,7 +149,7 @@ class DotTheme(object):
     def getEdgeStyle(self, edge):
         return dict(edge.style)
     def getEdgeWeight(self, edge, graph):
-        return edge.weight * self.scale
+        return edge.weight * self.scale + self.base
     def getEdgeColor(self, edge, graph):
         if edge.sign:
             if self.green: return (.167 + .167 * edge.sign,1,1)
