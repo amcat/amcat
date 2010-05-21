@@ -95,9 +95,10 @@ class ArticleOntArtMapping(datasource.Mapping):
         if type(memo) != dict:
             memo = dict(memo)
         of = self.b.ontfield
-        objects = of.getObjects()
+        objects = list(of.getObjects())
         for object in objects:
-            cooc = int(value in memo.get(object.id, {}))
+            values = list(memo.get(object.id))
+            cooc = int(value in values)
             yield OntArt(object, value, cooc)
 
     def startMapping(self, values, reverse=False):
@@ -182,9 +183,10 @@ class HierarchyOntologyField(OntologyField):
     def __init__(self, ds, concept, objectid, classid, depth=1, queryIncludesSelf=True):
         OntologyField.__init__(self, ds, concept)
         self.classid = classid
-        if ds.db and objectid:
+        if ds.db and classid:
             self.klass = ont.Class(ds.db, classid)
-            self.object = ont.BoundObject(self.klass, ont.Object(ds.db, objectid))
+            if objectid:
+                self.object = self.klass.getBoundObject(objectid)
         else:
             self.klass, self.object = None, None
         self.depth = depth
@@ -196,10 +198,11 @@ class HierarchyOntologyField(OntologyField):
     def getQuery(self, object):
         return " OR ".join("(%s)" % o for o in getDescendants(object))
     def getObject(self, id):
-        return ont.BoundObject(self.classid, id, self.datasource.db)
+        return self.klass.getBoundObject(id)
+    #return ont.BoundObject(self.classid, id, self.datasource.db)
         
 def getDescendants(root, depth=None):
-    for child in root.children:
+    for child in root.getChildren():
         yield child
         if (depth is None) or (depth > 1): 
             for child2 in getDescendants(child, depth and depth-1):
@@ -207,7 +210,7 @@ def getDescendants(root, depth=None):
 
 class ObjectArticleMapping(datasource.Mapping):
     def __init__(self, a, b, db):
-        datasource.Mapping.__init__(self, a, b, -10, 100000000)
+        datasource.Mapping.__init__(self, a, b, 1, 100000000)
         self.db = db
 
     def map(self, value, reverse, memo=None):
@@ -216,6 +219,8 @@ class ObjectArticleMapping(datasource.Mapping):
         #toolkit.warn("ObjectArticleMapping value=%s" % value)
         
         objects = self.a.getAllObjects(value)
+        objects = list(objects)
+        #print ">", map(str, objects)
         return self.a.datasource.index.search(objects)
 
 if __name__ == '__main__':
