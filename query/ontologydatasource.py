@@ -97,7 +97,7 @@ class ArticleOntArtMapping(datasource.Mapping):
         of = self.b.ontfield
         objects = list(of.getObjects())
         for object in objects:
-            values = list(memo.get(object.id))
+            values = list(memo.get(object.id, []))
             cooc = int(value in values)
             yield OntArt(object, value, cooc)
 

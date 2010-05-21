@@ -10,7 +10,7 @@ try:
     nomx = False
 except:
     nomx = True
-import xapian, dbtoolkit, toolkit, sources, project, article 
+import dbtoolkit, toolkit, sources, project, article 
 
 from datasource import DataSource, Mapping, Field, FieldConceptMapping
 from itertools import imap, izip

@@ -4,6 +4,7 @@ from datasource import *
 from itertools import izip
 from amcatmetadatasource import DatabaseMapping
 from dbtoolkit import quotesql
+import datasource
 
 class Operation(object):
     """Interface for operations"""
@@ -52,9 +53,11 @@ def getJoins(fields):
     return result
 
 class DatabaseOperation(Operation):
-    def __init__(self, edges):
+    def __init__(self, edges, debug = toolkit.ticker.warn):
         self.edges = edges
         self.db = toolkit.head(edges).mapping.a.datasource.db
+        self.debug = debug
+    def getEdges(self): return self.edges
     def getUtility(self, state):
         return 1
     
@@ -77,7 +80,7 @@ class DatabaseOperation(Operation):
         distinctstr = " DISTINCT " if state.distinct else ""
         sql = "SELECT %s %s FROM %s WHERE %s" % (distinctstr, selectstr, fromstr, wherestr)
 
-        toolkit.ticker.warn(`sql`)#[:100])
+        self.debug(`sql`)#[:100])
         data = self.db.doQuery(sql) or []
         fieldlist = [field[0] for field in sortedfields]
         result = mergeData(self.edges, fieldlist, data)
@@ -158,7 +161,7 @@ def getFilters(db, edges):
             yield "%s in (%s)" % (col, ",".join(map(toolkit.quotesql, values)))
         
                     
-def getDatabaseOperations(state):
+def getDatabaseOperations(state, debug):
     usededges = set()
     for edge in state.edges:
         if (edge not in usededges) and isinstance(edge.mapping, DatabaseMapping) and (edge.a.data or edge.b.data):
@@ -172,7 +175,7 @@ def getDatabaseOperations(state):
                         changed = True
 
             usededges |= edges
-            yield DatabaseOperation(edges)
+            yield DatabaseOperation(edges, debug)
 
             
         
@@ -181,8 +184,11 @@ class ReduceEdgeOperation(Operation):
     Class ReduceEdgeOperation can be used to combine two nodes along an edge
     to a single node containing the combined data
     """
-    def __init__(self, edge):
+    def __init__(self, edge, debug = toolkit.ticker.warn):
         self.edge = edge
+        self.debug = debug
+    def getEdges(self):
+        return (self.edge,)
     def getUtility(self, state):
         """
         Utility is -1 times the lowest cost of traversing the mapping a->b or b->a
@@ -198,7 +204,7 @@ class ReduceEdgeOperation(Operation):
         the combine function to map the data, and calls the removeEdge
         method of the state to update the state.
         """
-        toolkit.ticker.warn("Applying map %s" % str(self))
+        self.debug("Applying map %s" % str(self))
         newnode = combine(self.edge)
         state.collapse([self.edge], newnode)
         return state
@@ -210,12 +216,41 @@ class OperationsFactory(object):
     """
     Factory to create possible operations on a state 
     """
-    def getOperations(self, state):
+    def getOperations(self, state, debug=toolkit.ticker.warn):
         """
         Generate all operations that can be applied to a state.
         Currently returns a ReduceEdgeOperation for each edge
         """
-        return map(ReduceEdgeOperation, state.edges) + list(getDatabaseOperations(state))
+        return [ReduceEdgeOperation(e, debug) for e in state.edges] + list(getDatabaseOperations(state, debug))
+    def getBestOperation(self, state, debug=toolkit.ticker.warn):
+        return toolkit.choose(self.getOperations(state, debug),
+                              lambda op: (self.getPreference(op), op.getUtility(state)))
+        
+    def getPreference(self, op):
+        # higher is better
+        # 0 = operations with edges without data
+        # 1 = normal database operations
+        # 2 = dbreduceall
+        # 3 = other operations
+        # 4 = fieldconceptoperations
+        hasdata = False
+        for edge in op.getEdges():
+            if edge.a.data or edge.b.data:
+                hasdata = True
+                break
+        if not hasdata:
+            pref = 0
+        elif type(op) == DatabaseOperation:
+            pref = 2
+        elif type(op.edge.mapping)==datasource.FieldConceptMapping:
+            pref = 4
+        else:
+            pref = 3
+        u = op.getUtility(None)
+        #toolkit.warn("%i %s %s " % (pref, u if u is None else "%1.4f" % u, op))
+        return pref
+        
+
        
 def combine(edge):
     """

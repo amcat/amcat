@@ -45,7 +45,10 @@ class LuceneFinder(ObjectFinder):
             yield k, v.keys()
 
     def getQuery(self, obj):
-        return obj.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
+
+            
+        query = obj.getSearchString(xapian=False, languageid=self.languageid, fallback=True)
+        return query
 
     def getTerms(self, document):
         raise Exception("Not yet implemented")
@@ -55,7 +58,7 @@ class LuceneFinder(ObjectFinder):
         return results["X"].iterkeys()
 
 class XapianFinder(ObjectFinder):
-    def search(self, objects):
+    def search(self, objects, verbose=False):
         try:
             objects = list(objects)
         except:
@@ -64,16 +67,18 @@ class XapianFinder(ObjectFinder):
         if not query:
             toolkit.warn("Empty query for %r/%s" % (objects, objects))
             return []
-        return self.index.query(query, acceptPhrase=True, returnAID=True)
+        q= list(self.index.query(query, acceptPhrase=True, returnAID=True))
+        return q
 
     def searchMultiple(self, objectlist):
         for o, objects in objectlist:
-            yield o.id, self.search(o)
+            yield o.id, self.search(objects)#, verbose=o.id == 17538)
 
         #return ((o.id, set(self.index.query(o.getSearchString(xapian=True, languageid=self.languageid), returnAID=True))) for o in objects)
 
     def getQuery(self, obj):
-        return obj.getSearchString(xapian=True, languageid=self.languageid, fallback=True)
+        query = obj.getSearchString(xapian=True, languageid=self.languageid, fallback=True)
+        return query
 
     def getTerms(self, document):
         for term in self.index.getDocument(document).termlist():

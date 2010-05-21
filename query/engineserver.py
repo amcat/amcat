@@ -1,142 +1,132 @@
-import  socket, sys, threading, Queue, hashlib, functools, time, traceback
+import threading
+import Queue
+import functools
+import toolkit
+import traceback
+import sys
+import time
+import hashlib
 import uuid
-from dbpool import readi, sendi
+import tableserial
 import filter
-import cPickle as pickle
-import datasource
-import cachable, article, sources, ont
+import socketio
 
-PORT = 26228
+from servertools import *
+
 NWORKERS = 5
-KEY = '<\xdbW\x1bv9A\x8a\xb1\xf6{\x0f\xd1nN\x9e'
-#PASSBYTES = hashlib.md5(PASSPHRASE).digest()
 
-def deserialize(engine, obj):
-    if isinstance(obj, datasource.Concept):
-        return engine.model.getConcept(obj)
-    if type(obj) == str:
-        return engine.model.getConcept(obj)
-    if type(obj) in (list, tuple):
-        return type(obj)(deserialize(engine, o) for o in obj)
-    if type(obj) == dict:
-        return dict((k, deserialize(engine, v)) for (k,v) in obj.iteritems())
-    if isinstance(obj, filter.Filter):
-        obj.concept = deserialize(engine, obj.concept)
-    return obj
+DISPATCH = {} # request_id : function(socket)
 
-def cachelabels(table):
-    articles, cachables, srces = set(), set(), set()
-    for row in table:
-        for cell in row:
-            if isinstance(cell, article.Article): articles.add(cell)
-            elif isinstance(cell, sources.Source): srces.add(cell)
-            elif isinstance(cell, cachable.Cachable): cachables.add(cell)
-            elif isinstance(cell, ont.BoundObject): cachables.add(cell.objekt)
-    cachable.cacheMultiple(articles, "encoding", "headline")
-    cachable.cacheMultiple(srces, "name")
-    cachable.cache(cachables, "label")
+# EngineServer protocol version 1
+#   - All integers "i" sent as struct.pack('i', i) bytes
+#   - All bytestrings "s" sent as "i" strlen plus i bytes
+#   - At any time, if an error occurs, server sends integer -1 (ff.ff.ff.ff) followed by the error string
+#     As a consequence, every server response should start with something that can be checked as an error
+#     ie a string, non-zero integer, or float
+# 1. Client connects, sends expected version number "i"
+# 2. Server sends maxium supported version followed by a random challenge string
+# 3. Client sends 16 byte md5 hash of challenge bytes using shared key
+# 4. Client sends request "i"
+#    a) if request == REQUEST_LIST:
+#     a1) Client sends NUM_CONCEPTS "i" and NUM_FILTERS "i"
+#     a2) for each concept client sends concept id "i"
+#     a3) for each filter client sends concept id "i"
+#        followed by serialised data (using tableserial protocol)
+#     a4) server sends concept list data (using tableserial protocol)
+#   b)if request == REQUEST_QUOTE
+#     b1) Client sends articleid "i"
+#     b2) Client sends space separated quote words as one string
+#     b3) Server sends quote string
 
+DISPATCH[1] = lambda sock : sock
 
-def RequestHandler(engine, request):
-    call, args, kargs = request
-    #print `call, args, kargs`
-    if call == "getList":
-        args, kargs = deserialize(engine, [args, kargs])
-        l = engine.getList(*args, **kargs)
-        # call str(.) to allow pickling label
-        # maybe gather all cachables and call cache("label") in one go?
-        cachelabels(l)
-        return l
-    elif call == "getQuote":
-        return engine.getQuote(*args, **kargs)
-
-def readobj(conn):
-    s = readi(conn)
-    return pickle.loads(s)
-
-def sendobj(conn, obj):
-    print "Sending object of type %r" % (obj,)
-    try:
-        s = pickle.dumps(obj)
-    except Exception, e:
-        print "Exception on pickling object\n============"
-        import traceback
-        traceback.print_exc()
-        print "=============================\nSending exception: %s" % e
-        s = pickle.dumps(Exception(str(e)))
-    sendi(conn, s)
-
-def hash(s):
-    return hashlib.md5(KEY+s).digest()
-    
-def authenticateToServer(conn):
-    challenge = readi(conn)
-    response = hash(challenge)
-    #print "Received challenge %r, hashed with key %r, response is %r" % (challenge, KEY, response)
-    sendi(conn, response)
-
-def authenticateClient(conn):
+def authenticateClient(socket):
     challenge = uuid.uuid4().bytes
     hashed = hash(challenge)
-    sendi(conn, challenge)
-    response = readi(conn)
+    socket.sendstring(challenge)
+    socket.flush()
+
+    response = socket.read(16)
     if hashed <> response:
         #print "Sent challenge %r, hashed with key %r, received response %r<>%r" % (challenge, KEY, response, hashed)
         raise Exception("Access denied")
 
-    
+def serverhandshake(socket):
+    version = socket.readint()
+    if version <> 1: raise Exception("Unknown protocol version: %i" % version)
+    print "client version %iu connected, snending server version" % version
+    socket.sendint(1) # server version
+    authenticateClient(socket)
+    socket.sendint(1) # authenticated OK, ready for request
+    socket.flush()
+
 class WorkerThread(threading.Thread):
-    def __init__(self, queue, handler):
+    def __init__(self, queue, engine):
         threading.Thread.__init__(self, name="Worker-%i" % id(self))
         self.queue = queue
-        self.handler = handler
         self.stop = False
+        self.engine = engine
     def run(self):
         while not self.stop:
             try:
-                conn = self.queue.get(True, .1)
+                socket = self.queue.get(True, .1)
             except Queue.Empty:
                 if self.stop: return
                 continue
             try:
-                authenticateClient(conn)
-                request = readobj(conn)
-                #print str(self), request
-                result = self.handler(request)
-                sendobj(conn, result)
+                serverhandshake(socket)
+                print "Shook hands"
+                request = socket.readint()
+                DISPATCH[request](socket, self.engine)
             except Exception, e:
                 traceback.print_exc(file=sys.stdout)
-                sendobj(conn, Exception(repr(e)))
+                socket.senderror(e)
             finally:
-                conn.close()
-def serve(queue, port=PORT):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    while True:
-        try:
-            s.bind(('', port))
-            break
-        except Exception, e:
-            if "Address already in use" in str(e):
-                print "Waiting for port %i to become available" % port
-                time.sleep(2)
-            else:
-                raise
-    try:
-        s.listen(1)
-        print >>sys.stderr, ("Listening to port %i" % port)
-        while True:
-            conn, addr = s.accept()
-            queue.put(conn)
-    finally:
-        try:
-            s.close()
-        except:
-            pass
+                print "Closing connection"
+                socket.close()
 
-def createServer(engine, port=PORT, nworkers=NWORKERS):    
+def getFilter(type, concept, data):
+    if type == FILTER_INTERVAL:
+        (todate,), (fromdate,) = data
+        return filter.IntervalFilter(concept, todate, fromdate)
+    else:
+        return filter.ValuesFilter(concept, *[x for (x,) in data])
+    
+def getList(socket, engine, distinct=False):
+    nconcepts = socket.readint()
+    nfilters = socket.readint()
+    conceptnames = [socket.readstring() for i in range(nconcepts)]
+    concepts = map(engine.model.getConcept, conceptnames)
+    filters = []
+    for f in range(nfilters):
+        type = socket.readint()
+        conceptname = socket.readstring()
+
+        concept = engine.model.getConcept(conceptname)
+        data = tableserial.deserialiseData(socket, [concept])
+        filters.append(getFilter(type, concept, data))
+        print "Fitler type %i, Concept %s, data %r" % (type, concept, data)
+    data = engine.getList(concepts, filters ,distinct=distinct)
+    tableserial.serialiseData(concepts, data, socket)
+    socket.close()
+        
+    
+DISPATCH[REQUEST_LIST] = getList
+
+def getDistinctList(socket, engine):
+    getList(socket, engine, distinct=True)
+
+DISPATCH[REQUEST_LIST_DISTINCT] = getDistinctList
+
+def createServer(engine, port=PORT, nworkers=NWORKERS, callback=None):    
     requestq = Queue.Queue()
-    h = functools.partial(RequestHandler, engine)
     for i in range(NWORKERS):
-        WorkerThread(requestq, h).start()
-    serve(requestq, port=port)
+        WorkerThread(requestq, engine).start()
+    for sock in socketio.serve(port, callback=callback):
+        requestq.put(sock)
+
+if __name__ == '__main__':
+    import dbtoolkit; db = dbtoolkit.amcatDB()
+    import draftdatamodel; dm = draftdatamodel.getDatamodel(db)
+    import engine; e = engine.QueryEngine(dm)
+    createServer(e)

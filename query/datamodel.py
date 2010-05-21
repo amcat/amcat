@@ -1,4 +1,4 @@
-from toolkit import IDLabel
+from idlabel import IDLabel
 import collections
 
 class Concept(IDLabel):
