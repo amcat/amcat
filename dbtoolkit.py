@@ -266,7 +266,7 @@ class amcatDB(object):
 
     def insertmany(self, table, headers, dataseq):
         if len(dataseq) == 0: return
-        seperator = '%s' if self.dbType == 'MySQLdb' else '?'
+        seperator = self.parametermark()
         sql = 'insert into %s (%s) values (%s)' % (table, ','.join(headers), ','.join([seperator] * len(headers)))
         with self.cursor() as c:
             c.executemany(sql, dataseq)
@@ -287,7 +287,9 @@ class amcatDB(object):
         #if artid not in self._articlecache:
         #    self._articlecache[artid] = article.Article(self, artid)
         #return self._articlecache[artid]
-        return article.Article(self, artid)
+        a = article.Article(self, artid)
+        return a
+                
 
 
     

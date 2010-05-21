@@ -165,10 +165,12 @@ class CodedArticle(CodedUnit):
         self.addDBFKProperty("sentences", job.unitSchema.table, "arrowid",
                              function=lambda id : CodedSentence(self.db, id, job.unitSchema, ca=self))
 
+def getSentence(db, sid): return sentence.Sentence(db, sid)
+        
 class CodedSentence(CodedUnit):
     __idcolumn__ = 'arrowid'
     ca = DBPropertyFactory("codingjob_articleid", dbfunc=CodedArticle)
-    sentence = DBPropertyFactory("sentenceid", dbfunc=sentence.Sentence)
+    sentence = DBPropertyFactory("sentenceid", dbfunc=getSentence)
 
     def __init__(self, db, id, schema, **cache):
         CodedUnit.__init__(self, db, id, **cache)

@@ -1,4 +1,4 @@
-import xapian, article, toolkit, sqlalchemy, dbtoolkit, re, word
+import xapian, article, toolkit,  dbtoolkit, re, word
 from functools import partial
 
 VALUE_AID = 1

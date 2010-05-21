@@ -221,7 +221,7 @@ class Set(Base):
 
 class Ontology(Cachable):
     def __init__(self, db):
-        Cachable.__init__(self, db, None)
+        Cachable.__init__(self, db, -1)
         self.objects = {} # oid : object
         self.classes = {} # classid : class
         self.sets = {} # setid : set

@@ -216,6 +216,7 @@ class DBProperty(Property):
         if self.dbfunc: return self.dbfunc(self.cachable.db, *values)
         return values[0]
     def retrieve(self):
+        if not self.cachable.db: raise Exception("Cachable object %r has no database connection" % self.cachable) 
         seq = type(self.fieldname) in (list, tuple)
         if seq:
             field = ",".join(map(quotefield, self.fieldname))

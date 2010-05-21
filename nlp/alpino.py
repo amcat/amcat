@@ -51,11 +51,15 @@ def line2tokens(line):
     sid = data[15]
     return data2token(*token1), rel, data2token(*token2), int(sid)
 
-def parseSentence(sent, errorhook=None):
+def parseSentenceRaw(sent, errorhook=None):
     if not (sent and sent.strip()): return
     out, err = toolkit.execute(PARSE, sent, listener=errorhook)
     for line in out.split("\n"):
         if not line.strip(): continue
+        yield line
+
+def parseSentence(sent, errorhook=None):
+    for line in parseSentenceRaw(sent, errorhook):
         t1, rel, t2, sid = line2tokens(line)
         yield t1, rel, t2
 
@@ -103,9 +107,7 @@ def tokenizeText(text):
 
 AID = 44569371
 
-if __name__ == '__main__':
-    import sys, dbtoolkit, article
-    db = dbtoolkit.amcatDB()
-    sql = """select sentenceid from sentences s inner join articles a on s.articleid = a.articleid on where batchid=706 and sentenceid not in
-             (select sentenceid from parses_words where analysisid=%i)""" % ALPINO_ANALYSISISID
+    
+
+
         

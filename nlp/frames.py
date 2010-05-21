@@ -1,21 +1,17 @@
+from __future__ import with_statement
 from toolkit import Identity
 import toolkit
 import parsetree
 import sys
 from contextlib import contextmanager
 
+
 ############# INTERFACE ETC. ################
 
 LEMMA_SQL = """select distinct l.lemmaid from words_lemmata l inner join words_words w on l.lemmaid = w.lemmaid inner join words_strings s on s.stringid = w.stringid where string in (%s)"""
 
 
-@contextmanager
-def debugindent(debug, msg):
-    try:
-        debug(msg, indent=1)
-        yield None
-    finally:
-        debug(indent=-1)
+
 
 class Rule(object):
     def __init__(self, identifier, verbose=False):
@@ -23,6 +19,8 @@ class Rule(object):
         self.verbose = verbose
     def debug(self, *args, **kargs):
         if self.verbose: self.identifier.debug(*args, **kargs)
+    def debugindent(self, *args, **kargs):
+        return self.identifier.debugindent(*args, **kargs)
 class DeclarativeRule(Rule):
     def __init__(self, identifier, frame, condition=None, postprocess=None, verbose=None, name=None, rulename=None, **roles):
         if verbose is None: verbose = not str(rulename).startswith("_")
@@ -119,12 +117,11 @@ class FirstMatch(Pattern):
     def __init__(self, *rules):
         self.rules = rules
     def getNode(self, rule, node):
-        rule.debug("Applying FirstMatch", indent=1)
-        for r in self.rules:
-            n = r.getNode(rule, node)
-            if n:
-                rule.debug("FirstMatch found %s" % node, indent=-1)
-                return n
+        with rule.debugindent("FirstMatch") as d:
+            for r in self.rules:
+                n = r.getNode(rule, node)
+                if n:
+                    return n
 
 class Lowest(Pattern):
     def __init__(self, rel, pos):
@@ -152,38 +149,55 @@ class Identifier(object):
         self.db = db
         self.debugfunc = debug
         self.lemma_set_dict = {}
-    def debug(self, msg=None, indent=None):
+    def debug(self, msg=None, indent=None, adddepth=0):
         if not self.debugfunc: return
-        func = sys._getframe(2).f_code.co_name
+        func = sys._getframe(2+adddepth).f_code.co_name
         self.debugfunc(msg, func, indent)
         #self.debugfunc(func)
+    @contextmanager
+    def debugindent(self, msg):
+        try:
+            self.debug("Entering %s" % msg, indent=1, adddepth=1)
+            yield None
+        finally:
+            self.debug("Leaving %s" % msg, indent=-1, adddepth=1) 
     def findFrames(self, tree):
         for node in tree.getNodes():
             f = self.getFrame(node)
             if f: yield f
     def getFrame(self, node):
-        self.debug("Finding frames in %s"% node, indent=1)
-        try:
-            for rule in self.rules:
+        with self.debugindent("getFrame(%s)" % node):
+            frames = set()
+            for i, rule in enumerate(self.rules):
                 frame = rule.matches(node)
                 if frame and frame.isComplete():
                     self.debug("-->  Frame %s found in rule %s!"% (frame, rule))
-                    return frame
-                self.debug("Found frame %s, not complete" % frame)
-
-        finally:
-            self.debug(indent=-1)
+                    frame.rulerank = i
+                    frames.add(frame)
+                if frame: self.debug("Found frame %s, not complete" % frame)
+            if frames:
+                frames = sorted(frames, key=framesort)
+                self.debug("Rank ordered frames: %s" % frames)
+                return frames[0]
     def hasLemma(self, node, lemmata, pos=None):
         if not node: return
+        if "_" in node.word.lemma.label: # geef_aan etc, zie 34755418
+            if pos and (pos<> node.word.lemma.pos): return False
+            self.debug("_lemma %s in lemmata? %s (lemmata=%s)" % (node.word.lemma.label,node.word.lemma.label in lemmata, lemmata))
+            return node.word.lemma.label in lemmata
         key = (pos, tuple(lemmata))
         lset = self.lemma_set_dict.get(key)
         if not lset:
             SQL = LEMMA_SQL % (",".join("'%s'" % w for w in lemmata))
             if pos: SQL += "and pos ='%s'" % pos
             lset = set(lid for (lid,) in self.db.doQuery(SQL))
+            self.debug(SQL)
             self.lemma_set_dict[key] = lset
         return node.word.lemma.id in lset
 
+def framesort(frame):
+    return (int(frame.isComplete()), frame.rulerank)
+    
 ################### Specific rules ########################
 
 class SPORule(DeclarativeRule):
@@ -311,10 +325,10 @@ class SPO(Frame):
         if self.rulename == "passief": return
         if self.has('subject', 'predicate'):
             self.name = 'SPO_su'
-            return True
+            return 2
         if self.has('object', 'predicate'):
             self.name = 'SPO_obj'
-            return True
+            return 2
         return False
 
 ################# Node Finding  #######################
