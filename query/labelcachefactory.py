@@ -15,7 +15,7 @@ class LabelCacheFactory(object):
                 self.labelcaches[conceptid] = self.querydict("select id, label from labels where conceptid=%i" % conceptid)
             lbl = self.labelcaches[conceptid].get(value)
             if lbl: return idlabel.IDLabel(value, lbl)
-        return value
+        return idlabel.IDLabel(value,"CONCEPT %s ID %i" % (concept, value))
     def querydict(self, sql):
         c = self.db.cursor()
         try:

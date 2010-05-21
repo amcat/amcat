@@ -27,8 +27,14 @@ class ProxyEngine(QueryEngineBase):
         postprocess(result, sortfields, limit, offset)
         return result
 
-    def getQuote(self, *args, **kargs):
-        return self.remoteCall("getQuote", args, kargs)
+    def getQuote(self, aid, *words):
+        words = " ".join(words)
+        sock = self.connect()
+        sock.sendint(REQUEST_QUOTE)
+        sock.sendint(aid)
+        sock.sendstring(words)
+        sock.flush()
+        return sock.readstring()
 
 def authenticateToServer(socket):
     challenge = socket.readstring()

@@ -9,7 +9,7 @@ def debug(s):
     
 
 class ListTestCase(unittest.TestCase):
-    def __init__(self, testid, name, engine, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False):
+    def __init__(self, testid, name, engine, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False, check=None):
         self.testid = testid
         self.name = name
         self.engine = engine
@@ -19,12 +19,15 @@ class ListTestCase(unittest.TestCase):
         self.limit = limit
         self.offset = offset
         self.distinct = distinct
+        self.check = check
         unittest.TestCase.__init__(self)
 
     def runTest(self):
         debug("Running %s" % (self.shortDescription()))
         l = self.engine.getList(self.concepts, self.filters, self.sortfields, self.limit, self.offset, self.distinct)
         self.assertTrue(l)
+        if self.check:
+            self.assertTrue(self.check(l))
 
     def id(self):
         return self.testid
@@ -51,10 +54,29 @@ class TableTestCase(unittest.TestCase):
         
     def id(self):
         return self.testid
-
     def shortDescription(self):
         return "Table %s:%s" % (self.testid, self.name)
 
+class QuoteTestCase(unittest.TestCase):
+    def __init__(self, testid, name, engine, aid, quote):
+        self.testid = testid
+        self.name = name
+        self.engine = engine
+        self.aid = aid
+        self.quote = quote
+        unittest.TestCase.__init__(self)
+    def runTest(self):
+        debug("Running %s" % (self.shortDescription()))
+        q = self.engine.getQuote(self.aid, self.quote)
+        self.assertTrue(q)
+        print "QUOTE:", q
+    def id(self):
+        return self.testid
+    def shortDescription(self):
+        return "Table %s:%s" % (self.testid, self.name)
+    
+        
+    
 class TestDescriptor(object):
     def __init__(self, testid, name, type, *args, **kargs):
         self.testid, self.name, self.type, self.args, self.kargs = testid, name, type, args, kargs
@@ -63,11 +85,15 @@ class TestDescriptor(object):
             return ListTestCase(self.testid, self.name, engine, *self.args, **self.kargs)
         elif self.type == "table":
             return TableTestCase(self.testid, self.name, engine, *self.args, **self.kargs)
+        elif self.type == "quote":
+            return QuoteTestCase(self.testid, self.name, engine, *self.args, **self.kargs)
         else: raise Exception("Unknown test type: %s" % self.type)
 def Table(testid, name, *args, **kargs):
     return TestDescriptor(testid, name, "table", *args, **kargs)
 def List(testid, name, *args, **kargs):
     return TestDescriptor(testid, name, "list", *args, **kargs)
+def Quote(testid, name, *args, **kargs):
+    return TestDescriptor(testid, name, "quote", *args, **kargs)
 
 def getSuite(engines, descriptors):
     if isinstance(engines, enginebase.QueryEngineBase): engines = [engines]

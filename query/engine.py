@@ -8,6 +8,7 @@ import toolkit
 import table3, tableoutput
 import filter, aggregator # not used, import to allow indirect access
 import enginebase
+import article # for quote
     
 def postprocess(table, sortfields, limit, offset):
     if sortfields:
@@ -35,10 +36,11 @@ def makedistinct(rows):
         seen.add(row)
 
 class QueryEngine(enginebase.QueryEngineBase):
-    def __init__(self, datamodel, log=False, profile=False, debug=toolkit.ticker.warn):
+    def __init__(self, datamodel, db, log=False, profile=False, debug=toolkit.ticker.warn):
         enginebase.QueryEngineBase.__init__(self, datamodel, log, profile)
         self.operationsFactory = operation.OperationsFactory()
         self.debug = debug
+        self.db = db
 
     def getList(self, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False):
         T0 = time.time()
@@ -68,6 +70,7 @@ class QueryEngine(enginebase.QueryEngineBase):
     def getQuote(self, art, *args, **kargs):
         #import dbtoolkit
         #article.db = dbtoolkit.amcatDB()
+        if type(art) == int: art = article.Article(self.db, art)
         q = art.quote(*args, **kargs)
         if not q:
             toolkit.warn("No quote for article %r, args=%s, kargs=%s" % (art, args, kargs))

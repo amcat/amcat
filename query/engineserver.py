@@ -118,6 +118,16 @@ def getDistinctList(socket, engine):
 
 DISPATCH[REQUEST_LIST_DISTINCT] = getDistinctList
 
+def getQuote(socket, engine):
+    articleid = socket.readint()
+    quotewords = socket.readstring()
+    quote = engine.getQuote(articleid, quotewords)
+    socket.sendstring(quote)
+    socket.close()
+    
+
+DISPATCH[REQUEST_QUOTE] = getQuote
+
 def createServer(engine, port=PORT, nworkers=NWORKERS, callback=None):    
     requestq = Queue.Queue()
     for i in range(NWORKERS):
@@ -128,5 +138,6 @@ def createServer(engine, port=PORT, nworkers=NWORKERS, callback=None):
 if __name__ == '__main__':
     import dbtoolkit; db = dbtoolkit.amcatDB()
     import draftdatamodel; dm = draftdatamodel.getDatamodel(db)
-    import engine; e = engine.QueryEngine(dm)
+    import engine; e = engine.QueryEngine(dm, db)
     createServer(e)
+    

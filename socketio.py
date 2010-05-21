@@ -108,9 +108,12 @@ class SocketIO(io.RawIOBase):
         raise Exception("READINTO")
     def close(self):
         self.socket.close()
-    
+
+SOCKET = None
+        
 def serve(port, host='', callback=None):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    global SOCKET; SOCKET = sock
     while True:
         try:
             sock.bind((host, port))
