@@ -271,6 +271,12 @@ class BoundObject(toolkit.IDLabel):
     def getChildren(self):
         return self.hierarchy.getChildren(self)
     @property
+    def children(self):
+        return self.getChildren()
+    @property
+    def parent(self):
+        return self.getParent()
+    @property
     def label(self):
         return self.objekt.label
     def __str__(self):
