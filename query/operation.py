@@ -244,6 +244,8 @@ class OperationsFactory(object):
             pref = 2
         elif type(op.edge.mapping)==datasource.FieldConceptMapping:
             pref = 4
+        elif type(op.edge.mapping)==DatabaseMapping:
+            pref = 1
         else:
             pref = 3
         u = op.getUtility(None)
