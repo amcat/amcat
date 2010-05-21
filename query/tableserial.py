@@ -65,7 +65,7 @@ class DBLabelProvider(object):
         if self.cache is None:
             self.cache = dict(self.db.doQuery("select [%s], [%s] from [%s]" % (self.idcol, self.labelcol, self.table)))
         return self.cache.get(val, "?! %i" % val)
-IDLABELCOLS ="article", "batch","storedresult", "subject","object","arrow","quality","project","source","actor","issue","brand","property", "coocissue", "customer", "set"
+IDLABELCOLS ="article", "batch","storedresult", "subject","object","arrow","quality","project","source","actor","issue","brand","property", "coocissue", "customer", "set", "propertycluster"
 STRINGCOLS = "headline","sourcetype", "url"
 FLOATCOLS = "sentiment", "quality","associationcooc","issuecooc"
 DATECOLS = "date", "week","year"
