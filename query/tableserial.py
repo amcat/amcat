@@ -46,9 +46,9 @@ class IDLabelColumnSerialiser(ColumnSerialiser):
     def deserialiseValue(self, socket):
         value = socket.readint(checkerror=True)
         if self.IDLabelFactory:
-            print "Deserialising %s" % value
+            #print "Deserialising %s" % value
             value = self.IDLabelFactory.get(self.concept, value)
-            print value
+            #print value
         return value
             
 class LabelProvider(object):

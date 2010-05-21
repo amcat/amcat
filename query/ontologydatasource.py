@@ -98,6 +98,8 @@ class ArticleOntArtMapping(datasource.Mapping):
         objects = list(of.getObjects())
         for object in objects:
             values = list(memo.get(object.id, []))
+            if not values:
+                toolkit.warn("No values for object %r" % object)
             cooc = int(value in values)
             yield OntArt(object, value, cooc)
 
@@ -220,7 +222,7 @@ class ObjectArticleMapping(datasource.Mapping):
         
         objects = self.a.getAllObjects(value)
         objects = list(objects)
-        #print ">", map(str, objects)
+        #toolkit.warn("> %s -> %s" % (value, map(str, objects)))
         return self.a.datasource.index.search(objects)
 
 if __name__ == '__main__':

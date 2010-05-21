@@ -26,6 +26,9 @@ class ListTestCase(unittest.TestCase):
         debug("Running %s" % (self.shortDescription()))
         l = self.engine.getList(self.concepts, self.filters, self.sortfields, self.limit, self.offset, self.distinct)
         self.assertTrue(l)
+        debug("Got list of size %ix%i" % (len(l.getRows()), len(l.getColumns())))
+        self.assertTrue(l.getRows())
+        self.assertTrue(l.getColumns())
         if self.check:
             self.assertTrue(self.check(l))
 
@@ -51,12 +54,15 @@ class TableTestCase(unittest.TestCase):
         debug("Running %s" % (self.shortDescription()))
         t = self.engine.getTable(self.rows, self.columns, self.cellagr, self.filters)
         self.assertTrue(t)
+        debug("Got table of size %ix%i" % (len(t.getRows()), len(t.getColumns())))
+        self.assertTrue(t.getRows())
+        self.assertTrue(t.getColumns())
         
     def id(self):
         return self.testid
     def shortDescription(self):
         return "Table %s:%s" % (self.testid, self.name)
-
+    
 class QuoteTestCase(unittest.TestCase):
     def __init__(self, testid, name, engine, aid, quote):
         self.testid = testid

@@ -10,7 +10,7 @@ class LabelCacheFactory(object):
         if self.concept2id is None:
             self.concept2id = self.querydict("select concept, conceptid from labels_concepts limit 10")
         conceptid = self.concept2id.get(concept)
-        if conceptid:
+        if conceptid is not None:
             if conceptid not in self.labelcaches:
                 self.labelcaches[conceptid] = self.querydict("select id, label from labels where conceptid=%i" % conceptid)
             lbl = self.labelcaches[conceptid].get(value)
