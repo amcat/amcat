@@ -3,12 +3,12 @@ V_PASSIVE_SPEECH_ACTS = ('V', {
         })
 
 ZEG_LEMMATA =  "accepteer","antwoord","beaam","bedenk","bedoel","begrijp","beken","beklemtoon","bekrachtig","belijd","beluister","benadruk","bereken","bericht","beschouw","beschrijf","besef","betuig","bevestig","bevroed","beweer","bewijs","bezweer","biecht","breng","brul","concludeer","confirmeer","constateer","debiteer","declareer","demonstreer","denk","draag_uit","email","erken","expliceer","expliciteer","fantaseer","formuleer","geef_aan","geloof","hoor","hamer","herinner","houd_vol","kondig_aan","kwetter","licht_toe","maak_bekend","maak_hard","meld","merk","merk_op","motiveer","noem","nuanceer","observeer","onderschrijf","onderstreep","onthul","ontsluier","ontval","ontvouw","oordeel","parafraseer","postuleer","preciseer","presumeer","pretendeer","publiceer","rapporteer","realiseer","redeneer","refereer","reken","roep","roer_aan","ruik","schat","schets","schilder","schreeuw","schrijf","signaleer","snap","snater","specificeer","spreek_uit","staaf","stel","stip_aan","suggereer","tater","teken_aan","toon_aan","twitter","verbaas","verhaal","verklaar","verklap","verkondig","vermoed","veronderstel","verraad","vertel","vertel_na","verwacht","verwittig","verwonder","verzeker","vind","voel","voel_aan","waarschuw","wed","weet","wijs_aan","wind","zeg","zet_uiteen","zie","twitter"
-
+BELOOF_LEMMATA = "beloof","stel_voor","zeg_toe","zweer"
 
 V_SPEECH_ACTS = ('V', {
     "zeg" : ZEG_LEMMATA,
     "ontken" : ("bestrijd","herroep","loochen","negeer","ontken","spreek_tegen","vecht_aan","veronachtzaam","verwaarloos","verwerp","weerleg","weerspreek"),
-    "belofte" : ("beloof","stel_voor","zeg_toe","zweer"),
+    "belofte" : BELOOF_LEMMATA,
     "order" : ("adviseer","bedreig","bekoor","beveel","beveel_aan","commandeer","decreteer","drijf","dwing","eis","forceer","gebied","gelast","hits_aan","hits_op","hoop","jaag_aan","lok_aan","maan","maan_aan","mandateer","moedig_aan","ordonneer","por","pres","prikkel","raad_aan","roep_op","spoor_aan","stimuleer","stook","stook_op","verleid","verlok","verorden","verordonneer","verplicht","verzoek","vorder","vuur_aan","zet_aan","zweep_op"),
     'vraag' : ("aarzel","bestudeer","bid","dub","filosofeer","smeek","soebat","twijfel","vraag","vraag_na","wacht_af","weifel","zeur"),
     })

@@ -55,7 +55,8 @@ def getIdentifier(db, debug=None):
                                           childOfLowestV("obj1"), #passief 44499664 welke eerst?
                                           ),
                                Pattern(bijzin)),
-                 negation = Child("mod", lemma=NEGATORS),
+                 negation
+                = Child("mod", lemma=NEGATORS),
                  ),  #probleem:  passief SPOrule mag geen halve spo_su en spo_obj kernzinnen afleveren!
      
  
@@ -166,16 +167,22 @@ def isHighestV(rule, frame):
 
 def isVNotZeg(rule, frame):
     #TODO: niet alleen zeg-lemmata
-    if rule.identifier.hasLemma(frame.predicate, ZEG_LEMMATA, "V"):
-        return False
+    v = frame.predicate
+    while v:
+        rule.debug("CHECKING %s" % v)
+        for lemmata in (ZEG_LEMMATA, BELOOF_LEMMATA):
+            if rule.identifier.hasLemma(v, lemmata, "V"): return False
+        v = getChild(v, "vc")
     return frame.predicate.word.lemma.pos == "V"
     
 
     
 def VPostProcess(identifier, frame):
-    mod = getChild(frame.key, "mod")
-    if identifier.hasLemma(mod, NEGATORS): frame.negation= mod
-    if identifier.hasLemma(mod, DOELWOORDEN): frame.goal = mod #34669402
+    #mod = getChild(frame.key, "mod")
+    mods = [mod for (mod, rel) in frame.key.getRelations() if rel == "mod"]
+    for mod in mods:
+        if identifier.hasLemma(mod, NEGATORS): frame.negation= mod
+        if identifier.hasLemma(mod, DOELWOORDEN): frame.goal = mod #34669402
     if frame.source and getParent(frame.source, "mod") and frame.source.word.lemma.label in ("die","dat","welke","dewelke"):
         frame.source = getParent(frame.source, "mod")
     if frame.source and identifier.hasLemma(frame.source, N_GEZEGDE_LEMMATA, 'N'): #39417595
