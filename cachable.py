@@ -284,7 +284,8 @@ class DBFKProperty(Property):
         self.filter = filter
     def retrieve(self):
         distinctstr = "distinct " if self.distinct else ""
-        SQL = "SELECT %s%s FROM %s WHERE %s" % (distinctstr, _selectlist(self.targetfields), self.table, sqlWhere(self.reffield, self.cachable.id))
+        wherestr = ("WHERE %s" % sqlWhere(self.reffield, self.cachable.id)) if self.reffield else ""
+        SQL = "SELECT %s%s FROM %s %s" % (distinctstr, _selectlist(self.targetfields), self.table, wherestr)
         if self.filter: SQL += " AND (%s)" % self.filter
         if self.orderby: SQL += " ORDER BY %s" % _selectlist(self.orderby)
         data = self.cachable.db.doQuery(SQL)
