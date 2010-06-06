@@ -4,7 +4,7 @@ from functools import partial
 VALUE_AID = 1
 
 class Index(object):
-    def __init__(self, location, db, stem=True):
+    def __init__(self, location, db=None, stem=True):
         self.location = location
         self._index = None
         self.db = db
