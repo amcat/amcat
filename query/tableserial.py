@@ -18,16 +18,22 @@ class StringColumnSerialiser(ColumnSerialiser):
     def deserialiseValue(self, socket):
         return socket.readstring()
 
+def date2str(d):
+    return d.isoformat()[:10]
+def str2date(s):
+    return datetime.datetime(*map(int, s.split("-")))
+                              
 class DateColumnSerialiser(ColumnSerialiser):
     def serialiseValue(self, value, socket):
         if type(value) == str: value = toolkit.readDate(value)
         if value is not None:
-            value = int(time.mktime(value.timetuple()))
-        socket.sendint(value)
+            value = date2str(value)
+            #value = int(time.mktime(value.timetuple()))
+        socket.sendstring(value)
     def deserialiseValue(self, socket):
-        value = socket.readint(checkerror=True)
+        value = socket.readstring(checkerror=True)
         if value is not None:
-            return datetime.datetime(*time.gmtime(value)[:-2])
+            return str2date(value)#datetime.datetime(*time.gmtime(value)[:-2])
 
 class FloatColumnSerialiser(ColumnSerialiser):
     def serialiseValue(self, value, socket):
@@ -66,7 +72,7 @@ class DBLabelProvider(object):
             self.cache = dict(self.db.doQuery("select [%s], [%s] from [%s]" % (self.idcol, self.labelcol, self.table)))
         return self.cache.get(val, "?! %i" % val)
 IDLABELCOLS ="article", "batch","storedresult", "subject","object","arrow","quality","project","source","actor","issue","brand","property", "coocissue", "customer", "set", "propertycluster"
-STRINGCOLS = "headline","sourcetype", "url"
+STRINGCOLS = "headline","sourcetype", "url", "search"
 FLOATCOLS = "sentiment", "quality","associationcooc","issuecooc"
 DATECOLS = "date", "week","year"
 
