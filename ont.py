@@ -62,6 +62,7 @@ class Object(Cachable):
     firstname = DBPropertyFactory("firstname", table="o_politicians")
     prefix = DBPropertyFactory("prefix", table="o_politicians")
     keyword = DBPropertyFactory(table="o_keywords")
+    male = DBPropertyFactory(table="o_politicians", func=bool)
 
 
     functions = DBFKPropertyFactory("o_politicians_functions", ("functionid", "office_objectid", "fromdate", "todate"), dbfunc = Function)
@@ -69,6 +70,7 @@ class Object(Cachable):
     def __init__(self, db, id, languageid=2, **cache):
         Cachable.__init__(self, db, id, **cache)
         self.addDBProperty("label", table="dbo.fn_o_labels(%i)" % languageid)
+        self.languageid = languageid
 
     def getAllParents(self, date=None):
         for c, p in self.parents.iteritems():
@@ -375,7 +377,14 @@ if __name__ == '__main__':
     db = dbtoolkit.amcatDB(profile=True)
     db.beforeQueryListeners.add(lambda a: toolkit.ticker.warn(a[:250]))
 
+    
+
     o = Object(db, 15770)
+
+    o.cacheValues(keyword = "TEST")
+    print o.getSearchString()
+    import sys;sys.exit()
+    
     s = Set(db, 5001)
     s.cacheHierarchy()
     
