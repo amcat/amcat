@@ -339,7 +339,27 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
                     self._labels[i] = val
             else:
                 sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.params['table'])
-                self._labels =  dict(self.schema.db.doQuery(sql))
+                
+                # BUG (see part of e-mail below).
+                # 
+                # [ e-mail]
+                # ..certain countries/organizations (I suspect those that were added or changed
+                # by the Swiss team) are still represented with an ID number instead of their name.
+                # When the coders e.g. coded “NATO”, AmCAT shows “IDLabel(282)”.
+                #
+                # To a similar extent, for the variables “actor1-3”, “mp1-3”, and “canton1-3”,
+                # AmCAT only rarely shows labels. Most of the annotations appear in the form “IDLabel(63)”
+                # (standing here for what the coder wanted to be “206 Delamuraz Jean-Pascal”).
+                # [/ e-mail ]
+                #
+                # This is probably causes by iNet, which doesn't select id fields (206) but a row
+                # number (63).
+                
+                result = self.schema.db.doQuery(sql)
+                self._labels = {}
+                for i in xrange(len(result)):
+                    self._labels[i] = result[i][1]
+                
         return self._labels
     def getLabel(self, value, annotation=None):
         if value is None: return None
