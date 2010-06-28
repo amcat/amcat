@@ -1,74 +1,95 @@
 import dbtoolkit, toolkit, collections
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
+import cachable
 from functools import partial
 import article, word
+import graph
 
-class Sentence(Cachable):
+class SentenceWord(Cachable, graph.Node):
+    __table__ = 'parses_words'
+    __idcolumn__ = ['sentenceid','wordbegin']
+    __labelprop__ = 'word'
+    word = DBPropertyFactory("wordid", dbfunc=word.Word)
+    @property
+    def sentence(self):
+        return Sentence(self.db, self.id[0])
+    graph = sentence
+    @property
+    def position(self):
+        return self.id[1]
+    def getNeighbour(self, offset=1):
+        return self.sentence.getWord(self.position + offset)
+    
+def getSentenceWord(sentence, position):
+    return SentenceWord(sentence.db, (sentence.id, position))
+    
+def getTriple(sent, parent, rel, child):
+    parent, child = map(sent.getWord, (parent, child))
+    rel = Relation(sent.db, rel)
+    return parent, rel, child
+    #print sent, parent, child, rel
+
+class Sentence(Cachable, graph.Graph):
     __table__ = 'sentences'
     __idcolumn__ = 'sentenceid'
     __labelprop__ = 'text'
     __dbproperties__ = ["parnr", "sentnr", "encoding"]
     __encodingprop__ = 'encoding'
-    __metaclass__ = CachingMeta
+    #__metaclass__ = CachingMeta
     
     text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
     article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
-    words = DBFKPropertyFactory("parses_words", "wordid", dbfunc=word.Word, orderby="wordbegin")
-
+    words = DBFKPropertyFactory("parses_words", "wordbegin", objfunc=getSentenceWord, orderby="wordbegin")
+    triples = DBFKPropertyFactory("parses_triples", ["parentbegin","relation", "childbegin"], objfunc=getTriple)
+        
     def cacheWords(self, *args, **kargs):
         cacheWords([self], *args, **kargs)
-
-def cacheWords(sentences, words=True, lemmata=False):
-    """Cache all the words in the given sentences to avoid many queries
-    if words, also cache the word strings
-    if lemmata, also cache lemma strings and POS"""
-    if type(sentences) == Sentence: sentences = [sentences]
-    smap = dict((s.id, s) for s in sentences)
-    db = toolkit.head(smap.iteritems())[1].db
+    def getWord(self, position):
+        for word in self.words:
+            if word.position == position: return word
         
-    SQL = "SELECT sentenceid, w.wordid, w.stringid, w.lemmaid"
-    if words: SQL += ", ws.string"
-    if lemmata: SQL += ", l.stringid, l.pos, ls.string"
-    SQL += " FROM parses_words p inner join words_words w on p.wordid = w.wordid "
-    if words: SQL += " INNER JOIN words_strings ws on w.stringid = ws.stringid "
-    if lemmata: SQL += (" INNER JOIN words_lemmata l on w.lemmaid = l.lemmaid "
-                        +"INNER JOIN words_strings ls on l.stringid = ls.stringid ")
-    SQL += " WHERE analysisid=3 and %s" % toolkit.intselectionSQL("sentenceid", smap.keys())
-    SQL += " ORDER BY sentenceid, wordbegin"
 
-    cursid, curwords = None, None
-    def cache():
-        if curwords and cursid: smap[cursid].cacheValues(words=curwords)
-    for record in db.doQuery(SQL):
-        sid, wid, wsid, lid = record[:4]
-        if  lemmata:
-            lsid, pos, lstr = record[-3:]
-        if words: wstr = record[4]
+def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=False):
+    perword = dict(word = dict(string = []))
+    if lemmata: perword["lemma"] = dict(lemma=["string"], pos=[])
+    if sentiment: perword["lemma"] = dict(lemma=["string"], pos=[], sentiment=[], intensifier=[])
+    what = dict(words={'word' : perword})
+    if triples: what["triples"] = []
+    cachable.cache(sentences, **what)
 
-        if sid <> cursid:
-            cache()
-            cursid, curwords = sid, []
+def computeSentiment(words):
+    sum = 0.0
+    intens = 1.0
+    n = 0
+    for word in words:
+        lemma = word.word.lemma
+        if lemma.sentiment:
+            sum += lemma.sentiment
+            n += 1
+        if lemma.intensifier: intens *= lemma.intensifier
+    if not n: return 0.0
+    return (sum/n) * intens
 
-        ws = word.String(db, wsid)
-        if words: ws.cacheValues(string=wstr)
-        l = word.Lemma(db, lid)
-        if lemmata:
-            ls = word.String(db, lsid)
-            ls.cacheValues(string=lstr)
-            l.cacheValues(pos=pos, lemma=ls)
-            
-        w = word.Word(db, wid)
-        w.cacheValues(word=ws, lemma=l)
-        curwords.append(w)
-    cache()
+def getString(words):
+    words = sorted(words, key=lambda w:w.position)
+    return " ".join(map(str, words))
 
-        
+class Relation(Cachable):
+    __metaclass__ = CachingMeta
+    __table__ = "parses_rels"
+    __idcolumn__ = "relid"
+    __dbproperties__ = ["name"]
+    __labelprop__ = 'name'
+ 
     
 if __name__ == '__main__':
     db =dbtoolkit.amcatDB(profile=True)
-    s = Sentence(db,30031005)
-    s.cacheWords(words=True, lemmata=True)
-    #print " ".join("%s" % w for w in s.words)
-    print " ".join("%s/%s" % (w.lemma, w.lemma.pos) for w in s.words)
-    #print s.__properties__
+    s = Sentence(db,8202484)
+    s.cacheWords(sentiment=True)
+    db.printProfile()
+    w = list(s.words)
+    import random; random.shuffle(w)
+    print map(str, w)
+    print getString(w)
+    
     db.printProfile()

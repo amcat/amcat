@@ -95,8 +95,8 @@ def getSentimentSentences(db, where, tick=True, restrict=True):
     #if "storedresultid" in where: extrajoin = "inner join sentences z on z.sentenceid=p.sentenceid inner join storedresults_articles a on z.articleid = a.articleid"
     #elif "articleid" in where: extrajoin = "inner join sentences z on z.sentenceid=p.sentenceid "
     SQL = SENTIMENT_SQL % where#(extrajoin, where)
-    toolkit.ticker.warn("Querying database\n%s" % SQL)
     if restrict: SQL += " AND analysisid=3"
+    #toolkit.ticker.warn("Querying database\n%s" % SQL)
     data = db.doQuery(SQL)
     sids = set(row[0] for row in data)
     sentences = dict((sid, SentimentSentence(db, sid)) for sid in sids)

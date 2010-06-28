@@ -2,6 +2,7 @@ import tadpole, word, re, traceback, toolkit, lemmata
 import threading, Queue, time
 
 ANALYSISID = 3
+NBEFOREDIE = 200
 
 class TadpoleLemmatiser(object):
     def __init__(self, articleprovider):
@@ -32,6 +33,8 @@ class TadpoleLemmatiser(object):
 
     def addParagraph(self, aid, parno, text):
         result = []
+        #print "Lemmatising %r" % text
+        import sys; sys.stderr.write("."); sys.stderr.flush()
         tokens = self.tadpoleclient.process(text)
         sentno = 1
         sent = []
@@ -79,6 +82,8 @@ class ArticleLemmatiserThread(threading.Thread):
         self.articleq = articleq
         self.resultsq = resultsq
         self.lemmatiser = TadpoleLemmatiser(self)
+        self.ndone = 0
+        self.status = 'W'
             
     def getSentences(self, aid):
         DBLOCK.acquire()
@@ -86,9 +91,12 @@ class ArticleLemmatiserThread(threading.Thread):
             a = article.Article(self.db, aid)
             sents = a.sentences
             if sents:
-                return [(s.id, toolkit.stripAccents(s.text)) for s in sents]
+                result = [(s.id, toolkit.stripAccents(s.text)) for s in sents]
             else:
-                return None
+                result = None
+            a.removeCached("sentences")
+            [s.removeCached("text") for s in sents]
+            return result
         finally:
             DBLOCK.release()
 
@@ -102,6 +110,7 @@ class ArticleLemmatiserThread(threading.Thread):
             pars = re.split(r"\n\s*\n", self.db.getText(art.id).strip())#.split("\n\n")
             result += [toolkit.stripAccents(re.sub("\s+"," ", par))
                        for par in pars]
+            [art.removeCached(x) for x in ("headline","byline","text")]
             return result
         finally:
             DBLOCK.release()
@@ -112,15 +121,25 @@ class ArticleLemmatiserThread(threading.Thread):
             aid = None
             try:
                 if self.resultsq.qsize() > 100:
+                    self.status = 'S'
                     time.sleep(1)
                     continue
                 aid = self.articleq.get()
+                self.status='L'
                 result = self.lemmatiser.lemmatise(aid)
+                self.status='P'
                 self.resultsq.put((aid, result))
                 #toolkit.ticker.warn("Thread %s, Article %s, #results:%s!" % (threading.currentThread().getName(), aid, result and len(result)))
+                self.status='N'
             except Exception, e:
                 toolkit.ticker.warn("Thread %s, Article %s, Exception: %s" % (threading.currentThread().getName(), aid, e))
-                traceback.print_exc()
+                #traceback.print_exc()
+                self.status='E'
+            self.ndone += 1
+            if NBEFOREDIE and (self.ndone >= NBEFOREDIE):
+                toolkit.ticker.warn("Thread %s stopping after lemmatising %i articles" % (threading.currentThread().getName(), self.ndone))
+                self.status='X'
+                break
 
 class StorerThread(threading.Thread):
     def __init__(self, db, resultq):
@@ -131,7 +150,8 @@ class StorerThread(threading.Thread):
         print "Locking"
         DBLOCK.acquire()
         print "Getting lemmata"
-        self.creator = word.WordCreator(db)
+        #self.creator = word.WordCreator(db)
+        self.creator = word.CachingWordCreator(db)
         print "Releasing"
         DBLOCK.release()
     def run(self):
@@ -169,7 +189,7 @@ class StorerThread(threading.Thread):
                     DBLOCK.release()
         except Exception, e:
             toolkit.ticker.warn("Thread %s, Article %i, Exception on preprocessing: %s" % (threading.currentThread().getName(), aid, e))
-            traceback.print_exc()
+            #traceback.print_exc()
             return
 
         # Step 2: add all tokens in one transaction (so rollback is possible)
@@ -182,24 +202,29 @@ class StorerThread(threading.Thread):
                     sid = self.db.insert("sentences", sent)
                     sent["sid"] = sid
                     #toolkit.ticker.warn("Thread %s, Article %i, Created new sentence: %i" % (threading.currentThread().getName(), aid, sid))
-                self.db.insert("parses_words", dict(analysisid=ANALYSISID, sentenceid=sid, wordbegin=token.position, posid=token.posid, wordid=token.wid), retrieveIdent=False)
+                if token.position <= 255:
+                    self.db.insert("parses_words", dict(analysisid=ANALYSISID, sentenceid=sid, wordbegin=token.position, posid=token.posid, wordid=token.wid), retrieveIdent=False)
                 #toolkit.ticker.warn("Thread %s, Article %i, Inserted token %s" % (threading.currentThread().getName(), aid, token))
 
             self.db.commit()
         except Exception, e:
             self.db.rollback()
             toolkit.ticker.warn("Thread %s, Article %i, Exception on storing: %s" % (threading.currentThread().getName(), aid, e))
-            traceback.print_exc()
+            #traceback.print_exc()
         finally:
             DBLOCK.release()
 
+from guppy import hpy; heapy = hpy()
+heapy.setref()
       
-def lemmatiseArticles(db, aids, threads=4):
+def lemmatiseArticles(db, aids, numthreads=4):
+            
     aidq = Queue.Queue()
     resultq = Queue.Queue()
     for aid in aids:
         aidq.put(aid)
-    threads = [ArticleLemmatiserThread(db, aidq, resultq, name="L%i" % i) for i in range(threads)]
+    threadnum = int(numthreads)
+    threads = [ArticleLemmatiserThread(db, aidq, resultq, name="L%i" % i) for i in range(numthreads)]
     toolkit.ticker.warn("Queue now contains %i articles, %i results" % (aidq.qsize(), resultq.qsize()))
     for t in threads:
         t.start()
@@ -212,7 +237,24 @@ def lemmatiseArticles(db, aids, threads=4):
             if not t.isAlive():
                 toolkit.ticker.warn("Thread died: %s" % t.getName())
                 threads.remove(t)
-        toolkit.ticker.warn("Queue now contains %i articles, %i results; %i lemmatize threads alive, storer thread alive? %s " % (aidq.qsize(), resultq.qsize(), len(threads), storer.isAlive()))
+        toolkit.ticker.warn("Queue now contains %i articles, %i results; %i lemmatize threads alive [%s], storer thread alive? %s " % (aidq.qsize(), resultq.qsize(), len(threads), "".join(t.status for t in threads), storer.isAlive()))
+
+        try:
+            heap = heapy.heap()
+            toolkit.ticker.warn("HEAP:\n%s\n\n" % heap)
+            for i in range(3):
+                h = heap[i]
+                toolkit.ticker.warn("HEAP[%i](%s).sp:\n%s\n\n" % (i, h, h.sp))
+            del heap
+            del h
+            if len(threads) < numthreads:
+                toolkit.ticker.warn("Starting new thread #%i" % threadnum)
+                t = ArticleLemmatiserThread(db, aidq, resultq, name="L%i" % threadnum)
+                t.start()
+                threadnum += 1
+                threads.append(t)
+        except Exception, e:
+            toolkit.warn("Heap error: %s" % e)
     toolkit.ticker.warn("Lemmatising done, waiting for storer to exit!")
     storer.canstop = True
     while storer.isAlive():
@@ -234,7 +276,7 @@ def lemmatiseNewArticles(db, aids_or_sql, nthreads=NTHREADS):
     toolkit.ticker.warn("Querying %s" % SQL)
     aids = [aid for (aid,) in db.doQuery(SQL)]
     toolkit.ticker.warn("Lemmatising %i articles" % len(aids))
-    lemmatiseArticles(db, aids, threads=nthreads)
+    lemmatiseArticles(db, aids, numthreads=nthreads)
 
 if __name__ == '__main__':
     import dbtoolkit, article, toolkit, sys

@@ -76,18 +76,14 @@ def mkdir(newdir):
                 os.mkdir(newdir)
 
 def tempfilename(suffix = None,prefix="temp-",tempdir=None):
-    i = 0
     if tempdir is None: tempdir = tmp()
-    while i < 1000:
-        i += 1
+    for i in range(1000):
         fn = "%s/%s%s%s"% (tempdir, prefix, int(random.random() * 1000000000), suffix or "")
         if not os.path.exists(fn): return fn
     raise Exception("Could not create temp file!")
 
 def tempfile(mode='w'):
-    i = 0
-    while i < 1000:
-        i += 1
+    for i in range(1000):
         fn = "%s/temp-%s"% (tmp(), int(random.random() * 1000000000))
         try:
             f = open(fn, mode)
@@ -1125,6 +1121,26 @@ def execute(cmd, input=None, listener=None, listenOut=False):
     errr.join()
     return outr.out, errr.out
 
+def executepipe(cmd, input=None, listener=None, listenOut=False):
+    """
+    Variant of execute that yields the input pipe for writing,
+    and then yields the out and err.
+    Useful for large sending input streams for processes with
+    simple communication (everything in, then everything out)
+    """
+    #stdin, stdout, stderr = os.popen3(cmd)
+    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+    outr = Reader(p.stdout, "out", listenOut and listener)
+    errr = Reader(p.stderr, "err", listener)
+    outr.start()
+    errr.start()
+    #print "writing input"
+    yield p.stdin
+    p.stdin.close()
+    outr.join()
+    errr.join()
+    yield outr.out, errr.out
+
 
 def ps2pdf(ps):
     out, err = execute("ps2pdf - -", ps)
@@ -1429,8 +1445,11 @@ def intselectionTempTable(db, colname, ints, minIntsForTemp=5000):
     if type(ints) not in (set, tuple, list): ints = tuple(ints)
     if len(ints) < minIntsForTemp: return intselectionSQL(colname, ints)
     table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
+    ticker.warn("Creating temp table")
     db.doQuery("CREATE TABLE %s (i int)" % table)
+    ticker.warn("Populating temp table")
     db.insertmany(table, "i", [(i,) for i in ints])
+    ticker.warn("Done")
     return "(%s in (select i from %s))" % (colname, table)
         
 def intselectionSQL(colname, ints, allowtemp=False):
@@ -1494,10 +1513,9 @@ def buffer(sequence, buffercall, buffersize=100):
         for b in buffer: yield b
     
 if __name__ == '__main__':
-    import dbtoolkit, article
-    AIDS = 45143636,45564121,44783534,45560808,44783539,45560791
-    AIDS = 45560808,
-    for aid in AIDS:
-        a = article.Article(dbtoolkit.amcatDB(),aid)
-        print aid, a.headline, `a.text`
-        print a.quote(['Sky Radio'])
+    process = executepipe("cat")
+    pipe = process.next()
+    for x in range(200):
+        pipe.write("adsfgadfgfdsg")
+    print process.next()
+    

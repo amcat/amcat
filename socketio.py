@@ -3,8 +3,17 @@ import struct
 import math
 import sys
 
+UNSIGNED_STRUCT = None
+UNSIGNED_ERROR = '\xff\xff\xff\xff' # struct.pack("I", 2**32-1) == struct.pack("i", -1) (!)
+UNSIGNED_ERROR_VALUE = 2**32 - 1
+UNSIGNED_NULL = '\xfe\xff\xff\xff' # struct.pack("I", 2**32-2)
+UNSIGNED_NULL_VALUE = 2**32 - 2
+UNSIGNED_MAXINT = 2**32 - 3
+
 INT_STRUCT = None
 FLOAT_STRUCT = None
+
+
 class AmcatSocket(io.BufferedRWPair):
     def __init__(self, socket):
         io.BufferedRWPair.__init__(self, socket, socket)
@@ -24,7 +33,36 @@ class AmcatSocket(io.BufferedRWPair):
             raise Exception("Server unexpectedly closed network connection")
         return struct.unpack(bytes)
 
+    def sendunsigned(self, i):
+        if i is None:
+            self.write(UNSIGNED_NULL)
+        else:
+            if i < 0 or i > UNSIGNED_MAXINT: raise Exception("Unsigned cannot represent %i" % i)
+            global UNSIGNED_STRUCT
+            if UNSIGNED_STRUCT is None: UNSIGNED_STRUCT = struct.Struct("I")
+            self.sendstruct((i,), UNSIGNED_STRUCT)
+    def readunsigned(self, checkerror=True):
+        global UNSIGNED_STRUCT
+        if UNSIGNED_STRUCT is None: UNSIGNED_STRUCT = struct.Struct("I")
+        val = self.readstruct(UNSIGNED_STRUCT)[0]
+        if val == UNSIGNED_NULL_VALUE: return None
+        if checkerror and (val == UNSIGNED_ERROR_VALUE): 
+            str = self.readstring()
+            raise Exception("Exception from server: %s" % str)
+        return val
         
+    def readint(self, checkerror=False):
+        global INT_STRUCT
+        if INT_STRUCT is None: INT_STRUCT = struct.Struct("?i")
+        #print "Reading int"
+        val = readtuple(self.readstruct(INT_STRUCT))
+        #print "Val", val
+        if checkerror and val == -1:
+            str = self.readstring()
+            raise Exception("Exception from server: %s" % str)
+        return val
+
+    
     def sendint(self, i):
         global INT_STRUCT
         if INT_STRUCT is None: INT_STRUCT = struct.Struct("?i")
@@ -54,19 +92,21 @@ class AmcatSocket(io.BufferedRWPair):
         return val
 
     def sendstring(self, s):
-        bytes = str(s)
-        #print "Sending %i characters" % len(bytes)
-        self.sendint(len(bytes))
-        self.write(bytes)
+        if s is None:
+            self.sendunsigned(None)
+        else:
+            bytes = str(s)
+            #print "Sending %i characters" % len(bytes)
+            self.sendunsigned(len(bytes))
+            self.write(bytes)
     def readstring(self, checkerror=True):
-        strlen = self.readint()
+        strlen = self.readunsigned(checkerror=checkerror)
         #print "Reading %i characters" % strlen
-        if strlen == -1:
-            str = self.readstring()
-            raise Exception("Exception from server: %s" % str)
+        if strlen is None: return None
         elif strlen == 0: return ""
-        bytes = self.read(strlen)
-        return bytes
+        else:
+            bytes = self.read(strlen)
+            return bytes
 
     def senderror(self, e):
         self.sendint(-1)
@@ -139,11 +179,13 @@ def serve(port, host='', callback=None):
     
 
 if __name__ == '__main__':
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    s.connect(('localhost',1235))
-
-    f = SocketIO(s)
+    if False:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(('localhost',1235))
+        f = SocketIO(s)
+    else:
+        import io
+        f = io.BytesIO()
     rw = io.BufferedRWPair(f, f)
     
     print "writing"

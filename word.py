@@ -23,6 +23,9 @@ class Lemma(Cachable):
     __dbproperties__ = ["pos"]
     lemma = DBPropertyFactory("stringid", dbfunc=String)
     brouwers = DBFKPropertyFactory("words_brouwers","cat", dbfunc=BrouwersCat)
+    sentiment = DBPropertyFactory("sentiment", table="vw_lemma_sentiment")
+    intensifier = DBPropertyFactory("intensifier", table="vw_lemma_sentiment")
+    
     
 
 class Word(Cachable):
@@ -41,17 +44,6 @@ def clean(s):
     #s = toolkit.stripAccents(s)
     return s.lower().strip()
 
-def getOrCreate(db, dic, key, table, cols, **extra):
-    id = dic.get(key)
-    if id is None:
-        if type(key) in (list, tuple):
-            data = dict(zip(cols, key))
-        else:
-            data = {cols:key}
-        data.update(extra)
-        id = db.insert(table, data)
-        dic[key] = id
-    return id
 
 
 _WordCreators = {}
@@ -59,12 +51,56 @@ def WordCreator(db, language=2):
     return _WordCreator(db, language)
     global _WordCreators
     if language not in _WordCreators:
-        _WordCreators[language] = _WordCreator(db, language)
+        _WordCreators[language] = FullyCachedWordCreator(db, language)
     return _WordCreators[language]
 
-class _WordCreator(object):
+        
+
+class BaseWordCreator(object):
     def __init__(self, db, language=2):
         self.db = db
+        self.language = language
+        self.words, self.lemmata, self.strings, self.pos, self.rels = {}, {}, {}, {}, {}
+    def getString(self, string):
+        isword = bool(re.match("^[A-Za-z_]+$", string))
+        return self.getOrCreate("stringid", self.strings, (clean(string),), "words_strings", ("string",), isword=isword)
+    def getLemma(self, string, pos):
+        sid = self.getString(string)
+        return self.getOrCreate("lemmaid", self.lemmata, (sid,  clean(pos)), "words_lemmata", ("stringid","pos"))
+    def getWord(self, string, lemma_or_id, pos=None):
+        if type(lemma_or_id) <> int:
+            lemma_or_id = self.getLemma(lemma_or_id, pos)
+        sid = self.getString(string)
+        return self.getOrCreate("wordid", self.words, (lemma_or_id, sid), "words_words", ("lemmaid", "stringid"))
+    def getPos(self, major, minor, pos):
+        return self.getOrCreate("posid", self.pos, (clean(major), clean(minor), clean(pos)), "parses_pos", ("major","minor","pos"))
+    def getRel(self, name):
+        return self.getOrCreate("relid", self.rels, (clean(name),), "parses_rels", ("name",))
+
+class CachingWordCreator(BaseWordCreator):
+    def getOrCreate(self, idcol, dic, key, table, cols, **extra):
+        id = dic.get(key)
+        #print "Cache %s : %s from cache: %s" % (table, key, id)
+        if id is None:
+            sql = "SELECT %s FROM %s WHERE %s" % (idcol, table, " AND ".join("%s=%s" % (k, toolkit.quotesql(v)) for (k,v) in zip(cols, key)))
+            #print sql
+            id = self.db.getValue(sql)
+            #print "GET %s=%s from %s --> %s" % (key, cols, table, id)
+            if id is None:
+                #print "Inserting"
+                data = dict(zip(cols, key))
+                data.update(extra)
+                id = self.db.insert(table, data)
+                #print "PUT %s=%s into %s --> %s" % (key, cols, table, id)
+            dic[key] = id
+        return id
+            
+    
+
+
+class FullyCachedWordCreator(BaseWordCreator):
+    def __init__(self, db, language=2):
+        BaseWordCreator.__init__(self, db, language)
         self.words = dict(((lid, sid), wid) for (lid, sid, wid) in db.doQuery(
             "SELECT lemmaid, stringid, wordid FROM words_words"))
         self.lemmata = dict(((sid, clean(pos)), lid) for (sid, pos, lid) in db.doQuery(
@@ -75,27 +111,30 @@ class _WordCreator(object):
             "SELECT major, minor, pos, posid FROM parses_pos"))
         self.rels = dict((clean(name), relid) for (name, relid) in db.doQuery(
             "SELECT name, relid FROM parses_rels"))
-    def getString(self, string):
-        isword = bool(re.match("^[A-Za-z_]+$", string))
-        return getOrCreate(self.db, self.strings, clean(string), "words_strings", "string", isword=isword)
-    def getLemma(self, string, pos):
-        sid = self.getString(string)
-        return getOrCreate(self.db, self.lemmata, (sid,  clean(pos)), "words_lemmata", ("stringid","pos"))
-    def getWord(self, string, lemma_or_id, pos=None):
-        if type(lemma_or_id) <> int:
-            lemma_or_id = self.getLemma(lemma_or_id, pos)
-        sid = self.getString(string)
-        return getOrCreate(self.db, self.words, (lemma_or_id, sid), "words_words", ("lemmaid", "stringid"))
-    def getPos(self, major, minor, pos):
-        return getOrCreate(self.db, self.pos, (clean(major), clean(minor), clean(pos)), "parses_pos", ("major","minor","pos"))
-    def getRel(self, name):
-        return getOrCreate(self.db, self.rels, clean(name), "parses_rels", "name")
+    def getOrCreate(self, idcol, dic, key, table, cols, **extra):
+        id = dic.get(key)
+        if id is None:
+            data = dict(zip(cols, key))
+            data.update(extra)
+            id = self.db.insert(table, data)
+            dic[key] = id
+        return id
 
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True, easysoft=True)
-    c = WordCreator(db)
-    print c.getPos("punct","komma",".")
-    db.printProfile()
-    db.conn.commit()
+    #c = WordCreator(db)
+    #print c.getPos("punct","komma",".")
+    #db.printProfile()
+    #db.conn.commit()
+    c = CachingWordCreator(db, 2)
+    print c.getString("balkenende")
 
+    print c.getWord("balkenende", "balkenende", "M")
+    print c.getWord("balkenende", "balkenende", "M")
+
+    print c.getString("balkenende")
+
+    print c.getString("testtesttesttest")
+
+    db.commit()

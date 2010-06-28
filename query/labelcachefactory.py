@@ -17,14 +17,9 @@ class LabelCacheFactory(object):
             if lbl: return idlabel.IDLabel(value, lbl)
         return idlabel.IDLabel(value,"CONCEPT %s ID %i" % (concept, value))
     def querydict(self, sql):
-        c = self.db.cursor()
-        try:
+        with self.db.cursor() as c:
             c.execute(sql)
             return dict(c.fetchall())
-        finally:
-            try: c.close()
-            except: pass
-    
     
 def getPostgresLabelCacheFactory():
     db = driver.connect(user="proxy",password='bakkiePleuah', database='proxy', host='localhost')

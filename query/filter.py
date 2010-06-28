@@ -1,4 +1,4 @@
-import toolkit
+import toolkit, idlabel
 
 class Filter(toolkit.Identity):
     def __init__(self, concept):
@@ -9,6 +9,11 @@ class Filter(toolkit.Identity):
     def getSQL(self, fieldname):
         abstract
 
+def quotesql(val):
+    if isinstance(val, idlabel.IDLabel):
+        val = val.id
+    return toolkit.quotesql(val)
+        
 class ValuesFilter(Filter):
     def __init__(self, concept, *values):
         Filter.__init__(self, concept)
@@ -21,6 +26,9 @@ class ValuesFilter(Filter):
     def getValues(self):
         self.deserialize()
         return self.values
+    def getSQL(self, fieldname=None):
+        if fieldname is None: fieldname = self.concept.label
+        return "%s in (%s)" % (fieldname, ",".join(map(quotesql, self.values)))
     def __str__(self):
         return "%s in (%s)" % (self.concept, ",".join(map(str, self.values)))
     def identity(self):
@@ -31,7 +39,8 @@ class IntervalFilter(Filter):
         Filter.__init__(self, concept)
         self.fromValue = fromValue
         self.toValue = toValue
-    def getSQL(self, fieldname):
+    def getSQL(self, fieldname=None):
+        if fieldname is None: fieldname = self.concept.label
         fromsql = toolkit.quotesql(self.fromValue)
         tosql = toolkit.quotesql(self.toValue)
         if self.fromValue and self.toValue:

@@ -64,6 +64,7 @@ class Cachable(toolkit.IDLabel):
         """Create the Cachable with the given database and id
         Optionally, provide property=value pairs to cache immediately as **cache"""
         if id is None: raise TypeError("ID should not be None!")
+        if db is None: raise TypeError("DB should not be None!")
         self.db = db
         self.id = id
         self.__properties__ = {}

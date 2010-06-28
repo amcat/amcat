@@ -18,20 +18,24 @@ class Operation(object):
         abstract
 
 def getFields(edges):
-    fields = {} # field : table
+    fields, tables = {}, set() # assign each field to a table for selection, but use all tables for joining (also if one field is from >1 tables)
+    #toolkit.warn("Getfields: %s" % "/".join("%s -> %s" % (e.mapping.a, e.mapping.b) for e in edges))
     for edge in edges:
         table = edge.mapping.getTable()
-        fields[edge.mapping.a] = table
-        fields[edge.mapping.b] = table
-    return fields
+        for n in edge.mapping.a, edge.mapping.b:
+            fields[n] = table
+        tables.add(edge.mapping.getTable())
+    #toolkit.warn(" ---> %s / %s" % (fields, tables))
+    return fields, tables
 
-def getJoins(fields):
+def getJoins(fields, tables):
     "Returns table join order [tablea, tableb, key] based on fields {field:table}"
-    tables = set(fields.values())
     if len(tables) <= 1: return
     joins = {} # tableA, tableB -> key
+    #toolkit.warn("Fields: %s, Tables: %s" % (fields, tables))
     for field in fields:
         for a, b, key in field.getJoins():
+            #toolkit.warn("%s : %s / %s / %s" % (field, a,b,key))
             if a in tables and b in tables:
                 if joins.get((a,b), key) <> key: raise Exception("?") 
                 joins[a, b] = key
@@ -39,6 +43,7 @@ def getJoins(fields):
     jointos = set(b for (a,b) in joins)
     result = []
     while len(included) < len(tables):
+        #toolkit.warn("Tables: %s, included=%s, jointos=%s" % (tables, included, jointos))
         changed = False
         for a, b in joins: 
             key = joins[a,b]
@@ -48,8 +53,8 @@ def getJoins(fields):
                 changed = True
                 result.append((a,b,key))
                 break
-            if not changed:
-                raise Exception("Cannot find join order!")
+        if not changed:
+            raise Exception("Cannot find join order!")
     return result
 
 class DatabaseOperation(Operation):
@@ -62,10 +67,10 @@ class DatabaseOperation(Operation):
         return 1
     
     def apply(self, state):
-        fields = getFields(self.edges) # {field : table}
+        fields, tables = getFields(self.edges) # {field : table}
 
         fromstr = ""
-        joins = getJoins(fields)
+        joins = getJoins(fields, tables)
         if joins:
             for i, (a,b,key) in enumerate(joins):
                 if not i: fromstr += a

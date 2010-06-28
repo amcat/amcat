@@ -2,6 +2,8 @@ import user, toolkit, project, ont, article, dbtoolkit, sentence
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
 import cachable
 from functools import partial
+import table3
+from idlabel import IDLabel
 
 def getCodedArticle(db, cjaid):
     data = db.doQuery("select codingjobid, setnr from codingjobs_articles where codingjob_articleid=%i"% cjaid)
@@ -150,7 +152,7 @@ class CodedUnit(Cachable):
                                
 
 Codingjob = CodingJob
-        
+
 class CodedArticle(CodedUnit):
     __table__ = 'codingjobs_articles'
     __idcolumn__ = 'codingjob_articleid'
@@ -310,6 +312,8 @@ class AnnotationSchemaField(toolkit.IDLabel):
         if type(value) == float:
             return "%1.2f"  % value
         return value
+    def getValue(self, unit):
+        return unit.getValue(self)
     def hasLabel(self):
         return False
     def cache(self):
@@ -345,20 +349,21 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
                 # [ e-mail]
                 # ..certain countries/organizations (I suspect those that were added or changed
                 # by the Swiss team) are still represented with an ID number instead of their name.
-                # When the coders e.g. coded “NATO”, AmCAT shows “IDLabel(282)”.
+                # When the coders e.g. coded "NATO", AmCAT shows "IDLabel(282)".
                 #
-                # To a similar extent, for the variables “actor1-3”, “mp1-3”, and “canton1-3”,
-                # AmCAT only rarely shows labels. Most of the annotations appear in the form “IDLabel(63)”
-                # (standing here for what the coder wanted to be “206 Delamuraz Jean-Pascal”).
+                # To a similar extent, for the variables "actor1-3", "mp1-3", and "canton1-3",
+                # AmCAT only rarely shows labels. Most of the annotations appear in the form "IDLabel(63)"
+                # (standing here for what the coder wanted to be "206 Delamuraz Jean-Pascal").
                 # [/ e-mail ]
                 #
                 # This is probably causes by iNet, which doesn't select id fields (206) but a row
                 # number (63).
                 
                 result = self.schema.db.doQuery(sql)
-                self._labels = {}
-                for i in xrange(len(result)):
-                    self._labels[i] = result[i][1]
+                self._labels = dict((k,v.decode('latin-1')) for k,v in result)
+                #self._labels = {}
+                #for i in xrange(len(result)):
+                #    self._labels[i] = result[i][1]
                 
         return self._labels
     def getLabel(self, value, annotation=None):
@@ -406,7 +411,7 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
         self._set = None
     def deserialize(self, value):
         if value is None: return None
-        return ont.Object(self.schema.db, value, self.schema.language)
+        return ont.Object(self.schema.db, value, languageid=self.schema.language)
     @property
     def set(self):
         if self._set is None:
@@ -469,7 +474,33 @@ def getk06CodedSentences(db):
         ca = CodedArticle(db, cjaid)
         for cs in ca.sentences:
             yield cs
+    
+def getFieldType(field):
+    if type(field) in (OntologyAnnotationSchemaField, LookupAnnotationSchemaField):
+        return IDLabel
+    elif field.fieldtype in (6,9):
+        return float
+    elif field.fieldtype in (2,):
+        return int
+    return str
 
+def getValue(unit, field):
+    if unit is None: return None
+    return unit.getValue(field.fieldname)
+
+class FieldColumn(table3.ObjectColumn):
+    def __init__(self, field, article):
+        table3.ObjectColumn.__init__(self, field.label, fieldname=field.fieldname, fieldtype=getFieldType(field))
+        self.field = field
+        self.article = article
+        self.valuelabels = {}
+    def getUnit(self, row):
+        return row.ca if self.article else row.cs
+    def getCell(self, row):
+        val = getValue(self.getUnit(row), self.field)
+        
+        return val
+            
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)

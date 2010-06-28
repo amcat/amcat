@@ -265,7 +265,7 @@ class amcatDB(object):
         return id
 
     def insertmany(self, table, headers, dataseq):
-        if len(dataseq) == 0: return
+        if type(dataseq) in (list, tuple) and len(dataseq) == 0: return
         seperator = self.parametermark()
         sql = 'insert into %s (%s) values (%s)' % (table, ','.join(headers), ','.join([seperator] * len(headers)))
         with self.cursor() as c:
@@ -561,6 +561,8 @@ def quotesql(strOrSeq):
         return tuple(map(quotesql, strOrSeq))
     elif type(strOrSeq) == bool:
         return strOrSeq and "1" or "0"
+    elif type(strOrSeq) == int:
+        return str(strOrSeq)
     else:
         return quotesql(str(strOrSeq))
 

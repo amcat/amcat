@@ -126,7 +126,7 @@ class DotTheme(object):
         self.edgefont = edgefont
         self.header = header
         self.scale = scale
-        self.graphattrs = {"center" : "true", "size" : "30,40"}
+        self.graphattrs = {"size" : "40,40", "center" : "true"}
         self.base = base
         self.green = green
     def getEdgeDot(self, edge, graph, subgraph):
@@ -151,7 +151,7 @@ class DotTheme(object):
     def getEdgeWeight(self, edge, graph):
         return edge.weight * self.scale + self.base
     def getEdgeColor(self, edge, graph):
-        if edge.sign:
+        if edge.sign is not None:
             if self.green: return (.167 + .167 * edge.sign,1,1)
             else: return (.833-.167*edge.sign,1,.5)
         

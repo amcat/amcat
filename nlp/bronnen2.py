@@ -78,38 +78,38 @@ def getIdentifier(db, debug=None):
                 negation = Child("mod", lemma=NEGATORS),
                 ),
                                                                                                                
-        DeclarativeRule(i, Goal, condition=[isDoelPredicate],                                                                                         
-                        key = Self(),                                                                                                                 
-                        doel = FirstMatch(Serial(Child("body"), Child("vc")),     #eigenlijk fout, dat er een vc is een hulpwerkwoord-test, body=hulpwerkwoord moet dan doel zijn
-                                          Serial(Child("body"), Child("body"))),  #44499900 te-constructie
-                        middel = Serial(Parent(["mod","vc"]), HighestV())),  
-        DeclarativeRule(i, Goal, condition=[isMeansPredicate,notPassiveVoice],                                                                                         
-                        key = Self(),                                                                                                                 
-                        middel = FirstMatch(Serial(Child("body"), Child("vc")),     #eigenlijk fout, dat er een vc is een hulpwerkwoord-test, body=hulpwerkwoord moet dan doel zijn
-                                            Serial(Child("body"), Child("body")),
-                                            Child("obj1"),  #44499900 te-constructie
-                                            Child("mod",pos="V")), #44501308 waartoe-constructie
-                        doel = FirstMatch(Serial(Parent(["mod","vc"]),HighestV()),
-                                          Serial(Parent("mod"),Parent("obj1"),HighestV()))),
-        DeclarativeRule(i, Cause, condition=[isConsistent],                                                                                         
-                        key = Self(),                                                                                                                 
-                        dueTo = FirstMatch(Child("cnj"),Parent("mod")),
-                        consequence = FirstMatch(Child("cnj"),Child("body")) ),
-        DeclarativeRule(i, NegCause, condition=[isInconsistent],                                                                                         
-                        key = Self(),                                                                                                                 
-                        consequence = Parent("mod"),
-                        despite = Child("body") ),
-        DeclarativeRule(i, Assume, condition=[isPrecondition],                                                                                         
-                        key = Self(),                                                                                                                 
-                        consequence = FirstMatch(Parent("mod"), Parent("predm"), Child("nucl"),
-                                          Serial(Parent("body"),Parent("mod")) ),   #44505248 dekt ook negative condities, uitgezonderd wanneer, behalve als
-                        assumption = Child("body") ,
-                       # conditionality = Child("mod", lemma="behalve")
-                        ),                        
-        DeclarativeRule(i, Succession, condition=[isTimelyOrder],                                                                                         
-                        key = Self(),                                                                                                                 
-                        consequence = Parent("mod"),
-                        precedent = Child("body") ),
+        # DeclarativeRule(i, Goal, condition=[isDoelPredicate],                                                                                         
+        #                 key = Self(),                                                                                                                 
+        #                 doel = FirstMatch(Serial(Child("body"), Child("vc")),     #eigenlijk fout, dat er een vc is een hulpwerkwoord-test, body=hulpwerkwoord moet dan doel zijn
+        #                                   Serial(Child("body"), Child("body"))),  #44499900 te-constructie
+        #                 middel = Serial(Parent(["mod","vc"]), HighestV())),  
+        # DeclarativeRule(i, Goal, condition=[isMeansPredicate,notPassiveVoice],                                                                                         
+        #                 key = Self(),                                                                                                                 
+        #                 middel = FirstMatch(Serial(Child("body"), Child("vc")),     #eigenlijk fout, dat er een vc is een hulpwerkwoord-test, body=hulpwerkwoord moet dan doel zijn
+        #                                     Serial(Child("body"), Child("body")),
+        #                                     Child("obj1"),  #44499900 te-constructie
+        #                                     Child("mod",pos="V")), #44501308 waartoe-constructie
+        #                 doel = FirstMatch(Serial(Parent(["mod","vc"]),HighestV()),
+        #                                   Serial(Parent("mod"),Parent("obj1"),HighestV()))),
+        # DeclarativeRule(i, Cause, condition=[isConsistent],                                                                                         
+        #                 key = Self(),                                                                                                                 
+        #                 dueTo = FirstMatch(Child("cnj"),Parent("mod")),
+        #                 consequence = FirstMatch(Child("cnj"),Child("body")) ),
+        # DeclarativeRule(i, NegCause, condition=[isInconsistent],                                                                                         
+        #                 key = Self(),                                                                                                                 
+        #                 consequence = Parent("mod"),
+        #                 despite = Child("body") ),
+        # DeclarativeRule(i, Assume, condition=[isPrecondition],                                                                                         
+        #                 key = Self(),                                                                                                                 
+        #                 consequence = FirstMatch(Parent("mod"), Parent("predm"), Child("nucl"),
+        #                                   Serial(Parent("body"),Parent("mod")) ),   #44505248 dekt ook negative condities, uitgezonderd wanneer, behalve als
+        #                 assumption = Child("body") ,
+        #                # conditionality = Child("mod", lemma="behalve")
+        #                 ),                        
+        # DeclarativeRule(i, Succession, condition=[isTimelyOrder],                                                                                         
+        #                 key = Self(),                                                                                                                 
+        #                 consequence = Parent("mod"),
+        #                 precedent = Child("body") ),
     ]:
         i.rules.append(r)
     return i
@@ -179,7 +179,7 @@ def isVNotZeg(rule, frame):
     
 def VPostProcess(identifier, frame):
     #mod = getChild(frame.key, "mod")
-    mods = [mod for (mod, rel) in frame.key.getRelations() if rel == "mod"]
+    mods = [mod for (mod, rel) in frame.key.children if rel == "mod"]
     for mod in mods:
         if identifier.hasLemma(mod, NEGATORS): frame.negation= mod
         if identifier.hasLemma(mod, DOELWOORDEN): frame.goal = mod #34669402

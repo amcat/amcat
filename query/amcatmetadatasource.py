@@ -129,7 +129,10 @@ class DatabaseMapping(Mapping):
     def getTable(self):
         tables = set(self.a.tables) & set(self.b.tables)
         if len(tables) <> 1: raise Exception("Intersection not one!")
-        return tables.pop()
+        result = tables.pop()
+        #toolkit.warn("%s - %s :: %s" % (self.a, self.b, result))
+        return result
+                                                
     def startMapping(self, values,reverse):
         table = self.getTable()
         
@@ -144,7 +147,13 @@ class DatabaseMapping(Mapping):
                 result_dict[k].append(v)
 
         return result_dict
-        
+
+def getDataModel(db):
+    import datamodel
+    dm = datamodel.DataModel()
+    dm.register(AmcatMetadataSource(db, dm))
+    return dm
+    
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB()

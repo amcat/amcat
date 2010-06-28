@@ -11,12 +11,25 @@ class ColumnSerialiser(object):
         pass
     def deserialiseValue(self, serialiser):
         pass
+    def getSQLType(self):
+        abstract
+    def deserialiseSQL(self, value):
+        return value
+    def serialiseSQL(self, value):
+        return value
 
 class StringColumnSerialiser(ColumnSerialiser):
     def serialiseValue(self, value, socket):
         socket.sendstring(value)
     def deserialiseValue(self, socket):
         return socket.readstring()
+    def getSQLType(self):
+        return "varchar(5000)"
+    def serialiseSQL(self, value):
+        if value is None: return None
+        if type(value) == str:
+            return value.decode('latin-1')
+        return value
 
 def date2str(d):
     return d.isoformat()[:10]
@@ -32,14 +45,22 @@ class DateColumnSerialiser(ColumnSerialiser):
         socket.sendstring(value)
     def deserialiseValue(self, socket):
         value = socket.readstring(checkerror=True)
+        print "Received string %r" % value
         if value is not None:
             return str2date(value)#datetime.datetime(*time.gmtime(value)[:-2])
-
+    def getSQLType(self):
+        return "timestamp"
+    def serialiseSQL(self, value):
+        if value is None: return None
+        return toolkit.writeDateTime(value)
+    
 class FloatColumnSerialiser(ColumnSerialiser):
     def serialiseValue(self, value, socket):
         socket.sendfloat(value)
     def deserialiseValue(self, socket):
         return socket.readfloat(checkerror=True)
+    def getSQLType(self):
+        return "real"
     
 class IDLabelColumnSerialiser(ColumnSerialiser):
     def __init__(self, IDLabelFactory=None, concept=None):
@@ -48,14 +69,25 @@ class IDLabelColumnSerialiser(ColumnSerialiser):
     def serialiseValue(self, value, socket):
         if type(value) <> int:
             value = value.id
-        socket.sendint(value)
+        socket.sendunsigned(value)
     def deserialiseValue(self, socket):
-        value = socket.readint(checkerror=True)
+        value = socket.readunsigned(checkerror=True)
         if self.IDLabelFactory:
             #print "Deserialising %s" % value
             value = self.IDLabelFactory.get(self.concept, value)
             #print value
         return value
+    def getSQLType(self):
+        return "int"
+    def serialiseSQL(self, value):
+        if value is None: return None
+        if type(value) == int: return value
+        return value.id
+    def deserialiseSQL(self, value):
+        if self.IDLabelFactory:
+            value = self.IDLabelFactory.get(self.concept, value)
+        return value
+        
             
 class LabelProvider(object):
     def getLabel(self, val):
@@ -77,18 +109,20 @@ FLOATCOLS = "sentiment", "quality","associationcooc","issuecooc"
 DATECOLS = "date", "week","year"
 
 def getColumns(concepts, IDLabelFactory=None):
-    for c in concepts:
-        c = str(c)
-        if c in IDLABELCOLS:
-            yield IDLabelColumnSerialiser(IDLabelFactory=IDLabelFactory, concept=c)
-        elif c in FLOATCOLS:
-            yield FloatColumnSerialiser()
-        elif c in STRINGCOLS:
-            yield StringColumnSerialiser()
-        elif c in DATECOLS:
-            yield DateColumnSerialiser()
-        else:
-            raise Exception("Unknown concept: %s" % c)
+    return (getColumn(c, IDLabelFactory) for c in concepts)
+
+def getColumn(concept, IDLabelFactory=None):
+    c = str(concept)
+    if c in IDLABELCOLS:
+        return IDLabelColumnSerialiser(IDLabelFactory=IDLabelFactory, concept=c)
+    elif c in FLOATCOLS:
+        return FloatColumnSerialiser()
+    elif c in STRINGCOLS:
+        return StringColumnSerialiser()
+    elif c in DATECOLS:
+        return DateColumnSerialiser()
+    else:
+        raise Exception("Unknown concept: %s" % c)
 
 
 def serialise(columnserialisers, socket, data):

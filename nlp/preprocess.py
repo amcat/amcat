@@ -2,10 +2,12 @@ from itertools import izip, count
 import sbd, re, dbtoolkit, toolkit
 import tadpole
 import alpino, lemmata
+import sys, traceback
 
 
 
 def splitArticle(art):
+    if not art.db: raise Exception("Article %r has no db!" % art)
     if art.sentences: return
     text = art.db.getText(art.id)
     if not text:
@@ -33,6 +35,7 @@ def splitArticles(articles):
             article.db.commit()
         except Exception, e:
             error += '%s: %s\n' % (article.id , e)    
+            error += ''.join(traceback.format_exception(*sys.exc_info()))
     return error or None
 
 def parseArticles(articles):

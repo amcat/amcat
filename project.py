@@ -1,7 +1,6 @@
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 import user, permissions, article
 from functools import partial
-import codingjob
 
 def projects(db, usr, own=1):
     if own:
@@ -25,6 +24,8 @@ def projects(db, usr, own=1):
         for row in data:
             yield Project(db, row[0])
 
+def getCodingJob(db, id):
+    return codingjob.CodingJob(db, id)
 
 class Project(Cachable):
     __table__ = 'projects'
@@ -35,7 +36,7 @@ class Project(Cachable):
     visibility = DBPropertyFactory(func=permissions.ProjectVisibility.get, table="project_visibility")
     insertUser = DBPropertyFactory("insertuserid", dbfunc = lambda db, id : user.User(db, id))
     users = DBFKPropertyFactory("permissions_projects_users", "userid", dbfunc=lambda db, id : user.User(db, id))
-    codingjobs = DBFKPropertyFactory("codingjobs", "codingjobid", dbfunc=codingjob.CodingJob)
+    codingjobs = DBFKPropertyFactory("codingjobs", "codingjobid", dbfunc=getCodingJob)
 
     @property
     def href(self):
@@ -86,7 +87,8 @@ class StoredResult(Cachable):
                            [(self.id, getAid(a)) for a in articles])
         self.removeCached("articles")
         
-        
+
+import codingjob # prevent import cycle
 
         
 if __name__ == '__main__':

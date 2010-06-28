@@ -8,7 +8,7 @@ import toolkit, dbtoolkit, re, project, sources, types
 from itertools import izip, count
 from functools import partial
 _debug = toolkit.Debug('article',1)
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta, cacheMultiple
 
 
     
@@ -21,7 +21,7 @@ class Article(Cachable):
     __labelprop__ = 'headline'
     __encodingprop__ = 'encoding'
     __dbproperties__ = ["date", "length", "pagenr", "url", "encoding"]
-    __metaclass__ = CachingMeta
+    #__metaclass__ = CachingMeta
     headline = DBPropertyFactory(decode=True)
     byline = DBPropertyFactory(decode=True)
     metastring = DBPropertyFactory(decode=True)
@@ -56,9 +56,20 @@ class Article(Cachable):
 
     def quote(self, words_or_wordfilter, **kargs):
         return toolkit.quote(list(self.words(headline = True)), words_or_wordfilter, **kargs)
+    
+    def getSentence(self, parnr, sentnr):
+        for s in self.sentences:
+            if s.parnr == parnr and s.sentnr == sentnr:
+                return s
 
 def Articles(aids, db):
-    return [Article(db, aid) for aid in aids]
+    if db is None: raise Exception("Need a db connection to create articles")
+    arts = [Article(db, aid) for aid in aids]
+    if any(a.db is None for a in arts): raise Exception("Article has no db??")
+    return arts
+
+def cacheText(articles):
+    cacheMultiple(articles, "encoding", "headline", "text")
 
 def encodeAndLimitLength(variables, lengths):
     originals = map(lambda x: x and x.strip(), variables)

@@ -53,10 +53,13 @@ class Table(object):
     def __iter__(self):
         return iter(self.getNamedRows())
 
+
 class ObjectColumn(object):
-    def __init__(self, label, cellfunc=None):
+    def __init__(self, label, cellfunc=None, fieldname=None, fieldtype=None):
         self.label = label
         self.cellfunc = cellfunc
+        self.fieldname = fieldname or label
+        self.fieldtype = fieldtype
     def getCell(self, row):
         if self.cellfunc:
             return self.cellfunc(row)

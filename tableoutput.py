@@ -128,7 +128,8 @@ class HTMLGenerator(object):
             if val is None: val = ""
             if type(val) == unicode: val = val.encode('utf-8')
             elif type(val) == float: val = "%1.3f" % val
-            elif type(val) <> str: val = str(val)
+            elif type(val) <> str: val = unicode(val).encode('utf-8')
+
             self.element(stream, val, "td")
         self.close(stream, "tr")
     def startTable(self, table, stream):

@@ -38,7 +38,7 @@ if query.strip():
         print a.id, weight
 else:
     toolkit.warn("Creating new xapian index (database) at %s, generators=%s" % (indexloc, generators))
-    articles = toolkit.tickerate(toolkit.intlist())
+    articles = toolkit.tickerate(toolkit.intlist(), detail=1)
     i = amcatxapian.createIndex(indexloc, articles, db, termgenerators=generators, stemmer=lang, append=True)
     toolkit.warn("Created index %s" % i)
 

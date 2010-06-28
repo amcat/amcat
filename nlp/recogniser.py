@@ -1,5 +1,5 @@
-import ont, toolkit, parsetree, re
-
+import ont, toolkit, re
+import graph
 
 class Recogniser(object):
     def __init__(self, db):
@@ -10,7 +10,7 @@ class Recogniser(object):
     
     def matches(self, node, object):
         if object.name:
-            w = node.word.label.lower()
+            w = str(node.word).lower()
             if object.name.lower() == w: return True
             
             if object.prefix:
@@ -26,13 +26,15 @@ class Recogniser(object):
         
 
     def getObjects(self, nodes):
-        if type(nodes) == parsetree.ParseNode: nodes = [nodes]
-        for node in nodes:
-            for obj in self.objects:
-                if self.matches(node, obj):
-                    yield obj
-        
-                   
+        if isinstance(nodes, graph.Node): nodes = [nodes]
+        try:
+            for node in nodes:
+                for obj in self.objects:
+                    if self.matches(node, obj):
+                        yield obj
+        except Exception, e:
+            raise Exception("Error on getObjects(%r): %s" % (nodes, e))
+
 def getActors(db):
     return set(ont.Object(db, oid) for (oid,) in db.doQuery(
             """select objectid from o_sets_objects o where setid = 307 and 
@@ -46,7 +48,7 @@ def getIssues(db):
 
 def getWord(node_or_word):
     if type(node_or_word) in (str, unicode): return node_or_word.lower()
-    return node_or_word.word.label.lower()
+    return str(node_or_word.word).lower()
 
 class Query(object):
     def matches(self, node):
@@ -73,7 +75,7 @@ class PhraseQuery(Query):
         return "PhraseQuery(%r, slop=%i)" % (self.phrase, self.slop)
     def matches(self, node):
         for offset, term in enumerate(self.phrase):
-            n2 = node.tree.getNode(node.position+offset)
+            n2 = node.getNeighbour(offset)
             if not (n2 and term.matches(n2)): return False
         return True
 class Term(Query):

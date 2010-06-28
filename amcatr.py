@@ -126,6 +126,7 @@ def table2RFrame(table):
     
     cols = rlc.ArgsDict() 
     for col in table.getColumns():
+        print col
         vector = [table.getValue(row, col) for row in table.getRows()]
         types = set(map(type, vector))
         nonnull = types - set([type(None)])

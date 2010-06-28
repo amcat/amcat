@@ -1,10 +1,9 @@
 from __future__ import with_statement
 from toolkit import Identity
 import toolkit
-import parsetree
 import sys
 from contextlib import contextmanager
-
+import graph
 
 ############# INTERFACE ETC. ################
 
@@ -162,6 +161,7 @@ class Identifier(object):
         finally:
             self.debug("Leaving %s" % msg, indent=-1, adddepth=1) 
     def findFrames(self, tree):
+        tree.cacheWords(triples=True, lemmata=True)
         for node in tree.getNodes():
             f = self.getFrame(node)
             if f: yield f
@@ -181,10 +181,10 @@ class Identifier(object):
                 return frames[0]
     def hasLemma(self, node, lemmata, pos=None):
         if not node: return
-        if "_" in node.word.lemma.label: # geef_aan etc, zie 34755418
+        if "_" in str(node.word.lemma): # geef_aan etc, zie 34755418
             if pos and (pos<> node.word.lemma.pos): return False
             self.debug("_lemma %s in lemmata? %s (lemmata=%s)" % (node.word.lemma.label,node.word.lemma.label in lemmata, lemmata))
-            return node.word.lemma.label in lemmata
+            return str(node.word.lemma) in lemmata
         key = (pos, tuple(lemmata))
         lset = self.lemma_set_dict.get(key)
         if not lset:
@@ -253,7 +253,7 @@ class Frame(Identity):
         return True
     def getConstituents(self):
         return tuple(sorted((k,v) for (k,v) in self.__dict__.items()
-                            if isinstance(v, parsetree.ParseNode)))
+                            if isinstance(v, graph.Node)))
     def getArgs(self):
         for argname in self.__class__.ARGS:
             arg = self.__dict__.get(argname)
@@ -342,7 +342,7 @@ def find(path, rel=None, word=None, lemma=None, pos=None, check=None):
     if not path: return
     word, lemma, pos, rel = map(getTest, (word, lemma, pos, rel))
     for n2, r in path:
-        if word(n2.word.label) and lemma(n2.word.lemma.label) and pos(n2.word.lemma.pos) and rel(r.strip()):
+        if word(str(n2.word)) and lemma(str(n2.word.lemma)) and pos(n2.word.lemma.pos) and rel(str(r).strip()):
             if (not check) or check(n2):
                 return n2
 
@@ -351,17 +351,17 @@ def findLast(path, rel=None, word=None, lemma=None, pos=None):
     word, lemma, pos, rel = map(getTest, (word, lemma, pos, rel))
     result = None
     for n2, r in path:
-        if word(n2.word.label) and lemma(n2.word.lemma.label) and pos(n2.word.lemma.pos) and rel(r.strip()):
+        if word(str(n2.word)) and lemma(str(n2.word.lemma)) and pos(n2.word.lemma.pos) and rel(str(r).strip()):
             result = n2
         else:
             return result
     return result
         
 def getChild(node, *cond, **kwcond):
-    return find(node and node.getRelations(), *cond, **kwcond)
+    return find(node and node.children, *cond, **kwcond)
 
 def getParent(node, *cond, **kwcond):
-    return find(node and node.getParents(), *cond, **kwcond)
+    return find(node and node.parents, *cond, **kwcond)
         
 def getAncestor(node, *cond, **kwcond):
     return find(getAncestors(node), *cond, **kwcond)
@@ -377,7 +377,7 @@ def getAncestors(node, stoplist=None):
     if not node: return
     if node in stoplist: return
     stoplist.add(node)
-    for n2, rel in node.getParents():
+    for n2, rel in node.parents:
         yield n2, rel
         for n3, rel in getAncestors(n2, stoplist):
             yield n3, rel
@@ -386,7 +386,7 @@ def getDescendants(node, stoplist = set()):
     if not node: return
     if node in stoplist: return
     stoplist.add(node)
-    for n2, rel in node.getRelations():
+    for n2, rel in node.children:
         yield n2, rel
         for n3, rel in getDescendants(n2, stoplist):
             yield n3, rel
