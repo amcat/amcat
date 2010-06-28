@@ -1,10 +1,11 @@
 import toolkit, dbtoolkit, sources, binascii, article, types
 
 def createArticle(db, headline, date, source, batchid, text, texttype=2,
-                  length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, retrieveArticle=1):
+                  length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, parentUrl=None, retrieveArticle=1):
     """
     Writes the article object to the database
     """
+    # TODO link to parent if parentUrl is not None
 
     if toolkit.isDate(date): date = toolkit.writeDateTime(date, 1)
     if type(source) == sources.Source: source = source.id
@@ -30,7 +31,10 @@ def createArticle(db, headline, date, source, batchid, text, texttype=2,
          'mediumid' : source,
          'url':url,
          'externalid':externalid,
-         'encoding' : encoding}
+         'encoding' : encoding,
+         # We don't store the parentUrl. Instead, we use the articles_postsings
+         # table to store this information. This is done by the scraper class.
+        }
     aid = db.insert('articles', q)
     text, encoding = dbtoolkit.encodeText(text)
     

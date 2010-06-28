@@ -8,7 +8,7 @@ from datetime import datetime, date
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
 class ArticleDescriptor(object):
-    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, mediumid=None, externalid=None, **args):
+    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, mediumid=None, externalid=None, parentUrl=None, **args):
         self.body = body
         self.headline = headline
         self.date = date
@@ -24,6 +24,7 @@ class ArticleDescriptor(object):
         self.batch = batch
         self.mediumid = mediumid
         self.externalid = externalid
+        self.parentUrl = parentUrl
 
     def createArticle(self, db, batchid, mediumid, date, imagescale=.67):
         body = stripText(self.body)
@@ -44,7 +45,8 @@ class ArticleDescriptor(object):
         
         a = articlecreator.createArticle(db, headline, self.date, self.mediumid, self.batch, body, 
                                   pagenr=self.pagenr, byline=self.byline, url=self.url,
-                                  section=self.section, fullmeta=self.fullmeta, externalid=self.externalid)
+                                  section=self.section, fullmeta=self.fullmeta, externalid=self.externalid,
+                                  parentUrl=self.parentUrl)
         if self.imagebytes:
             imagebytes = convertImage(self.imagebytes, imagescale)
             articlecreator.storeImage(db,a.id,imagebytes, self.imagetype)
@@ -70,12 +72,10 @@ class Scraper(object):
         self.date = date
         self.log = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
         self.imagescale = imagescale
-        query = "select url from articles where batchid = '%i'" % self.batch
+        query = "select url, articleid from articles where batchid = '%i'" % self.batch
         if self.mediumid: query += " and mediumid = '%i'" % self.mediumid
         data = self.db.doQuery(query)
-        self.urls = set()
-        for url in data:
-            self.urls.add(url[0])
+        self.urls = dict(data)
 
     def urlExists(self, url):
         return url in self.urls
@@ -96,6 +96,8 @@ class Scraper(object):
                                 
     def logInfo(self, msg):
         self.log.info(msg, application=self.name)    
+    def logWarning(self, msg):
+        self.log.warning(msg, application=self.name)
     def logException(self, msg=""):
         self.log.error(msg + '\n' + toolkit.returnTraceback(), application=self.name)
     def createArticle(self, artdesc):
@@ -106,7 +108,8 @@ class Scraper(object):
         result = artdesc.createArticle(self.db, self.batch, self.mediumid, self.date, imagescale = self.imagescale)
         if result:
             self.articleCount += 1
-            self.urls.add(url)
+            self.urls[url] = result.id
+        self.linkChildWithParent(artdesc)
         return result
     def logStatistics(self):
         self.logInfo('Downloaded %i urls. Added %i articles' % (self.downloadCount, self.articleCount))
@@ -114,6 +117,28 @@ class Scraper(object):
         self.articleCount, self.downloadCount = 0,0
     def convertImage(self, image, *args, **kargs):
         return convertImage(image, *args, **kargs)
+    def linkChildWithParent(self, c_desc):
+        if not c_desc.aid:
+            return
+        
+        if not c_desc.parentUrl:
+            return
+            
+        if c_desc.parentUrl in self.urls:
+            parentid = self.urls.get(c_desc.parentUrl)
+        else:
+            parentid = self.db.getValue(
+                "select articleid from articles wherer batchid=%i and url=%s" %
+                (self.batch, toolkit.quotesql(c_desc.parentUrl)))
+
+        if not parentid:
+            self.logWarning("Could not find parent article <%s>" % c_desc.parentUrl)
+        else:
+            self.urls[c_desc.parentUrl] = parentid
+            self.db.insert("articles_postings",
+                dict(articleid=c_desc.aid, parent_articleid=parentid),
+                retrieveIdent=False)
+            #self.logInfo(">>> Linked %i to %i" % (c_desc.aid, parentid))
 
     def startScrape(self):
         self.resetStatistics()
@@ -191,6 +216,8 @@ class ArticleScraper(Scraper):
     def createIndexArticle(self, articleDict, pagenr, url, date=None, section=None, imagebytes=None, imagetype='jpg'):
         """
         supply an articledict {aid : [coord, coord, ...]}
+
+        TODO: use URLs instead of article IDs...?
         """
         if self.urlExists(url):
             self.logInfo('Skipping duplicate url %r' % url)
