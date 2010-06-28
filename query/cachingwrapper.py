@@ -8,12 +8,13 @@ import labelcachefactory
 import toolkit
 
 class CachingEngineWrapper(QueryEngineBase):
-    def __init__(self, engine, cachedb, caching=True):
+    def __init__(self, engine, cachedb, caching=True, useengine=True):
         self.engine = engine
         self.nconcepts = max(concept.id for concept in self.engine.model.getConcepts())
         self.cachedb = cachedb
         self.initcache()
         self.caching = caching
+        self.useengine = useengine
         self.labelfactory = labelcachefactory.LabelCacheFactory(self.cachedb)
         QueryEngineBase.__init__(self, self.engine.model)
         
@@ -25,6 +26,8 @@ class CachingEngineWrapper(QueryEngineBase):
             import traceback
             traceback.print_exc()
         if not result:
+            if not self.useengine:
+                raise Exception("Result not cached and engine disabled")
             result = self.engine.getList(concepts, filters, distinct=distinct)
             print "got result"
             if self.caching:
@@ -36,16 +39,21 @@ class CachingEngineWrapper(QueryEngineBase):
     def getCachedList(self, concepts, filters, distinct):
         bitmask = self.getBits(concept.id for concept in concepts)
         filtermask = self.getBits(f.concept.id for f in filters)
-        SQL = "SELECT id, filterconcepts, filtervalues FROM listcachetables WHERE (concepts & %s = %s) AND (filterconcepts & %s = filterconcepts)" % (bitmask, bitmask, filtermask)
+        SQL = "SELECT id, concepts, filterconcepts, filtervalues FROM listcachetables WHERE (concepts & %s = %s) AND (filterconcepts & %s = filterconcepts)" % (bitmask, bitmask, filtermask)
         if not distinct: SQL += " AND (NOT distnct)"
         print SQL
-        for id, filterconcepts, filtervalues in self.cachedb.doQuery(SQL):
+        for id, cachedconcepts, filterconcepts, filtervalues in self.cachedb.doQuery(SQL):
+            print "CHECKING %i" % id
             filterconceptids = [self.engine.model.getConcept(self.nconcepts-1-i) for (i, on) in enumerate(filterconcepts) if on == "1"]
+            cachedconceptids = [self.engine.model.getConcept(self.nconcepts-1-i) for (i, on) in enumerate(cachedconcepts) if on == "1"]
             cachefilters = list(deserialiseFilters(filtervalues, filterconceptids))
             tofilter = filterSubsumption(filters, cachefilters)
             if tofilter is None:
                 print "Incompatible, skipping"
                 continue  # incompatible filters
+            if set(f.concept for f in tofilter) - set(cachedconcepts):
+                print "Required filter concept not in concepts"
+                continue
             return self.getListFromCache(id, concepts, tofilter, distinct)
 
     def getListFromCache(self, cid, concepts, tofilter, distinct):
@@ -83,9 +91,9 @@ class CachingEngineWrapper(QueryEngineBase):
                 self.cachedb.doQuery(cmd % self.__dict__)
             self.cachedb.commit()
 
-    def getBits(self, conceptids, returnStr=False):
+    def getBits(self, conceptids, returnStr=False): 
+        conceptids = set(conceptids)
         if returnStr:
-            conceptids = set(conceptids)
             return "".join(("1" if (self.nconcepts-1-id) in conceptids else "0") for id in range(self.nconcepts))
         bitmask = sum(2**cid for cid in conceptids)
         return "%i::bit(%i)" % (bitmask, self.nconcepts)
@@ -192,11 +200,17 @@ def filterSubsumption(filters, cachefilters):
         
 CACHE_INIT_SQL = [
     """create table listcachetables (
-    id serial primary key,
-    concepts bit(%(nconcepts)i),
-    filterconcepts bit(%(nconcepts)i),
-    filtervalues bytea,
-    distnct boolean)"""]
+       id serial primary key,
+       concepts bit(%(nconcepts)i),
+       filterconcepts bit(%(nconcepts)i),
+       filtervalues bytea,
+       distnct boolean)""",
+    """create table quotecache (
+       aid integer,
+       words varchar(4000),
+       quote varchar(4000),
+       primary key (aid, words))"""
+    ]
 
 if __name__ == '__main__':
     import amcatmetadatasource, engine, dbtoolkit, psycopg2, filter, config, tableoutput

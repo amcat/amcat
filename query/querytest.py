@@ -6,6 +6,8 @@ import toolkit
 import table3
 import datetime
 from idlabel import IDLabel
+import cachingwrapper
+import types
 
 def debug(s):
     toolkit.ticker.warn(s)
@@ -101,7 +103,7 @@ class EqualResultCase(unittest.TestCase):
         for o in objs:
             for o2 in objs:
                 if o is o2: continue
-                if type(o) in (str, unicode):
+                if type(o) in (str, unicode, types.NoneType) or type(o2) in (str, unicode, types.NoneType):
                     self.assertEqual(o, o2) # quotes
                 else:
                     self.equalTables(o, o2)
