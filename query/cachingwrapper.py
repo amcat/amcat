@@ -12,7 +12,7 @@ class CachingEngineWrapper(QueryEngineBase):
         self.engine = engine
         self.nconcepts = max(concept.id for concept in self.engine.model.getConcepts())
         self.cachedb = cachedb
-        self.initcache()
+        initcache(self.cachedb, self.engine.model)
         self.caching = caching
         self.useengine = useengine
         self.labelfactory = labelcachefactory.LabelCacheFactory(self.cachedb)
@@ -51,8 +51,8 @@ class CachingEngineWrapper(QueryEngineBase):
             if tofilter is None:
                 print "Incompatible, skipping"
                 continue  # incompatible filters
-            if set(f.concept for f in tofilter) - set(cachedconcepts):
-                print "Required filter concept not in concepts"
+            if set(f.concept for f in tofilter) - set(cachedconceptids):
+                print "Required filter concept not in concepts %s - %s = %s <> {}" % (set(f.concept for f in tofilter), set(cachedconceptids), set(f.concept for f in tofilter) - set(cachedconceptids))
                 continue
             return self.getListFromCache(id, concepts, tofilter, distinct)
 
@@ -84,12 +84,6 @@ class CachingEngineWrapper(QueryEngineBase):
             return self.engine.getQuote(article, [words])        
                                                       
     
-    def initcache(self):
-        if not self.cachedb.hasTable("listcachetables"):
-            print "Creating cache tables"
-            for cmd in CACHE_INIT_SQL:
-                self.cachedb.doQuery(cmd % self.__dict__)
-            self.cachedb.commit()
 
     def getBits(self, conceptids, returnStr=False): 
         conceptids = set(conceptids)
@@ -193,11 +187,21 @@ def filterSubsumption(filters, cachefilters):
             if ff==cff and ft == cft:
                 del filters[cf.concept.id] # identical
             else:
-                print ff, cff, ft, cft
-                if ff != cff and ff < cff: return None
-                if ft != cft and ft > cft: return None
+                print "ff=%(ff)s, cff=%(cff)s, ft=%(ft)s, cft=%(cft)s" % locals()
+                if (not (ff == cff or cff is None)) and ff < cff: return None
+                print "!"
+                if (not (ft == cft or cft is None)) and ft > cft: return None
+                print "?"
     return filters.values()
-        
+      
+def initcache(db, dm):
+    nconcepts = max(concept.id for concept in dm.getConcepts())
+    if not db.hasTable("listcachetables"):
+        toolkit.warn("Creating cache tables")
+        for cmd in CACHE_INIT_SQL:
+            db.doQuery(cmd % locals())
+        db.commit()
+          
 CACHE_INIT_SQL = [
     """create table listcachetables (
        id serial primary key,

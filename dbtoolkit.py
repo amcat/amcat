@@ -114,7 +114,8 @@ class amcatDB(object):
             c = self._getCursor()
             yield c
         finally:
-            self._releaseCursor(c)
+            if c is not None:
+                self._releaseCursor(c)
         
     def _getCursor(self):
         if self.conn is None:
@@ -148,9 +149,9 @@ class amcatDB(object):
         sql  = self.fireBeforeQuery(sql)
         try:
             cursor.execute(sql)
+            return cursor
         except Exception, e:
             raise SQLException(sql, e)
-        return cursor
             
     def doQuery(self, sql, colnames = False, select=None):
         """

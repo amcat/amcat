@@ -8,13 +8,14 @@ import datetime
 from idlabel import IDLabel
 import cachingwrapper
 import types
+import clearcache
 
 def debug(s):
     toolkit.ticker.warn(s)
     
 
 class ListTestCase(unittest.TestCase):
-    def __init__(self, testid, name, engine, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False, check=None):
+    def __init__(self, testid, name, engine, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False, check=None, expectError=False):
         self.testid = testid
         self.name = name
         self.engine = engine
@@ -26,11 +27,17 @@ class ListTestCase(unittest.TestCase):
         self.distinct = distinct
         self.check = check
         self.lastresult = None
+        self.expectError=expectError
         unittest.TestCase.__init__(self)
 
     def runTest(self):
         debug("Running %s" % (self.shortDescription()))
-        l = self.engine.getList(self.concepts, self.filters, self.sortfields, self.limit, self.offset, self.distinct)
+        try:
+            l = self.engine.getList(self.concepts, self.filters, self.sortfields, self.limit, self.offset, self.distinct)
+        except:
+            if self.expectError: return
+            raise # unexpected error 
+        self.assertFalse(self.expectError, "Expected error did not occur")
         self.assertTrue(l)
         debug("Got list of size %ix%i" % (len(l.getRows()), len(l.getColumns())))
         self.assertTrue(l.getRows())
@@ -43,7 +50,7 @@ class ListTestCase(unittest.TestCase):
         return self.testid
 
     def shortDescription(self):
-        return "List %s:%s" % (self.testid, self.name)
+        return "List %s:%s (%s)" % (self.testid, self.name, type(self.engine).__name__)
 
         
 class TableTestCase(unittest.TestCase):
@@ -136,7 +143,18 @@ class EqualResultCase(unittest.TestCase):
                 v1, v2 = t1.getValue(row1, col1), t2.getValue(row2, col2)
                 self.assertTrue(isequal(v1, v2), "Value [%s x %s] not equal: %s <> %s" % (row1, col1, v1, v2))
         
-    
+class ClearCacheTestCase(unittest.TestCase):
+    def __init__(self, db, dm):
+        self.db = db
+        self.dm = dm
+        unittest.TestCase.__init__(self)
+    def runTest(self):
+        clearcache.clear(self.db)
+        self.assertFalse(self.db.hasTable("quotecache"))
+        self.assertFalse(self.db.hasTable("listcachetables"))
+        cachingwrapper.initcache(self.db, self.dm)
+        self.assertTrue(self.db.hasTable("quotecache"))
+        self.assertTrue(self.db.hasTable("listcachetables"))
     
 
 class TestDescriptor(object):
@@ -173,8 +191,11 @@ def getSuite(engines, descriptors):
 
 TITLE = "Test Report"
 DESCRIPTION = "Test Report below:"
-def runTests(engines, descriptors, html=False, title=TITLE, description=DESCRIPTION):
+def runTests(engines, descriptors, *args, **kargs):
     suite = getSuite(engines, descriptors)
+    runSuite(suit, *args, **kargs)
+    
+def runSuite(suite, html=False, title=TITLE, description=DESCRIPTION):
     output = StringIO.StringIO()
     
     if html:
