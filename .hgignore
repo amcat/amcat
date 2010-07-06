@@ -1,0 +1,9 @@
+# use glob syntax.
+syntax: glob
+
+*.cache
+*.lock
+*.html.py
+*.pyc
+*~
+\#*\#
