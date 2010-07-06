@@ -136,8 +136,10 @@ def createServer(engine, port=PORT, nworkers=NWORKERS, callback=None):
         requestq.put(sock)
 
 if __name__ == '__main__':
+    import sys
+    port = int(sys.argv[1])
     import dbtoolkit; db = dbtoolkit.amcatDB()
-    import draftdatamodel; dm = draftdatamodel.getDatamodel(db)
+    import amcatmetadatasource; dm = amcatmetadatasource.getDataModel(db)
     import engine; e = engine.QueryEngine(dm, db)
-    createServer(e)
+    createServer(e, port=port)
     

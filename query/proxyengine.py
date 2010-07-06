@@ -76,13 +76,14 @@ def queryList(socket, concepts, filters, distinct=False, idlabelfactory=None):
     
                                
 if __name__ == '__main__':
+    import sys; port = int(sys.argv[1])
     dm = datamodel.DataModel()
-    p = ProxyEngine(dm)
+    p = ProxyEngine(dm, port=port)
     from filter import *
     #p.getList([dm.article, dm.url], [])
     #p.getList([dm.article, dm.headline, dm.date, dm.sourcetype, dm.project, dm.source], [filter.ValuesFilter(dm.storedresult, 958), filter.IntervalFilter(dm.date, '2010-01-01','2010-12-10')])
     #t = p.getList([dm.source], [filter.ValuesFilter(dm.storedresult, 958), filter.IntervalFilter(dm.date, '2010-01-01','2010-12-10')], distinct=True, limit=3)
     #t = p.getList([dm.article], [ValuesFilter(dm.article, 46599856), ValuesFilter(dm.brand, 16545)])
-    t = p.getList([dm.article, dm.brand, dm.property, dm.associationcooc], [ValuesFilter(dm.article, 46599856), ValuesFilter(dm.brand, 16545)])
+    t = p.getList([dm.article], [ValuesFilter(dm.article, 7777777)])
     import tableoutput; print tableoutput.table2ascii(t)
 
