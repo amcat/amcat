@@ -166,6 +166,8 @@ class CodedArticle(CodedUnit):
         self.init(job.articleSchema)
         self.addDBFKProperty("sentences", job.unitSchema.table, "arrowid",
                              function=lambda id : CodedSentence(self.db, id, job.unitSchema, ca=self))
+    def getArticle(self):
+        return self.article
 
 def getSentence(db, sid): return sentence.Sentence(db, sid)
         
@@ -181,6 +183,8 @@ class CodedSentence(CodedUnit):
 
     def getFilter(self):
         return "arrowid", self.arrowid        
+    def getArticle(self):
+        return self.ca.article
 
 getCodingJob = CodingJob
 
