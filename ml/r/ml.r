@@ -5,16 +5,28 @@ nfromtest <- function() {
   nfoldreport(testdata, dowrite=F)
 }
 
-nfoldreport <- function(testdata, dowrite=T) {
-  if (!is.numeric(testdata$conf0)) {read.table("/tmp/bla")}
+predictreport <- function(testdata, dowrite=T) {
+  report <- createReport()
+  testdata$confbin <- confbins(testdata$conf0)
+  report$byconf <- data.frame(n=tapply(testdata$confbin, testdata$confbin, length))
+  addResult(report, "byconf", "N by confidence bin")
+  report
+}
+
+confbins <- function(conf) {
+  ((conf-0.00000001) %/% .05) * .05
+}
+
+testreport <- function(testdata, dowrite=T, byfold=F) {
   report <- createReport()
   d <- prepare(testdata)
   print(head(d))
   if (dowrite) {write.table(testdata, "/tmp/table.txt")}
 
-  
-  report$byfold = acctable(d, d$context)
-  addResult(report, "byfold", "N and Accuracy by fold")
+  if (byfold) {
+    report$byfold = acctable(d, d$context)
+    addResult(report, "byfold", "N and Accuracy by fold")
+  }
            
   bycat = acctable(d, d$report)
   report$bycat = bycat[order(-bycat$acc),]
@@ -23,7 +35,7 @@ nfoldreport <- function(testdata, dowrite=T) {
   conf <- acctable(d, d$confbin)
   report$byconf = conf
   addResult(report, "byconf", "N and Accuracy by confidence bin")
-  
+
   prop = conf$n / sum(conf$n)
   max = max(c(prop, conf$acc, conf$report, conf$top5))
   max = ((max %/% 0.1) * 0.1) + 0.1
@@ -36,7 +48,7 @@ nfoldreport <- function(testdata, dowrite=T) {
   
   d$confusion = sprintf("%s-%s", d$actual, d$pred0)
   t = table(d$confusion[!d$correct])
-  t = t[order(-t)[1:10]]
+  t = t[order(-t)[1:min(10, length(t))]]
   report$confusion = data.frame( n=t)
   addResult(report, "confusion", "Top-10 confused categories")
  
@@ -52,7 +64,7 @@ prepare <- function(data) {
   data <- data[!is.na(data$actual),]
   data$correct <- data$actual == data$pred0
   data$top5 <- !is.na(data$actualpos) & (data$actualpos < 5)
-  data$confbin <- ((data$conf0-0.00000001) %/% .05) * .05
+  data$confbin <- confbins(data$conf0)
 
   data$report <- data$actual %/% 100
   data$reportactual <- data$pred0 %/% 100
@@ -71,3 +83,8 @@ acctable <- function(data, split) {
  }
 
 
+sample <- function(results, n=10) {
+  indices = order(results$conf0)
+  indices[1:min(length(results),n)]
+  results[indices,"unit"]
+}
