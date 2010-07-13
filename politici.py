@@ -31,7 +31,6 @@ class Politici(object):
         cands2 = set()
         w = getWords(name)
         for cand in cands:
-            print getNaamPartij(cand), cand.firstname
             if getWords(cand.firstname) & w:
                 cands2.add(cand)
         if not cands2: raise Exception("No suitable match for %r found in candidates %s" % (name, map(getNaamPartij, cands)))
@@ -61,7 +60,7 @@ def getPolitici(db, fromdate=None, todate=None):
 if __name__ == '__main__':
     import datetime, sys
     p = getPolitici(db, datetime.date(2009, 9, 1), datetime.date(2010, 9, 1))
-    print getNaamPartij(p.getPoliticus((sys.argv + ["hamming"])[1]))
+    print getNaamPartij(p.getPoliticus("jan-jacob van dijk"))
     #print getNaamPartij(p.getPoliticus((sys.argv + ["hamming"])[1]))
     
         
