@@ -1,5 +1,5 @@
 import log, toolkit, dbtoolkit, re, urllib2, article, urllib
-from BeautifulSoup import BeautifulSoup
+from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup
 from PIL import Image
 import cStringIO, articlecreator
 from datetime import datetime, date
@@ -195,7 +195,7 @@ class ArticleScraper(Scraper):
     def endPage(self, context, page):
         if self.commitPage:
             self.db.commit()
-    def download(self, url, allowRedirect=False, useSoup=False, postdata=None, canretry=True):
+    def download(self, url, allowRedirect=False, useSoup=False, postdata=None, canretry=True, useStoneSoup=False):
         self.logInfo('downloading %s' % url)
         if postdata:
             response = self.session.open(url, urllib.urlencode(postdata))
@@ -211,6 +211,8 @@ class ArticleScraper(Scraper):
         self.downloadCount += 1
         if useSoup:
             return BeautifulSoup(response)
+        if useStoneSoup:
+            return BeautifulStoneSoup(response)
         return decode(response)
     
     def createIndexArticle(self, articleDict, pagenr, url, date=None, section=None, imagebytes=None, imagetype='jpg'):
