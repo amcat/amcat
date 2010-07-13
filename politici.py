@@ -47,9 +47,9 @@ def getNaamPartij(o, date=None):
 
         
         
-    
+
 def getPolitici(db, fromdate=None, todate=None):
-    sql = "select p.objectid from o_politicians p inner join o_politicians_functions f on f.objectid = p.objectid where office_objectid = 1608"
+    sql = "select p.objectid from o_politicians p inner join o_politicians_functions f on f.objectid = p.objectid"# where office_objectid = 1608"
     for (name, op, date) in (('todate', ">=", fromdate), ('fromdate', "<=", todate)):
         if date:
             if type(date) not in (str,unicode): date = date.strftime("%Y-%m-%d")
@@ -60,7 +60,7 @@ def getPolitici(db, fromdate=None, todate=None):
 if __name__ == '__main__':
     import datetime, sys
     p = getPolitici(db, datetime.date(2009, 9, 1), datetime.date(2010, 9, 1))
-    print getNaamPartij(p.getPoliticus("jan-jacob van dijk"))
-    #print getNaamPartij(p.getPoliticus((sys.argv + ["hamming"])[1]))
+    #print getNaamPartij(p.getPoliticus("jan-jacob van dijk"))
+    print getNaamPartij(p.getPoliticus((sys.argv + ["hamming"])[1]))
     
         
