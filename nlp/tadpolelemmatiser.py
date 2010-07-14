@@ -24,7 +24,9 @@ class TadpoleLemmatiser(object):
             return self.lemmatiseText(aid)
 
     def lemmatiseText(self, aid):
+        #import sys; sys.stderr.write(str(aid)); sys.stderr.flush()
         pars = self.articleprovider.getParagraphs(aid)
+        if len(pars) > 100: raise Exception("Article %i has %i paragraphs, skipping!" % (aid, len(pars)))
         result = []
         for i, par in enumerate(pars):
             if par:
@@ -34,7 +36,7 @@ class TadpoleLemmatiser(object):
     def addParagraph(self, aid, parno, text):
         result = []
         #print "Lemmatising %r" % text
-        import sys; sys.stderr.write("."); sys.stderr.flush()
+        #import sys; sys.stderr.write("."); sys.stderr.flush()
         tokens = self.tadpoleclient.process(text)
         sentno = 1
         sent = []
@@ -125,9 +127,9 @@ class ArticleLemmatiserThread(threading.Thread):
                     time.sleep(1)
                     continue
                 aid = self.articleq.get()
-                self.status='L'
+                self.status="L:%i" % (aid)
                 result = self.lemmatiser.lemmatise(aid)
-                self.status='P'
+                self.status="P:%i" % (aid)
                 self.resultsq.put((aid, result))
                 #toolkit.ticker.warn("Thread %s, Article %s, #results:%s!" % (threading.currentThread().getName(), aid, result and len(result)))
                 self.status='N'
@@ -214,8 +216,8 @@ class StorerThread(threading.Thread):
         finally:
             DBLOCK.release()
 
-from guppy import hpy; heapy = hpy()
-heapy.setref()
+#from guppy import hpy; heapy = hpy()
+#heapy.setref()
       
 def lemmatiseArticles(db, aids, numthreads=4):
             
@@ -237,17 +239,17 @@ def lemmatiseArticles(db, aids, numthreads=4):
             if not t.isAlive():
                 toolkit.ticker.warn("Thread died: %s" % t.getName())
                 threads.remove(t)
-        toolkit.ticker.warn("Queue now contains %i articles, %i results; %i lemmatize threads alive [%s], storer thread alive? %s " % (aidq.qsize(), resultq.qsize(), len(threads), "".join(t.status for t in threads), storer.isAlive()))
+        toolkit.ticker.warn("Queue now contains %i articles, %i results; %i lemmatize threads alive [%s], storer thread alive? %s " % (aidq.qsize(), resultq.qsize(), len(threads), ",".join(t.status for t in threads), storer.isAlive()))
 
         try:
-            heap = heapy.heap()
-            toolkit.ticker.warn("HEAP:\n%s\n\n" % heap)
-            for i in range(3):
-                h = heap[i]
-                toolkit.ticker.warn("HEAP[%i](%s).sp:\n%s\n\n" % (i, h, h.sp))
-            del heap
-            del h
-            if len(threads) < numthreads:
+            #heap = heapy.heap()
+            #toolkit.ticker.warn("HEAP:\n%s\n\n" % heap)
+            #for i in range(3):
+            #    h = heap[i]
+            #    toolkit.ticker.warn("HEAP[%i](%s).sp:\n%s\n\n" % (i, h, h.sp))
+            #del heap
+            #del h
+            if len(threads) < numthreads and not aidq.empty():
                 toolkit.ticker.warn("Starting new thread #%i" % threadnum)
                 t = ArticleLemmatiserThread(db, aidq, resultq, name="L%i" % threadnum)
                 t.start()
@@ -281,6 +283,10 @@ def lemmatiseNewArticles(db, aids_or_sql, nthreads=NTHREADS):
 if __name__ == '__main__':
     import dbtoolkit, article, toolkit, sys
     db  = dbtoolkit.amcatDB()
+
+    #t = ArticleLemmatiserThread(db, None, None, None)
+    #print len(t.getParagraphs(45638337))
+    #import sys; sys.exit()
 
     if len(sys.argv) >= 2:
         storedresultid = int(sys.argv[1])
