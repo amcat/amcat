@@ -133,14 +133,10 @@ class CodedUnit(Cachable):
         for field in schema.fields:
             self.fields[field.fieldname] = self.addDBProperty(field.fieldname, func=field.deserialize, table=schema.table)
 
-#    @property
-#    def values(self): return self.getValues()
-#    def getValues(self):
-#        SQL = self.schema.SQLSelect() + " where codingjob_articleid = %i" % self.id
-#        data = self.db.doQuery(SQL)
-#        if data: return self.schema.asDict(data[0])
-#        else: return None
-
+    @property
+    def values(self):
+        return self.fields
+            
     def getValue(self, field):
         if isinstance(field, AnnotationSchemaField):
             field = field.fieldname
