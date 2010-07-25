@@ -210,6 +210,11 @@ class amcatDB(object):
         l = self.getProfiler()
         if l: l.printreport(*args, **kargs)
             
+    def printProfileHTML(self):
+        out = StringIO()
+        l = self.getProfiler()
+        if l: l.printreport(stream=out, htmlgenerator=True)
+        return out.getvalue()
     
         
     def update(self, table, col, newval, where):
@@ -280,9 +285,12 @@ class amcatDB(object):
         return None
 
         
-    def getColumn(self, sql, colindex=0):
-        for col in self.doQuery(sql):
-            yield col[colindex]
+    def getColumn(self, sql, colindex=0, func=None, dbfunc=None):
+        for row in self.doQuery(sql):
+            val = row[colindex]
+            if func: val = func(val)
+            elif dbfunc: val = dbfunc(self, val)
+            yield val
         
     def article(self, artid):
         #if artid not in self._articlecache:
