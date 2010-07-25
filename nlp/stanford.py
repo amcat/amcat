@@ -1,6 +1,13 @@
-import sys, subprocess, time, threading, lemmata, re, parsetree
+from __future__ import with_statement
+import subprocess, time, threading, re, toolkit
+from contextlib import contextmanager
 
-CMD = 'java -cp /home/amcat/resources/jars/stanford-parser-2008-10-30.jar -mx200m edu.stanford.nlp.parser.lexparser.LexicalizedParser -sentences -retainTMPSubcategories -outputFormat "wordsAndTags,typedDependencies" -outputFormatOptions "stem" /home/amcat/resources/files/englishPCFG.ser.gz -'
+RESOURCES = "/home/amcat/resources"
+
+CMD = 'java -cp %s/jars/stanford-parser-2008-10-30.jar -mx200m edu.stanford.nlp.parser.lexparser.LexicalizedParser -sentences -retainTMPSubcategories -outputFormat "wordsAndTags,typedDependencies" -outputFormatOptions "stem,basicDependencies" %s/files/englishPCFG.ser.gz -' 
+
+STANFORD_ANALYSISID=4
+ENGLISH=1
 
 STANFORD_POS = {
    '$' :'.',
@@ -67,13 +74,25 @@ class Reader(threading.Thread):
 
 
 class StanfordJavaParser(object):
-    def __init__(self):
-        self.p = subprocess.Popen(CMD, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
-        self.log = Reader(self.p.stderr)
-        self.log.start()
+    def __init__(self, resources=RESOURCES):
+        cmd = CMD % (resources, resources)
+        self.p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
+        map(self.expectErr, ("Loading parser","Parsing file:"))
+
+    def expectErr(self, msg):
+        line = self.p.stderr.readline()
+        if not line.startswith(msg):
+            raise Exception("Unexpected parser message. Expecting: '%s*', got %r" % (msg, line))
+        
     def parse(self, sent):
         self.p.stdin.write(sent)
         self.p.stdin.write("\n")
+
+        words = self.p.stderr.readline()
+        m = re.match(r"Parsing \[sent. \d+ len. \d+\]: \[(.*)\]", words)
+        if not m: raise Exception("Cannot parse: %r" % line)
+        words = m.group(1).split(", ")
+        
         pos = []
         while True:
             line = self.p.stdout.readline()
@@ -83,30 +102,33 @@ class StanfordJavaParser(object):
         while True:
             line = self.p.stdout.readline()
             if not line.strip(): break
-            triples.append(line)    
-        return pos, triples
-    def stop(self):
-        self.log.stop = True
-        self.p.stdin.close()
-        return self.log.out
+            triples.append(line)
 
-def pos2token(position, s):
-    word, pos = s.split("/")
+        return words, pos, triples
+    def stop(self):
+        self.p.stdin.close()
+
+def pos2token(position, w, s):
+    lemma, pos = s.rsplit("/", 1)
     poscat = STANFORD_POS[pos]
-    return lemmata.Token(position, word, word, poscat, pos,'')
-    
+    return (position, w, lemma, poscat, pos,'')
     
 class StanfordParser(object):
-    def __init__(self):
-        self.parser = StanfordJavaParser()
+    def __init__(self, *args, **kargs):
+        self.parser = StanfordJavaParser(*args, **kargs)
     def parse(self, sentence):
-        pos, triples = self.parser.parse(sentence)
-        pos = pos[0].replace("\n","")
-        tokens = [pos2token(i+1, s) for (i,s) in enumerate(pos.split(" "))]
+        sentence = toolkit.clean(sentence, level=1)
+        words, pos, triples = self.parser.parse(sentence)
+        pos = pos[0].replace("\n","").split(" ")
+        if len(pos) <> len(words):
+            raise Exception("Words %r do not match pos %r" % (words, pos))
+        tokens = [pos2token(i+1, w, s) for (i,(w,s)) in enumerate(zip(words, pos))]
         for triple in triples:
-            m = re.match(r"(\w+)\((.+)-(\d+), (.+)-(\d+)\)", triple)
+            m = re.match(r"([\w&]+)\((.+)-(\d+), (.+)-(\d+)\)", triple)
             if not m:
-                raise Exception(triple)
+                #raise Exception("Cannot parse triple %r" % (triple))
+                toolkit.warn("Cannot parse triple %r" % (triple))
+                continue
             rel, t1, p1, t2, p2 = m.groups()
             tok1 = tokens[int(p1)-1]
             tok2 = tokens[int(p2)-1]
@@ -119,33 +141,38 @@ class StanfordParser(object):
     def __del__(self):
         self.stop()
         
-def parseOne(sent):
-    s = StanfordParser()
+
+@contextmanager
+def stanfordParser(*args, **kargs):
+    p = None
     try:
-        return s.parse(sent)
+        p = StanfordParser(*args, **kargs)
+        yield p
     finally:
-        s.stop()
-            
-def parseTree(sent):
-    s = StanfordParser()
-    words = {}
-    p = parsetree.ParseTree(None)
-    for (parent, rel, child) in s.parse(sent):
-        if parent not in words:
-            words[parent] = parsetree.ParseNode(p, parent, parent.position)
-        if child not in words:
-            words[child] = parsetree.ParseNode(p, child, child.position) 
-        p.addTriple(words[parent], words[child], rel)
-    s.stop()
-    return p
+        if p is not None:
+            p.stop()
+
         
 if __name__ == '__main__':
     import sys
-    p = parseTree(" ".join(sys.argv[1:]))
-    #p.printTree(output="/home/amcat/www-plain/test/test.png")
-    import bronnen_en
-    bronnen = list(bronnen_en.findBronnen(p))
-    print bronnen
+    if len(sys.argv) < 2:
+        toolkit.warn("Usage: stanford.py SID-or-SENTENCE")
+        sys.exit()
+    try:
+        sid = int(sys.argv[1])
+    except:
+        sid = None
+
+    if sid:
+        import dbtoolkit, sentence
+        db = dbtoolkit.amcatDB()
+        s = sentence.Sentence(db, sid)
+        sent = s.text
+        print toolkit.clean(sent, level=1)
+    else:
+        sent = " ".join(sys.argv[1:])
+    with stanfordParser() as p:
+        print list(p.parse(sent))
 
 
     
