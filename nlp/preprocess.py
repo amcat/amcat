@@ -53,7 +53,7 @@ def parseArticles(articles):
 if __name__ == '__main__':
     import dbtoolkit, article
     db  = dbtoolkit.amcatDB()
-    aids = 44721769,46056991
+    aids = toolkit.intlist()
     arts = [article.Article(db, aid) for aid in aids]
     #parseArticles(arts)
     splitArticles(arts)

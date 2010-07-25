@@ -159,13 +159,15 @@ class Debug:
         this.module = modulename
         this.debuglevel = debuglevel
         this.printer = printer
+        this.last = time.time()
     def __call__(this, level, message, newline=1):
         if not this.printer: return
         if level <= this.debuglevel:
             col = _DEBUG_COLOURS[level-1]
             if newline <> 2: # print prefix
-                this.printer("[%-10s %s %s] " % (this.module[:10], threading.currentThread().getName(), time.strftime("%Y-%m-%d %H:%M")), 0, col)
+                this.printer("[%-10s %s %s %03.4f] " % (this.module[:10], threading.currentThread().getName(), time.strftime("%Y-%m-%dT%H:%M:%S"), time.time() - this.last), 0, col)
             this.printer(message, newline and 2, col)
+            this.last = time.time()
     def ok(this, level):
         this(level, " OK!", newline=2)
     def fail(this, level):

@@ -1,7 +1,7 @@
-import toolkit, word, threading
+import toolkit, word, threading, idlabel
 
 
-class Token(object):
+class Token(idlabel.Identity):
     def __init__(self, position, word, lemma, poscat, posmajor, posminor):
         self.position = int(position)
         self.word = word
@@ -14,6 +14,8 @@ class Token(object):
         return "Token(%i, %r, %r, %r, %r, %r)" % (self.position, self.word, self.lemma, self.poscat, self.posmajor, self.posminor)
     def __str__(self):
         return "%s/%s/%s" % (self.word, self.lemma, self.poscat)
+    def identity(self):
+        return (self.position,  self.word, self.lemma, self.poscat, self.posmajor, self.posminor)
 
 
 

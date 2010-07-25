@@ -6,10 +6,13 @@ nfromtest <- function() {
 }
 
 predictreport <- function(testdata, dowrite=T) {
+  if (dowrite) {write.table(testdata, "/tmp/table.txt")}
   report <- createReport()
   testdata$confbin <- confbins(testdata$conf0)
   report$byconf <- data.frame(n=tapply(testdata$confbin, testdata$confbin, length))
   addResult(report, "byconf", "N by confidence bin")
+
+  
   report
 }
 

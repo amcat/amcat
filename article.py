@@ -21,7 +21,7 @@ class Article(Cachable):
     __labelprop__ = 'headline'
     __encodingprop__ = 'encoding'
     __dbproperties__ = ["date", "length", "pagenr", "url", "encoding"]
-    #__metaclass__ = CachingMeta
+    __metaclass__ = CachingMeta
     headline = DBPropertyFactory(decode=True)
     byline = DBPropertyFactory(decode=True)
     metastring = DBPropertyFactory(decode=True)

@@ -5,15 +5,23 @@ from functools import partial
 import article, word
 import graph
 
-class SentenceWord(Cachable, graph.Node):
+class SentenceWord(graph.Node, Cachable):
     __table__ = 'parses_words'
     __idcolumn__ = ['sentenceid','wordbegin']
     __labelprop__ = 'word'
     word = DBPropertyFactory("wordid", dbfunc=word.Word)
+    def __init__(self, *args, **kargs):
+        Cachable.__init__(self, *args, **kargs)
+        graph.Node.__init__(self)
     @property
     def sentence(self):
         return Sentence(self.db, self.id[0])
-    graph = sentence
+    def getGraph(self):
+        return self.sentence
+
+    def __str__(self):
+        return "%i:%s" % (self.position, self.word)
+    
     @property
     def position(self):
         return self.id[1]
@@ -35,7 +43,7 @@ class Sentence(Cachable, graph.Graph):
     __labelprop__ = 'text'
     __dbproperties__ = ["parnr", "sentnr", "encoding"]
     __encodingprop__ = 'encoding'
-    #__metaclass__ = CachingMeta
+    __metaclass__ = CachingMeta
     
     text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
     article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
@@ -81,6 +89,9 @@ class Relation(Cachable):
     __dbproperties__ = ["name"]
     __labelprop__ = 'name'
  
+
+def getSentence(id):
+    return Sentence(dbtoolkit.amcatDB(), id)
     
 if __name__ == '__main__':
     db =dbtoolkit.amcatDB(profile=True)

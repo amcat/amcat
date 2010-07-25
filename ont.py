@@ -206,15 +206,18 @@ class Hierarchy(object):
                 
     def categorise(self, object, date=None, depth=[0,1,2], returnObjects=True, returnOmklap=False):
         object = self.getBoundObject(object)
-        path = self.getCategorisationPath(object, date)
-        if returnOmklap:
-            omklap = 1
-            for p, c in zip(path[1:-1], path[:-2]):
-                omklap *= getOmklap(self.db, p, c)
-            
-        l = max(depth)+1
-        path = [object] * (l - len(path)) + path
-        path = [path[-1-d] for d in depth]
+        if not object:
+            path, omklap = [None for d in depth], 1.0
+        else:
+            path = self.getCategorisationPath(object, date)
+            if returnOmklap:
+                omklap = 1
+                for p, c in zip(path[1:-1], path[:-2]):
+                    omklap *= getOmklap(self.db, p, c)
+            if returnObjects:
+                l = max(depth)+1
+                path = [object] * (l - len(path)) + path
+                path = [path[-1-d] for d in depth]
 
         if returnObjects and returnOmklap:
             return path, omklap
