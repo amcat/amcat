@@ -1,3 +1,5 @@
+import StringIO
+
 """
 Classes that define a graph as a set of parent - relation - child triples
 """
@@ -45,11 +47,15 @@ class Graph(object):
             
  
     def printNetworkxGraph(self, *args, **kargs):
-        printNetworkxGraph(self, *args, **kargs)
+        return printNetworkxGraph(self, *args, **kargs)
     
 class Node(object):
-    def __init__(self, graph):
+    def __init__(self, graph=None):
         self.graph = graph
+
+    def getGraph(self):
+        return self.graph
+    
     @property
     def childNodes(self):
         for child, rel in self.children:
@@ -60,12 +66,12 @@ class Node(object):
             yield parent
     @property
     def children(self):
-        for parent, rel, child in self.graph.getTriples():
+        for parent, rel, child in self.getGraph().getTriples():
             if parent == self:
                 yield child, rel
     @property
     def parents(self):
-        for parent, rel, child in self.graph.getTriples():
+        for parent, rel, child in self.getGraph().getTriples():
             if child == self:
                 yield parent, rel
     @property
@@ -85,12 +91,26 @@ class Node(object):
             for desc in child.getDescendants(stoplist):
                 yield desc
 
-
 def getAttr(obj, attr):
     try:
         return obj.__getattribute__(attr)
     except AttributeError:
         return None
+
+def getNxLabel(node):
+    s = getattr(node, "graphlabel", str(node))
+    return s
+
+def getNxAttributes(node):
+    attrs = {}
+    color, alpha, shape, size = [getattr(node, x, None) for x in ("graphcolor","graphalpha","graphshape", "graphsize")]
+    if color: attrs['node_color'] = color
+    if alpha: attrs['alpha'] = alpha
+    if size: attrs['node_size'] = size
+    if shape:
+        if shape == 'rect': attrs['node_shape']=([[-2.0, -1.0], [-2.0, 1.0], [2.0, 1.0], [2.0, -1.0]], 0)
+        else: attrs['node_shape'] = shape
+    return attrs
     
 def printNetworkxGraph(graph, output=None):
     import networkx
@@ -104,13 +124,17 @@ def printNetworkxGraph(graph, output=None):
     g = networkx.DiGraph()
     for parent, relation, child in graph.getTriples():
         g.add_edge(parent, child)
-        labels[parent] = str(parent)
-        labels[child] = str(child)
+        labels[parent] = getNxLabel(parent)
+        labels[child] = getNxLabel(child)
         edgelabels[child, parent] = str(relation)
     pos=networkx.graphviz_layout(g,prog='dot')
     pos = dict((k, (x*50,y*50)) for (k,(x,y)) in pos.items())
 
-    
+
+    for node in graph.getNodes():
+        attrs = getNxAttributes(node)
+        if attrs:
+            networkx.draw_networkx_nodes(g, pos, nodelist=[node], **attrs)
     
     networkx.draw_networkx_edges(g, pos, width=1,alpha=0.2,edge_color='b')
 
