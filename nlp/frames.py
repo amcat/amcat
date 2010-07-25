@@ -161,7 +161,6 @@ class Identifier(object):
         finally:
             self.debug("Leaving %s" % msg, indent=-1, adddepth=1) 
     def findFrames(self, tree):
-        tree.cacheWords(triples=True, lemmata=True)
         for node in tree.getNodes():
             f = self.getFrame(node)
             if f: yield f
@@ -192,6 +191,7 @@ class Identifier(object):
             if pos: SQL += "and pos ='%s'" % pos
             lset = set(lid for (lid,) in self.db.doQuery(SQL))
             self.debug(SQL)
+            self.debug(lset)
             self.lemma_set_dict[key] = lset
         return node.word.lemma.id in lset
 
@@ -215,7 +215,7 @@ class BronRule(DeclarativeRule):
     def getFrame(self, node):
         if self.match:
             pos, entries = self.match
-            if pos and (node.word.lemma.pos <> pos): return
+            if pos and (node.word.lemma.pos.lower() <> pos.lower()): return
             for name, lemmata in entries.iteritems():
                 if ((pos and self.identifier.hasLemma(node, lemmata, pos))
                     or ((not pos) and (node.word.lemma.label in lemmata))):
