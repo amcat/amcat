@@ -18,14 +18,19 @@ class Operation(object):
         abstract
 
 def getFields(edges):
+    """Returns a dict of field -> table mappings plus a set of all tables
+    We need to return table set and field dict separately because
+    - for each field we need to know *a* table for the SELECT clause (table.field)
+    - the fields.values() might not contain all needed tables because each field can
+      occur more than once (masking the earlier fields[field] entry leading to an
+      incomplete FROM clause
+    """
     fields, tables = {}, set() # assign each field to a table for selection, but use all tables for joining (also if one field is from >1 tables)
-    #toolkit.warn("Getfields: %s" % "/".join("%s -> %s" % (e.mapping.a, e.mapping.b) for e in edges))
     for edge in edges:
         table = edge.mapping.getTable()
         for n in edge.mapping.a, edge.mapping.b:
             fields[n] = table
         tables.add(edge.mapping.getTable())
-    #toolkit.warn(" ---> %s / %s" % (fields, tables))
     return fields, tables
 
 def getJoins(fields, tables):
@@ -67,7 +72,7 @@ class DatabaseOperation(Operation):
         return 1
     
     def apply(self, state):
-        fields, tables = getFields(self.edges) # {field : table}
+        fields, tables = getFields(self.edges) 
 
         fromstr = ""
         joins = getJoins(fields, tables)

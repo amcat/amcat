@@ -3,7 +3,6 @@ The amcatmetadatasource class creates a mapping between the metadata
 of articles in the amcat database, and the articles.
 """
 
-
 import collections, datetime
 try:
     import mx.DateTime
@@ -16,11 +15,11 @@ from datasource import DataSource, Mapping, Field, FieldConceptMapping
 from itertools import imap, izip
 
 #SQL queries for finding the date formats
-WEEKSQL = "cast(datepart(year, %(table)s.date) as varchar) + '/' + REPLICATE(0,2-LEN(cast(datepart(week, %(table)s.date) as varchar)))+ CONVERT(VARCHAR,cast(datepart(week, %(table)s.date) as varchar))"
 DATESQL = "convert(datetime, convert(int, %(table)s.date))"
-WEEKSQL = "datepart(year, %(table)s.date) * 100 + datepart(week, %(table)s.date)"
 YEARSQL = "datepart(year, %(table)s.date)"
-WEEKSQL = "DATEADD(wk, DATEDIFF(wk, 0, %(table)s.date), 0)"
+
+# datediff gives no weeks since epoch, so adding those to epoch gives start of current week
+WEEKSQL = "DATEADD(wk, DATEDIFF(wk, 0, %(table)s.date), 0)" 
 
 class DateMapper(object):
     def map(self, date, reverse):
@@ -64,9 +63,9 @@ class AmcatMetadataSource(DataSource):
         
         return [
           DatabaseMapping(articlefield, batch),
-          DatabaseMapping(articlefield, date, 1, 9999),
+          DatabaseMapping(articlefield, date, 1, 999999),
           DatabaseMapping(articlefield, week, 1, 999999),
-          DatabaseMapping(articlefield, year, 1, 99999),
+          DatabaseMapping(articlefield, year, 1, 999999),
           DatabaseMapping(articlefield, source),
           DatabaseMapping(articlefield, url),
           DatabaseMapping(batch, projectfield),
@@ -135,7 +134,7 @@ class DatabaseMapping(Mapping):
                                                 
     def startMapping(self, values,reverse):
         table = self.getTable()
-        
+
         selectcol = self.a.getColumn(table) if reverse else self.b.getColumn(table)
         filtercol = self.b.getColumn(table) if reverse else self.a.getColumn(table)
         values = list(set(values))

@@ -10,8 +10,11 @@ def getIdentifier(db, debug=None):
         BronRule(i, '1', V_SPEECH_ACTS,source=Child("nsubj"), quote=FirstMatch(Child(["dobj", "ccomp"]), Parent("dep"))),
 
         SPORule(i, "copula", predicate=Child("cop"), subject=Child("nsubj"), object=Self()),
+        SPORule(i, "dep#", subject=Parent("dep"), object=Child("dobj")),
 
-        #SPORule(i, 'actief', condition=[isVNotZeg], subject=Child("nsubj"), object=Child("dobj")),
+        SPORule(i, "pass", object=FirstMatch(Child("nsubjpass"), Parent("partmod")), subject=Serial(Child("prep", lemma="by"), Child("pobj"))),
+
+        SPORule(i, 'actief', subject=Child("nsubj"), object=Child("dobj")),
         
     ]:
         i.rules.append(r)

@@ -5,6 +5,10 @@ try:
     import mx.DateTime as my_datetime
 except:
     from datetime import datetime as my_datetime
+
+DUMMY_CLASSID_PARTYMEMBER = 1
+DUMMY_CLASSID_OFFICE = 2
+
     
 def getParent(db, cid, pid):
     cl = Class(db, cid)
@@ -216,7 +220,7 @@ class Hierarchy(object):
                     omklap *= getOmklap(self.db, p, c)
             if returnObjects:
                 l = max(depth)+1
-                path = [object] * (l - len(path)) + path
+                path = [object] * (l - len(path)) + path #WvA moet dit niet max(path) zijn??
                 path = [path[-1-d] for d in depth]
 
         if returnObjects and returnOmklap:
@@ -227,6 +231,7 @@ class Hierarchy(object):
     
 _omklaps = None
 def getOmklap(db, parent, child):
+    #TODO: lelijk!
     global _omklaps
     if _omklaps is None:
         _omklaps = set(db.doQuery("select parentid, childid from o_hierarchy where reverse = 1"))
@@ -314,8 +319,8 @@ class Class(Cachable, DictHierarchy):
         if type(object) == BoundObject: object = object.objekt
         children = object.children.get(self)
         if children:
-            for c in children:
-                yield self.getBoundObject(c)
+            return (self.getBoundObject(c) for c in children)
+
     def getParent(self, object, date=None):
         if type(object) == BoundObject: object = object.objekt
         p = object.parents.get(self)
@@ -341,7 +346,6 @@ class Set(Cachable, DictHierarchy):
     def getParent(self, o, date=None):
         if type(o) == BoundObject: o = o.objekt 
         parents = dict(o.getAllParents(date))
-        
         for c in self.classes:
             o2 = parents.get(c)
             if o2 in self:
@@ -352,15 +356,20 @@ class Set(Cachable, DictHierarchy):
             for o2 in c.getChildren(o):
                 if o2 in yielded: continue
                 if o2 not in self: continue
+                # Make sure to return only children whose parent is o, ie if the child has a parent in more
+                # classes in this set only return the child for the proper parent
+                # ie satisfy [Assert(self.getParent(c) == o) for c in o.getChildren()]
+                # TODO: WvA: isn't this guaranteed by iterating over the classes in order??
                 p = self.getParent(o2)
                 if p and p.id == o.id:
                     yielded.add(o2)
                     yield self.getBoundObject(o2)
+                    
     def cacheHierarchy(self):
         print "Caching set %s!" % self.id
         cachable.cacheMultiple(self, "objects", "classes")
         fields = ["parents", "children", "label"]
-        if set((1,2)) & set(c.id for c in self.classes):
+        if set((DUMMY_CLASSID_PARTYMEMBER, DUMMY_CLASSID_OFFICE)) & set(c.id for c in self.classes):
             fields.append("functions")
         cachable.cacheMultiple(self.objects, *fields)
         for c in self.classes:
@@ -373,7 +382,37 @@ class Set(Cachable, DictHierarchy):
         for c in self.classes:
             if object in c:
                 return c
-    
+
+# data manipulation functions follow
+            
+def createClass(db, classid, label):
+    db.insert("o_classes", dict(classid=classid, label=label), retrieveIdent=False)
+    return Class(db, classid)
+
+def createObject(klass_or_parent, label, lang=1, sets=[]):
+    if isinstance(klass_or_parent, BoundObject):
+        parent = klass_or_parent
+        cl = klass_or_parent.hierarchy
+    else:
+        parent = None
+        cl = klass_or_parent
+    if not isinstance(cl, Class): raise TypeError("Parent should be Class or BoundObject bound to a Class")
+
+    oid = cl.db.insert("o_objects", dict(nr=None))
+    cl.db.insert("o_hierarchy", dict(childid=oid, parentid=(parent and parent.id), classid=cl.id), retrieveIdent=False)
+    if type(label) == str: label = label.decode('ascii')
+    label = label.encode('ascii')
+    cl.db.insert("o_labels", dict(objectid=oid, languageid=lang, label=label), retrieveIdent=False)
+    for set in sets:
+        cl.db.insert("o_sets_objects", dict(objectid=oid, setid=set),  retrieveIdent=False)
+    return BoundObject(cl, Object(cl.db, oid))
+
+def addLabel(object, label, lang=1):
+    if isinstance(object, BoundObject): object=object.objekt
+    if type(label) == str: label = label.decode('ascii')
+    label = label.encode('ascii')
+    object.db.insert("o_labels", dict(objectid=object.id, languageid=lang, label=label), retrieveIdent=False)
+            
 if __name__ == '__main__':
     import dbtoolkit, pickle, cachable
 

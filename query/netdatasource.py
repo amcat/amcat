@@ -14,7 +14,7 @@ REALITY = 2547
 IDEAL_ATYPE = 2
 
 class NETDataSource(datasource.DataSource):
-    def __init__(self, dm, db):
+    def __init__(self, dm, db, projectid):
         artfield = MappedField(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
         subject = datasource.Field(self,dm.getConcept("subject"))
         object = datasource.Field(self,dm.getConcept("object"))
@@ -22,7 +22,7 @@ class NETDataSource(datasource.DataSource):
         arrow = NETArrowField(self, dm.getConcept("arrow"))
         quality = datasource.Field(self, dm.getConcept("quality"))
 
-        proj = project.Project(db, 388)
+        proj = project.Project(db, projectid)
         
         mappings = [
             ArticleArrowMapping(artfield, arrow, proj),

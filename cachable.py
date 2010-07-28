@@ -149,6 +149,10 @@ class Cachable(toolkit.IDLabel):
         cacheMultiple([self], propnames)
     def sqlFrom(self, table=None):
         return sqlFrom([self], table)
+    def exists(self):
+        """Checks whether the database contains a record for this object"""
+        SQL = "select count(*) from %s where %s" % (self.__table__, sqlWhere(self.__idcolumn__, self.id))
+        return bool(self.db.getValue(SQL))
 
         
 
