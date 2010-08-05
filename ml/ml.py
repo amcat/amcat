@@ -15,6 +15,8 @@ class Match(object):
         self.context = context
     def getPrediction(self):
         return str(self.predictions[0][0])
+    def getConfidence(self):
+        return str(self.predictions[0][1])
     def getActual(self):
         return str(self.actual)
     def getActualPosition(self):

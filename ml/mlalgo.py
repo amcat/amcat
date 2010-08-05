@@ -205,7 +205,14 @@ class SVMAlgorithm(FeatureFileAlgorithm):
 def flt(x):
     if x is None: return "-"
     return "%1.2f" % x
-    
+
+ALGORITHM_FACTORIES = {
+    "maxent":        lambda : MaxentAlgorithm(),
+    "svm" :          lambda : SVMAlgorithm(),
+    "libsvm_rbf":    lambda : LibSVMAlgorithm("RBF", C=1E5, gamma=1E-3, probability=True),
+    "libsvm_linear": lambda : LibSVMAlgorithm("LINEAR", C=10, probability=True),
+    "combined":      lambda : MetaAlgorithm(ALGORITHM_FACTORIES["maxent"](), ALGORITHM_FACTORIES["libsvm_rbf"]()),
+}
     
 if __name__ == '__main__':
     test = {
