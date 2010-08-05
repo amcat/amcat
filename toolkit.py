@@ -1513,7 +1513,17 @@ def buffer(sequence, buffercall, buffersize=100):
     if buffer:
         buffercall(buffer)
         for b in buffer: yield b
-    
+
+def getseq(sequence, seqtypes=(list, tuple, set), pref=list):
+    """
+    Makes sure that the sequence is a 'proper' sequence (and not
+    an iterator/generator). If it is, return the sequence, otherwise
+    create a list out of it and return that.
+    seqtypes and pref define the allowed sequence types and the preferred
+    sequence to make out of it.
+    """
+    return sequence if isinstance(sequence, seqtypes) else pref(sequence)
+        
 if __name__ == '__main__':
     process = executepipe("cat")
     pipe = process.next()
