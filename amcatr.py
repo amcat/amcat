@@ -47,16 +47,13 @@ class Report(object):
     def __init__(self, report):
         self.report = report
     def getResults(self):
-        r = self.report
-        for varname, label in zip(r['reportvars'], r['reportlabels']):
-            if varname.startswith("file://"):
-                obj = Plot(varname)
-            else:
-                obj = interpret(r[varname])
-            yield label, varname, obj
+        for label, obj in self.report:
+            if type(obj) in (str,unicode) and obj.startswith("file://"):
+                obj = Plot(obj)
+            yield label, obj
     def printReport(self, out=sys.stdout):
         gen = tableoutput.HTMLGenerator(rownames=True)
-        for label, var, obj in self.getResults():
+        for label, obj in self.getResults():
             out.write("<h2>%s</h2>" % label)
             if isinstance(obj, table3.Table):
                 gen.generate(obj, out)
@@ -67,12 +64,18 @@ class Report(object):
         
     
 def interpret(robj, scalar=True, recurse=True):
-    if type(robj).__module__ == '__builtin__': return robj
+    #print "Interpreting %s %s" % (robj, type(robj))
+    if type(robj) in (float,str,): return robj
     if isinstance(robj, robjects.RArray):
         return MatrixTable(robj)
     if isinstance(robj, robjects.RDataFrame):
         return FrameTable(robj)
     if isinstance(robj, robjects.RVector):
+        if str(robj.getnames()) <> 'NULL':
+            # this is a list - return key/value pairs
+            func = interpret if recurse else lambda x:x
+            return [(name, func(val)) for (name, val)
+                    in zip(robj.getnames(), robj)]
         if scalar and len(robj) == 1:
             return robj[0]
         if scalar and len(robj) == 0:
@@ -143,7 +146,7 @@ def table2RFrame(table):
 
 
 if __name__ == '__main__':
-    l = call("/home/wva/projects/ml2/active.r", "test", interpret=True)
-    print l
+    l = getReport("/home/wva/libpy/ml/r/test.r", "test", interpret=True)
+    l.printReport()
 
 

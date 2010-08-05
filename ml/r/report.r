@@ -12,11 +12,7 @@ addResult <- function(report, varname, label) {
   report$plotdir <- "/home/amcat/www/plain/test"
 }
 
-startPlot <- function(report, filename, label) {
-  f <- sprintf("%s/%s.png", report$plotdir, filename)
-  png(file=f)
-  addResult(report, sprintf("file://%s", f), label)
-}
+
 
 
 

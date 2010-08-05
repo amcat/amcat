@@ -1,48 +1,42 @@
-source("/home/wva/libpy/ml/r/report.r")
+library(plyr)
+library(reshape)
+
+DEFAULT.IMAGES = "/home/amcat/www/plain/test"
 
 nfromtest <- function() {
   testdata = read.table("/tmp/table.txt")
   nfoldreport(testdata, dowrite=F)
 }
 
-predictreport <- function(testdata, dowrite=T) {
-  if (dowrite) {write.table(testdata, "/tmp/table.txt")}
-  report <- createReport()
-  testdata$confbin <- confbins(testdata$conf0)
-  report$byconf <- data.frame(n=tapply(testdata$confbin, testdata$confbin, length))
-  addResult(report, "byconf", "N by confidence bin")
+percentages <- function(v) {v / sum(v)}
 
-  
-  report
+predictreport <- function(predicted, testdata=NULL, dowrite=T, imagesdir=DEFAULT.IMAGES) {
+  if (dowrite) {write.table(predicted, "/tmp/table.txt")}
+  predicted <- prepare(predicted)
+  if (!is.null(testdata)) testdata <- prepare(testdata)
+  list(
+       "By confidence bin" =
+         conftable(predicted, predicted$confbin, testdata=testdata, includeconf=F),
+       "By predicted category" =
+         conftable(predicted, predicted$pred0cat, testdata=testdata)
+       )
 }
 
 confbins <- function(conf) {
   ((conf-0.00000001) %/% .05) * .05
 }
 
-testreport <- function(testdata, dowrite=T, byfold=F) {
-  report <- createReport()
+testreport <- function(testdata, dowrite=T, imagesdir=DEFAULT.IMAGES) {
   d <- prepare(testdata)
-  print(head(d))
   if (dowrite) {write.table(testdata, "/tmp/table.txt")}
 
-  if (byfold) {
-    report$byfold = acctable(d, d$context)
-    addResult(report, "byfold", "N and Accuracy by fold")
-  }
-           
-  bycat = acctable(d, d$report)
-  report$bycat = bycat[order(-bycat$acc),]
-  addResult(report, "bycat", "N and Accuracy by report category")
-  
+  bycat <- acctable(d, d$actualcat, order=T)
   conf <- acctable(d, d$confbin)
-  report$byconf = conf
-  addResult(report, "byconf", "N and Accuracy by confidence bin")
 
+  accplot = startPlot("acc", imagesdir)  
   prop = conf$n / sum(conf$n)
   max = max(c(prop, conf$acc, conf$report, conf$top5))
   max = ((max %/% 0.1) * 0.1) + 0.1
-  startPlot(report, "acc", "Accuracy on 2 and 4 digits")
   x = barplot(prop, ylim=c(0,max), main="N and Accuracy by confidence", ylab="% of cases / Accuracy (%)", xlab="Confidence")
   lines(x, conf$acc)
   lines(x, conf$top5, col="red")
@@ -52,10 +46,21 @@ testreport <- function(testdata, dowrite=T, byfold=F) {
   d$confusion = sprintf("%s-%s", d$actual, d$pred0)
   t = table(d$confusion[!d$correct])
   t = t[order(-t)[1:min(10, length(t))]]
-  report$confusion = data.frame( n=t)
-  addResult(report, "confusion", "Top-10 confused categories")
- 
-  report
+  confusion = data.frame( n=t)
+
+  list(
+       "N and Accuracy by category" = bycat,
+       "N and Accuracy by confidence bin" = conf,
+       "Accuracy on 2 and 4 digits" = accplot,
+       "Top-10 confused categories" = confusion
+       )
+}
+
+startPlot <- function(filename, imagesdir=DEFAULT.IMAGES) {
+  f <- sprintf("%s/%s.png", imagesdir, filename)
+  url <- sprintf("file://%s", f)
+  png(file=f)
+  url
 }
 
 unfactor <- function(x) {as.integer(levels(x)[as.numeric(x)])}
@@ -69,21 +74,41 @@ prepare <- function(data) {
   data$top5 <- !is.na(data$actualpos) & (data$actualpos < 5)
   data$confbin <- confbins(data$conf0)
 
-  data$report <- data$actual %/% 100
-  data$reportactual <- data$pred0 %/% 100
-  data$reportcorrect <- data$report == data$reportactual
-  
+  data$actualcat <- data$actual %/% 100
+  data$pred0cat <- data$pred0 %/% 100
+  data$catcorrect <- data$actualcat == data$pred0cat  
   data
 }
 
 
-acctable <- function(data, split) {
-   data.frame(
+acctable <- function(data, split, order=F) {
+  result = data.frame(
     n = tapply(split, split, length),
+    perc = percentages(tapply(split, split, length)),
     acc = tapply(data$correct, split, mean),              
-    report = tapply(data$reportcorrect, split, mean),
+    report = tapply(data$catcorrect, split, mean),
     top5 = tapply(data$top5, split, mean))
- }
+  if (order) result = result[order(-result$acc),]
+  result
+}
+
+conftable <- function(data, split, testdata=NULL, includeconf=T) {
+  result <- data.frame(
+    n = tapply(split, split, length),
+    perc = percentages(tapply(split, split, length))
+  )
+  if (includeconf) {
+    result$conf = tapply(data$conf0, split, mean)
+  }
+
+  if (!is.null(testdata)) {
+    acc = acctable(testdata, split)
+    names(acc) = paste("est.", names(acc))
+    result = cbind(result, acc)
+  }
+
+  result
+}
 
 
 sample <- function(results, n=10) {
