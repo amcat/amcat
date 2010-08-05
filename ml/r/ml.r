@@ -11,14 +11,17 @@ nfromtest <- function() {
 percentages <- function(v) {v / sum(v)}
 
 predictreport <- function(predicted, testdata=NULL, dowrite=T, imagesdir=DEFAULT.IMAGES) {
-  if (dowrite) {write.table(predicted, "/tmp/table.txt")}
+  if (dowrite) {
+    write.table(predicted, "/tmp/predicted.txt")
+    if (!is.null(testdata)) {write.table(testdata, "/tmp/testdata.txt")}
+  }
   predicted <- prepare(predicted)
-  if (!is.null(testdata)) testdata <- prepare(testdata)
+  if (!is.null(testdata)) testdata <- prepare(testdata, omit.missing.actual=T)
   list(
        "By confidence bin" =
-         conftable(predicted, predicted$confbin, testdata=testdata, includeconf=F),
+         conftable(predicted, "confbin", testdata=testdata, includeconf=F),
        "By predicted category" =
-         conftable(predicted, predicted$pred0cat, testdata=testdata)
+         conftable(predicted, "pred0cat", testdata=testdata)
        )
 }
 
@@ -27,11 +30,13 @@ confbins <- function(conf) {
 }
 
 testreport <- function(testdata, dowrite=T, imagesdir=DEFAULT.IMAGES) {
-  d <- prepare(testdata)
+  d <- prepare(testdata, omit.missing.actual=T)
   if (dowrite) {write.table(testdata, "/tmp/table.txt")}
 
-  bycat <- acctable(d, d$actualcat, order=T)
-  conf <- acctable(d, d$confbin)
+  d$een = 1
+  overall <- acctable(d, "een")
+  bycat <- acctable(d, "actualcat", order=T)
+  conf <- acctable(d, "confbin")
 
   accplot = startPlot("acc", imagesdir)  
   prop = conf$n / sum(conf$n)
@@ -49,6 +54,7 @@ testreport <- function(testdata, dowrite=T, imagesdir=DEFAULT.IMAGES) {
   confusion = data.frame( n=t)
 
   list(
+       "Overall accuracy" = overall,
        "N and Accuracy by category" = bycat,
        "N and Accuracy by confidence bin" = conf,
        "Accuracy on 2 and 4 digits" = accplot,
@@ -65,11 +71,13 @@ startPlot <- function(filename, imagesdir=DEFAULT.IMAGES) {
 
 unfactor <- function(x) {as.integer(levels(x)[as.numeric(x)])}
 
-prepare <- function(data) {
+prepare <- function(data, omit.missing.actual=F) {
   if (!is.numeric(data$actual)) {data$actual <- unfactor(data$actual)}
   if (!is.numeric(data$pred0)) {data$pred0 <- unfactor(data$pred0)}
-  #data$actual <- unfactor(data$actual)
-  data <- data[!is.na(data$actual),]
+
+  if (omit.missing.actual) {
+    data <- data[!is.na(data$actual),]
+  }
   data$correct <- data$actual == data$pred0
   data$top5 <- !is.na(data$actualpos) & (data$actualpos < 5)
   data$confbin <- confbins(data$conf0)
@@ -82,6 +90,7 @@ prepare <- function(data) {
 
 
 acctable <- function(data, split, order=F) {
+  split = data[,split]
   result = data.frame(
     n = tapply(split, split, length),
     perc = percentages(tapply(split, split, length)),
@@ -93,12 +102,13 @@ acctable <- function(data, split, order=F) {
 }
 
 conftable <- function(data, split, testdata=NULL, includeconf=T) {
+  dsplit = data[,split]
   result <- data.frame(
-    n = tapply(split, split, length),
-    perc = percentages(tapply(split, split, length))
+    n = tapply(dsplit, dsplit, length),
+    perc = percentages(tapply(dsplit, dsplit, length))
   )
   if (includeconf) {
-    result$conf = tapply(data$conf0, split, mean)
+    result$conf = tapply(data$conf0, dsplit, mean)
   }
 
   if (!is.null(testdata)) {

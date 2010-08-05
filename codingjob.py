@@ -162,6 +162,8 @@ class CodedArticle(CodedUnit):
         self.init(job.articleSchema)
         self.addDBFKProperty("sentences", job.unitSchema.table, "arrowid",
                              function=lambda id : CodedSentence(self.db, id, job.unitSchema, ca=self))
+        self.addDBProperty("confidence", table=job.articleSchema.table, func = lambda c : float(c) / 1000)
+            
     def getArticle(self):
         return self.article
 
@@ -500,14 +502,31 @@ class FieldColumn(table3.ObjectColumn):
         val = getValue(self.getUnit(row), self.field)
         
         return val
-            
+
+def createCodingJob(project, name, unitschema, articleschema, coders=[]):
+    if not type(unitschema) == int: unitschema = unitschema.id
+    if not type(articleschema) == int: articleschema = articleschema.id
+    cjid = project.db.insert("codingjobs", dict(projectid=project.id, unitschemaid=unitschema, articleschemaid=articleschema, name=name))
+    for i, coder in enumerate(coders):
+        if not type(coder) == int: coder = coder.id
+        project.db.insert("codingjobs_sets", dict(codingjobid=cjid, setnr=i+1, coder_userid=coder), retrieveIdent=False)
+    return CodingJob(project.db, cjid, project=project)
+
+def cloneCodingJob(codingjob, newname = None, coders=[]):
+    if newname is None: newname = "%s (kopie)" % (codingjob.label,)
+    return createCodingJob(codingjob.project, newname, codingjob.unitSchema, codingjob.articleSchema, coders=coders)
+    
+def createCodedArticle(codingjobset, article):
+    cjid, setnr = codingjobset.id
+    if not type(article) == int: article = article.id 
+    cjaid = codingjobset.db.insert("codingjobs_articles", dict(codingjobid=cjid, setnr=setnr, articleid=article))
+    return CodedArticle(codingjobset.db, cjaid)
+    
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)
-    db.beforeQueryListeners.add(lambda a: toolkit.ticker.warn(a[:250]))
-    ca = CodedArticle(db, 11100)
-    db.printProfile()
-    print ca.set
-    cachable.cache(ca.set, "coder")
-    db.printProfile()
-    
+
+    cj = CodingJob(db, 423)
+    cj2 = cloneCodingJob(cj, "test", [2])
+    print `cj2`, cj2
+    db.commit()

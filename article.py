@@ -42,6 +42,10 @@ class Article(Cachable):
         result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")
         return result.replace("\\r","").replace("\r","\n")
 
+    def getArticle(self):
+        "Convenience function also present in CodedArticle, CodedUnit"
+        return self
+
     def words(self, onlyWords = False, lemma=0, headline=False): #lemma: 1=lemmaP, 2=lemma, 3=word
         import ctokenizer
         text = self.text
