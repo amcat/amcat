@@ -47,7 +47,10 @@ class Report(object):
     def __init__(self, report):
         self.report = report
     def getResults(self):
-        for label, obj in self.report:
+        for element in self.report:
+            if len(element)<>2:
+                raise Exception("Element has %i parts (need label, obj):\n%s\n==\n%r\n---------\nReport is:\n%s\n==\n%r" % (len(element), element, element, self.report, self.report))
+            label, obj = element
             if type(obj) in (str,unicode) and obj.startswith("file://"):
                 obj = Plot(obj)
             yield label, obj
