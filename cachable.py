@@ -149,11 +149,16 @@ class Cachable(toolkit.IDLabel):
         cacheMultiple([self], propnames)
     def sqlFrom(self, table=None):
         return sqlFrom([self], table)
+
+    
     def exists(self):
         """Checks whether the database contains a record for this object"""
         SQL = "select count(*) from %s where %s" % (self.__table__, sqlWhere(self.__idcolumn__, self.id))
         return bool(self.db.getValue(SQL))
-
+    def deleteFromDB(self, commit=False):
+        SQL = "delete from %s where %s" % (self.__table__, sqlWhere(self.__idcolumn__, self.id))
+        self.db.doQuery(SQL)
+        if commit: self.db.commit()
         
 
 
@@ -368,6 +373,18 @@ class DBFKPropertyFactory(PropertyFactory):
         if not self.args and not "fieldname" in self.kargs:
             self.args = (property,)
         return super(DBFKPropertyFactory, self).createProperty(object, property)
+
+#DBFKProperty(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None, objfunc=None, distinct=False, filter=None):
+   
+class DBFKClassPropertyFactory(PropertyFactory):
+    """Convenience class to create a property factory
+    from a target class yielding table, targetfields, and dbfunc"""
+    def __init__(self, targetklass, *args, **kargs):
+        newargs = dict(table=targetklass.__table__, targetfields=targetklass.__idcolumn__, dbfunc=targetklass)
+        newargs.update(kargs)
+        PropertyFactory.__init__(self, DBFKProperty, *args, **newargs)
+    def createProperty(self, object, property):
+        return super(DBFKClassPropertyFactory, self).createProperty(object, property)
 
 #####################################
 # SQL String auxilliary functions   #
