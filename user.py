@@ -71,19 +71,14 @@ class User(Cachable):
     def isSuperAdmin(self):
         return self.permissionLevel.value >= permissions.UserPermission.SUPER_ADMIN.value
         
-        
+def currentUser(db):
+    uid = db.getValue("select dbo.anoko_user()")
+    return User(db, uid)
     
         
         
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB()
-    p = dbtoolkit.ProfilingAfterQueryListener()
-    db.afterQueryListeners.add(p)
-    for i in range(4):
-        u = User(db, 2)
-        print u.permissionLevel
-        print u.fullname
-        print u.label
-    p.printreport()
+    print currentUser(db)
 
