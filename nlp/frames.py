@@ -21,7 +21,7 @@ class Rule(object):
     def debugindent(self, *args, **kargs):
         return self.identifier.debugindent(*args, **kargs)
 class DeclarativeRule(Rule):
-    def __init__(self, identifier, frame, condition=None, postprocess=None, verbose=None, name=None, rulename=None, **roles):
+    def __init__(self, identifier, frame, condition=None, postprocess=None, verbose=None, name=None, rulename=None, precheck=None, **roles):
         if verbose is None: verbose = not str(rulename).startswith("_")
         Rule.__init__(self, identifier, verbose)
         self.frame = frame
@@ -30,9 +30,13 @@ class DeclarativeRule(Rule):
         self.roles = roles
         self.name = name
         self.rulename = rulename or "?"
+        self.precheck = precheck
     def getFrame(self, node):
-        return self.frame(name=self.name, rulename=self.rulename)
+        return self.frame(name=self.name, rule=self)
+    def doPrecheck(self, node):
+        return (not self.precheck) or self.precheck(self.identifier, node)
     def matches(self, node):
+        if not self.doPrecheck(node): return 
         self.debug("  Applying rule %s"% self)
         frame = self.getFrame(node)
         if not frame: return
@@ -128,8 +132,10 @@ class Lowest(Pattern):
         self.pos = pos
     def getNode(self, rule, node):
         lowest = node
-        while getChild(lowest, self.rel, pos=self.pos):
-            lowest = getChild(lowest, self.rel, pos=self.pos)
+        while True:
+            n2 = getChild(lowest, self.rel, pos=self.pos)
+            if not n2: break
+            lowest = n2
         return lowest
 
 class Highest(Pattern):
@@ -181,7 +187,7 @@ class Identifier(object):
     def hasLemma(self, node, lemmata, pos=None):
         if not node: return
         if "_" in str(node.word.lemma): # geef_aan etc, zie 34755418
-            if pos and (pos<> node.word.lemma.pos): return False
+            if pos and (pos.lower()<> node.word.lemma.pos.lower()): return False
             self.debug("_lemma %s in lemmata? %s (lemmata=%s)" % (node.word.lemma.label,node.word.lemma.label in lemmata, lemmata))
             return str(node.word.lemma) in lemmata
         key = (pos, tuple(lemmata))
@@ -201,8 +207,9 @@ def framesort(frame):
 ################### Specific rules ########################
 
 class SPORule(DeclarativeRule):
-    def __init__(self, identifier, rulename, postprocess=None, predicate=Self(), name="spo",  **roles):
+    def __init__(self, identifier, rulename, postprocess=None, predicate=Self(), name="spo",  allowPartial=False, **roles):
         roles['predicate'] = predicate
+        self.allowPartial = allowPartial
         DeclarativeRule.__init__(self, identifier, SPO, postprocess=postprocess, name=name, rulename=rulename, **roles)
     
     
@@ -213,13 +220,14 @@ class BronRule(DeclarativeRule):
         self.match = match
         self.checks = checks
     def getFrame(self, node):
+        if not self.doPrecheck(node): return 
         if self.match:
             pos, entries = self.match
             if pos and (node.word.lemma.pos.lower() <> pos.lower()): return
             for name, lemmata in entries.iteritems():
                 if ((pos and self.identifier.hasLemma(node, lemmata, pos))
                     or ((not pos) and (node.word.lemma.label in lemmata))):
-                    return self.frame(name)
+                    return self.frame(self)
         else:
             return super(BronRule, self).getFrame(node)
 
@@ -235,14 +243,24 @@ class BronRule(DeclarativeRule):
 ################# Frame Definitions ########
 
 class Frame(Identity):
-    def __init__(self, name, *args, **kargs):
-        self.name = name
+    def __init__(self, rule, *args, **kargs):
+        self._data = kargs.get("_data") # simulate the (*args, _data=x, **kargs) from python2.6!
+        if "_data" in kargs: del kargs["_data"]
+        if type(rule) in (str, unicode):
+            self.name = rule
+            self.rule = None
+        else:
+            self.rule = rule
+            self.name = rule.rulename
         for i, k in enumerate(self.__class__.ARGS):
             v = args[i] if i < len(args) else None
             self.__dict__[k] = v
         for k,v in kargs.items():
             self.__dict__[k] = v
-                    
+            
+    def getData(self):
+        return self._data
+            
     def isComplete(self):
         return True
     def get(self, name):
@@ -266,6 +284,8 @@ class Frame(Identity):
         return "%s(%s, %s)" % (self.__class__.__name__, self.name,
                                ", ".join("%s=%s" % kv for kv in self.getConstituents()))
     def __repr__(self):
+        return "%s(%s,%s)" % (self.__class__.__name__, `self.name`, self.getArgStr())
+    def getArgStr(self):
         args = [arg.position for arg in self.getArgs()]
         kargs = {}
         for k,v in self.getConstituents():
@@ -273,18 +293,25 @@ class Frame(Identity):
                 kargs[k] = v.position
         args = map(str, args)
         args += ["%s=%i" % (kv) for kv in kargs.items()]
-        args = ",".join(args)
-        return "%s(%s,%s)" % (self.__class__.__name__, `self.name`, args)
+        return ",".join(args)
+    
     def getNodesForConstituent(self, rol):
         constituents = self.getConstituents()
         stoplist = set([n for (r,n) in constituents])
         node = self.__getattribute__(rol)
-        return set(node.getDescendants(stoplist=stoplist))
+        if node:
+            return set(node.getDescendants(stoplist=stoplist))
 
     def getNodesPerConstituent(self):
         for rol, node in self.getConstituents():
             yield rol, self.getNodesForConstituent(rol)
-    
+
+
+class Equal(Frame):
+    ARGS = ["subject","object","predicate"]
+    def isComplete(self):
+        return self.has('subject','object')
+            
 class Bron(Frame):
     ARGS = ["key","source","quote","addressee","negation"]
     def isComplete(self):
@@ -322,7 +349,13 @@ class SPO(Frame):
     def isComplete(self):
         #if self.has('doelkey') ^ self.has('doelobject'): return false # ^ = XOR
         if self.has('subject','predicate','object'): return True
-        if "#" in self.rulename: return
+        if self.rule:
+            a = self.rule.allowPartial
+            if not a: return
+            if callable(a):
+                if not a(self): return
+                self.rule.debug([self, a(self)])
+
         if self.has('subject', 'predicate'):
             self.name = 'SPO_su'
             return 2
@@ -331,6 +364,17 @@ class SPO(Frame):
             return 2
         return False
 
+class Order(Frame):
+    ARGS = ["subject", "predicate", "ordered", "order"]
+    def isComplete(self):
+        return self.has(*Order.ARGS)
+
+class Reality(Frame):
+    ARGS = ["predicate", "object"]
+    def isComplete(self):
+        return self.has(*Reality.ARGS)
+    
+
 ################# Node Finding  #######################
 
 def getTest(e):
@@ -338,20 +382,28 @@ def getTest(e):
     if type(e) in (list, tuple, set): return e.__contains__
     return e.__eq__
 
-def find(path, rel=None, word=None, lemma=None, pos=None, check=None):
-    if not path: return
-    word, lemma, pos, rel = map(getTest, (word, lemma, pos, rel))
-    for n2, r in path:
-        if word(str(n2.word)) and lemma(str(n2.word.lemma)) and pos(n2.word.lemma.pos) and rel(str(r).strip()):
-            if (not check) or check(n2):
-                return n2
+def Check(**kwcond):
+    return lambda identifier, node: nodecheck(node, **kwcond)
 
-def findLast(path, rel=None, word=None, lemma=None, pos=None):
+
+def nodecheck(node, word=None, lemma=None, pos=None, check=None):
+    word, lemma, pos = map(getTest, (word, lemma, pos))
+    return (word(str(node.word)) and lemma(str(node.word.lemma)) and pos(node.word.lemma.pos) and
+            ((not check) or check(node)))
+
+def find(path, rel=None, **kwcond):
     if not path: return
-    word, lemma, pos, rel = map(getTest, (word, lemma, pos, rel))
-    result = None
+    rel = getTest(rel)
     for n2, r in path:
-        if word(str(n2.word)) and lemma(str(n2.word.lemma)) and pos(n2.word.lemma.pos) and rel(str(r).strip()):
+        if rel(str(r).strip()) and nodecheck(n2, **kwcond):
+            return n2
+
+def findLast(path, rel=None, **kwcond):
+    if not path: return
+    result = None
+    rel = getTest(rel)
+    for n2, r in path:
+        if rel(str(r).strip()) and nodecheck(n2, **kwcond):
             result = n2
         else:
             return result

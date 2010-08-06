@@ -31,11 +31,48 @@ class SentenceWord(graph.Node, Cachable):
 def getSentenceWord(sentence, position):
     return SentenceWord(sentence.db, (sentence.id, position))
     
-def getTriple(sent, parent, rel, child):
+def getTriple(sent, parent, rel, child, analysisid):
     parent, child = map(sent.getWord, (parent, child))
     rel = Relation(sent.db, rel)
-    return parent, rel, child
+    return parent, rel, child, analysisid
     #print sent, parent, child, rel
+
+NEED_COPULA_FLIP_ANALYSISIDS = 4,
+COPULA_RELID=58
+KEEP_ON_NOUN_RELIDS = 4,51, 55 # amod, det, nn
+
+def flipCopula(triples):
+    """Flip the copula relations for stanford parses as I think they make no sense whatsoever"""
+    toflip = []
+    if type(triples) <> set: raise Exception(triples)
+    for parent, rel, child in triples:
+        if rel.id == COPULA_RELID:
+            toflip.append((parent, child))
+
+    
+    for parent, rel, child in triples:
+        for noun, cop in toflip:
+            if parent == cop: raise Exception("Relation to copula??")
+            if parent == noun and rel.id not in KEEP_ON_NOUN_RELIDS: parent = cop
+            if child == noun: child = cop
+            elif child == cop: child = noun
+        yield parent, rel, child
+            
+            
+    
+
+def endTriples(triples):
+    """Take the analysis with the highest analysisid (arbitrary)
+    If necessary, flip the copula to 'repair' stanford parse"""
+    triplesPerAnalysis = {}
+    for parent, rel, child, analysisid in triples:
+        triplesPerAnalysis[analysisid] =  triplesPerAnalysis.get(analysisid, set()) | set([(parent, rel, child)])
+    if not triplesPerAnalysis: return None
+    best = max(triplesPerAnalysis.keys())
+    triples = triplesPerAnalysis[best]
+    if best in NEED_COPULA_FLIP_ANALYSISIDS:
+        triples = list(flipCopula(triples))
+    return triples
 
 class Sentence(Cachable, graph.Graph):
     __table__ = 'sentences'
@@ -44,26 +81,29 @@ class Sentence(Cachable, graph.Graph):
     __dbproperties__ = ["parnr", "sentnr", "encoding"]
     __encodingprop__ = 'encoding'
     __metaclass__ = CachingMeta
-    
+
     text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
     article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
     words = DBFKPropertyFactory("parses_words", "wordbegin", objfunc=getSentenceWord, orderby="wordbegin")
-    triples = DBFKPropertyFactory("parses_triples", ["parentbegin","relation", "childbegin"], objfunc=getTriple)
+    triples = DBFKPropertyFactory("parses_triples", ["parentbegin","relation", "childbegin", "analysisid"], objfunc=getTriple, endfunc=endTriples)
         
     def cacheWords(self, *args, **kargs):
         cacheWords([self], *args, **kargs)
     def getWord(self, position):
         for word in self.words:
             if word.position == position: return word
-        
 
-def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=False):
+
+def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=False, sentence=False):
     perword = dict(word = dict(string = []))
     if lemmata: perword["lemma"] = dict(lemma=["string"], pos=[])
     if sentiment: perword["lemma"] = dict(lemma=["string"], pos=[], sentiment=[], intensifier=[])
     what = dict(words={'word' : perword})
     if triples: what["triples"] = []
     cachable.cache(sentences, **what)
+    if sentence:
+        cachable.cacheMultiple(sentences, "encoding", "text")
+        
 
 def computeSentiment(words):
     sum = 0.0
@@ -88,7 +128,11 @@ class Relation(Cachable):
     __idcolumn__ = "relid"
     __dbproperties__ = ["name"]
     __labelprop__ = 'name'
- 
+
+def cacheRelationNames(db):
+    for relid, name in db.doQuery("select relid, name from %s" % Relation.__table__):
+        Relation(db, relid, name=name)
+    
 
 def getSentence(id):
     return Sentence(dbtoolkit.amcatDB(), id)

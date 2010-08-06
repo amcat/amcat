@@ -39,8 +39,10 @@ class Graph(object):
                     seen.add(n2)
                     
         else:# in order of appearance
+            triples = self.getTriples()
+            if triples is None: return 
             seen = set()
-            for parent, rel, child in  self.getTriples():
+            for parent, rel, child in triples:
                 for node in parent, child:
                     if node not in seen: yield node
                     seen.add(node)

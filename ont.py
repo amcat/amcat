@@ -30,7 +30,9 @@ def getAllAncestors(object, stoplist=None, golist=None):
 
 def getAllDescendants(object, stoplist=None, golist=None):
     if stoplist is None: stoplist = set()
-    for p in object.children:
+    children = object.children
+    if not children: return
+    for p in children:
         if (p is None) or (p in stoplist): continue
         if (golist and p not in golist): continue
         yield p

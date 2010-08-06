@@ -1,12 +1,13 @@
 import ont, toolkit, re
 import graph
+from itertools import imap, izip
 
 class Recogniser(object):
-    def __init__(self, db, objects, debug=None, lang=101):
+    def __init__(self, db, objects, debug=None, querylang=101):
         self.objects = objects
         #self.objects = set([ont.Object(db, 10275)])
         #self.objects = set([ont.Object(db, 1156)])
-        self.queries = dict(getQueries(self.objects, lang=lang))
+        self.queries = dict(getQueries(self.objects, querylang=querylang))
 
     def debug(self, msg):
         pass
@@ -51,12 +52,9 @@ def getIssues(db):
 def getRecogniser(db):
     return Recogniser(db, getActors(db) | getIssues(db))
 
-def getWord(node_or_word):
-    if type(node_or_word) in (str, unicode): return node_or_word.lower()
-    return str(node_or_word.word).lower()
 
 class Query(object):
-    def matches(self, node):
+    def matches(self, words, context=[]):
         abstract
 class BooleanQuery(Query):
     def __init__(self, mays=[], musts=[], nots=[]):
@@ -65,12 +63,21 @@ class BooleanQuery(Query):
         self.nots = nots
     def __repr__(self):
         return "BooleanQuery(mays=%r, musts=%r, nots=%s)" % (self.mays, self.musts, self.nots)
-    def matches(self, node):
-        # TODO: test of de MUSTS voorkomen in zelfde document, de NOTS niet, en 1 van de MAYS/MUSTS deze node is
-        if any(q.matches(node) for q in self.nots): return False
-        #if not all(q.matches(node) for q in self.musts): return False
-        return (any(q.matches(node) for q in self.mays) or
-                any(q.matches(node) for q in self.musts))
+    def matches(self, word, context=[]):
+        # return False if none of the mays/musts matches the current word
+        # return False if any context-word matches one of the nots
+        # return False if any of the musts is not found in the context
+        # return True otherwise
+        word = getWord(word)
+        if not any(q.matches(word, context) for q in set(self.mays) | set(self.musts)):
+            return False
+        for q in self.nots:
+            if any(q.matches(w, context) for w in context):
+                return False
+        for q in self.musts:
+            if not any(q.matches(w, context) for w in context):
+                return False
+        return True
             
 class PhraseQuery(Query):
     def __init__(self, phrase, slop=0):
@@ -78,54 +85,61 @@ class PhraseQuery(Query):
         self.slop = slop
     def __repr__(self):
         return "PhraseQuery(%r, slop=%i)" % (self.phrase, self.slop)
-    def matches(self, node):
-        for offset, term in enumerate(self.phrase):
-            n2 = node.getNeighbour(offset)
-            if not (n2 and term.matches(n2)): return False
-        return True
+    def matches(self, word, context=[]):
+        # anchor to first word in phrase
+        word = getWord(word)
+        if not self.phrase[0].matches(word, context): return False
+        if self.slop:
+            # TODO: consider as AND
+            for q in self.phrase:
+                if not any(q.matches(w, context) for w in context): return False
+            return True
+        else:
+            context = map(getWord, context)
+            if word not in context: raise Exception("%r not in %r??" % (word, context))
+            words = context[map(getWord, context).index(word):]
+            if len(words) < len(self.phrase): return False
+            for word, q in zip(words, self.phrase):
+                if not q.matches(word, context): return False
+            return True
+    
 class Term(Query):
     def __init__(self, term):
         self.term = term.lower()
     def __repr__(self):
         return "Term(%r)" % self.term
-    def matches(self, node):
-        word = getWord(node)
+    def matches(self, word, context=[]):
+        word = getWord(word)
         if "*" not in self.term: return word == self.term
         if "*" not in self.term[:-1]: return word.startswith(self.term[:-1])
         return bool(re.match(self.term.replace("*", ".*")+"$", word))
 
-CLASSPATH=".:/home/amcat/resources/jars/lucene-core-2.3.2.jar:/home/amcat/resources/jars/msbase.jar:/home/amcat/resources/jars/mssqlserver.jar:/home/amcat/resources/jars/msutil.jar:/home/amcat/libjava:/home/amcat/resources/jars/lucene-highlighter-2.3.2.jar:/home/amcat/resources/jars/aduna-clustermap-2006.1.jar:/home/amcat/resources/jars/jutf7-0.9.0.jar:/home/amcat/resources/jars/stanford-parser-2008-10-30.jar"
+def getWord(word):
+    return str(word).lower()
     
-def getQueries(objects, lang=101):
-    objs = []
-    args = []
-    for o in objects:
-        l = o.labels.get(lang)
-        if not l: continue
-        objs.append(o)
-        args.append('"%s"' % l.replace('"', '\\"'))
+CLASSPATH=".:/home/amcat/resources/jars/lucene-core-2.3.2.jar:/home/amcat/resources/jars/msbase.jar:/home/amcat/resources/jars/mssqlserver.jar:/home/amcat/resources/jars/msutil.jar:/home/amcat/libjava:/home/amcat/resources/jars/lucene-highlighter-2.3.2.jar:/home/amcat/resources/jars/aduna-clustermap-2006.1.jar:/home/amcat/resources/jars/jutf7-0.9.0.jar:/home/amcat/resources/jars/stanford-parser-2008-10-30.jar"
+
+def lucene2terms(queries):
+    args = ['"%s"' % q.replace('"', '\\"') for q in queries]
     CMD = 'CLASSPATH=%s java AnokoQueryParser %s' % (CLASSPATH, " ".join(args))
     out, err =  toolkit.execute(CMD)
     if err: raise("Exception on parsing queries:\n%s\n------------\n" % (err))
-    for obj, query in zip(objs, out.split("\n")):
-        yield obj, eval(query)
+    if out[-1] == "\n": out = out[:-1]
     
-                              
+    return map(eval, out.split("\n"))
+
     
+def getQueries(objects, querylang=101):
+    objs = []
+    queries = []
+    for o in objects:
+        q = o.labels.get(querylang)
+        if not q: continue
+        objs.append(o)
+        queries.append(q)
+    return izip(objs, lucene2terms(queries))
     
 if __name__ == '__main__':
-
-
-    import dbtoolkit
-    db = dbtoolkit.amcatDB()
-    r = Recogniser(db)
-    for o, q in r.queries.items():
-        if type(q) == BooleanQuery and type(q.nots) not in (list, tuple): raise Exception([o, q])
-
-    p = parsetree.fromDB(db, 43729648)
-    for n in p.getNodes():
-        if n.word.label.lower() == 'partij':
-            print list(r.getObjects(n))
-            
-    
+    import sys
+    print list(lucene2terms(sys.argv[1:]))
 
