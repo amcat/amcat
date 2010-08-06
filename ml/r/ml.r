@@ -126,3 +126,10 @@ sample <- function(results, n=10) {
   indices[1:min(length(results),n)]
   results[indices,"unit"]
 }
+
+stepreport <- function(datasets) {
+  for (i in 1:length(datasets)) {
+    dataset = datasets[i]
+    write.table(dataset, sprintf("/tmp/dataset_%i.txt", i))
+  }
+}
