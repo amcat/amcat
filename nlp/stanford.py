@@ -85,12 +85,14 @@ class StanfordJavaParser(object):
             raise Exception("Unexpected parser message. Expecting: '%s*', got %r" % (msg, line))
         
     def parse(self, sent):
+        sent = sent.strip()
+        if sent and sent[-1] not in ".?;!": sent += "."
         self.p.stdin.write(sent)
         self.p.stdin.write("\n")
 
         words = self.p.stderr.readline()
         m = re.match(r"Parsing \[sent. \d+ len. \d+\]: \[(.*)\]", words)
-        if not m: raise Exception("Cannot parse: %r" % line)
+        if not m: raise Exception("Cannot parse: %r" % words)
         words = m.group(1).split(", ")
         
         pos = []
@@ -115,7 +117,9 @@ def pos2token(position, w, s):
     
 class StanfordParser(object):
     def __init__(self, *args, **kargs):
-        self.parser = StanfordJavaParser(*args, **kargs)
+        self.parserArgs = args
+        self.parserKargs = kargs
+        self.restart()
     def parse(self, sentence):
         sentence = toolkit.clean(sentence, level=1)
         words, pos, triples = self.parser.parse(sentence)
@@ -134,9 +138,13 @@ class StanfordParser(object):
             tok2 = tokens[int(p2)-1]
             yield tok1, rel, tok2
     def stop(self):
-        if not self.parser: return None
+        if not getattr(self, 'parser', None): return 
         log = self.parser.stop()
         self.parser = None
+        return log
+    def restart(self):
+        log = self.stop()
+        self.parser = StanfordJavaParser(*self.parserArgs, **self.parserKargs)
         return log
     def __del__(self):
         self.stop()

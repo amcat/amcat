@@ -69,7 +69,7 @@ class ParseStorer(object):
             self.analysisid, self.analysisid)
         
         while True:
-            SQL = "SELECT TOP 100 sentenceid, result FROM parses_jobs_sentences WHERE analysisid=%i AND result is not null " % (self.analysisid,)
+            SQL = "SELECT TOP 100 sentenceid, result FROM parses_jobs_sentences WHERE analysisid=%i AND result is not null AND sentenceid not in (select sentenceid from parses_words where analysisid=%i)" % (self.analysisid, self.analysisid)
             results = self.db.doQuery(SQL)
             if not results:
                 toolkit.warn("No results: done!")
