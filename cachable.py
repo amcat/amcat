@@ -141,6 +141,9 @@ class Cachable(toolkit.IDLabel):
             p = self._getProperty(prop)
             if not p: raise AttributeError("Cannot find property %s of %r" % (prop, self))
             p.cache(val)
+    def cacheAllProperties(self):
+        """Cache all properties"""
+        cache([self], *tuple(self._getPropertyNames()))
     def removeCached(self, prop):
         """Remove the cached value from the given property"""
         self._getProperty(prop).uncache()
