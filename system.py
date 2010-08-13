@@ -9,6 +9,13 @@ class System(Cachable):
 
     projects = DBFKPropertyFactory("projects", "projectid", dbfunc=project.Project)
     users = DBFKPropertyFactory("users", "userid", dbfunc=user.User)
+    
+    def getUserByUsername(self, uname):
+        cacheMultiple(self.users, ["username",])
+        
+        for usr in self.users:
+            if usr.username == uname:
+                return usr
 
 if __name__ == '__main__':
     import dbtoolkit
@@ -24,6 +31,3 @@ if __name__ == '__main__':
     s = system.projects
     u = system.users
     db.printProfile()
-    
-    
-
