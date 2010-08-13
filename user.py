@@ -32,7 +32,7 @@ class User(Cachable):
     __labelprop__ = 'username'
     
 
-    __dbproperties__ = ["username", "fullname", "affiliation", "active", "email"]
+    __dbproperties__ = ["username", "fullname", "affiliation", "active", "email", "language"]
     permissionLevel = DBPropertyFactory("permissionid", table="permissions_users", func=permissions.UserPermission.get)
     projects = DBFKPropertyFactory("permissions_projects_users", "projectid", dbfunc=lambda db, id : project.Project(db, id))
 
