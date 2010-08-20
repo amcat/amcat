@@ -1531,3 +1531,5 @@ if __name__ == '__main__':
         pipe.write("adsfgadfgfdsg")
     print process.next()
     
+makeList = lambda *args: args
+escape = lambda v: v.replace("'", "\\'")
