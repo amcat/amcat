@@ -26,10 +26,13 @@ class Article(Cachable):
     byline = DBPropertyFactory(decode=True)
     metastring = DBPropertyFactory(decode=True)
     section = DBPropertyFactory(decode=True)
-    text = DBPropertyFactory(table="texts", decode=True)
     batch = DBPropertyFactory("batchid", dbfunc=lambda db, id: project.Batch(db, id))
     source = DBPropertyFactory("mediumid", dbfunc=sources.Source)
     sentences = DBFKPropertyFactory("sentences", "sentenceid", dbfunc=doCreateSentence)
+    
+    @property
+    def text(self):
+        return(self.db.getText(self.id))
 
     @property
     def fullmeta(self):
