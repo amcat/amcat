@@ -24,6 +24,18 @@ class Users(object):
     def __iter__(self):
         for user in self.byid.values():
             yield user
+            
+def addUser(db, uname, passwd, fullname, affiliation, email, permissionLevel):
+    """Add a user to the system. Return new UID."""
+    
+    sql = "exec newcoder '%s', '%s', '%s', '%s', '%s', '%s'"
+    args = (uname, passwd, fullname, email, affiliation, permissionLevel)
+    
+    db.commit()    
+    uid = db.doSafeQuery(sql, *args)
+    db.commit()
+    
+    return uid
 
 class User(Cachable):
     __metaclass__ = CachingMeta
