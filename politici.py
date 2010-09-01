@@ -26,16 +26,25 @@ class Politici(object):
 
     def getPoliticus(self, name):
         cands = self.getCandidates(name)
-        if not cands: raise Exception("Cannot find %r" % name)
+        if not cands:
+            print ("Cannot find %r" % name)
+            cands=name
+            return cands
         if len(cands) == 1: return cands.pop()
         cands2 = set()
         w = getWords(name)
         for cand in cands:
             if getWords(cand.firstname) & w:
                 cands2.add(cand)
-        if not cands2: raise Exception("No suitable match for %r found in candidates %s" % (name, map(getNaamPartij, cands)))
-        if len(cands2) > 1: raise Exception("Too many suitable matches for %r found in candidates %s: %s",
+        if not cands2:
+            print("No suitable match for %r found in candidates %s" % (name, map(getNaamPartij, cands)))
+            cands=name
+            return cands
+        if len(cands2) > 1:
+            print("Too many suitable matches for %r found in candidates %s: %s",
                                             name, map(getNaamPartij, cands), map(getNaamPartij, cands2))
+            cands=name
+            return cands
         return cands2.pop()
 
 def getNaamPartij(o, date=None):
