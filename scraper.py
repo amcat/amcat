@@ -8,7 +8,7 @@ from datetime import datetime, date
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
 class ArticleDescriptor(object):
-    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, mediumid=None, externalid=None, parentUrl=None, **args):
+    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, mediumid=None, externalid=None, parentUrl=None, rawtext=False, **args):
         self.body = body
         self.headline = headline
         self.date = date
@@ -25,9 +25,10 @@ class ArticleDescriptor(object):
         self.mediumid = mediumid
         self.externalid = externalid
         self.parentUrl = parentUrl
-
+        self.rawtext = rawtext
+ 
     def createArticle(self, db, batchid, mediumid, date, imagescale=.67):
-        body = stripText(self.body)
+        body = self.body if self.rawtext else stripText(self.body)
         byline = stripText(self.byline)
         headline = stripText(self.headline)
         if date is None: date = self.date
@@ -167,6 +168,7 @@ class ArticleScraper(Scraper):
             return
         if self.limit_page: pages = sorted(list(pages))[:self.limit_page]                       
         for page in pages:
+            print page
             try:
                 articles = self.getArticles(context, page)
                 if self.limit_articlesperpage: articles = list(articles)[:self.limit_articlesperpage]
