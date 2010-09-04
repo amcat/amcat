@@ -1,12 +1,13 @@
 import ont, dbtoolkit, toolkit
 import cachable
-import collections
+import collections, re
 db = dbtoolkit.amcatDB()                            
 
-STOPLIST = set("van der den Veen MA Van de".split())
+STOPLIST = set("van der den Veen MA Van de".split()) | set([""])
+
 
 def getWords(name):
-    words = name.lower().replace("-"," ").split(" ")
+    words = name.lower().replace("-"," ").replace(","," ").split(" ")
     return set(words) - STOPLIST
 
 
@@ -27,9 +28,7 @@ class Politici(object):
     def getPoliticus(self, name):
         cands = self.getCandidates(name)
         if not cands:
-            print ("Cannot find %r" % name)
-            cands=name
-            return cands
+            raise Exception("Cannot find %r" % name)
         if len(cands) == 1: return cands.pop()
         cands2 = set()
         w = getWords(name)
@@ -37,14 +36,10 @@ class Politici(object):
             if getWords(cand.firstname) & w:
                 cands2.add(cand)
         if not cands2:
-            print("No suitable match for %r found in candidates %s" % (name, map(getNaamPartij, cands)))
-            cands=name
-            return cands
+            raise Exception("No suitable match for %r found in candidates %s" % (name, map(getNaamPartij, cands)))
         if len(cands2) > 1:
-            print("Too many suitable matches for %r found in candidates %s: %s",
-                                            name, map(getNaamPartij, cands), map(getNaamPartij, cands2))
-            cands=name
-            return cands
+            raise Exception("Too many suitable matches for %r found in candidates %s: %s",
+                            name, map(getNaamPartij, cands), map(getNaamPartij, cands2))
         return cands2.pop()
 
 def getNaamPartij(o, date=None):
@@ -54,11 +49,18 @@ def getNaamPartij(o, date=None):
             result += " (%s)" % f.office.label
     return result
 
-        
+def getNaamPartijTuple(o, date=None):
+    result = (o.name, o.firstname, o.prefix)
+    for f in o.currentFunctions(date):
+        if f.functionid == 0:
+            return result + (f.office.label,)
+    return result + (None,)
+
         
 
-def getPolitici(db, fromdate=None, todate=None):
-    sql = "select p.objectid from o_politicians p inner join o_politicians_functions f on f.objectid = p.objectid"# where office_objectid = 1608"
+def getPolitici(db, fromdate=None, todate=None, onlytk=True):
+    sql = "select p.objectid from o_politicians p inner join o_politicians_functions f on f.objectid = p.objectid"
+    if onlytk: sql += " where office_objectid = 1608"
     for (name, op, date) in (('todate', ">=", fromdate), ('fromdate', "<=", todate)):
         if date:
             if type(date) not in (str,unicode): date = date.strftime("%Y-%m-%d")
