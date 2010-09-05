@@ -5,8 +5,19 @@ db = dbtoolkit.amcatDB()
 
 STOPLIST = set("van der den Veen MA Van de".split()) | set([""])
 
+# niet in db:
+# fassed, bikker, verhoeven, kooiman, lucas-smeerdijk, sharpe, elissen
 
-adhoc = {u'ko\u015fer kaya' : 1076}
+adhoc = {u'ko\u015fer kaya' : 1076,
+         u'van der burg' : 903,
+         u'van velzen' : 2619,
+         u'aasted-madsen-van stiphout' : 995,
+         u'aasted madsen-van stiphout' : 995,
+         u'van vroonhoven-kok' : 913,
+         u'plasterk' : 2769,
+         u'dijksma' : 1249,
+         u'eski' : 1375
+         }
 
 def getWords(name):
     words = toolkit.stripAccents(name).lower().replace("-"," ").replace(","," ").split(" ")
@@ -28,6 +39,7 @@ class Politici(object):
         return cands
 
     def getPoliticus(self, name):
+        name = name.replace("c.s.","").replace("\n"," ").strip()
         if name in adhoc: return ont.Object(db, adhoc[name])
         cands = self.getCandidates(name)
         if not cands:
