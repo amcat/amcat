@@ -6,8 +6,10 @@ db = dbtoolkit.amcatDB()
 STOPLIST = set("van der den Veen MA Van de".split()) | set([""])
 
 
+adhoc = {u'ko\u015fer kaya' : 1076}
+
 def getWords(name):
-    words = name.lower().replace("-"," ").replace(","," ").split(" ")
+    words = toolkit.stripAccents(name).lower().replace("-"," ").replace(","," ").split(" ")
     return set(words) - STOPLIST
 
 
@@ -26,6 +28,7 @@ class Politici(object):
         return cands
 
     def getPoliticus(self, name):
+        if name in adhoc: return ont.Object(db, adhoc[name])
         cands = self.getCandidates(name)
         if not cands:
             raise Exception("Cannot find %r" % name)
