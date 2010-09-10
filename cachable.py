@@ -152,6 +152,23 @@ class Cachable(toolkit.IDLabel):
         cacheMultiple([self], propnames)
     def sqlFrom(self, table=None):
         return sqlFrom([self], table)
+    
+    def update(self, prop, value):
+        """Update a property"""
+        self.removeCached(prop)
+        
+        # Check if this property has a custom update function
+        updatef = '%s_update' % prop
+        if hasattr(self, updatef):
+            getattr(self, updatef)(value)
+        else:
+            SQL = "UPDATE %s set %s='%s' WHERE %s" % (self.__table__,
+                                                      prop,
+                                                      toolkit.escape(value),
+                                                      sqlWhere(self.__idcolumn__, self.id))
+            self.db.doQuery(SQL)
+            
+            self.cacheValues(**{prop:value})
 
     
     def exists(self):
