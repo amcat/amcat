@@ -162,7 +162,7 @@ class CodedArticle(CodedUnit):
         self.init(job.articleSchema)
         self.addDBFKProperty("sentences", job.unitSchema.table, "arrowid",
                              function=lambda id : CodedSentence(self.db, id, job.unitSchema, ca=self))
-        self.addDBProperty("confidence", table=job.articleSchema.table, func = lambda c : float(c) / 1000)
+        self.addDBProperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
             
     def getArticle(self):
         return self.article
@@ -527,6 +527,4 @@ if __name__ == '__main__':
     db = dbtoolkit.amcatDB(profile=True)
 
     cj = CodingJob(db, 423)
-    cj2 = cloneCodingJob(cj, "test", [2])
-    print `cj2`, cj2
-    db.commit()
+    print cj, cj.project
