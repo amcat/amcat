@@ -172,9 +172,11 @@ def getstr(val):
     if type(val) == unicode: return val.encode('utf-8')
     return str(val)
 
-def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False):
+def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False, tabseparated=False):
     table = getTable(table, colnames)
-    if csvwriter is None: csvwriter = csv.writer(outfile)
+    if csvwriter is None:
+        dialect = csv.excel_tab if tabseparated else csv.excel
+        csvwriter = csv.writer(outfile, dialect=dialect)
     cols = list(table.getColumns())
     if writecolnames == True: writecolnames = str 
     if writerownames == True: writerownames = str            
@@ -189,7 +191,7 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
 
 if __name__ == '__main__':
     t = table3.DictTable(default=0)
-    t.addValue(("bla","x"), "piet", 3)
-    t.addValue(("bla","y"), "jan", 4)
+    t.addValue(("bla","x"), "pi,et", 3)
+    t.addValue(("bla","y"), "ja\tn", 4)
     t.addValue(("bla","y"), "piet", 5)
-    table2csv(t, writerownames=lambda s : "/".join(map(str, s)))
+    table2csv(t, writerownames=lambda s : "/".join(map(str, s)), tabseparated=True)
