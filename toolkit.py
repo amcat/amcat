@@ -1532,4 +1532,3 @@ if __name__ == '__main__':
     print process.next()
     
 makeList = lambda *args: args
-escape = lambda v: v.replace("'", "\\'")
