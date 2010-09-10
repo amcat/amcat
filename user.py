@@ -31,7 +31,7 @@ def addUser(db, uname, passwd, fullname, affiliation, email, permissionLevel):
     sql = "exec newcoder '%s', '%s', '%s', '%s', '%s', '%s'"
     args = (uname, passwd, fullname, email, affiliation, permissionLevel)
     
-    db.commit()    
+    db.commit()
     uid = db.doSafeQuery(sql, *args)
     db.commit()
     
@@ -48,6 +48,9 @@ class User(Cachable):
     permissionLevel = DBPropertyFactory("permissionid", table="permissions_users", func=permissions.UserPermission.get)
     projects = DBFKPropertyFactory("permissions_projects_users", "projectid", dbfunc=lambda db, id : project.Project(db, id))
 
+    def permissionLevel_update(self, value):
+        p = Permission(self.db, self.id)
+        p.update('permissionid', value)
     
     @property
     def permissionLevelName(self):
@@ -82,6 +85,16 @@ class User(Cachable):
     @property
     def isSuperAdmin(self):
         return self.permissionLevel.value >= permissions.UserPermission.SUPER_ADMIN.value
+    
+
+
+class Permission(Cachable):
+    __metaclass__ = CachingMeta
+    __table__ = 'permissions_users'
+    __idcolumn__ = 'userid'
+    __labelprop__ = 'userid'
+    
+    __dbproperties__ = ["permissionid"]
         
 def currentUser(db):
     uid = db.getValue("select dbo.anoko_user()")
