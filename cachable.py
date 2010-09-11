@@ -154,7 +154,16 @@ class Cachable(toolkit.IDLabel):
         return sqlFrom([self], table)
     
     def update(self, **kargs):
-        """Update properties"""
+        """Update one or more properties.
+        
+        Call this method like:
+          mycachable.update(name='Martin',
+                            surname='Smith')
+        
+        Custom update functions can be created by adding a property_update method
+        to the cachable. For example, if you want to create a custom update
+        function for 'surname', you create the method mycachable.surname_update.
+        """
                 
         SQL = "UPDATE %s %s WHERE %s"
         SET = ''
