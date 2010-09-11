@@ -50,7 +50,7 @@ class User(Cachable):
 
     def permissionLevel_update(self, value):
         p = Permission(self.db, self.id)
-        p.update('permissionid', value)
+        p.update(permissionid=value)
     
     @property
     def permissionLevelName(self):

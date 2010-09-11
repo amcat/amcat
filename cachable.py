@@ -166,23 +166,23 @@ class Cachable(toolkit.IDLabel):
         """
                 
         SQL = "UPDATE %s %s WHERE %s"
-        SET = ''
+        SET = 'SET '
         for prop, value in kargs.items():
-            self.removeCached(prop)
+            try: self.removeCached(prop)
+            except: pass
         
             # Check if this property has a custom update function
             updatef = '%s_update' % prop
             if hasattr(self, updatef):
                 getattr(self, updatef)(value)
             else:
-                SET += " set %s='%s' " % (prop, toolkit.quotesql(value))
+                SET += " %s=%s," % (prop, toolkit.quotesql(value))
                 
         SQL = SQL % (self.__table__,
-                     SET,
+                     SET.rstrip(','),
                      sqlWhere(self.__idcolumn__, self.id))
         
         self.db.doQuery(SQL)
-        self.cacheValues(**kargs)
 
     
     def exists(self):
