@@ -1,6 +1,6 @@
 from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory, CachingMeta, cache
 import cachable
-import toolkit
+import toolkit, idlabel
 try:
     import mx.DateTime as my_datetime
 except:
@@ -270,12 +270,12 @@ class DictHierarchy(Hierarchy):
         return self.objectdict.values()
         
 
-class BoundObject(toolkit.IDLabel):
+class BoundObject(idlabel.IDLabel):
     """
     Represents an object 'bound' to a hierachy, ie with a unique parent and sequence of children
     """
     def __init__(self, hierarchy, objekt):
-        toolkit.IDLabel.__init__(self, objekt.id, label=None)
+        idlabel.IDLabel.__init__(self, objekt.id, label=None)
         self.hierarchy = hierarchy
         self.objekt = objekt
     def getParent(self, date=None):

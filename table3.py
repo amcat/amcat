@@ -10,7 +10,7 @@ Interface Table:
 see tableoutput.py for useful methods for rendering tables in different ways
 """
 
-import toolkit, types
+import toolkit, types, idlabel
 from toolkit import isnull
 from oset import OrderedSet
 def trivialCellFunc(row, col): return "%s/%s" % (row, col)
@@ -123,7 +123,7 @@ class ListTable(Table):
     def getColumns(self):
         if not (self.colnames or self.rows): return []
         colnames = self.colnames or range(len(toolkit.head(self.rows)))
-        return [toolkit.IDLabel(i, colname) for (i, colname) in enumerate(colnames)]
+        return [idlabel.IDLabel(i, colname) for (i, colname) in enumerate(colnames)]
     def addRow(self, *row):
         self.rows.append(row)
     def getValue(self, row, col):
@@ -168,7 +168,7 @@ class MergedTable(Table):
     def getColumns(self):
         result = []
         for table in self.tables:
-            result += [toolkit.IDLabel((table, c), c)
+            result += [idlabel.IDLabel((table, c), c)
                        for c in table.getColumns()
                        if self.columnfilter(table, c)]
         return result
@@ -194,7 +194,7 @@ class ColumnViewTable(Table):
         self.uselabel = uselabel
     def getColumns(self):
         for col in self.table.getColumns():
-            if col in self.columns or (self.uselabel and isinstance(col, toolkit.IDLabel) and col.label in self.columns):
+            if col in self.columns or (self.uselabel and isinstance(col, idlabel.IDLabel) and col.label in self.columns):
                 yield col
     def getRows(self):
         return self.table.getRows()

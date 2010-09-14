@@ -359,13 +359,15 @@ def intlist(seq=sys.stdin):
     for el in seq:
         if el.strip(): yield int(el)
 
-def naturalSort(sequence): 
-    """ Sort the given sequence in the way that humans expect. """ 
-    def naturalSortKey(key):
-        """Return a natural sort key for a string"""
-        if type(key) != unicode: key = str(key)
-        convert = lambda text: int(text) if text.isdigit() else text 
-        return map(convert, re.split('([0-9]+)', key))
+def naturalSortKey(key):
+    """Return a  sort key for an element that sorts numbers sensibly"""
+    if type(key) != unicode: key = str(key)
+    convert = lambda text: int(text) if text.isdigit() else text 
+    return map(convert, re.split('([0-9]+)', key))
+
+@deprecated
+def naturalSort(sequence):
+    """B{Deprecated: use sorted(key=naturalSortKey)}"""
     return sorted(sequence, key=naturalSortKey) 
 
 

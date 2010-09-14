@@ -504,6 +504,23 @@ class amcatDB(object):
         else:
             return self.getValue("SELECT name FROM sysobjects WHERE xtype='U' and name=%s" % quotesql(name)) 
         raise Exception(self.dbType)
+
+    def intSelectionSQL(self, colname, ints, minIntsForTemp=5000):
+        if type(ints) not in (set, tuple, list): ints = tuple(ints)
+        if len(ints) < minIntsForTemp:
+            conds = []
+            remainder = []
+            for i,j in toolkit.ints2ranges(ints):
+                if j - i > 2: conds.append("(%s between %i and %i)" % (colname, i,j))
+                elif j - i == 2: remainder += [str(i), str(i+1), str(j)]
+                elif i==j: remainder.append(str(i))
+                else: remainder += [str(i),str(j)]
+            if remainder: conds.append("(%s in (%s))" % (colname, ",".join(remainder)))
+            return "(%s)" % " OR ".join(conds)
+        table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
+        self.doQuery("CREATE TABLE %s (i int)" % table)
+        self.insertmany(table, "i", [(i,) for i in ints])
+        return "(%s in (select i from %s))" % (colname, table)
     
 anokoDB = amcatDB
 
@@ -694,29 +711,11 @@ def persistent_loads(bytes, db, module=cPickle):
 
 
 
-# def intSelection(db, colname, ints, minIntsForTemp=5000):
-#     if type(ints) not in (set, tuple, list): ints = tuple(ints)
-#     if len(ints) < minIntsForTemp: return intselectionSQL(colname, ints)
-#     table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
-#     ticker.warn("Creating temp table")
-#     db.doQuery("CREATE TABLE %s (i int)" % table)
-#     ticker.warn("Populating temp table")
-#     db.insertmany(table, "i", [(i,) for i in ints])
-#     ticker.warn("Done")
-#     return "(%s in (select i from %s))" % (colname, table)
+
 
 # intselectionTempTable = intSelection
        
-# def intselectionSQL(colname, ints, allowtemp=False):
-#     conds = []
-#     remainder = []
-#     for i,j in ints2ranges(ints):
-#         if j - i > 2: conds.append("(%s between %i and %i)" % (colname, i,j))
-#         elif j - i == 2: remainder += [str(i), str(i+1), str(j)]
-#         elif i==j: remainder.append(str(i))
-#         else: remainder += [str(i),str(j)]
-#     if remainder: conds.append("(%s in (%s))" % (colname, ",".join(remainder)))
-#     return "(%s)" % " OR ".join(conds)
+
     
 if __name__ == '__main__':
     db = anokoDB()

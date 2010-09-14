@@ -299,9 +299,9 @@ def getAnnotationschemas(db):
         yield AnnotationSchema(db, a[0])
 
 
-class AnnotationSchemaField(toolkit.IDLabel):
+class AnnotationSchemaField(IDLabel):
     def __init__(self, schema, fieldnr, fieldname, label, fieldtype, params, default):
-        toolkit.IDLabel.__init__(self, (schema.id, fieldnr), label)
+        IDLabel.__init__(self, (schema.id, fieldnr), label)
         self.schema = schema
         self.fieldnr = fieldnr
         self.fieldname = fieldname
@@ -328,7 +328,7 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
     def deserialize(self, value):
         if value is None: return None
         label = self.getLabels().get(value, None)
-        result = toolkit.IDLabel(value, label)
+        result = IDLabel(value, label)
         return result
         # raise Exception([value, self.getLabels().get(value, None), self.getLabels()])
         #return LookupValue(value, self.getLabels().get(value, None))
@@ -381,7 +381,7 @@ class LookupAnnotationSchemaField(AnnotationSchemaField):
         self.getLabels()
         
         
-class LookupValue(toolkit.IDLabel):
+class LookupValue(IDLabel):
     pass
 
 class FromAnnotationSchemaField(AnnotationSchemaField):

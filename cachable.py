@@ -26,7 +26,7 @@ the Property at the moment it is needed.
     # - allow caching by setting e.g. article.headline = "bla"
 """
 
-import toolkit, collections, inspect
+import toolkit, collections, inspect, idlabel
 #from functools import partial
 import weakref
         
@@ -53,7 +53,7 @@ class CachingMeta(type):
         _CACHE[cls, id] = weakref.ref(obj)
         return obj
 
-class Cachable(toolkit.IDLabel):
+class Cachable(idlabel.IDLabel):
     """
     Base class for all 'cachable' objects. Allows the registration of
     'properties' that will be accessible just like normal properties, but
@@ -111,7 +111,7 @@ class Cachable(toolkit.IDLabel):
             if prop:
                 return prop.get()
         try:
-            return toolkit.IDLabel.__getattribute__(self, attr) #superclass
+            return idlabel.IDLabel.__getattribute__(self, attr) #superclass
         #return super(Cachable, self).__getattribute__(attr)
         except AttributeError, e:
             if attr <> "label": raise
@@ -415,7 +415,7 @@ def sqlFrom(cachables, table = None, reffield=None):
     if type(reffield) in (str, unicode):
         if type(c.id) <> int:
             raise TypeError("Singular reffield with non-int id! Reffield: %r, cachable: %r, id: %r" % (reffield, c, c.id))
-        where  = toolkit.intselectionSQL(reffield, (x.id for x in cachables))
+        where  = c.db.intSelectionSQL(reffield, (x.id for x in cachables))
     else:
         where = "((%s))" % ") or (".join(sqlWhere(reffield, x.id) for x in cachables)
 

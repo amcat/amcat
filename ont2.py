@@ -4,7 +4,7 @@ try:
     import mx.DateTime as my_datetime
 except:
     from datetime import datetime as my_datetime
-from toolkit import Identity, IDLabel
+from idlabel import Identity, IDLabel
 
 class Base(IDLabel):
     def __init__(self, ont, id, label=None):

@@ -1,4 +1,4 @@
-import table3, toolkit, sys, csv
+import table3, toolkit, sys, csv, idlabel
 
 def getTable(table, colnames=None):
     if isinstance(table, (list, tuple)):
@@ -56,7 +56,7 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
     if sortcols:
         headers = []
         for col in cols:
-            if isinstance(col, toolkit.IDLabel) and col in sortcols:
+            if isinstance(col, idlabel.IDLabel) and col in sortcols:
                 headers.append(u"%s %s" % (col.label, SORTINDICATORS[useunicode, sortcols[col]]))
             else:
                 headers.append(col.label)

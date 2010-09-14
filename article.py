@@ -4,7 +4,7 @@ def doCreateSentence(db, aid, **cache):
     import sentence
     return sentence.Sentence(db, aid, **cache)
 
-import toolkit, dbtoolkit, re, project, sources, types, quote
+import toolkit, dbtoolkit, re, project, sources, types, quote, batch
 from itertools import izip, count
 from functools import partial
 _debug = toolkit.Debug('article',1)
@@ -26,7 +26,7 @@ class Article(Cachable):
     byline = DBPropertyFactory(decode=True)
     metastring = DBPropertyFactory(decode=True)
     section = DBPropertyFactory(decode=True)
-    batch = DBPropertyFactory("batchid", dbfunc=lambda db, id: project.Batch(db, id))
+    batch = DBPropertyFactory("batchid", factory=lambda : batch.Batch)
     source = DBPropertyFactory("mediumid", dbfunc=sources.Source)
     sentences = DBFKPropertyFactory("sentences", "sentenceid", dbfunc=doCreateSentence)
     
