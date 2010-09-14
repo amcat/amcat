@@ -51,7 +51,9 @@ except: pass
 ##                               Decorators                              ##
 ###########################################################################
 
-
+def _deprecationwarning(msg):
+    warnings.warn(DeprecationWarning(msg))
+        
 def deprecated(func, msg = 'Call to deprecated function %(funcname)s.'):
     """
     Decorate a function to mark deprecated
@@ -64,13 +66,12 @@ def deprecated(func, msg = 'Call to deprecated function %(funcname)s.'):
     """
     def new_func(*args, **kwargs):
         """Print a warning and then call the original function"""
-        warnings.warn(msg % dict(funcname=func.__name__),
-                      category=DeprecationWarning)
+        warnings.warn(DeprecationWarning(msg % dict(funcname=func.__name__)))
         return func(*args, **kwargs)
     new_func.__name__ = func.__name__
     new_func.__doc__ = ("B{Deprecated: %s}" %
                         (msg % dict(funcname=func.__name__))
-                        + func.__doc__.replace("@","\@").replace("L{","l{"))
+                        + (func.__doc__ or "").replace("@","\@").replace("L{","l{"))
     new_func.__dict__.update(func.__dict__)
     return new_func
 
@@ -403,7 +404,11 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
         else:
             yield subsequence
 
-
+@deprecated
+def buffer(sequence, buffercall, buffersize=100):
+    """B{Deprecated: please use splitlist(..., yieldelements=True)}"""
+    splitlist(sequence, buffersize, buffercall, yieldelements=True)
+            
 ###########################################################################
 ##                      Mapping functions                                ##
 ###########################################################################
@@ -454,13 +459,12 @@ class Indexer(object):
 def prnt(string, *args, **kargs):
     """Print the string, optionally applying %args or %kargs
 
-    The keyword-only arguments stream and end are taken from kargs
+    Two keyword-only arguments are popped from kargs
+      - stream: (keyword-only; popped from kargs; default sys.stdout)
+        the stream to write to
+      - end: (keyword-only; popped from kargs; default newline)
+        an optional final string to write to the stream
 
-    @param string: The string to print
-    @param stream: (keyword-only; popped from kargs; default sys.stdout)
-      the stream to write to
-    @param end: (keyword-only; popped from kargs; default '\n')
-      an optional final string to write to the stream
     """
     stream = kargs.pop("stream", sys.stdout)
     end = kargs.pop("end", '\n')
@@ -555,7 +559,7 @@ def stripAccents(s, usemap = ACCENTS_MAP):
 
     @param s: the string to strip accents from. If it is not a unicode object
       it is first converted using L{unicode}C{(.., 'latin-1')}
-    @param map: an optional translation map to use
+    @param usemap: an optional translation map to use
     @return: a unicode string containing the translated input
     """
     #TODO: This is probably not very efficient! Creating a reverse map and
@@ -611,7 +615,7 @@ def clean(string, level=0, lower=False, droptags=False, escapehtml=False, keepta
     @param lower: whether to call .lower() on the string
     @param droptags: whether to remove all xml-tags
     @param escapehtml: whether to call unescapehtml
-    @apram keeptabs: whether to keep tabs (if level 1 or normazeWhitespace)
+    @param keeptabs: whether to keep tabs (if level 1 or normazeWhitespace)
     @param normalizeWhitespace: replace all adjacent whitespace with a single
       space (excepting tabs if keeptabs is True)
     @return: the cleaned string
@@ -705,7 +709,7 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
 
     Attempt a number of date formats to read str
 
-    @param str: the date string to read
+    @param string: the date string to read
     @param lax: if True, return None if no match was found instead of
       raising an error
     @param rejectPre1970: if True, reject dates before 1970 (to catch
@@ -859,7 +863,7 @@ def execute(cmd, inputbytes=None, **kargs):
     process' stdin.
 
     @param cmd: the process to run
-    @param input: (optional) input to send to the process' input pipe
+    @param inputbytes: (optional) input to send to the process' input pipe
     @param kargs: optional listener and listenout to send to executepipe
     """
     gen = executepipe(cmd, **kargs)
@@ -953,11 +957,12 @@ def htmlImageObject(bytes, format='png'):
 def getREGroups(regExp, text, flags=re.DOTALL, groups=(1,), match=True):
     """Return the selected groups from the regexp, or None(s) if no match
 
-    Convenience function for
-    m = re.match(regExp, text)
-    if m:
-      a = m.group(1)
-      ...do something...
+    Convenience function for::
+    
+      >>>m = re.match(regExp, text)
+      ...if m:
+      ...  a = m.group(1)
+      ...  #do something
 
     @param regExp: the expression to test
     """
@@ -967,8 +972,6 @@ def getREGroups(regExp, text, flags=re.DOTALL, groups=(1,), match=True):
     if len(groups) == 1:
         return None
     return (None,) * len(groups) 
-
-getGroup1 = getREGroups # old name
 
 
 def isnull(x, alt):
@@ -1011,20 +1014,20 @@ def log2(x, pwr = 2):
 
 #### old ticker connection ####
 
-import ticker as _ticker
 
 @deprecated
 def tickerate(*args, **kargs):
     """B{Deprecated: please use L{ticker.tickerate}}"""
-    _ticker.tickerate(*args, **kargs)
+    import ticker as _ticker
+    return _ticker.tickerate(*args, **kargs)
 
 class _ticker_proxy(object):
-    """proxy to replace old ticker global"""
-    @staticmethod
-    def __call__(*args, **kargs):
-        """call the ticker object from the ticker.getTicker()"""
-        #TODO: does this even make sense?
-        _ticker.ticker()(*args, **kargs)
+    """B{Deprecated: please use L{ticker.ticker()}"""
+    def __getattr__(self, name):
+        if "__" not in name:
+            warnings.warn(DeprecationWarning("Deprecated: please use ticker.ticker().%s" % (name)))
+        import ticker as _ticker
+        return getattr(_ticker.ticker(), name)
 ticker = _ticker_proxy()
 
 @deprecated
@@ -1096,6 +1099,13 @@ def returnTraceback():
     """B{Deprecated: please use traceback.format_exc()}"""
     import traceback
     return traceback.format_exc()
+
+@deprecated
+def getGroup1(*args, **kargs):
+    """B{Deprecated: please use getREGroups}"""
+    return getREGroups(*args, **kargs)
+
+
 
 if __name__ == '__main__':
     pass
