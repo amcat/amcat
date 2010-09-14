@@ -1,4 +1,4 @@
-SAY_LEMMATA =  "say", "tell", "think", "believe"
+SAY_LEMMATA =  "say", "tell", "think","believe",
 ORDER_LEMMATA = "order",
 
 

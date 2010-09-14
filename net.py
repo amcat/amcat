@@ -393,7 +393,7 @@ if __name__ == '__main__':
             data.append([r.subj, r.obj, r.qual, r.weight, network.relweight(r), r.divergence, r.ambivalence, r.var()])
         data.sort()
         for d in data:
-            print "<tr>%s</tr>" % "".join("<td>%s</td>" % toolkit.format(x) for x in d)
+            print "<tr>%s</tr>" % "".join("<td>%s</td>" % x for x in d)
         print "</table>"
         graph = network.getdot(label=LBL_3)
         graph.normalizeWeights()

@@ -1,13 +1,9 @@
 from __future__ import with_statement
 import subprocess, time, threading, re, toolkit
 from contextlib import contextmanager
-
-RESOURCES = "/home/amcat/resources"
+import parse
 
 CMD = 'java -cp %s/jars/stanford-parser-2008-10-30.jar -mx200m edu.stanford.nlp.parser.lexparser.LexicalizedParser -sentences -retainTMPSubcategories -outputFormat "wordsAndTags,typedDependencies" -outputFormatOptions "stem,basicDependencies" %s/files/englishPCFG.ser.gz -' 
-
-STANFORD_ANALYSISID=4
-ENGLISH=1
 
 STANFORD_POS = {
    '$' :'.',
@@ -74,8 +70,10 @@ class Reader(threading.Thread):
 
 
 class StanfordJavaParser(object):
-    def __init__(self, resources=RESOURCES):
+    def __init__(self, resources=None):
+        if resources is None: resources = parse.getResourcesDir()
         cmd = CMD % (resources, resources)
+        print cmd
         self.p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, close_fds=True)
         map(self.expectErr, ("Loading parser","Parsing file:"))
 
@@ -115,11 +113,13 @@ def pos2token(position, w, s):
     poscat = STANFORD_POS[pos]
     return (position, w, lemma, poscat, pos,'')
     
-class StanfordParser(object):
+class StanfordParser(parse.Parser):
+    analysisid = 4
     def __init__(self, *args, **kargs):
         self.parserArgs = args
         self.parserKargs = kargs
-        self.restart()
+        self.start()
+        parse.Parser.__init__(self)
     def parse(self, sentence):
         sentence = toolkit.clean(sentence, level=1)
         words, pos, triples = self.parser.parse(sentence)
@@ -142,45 +142,22 @@ class StanfordParser(object):
         log = self.parser.stop()
         self.parser = None
         return log
-    def restart(self):
+    def start(self):
         log = self.stop()
         self.parser = StanfordJavaParser(*self.parserArgs, **self.parserKargs)
         return log
     def __del__(self):
         self.stop()
         
-
-@contextmanager
-def stanfordParser(*args, **kargs):
-    p = None
-    try:
-        p = StanfordParser(*args, **kargs)
-        yield p
-    finally:
-        if p is not None:
-            p.stop()
-
-        
+       
 if __name__ == '__main__':
     import sys
     if len(sys.argv) < 2:
-        toolkit.warn("Usage: stanford.py SID-or-SENTENCE")
+        toolkit.warn("Usage: stanford.py SENTENCE")
         sys.exit()
-    try:
-        sid = int(sys.argv[1])
-    except:
-        sid = None
-
-    if sid:
-        import dbtoolkit, sentence
-        db = dbtoolkit.amcatDB()
-        s = sentence.Sentence(db, sid)
-        sent = s.text
-        print toolkit.clean(sent, level=1)
-    else:
-        sent = " ".join(sys.argv[1:])
-    with stanfordParser() as p:
-        print list(p.parse(sent))
+    sent = " ".join(sys.argv[1:])
+    p = StanfordParser() 
+    print "\n".join(map(str, p.parse(sent)))
 
 
     

@@ -197,7 +197,7 @@ class DBProperty(Property):
     Property representing (normally) a column in the
     row defining an object.
     """
-    def __init__(self, cachable, fieldname, func=None, table=None, objfunc=None, dbfunc=None, decode=False):
+    def __init__(self, cachable, fieldname, func=None, table=None, objfunc=None, dbfunc=None, decode=False, factory=None):
         """
         Fieldname is the name of the field to retrieve. It can be a
         tuple, in which case multiple values will be passed to the
@@ -214,6 +214,7 @@ class DBProperty(Property):
         self.dbfunc = dbfunc
         self.table = table
         self.decode = decode
+        self.factory = factory
     def process(self, *values):
         # decode UTF, remove guard if all is ok
         import dbtoolkit
@@ -227,6 +228,7 @@ class DBProperty(Property):
         if self.func: return self.func(*values)
         if self.objfunc: return self.objfunc(self.cachable, *values)
         if self.dbfunc: return self.dbfunc(self.cachable.db, *values)
+        elif self.factory: return self.factory()(self.cachable.db, *values)
         return values[0]
     def retrieve(self):
         if not self.cachable.db: raise Exception("Cachable object %r has no database connection" % self.cachable) 

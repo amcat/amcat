@@ -52,7 +52,7 @@ if __name__ == '__main__':
     db = dbtoolkit.anokoDB()
 
     if len(sys.argv) == 2:
-        filenames = toolkit.chomp(sys.stdin.readlines())
+        filenames = [x.rstrip("\n") for x in sys.stdin.readlines()]
     else:
         filenames = sys.argv[2:]
 

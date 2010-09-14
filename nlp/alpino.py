@@ -1,11 +1,8 @@
 import toolkit
-import lemmata, sentence
+import parse
 
-ALPINO = "/home/amcat/resources/Alpino"
-ALPINO_ANALYSISID = 2
-
-TOKENIZE = "%s/Tokenization/tok" % ALPINO
-PARSE = "ALPINO_HOME=%s %s/bin/Alpino end_hook=dependencies -notk -parse" % (ALPINO, ALPINO)
+TOKENIZE = "%s/Alpino/Tokenization/tok" 
+PARSE = "ALPINO_HOME=%s/Alpino %s/Alpino/bin/Alpino end_hook=dependencies -notk -parse" 
 
 POSMAP = {"pronoun" : 'O',
           "verb" : 'V',
@@ -25,6 +22,7 @@ POSMAP = {"pronoun" : 'O',
           "intensifier" : "B",
           "number" : "Q",
           "reflexive":  'O',
+          "conjunct" : 'C',
           }
 
 def data2token(lemma, word, begin, end, dummypos, dummypos2, pos):
@@ -40,7 +38,7 @@ def data2token(lemma, word, begin, end, dummypos, dummypos2, pos):
     cat = POSMAP.get(m2)
     if not cat:
         raise Exception("Unknown POS: %r (%s/%s/%s/%s)" % (m2, major, begin, word, pos))
-    return lemmata.Token(int(begin), word, lemma, cat, major, minor) 
+    return (int(begin), word, lemma, cat, major, minor) 
 
 def line2tokens(line):
     data =line.split("|")
@@ -51,63 +49,42 @@ def line2tokens(line):
     sid = data[15]
     return data2token(*token1), rel, data2token(*token2), int(sid)
 
-def parseSentenceRaw(sent, errorhook=None):
-    if not (sent and sent.strip()): return
-    out, err = toolkit.execute(PARSE, sent, listener=errorhook)
-    for line in out.split("\n"):
-        if not line.strip(): continue
-        yield line
-
-def parseSentence(sent, errorhook=None):
-    for line in parseSentenceRaw(sent, errorhook):
-        t1, rel, t2, sid = line2tokens(line)
-        yield t1, rel, t2
-
-def addText(art, text, lem=None):
-    sents = tokenizeText(text + " ")
-    if lem is None: lem = lemmata.Lemmata(art.db, ALPINO_ANALYSISID)
-    sent = None
-    for text in sents:
-        sent = sent or addSentence(art, lem, text)
-    art.db.commit()
-    return sent
-                                    
-
-def addSentence(art, lem, sent):
-    if not (sent and sent.strip()): return
-    sid = lemmata.addSentence(art, sent)
-    s = sentence.Sentence(art.db, sid)
-    parseAndStoreSentence(lem, s)
-    return s
-
-def parseAndStoreSentence(lem, sent):
-    tokens = {}
-    rels = []
-    for t1, rel, t2 in parseSentence(sent.text):
-        tokens[t1.position] = t1
-        tokens[t2.position] = t2
-        rels.append((t1.position, t2.position, rel))
-    for token in tokens.values():
-        lem.addParseWord(sent.id, token)
-    duperels = {} # ppos, cpos : rel (to detect dupes)
-    for ppos, cpos, rel in rels:
-        oldrel = duperels.get((ppos, cpos))
-        if oldrel is not None:
-            if oldrel == rel: continue
-            raise Exception("Cannot store sentence %i: duplicate relation %s->%s (%s <> %s)" % (send.id, ppos, cpos, oldrel, rel))
-        duperels[ppos, cpos] = rel
-        relid = lem.creator.getRel(rel)
-        sent.db.insert("parses_triples", dict(sentenceid=sent.id, parentbegin=ppos, childbegin=cpos, relation=relid, analysisid=ALPINO_ANALYSISID), retrieveIdent=False)
-
-def tokenizeText(text):
-    out, err = toolkit.execute(TOKENIZE, text)
-    if err:
-        raise Exception(err)
-    return [x for x in out.split("\n") if x.strip()]
-
-AID = 44569371
-
+class AlpinoParser(parse.Parser):
+    analysisid=2
+    def __init__(self, errorhook=None):
+        self.errorhook = errorhook
+        parse.Parser.__init__(self)
     
+    def parseSentenceRaw(self, sent):
+        resources = parse.getResourcesDir()
+        if not (sent and sent.strip()): return
+        out, err = toolkit.execute(PARSE % (resources, resources), sent, listener=self.errorhook)
+        print "Received\n%s\n---------\n%s" % (out, err)
+        for line in out.split("\n"):
+            if not line.strip(): continue
+            yield line
 
+    def parse(self, sent):
+        for line in self.parseSentenceRaw(sent):
+            t1, rel, t2, sid = line2tokens(line)
+            yield t1, rel, t2
+
+    def tokenizeText(text):
+        resources = parse.getResourcesDir()
+        out, err = toolkit.execute(TOKENIZE % (resources,), text)
+        if err:
+            raise Exception(err)
+        return [x for x in out.split("\n") if x.strip()]
+
+       
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) < 2:
+        toolkit.warn("Usage: alpino.py SENTENCE")
+        sys.exit()
+    sent = " ".join(sys.argv[1:])
+    p = AlpinoParser()
+    print "Using %r to parse %r" % (p, sent)
+    print "\n".join(map(str, p.parse(sent)))
 
         

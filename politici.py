@@ -8,7 +8,7 @@ STOPLIST = set("van der den Veen MA Van de".split()) | set([""])
 # niet in db:
 # fassed, bikker, verhoeven, kooiman, lucas-smeerdijk, sharpe, elissen
 
-adhoc = {u'ko\u015fer kaya' : 1076,
+adhoctk = {u'ko\u015fer kaya' : 1076,
          u'van der burg' : 903,
          u'van velzen' : 2619,
          u'aasted-madsen-van stiphout' : 995,
@@ -16,8 +16,28 @@ adhoc = {u'ko\u015fer kaya' : 1076,
          u'van vroonhoven-kok' : 913,
          u'plasterk' : 2769,
          u'dijksma' : 1249,
-         u'eski' : 1375
+         u'eski' : 1375,
+         u'van der veen' : 635,
+         u'kraneveldt-van der veen' : 1235,
+         u'bluemink' : 2588,
+           u'algra' : 2337,
          }
+
+adhocall = {
+         u'ter horst' : 1912,
+         u'cramer' : 2108,
+         u'van bijsterveldt-vliegenthart' : 2742,
+         u'de jager' : 1100,
+         u'van middelkoop' : 799,
+         u'van der laan' : 10820,
+         u'bos' : 889,
+         u'de vries' : 1144,
+         u'middelkoop' : 799,
+         }
+
+adhocall.update(adhoctk)
+
+
 
 def getWords(name):
     words = toolkit.stripAccents(name).lower().replace("-"," ").replace(","," ").split(" ")
@@ -25,13 +45,14 @@ def getWords(name):
 
 
 class Politici(object):
-    def __init__(self, objects):
+    def __init__(self, objects, adhoc=None):
         self.objects = objects
         cachable.cache(self.objects, "name", "functions")
         self.words2objects = collections.defaultdict(set)
         for o in self.objects:
             for w in getWords(o.name):
                 self.words2objects[w].add(o)
+        self.adhoc = adhoc
     def getCandidates(self, name):
         cands = set()
         for w in getWords(name):
@@ -39,8 +60,8 @@ class Politici(object):
         return cands
 
     def getPoliticus(self, name):
-        name = name.replace("c.s.","").replace("\n"," ").strip()
-        if name in adhoc: return ont.Object(db, adhoc[name])
+        name = name.replace("c.s.","").replace("\n"," ").strip().lower()
+        if self.adhoc and name in self.adhoc: return ont.Object(db, self.adhoc[name])
         cands = self.getCandidates(name)
         if not cands:
             raise Exception("Cannot find %r" % name)
@@ -81,7 +102,8 @@ def getPolitici(db, fromdate=None, todate=None, onlytk=True):
             if type(date) not in (str,unicode): date = date.strftime("%Y-%m-%d")
             sql += " and ((%s is null) or (%s %s '%s') )" % (name, name, op, date)
     objs = [ont.Object(db, oid) for (oid,) in db.doQuery(sql)]
-    return Politici(objs)
+    adhoc = adhoctk if onlytk else adhocall
+    return Politici(objs, adhoc)
 
 if __name__ == '__main__':
     import datetime, sys

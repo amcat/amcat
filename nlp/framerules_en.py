@@ -31,8 +31,8 @@ def isThereIs(i, node):
     return getChild(node, "expl", lemma="there")
 
 def allowPartialSPO(frame):
+    # Determine whether an SPO frame is allowed to be incomplete or not
     if not frame.rule: return True # came from db
-    if frame.rule.rulename == "pass": return True #not quite as easy...
     if frame.rule.identifier.hasLemma(frame.predicate, SUCFAIL_LEMMATA, "V"): return True
 
 def getIdentifier(db, debug=None):
@@ -51,17 +51,17 @@ def getIdentifier(db, debug=None):
                 ), precheck=isVNotZeg, allowPartial=True),
 
         SPORule(i, 'actief',
-                subject=FirstMatch(
-                Child("nsubj"),
-                Conditional(childOfConjoinedV, "nsubj"),
-                Serial(Parent("xcomp"), Child("nsubj"))),#52886613
-                object=FirstMatch(
-                #Serial(childOfLowestV("prep"), Child("pobj")),
-                UseXtoY(),
-                childOfLowestV("dobj"),
-                ),
-                aux = Parent("xcomp"),
                 precheck=isVNotZeg,
+                subject=FirstMatch(
+                  Child("nsubj"),
+                  Conditional(childOfConjoinedV, "nsubj"),
+                  Serial(Parent("xcomp"), Child("nsubj"))),#52886613
+                object=FirstMatch(
+                  #Serial(childOfLowestV("prep"), Child("pobj")),
+                  UseXtoY(),#52886613
+                  childOfLowestV("dobj"),
+                ),
+                aux = Parent("xcomp"),#52886613
                 allowPartial=allowPartialSPO),
 
         

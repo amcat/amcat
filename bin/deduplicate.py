@@ -1,16 +1,21 @@
-import dbtoolkit, sys
+import dbtoolkit, sys, datetime
+import batch, toolkit
+import ticker
+
+db = dbtoolkit.anokoDB()
 
 arg = sys.argv[1]
 if arg[0] == "s":
     srid = int(arg[1:])
     where = " articleid in (select articleid from storedresults_articles where storedresultid=%i)" % srid
+    projectid = db.getValue("select projectid from storedresults where storedresultid=%i" % srid)
 else:
+    srid = None
     projectid = int(sys.argv[1])
     where = " batchid in (select batchid from batches where projectid=%i)" % projectid
 
-print "Querying for duplicate articles"
+ticker.warn("Querying for duplicate articles")
 
-db = dbtoolkit.anokoDB()
 db.doQuery("create table #tempmax (n int not null, mx int not null)")
 
 N=[3,4,5]
@@ -22,11 +27,11 @@ for i in N:
     and articleid not in (select mx from #tempmax)
     group by mediumid, date, section, headline, pagenr
     having count(*) > 2""" % (i, where)
-    print SQL
+    ticker.warn(SQL)
     db.doQuery(SQL)
 
 cols = ", ".join('a%i' % i for i in N)
-SQL = """select t1.n, t1.a1, t1.a2, %s from (
+SQL = """select t1.a1, t1.a2, %s from (
   select min(articleid) as a1, max(articleid) as a2, count(*) as n from articles
   where %s
   group by mediumid, date, section, headline, pagenr
@@ -44,68 +49,67 @@ for i in N:
     having count(*) > 1
     ) %(t)s on t1.a1 = %(t)s.a1""" % locals()
 
-print "\n\n", SQL
+ticker.warn("\n\n", SQL)
 data = db.doQuery(SQL)
 
 db.doQuery("drop table #tempmax")
 db.conn.commit()
 
-print "%i duplicates found" % len(data)
+if not data:
+    ticker.warn("No duplicates found")
+    sys.exit()
 
-NN = 500
-for j in range(0, len(data), NN):
-    k = j+NN
-    if k > len(data): k = len(data)-1
-    print "Processing duplicates %i - %i" % (j, k)
-    d2 = data[j:k]
-    aids = set()
-    coded = set()
-    prep = set()
-    for n, a1, a2, a3, a4, a5 in d2:
-        aids |= set([a1, a2, a3, a4, a5])
-        
-    print "Obtaining use in annotations, indices, storedresults, parses etc."
-    SQL = """select distinct a.articleid, ca.articleid, s.articleid, s2.articleid, s3.articleid from articles a
-        left  join codingjobs_articles ca on ca.articleid = a.articleid
-        left join sentences s on s.articleid = a.articleid
-        left join sentences s2 on s2.articleid = a.articleid and s2.sentenceid in (select sentenceid from parses_words)
-        left join storedresults_articles s3 on s3.articleid = a.articleid
-        where a.articleid in (%s)""" % (",".join(str(i) for i in aids))
-    for a, ca, s, s2, s3 in db.doQuery(SQL):
-        if ca: coded.add(a)
-        elif s or s2 or s3: prep.add(a)
+ticker.warn("%i duplicates found" % len(data))
 
-    delarts = set()
-    totarts = 0
-    for n, a1, a2, a3, a4, a5 in d2:
-        n=5
-        as = [a1, a2]
-        if a3 <> a2: as.append(a3)
-        if a4 <> a2: as.append(a4)
-        if a5 <> a2: as.append(a5)
-        totarts += len(as)
-        cands = [x for x in as if x not in coded]
-        if len(cands) <> len(as):
-            pass
-        else:
-            ok = False
-            for i,a in enumerate(cands[:]):
-                if a in prep:
-                    del(cands[i])
-                    ok = True
-                    break
-            if not ok:
-                cands = cands[1:]
+batchname = "Duplicate articles %s" % (datetime.datetime.now())
+batchquery = "Duplicates from %s" % ("Stored Result %i" % srid if srid else "Project %s" % projectid)
+b = batch.createBatch(projectid, batchname, batchquery, db)
 
-        if len(as) - len(cands) <> 1:
-            print len(as), len(cands)
-        delarts |= set(cands)
-    print "deleting %i/%i articles for %i uniques..." % (len(delarts), totarts, len(d2))
-    db.doQuery("delete from articles where articleid in (%s)" % (",".join(str(i) for i in delarts)))
-    db.conn.commit()
+ticker.warn("Created '%s' for duplicates in %s" % (b.clsidlabel(), b.project.clsidlabel()))
 
-            
-        
-        
-        
-        
+aids = set(toolkit.flatten(data))
+aidselection = toolkit.intSelection(db, "articleid", aids)
+
+ticker.warn("Determining use in codingjobs")
+ticker.warn(aidselection)
+coded = set(db.getColumn("select articleid from codingjobs_articles where %s" % aidselection))
+ticker.warn("Determining parsed articles")
+parsed = set(db.getColumn("select articleid from parses_words w inner join sentences s on w.sentenceid = s.sentenceid where %s" % aidselection))
+ticker.warn("Determining use in stored results")
+inset = set(db.getColumn("select articleid from storedresults_articles where %s" % aidselection))
+
+sets = {"Already coded or assigned" : coded, "Parsed or lemmatized" :  parsed, "In a set / Stored Result" : inset}
+delete = toolkit.Counter(keys=sets.keys())
+prefs = coded, parsed, inset
+
+tomove = set()
+             
+for articles in data:
+    articles = set(articles)
+
+    def preference(article):
+        """Give high scores to articles we would like to delete"""
+        for i, aset in enumerate(prefs):
+            if article in aset:
+                return -3+i
+        return article
+    
+    articles = sorted(articles, key=preference)
+    for article in articles[1:]:
+        for name, sset in sets.items():
+            if article in sset: delete.count(name)
+        delete.count("Total")
+        tomove.add(article)
+
+
+ticker.warn("Deduplicating %i articles:" % (len(tomove)))
+delete.prnt(outfunc=ticker.warn)
+
+SQL = "update articles set batchid=%i where %s" % (b.id, toolkit.intSelection(db, "articleid", tomove))
+print SQL
+
+db.doQuery("update articles set batchid=%i where %s" % (b.id, toolkit.intSelection(db, "articleid", tomove)))
+
+ticker.warn("Committing")
+db.commit()
+ticker.warn("Done!")

@@ -2,7 +2,6 @@ from __future__ import with_statement
 
 import base64, sbd # only needed for image processing, move to other module>?
 import toolkit, config, sys
-import article, sources, user
 import re, collections, time
 #from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
 OrderedSet = set # OrderedSet gaat mis bij pickle, dan maar geen order op de listeners...?
@@ -10,7 +9,6 @@ import table3
 import threading
 import cPickle
 from cStringIO import StringIO
-import functools
 from contextlib import contextmanager
 
 
@@ -296,6 +294,7 @@ class amcatDB(object):
         #if artid not in self._articlecache:
         #    self._articlecache[artid] = article.Article(self, artid)
         #return self._articlecache[artid]
+        import article
         a = article.Article(self, artid)
         return a
                 
@@ -305,7 +304,6 @@ class amcatDB(object):
     
     def articles(self, aids=None, tick=False, **kargs):
         if not aids:
-            import sys
             aids = toolkit.intlist(sys.stdin)
         if tick:
             aids = toolkit.tickerate(aids)
@@ -337,6 +335,7 @@ class amcatDB(object):
         Returns a cached sources object. If it does not exist,
         creates and caches it before returning.
         """
+        import sources
         if not self._sources:
             self._sources = sources.Sources(self)
         return self._sources
@@ -350,6 +349,7 @@ class amcatDB(object):
         return user.Users(self)
 
     def getUser(self):
+        import user
         uid = self.getValue("select dbo.anoko_user()")
         return user.User(self, uid)
             
@@ -360,7 +360,8 @@ class amcatDB(object):
 
     def newProject(self, name, description, owner=None, verbose=0):
         name, description = map(quotesql, (name, description))
-        owner = toolkit.num(owner, lenient=1)
+        owner = int(owner)
+        #owner = toolkit.num(owner, lenient=1)
         if toolkit.isString(owner):
             self.doQuery('exec newProject %s, %s, @ownerstr=%s' % (name, description,quotesql(owner)))
         else:
@@ -452,7 +453,7 @@ class amcatDB(object):
     def setText(self, aid, text, type=2):
         bytes, remainder = None, None
         try:
-            ascii = text.encode('ascii')
+            bytes = text.encode('ascii')
             print "ASCII encoded!"
         except:
             pass
@@ -519,7 +520,7 @@ def decode(text, encodingid, lenient=True):
     if encodingid is None: encodingid = 3 # assume latin-1
     try:
         return text.decode(_encoding[encodingid])
-    except  UnicodeDecodeError, e:
+    except  UnicodeDecodeError:
        return text.decode('latin-1')
 
 class RawSQL(object):
@@ -590,12 +591,12 @@ def encodeText(text):
     try:
         txt = text.encode('ascii')
         return txt, 2
-    except UnicodeEncodeError, e: pass
+    except UnicodeEncodeError: pass
     try:
         txt = text.encode('latin-1')
         if checklatin1(txt):
             return txt, 3
-    except UnicodeEncodeError, e: pass
+    except UnicodeEncodeError: pass
     txt = text.replace('\r', '\n')
     txt = text.replace(u'\x07', '')
     txt = txt.encode('utf-7')
@@ -644,7 +645,7 @@ class ProfilingAfterQueryListener(object):
                     data = table3.SortedTable(data, (col, False))
         import tableoutput
         if htmlgenerator:
-            if htmlgenerator == True: htmlgenerator = tableoutput.HTMLGenerator()
+            if htmlgenerator is True: htmlgenerator = tableoutput.HTMLGenerator()
             htmlgenerator.generate(data, stream)
         else:
             result = tableoutput.table2unicode(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
@@ -690,7 +691,32 @@ def persistent_loads(bytes, db, module=cPickle):
     u.persistent_load = get_persistent_load(db)
     return u.load()
 
-    
+
+
+
+# def intSelection(db, colname, ints, minIntsForTemp=5000):
+#     if type(ints) not in (set, tuple, list): ints = tuple(ints)
+#     if len(ints) < minIntsForTemp: return intselectionSQL(colname, ints)
+#     table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
+#     ticker.warn("Creating temp table")
+#     db.doQuery("CREATE TABLE %s (i int)" % table)
+#     ticker.warn("Populating temp table")
+#     db.insertmany(table, "i", [(i,) for i in ints])
+#     ticker.warn("Done")
+#     return "(%s in (select i from %s))" % (colname, table)
+
+# intselectionTempTable = intSelection
+       
+# def intselectionSQL(colname, ints, allowtemp=False):
+#     conds = []
+#     remainder = []
+#     for i,j in ints2ranges(ints):
+#         if j - i > 2: conds.append("(%s between %i and %i)" % (colname, i,j))
+#         elif j - i == 2: remainder += [str(i), str(i+1), str(j)]
+#         elif i==j: remainder.append(str(i))
+#         else: remainder += [str(i),str(j)]
+#     if remainder: conds.append("(%s in (%s))" % (colname, ",".join(remainder)))
+#     return "(%s)" % " OR ".join(conds)
     
 if __name__ == '__main__':
     db = anokoDB()

@@ -54,6 +54,19 @@ def split(str):
 
 multilang = {'section':['section','rubrique'], 'headline':['\xdcberschrift','titre'],'length':['longeur']}
 
+def parseSection(section):
+    """Splits a LexisNexis section into a section and pagenr"""
+    if not section: return None
+    m = re.match(r'(.*?)(?:pg\.?\s*|blz\.?\s*)(\d+)(.*)', section, re.IGNORECASE)
+    #print `section`
+    #print ">>>>>>>>>>", m and m.groups()
+    #print "<<<<<<<<<<", m and int(m.group(2))
+    if not m:
+        m = re.match(r'(.*?)(\d+)(.*)', section, re.IGNORECASE)
+    if m:
+        return (m.group(1) + m.group(3)).strip(), int(m.group(2))
+    return None
+
 def parseArticle(articleString, db, batchid, commit):
     """
     Creates a new Article by parsing a Lexis Nexis plain text format article string
@@ -90,8 +103,9 @@ def parseArticle(articleString, db, batchid, commit):
     # interpret length
     length = None
     if 'length' in meta:
-        if toolkit.rematch(RE_LENGTH, meta['length']): 
-            length = int(toolkit._MATCH.group(1))
+        m = re.match(RE_LENGTH, meta['length'])
+        if m:
+            length = int(m.group(1))
     if not length: length = len(body.split())
 
     # extract crucial meta info

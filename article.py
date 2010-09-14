@@ -4,7 +4,7 @@ def doCreateSentence(db, aid, **cache):
     import sentence
     return sentence.Sentence(db, aid, **cache)
 
-import toolkit, dbtoolkit, re, project, sources, types
+import toolkit, dbtoolkit, re, project, sources, types, quote
 from itertools import izip, count
 from functools import partial
 _debug = toolkit.Debug('article',1)
@@ -62,7 +62,7 @@ class Article(Cachable):
         return text.split(" ")
 
     def quote(self, words_or_wordfilter, **kargs):
-        return toolkit.quote(list(self.words(headline = True)), words_or_wordfilter, **kargs)
+        return quote.quote(list(self.words(headline = True)), words_or_wordfilter, **kargs)
     
     def getSentence(self, parnr, sentnr):
         for s in self.sentences:

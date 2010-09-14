@@ -53,10 +53,13 @@ class IDLabel(Identity):
         except AttributeError, e:
             return repr(self)
     def __unicode__(self):
-        if type(self.label) == unicode:
-            return self.label
-        else:
-            return str(self.label).decode('latin-1')
+        try:
+            if type(self.label) == unicode:
+                return self.label
+            else:
+                return str(self.label).decode('latin-1')
+        except AttributeError, e:
+            return unicode(repr(self))
         
     def __repr__(self):
         return "%s(%s)" % (type(self).__name__, self.id)

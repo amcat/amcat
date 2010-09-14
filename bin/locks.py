@@ -1,3 +1,5 @@
+#! /usr/bin/python
+
 import dbtoolkit
 db = dbtoolkit.amcatDB()
 

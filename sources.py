@@ -1,6 +1,7 @@
 import toolkit
-from cachable import Cachable, CachingMeta
+from cachable import Cachable, CachingMeta, DBPropertyFactory
 import time
+import language
 
 def clean(s):
     return toolkit.clean(s,1,1)
@@ -10,7 +11,8 @@ class Source(Cachable):
     __table__ = 'media'
     __idcolumn__ = 'mediumid'
     __labelprop__ = 'name'
-    __dbproperties__ = ["name", "circulation", "language", "type", "abbrev"]
+    __dbproperties__ = ["name", "circulation", "type", "abbrev"]
+    language = DBPropertyFactory("language", dbfunc = language.Language)
 
 class Sources(object):
     def __init__(self, connection):

@@ -1,6 +1,7 @@
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
 import user, permissions, article
 from functools import partial
+import batch, codingjob, toolkit
 
 def projects(db, usr, own=1):
     if own:
@@ -24,19 +25,16 @@ def projects(db, usr, own=1):
         for row in data:
             yield Project(db, row[0])
 
-def getCodingJob(db, id):
-    return codingjob.CodingJob(db, id)
-
 class Project(Cachable):
     __table__ = 'projects'
     __idcolumn__ = 'projectid'
     __dbproperties__ = ["name", "insertDate", "description"]
     
-    batches = DBFKPropertyFactory("batches", "batchid", factory = lambda: Batch)
+    batches = DBFKPropertyFactory("batches", "batchid", factory = lambda: batch.Batch)
     visibility = DBPropertyFactory(func=permissions.ProjectVisibility.get, table="project_visibility")
     insertUser = DBPropertyFactory("insertuserid", dbfunc = lambda db, id : user.User(db, id))
     users = DBFKPropertyFactory("permissions_projects_users", "userid", dbfunc=lambda db, id : user.User(db, id))
-    codingjobs = DBFKPropertyFactory("codingjobs", "codingjobid", dbfunc=getCodingJob)
+    codingjobs = DBFKPropertyFactory("codingjobs", "codingjobid", factory = lambda : codingjob.CodingJob)
 
     @property
     def href(self):
@@ -52,16 +50,11 @@ class Project(Cachable):
         if not p: return None
         else:
             return permissions.ProjectPermission.get(p)       
-            
-class Batch(Cachable):
-    __table__ = 'batches'
-    __idcolumn__ = 'batchid'
-    __dbproperties__ = ["name", "insertDate", "query"]
-    insertUser = DBPropertyFactory("insertuserid", dbfunc = lambda db, id : user.User(db, id))
-    project = DBPropertyFactory("projectid", dbfunc=lambda db, id : Project(db, id))
-    articles = DBFKPropertyFactory("articles", "articleid", dbfunc= lambda db, id : article.Article(db, id))
-    def __init__(self, *args, **kargs):
-        Cachable.__init__(self, *args, **kargs)
+
+@toolkit.deprecated
+def Batch(*args, **kargs):
+    """B{Deprecated: use L{batch.Batch}}"""
+    return batch.Batch(args, kargs)
 
 def getArticles(*objects):
     for object in objects:
@@ -86,9 +79,7 @@ class StoredResult(Cachable):
         self.db.insertmany("storedresults_articles", ["storedresultid", "articleid"],
                            [(self.id, getAid(a)) for a in articles])
         self.removeCached("articles")
-        
-
-import codingjob # prevent import cycle
+    
 
         
 if __name__ == '__main__':
@@ -100,5 +91,6 @@ if __name__ == '__main__':
     print `p`
     print `batch`
     print `pr`
+    print len(batch.articles)
     print p == pr
     print p is pr

@@ -8,7 +8,7 @@ from datetime import datetime, date
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
 
 class ArticleDescriptor(object):
-    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, mediumid=None, externalid=None, parentUrl=None, rawtext=False, **args):
+    def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, mediumid=None, externalid=None, parentUrl=None, rawtext=False, stripAccents=True, **args):
         self.body = body
         self.headline = headline
         self.date = date
@@ -26,11 +26,12 @@ class ArticleDescriptor(object):
         self.externalid = externalid
         self.parentUrl = parentUrl
         self.rawtext = rawtext
+        self.stripAccents = stripAccents
  
     def createArticle(self, db, batchid, mediumid, date, imagescale=.67):
-        body = self.body if self.rawtext else stripText(self.body)
-        byline = stripText(self.byline)
-        headline = stripText(self.headline)
+        body = self.body if self.rawtext else self.stripText(self.body)
+        byline = self.stripText(self.byline)
+        headline = self.stripText(self.headline)
         if date is None: date = self.date
         if date is None: raise Exception("No date for article %s" % self.url)
         
@@ -57,6 +58,9 @@ class ArticleDescriptor(object):
         return "ArticleDescriptor(%r, %r, %r, ..)" % (self.body and self.body[:5]+"...", self.headline, self.date)
     __repr__ = __str__
 
+    def stripText(self, text):
+        return stripText(text, stripAccents = self.stripAccents)
+
 
 def convertImage(img, scale=.67, quality=.2):
     img2 = toolkit.convertImage(img, 'jpeg', scale=scale, quality=quality)
@@ -64,7 +68,7 @@ def convertImage(img, scale=.67, quality=.2):
     return img2
 
 class Scraper(object):
-    def __init__(self, db, batch, mediumid, name, date=None, imagescale=.67):
+    def __init__(self, db, batch, mediumid, name, date=None, imagescale=.67, tick=False):
         self.db = db
         self.batch = batch
         self.mediumid = mediumid
@@ -77,6 +81,7 @@ class Scraper(object):
         if self.mediumid: query += " and mediumid = '%i'" % self.mediumid
         data = self.db.doQuery(query)
         self.urls = dict(data)
+        self.tick = tick
 
     def urlExists(self, url):
         return url in self.urls
@@ -265,8 +270,8 @@ class ArticleScraper(Scraper):
 
 
 class TextImporter(Scraper):
-    def __init__(self, db, batch=None, mediumid=None, name="TextImporter", date=None, imagescale = .67):
-        Scraper.__init__(self, db, batch, mediumid, name, date, imagescale)
+    def __init__(self, db, batch, mediumid, name, *args, **kargs):
+        Scraper.__init__(self, db, batch, mediumid, name, *args, **kargs)
 
     #######################################################
     ## Main scraping logic and aux methods               ##
@@ -277,6 +282,7 @@ class TextImporter(Scraper):
         if not files:
             self.logException('No files found for scraper %s / %s, date %s' % (self.__class__, self.name, context))
             return
+        if self.tick: files = toolkit.tickerate(files)
         for file in files:
             try:
                 if type(file) in (str, unicode): file = open(file)
@@ -326,7 +332,7 @@ stripRegExpTuple = (
     (re.compile(ur'\n\n+'), u'\n\n'),
 )
                 
-def stripText(text, removeSpecial=False):
+def stripText(text, removeSpecial=False, stripAccents=True):
     if not text: return text
 
     for regExp, replacement in stripRegExpTuple:
@@ -337,7 +343,8 @@ def stripText(text, removeSpecial=False):
         text = re.sub(ur'[^\w \-,\.\!\?\:/]+', '', text)
 
     text = toolkit.unescapeHtml(text)
-    text = toolkit.stripAccents(text)
+    if stripAccents:
+        text = toolkit.stripAccents(text)
     
     return text.strip()
 
