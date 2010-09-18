@@ -27,6 +27,7 @@ level AmCAT objects such as projects, users, and analyses.
 from cachable import Cachable, DBFKPropertyFactory, CachingMeta, cacheMultiple
 import project
 import user
+import authorisation
 import analysis
 from annotationschema import AnnotationSchema, AnnotationSchemaFieldtype
 
@@ -45,6 +46,9 @@ class System(Cachable):
     annotationschemas = DBFKPropertyFactory("annotationschemas", "annotationschemaid", dbfunc=AnnotationSchema)
     fieldtypes = DBFKPropertyFactory("annotationschemas_fieldtypes", "fieldtypeid", dbfunc=AnnotationSchemaFieldtype)
 
+    roles = DBFKPropertyFactory("roles", "roleid", factory = lambda : authorisation.Role)
+    privileges = DBFKPropertyFactory("privileges", "privilegeid", factory = lambda : authorisation.Privilege)
+    
     def __init__(self, db, id=None):
         Cachable.__init__(self, db, ())
         

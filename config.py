@@ -24,9 +24,10 @@ class Configuration:
         
 def default(**kargs):
     homedir = os.getenv('HOME')
-
+    if 'use_app' in kargs:
+        return amcatConfig(**kargs)
     if not homedir:
-        if 'SERVER_SOFTWARE' in os.environ or 'username' in kargs or 'use_app' in kargs:
+        if 'SERVER_SOFTWARE' in os.environ or 'username' in kargs:
             return amcatConfig(**kargs)
         raise Exception('Could not determine home directory! Please specify the HOME environemnt variable')
     passwdfile = os.path.join(homedir, __PASSWD_FILE)

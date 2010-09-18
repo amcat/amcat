@@ -346,10 +346,14 @@ class DBFKProperty(Property):
         elif factory:
             if uplink is None: uplink = type(cachable).__name__.lower()
             factory = factory()
+            cache = {}
+            if getattr(factory, uplink, None):
+                cache = dict(uplink=self.cachable)
+
             if type(targetfields) in (str, unicode):
-                self.function = lambda id : factory(self.cachable.db, id, **{uplink: self.cachable})
+                self.function = lambda id : factory(self.cachable.db, id, **cache)
             else:
-                self.function = lambda *ids : factory(self.cachable.db, ids, **{uplink: self.cachable})
+                self.function = lambda *ids : factory(self.cachable.db, ids, **cache)
         else:
             self.function = _trivial
         self.reffield = reffield or cachable.__idcolumn__

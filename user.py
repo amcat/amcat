@@ -1,5 +1,5 @@
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
-import toolkit, permissions, project
+import toolkit, permissions, project, authorisation
 
 _users = None
 def users(db):
@@ -48,6 +48,7 @@ class User(Cachable):
     __dbproperties__ = ["username", "fullname", "affiliation", "active", "email", "language"]
     permissionLevel = DBPropertyFactory("permissionid", table="permissions_users", func=permissions.UserPermission.get)
     projects = DBFKPropertyFactory("permissions_projects_users", "projectid", dbfunc=lambda db, id : project.Project(db, id))
+    roles = DBFKPropertyFactory("users_roles", "roleid", factory= lambda:authorisation.Role)
 
     def permissionLevel_update(self, value):
         p = Permission(self.db, self.id)
