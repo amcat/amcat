@@ -411,7 +411,7 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
 @deprecated
 def buffer(sequence, buffercall, buffersize=100):
     """B{Deprecated: please use splitlist(..., yieldelements=True)}"""
-    splitlist(sequence, buffersize, buffercall, yieldelements=True)
+    return splitlist(sequence, buffersize, buffercall, yieldelements=True)
             
 ###########################################################################
 ##                      Mapping functions                                ##
