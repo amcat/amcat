@@ -1,3 +1,23 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+
 """
 Cachable contains a number of classes that function as the
 'database' layer of AmCAT. A Cachable class is a class that
@@ -19,14 +39,13 @@ To avoid the cpu cost of creating many Properties on object creation,
 PropertyFactories can be used as class attributes that will create
 the Property at the moment it is needed.
 
-(C) 2009-2010 Wouter van Atteveldt
 
-    #TODO: - maybe use __dict__ instead of __properties__, and catch the
+#TODO: - maybe use __dict__ instead of __properties__, and catch the
     # settattribute and getattribute to display the correct behaviour?
     # - allow caching by setting e.g. article.headline = "bla"
 """
 
-import toolkit, collections, inspect, idlabel
+import toolkit, collections, inspect, idlabel, dbtoolkit
 #from functools import partial
 import weakref
         
@@ -38,9 +57,13 @@ class CachingMeta(type):
     will be cached by Class and ID.
     """
     def __call__(cls, db, *args, **kargs):
-        if not args: #Call default creator
-            return type.__call__(cls, db, *args, **kargs)
-        id = args[0]
+        #print "Call %s(%s, *%s, **%s)" % (cls, db, args, kargs)
+        if (cls.__idcolumn__ is None):
+            id = None
+        else:
+            if not args: #Call default creator
+                return type.__call__(cls, db, *args, **kargs)
+            id = args[0]
         if (cls, id) in _CACHE:
             # return cached instance, call weakref to see
             # whether it still exists
@@ -162,7 +185,10 @@ class Cachable(idlabel.IDLabel):
         SQL = "delete from %s where %s" % (self.__table__, sqlWhere(self.__idcolumn__, self.id))
         self.db.doQuery(SQL)
         if commit: self.db.commit()
-        
+
+    def getType(self, propertyname):
+        """Returns the type of the given property"""
+        return self._getProperty(propertyname).getType()
 
 
 ##################################
@@ -191,7 +217,10 @@ class Property(object):
     def uncache(self):
         self.value = None
         self.cached = False
-
+    def getType(self):
+        """Returns the type of the this property"""
+        abstract
+    
 class DBProperty(Property):
     """
     Property representing (normally) a column in the
@@ -406,7 +435,7 @@ def quotefields(s):
 def sqlWhere(fields, ids):
     if type(fields) in (str, unicode):
         fields, ids = [fields], [ids]
-    return "(%s)" % " and ".join("(%s = %s)" % (field, toolkit.quotesql(id))
+    return "(%s)" % " and ".join("(%s = %s)" % (field, dbtoolkit.quotesql(id))
                                  for (field, id) in zip(fields, ids))
         
 def sqlFrom(cachables, table = None, reffield=None):
