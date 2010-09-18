@@ -28,6 +28,7 @@ from cachable import Cachable, DBFKPropertyFactory, CachingMeta, cacheMultiple
 import project
 import user
 import analysis
+from annotationschema import AnnotationSchema, AnnotationSchemaFieldtype
 
 class System(Cachable):
     """Cachable without id that provides access to top level AmCAT objects"""
@@ -41,8 +42,19 @@ class System(Cachable):
     analyses = DBFKPropertyFactory("parses_analyses", "analysisid",
                                    dbfunc=analysis.Analysis)
 
+    annotationschemas = DBFKPropertyFactory("annotationschemas", "annotationschemaid", dbfunc=AnnotationSchema)
+    fieldtypes = DBFKPropertyFactory("annotationschemas_fieldtypes", "fieldtypeid", dbfunc=AnnotationSchemaFieldtype)
+
     def __init__(self, db, id=None):
         Cachable.__init__(self, db, ())
+        
+    @property
+    def schematypes(self):
+        # Seems to be hardcoded (i.e. not stored in table)
+        res = []
+        for (i, label) in enumerate(('Net', 'Simple')):
+            res.append(Schematype(i, label))
+        return res
     
     def getUserByUsername(self, uname):
         """Search for a user given a username"""
@@ -51,6 +63,12 @@ class System(Cachable):
         for usr in self.users:
             if usr.username == uname:
                 return usr
+
+        
+class Schematype(object):
+    def __init__(self, id, label):
+        self.id = id
+        self.label = label
 
 if __name__ == '__main__':
     import dbtoolkit
