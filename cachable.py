@@ -250,7 +250,7 @@ class Property(object):
         self.cached = False
     def getType(self):
         """Returns the type of the this property"""
-        abstract
+        return str
     
 class DBProperty(Property):
     """
