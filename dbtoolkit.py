@@ -174,6 +174,12 @@ class amcatDB(object):
                 colnames = [entry[0] for entry in info]
                 return res, colnames            
             return res
+        
+    def doSafeQuery(self, sql, *args):
+        e_args = [quotesql(a) for a in args]
+        sql = sql % (toolkit.makeList(*e_args))
+        self.doQuery(sql)
+        
 
     def doCall(self, proc, params):
         """

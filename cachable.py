@@ -175,6 +175,37 @@ class Cachable(idlabel.IDLabel):
         cacheMultiple([self], propnames)
     def sqlFrom(self, table=None):
         return sqlFrom([self], table)
+    
+    def update(self, **kargs):
+        """Update one or more properties.
+        
+        Call this method like:
+          mycachable.update(name='Martin',
+                            surname='Smith')
+        
+        Custom update functions can be created by adding a property_update method
+        to the cachable. For example, if you want to create a custom update
+        function for 'surname', you create the method mycachable.surname_update.
+        """
+                
+        SQL = "UPDATE %s %s WHERE %s"
+        SET = 'SET '
+        for prop, value in kargs.items():
+            try: self.removeCached(prop)
+            except: pass
+        
+            # Check if this property has a custom update function
+            updatef = '%s_update' % prop
+            if hasattr(self, updatef):
+                getattr(self, updatef)(value)
+            else:
+                SET += " %s=%s," % (prop, toolkit.quotesql(value))
+                
+        SQL = SQL % (self.__table__,
+                     SET.rstrip(','),
+                     sqlWhere(self.__idcolumn__, self.id))
+        
+        self.db.doQuery(SQL)
 
     
     def exists(self):
