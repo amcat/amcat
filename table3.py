@@ -200,6 +200,18 @@ class ColumnViewTable(Table):
         return self.table.getRows()
     def getValue(self, row, col):
         return self.table.getValue(row, col)
+
+class PostProcessTable(Table):
+    def __init__(self, table, valuefunc=None):
+        self.table = table
+        self.valuefunc = valuefunc
+    def getColumns(self):
+        return self.table.getColumns()
+    def getRows(self):
+        return self.table.getRows()
+    def getValue(self, row, col):
+        v = self.table.getValue(row, col)
+        return self.valuefunc(self, v, row, col)
     
 def getColumnByLabel(table, label):
     stringify = unicode if type(label) == unicode else str

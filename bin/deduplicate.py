@@ -9,10 +9,16 @@ if arg[0] == "s":
     srid = int(arg[1:])
     where = " articleid in (select articleid from storedresults_articles where storedresultid=%i)" % srid
     projectid = db.getValue("select projectid from storedresults where storedresultid=%i" % srid)
+    selection = "Stored Result %i in project %i" % (srid, projectid)
+if arg[0] == "b":
+    bid = int(arg[1:])
+    where = " batchid = %i" % bid
+    projectid = db.getValue("select projectid from batches where batchid=%i" % bid)
+    selection = "Batch %i in project %i" % (bid, projectid)
 else:
-    srid = None
     projectid = int(sys.argv[1])
     where = " batchid in (select batchid from batches where projectid=%i)" % projectid
+    selection = "Project %i" % projectid
 
 ticker.warn("Querying for duplicate articles")
 
@@ -62,13 +68,13 @@ if not data:
 ticker.warn("%i duplicates found" % len(data))
 
 batchname = "Duplicate articles %s" % (datetime.datetime.now())
-batchquery = "Duplicates from %s" % ("Stored Result %i" % srid if srid else "Project %s" % projectid)
+batchquery = "Duplicates from %s" % selection
 b = batch.createBatch(projectid, batchname, batchquery, db)
 
 ticker.warn("Created '%s' for duplicates in %s" % (b.clsidlabel(), b.project.clsidlabel()))
 
 aids = set(toolkit.flatten(data))
-aidselection = toolkit.intSelection(db, "articleid", aids)
+aidselection = db.intSelectionSQL("articleid", aids)
 
 ticker.warn("Determining use in codingjobs")
 ticker.warn(aidselection)
@@ -105,10 +111,10 @@ for articles in data:
 ticker.warn("Deduplicating %i articles:" % (len(tomove)))
 delete.prnt(outfunc=ticker.warn)
 
-SQL = "update articles set batchid=%i where %s" % (b.id, toolkit.intSelection(db, "articleid", tomove))
+SQL = "update articles set batchid=%i where %s" % (b.id, db.intSelectionSQL("articleid", tomove))
 print SQL
 
-db.doQuery("update articles set batchid=%i where %s" % (b.id, toolkit.intSelection(db, "articleid", tomove)))
+db.doQuery("update articles set batchid=%i where %s" % (b.id, db.intSelectionSQL("articleid", tomove)))
 
 ticker.warn("Committing")
 db.commit()

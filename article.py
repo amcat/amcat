@@ -7,7 +7,6 @@ def doCreateSentence(db, aid, **cache):
 import toolkit, dbtoolkit, re, project, sources, types, quote, batch
 from itertools import izip, count
 from functools import partial
-_debug = toolkit.Debug('article',1)
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta, cacheMultiple
 
 

@@ -1,17 +1,52 @@
-from cachable import *
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+Unparametrized entry point for the AmCAT system
+
+The System singleton contains 'foreign key' relations to the top
+level AmCAT objects such as projects, users, and analyses.
+"""
+
+from cachable import Cachable, DBFKPropertyFactory, CachingMeta, cacheMultiple
 import project
 import user
+import analysis
 
 class System(Cachable):
+    """Cachable without id that provides access to top level AmCAT objects"""
     __metaclass__ = CachingMeta
     __table__ = None
     __idcolumn__ = None
 
-    projects = DBFKPropertyFactory("projects", "projectid", dbfunc=project.Project)
+    projects = DBFKPropertyFactory("projects", "projectid",
+                                   dbfunc=project.Project)
     users = DBFKPropertyFactory("users", "userid", dbfunc=user.User)
+    analyses = DBFKPropertyFactory("parses_analyses", "analysisid",
+                                   dbfunc=analysis.Analysis)
+
+    def __init__(self, db, id=None):
+        Cachable.__init__(self, db, ())
     
     def getUserByUsername(self, uname):
-        cacheMultiple(self.users, ["username",])
+        """Search for a user given a username"""
+        cacheMultiple(self.users, ["username", ])
         
         for usr in self.users:
             if usr.username == uname:

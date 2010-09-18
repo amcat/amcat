@@ -1,3 +1,26 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+Object-layer module containing classes modelling sentences
+"""
+
 import dbtoolkit, toolkit, collections
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
 import cachable
@@ -6,8 +29,9 @@ import article, word
 import graph
 
 class SentenceWord(graph.Node, Cachable):
+    __metaclass__ = CachingMeta
     __table__ = 'parses_words'
-    __idcolumn__ = ['sentenceid','wordbegin']
+    __idcolumn__ = ['sentenceid','analysisid','wordbegin']
     __labelprop__ = 'word'
     word = DBPropertyFactory("wordid", dbfunc=word.Word)
     def __init__(self, *args, **kargs):
@@ -16,6 +40,9 @@ class SentenceWord(graph.Node, Cachable):
     @property
     def sentence(self):
         return Sentence(self.db, self.id[0])
+    @property
+    def analysedSentence(self):
+        return AnalysedSentence(self.db, self.id[:2])
     def getGraph(self):
         return self.sentence
 
@@ -24,17 +51,37 @@ class SentenceWord(graph.Node, Cachable):
     
     @property
     def position(self):
-        return self.id[1]
+        return self.id[2]
     def getNeighbour(self, offset=1):
         return self.sentence.getWord(self.position + offset)
+
+def getAnalysedSentence(sentence, analysisid):
+    return AnalysedSentence(sentence.db, sentence.id, analysisid)
     
-def getSentenceWord(sentence, position):
-    return SentenceWord(sentence.db, (sentence.id, position))
-    
-def getTriple(sent, parent, rel, child, analysisid):
+class Sentence(Cachable):
+    __metaclass__ = CachingMeta
+    __table__ = 'sentences'
+    __idcolumn__ = 'sentenceid'
+    __labelprop__ = 'text'
+    __dbproperties__ = ["parnr", "sentnr", "encoding"]
+    __encodingprop__ = 'encoding'
+
+    text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
+    article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
+    analysedSentences = DBFKPropertyFactory("parses_words", "analysisid", objfunc=getAnalysedSentence, distinct=True)
+        
+    def cacheWords(self, *args, **kargs):
+        cacheWords([self], *args, **kargs)
+        
+
+def getSentenceWord(analysedSentence, position):
+    return SentenceWord(analysedSentence.db, (analysedSentence.sentenceid, analysedSentence.analysisid, position))
+
+
+def getTriple(sent, parent, rel, child):
     parent, child = map(sent.getWord, (parent, child))
     rel = Relation(sent.db, rel)
-    return parent, rel, child, analysisid
+    return parent, rel, child
     #print sent, parent, child, rel
 
 NEED_COPULA_FLIP_ANALYSISIDS = 4,
@@ -58,37 +105,30 @@ def flipCopula(triples):
             elif child == cop: child = noun
         yield parent, rel, child
             
-            
-    
-
 def endTriples(triples):
     """Take the analysis with the highest analysisid (arbitrary)
     If necessary, flip the copula to 'repair' stanford parse"""
-    triplesPerAnalysis = {}
-    for parent, rel, child, analysisid in triples:
-        triplesPerAnalysis[analysisid] =  triplesPerAnalysis.get(analysisid, set()) | set([(parent, rel, child)])
-    if not triplesPerAnalysis: return None
-    best = max(triplesPerAnalysis.keys())
-    triples = triplesPerAnalysis[best]
-    if best in NEED_COPULA_FLIP_ANALYSISIDS:
+    triples = list(triples)
+    if triples:
+        anid = triples[0][0].analysedSentence.analysisid
+    if anid in NEED_COPULA_FLIP_ANALYSISIDS:
         triples = list(flipCopula(triples))
     return triples
 
-class Sentence(Cachable, graph.Graph):
-    __table__ = 'sentences'
-    __idcolumn__ = 'sentenceid'
-    __labelprop__ = 'text'
-    __dbproperties__ = ["parnr", "sentnr", "encoding"]
-    __encodingprop__ = 'encoding'
+class AnalysedSentence(Cachable, graph.Graph):
     __metaclass__ = CachingMeta
-
-    text = DBPropertyFactory("isnull(longsentence, sentence)", decode=True)
-    article = DBPropertyFactory("articleid", dbfunc=article.doCreateArticle)
+    __idcolumn__ = ('sentenceid', 'analysisid')
+    triples = DBFKPropertyFactory("parses_triples", ["parentbegin","relation", "childbegin"], objfunc=getTriple, endfunc=endTriples)
     words = DBFKPropertyFactory("parses_words", "wordbegin", objfunc=getSentenceWord, orderby="wordbegin")
-    triples = DBFKPropertyFactory("parses_triples", ["parentbegin","relation", "childbegin", "analysisid"], objfunc=getTriple, endfunc=endTriples)
-        
-    def cacheWords(self, *args, **kargs):
-        cacheWords([self], *args, **kargs)
+
+    #analysis = DBPropertyFactory("analysisid", factory=Sentence)
+    def __init__(self, db, id_or_sentenceid, analysisid=None):
+        if analysisid:
+            idtuple = (id_or_sentenceid, analysisid)
+        else:
+            idtuple = id_or_sentenceid
+        self.sentenceid, self.analysisid = idtuple
+        Cachable.__init__(self, db, idtuple)
     def getWord(self, position):
         for word in self.words:
             if word.position == position: return word
@@ -98,7 +138,7 @@ def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=Fa
     perword = dict(word = dict(string = []))
     if lemmata: perword["lemma"] = dict(lemma=["string"], pos=[])
     if sentiment: perword["lemma"] = dict(lemma=["string"], pos=[], sentiment=[], intensifier=[])
-    what = dict(words={'word' : perword})
+    what = dict(analysedSentences = dict(words={'word' : perword}))
     if triples: what["triples"] = []
     cachable.cache(sentences, **what)
     if sentence:
@@ -132,7 +172,6 @@ class Relation(Cachable):
 def cacheRelationNames(db):
     for relid, name in db.doQuery("select relid, name from %s" % Relation.__table__):
         Relation(db, relid, name=name)
-    
 
 def getSentence(id):
     return Sentence(dbtoolkit.amcatDB(), id)

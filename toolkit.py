@@ -66,7 +66,9 @@ def deprecated(func, msg = 'Call to deprecated function %(funcname)s.'):
     """
     def new_func(*args, **kwargs):
         """Print a warning and then call the original function"""
-        warnings.warn(DeprecationWarning(msg % dict(funcname=func.__name__)))
+        warnings.warn(DeprecationWarning(msg % dict(funcname=func.__name__)),
+                      stacklevel=2)
+        
         return func(*args, **kwargs)
     new_func.__name__ = func.__name__
     new_func.__doc__ = ("B{Deprecated: %s}" %
@@ -317,7 +319,7 @@ def count(seq):
 def head(seq, filterfunc=None):
     """Return the first element in seq (for which filterfunc(.) is True)"""
     for val in seq:
-        if filter is None or filterfunc(val):
+        if (filterfunc is None) or filterfunc(val):
             return val
 
 def choose(seq, scorer, returnscore=False, verbose=False):
@@ -435,7 +437,7 @@ def sortByValue(dictionary, reverse=False):
         items = dictionary.iteritems()
     else:
         items = dictionary
-    l = sorted(items, key= lambda dummy, v : v)
+    l = sorted(items, key= lambda kv : kv[1])
     if reverse: l = list(reversed(l))
     return l
 
@@ -481,8 +483,11 @@ def prnt(string, *args, **kargs):
             
 class Counter(collections.defaultdict):
     """Subclass of defaultdict(int) that simplifies counting stuff"""
-    def __init__(self):
+    def __init__(self, keys=None):
         collections.defaultdict.__init__(self, int)
+        if keys:
+            for k in keys:
+                self[k] = 0
     def count(self, obj, count=1):
         """Count the given object"""
         self[obj] += count
@@ -496,7 +501,7 @@ class Counter(collections.defaultdict):
                 self.count(o)
     def items(self, reverse=True):
         """Return the items from most to least frequent"""
-        return sortByValue(super(Counter, self).iteritems(self), reverse=reverse)
+        return sortByValue(super(Counter, self).iteritems(), reverse=reverse)
     def prnt(self, threshold=None, outfunc=prnt, reverse=True):
         """Print the items with optional threshold"""
         for k, v in self.items(reverse=reverse):
@@ -826,7 +831,7 @@ class _Reader(threading.Thread):
 
 
 
-def executepipe(cmd, listener=None, listenOut=False):
+def executepipe(cmd, listener=None, listenOut=False, outonly=False):
     """Execute a command, yielding an input pipe for writing,
     then yielding out and err, using threads to avoid deadlock
     
@@ -844,6 +849,8 @@ def executepipe(cmd, listener=None, listenOut=False):
       if listenOut is True) this might cause multithreading issues.
     @param listenOut: if False (default), only the error stream will be used
       for the listener, otherwise both error and output stream will be used.
+    @param outonly: if True, return only the out part, and raise an exception
+      if there is any data on the error stream
     """
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, close_fds=True)
@@ -855,6 +862,10 @@ def executepipe(cmd, listener=None, listenOut=False):
     p.stdin.close()
     outr.join()
     errr.join()
+    if outonly:
+        e = errr.out.strip()
+        if e: raise Exception("Error on executing %r:\n%s" % (cmd, e))
+        yield outr.out
     yield outr.out, errr.out
 
 
@@ -871,7 +882,7 @@ def execute(cmd, inputbytes=None, **kargs):
     gen = executepipe(cmd, **kargs)
     pipe = gen.next()
     try:
-        if input:
+        if inputbytes:
             pipe.write(inputbytes)
     finally:
         pipe.close()
@@ -1107,7 +1118,10 @@ def getGroup1(*args, **kargs):
     """B{Deprecated: please use getREGroups}"""
     return getREGroups(*args, **kargs)
 
-
+@deprecated
+def intSelection(db, *args, **kargs):
+    """B{Deprecated: please use amcatDB.intSelectionSQL}"""
+    return db.intSelectionSQL(*args, **kargs)
 
 if __name__ == '__main__':
     pass

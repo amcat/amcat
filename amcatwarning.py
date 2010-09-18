@@ -28,7 +28,8 @@ A number of warning levels are defined
 
 """
 
-import warnings, time, threading
+from __future__ import with_statement
+import warnings, time, threading, contextlib, sys
 
 START = time.time()
 
@@ -54,7 +55,7 @@ class AmcatWarning(Warning):
         Warning.__init__(self, msg)
     def warn(self):
         """Convenience method to call warnings.warn(self)"""
-        warnings.warn(self)
+        warnings.warn(self, stacklevel=2)
         
 
 class Information(AmcatWarning):
@@ -79,21 +80,21 @@ def coloured(colour, text):
     return u'\033[%s;%sm%s\033[m' % (c, bold, text)
 
 #override default formatwarning to supply AmcatWarnings with their own format
-_warnings_formatwarning = warnings.formatwarning
-def _formatwarning(message, category, filename, lineno, *args, **kargs):
-                     
-                     
+def amcat_formatwarning(message, category, filename, lineno, *args, **kargs):
+    """Custom formatting to use severity for colour"""
     if not issubclass(category, AmcatWarning):
-        return _warnings_formatwarning(message, category,
-                                       filename, lineno, *args, **kargs)        
+        return warnings.formatwarning(message, category,
+                                      filename, lineno, *args, **kargs)        
     msg = "%-30s %s\n" % ("%s:%s" % (filename, lineno), message)
     if USE_CURSES: msg = coloured(COLOURS[category.severity], msg)
     return msg
-warnings.formatwarning = _formatwarning
 
-
-
-
+def _showwarning(message, category, filename, lineno, file=sys.stderr,
+                 line=None):
+    """Custom showwarning that uses amcat_formatwarning"""
+    file.write(amcat_formatwarning(message, category, filename, lineno))
+warnings.showwarning = _showwarning
+    
 # def getCaller(depth=2): # [checktoolkit.py: unused]
 #     import inspect
 #     stack = inspect.stack()
@@ -107,3 +108,35 @@ warnings.formatwarning = _formatwarning
 #             del frame
 #     finally:
 #         del stack
+
+@contextlib.contextmanager
+def storeWarnings():
+    """Context Manager to store warnings rather than let them be printed
+
+    yields the list that will be used to append warnings as
+    (message, category, filename, lineno, file, line) tuples that can
+    be passed to warnings.formatwarning.
+
+    Example usage:
+
+    >>> with storeWarnings() as w:
+    ...    #code that might raise a warning
+    ... print "\n".join(warnings.formatwarning(*args) for args in w)
+    """
+    storedwarnings = []
+    _showwarning = warnings.showwarning
+    warnings.showwarning = lambda *args : storedwarnings.append(args)
+    try:
+        yield storedwarnings
+    finally:
+        warnings.showwarning = _showwarning    
+
+
+if __name__ == '__main__':
+    Information("bla1").warn()
+    with storeWarnings() as w:
+        Information("bla2").warn()
+    Information("bla3").warn()
+    print "----------"
+    print "".join(warnings.formatwarning(*args) for args in w)
+

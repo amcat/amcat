@@ -3,6 +3,7 @@ import toolkit, permissions, project
 
 _users = None
 def users(db):
+    """Access singleton Users object"""
     global _users
     if _users is None:
         _users = Users(db)

@@ -26,7 +26,7 @@ def default(**kargs):
     homedir = os.getenv('HOME')
 
     if not homedir:
-        if 'SERVER_SOFTWARE' in os.environ or 'username' in kargs:
+        if 'SERVER_SOFTWARE' in os.environ or 'username' in kargs or 'use_app' in kargs:
             return amcatConfig(**kargs)
         raise Exception('Could not determine home directory! Please specify the HOME environemnt variable')
     passwdfile = os.path.join(homedir, __PASSWD_FILE)
@@ -41,7 +41,7 @@ def default(**kargs):
     else:
         return amcatConfig(**kargs)
 
-def amcatConfig(username = "app", password = "eno=hoty", easysoft=False, database="anoko"):
+def amcatConfig(username = "app", password = "eno=hoty", easysoft=False, database="anoko", use_app=None):
     
     if easysoft:
         host = "Easysoft-AmcatDB"

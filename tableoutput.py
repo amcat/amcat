@@ -1,4 +1,4 @@
-import table3, toolkit, sys, csv, idlabel
+import table3, toolkit, sys, csv, idlabel, StringIO, traceback
 
 def getTable(table, colnames=None):
     if isinstance(table, (list, tuple)):
@@ -43,7 +43,13 @@ def printTable(table):
 def table2ascii(table, colnames=None, formats=None, useunicode=False, box=False):
     return table2unicode(table, colnames, formats, useunicode, box)
         
-def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True, rownames=False):
+def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True, rownames=False, stream=None, encoding=None):
+    def write(s):
+        if encoding: s = s.encode(encoding)
+        stream.write(s)
+    returnstring = (not stream)
+    if returnstring:
+        stream = StringIO.StringIO()
     table = getTable(table, colnames)
     con_sep2t, con_sep2b, con_sep, con_line = CONNECTORS[useunicode, box]
     cols, rows = table.getColumns(), table.getRows()
@@ -56,10 +62,11 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
     if sortcols:
         headers = []
         for col in cols:
-            if isinstance(col, idlabel.IDLabel) and col in sortcols:
-                headers.append(u"%s %s" % (col.label, SORTINDICATORS[useunicode, sortcols[col]]))
+            #if isinstance(col, idlabel.IDLabel) and
+            if col in sortcols:
+                headers.append(u"%s %s" % (str(col), SORTINDICATORS[useunicode, sortcols[col]]))
             else:
-                headers.append(col.label)
+                headers.append(str(col))
     def cell(row, col, fmt):
         val = table.getValue(row, col)
         if type(val) == str: val = val.decode('latin-1')
@@ -86,17 +93,17 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
             collengths[i] = max(collengths[i], len(value))
             data[-1].append(value)
 
-    result = u""
     if rownames:
         collengths.insert(0, 15)
         headers.insert(0, "")
-    result += sep(collengths, con_sep2t)
-    result += line(map(formatheader, headers), collengths, con_line)
-    result += sep(collengths, con_sep)
+    write(sep(collengths, con_sep2t))
+    write(line(map(formatheader, headers), collengths, con_line))
+    write(sep(collengths, con_sep))
     for r in data:
-        result += line(r, collengths, con_line)
-    result += sep(collengths, con_sep2b)
-    return result
+        write(line(r, collengths, con_line))
+    write(sep(collengths, con_sep2b))
+    if returnstring:
+        return stream.getvalue()
 
 
 ########################### table2html #######################################
@@ -106,6 +113,7 @@ class HTMLGenerator(object):
     def __init__(self, tclass=None, rownames=False):
         self.tclass = tclass
         self.rownames = rownames
+        self.NoneString = ''
 
     def generate(self, table, stream=sys.stdout):
         self.startTable(table, stream)
@@ -124,12 +132,14 @@ class HTMLGenerator(object):
         self.open(stream, "tr")
         if self.rownames: self.element(stream, str(row), "th")
         for col in table.getColumns():
-            val = table.getValue(row, col)
-            if val is None: val = ""
-            if type(val) == unicode: val = val.encode('utf-8')
-            elif type(val) == float: val = "%1.3f" % val
-            elif type(val) <> str: val = unicode(val).encode('utf-8')
-
+            try:
+                val = table.getValue(row, col)
+                if val is None: val = self.NoneString
+                if type(val) == unicode: val = val.encode('utf-8')
+                elif type(val) == float: val = "%1.3f" % val
+                elif type(val) <> str: val = unicode(val).encode('utf-8')
+            except Exception:
+                val = '<span style="color:red" title="%s">ERROR</span>' % traceback.format_exc().replace('"', "'")
             self.element(stream, val, "td")
         self.close(stream, "tr")
     def startTable(self, table, stream):
