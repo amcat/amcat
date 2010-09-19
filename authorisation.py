@@ -28,7 +28,7 @@ check(db, privilege/str/int) checks whether user has privilege
 
 import system
 from cachable import Cachable, DBPropertyFactory
-from project import Project
+import project
 
 class AccessDenied(EnvironmentError):
     def __init__(self, user, privilege, roles):
@@ -36,7 +36,7 @@ class AccessDenied(EnvironmentError):
             privilege.label, user.label, privilege.role.label, [r.label for r in roles])
         EnvironmentError.__init__(self, msg)
 
-def check(db, privilege, project=None):
+def check(db, privilege, forproject=None):
     """Check whether the logged-in user is authorised 
 
     If permission is denied, will raise L{AccessDenied}; otherwise will
@@ -45,16 +45,16 @@ def check(db, privilege, project=None):
     @param db: db connection with the 'current user' logged in
     @type privilege: Privilege object, id, or str
     @param privilege: The requested privilege
-    @param project: The project the privilege is requested on,
+    @param forproject: The project the privilege is requested on,
       or None (ignored) for global privileges
     @return: None (raises exception if denied)
     """
     p = getPrivilege(db, privilege)
     if p.projectlevel:
-        project = None
+        forproject = None
     elif type(project) == int:
-        project = Project(db, project)
-    if project:
+        forproject = project.Project(db, forproject)
+    if forproject:
         #TODO implement role getting for projects!
         return 
     neededroleid = p.role.id
