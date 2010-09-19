@@ -22,7 +22,7 @@ Object-layer module containing classes modelling sentences
 """
 
 import dbtoolkit, toolkit, collections
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory,ForeignKey, CachingMeta
 import cachable
 from functools import partial
 import article, word

@@ -1,4 +1,4 @@
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
+from cachable import Cachable, DBPropertyFactory, ForeignKey
 import permissions
 from functools import partial
 import user, article, project
@@ -9,7 +9,7 @@ class Batch(Cachable):
     __dbproperties__ = ["name", "insertDate", "query"]
     insertUser = DBPropertyFactory("insertuserid", factory = lambda : user.User)
     project = DBPropertyFactory("projectid", factory = lambda : project.Project)
-    articles = DBFKPropertyFactory("articles", "articleid", factory = lambda : article.Article)
+    articles = ForeignKey(lambda:article.Article)
     def __init__(self, *args, **kargs):
         Cachable.__init__(self, *args, **kargs)
         
