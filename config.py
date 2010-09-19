@@ -3,7 +3,8 @@ import os, os.path
 __PASSWD_FILE = '.sqlpasswd'
 
 class Configuration:
-    def __init__(self, username, password, host="anoko", database="anoko", driver=None, useDSN=False, keywordargs=False):
+    def __init__(self, username, password, host="anoko", database="anoko", driver=None, useDSN=False,
+                 keywordargs=False, setMxODBCErrorHandler=False):
         if not driver: raise Exception("No driver!")
         self.host = host
         self.username = username
@@ -13,14 +14,18 @@ class Configuration:
         self.drivername = driver.__name__
         self.useDSN = useDSN 
         self.keywordargs = keywordargs
+        self.setMxODBCErrorHandler = setMxODBCErrorHandler
 
     def connect(self, *args, **kargs):
+        if self.setMxODBCErrorHandler and "errorhandler" not in kargs:
+            kargs["errorhandler"] = mxODBCErrorHandler()
         if self.useDSN:
             return self.driver.connect("DSN=%s" % self.host, user=self.username, password=self.password, *args, **kargs) 
         elif self.keywordargs:
             return self.driver.connect(user=self.username, password=self.password, database=self.database, host=self.host)
         else:
             return self.driver.connect(self.host, self.username, self.password, *args, **kargs)
+            
         
 def default(**kargs):
     homedir = os.getenv('HOME')
@@ -50,10 +55,41 @@ def amcatConfig(username = "app", password = "eno=hoty", easysoft=False, databas
         import mx.ODBC.unixODBC as driver
         import dbtoolkit
         dbtoolkit.ENCODE_UTF8 = True
+        setMxODBCErrorHandler = True
     else:
         host = "AmcatDB"
         import mx.ODBC.iODBC as driver
-    return Configuration(username, password, host, driver=driver, database=database)#, kargs=easysoft)
+        setMxODBCErrorHandler = False
+    return Configuration(username, password, host, driver=driver, database=database,setMxODBCErrorHandler=setMxODBCErrorHandler)#, kargs=easysoft)
+
+MXODBC_IGNORE_WARNINGS = (15488, # X added to role Y
+                          15341, # granted db access to X
+                          15298, # new login created
+                          )
+
+class mxODBCErrorHandler(object):
+    def __init__(self, ignore_warnings=MXODBC_IGNORE_WARNINGS):
+        self.ignore_warnings = set(ignore_warnings)
+        
+    def __call__(self, connection, cursor, errorclass, errorvalue):
+        """ mxODBC error handler.
+        The error handler reports all errors and warnings
+        using exceptions and also records these in
+        connection.messages as list of tuples (errorclass,
+        errorvalue), except for the ignore_warnings
+        """
+        # Append to messages list
+        if cursor is not None:
+            cursor.messages.append((errorclass, errorvalue))
+        elif connection is not None:
+            connection.messages.append((errorclass, errorvalue))
+        # Ignore specified warnings
+        errno = errorvalue[1]
+        if errno in self.ignore_warnings:
+            return
+        # Raise the exception
+        raise errorclass, errorvalue
+
 
 if __name__ == '__main__':
     c = default()
