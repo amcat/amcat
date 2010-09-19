@@ -348,7 +348,7 @@ class DBFKProperty(Property):
             factory = factory()
             cache = {}
             if getattr(factory, uplink, None):
-                cache = dict(uplink=self.cachable)
+                cache = {uplink : self.cachable}
 
             if type(targetfields) in (str, unicode):
                 self.function = lambda id : factory(self.cachable.db, id, **cache)
