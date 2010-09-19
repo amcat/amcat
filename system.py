@@ -37,9 +37,8 @@ class System(Cachable):
     __table__ = None
     __idcolumn__ = None
 
-    projects = DBFKPropertyFactory("projects", "projectid",
-                                   dbfunc=project.Project)
-    users = DBFKPropertyFactory("users", "userid", dbfunc=user.User)
+    projects = DBFKPropertyFactory("projects", "projectid", factory= lambda : project.Project)
+    users = DBFKPropertyFactory("users", "userid", factory = lambda : user.User)
     analyses = DBFKPropertyFactory("parses_analyses", "analysisid",
                                    dbfunc=analysis.Analysis)
 

@@ -62,7 +62,7 @@ In each case, the caller is responsible for committing the db transaction.
 """
 
 from itertools import izip, count
-import sbd, re, dbtoolkit, toolkit
+import sbd, re, dbtoolkit, toolkit, amcatwarning, traceback, article
 import tadpole
 import alpino, lemmata
 import sys, traceback
@@ -121,7 +121,7 @@ def splitArticle(db, art):
     @type art: L{article.Article} 
     @param art: The article to split
     """
-    if art.sentences: return
+    if art.sentences: return False
     text = db.getText(art.id)
     if not text:
         toolkit.warn("Article %s empty, adding headline only" % art.id)
@@ -139,6 +139,7 @@ def splitArticle(db, art):
                 raise Exception("Sentence longer than 6000 characters, this is not normal!")
             db.insert("sentences", {"articleid":art.id, "parnr" : parnr, "sentnr" : sentnr, "sentence" : sent, 'encoding': encoding})
     art.removeCached("sentences")
+    return True
 
 ###########################################################################
 #                           Convenience methods                           #
@@ -160,10 +161,10 @@ def assignArticles(db, analysis, articles):
     for art in articles:
         try:
             if type(art) == int: art = article.Article(db, art)
-            splitArticle(article)
+            splitArticle(db, article)
             assignSentences(db, analysis, art.sentences)
         except Exception, e:
-            amcatwarnings.Error(str(e)).warn()
+            amcatwarning.Error(str(e)).warn()
             
 def splitArticles(db, articles):
     """Split multiple articles into sentences
@@ -176,13 +177,14 @@ def splitArticles(db, articles):
     @type articles: ints or L{article.Article}s
     @param articles: The articles to split
     """
-    
+    nsplit = 0
     for art in articles:
         try:
             if type(art) == int: art = article.Article(db, art)
-            splitArticle(article)
+            nsplit += int(bool(splitArticle(db, art)))
         except Exception, e:
-            amcatwarnings.Error(str(e)).warn()
+            amcatwarning.Error(traceback.format_exc()).warn()
+    return nsplit
 
 # def parseArticles(articles):
 #     if type(articles) not in (tuple, list, set): articles = set(articles)
