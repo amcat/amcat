@@ -91,6 +91,6 @@ if __name__ == '__main__':
             print "\n---------\nWarnings:\n"
             print "".join(warnings.formatwarning(*args) for args in w)
         else:
-            print "\nNote: %i Warning(s) have been raised."
-            print "Run with -w to see the warnings" % len(w)
+            print "\nNote: %i Warning(s) have been raised." % len(w)
+            print "Run with -w to see the warnings" 
         

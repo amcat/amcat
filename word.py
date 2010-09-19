@@ -1,4 +1,4 @@
-from cachable import *
+from cachable import Cachable, CachingMeta, DBFKPropertyFactory, DBPropertyFactory
 import toolkit, re
 
 class BrouwersCat(Cachable):
@@ -15,6 +15,8 @@ class String(Cachable):
     __labelprop__ = "string"
     __dbproperties__ = ["string"]
 
+    def __str__(self): return self.label
+
 class Lemma(Cachable):
     __metaclass__ = CachingMeta
     __table__ = 'words_lemmata'
@@ -26,7 +28,7 @@ class Lemma(Cachable):
     sentiment = DBPropertyFactory("sentiment", table="vw_lemma_sentiment")
     intensifier = DBPropertyFactory("intensifier", table="vw_lemma_sentiment")
     
-    
+    def __str__(self): return self.lemma.label
 
 class Word(Cachable):
     __metaclass__ = CachingMeta
@@ -37,6 +39,8 @@ class Word(Cachable):
     word = DBPropertyFactory("stringid", dbfunc=String)
     lemma = DBPropertyFactory("lemmaid", dbfunc=Lemma)
 
+    def __str__(self): return self.word.label
+    
 def clean(s):
     if s is None: return ""
     #if type(s) == str:

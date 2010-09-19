@@ -1,4 +1,4 @@
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory
+from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, ForeignKey
 import user, permissions, article
 from functools import partial
 import batch, codingjob, toolkit
@@ -30,11 +30,11 @@ class Project(Cachable):
     __idcolumn__ = 'projectid'
     __dbproperties__ = ["name", "insertDate", "description"]
     
-    batches = DBFKPropertyFactory("batches", "batchid", factory = lambda: batch.Batch)
+    batches = ForeignKey(lambda: batch.Batch)
     visibility = DBPropertyFactory(func=permissions.ProjectVisibility.get, table="project_visibility")
     insertUser = DBPropertyFactory("insertuserid", dbfunc = lambda db, id : user.User(db, id))
-    users = DBFKPropertyFactory("permissions_projects_users", "userid", dbfunc=lambda db, id : user.User(db, id))
-    codingjobs = DBFKPropertyFactory("codingjobs", "codingjobid", factory = lambda : codingjob.CodingJob)
+    users = ForeignKey(lambda : user.User, table="permissions_projects_users")
+    codingjobs = ForeignKey(lambda : codingjob.CodingJob)
 
     @property
     def href(self):
@@ -73,7 +73,7 @@ class StoredResult(Cachable):
     name = DBPropertyFactory()
     project = DBPropertyFactory("projectid", dbfunc=lambda db, id : Project(db, id))
     owner = DBPropertyFactory("ownerid", dbfunc = lambda db, id: user.User(db, id))
-    articles = DBFKPropertyFactory("storedresults_articles","articleid", dbfunc=lambda db, id: article.Article(db, id))
+    articles = ForeignKey(lambda : article.Article, table="storedresults_articles")
     
     def addArticles(self, articles):
         self.db.insertmany("storedresults_articles", ["storedresultid", "articleid"],

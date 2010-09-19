@@ -221,6 +221,14 @@ class Cachable(idlabel.IDLabel):
         """Returns the type of the given property"""
         return self._getProperty(propertyname).getType()
 
+    def getCardinality(self, propertyname):
+        """Returns the cardinality of the given property
+
+        If it is single, None is returned.
+        Otherwise, the data structure (list, set, dict) reflecting
+        the cardinality is returned        
+        """
+        return self._getProperty(propertyname).getCardinality()
 
 ##################################
 #         Properties             #
@@ -250,7 +258,15 @@ class Property(object):
         self.cached = False
     def getType(self):
         """Returns the type of the this property"""
-        return str
+        return type(self.get())
+    def getCardinality(self):
+        """Return the cardinality of the given property
+
+        If it is single, None is returned.
+        Otherwise, the data structure (list, set, dict) reflecting
+        the cardinality is returned
+        """
+        return None
     
 class DBProperty(Property):
     """
@@ -307,6 +323,14 @@ class DBProperty(Property):
         if self.cached: return
         val = cacher.getDBData(self.cachable, self.fieldname, self.table)
         self.cache(self.process(val))
+    def getType(self):
+        if self.value: return type(self.value)
+        if inspect.isclass(self.dbfunc): return self.dbfunc
+        if self.factory:
+            f = self.factory()
+            if inspect.isclass(f): return f
+        return super(DBProperty, self).getType()
+            
 
 class FunctionProperty(Property):
     "Trivial implementation of retrieve using a supplied function"
@@ -326,7 +350,7 @@ class DBFKProperty(Property):
     """
     Property representing a one-to-many relation
     """
-    def __init__(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None, objfunc=None, distinct=False, filter=None):
+    def __init__(self, cachable, table=None, targetfields=None, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None, objfunc=None, distinct=False, filter=None, targetClass=None, targetType=None):
         """
         Table is the foreign key table, target fields the fields to retrieve.
         Reffield is the field to select on, defaulting to the idcolumn of the cachable.
@@ -335,27 +359,29 @@ class DBFKProperty(Property):
         orderby can be a database field to ORDER BY
         """
         Property.__init__(self, cachable)
+        # convenience setting of table, targetfields, and function
+        if targetClass:
+            if not inspect.isclass(targetClass):
+                targetClass = targetClass() # assume it is lamdba : klass
+            if not table: table = targetClass.__table__
+            if not targetfields: targetfields = targetClass.__idcolumn__
+            dbfunc = targetClass
+        if factory:
+            dbfunc = factory()
+        if dbfunc:
+            if type(targetfields) in (str, unicode):
+                function = lambda id : dbfunc(self.cachable.db, id)
+            else:
+                function = lambda *ids : dbfunc(self.cachable.db, ids)
+            if not targetType and inspect.isclass(dbfunc): targetType = targetClass
+        elif objfunc:
+            function = Partial(objfunc, self.cachable)
+
         self.table = table
         self.targetfields = targetfields
-        if function:
-            self.function = function
-        elif dbfunc:
-            self.function = Partial(dbfunc, self.cachable.db)
-        elif objfunc:
-            self.function = Partial(objfunc, self.cachable)
-        elif factory:
-            if uplink is None: uplink = type(cachable).__name__.lower()
-            factory = factory()
-            cache = {}
-            if getattr(factory, uplink, None):
-                cache = {uplink : self.cachable}
-
-            if type(targetfields) in (str, unicode):
-                self.function = lambda id : factory(self.cachable.db, id, **cache)
-            else:
-                self.function = lambda *ids : factory(self.cachable.db, ids, **cache)
-        else:
-            self.function = _trivial
+        self.function = function or (lambda x:x)
+        self.targetType = targetType
+        
         self.reffield = reffield or cachable.__idcolumn__
         self.endfunc = endfunc or list
         self.orderby = orderby
@@ -385,9 +411,13 @@ class DBFKProperty(Property):
         data = cacher.getFKData(fields, self.table, self.cachable, self.reffield, self.orderby)
         val = self.endfunc(self.function(*x) for x in data)
         self.cache(val)
+     
+    def getType(self):
+        if self.targetType: return self.targetType
+        return super(DBProperty, self).getType()
 
-        
-        
+    def getCardinality(self):
+        return self.endfunc
     
     # TODO: cache! not as easy as I thought# !
     # def prepareCache(self, cacher):
@@ -445,16 +475,16 @@ class DBFKPropertyFactory(PropertyFactory):
 
 #DBFKProperty(self, cachable, table, targetfields, reffield=None, function=None, endfunc = None, orderby=None, dbfunc=None, factory=None, uplink=None, objfunc=None, distinct=False, filter=None):
    
-class DBFKClassPropertyFactory(PropertyFactory):
-    """Convenience class to create a property factory
-    from a target class yielding table, targetfields, and dbfunc"""
-    def __init__(self, targetklass, *args, **kargs):
-        newargs = dict(table=targetklass.__table__, targetfields=targetklass.__idcolumn__, dbfunc=targetklass)
-        newargs.update(kargs)
-        PropertyFactory.__init__(self, DBFKProperty, *args, **newargs)
-    def createProperty(self, object, property):
-        return super(DBFKClassPropertyFactory, self).createProperty(object, property)
-
+class ForeignKey(PropertyFactory):
+    """PropertyFactory for DBFKProperty objects"""
+    def __init__(self, targetClass, *args, **kargs):
+        kargs["targetClass"] = targetClass
+        PropertyFactory.__init__(self, DBFKProperty, *args, **kargs)
+        
+        
+    
+    
+    
 #####################################
 # SQL String auxilliary functions   #
 #####################################
