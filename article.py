@@ -4,7 +4,9 @@ def doCreateSentence(db, aid, **cache):
     import sentence
     return sentence.Sentence(db, aid, **cache)
 
-import toolkit, dbtoolkit, re, project, sources, types, quote, batch
+import toolkit, dbtoolkit, re, project, sources, types, batch
+
+from nlp import quote
 from itertools import izip, count
 from functools import partial
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta, cacheMultiple
