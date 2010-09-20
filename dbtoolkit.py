@@ -10,7 +10,7 @@ import threading
 import cPickle
 from cStringIO import StringIO
 from contextlib import contextmanager
-
+import datetime
 
 _encoding = {
     0 : 'utf-8',
@@ -491,6 +491,27 @@ class amcatDB(object):
 
     def isnull(self):
         return "ifnull" if self.mysql else "isnull"
+
+    _XTYPES = {
+        35 : str,
+        167 : str,
+        175 : str,
+        48 : int,
+        52 : int,
+        56 : int,
+        62 : float,
+        58 : datetime.datetime,
+        61 : datetime.datetime,
+        104 : bool,
+        }
+        
+    def getColumnType(self, table, column):
+        SQL = """select c.xtype from syscolumns c 
+              inner join sysobjects o on c.id = o.id
+              where o.name = %s and c.name=%s""" % (
+            quotesql(table), quotesql(column))
+        xtype = self.getValue(SQL)
+        return amcatDB._XTYPES[xtype]
 
     def getTableColumns(self, table):
         """ do a funky query to obtain column names and xtypes """
