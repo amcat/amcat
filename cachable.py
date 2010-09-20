@@ -329,7 +329,7 @@ class DBProperty(Property):
         if self.factory:
             f = self.factory()
             if inspect.isclass(f): return f
-        return super(DBProperty, self).getType()
+        return self.cachable.db.getColumnType(self.cachable.__table__, self.fieldname)
             
 
 class FunctionProperty(Property):
