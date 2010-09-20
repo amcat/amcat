@@ -1,23 +1,46 @@
 import unittest, dbtoolkit
-from cachable2 import Cachable, Property, DBProperty, UnknownTypeException
+from cachable2 import Cachable, Property, DBProperty,DBProperties, UnknownTypeException, ForeignKey
 
 class TestDummy(Cachable):
     prop = Property()
     prop2 = Property()
 
+class TestLanguage(Cachable):
+    __table__ = 'languages'
+    __idcolumn__ = 'languageid'
+    label = DBProperty()
+    
+class TestRole(Cachable):
+    __table__ = 'roles'
+    __idcolumn__ = 'roleid'
+    label = DBProperty()
+    
 class TestUser(Cachable):
     __table__ = 'users'
     __idcolumn__ = 'userid'
-    username = DBProperty()
-    email = DBProperty()
-    fullname = DBProperty()
-    active = DBProperty()
+    username, email, fullname, active = DBProperties(4)
+    language = DBProperty(lambda : TestLanguage, getcolumn="language")
+    roles = ForeignKey(TestRole, table="users_roles")
 
 class TestAmcatMemcache(unittest.TestCase):
 
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)
-         
+
+    def testForeignKey(self):
+        self.assertEqual(TestUser.roles.getType(), TestRole)
+        self.assertTrue(TestUser.roles.getCardinality())
+        self.assertFalse(TestUser.language.getCardinality())
+        self.assertFalse(TestDummy.prop.getCardinality())
+
+        u = TestUser(self.db, 2)
+        self.assertTrue(set(u.roles))
+        self.assertTrue(TestRole(self.db, 1) in set(u.roles))
+        
+        u = TestUser(self.db, 5)
+        self.assertFalse(set(u.roles))
+
+        
     def testType(self):
         TestDummy.prop.observedType=None
         TestDummy.prop2.observedType=None
@@ -31,6 +54,15 @@ class TestAmcatMemcache(unittest.TestCase):
         # test observed from cache on object
         self.assertEqual(d.getType(TestDummy.prop2), str) 
 
+    def testTypedDBProperty(self):
+        TestUser.language.observedType=None
+        self.assertEqual(TestUser.language.getType(), TestLanguage)
+        u = TestUser(self.db, 2)
+        self.assertEqual(type(u.language), TestLanguage)
+        self.assertEqual(u.language.label, 'nl')        
+        u = TestUser(self.db, 5)
+        self.assertEqual(u.language, None)
+        
     def testDBType(self):
         # test get from db
         TestUser.username.observedType=None
@@ -79,4 +111,17 @@ class TestAmcatMemcache(unittest.TestCase):
         
 
 if __name__ == '__main__':
+    
+    #TestDummy.prop.observedType=None
+    #d = TestDummy([], -1)
+    #d.prop = 1
+    #dummy = d.prop
+    #print dummy
+    #print TestDummy.prop.getType()
+    #db = dbtoolkit.amcatDB(use_app=True)
+    #u = TestUser(db, 2)
+    #print u.roles
+    #del u.language
+    
+    #print repr(u.language)
     unittest.main()

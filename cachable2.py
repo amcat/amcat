@@ -42,10 +42,20 @@ Example usage::
   print o.label    # 'test' from cache
 """
 
-import idlabel
+import inspect, types
+import idlabel, dbtoolkit
 import amcatmemcache as store
 
+class Meta(type):
+    """Metaclass to  ensure properties are initialised"""
+    def __getattribute__(cls, attr):
+        result = type.__getattribute__(cls, attr)
+        if isinstance(result, Property):
+            if not result._initialised: result._initialise(cls, attr)
+        return result
+
 class Cachable(idlabel.IDLabel):
+    __metaclass__ = Meta
     """Main class of the Cachable structure
     
     A Cachable class has class-level properties that are 
@@ -69,49 +79,48 @@ class Cachable(idlabel.IDLabel):
         idlabel.IDLabel.__init__(self, id, None)
 
     @classmethod
-    def _asProperty(cls, p, propname):
-        """initialise and return p if it is a property, otherwise return None"""
-        if isinstance(p,Property):
-            if not p._initialised: p._initialise(cls, propname)
-            return p
-    @classmethod
-    def getProperty(cls, attr):
-       """return a Property attr if there is one, None otherwise"""
-       try:
-           p = getattr(cls, attr)
-       except AttributeError:
-           return
-       return cls._asProperty(p, attr)
+    def _getProperty(cls, attr):
+       """return a Property attr if there is one, TypeError (or AttributeError) otherwise"""
+       p = getattr(cls, attr)
+       if isinstance(p, Property):
+           return p
+       raise TypeError("%s is not a Property" % attr)
     
     def __getattribute__(self, attr):
-        """if attr is a property, use its .get method. Otherwise, call super"""
-        superfunc = super(Cachable, self).__getattribute__
-        p = superfunc(attr)
-        cls = superfunc("__class__")
-        return p.get(self) if cls._asProperty(p, attr) else p
+        """if attr exists and is a property, use its .get method. Otherwise, call super"""
+        if not "_" in attr:
+            try:
+                p =  self.__class__._getProperty(attr)
+            except (TypeError, AttributeError):
+                pass
+            else:
+                return p.get(self)
+        return super(Cachable, self).__getattribute__(attr)
     
 
     def __setattr__(self, attr, value):
         """If attr is a property, cache the value. Otherwise, call super"""
-        p = self.getProperty(attr)
-        if p:
-            p.cache(self, value) 
-        else:
+        try:
+            p = self._getProperty(attr)
+        except (TypeError, AttributeError):
             super(Cachable, self).__setattr__(attr, value)
+        else:
+            p.cache(self, value)
 
     def __delattr__(self, attr):
         """If attr is a property, uncache the value. Otherwise, call super"""
-        p = self.getProperty(attr)
-        if p:
-            p.uncache(self) 
-        else:
+        try:
+            p = self._getProperty(attr)
+        except (TypeError, AttributeError):
             super(Cachable, self).__delattr__(attr)
+        else:
+            p.uncache(self)
 
-    def getType(self, property):
+    def getType(self, prop):
         """Get the type of the given property (or property name)"""
-        if not isinstance(property, Property):
-            property = self.getProperty(property)
-        return property.getType(self)
+        if not isinstance(prop, Property):
+            prop = self._getProperty(prop)
+        return prop.getType(self)
 
 
             
@@ -124,24 +133,45 @@ class Property(object):
 
     Subclasses should implement retrieve(obj)
     """
+    
     def __init__(self):
         self._initialised = False
         self.observedType = None
+        
     def _initialise(self, cls, propname):
+        """initialise this property with the given class and propname
+
+        Properties are initialised for two reasons:
+        - to 'bind' it to class and propname (which are not accessible on creation)
+        - to allow resolving types that would cause import problems on creation
+        """
         self.cls = cls
         self.propname = propname
         self.store = store.CachablePropertyStore(cls, propname)
 
     def get(self, obj):
-        """Get obj from cache, or L{retrieve} and L{cache} it"""
+        """Get obj from cache, or L{retrieve} and L{cache} it
+
+        Will call L{dataToObjects} to deserialise the value"""
         try:
             v = self.getCached(obj)
         except store.UnknownKeyException:
             v = self.retrieve(obj)
             self.cache(obj, v)
+        v = self.dataToObjects(obj, v)
+        # remember the type info for later use
         if self.observedType is None: self.observedType = type(v)
         return v
 
+    def dataToObjects(self, obj, data):
+        """Deserialise the data into object(s)
+
+        @param obj: the 'parent' object of the new object(s)
+        @param data: the raw data (from the db or memcache)
+        @return: an (iterable of) 'domain' object(s)
+        """
+        return data
+    
     def cache(self, obj, value):
         """Cache the given value for the given object"""
         self.store.set(obj.id, value)
@@ -153,7 +183,7 @@ class Property(object):
         return self.store.get(obj.id)
 
     def retrieve(self, obj): 
-        """Get the value for this property from the underlying store
+        """Get the value for this property from the underlying data source
         
         B{Abstract: Subclasses should override} 
         """
@@ -165,7 +195,7 @@ class Property(object):
         @param obj: an optional Cachable object
           that can be used to help determine the type
         @return a type object  
-        """ 
+        """
         if (self.observedType is None
             and isinstance(obj, Cachable)):
             #try to get cached value
@@ -184,17 +214,64 @@ class Property(object):
         @return None for single values, a sequence type for multiple values
         """
         return None
+    def __str__(self):
+        try:
+            return "%s(%s.%s)" % (self.__class__.__name__, self.cls.__name__, self.propname)
+        except AttributeError:
+            return "%s(uninitialised)" %  (self.__class__.__name__,)
         
 class DBProperty(Property):
     """Property that retrieves its value from the database"""
+
+    def __init__(self, targetclass=None, table=None, getcolumn=None):
+        Property.__init__(self)
+        self.targetclass = targetclass
+        self.table = table
+        self.getcolumn = getcolumn
+    def _initialise(self, cls, propname):
+        super(DBProperty, self)._initialise(cls, propname)
+        if self.targetclass is not None:
+            if not callable(self.targetclass):
+                raise ValueError("targetklass should be callable")
+            if ((not inspect.isclass(self.targetclass)) and
+                inspect.getargspec(self.targetclass)[0] == []):
+                # assume targetklass is lambda
+                self.targetclass = self.targetclass()
+
+    def dbrowToObject(self, obj, *dbvalues):
+        """Convert a db row to an amcat object
+        
+        @param obj: the "parent object" of the new object
+        @param dbvalues: the row tuple as returned from the db
+        @return object: a single 'domain' object
+        """
+        if self.targetclass:
+            if dbvalues == (None,) * len(dbvalues): 
+                return None
+            return self.targetclass(obj.db, *dbvalues)
+        return dbvalues[0]
+
+    def dataToObjects(self, obj, data):
+        return self.dbrowToObject(obj, *data[0])        
+
+    def _getTable(self):
+        if self.table: return self.table
+        return self.cls.__table__
+    def _getColumns(self):
+        if self.getcolumn: return self.getcolumn
+        try:
+            return self.targetclass.__idcolumn__
+        except AttributeError:
+            return self.propname
     
     def retrieve(self, obj):
-        """Use the database to retrieve the value of this property for obj"""
-        data = _select(self.propname, obj)
-        result = data[0][0]
-        return result
+        """Use the database to retrieve the value of this property for obj
+        Calls dbresultToObjects on the db results
+        """
+        return _select(self._getColumns(), obj, self._getTable())
     
     def getType(self, obj_or_db=None):
+        if inspect.isclass(self.targetclass): return self.targetclass
         try:
             return super(DBProperty, self).getType(obj_or_db)
         except UnknownTypeException:
@@ -207,28 +284,60 @@ class DBProperty(Property):
         self.observedType = result
         return result
 
+class ForeignKey(DBProperty):
+    def __init__(self, targetclass=None, sequencetype=None, table=None):
+        """Create a 'foreign key' property
+
+        Getting the property will create a sequence of domain objects
+
+        @param targetclass: the class of the domain objects, or None for keeping
+          the db-primitive intact
+        @param sequencetype: the type of sequence to create (list, set, etc), or
+          None for returning a generator
+        """
+        DBProperty.__init__(self, targetclass, table)
+        self.sequencetype = sequencetype
         
+    def dataToObjects(self, obj, data):
+        result = (self.dbrowToObject(obj, *row) for row in data)
+        if self.sequencetype: result = self.sequencetype(result)
+        return result
+    
+    def _getTable(self):
+        if self.table: return self.table
+        try:
+            return self.targetclass.__table__
+        except AttributeError:
+            return self.cls.__table__
+    
+    def getCardinality(self):
+        if self.sequencetype is None:
+            return types.GeneratorType
+        return self.sequencetype
 
-
+def DBProperties(n):
+    """Shortcut to create n DBProperty objects
+    (for assigning to a,b = DBProperties(2))""" 
+    return [DBProperty() for dummy in range(n)]
+    
 def _sqlWhere(fields, ids):
     if type(fields) in (str, unicode):
         fields, ids = [fields], [ids]
     return "(%s)" % " and ".join("(%s = %s)" % (field, dbtoolkit.quotesql(id))
                                  for (field, id) in zip(fields, ids))
 
-def _select(columns, cachables):
+def _select(columns, cachables, table):
     if isinstance(cachables, Cachable): cachables = (cachables,)
     if isinstance(columns, basestring): columns = (columns,)
     prototype = cachables[0]
     select = ", ".join(map(prototype.db.escapeFieldName, columns))
-    table = prototype.__table__
     
     reffield = prototype.__idcolumn__
     if type(reffield) in (str, unicode):
         if type(prototype.id) <> int:
-            raise TypeError("Singular reffield with non-int id! Reffield: %r, cachable: %r, id: %r" % (reffield, c, c.id))
+            raise TypeError("Singular reffield with non-int id! Reffield: %r, cachable: %r, id: %r" % (reffield, prototype, prototype.id))
         where  = prototype.db.intSelectionSQL(reffield, (x.id for x in cachables))
     else:
         where = "((%s))" % ") or (".join(sqlWhere(reffield, x.id) for x in cachables)
-    SQL = "SELECT %s FROM %s WHERE %s" % (select, table, where) 
+    SQL = "SELECT %s FROM %s WHERE %s" % (select, table, where)
     return prototype.db.doQuery(SQL)
