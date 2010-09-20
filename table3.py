@@ -78,10 +78,10 @@ class ObjectTable(Table):
         self.rows = rows or []
         self.columns = columns or []
         self.cellfunc = lambda row, col : col.getCell(row)
-    def addColumn(self, col, label=None):
+    def addColumn(self, col, label=None, **kargs):
         if type(col) == types.FunctionType:
             if label is None: label = col.__name__
-            col = ObjectColumn(label, col)
+            col = ObjectColumn(label, col, **kargs)
         self.columns.append(col)
 
 class DictTable(Table):
