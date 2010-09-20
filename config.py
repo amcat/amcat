@@ -1,4 +1,4 @@
-import os, os.path
+import os, os.path, sys
 
 __PASSWD_FILE = '.sqlpasswd'
 
@@ -47,8 +47,11 @@ def default(**kargs):
     else:
         return amcatConfig(**kargs)
 
-def amcatConfig(username = "app", password = "eno=hoty", easysoft=False, database="anoko", use_app=None):
-    
+def amcatConfig(username = "app", password = "eno=hoty", easysoft=None, database="anoko", use_app=None):
+
+    if easysoft is None:
+        easysoft = sys.version_info[1] == 6
+
     if easysoft:
         host = "Easysoft-AmcatDB"
         #import pyodbc as driver
