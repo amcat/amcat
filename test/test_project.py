@@ -1,4 +1,4 @@
-import dbtoolkit, unittest, project, batch, user, mx.DateTime
+import dbtoolkit, unittest, project, batch, user, mx.DateTime, datetime
 
 class TestProject(unittest.TestCase):
 
@@ -11,13 +11,14 @@ class TestProject(unittest.TestCase):
 
     def testType(self):
         p = project.Project(self.db, 1)
-        for (prop, type, card) in (
+        for (prop, types, card) in (
             ("batches", batch.Batch, list),
             ("users", user.User, list),
             ("name", str, None),
-            ("insertDate", mx.DateTime.DateTimeType, None),
+            ("insertDate", (mx.DateTime.DateTimeType, datetime.datetime), None),
             ):
-            self.assertEqual(p.getType(prop), type)
+            if type(types) not in (tuple, set, list): types = (types,)
+            self.assertTrue(p.getType(prop) in types)
             self.assertEqual(p.getCardinality(prop), card)
         
         
