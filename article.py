@@ -6,7 +6,10 @@ def doCreateSentence(db, aid, **cache):
 
 import toolkit, dbtoolkit, re, project, sources, types, batch
 
-from nlp import quote
+try:
+    from nlp import quote
+except:
+    import quote
 from itertools import izip, count
 from functools import partial
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta, cacheMultiple
