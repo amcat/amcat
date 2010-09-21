@@ -27,42 +27,54 @@ check(db, privilege/str/int) checks whether user has privilege
 """
 
 import system
-from cachable import Cachable, DBPropertyFactory
-import project
+from cachable2 import Cachable, DBProperty, ForeignKey
+import project, user
+
+ADMIN_ROLE = 1
 
 class AccessDenied(EnvironmentError):
-    def __init__(self, user, privilege, roles):
-        msg = "Access denied for privilege %s to %s\nRequired role %s, has roles %s" % (
-            privilege.label, user.label, privilege.role.label, [r.label for r in roles])
+    def __init__(self, user, privilege, project=None):
+        roles = getRoles(user)
+        projectstr = " on %s" % project if project else ""
+        msg = "Access denied for privilege %s%s to %s\nRequired role %s, has roles %s" % (
+            privilege.label, projectstr, user.label, privilege.role.label, [r.label for r in roles])
         EnvironmentError.__init__(self, msg)
 
-def check(db, privilege, forproject=None):
+def check(db_or_user, privilege, onproject=None):
     """Check whether the logged-in user is authorised 
 
     If permission is denied, will raise L{AccessDenied}; otherwise will
     return silently
     
-    @param db: db connection with the 'current user' logged in
+    @param db_or_user: db connection with the user to check logged in, or the
+      user object to check
     @type privilege: Privilege object, id, or str
     @param privilege: The requested privilege
-    @param forproject: The project the privilege is requested on,
+    @param onproject: The project the privilege is requested on,
       or None (ignored) for global privileges
     @return: None (raises exception if denied)
     """
+    if isinstance(db_or_user, user.User):
+        db, checkuser = db_or_user.db, db_or_user
+    else:
+        db, checkuser = db_or_user, db_or_user.getUser()
+    userroles =getRoles(checkuser)
+
     p = getPrivilege(db, privilege)
+    neededroleid = p.role.id    
     if p.projectlevel:
-        forproject = None
-    elif type(project) == int:
-        forproject = project.Project(db, forproject)
-    if forproject:
-        #TODO implement role getting for projects!
-        return 
-    neededroleid = p.role.id
-    roles = getRoles(db.getUser(), project)
-    for r in roles:
-        if r.id == 1: return # admin can do what he wants
-        if r.id == neededroleid: return
-    raise AccessDenied(db.getUser(), p, roles)
+        if onproject is None:
+            raise ValueError("Cannot check project privilege %s without project" % (p))
+        if type(onproject) == int:
+            onproject = project.Project(db, onproject)
+        # global admin can do anything on any project:
+        if any(r.id == ADMIN_ROLE for r in userroles): return
+        projectroles = getRoles(checkuser, onproject)
+        if not any(r.id in (ADMIN_ROLE, neededroleid) for r in projectroles):
+            raise AccessDenied(checkuser, p, onproject)
+    else:
+        if not any(r.id in (ADMIN_ROLE, neededroleid) for r in userroles):
+            raise AccessDenied(checkuser, p)
 
 def getPrivilege(db, privilege):
     """Find a privilege object by name or number
@@ -81,20 +93,29 @@ def getPrivilege(db, privilege):
             return p
     raise ValueError("Privilege %r cannot be found" % privilege)
 
-def getRoles(user, project=None):
+
+
+def getRoles(user, onproject=None):
     """Get all roles for the user (on the project)"""
-    if project is None:
+    if onproject is None:
         return user.roles
+    return user.projectroles.get(onproject, [])
     
 class Role(Cachable):
     __table__ = 'roles'
     __idcolumn__ = 'roleid'
 
-    __dbproperties__ = ['label']
+    label = DBProperty()
 
 class Privilege(Cachable):
     __table__ = 'privileges'
     __idcolumn__ = 'privilegeid'
-    __dbproperties__ = ['label', 'projectlevel']
-    role = DBPropertyFactory("roleid", dbfunc=Role)
+    label = DBProperty()
+    projectlevel = DBProperty()
+    role = DBProperty(Role)
 
+if __name__ == '__main__':
+    import dbtoolkit
+    check(dbtoolkit.amcatDB(use_app=True), 2, 2)
+
+    
