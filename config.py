@@ -68,6 +68,7 @@ def amcatConfig(username = "app", password = "eno=hoty", easysoft=None, database
 MXODBC_IGNORE_WARNINGS = (15488, # X added to role Y
                           15341, # granted db access to X
                           15298, # new login created
+                          15338, 15477, # rename warnings
                           )
 
 class mxODBCErrorHandler(object):
