@@ -3,27 +3,6 @@ import user, permissions, article
 from functools import partial
 import batch, codingjob, toolkit
 
-def projects(db, usr, own=1):
-    if own:
-        if type(usr) == int:
-            usr = user.User(db, usr)
-        for project in usr.projects:
-            yield project
-    else: # all projects
-        userid = usr if type(usr) == int else usr.id
-        sql = """
-            SELECT DISTINCT p.projectid
-            FROM projects AS p
-            LEFT JOIN permissions_projects_users as ppu
-                ON ppu.projectid = p.projectid
-            INNER JOIN project_visibility AS pv
-                ON p.projectid = pv.projectid
-            WHERE (ppu.userid = %d OR pv.visibility > 1)
-            ORDER BY p.projectid DESC
-            """ % userid
-        data = db.doQuery(sql, colnames=0)
-        for row in data:
-            yield Project(db, row[0])
 
 class Project(Cachable):
     __table__ = 'projects'
