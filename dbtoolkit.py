@@ -348,12 +348,6 @@ class amcatDB(object):
     _sources = None
     sources = property(_getsources)
 
-
-    @property
-    def users(self):
-        #TODO get rid of this!
-        return user.Users(self)
-
     def getUser(self):
         import user
         uid = self.getValue("select dbo.anoko_user()")
