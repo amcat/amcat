@@ -42,9 +42,11 @@ Example usage::
   print o.label    # 'test' from cache
 """
 
-import inspect, types
+import inspect, types, warnings
 import idlabel, dbtoolkit
 import amcatmemcache as store
+from toolkit import printargs
+
 
 class Meta(type):
     """Metaclass to  ensure properties are initialised"""
@@ -76,7 +78,7 @@ class Cachable(idlabel.IDLabel):
         if id is None: raise ValueError("ID should not be None!")
         if db is None: raise ValueError("DB should not be None!")
         self.db = db
-        idlabel.IDLabel.__init__(self, id, None)
+        idlabel.IDLabel.__init__(self, id)
 
     @classmethod
     def _getProperty(cls, attr):
@@ -122,7 +124,14 @@ class Cachable(idlabel.IDLabel):
             prop = self._getProperty(prop)
         return prop.getType(self)
 
-
+    @property
+    def label(self):
+        # if a __labelprop__ is defined, return that, otherwise, call super
+        try:
+            return getattr(self, self.__labelprop__)
+        except AttributeError:
+            return super(Cachable, self).label
+    
             
 class UnknownTypeException(Exception):
     def __init__(self, prop):
@@ -134,9 +143,10 @@ class Property(object):
     Subclasses should implement retrieve(obj)
     """
     
-    def __init__(self):
+    def __init__(self, deprecated=False):
         self._initialised = False
         self.observedType = None
+        self.deprecated = deprecated
         
     def _initialise(self, cls, propname):
         """initialise this property with the given class and propname
@@ -148,11 +158,14 @@ class Property(object):
         self.cls = cls
         self.propname = propname
         self.store = store.CachablePropertyStore(cls, propname)
+        self._initialised = True
 
     def get(self, obj):
         """Get obj from cache, or L{retrieve} and L{cache} it
 
         Will call L{dataToObjects} to deserialise the value"""
+        if self.deprecated:
+            warnings.warn(DeprecationWarning("Property %s has been deprecated" % self))
         try:
             v = self.getCached(obj)
         except store.UnknownKeyException:
@@ -223,8 +236,8 @@ class Property(object):
 class DBProperty(Property):
     """Property that retrieves its value from the database"""
 
-    def __init__(self, targetclass=None, table=None, getcolumn=None):
-        Property.__init__(self)
+    def __init__(self, targetclass=None, table=None, getcolumn=None, **kargs):
+        Property.__init__(self, **kargs)
         self.targetclass = targetclass
         self.table = table
         self.getcolumn = getcolumn
@@ -248,11 +261,16 @@ class DBProperty(Property):
         if self.targetclass:
             if dbvalues == (None,) * len(dbvalues): 
                 return None
-            return self.targetclass(obj.db, *dbvalues)
+            if type(self.targetclass) == tuple:
+                if len(self.targetclass) != len(dbvalues):
+                    raise ValueError("If targetclass is a tuple, #columns should equal #classes")
+                return tuple(c(obj.db, v) for (c, v) in zip(self.targetclass, dbvalues))
+            else:
+                return self.targetclass(obj.db, *dbvalues)
         return dbvalues[0]
 
     def dataToObjects(self, obj, data):
-        return self.dbrowToObject(obj, *data[0])        
+        return self.dbrowToObject(obj, *data[0])
 
     def _getTable(self):
         if self.table: return self.table
@@ -260,6 +278,8 @@ class DBProperty(Property):
     def _getColumns(self):
         if self.getcolumn: return self.getcolumn
         try:
+            if type(self.targetclass) == tuple:
+                return tuple(c.__idcolumn__ for c in self.targetclass)
             return self.targetclass.__idcolumn__
         except AttributeError:
             return self.propname
@@ -271,7 +291,11 @@ class DBProperty(Property):
         return _select(self._getColumns(), obj, self._getTable())
     
     def getType(self, obj_or_db=None):
+        # if targetclass is a class or tuple of classes, return it 
         if inspect.isclass(self.targetclass): return self.targetclass
+        if (type(self.targetclass) == tuple and all(inspect.isclass(c) for c in self.targetclass)):
+            return self.targetclass
+        
         try:
             return super(DBProperty, self).getType(obj_or_db)
         except UnknownTypeException:
@@ -285,7 +309,7 @@ class DBProperty(Property):
         return result
 
 class ForeignKey(DBProperty):
-    def __init__(self, targetclass=None, sequencetype=None, table=None):
+    def __init__(self, targetclass=None, sequencetype=None, **kargs):
         """Create a 'foreign key' property
 
         Getting the property will create a sequence of domain objects
@@ -295,9 +319,9 @@ class ForeignKey(DBProperty):
         @param sequencetype: the type of sequence to create (list, set, etc), or
           None for returning a generator
         """
-        DBProperty.__init__(self, targetclass, table)
+        DBProperty.__init__(self, targetclass, **kargs)
         self.sequencetype = sequencetype
-        
+
     def dataToObjects(self, obj, data):
         result = (self.dbrowToObject(obj, *row) for row in data)
         if self.sequencetype: result = self.sequencetype(result)
