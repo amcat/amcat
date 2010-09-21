@@ -42,7 +42,7 @@ class Logger(object):
 def send_reports(db):
     #get subscriptions
     ids = db.doQuery("select * from log_subscriptions")
-    emails = [db.users.getUser(a).email for a in ids[0]]
+    emails = []#[db.users.getUser(a).email for a in ids[0]]
     levels = dict(db.doQuery("select * from loglevels"))
     header = "The news for today: \n\n"
     #send mails
