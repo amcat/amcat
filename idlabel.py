@@ -33,11 +33,16 @@ class IDLabel(Identity):
     Simple class representing objects with a label and ID. Identity checks equality
     on class + ID; str( ) returns the label, repr( ) return class(id, label, ..)
     """
-    def __init__(self, id, label):
+    def __init__(self, id, label=None):
         Identity.__init__(self, self.__class__, id)
         self.id = id
-        if label is not None:
-            self.label = label
+        self._label = label
+
+    @property
+    def label(self):
+        if self._label is None: raise AttributeError("%r has no label" % self)
+        return self._label
+        
     def identity(self):
         return (self.__class__, self.id)
     def clsidlabel(self):
@@ -50,7 +55,7 @@ class IDLabel(Identity):
                 return self.label.encode('ascii', 'replace')
             else:
                 return str(self.label)
-        except AttributeError, e:
+        except AttributeError:
             return repr(self)
     def __unicode__(self):
         try:
@@ -58,7 +63,7 @@ class IDLabel(Identity):
                 return self.label
             else:
                 return str(self.label).decode('latin-1')
-        except AttributeError, e:
+        except AttributeError:
             return unicode(repr(self))
         
     def __repr__(self):
