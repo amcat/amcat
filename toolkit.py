@@ -94,6 +94,20 @@ def cached(func):
     inner._vals = vals
     return inner
 
+def printargs(func):
+    """This decorator dumps out the arguments passed to a function before calling it
+
+    Source: U{http://wiki.python.org/moin/PythonDecoratorLibrary}
+    """
+    argnames = func.func_code.co_varnames[:func.func_code.co_argcount]
+    fname = func.func_name
+    def echo_func(*args,**kwargs):
+        print "%s(%s)" % (fname, ', '.join(
+            '%s=%r' % entry
+            for entry in zip(argnames,args) + kwargs.items()))
+        return func(*args, **kwargs)
+    return echo_func
+
 ###########################################################################
 ##                      Statistical Functions                            ##
 ###########################################################################
@@ -416,20 +430,18 @@ def buffer(sequence, buffercall, buffersize=100):
 ###########################################################################
 ##                      Mapping functions                                ##
 ###########################################################################
-    
-def multidict(seq):
-    """Creates a dictionary of key : set pairs
 
-    @param seq: a sequence of (key, value) tuples (with duplicate keys)
-    @returns: a mapping of {key : set(values)}
-    """
-    result = collections.defaultdict(set)
-    if seq:
-        for kv in seq:
-            if kv:
-                k, v = kv
-                result[k].add(v)
-    return result
+class multidict(collections.defaultdict):
+    """A dictionary of key : set pairs"""
+    def __init__(self, seq):
+        """Create a new multidict from a seq of key,value pairs (with duplicate keys)"""
+        collections.defaultdict.__init__(self, set)
+        if seq:
+            for kv in seq:
+                if kv:
+                    self.add(*kv)
+    def add(self, key, value):
+        self[key].add(value)
 
 def sortByValue(dictionary, reverse=False):
     """Sort a dictionary by values, optionally in descending order"""

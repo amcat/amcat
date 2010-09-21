@@ -12,6 +12,15 @@ class TestToolkitFunctions(unittest.TestCase):
             seq = [random.randint(-100, 100) for dummy in range(100)]
             self.assertEqual(set(toolkit.flatten(range(fro, to+1) for (fro, to) in toolkit.ints2ranges(seq))), set(seq))
 
+    def test_multidict(self):
+        for input, output in (
+            ([(1,1), (1,2), (1,3), (2,3)], {1 : set([1,2,3]), 2:set([3])}),
+            ((x for x in [(1,1), (1,2), (1,3), (2,3)]), {1 : set([1,2,3]), 2:set([3])}),
+            ((x for x in []), {}),
+            ):
+            self.assertEqual(dict(toolkit.multidict(input)), output)
+            
+            
     def test_readdate(self):
         for s, date, american, lax in (
             ("22 maart 1980" , datetime.datetime(1980, 3, 22,0,0,0), False, True),
