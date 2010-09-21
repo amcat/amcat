@@ -28,7 +28,7 @@ from __future__ import with_statement
 import unittest, os.path, os, sys, types
 import amcatwarning, toolkit
 import table3, tableoutput
-import test, hg
+import amcattest, hg
 
 
 LICENSE = """###########################################################################
@@ -104,7 +104,7 @@ def hasDocStrings(fn, returnbool=False, returnpair=True):
     if type(fn) == str:
         if not os.path.exists(fn): return
         if fn  == __file__: return
-        m = test.getModule(fn)
+        m = amcattest.getModule(fn)
     else:
         m = fn
     result = membersHaveDocStrings(m)
@@ -128,7 +128,7 @@ def getSuites(fn):
     """Get the test suites for the file fn"""
     testpath = getTestPath(fn)
     if not os.path.exists(testpath): return None
-    return test.getSuites(testpath)
+    return amcattest.getSuites(testpath)
     
 def passesTest(fn):
     """Determine whether fn passes the test
@@ -136,7 +136,7 @@ def passesTest(fn):
     @return: a pair (npassed, ntotal)"""
     testpath = getTestPath(fn)
     if not os.path.exists(testpath): return None
-    suites = test.getSuites(testpath)
+    suites = amcattest.getSuites(testpath)
     t = unittest.TestResult()
     with amcatwarning.storeWarnings():
         for suite in suites:

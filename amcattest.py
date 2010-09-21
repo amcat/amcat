@@ -35,7 +35,7 @@ Options:
 
 from __future__ import with_statement
 import unittest, os.path, os, inspect, sys
-import amcatwarning, warnings
+import amcatwarning, warnings, toolkit
 
 
 
@@ -69,6 +69,18 @@ def getSuites(fn):
     for case in getTestCases(fn):
         yield unittest.TestLoader().loadTestsFromTestCase(case)
 
+class AmcatTestCase(unittest.TestCase):
+    def __init__(self, *args, **kargs):
+        unittest.TestCase.__init__(self, *args, **kargs)
+    def assertNotRaises(self, *dummy, **dummy2):
+        pass # will fail it is does raise
+    def assertSubclass(self, type1, type2):
+        self.assertTrue(issubclass(type1, type2), "%s is not a subclass of %s" % (type1, type2))
+    def assertIn(self, element, sequence):
+        sequence=toolkit.getseq(sequence) # force permanent sequence
+        self.assertTrue(element in sequence, "%s is not in %s" % (element, sequence))
+        
+    
 if __name__ == '__main__':
     if "-h" in sys.argv:
         print __doc__
