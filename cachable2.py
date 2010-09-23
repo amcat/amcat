@@ -362,6 +362,6 @@ def _select(columns, cachables, table):
             raise TypeError("Singular reffield with non-int id! Reffield: %r, cachable: %r, id: %r" % (reffield, prototype, prototype.id))
         where  = prototype.db.intSelectionSQL(reffield, (x.id for x in cachables))
     else:
-        where = "((%s))" % ") or (".join(sqlWhere(reffield, x.id) for x in cachables)
+        where = "((%s))" % ") or (".join(_sqlWhere(reffield, x.id) for x in cachables)
     SQL = "SELECT %s FROM %s WHERE %s" % (select, table, where)
     return prototype.db.doQuery(SQL)
