@@ -7,7 +7,7 @@ class TestSystem(unittest.TestCase):
         self.system = system.System(self.db)
 
     def test_singleton(self):
-        self.assertTrue(self.system is system.System(self.db))
+        self.assertTrue(self.system == system.System(self.db))
 
     def test_access(self):
         self.assertTrue(self.system.users)

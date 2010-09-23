@@ -37,8 +37,8 @@ class System(Cachable):
     projects = ForeignKey(lambda : project.Project, table="projects")
     users = ForeignKey(lambda : user.User, table="users")
     analyses = ForeignKey(lambda : analysis.Analysis, table="parses_analyses")
-    roles = ForeignKey(lambda : analysis.Analysis, table="roles")
-    privileges = ForeignKey(lambda : analysis.Analysis, table="privileges")
+    roles = ForeignKey(lambda : authorisation.Role, table="roles")
+    privileges = ForeignKey(lambda : authorisation.Privilege, table="privileges")
 
     # Annotationschema-properties
     annotationschemas = ForeignKey(lambda : AnnotationSchema, table="annotationschemas")
