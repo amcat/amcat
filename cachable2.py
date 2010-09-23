@@ -138,6 +138,8 @@ class Cachable(idlabel.IDLabel):
         
         @type db: AmCAT Database object"""
         ids = _select(cls.__idcolumn__, db, cls.__table__)
+        if type(cls.__idcolumn__) in (str, unicode):
+            ids = (id[0] for id in ids)
         return (cls(db, c) for c in ids)
         
     
