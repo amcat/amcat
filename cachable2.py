@@ -132,6 +132,15 @@ class Cachable(idlabel.IDLabel):
         except AttributeError:
             return super(Cachable, self).label
     
+    @classmethod
+    def getAll(cls, db):
+        """Get all objects in table
+        
+        @type db: AmCAT Database object"""
+        ids = _select(cls.__idcolumn__, db, cls.__table__)
+        return (cls(db, c) for c in ids)
+        
+    
             
 class UnknownTypeException(Exception):
     def __init__(self, prop):
@@ -338,14 +347,6 @@ class ForeignKey(DBProperty):
         if self.sequencetype is None:
             return types.GeneratorType
         return self.sequencetype
-    
-    def getAll(self, db):
-        """Get all objects referred to by this FK
-        
-        @type db: AmCAT Database object"""
-        ids = _select(self.cls.__idcolumn__, db, self._getTable())
-        if len(ids[0]) == 1: ids = (id[0] for id in ids)
-        return (self.getType(db)(db, c) for c in ids)
 
 def DBProperties(n):
     """Shortcut to create n DBProperty objects
