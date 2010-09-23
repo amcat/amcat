@@ -338,11 +338,21 @@ class ForeignKey(DBProperty):
         if self.sequencetype is None:
             return types.GeneratorType
         return self.sequencetype
+    
+    def getAll(self, db):
+        """Get all objects referred to by this FK
+        
+        @type db: AmCAT Database object"""
+        ids = _select(self.cls.__idcolumn__, db, self._getTable())
+        if len(ids[0]) == 1: ids = (id[0] for id in ids)
+        return (self.getType(db)(db, c) for c in ids)
 
 def DBProperties(n):
     """Shortcut to create n DBProperty objects
     (for assigning to a,b = DBProperties(2))""" 
     return [DBProperty() for dummy in range(n)]
+
+def cacheMultiple(*args, **kargs): pass
     
 def _sqlWhere(fields, ids):
     if type(fields) in (str, unicode):
@@ -350,21 +360,38 @@ def _sqlWhere(fields, ids):
     return "(%s)" % " and ".join("(%s = %s)" % (field, dbtoolkit.quotesql(id))
                                  for (field, id) in zip(fields, ids))
 
-def _select(columns, cachables, table):
-    if isinstance(cachables, Cachable): cachables = (cachables,)
+def _select(columns, cachables_or_db, table):
+    """SQL select on given cachables or all objects in table
+    
+    @type columns: string, list or tuple
+    @param columns: columns to select
+    
+    @type cachables_or_db: bound cachable or AmCAT Database object
+    @param cachables_or_db: bound cachable or AmCAT Database object
+    
+    @type table: str
+    @param table: which table to retrieve the information from
+    
+    """
     if isinstance(columns, basestring): columns = (columns,)
+    if hasattr(cachables_or_db, 'doQuery'): 
+        # Is a database object, select all rows and return
+        select = ", ".join(map(cachables_or_db.escapeFieldName, columns))
+        return cachables_or_db.doQuery("SELECT %s FROM %s" % (select, table))
+    
+    # Convert generators to normals lists
+    try: cachables = tuple(cachables_or_db)
+    except: cachables = (cachables_or_db,)
+
     prototype = cachables[0]
     select = ", ".join(map(prototype.db.escapeFieldName, columns))
-    
     reffield = prototype.__idcolumn__
     if type(reffield) in (str, unicode):
         if type(prototype.id) <> int:
             raise TypeError("Singular reffield with non-int id! Reffield: %r, cachable: %r, id: %r" % (reffield, prototype, prototype.id))
         where  = prototype.db.intSelectionSQL(reffield, (x.id for x in cachables))
-    elif type(reffield) == type(None):
-        # No __idcolumn__ defined (probably system.py), select all
-        where = '1=1'
     else:
         where = "((%s))" % ") or (".join(_sqlWhere(reffield, x.id) for x in cachables)
+    
     SQL = "SELECT %s FROM %s WHERE %s" % (select, table, where)
     return prototype.db.doQuery(SQL)

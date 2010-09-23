@@ -18,6 +18,9 @@ class TestSystem(unittest.TestCase):
         self.assertTrue(self.system.annotationschemas)
         self.assertTrue(self.system.annotationschemafieldtypes)
         
+        user = self.system.getUserByUsername('wva')
+        self.assertTrue(user.username == 'wva')
+        
 
 if __name__ == '__main__':
     unittest.main()

@@ -39,7 +39,11 @@ class TestAmcatMemcache(unittest.TestCase):
         
         u = TestUser(self.db, 5)
         self.assertFalse(set(u.roles))
-
+        
+        roles = list(TestUser.roles.getAll(self.db))
+        self.assertTrue(roles)
+        self.assertTrue(roles[0].label)
+        
         
     def testType(self):
         TestDummy.prop.observedType=None
