@@ -26,7 +26,7 @@ def _getConnection():
         _CONNECTION = _connect()
     return _CONNECTION
 def _connect():
-    return memcache.Client(["127.0.0.1"])
+    return memcache.Client(["127.0.0.1:11211"])
 
 def key2bytes(klass, prop, key):
     """Return a byte-encoding of the key"""
