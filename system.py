@@ -24,41 +24,29 @@ The System singleton contains 'foreign key' relations to the top
 level AmCAT objects such as projects, users, and analyses.
 """
 
-from cachable import Cachable, DBFKPropertyFactory, CachingMeta, cacheMultiple
-import project
-import user
-import authorisation
-import analysis
+from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
+import project, user, authorisation, analysis
+
 from annotationschema import AnnotationSchema, AnnotationSchemaFieldtype
 
 class System(Cachable):
     """Cachable without id that provides access to top level AmCAT objects"""
-    __metaclass__ = CachingMeta
     __table__ = None
     __idcolumn__ = None
 
-    projects = DBFKPropertyFactory("projects", "projectid", factory= lambda : project.Project)
-    users = DBFKPropertyFactory("users", "userid", factory = lambda : user.User)
-    analyses = DBFKPropertyFactory("parses_analyses", "analysisid",
-                                   dbfunc=analysis.Analysis)
+    projects = ForeignKey(lambda : project.Project, table="projects")
+    users = ForeignKey(lambda : user.User, table="users")
+    analyses = ForeignKey(lambda : analysis.Analysis, table="parses_analyses")
+    roles = ForeignKey(lambda : analysis.Analysis, table="roles")
+    privileges = ForeignKey(lambda : analysis.Analysis, table="privileges")
 
-    annotationschemas = DBFKPropertyFactory("annotationschemas", "annotationschemaid", dbfunc=AnnotationSchema)
-    fieldtypes = DBFKPropertyFactory("annotationschemas_fieldtypes", "fieldtypeid", dbfunc=AnnotationSchemaFieldtype)
-
-    roles = DBFKPropertyFactory("roles", "roleid", factory = lambda : authorisation.Role)
-    privileges = DBFKPropertyFactory("privileges", "privilegeid", factory = lambda : authorisation.Privilege)
-    
+    # Annotationschema-properties
+    annotationschemas = ForeignKey(lambda : AnnotationSchema, table="annotationschemas")
+    annotationschemafieldtypes = ForeignKey(lambda : AnnotationSchemaFieldtype, table="annotationschemas_fieldtypes")
+        
     def __init__(self, db, id=None):
         Cachable.__init__(self, db, ())
         
-    @property
-    def schematypes(self):
-        # Seems to be hardcoded (i.e. not stored in table)
-        res = []
-        for (i, label) in enumerate(('Net', 'Simple')):
-            res.append(Schematype(i, label))
-        return res
-    
     def getUserByUsername(self, uname):
         """Search for a user given a username"""
         cacheMultiple(self.users, ["username", ])
@@ -66,12 +54,8 @@ class System(Cachable):
         for usr in self.users:
             if usr.username == uname:
                 return usr
-
-        
-class Schematype(object):
-    def __init__(self, id, label):
-        self.id = id
-        self.label = label
+            
+            
 
 if __name__ == '__main__':
     import dbtoolkit
