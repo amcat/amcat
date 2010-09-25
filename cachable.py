@@ -220,6 +220,9 @@ class Cachable(idlabel.IDLabel):
     def getType(self, propertyname):
         """Returns the type of the given property"""
         return self._getProperty(propertyname).getType()
+    
+    @classmethod
+    def getAll(cls, db): return ()
 
     def getCardinality(self, propertyname):
         """Returns the cardinality of the given property

@@ -87,6 +87,21 @@ class Cachable(idlabel.IDLabel):
        if isinstance(p, Property):
            return p
        raise TypeError("%s is not a Property" % attr)
+   
+    @classmethod
+    def _getProperties(cls, deprecated=True):
+        """Return all DBPropterties and Foreignkeys
+        
+        @type deprecated: Boolean
+        @param deprecated: If true, return deprecated functions also
+        
+        @return: 2-key tuple with the name of the property and the
+        property itself"""
+        for name in dir(cls):
+            prop = getattr(cls, name)
+            if type(prop) in (DBProperty, ForeignKey):
+                if not deprecated and not prop.deprecated:
+                    yield (name, prop)
     
     def __getattribute__(self, attr):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""

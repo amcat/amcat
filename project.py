@@ -16,14 +16,18 @@ class Project(Cachable):
     codingjobs = ForeignKey(lambda : codingjob.CodingJob)
 
     @property
+    @toolkit.deprecated
     def href(self):
         return '<a href="projectDetails?projectid=%i">%i - %s</a>' % (self.id, self.id, self.name)
+    
     @property
+    @toolkit.deprecated
     def articles(self):
         for b in self.batches:
             for a in b.articles:
                 yield a
 
+    @toolkit.deprecated
     def userPermission(self, user):
         p = self.db.getValue("select permissionid from permissions_projects_users where projectid=%i and userid=%i" % (self.id, user.id))
         if not p: return None

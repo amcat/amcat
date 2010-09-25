@@ -1,3 +1,22 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
 """
 Interface and base implmentations for a generic table type
 
@@ -79,10 +98,58 @@ class ObjectTable(Table):
         self.columns = columns or []
         self.cellfunc = lambda row, col : col.getCell(row)
     def addColumn(self, col, label=None, **kargs):
+        """Add column to Table3 object
+        
+        @type col: ObjectColumn or (lambda-)function
+        @param col: Column you want to add to this table. If it is
+        a function, it will be called with an object every time
+        a cell is created. The returned data will be used to fill it.
+        
+        @type label: str or unicode
+        @param label: String for user-friendly column-identification.
+        If not provided, the __name__ attribute of `col` will be used.
+        
+        @type return: NoneType 
+        """
         if type(col) == types.FunctionType:
             if label is None: label = col.__name__
+            if label == '<lambda>': label = ''
+            
             col = ObjectColumn(label, col, **kargs)
         self.columns.append(col)
+        
+class FormTable(ObjectTable):
+    """Wrapper around ObjectTable. Get its default columns from a Form
+    object."""
+    
+    def __createColumn(self, name):
+        return lambda x:getattr(x, name)
+    
+    def __init__(self, form, objects):
+        """
+        @type form: Django Form (django.forms.Form)
+        @param form: Typically a form from model.forms. It doesn't matter
+        whether this object is bound or not.
+        
+        @type objects: A cachable object"""        
+        super(FormTable, self).__init__(objects)
+        
+        # Bound class if it's not, do nothing when it is
+        if not hasattr(form, 'fields'): form = form()
+        self.form = form
+        
+        # Walk through all fields and add them to the table object
+        for name, field in form.fields.items():
+            
+            label = field.label
+            if label == None:
+                label = name.capitalize()
+                  
+            col = self.__createColumn(name)
+            fieldtype = field.widget.__class__.__name__
+            self.addColumn(col, label,
+                           fieldname=name,
+                           fieldtype=fieldtype)
 
 class DictTable(Table):
     """
