@@ -311,8 +311,8 @@ class TextImporter(Scraper):
         """Return a sequence of filenames or files to be scraped.
         If strings are returned, they will be opened using open(.), otherwise
         they will be passed on to splitFile as-is.
-        Subclasses *must* override"""
-        abstract
+        Subclasses *may* override; default will return context as-is"""
+        return context
     def splitFile(self, context, file):
         """Split the given file into documents, returning document objects
         (eg strings) that will be passed onto getArticle(.).
