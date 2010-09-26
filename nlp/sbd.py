@@ -1,4 +1,4 @@
-import re,os, toolkit
+import re,os, toolkit, collections
 
 abbrevs = ["ir","mr","dr","dhr","ing","drs","mrs","sen","sens","gov","st","jr","rev","vs","gen","adm","sr","lt","sept"]
 months = "Jan Feb Mar Apr Jun Jul Aug Sep Oct Nov Dec".split()
@@ -17,7 +17,7 @@ def split(text, type=2, maxsentlength=2000, abbreviateIfTooLong=False):
         text = text.replace(".'", "'.")
         global expr
         if expr is None:
-            lenmap = toolkit.DefaultDict(list)
+            lenmap = collections.defaultdict(list)
             for a in abbrevs+months:
                 lenmap[len(a)].append(a)
                 lenmap[len(a)].append(a.title())
