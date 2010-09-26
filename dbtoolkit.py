@@ -174,6 +174,10 @@ class amcatDB(object):
                 colnames = [entry[0] for entry in info]
                 return res, colnames            
             return res
+
+    def doQueryTable(self, sql):
+        data, colnames = self.doQuery(sql, colnames=True, select=True)
+        return table3.ListTable(data, colnames)
         
     def doSafeQuery(self, sql, *args):
         e_args = [quotesql(a) for a in args]
@@ -542,6 +546,16 @@ class amcatDB(object):
         self.doQuery("CREATE TABLE %s (i int)" % table)
         self.insertmany(table, "i", [(i,) for i in ints])
         return "(%s in (select i from %s))" % (colname, table)
+
+    @contextmanager
+    def transaction(self):
+        try:
+            yield 
+        except:
+            self.rollback()
+            raise
+        else:
+            self.commit()
     
 anokoDB = amcatDB
 
