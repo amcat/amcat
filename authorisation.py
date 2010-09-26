@@ -22,8 +22,9 @@ Module containing classes and utility functions related to AmCAT authorisation
 
 Main entry points are
 
-getPrivilege(db, str or int) returns Privilege object
 check(db, privilege/str/int) checks whether user has privilege
+getPrivilege(db, str or int) returns Privilege object
+
 """
 
 import system
