@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -65,7 +67,9 @@ from itertools import izip, count
 import sbd, re, dbtoolkit, toolkit, amcatwarning, traceback, article
 import tadpole
 import alpino, lemmata
+import table3, sentence
 import sys, traceback
+from analysis import Analysis
 
 def _getid(o):
     return o if type(o) == int else o.id
@@ -103,8 +107,13 @@ def assignSentences(db, analysis, sentences, check=True):
         
 
     
-def storeResults(db, analysis):
-    pass
+def storeResult(db, analysis, sid, result):
+    analysisid = _getid(analysis)
+    result = dbtoolkit.quotesql(result)
+    sql = """update parses_jobs_sentences set result=%s where
+             sentenceid=%i and analysisid=%i""" % (result, sid, analysisid)
+    print sql
+    db.doQuery(sql)
 
 
 ###########################################################################
@@ -125,21 +134,66 @@ def splitArticle(db, art):
     text = db.getText(art.id)
     if not text:
         toolkit.warn("Article %s empty, adding headline only" % art.id)
-        text = ""                                                                                                             
-    text = re.sub(r"q11\s*\n", "\n\n",text)                                                                                   
-    #if article.byline: text = article.byline + "\n\n" + text                                                                 
+        text = ""
+        text = re.sub(r"q11\s*\n", "\n\n",text)
+    #if article.byline: text = article.byline + "\n\n" + text
     if art.headline: text = art.headline.replace(";",".")+ "\n\n" + text                                              
-    spl = sbd.splitPars(text,  maxsentlength=2000, abbreviateIfTooLong=True)                                                                                                 
-    for parnr, par in izip(count(1), spl):                                                                                    
-        for sentnr, sent in izip(count(1), par):                                                                              
-            sent = sent.strip()                                                                                               
-            orig = sent                                                                                                       
-            [sent], encoding = dbtoolkit.encodeTexts([sent])                                                                  
+    spl = sbd.splitPars(text,  maxsentlength=2000, abbreviateIfTooLong=True)
+    for parnr, par in izip(count(1), spl):
+        for sentnr, sent in izip(count(1), par):
+            sent = sent.strip()
+            orig = sent
+            [sent], encoding = dbtoolkit.encodeTexts([sent])
             if len(sent) > 6000:
                 raise Exception("Sentence longer than 6000 characters, this is not normal!")
-            db.insert("sentences", {"articleid":art.id, "parnr" : parnr, "sentnr" : sentnr, "sentence" : sent, 'encoding': encoding})
+            db.insert("sentences", {"articleid":art.id, "parnr" : parnr, "sentnr" :
+                                        sentnr, "sentence" : sent, 'encoding': encoding})
     art.removeCached("sentences")
     return True
+
+###########################################################################
+#                             Statistics                                  #
+###########################################################################
+
+def getStatistics(db):
+    """return a Table with statistics on #assigned, #done etc per analysis"""
+    SQL = """select analysisid, count(sentenceid) as [#assigned], min(assigned) as [oldest assigned],
+                 max(assigned) as [youngest assigned], count(started) as [#started],
+                 sum(case when result is null then 0 else 1 end) as [#done]
+             from parses_jobs_sentences
+             group by analysisid order by analysisid"""
+    return db.doQueryTable(SQL)
+
+
+def getSentences(db, analysis, maxn):
+    """Retrieve and mark a number of sentences to be analysed
+
+    B{Important: This function will obtain a table lock on parses_jobs_sentences and
+    commit as soon as they are marked, so make sure that the db does not contain
+    any ongoing transactions you might want to rollback!}
+
+    @param analysis: the Analysis object to get sentences from
+    @param maxn: the maximum number of sentences to retrieve
+    @return: a list of Sentence objects to be analysed
+    """
+    #Get eligible sentenceids, lock table, update 'started', commit
+    analysisid = _getid(analysis)
+    with db.transaction():
+        SQL = """select top %(maxn)i sentenceid from parses_jobs_sentences 
+              with (repeatableread,tablockx)
+              where analysisid=%(analysisid)i and started is null and result is null order by assigned """ % locals()
+        sids = list(db.getColumn(SQL))
+        if sids:
+            SQL = ("update parses_jobs_sentences set started=getdate() where %s" %
+                   db.intSelectionSQL("sentenceid", sids))
+            db.doQuery(SQL)
+    #Create and return sentence objects
+    return (sentence.Sentence(db, sid) for sid in sids)
+
+def reset(db, analysis):
+    """Reset all non-completed sentences to non-started"""
+    analysisid = _getid(analysis)
+    db.doQuery("update parses_jobs_sentences set started=null where result is null")
 
 ###########################################################################
 #                           Convenience methods                           #
@@ -161,7 +215,7 @@ def assignArticles(db, analysis, articles):
     for art in articles:
         try:
             if type(art) == int: art = article.Article(db, art)
-            splitArticle(db, article)
+            splitArticle(db, art)
             assignSentences(db, analysis, art.sentences)
         except Exception, e:
             amcatwarning.Error(str(e)).warn()
@@ -186,6 +240,66 @@ def splitArticles(db, articles):
             amcatwarning.Error(traceback.format_exc()).warn()
     return nsplit
 
+class ParseStorer(object):
+    def __init__(self, db, analysis):
+        self.db = db
+        self._words = None
+        if type(analysis)==int: analysis=Analysis(self.db, analysis)
+        self.analysis = analysis
+
+    @property
+    def words(self):
+        if self._words is None:
+            self._words = word.CachingWordCreator(language=self.analysis.language, db=self.db)
+        return self._words
+    
+    def getWord(self, token):
+        return self.words.getWord(token.word, token.lemma, token.poscat)
+    def getRel(self, rel):
+        return self.words.getRel(rel)
+        
+    def getWord(self, token):
+        return self.words.getWord(token.word, token.lemma, token.poscat)
+    
+    def storeTriples(self, sentenceid, triples):
+        for token in tokensFromTriples(triples):
+            wordid = self.words.getWord(token.word, token.lemma, token.poscat)
+            posid = self.words.getPos(token.posmajor, token.posminor, token.poscat)
+            self.db.insert("parses_words", dict(sentenceid=sentenceid, wordbegin=token.position, posid=posid, wordid=wordid, analysisid=self.analysisid), retrieveIdent=False)
+        self.db.commit()
+        for parentpos, rel, childpos in triplesFromTriples(triples):
+            relid = self.words.getRel(rel)
+            self.db.insert("parses_triples", dict(sentenceid=sentenceid, parentbegin=parentpos, childbegin=childpos, relation=relid, analysisid=self.analysisid), retrieveIdent=False)
+        #toolkit.warn("Stored parses_* for sentence %i" % sentenceid)
+
+    def storePickle(self, picklestream):
+        for sid, triples in pickle.load(picklestream):
+            self.storeTriples(sid, triples)
+            
+    def storeResults(self):
+        SQL = "DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND sentenceid in (select sentenceid from parses_words where analysisid=%i)" % (
+            self.analysisid, self.analysisid)
+        
+        while True:
+            SQL = "SELECT TOP 100 sentenceid, result FROM parses_jobs_sentences WHERE analysisid=%i AND result is not null AND sentenceid not in (select sentenceid from parses_words where analysisid=%i)" % (self.analysisid, self.analysisid)
+            results = self.db.doQuery(SQL)
+            if not results:
+                toolkit.warn("No results: done!")
+                return
+            toolkit.ticker.warn("Fetched %i results" % len(results))
+            
+            for sid, result in results:
+                triples = pickle.loads(result)
+                try:
+                    self.storeTriples(sid, triples)
+                    self.db.doQuery("DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND sentenceid=%i" % (self.analysisid, sid))
+                    #toolkit.warn("Stored %i triples for sentence %i" % (len(triples), sid))
+                    self.db.commit()
+                except Exception, e:
+                    toolkit.warn("Exception on storing result for %i: \n%s" % (sid, e))
+                    self.db.rollback()
+
+
 # def parseArticles(articles):
 #     if type(articles) not in (tuple, list, set): articles = set(articles)
 #     db = toolkit.head(articles).db
@@ -201,8 +315,9 @@ def splitArticles(db, articles):
 if __name__ == '__main__':
     import dbtoolkit, article
     db  = dbtoolkit.amcatDB()
-    sids = range(100, 200)
-    assignSentences(db, 0, sids)
-    db.commit()
+
+    t = getStatistics(db)
+    import tableoutput
+    print tableoutput.table2unicode(t)
 
 

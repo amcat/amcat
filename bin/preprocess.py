@@ -19,50 +19,99 @@
 ###########################################################################
 
 """
-Usage: python preprocess.py ACTION ANALYSISID [<ARTICLEIDS]
+Usage: python preprocess.py [-q] ACTION [ANALYSISID] [MAXN] [<ARTICLEIDS]
 
 Possible ACTIONs:
 
+stats:  Give statistics about assigned articles
 split:  Split the given articles
         Ignores sentences already split
 assign: Split the given articles and assign to the given analysis
         Ignores sentences already parsed or assigned.
+get:    Get MAXN sentences from the analysis and mark them 'started'
+reset:  Set non-complete analyses to not-started
+
+if -q is given, only print errors to stderr
 """
 
 import sys, dbtoolkit, analysis, preprocessing, system, toolkit, amcatwarning
-
+try:
+    import cPickle as pickle
+except:
+    import pickle
+    
 db = dbtoolkit.amcatDB()
 
 def usage(msg=None):
-    if msg: print msg, "\n"
-    print __doc__
-    print "\nAvailable analyses:"
+    if msg: toolkit.warn("%s\n" % msg)
+    toolkit.warn(__doc__)
+    toolkit.warn("\nAvailable analyses:")
     for a in system.System(db).analyses:
         if a.id > 0:
-            print " %i) %s" % (a.id, a.label)
+            toolkit.warn(" %i) %s" % (a.id, a.label))
     sys.exit()
-    
-if len(sys.argv) < 2: usage()
 
-action = sys.argv[1]
+def arg(i):
+    if len(sys.argv) <= i: usage("The requested action needs at least %i arguments, only %i provided" %
+                                 (i, len(sys.argv)-1))
+    return sys.argv[i]
+
+verbose = True
+if "-q" in sys.argv:
+    verbose = False
+    del sys.argv[sys.argv.index("-q")]
+
+def status(s):
+    if verbose:
+        toolkit.warn(s)
+
+action = arg(1)
 
 if action == "split":
     aids = list(toolkit.intlist())
-    print "Splitting %i articles" % len(aids)
+    status("Splitting %i articles" % len(aids))
     n = preprocessing.splitArticles(db, aids)
-    print "%i articles where split, committing" % n
+    status("%i articles where split, committing" % n)
     db.commit()
-    print "Done!"
-elif action == "assign":
+    status("Done!")
+elif action == "stats":
+    t = preprocessing.getStatistics(db)
+    import tableoutput
+    status(tableoutput.table2unicode(t))
+elif action in ('assign', 'get', 'reset', 'store'):
     try:
-        analysisid = int(sys.argv[2])
-        a = analysis.Analysis(db, analysisid)
-        if a.id == 0 or (not a.exists()):
+        analysisid = int(arg(2))
+        ana = analysis.Analysis(db, analysisid)
+        if ana.id == 0 or (not ana in system.System(db).analyses):
             raise ValueError("Analysis %i does not exist" % analysisid)
     except Exception, e:
         usage(e)
-    aids = list(toolkit.intlist())
-    amcatwarning.Information("Assigning %i articles to analysis %s" % (len(aids), a))
+    if action == "assign":
+        aids = list(toolkit.intlist())
+        status("Assigning %i articles to analysis %s" % (len(aids), ana.idlabel()))
+        preprocessing.assignArticles(db, ana, aids)
+        db.commit()
+        status('Succesfully assigned the articles. Run "preprocess.py stats" to keep track of progress')
+    elif action == 'reset':
+        status("Resetting 'started' state for non-complete articles in %s" % ana.idlabel())
+        preprocessing.reset(db, ana)
+        db.commit()
+    elif action == 'store':
+        sid = int(arg(3))
+        results = sys.stdin.read()
+        status("Committing %i bytes to sentence %i in %s" % (len(results), sid, ana.idlabel()))
+        preprocessing.storeResult(db, ana, sid, results)
+        db.commit()
+        status("Done")
+    elif action == 'get':
+        def filter(text):
+            l = len(text.strip().split())
+            return l > 2 and l < 30
+        maxn = int(arg(3))
+        status("Getting max %i sentences from %s"% (maxn, ana.idlabel()))
+        sents = preprocessing.getSentences(db, ana, maxn)
+        sents = [(s.id, s.text)  for s in sents if filter(s.text)]
+        status("Printing %i non-empty sentences" % len(sents))
+        pickle.dump(sents, sys.stdout, protocol=2)
 else:
     usage("Uknown action: %s" % action)
-
