@@ -1,8 +1,11 @@
-import cachable, language
+from cachable2 import Cachable, DBProperty
+import language
 
-class Analysis(cachable.Cachable):
-    __metaclass__ = cachable.CachingMeta
+class Analysis(Cachable):
+    """Object representing an NLP 'preprocessing' analysis"""
     __table__ = 'parses_analyses'
     __idcolumn__ = 'analysisid'
-    __dbproperties__ = ['label']
-    language = cachable.DBPropertyFactory("languageid", dbfunc = language.Language)
+    label = DBProperty()
+    language = DBProperty(language.Language)
+
+    
