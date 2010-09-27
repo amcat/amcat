@@ -43,7 +43,7 @@ class TestUser(amcattest.AmcatTestCase):
 
         for d in (db, self.db):
             self.assertEqual(user.currentUser(d), d.getUser())
-            self.assertEqual(user.users(d), system.System(d).users)
+            self.assertEqual(list(user.users(d)), list(system.System(d).users))
 
 if __name__ == '__main__':
     unittest.main()
