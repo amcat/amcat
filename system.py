@@ -49,7 +49,7 @@ class System(Cachable):
         
     def getUserByUsername(self, uname):
         """Search for a user given a username"""
-        cacheMultiple(self.users, ["username", ])
+        #cacheMultiple(self.users, ["username", ])
         
         for usr in self.users:
             if usr.username == uname:
