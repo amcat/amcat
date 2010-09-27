@@ -1,8 +1,8 @@
-import toolkit
+import  re, toolkit
 import parse
 
 TOKENIZE = "%s/Alpino/Tokenization/tok" 
-PARSE = "ALPINO_HOME=%s/Alpino %s/Alpino/bin/Alpino end_hook=dependencies -notk -parse" 
+PARSE = "ALPINO_HOME=%s/Alpino %s/Alpino/bin/Alpino end_hook=dependencies -notk -parse"
 
 POSMAP = {"pronoun" : 'O',
           "verb" : 'V',
@@ -11,6 +11,7 @@ POSMAP = {"pronoun" : 'O',
           "determiner" : "D",
           "comparative" : "C",
           "adverb" : "B",
+          'adv' : 'B',
           "adjective" : "A",
           "complementizer" : "C",
           "punct" : ".",
@@ -23,7 +24,72 @@ POSMAP = {"pronoun" : 'O',
           "number" : "Q",
           "reflexive":  'O',
           "conjunct" : 'C',
-          }
+          "pp" : 'P',
+          'anders' : '?',
+          'etc' : '?',
+          'enumeration': '?',
+          'np': 'N',
+          'p': 'P',
+          'quant': 'Q',
+          'sg' : '?',
+          'zo' : '?',
+          'max' : '?',
+                    }
+
+class AlpinoParser(parse.Parser):
+    def __init__(self, resources):
+        self.resources = resources
+        parse.Parser.__init__(self)
+
+def tokenize(sentences):
+    resources = parse.getResourcesDir()
+    cmd = TOKENIZE % resources
+    if sentences[-1] != "\n": sentences += "\n"
+    return toolkit.execute(cmd, sentences, outonly=True)
+
+def clean(sent):
+    return toolkit.clean(sent, level=1, keeptabs=False)
+
+def parseRaw(input):
+    resources = parse.getResourcesDir()
+    cmd = PARSE % (resources, resources)
+    out, err = toolkit.execute(cmd, input)
+    return out
+
+def splitRawParse(rawparse):
+    curid = None
+    cur = []
+    for line in rawparse.split("\n"):
+        if "|" not in line: continue
+        sid = int(line.split("|")[-1])
+        if sid != curid:
+            if cur:
+                yield curid, cur
+            curid = sid
+            cur = []
+        cur.append(line)
+    if cur:
+        yield curid, cur
+
+
+        
+def interpret(parse):
+    words, triples = {}, []
+    lines = map(line2tokens, parse)
+    for parent, rel, child in lines:
+        for node in parent, child:
+            words[node[0]] = node
+        triples.append((parent[0], rel, child[0]))
+    words = sorted(words.values())
+    return words, triples
+        
+def parseSentences(sentences):
+    input = "\n".join("%i|%s" % (sid, clean(sent)) for (sid, sent) in sentences)
+    input = tokenize(input)
+    rawparse = parseRaw(input)
+    for sid, parse in splitRawParse(rawparse):
+        words, triples = interpret(parse)
+        yield sid, (('tokens', words), ('tiples', triples))
 
 def data2token(lemma, word, begin, end, dummypos, dummypos2, pos):
     if "(" in pos:
@@ -46,45 +112,16 @@ def line2tokens(line):
     rel = data[7]
     rel = rel.split("/")[-1]
     token2 = data[8:15]
-    sid = data[15]
-    return data2token(*token1), rel, data2token(*token2), int(sid)
-
-class AlpinoParser(parse.Parser):
-    analysisid=2
-    def __init__(self, errorhook=None):
-        self.errorhook = errorhook
-        parse.Parser.__init__(self)
-    
-    def parseSentenceRaw(self, sent):
-        resources = parse.getResourcesDir()
-        if not (sent and sent.strip()): return
-        out, err = toolkit.execute(PARSE % (resources, resources), sent, listener=self.errorhook)
-        print "Received\n%s\n---------\n%s" % (out, err)
-        for line in out.split("\n"):
-            if not line.strip(): continue
-            yield line
-
-    def parse(self, sent):
-        for line in self.parseSentenceRaw(sent):
-            t1, rel, t2, sid = line2tokens(line)
-            yield t1, rel, t2
-
-    def tokenizeText(text):
-        resources = parse.getResourcesDir()
-        out, err = toolkit.execute(TOKENIZE % (resources,), text)
-        if err:
-            raise Exception(err)
-        return [x for x in out.split("\n") if x.strip()]
-
-       
-if __name__ == '__main__':
-    import sys
-    if len(sys.argv) < 2:
-        toolkit.warn("Usage: alpino.py SENTENCE")
-        sys.exit()
-    sent = " ".join(sys.argv[1:])
-    p = AlpinoParser()
-    print "Using %r to parse %r" % (p, sent)
-    print "\n".join(map(str, p.parse(sent)))
+    return data2token(*token1), rel, data2token(*token2)
 
         
+if __name__ == '__main__':
+    #zin  ="dit, waarde heer, is 'een' zin"
+    input = [(123, "hij 'koopt' bloemen"), (456,"dat is, mooi")]
+    #p = BaseAlpinoParser()
+    #print p.parse(1234, zin)
+    #p.stop()
+
+    for sid, info in  parseSentences(input):
+        print sid
+        print "\n".join(map(str, info))

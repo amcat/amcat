@@ -21,17 +21,7 @@
 Give progress feedback on the command line
 """
 
-import time,  math,  amcatwarning, warnings
-
-class Tick(amcatwarning.Information):
-    """Warning level to use for Ticks"""
-    severity = 3
-    def __init__(self, msg, i=None, length=None, *args, **kargs):
-        if i:
-            i = "%6i" % i
-            if length: i += "/%6i" % length
-            msg = "[%s] %s" % (i, msg)
-        amcatwarning.Information.__init__(self, msg, *args, **kargs)
+import time,  math, amcatlogging, logging, toolkit
 
 class Ticker(object):
     """
@@ -51,7 +41,7 @@ class Ticker(object):
         self.markThread = markThread
         self.estimate = None
 
-    def warn(self, msg, reset=False, interval = None, estimate=None, detail=0):
+    def warn(self, msg, reset=False, interval = None, estimate=None, detail=0, depth=3, **kargs):
         """
         Display a warning message containing current iteration number
 
@@ -75,7 +65,7 @@ class Ticker(object):
             self.interval = 10**(int(magnitude))
             msg += " (%s steps / %s)" % (estimate, self.interval)
 
-        self._doTick(msg)
+        self._doTick(msg, depth, **kargs)
         #self.last = now
         if reset: self.reset()
 
@@ -83,10 +73,14 @@ class Ticker(object):
         """Reset the iteration count of this ticker to zero"""
         self.i = 0
 
-    def _doTick(self, msg):
-        warnings.warn(Tick(msg, self.i, self.estimate)) 
+    def _doTick(self, msg, depth=2, **kargs):
+        if self.i:
+            i = "%6i" % self.i
+            if self.estimate: i += "/%6i" % self.estimate
+            msg = "[%s] %s" % (i, msg)
+        amcatlogging.debug(msg, level=logging.INFO,depth=depth, **kargs)
         
-    def tick(self, msg = "", interval = None):
+    def tick(self, msg = "", interval = None, depth=3, **kargs):
         """
         Indicate a single iteration
 
@@ -99,7 +93,7 @@ class Ticker(object):
         if interval: self.interval = interval
         self.i += 1
         if self.i % self.interval == 0:
-            self._doTick(msg)
+            self._doTick(msg, depth, **kargs)
 
     def totaltime(self):
         """Print the total time so far to the warning stream"""
@@ -123,16 +117,17 @@ def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0):
     @param useticker: if given, use that ticker rather than the default L{ticker}()
     @param detail: optional C{detail} argument to pass to L{Ticker.warn}
     """
+    fn, lineno, func = toolkit.getCaller()
     if msg is None: msg = "Starting iteration"
     if useticker is None: useticker = ticker()
     if getlen:
         if type(seq) not in (list, tuple, set):
             seq = list(seq)
-        useticker.warn(msg, estimate=len(seq), detail=detail)
+        useticker.warn(msg, estimate=len(seq), detail=detail, fn=fn, lineno=lineno, func=func)
     else:
-        useticker.warn(msg)
+        useticker.warn(msg, fn=fn, lineno=lineno, func=func)
     for x in seq:
-        useticker.tick()
+        useticker.tick(fn=fn, lineno=lineno, func=func)
         yield x
 
 _SINGLETON = None
@@ -145,9 +140,11 @@ def ticker():
 
 def warn(*args, **kargs):
     """Convenience method for ticker().warn(..)"""
+    if 'depth' not in kargs: kargs['depth'] = 4
     ticker().warn(*args, **kargs)
 def tick(*args, **kargs):
     """Convenience method for ticker().tick(..)"""
+    if 'depth' not in kargs: kargs['depth'] = 4
     ticker().tick(*args, **kargs)
 
 if __name__ == '__main__':

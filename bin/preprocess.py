@@ -34,7 +34,7 @@ reset:  Set non-complete analyses to not-started
 if -q is given, only print errors to stderr
 """
 
-import sys, dbtoolkit, analysis, preprocessing, system, toolkit, amcatwarning
+import sys, dbtoolkit, analysis, preprocessing, system, toolkit
 try:
     import cPickle as pickle
 except:

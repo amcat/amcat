@@ -26,7 +26,7 @@ Test whether the libpy/*.py modules comply with AmCAT policy
 
 from __future__ import with_statement
 import unittest, os.path, os, sys, types
-import amcatwarning, toolkit
+import toolkit
 import table3, tableoutput
 import amcattest, hg
 
@@ -138,9 +138,8 @@ def passesTest(fn):
     if not os.path.exists(testpath): return None
     suites = amcattest.getSuites(testpath)
     t = unittest.TestResult()
-    with amcatwarning.storeWarnings():
-        for suite in suites:
-            suite.run(t)
+    for suite in suites:
+        suite.run(t)
     nfailed = len(t.errors) + len(t.failures)
     return t.testsRun - nfailed, t.testsRun
 

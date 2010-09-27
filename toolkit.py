@@ -43,7 +43,7 @@ this organisation!
 """
 
 import warnings, os, random, gzip, types, datetime, itertools, re, collections
-import threading, subprocess, sys, colorsys, base64
+import threading, subprocess, sys, colorsys, base64, time, inspect
 try: import mx.DateTime
 except: pass
 
@@ -310,7 +310,7 @@ def pairs(seq, lax=False):
 
 
 
-def getseq(sequence, seqtypes=(list, tuple, set), pref=list):
+def getseq(sequence, seqtypes=(list, tuple, set), pref=list, stringok=False):
     """Ensures that the sequences is list/tuple/set and changes if necessary
     
     Makes sure that the sequence is a 'proper' sequence (and not
@@ -322,6 +322,7 @@ def getseq(sequence, seqtypes=(list, tuple, set), pref=list):
     @param pref: the sequence type to change into if necessary
     @return: the original sequence if allowed, otherwise pref(sequence)
     """
+    if stringok: seqtypes += (str,unicode)
     return sequence if isinstance(sequence, seqtypes) else pref(sequence)
 
 
@@ -657,6 +658,9 @@ def clean(string, level=0, lower=False, droptags=False, escapehtml=False, keepta
     return string.strip()
 
 
+def warn(string):
+    print >>sys.stderr, string
+
 ###########################################################################
 ##                     Date(time) functions                              ##
 ###########################################################################
@@ -841,8 +845,29 @@ class _Reader(threading.Thread):
         else:
             self.out = self.stream.read()
 
+class ErrorReader(threading.Thread):
+    def __init__(self, stream):
+        threading.Thread.__init__(self)
+        self.stream = stream
 
-
+        import fcntl
+        fd = self.stream.fileno()
+        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        
+    def run(self):
+        while True:
+            try:
+                err = self.stream.read()
+            except IOError, e:
+                if e.errno not in (11,):
+                    raise
+                print e.errno
+            else:
+                if err.strip():
+                    raise Exception("Unexpected message:\n%s" % err)
+            time.sleep(0.1)
+            
 def executepipe(cmd, listener=None, listenOut=False, outonly=False):
     """Execute a command, yielding an input pipe for writing,
     then yielding out and err, using threads to avoid deadlock
@@ -870,10 +895,16 @@ def executepipe(cmd, listener=None, listenOut=False, outonly=False):
     errr = _Reader(p.stderr, "err", listener)
     outr.start()
     errr.start()
+    #print "Yielding input pipe"
     yield p.stdin
+    #print "Closing input pipe"
     p.stdin.close()
+
+    #print "Joining outr"
     outr.join()
+    #print "Joining errr"
     errr.join()
+    #print "Returning..."
     if outonly:
         e = errr.out.strip()
         if e: raise Exception("Error on executing %r:\n%s" % (cmd, e))
@@ -891,13 +922,13 @@ def execute(cmd, inputbytes=None, **kargs):
     @param inputbytes: (optional) input to send to the process' input pipe
     @param kargs: optional listener and listenout to send to executepipe
     """
+    #print "Starting execute %r" % cmd
     gen = executepipe(cmd, **kargs)
+    #print "Getting input stream"
     pipe = gen.next()
-    try:
-        if inputbytes:
-            pipe.write(inputbytes)
-    finally:
-        pipe.close()
+    if inputbytes:
+        #print "Writing %i bytes" % len(inputbytes)
+        pipe.write(inputbytes)
     return gen.next()
     
 def ps2pdf(ps):
@@ -960,6 +991,15 @@ def isIterable(obj, excludeStrings = False):
 ###########################################################################
 # Please try to keep this one clean...
 
+def getCaller(depth=1):
+    """Return the filename, lineno, function of the caller
+
+    A depth of 1 signifies the caller of the function calling this function.
+    Depth 2 would be its caller etc.
+    """
+    depth = depth + 1 # me, caller, caller's caller
+    return inspect.stack()[depth][1:4]
+    
 def HSVtoHTML(h, s, v):
     """Convert HSV (HSB) colour to HTML hex string"""
     rgb = colorsys.hsv_to_rgb(h, s, v)
@@ -1054,31 +1094,24 @@ class _ticker_proxy(object):
         import ticker as _ticker
         return getattr(_ticker.ticker(), name)
 ticker = _ticker_proxy()
-
-@deprecated
-def warn(string, *dummy, **dummy2):
-    """B{Deprecated: please use C{amcatwarning.Information(string).warn()}}"""
-    import amcatwarning
-    amcatwarning.Information(string).warn()
     
 class Debug:
-    """B{Deprecated: please use amcatwarning}"""
+    """B{Deprecated: please use amcatlogging}"""
     @deprecated
     def __init__(self, modulename=None, debuglevel=None, printer=warn):
-        """B{Deprecated: please use amcatwarnings}"""
+        """B{Deprecated: please use amcatlogging}"""
         pass
     @deprecated
     def __call__(self, message, *dummy, **dummy2):
-        """B{Deprecated: please use amcatwarnings}"""
-        import amcatwarning
-        amcatwarning.Information(message).warn()
+        """B{Deprecated: please use amcatlogging}"""
+        warn(message)
     @deprecated
     def ok(self, level):
-        """B{Deprecated: please use amcatwarnings}"""
+        """B{Deprecated: please use amcatlogging}"""
         self(level, " OK!")
     @deprecated
     def fail(self, level):
-        """B{Deprecated: please use amcatwarnings}"""
+        """B{Deprecated: please use amcatlogging}"""
         self(level, " FAILED!")
     
     
@@ -1104,12 +1137,12 @@ def sortByKeys(dictionary, reverse=False):
 
 @deprecated
 def debug(string, *dummy, **dummy2):
-    """B{Deprecated: please use amcatwarnings}"""
+    """B{Deprecated: please use amcatlogging}"""
     Debug()(string)
 
 @deprecated
 def setDebug(*dummy, **dummy2):
-    """B{Deprecated: please use amcatwarnings}"""
+    """B{Deprecated: please use amcatlogging}"""
     pass
 
 @deprecated

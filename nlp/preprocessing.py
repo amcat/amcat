@@ -64,7 +64,7 @@ In each case, the caller is responsible for committing the db transaction.
 """
 
 from itertools import izip, count
-import sbd, re, dbtoolkit, toolkit, amcatwarning, traceback, article
+import sbd, re, dbtoolkit, toolkit, amcatlogging, traceback, article
 import tadpole
 import alpino, lemmata
 import table3, sentence
@@ -202,8 +202,8 @@ def reset(db, analysis):
 def assignArticles(db, analysis, articles):
     """Convenience method to L{splitArticle} and L{assignSentences}
 
-    If the underlying methods call exceptions, they are issues as
-    L{amcatwarning.Error} warnings.
+    If the underlying methods call exceptions, they are logged using
+    L{amcatlogging.exception}.
 
     @type db: L{amcatDB} 
     @param db: Connection to the database - caller should commit
@@ -218,13 +218,13 @@ def assignArticles(db, analysis, articles):
             splitArticle(db, art)
             assignSentences(db, analysis, art.sentences)
         except Exception, e:
-            amcatwarning.Error(str(e)).warn()
+            amcatlogging.exception(e)
             
 def splitArticles(db, articles):
     """Split multiple articles into sentences
 
-    If the splitting method raises exceptions, they are issues as
-    L{amcatwarning.Error} warnings.
+    If the underlying methods call exceptions, they are logged using
+    L{amcatlogging.exception}.
 
     @type db: L{amcatDB} 
     @param db: Connection to the database - caller should commit
@@ -237,7 +237,7 @@ def splitArticles(db, articles):
             if type(art) == int: art = article.Article(db, art)
             nsplit += int(bool(splitArticle(db, art)))
         except Exception, e:
-            amcatwarning.Error(traceback.format_exc()).warn()
+            amcatlogging.exception(e)
     return nsplit
 
 class ParseStorer(object):

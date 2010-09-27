@@ -35,7 +35,7 @@ Options:
 
 from __future__ import with_statement
 import unittest, os.path, os, inspect, sys
-import amcatwarning, warnings, toolkit
+import warnings, toolkit
 
 
 
@@ -77,7 +77,7 @@ class AmcatTestCase(unittest.TestCase):
     def assertSubclass(self, type1, type2):
         self.assertTrue(issubclass(type1, type2), "%s is not a subclass of %s" % (type1, type2))
     def assertIn(self, element, sequence):
-        sequence=toolkit.getseq(sequence) # force permanent sequence
+        sequence=toolkit.getseq(sequence, stringok=True) # force permanent sequence
         self.assertTrue(element in sequence, "%s is not in %s" % (element, sequence))
         
     
@@ -94,15 +94,14 @@ if __name__ == '__main__':
 
     suite = unittest.TestSuite(suites)
 
-    with amcatwarning.storeWarnings() as w:
-        verbosity = 2 if "-v" in sys.argv else 1
-        unittest.TextTestRunner(verbosity=2).run(suite)
+    verbosity = 2 if "-v" in sys.argv else 1
+    unittest.TextTestRunner(verbosity=2).run(suite)
 
-    if w:
-        if "-w" in sys.argv:
-            print "\n---------\nWarnings:\n"
-            print "".join(warnings.formatwarning(*args) for args in w)
-        else:
-            print "\nNote: %i Warning(s) have been raised." % len(w)
-            print "Run with -w to see the warnings" 
+    #if w:
+    #    if "-w" in sys.argv:
+    #        print "\n---------\nWarnings:\n"
+    #        print "".join(warnings.formatwarning(*args) for args in w)
+    #    else:
+    #        print "\nNote: %i Warning(s) have been raised." % len(w)
+    #        print "Run with -w to see the warnings" 
         
