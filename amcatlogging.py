@@ -28,15 +28,17 @@ import logging
 import logging.handlers
 import threading
 import toolkit
-import StringIO
 import thread
 import sys
+import inspect
 
-_CONTEXT = threading.local()
-_HANDLER_IS_SET = False
+_THREAD_CONTEXT = threading.local()
+CONTEXT_FIELDS = ['application','user','host']
 
-_FORMAT = "[%(pathname)s:%(lineno)d %(application)s/%(user)s/%(host)s %(levelname)s] %(message)s"
-_DATE_FORMAT = "[%(asctime)s %(pathname)s:%(lineno)d %(application)s/%(user)s/%(host)s %(levelname)s] %(message)s"
+DEBUG_MODULES = set()
+INFO_MODULES = set(['__main__'])
+
+logging.getLogger().setLevel(logging.DEBUG)
 
 class AmcatFormatter(logging.Formatter):
     def __init__(self, date=False):
@@ -54,30 +56,44 @@ class AmcatFormatter(logging.Formatter):
             s += "\n"+self.formatException(record.exc_info)
         return s
 
-def _getFormatter(date=False):
-    return AmcatFormatter(date)
-#return logging.Formatter(_DATE_FORMAT if date else _FORMAT)
+class ContextInjectingFilter(logging.Filter):
+    def filter(self, record):
+        for field in CONTEXT_FIELDS:
+            val = getattr(_THREAD_CONTEXT, field, None)
+            if val is not None:
+                record.field = val
+        return True
 
-def _setSyslogHandler(logger):
-    """Make sure that the sysloghandler is set on the amcat logger"""
-    global _HANDLER_IS_SET
-    if _HANDLER_IS_SET: return
+class ModuleLevelFilter(logging.Filter):
+    def filter(self, record):
+        #print record, record.name
+        if record.levelno >= logging.WARNING: return True
+        if record.levelno >= logging.INFO and record.name in INFO_MODULES: return True
+        if record.levelno >= logging.DEBUG and record.name in DEBUG_MODULES: return True
+        return False
+
+def infoModule():
+    INFO_MODULES.add(toolkit.getCallingModule())
+
+def debugModule():
+    DEBUG_MODULES.add(toolkit.getCallingModule())
+
+def setSyslogHandler():
+    """Add a sysloghandler to the root logger with contextinjecting and module level filters"""
+    root = logging.getLogger()
     h = logging.handlers.SysLogHandler(address="/dev/log", facility="local0")
-    h.setFormatter(_getFormatter())
-    h.setLevel(logging.WARNING)
-    logger.addHandler(h)
-    _HANDLER_IS_SET = True
-  
-def getLogger(application=None, user=None, host=None):
-    """Retrieve the amcat logger and make sure that the syslog handler is attached
+    h.setFormatter(AmcatFormatter())
+    h.addFilter(ContextInjectingFilter())
+    h.addFilter(ModuleLevelFilter())
+    root.addHandler(h)
 
-    If application is given, L{setContext} will be run
-    """ 
-    logger = logging.getLogger("amcat")
-    _setSyslogHandler(logger)
-    if application is not None:
-        setContext(application, user, host)
-    return logger
+def setStreamHandler():
+    """Add a StreamHandler to the root logger with module level filters"""
+    root = logging.getLogger()
+    h = logging.StreamHandler()
+    h.setFormatter(AmcatFormatter(date=True))
+    h.addFilter(ModuleLevelFilter())
+    root.addHandler(h)
 
 def setContext(application, user=None, host=None):
     """Set the Context for the current thread
@@ -85,35 +101,11 @@ def setContext(application, user=None, host=None):
     The application name, user, and host (all strings) will be set
     for this thread and included in subsequent logging messages.
     """
-    _CONTEXT.application = application
-    _CONTEXT.user = user
-    _CONTEXT.host = host
+    _THREAD_CONTEXT.application = application
+    _THREAD_CONTEXT.user = user
+    _THREAD_CONTEXT.host = host
 
-def debug(msg, level, depth=1, fn=None, lineno=None, func=None, exc_info=None):
-    """Create a log record in the amcat logger with specified level and msg.
-
-    Caller info is taken from the stack at the given depth using L{toolkit.getCaller}
-    """
-    logger = getLogger()
-    if fn is None:
-        fn, lineno, func = toolkit.getCaller(depth)
-    extra = dict((k, getattr(_CONTEXT, k, None)) for k in ["application","user","host"])
-    rec = logger.makeRecord("amcat", level, fn, lineno, msg, [], exc_info, func=func, extra=extra)
-    logger.handle(rec)
-
-def warn(msg, level=logging.WARN, depth=2, **kargs):
-    """Convenience method to call debug(level=logging.WARN)"""
-    debug(msg, level=level, depth=depth, **kargs)
-    
-def info(msg, level=logging.INFO, depth=2, **kargs):
-    """Convenience method to call debug(level=logging.INFO)"""
-    debug(msg, level=level, depth=depth, **kargs)
-
-def exception(msg=None, level=logging.ERROR, depth=2, exc_info=None, **kargs):
-    if exc_info is None: exc_info = sys.exc_info()
-    if msg is None: msg = str(exc_info[1])
-    debug(msg, level=level, depth=depth, exc_info = exc_info, **kargs)
-    
+   
 class CurrentThreadFilter(logging.Filter):
     """Filter that only accepts log records from the current thread"""
     def filter(self, record):
@@ -129,41 +121,45 @@ class MemoryHandler(logging.Handler):
 
 @contextmanager
 def collect(level=logging.DEBUG, destination=None):
-    """Collect the log messages in this context into a StringIO
+    """Collect the log messages in this context into a list
 
     >>> with collect() as l:
           pass # do something
         print format(l)
     """
     mh = MemoryHandler(destination)
-    logger = getLogger()
+    mh.setLevel(logging.DEBUG)
+    mh.addFilter(CurrentThreadFilter())
+    logger = logging.getLogger()
     logger.addHandler(mh)
-    logger.addFilter(CurrentThreadFilter())
     try:
         yield mh.destination
     finally:
         logger.removeHandler(mh)
 
 @contextmanager
-def logExceptions(basetype=Exception):
+def logExceptions(logger=None, basetype=Exception):
     """Creates a try/catch block that logs exceptions"""
     try:
         yield
-    except basetype:
-        exception(depth=4)
+    except basetype, e:
+        if not logger:
+            logger = logging.getLogger(toolkit.getCallingModule())
+        logger.exception(str(e))
         
 def format(records, date=True):
+    fmt = AmcatFormatter(date).format
     if isinstance(records, logging.LogRecord):
         records = (records,)
-    return "\n".join(_getFormatter(date).format(r) for r in records)
+    return "\n".join(map(fmt, records))
 
 
 if __name__ == '__main__':
-    setContext("amcat2", "piet", "192.168.1.1")
-    warn("Dit is een eerste waarschuwing")
-    with collect() as s:
-        warn("Dit is een waarschuwing")
-        info("Dit is info")
-    print "Done collecting, printing:"
-    print s.getvalue()
-    print "---"
+    setStreamHandler()
+    debugModule()
+    log = logging.getLogger(__name__)
+    print log.level, logging.DEBUG
+    log.warning("warn")
+    log.info("info")
+    log.debug("debug")
+    #logging.warning("test")

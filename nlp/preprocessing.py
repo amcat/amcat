@@ -64,13 +64,14 @@ In each case, the caller is responsible for committing the db transaction.
 """
 
 from itertools import izip, count
-import sbd, re, dbtoolkit, toolkit, amcatlogging, traceback, article
+import sbd, re, dbtoolkit, toolkit, traceback, article
 import tadpole
 import alpino, lemmata
 import table3, sentence
 import sys, traceback
 from analysis import Analysis
-
+import cPickle as pickle
+from amcatlogging import logExceptions
 def _getid(o):
     return o if type(o) == int else o.id
 
@@ -213,12 +214,10 @@ def assignArticles(db, analysis, articles):
     @param articles: The articles to assign
     """
     for art in articles:
-        try:
+        with logExceptions():
             if type(art) == int: art = article.Article(db, art)
             splitArticle(db, art)
             assignSentences(db, analysis, art.sentences)
-        except Exception, e:
-            amcatlogging.exception(e)
             
 def splitArticles(db, articles):
     """Split multiple articles into sentences
@@ -233,11 +232,9 @@ def splitArticles(db, articles):
     """
     nsplit = 0
     for art in articles:
-        try:
+        with logExceptions():
             if type(art) == int: art = article.Article(db, art)
             nsplit += int(bool(splitArticle(db, art)))
-        except Exception, e:
-            amcatlogging.exception(e)
     return nsplit
 
 class ParseStorer(object):
@@ -257,11 +254,16 @@ class ParseStorer(object):
         return self.words.getWord(token.word, token.lemma, token.poscat)
     def getRel(self, rel):
         return self.words.getRel(rel)
-        
-    def getWord(self, token):
-        return self.words.getWord(token.word, token.lemma, token.poscat)
-    
+
+    def storeTokens(self, sentenceid, tokens):
+        print tokens
+        for token in tokens:
+            position, word, lemma, poscat, posmajor, posminor = token
+            wordid = self.words.getWord(word, lemma, poscat)
+            posid = self.words.getPos(posmajor, posminor, poscat)
+            print wordid, posid, token
     def storeTriples(self, sentenceid, triples):
+        return
         for token in tokensFromTriples(triples):
             wordid = self.words.getWord(token.word, token.lemma, token.poscat)
             posid = self.words.getPos(token.posmajor, token.posminor, token.poscat)
@@ -272,52 +274,22 @@ class ParseStorer(object):
             self.db.insert("parses_triples", dict(sentenceid=sentenceid, parentbegin=parentpos, childbegin=childpos, relation=relid, analysisid=self.analysisid), retrieveIdent=False)
         #toolkit.warn("Stored parses_* for sentence %i" % sentenceid)
 
-    def storePickle(self, picklestream):
-        for sid, triples in pickle.load(picklestream):
-            self.storeTriples(sid, triples)
-            
-    def storeResults(self):
-        SQL = "DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND sentenceid in (select sentenceid from parses_words where analysisid=%i)" % (
-            self.analysisid, self.analysisid)
-        
-        while True:
-            SQL = "SELECT TOP 100 sentenceid, result FROM parses_jobs_sentences WHERE analysisid=%i AND result is not null AND sentenceid not in (select sentenceid from parses_words where analysisid=%i)" % (self.analysisid, self.analysisid)
-            results = self.db.doQuery(SQL)
-            if not results:
-                toolkit.warn("No results: done!")
-                return
-            toolkit.ticker.warn("Fetched %i results" % len(results))
-            
-            for sid, result in results:
-                triples = pickle.loads(result)
-                try:
-                    self.storeTriples(sid, triples)
-                    self.db.doQuery("DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND sentenceid=%i" % (self.analysisid, sid))
-                    #toolkit.warn("Stored %i triples for sentence %i" % (len(triples), sid))
-                    self.db.commit()
-                except Exception, e:
-                    toolkit.warn("Exception on storing result for %i: \n%s" % (sid, e))
-                    self.db.rollback()
+    def storeResultsFromDB(self, sids):
+        SQL = "SELECT sentenceid, result FROM parses_jobs_sentences WHERE analysisid=%i AND %s" % (
+            self.analysis.id, self.db.intSelectionSQL("sentenceid", sids))
+        for sid, result in self.db.doQuery(SQL):
+            with logExceptions():
+                result = pickle.loads(result)
+                for rtype, result in result:
+                    if rtype == "tiples": rtype = "triples"
+                    if rtype == "tokens": self.storeTokens(sid, result)
+                    elif rtype == "tiples": self.storeTriples(sid, result)
+                    else:
+                        raise ValueError("Unknown result type: %s" % (rtype))
 
-
-# def parseArticles(articles):
-#     if type(articles) not in (tuple, list, set): articles = set(articles)
-#     db = toolkit.head(articles).db
-#     toolkit.ticker.warn("Splitting articles")
-#     splitArticles(articles)
-#     toolkit.ticker.warn("SEtting up lemmatiser")
-#     lem = lemmata.Lemmata(db, alpino.ALPINO_ANALYSISID)
-#     for article in toolkit.tickerate(articles, msg="Parsing", detail=1):
-#         for sent in article.sentences:
-#             alpino.parseAndStoreSentence(lem, sent)
-#         article.db.commit()
 
 if __name__ == '__main__':
     import dbtoolkit, article
     db  = dbtoolkit.amcatDB()
-
-    t = getStatistics(db)
-    import tableoutput
-    print tableoutput.table2unicode(t)
-
+    ParseStorer(db, 2).storeResultsFromDB([44499901])
 
