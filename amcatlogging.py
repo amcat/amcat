@@ -19,6 +19,27 @@
 
 """
 Utility methods to use the python logging framework in AmCAT
+
+This module contains a number of generally useful auxilliary functions related to logging:
+- The L{collect} contextmanager can be used to collect all log message from the body
+- The L{logExceptions} contextmanager can be used to log exceptions from its body
+- L{format} formats one or more logrecords to a string
+ 
+
+Additionally, it contains a number of useful classes for managing logging
+- L{AmcatFormatter} gives a pretty format to log messages
+- L{ContextInjectionFilter} uses a thread-specific context to add the extra
+  context from L{setContext} to log records
+- L{ModuleLevelFilter} uses the module-level L{DEBUG_MODULES} and L{INFO_MODULES}
+  to filter >= warn unless a record is in a modules on those lists, which it 
+  can place itself on using L{debugModule} and L{infoModule}
+
+In general, amcat modules should:
+1. Normal (library) modules should not use this module (except the auxilliary functions and debugModule)
+2. Applications (e.g. the web site, daemons, scripts) should install a handler on
+   the root by calling L{setSyslogHandler} or L{setStreamHandler}
+3. Thread-based applications (e.g. the web site) can call setContext to add useful
+   extra information to all log records from that thread.
 """
 
 from __future__ import with_statement
