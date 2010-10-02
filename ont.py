@@ -10,8 +10,8 @@ DUMMY_CLASSID_PARTYMEMBER = 1
 DUMMY_CLASSID_OFFICE = 2
 
     
-def getParent(db, cid, pid):
-    cl = Class(db, cid)
+def getParent(db, cid, pid=None):
+    cl = Class(db, cid[0])
     if pid is None:
         return cl, None
     return cl, Object(db, pid)
@@ -44,12 +44,10 @@ def getObject(db, id):
     return Object(db, id)
 
 class Function(object):
-    def __init__(self, db, functionid, office_objectid, fromdate, todate):
-        self.functionid = functionid
+    def __init__(self, db, ids):
+        self.functionid, office_objectid, self.fromdate, self.todate = ids
         self.office = Object(db, office_objectid)
-        if fromdate.year == 1753: fromdate = None
-        self.fromdate = fromdate
-        self.todate = todate
+        if self.fromdate.year == 1753: self.fromdate = None
         self.klass = Class(db, 1) if self.functionid==0 else Class(db, 2) 
     def __str__(self):
         return "Function(%s, %s, %s, %s)" % (self.functionid, self.office, self.fromdate and toolkit.writeDate(self.fromdate), self.todate and toolkit.writeDate(self.todate))
