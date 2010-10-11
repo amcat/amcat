@@ -107,7 +107,7 @@ class Ticker(object):
         """Print the total time so far to the warning stream"""
         self._doTick("Total time: %10f\n" % (time.time() - self.start))
 
-def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0):
+def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0, uselog=None):
     """
     Use a ticker to display progress while iterating over the given sequence
 
@@ -127,7 +127,11 @@ def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0):
     """
     fn, lineno, func = toolkit.getCaller()
     if msg is None: msg = "Starting iteration"
-    if useticker is None: useticker = ticker()
+    if useticker is None:
+        if uselog is None:
+            useticker = ticker()
+        else:
+            useticker = Ticker(log=uselog)
     if getlen:
         if type(seq) not in (list, tuple, set):
             seq = list(seq)
