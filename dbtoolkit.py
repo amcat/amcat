@@ -223,11 +223,40 @@ class amcatDB(object):
         l = self.getProfiler()
         if l: l.printreport(stream=out, htmlgenerator=True)
         return out.getvalue()
-    
+
+    def _updateSQL(self, table, where, newvals):
+        if not toolkit.isString(where):
+            whereclauses = []
+            for col,vals in where.iteritems():
+                if toolkit.isIterable(vals, excludeStrings=True):
+                    vals = toolkit.getseq(vals) # guarantee persistence
+                    if all(type(val) == int for val in vals):
+                        whereclauses.append(self.intSelectionSQL(col, vals))
+                    else:
+                        whereclauses.append("%s IN (%s)" % (self.escapeFieldName(col), ",".join(map(quotesql, vals))))
+                else:
+                    whereclauses.append("%s = %s" % (self.escapeFieldName(col), quotesql(vals)))
+            where = " AND ".join(whereclauses)
+
+        update = ",".join("%s=%s" % (self.escapeFieldName(col), quotesql(val))
+                          for (col, val) in newvals.iteritems())
         
-    def update(self, table, col, newval, where):
-        self.doQuery("UPDATE %s set %s=%s WHERE (%s)" % (
-            table, col, quotesql(newval), where))
+        return "UPDATE [%(table)s] SET %(update)s WHERE %(where)s" % locals()
+        
+
+    def update(self, table, where, newvals):
+        """Create and execute and UPDATE statement
+
+        @type table: str
+        @param table: the table to update
+        @type where: str or dict
+        @param where: the where clause to use. If a dict, will create a
+          AND-joined key=quotesql(val) string
+        @type newvals: dict
+        @param newvals: the colname:value pairs to update
+        """
+        SQL = self._updateSQL(table, where, newvals)
+        self.doQuery(SQL)
 
 
     def doInsert(self, sql, retrieveIdent=1):
@@ -536,16 +565,16 @@ class amcatDB(object):
             conds = []
             remainder = []
             for i,j in toolkit.ints2ranges(ints):
-                if j - i > 2: conds.append("(%s between %i and %i)" % (colname, i,j))
+                if j - i > 2: conds.append("(%s between %i and %i)" % (self.escapeFieldName(colname), i,j))
                 elif j - i == 2: remainder += [str(i), str(i+1), str(j)]
                 elif i==j: remainder.append(str(i))
                 else: remainder += [str(i),str(j)]
-            if remainder: conds.append("(%s in (%s))" % (colname, ",".join(remainder)))
+            if remainder: conds.append("(%s in (%s))" % (self.escapeFieldName(colname), ",".join(remainder)))
             return "(%s)" % " OR ".join(conds)
         table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
         self.doQuery("CREATE TABLE %s (i int)" % table)
         self.insertmany(table, "i", [(i,) for i in ints])
-        return "(%s in (select i from %s))" % (colname, table)
+        return "(%s in (select i from %s))" % (self.escapeFieldName(colname), table)
 
     @contextmanager
     def transaction(self):
