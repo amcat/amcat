@@ -18,6 +18,11 @@ def search(indexLocation, queryList, startNum=0, endNum=-1, startDate=None, endD
     -Xmx500M \
     AnokoSearch2 "%(indexLocation)s" - csv \
                 %(startNum)s %(endNum)s""" % locals()
+    if startDate and type(startDate) <> int:
+        startDate = int(startDate.strftime("%Y%m%d"))
+    if endDate and type(endDate) <> int:
+        endDate = int(endDate.strftime("%Y%m%d"))
+
     if startDate and endDate and endDate < startDate:
         raise Exception('Invalid date selection. End date is before begin date')
     if startDate:
@@ -33,7 +38,7 @@ def search(indexLocation, queryList, startNum=0, endNum=-1, startDate=None, endD
             cmd += ' 19000101 21000101'
         cmd += ' %s' % ':'.join(map(str, mediumids))
 
-    print "@@@@@@@@@@@@",startDate, endDate, cmd
+        #print "@@@@@@@@@@@@",startDate, endDate, cmd
     
     if type(queryList) == str:
         raise Exception('invalid query type, should be iterable')
@@ -43,8 +48,7 @@ def search(indexLocation, queryList, startNum=0, endNum=-1, startDate=None, endD
     inputText = inputText.encode('utf-8')
         
     startTime = time.time()
-
-    out, errorMsg = toolkit.execute(cmd, input=inputText)
+    out, errorMsg = toolkit.execute(cmd, inputText)
     
     endTime = time.time()
     totalTime = endTime - startTime

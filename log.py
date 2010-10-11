@@ -53,7 +53,7 @@ def send_reports(db):
             sendmail.sendmail(email, "log report %d - %d" % (last, logs[-1][0]), header + msg)
             #update last reported id: (1=1 because where clause is not optional)
             last = logs[-1][0]
-            db.update("log_subscriptions", "reported_msgid", `last`, "1=1")
+            db.update("log_subscriptions", where='1=1', newvals=dict(reported_msgid=`last`))
             db.conn.commit()
         else:
             #nothing to report

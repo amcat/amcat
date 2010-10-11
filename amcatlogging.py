@@ -56,8 +56,9 @@ import inspect
 _THREAD_CONTEXT = threading.local()
 CONTEXT_FIELDS = ['application','user','host']
 
+QUIET_MODULES = set()
 DEBUG_MODULES = set()
-INFO_MODULES = set(['__main__'])
+INFO_MODULES = set(['__main__', 'ticker'])
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -88,11 +89,16 @@ class ContextInjectingFilter(logging.Filter):
 class ModuleLevelFilter(logging.Filter):
     def filter(self, record):
         #print record, record.name
+        if record.levelno < logging.ERROR and record.name in QUIET_MODULES: return False
         if record.levelno >= logging.WARNING: return True
         if record.levelno >= logging.INFO and record.name in INFO_MODULES: return True
         if record.levelno >= logging.DEBUG and record.name in DEBUG_MODULES: return True
         return False
 
+def quietModule():
+    QUIET_MODULES.add(toolkit.getCallingModule())
+
+    
 def infoModule():
     INFO_MODULES.add(toolkit.getCallingModule())
 
