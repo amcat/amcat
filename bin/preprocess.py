@@ -34,6 +34,8 @@ reset:  Set non-complete analyses to not-started
 if -q is given, only print errors to stderr
 """
 
+import logging; LOG = logging.getLogger(__name__)
+import amcatlogging; amcatlogging.setStreamHandler()
 import sys, dbtoolkit, analysis, preprocessing, system, toolkit
 try:
     import cPickle as pickle
@@ -42,13 +44,15 @@ except:
     
 db = dbtoolkit.amcatDB()
 
+def warn(x): print >>sys.stderr, x
+
 def usage(msg=None):
-    if msg: toolkit.warn("%s\n" % msg)
-    toolkit.warn(__doc__)
-    toolkit.warn("\nAvailable analyses:")
+    if msg: warn("%s\n" % msg)
+    warn(__doc__)
+    warn("\nAvailable analyses:")
     for a in system.System(db).analyses:
         if a.id > 0:
-            toolkit.warn(" %i) %s" % (a.id, a.label))
+            warn(" %i) %s" % (a.id, a.label))
     sys.exit()
 
 def arg(i):
@@ -60,10 +64,10 @@ verbose = True
 if "-q" in sys.argv:
     verbose = False
     del sys.argv[sys.argv.index("-q")]
-
+    amcatlogging.quietModule()
+    
 def status(s):
-    if verbose:
-        toolkit.warn(s)
+    LOG.info(s)
 
 action = arg(1)
 
@@ -77,7 +81,7 @@ if action == "split":
 elif action == "stats":
     t = preprocessing.getStatistics(db)
     import tableoutput
-    status(tableoutput.table2unicode(t))
+    print tableoutput.table2unicode(t)
 elif action in ('assign', 'get', 'reset', 'store'):
     try:
         analysisid = int(arg(2))

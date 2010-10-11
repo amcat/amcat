@@ -65,6 +65,7 @@ In each case, the caller is responsible for committing the db transaction.
 
 from itertools import izip, count
 import sbd, re, dbtoolkit, toolkit, traceback, article
+import word
 import tadpole
 import alpino, lemmata
 import table3, sentence
@@ -72,6 +73,9 @@ import sys, traceback
 from analysis import Analysis
 import cPickle as pickle
 from amcatlogging import logExceptions
+import logging; LOG = logging.getLogger(__name__)
+import ticker
+
 def _getid(o):
     return o if type(o) == int else o.id
 
@@ -98,10 +102,11 @@ def assignSentences(db, analysis, sentences, check=True):
                  where analysisid=%i and %s""" % (
             analysisid, db.intSelectionSQL("sentenceid", sentenceids))
         sentenceids -= set(db.getColumn(SQL))
+    if not sentenceids: return
     # remove already assigned
     SQL = """select distinct sentenceid from parses_jobs_sentences
                  where analysisid=%i and %s""" % (
-            analysisid, db.intSelectionSQL("sentenceid", sentenceids))  
+            analysisid, db.intSelectionSQL("sentenceid", sentenceids))
     sentenceids -= set(db.getColumn(SQL)) 
     db.insertmany("parses_jobs_sentences", ("analysisid", "sentenceid"),
                   [(analysisid, sid) for sid in sentenceids])
@@ -110,10 +115,11 @@ def assignSentences(db, analysis, sentences, check=True):
     
 def storeResult(db, analysis, sid, result):
     analysisid = _getid(analysis)
+    if type(result) <> str:
+        result = pickle.dumps(result)
     result = dbtoolkit.quotesql(result)
     sql = """update parses_jobs_sentences set result=%s where
              sentenceid=%i and analysisid=%i""" % (result, sid, analysisid)
-    print sql
     db.doQuery(sql)
 
 
@@ -200,7 +206,7 @@ def reset(db, analysis):
 #                           Convenience methods                           #
 ###########################################################################    
     
-def assignArticles(db, analysis, articles):
+def assignArticles(db, analysis, articles, commitarticle=True):
     """Convenience method to L{splitArticle} and L{assignSentences}
 
     If the underlying methods call exceptions, they are logged using
@@ -213,11 +219,12 @@ def assignArticles(db, analysis, articles):
     @type articles: ints or L{article.Article}s
     @param articles: The articles to assign
     """
-    for art in articles:
+    for art in ticker.tickerate(articles, detail=1):
         with logExceptions():
             if type(art) == int: art = article.Article(db, art)
             splitArticle(db, art)
             assignSentences(db, analysis, art.sentences)
+            if commitarticle: db.commit()
             
 def splitArticles(db, articles):
     """Split multiple articles into sentences
@@ -256,40 +263,55 @@ class ParseStorer(object):
         return self.words.getRel(rel)
 
     def storeTokens(self, sentenceid, tokens):
-        print tokens
         for token in tokens:
             position, word, lemma, poscat, posmajor, posminor = token
             wordid = self.words.getWord(word, lemma, poscat)
             posid = self.words.getPos(posmajor, posminor, poscat)
-            print wordid, posid, token
+            self.db.insert("parses_words", dict(sentenceid=sentenceid, wordbegin=position, 
+                                                posid=posid, wordid=wordid, 
+                                                analysisid=self.analysis.id), 
+                           retrieveIdent=False)
     def storeTriples(self, sentenceid, triples):
-        return
-        for token in tokensFromTriples(triples):
-            wordid = self.words.getWord(token.word, token.lemma, token.poscat)
-            posid = self.words.getPos(token.posmajor, token.posminor, token.poscat)
-            self.db.insert("parses_words", dict(sentenceid=sentenceid, wordbegin=token.position, posid=posid, wordid=wordid, analysisid=self.analysisid), retrieveIdent=False)
-        self.db.commit()
-        for parentpos, rel, childpos in triplesFromTriples(triples):
+        for parentpos, rel, childpos in triples:
             relid = self.words.getRel(rel)
-            self.db.insert("parses_triples", dict(sentenceid=sentenceid, parentbegin=parentpos, childbegin=childpos, relation=relid, analysisid=self.analysisid), retrieveIdent=False)
-        #toolkit.warn("Stored parses_* for sentence %i" % sentenceid)
+            self.db.insert("parses_triples", dict(sentenceid=sentenceid, parentbegin=parentpos, 
+                                                  childbegin=childpos, relation=relid, 
+                                                  analysisid=self.analysis.id), 
+                           retrieveIdent=False)
 
-    def storeResultsFromDB(self, sids):
-        SQL = "SELECT sentenceid, result FROM parses_jobs_sentences WHERE analysisid=%i AND %s" % (
-            self.analysis.id, self.db.intSelectionSQL("sentenceid", sids))
-        for sid, result in self.db.doQuery(SQL):
-            with logExceptions():
+    def storeResultsFromDB(self, n=100):
+        SQL = """SELECT top %i sentenceid, result FROM parses_jobs_sentences WHERE analysisid=%i
+                 AND result IS NOT null""" % (n, self.analysis.id)
+        todelete = []
+        data = self.db.doQuery(SQL)
+        LOG.info("Retrieved %i sentences to store" % len(data))
+        for sid, result in data:
+            with logExceptions(LOG):
                 result = pickle.loads(result)
                 for rtype, result in result:
                     if rtype == "tiples": rtype = "triples"
                     if rtype == "tokens": self.storeTokens(sid, result)
-                    elif rtype == "tiples": self.storeTriples(sid, result)
+                    elif rtype == "triples": self.storeTriples(sid, result)
                     else:
                         raise ValueError("Unknown result type: %s" % (rtype))
+                todelete.append(sid)
+        LOG.info("Deleting %i sentences" % len(todelete))
+        if todelete:
+            SQL = "DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND %s" % (
+                self.analysis.id, self.db.intSelectionSQL("sentenceid", todelete))
+            self.db.doQuery(SQL)
+        return todelete
+        
+    def storeAllFromDB(self):
+        while True:
+            sids = self.storeResultsFromDB(100)
+            self.db.commit()
+            if not sids: break
 
 
 if __name__ == '__main__':
     import dbtoolkit, article
+    import amcatlogging; amcatlogging.setStreamHandler()
+    amcatlogging.debugModule()
     db  = dbtoolkit.amcatDB()
-    ParseStorer(db, 2).storeResultsFromDB([44499901])
-
+    ParseStorer(db, 3).storeAllFromDB()

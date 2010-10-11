@@ -1,5 +1,5 @@
 from cachable import Cachable, CachingMeta, DBFKPropertyFactory, DBPropertyFactory
-import toolkit, re
+import toolkit, re, dbtoolkit
 
 class BrouwersCat(Cachable):
     __metaclass__ = CachingMeta
@@ -86,7 +86,7 @@ class CachingWordCreator(BaseWordCreator):
         id = dic.get(key)
         #print "Cache %s : %s from cache: %s" % (table, key, id)
         if id is None:
-            sql = "SELECT %s FROM %s WHERE %s" % (idcol, table, " AND ".join("%s=%s" % (k, toolkit.quotesql(v)) for (k,v) in zip(cols, key)))
+            sql = "SELECT %s FROM %s WHERE %s" % (idcol, table, " AND ".join("%s=%s" % (k, dbtoolkit.quotesql(v)) for (k,v) in zip(cols, key)))
             #print sql
             id = self.db.getValue(sql)
             #print "GET %s=%s from %s --> %s" % (key, cols, table, id)

@@ -34,8 +34,7 @@ def TadpoleToken( position, word, lemma, morph, pos, *args):
     word = toolkit.stripAccents(word).encode('ascii', 'replace')
     lemma = toolkit.stripAccents(lemma).encode('ascii', 'replace')
     #print position-1, word, lemma, poscat, major, minor
-    return lemmata.Token(position-1, word, lemma, poscat, major, minor)
-
+    return (position-1, word, lemma, poscat, major, minor)
 
 import threading
 LOCK = threading.Lock()

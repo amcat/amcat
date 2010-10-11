@@ -34,6 +34,7 @@ POSMAP = {"pronoun" : 'O',
           'sg' : '?',
           'zo' : '?',
           'max' : '?',
+          'mogelijk' : '?',
                     }
 
 class AlpinoParser(parse.Parser):
