@@ -436,7 +436,8 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
     def hasLabel(self):
         return True
     def cache(self):
-        self.set.cacheLabels()
+        if self.set:
+            self.set.cacheLabels()
 
 def getCAJobs(cas):
     return sorted(set([ca.set.job for ca in cas]))

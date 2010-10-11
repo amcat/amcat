@@ -1,4 +1,4 @@
-import unittest, dbtoolkit
+import amcattest, dbtoolkit, user, language
 from cachable2 import Cachable, Property, DBProperty,DBProperties, UnknownTypeException, ForeignKey
 
 class TestDummy(Cachable):
@@ -18,11 +18,12 @@ class TestRole(Cachable):
 class TestUser(Cachable):
     __table__ = 'users'
     __idcolumn__ = 'userid'
+    __labelprop__ = 'username'
     username, email, fullname, active = DBProperties(4)
-    language = DBProperty(lambda : TestLanguage, getcolumn="language")
+    language = DBProperty(lambda : TestLanguage, getcolumn="languageid")
     roles = ForeignKey(TestRole, table="users_roles")
 
-class TestAmcatMemcache(unittest.TestCase):
+class TestAmcatMemcache(amcattest.AmcatTestCase):
 
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)
@@ -112,8 +113,30 @@ class TestAmcatMemcache(unittest.TestCase):
         u2.notaprop = "different"
         self.assertNotEqual(u.notaprop, u2.notaprop)
         
-        
 
+    def testUpdate(self):
+        #import amcatlogging; amcatlogging.DEBUG_MODULES.add("amcatmemcache")
+        db = dbtoolkit.amcatDB()
+        u = user.User(db, 43)
+        for name in ('test_123', 'test_456'):
+            u.update(db, username=name)
+            self.assertEqual(u.username, name)
+            del u.username
+            self.assertEqual(u.username, name)
+        for lang in (1,2):
+            l = language.Language(db, lang)
+            u.update(db, language=l.id)
+            self.assertEqual(u.language, l)
+            del u.language
+            self.assertEqual(u.language.id, l.id)
+            l = language.Language(db, lang+3)
+            u.update(db, language=l)
+            self.assertEqual(u.language, l)
+            del u.language
+            self.assertEqual(u.language.id, l.id)
+        db.rollback()
+        
+        
 if __name__ == '__main__':
     
     #TestDummy.prop.observedType=None
@@ -128,4 +151,4 @@ if __name__ == '__main__':
     #del u.language
     
     #print repr(u.language)
-    unittest.main()
+    amcattest.main()

@@ -1,25 +1,29 @@
-import dbtoolkit, unittest, project, batch, user, mx.DateTime, datetime
+import dbtoolkit, unittest, project, batch, user, mx.DateTime, datetime, amcattest
 
-class TestProject(unittest.TestCase):
+class TestProject(amcattest.AmcatTestCase):
 
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)
 
     def testUsers(self):
         p = project.Project(self.db, 1)
-        self.assertTrue([u for u in p.users if u.id == 2])
+        self.assertIn(user.User(self.db, 2), p.users)
 
     def testType(self):
         p = project.Project(self.db, 1)
-        for (prop, types, card) in (
-            ("batches", batch.Batch, list),
-            ("users", user.User, list),
+        for (propname, types, card) in (
+            ("batches", batch.Batch, True),
+            ("users", user.User, True),
             ("name", str, None),
             ("insertDate", (mx.DateTime.DateTimeType, datetime.datetime), None),
             ):
             if type(types) not in (tuple, set, list): types = (types,)
-            self.assertTrue(p.getType(prop) in types)
-            self.assertEqual(p.getCardinality(prop), card)
+            self.assertIn(p.getType(propname), types)
+            prop = getattr(project.Project, propname)
+            if card is True:
+                self.assertTrue(prop.getCardinality())
+            else:
+                self.assertEqual(prop.getCardinality(), card)
         
         
 

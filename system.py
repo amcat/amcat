@@ -26,6 +26,7 @@ level AmCAT objects such as projects, users, and analyses.
 
 from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
 import project, user, authorisation, analysis
+from toolkit import deprecated
 
 from annotationschema import AnnotationSchema, AnnotationSchemaFieldtype
 
@@ -34,11 +35,6 @@ class System(Cachable):
     __table__ = None
     __idcolumn__ = None
 
-    projects = ForeignKey(lambda : project.Project, table="projects")
-    users = ForeignKey(lambda : user.User, table="users")
-    analyses = ForeignKey(lambda : analysis.Analysis, table="parses_analyses")
-    roles = ForeignKey(lambda : authorisation.Role, table="roles")
-    privileges = ForeignKey(lambda : authorisation.Privilege, table="privileges")
 
     # Annotationschema-properties
     annotationschemas = ForeignKey(lambda : AnnotationSchema, table="annotationschemas")
@@ -54,9 +50,36 @@ class System(Cachable):
         for usr in self.users:
             if usr.username == uname:
                 return usr
-            
-            
 
+    @property
+    @deprecated
+    def users(self):
+        return user.User.getAll(self.db)
+    @property
+    @deprecated
+    def projects(self):
+        return project.Project.getAll(self.db)
+    @property
+    @deprecated
+    def analyses(self):
+        return analysis.Analysis.getAll(self.db)
+    @property
+    @deprecated
+    def roles(self):
+        return authorisation.Role.getAll(self.db)
+    @property
+    @deprecated
+    def privileges(self):
+        return authorisation.Privilege.getAll(self.db)
+    @property
+    @deprecated
+    def annotationschemas(self):
+        return AnnotationSchema.getAll(self.db)
+    @property
+    @deprecated
+    def annotationschemafieldtypes(self):
+        return AnnotationSchemaFieldtype.getAll(self.db)
+    
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)

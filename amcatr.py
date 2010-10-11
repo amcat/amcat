@@ -1,7 +1,7 @@
 import rpy2.robjects as robjects
 import rpy2.rlike.container as rlc 
 import table3, tableoutput, sys, toolkit
-from toolkit import IDLabel
+from idlabel import IDLabel
 
 
 ###########################################

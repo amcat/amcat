@@ -412,28 +412,30 @@ def addLabel(object, label, lang=1):
     if type(label) == str: label = label.decode('ascii')
     label = label.encode('ascii')
     object.db.insert("o_labels", dict(objectid=object.id, languageid=lang, label=label), retrieveIdent=False)
-            
+
+PERSONS_CLASSID = 4003
+PARTYMEMBER_FUNCTIONID = 0
+    
+def createPolitician(db, partij, name, firstname=None, initials=None, prefix=None, sets=[]):
+    label = name
+    if firstname or initials: label += ", " + (firstname or initials)
+    if prefix: label += " " + prefix
+    if type(partij) == int: partij = Object(db, partij)
+    label += " (%s)" % partij.label
+
+    personclass = Class(db, PERSONS_CLASSID)
+    print "Creating object %r" % label
+    o = createObject(personclass, label, sets=sets)
+    db.insert("o_politicians", dict(objectid=o.id, name=name, firstname=firstname, initials=initials, prefix=prefix), retrieveIdent=False)
+    db.insert("o_politicians_functions", dict(objectid=o.id, functionid=PARTYMEMBER_FUNCTIONID, office_objectid=partij.id, fromdate='1753-01-01'), retrieveIdent=False)
+    return o
+    
+
+    
 if __name__ == '__main__':
     import dbtoolkit, pickle, cachable
 
     db = dbtoolkit.amcatDB(profile=True)
-    db.beforeQueryListeners.add(lambda a: toolkit.ticker.warn(a[:250]))
 
-    
+    o = createPolitician(db, "hoof", 1373, "piet", prefix="van")
 
-    o = Object(db, 15770)
-
-    o.cacheValues(keyword = "TEST")
-    print o.getSearchString()
-    import sys;sys.exit()
-    
-    s = Set(db, 5001)
-    s.cacheHierarchy()
-    
-    path, omklap = s.categorise(o, returnOmklap = True)
-    print omklap, map(str, path)
-
-    #s = Set(db, 201)
-    #print map(str, s.categorise(10283))
-    
-    db.printProfile()

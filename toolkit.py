@@ -43,7 +43,7 @@ this organisation!
 """
 
 import warnings, os, random, gzip, types, datetime, itertools, re, collections
-import threading, subprocess, sys, colorsys, base64, time, inspect
+import threading, subprocess, sys, colorsys, base64, time, inspect, logging
 try: import mx.DateTime
 except: pass
 
@@ -659,7 +659,13 @@ def clean(string, level=0, lower=False, droptags=False, escapehtml=False, keepta
 
 
 def warn(string):
-    print >>sys.stderr, string
+    fn, lineno, func = getCaller()
+    module = getCallingModule()
+    logging.basicConfig()
+    log = logging.getLogger()
+    rec = log.makeRecord(module, logging.WARN, fn, lineno,
+                         string, [], exc_info=None, func=func)
+    log.handle(rec)
 
 ###########################################################################
 ##                     Date(time) functions                              ##
@@ -1000,6 +1006,13 @@ def getCaller(depth=1):
     depth = depth + 1 # me, caller, caller's caller
     return inspect.stack()[depth][1:4]
     
+def getCallingModule(depth=1):
+    """Return the module name of the caller (see L{getCaller})"""
+    depth = depth + 1 # me, caller, caller's caller
+    caller = inspect.stack()[depth]
+    return caller[0].f_globals['__name__']
+
+
 def HSVtoHTML(h, s, v):
     """Convert HSV (HSB) colour to HTML hex string"""
     rgb = colorsys.hsv_to_rgb(h, s, v)
@@ -1169,5 +1182,6 @@ def intSelection(db, *args, **kargs):
     return db.intSelectionSQL(*args, **kargs)
 
 if __name__ == '__main__':
-    pass
-    
+    import amcatlogging ;amcatlogging.setStreamHandler()
+    warn("zoiets?")
+

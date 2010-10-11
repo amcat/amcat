@@ -15,6 +15,7 @@ Values are offered as (lists of (tuples of)) primitives, which memcache
 """
 
 import memcache
+import logging; LOG = logging.getLogger(__name__)
 
 class UnknownKeyException(EnvironmentError):
     pass
@@ -48,8 +49,8 @@ def get(klass, prop, key, conn=None):
       or generator of (tuple-of) primitive
     """
     keybytes = key2bytes(klass, prop, key)
-    #print "GETTING %r" % keybytes
     val =_getConnection().get(keybytes)
+    LOG.debug("GET %s(%r).%s (%r) -> %r" % (klass.__name__, key, prop, keybytes, val))
     if val is None:
         raise UnknownKeyException(keybytes)
     return val
@@ -65,7 +66,7 @@ def put(klass, prop, key, value, conn=None):
     @param conn: an optional connection object
     """
     keybytes = key2bytes(klass, prop, key)
-    #print "SETTING %r" % keybytes
+    LOG.debug("PUT %s(%r).%s (%r) <- %r" % (klass.__name__, key, prop, keybytes, value))
     _getConnection().set(keybytes, value)
 
 def delete(klass, prop, key, conn=None):

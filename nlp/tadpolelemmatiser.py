@@ -1,5 +1,6 @@
 import tadpole, word, re, traceback, toolkit, lemmata
 import threading, Queue, time
+import logging; LOG = logging.getLogger(__name__)
 
 ANALYSISID = 3
 NBEFOREDIE = 200
@@ -10,13 +11,10 @@ class TadpoleLemmatiser(object):
         self.articleprovider = articleprovider
  
     def lemmatiseSentences(self, sentences):
-        result = []
         for sid, text in sentences:
-            result += self.addSentenceLemmata({'sid':sid}, self.tadpoleclient.process(text))
-        return result
+            yield self.addSentenceLemmata({'sid':sid}, self.tadpoleclient.process(text))
 
     def lemmatise(self, aid):
-        result = []
         sentences = self.articleprovider.getSentences(aid)
         if sentences:
             return self.lemmatiseSentences(sentences)
@@ -67,13 +65,11 @@ class TadpoleLemmatiser(object):
     def addSentenceLemmata(self, sent, tokens):
         #print "Adding lemmata to sentence %s" % sent
         last = None
-        result = []
         for token in tokens:
             if token.position <= last: # prevent mistake in SBD (ie old sentences) from crashing insert
                 token.position = last + 1 
             last = token.position
-            result.append((sent, token))
-        return result
+            yield sent, token
 
 DBLOCK = threading.Lock()
             
@@ -96,8 +92,8 @@ class ArticleLemmatiserThread(threading.Thread):
                 result = [(s.id, toolkit.stripAccents(s.text)) for s in sents]
             else:
                 result = None
-            a.removeCached("sentences")
-            [s.removeCached("text") for s in sents]
+            #a.removeCached("sentences")
+            #[s.removeCached("text") for s in sents]
             return result
         finally:
             DBLOCK.release()
@@ -112,7 +108,7 @@ class ArticleLemmatiserThread(threading.Thread):
             pars = re.split(r"\n\s*\n", self.db.getText(art.id).strip())#.split("\n\n")
             result += [toolkit.stripAccents(re.sub("\s+"," ", par))
                        for par in pars]
-            [art.removeCached(x) for x in ("headline","byline","text")]
+            #[art.removeCached(x) for x in ("headline","byline","text")]
             return result
         finally:
             DBLOCK.release()
@@ -281,23 +277,26 @@ def lemmatiseNewArticles(db, aids_or_sql, nthreads=NTHREADS):
     lemmatiseArticles(db, aids, numthreads=nthreads)
 
 if __name__ == '__main__':
-    import dbtoolkit, article, toolkit, sys
+    import amcatlogging; amcatlogging.setStreamHandler()
+    import dbtoolkit, article, toolkit, sys, preprocessing
     db  = dbtoolkit.amcatDB()
 
     #t = ArticleLemmatiserThread(db, None, None, None)
     #print len(t.getParagraphs(45638337))
     #import sys; sys.exit()
+    l = TadpoleLemmatiser(9998)
 
-    if len(sys.argv) >= 2:
-        storedresultid = int(sys.argv[1])
-        SQL = """select articleid from storedresults_articles where storedresultid=%i and articleid not in 
-             (select articleid from sentences s inner join parses_words w on s.sentenceid = w.sentenceid where analysisid=3)
-             order by newid()""" % storedresultid
-        toolkit.warn(SQL)
-        aids = [aid for (aid,) in db.doQuery(SQL)]
-    else:
-        toolkit.warn("Reading AIDs from stdin")
-        aids = list(toolkit.intlist())
+    while True:
+        maxn = 1
+        LOG.info("Getting max %i sentences to lemmatise" % maxn)
+        sents = list(preprocessing.getSentences(db, ANALYSISID, maxn))
+        db.commit()
+        if not sents:
+            LOG.info("Done!" % len(sents))
+            break
+        LOG.info("Lemmatising %i sentences" % len(sents))
+        for s in sents:
+            tokens = list(l.addSentenceLemmata(s))
+            print tokens
+        break
         
-    toolkit.warn("Lemmatising...")
-    lemmatiseNewArticles(db, aids)

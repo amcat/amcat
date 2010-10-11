@@ -21,7 +21,7 @@
 Give progress feedback on the command line
 """
 
-import time,  math, amcatlogging, logging, toolkit
+import time,  math, logging, toolkit
 
 class Ticker(object):
     """
@@ -29,7 +29,7 @@ class Ticker(object):
     displays a warning message for every N iterations
     """
     
-    def __init__(self, interval = 10, markThread=True):
+    def __init__(self, interval = 10, markThread=True, log=None, depth=1):
         """
         @param interval: give a warning message every C{interval} calls
         @param markThread: if True, display thread name unless MainThread
@@ -40,8 +40,10 @@ class Ticker(object):
         self.last = time.time()
         self.markThread = markThread
         self.estimate = None
+        if log is None: log = logging.getLogger(toolkit.getCallingModule(depth))
+        self.log = log
 
-    def warn(self, msg, reset=False, interval = None, estimate=None, detail=0, depth=3, **kargs):
+    def warn(self, msg, reset=False, interval = None, estimate=None, detail=0, depth=2, **kargs):
         """
         Display a warning message containing current iteration number
 
@@ -64,7 +66,6 @@ class Ticker(object):
             if detail: magnitude -= detail
             self.interval = 10**(int(magnitude))
             msg += " (%s steps / %s)" % (estimate, self.interval)
-
         self._doTick(msg, depth, **kargs)
         #self.last = now
         if reset: self.reset()
@@ -73,14 +74,21 @@ class Ticker(object):
         """Reset the iteration count of this ticker to zero"""
         self.i = 0
 
-    def _doTick(self, msg, depth=2, **kargs):
+    def _doTick(self, msg, depth, **kargs):
         if self.i:
             i = "%6i" % self.i
             if self.estimate: i += "/%6i" % self.estimate
             msg = "[%s] %s" % (i, msg)
-        amcatlogging.debug(msg, level=logging.INFO,depth=depth, **kargs)
+
+        if "fn" in kargs:
+            fn, lineno, func = kargs["fn"], kargs["lineno"], kargs["func"]
+        else:
+            fn, lineno, func = toolkit.getCaller(depth=depth)
+        rec = self.log.makeRecord(self.log.name, logging.INFO, fn, lineno,
+                                  msg, [], exc_info=None, func=func)
+        self.log.handle(rec)
         
-    def tick(self, msg = "", interval = None, depth=3, **kargs):
+    def tick(self, msg = "", interval = None, depth=2, **kargs):
         """
         Indicate a single iteration
 
@@ -99,7 +107,7 @@ class Ticker(object):
         """Print the total time so far to the warning stream"""
         self._doTick("Total time: %10f\n" % (time.time() - self.start))
 
-def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0):
+def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0, uselog=None):
     """
     Use a ticker to display progress while iterating over the given sequence
 
@@ -119,7 +127,11 @@ def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0):
     """
     fn, lineno, func = toolkit.getCaller()
     if msg is None: msg = "Starting iteration"
-    if useticker is None: useticker = ticker()
+    if useticker is None:
+        if uselog is None:
+            useticker = ticker()
+        else:
+            useticker = Ticker(log=uselog)
     if getlen:
         if type(seq) not in (list, tuple, set):
             seq = list(seq)
@@ -131,21 +143,21 @@ def tickerate(seq, msg=None, getlen=True, useticker=None, detail=0):
         yield x
 
 _SINGLETON = None
-def ticker():
+def ticker(depth=2):
     """Return a default (singleton) ticker object"""
     global _SINGLETON
     if _SINGLETON is None:
-        _SINGLETON = Ticker()
+        _SINGLETON = Ticker(depth=depth)
     return _SINGLETON
 
 def warn(*args, **kargs):
     """Convenience method for ticker().warn(..)"""
-    if 'depth' not in kargs: kargs['depth'] = 4
-    ticker().warn(*args, **kargs)
+    if 'depth' not in kargs: kargs['depth'] = 3
+    ticker(depth=3).warn(*args, **kargs)
 def tick(*args, **kargs):
     """Convenience method for ticker().tick(..)"""
-    if 'depth' not in kargs: kargs['depth'] = 4
-    ticker().tick(*args, **kargs)
+    if 'depth' not in kargs: kargs['depth'] = 3
+    ticker(depth=3).tick(*args, **kargs)
 
 if __name__ == '__main__':
     for i in tickerate(range(100)):
