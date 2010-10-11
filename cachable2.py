@@ -45,8 +45,6 @@ Example usage::
 import inspect, types, warnings
 import idlabel, dbtoolkit
 import amcatmemcache as store
-from toolkit import printargs
-
 
 class Meta(type):
     """Metaclass to  ensure properties are initialised"""
@@ -139,6 +137,25 @@ class Cachable(idlabel.IDLabel):
             prop = self._getProperty(prop)
         return prop.getType(self)
 
+    def update(self, db, **props):
+        """Update the database db with the given props
+
+        Note that the caller is responsible for maintaining the db transaction
+        (i.e. for committing after an update).
+
+        Default implementation calls _updateProperty(db, prop, val) for each prop, val in props,
+        which will call prop._update(db, self, val). Subclasses may override this function and/or
+        the underlying _updateProperty to implement updating via e.g. stored procedures. If overridden,
+        subclass is responsible for making sure the cache store is invalidated/updated where appropriate.
+        """
+        for propname, val in props.iteritems():
+            prop = self._getProperty(propname)
+            self._updateProperty(db, prop, val)
+
+    def _updateProperty(self, db, prop, val):
+        """Update a single property by calling prop._update. See L{update}"""
+        prop._update(db, self, val)
+
     @property
     def label(self):
         # if a __labelprop__ is defined, return that, otherwise, call super
@@ -149,13 +166,13 @@ class Cachable(idlabel.IDLabel):
     
     @classmethod
     def getAll(cls, db):
-        """Get all objects in table
-        
-        @type db: AmCAT Database object"""
-        ids = _select(cls.__idcolumn__, db, cls.__table__)
+        """Get all known objects of this type"""
         if type(cls.__idcolumn__) in (str, unicode):
-            ids = (id[0] for id in ids)
-        return (cls(db, c) for c in ids)
+            rowfunc = lambda i : cls(db, i)
+        else: #need to pass arg tuple as single id argument to constructor
+            rowfunc = lambda *i : cls(db, i)                      
+        return db.select(cls.__table__, cls.__idcolumn__, rowfunc=rowfunc)
+
         
     
             
@@ -227,6 +244,14 @@ class Property(object):
         B{Abstract: Subclasses should override} 
         """
         abstract
+    def _update(self, db, obj, val):
+        """Update the value on this property in the underlying store (eg database)
+
+        This base implementation (only) calls L{cache} to update the cache.
+        Note: call L{Cachable.update} rather than this method to allow alternative
+        update strategies (eg via stored procedure, single compound updates etc.)
+        """
+        self.cache(obj, val)
 
     def getType(self, obj=None):
         """Get the data type of this property
@@ -309,12 +334,19 @@ class DBProperty(Property):
             return self.targetclass.__idcolumn__
         except AttributeError:
             return self.propname
+    def _getWhere(self, obj):
+        idcol, oid = self.cls.__idcolumn__, obj.id
+        if type(idcol) in (str, unicode):
+            if type(oid) != int: raise ValueError("Tuple id on object %r with scalar idcolumn %r!" % (obj, idcol)) 
+            return {idcol : oid}
+        else:
+            if type(oid) != tuple: raise ValueError("Scalar id on object %r with tuple idcolumn %r!" % (obj, idcol)) 
+            return dict(zip(idcol, oid))
     
     def retrieve(self, obj):
         """Use the database to retrieve the value of this property for obj
-        Calls dbresultToObjects on the db results
         """
-        return _select(self._getColumns(), obj, self._getTable())
+        return obj.db.select(self._getTable(), self._getColumns(), self._getWhere(obj), alwaysReturnTable=True)
     
     def getType(self, obj_or_db=None):
         # if targetclass is a class or tuple of classes, return it 
@@ -334,6 +366,23 @@ class DBProperty(Property):
         self.observedType = result
         return result
 
+    def _update(self, db, obj, val):
+        """Create and execute an SQL UPDATE statement to update the db"""
+
+        print "UPDATEing %r.%s -> %r" % (obj, self, val)
+        if isinstance(val, idlabel.IDLabel): val = val.id
+        cols = self._getColumns()
+        print ">", `cols`
+        if type(cols) in (str, unicode):
+            update = {cols : val}
+            val = (val,) # for caching
+        else:
+            update = dict(zip(cols, val))
+        print update
+        obj.db.update(self._getTable(), update, self._getWhere(obj))
+        self.cache(obj, [val])
+            
+        
 class ForeignKey(DBProperty):
     def __init__(self, targetclass=None, sequencetype=None, **kargs):
         """Create a 'foreign key' property
@@ -365,6 +414,9 @@ class ForeignKey(DBProperty):
             return types.GeneratorType
         return self.sequencetype
 
+    def _update(self, db, obj, val):
+        raise NotImplementedError()
+    
 def DBProperties(n):
     """Shortcut to create n DBProperty objects
     (for assigning to a,b = DBProperties(2))""" 
@@ -389,7 +441,6 @@ def _select(columns, cachables_or_db, table):
     
     @type table: str
     @param table: which table to retrieve the information from
-    
     """
     if isinstance(columns, basestring): columns = (columns,)
     if hasattr(cachables_or_db, 'doQuery'): 
