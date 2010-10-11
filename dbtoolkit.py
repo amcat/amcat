@@ -224,27 +224,43 @@ class amcatDB(object):
         if l: l.printreport(stream=out, htmlgenerator=True)
         return out.getvalue()
 
-    def _updateSQL(self, table, where, newvals):
-        if not toolkit.isString(where):
-            whereclauses = []
-            for col,vals in where.iteritems():
-                if toolkit.isIterable(vals, excludeStrings=True):
-                    vals = toolkit.getseq(vals) # guarantee persistence
-                    if all(type(val) == int for val in vals):
-                        whereclauses.append(self.intSelectionSQL(col, vals))
-                    else:
-                        whereclauses.append("%s IN (%s)" % (self.escapeFieldName(col), ",".join(map(quotesql, vals))))
+    def _whereSQL(self, where):
+        if not where: return None
+        if toolkit.isString(where): return where
+        whereclauses = []
+        for col,vals in where.iteritems():
+            if toolkit.isIterable(vals, excludeStrings=True):
+                vals = toolkit.getseq(vals) # guarantee persistence
+                if all(type(val) == int for val in vals):
+                    whereclauses.append(self.intSelectionSQL(col, vals))
+                else:
+                    whereclauses.append("%s IN (%s)" % (self.escapeFieldName(col), ",".join(map(quotesql, vals))))
+            else:
+                if vals is None:
+                    whereclauses.append("%s is null" % (self.escapeFieldName(col)))
                 else:
                     whereclauses.append("%s = %s" % (self.escapeFieldName(col), quotesql(vals)))
-            where = " AND ".join(whereclauses)
-
+        return " AND ".join(whereclauses)
+    
+    def _updateSQL(self, table, newvals, where):
+        where = self._whereSQL(where)
+        if where: where = "WHERE %s" % where
         update = ",".join("%s=%s" % (self.escapeFieldName(col), quotesql(val))
                           for (col, val) in newvals.iteritems())
-        
-        return "UPDATE [%(table)s] SET %(update)s WHERE %(where)s" % locals()
+        table = self.escapeFieldName(table)
+        return "UPDATE %(table)s SET %(update)s %(where)s" % locals()
         
 
-    def update(self, table, where, newvals):
+    def _selectSQL(self, table, columns, where=None):
+        where = self._whereSQL(where)
+        where = "" if where is None else " WHERE %s" % where 
+        if not toolkit.isIterable(columns, excludeStrings=True): columns = (columns,)
+        columns = ",".join(map(self.escapeFieldName, columns))
+        table = self.escapeFieldName(table)
+        return "SELECT %(columns)s FROM %(table)s%(where)s" % locals()
+        
+    
+    def update(self, table, newvals, where):
         """Create and execute and UPDATE statement
 
         @type table: str
@@ -255,9 +271,32 @@ class amcatDB(object):
         @type newvals: dict
         @param newvals: the colname:value pairs to update
         """
-        SQL = self._updateSQL(table, where, newvals)
+        SQL = self._updateSQL(table, newvals, where)
         self.doQuery(SQL)
 
+    def select(self, table, columns, where=None, rowfunc=None, alwaysReturnTable=False):
+        """Create and execute and UPDATE statement
+
+        @type table: str
+        @param table: the table to update
+        @type columns: str or sequence of str
+        @param colunms: the column or colunms to select
+        @type where: str or dict
+        @param where: the where clause to use. If a dict, will create a
+          AND-joined key=quotesql(val) string
+        @param rowfunc: an optional function to call on each row. Should accept
+          len(columns) number of arguments
+        @return: a list containing the date, each item being the result of rowfunc (if given),
+          a tuple (if columns is a sequence) or a simple value 
+        """
+        SQL = self._selectSQL(table, columns, where)
+        data = self.doQuery(SQL)
+        if rowfunc:
+            return [rowfunc(*col) for col in data]
+        elif not (alwaysReturnTable or toolkit.isSequence(columns, excludeStrings=True)):
+            return [val for (val,) in data]
+        else:
+            return data
 
     def doInsert(self, sql, retrieveIdent=1):
         """
