@@ -1,5 +1,5 @@
 from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
-import toolkit, permissions, project, authorisation
+import toolkit, permissions, project, authorisation, language
 
 def getProjectRole(db, projectid, roleid):
     return project.Project(db, projectid), authorisation.Role(db, roleid)
@@ -11,11 +11,12 @@ class User(Cachable):
 
     permissionLevel = DBProperty(table="permissions_users", getcolumn="permissionid", deprecated=True)
     
-    username, fullname, affiliation, active, email, language = DBProperties(6)
+    username, fullname, affiliation, active, email = DBProperties(5)
     roles = ForeignKey(lambda : authorisation.Role, table="users_roles")
     projects = ForeignKey(lambda : project.Project, table="projects_users_roles")
     projectroles = ForeignKey(lambda : (project.Project, authorisation.Role),
                               table="projects_users_roles", sequencetype=toolkit.multidict)
+    language = DBProperty(lambda : language.Language)
         
     @property
     @toolkit.deprecated

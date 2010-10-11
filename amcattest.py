@@ -36,7 +36,7 @@ Options:
 from __future__ import with_statement
 import unittest, os.path, os, inspect, sys
 import warnings, toolkit
-
+import amcatlogging
 
 
 def getModule(fn):
@@ -79,6 +79,14 @@ class AmcatTestCase(unittest.TestCase):
     def assertIn(self, element, sequence):
         sequence=toolkit.getseq(sequence, stringok=True) # force permanent sequence
         self.assertTrue(element in sequence, "%s is not in %s" % (element, sequence))
+    def assertNotEmpty(self, sequence):
+        original = sequence
+        sequence = toolkit.getseq(sequence)
+        self.assertTrue(sequence, "empty (converted) sequence: %r --> %r" % (original, sequence))
+
+def main():
+    amcatlogging.setStreamHandler()
+    unittest.main()
         
     
 if __name__ == '__main__':
