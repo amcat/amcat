@@ -208,6 +208,8 @@ class ArticleScraper(Scraper):
             response = self.session.open(url, urllib.urlencode(postdata))
         else:
             response = self.session.open(url)
+            
+        if url.find('#') > -1: url = url[:url.find('#')]
         if not allowRedirect and response.url != url:
             if canretry:
                 self.logInfo('Redirect attempted, logging in again (-> %r)' % (response.url))
