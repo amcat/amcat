@@ -7,6 +7,7 @@ import batch, codingjob, toolkit
 class Project(Cachable):
     __table__ = 'projects'
     __idcolumn__ = 'projectid'
+    __labelprop__ = 'name'
 
     name, insertDate, description = DBProperties(3)
     batches = ForeignKey(lambda: batch.Batch)
