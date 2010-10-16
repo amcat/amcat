@@ -54,10 +54,11 @@ def check(db_or_user, privilege, onproject=None):
       or None (ignored) for global privileges
     @return: None (raises exception if denied)
     """
-    if isinstance(db_or_user, user.User):
-        db, checkuser = db_or_user.db, db_or_user
-    else:
+    if hasattr(db_or_user, 'getUser'):
         db, checkuser = db_or_user, db_or_user.getUser()
+    else:
+        db, checkuser = db_or_user.db, db_or_user
+    
     userroles =getRoles(checkuser)
 
     p = getPrivilege(db, privilege)
