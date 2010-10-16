@@ -1,8 +1,23 @@
 from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
-import toolkit, permissions, project, authorisation, language
+import toolkit, permissions, project, authorisation
 
 def getProjectRole(db, projectid, roleid):
     return project.Project(db, projectid), authorisation.Role(db, roleid)
+
+class Affiliation(Cachable):
+    __table__ = 'affiliations'
+    __idcolumn__ = 'affiliationid'
+    __labelprop__ = 'name'
+    
+    name = DBProperty()
+    users = ForeignKey(lambda : User)
+    
+class Language(Cachable):
+    __table__ = 'languages'
+    __idcolumn__ = 'languageid'
+    
+    label = DBProperty()
+    users = ForeignKey(lambda : User)
 
 class User(Cachable):
     __table__ = 'users'
@@ -12,11 +27,13 @@ class User(Cachable):
     permissionLevel = DBProperty(table="permissions_users", getcolumn="permissionid", deprecated=True)
     
     userid, username, fullname, affiliation, active, email = DBProperties(6)
-    language = DBProperty(lambda : language.Language)
+    language = DBProperty(lambda : Language)
     roles = ForeignKey(lambda : authorisation.Role, table="users_roles")
     projects = ForeignKey(lambda : project.Project, table="permissions_projects_users")
     projectroles = ForeignKey(lambda : (project.Project, authorisation.Role),
                               table="projects_users_roles", sequencetype=toolkit.multidict)
+    
+    affiliationid = DBProperty(lambda : Affiliation, getcolumn="affiliationid")
     
     def haspriv(self, privilege, onproject=None):
         """If permission is denied, this function returns False,
