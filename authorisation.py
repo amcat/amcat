@@ -27,7 +27,6 @@ getPrivilege(db, str or int) returns Privilege object
 
 """
 
-import system
 from cachable2 import Cachable, DBProperty, ForeignKey
 import project, user
 
@@ -89,7 +88,7 @@ def getPrivilege(db, privilege):
     """
     if isinstance(privilege, Privilege):
         return privilege
-    for p in system.System(db).privileges:
+    for p in Privilege.getAll(db):
         if privilege in (p.id, p.label):
             return p
     raise ValueError("Privilege %r cannot be found" % privilege)
