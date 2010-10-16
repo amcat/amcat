@@ -74,11 +74,17 @@ class Table(object):
 
 
 class ObjectColumn(object):
-    def __init__(self, label, cellfunc=None, fieldname=None, fieldtype=None):
+    def __init__(self, label, cellfunc=None, fieldname=None, fieldtype=None,
+                 fieldwidget=None, fieldwidget_attrs=None, visible=True,
+                 choices=None):
         self.label = label
         self.cellfunc = cellfunc
+        self.choices = choices
         self.fieldname = fieldname or label
         self.fieldtype = fieldtype
+        self.fieldwidget = fieldwidget
+        self.fieldwidget_attrs = fieldwidget_attrs
+        self.visible = visible
     def getCell(self, row):
         if self.cellfunc:
             return self.cellfunc(row)
@@ -122,14 +128,14 @@ class FormTable(ObjectTable):
     """Wrapper around ObjectTable. Get its default columns from a Form
     object."""
     
-    def __createColumn(self, name):
-        return lambda x:getattr(x, name)
-    
-    def __init__(self, form, objects):
+    def __init__(self, form, objects, idcolumn=None):
         """
         @type form: Django Form (django.forms.Form)
         @param form: Typically a form from model.forms. It doesn't matter
         whether this object is bound or not.
+        
+        @type idcolumn: int or tuple
+        @param idcolumn: Which column(s) are unique
         
         @type objects: A cachable object"""        
         super(FormTable, self).__init__(objects)
@@ -138,18 +144,63 @@ class FormTable(ObjectTable):
         if not hasattr(form, 'fields'): form = form()
         self.form = form
         
+        # Set self.idcolumn
+        if not idcolumn and hasattr(form, 'Meta'):
+            if hasattr(form.Meta, 'idcolumn'):
+                idcolumn = form.Meta.idcolumn
+            else:
+                idcolumn = ()
+                            
+        if type(idcolumn) in (str, unicode):
+            idcolumn = (idcolumn,)
+        self.idcolumn = idcolumn
+        
         # Walk through all fields and add them to the table object
-        for name, field in form.fields.items():
+        for name, field in self.__getFields__(form):    
+            self.__addColumn__(name, field)
             
-            label = field.label
-            if label == None:
-                label = name.capitalize()
-                  
-            col = self.__createColumn(name)
-            fieldtype = field.widget.__class__.__name__
-            self.addColumn(col, label,
-                           fieldname=name,
-                           fieldtype=fieldtype)
+        # Adding id field (if possible)
+        columns = [c.fieldname for c in self.columns]
+        for c in self.idcolumn:
+            if c not in columns:
+                self.__addColumn__(c, form.fields[c], visible=False)
+                
+    def __addColumn__(self, name, field, visible=True):
+        label = field.label
+        if label == None:
+            label = name.capitalize()
+        
+        col = self.__createCellfunc__(name)
+        widget = field.widget.__class__.__name__
+        type = field.__class__.__name__
+        
+        choices = None
+        if hasattr(field, 'choices'): choices = field.choices
+        self.addColumn(col, label,
+                       choices=choices,
+                       fieldname=name,
+                       fieldwidget=widget,
+                       fieldwidget_attrs=field.widget_attrs(field),
+                       fieldtype=type,
+                       visible=visible)
+            
+    def __createCellfunc__(self, name):
+        """Create a lambda function outside __init__ avoiding scoping issues"""
+        return lambda x:getattr(x, name)
+    
+    def __getFields__(self, form):
+        """
+        Get all columns (called a 'field' in a form) to be displayed in the
+        table.
+        
+        @type form: Django Form
+        @param form: Form object with optional Meta.table
+        
+        """
+        if hasattr(form, 'Meta') and hasattr(form.Meta, 'table'):
+            return [(name, form.fields[name]) for name in form.Meta.table]
+        return form.fields.items()
+        
 
 class DictTable(Table):
     """
