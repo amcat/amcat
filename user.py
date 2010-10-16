@@ -11,12 +11,28 @@ class User(Cachable):
 
     permissionLevel = DBProperty(table="permissions_users", getcolumn="permissionid", deprecated=True)
     
-    username, fullname, affiliation, active, email = DBProperties(5)
+    userid, username, fullname, affiliation, active, email = DBProperties(6)
+    language = DBProperty(lambda : language.Language)
     roles = ForeignKey(lambda : authorisation.Role, table="users_roles")
-    projects = ForeignKey(lambda : project.Project, table="projects_users_roles")
+    projects = ForeignKey(lambda : project.Project, table="permissions_projects_users")
     projectroles = ForeignKey(lambda : (project.Project, authorisation.Role),
                               table="projects_users_roles", sequencetype=toolkit.multidict)
-    language = DBProperty(lambda : language.Language)
+    
+    def haspriv(self, privilege, onproject=None):
+        """If permission is denied, this function returns False,
+        if permission granted it returns True.
+        
+        @type privilege: Privilege object, id, or str
+        @param privilege: The requested privilege
+        @param onproject: The project the privilege is requested on,
+          or None (ignored) for global privileges
+        
+        @return: True or False (see above)"""
+        try: authorisation.check(self, privilege, onproject)
+        except authorisation.AccessDenied:
+            return False
+        
+        return True
         
     @property
     @toolkit.deprecated
