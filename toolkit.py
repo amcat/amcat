@@ -531,7 +531,7 @@ class Counter(collections.defaultdict):
     def prnt(self, threshold=None, outfunc=prnt, reverse=True):
         """Print the items with optional threshold"""
         for k, v in self.items(reverse=reverse):
-            if (not threshold) or  v < threshold:
+            if (not threshold) or  v >= threshold:
                 outfunc("%4i\t%s" % (v, k))
 
 def countmany(objects):
