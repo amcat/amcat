@@ -382,7 +382,7 @@ def idlist(idcolumn):
     if not idcolumn: return ()
     
     if type(idcolumn) in (str, unicode):
-        return (self.idcolumn,)
+        return (idcolumn,)
 
 def intlist(seq=sys.stdin):
     """Return integers from seq, skipping blank lines"""
