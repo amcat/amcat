@@ -144,26 +144,20 @@ class FormTable(ObjectTable):
         if not hasattr(form, 'fields'): form = form()
         self.form = form
         
-        # Set self.idcolumn
-        if not idcolumn and hasattr(form, 'Meta'):
-            if hasattr(form.Meta, 'idcolumn'):
-                idcolumn = form.Meta.idcolumn
-            else:
-                idcolumn = ()
-                            
-        if type(idcolumn) in (str, unicode):
-            idcolumn = (idcolumn,)
-        self.idcolumn = idcolumn
+        # Set idcolumn
+        if not idcolumn:
+            try: form.Meta.model
+            except: pass
+            else: idcolumn = form.Meta.model.__idcolumn__
+        self.idcolumn = toolkit.idlist(idcolumn)
         
-        # Walk through all fields and add them to the table object
         for name, field in self.__getFields__(form):    
-            self.__addColumn__(name, field)
-            
-        # Adding id field (if possible)
+            self.__addColumn__(name, field)     
+        
         columns = [c.fieldname for c in self.columns]
         for c in self.idcolumn:
             if c not in columns:
-                self.__addColumn__(c, form.fields[c], visible=False)
+                self.__addColumn__(c, form.fields[c], visible=False)   
                 
     def __addColumn__(self, name, field, visible=True):
         label = field.label

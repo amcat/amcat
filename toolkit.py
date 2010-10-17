@@ -67,8 +67,7 @@ def deprecated(func, msg = 'Call to deprecated function %(funcname)s.'):
     def new_func(*args, **kwargs):
         """Print a warning and then call the original function"""
         warnings.warn(DeprecationWarning(msg % dict(funcname=func.__name__)),
-                      stacklevel=2)
-        
+                      stacklevel=2)        
         return func(*args, **kwargs)
     new_func.__name__ = func.__name__
     new_func.__doc__ = ("B{Deprecated: %s}" %
@@ -370,6 +369,20 @@ def chomped(seq=sys.stdin, skipblanks=True, transform=None):
             e = transform(e)
             if skipblanks and not e: continue
         yield e
+        
+def idlist(idcolumn):
+    """Function to convert a idcolumn value to a list.
+    
+    An __idcolumn__ may be a str or tuple. This function
+    removes the necessity to check as it always returns
+    the latter.
+    
+    @type idcolumn: tuple, str or None
+    @param idcolumn: value to convert to a tuple"""
+    if not idcolumn: return ()
+    
+    if type(idcolumn) in (str, unicode):
+        return (self.idcolumn,)
 
 def intlist(seq=sys.stdin):
     """Return integers from seq, skipping blank lines"""
