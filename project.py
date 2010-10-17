@@ -9,7 +9,7 @@ class Project(Cachable):
     __idcolumn__ = 'projectid'
     __labelprop__ = 'name'
 
-    name, insertDate, description = DBProperties(3)
+    name, projectid, insertDate, description = DBProperties(4)
     batches = ForeignKey(lambda: batch.Batch)
     #visibility = DBProperty(func=permissions.ProjectVisibility.get, table="project_visibility")
     insertUser = DBProperty(lambda : user.User, getcolumn="insertuserid")
