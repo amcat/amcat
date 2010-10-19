@@ -260,11 +260,13 @@ class Property(object):
           that can be used to help determine the type
         @return a type object  
         """
+        #print "%s.getType(obj=%r); observedType=%r" % (self, obj, self.observedType)
         if (self.observedType is None
             and isinstance(obj, Cachable)):
             #try to get cached value
             try:
                 val = self.getCached(obj)
+                val = self.get(obj)
                 self.observedType = type(val)
             except store.UnknownKeyException:
                 pass

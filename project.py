@@ -70,12 +70,5 @@ class StoredResult(Cachable):
 if __name__ == '__main__':
     import dbtoolkit
     p = Project(dbtoolkit.amcatDB(), 1)
-    batch = p.batches[0]
-    print "--------"
-    pr = batch.project
-    print `p`
-    print `batch`
-    print `pr`
-    print len(batch.articles)
-    print p == pr
-    print p is pr
+    print p.getType("name")
+    print Project.name.getType()
