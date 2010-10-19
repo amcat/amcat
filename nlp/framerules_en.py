@@ -35,8 +35,8 @@ def allowPartialSPO(frame):
     if not frame.rule: return True # came from db
     if frame.rule.identifier.hasLemma(frame.predicate, SUCFAIL_LEMMATA, "V"): return True
 
-def getIdentifier(db, debug=None):
-    i = Identifier(db, debug=debug)
+def getIdentifier(db):
+    i = Identifier(db)
     for r in [
         BronRule(i, '1', V_SPEECH_ACTS,source=Child("nsubj"), quote=FirstMatch(Child(["dobj", "ccomp"]), Parent("dep"))),
         BronRule(i, 'ORD', V_ORDERS, source=Child("nsubj"), addressee=Child("dobj"), quote=Serial(Child("dobj"), Child("infmod"))),
