@@ -53,6 +53,7 @@ import thread
 import sys
 import inspect
 
+
 _THREAD_CONTEXT = threading.local()
 CONTEXT_FIELDS = ['application','user','host']
 
@@ -122,6 +123,10 @@ def setStreamHandler():
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
 
+def setup():
+    setStreamHandler()
+    return logging.getLogger('__main__')
+    
 def setContext(application, user=None, host=None):
     """Set the Context for the current thread
 

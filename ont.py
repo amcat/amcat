@@ -1,6 +1,6 @@
 from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory, CachingMeta, cache
 import cachable
-import toolkit, idlabel
+import toolkit, idlabel, language
 try:
     import mx.DateTime as my_datetime
 except:
@@ -10,8 +10,9 @@ DUMMY_CLASSID_PARTYMEMBER = 1
 DUMMY_CLASSID_OFFICE = 2
 
     
-def getParent(db, cid, pid=None):
-    cl = Class(db, cid[0])
+def getParent(db, cidpid):
+    cid, pid = cidpid
+    cl = Class(db, cid)
     if pid is None:
         return cl, None
     return cl, Object(db, pid)
@@ -53,12 +54,16 @@ class Function(object):
         return "Function(%s, %s, %s, %s)" % (self.functionid, self.office, self.fromdate and toolkit.writeDate(self.fromdate), self.todate and toolkit.writeDate(self.todate))
     __repr__ = __str__
 
+def getLangLabel(db, languageidlabel):
+    languageid, label  = languageidlabel 
+    return language.Language(db, languageid), label
+
 class Object(Cachable):
     __table__ = 'o_objects'
     __idcolumn__ = 'objectid'
     __metaclass__ = CachingMeta
 
-    labels = DBFKPropertyFactory("o_labels", ("languageid", "label"), endfunc=dict)
+    labels = DBFKPropertyFactory("o_labels", ("languageid", "label"), dbfunc = getLangLabel, endfunc=dict)
     parents = DBFKPropertyFactory("o_hierarchy", ("classid", "parentid"), reffield="childid", dbfunc = getParent, endfunc=dict)
     children = DBFKPropertyFactory("o_hierarchy", ("classid", "childid"), reffield="parentid", dbfunc = getParent, endfunc=toolkit.multidict)
 
@@ -76,6 +81,10 @@ class Object(Cachable):
         self.addDBProperty("label", table="dbo.fn_o_labels(%i)" % languageid)
         self.languageid = languageid
 
+    def getLabel(self, lang):
+        if type(lang) == int: lang = language.Language(self.db, lang)
+        return self.labels.get(lang)
+
     def getAllParents(self, date=None):
         for c, p in self.parents.iteritems():
             yield c, p
@@ -85,8 +94,8 @@ class Object(Cachable):
     def currentFunctions(self, date=None):
         if not date: date = my_datetime.now()
         for f in self.functions:
-            if f.fromdate and date < f.fromdate: continue
-            if f.todate and date >= f.todate: continue
+            if f.fromdate and toolkit.cmpDate(date, f.fromdate) < 0: continue
+            if f.todate and toolkit.cmpDate(date, f.todate) >= 0: continue
             yield f
     
     def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):

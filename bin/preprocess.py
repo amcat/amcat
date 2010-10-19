@@ -36,7 +36,7 @@ if -q is given, only print errors to stderr
 
 import logging; LOG = logging.getLogger(__name__)
 import amcatlogging; amcatlogging.setStreamHandler()
-import sys, dbtoolkit, analysis, preprocessing, system, toolkit
+import sys, dbtoolkit, analysis, preprocessing, toolkit
 try:
     import cPickle as pickle
 except:
@@ -50,7 +50,7 @@ def usage(msg=None):
     if msg: warn("%s\n" % msg)
     warn(__doc__)
     warn("\nAvailable analyses:")
-    for a in system.System(db).analyses:
+    for a in analysis.Analysis.getAll(db):
         if a.id > 0:
             warn(" %i) %s" % (a.id, a.label))
     sys.exit()
@@ -86,7 +86,7 @@ elif action in ('assign', 'get', 'reset', 'store'):
     try:
         analysisid = int(arg(2))
         ana = analysis.Analysis(db, analysisid)
-        if ana.id == 0 or (not ana in system.System(db).analyses):
+        if ana.id == 0 or (not ana in analysis.Analysis.getAll(db)):
             raise ValueError("Analysis %i does not exist" % analysisid)
     except Exception, e:
         usage(e)

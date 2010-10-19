@@ -7,3 +7,4 @@ class Language(Cachable):
     
     label = DBProperty()
     users = ForeignKey(lambda : User)
+    

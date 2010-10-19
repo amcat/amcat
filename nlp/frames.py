@@ -1,9 +1,10 @@
 from __future__ import with_statement
-from toolkit import Identity
+from idlabel import Identity
 import toolkit
 import sys
 from contextlib import contextmanager
 import graph
+import logging; log = logging.getLogger(__name__)
 
 ############# INTERFACE ETC. ################
 
@@ -13,17 +14,17 @@ LEMMA_SQL = """select distinct l.lemmaid from words_lemmata l inner join words_w
 
 
 class Rule(object):
-    def __init__(self, identifier, verbose=False):
+    def __init__(self, identifier=None, verbose=False):
         self.identifier = identifier
-        self.verbose = verbose
+        self.verbose = False
     def debug(self, *args, **kargs):
-        if self.verbose: self.identifier.debug(*args, **kargs)
+        log.debug(" ".join(map(str, args)) + "".join(" %s=%r" % (k,v) for (k,v) in kargs.iteritems()))
     def debugindent(self, *args, **kargs):
         return self.identifier.debugindent(*args, **kargs)
 class DeclarativeRule(Rule):
-    def __init__(self, identifier, frame, condition=None, postprocess=None, verbose=None, name=None, rulename=None, precheck=None, **roles):
+    def __init__(self, frame, condition=None, postprocess=None, verbose=None, name=None, rulename=None, precheck=None, **roles):
         if verbose is None: verbose = not str(rulename).startswith("_")
-        Rule.__init__(self, identifier, verbose)
+        Rule.__init__(self, verbose)
         self.frame = frame
         self.condition = condition
         self.postprocess = postprocess
@@ -149,16 +150,16 @@ class Highest(Pattern):
         return highest
     
 class Identifier(object):
-    def __init__(self, db, debug=None):
+    def __init__(self, db):
         self.rules = []
         self.db = db
-        self.debugfunc = debug
         self.lemma_set_dict = {}
     def debug(self, msg=None, indent=None, adddepth=0):
-        if not self.debugfunc: return
-        func = sys._getframe(2+adddepth).f_code.co_name
-        self.debugfunc(msg, func, indent)
+        #if not self.debugfunc: return
+        #f\unc = sys._getframe(2+adddepth).f_code.co_name
+        #self.debugfunc(msg, func, indent)
         #self.debugfunc(func)
+        log.debug(msg)
     @contextmanager
     def debugindent(self, msg):
         try:
@@ -201,22 +202,55 @@ class Identifier(object):
             self.lemma_set_dict[key] = lset
         return node.word.lemma.id in lset
 
+
+    def getSources(self, sent):
+        frames = set(self.findFrames(sent))
+        for frame in frames:
+            if isinstance(frame, Bron):
+                yield frame
+    
+    def getNuclearSentences(self, sent):
+        sourcedict = {} # node : source
+        frames = set(self.findFrames(sent))
+        for frame in frames:
+            if isinstance(frame, Bron):
+                sourcedict[frame.key] = frame
+                
+        usedsources = set()
+        for frame in frames:
+            if not isinstance(frame, Bron):
+                key = getattr(frame, "predicate", None)
+                if not key: continue
+                sources = []
+                while key:
+                    if key in sourcedict:
+                        sources.append(sourcedict[key])
+                    key = key.parentNode
+                usedsources |= set(sources)
+
+                yield sources, frame
+
+        for source in set(sourcedict.values()) - usedsources:
+            yield [source], None
+
+
+    
 def framesort(frame):
     return (int(frame.isComplete()), frame.rulerank)
     
 ################### Specific rules ########################
 
 class SPORule(DeclarativeRule):
-    def __init__(self, identifier, rulename, postprocess=None, predicate=Self(), name="spo",  allowPartial=False, **roles):
+    def __init__(self, rulename, postprocess=None, predicate=Self(), name="spo",  allowPartial=False, **roles):
         roles['predicate'] = predicate
         self.allowPartial = allowPartial
-        DeclarativeRule.__init__(self, identifier, SPO, postprocess=postprocess, name=name, rulename=rulename, **roles)
+        DeclarativeRule.__init__(self, SPO, postprocess=postprocess, name=name, rulename=rulename, **roles)
     
     
 class BronRule(DeclarativeRule):
-    def __init__(self, identifier, rulename,  match=None, key=Self(), checks=None, postprocess=None, verbose=None, **roles):
+    def __init__(self, rulename,  match=None, key=Self(), checks=None, postprocess=None, verbose=None, **roles):
         roles['key'] = key
-        DeclarativeRule.__init__(self, identifier, Bron, postprocess=postprocess, verbose=verbose, rulename=rulename, **roles)
+        DeclarativeRule.__init__(self, Bron, postprocess=postprocess, verbose=verbose, rulename=rulename, **roles)
         self.match = match
         self.checks = checks
     def getFrame(self, node):
@@ -354,7 +388,7 @@ class SPO(Frame):
             if not a: return
             if callable(a):
                 if not a(self): return
-                self.rule.debug([self, a(self)])
+                log.debug("%s %s") % (self, a(self))
 
         if self.has('subject', 'predicate'):
             self.name = 'SPO_su'

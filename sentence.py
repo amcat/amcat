@@ -44,7 +44,7 @@ class SentenceWord(graph.Node, Cachable):
     def analysedSentence(self):
         return AnalysedSentence(self.db, self.id[:2])
     def getGraph(self):
-        return self.sentence
+        return self.analysedSentence
 
     def __str__(self):
         return "%i:%s" % (self.position, self.word)
@@ -73,6 +73,10 @@ class Sentence(Cachable):
     def cacheWords(self, *args, **kargs):
         cacheWords([self], *args, **kargs)
         
+    def getAnalysedSentence(self, analysisid):
+        for a in self.analysedSentences:
+            if analysisid == a.analysisid:
+                return a
 
 def getSentenceWord(analysedSentence, position):
     return SentenceWord(analysedSentence.db, (analysedSentence.sentenceid, analysedSentence.analysisid, position))
@@ -139,7 +143,7 @@ def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=Fa
     if lemmata: perword["lemma"] = dict(lemma=["string"], pos=[])
     if sentiment: perword["lemma"] = dict(lemma=["string"], pos=[], sentiment=[], intensifier=[])
     what = dict(analysedSentences = dict(words={'word' : perword}))
-    if triples: what["triples"] = []
+    if triples: what["analysedSentences"] = ["triples"]
     cachable.cache(sentences, **what)
     if sentence:
         cachable.cacheMultiple(sentences, "encoding", "text")

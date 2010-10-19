@@ -22,6 +22,8 @@ POSMAP = {"pronoun" : 'O',
           "part" : "R",
           "intensifier" : "B",
           "number" : "Q",
+          "cat" : "Q",
+          "n" : "Q",
           "reflexive":  'O',
           "conjunct" : 'C',
           "pp" : 'P',
@@ -35,6 +37,8 @@ POSMAP = {"pronoun" : 'O',
           'zo' : '?',
           'max' : '?',
           'mogelijk' : '?',
+          'sbar' : '?',
+          '--' : '?',
                     }
 
 class AlpinoParser(parse.Parser):
