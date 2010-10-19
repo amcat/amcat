@@ -382,7 +382,7 @@ class DBFKProperty(Property):
 
         self.table = table
         self.targetfields = targetfields
-        self.function = function or (lambda x:x)
+        self.function = function 
         self.targetType = targetType
         
         self.reffield = reffield or cachable.__idcolumn__
@@ -397,7 +397,9 @@ class DBFKProperty(Property):
         if self.filter: SQL += " AND (%s)" % self.filter
         if self.orderby: SQL += " ORDER BY %s" % _selectlist(self.orderby)
         data = self.cachable.db.doQuery(SQL)
-        return self.endfunc(self.function(*x) for x in data)
+        if self.function:
+            data = (self.function(*x) for x in data)
+        return self.endfunc(data)
 
     def prepareCache(self,cacher):
         if self.cached: return
