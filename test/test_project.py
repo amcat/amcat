@@ -18,7 +18,7 @@ class TestProject(amcattest.AmcatTestCase):
             ("insertDate", (mx.DateTime.DateTimeType, datetime.datetime), None),
             ):
             if type(types) not in (tuple, set, list): types = (types,)
-            self.assertIn(p.getType(propname), types)
+            self.assertIn(p.getType(propname), types, "checking type(Project.%s)" % propname)
             prop = getattr(project.Project, propname)
             if card is True:
                 self.assertTrue(prop.getCardinality())
