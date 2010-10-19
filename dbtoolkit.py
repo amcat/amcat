@@ -11,6 +11,7 @@ import cPickle
 from cStringIO import StringIO
 from contextlib import contextmanager
 import datetime
+import random
 
 _encoding = {
     0 : 'utf-8',
