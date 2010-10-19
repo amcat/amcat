@@ -12,7 +12,7 @@ class Source(Cachable):
     __idcolumn__ = 'mediumid'
     __labelprop__ = 'name'
     __dbproperties__ = ["name", "circulation", "type", "abbrev"]
-    language = DBPropertyFactory("language", dbfunc = language.Language)
+    language = DBPropertyFactory("language", dbfunc = lambda (db, lid) : language.Language(db, lid))
 
 class Sources(object):
     def __init__(self, connection):
