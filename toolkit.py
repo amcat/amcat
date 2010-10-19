@@ -821,6 +821,17 @@ def getYQ(date):
     """Return a float containing year.quarter (eg 2002.4)"""
     return date.year + (int((date.month-1)/3)+1)/10.0
 
+def toDate(date):
+    """Convert a string, datetime.datetime, or mx.DateTime into a datetime"""
+    if type(date) == str:
+        return readDate(date)
+    return datetime.datetime(*date.timetuple()[:6])
+
+def cmpDate(date1, date2):
+    """Compares to date-like arguments (see L{toDate}), returning cmp-score"""
+    date1, date2 = map(toDate, (date1, date2))
+    return cmp(date1, date2)
+
 
 ###########################################################################
 ##              Process Handling and External Processes                  ##
