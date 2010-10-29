@@ -15,6 +15,11 @@ class Project(Cachable):
     insertUser = DBProperty(lambda : user.User, getcolumn="insertuserid")
     users = ForeignKey(lambda : user.User, table="permissions_projects_users")
     codingjobs = ForeignKey(lambda : codingjob.CodingJob)
+    
+    @property
+    @toolkit.deprecated
+    def visibility(self):
+        return permissions.ProjectVisibility.get(3)
 
     @property
     @toolkit.deprecated
