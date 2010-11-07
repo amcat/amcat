@@ -269,7 +269,8 @@ def fromDB(db):
     o = Ontology(db)
     for oid, nr in db.doQuery("SELECT objectid, cast(nr as varchar(255)) FROM o_objects"):
         if nr: nr = Number(nr)
-        o.createObject(oid, nr)
+        try: o.createObject(oid, nr)
+        except: print 'Object %s could not be created!' % oid
     for oid, lang, lbl in db.doQuery("SELECT objectid, languageid, label FROM o_labels"):
         o.objects[oid].setLabel(lang, lbl)
     for cid, lbl in db.doQuery("SELECT classid, label FROM o_classes"):
