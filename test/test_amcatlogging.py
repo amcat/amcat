@@ -27,7 +27,7 @@ class TestLogging(amcattest.AmcatTestCase, logging.Filter):
         self.assertIn('test/test_amcatlogging.py", line 23, in testException', amcatlogging.format(s))
         with amcatlogging.collect() as s:
             with amcatlogging.logExceptions():
-                x = 1/0
+                raise Exception("!")
         self.assertEqual(len(s), 1)
         self.assertIn('test/test_amcatlogging.py", line 30, in testException',amcatlogging.format(s))
         
