@@ -1,4 +1,4 @@
-import amcattest, dbtoolkit, user, language
+import amcattest, dbtoolkit, user, language, inspect
 from cachable2 import Cachable, Property, DBProperty,DBProperties, UnknownTypeException, ForeignKey
 
 class TestDummy(Cachable):
@@ -23,11 +23,29 @@ class TestUser(Cachable):
     language = DBProperty(lambda : TestLanguage, getcolumn="languageid")
     roles = ForeignKey(TestRole, table="users_roles")
 
+        
+class Test(Cachable):
+    __table__ = '#test'
+    __idcolumn__ = 'id'
+    strval, strval2, intval = DBProperties(3)
+class Test2(Cachable):
+    __table__ = '#test2'
+    __idcolumn__ = ['id', 'id2']
+    strval = DBProperty()
+    
 class TestAmcatMemcache(amcattest.AmcatTestCase):
 
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)
+        self.createTestTables()
 
+    def createTestTables(self):
+        self.db.doQuery("create table #test (id int identity(1,1) primary key, strval varchar(255) not null, strval2 varchar(255) not null default 'test', intval int null)")
+        self.db.doQuery("create table #test2 (id int, id2 int, strval varchar(255), primary key (id, id2))")
+
+    def tearDown(self):
+        self.db.rollback()
+        
     def testForeignKey(self):
         self.assertEqual(TestUser.roles.getType(), TestRole)
         self.assertTrue(TestUser.roles.getCardinality())
@@ -136,9 +154,43 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
             self.assertEqual(u.language.id, l.id)
         db.rollback()
         
+    def testAdd(self):
+        #import amcatlogging; amcatlogging.DEBUG_MODULES.add("dbtoolkit")
+        #amcatlogging.DEBUG_MODULES.add("amcatmemcache")
+        for i, (props, strval, strval2, intval) in enumerate([
+                (dict(), dbtoolkit.SQLException, None, None),
+                (dict(strval="bla bla"), "bla bla", "test", None),
+                (dict(strval="bla bla", intval=user.User(self.db, 15)), "bla bla", "test", user.User(self.db, 15)),
+                ]):
+            if inspect.isclass(strval) and issubclass(strval, Exception):
+                self.assertRaises(strval, Test.create, self.db, **props)
+            else:
+                t = Test.create(self.db, **props)
+                try:
+                    self.assertEqual(t.id, i+1)
+                    self.assertEqual(t.strval, strval)
+                    self.assertEqual(t.strval2, strval2)
+                    self.assertEqual(t.intval, intval)
+                finally:
+                    t.uncache()
+        
+    def testDelete(self):
+        import amcatlogging; amcatlogging.DEBUG_MODULES.add("dbtoolkit")
+        amcatlogging.DEBUG_MODULES.add("amcatmemcache")
+        
+        t = Test.create(self.db, strval="x")
+        self.assertEqual(self.db.getValue("select count(*) from #test"), 1)
+        t.delete(self.db)
+        self.assertEqual(self.db.getValue("select count(*) from #test"), 0)
+
+        self.assertEqual(self.db.getValue("select count(*) from #test2"), 0)
+        t = Test2.create(self.db, idvalues=(1,2))
+        self.assertEqual(self.db.getValue("select count(*) from #test2"), 1)
+        t.delete(self.db)
+        self.assertEqual(self.db.getValue("select count(*) from #test2"), 0)
         
 if __name__ == '__main__':
-    
+    #TestAmcatMemcache().testAdd()
     #TestDummy.prop.observedType=None
     #d = TestDummy([], -1)
     #d.prop = 1

@@ -45,6 +45,8 @@ Example usage::
 import inspect, types, warnings
 import idlabel, dbtoolkit
 import amcatmemcache as store
+import logging; log = logging.getLogger(__name__)
+
 
 class Meta(type):
     """Metaclass to  ensure properties are initialised"""
@@ -93,12 +95,12 @@ class Cachable(idlabel.IDLabel):
         @type deprecated: Boolean
         @param deprecated: If true, return deprecated functions also
         
-        @return: 2-key tuple with the name of the property and the
+        @return: sequence of 2-tuple with the name of the property and the
         property itself"""
         for name in dir(cls):
             prop = getattr(cls, name)
-            if type(prop) in (DBProperty, ForeignKey):
-                if not deprecated and not prop.deprecated:
+            if isinstance(prop, Property):
+                if deprecated or not prop.deprecated:
                     yield (name, prop)
     
     def __getattribute__(self, attr):
@@ -131,11 +133,24 @@ class Cachable(idlabel.IDLabel):
         else:
             p.uncache(self)
 
+    def uncache(self):
+        """Remove all cached entries for this object"""
+        for name, prop in self._getProperties():
+            prop.uncache(self)
+
     def getType(self, prop):
         """Get the type of the given property (or property name)"""
         if not isinstance(prop, Property):
             prop = self._getProperty(prop)
         return prop.getType(self)
+
+    @property
+    def label(self):
+        # if a __labelprop__ is defined, return that, otherwise, call super
+        try:
+            return getattr(self, self.__labelprop__)
+        except AttributeError:
+            return super(Cachable, self).label
 
     def update(self, db, **props):
         """Update the database db with the given props
@@ -156,13 +171,39 @@ class Cachable(idlabel.IDLabel):
         """Update a single property by calling prop._update. See L{update}"""
         prop._update(db, self, val)
 
-    @property
-    def label(self):
-        # if a __labelprop__ is defined, return that, otherwise, call super
-        try:
-            return getattr(self, self.__labelprop__)
-        except AttributeError:
-            return super(Cachable, self).label
+
+    ############### DB Specific (class)methods #########################    
+
+    def delete(self, db):
+        """Delete this Cachable object, and uncache all properties"""
+        db.delete(self.__table__, self._getWhere())
+        self.uncache()
+        
+    @classmethod
+    def create(cls, db, idvalues=None, **props):
+        """Create a new instance of this Cachable class, initialised with props
+
+        Note that the caller is responsible for maintaining the db transaction
+        (i.e. for committing after an update).
+
+        Default implementation calls a db.insert with the given props, and creates
+        the Cachable object with the returned id. The props are then cached.
+        """
+        if idvalues is not None:
+            idcol = cls.__idcolumn__
+            if type(idcol) not in (list, tuple):
+                idcol, idvalues = [idcol], [idvalues]
+            allprops = dict(props.items() + zip(idcol, idvalues))
+            db.insert(cls.__table__, allprops, retrieveIdent=False)
+        else:
+            idvalues= db.insert(cls.__table__, props)
+        result = cls(db, idvalues)
+        log.debug("Created object %r" % result)
+        for propname, val in props.iteritems():
+            prop = result._getProperty(propname)
+            log.debug("Caching %s.%s <- %s" % (result, propname, [val]))
+            prop.cache(result, [[val]])
+        return result
     
     @classmethod
     def getAll(cls, db):
@@ -173,7 +214,14 @@ class Cachable(idlabel.IDLabel):
             rowfunc = lambda *i : cls(db, i)                      
         return db.select(cls.__table__, cls.__idcolumn__, rowfunc=rowfunc)
 
-        
+    def _getWhere(self):
+        idcol, oid = self.__idcolumn__, self.id
+        if type(idcol) in (str, unicode):
+            if type(oid) != int: raise ValueError("Non-integral id on object %r with scalar idcolumn %r!" % (obj, idcol)) 
+            return {idcol : oid}
+        else:
+            if type(oid) != tuple: raise ValueError("Scalar id on object %r with tuple idcolumn %r!" % (obj, idcol)) 
+            return dict(zip(idcol, oid)) 
     
             
 class UnknownTypeException(Exception):
@@ -211,10 +259,13 @@ class Property(object):
             warnings.warn(DeprecationWarning("Property %s has been deprecated" % self))
         try:
             v = self.getCached(obj)
+            log.debug("Got cached %r.%s = %r" % (obj, self, v))
         except store.UnknownKeyException:
             v = self.retrieve(obj)
             self.cache(obj, v)
+            log.debug("Retrieved (and cached) %r.%s = %r" % (obj, self, v))
         v = self.dataToObjects(obj, v)
+        log.debug("Converted into %r" % v)
         # remember the type info for later use
         if self.observedType is None: self.observedType = type(v)
         return v
@@ -336,19 +387,11 @@ class DBProperty(Property):
             return self.targetclass.__idcolumn__
         except AttributeError:
             return self.propname
-    def _getWhere(self, obj):
-        idcol, oid = self.cls.__idcolumn__, obj.id
-        if type(idcol) in (str, unicode):
-            if type(oid) != int: raise ValueError("Tuple id on object %r with scalar idcolumn %r!" % (obj, idcol)) 
-            return {idcol : oid}
-        else:
-            if type(oid) != tuple: raise ValueError("Scalar id on object %r with tuple idcolumn %r!" % (obj, idcol)) 
-            return dict(zip(idcol, oid))
     
     def retrieve(self, obj):
         """Use the database to retrieve the value of this property for obj
         """
-        return obj.db.select(self._getTable(), self._getColumns(), self._getWhere(obj), alwaysReturnTable=True)
+        return obj.db.select(self._getTable(), self._getColumns(), obj._getWhere(), alwaysReturnTable=True)
     
     def getType(self, obj_or_db=None):
         # if targetclass is a class or tuple of classes, return it 
@@ -371,17 +414,17 @@ class DBProperty(Property):
     def _update(self, db, obj, val):
         """Create and execute an SQL UPDATE statement to update the db"""
 
-        print "UPDATEing %r.%s -> %r" % (obj, self, val)
+        log.debug("UPDATEing %r.%s -> %r" % (obj, self, val))
         if isinstance(val, idlabel.IDLabel): val = val.id
         cols = self._getColumns()
-        print ">", `cols`
+        log.debug("> %r" % cols)
         if type(cols) in (str, unicode):
             update = {cols : val}
             val = (val,) # for caching
         else:
             update = dict(zip(cols, val))
-        print update
-        obj.db.update(self._getTable(), update, self._getWhere(obj))
+        log.debug(update)
+        obj.db.update(self._getTable(), update, obj._getWhere())
         self.cache(obj, [val])
             
         
@@ -426,43 +469,4 @@ def DBProperties(n):
 
 def cacheMultiple(*args, **kargs): pass
     
-def _sqlWhere(fields, ids):
-    if type(fields) in (str, unicode):
-        fields, ids = [fields], [ids]
-    return "(%s)" % " and ".join("(%s = %s)" % (field, dbtoolkit.quotesql(id))
-                                 for (field, id) in zip(fields, ids))
-
-def _select(columns, cachables_or_db, table):
-    """SQL select on given cachables or all objects in table
-    
-    @type columns: string, list or tuple
-    @param columns: columns to select
-    
-    @type cachables_or_db: bound cachable or AmCAT Database object
-    @param cachables_or_db: bound cachable or AmCAT Database object
-    
-    @type table: str
-    @param table: which table to retrieve the information from
-    """
-    if isinstance(columns, basestring): columns = (columns,)
-    if hasattr(cachables_or_db, 'doQuery'): 
-        # Is a database object, select all rows and return
-        select = ", ".join(map(cachables_or_db.escapeFieldName, columns))
-        return cachables_or_db.doQuery("SELECT %s FROM %s" % (select, table))
-    
-    # Convert generators to normals lists
-    try: cachables = tuple(cachables_or_db)
-    except: cachables = (cachables_or_db,)
-
-    prototype = cachables[0]
-    select = ", ".join(map(prototype.db.escapeFieldName, columns))
-    reffield = prototype.__idcolumn__
-    if type(reffield) in (str, unicode):
-        if type(prototype.id) <> int:
-            raise TypeError("Singular reffield with non-int id! Reffield: %r, cachable: %r, id: %r" % (reffield, prototype, prototype.id))
-        where  = prototype.db.intSelectionSQL(reffield, (x.id for x in cachables))
-    else:
-        where = "((%s))" % ") or (".join(_sqlWhere(reffield, x.id) for x in cachables)
-    
-    SQL = "SELECT %s FROM %s WHERE %s" % (select, table, where)
-    return prototype.db.doQuery(SQL)
+import amcatlogging; amcatlogging.debugModule()

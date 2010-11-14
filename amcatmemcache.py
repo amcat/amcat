@@ -72,7 +72,7 @@ def put(klass, prop, key, value, conn=None):
 def delete(klass, prop, key, conn=None):
     """Delete the value for the given key"""
     keybytes = key2bytes(klass, prop, key)
-    #print "DELETING %r" % keybytes
+    LOG.debug("DEL %s(%r).%s (%r)" % (klass.__name__, key, prop, keybytes))
     _getConnection().delete(keybytes)
     
 class CachablePropertyStore(object):
