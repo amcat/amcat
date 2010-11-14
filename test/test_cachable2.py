@@ -217,7 +217,7 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         
         
 if __name__ == '__main__':
-    t = TestAmcatMemcache('testDelete')
-    t.setUp()
-    t.testAddFK()
-    #amcattest.main()
+    #t = TestAmcatMemcache('testDelete')
+    #t.setUp()
+    #t.testAddFK()
+    amcattest.main()

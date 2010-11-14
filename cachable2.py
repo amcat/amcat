@@ -462,7 +462,7 @@ class ForeignKey(DBProperty):
     def _update(self, db, obj, val):
         raise NotImplementedError()
 
-    def addNewChild(self, db, obj, **props):
+    def addNewChild(self, db, obj, idvalues=None, **props):
         """Add a new child to this ForeignKey relation
         
         Note that the caller is responsible for maintaining the db transaction
@@ -476,7 +476,7 @@ class ForeignKey(DBProperty):
             props.update(dict(zip(obj.__idcolumn__, obj.id)))
         else:
             props[obj.__idcolumn__] = obj.id
-        child = self.targetclass.create(db, **props)
+        child = self.targetclass.create(db, idvalues=idvalues, **props)
         #uncache to force retrieval, inefficient but for now easier than updating the cache?
         self.uncache(obj)
         return child
