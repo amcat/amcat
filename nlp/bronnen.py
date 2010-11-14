@@ -1,4 +1,4 @@
-from toolkit import Identity
+from idlabel import Identity
 import sys, parsetree
 
 _DB = None

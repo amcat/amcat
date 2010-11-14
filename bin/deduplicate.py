@@ -2,6 +2,8 @@ import dbtoolkit, sys, datetime
 import batch, toolkit
 import ticker
 
+import amcatlogging; log = amcatlogging.setup()
+
 db = dbtoolkit.anokoDB()
 
 arg = sys.argv[1]

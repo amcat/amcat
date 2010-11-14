@@ -12,6 +12,8 @@ from cStringIO import StringIO
 from contextlib import contextmanager
 import datetime
 import random
+from idlabel import IDLabel
+import logging; log = logging.getLogger(__name__)
 
 _encoding = {
     0 : 'utf-8',
@@ -158,6 +160,7 @@ class amcatDB(object):
         If cursor is given, use that cursor and return the cursor instead
         Otherwise, pre- and postprocess around a call with a new cursor
         """
+        log.debug(sql)
         if type(sql) == unicode: sql = sql.encode('latin-1', 'replace')
         if select is None:
             select=sql.lower().strip().startswith("select")
@@ -262,7 +265,7 @@ class amcatDB(object):
         
     
     def update(self, table, newvals, where):
-        """Create and execute and UPDATE statement
+        """Create and execute an UPDATE statement
 
         @type table: str
         @param table: the table to update
@@ -275,8 +278,21 @@ class amcatDB(object):
         SQL = self._updateSQL(table, newvals, where)
         self.doQuery(SQL)
 
+    def delete(self, table, where):
+        """Create and execute a DELETE statement
+
+        @type table: str
+        @param table: the table to delete rows from
+        @type where: str or dict
+        @param where: the where clause to use. If a dict, will create a
+          AND-joined key=quotesql(val) string
+        """
+        where = self._whereSQL(where)
+        SQL = "DELETE FROM %(table)s WHERE %(where)s" % locals()
+        self.doQuery(SQL)
+        
     def select(self, table, columns, where=None, rowfunc=None, alwaysReturnTable=False):
-        """Create and execute and UPDATE statement
+        """Create and execute a SELECT statement
 
         @type table: str
         @param table: the table to update
@@ -287,7 +303,7 @@ class amcatDB(object):
           AND-joined key=quotesql(val) string
         @param rowfunc: an optional function to call on each row. Should accept
           len(columns) number of arguments
-        @return: a list containing the date, each item being the result of rowfunc (if given),
+        @return: a list containing the data, each item being the result of rowfunc (if given),
           a tuple (if columns is a sequence) or a simple value 
         """
         SQL = self._selectSQL(table, columns, where)
@@ -303,8 +319,7 @@ class amcatDB(object):
         """
         Executes the INSERT sql and returns the inserted IDENTITY value
         """
-        
-            
+
         self.doQuery(sql)
         if retrieveIdent:
             id = self.getValue("select SCOPE_IDENTITY()")
@@ -324,27 +339,31 @@ class amcatDB(object):
         Inserts a new row in <table> using the key/value pairs from dict
         Returns the id value of that table.
         """
-        fields = dict.keys()
-        values = dict.values()
-        fieldsString = ", ".join(map(self.escapeFieldName, fields))
-        if False or self.dbType == "psycopg2":
-            # use parameters for insert. Test whether this works for mssql as well
-            paramstr = ",".join(self.parametermark() for i in range(len(fields)))
-            SQL = "INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, paramstr)
-            if retrieveIdent and self.dbType=="psycopg2": SQL += " RETURNING id"
-            with self.cursor() as c:
-                #values = map(str, values)
-                c.execute(SQL, values)
-                if retrieveIdent:
-                    if self.dbType == "psycopg2":
-                        data = c.fetchall()
-                        if data: return data[0][0]
-                    
-                return
-        
-        valuesString = ", ".join([quotesql(value) for value in values])
-        id = self.doInsert("INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, valuesString),
-                           retrieveIdent=retrieveIdent)
+        SQL = "INSERT INTO %s" % table
+        if dict:
+            fields = dict.keys()
+            values = dict.values()
+            fieldsString = ", ".join(map(self.escapeFieldName, fields))
+            if False or self.dbType == "psycopg2":
+                # use parameters for insert. Test whether this works for mssql as well
+                paramstr = ",".join(self.parametermark() for i in range(len(fields)))
+                SQL = "INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, paramstr)
+                if retrieveIdent and self.dbType=="psycopg2": SQL += " RETURNING id"
+                with self.cursor() as c:
+                    #values = map(str, values)
+                    c.execute(SQL, values)
+                    if retrieveIdent:
+                        if self.dbType == "psycopg2":
+                            data = c.fetchall()
+                            if data: return data[0][0]
+
+                    return
+
+            valuesString = ", ".join([quotesql(value) for value in values])
+            SQL += " (%s) VALUES (%s)" % (fieldsString, valuesString)
+        else:
+            SQL += " DEFAULT VALUES"
+        id = self.doInsert(SQL, retrieveIdent=retrieveIdent)
         return id
 
     def insertmany(self, table, headers, dataseq):
@@ -694,6 +713,8 @@ def quotesql(strOrSeq):
         return strOrSeq and "1" or "0"
     elif type(strOrSeq) == int:
         return str(strOrSeq)
+    elif isinstance(strOrSeq, IDLabel):
+        return str(strOrSeq.id)
     else:
         return quotesql(str(strOrSeq))
 
@@ -820,7 +841,6 @@ def persistent_loads(bytes, db, module=cPickle):
 # intselectionTempTable = intSelection
        
 
-    
 if __name__ == '__main__':
     db = anokoDB()
     db.beforeQueryListeners.append(toolkit.warn)
@@ -834,4 +854,3 @@ if __name__ == '__main__':
     print
     p.printreport()
 
-    
