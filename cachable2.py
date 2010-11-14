@@ -461,6 +461,39 @@ class ForeignKey(DBProperty):
 
     def _update(self, db, obj, val):
         raise NotImplementedError()
+
+    def addNewChild(self, db, obj, **props):
+        """Add a new child to this ForeignKey relation
+        
+        Note that the caller is responsible for maintaining the db transaction
+        (i.e. for committing after an update).
+
+        @param db: the database connection to use for updating/inserting
+        @obj: the object (parent) to add the child to
+        @props: **props to create a new instance (in addition to parent id)
+        """
+        if type(obj.__idcolumn__) in (list, tuple):
+            props.update(dict(zip(obj.__idcolumn__, obj.id)))
+        else:
+            props[obj.__idcolumn__] = obj.id
+        child = self.targetclass.create(db, **props)
+        #uncache to force retrieval, inefficient but for now easier than updating the cache?
+        self.uncache(obj)
+        return child
+
+    def removeChild(self, db, obj, child):
+        """Delete the child and remove it from this ForeignKey relation
+        
+        Note that the caller is responsible for maintaining the db transaction
+        (i.e. for committing after an update).
+
+        @param db: the database connection to use for updating/inserting
+        @obj: the object (parent) to add the child to
+        @child: the child to delete and remove
+        """
+        child.delete(db)
+        #uncache to force retrieval, inefficient but for now easier than updating the cache?
+        self.uncache(obj)
     
 def DBProperties(n):
     """Shortcut to create n DBProperty objects
@@ -469,4 +502,4 @@ def DBProperties(n):
 
 def cacheMultiple(*args, **kargs): pass
     
-import amcatlogging; amcatlogging.debugModule()
+#import amcatlogging; amcatlogging.debugModule()

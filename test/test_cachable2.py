@@ -24,15 +24,20 @@ class TestUser(Cachable):
     roles = ForeignKey(TestRole, table="users_roles")
 
         
-class Test(Cachable):
-    __table__ = '#test'
-    __idcolumn__ = 'id'
-    strval, strval2, intval = DBProperties(3)
 class Test2(Cachable):
     __table__ = '#test2'
     __idcolumn__ = ['id', 'id2']
     strval = DBProperty()
-    
+class TestChild(Cachable):
+    __table__ = '#testchild'
+    __idcolumn__ = 'pk'
+    label, testid = DBProperties(2)
+class Test(Cachable):
+    __table__ = '#test'
+    __idcolumn__ = 'testid'
+    strval, strval2, intval = DBProperties(3)
+    test2s = ForeignKey(TestChild)
+   
 class TestAmcatMemcache(amcattest.AmcatTestCase):
 
     def setUp(self):
@@ -40,13 +45,17 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         self.createTestTables()
 
     def createTestTables(self):
-        self.db.doQuery("create table #test (id int identity(1,1) primary key, strval varchar(255) not null, strval2 varchar(255) not null default 'test', intval int null)")
+        self.db.doQuery("create table #test (testid int identity(1,1) primary key, strval varchar(255) not null, strval2 varchar(255) not null default 'test', intval int null)")
         self.db.doQuery("create table #test2 (id int, id2 int, strval varchar(255), primary key (id, id2))")
+        self.db.doQuery("create table #testchild (pk int identity(1,1) primary key, testid int not null, label varchar(255) default 'bla')")
+        
 
     def tearDown(self):
         self.db.rollback()
         
     def testForeignKey(self):
+        import amcatlogging; amcatlogging.DEBUG_MODULES |= set(["dbtoolkit", "amcatmemcache"])
+
         self.assertEqual(TestUser.roles.getType(), TestRole)
         self.assertTrue(TestUser.roles.getCardinality())
         self.assertFalse(TestUser.language.getCardinality())
@@ -62,7 +71,12 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         roles = list(TestRole.getAll(self.db))
         self.assertTrue(roles)
         self.assertTrue(roles[0].label)
-        
+
+        t = Test.create(self.db, strval="test1")
+        t.uncache()
+        t2 = TestChild.create(self.db, testid=t.id)
+        t3 = TestChild.create(self.db, testid=t.id)
+        self.assertEqual(list(t.test2s), [t2, t3])
         
     def testType(self):
         TestDummy.prop.observedType=None
@@ -175,8 +189,8 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
                     t.uncache()
         
     def testDelete(self):
-        import amcatlogging; amcatlogging.DEBUG_MODULES.add("dbtoolkit")
-        amcatlogging.DEBUG_MODULES.add("amcatmemcache")
+        #import amcatlogging; amcatlogging.DEBUG_MODULES.add("dbtoolkit")
+        #amcatlogging.DEBUG_MODULES.add("amcatmemcache")
         
         t = Test.create(self.db, strval="x")
         self.assertEqual(self.db.getValue("select count(*) from #test"), 1)
@@ -188,19 +202,22 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         self.assertEqual(self.db.getValue("select count(*) from #test2"), 1)
         t.delete(self.db)
         self.assertEqual(self.db.getValue("select count(*) from #test2"), 0)
+
+    def testAddFK(self):
+        t = Test.create(self.db, strval="test1")
+        t.uncache()
+        t1 = Test.test2s.addNewChild(self.db, t)
+        t2 = Test.test2s.addNewChild(self.db, t)
+        self.assertEqual(len(list(t.test2s)), 2)
+        self.assertEqual(list(t.test2s), [t1, t2])
+        for c in t1, t2:
+            Test.test2s.removeChild(self.db, t, c)
+        self.assertEqual(len(list(t.test2s)), 0)
+        self.assertEqual(list(t.test2s), [])
+        
         
 if __name__ == '__main__':
-    #TestAmcatMemcache().testAdd()
-    #TestDummy.prop.observedType=None
-    #d = TestDummy([], -1)
-    #d.prop = 1
-    #dummy = d.prop
-    #print dummy
-    #print TestDummy.prop.getType()
-    #db = dbtoolkit.amcatDB(use_app=True)
-    #u = TestUser(db, 2)
-    #print u.roles
-    #del u.language
-    
-    #print repr(u.language)
-    amcattest.main()
+    t = TestAmcatMemcache('testDelete')
+    t.setUp()
+    t.testAddFK()
+    #amcattest.main()
