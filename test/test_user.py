@@ -1,4 +1,4 @@
-import dbtoolkit, unittest, user, system, authorisation, project, types, amcattest
+import dbtoolkit, user, system, authorisation, project, types, amcattest
 
 class TestUser(amcattest.AmcatTestCase):
 
@@ -46,4 +46,4 @@ class TestUser(amcattest.AmcatTestCase):
             self.assertEqual(list(user.users(d)), list(system.System(d).users))
 
 if __name__ == '__main__':
-    unittest.main()
+    amcattest.main()
