@@ -1,3 +1,4 @@
+
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -51,9 +52,10 @@ import logging; log = logging.getLogger(__name__)
 class Meta(type):
     """Metaclass to  ensure properties are initialised"""
     def __getattribute__(cls, attr):
+        """Get a class attribute, and _initialise it if possible/needed"""
         result = type.__getattribute__(cls, attr)
-        if isinstance(result, Property):
-            if not result._initialised: result._initialise(cls, attr)
+        try: result._initialise(cls, attr)
+        except AttributeError: pass # only initialise properies
         return result
 
 class Cachable(idlabel.IDLabel):
@@ -80,6 +82,8 @@ class Cachable(idlabel.IDLabel):
         self.db = db
         idlabel.IDLabel.__init__(self, id)
 
+    ############### Internal Property access  #########################
+        
     @classmethod
     def _getProperty(cls, attr):
        """return a Property attr if there is one, TypeError (or AttributeError) otherwise"""
@@ -102,6 +106,8 @@ class Cachable(idlabel.IDLabel):
             if isinstance(prop, Property):
                 if deprecated or not prop.deprecated:
                     yield (name, prop)
+                    
+    ############ Public Attribute Access (operator overloading)  ######################
     
     def __getattribute__(self, attr):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""
@@ -113,7 +119,6 @@ class Cachable(idlabel.IDLabel):
             else:
                 return p.get(self)
         return super(Cachable, self).__getattribute__(attr)
-    
 
     def __setattr__(self, attr, value):
         """If attr is a property, cache the value. Otherwise, call super"""
@@ -132,18 +137,24 @@ class Cachable(idlabel.IDLabel):
             super(Cachable, self).__delattr__(attr)
         else:
             p.uncache(self)
+            
+    ############### Cache inspection and manipulation ############
 
     def uncache(self):
         """Remove all cached entries for this object"""
         for name, prop in self._getProperties():
             prop.uncache(self)
 
+    ############### Inspection  #########################
+            
     def getType(self, prop):
         """Get the type of the given property (or property name)"""
         if not isinstance(prop, Property):
             prop = self._getProperty(prop)
         return prop.getType(self)
 
+    ############### IDLabel implementation  #########################
+    
     @property
     def label(self):
         # if a __labelprop__ is defined, return that, otherwise, call super
@@ -152,6 +163,8 @@ class Cachable(idlabel.IDLabel):
         except AttributeError:
             return super(Cachable, self).label
 
+    ############### Manipulating Cachables  #########################
+        
     def update(self, db, **props):
         """Update the database db with the given props
 
@@ -201,8 +214,8 @@ class Cachable(idlabel.IDLabel):
         log.debug("Created object %r" % result)
         for propname, val in props.iteritems():
             prop = result._getProperty(propname)
-            log.debug("Caching %s.%s <- %s" % (result, propname, [val]))
-            prop.cache(result, [[val]])
+            log.debug("Caching %s.%s <- %s" % (result, propname, val))
+            prop.cache(result, val)
         return result
     
     @classmethod
@@ -224,10 +237,6 @@ class Cachable(idlabel.IDLabel):
             return dict(zip(idcol, oid)) 
     
             
-class UnknownTypeException(Exception):
-    def __init__(self, prop):
-        Exception.__init__(self, "The type of property %s cannot be determined" % prop)
-
 class Property(object):
     """Abstract base class of all Properties. 
 
@@ -246,6 +255,7 @@ class Property(object):
         - to 'bind' it to class and propname (which are not accessible on creation)
         - to allow resolving types that would cause import problems on creation
         """
+        if self._initialised: return
         self.cls = cls
         self.propname = propname
         self.store = store.CachablePropertyStore(cls, propname)
@@ -261,9 +271,10 @@ class Property(object):
             v = self.getCached(obj)
             log.debug("Got cached %r.%s = %r" % (obj, self, v))
         except store.UnknownKeyException:
+            log.debug("%r.%s Not found in cache, retrieving from source" % (obj, self))
             v = self.retrieve(obj)
-            self.cache(obj, v)
-            log.debug("Retrieved (and cached) %r.%s = %r" % (obj, self, v))
+            log.debug("Retrieved %r.%s = %r, caching" % (obj, self, v))
+            self.cache(obj, v, isData=True)
         v = self.dataToObjects(obj, v)
         log.debug("Converted into %r" % v)
         # remember the type info for later use
@@ -278,19 +289,38 @@ class Property(object):
         @return: an (iterable of) 'domain' object(s)
         """
         return data
+
+    def objectsToData(self, obj, objects):
+        """Serialise the given object(s) into data
+
+        This should be the inverse of L{dataToObjects}
+        
+        @param obj: the 'parent' object of the objects
+        @param objects: the object(s) to serialise
+        @return: the raw data that can be stored (eg in memcache)
+        """
+        return objects
+        
     
-    def cache(self, obj, value):
-        """Cache the given value for the given object"""
+    def cache(self, obj, value, isData=False):
+        """Cache the given object or data value for this property
+
+        @param obj: the object whose property to cache
+        @param value: the value to cache
+        @param isData: unless True, serialise the value before caching
+        """
+        if not isData:
+            value =  self.objectsToData(obj, value)
         self.store.set(obj.id, value)
     def uncache(self, obj):
-        """Uncache the given value for the given object"""
+        """Uncache this property for the given object"""
         self.store.delete(obj.id)
     def getCached(self, obj): 
-        """Get the cached value for obj, or raise an UnknownKeyException"""
+        """Get the cached data value for obj, or raise an UnknownKeyException"""
         return self.store.get(obj.id)
 
     def retrieve(self, obj): 
-        """Get the value for this property from the underlying data source
+        """Get the data value for this property from the underlying data source
         
         B{Abstract: Subclasses should override} 
         """
@@ -299,8 +329,9 @@ class Property(object):
         """Update the value on this property in the underlying store (eg database)
 
         This base implementation (only) calls L{cache} to update the cache.
-        Note: call L{Cachable.update} rather than this method to allow alternative
-        update strategies (eg via stored procedure, single compound updates etc.)
+        Note: Internal method: call L{Cachable.update} rather than
+          this method to allow alternative update strategies (eg via
+          stored procedure, single compound updates etc.)
         """
         self.cache(obj, val)
 
@@ -315,6 +346,7 @@ class Property(object):
         if (self.observedType is None
             and isinstance(obj, Cachable)):
             #try to get cached value
+            #TODO: the logic of the try/except below is not very clear!
             try:
                 val = self.getCached(obj)
                 val = self.get(obj)
@@ -346,6 +378,7 @@ class DBProperty(Property):
         self.table = table
         self.getcolumn = getcolumn
     def _initialise(self, cls, propname):
+        if self._initialised: return
         super(DBProperty, self)._initialise(cls, propname)
         if self.targetclass is not None:
             if not callable(self.targetclass):
@@ -373,6 +406,22 @@ class DBProperty(Property):
                 return self.targetclass(obj.db, *dbvalues)
         return dbvalues[0]
 
+    def objectToDbrow(self, obj, *dbvalues):
+        """Convert an amcat object to a db row
+        
+        @param obj: the "parent object" of the new object
+        @param object: a single 'domain' object
+        @return dbvalues: the row tuple as it was returned from the db
+        """
+        if isinstance(obj, idlabel.IDLabel):
+            obj = obj.id
+        if type(obj) not in (list, tuple): obj = (obj, )
+        return obj
+
+    def objectsToData(self, obj, objects):
+        log.debug("Serialising %s=%r" % (self, objects))
+        return [self.objectToDbrow(objects)]
+        
     def dataToObjects(self, obj, data):
         return self.dbrowToObject(obj, *data[0])
 
@@ -387,7 +436,7 @@ class DBProperty(Property):
             return self.targetclass.__idcolumn__
         except AttributeError:
             return self.propname
-    
+
     def retrieve(self, obj):
         """Use the database to retrieve the value of this property for obj
         """
@@ -413,17 +462,15 @@ class DBProperty(Property):
 
     def _update(self, db, obj, val):
         """Create and execute an SQL UPDATE statement to update the db"""
-
+        #TODO: use serialisation method
         log.debug("UPDATEing %r.%s -> %r" % (obj, self, val))
         if isinstance(val, idlabel.IDLabel): val = val.id
         cols = self._getColumns()
-        log.debug("> %r" % cols)
         if type(cols) in (str, unicode):
             update = {cols : val}
             val = (val,) # for caching
         else:
             update = dict(zip(cols, val))
-        log.debug(update)
         obj.db.update(self._getTable(), update, obj._getWhere())
         self.cache(obj, [val])
             
@@ -446,6 +493,10 @@ class ForeignKey(DBProperty):
         result = (self.dbrowToObject(obj, *row) for row in data)
         if self.sequencetype: result = self.sequencetype(result)
         return result
+
+    def objectsToData(self, obj, objects):
+        log.debug("FKSerialising %s=%r" % (self, objects))
+        return [self.objectToDbrow(o) for o in objects]
     
     def _getTable(self):
         if self.table: return self.table
@@ -501,5 +552,11 @@ def DBProperties(n):
     return [DBProperty() for dummy in range(n)]
 
 def cacheMultiple(*args, **kargs): pass
-    
+
+class UnknownTypeException(Exception):
+    def __init__(self, prop):
+        Exception.__init__(self, "The type of property %s cannot be determined" % prop)
+
+
+
 #import amcatlogging; amcatlogging.debugModule()

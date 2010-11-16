@@ -52,9 +52,43 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
 
     def tearDown(self):
         self.db.rollback()
+
+    def testGetReget(self):
+        # getting a property, its cached value, and setting it and regetting it
+        # shoule always give the same result
+        import project
+        obj = project.Project(self.db, 282)
+        prop = "name"
+        for obj, prop in [
+            (project.Project(self.db, 282), "name"),
+            (project.Project(self.db, 282), "insertUser"),
+            (project.Project(self.db, 282), "insertDate"),
+            (project.Project(self.db, 282), "batches"),
+            ]:
+            try:
+                print obj, prop
+                orig = getattr(obj, prop)
+                if getattr(orig, '__iter__', False):
+                    orig = list(orig)
+                obj.uncache()
+                uncached = getattr(obj, prop)
+                cached = getattr(obj, prop)
+                obj.uncache()
+                setattr(obj, prop, orig)
+                forced = getattr(obj, prop)
+                for var in "uncached", "cached", "forced":
+                    val = locals()[var]
+                    if getattr(val, '__iter__', False):
+                        val = list(val)
+                    self.assertEqual(orig, val, "Original value %r unequal to %s value %r" % (orig, var, val))
+            finally:
+                obj.uncache() # to make sure we don't muck things up
+
+class StopHere:
         
     def testForeignKey(self):
-        import amcatlogging; amcatlogging.DEBUG_MODULES |= set(["dbtoolkit", "amcatmemcache"])
+        #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")
+
 
         self.assertEqual(TestUser.roles.getType(), TestRole)
         self.assertTrue(TestUser.roles.getCardinality())
@@ -169,8 +203,7 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         db.rollback()
         
     def testAdd(self):
-        #import amcatlogging; amcatlogging.DEBUG_MODULES.add("dbtoolkit")
-        #amcatlogging.DEBUG_MODULES.add("amcatmemcache")
+        #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")
         for i, (props, strval, strval2, intval) in enumerate([
                 (dict(), dbtoolkit.SQLException, None, None),
                 (dict(strval="bla bla"), "bla bla", "test", None),
@@ -189,8 +222,7 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
                     t.uncache()
         
     def testDelete(self):
-        #import amcatlogging; amcatlogging.DEBUG_MODULES.add("dbtoolkit")
-        #amcatlogging.DEBUG_MODULES.add("amcatmemcache")
+        #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")
         
         t = Test.create(self.db, strval="x")
         self.assertEqual(self.db.getValue("select count(*) from #test"), 1)
@@ -217,6 +249,7 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         
         
 if __name__ == '__main__':
+    import amcatlogging; amcatlogging.debugModule("cachable2", "amcatmemcache")
     #t = TestAmcatMemcache('testDelete')
     #t.setUp()
     #t.testAddFK()
