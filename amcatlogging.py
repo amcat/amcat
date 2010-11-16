@@ -96,16 +96,18 @@ class ModuleLevelFilter(logging.Filter):
         if record.levelno >= logging.DEBUG and record.name in DEBUG_MODULES: return True
         return False
 
-def quietModule():
-    QUIET_MODULES.add(toolkit.getCallingModule())
+def quietModule(*modules):
+    _addModulesToSet(QUIET_MODULES, *modules)
+def infoModule(*modules):
+    _addModulesToSet(INFO_MODULES, *modules)
+def debugModule(*modules):
+    _addModulesToSet(DEBUG_MODULES, *modules)
+
+def _addModulesToSet(targetset, *modules):
+    if not modules: modules = [toolkit.getCallingModule(depth=2)]
+    targetset |= set(modules)
 
     
-def infoModule():
-    INFO_MODULES.add(toolkit.getCallingModule())
-
-def debugModule():
-    DEBUG_MODULES.add(toolkit.getCallingModule())
-
 def setSyslogHandler():
     """Add a sysloghandler to the root logger with contextinjecting and module level filters"""
     root = logging.getLogger()
