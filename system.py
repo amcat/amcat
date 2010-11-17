@@ -28,7 +28,7 @@ from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
 import project, user, authorisation, analysis
 from toolkit import deprecated
 
-from annotationschema import AnnotationSchema, AnnotationSchemaFieldtype
+from annotationschema import AnnotationSchema#, AnnotationSchemaFieldtype
 
 class System(Cachable):
     """Cachable without id that provides access to top level AmCAT objects"""
@@ -38,7 +38,7 @@ class System(Cachable):
 
     # Annotationschema-properties
     annotationschemas = ForeignKey(lambda : AnnotationSchema, table="annotationschemas")
-    annotationschemafieldtypes = ForeignKey(lambda : AnnotationSchemaFieldtype, table="annotationschemas_fieldtypes")
+    #annotationschemafieldtypes = ForeignKey(lambda : AnnotationSchemaFieldtype, table="annotationschemas_fieldtypes")
         
     def __init__(self, db, id=None):
         Cachable.__init__(self, db, ())
