@@ -73,8 +73,10 @@ import sys, traceback
 from analysis import Analysis
 import cPickle as pickle
 from amcatlogging import logExceptions
-import logging; LOG = logging.getLogger(__name__)
+import logging; log = logging.getLogger(__name__)
 import ticker
+
+#import amcatlogging; amcatlogging.debugModule()
 
 def _getid(o):
     return o if type(o) == int else o.id
@@ -118,7 +120,7 @@ def storeResult(db, analysis, sid, result):
     if type(result) <> str:
         result = pickle.dumps(result)
     result = dbtoolkit.quotesql(result)
-    sql = """update parses_jobs_sentences set result=%s where
+    sql = """update parses_jobs_sentences set result=%s,done=1 where
              sentenceid=%i and analysisid=%i""" % (result, sid, analysisid)
     db.doQuery(sql)
 
@@ -164,13 +166,43 @@ def splitArticle(db, art):
 
 def getStatistics(db):
     """return a Table with statistics on #assigned, #done etc per analysis"""
-    SQL = """select analysisid, count(sentenceid) as [#assigned], min(assigned) as [oldest assigned],
-                 max(assigned) as [youngest assigned], count(started) as [#started],
-                 sum(case when result is null then 0 else 1 end) as [#done]
+    SQL = """select analysisid, count(sentenceid) as [#assigned], count(started) as [#started],
+                 sum(cast(done as int)) as [#done]
              from parses_jobs_sentences
              group by analysisid order by analysisid"""
     return db.doQueryTable(SQL)
 
+
+
+def _filter(text):
+    l = len(text.strip().split())
+    return l > 1 and l < 30
+
+def getNonemptySentenceTexts(db, analysis, maxn):
+    """Retrieve and mark a number of sentences, deleting empties and returning id and text
+
+    The result can be less than maxn if sentences were deleted. If there were no sentences to
+    parse at all, will return None. If there were sentences, but all were deleted, returns []
+    
+    @param analysis: the Analysis object to get sentences from
+    @param maxn: the maximum number of sentences to retrieve
+    @return: a list of (sentenceid, text) pairs to be analysed, or None if the queue is empty
+    """
+    analysisid = _getid(analysis)
+    todelete = set()
+    result = []
+    for sent in getSentences(db, analysis, maxn):
+        text = sent.text.strip()
+        nwords = len(text.split())
+        if nwords <= 1 or nwords > 60:
+            todelete.add(sent.id)
+        else:
+            result.append((sent.id, sent.text))
+    if not (result or todelete): return None
+    log.info("len(todelete)=%i, len(result)=%i" % (len(todelete), len(result)))
+    db.doQuery("DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND %s" % (analysisid, db.intSelectionSQL("sentenceid", todelete)))
+    db.commit()
+    return result
 
 def getSentences(db, analysis, maxn):
     """Retrieve and mark a number of sentences to be analysed
@@ -181,14 +213,14 @@ def getSentences(db, analysis, maxn):
 
     @param analysis: the Analysis object to get sentences from
     @param maxn: the maximum number of sentences to retrieve
-    @return: a list of Sentence objects to be analysed
+    @return: a sequence of Sentence objects to be analysed
     """
     #Get eligible sentenceids, lock table, update 'started', commit
     analysisid = _getid(analysis)
     with db.transaction():
         SQL = """select top %(maxn)i sentenceid from parses_jobs_sentences 
               with (repeatableread,tablockx)
-              where analysisid=%(analysisid)i and started is null and result is null order by assigned """ % locals()
+              where analysisid=%(analysisid)i and started is null and done=0 order by assigned """ % locals()
         sids = list(db.getColumn(SQL))
         if sids:
             SQL = ("update parses_jobs_sentences set started=getdate() where %s" %
@@ -198,10 +230,32 @@ def getSentences(db, analysis, maxn):
     return (sentence.Sentence(db, sid) for sid in sids)
 
 def reset(db, analysis):
-    """Reset all non-completed sentences to non-started"""
+    """Reset all non-completed sentences to non-started and call L{purge}"""
     analysisid = _getid(analysis)
-    db.doQuery("update parses_jobs_sentences set started=null where result is null")
+    purge(db, analysis)
+    db.doQuery("update parses_jobs_sentences set started=null where done=0")
 
+def purge(db, analysis):
+    """Remove all already-parsed articles from the parses_jobs_sentences table"""
+    analysisid = _getid(analysis)
+    SQL = "delete from parses_jobs_sentences where analysisid=%i and sentenceid in (select sentenceid from parses_words where analysisid=%i)" % (analysisid, analysisid)
+    db.doQuery(SQL)
+            
+def save(db, analysis, maxn=None):
+    """Save pickled parses to the perses_triples/parses_words tables and remove from parses_jobs
+
+    @param maxn: if given, save maximum maxn sentences in one go. If not given, repeatedly
+                 save sentences until all sentences are done
+    """
+    import amcatlogging; amcatlogging.infoModule()
+    purge(db, analysis)
+    analysisid = _getid(analysis)
+    s = _ParseSaver(db, analysis.id)
+    if maxn:
+        s.saveResults(maxn)
+    else:
+        s.saveAll()
+        
 ###########################################################################
 #                           Convenience methods                           #
 ###########################################################################    
@@ -244,74 +298,109 @@ def splitArticles(db, articles):
             nsplit += int(bool(splitArticle(db, art)))
     return nsplit
 
-class ParseStorer(object):
+class _ParseSaver(object):
+    """Helper object to save results from the jobs table to the parses_* tables"""
+    
     def __init__(self, db, analysis):
+        """
+        @param db: The connection. NOTE: the saveResults (and saveAll) methods will run a transaction
+                   on this connection, so make sure not to have pending updates on it
+        @param analysis: the analysis object or id
+        """
         self.db = db
-        self._words = None
+        self._words_cache = None
         if type(analysis)==int: analysis=Analysis(self.db, analysis)
         self.analysis = analysis
 
     @property
-    def words(self):
-        if self._words is None:
-            self._words = word.CachingWordCreator(language=self.analysis.language, db=self.db)
-        return self._words
+    def _words(self):
+        if self._words_cache is None:
+            self._words_cache = word.CachingWordCreator(language=self.analysis.language, db=self.db)
+        return self._words_cache
     
-    def getWord(self, token):
-        return self.words.getWord(token.word, token.lemma, token.poscat)
-    def getRel(self, rel):
-        return self.words.getRel(rel)
-
-    def storeTokens(self, sentenceid, tokens):
+    def saveTokens(self, sentenceid, tokens):
+        """Save the given token tuples on the given sentence in the  parses_words table, making words as needed"""
+        seen = set()
         for token in tokens:
             position, word, lemma, poscat, posmajor, posminor = token
-            wordid = self.words.getWord(word, lemma, poscat)
-            posid = self.words.getPos(posmajor, posminor, poscat)
+            if position in seen:
+                log.debug("Already seen position %i (seen=%s), setting new position: %i" % (position, seen, max(seen)+1))
+                position = max(seen) + 1
+            seen.add(position)
+
+            if position >= 256:
+                log.warn("Ignoring token with  position >= 256! (%i.%i %r)" % (sentenceid, position, token))
+                continue
+                
+            wordid = self._words.getWord(word, lemma, poscat)
+            posid = self._words.getPos(posmajor, posminor, poscat)
+            log.debug(str([self.analysis.id, sentenceid, position, position, wordid, posid]))
             self.db.insert("parses_words", dict(sentenceid=sentenceid, wordbegin=position, 
                                                 posid=posid, wordid=wordid, 
                                                 analysisid=self.analysis.id), 
                            retrieveIdent=False)
-    def storeTriples(self, sentenceid, triples):
+    def saveTriples(self, sentenceid, triples):
+        """Save the given triple tuples on the given sentence in the  parses_triples table, making rels as needed"""
         for parentpos, rel, childpos in triples:
-            relid = self.words.getRel(rel)
+            relid = self._words.getRel(rel)
             self.db.insert("parses_triples", dict(sentenceid=sentenceid, parentbegin=parentpos, 
                                                   childbegin=childpos, relation=relid, 
                                                   analysisid=self.analysis.id), 
                            retrieveIdent=False)
 
-    def storeResultsFromDB(self, n=100):
+    def saveResults(self, n=100, sids = None):
+        """Save n results from the jobs table to the parses_* tables.
+        This method *will* run and commit/rollback a transaction on self.db
+        This method internally calls saveTriples/saveTokens"""
+        log.debug("Querying max %i sentences from analysis %i" % (n, self.analysis.id))
         SQL = """SELECT top %i sentenceid, result FROM parses_jobs_sentences WHERE analysisid=%i
-                 AND result IS NOT null""" % (n, self.analysis.id)
+                 AND done=1""" % (n, self.analysis.id)
+        if sids:
+            SQL += " AND (%s)" % (self.db.intSelectionSQL("sentenceid", sids))
         todelete = []
         data = self.db.doQuery(SQL)
-        LOG.info("Retrieved %i sentences to store" % len(data))
-        for sid, result in data:
-            with logExceptions(LOG):
+        log.debug("Retrieved %i sentences to save" % len(data))
+        with self.db.transaction():
+            for sid, result in data:
                 result = pickle.loads(result)
                 for rtype, result in result:
                     if rtype == "tiples": rtype = "triples"
-                    if rtype == "tokens": self.storeTokens(sid, result)
-                    elif rtype == "triples": self.storeTriples(sid, result)
+                    if rtype == "tokens": self.saveTokens(sid, result)
+                    elif rtype == "triples": self.saveTriples(sid, result)
                     else:
                         raise ValueError("Unknown result type: %s" % (rtype))
                 todelete.append(sid)
-        LOG.info("Deleting %i sentences" % len(todelete))
-        if todelete:
-            SQL = "DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND %s" % (
-                self.analysis.id, self.db.intSelectionSQL("sentenceid", todelete))
-            self.db.doQuery(SQL)
+            log.debug("Deleting %i sentences" % len(todelete))
+            if todelete:
+                SQL = "DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND %s" % (
+                    self.analysis.id, self.db.intSelectionSQL("sentenceid", todelete))
+                self.db.doQuery(SQL)
+        log.debug("Saved and deleted sentences %r" % todelete)
         return todelete
         
-    def storeAllFromDB(self):
+    def saveAll(self, npercommit=500):
+        """Repeatedly save results from the jobs table to the parses_* tables until done.
+        This method internally calls saveResults, which *will* run transactions on self.db"""
+        log.debug("Querying database for N")
+        SQL = "select count(*) from parses_jobs_sentences where analysisid=%i and done=1" % self.analysis.id
+        n = self.db.getValue(SQL)
+        done = 0
+        log.info("%i sentences to save" % n)
+        
         while True:
-            sids = self.storeResultsFromDB(100)
-            self.db.commit()
-            if not sids: break
+            with logExceptions(log):
+                sids = self.saveResults(npercommit)
+                if not sids: break
+                done += len(sids)
+                log.info("%i sentences saved, %i/%i done (%1.1f%%)" % (len(sids), done, n, float(done)/n*100))
+                
 
+        
 
 if __name__ == '__main__':
     import dbtoolkit, article
     import amcatlogging; amcatlogging.setStreamHandler()
     amcatlogging.debugModule()
     db  = dbtoolkit.amcatDB()
-    ParseStorer(db, 3).storeAllFromDB()
+    sids = set(toolkit.intlist())
+    _ParseSaver(db, 3).saveResults(len(sids), sids)

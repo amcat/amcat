@@ -92,6 +92,8 @@ class AmcatTestCase(unittest.TestCase):
 def main():
     amcatlogging.setStreamHandler()
     unittest.main()
+
+        
         
     
 if __name__ == '__main__':

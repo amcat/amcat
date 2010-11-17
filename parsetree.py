@@ -1,5 +1,5 @@
 import networkx
-from toolkit import IDLabel
+from idlabel import IDLabel
 import matplotlib.pyplot as plt
 import StringIO
 from networkx import *

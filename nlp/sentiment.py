@@ -22,9 +22,9 @@ where sentenceid in (select sentenceid from sentences where %s)
 
 INTENSIFIER_RANGE = 4
 CACHE_WORD = False
-class SentimentSentence(sentence.Sentence):
+class SentimentSentence(sentence.AnalysedSentence):
     def __init__(self, *args, **kargs):
-        sentence.Sentence.__init__(self, *args, **kargs)
+        sentence.AnalysedSentence.__init__(self, *args, **kargs)
         if CACHE_WORD:
             self.cacheWords()
         self.sentimentTokens = {}
@@ -99,7 +99,7 @@ def getSentimentSentences(db, where, tick=True, restrict=True):
     #toolkit.ticker.warn("Querying database\n%s" % SQL)
     data = db.doQuery(SQL)
     sids = set(row[0] for row in data)
-    sentences = dict((sid, SentimentSentence(db, sid)) for sid in sids)
+    sentences = dict((sid, SentimentSentence(db, (sid,3))) for sid in sids)
     #sentence.cacheWords(sentences.values())
     cursent = None
     if tick: data = toolkit.tickerate(data, detail=1)

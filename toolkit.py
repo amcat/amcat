@@ -87,7 +87,7 @@ def cached(func):
         """Check whether the 'self' is known, is so return cached value"""
         try: iden = self.__id__()
         except AttributeError: iden = self
-        if not iden in vals:
+        if iden not in vals:
             vals[iden] = func(self)
         return vals[iden]
     inner._vals = vals

@@ -136,6 +136,9 @@ class AnalysedSentence(Cachable, graph.Graph):
     def getWord(self, position):
         for word in self.words:
             if word.position == position: return word
+    @property
+    def sentence(self):
+        return Sentence(self.db, self.id[0])
 
 
 def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=False, sentence=False):

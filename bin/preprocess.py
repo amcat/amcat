@@ -19,7 +19,7 @@
 ###########################################################################
 
 """
-Usage: python preprocess.py [-q] ACTION [ANALYSISID] [MAXN] [<ARTICLEIDS]
+Usage: python preprocess.py [-q] ACTION [ANALYSISID] [MAXN/SID] [<ARTICLEIDS/BYTES]
 
 Possible ACTIONs:
 
@@ -30,6 +30,10 @@ assign: Split the given articles and assign to the given analysis
         Ignores sentences already parsed or assigned.
 get:    Get MAXN sentences from the analysis and mark them 'started'
 reset:  Set non-complete analyses to not-started
+store:  Store BYTES for sentence SID on analysis
+save:   Save (maxn) sentences from stored to actual parses tables
+        NOTE: SAVE IS NOT THREADSAFE, make sure that 'you' are the only
+              process running save at the same time!
 
 if -q is given, only print errors to stderr
 """
@@ -82,7 +86,7 @@ elif action == "stats":
     t = preprocessing.getStatistics(db)
     import tableoutput
     print tableoutput.table2unicode(t)
-elif action in ('assign', 'get', 'reset', 'store'):
+elif action in ('assign', 'get', 'reset', 'store', 'save'):
     try:
         analysisid = int(arg(2))
         ana = analysis.Analysis(db, analysisid)
@@ -108,14 +112,18 @@ elif action in ('assign', 'get', 'reset', 'store'):
         db.commit()
         status("Done")
     elif action == 'get':
-        def filter(text):
-            l = len(text.strip().split())
-            return l > 2 and l < 30
         maxn = int(arg(3))
         status("Getting max %i sentences from %s"% (maxn, ana.idlabel()))
-        sents = preprocessing.getSentences(db, ana, maxn)
-        sents = [(s.id, s.text)  for s in sents if filter(s.text)]
-        status("Printing %i non-empty sentences" % len(sents))
+        sents = preprocessing.getNonemptySentenceTexts(db, ana, maxn)
+        if sents is None:
+            status("Queue is empty, printing pickle(None)")
+        else:
+            status("Printing %i non-empty sentences in pickled list of pairs" % len(sents))
         pickle.dump(sents, sys.stdout, protocol=2)
+    elif action == 'save':
+        maxn = int(sys.argv[3]) if len(sys.argv) > 3 else None
+        status("Saving %s sentences from %s to destination"% (maxn, ana.idlabel()))
+        preprocessing.save(db, ana, maxn)
+        
 else:
     usage("Uknown action: %s" % action)

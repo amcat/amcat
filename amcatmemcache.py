@@ -12,6 +12,14 @@ better serialisation using these constraints and the binary protocol
 Keys are stored as class_property(_key)+, where key is a hexadecimal number
 Values are offered as (lists of (tuples of)) primitives, which memcache
   will pickle and zip
+
+Command line usage to inspect/manipulate keystore:
+
+python amcatmemcache.py ACTION CLASSNAME PROPNAME KEY
+  ACTION: one of {get, delete}
+  CLASSNAME: the name of the class (e.g. Project)
+  PROPNAME: the name of the property (e.g. headline)
+  KEY: the python string representation of the key (282 or 282,12)
 """
 
 import memcache
@@ -32,9 +40,16 @@ def _connect():
 def key2bytes(klass, prop, key):
     """Return a byte-encoding of the key"""
     # memcached requires key chars > 33 and != 127, so use str(.) for now
+    if type(klass) <> str: klass = klass.__name__
     if type(key) == int: key = (key,)
-    return "%s_%s_%s" % (klass.__name__, prop,
-                         "_".join("%x" % k for k in key))
+    if type(key) <> str: key = "_".join("%x" % k for k in key)
+    return "%s_%s_%s" % (klass, prop, key)
+
+def _debug(action, klass, prop, key, data=None):
+    keybytes = key2bytes(klass, prop, key)
+    if type(klass) <> str: klass = klass.__name__
+    LOG.debug("%s %s(%r).%s (%r) %s" % (action, klass, key, prop, keybytes, data or ""))
+    
 
 def get(klass, prop, key, conn=None):
     """Get the value corresponding to key
@@ -50,7 +65,7 @@ def get(klass, prop, key, conn=None):
     """
     keybytes = key2bytes(klass, prop, key)
     val =_getConnection().get(keybytes)
-    LOG.debug("GET %s(%r).%s (%r) -> %r" % (klass.__name__, key, prop, keybytes, val))
+    _debug("GET", klass, prop, key, "-> %r" % val)
     if val is None:
         raise UnknownKeyException(keybytes)
     return val
@@ -66,13 +81,13 @@ def put(klass, prop, key, value, conn=None):
     @param conn: an optional connection object
     """
     keybytes = key2bytes(klass, prop, key)
-    LOG.debug("PUT %s(%r).%s (%r) <- %r" % (klass.__name__, key, prop, keybytes, value))
+    _debug("PUT", klass, prop, key, "<- %r" % value)
     _getConnection().set(keybytes, value)
 
 def delete(klass, prop, key, conn=None):
     """Delete the value for the given key"""
     keybytes = key2bytes(klass, prop, key)
-    #print "DELETING %r" % keybytes
+    _debug("DEL", klass, prop, key)
     _getConnection().delete(keybytes)
     
 class CachablePropertyStore(object):
@@ -87,3 +102,22 @@ class CachablePropertyStore(object):
     def delete(self, key):
         delete(self.klass, self.prop, key, conn=self.conn)
         
+
+if __name__ == '__main__':
+    import amcatlogging; log = amcatlogging.setup()
+
+    import sys
+    if len(sys.argv) < 4:
+        print >>sys.stderr, __doc__
+        sys.exit()
+    action, klass, prop, key = sys.argv[1:5]
+    key = eval(key)
+    
+    if action == "get":
+        try:
+            v = `get(klass, prop, key)`
+        except UnknownKeyException:
+            v = "None (key not in store)"
+        print "GET %s(%r).%s value: %s" % (klass, key, prop, v)
+    
+    
