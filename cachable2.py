@@ -368,6 +368,25 @@ class Property(object):
             return "%s(%s.%s)" % (self.__class__.__name__, self.cls.__name__, self.propname)
         except AttributeError:
             return "%s(uninitialised)" %  (self.__class__.__name__,)
+
+    ################### Caching ###################
+
+    def prepareCache(self, cacher):
+        """Optionally declare to cacher what to retrieve
+
+        Preparation for a cacheMultiple operation. In this step, the property asks
+        the cacher to retrieve certain information. The cachers does this and then calls
+        doCache to actually set the cache for the retrieved values.
+
+        @param cacher: A Cacher object that will do the caching
+        """
+        pass
+
+    def doCache(self, cacher):
+        """Optionally cache the values from the cacher (see L{prepareCache})"""
+        pass
+
+      
         
 class DBProperty(Property):
     """Property that retrieves its value from the database"""
@@ -385,7 +404,7 @@ class DBProperty(Property):
                 raise ValueError("targetklass should be callable")
             if ((not inspect.isclass(self.targetclass)) and
                 inspect.getargspec(self.targetclass)[0] == []):
-                # assume targetklass is lambda
+                # assume targetklass is lambda, so dereference
                 self.targetclass = self.targetclass()
 
     def dbrowToObject(self, obj, *dbvalues):
@@ -472,8 +491,15 @@ class DBProperty(Property):
         else:
             update = dict(zip(cols, val))
         obj.db.update(self._getTable(), update, obj._getWhere())
-        self.cache(obj, [val])
-            
+        self.cache(obj, val)
+
+
+    def prepareCache(self, cacher):
+        cacher.addDBField(table=self._getTable(), field=self._getColumns())
+    def doCache(self, cacher, obj):
+        val = cacher.getDBData(obj, self._getColumns(), table=self._getTable())
+        val = [(val,)]
+        self.cache(obj, val, isData=True)
         
 class ForeignKey(DBProperty):
     def __init__(self, targetclass=None, sequencetype=None, **kargs):
@@ -545,13 +571,17 @@ class ForeignKey(DBProperty):
         child.delete(db)
         #uncache to force retrieval, inefficient but for now easier than updating the cache?
         self.uncache(obj)
-    
+    def prepareCache(self, cacher):
+        pass
+    def doCache(self, cacher):
+        pass
+        
 def DBProperties(n):
     """Shortcut to create n DBProperty objects
     (for assigning to a,b = DBProperties(2))""" 
     return [DBProperty() for dummy in range(n)]
 
-def cacheMultiple(*args, **kargs): pass
+from cachable import cacheMultiple, cache
 
 class UnknownTypeException(Exception):
     def __init__(self, prop):

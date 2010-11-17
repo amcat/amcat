@@ -1,5 +1,5 @@
 import amcattest, dbtoolkit, user, language, inspect
-from cachable2 import Cachable, Property, DBProperty,DBProperties, UnknownTypeException, ForeignKey
+from cachable2 import Cachable, Property, DBProperty,DBProperties, UnknownTypeException, ForeignKey, cache, cacheMultiple
 
 class TestDummy(Cachable):
     prop = Property()
@@ -31,7 +31,8 @@ class Test2(Cachable):
 class TestChild(Cachable):
     __table__ = '#testchild'
     __idcolumn__ = 'pk'
-    label, testid = DBProperties(2)
+    label = DBProperty()
+    testid = DBProperty(lambda : Test)
 class Test(Cachable):
     __table__ = '#test'
     __idcolumn__ = 'testid'
@@ -52,6 +53,23 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
 
     def tearDown(self):
         self.db.rollback()
+
+
+    def testCacheMultiple(self):
+        import project
+        obj = project.Project(self.db, 282)
+        props = ["name", "insertUser"]
+        val = [getattr(obj, prop) for prop in props]
+        obj.uncache()
+        cacheMultiple([obj], *props)
+        #disable db to make sure that we have values cached
+        self.db.conn, conn = None, self.db.conn
+        try:
+            val2= [getattr(obj, prop) for prop in props]
+            for v, v2 in zip(val, val2):
+                self.assertEqual(v, v2)
+        finally:
+            self.db.conn, conn = conn, self.db.conn
 
     def testGetReget(self):
         # getting a property, its cached value, and setting it and regetting it
@@ -84,8 +102,6 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
             finally:
                 obj.uncache() # to make sure we don't muck things up
 
-class StopHere:
-        
     def testForeignKey(self):
         #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")
 
@@ -207,7 +223,7 @@ class StopHere:
         for i, (props, strval, strval2, intval) in enumerate([
                 (dict(), dbtoolkit.SQLException, None, None),
                 (dict(strval="bla bla"), "bla bla", "test", None),
-                (dict(strval="bla bla", intval=user.User(self.db, 15)), "bla bla", "test", user.User(self.db, 15)),
+                (dict(strval="bla bla", intval=15), "bla bla", "test", 15),
                 ]):
             if inspect.isclass(strval) and issubclass(strval, Exception):
                 self.assertRaises(strval, Test.create, self.db, **props)
@@ -220,6 +236,13 @@ class StopHere:
                     self.assertEqual(t.intval, intval)
                 finally:
                     t.uncache()
+        # test using object as property to create
+        t = Test.create(self.db, strval="bla")
+        t2 = TestChild.create(self.db, testid=t)
+        self.assertEqual(t, t2.testid)
+        t2 = TestChild.create(self.db, testid=t.id)
+        self.assertEqual(t, t2.testid)
+
         
     def testDelete(self):
         #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")

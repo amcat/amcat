@@ -255,7 +255,7 @@ class Property(object):
         self.cached = True
     def retrieve(self): abstract
     def prepareCache(self, cacher): pass
-    def doCache(self, cacher): pass
+    def doCache(self, cacher, cachable=None): pass
     def uncache(self):
         self.value = None
         self.cached = False
@@ -322,7 +322,7 @@ class DBProperty(Property):
     def prepareCache(self, cacher):
         if self.cached: return
         cacher.addDBField(self.fieldname, table=self.table)
-    def doCache(self, cacher):
+    def doCache(self, cacher, cachable=None):
         if self.cached: return
         val = cacher.getDBData(self.cachable, self.fieldname, self.table)
         self.cache(self.process(val))
@@ -408,7 +408,7 @@ class DBFKProperty(Property):
         if type(fields) in (str, unicode): fields = [fields]
         cacher.addFKField(fields, self.table, self.reffield, self.orderby)
 
-    def doCache(self, cacher):
+    def doCache(self, cacher, cachable=None):
         if self.cached: return
         if type(self.reffield) in (list, tuple): return
         fields = self.targetfields
@@ -532,6 +532,7 @@ class Cacher(object):
     def __init__(self):
         self.dbfields = collections.defaultdict(set) # table : fields
         self.dbfkfields = set() # (table, reffield, fields)
+        
     def getData(self, cachables):
         self.data = {} # {table, id} : {field : value}
         if type(cachables) not in (list, set):
@@ -580,6 +581,8 @@ class Cacher(object):
         fields = tuple(fields)
         return self.fkdata[table, reffield, fields, orderby].get(cachable.id, [])
 
+
+    
 def cacheMultiple(cachables, *propnames):
     """
     Cache the given propnames for the given cachables. If possible,
@@ -601,7 +604,7 @@ def cacheMultiple(cachables, *propnames):
     #toolkit.ticker.warn("CAching values")
     for cachable in cachables:
         for prop in propnames:
-            cachable._getProperty(prop).doCache(cacher)
+            cachable._getProperty(prop).doCache(cacher, cachable)
 
 def cache(cachables, *properties, **structure):
     """

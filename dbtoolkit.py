@@ -228,7 +228,8 @@ class amcatDB(object):
         if l: l.printreport(stream=out, htmlgenerator=True)
         return out.getvalue()
 
-    def _whereSQL(self, where):
+    def whereSQL(self, where):
+        """Return a WHERE clause given a dict of col=value(s) pairs"""
         if not where: return None
         if toolkit.isString(where): return where
         whereclauses = []
@@ -247,7 +248,7 @@ class amcatDB(object):
         return " AND ".join(whereclauses)
     
     def _updateSQL(self, table, newvals, where):
-        where = self._whereSQL(where)
+        where = self.whereSQL(where)
         if where: where = "WHERE %s" % where
         update = ",".join("%s=%s" % (self.escapeFieldName(col), quotesql(val))
                           for (col, val) in newvals.iteritems())
@@ -256,7 +257,7 @@ class amcatDB(object):
         
 
     def _selectSQL(self, table, columns, where=None):
-        where = self._whereSQL(where)
+        where = self.whereSQL(where)
         where = "" if where is None else " WHERE %s" % where 
         if not toolkit.isIterable(columns, excludeStrings=True): columns = (columns,)
         columns = ",".join(map(self.escapeFieldName, columns))
@@ -287,7 +288,7 @@ class amcatDB(object):
         @param where: the where clause to use. If a dict, will create a
           AND-joined key=quotesql(val) string
         """
-        where = self._whereSQL(where)
+        where = self.whereSQL(where)
         SQL = "DELETE FROM %(table)s WHERE %(where)s" % locals()
         self.doQuery(SQL)
         
