@@ -136,6 +136,12 @@ class Cachable(idlabel.IDLabel):
         if not isinstance(prop, Property):
             prop = self._getProperty(prop)
         return prop.getType(self)
+    
+    def isNullable(cls, prop):
+        """Checks if `prop` is a required field"""
+        if not isinstance(prop, Property):
+            prop = self._getProperty(prop)
+        return prop._isNullable(self.db)
 
     def update(self, db, **props):
         """Update the database db with the given props
@@ -157,11 +163,12 @@ class Cachable(idlabel.IDLabel):
         prop._update(db, self, val)
 
     @property
-    def label(self):
+    def label(self):        
         # if a __labelprop__ is defined, return that, otherwise, call super
         try:
             return getattr(self, self.__labelprop__)
         except AttributeError:
+            
             return super(Cachable, self).label
     
     @classmethod
@@ -188,7 +195,8 @@ class Property(object):
     
     def __init__(self, deprecated=False):
         self._initialised = False
-        self.observedType = None
+        self._observedType = None
+        self._nullable = None
         self.deprecated = deprecated
         
     def _initialise(self, cls, propname):
@@ -216,7 +224,7 @@ class Property(object):
             self.cache(obj, v)
         v = self.dataToObjects(obj, v)
         # remember the type info for later use
-        if self.observedType is None: self.observedType = type(v)
+        if self._observedType is None: self._observedType = type(v)
         return v
 
     def dataToObjects(self, obj, data):
@@ -252,6 +260,19 @@ class Property(object):
         update strategies (eg via stored procedure, single compound updates etc.)
         """
         self.cache(obj, val)
+        
+    def isNullable(self, db):
+        """Returns whether a property-field is required or not.
+        
+        Warning: This is mssql specific"""
+        if self._nullable is None:
+            # Note: maybe this should move to dbtoolkit?
+            where = "id=OBJECT_ID('%s') AND name=%s" % (self._getTable(), dbtoolkit.quotesql(self._getColumns()))
+            self._nullable = bool(db.select('syscolumns', 'isnullable', where )[0])            
+        return self._nullable
+        
+    def _getTable(self):
+        abstract
 
     def getType(self, obj=None):
         """Get the data type of this property
@@ -261,18 +282,18 @@ class Property(object):
         @return a type object  
         """
         #print "%s.getType(obj=%r); observedType=%r" % (self, obj, self.observedType)
-        if (self.observedType is None
+        if (self._observedType is None
             and isinstance(obj, Cachable)):
             #try to get cached value
             try:
                 val = self.getCached(obj)
                 val = self.get(obj)
-                self.observedType = type(val)
+                self._observedType = type(val)
             except store.UnknownKeyException:
                 pass
-        if self.observedType is None:
+        if self._observedType is None:
             raise UnknownTypeException(self)
-        return self.observedType        
+        return self._observedType
                 
     def getCardinality(self): 
         """Get the cardinality of this property
@@ -365,7 +386,7 @@ class DBProperty(Property):
         else:
             db = obj_or_db
         result = db.getColumnType(self.cls.__table__, self.propname)
-        self.observedType = result
+        self._observedType = result
         return result
 
     def _update(self, db, obj, val):
@@ -411,6 +432,9 @@ class ForeignKey(DBProperty):
         except AttributeError:
             return self.cls.__table__
     
+    def isNullable(self, db):
+        return True
+    
     def getCardinality(self):
         if self.sequencetype is None:
             return types.GeneratorType
@@ -425,44 +449,3 @@ def DBProperties(n):
     return [DBProperty() for dummy in range(n)]
 
 def cacheMultiple(*args, **kargs): pass
-    
-def _sqlWhere(fields, ids):
-    if type(fields) in (str, unicode):
-        fields, ids = [fields], [ids]
-    return "(%s)" % " and ".join("(%s = %s)" % (field, dbtoolkit.quotesql(id))
-                                 for (field, id) in zip(fields, ids))
-
-def _select(columns, cachables_or_db, table):
-    """SQL select on given cachables or all objects in table
-    
-    @type columns: string, list or tuple
-    @param columns: columns to select
-    
-    @type cachables_or_db: bound cachable or AmCAT Database object
-    @param cachables_or_db: bound cachable or AmCAT Database object
-    
-    @type table: str
-    @param table: which table to retrieve the information from
-    """
-    if isinstance(columns, basestring): columns = (columns,)
-    if hasattr(cachables_or_db, 'doQuery'): 
-        # Is a database object, select all rows and return
-        select = ", ".join(map(cachables_or_db.escapeFieldName, columns))
-        return cachables_or_db.doQuery("SELECT %s FROM %s" % (select, table))
-    
-    # Convert generators to normals lists
-    try: cachables = tuple(cachables_or_db)
-    except: cachables = (cachables_or_db,)
-
-    prototype = cachables[0]
-    select = ", ".join(map(prototype.db.escapeFieldName, columns))
-    reffield = prototype.__idcolumn__
-    if type(reffield) in (str, unicode):
-        if type(prototype.id) <> int:
-            raise TypeError("Singular reffield with non-int id! Reffield: %r, cachable: %r, id: %r" % (reffield, prototype, prototype.id))
-        where  = prototype.db.intSelectionSQL(reffield, (x.id for x in cachables))
-    else:
-        where = "((%s))" % ") or (".join(_sqlWhere(reffield, x.id) for x in cachables)
-    
-    SQL = "SELECT %s FROM %s WHERE %s" % (select, table, where)
-    return prototype.db.doQuery(SQL)
