@@ -370,6 +370,16 @@ def chomped(seq=sys.stdin, skipblanks=True, transform=None):
             if skipblanks and not e: continue
         yield e
         
+def totuple(v):
+    """Function to convert `value` to a tuple.
+        
+    @type idcolumn: tuple, list, str, int, unicode, or None
+    @param idcolumn: value to convert to a tuple"""
+    if v is None: return ()
+    elif type(v) in (str, unicode, int): return (v,)
+    
+    return v
+        
 def idlist(idcolumn):
     """Function to convert a idcolumn value to a list.
     
@@ -679,6 +689,20 @@ def warn(string):
     rec = log.makeRecord(module, logging.WARN, fn, lineno,
                          string, [], exc_info=None, func=func)
     log.handle(rec)
+    
+def toJSON(value):
+    """Convert `value` to a string json can encode. Generators are converted
+    to lists, NoneTypes to empty strings.
+    
+    @type value: anything
+    @param value: value you wish to convert to a json-friendly type"""    
+    if type(value) == types.GeneratorType:
+        return map(toJSON, tuple(value))
+    
+    if value and value != 'None':
+        return unicode(value)
+    
+    return ''
 
 ###########################################################################
 ##                     Date(time) functions                              ##

@@ -68,15 +68,19 @@ class Table(object):
         for r in self.getRows():
             yield NamedRow(self, r)
     def getColumns(self):
-        return self.columns
+        return self.columns                
     def __iter__(self):
         return iter(self.getNamedRows())
+    
 
+OBJECTCOLUMN_PROPERTIES = ('fieldname', 'fieldtype', 'label',
+                           'fieldwidget', 'fieldwidget_attrs',
+                           'visible', 'choices', 'editable')
 
 class ObjectColumn(object):
     def __init__(self, label, cellfunc=None, fieldname=None, fieldtype=None,
                  fieldwidget=None, fieldwidget_attrs=None, visible=True,
-                 choices=None):
+                 choices=None, editable=True):
         self.label = label
         self.cellfunc = cellfunc
         self.choices = choices
@@ -85,6 +89,7 @@ class ObjectColumn(object):
         self.fieldwidget = fieldwidget
         self.fieldwidget_attrs = fieldwidget_attrs
         self.visible = visible
+        self.editable = editable
     def getCell(self, row):
         if self.cellfunc:
             return self.cellfunc(row)
@@ -151,13 +156,13 @@ class FormTable(ObjectTable):
             else: idcolumn = form.Meta.model.__idcolumn__
         self.idcolumn = toolkit.idlist(idcolumn)
         
-        for name, field in self.__getFields__(form):    
-            self.__addColumn__(name, field)     
+        for name, field in self.__getFields__(form):
+            self.__addColumn__(name, field)
         
         columns = [c.fieldname for c in self.columns]
         for c in self.idcolumn:
             if c not in columns:
-                self.__addColumn__(c, form.fields[c], visible=False)   
+                self.__addColumn__(c, form.fields[c], visible=False)
                 
     def __addColumn__(self, name, field, visible=True):
         label = field.label
