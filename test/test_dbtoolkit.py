@@ -5,6 +5,18 @@ class TestProject(amcattest.AmcatTestCase):
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)
 
+    def testIntSelectionSQL(self):
+        for colname, ints, result in[
+            ("bla", [0], "(([bla] in (0)))"),
+            ("bla", [], "(1=0)"),
+            ("bla", [0,1,2,0], "(([bla] in (0,1,2)))"),
+            ]:
+            sql = self.db.intSelectionSQL(colname, ints)
+            self.assertEqual(sql, result)
+            # test generator instead of list
+            sql = self.db.intSelectionSQL(colname, (i for i in ints))
+            self.assertEqual(sql, result)
+def StopHere():
     def testUpdateSQL(self):
         for table, where, newvals, result in (
             ("test", dict(a=range(3)), dict(b=1), "UPDATE [test] SET [b]=1 WHERE (([a] in (0,1,2)))"),
@@ -63,6 +75,8 @@ class TestProject(amcattest.AmcatTestCase):
 
         data = self.db.select(table, ("s","d"), where=dict(id=1), rowfunc=lambda *l : list(l))
         self.assertEqual(data, [[None, None]])
+
             
+        
 if __name__ == '__main__':
-    unittest.main()
+    amcattest.main()

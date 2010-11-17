@@ -11,6 +11,11 @@ class TestToolkitFunctions(unittest.TestCase):
         for i in range(10):
             seq = [random.randint(-100, 100) for dummy in range(100)]
             self.assertEqual(set(toolkit.flatten(range(fro, to+1) for (fro, to) in toolkit.ints2ranges(seq))), set(seq))
+        for input, output in [
+            ([0], [(0,0)]),
+            ([], []),
+            ]:
+            self.assertEqual(list(toolkit.ints2ranges(input)), output)
 
     def test_multidict(self):
         for input, output in (

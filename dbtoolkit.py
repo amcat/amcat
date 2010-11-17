@@ -621,7 +621,11 @@ class amcatDB(object):
 
     def intSelectionSQL(self, colname, ints, minIntsForTemp=5000):
         if type(ints) not in (set, tuple, list): ints = tuple(ints)
-        if len(ints) < minIntsForTemp:
+        if len(ints) == 0:
+            # colname in () is illegal but should always be FALSE, so
+            return "(1=0)"
+        elif len(ints) < minIntsForTemp:
+            # create combination of between and in statements
             conds = []
             remainder = []
             for i,j in toolkit.ints2ranges(ints):
@@ -631,10 +635,12 @@ class amcatDB(object):
                 else: remainder += [str(i),str(j)]
             if remainder: conds.append("(%s in (%s))" % (self.escapeFieldName(colname), ",".join(remainder)))
             return "(%s)" % " OR ".join(conds)
-        table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
-        self.doQuery("CREATE TABLE %s (i int)" % table)
-        self.insertmany(table, "i", [(i,) for i in ints])
-        return "(%s in (select i from %s))" % (self.escapeFieldName(colname), table)
+        else:
+            # create temp table
+            table = "#intselection_%s" % "".join(chr(random.randint(65,90)) for i in range(25))
+            self.doQuery("CREATE TABLE %s (i int)" % table)
+            self.insertmany(table, "i", [(i,) for i in ints])
+            return "(%s in (select i from %s))" % (self.escapeFieldName(colname), table)
 
     @contextmanager
     def transaction(self):

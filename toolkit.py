@@ -270,7 +270,7 @@ def ints2ranges(seq, presorted=False):
             yield start, prev
             start = i
         prev = i
-    if prev:
+    if prev is not None:
         yield start, prev
 
 
