@@ -1,4 +1,3 @@
-
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -71,13 +70,14 @@ class Cachable(idlabel.IDLabel):
     attribute is a property, and if so call get/set/del on the property    
     """
     
-    def __init__(self, db, id):
+    def __init__(self, db, *id):
         """Create a cachable with db and id
         
         @param db: database connection
         @param id: the id of this object
         """
-        if id is None: raise ValueError("ID should not be None!")
+        if not id: raise ValueError("ID should be given, not %r!" % id)
+        if len(id) == 1: id = id[0]
         if db is None: raise ValueError("DB should not be None!")
         self.db = db
         idlabel.IDLabel.__init__(self, id)

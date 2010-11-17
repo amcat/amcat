@@ -1,8 +1,7 @@
-import user, toolkit, project, ont, article, dbtoolkit, sentence
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
+import toolkit, project, ont, article, dbtoolkit, sentence
+from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
 import cachable
-from functools import partial
-import table3
+from table3 import ObjectColumn
 from idlabel import IDLabel
 
 def paramdict(paramstr):
@@ -17,15 +16,17 @@ class AnnotationSchema(Cachable):
     __idcolumn__ = 'annotationschemaid'
     __table__ = 'annotationschemas'
     __dbproperties__ = ["name", "articleschema"]
-    __metaclass__ = CachingMeta
-    params = DBPropertyFactory("params", func=paramdict)
-
-    def __init__(self, db, id):
-        Cachable.__init__(self, db, id)
-        #todo naar class variables
-        self.addDBProperty("table", "location", lambda loc : loc.split(":")[0])
-        self.addDBFKProperty("fields", "annotationschemas_fields", ["fieldnr", "fieldname", "label", "fieldtypeid", "params", "deflt"], function=self.createField)
-
+    __labelprop__ = 'name'
+    
+    name, articleschema, location = DBProperties(3)
+    params = DBProperty(paramdict)
+    fields = ForeignKey(lambda:AnnotationSchemaField)
+    
+    @property
+    def table(self):
+        return self.location.split(":")[0]
+    
+    
     def createField(self, fieldnr, fieldname, label, fieldtype, params, deflt):
         if fieldtype in (5,):
             return OntologyAnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params, deflt)
@@ -72,16 +73,16 @@ def getAnnotationschemas(db):
     for a in ids:
         yield AnnotationSchema(db, a[0])
 
+        
+class AnnotationSchemaField(Cachable):
+    __table__ = 'annotationschemas_fields'
+    __idcolumn__ = ('annotationschemaid','fieldnr')
 
-class AnnotationSchemaField(IDLabel):
-    def __init__(self, schema, fieldnr, fieldname, label, fieldtype, params, default):
-        IDLabel.__init__(self, (schema.id, fieldnr), label)
-        self.schema = schema
-        self.fieldnr = fieldnr
-        self.fieldname = fieldname
-        self.fieldtype = fieldtype
-        self.params = paramdict(params)
-        self.default = default
+    schema = DBProperty(AnnotationSchema, getcolumn="annotationschemaid")
+    fieldname, label, default = DBProperties(3)
+    params = DBProperty(paramdict)
+    fieldtype = DBProperty()
+    
     def deserialize(self, value):
         return value
     def getLabel(self, value, annotation=None):
@@ -226,10 +227,10 @@ def getValue(unit, field):
     if unit is None: return None
     return unit.getValue(field.fieldname)
 
-class FieldColumn(table3.ObjectColumn):
+class FieldColumn(ObjectColumn):
     """ObjectColumn based on a AnnotationSchemaField"""
     def __init__(self, field, article):
-        table3.ObjectColumn.__init__(self, field.label, fieldname=field.fieldname, fieldtype=getFieldType(field))
+        ObjectColumn.__init__(self, field.label, fieldname=field.fieldname, fieldtype=getFieldType(field))
         self.field = field
         self.article = article
         self.valuelabels = {}
