@@ -3,8 +3,10 @@ from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
 import cachable
 from table3 import ObjectColumn
 from idlabel import IDLabel
+import logging; log = logging.getLogger(__name__)
+#import amcatlogging; amcatlogging.debugModule()
 
-def paramdict(paramstr):
+def paramdict(db, paramstr):
     d = {}
     if not paramstr: return d
     for kv in paramstr.split(","):
@@ -27,17 +29,6 @@ class AnnotationSchema(Cachable):
         return self.location.split(":")[0]
     
     
-    def createField(self, fieldnr, fieldname, label, fieldtype, params, deflt):
-        if fieldtype in (5,):
-            return OntologyAnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params, deflt)
-        elif fieldtype in (3,4,8):
-            return LookupAnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params, deflt)
-        elif fieldtype == 12:
-            return FromAnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params, deflt)
-        else:
-            return AnnotationSchemaField(self, fieldnr, fieldname, label, fieldtype, params, deflt)
-    
-
     def getField(self, fieldname):
         for f in self.fields:
             if f.fieldname == fieldname: return f
@@ -73,6 +64,12 @@ def getAnnotationschemas(db):
     for a in ids:
         yield AnnotationSchema(db, a[0])
 
+
+class AnnotationSchemaFieldType(Cachable):
+    __table__ = "annotationschemas_fieldtypes"
+    __idcolumn__ = "fieldtypeid"
+    __labelprop__ = "name"
+    name = DBProperty()
         
 class AnnotationSchemaField(Cachable):
     __table__ = 'annotationschemas_fields'
@@ -81,87 +78,102 @@ class AnnotationSchemaField(Cachable):
     schema = DBProperty(AnnotationSchema, getcolumn="annotationschemaid")
     fieldname, label, default = DBProperties(3)
     params = DBProperty(paramdict)
-    fieldtype = DBProperty()
-    
-    def deserialize(self, value):
-        return value
-    def getLabel(self, value, annotation=None):
-        if type(value) == float:
-            return "%1.2f"  % value
-        return value
-    def getValue(self, unit):
-        return unit.getValue(self)
-    def hasLabel(self):
-        return False
-    def cache(self):
-        pass
+    fieldtype = DBProperty(AnnotationSchemaFieldType)
 
-class LookupAnnotationSchemaField(AnnotationSchemaField):
-    def __init__(self, *vals):
-        AnnotationSchemaField.__init__(self, *vals)
-        self._labels = None
+    @property
+    def _serialiser(self):
+        try:
+            return self.__serialiser
+        except AttributeError: pass
+        
+        ftid = self.fieldtype.id
+        if ftid == 5:
+            self.__serialiser = OntologyFieldSerialiser(self.schema.db, self.schema.language)
+        elif ftid == 4:
+            self.__serialiser = AdHocLookupFieldSerialiser(self.params["values"])
+        elif ftid in (3,8):
+            self.__serialiser = DBLookupFieldSerialiser(self.schema.db, *map(self.params.get, ["table","key","label"]))
+        elif ftid == 12:
+            self.__serialiser = FromFieldSerialiser()
+        else:
+            self.__serialiser = SchemaFieldSerialiser()
+            
+        return self.__serialiser
+
+    def deserialize(self, value):
+        val = self._serialiser.deserialize(value)
+        log.debug("%s/%s deserialised %r to %r" % (self, self._serialiser, value, val))
+        return val
+    def getTargetType(self):
+        return self._serialiser.getTargetType()   
+    
+
+
+class SchemaFieldSerialiser(object):
+    """Base class for serialisation support for schema fields"""
+    def deserialize(self, value):
+        """Convert the given (db) value to a domain object"""
+        return value
+    def getTargetType(self):
+        """Return the type of objects dererialisation will yield
+
+        @return: a type object such as IDLabel or ont.Object"""
+        return object
+    
+class LookupFieldSerialiser(SchemaFieldSerialiser):
     def deserialize(self, value):
         if value is None: return None
         label = self.getLabels().get(value, None)
         result = IDLabel(value, label)
         return result
-        # raise Exception([value, self.getLabels().get(value, None), self.getLabels()])
-        #return LookupValue(value, self.getLabels().get(value, None))
-    def hasLabel(self):
-        return True
+    def getTargetType(self):
+        return IDLabel
+    
+class AdHocLookupFieldSerialiser(LookupFieldSerialiser):
+    def __init__(self, valuestr):
+        self._labels = {}
+        for i, val in enumerate(self.params['values'].split(";")):
+            if ":" in val:
+                i, val = val.split(":")
+                i = int(i)
+                self._labels[i] = val
     def getLabels(self):
-        if self._labels is None:
-            if self.fieldtype == 4:
-                self._labels = {}
-                for i, val in enumerate(self.params['values'].split(";")):
-                    if ":" in val:
-                        i, val = val.split(":")
-                        i = int(i)
-                    self._labels[i] = val
-            else:
-                sql = "SELECT %s, %s FROM %s" % (self.params['key'], self.params['label'], self.params['table'])
-                
-                # BUG (see part of e-mail below).
-                # 
-                # [ e-mail]
-                # ..certain countries/organizations (I suspect those that were added or changed
-                # by the Swiss team) are still represented with an ID number instead of their name.
-                # When the coders e.g. coded "NATO", AmCAT shows "IDLabel(282)".
-                #
-                # To a similar extent, for the variables "actor1-3", "mp1-3", and "canton1-3",
-                # AmCAT only rarely shows labels. Most of the annotations appear in the form "IDLabel(63)"
-                # (standing here for what the coder wanted to be "206 Delamuraz Jean-Pascal").
-                # [/ e-mail ]
-                #
-                # This is probably causes by iNet, which doesn't select id fields (206) but a row
-                # number (63).
-                
-                result = self.schema.db.doQuery(sql)
-                self._labels = dict((k,v.decode('latin-1')) for k,v in result)
-                #self._labels = {}
-                #for i in xrange(len(result)):
-                #    self._labels[i] = result[i][1]
-                
         return self._labels
-    def getLabel(self, value, annotation=None):
-        if value is None: return None
-        if type(value) in (int, float, str, unicode):
-            return str(value)
-        return value.label
-        #v = self.deserialize(value)
-        #if not v: return None
-        #return "@@ %r / %r / %r / %r $$" % (value, v, v.id, v.label)
-        #return v.label
-    def cache(self):
-        self.getLabels()
-        
-        
-class LookupValue(IDLabel):
-    pass
 
-class FromAnnotationSchemaField(AnnotationSchemaField):
-    def __init__(self, *vals):
-        AnnotationSchemaField.__init__(self, *vals)
+class DBLookupFieldSerialiser(LookupFieldSerialiser):
+    def __init__(self, db, table, keycol, labelcol):
+        self.db = db
+        self.keycol = keycol
+        self.labelcol = labelcol
+        self.table = table
+    def getLabels(self):
+        try:
+            return self._labels
+        except AttributeError: pass
+        
+        # BUG (see part of e-mail below).
+        # 
+        # [ e-mail]
+        # ..certain countries/organizations (I suspect those that were added or changed
+        # by the Swiss team) are still represented with an ID number instead of their name.
+        # When the coders e.g. coded "NATO", AmCAT shows "IDLabel(282)".
+        #
+        # To a similar extent, for the variables "actor1-3", "mp1-3", and "canton1-3",
+        # AmCAT only rarely shows labels. Most of the annotations appear in the form "IDLabel(63)"
+        # (standing here for what the coder wanted to be "206 Delamuraz Jean-Pascal").
+        # [/ e-mail ]
+        #
+        # This is probably causes by iNet, which doesn't select id fields (206) but a row
+        # number (63).
+        
+        result = self.db.select(self.table, [self.keycol, self.labelcol])
+        self._labels = dict((k,v.decode('latin-1')) for k,v in result)
+        return self._labels
+        
+        
+class FromFieldSerialiser(SchemaFieldSerialiser):
+    def deserialise(self, value):
+        return NotImplementedError()
     def getLabel(self, value, codedsentence=None):
         froms = []
         for s in codedsentence.ca.sentences:
@@ -177,52 +189,20 @@ class FromAnnotationSchemaField(AnnotationSchemaField):
         else: to = froms[i+1]
 
         return " ".join(codedsentence.sentence.text.split()[value:to])
-
-    def hasLabel(self):
-        return True
+    def getTargetType(self):
+        return IDLabel
         
         
-class OntologyAnnotationSchemaField(AnnotationSchemaField):
-    def __init__(self, *vals):
-        AnnotationSchemaField.__init__(self, *vals)
-        self._set = None
+class OntologyFieldSerialiser(SchemaFieldSerialiser):
+    def __init__(self, db, language):
+        self.db = db
+        self.language = language
     def deserialize(self, value):
         if value is None: return None
-        return ont.Object(self.schema.db, value, languageid=self.schema.language)
-    @property
-    def set(self):
-        if self._set is None:
-            setid = self.params.get("setid")
-            if not setid: setid = self.params.get("set")
-            if not setid: setid = self.params.get("sets")
-            if not setid:
-                toolkit.warn("OntologyASF without setid? %s" % (self.params))
-                return None
-            self._set = ont.Set(self.schema.db, int(setid))
-        return self._set
-    def getLabel(self, value, codedsentence=None):
-        v = self.deserialize(value)
-       
-        if not v: return None
-        try:
-            return v.getLabel()
-        except AttributeError:
-            return v
-    def hasLabel(self):
-        return True
-    def cache(self):
-        if self.set:
-            self.set.cacheLabels()
+        return ont.Object(self.db, value, languageid=self.language)
+    def getTargetType(self):
+        return ont.Object
             
-def getFieldType(field):
-    if type(field) in (OntologyAnnotationSchemaField, LookupAnnotationSchemaField):
-        return IDLabel
-    elif field.fieldtype in (6,9):
-        return float
-    elif field.fieldtype in (2,):
-        return int
-    return str
-
 def getValue(unit, field):
     if unit is None: return None
     return unit.getValue(field.fieldname)

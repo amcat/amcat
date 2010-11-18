@@ -125,6 +125,20 @@ def setStreamHandler():
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
 
+@contextmanager
+def streamHandler(stream):
+    root = logging.getLogger()
+    h = logging.StreamHandler(stream)
+    h.setFormatter(AmcatFormatter(date=True))
+    h.addFilter(ModuleLevelFilter())
+    try:
+        root.addHandler(h)
+        stream.write("INSTALLED HANDLER")
+        yield h
+    finally:
+        root.removeHandler(h)
+        stream.write("REMOVED HANDLER")
+
 def setup():
     setStreamHandler()
     return logging.getLogger('__main__')
@@ -138,7 +152,7 @@ def setContext(application, user=None, host=None):
     _THREAD_CONTEXT.application = application
     _THREAD_CONTEXT.user = user
     _THREAD_CONTEXT.host = host
-
+    
    
 class CurrentThreadFilter(logging.Filter):
     """Filter that only accepts log records from the current thread"""
