@@ -15,6 +15,8 @@ import random
 from idlabel import IDLabel
 import logging; log = logging.getLogger(__name__)
 
+#import amcatlogging; amcatlogging.infoModule()
+
 _encoding = {
     0 : 'utf-8',
     1 : 'UTF-7',
@@ -160,7 +162,7 @@ class amcatDB(object):
         If cursor is given, use that cursor and return the cursor instead
         Otherwise, pre- and postprocess around a call with a new cursor
         """
-        log.debug(sql)
+        log.info("Executing query: %s" % sql)
         if type(sql) == unicode: sql = sql.encode('latin-1', 'replace')
         if select is None:
             select=sql.lower().strip().startswith("select")
