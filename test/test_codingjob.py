@@ -22,6 +22,13 @@ class TestProject(amcattest.AmcatTestCase):
         c = codingjob.Codingjob(self.db, 5175)
         cachable2.cache(c, **{'sets': {'articles' : {'article' : {'source' : ["name"]}}}})
 
+    def testSimpleCodedSentence(self):
+        #test an article with net codings
+        cjaid = 16284
+        arrowid = 30188
+        ca = codingjob.CodedArticle(self.db, cjaid)
+        s = list(ca.sentences)[0]
+        
     def testCodedArticle(self):
         # test an article with agenda codings
         cjaid = 1609147
@@ -31,10 +38,10 @@ class TestProject(amcattest.AmcatTestCase):
         self.assertEqual(ca.set.job.id, 5175)
         self.assertEqual(ca.set.setnr, 1)
         self.assertEqual(ca.annotationschema.id, 26)
-        self.assertEqual(ca.topic.id, 10490)
         self.assertEqual(ca.getValue("topic").id, 10490)
+        self.assertEqual(ca.topic.id, 10490)
         self.assertEqual(list(ca.sentences), [])
-        
+
     def testCodedSentence(self):
         #test an article with net codings
         cjaid = 16284
@@ -44,8 +51,8 @@ class TestProject(amcattest.AmcatTestCase):
         self.assertNotEmpty(list(ca.sentences))
         self.assertIn(30188, [cs.id for cs in ca.sentences])
         cs = [cs for cs in ca.sentences if cs.id == 30188][0]
-        self.assertEqual(cs.subject.id, 1098)
         self.assertEqual(cs.getValue("object").id, 1625)
+        self.assertEqual(cs.subject.id, 1098)
         self.assertEqual(cs.predicate, 'idealistisch, niet de hele dag')
 
     def testCodingJob(self):

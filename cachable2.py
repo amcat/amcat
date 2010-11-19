@@ -47,6 +47,7 @@ import idlabel, dbtoolkit
 import amcatmemcache as store
 import logging; log = logging.getLogger(__name__)
 
+#import amcatlogging; amcatlogging.debugModule()
 
 class Meta(type):
     """Metaclass to  ensure properties are initialised"""
@@ -57,6 +58,8 @@ class Meta(type):
         except AttributeError: pass # only initialise properies
         return result
 
+class NotAPropertyError(TypeError):pass
+    
 class Cachable(idlabel.IDLabel):
     __metaclass__ = Meta
     """Main class of the Cachable structure
@@ -90,7 +93,7 @@ class Cachable(idlabel.IDLabel):
        p = getattr(cls, attr)
        if isinstance(p, Property):
            return p
-       raise TypeError("%s is not a Property" % attr)
+       raise NotAPropertyError("%s is not a Property" % attr)
    
     @classmethod
     def _getProperties(cls, deprecated=True):
@@ -113,8 +116,11 @@ class Cachable(idlabel.IDLabel):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""
         if not "_" in attr:
             try:
+                log.debug("Getting attribute %s, property?" % (attr)) 
                 p =  self.__class__._getProperty(attr)
-            except (TypeError, AttributeError):
+                log.debug("Got property %s -> %s, calling property.get()" % (attr, p)) 
+            except (NotAPropertyError, AttributeError), e:
+                log.debug("Property not found, will call super (%s:%s)" % (type(e), e))
                 pass
             else:
                 return p.get(self)
@@ -348,7 +354,7 @@ class Property(object):
         Warning: This is mssql specific"""
         if self._nullable is None:
             # Note: maybe this should move to dbtoolkit?
-            where = "id=OBJECT_ID('%s') AND name=%s" % (self._getTable(), dbtoolkit.quotesql(self._getColumns()))
+            where = "id=OBJECT_ID('%s') AND name=%s" % (self._getTable(obj), dbtoolkit.quotesql(self._getColumns()))
             self._nullable = bool(db.select('syscolumns', 'isnullable', where )[0])            
         return self._nullable
 
@@ -413,6 +419,9 @@ class DBProperty(Property):
         self.targetclass = targetclass
         self.table = table
         self.getcolumn = getcolumn
+        
+        self.tablehook = None # function obj -> table
+        self.postprocess = None # function(obj, child) -> child
     def _initialise(self, cls, propname):
         if self._initialised: return
         super(DBProperty, self)._initialise(cls, propname)
@@ -437,11 +446,17 @@ class DBProperty(Property):
             if type(self.targetclass) == tuple:
                 if len(self.targetclass) != len(dbvalues):
                     raise ValueError("If targetclass is a tuple, #columns should equal #classes")
-                return tuple(c(obj.db, v) for (c, v) in zip(self.targetclass, dbvalues))
+                return tuple(self._postprocess(obj, c(obj.db, v))
+                             for (c, v) in zip(self.targetclass, dbvalues))
             else:
-                return self.targetclass(obj.db, *dbvalues)
-        return dbvalues[0]
+                return self._postprocess(obj, self.targetclass(obj.db, *dbvalues))
+        return self._postprocess(obj, dbvalues[0])
 
+    def _postprocess(self, obj, child):
+        log.debug("Created %r.%r child %r" % (obj, self, child))
+        if self.postprocess: self.postprocess(obj, child)
+        return child
+    
     def objectToDbrow(self, obj, *dbvalues):
         """Convert an amcat object to a db row
         
@@ -461,8 +476,12 @@ class DBProperty(Property):
     def dataToObjects(self, obj, data):
         return self.dbrowToObject(obj, *data[0])
 
-    def _getTable(self):
+    def _getTable(self, obj=None):
+        log.debug("getTable(%r), self.table=%s, self.tablehook=%s" % (obj, self.table, self.tablehook))
         if self.table: return self.table
+        if self.tablehook: return self.tablehook(obj)
+        if obj and getattr(obj, '__table__', None):
+            return obj.__table__
         return self.cls.__table__
     def _getColumns(self):
         if self.getcolumn: return self.getcolumn
@@ -476,7 +495,7 @@ class DBProperty(Property):
     def retrieve(self, obj):
         """Use the database to retrieve the value of this property for obj
         """
-        return obj.db.select(self._getTable(), self._getColumns(), obj._getWhere(), alwaysReturnTable=True)
+        return obj.db.select(self._getTable(obj), self._getColumns(), obj._getWhere(), alwaysReturnTable=True)
     
     def getType(self, obj_or_db=None):
         # if targetclass is a class or tuple of classes, return it 
@@ -507,7 +526,7 @@ class DBProperty(Property):
             val = (val,) # for caching
         else:
             update = dict(zip(cols, val))
-        obj.db.update(self._getTable(), update, obj._getWhere())
+        obj.db.update(self._getTable(obj), update, obj._getWhere())
         self.cache(obj, val)
 
 
@@ -519,7 +538,7 @@ class DBProperty(Property):
         self.cache(obj, val, isData=True)
         
 class ForeignKey(DBProperty):
-    def __init__(self, targetclass=None, sequencetype=None, **kargs):
+    def __init__(self, targetclass=None, sequencetype=None, includeOwnID=False, **kargs):
         """Create a 'foreign key' property
 
         Getting the property will create a sequence of domain objects
@@ -528,9 +547,11 @@ class ForeignKey(DBProperty):
           the db-primitive intact
         @param sequencetype: the type of sequence to create (list, set, etc), or
           None for returning a generator
+        @param includeOwnID: if True, create objects using childid=(ownid,retrieved) 
         """
         DBProperty.__init__(self, targetclass, **kargs)
         self.sequencetype = sequencetype
+        self.includeOwnID = includeOwnID
 
     def dataToObjects(self, obj, data):
         result = (self.dbrowToObject(obj, *row) for row in data)
@@ -541,12 +562,14 @@ class ForeignKey(DBProperty):
         log.debug("FKSerialising %s=%r" % (self, objects))
         return [self.objectToDbrow(o) for o in objects]
     
-    def _getTable(self):
+    def _getTable(self, obj=None):
+        log.debug("getTable(%r), self.table=%s, self.tablehook=%s" % (obj, self.table, self.tablehook))
         if self.table: return self.table
+        if self.tablehook: return self.tablehook(obj)
         try:
             return self.targetclass.__table__
-        except AttributeError:
-            return self.cls.__table__
+        except AttributeError: pass
+        return self.cls.__table__
         
     def isNullable(self, db):
         return True

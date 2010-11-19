@@ -1,10 +1,14 @@
 import user, toolkit, project, ont, article, dbtoolkit, sentence
-from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory, CachingMeta
-import cachable
+
+from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
+
 from functools import partial
 import table3
 from idlabel import IDLabel
 import annotationschema
+
+import logging; log = logging.getLogger(__name__)
+#import amcatlogging; amcatlogging.debugModule()
 
 def getCodedArticle(db, cjaid):
     data = db.doQuery("select codingjobid, setnr from codingjobs_articles where codingjob_articleid=%i"% cjaid)
@@ -49,17 +53,16 @@ def getCodedSentencesFromCodingjobs(codingjobs):
             yield cs
             
 class CodingJob(Cachable):
-    __metaclass__ = CachingMeta
     __table__ = 'codingjobs'
     __idcolumn__ = 'codingjobid'
-    __dbproperties__ = ["name", "insertdate"]
-    
-    unitSchema = DBPropertyFactory("unitschemaid", dbfunc = lambda db, id: annotationschema.AnnotationSchema(db, id))
-    articleSchema = DBPropertyFactory("articleschemaid", dbfunc = lambda db, id: annotationschema.AnnotationSchema(db, id))
-    project = DBPropertyFactory("projectid", dbfunc = lambda db, id : project.Project(db, id))
-    owner = DBPropertyFactory("owner_userid", dbfunc = lambda db, id : user.User(db, id))
-    
-    sets = DBFKPropertyFactory("codingjobs_sets", ["codingjobid", "setnr"], factory = lambda: CodingjobSet, uplink="job")
+    name, insertdate = DBProperties(2)
+
+    unitSchema = DBProperty(annotationschema.AnnotationSchema, getcolumn="unitschemaid")
+    articleSchema = DBProperty(annotationschema.AnnotationSchema, getcolumn="articleschemaid")
+    project = DBProperty(lambda:project.Project)
+    owner = DBProperty(lambda:user.User, getcolumn="owner_userid")
+
+    sets = ForeignKey(lambda:CodingJobSet, includeOwnID=True)
         
     def getLink(self):
         return "codingjobDetails?codingjobid=%i" % self.id
@@ -124,85 +127,22 @@ class CodingJob(Cachable):
                 retrieveIdent = False)
         self.db.commit()
         
-        
-class CodedUnit(Cachable):
-    def __init__(self, db, id, **cache):
-        Cachable.__init__(self, db, id, **cache)
-    def init(self, schema):
-        self.annotationschema = schema
-        self.fields = {} # fieldname : property
-        for field in schema.fields:
-            self.fields[field.fieldname] = self.addDBProperty(field.fieldname, func=field.deserialize, table=schema.table)
-
-    @property
-    def values(self):
-        return self.fields
-            
-    def getValue(self, field):
-        if isinstance(field, annotationschema.AnnotationSchemaField):
-            field = field.fieldname
-        if field not in self.fields: return None
-        return self.fields[field].get()
-
-
-    
-                               
-
-Codingjob = CodingJob
-
-class CodedArticle(CodedUnit):
-    __table__ = 'codingjobs_articles'
-    __idcolumn__ = 'codingjob_articleid'
-    __labelprop__ = None
-
-    article = DBPropertyFactory("articleid", dbfunc = lambda db, id : article.Article(db, id))
-    set = DBPropertyFactory(["codingjobid", "setnr"], dbfunc = lambda db, cjid, setnr : CodingjobSet(db, (cjid, setnr)))
-    def __init__(self, db, id, **cache):
-        CodedUnit.__init__(self, db, id, **cache)
-        job = self.set.job
-        self.init(job.articleSchema)
-        self.addDBFKProperty("sentences", job.unitSchema.table, "arrowid",
-                             function=lambda id : CodedSentence(self.db, id, job.unitSchema, ca=self))
-        self.addDBProperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
-            
-    def getArticle(self):
-        return self.article
-
-def getSentence(db, sid): return sentence.Sentence(db, sid)
-        
-class CodedSentence(CodedUnit):
-    __idcolumn__ = 'arrowid'
-    ca = DBPropertyFactory("codingjob_articleid", dbfunc=CodedArticle)
-    sentence = DBPropertyFactory("sentenceid", dbfunc=getSentence)
-
-    def __init__(self, db, id, schema, **cache):
-        CodedUnit.__init__(self, db, id, **cache)
-        self.init(schema)
-        self.__table__ = schema.table
-
-    def getFilter(self):
-        return "arrowid", self.arrowid        
-    def getArticle(self):
-        return self.ca.article
-
-getCodingJob = CodingJob
-
-def getCodedArticle(db, cjaid):
-    cjid = db.getValue("select codingjobid from codingjobs_articles where codingjob_articleid = %i"  % cjaid)
-    job = getCodingJob(db, cjid)
-    return job.findCodedArticle(cjaid = cjaid)
-
 class CodingJobSet(Cachable):
     __table__ = 'codingjobs_sets'
     __idcolumn__ = ['codingjobid', 'setnr']
-    __labelprop__ = None
     
-    coder = DBPropertyFactory("coder_userid", dbfunc = lambda db,id : user.User(db, id))
-    articles = DBFKPropertyFactory("codingjobs_articles", "codingjob_articleid", factory = lambda: CodedArticle, uplink="set")
-    job = DBPropertyFactory("codingjobid", dbfunc = lambda db, id: CodingJob(db, id))
-    def __init__(self, db, (jobid, setnr), **cache):
-        Cachable.__init__(self, db, (jobid, setnr), **cache)
-        self.setnr = setnr
+    coder = DBProperty(lambda:user.User, getcolumn="coder_userid")
+    articles = ForeignKey(lambda:CodedArticle)
+
+    @property
+    def job(self):
+        return CodingJob(self.db, self.jobid)
+    @property
+    def setnr(self):
+        return self.id[1]
+    @property
+    def jobid(self):
+        return self.id[0]
 
     def getArticle(self, cjaid):
         for a in self.articles:
@@ -230,7 +170,90 @@ class CodingJobSet(Cachable):
     def label(self):
         return repr(self)
         
-CodingjobSet = CodingJobSet
+CodingjobSet = CodingJobSet       
+        
+class CodedUnit(object):
+    def __init__(self):
+        self._fields = None
+        self._values = {}
+        
+    def __getattr__(self, attr):
+        # if not found, check fields
+        if "_" in attr: return super(CodedUnit, self).__getattribute__(attr)
+        log.debug("__getattr__(%r), in fields %s?" % (attr, self.fields))
+        if attr in self.fields:
+            if attr not in self._values:
+                self.loadValues()
+            val = self._values.get(attr)
+            field = self.annotationschema.getField(attr)
+            return field.deserialize(val)
+
+        return super(CodedUnit, self).__getattribute__(attr)
+
+    def loadValues(self):
+        s = self.annotationschema
+        vals = self.db.select(s.table, self._fields, self._getWhere())
+        if len(vals) <> 1:
+            raise ValueError("CodedUnit values %r not len==1" % vals)
+        self._values = dict(zip(self.fields, vals[0]))
+        log.debug("Loaded %r" % self._values)
+    
+    @property
+    def fields(self):
+        if self._fields is None:
+            self._fields = [f.fieldname for f in self.annotationschema.fields]
+        return self._fields
+    
+    def getValue(self, field):
+        if isinstance(field, annotationschema.AnnotationSchemaField):
+            field = field.fieldname
+        return getattr(self, field)
+
+class CodedArticle(Cachable, CodedUnit):
+    __table__ = 'codingjobs_articles'
+    __idcolumn__ = 'codingjob_articleid'
+
+    def __init__(self, *args, **kargs):
+        Cachable.__init__(self, *args, **kargs)
+        CodedUnit.__init__(self)
+    
+    article = DBProperty(lambda:article.Article)
+    set = DBProperty(CodingJobSet)
+
+    def getSentenceTable(self):
+        return self.set.job.unitSchema.table
+    def createSentence(self, s):
+        s.ca = self
+        s.annotationschema = self.set.job.unitSchema
+        s.table = s.annotationschema.table
+    sentences = ForeignKey(lambda:CodedSentence)
+    sentences.postprocess=createSentence
+    sentences.tablehook=getSentenceTable
+#        self.addDBroperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
+
+    @property
+    def annotationschema(self):
+        return self.set.job.articleSchema
+    def getArticle(self):
+        return self.article
+    
+
+class CodedSentence(CodedUnit, Cachable):
+    __idcolumn__ = 'arrowid'
+    ca = DBProperty(CodedArticle)
+    sentence = DBProperty(lambda:sentence.Sentence)
+
+    
+    def __init__(self, db, arrowid):
+        Cachable.__init__(self, db, arrowid)
+        CodedUnit.__init__(self)
+
+# def getCodedArticle(db, cjaid):
+#     cjid = db.getValue("select codingjobid from codingjobs_articles where codingjob_articleid = %i"  % cjaid)
+#     job = getCodingJob(db, cjid)
+#     return job.findCodedArticle(cjaid = cjaid)
+
+
 
 def getCAJobs(cas):
     return sorted(set([ca.set.job for ca in cas]))
