@@ -399,8 +399,10 @@ class Property(object):
         """
         pass
 
-    def doCache(self, cacher):
-        """Optionally cache the values from the cacher (see L{prepareCache})"""
+    def doCache(self, cacher, cachable=None):
+        """Optionally cache the values from the cacher (see L{prepareCache})
+        
+        @param cachable: provided for backward compatibility"""
         pass
 
       
@@ -593,7 +595,7 @@ class ForeignKey(DBProperty):
         self.uncache(obj)
     def prepareCache(self, cacher):
         pass
-    def doCache(self, cacher):
+    def doCache(self, cacher, cachable=None):
         pass
         
 def DBProperties(n):

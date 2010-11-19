@@ -82,6 +82,7 @@ class AnnotationSchemaField(Cachable):
     fieldname, label, default = DBProperties(3)
     params = DBProperty(paramdict)
     fieldtype = DBProperty()
+    fieldtypeid = DBProperty()
     
     def deserialize(self, value):
         return value
@@ -217,9 +218,9 @@ class OntologyAnnotationSchemaField(AnnotationSchemaField):
 def getFieldType(field):
     if type(field) in (OntologyAnnotationSchemaField, LookupAnnotationSchemaField):
         return IDLabel
-    elif field.fieldtype in (6,9):
+    elif field.fieldtypeid in (6,9):
         return float
-    elif field.fieldtype in (2,):
+    elif field.fieldtypeid in (2,):
         return int
     return str
 

@@ -269,7 +269,13 @@ def readfile(txt, db, batchid, commit):
             #raise
             import traceback, sys
             tb = sys.exc_info()[2]
-            errmsg = "%s at %s" % (e, " / ".join(traceback.format_tb(tb, 3)))
+            tb = " / ".join(traceback.format_tb(tb, 3))
+            
+            tb = toolkit.smart_str(tb, encoding='latin-1', errors='replace')
+            e = toolkit.smart_str(e, encoding='latin-1', errors='replace')
+            errmsg = "%s at %s" % (e, tb)
+            errmsg = toolkit.smart_str(errmsg, encoding='latin-1', errors='replace')
+            
             errors += '\n%s\n' % errmsg
             errorCount += 1
     if commit:
