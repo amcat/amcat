@@ -93,7 +93,7 @@ def parseArticle(articleString, db, batchid, commit):
             for tran in trans:
                 if tran in meta: meta[orig] = meta[tran]
                 
-    sectionpage = toolkit.parseSection(meta.get('section', None))
+    sectionpage = parseSection(meta.get('section', None))
     if sectionpage is not None:
         meta['section'] = sectionpage[0]
         meta['pagenr'] = sectionpage[1]
