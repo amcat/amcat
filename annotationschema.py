@@ -81,31 +81,37 @@ class AnnotationSchemaField(Cachable):
     fieldtype = DBProperty(AnnotationSchemaFieldType)
 
     @property
-    def _serialiser(self):
+    def serializer(self):
         try:
-            return self.__serialiser
+            return self._serializer
         except AttributeError: pass
         
         ftid = self.fieldtype.id
         if ftid == 5:
-            self.__serialiser = OntologyFieldSerialiser(self.schema.db, self.schema.language)
+            setid = self.params.get("setid")
+            if not setid: setid = self.params.get("set")
+            if not setid: setid = self.params.get("sets")
+            if not setid:
+                log.warn("OntologyASF without setid? %s" % (self.params))
+                self._serializer = SchemaFieldSerialiser()
+            self._serializer = OntologyFieldSerialiser(self.schema.db, self.schema.language, int(setid))
         elif ftid == 4:
-            self.__serialiser = AdHocLookupFieldSerialiser(self.params["values"])
+            self._serializer = AdHocLookupFieldSerialiser(self.params["values"])
         elif ftid in (3,8):
-            self.__serialiser = DBLookupFieldSerialiser(self.schema.db, *map(self.params.get, ["table","key","label"]))
+            self._serializer = DBLookupFieldSerialiser(self.schema.db, *map(self.params.get, ["table","key","label"]))
         elif ftid == 12:
-            self.__serialiser = FromFieldSerialiser()
+            self._serializer = FromFieldSerialiser()
         else:
-            self.__serialiser = SchemaFieldSerialiser()
+            self._serializer = SchemaFieldSerialiser()
             
-        return self.__serialiser
+        return self._serializer
 
     def deserialize(self, value):
-        val = self._serialiser.deserialize(value)
-        log.debug("%s/%s deserialised %r to %r" % (self, self._serialiser, value, val))
+        val = self.serializer.deserialize(value)
+        log.debug("%s/%s deserialised %r to %r" % (self, self.serializer, value, val))
         return val
     def getTargetType(self):
-        return self._serialiser.getTargetType()   
+        return self.serializer.getTargetType()   
     
 
 
@@ -132,7 +138,7 @@ class LookupFieldSerialiser(SchemaFieldSerialiser):
 class AdHocLookupFieldSerialiser(LookupFieldSerialiser):
     def __init__(self, valuestr):
         self._labels = {}
-        for i, val in enumerate(self.params['values'].split(";")):
+        for i, val in enumerate(valuestr.split(";")):
             if ":" in val:
                 i, val = val.split(":")
                 i = int(i)
@@ -194,15 +200,24 @@ class FromFieldSerialiser(SchemaFieldSerialiser):
         
         
 class OntologyFieldSerialiser(SchemaFieldSerialiser):
-    def __init__(self, db, language):
+    def __init__(self, db, language, setid):
         self.db = db
         self.language = language
+        self.setid = setid
     def deserialize(self, value):
         if value is None: return None
         return ont.Object(self.db, value, languageid=self.language)
     def getTargetType(self):
         return ont.Object
-            
+    @property
+    def set(self):
+        try:
+            return self._set
+        except AttributeError: pass
+        self._set = ont.Set(self.db, self.setid)
+        return self._set
+
+
 def getValue(unit, field):
     if unit is None: return None
     return unit.getValue(field.fieldname)
@@ -210,7 +225,7 @@ def getValue(unit, field):
 class FieldColumn(ObjectColumn):
     """ObjectColumn based on a AnnotationSchemaField"""
     def __init__(self, field, article):
-        ObjectColumn.__init__(self, field.label, fieldname=field.fieldname, fieldtype=getFieldType(field))
+        ObjectColumn.__init__(self, field.label, fieldname=field.fieldname, fieldtype=field.getTargetType())
         self.field = field
         self.article = article
         self.valuelabels = {}

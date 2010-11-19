@@ -272,7 +272,7 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         
         
 if __name__ == '__main__':
-    import amcatlogging; amcatlogging.debugModule("cachable2", "amcatmemcache")
+    #import amcatlogging; amcatlogging.debugModule("cachable2", "amcatmemcache")
     #t = TestAmcatMemcache('testDelete')
     #t.setUp()
     #t.testAddFK()

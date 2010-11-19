@@ -414,14 +414,14 @@ class Property(object):
 class DBProperty(Property):
     """Property that retrieves its value from the database"""
 
-    def __init__(self, targetclass=None, table=None, getcolumn=None, **kargs):
+    def __init__(self, targetclass=None, table=None, getcolumn=None, constructor=None, **kargs):
         Property.__init__(self, **kargs)
         self.targetclass = targetclass
         self.table = table
         self.getcolumn = getcolumn
         
         self.tablehook = None # function obj -> table
-        self.postprocess = None # function(obj, child) -> child
+        self.constructor = constructor # function(obj, db, values) -> child
     def _initialise(self, cls, propname):
         if self._initialised: return
         super(DBProperty, self)._initialise(cls, propname)
@@ -440,23 +440,20 @@ class DBProperty(Property):
         @param dbvalues: the row tuple as returned from the db
         @return object: a single 'domain' object
         """
+        log.debug("Creating %r.%s object from %r, targetclass=%s, constructor=%s" % (obj, self, dbvalues, self.targetclass, self.constructor))
+        if self.constructor:
+            return self.constructor(obj, obj.db, *dbvalues)
         if self.targetclass:
             if dbvalues == (None,) * len(dbvalues): 
                 return None
             if type(self.targetclass) == tuple:
                 if len(self.targetclass) != len(dbvalues):
                     raise ValueError("If targetclass is a tuple, #columns should equal #classes")
-                return tuple(self._postprocess(obj, c(obj.db, v))
-                             for (c, v) in zip(self.targetclass, dbvalues))
+                return tuple(c(obj.db, v) for (c, v) in zip(self.targetclass, dbvalues))
             else:
-                return self._postprocess(obj, self.targetclass(obj.db, *dbvalues))
-        return self._postprocess(obj, dbvalues[0])
+                return self.targetclass(obj.db, *dbvalues)
+        return dbvalues[0]
 
-    def _postprocess(self, obj, child):
-        log.debug("Created %r.%r child %r" % (obj, self, child))
-        if self.postprocess: self.postprocess(obj, child)
-        return child
-    
     def objectToDbrow(self, obj, *dbvalues):
         """Convert an amcat object to a db row
         
@@ -538,7 +535,7 @@ class DBProperty(Property):
         self.cache(obj, val, isData=True)
         
 class ForeignKey(DBProperty):
-    def __init__(self, targetclass=None, sequencetype=None, includeOwnID=False, **kargs):
+    def __init__(self, targetclass=None, sequencetype=None, constructor=None, includeOwnID=False, **kargs):
         """Create a 'foreign key' property
 
         Getting the property will create a sequence of domain objects
@@ -549,7 +546,7 @@ class ForeignKey(DBProperty):
           None for returning a generator
         @param includeOwnID: if True, create objects using childid=(ownid,retrieved) 
         """
-        DBProperty.__init__(self, targetclass, **kargs)
+        DBProperty.__init__(self, targetclass, constructor=constructor, **kargs)
         self.sequencetype = sequencetype
         self.includeOwnID = includeOwnID
 
@@ -632,4 +629,3 @@ class UnknownTypeException(Exception):
 
 
 
-#import amcatlogging; amcatlogging.debugModule()

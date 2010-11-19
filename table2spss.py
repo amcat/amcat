@@ -15,7 +15,8 @@ def clean(s, maxchars=None):
     return s
 
 def getSPSSFormat(type):
-    if type in (int, IDLabel): return " (F8.0)"
+    if type == int: return " (F8.0)"
+    if issubclass(type, IDLabel): return " (F8.0)"
     if type == float: return " (F8.3)"
     if type == str: return " (A255)"
     if type == datetime.datetime: return " (date10)"

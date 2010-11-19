@@ -126,7 +126,8 @@ class CodingJob(Cachable):
             self.db.insert('codingjobs_articles', {'codingjobid' : self.id, 'setnr' : setnr, 'articleid' : aid}, 
                 retrieveIdent = False)
         self.db.commit()
-        
+Codingjob = CodingJob
+
 class CodingJobSet(Cachable):
     __table__ = 'codingjobs_sets'
     __idcolumn__ = ['codingjobid', 'setnr']
@@ -179,7 +180,7 @@ class CodedUnit(object):
         
     def __getattr__(self, attr):
         # if not found, check fields
-        if "_" in attr: return super(CodedUnit, self).__getattribute__(attr)
+        if attr.startswith("_"): return super(CodedUnit, self).__getattribute__(attr)
         log.debug("__getattr__(%r), in fields %s?" % (attr, self.fields))
         if attr in self.fields:
             if attr not in self._values:
@@ -222,12 +223,9 @@ class CodedArticle(Cachable, CodedUnit):
 
     def getSentenceTable(self):
         return self.set.job.unitSchema.table
-    def createSentence(self, s):
-        s.ca = self
-        s.annotationschema = self.set.job.unitSchema
-        s.table = s.annotationschema.table
-    sentences = ForeignKey(lambda:CodedSentence)
-    sentences.postprocess=createSentence
+    def createSentence(self, db, arrowid):
+        return CodedSentence(db, arrowid, self)
+    sentences = ForeignKey(lambda:CodedSentence, constructor=createSentence)
     sentences.tablehook=getSentenceTable
 #        self.addDBroperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
 
@@ -236,17 +234,24 @@ class CodedArticle(Cachable, CodedUnit):
         return self.set.job.articleSchema
     def getArticle(self):
         return self.article
-    
+
+    @property
+    def confidence(self):
+        return .99
+    #confidence = DBProperty()self.addDBProperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
 
 class CodedSentence(CodedUnit, Cachable):
     __idcolumn__ = 'arrowid'
     ca = DBProperty(CodedArticle)
     sentence = DBProperty(lambda:sentence.Sentence)
-
     
-    def __init__(self, db, arrowid):
+    
+    def __init__(self, db, arrowid, ca):
         Cachable.__init__(self, db, arrowid)
         CodedUnit.__init__(self)
+        self.ca = ca
+        self.annotationschema = ca.set.job.unitSchema
+        self.__table__ = self.annotationschema.table
 
 # def getCodedArticle(db, cjaid):
 #     cjid = db.getValue("select codingjobid from codingjobs_articles where codingjob_articleid = %i"  % cjaid)
@@ -263,7 +268,6 @@ def getCACoders(cas):
 
 def getValue(row, schemafield):
     val = row.getValue(schemafield)
-    val = schemafield.deserialize(val)
     return val
 
 def getCodingTable(units, valfunc=getValue, coder=True):
