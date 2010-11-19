@@ -712,8 +712,6 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
     """
     if strings_only and isinstance(s, (types.NoneType, int)):
         return s
-    if isinstance(s, Promise):
-        return unicode(s).encode(encoding, errors)
     elif not isinstance(s, basestring):
         try:
             return str(s)
@@ -726,6 +724,7 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
                         errors) for arg in s])
             return unicode(s).encode(encoding, errors)
     elif isinstance(s, unicode):
+        s = unicode(s)
         return s.encode(encoding, errors)
     elif s and encoding != 'utf-8':
         return s.decode('utf-8', errors).encode(encoding, errors)
