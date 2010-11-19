@@ -705,7 +705,8 @@ def quotesql(strOrSeq):
             return "cast(%s as varchar(8000))" % sqlbytes(bytes)
     elif type(strOrSeq) in (str, unicode):
         if type(strOrSeq) == unicode:
-            strOrSeq = strOrSeq.encode('latin-1')
+            strOrSeq = toolkit.smart_str(strOrSeq, encoding='latin-1', errors='replace')
+            #strOrSeq = strOrSeq.encode('latin-1')
         strOrSeq = strOrSeq.replace("\r\n","\n")
         strOrSeq = strOrSeq.replace("\n\r","\n")
         strOrSeq = strOrSeq.replace("\r","\n")
