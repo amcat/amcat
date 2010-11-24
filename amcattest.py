@@ -88,6 +88,9 @@ class AmcatTestCase(unittest.TestCase):
         original = sequence
         sequence = toolkit.getseq(sequence)
         self.assertTrue(sequence, "empty (converted) sequence: %r --> %r" % (original, sequence))
+    def assertIsInstance(self, obj, cls):
+        self.assertTrue(isinstance(obj, cls), "%r is not an instance of %s" % (obj, cls))
+        
 
 def main():
     amcatlogging.setStreamHandler()
