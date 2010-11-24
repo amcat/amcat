@@ -53,7 +53,7 @@ class DBWordFeatureSet(object):
         self.memo = collections.defaultdict(list)
 
         for subset in toolkit.splitlist(units, 1000):
-            aidsel = toolkit.intselectionSQL("articleid", map(getAID, subset))
+            aidsel = self.db.intSelectionSQL("articleid", map(getAID, subset))
             idsel = ""
             #idsel = "AND (%s)" % toolkit.intselectionSQL("id", self.lid2fno.keys())
             SQL = "select articleid, id, sum(n) from %s where analysisid=3 and (%s) %s group by articleid, id" % (self.view, aidsel, idsel)
