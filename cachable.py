@@ -99,7 +99,7 @@ class Cachable(idlabel.IDLabel):
         #sanity check on idcolumn/id
         if id and '__idcolumn__' in self.__class__.__dict__:
             if type(self.__idcolumn__) in (str, unicode) and type(id) <> int:
-                raise TypeError("Type Mismatch between icolumn %r and id %r on object %r" %
+                raise TypeError("Type Mismatch between idcolumn %r and id %r on object %r" %
                                 (self.__idcolumn__, id, self.__class__.__name__))
         #else: print self.__class__.__name__
 
