@@ -21,13 +21,16 @@
 
 External Scripts are scripts that are supposed to be run as background
 processes, e.g. for creating a Lucene index or for preparing an SPSS
-export file.
+export file. 
 
-This module should not be used directly, but rather and concrete
-script will inherit from the L{ExternalScript} class.
+The ExternalScript and Invocation classes are Cachables representing the
+externalscripts and _invocations tables, respectively. They can be used
+to easily acquire the concrete base object and monitor progress.
 
-In principle, there are three use cases for subclasses of
-ExternalScript:
+The L{ExternalScriptBase} from this module should not be used
+directly, but concrete script will inherit from this class. In
+principle, there are three use cases for subclasses of
+ExternalScriptBase:
 
 1) a _caller_ will use the object to find out which arguments are
   needed and to start the background process using
@@ -42,10 +45,40 @@ ExternalScript:
 """
 
 import logging; log = logging.getLogger(__name__)
-import toolkit, subprocess, inspect, sys, idlabel
+import toolkit, subprocess, inspect, sys, idlabel, user
 import progress
+from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
 
-class ExternalScript(object):
+class ExternalScript(Cachable):
+    __table__ = 'externalscripts'
+    __idcolumn__ = 'scriptid'
+
+    modulename, classname = DBProperties(2)
+
+    def getInstance(self):
+        mod = __import__(self.modulename, fromlist=self.classname)
+        cls = getattr(mod, self.classname)
+        return cls()
+
+def getScript(db, scriptid):
+    return ExternalScript(db, scriptid).getInstance()
+
+class Invocation(Cachable):
+    __table__ = 'externalscripts_invocations'
+    __idcolumn__ = 'invocationid'
+
+    script = DBProperty(ExternalScript)
+    user = DBProperty(user.User)
+    insertdate, outfile, errfile, argstr, pid = DBProperties(5)
+
+    def getScript(self):
+        return self.script.getInstance()
+    def getProgress(self):
+        log = open(self.errfile)
+        return self.script.getInstance().interpretStatus(log)
+
+
+class ExternalScriptBase(object):
     """Class that represents an external script such as a codingjob extraction script"""
 
     def __init__(self, command=None):
@@ -91,7 +124,7 @@ class ExternalScript(object):
 
         @return: a L{progress.ProgressMonitor} object
         """
-        pass 
+        return progress.readLog(errstream.read(), monitorname=self.__class__.__name__)
 
     def _serialise(self, obj):
         """Helper function to serialise an argument or data line to a str"""
@@ -128,7 +161,9 @@ class ExternalScript(object):
         @param err: the error stream to use
         @param args: the arguments as parsed by _parseArgs
         """
-        import amcatlogging; amcatlogging.setStreamHandler(err)
+        import amcatlogging
+        amcatlogging.setStreamHandler(err)
+        amcatlogging.infoModule()
         self.pm = progress.ProgressMonitor(self.__class__.__name__)
         self.pm.listeners.add(progress.TickLogListener(log, 20))
     
