@@ -34,8 +34,8 @@ import re
 from contextlib import contextmanager
 
 
-STATE_NOTSTARTED, STATE_STARTED, STATE_DONE = 0,1,2
-STATE_LABELS = "not-started", "started", "done"
+STATE_NOTSTARTED, STATE_STARTED, STATE_DONE, STATE_ERROR = 0,1,2,3
+STATE_LABELS = "not-started", "started", "done", "error"
 
 class ProgressMonitor(object):
     """Eclipse-inspired ProgressMonitor
@@ -51,6 +51,7 @@ class ProgressMonitor(object):
     
     def __init__(self, name=None, taskname=None, units=100):
         """If taskname is given, calls L{start}"""
+        self.exception = None
         self.name = name
         self.listeners = set()
         self.progress = 0 # progress so far
@@ -62,7 +63,9 @@ class ProgressMonitor(object):
             self.taskname = None
 
     def start(self, task="Task", units=100):
-        """Start this monitor with the given name and #units to work"""
+        """Start this monitor with the given name and #units to work
+
+        Further calls to start will result in an error"""
         self._checkstate(STATE_NOTSTARTED)
         self.state = STATE_STARTED
         self.taskname = task
@@ -74,10 +77,55 @@ class ProgressMonitor(object):
         self.progress += n
         self._fire()
     def done(self):
-        """Indicate that this progress monitor is done"""
+        """Indicate that this progress monitor is done
+
+        Further calls to worked will result in an error"""
         self._checkstate(STATE_STARTED)
         self.state = STATE_DONE
         self._fire(True)
+    def error(self, exception):
+        """Indicate that this monitor has encountered an error
+
+        Further calls to worked or done will result in an error"""
+        self.state = STATE_ERROR
+        self.exception = exception
+        self._fire(True)
+
+    def checkError(self):
+        """Raises the exception if the monitor has one, otherwise returns silently"""
+        if self.exception is not None:
+            if isinstance(self.exception, BaseException):
+                raise self.exception
+            else:
+                raise Exception(self.exception)
+    def percentDone(self):
+        """@return: float representing the proportion of work done"""
+        if self.progress is None: return None
+        if self.units is None or self.units == 0: return None
+        
+        return float(self.progress) / self.units
+    def isDone(self, checkError=True):
+        """ check whether the progress is 'done', and raise except if error
+        @param checkError: if False, do not check for (and raise) errors 
+        @return: bool whether the progress is done or not"""
+        self.checkError()
+        return self.state == STATE_DONE
+                
+    def submonitor(self, workunits, name=None):
+        """Create a submonitor to delegate part of the work to.
+        The resulting monitor has to be start()ed before use!
+
+        @param workunits: the number of units of parent work that the
+          submonitor will do
+        @param name: the name of the submonitor
+        @return: a not-started ProgressMonitor object
+        """
+        m = ProgressMonitor(name)
+        m.listeners.add(SubmonitorListener(self, workunits))
+        return m
+
+    def monitored(self, taskname, units, submonitorwork=None):
+        return monitored(taskname, units, monitor=self, submonitorwork=submonitorwork)
 
     def _checkstate(self, state):
         """Check whether the monitor is in given state, raise Exception otherwise"""
@@ -90,27 +138,11 @@ class ProgressMonitor(object):
             with amcatlogging.logExceptions(log):
                 listener(self, stateChanged)
 
-    def percentDone(self):
-        """@return: float representing the proportion of work done"""
-        if self.progress is None: return None
-        if self.units is None or self.units == 0: return None
-        
-        return float(self.progress) / self.units
-    def isDone(self):
-        """@return: bool whether the progress is done or not"""
-        return self.state == STATE_DONE
-                
-    def submonitor(self, workunits):
-        """Create a submonitor to delegate part of the work to.
-        The resulting monitor has to be start()ed before use!
-
-        @param workunits: the number of units of parent work that the
-          submonitor will do
-        @return: a not-started ProgressMonitor object
-        """
-        m = ProgressMonitor()
-        m.listeners.add(SubmonitorListener(self, workunits))
-        return m
+    def __str__(self):
+        pd = self.percentDone()
+        if pd is not None: pd = "%s%%" % int(pd*100)
+        return "[PM %s: %s %s%s %s/%s %s]" % (self.name, self.taskname, STATE_LABELS[self.state],
+                                              self.exception or "", self.progress, self.units, pd)
 
 class SubmonitorListener(object):
     """Listener to connect a submonitor to its parent monitor"""
@@ -148,7 +180,9 @@ class TickLogListener(object):
             msg = "[Progress"
             if monitor.name: msg += ":%s" % monitor.name
             msg += "] %s" % (monitor.taskname)
-            if stateChanged:
+            if monitor.state == STATE_ERROR:
+                msg += " error (%s)" % monitor.exception
+            elif stateChanged:
                 msg += " %s (%i units)" % (STATE_LABELS[monitor.state], monitor.units)
             else:
                 msg += " %s/%s (%s%%)" % (monitor.progress, monitor.units, int(100*monitor.percentDone()))
@@ -160,31 +194,35 @@ class TickLogListener(object):
                     [], exc_info=None, func=func))
 
 @contextmanager
-def monitored(name, units, monitor=None, submonitorwork=None):
+def monitored(taskname, units, monitor=None, monitorname=None, submonitorwork=None):
     """ContextManager to help use a monitor for a task
 
-    @name: the name of the task
+    @taskname: the name of the task
     @units: the number of units work
     @monitor: if given, use this monitor instead of creating
       a new one
+    @monitorname: if given, use this name when creating a (sub)monitor
     @submonitorwork: if this and monitor are given, create a
       submonitor of the given monitor representing this amount
       of work in the parent monitor
     """
-    if monitor is None: monitor=ProgressMonitor()
-    elif submonitorwork: monitor=monitor.submonitor(submonitorwork)
-    monitor.start(name, units)
+    if monitor is None: monitor=ProgressMonitor(monitorname)
+    elif submonitorwork: monitor=monitor.submonitor(submonitorwork, monitorname)
+    monitor.start(taskname, units)
     try:
         yield monitor
-    finally:
+    except StandardError, e: # don't catch generatorexit etc. from 2.6 this can be reverted to Exception?
+        #log.exception(str(e))
+        monitor.error(e)
+    else:
         monitor.done()
             
-def tickerate(seq, msg=None, log=None, logticks=10, monitor=None, submonitorwork=None):
+def tickerate(seq, msg=None, log=None, logticks=10, monitor=None, monitorname=None, submonitorwork=None):
     if type(seq) not in (list, tuple, set):
         seq = list(seq)
     n = len(seq)
     if msg is None: msg = "Iteration"
-    with monitored(msg, n, monitor, submonitorwork) as m:
+    with monitored(msg, n, monitor, monitorname, submonitorwork) as m:
         if log: m.listeners.add(TickLogListener(log, logticks))
         for elem in seq:
             m.worked(1)
@@ -197,21 +235,47 @@ class IllegalMonitorStateException(Exception):
         Exception.__init__(self, "Monitor is required to be in state %s; but is in state %s" %
                            (STATE_LABELS[goalstate], STATE_LABELS[realstate]))
 
-def readLog(logstr, name, monitor=None):
-    if monitor is None: monitor = ProgressMonitor()
-    pattern = re.compile(r"INFO] progress %s\s+(.*?)\s*\((.*\))" % name)
+def readLog(logstr, monitorname=None, taskname=None):
+    """Interpret the log messages of a TickLogListener
+
+    @param logstr: the log string emitted by the listener
+    @param monitorname: if given, the name of the progress monitor to search
+    @param taskname: if given, the name of the task to search
+    @return: a ProgressMonitor object
+    """
+    pattern = re.compile(r"INFO\] \[Progress:?(.*?)\]\s+(.*?)\s+(.*?)\s*\((.*?)\)")
+    monitor = None
+    # for now, interpret lines from top to bottom (reverse with break = more efficient, but who cares?)
     for line in logstr.split("\n"):
         m = pattern.search(line)
-        if not m: continue
-        action, units = m.groups()
+        if not m: continue # not a progress line
+        mname, tname, action, units = m.groups()
+        # check whether it is "our" monitor/task
+        if (monitorname is not None) and mname != monitorname: continue
+        if (taskname is not None) and tname != taskname: continue
+        # start a monitor if needed
+        if monitor is None:
+            monitor = ProgressMonitor(mname or None)
+            monitorname = mname
+        #interpret action
         if action == "started":
             units = int(units.split()[0])
-            monitor.start(name, units)
+            monitor.progress = 0
+            monitor.taskname = tname
+            monitor.units = units
+            monitor.state = STATE_STARTED
         elif action == "done":
             monitor.done()
-        else:
-            worked = int(action.split("/")[0])
+        elif action == "error":
+            monitor.error(units)   
+        elif "/" in action:
+            worked, total = map(int, action.split("/"))
             monitor.progress = worked
+            monitor.taskname = tname
+            monitor.units = total
+            monitor.state = STATE_STARTED
+        else:
+            raise Exception("Cannot interpret action %r" % action)
     return monitor
         
 if __name__ == '__main__':
@@ -231,5 +295,6 @@ if __name__ == '__main__':
     for i in tickerate(range(100), log=log, monitor=p, submonitorwork=30):
         pass#if i > 50: break
     p.done()
+    p.error("!")
 
-    print readLog(sio.getvalue(), "test").percentDone()
+    print readLog(sio.getvalue(), "x33")
