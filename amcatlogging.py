@@ -176,7 +176,7 @@ def collect(level=logging.DEBUG, destination=None):
         print format(l)
     """
     mh = MemoryHandler(destination)
-    mh.setLevel(logging.DEBUG)
+    mh.setLevel(level)
     mh.addFilter(CurrentThreadFilter())
     logger = logging.getLogger()
     logger.addHandler(mh)
