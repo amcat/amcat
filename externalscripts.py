@@ -43,6 +43,7 @@ ExternalScript:
 
 import logging; log = logging.getLogger(__name__)
 import toolkit, subprocess, inspect, sys, idlabel
+import progress
 
 class ExternalScript(object):
     """Class that represents an external script such as a codingjob extraction script"""
@@ -90,7 +91,7 @@ class ExternalScript(object):
 
         @return: a L{progress.ProgressMonitor} object
         """
-        pass
+        pass 
 
     def _serialise(self, obj):
         """Helper function to serialise an argument or data line to a str"""
@@ -127,11 +128,12 @@ class ExternalScript(object):
         @param err: the error stream to use
         @param args: the arguments as parsed by _parseArgs
         """
-        pass
+        import amcatlogging; amcatlogging.setStreamHandler(err)
+        self.pm = progress.ProgressMonitor(self.__class__.__name__)
+        self.pm.listeners.add(progress.TickLogListener(log, 20))
     
     def runFromCommand(self):
         """Parse the command line arguments and L{_run} the script"""
-        import amcatlogging; amcatlogging.setup()
         args = self._parseArgs(*sys.argv[1:])
         self._run(sys.stdin, sys.stdout, sys.stderr, *args)
         
