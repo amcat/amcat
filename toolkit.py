@@ -1061,6 +1061,12 @@ def getCallingModule(depth=1):
     return caller[0].f_globals['__name__']
 
 
+def getCallingModuleFilename(depth=1):
+    """Return the module name of the caller (see L{getCaller})"""
+    depth = depth + 1 # me, caller, caller's caller
+    caller = inspect.stack()[depth]
+    return caller[1]
+
 def HSVtoHTML(h, s, v):
     """Convert HSV (HSB) colour to HTML hex string"""
     rgb = colorsys.hsv_to_rgb(h, s, v)
