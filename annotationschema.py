@@ -88,12 +88,15 @@ class AnnotationSchemaField(Cachable):
         
         ftid = self.fieldtype.id
         if ftid == 5:
-            setid = self.params.get("setid")
-            if not setid: setid = self.params.get("set")
-            if not setid: setid = self.params.get("sets")
-            if not setid:
-                log.warn("OntologyASF without setid? %s" % (self.params))
-                self._serializer = SchemaFieldSerialiser()
+            if self.params:
+                setid = self.params.get("setid") if self.params else None
+                if not setid: setid = self.params.get("set")
+                if not setid: setid = self.params.get("sets")
+                if not setid:
+                    log.warn("OntologyASF without setid? %s" % (self.params))
+                    self._serializer = SchemaFieldSerialiser()
+            else:
+                setid = 201
             self._serializer = OntologyFieldSerialiser(self.schema.db, self.schema.language, int(setid))
         elif ftid == 4:
             self._serializer = AdHocLookupFieldSerialiser(self.params["values"])
@@ -124,7 +127,7 @@ class SchemaFieldSerialiser(object):
         """Return the type of objects dererialisation will yield
 
         @return: a type object such as IDLabel or ont.Object"""
-        return object
+        return str#object
     
 class LookupFieldSerialiser(SchemaFieldSerialiser):
     def deserialize(self, value):

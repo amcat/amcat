@@ -55,6 +55,7 @@ def getCodedSentencesFromCodingjobs(codingjobs):
 class CodingJob(Cachable):
     __table__ = 'codingjobs'
     __idcolumn__ = 'codingjobid'
+    __labelprop__ = 'name'
     name, insertdate = DBProperties(2)
 
     unitSchema = DBProperty(annotationschema.AnnotationSchema, getcolumn="unitschemaid")
@@ -195,7 +196,7 @@ class CodedUnit(object):
         s = self.annotationschema
         vals = self.db.select(s.table, self._fields, self._getWhere())
         if len(vals) <> 1:
-            raise ValueError("CodedUnit values %r not len==1" % vals)
+            raise ValueError("CodedUnit values %r not len==1 %s %s %s" % (vals, s.table, self._fields, self._getWhere()))
         self._values = dict(zip(self.fields, vals[0]))
         log.debug("Loaded %r" % self._values)
     
