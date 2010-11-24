@@ -49,8 +49,9 @@ class ProgressMonitor(object):
     Progress can be delegated to a L{submonitor}
     """
     
-    def __init__(self, taskname=None, units=100):
+    def __init__(self, name=None, taskname=None, units=100):
         """If taskname is given, calls L{start}"""
+        self.name = name
         self.listeners = set()
         self.progress = 0 # progress so far
         self.units = None # total number of units to work
@@ -91,6 +92,9 @@ class ProgressMonitor(object):
 
     def percentDone(self):
         """@return: float representing the proportion of work done"""
+        if self.progress is None: return None
+        if self.units is None or self.units == 0: return None
+        
         return float(self.progress) / self.units
     def isDone(self):
         """@return: bool whether the progress is done or not"""
@@ -141,7 +145,9 @@ class TickLogListener(object):
         # log message if stateChanged OR we reached a new 'tick'
         tick = int(self.nticks *  monitor.percentDone())
         if stateChanged or (tick > self.lasttick):
-            msg = "progress %s" % (monitor.taskname)
+            msg = "[Progress"
+            if monitor.name: msg += ":%s" % monitor.name
+            msg += "] %s" % (monitor.taskname)
             if stateChanged:
                 msg += " %s (%i units)" % (STATE_LABELS[monitor.state], monitor.units)
             else:
@@ -215,7 +221,7 @@ if __name__ == '__main__':
     sio= StringIO.StringIO()
     amcatlogging.setStreamHandler(sio)
     
-    p = ProgressMonitor()
+    p = ProgressMonitor("x33")
     p.listeners.add(TickLogListener(log, 5))
     p.start("test")
 
