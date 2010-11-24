@@ -1,10 +1,6 @@
 import datasource
 from amcatmetadatasource import ConceptMapper, MappedField
-import codingjob
-import article
 import collections
-import ont
-import project
 import toolkit
 import cachable
 
@@ -15,6 +11,7 @@ IDEAL_ATYPE = 2
 
 class NETDataSource(datasource.DataSource):
     def __init__(self, dm, db, projectid):
+        import project
         artfield = MappedField(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
         subject = datasource.Field(self,dm.getConcept("subject"))
         object = datasource.Field(self,dm.getConcept("object"))
@@ -35,7 +32,7 @@ class NETDataSource(datasource.DataSource):
         self.db = db
     
     def deserialize(self, concept, id):
-        
+        import ont
         if concept.label in ("subject","object"):
             return ont.Object(self.db, id)
     
@@ -82,6 +79,7 @@ class ArticleArrowMapping(datasource.Mapping):
         self.categories = None
 
     def getObject(self, x):
+        import ont
         if self.categories is None:
             self.categories = {}
             for pol, party in self.db.doQuery("select distinct objectid, office_objectid from o_politicians_functions where functionid=0 and todate is null"):

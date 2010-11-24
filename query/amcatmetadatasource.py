@@ -9,10 +9,11 @@ try:
     nomx = False
 except:
     nomx = True
-import dbtoolkit, toolkit, sources, project, article 
+
 
 from datasource import DataSource, Mapping, Field, FieldConceptMapping
 from itertools import imap, izip
+import toolkit
 
 #SQL queries for finding the date formats
 DATESQL = "convert(datetime, convert(int, %(table)s.date))"
@@ -49,6 +50,7 @@ class AmcatMetadataSource(DataSource):
 	DataSource.__init__(self, self.createMappings(datamodel, sourcetypecolumn))
         
     def createMappings(self, datamodel, sourcetypecolumn):
+        import sources, project, article 
         articlefield = DatabaseField(self, datamodel.getConcept("article"), ["articles", "storedresults_articles"], "articleid", ConceptMapper(self.db, article.Article))
         batch = DatabaseField(self, datamodel.getConcept("batch"), ["articles", "batches"], "batchid", ConceptMapper(self.db, project.Batch))
         headline = DatabaseField(self, datamodel.getConcept("headline"), ["articles"], "headline")

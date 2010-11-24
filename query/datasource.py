@@ -26,12 +26,10 @@ Interface Concept:
 
 import collections
 from idlabel import Identity, IDLabel
-import project, toolkit, article, sources
+#import project, toolkit, article, sources
 #import association, amcatxapian, dbtoolkit,article
 ################### Base implementations ##############################
 
-import datamodel
-DataModel = datamodel.DataModel
 
 
 class Field(Identity):

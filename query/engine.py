@@ -8,7 +8,6 @@ import toolkit
 import table3, tableoutput
 import filter, aggregator # not used, import to allow indirect access
 import enginebase
-import article # for quote
     
 def postprocess(table, sortfields, limit, offset):
     if sortfields:
@@ -70,6 +69,7 @@ class QueryEngine(enginebase.QueryEngineBase):
     def getQuote(self, art, *args, **kargs):
         #import dbtoolkit
         #article.db = dbtoolkit.amcatDB()
+        import article
         if type(art) == int: art = article.Article(self.db, art)
         q = art.quote(*args, **kargs)
         if not q:
