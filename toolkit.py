@@ -704,6 +704,33 @@ def toJSON(value):
     
     return ''
 
+def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
+    """
+    Returns a bytestring version of 's', encoded as specified in 'encoding'.
+
+    If strings_only is True, don't convert (some) non-string-like objects.
+    """
+    if strings_only and isinstance(s, (types.NoneType, int)):
+        return s
+    elif not isinstance(s, basestring):
+        try:
+            return str(s)
+        except UnicodeEncodeError:
+            if isinstance(s, Exception):
+                # An Exception subclass containing non-ASCII data that doesn't
+                # know how to print itself properly. We shouldn't raise a
+                # further exception.
+                return ' '.join([smart_str(arg, encoding, strings_only,
+                        errors) for arg in s])
+            return unicode(s).encode(encoding, errors)
+    elif isinstance(s, unicode):
+        s = unicode(s)
+        return s.encode(encoding, errors)
+    elif s and encoding != 'utf-8':
+        return s.decode('utf-8', errors).encode(encoding, errors)
+    else:
+        return s
+
 ###########################################################################
 ##                     Date(time) functions                              ##
 ###########################################################################
@@ -803,6 +830,23 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
         for df in _DATEFORMATS:
             date = df.readDate(datestr, american=american)
             if date: break
+        
+        datestr = datestr.lower()
+        if not date:
+            # For 'October 20, 2010'
+            for i, prefixes in enumerate(MONTHNAMES):
+                if datestr.startswith(prefixes):
+                    month_plus_day, year = datestr.split(',')
+                    day = month_plus_day.split(' ')[1]
+                    date = int(year), i+1, int(day)
+        
+        if not date:        
+            # For '22 November 2006 Wednesday 10:23 AM (Central European Time)'
+            s = datestr.split(' ')
+            for i, prefixes in enumerate(MONTHNAMES):
+                if s[1].startswith(prefixes):
+                    date = int(s[2]), i+1, int(s[0]) 
+            
         if not date:
             if lax: return
             raise ValueError("Could not parse datetime string '%s'" % (string))

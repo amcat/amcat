@@ -1,8 +1,9 @@
 import toolkit, idlabel
+from idlabel import Identity
 
-class Filter(toolkit.Identity):
+class Filter(Identity):
     def __init__(self, concept):
-        toolkit.Identity.__init__(self)
+        Identity.__init__(self)
         self.concept = concept
     def getValues(self):
         return None

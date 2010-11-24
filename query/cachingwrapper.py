@@ -7,6 +7,12 @@ import datetime
 import labelcachefactory
 import toolkit
 
+import amcatlogging
+#amcatlogging.debugModule()
+import logging; log = logging.getLogger(__name__)
+
+
+
 class CachingEngineWrapper(QueryEngineBase):
     def __init__(self, engine, cachedb, caching=True, useengine=True):
         self.engine = engine
@@ -20,50 +26,54 @@ class CachingEngineWrapper(QueryEngineBase):
         
     def getList(self, concepts, filters, sortfields=None, limit=None, offset=None, distinct=False):
         result = None
-        try:
+        with amcatlogging.logExceptions(logger=log):
             result = self.getCachedList(concepts, filters, distinct)
-        except Exception, e:
-            import traceback
-            traceback.print_exc()
-        if not result:
+        log.debug("Cached list found? %s "% bool(result))
+        if result is None:
             if not self.useengine:
                 raise Exception("Result not cached and engine disabled")
+            log.debug("result not found in cache, delegate to wrapped engine object")
             result = self.engine.getList(concepts, filters, distinct=distinct)
-            print "got result"
+            log.debug("got result from wrapped engine")
             if self.caching:
-                print "caching"
+                log.debug("caching result")
                 self.cacheList(result, concepts, filters, distinct)
         enginebase.postprocess(result, sortfields, limit, offset)
         return result 
 
     def getCachedList(self, concepts, filters, distinct):
+        """Get the list for the given concepts or filters from the cache, or return None if not found"""
         bitmask = self.getBits(concept.id for concept in concepts)
         filtermask = self.getBits(f.concept.id for f in filters)
         SQL = "SELECT id, concepts, filterconcepts, filtervalues FROM listcachetables WHERE (concepts & %s = %s) AND (filterconcepts & %s = filterconcepts)" % (bitmask, bitmask, filtermask)
         if not distinct: SQL += " AND (NOT distnct)"
-        print SQL
-        for id, cachedconcepts, filterconcepts, filtervalues in self.cachedb.doQuery(SQL):
-            print "CHECKING %i" % id
+        log.debug("Querying cache using %s" % SQL)
+        for cacheid, cachedconcepts, filterconcepts, filtervalues in self.cachedb.doQuery(SQL):
+            log.debug("CHECKING candidate table id %i" % cacheid)
             filterconceptids = [self.engine.model.getConcept(self.nconcepts-1-i) for (i, on) in enumerate(filterconcepts) if on == "1"]
             cachedconceptids = [self.engine.model.getConcept(self.nconcepts-1-i) for (i, on) in enumerate(cachedconcepts) if on == "1"]
             cachefilters = list(deserialiseFilters(filtervalues, filterconceptids))
             tofilter = filterSubsumption(filters, cachefilters)
             if tofilter is None:
-                print "Incompatible, skipping"
+                log.debug("Incompatible, skipping")
                 continue  # incompatible filters
             if set(f.concept for f in tofilter) - set(cachedconceptids):
-                print "Required filter concept not in concepts %s - %s = %s <> {}" % (set(f.concept for f in tofilter), set(cachedconceptids), set(f.concept for f in tofilter) - set(cachedconceptids))
+                log.debug("Required filter concept not in concepts %s - %s = %s <> {}" % (set(f.concept for f in tofilter), set(cachedconceptids), set(f.concept for f in tofilter) - set(cachedconceptids)))
                 continue
-            return self.getListFromCache(id, concepts, tofilter, distinct)
+            log.debug("Concepts and filters for %i compatible, returning result from that cache entry" % cacheid)
+            return self.getListFromCache(cacheid, concepts, tofilter, distinct)
+        log.debug("No suitable cache entry found, returning None")
+        return None 
 
     def getListFromCache(self, cid, concepts, tofilter, distinct):
+        """Build a Table from the cache entry cid and other options"""
         sql = "SELECT %s%s FROM listcachetable_%i" % (distinct and "DISTINCT " or "", ",".join(concept.label for concept in concepts), cid)
         if tofilter:
             sql += " WHERE (%s)" % ") AND (".join(f.getSQL() for f in tofilter)
         
         serialisers = list(tableserial.getColumns(concepts, IDLabelFactory=self.labelfactory))
         data = []
-        print sql
+        log.debug("Retrieveing cached data using %s" % sql)
         for row in self.cachedb.doQuery(sql):
             data.append([s.deserialiseSQL(val) for (s, val) in zip(serialisers, row)])
         return enginebase.ConceptTable(concepts, data)
@@ -240,3 +250,4 @@ if __name__ == '__main__':
     print tableoutput.table2unicode(l)
     
 
+   

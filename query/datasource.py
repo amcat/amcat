@@ -25,7 +25,7 @@ Interface Concept:
 """
 
 import collections
-from toolkit import Identity, IDLabel
+from idlabel import Identity, IDLabel
 import project, toolkit, article, sources
 #import association, amcatxapian, dbtoolkit,article
 ################### Base implementations ##############################
