@@ -117,10 +117,10 @@ def setSyslogHandler():
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
 
-def setStreamHandler():
+def setStreamHandler(*args, **kargs):
     """Add a StreamHandler to the root logger with module level filters"""
     root = logging.getLogger()
-    h = logging.StreamHandler()
+    h = logging.StreamHandler(*args, **kargs)
     h.setFormatter(AmcatFormatter(date=True))
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
