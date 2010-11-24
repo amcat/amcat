@@ -6,6 +6,8 @@ from idlabel import IDLabel
 import collections
 import os.path
 
+import logging; log = logging.getLogger(__name__)
+
 def clean(s, maxchars=None):
     if type(s) == str: s = s.decode('latin-1')
     if type(s) == unicode: s = s.encode('ascii','replace')
@@ -15,6 +17,7 @@ def clean(s, maxchars=None):
     return s
 
 def getSPSSFormat(type):
+    log.debug("Determining format of %s" % type)
     if type == int: return " (F8.0)"
     if issubclass(type, IDLabel): return " (F8.0)"
     if type == float: return " (F8.3)"
