@@ -48,6 +48,7 @@ def clienthandshake(socket):
     socket.flush()
     print "Reading server version"
     serverversion = socket.readint(checkerror=True)
+    if serverversion is None: raise Exception("Server returned invalid serverversion")
     print "Connected to AmCAT EngineServer version %i" % serverversion
     authenticateToServer(socket)
     serverok = socket.readint(checkerror=True)

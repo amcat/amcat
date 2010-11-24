@@ -4,6 +4,7 @@ from datasource import *
 from itertools import izip
 from amcatmetadatasource import DatabaseMapping
 from dbtoolkit import quotesql
+import dbtoolkit
 import datasource
 
 class Operation(object):
@@ -86,6 +87,7 @@ class DatabaseOperation(Operation):
         selectstr = ",".join("%s as v%i" % (f.getColumn(t), i)
                              for (i,(f,t)) in enumerate(sortedfields))
         
+        
         wherestr = " AND ".join("(%s)" % f for f in getFilters(self.db, self.edges))
         distinctstr = " DISTINCT " if state.distinct else ""
         sql = "SELECT %s %s FROM %s WHERE %s" % (distinctstr, selectstr, fromstr, wherestr)
@@ -163,10 +165,10 @@ def getFilters(db, edges):
                 yield node.filter.getSQL(field.getColumn(table))
     for col, values in valuefilters.iteritems():
         if all(type(v) == int for v in values):
-            if len(values) > 10000:
-                yield toolkit.intselectionTempTable(db, col, values)
-            else:
-                yield toolkit.intselectionSQL(col, values)
+            # if len(values) > 10000:
+                # yield toolkit.intselectionTempTable(db, col, values)
+            # else:
+             yield db.intSelectionSQL(col, values)
         else:
             yield "%s in (%s)" % (col, ",".join(map(toolkit.quotesql, values)))
         

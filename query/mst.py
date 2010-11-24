@@ -1,5 +1,6 @@
 
 import toolkit
+from idlabel import Identity
 
 def profile(s):
     pass
@@ -131,7 +132,7 @@ def getSolution(mappings, goal, prune=True):
     return sol
     
         
-class State(toolkit.Identity):
+class State(Identity):
     def __init__(self, edges=(), cost=0, nodes = None):
         self.edges = edges
         self.cost = cost

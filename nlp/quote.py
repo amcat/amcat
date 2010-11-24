@@ -1,3 +1,5 @@
+import re
+
 def _getQuoteWords(words):
     if type(words) not in (str, unicode): words = " ".join(words)
     words = re.sub(r'[^\w\s]+', '', words)

@@ -1,7 +1,7 @@
 import datasource 
 import article
 import ont2
-import toolkit
+import idlabel
 import categorise
 import lucenelib
 import dbtoolkit
@@ -12,7 +12,7 @@ from amcatmetadatasource import ConceptMapper, MappedField
 def getActor(db, obj):
     lbl = obj.labels.get(15)
     if not lbl: lbl = str(obj)
-    return toolkit.IDLabel(obj.id, lbl)
+    return idlabel.IDLabel(obj.id, lbl)
 
 class ActorIssueDataSource(OntologyDataSource):
     def __init__(self, dm, db, index):

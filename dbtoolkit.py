@@ -330,7 +330,8 @@ class amcatDB(object):
     def escapeFieldName(self, f):
         if self.dbType == "psycopg2":
             return f
-        return "[%s]"% f
+        
+        return "[%s]"% f.replace('.', '].[')
 
     def parametermark(self):
         return "%s" if self.dbType == "psycopg2" else "?"
