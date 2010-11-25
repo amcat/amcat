@@ -11,7 +11,7 @@ IDEAL_ATYPE = 2
 
 class NETDataSource(datasource.DataSource):
     def __init__(self, dm, db, projectid):
-        import project
+        import project, article
         artfield = MappedField(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
         subject = datasource.Field(self,dm.getConcept("subject"))
         object = datasource.Field(self,dm.getConcept("object"))

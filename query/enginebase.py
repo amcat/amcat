@@ -3,7 +3,7 @@ Query Engine Base class and module
 Does 'everything except for getList', ie everthing except for actually getting data
 """
 
-import sys, table3, toolkit
+import sys, table3, idlabel
 
 def postprocess(table, sortfields, limit, offset):
     if sortfields:
@@ -86,7 +86,7 @@ def aggregate(table, selectcolumns, aggregatecolumns):
     """
     dict = {}
     ids2objs = {}
-    def getid(o): return o.id if isinstance(o, toolkit.IDLabel) else o
+    def getid(o): return o.id if isinstance(o, idlabel.IDLabel) else o
     for row in table.getRows():
         objs = tuple(table.getValue(row, col) for col in selectcolumns)
         key = tuple(getid(o) for o in objs)
