@@ -2,7 +2,7 @@ import hashlib
 
 PORT = 26221
 KEYFILE = "/home/amcat/resources/key" # for amcat
-KEYFILE = "/usr/home/netframe/resources" # for parc
+KEYFILE = "/usr/home/netframe/resources/key" # for parc
 KEY = None
 
 REQUEST_LIST = 1
