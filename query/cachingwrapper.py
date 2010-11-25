@@ -219,11 +219,11 @@ CACHE_INIT_SQL = [
        filterconcepts bit(%(nconcepts)i),
        filtervalues bytea,
        distnct boolean)""",
-    """create table quotecache (
-       aid integer,
-       words varchar(4000),
-       quote varchar(4000),
-       primary key (aid, words))"""
+    # """create table quotecache (
+       # aid integer,
+       # words varchar(4000),
+       # quote varchar(4000),
+       # primary key (aid, words))"""
     ]
 
 if __name__ == '__main__':
