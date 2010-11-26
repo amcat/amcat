@@ -80,7 +80,7 @@ class CachingEngineWrapper(QueryEngineBase):
             
     
     def getQuote(self, article, words):
-        words = " ".join(toolkit.getQuoteWords(words))
+        words = " ".join(words or "") #toolkit.getQuoteWords(words)) # missing funciton
         try:
             q = self.getCachedQuote(article, words)
             if q:
@@ -90,7 +90,8 @@ class CachingEngineWrapper(QueryEngineBase):
                 q = self.engine.getQuote(article, [words])
                 self.cacheQuote(article, words, q)
             return q
-        except:
+        except Exception, e:
+            log.exception('getQuote exception')
             return self.engine.getQuote(article, [words])        
                                                       
     
