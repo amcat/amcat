@@ -353,9 +353,10 @@ class Property(object):
         
         Warning: This is mssql specific"""
         if self._nullable is None:
-            # Note: maybe this should move to dbtoolkit?
-            where = "id=OBJECT_ID('%s') AND name=%s" % (self._getTable(obj), dbtoolkit.quotesql(self._getColumns()))
-            self._nullable = bool(db.select('syscolumns', 'isnullable', where )[0])            
+            table = self._getTable(self.targetclass)
+            column = dbtoolkit.quotesql(self._getColumns()) 
+            self._nullable = db.isNullable(table, column)
+            
         return self._nullable
 
     def getType(self, obj=None):

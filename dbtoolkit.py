@@ -317,6 +317,14 @@ class amcatDB(object):
             return [val for (val,) in data]
         else:
             return data
+        
+    def isNullable(self, table, column):
+        if self.dbType == "mx.ODBC.unixODBC":
+            # Information about nullability is stored in 'syscolumns'
+            where = "id=OBJECT_ID('%s') AND name=%s" % (table, column)
+            return bool(self.select('syscolumns', 'isnullable', where )[0])
+        
+        raise Exception('Unsupported database (%s) for isNullable' % self.dbType)
 
     def doInsert(self, sql, retrieveIdent=1):
         """
