@@ -743,7 +743,7 @@ MONTHNAMES = (('jan', 'janv', 'ener'),
               ('jun', 'juin'),
               ('jul', 'juil'),
               ('aug', 'aout', 'agos'),
-              ('sep'),
+              ('sep', 'setem'),
               ('oct', 'okt'),
               ('nov'),
               ('dec', 'dez', 'dici'))
@@ -845,7 +845,7 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
             s = datestr.split(' ')
             for i, prefixes in enumerate(MONTHNAMES):
                 if s[1].startswith(prefixes):
-                    date = int(s[2]), i+1, int(s[0]) 
+                    date = int(s[2]), i+1, int(s[0])
             
         if not date:
             if lax: return
