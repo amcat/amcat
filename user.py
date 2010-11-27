@@ -19,14 +19,14 @@ class User(Cachable):
 
     permissionLevel = DBProperty(table="permissions_users", getcolumn="permissionid", deprecated=True)
     
-    userid, username, fullname, affiliation, active, email = DBProperties(6)
+    userid, username, fullname, affiliationid, active, email = DBProperties(6)
     language = DBProperty(lambda : language.Language)
     roles = ForeignKey(lambda : authorisation.Role, table="users_roles")
     projects = ForeignKey(lambda : project.Project, table="permissions_projects_users")
     projectroles = ForeignKey(lambda : (project.Project, authorisation.Role),
                               table="projects_users_roles", sequencetype=toolkit.multidict)
     
-    affiliationid = DBProperty(lambda : Affiliation, getcolumn="affiliationid")
+    affiliation = DBProperty(lambda : Affiliation, getcolumn="affiliationid")
     
     def haspriv(self, privilege, onproject=None):
         """If permission is denied, this function returns False,
@@ -43,6 +43,11 @@ class User(Cachable):
             return False
         
         return True
+    
+    @classmethod
+    def create(cls, db, idvalues=None, **props):
+                
+        super(User, cls).create(db, idvalues=None, **props)
         
     @property
     @toolkit.deprecated
