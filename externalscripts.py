@@ -42,6 +42,22 @@ ExternalScriptBase:
 3) a _monitor_ can use the object to interpret the output and error
   streams of the process, possibly based on the
   externalscripts_invocations table
+
+It is possible to run externalscripts from the command line in order to
+execute one of the scripts. This makes it easier to deal with pythonpath
+issues. The usage for that is:
+
+python externalscripts COMMAND SCRIPTID [ARGS] [<DATA]
+
+Where COMMAND is one of:
+INVOKE: call the script and add a database invocation entry
+CALL: call the script as an external command (using RUN), printing pid, out, and err
+RUN: run the script directly 
+
+Where SCRIPTID is the id of the script to call, and args and data are
+passed to the script as normal.
+
+for CALL and INVOKE, DATA *must* be supplied (if need be with </dev/null) or script will hang!
 """
 
 import logging; log = logging.getLogger(__name__)
@@ -56,64 +72,47 @@ def _getClass(modulename, classname):
     mod = __import__(modulename, fromlist=classname)
     return getattr(mod, classname)
 
+IMPORT_SCRIPT = _getClass
+
 
 class ExternalScript(Cachable):
     __table__ = 'externalscripts'
     __idcolumn__ = 'scriptid'
 
-    modulename, classname = DBProperties(2)
+    modulename, classname, label, category = DBProperties(4)
 
-    def getInstance(self, importer=_getClass):
-        cls = importer(self.modulename, self.classname)
+    def getInstance(self):
+        cls = IMPORT_SCRIPT(self.modulename, self.classname)
         return cls()
 
-def getScript(db, scriptid):
-    return ExternalScript(db, scriptid).getInstance()
-
-class Invocation(Cachable):
-    __table__ = 'externalscripts_invocations'
-    __idcolumn__ = 'invocationid'
-
-    script = DBProperty(ExternalScript)
-    user = DBProperty(user.User)
-    insertdate, outfile, errfile, argstr, pid, outputtype = DBProperties(6)
-
-    def getScript(self, **kargs):
-        return self.script.getInstance(**kargs)
-    def getProgress(self, **kargs):
-        log = open(self.errfile)
-        return self.script.getInstance(**kargs).interpretStatus(log)
-
-
-class ExternalScriptBase(object):
-    """Class that represents an external script such as a codingjob extraction script"""
-
-    def __init__(self, command=None):
-        """
-        @param filename: name of the command, defaults to 'python /path/modulename.py'
-        """
-        self.command = command 
-
+    def _getCommand(self, script, args):
+        return ["python",__file__, "RUN", str(self.id)] + [script._serialise(arg) for arg in args]
+    
     def invoke(self, db, data, *args, **kargs):
         """Call this script and  store and return an Invocation"""
+        script = self.getInstance()
+        cmd = self._getCommand(script, args)
         pid, out, err = self.call(data, *args, **kargs)
-        scriptid = self.__class__.scriptid
-        return Invocation.create(db, script=scriptid, outfile=out, errfile=err, pid=pid,
-                                 argstr=" ".join(self._getCommand(args)), outputtype=self._getOutputType(args))
+        return Invocation.create(db, script=self.id, outfile=out, errfile=err, pid=pid,
+                                 argstr=" ".join(cmd), outputtype=script._getOutputType(args))
                 
+
     def call(self, data=None, *args, **kargs):
-        """Call this script as an external process
+        """Call the referenced script as an external process through this module's __main__
 
         @param data: optional data to send to script
         @param args: 'command line' arguments for script
         @param kargs: 'outfile' and 'errfile' str filenames for input and output
         @return: tuple of (pid, outfilename, errfilename)
         """
-        cmd = self._getCommand(*args)
+        script = self.getInstance()
+        cmd = self._getCommand(script, args)
+        log.debug("Calling %s with data=%r, args=%r, cmd=\n%s" % (script, data, args, cmd))
+        
         if 'outfile' in kargs:
             out = kargs['outfile']
         else:
-            out = toolkit.tempfilename(prefix="tmp-script-", suffix=self._getOutputExtension(args))
+            out = toolkit.tempfilename(prefix="tmp-script-", suffix=script._getOutputExtension(args))
         if 'errfile' in kargs:
             err = kargs['errfile']
         else:
@@ -127,11 +126,53 @@ class ExternalScriptBase(object):
             if not toolkit.isIterable(data, excludeStrings=True):
                 data = [data]
             for row in data:
-                p.stdin.write(self._serialise(row))
+                p.stdin.write(script._serialise(row))
                 p.stdin.write("\n")
         p.stdin.close()
 
         return p.pid, out, err
+
+    
+def getExternalScripts(db, category):
+    for es in ExternalScript.getAll(db):
+        if es.category == category:
+            yield es
+    
+def getScript(db, scriptid):
+    return ExternalScript(db, scriptid).getInstance()
+
+class Invocation(Cachable):
+    __table__ = 'externalscripts_invocations'
+    __idcolumn__ = 'invocationid'
+    __labelprop__ = 'argstr'
+
+    script = DBProperty(ExternalScript)
+    user = DBProperty(user.User)
+    insertdate, outfile, errfile, argstr, pid, outputtype = DBProperties(6)
+
+    def getScript(self, **kargs):
+        return self.script.getInstance(**kargs)
+    def getProgress(self, **kargs):
+        log = open(self.errfile)
+        try:
+            pm =  self.script.getInstance(**kargs).interpretStatus(log)
+            if not pm: raise TypeError("Could not interpret log file")
+        except Exception, e:
+            import sys
+            exc_type, exc_value, exc_traceback = sys.exc_info()
+            pm = progress.ProgressMonitor()
+            pm.error(e, exc_traceback)
+        return pm
+
+
+class ExternalScriptBase(object):
+    """Class that represents an external script such as a codingjob extraction script"""
+    
+    def __init__(self, command=None):
+        """
+        @param filename: name of the command, defaults to 'python /path/modulename.py'
+        """
+        self.command = command 
 
     def interpretStatus(self, errstream):
         """Interpret the err stream of the process
@@ -154,7 +195,7 @@ class ExternalScriptBase(object):
         """Suggest an extension for the output file"""
         return ".out"
     
-    def _getCommand(self, *args):
+    def _serialiseArgs(self, *args):
         """Return the command array (e.g. to be used for Popen)"""
         if self.command:
             if type(self.command) in (str, unicode):
@@ -162,7 +203,8 @@ class ExternalScriptBase(object):
             else:
                 cmd = list(self.command)
         else:
-            cmd = ["python", inspect.getfile(self.__class__)]
+            file = self.__class__.__file__
+            cmd = ["python", file]
         for arg in args:
             cmd += [self._serialise(arg)]
         return cmd
@@ -176,7 +218,7 @@ class ExternalScriptBase(object):
         return args           
     
     def _run(self, data, out, err, *args):
-        """Run the actual script. Subclasses should override
+        """Run the actual script. Subclasses should override and may call this base for loggin
         
         @param data: the stream for the data input
         @param out: the output stream to use, which should be interpretable
@@ -191,13 +233,45 @@ class ExternalScriptBase(object):
         self.pm = progress.ProgressMonitor(self.__class__.__name__)
         self.pm.listeners.add(progress.TickLogListener(log, 100))
     
-    def runFromCommand(self):
+    def runFromCommand(self, args=None):
         """Parse the command line arguments and L{_run} the script"""
-        args = self._parseArgs(*sys.argv[1:])
+        if args is None: args = sys.argv[1:]
+        args = self._parseArgs(*args)
+        log.debug("Running %s with args=%s" % (self, args))
         self._run(sys.stdin, sys.stdout, sys.stderr, *args)
 
 import amcatlogging; amcatlogging.debugModule()
         
-if __name__ == '__main__':
-    import amcatlogging; amcatlogging.setup()
-    ExternalScript().call()
+if __name__ == '__main__':    
+
+    import sys
+    if len(sys.argv) < 3:
+        print >>sys.stderr, __doc__
+        sys.exit()
+
+    cmd = sys.argv[1].lower()
+    scriptid = int(sys.argv[2])
+    args = sys.argv[3:]
+
+    # get externalscript instance
+    import dbtoolkit
+    db = dbtoolkit.amcatDB(use_app=True)
+    script = ExternalScript(db, scriptid)
+
+    if cmd == "call":
+        import amcatlogging; amcatlogging.setup()
+        print script.call(sys.stdin.read(), *args)
+    elif cmd == "invoke":
+        import amcatlogging; amcatlogging.setup()
+        inv = script.invoke(db, sys.stdin.read(), *args)
+        db.commit()
+        print "Created invocation %i" % inv.id
+    elif cmd == "run":
+        es = script.getInstance()
+        log.debug("calling runFromCommand(%s)" % args)
+
+        es.runFromCommand(args)
+    else:
+        print >>sys.stderr, __doc__
+        sys.exit()
+

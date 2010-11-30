@@ -1,4 +1,17 @@
-from scripts.export_codingjobresults import ExportScript, FieldColumn, Row
+try:
+    from export_codingjobresults import ExportScript, FieldColumn, Row
+except ImportError, e:
+    try:
+        from mod_python import apache
+        mod = apache.import_module("scripts/export_codingjobresults")
+        ExportScript = mod.ExportScript
+        FieldColumn = mod.FieldColumn
+        Row = mod.Row
+    except ImportError, e2:
+        import sys
+        raise ImportError("Could not import from base class, tried simple import using path\n\n%s\n\n, then tried via apache, but nothing helped\n\n%s\n%s"% (sys.path, e, e2))
+
+
 import toolkit
 import codingjob
 import table3, tableoutput
@@ -73,13 +86,6 @@ class AggrQualColumn(FieldColumn):
         
 CODER_HIERARCHY = {206:280}
 class DNNExportScript(ExportScript):
-    def __init__(self, *args, **kargs):
-        ExportScript.__init__(self, True, *args, **kargs)
-    
-    #def getTable(self, jobs, monitor):
-    #    return super(DNNExportScript, self).getTable(jobs)
-        
-    
     def getColumn(self, field, article):
         if issubclass(field.getTargetType(), ont.Object):
             for option in [None, "cat", "root", "class", "dim"]:

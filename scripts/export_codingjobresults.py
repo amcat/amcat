@@ -32,11 +32,8 @@ class Row(object):
         self.art = ca.article
         
 class ExportScript(externalscripts.ExternalScriptBase):
-    def call(self, jobs, exportformat='csv'):
-        return super(ExportScript, self).call(jobs, exportformat)
-
-    def invoke(self, db, jobidlist, outexportformat='csv', requireSentence=False):
-        super(ExportScript, self).invoke(self, db, jobidlist, outexportformat, requireSentence)
+    def call(self, jobs, exportformat='csv', requireSentence=False):
+        return super(ExportScript, self).call(jobs, exportformat, requireSentence=False)
     
     def _run(self, jobidlist, out, err, exportformat='csv', requireSentence=False):
         super(ExportScript, self)._run(jobidlist, out, err)
