@@ -278,7 +278,7 @@ def readLog(logstr, monitorname=None, taskname=None):
     @param taskname: if given, the name of the task to search
     @return: a ProgressMonitor object
     """
-    pattern = re.compile(r"INFO\] \[Progress:?(.*?)\]\s+(.*?)\s+(.*?)\s*\((.*?)\)")
+    pattern = re.compile(r"INFO\] \[Progress:?(.*?)\]\s+(.*)\s+(\w.*?)\s*\((.*?)\)")
     monitor = None
     # for now, interpret lines from top to bottom (reverse with break = more efficient, but who cares?)
     for line in logstr.split("\n"):
