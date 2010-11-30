@@ -1,6 +1,8 @@
 import user, toolkit, project, ont, article, dbtoolkit, sentence
 
-from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
+from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties, cache, cacheMultiple
+
+
 
 from functools import partial
 import table3
@@ -46,7 +48,7 @@ def getCodedSentencesFromCodingjobIds(db, codingjobids):
 
 def getCodedSentencesFromCodingjobs(codingjobs):
     toolkit.ticker.warn("Caching")
-    cachable.cache(codingjobs, sets=dict(articles=dict(article=["sentences"], sentences=[])))
+    cache(codingjobs, sets=dict(articles=dict(article=["sentences"], sentences=[])))
     toolkit.ticker.warn("Returning")
     for ca in getCodedArticlesFromCodingjobs(codingjobs):
         for cs in ca.sentences:
@@ -152,7 +154,7 @@ class CodingJobSet(Cachable):
                 return a
 
     def getArticles(self):
-        cachable.cacheMultiple(self.articles, "article")
+        cacheMultiple(self.articles, "article")
         return [a.article for a in self.articles]
     def getArticleIDS(self):
         return set(a.id for a in self.getArticles())
@@ -195,10 +197,14 @@ class CodedUnit(object):
     def loadValues(self):
         s = self.annotationschema
         vals = self.db.select(s.table, self._fields, self._getWhere())
-        if len(vals) <> 1:
-            raise ValueError("CodedUnit values %r not len==1 %s %s %s" % (vals, s.table, self._fields, self._getWhere()))
-        self._values = dict(zip(self.fields, vals[0]))
-        log.debug("Loaded %r" % self._values)
+        if len(vals) == 0:
+            self._values = dict(map(None, self.fields, [])) # {f : None \forall f in fields}
+            log.debug("No values found")
+        elif len(vals) > 1:
+            raise ValueError("CodedUnit values %r has len>1 %s %s %s" % (vals, s.table, self._fields, self._getWhere()))
+        else:
+            self._values = dict(zip(self.fields, vals[0]))
+            log.debug("Loaded %r" % self._values)
     
     @property
     def fields(self):
