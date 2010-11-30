@@ -4,6 +4,8 @@ import dbtoolkit
 import sys
 import tableoutput
 
+import amcatlogging; log = amcatlogging.setup()
+
 db = dbtoolkit.anokoDB()
 
 outputs = ["plain", "csv"]
