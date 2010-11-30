@@ -1,6 +1,6 @@
 from __future__ import with_statement
 
-import base64, sbd # only needed for image processing, move to other module>?
+import base64
 import toolkit, config, sys
 import re, collections, time
 #from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
@@ -517,6 +517,7 @@ class amcatDB(object):
             raise Exception("Could not create sentence")
 
         if caption:
+            import sbd
             for i, line in enumerate(sbd.split(caption)):
                 if not line.strip(): continue
                 ins = {"articleid" : articleid, "parnr" : newp, "sentnr": 2 + i, "sentence" : line.strip()}
