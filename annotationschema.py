@@ -105,7 +105,11 @@ class AnnotationSchemaField(Cachable):
         elif ftid == 12:
             self._serializer = FromFieldSerialiser()
         else:
-            self._serializer = SchemaFieldSerialiser()
+            if ftid == 2: ftype = int
+            elif ftid in (6,9): ftype = float
+            elif ftid == 7: ftype = int #treat bool as int since spsss doe not have bool type
+            else: ftype = str
+            self._serializer = SchemaFieldSerialiser(ftype)
             
         return self._serializer
 
@@ -120,6 +124,8 @@ class AnnotationSchemaField(Cachable):
 
 class SchemaFieldSerialiser(object):
     """Base class for serialisation support for schema fields"""
+    def __init__(self, targettype):
+        self.targettype = targettype
     def deserialize(self, value):
         """Convert the given (db) value to a domain object"""
         return value
@@ -127,7 +133,7 @@ class SchemaFieldSerialiser(object):
         """Return the type of objects dererialisation will yield
 
         @return: a type object such as IDLabel or ont.Object"""
-        return str#object
+        return self.targettype
     
 class LookupFieldSerialiser(SchemaFieldSerialiser):
     def deserialize(self, value):
@@ -227,8 +233,10 @@ def getValue(unit, field):
 
 class FieldColumn(ObjectColumn):
     """ObjectColumn based on a AnnotationSchemaField"""
-    def __init__(self, field, article):
-        ObjectColumn.__init__(self, field.label, fieldname=field.fieldname, fieldtype=field.getTargetType())
+    def __init__(self, field, article, fieldname=None, label=None):
+        if fieldname is None: fieldname = field.fieldname
+        if label is None: label = field.label
+        ObjectColumn.__init__(self, label, fieldname, fieldtype=field.getTargetType())
         self.field = field
         self.article = article
         self.valuelabels = {}
