@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 import table3
 import codingjob
 import toolkit
@@ -20,7 +22,8 @@ import dbtoolkit
 
 BUFFERSIZE = 500
 
-
+import amcatlogging; amcatlogging.infoModule()
+import amcatlogging; amcatlogging.infoModule('progress')
 
 class Row(object):
     def __init__(self, ca, cs):
@@ -28,44 +31,57 @@ class Row(object):
         self.cs = cs
         self.art = ca.article
         
-class ExportScript(externalscripts.ExternalScript):
+class ExportScript(externalscripts.ExternalScriptBase):
     def call(self, jobs, exportformat='csv'):
         return super(ExportScript, self).call(jobs, exportformat)
-    
-    def run(self, data, exportformat='csv', requireSentence=False):
-        import amcatlogging
-        amcatlogging.debugModule("tableoutput", "table2spss")
-        amcatlogging.infoModule()
-        log.info("Starting export of data %s to format %s" % (data, exportformat))
-        db = dbtoolkit.amcatDB(username='app', password='eno=hoty')
-        jobs = [codingjob.Codingjob(db, cjid) for cjid in toolkit.intlist(data)]
-        self.requireSentence = requireSentence
-        self.allowidlabel = False
-        t = self.getTable(jobs)
-        self.exportTable(t, exportformat)
 
-    def exportTable(self, table, format):
+    def invoke(self, db, jobidlist, outexportformat='csv', requireSentence=False):
+        super(ExportScript, self).invoke(self, db, jobidlist, outexportformat, requireSentence)
+    
+    def _run(self, jobidlist, out, err, exportformat='csv', requireSentence=False):
+        super(ExportScript, self)._run(jobidlist, out, err)
+        with self.pm.monitored("Extracting data", 100):
+            log.info("Starting export of data %r to format %s" % (jobidlist, exportformat))
+            db = dbtoolkit.amcatDB(username='app', password='eno=hoty')
+            jobs = [codingjob.Codingjob(db, cjid) for cjid in toolkit.intlist(jobidlist)]
+            self.requireSentence = requireSentence
+            self.allowidlabel = False
+            self.pm.worked(5)
+            t = self.getTable(jobs, self.pm.submonitor(10))
+            log.info("Table created, starting export")
+            self.exportTable(t, exportformat, self.pm.submonitor(80, name="export"))
+            self.pm.worked(5)
+
+    def exportTable(self, table, format, monitor):
         if format == 'spss':
-            fn = toolkit.tempfilename(suffix=".sav")
-            table2spss.table2spss(table, saveas=fn)
+            #w = open('/tmp/log.spss', 'w')
+            #table2spss.table2spss(table, w)
+            fn = table2spss.table2sav(table, monitor=monitor)
+            
             log.info("Saved as %s" % fn)
+            self.out.write(open(fn).read())
         else:
-            tableoutput.table2csv(table)
+            tableoutput.table2csv(table, outfile=self.out, monitor=monitor)
         log.info("Done!")
         
     
-    def getTable(self, jobs):
-        log.debug("Setting up table - caching jobs/schemas")
-        self.cacheJobs(jobs)
-        self.cacheSchemas(jobs)
+    def getTable(self, jobs, monitor):
+        with monitor.monitored("Setting up table", 100) as pm:
+            self.cacheJobs(jobs)
+            pm.worked(20)
+            self.cacheSchemas(jobs)
+            pm.worked(20)
         #log.debug(jobs[0].db.printProfileHTML())
-        log.debug("Setting up table - Creating row generator")
-        rows = toolkit.splitlist(self.getRows(jobs), buffercall=self.cacheRows, itemsperbatch=BUFFERSIZE, yieldelements=True)
-        log.debug("Setting up table - Creating columns")
-        cols = self.getColumns(jobs)
-        t = table3.ObjectTable(rows, cols)
-        log.debug("Setting up table - Done")
-        return t
+            log.debug("Setting up table - Creating row generator")
+            rows = toolkit.splitlist(self.getRows(jobs), buffercall=self.cacheRows, itemsperbatch=BUFFERSIZE, yieldelements=True)
+            pm.worked(20)
+            log.debug("Setting up table - Creating columns")
+            cols = self.getColumns(jobs)
+            pm.worked(20)
+            t = table3.ObjectTable(rows, cols)
+            pm.worked(20)
+            log.debug("Setting up table - Done")
+            return t
 
     def cacheJobs(self, jobs):
         cachable.cache(jobs, "unitSchema", "articleSchema", "name", sets=dict(coder=["username"]))
@@ -78,6 +94,7 @@ class ExportScript(externalscripts.ExternalScript):
 
         
     def cacheMeta(self, rows):
+        return
         cas = set(row.ca for row in rows)
         cachable.cacheMultiple(cas, "article")
         cachable.cacheMultiple(set(ca.article for ca in cas),
@@ -114,12 +131,8 @@ class ExportScript(externalscripts.ExternalScript):
 
 
     def cacheRows(self, rows):
-        tick = ticker.Ticker(log=log)
-        tick.warn(">>>>>>>>")
         self.cacheMeta(rows)
-        tick.warn("--------")
         self.cacheFields(rows)
-        tick.warn("<<<<<<<<")
 
     def cacheFields(self, rows):
         units = collections.defaultdict(set) # schema : units

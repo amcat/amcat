@@ -49,15 +49,22 @@ import toolkit, subprocess, inspect, sys, idlabel, user
 import progress
 from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
 
+def _getClass(modulename, classname):
+    """Import the module and return the class contained in it
+
+    Apache users should supply an apache-aware importer"""
+    mod = __import__(modulename, fromlist=classname)
+    return getattr(mod, classname)
+
+
 class ExternalScript(Cachable):
     __table__ = 'externalscripts'
     __idcolumn__ = 'scriptid'
 
     modulename, classname = DBProperties(2)
 
-    def getInstance(self):
-        mod = __import__(self.modulename, fromlist=self.classname)
-        cls = getattr(mod, self.classname)
+    def getInstance(self, importer=_getClass):
+        cls = importer(self.modulename, self.classname)
         return cls()
 
 def getScript(db, scriptid):
@@ -69,13 +76,13 @@ class Invocation(Cachable):
 
     script = DBProperty(ExternalScript)
     user = DBProperty(user.User)
-    insertdate, outfile, errfile, argstr, pid = DBProperties(5)
+    insertdate, outfile, errfile, argstr, pid, outputtype = DBProperties(6)
 
-    def getScript(self):
-        return self.script.getInstance()
-    def getProgress(self):
+    def getScript(self, **kargs):
+        return self.script.getInstance(**kargs)
+    def getProgress(self, **kargs):
         log = open(self.errfile)
-        return self.script.getInstance().interpretStatus(log)
+        return self.script.getInstance(**kargs).interpretStatus(log)
 
 
 class ExternalScriptBase(object):
@@ -87,6 +94,13 @@ class ExternalScriptBase(object):
         """
         self.command = command 
 
+    def invoke(self, db, data, *args, **kargs):
+        """Call this script and  store and return an Invocation"""
+        pid, out, err = self.call(data, *args, **kargs)
+        scriptid = self.__class__.scriptid
+        return Invocation.create(db, script=scriptid, outfile=out, errfile=err, pid=pid,
+                                 argstr=" ".join(self._getCommand(args)), outputtype=self._getOutputType(args))
+                
     def call(self, data=None, *args, **kargs):
         """Call this script as an external process
 
@@ -99,7 +113,7 @@ class ExternalScriptBase(object):
         if 'outfile' in kargs:
             out = kargs['outfile']
         else:
-            out = toolkit.tempfilename(prefix="tmp-script-", suffix=".out")
+            out = toolkit.tempfilename(prefix="tmp-script-", suffix=self._getOutputExtension(args))
         if 'errfile' in kargs:
             err = kargs['errfile']
         else:
@@ -128,9 +142,18 @@ class ExternalScriptBase(object):
 
     def _serialise(self, obj):
         """Helper function to serialise an argument or data line to a str"""
+        log.debug("Serialising obj=%s" % (obj,))
         if isinstance(obj, idlabel.IDLabel): obj = obj.id
+        log.debug("Serialised to %r" % str(obj))
         return str(obj)
-        
+
+    def _getOutputType(self, *args):
+        """How to interpret the output file, i.e. return its (mime) type"""
+        return "text/plain"
+    def _getOutputExtension(self, *args):
+        """Suggest an extension for the output file"""
+        return ".out"
+    
     def _getCommand(self, *args):
         """Return the command array (e.g. to be used for Popen)"""
         if self.command:
@@ -161,16 +184,19 @@ class ExternalScriptBase(object):
         @param err: the error stream to use
         @param args: the arguments as parsed by _parseArgs
         """
+        self.out = out
         import amcatlogging
         amcatlogging.setStreamHandler(err)
         amcatlogging.infoModule()
         self.pm = progress.ProgressMonitor(self.__class__.__name__)
-        self.pm.listeners.add(progress.TickLogListener(log, 20))
+        self.pm.listeners.add(progress.TickLogListener(log, 100))
     
     def runFromCommand(self):
         """Parse the command line arguments and L{_run} the script"""
         args = self._parseArgs(*sys.argv[1:])
         self._run(sys.stdin, sys.stdout, sys.stderr, *args)
+
+import amcatlogging; amcatlogging.debugModule()
         
 if __name__ == '__main__':
     import amcatlogging; amcatlogging.setup()
