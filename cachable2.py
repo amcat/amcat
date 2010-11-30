@@ -114,7 +114,7 @@ class Cachable(idlabel.IDLabel):
     
     def __getattribute__(self, attr):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""
-        if not "_" in attr:
+        if (not "_" in attr) and (attr != 'id'): # skip special attributes
             try:
                 log.debug("Getting attribute %s, property?" % (attr)) 
                 p =  self.__class__._getProperty(attr)
@@ -214,14 +214,26 @@ class Cachable(idlabel.IDLabel):
         Default implementation calls a db.insert with the given props, and creates
         the Cachable object with the returned id. The props are then cached.
         """
+
+        def getcol(key): # find property 'key', get column #1
+            p = cls._getProperty(key)
+            if not p: raise TypeError("Cannot find property %s.%s" % (cls, key))
+            cols = p._getColumns()
+            if type(cols) in (list, tuple): raise TypeError("mulitple columns in create property %s=%r" % (key, cols))
+            return cols
+
+        log.debug("Creating %s with idvalues=%s, props=%s" % (cls.__name__, idvalues, props))
+        dbprops = dict((getcol(k), v) for (k,v) in props.iteritems())
+        log.debug("new props=%s" % (dbprops))
+        
         if idvalues is not None:
             idcol = cls.__idcolumn__
             if type(idcol) not in (list, tuple):
                 idcol, idvalues = [idcol], [idvalues]
-            allprops = dict(props.items() + zip(idcol, idvalues))
-            db.insert(cls.__table__, allprops, retrieveIdent=False)
+            dbprops = dict(dbprops.items() + zip(idcol, idvalues))
+            db.insert(cls.__table__, dbprops, retrieveIdent=False)
         else:
-            idvalues= db.insert(cls.__table__, props)
+            idvalues= db.insert(cls.__table__, dbprops)
         result = cls(db, idvalues)
         log.debug("Created object %r" % result)
         for propname, val in props.iteritems():
