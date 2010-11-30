@@ -1,3 +1,5 @@
+import logging; log = logging.getLogger(__name__)
+
 class Identity(object):
     """
     Simple class representing an object which can be compared to
@@ -40,7 +42,9 @@ class IDLabel(Identity):
 
     @property
     def label(self):
-        if self._label is None: raise AttributeError("%r has no label" % self)
+        if self._label is None:
+            log.warn("%r has no label" % self)
+            return repr(self)
         return self._label
         
     def identity(self):
