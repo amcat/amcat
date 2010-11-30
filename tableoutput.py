@@ -1,4 +1,8 @@
-import table3, toolkit, sys, csv, idlabel, StringIO, traceback
+from __future__ import with_statement
+import table3, toolkit, sys, csv, idlabel, StringIO, traceback, progress
+
+import logging; log = logging.getLogger(__name__)
+import amcatlogging; amcatlogging.debugModule()
 
 def getTable(table, colnames=None):
     if isinstance(table, (list, tuple)):
@@ -182,21 +186,27 @@ def getstr(val):
     if type(val) == unicode: return val.encode('utf-8')
     return str(val)
 
-def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False, tabseparated=False):
-    table = getTable(table, colnames)
-    if csvwriter is None:
-        dialect = csv.excel_tab if tabseparated else csv.excel
-        csvwriter = csv.writer(outfile, dialect=dialect)
-    cols = list(table.getColumns())
-    if writecolnames == True: writecolnames = str 
-    if writerownames == True: writerownames = str            
-    if writecolnames:
-        c = [""] + cols if writerownames else cols
-        csvwriter.writerow(map(writecolnames, c))
-    for row in table.getRows():
-        values = [writerownames(row)] if writerownames else []
-        values += map(getstr, (table.getValue(row,col) for col in cols))
-        csvwriter.writerow(values)
+def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
+              tabseparated=False, monitor=progress.NullMonitor()):
+    with monitor.monitored("Exporting to CSV", 100) as pm:
+        table = getTable(table, colnames)
+        if csvwriter is None:
+            dialect = csv.excel_tab if tabseparated else csv.excel
+            csvwriter = csv.writer(outfile, dialect=dialect)
+        pm.worked(5)
+        cols = list(table.getColumns())
+        if writecolnames == True: writecolnames = str 
+        if writerownames == True: writerownames = str            
+        if writecolnames:
+            c = [""] + cols if writerownames else cols
+            csvwriter.writerow(map(writecolnames, c))
+        pm.worked(5)
+        rows = table.getRows()
+        log.debug("Starting export")
+        for row in monitor.tickerate(rows, msg="Exporting CSV", submonitorwork=90):
+            values = [writerownames(row)] if writerownames else []
+            values += map(getstr, (table.getValue(row,col) for col in cols))
+            csvwriter.writerow(values)
 
 
 if __name__ == '__main__':
