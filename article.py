@@ -31,7 +31,7 @@ class Article(Cachable):
     metastring = DBPropertyFactory(decode=True)
     section = DBPropertyFactory(decode=True)
     batch = DBPropertyFactory("batchid", factory=lambda : batch.Batch)
-    source = DBPropertyFactory("mediumid", dbfunc=lambda : sources.Source)
+    source = DBPropertyFactory("mediumid", factory=lambda : sources.Source)
     sentences = DBFKPropertyFactory("sentences", "sentenceid", dbfunc=doCreateSentence)
     
     @property
