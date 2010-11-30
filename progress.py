@@ -30,9 +30,11 @@ from __future__ import with_statement
 import logging; log = logging.getLogger(__name__)
 import amcatlogging
 import toolkit
-import re
+import re, sys, traceback
 from contextlib import contextmanager
+import random
 
+#amcatlogging.debugModule()
 
 STATE_NOTSTARTED, STATE_STARTED, STATE_DONE, STATE_ERROR = 0,1,2,3
 STATE_LABELS = "not-started", "started", "done", "error"
@@ -52,11 +54,13 @@ class ProgressMonitor(object):
     def __init__(self, name=None, taskname=None, units=100):
         """If taskname is given, calls L{start}"""
         self.exception = None
-        self.name = name
+        self.traceback = None
+        self.name = name or "".join([chr(97+random.randint(0,25)) for i in range(10)])
         self.listeners = set()
         self.progress = 0 # progress so far
         self.units = None # total number of units to work
         self.state = STATE_NOTSTARTED # isdone? None = not started, False = started, True = done
+        log.debug("Created monitor %s" % self.name)
         if taskname is not None:
             self.start(taskname, units)
         else:
@@ -70,6 +74,7 @@ class ProgressMonitor(object):
         self.state = STATE_STARTED
         self.taskname = task
         self.units = units
+        log.debug("Monitor %s starting task %s/%s" % (self.name, task, units))
         self._fire(True)
     def worked(self, n = 1):
         """Progess n units of work"""
@@ -82,13 +87,15 @@ class ProgressMonitor(object):
         Further calls to worked will result in an error"""
         self._checkstate(STATE_STARTED)
         self.state = STATE_DONE
+        log.debug("Monitor %s task %s done" % (self.name, self.taskname))
         self._fire(True)
-    def error(self, exception):
+    def error(self, exception, traceback=None):
         """Indicate that this monitor has encountered an error
 
         Further calls to worked or done will result in an error"""
         self.state = STATE_ERROR
         self.exception = exception
+        self.traceback = traceback
         self._fire(True)
 
     def checkError(self):
@@ -120,12 +127,18 @@ class ProgressMonitor(object):
         @param name: the name of the submonitor
         @return: a not-started ProgressMonitor object
         """
+        name = name or "".join([chr(97+random.randint(0,25)) for i in range(10)])
+        log.debug("Creating submonitor %s/%s of %s" % (name, workunits, self.name)) 
         m = ProgressMonitor(name)
         m.listeners.add(SubmonitorListener(self, workunits))
         return m
 
     def monitored(self, taskname, units, submonitorwork=None):
         return monitored(taskname, units, monitor=self, submonitorwork=submonitorwork)
+
+    def tickerate(self, seq, *args, **kargs):
+        kargs["monitor"]= self
+        return tickerate(seq, *args, **kargs)
 
     def _checkstate(self, state):
         """Check whether the monitor is in given state, raise Exception otherwise"""
@@ -144,6 +157,20 @@ class ProgressMonitor(object):
         return "[PM %s: %s %s%s %s/%s %s]" % (self.name, self.taskname, STATE_LABELS[self.state],
                                               self.exception or "", self.progress, self.units, pd)
 
+class NullMonitor(object):
+    def start(self, task=None, units=None): pass
+    def done(self): pass
+    def worked(self, n=None): pass
+    def error(self, exception, traceback):
+        raise exception
+    def monitored(self, *args, **kargs):
+        return monitored("",10,monitor=self)
+    def tickerate(self, seq, *args, **kargs):
+        return seq
+    def submonitor(self, *args, **kargs):
+        return self
+    
+    
 class SubmonitorListener(object):
     """Listener to connect a submonitor to its parent monitor"""
     def __init__(self, monitor, units):
@@ -155,13 +182,17 @@ class SubmonitorListener(object):
         self.monitor = monitor
         self.units = units
         self.sofar = 0
+        log.debug("SubmonitorListener %s / %s" % (self.units, self.monitor.name))
     def __call__(self, submon, stateChanged):
         # check if there is enough progress to warrant a
         # worked message to the parent monitor
         n = int(self.units * submon.percentDone())
+        log.debug("Submonitor worked %1.2f x %i -> main monitor %s" % (submon.percentDone(), self.units, n))
         if n > self.sofar:
             self.monitor.worked(n - self.sofar)
             self.sofar = n
+        if submon.state == STATE_ERROR:
+            self.monitor.error(submon.exception, submon.traceback)
             
 class TickLogListener(object):
     """Listener to log progress for a number of 'ticks' (ie 10%, 20% etc)"""
@@ -182,6 +213,9 @@ class TickLogListener(object):
             msg += "] %s" % (monitor.taskname)
             if monitor.state == STATE_ERROR:
                 msg += " error (%s)" % monitor.exception
+                if monitor.traceback:
+                    msg += "\n" + "".join(traceback.format_tb(monitor.traceback))
+            
             elif stateChanged:
                 msg += " %s (%i units)" % (STATE_LABELS[monitor.state], monitor.units)
             else:
@@ -213,7 +247,8 @@ def monitored(taskname, units, monitor=None, monitorname=None, submonitorwork=No
         yield monitor
     except StandardError, e: # don't catch generatorexit etc. from 2.6 this can be reverted to Exception?
         #log.exception(str(e))
-        monitor.error(e)
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        monitor.error(e, exc_traceback)
     else:
         monitor.done()
             
