@@ -44,7 +44,13 @@ class TestProject(amcattest.AmcatTestCase):
                     self.assertEqual(parent, parentiddict[cl])
 
             #childiddict = dict((cl.id, set(c.id for c in cc)) for (cl,cc) in o.children.items())
-            
+
+    def testCategorisation(self):
+        c = ont.Class(self.db, 5000)
+        o = ont.Object(self.db, 7345)
+        print c, o
+        print c.getCategorisationPath(o)
+                    
     #TODO: sets, sethierarchy, classes, boundobjects, categorizations
 
         

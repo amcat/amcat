@@ -8,7 +8,8 @@ except:
 
 DUMMY_CLASSID_PARTYMEMBER = 1
 DUMMY_CLASSID_OFFICE = 2
-
+import logging; log = logging.getLogger(__name__)
+#import amcatlogging; amcatlogging.debugModule()
     
 def getParent(db, cidpid):
     cid, pid = cidpid
@@ -213,6 +214,8 @@ class Hierarchy(object):
                 p = self.getParent(path[-1], date)
                 if p is None: break
                 path.append(p)
+                log.debug("p=%s, path now %s" % (p, path))
+                                
             path.append(self.getClass(path[-1]))
             self.categorisationcache[object.id] = path
         return self.categorisationcache[object.id]
@@ -222,6 +225,7 @@ class Hierarchy(object):
         if not object:
             path, omklap = [None for d in depth], 1.0
         else:
+            log.debug("Getting categoriation path for %s/%s/%s, depth %s" % (self, object.id, str(object), depth))
             path = self.getCategorisationPath(object, date)
             if returnOmklap:
                 omklap = 1
@@ -244,7 +248,7 @@ def getOmklap(db, parent, child):
     global _omklaps
     if _omklaps is None:
         _omklaps = set(db.doQuery("select parentid, childid from o_hierarchy where reverse = 1"))
-        print _omklaps
+        #print _omklaps
     if (parent.id, child.id) in _omklaps: return -1
     return 1
             
@@ -375,7 +379,6 @@ class Set(Cachable, DictHierarchy):
                     yield self.getBoundObject(o2)
                     
     def cacheHierarchy(self):
-        print "Caching set %s!" % self.id
         cachable.cacheMultiple(self, "objects", "classes")
         fields = ["parents", "children", "label"]
         if set((DUMMY_CLASSID_PARTYMEMBER, DUMMY_CLASSID_OFFICE)) & set(c.id for c in self.classes):
