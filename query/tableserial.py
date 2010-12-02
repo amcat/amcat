@@ -28,7 +28,7 @@ class StringColumnSerialiser(ColumnSerialiser):
     def serialiseSQL(self, value):
         if value is None: return None
         if type(value) == str:
-            return value#.decode('latin-1') # latin-1 disabled, else I got UnicodeEncodeError in insertmany for some data. Jouke
+            return value.decode('latin-1') # latin-1 disabled, else I got UnicodeEncodeError in insertmany for some data. Jouke
         return value
 
 def date2str(d):

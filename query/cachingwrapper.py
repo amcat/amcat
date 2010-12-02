@@ -144,9 +144,13 @@ class CachingEngineWrapper(QueryEngineBase):
         createsql = "CREATE TABLE %s (\n%s)" % (tablename, ",\n".join(
                 "%s %s" % (c, s.getSQLType()) for (c,s) in zip(columns, serialisers)))
         self.cachedb.doQuery(createsql)
-        self.cachedb.insertmany(tablename, columns, ([s.serialiseSQL(v) for (s,v) in zip(serialisers, row)] for row in table))
+        self.cachedb.insertmany(tablename, columns, ([unicodeToStr(s.serialiseSQL(v)) for (s,v) in zip(serialisers, row)] for row in table))
         self.cachedb.commit()
 
+def unicodeToStr(obj):
+    if type(obj) == unicode: return obj.encode('utf-8')
+    return obj
+        
 def getColumnNames(concepts):
     result = []
     for concept in concepts:

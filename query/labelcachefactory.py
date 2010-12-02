@@ -30,11 +30,11 @@ class LabelCacheFactory(object):
             self.concept2id = self.querydict("select concept, conceptid from labels_concepts")
         conceptid = self.concept2id.get(concept)
         if conceptid is not None:
-            log.info("conceptid found in cache db")
             if conceptid not in self.labelcaches:
                 self.labelcaches[conceptid] = self.querydict("select id, label from labels where conceptid=%i" % conceptid)
             lbl = self.labelcaches[conceptid].get(value)
             if lbl: return idlabel.IDLabel(value, lbl)
+            log.warn("conceptid not found in cache db")
         return idlabel.IDLabel(value,"CONCEPT %s ID %i" % (concept, value))
     def querydict(self, sql):
         with self.db.cursor() as c:
