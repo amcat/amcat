@@ -46,10 +46,12 @@ class TestProject(amcattest.AmcatTestCase):
             #childiddict = dict((cl.id, set(c.id for c in cc)) for (cl,cc) in o.children.items())
 
     def testCategorisation(self):
-        c = ont.Class(self.db, 5000)
-        o = ont.Object(self.db, 7345)
-        print c, o
-        print c.getCategorisationPath(o)
+        c = ont.Set(self.db, 5001)
+        o = ont.Object(self.db, 1560)
+        self.assertEqual([o2.id for o2 in c.getCategorisationPath(o)], [366, 10661])
+        self.assertEqual(c.categorise(o, depth=[1])[0].id, 366)
+        #self.assertEqual(c.categorise(o, depth=[1], returnOmklap=True, returnObjects=False)[0], 1)
+        # dim cosmo?
                     
     #TODO: sets, sethierarchy, classes, boundobjects, categorizations
 

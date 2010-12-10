@@ -9,7 +9,7 @@ class TestUser(amcattest.AmcatTestCase):
     def testProperties(self):
         self.assertEqual(self.app.username, "app")
         self.assertEqual(self.app.fullname, "'nepaccount' voor applicatie")
-        self.assertEqual(self.app.affiliation, "VU")
+        self.assertEqual(str(self.app.affiliation), "VU")
 
     def testUserProjects(self):
         for projectid in (1,2):
