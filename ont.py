@@ -164,8 +164,6 @@ class Hierarchy(object):
     Also, there should be no parent of child cycles, and every object in h must be reachable
     using repeated getChildren calls on the roots and vice versa
     """
-    def __init__(self):
-        self.categorisationcache = {} # objectid : path
     def getParent(self, object, date=None):
         """Returns a BoundObject representing the parent of the given (Bound)Object in this hierarchy"""
         abstract
@@ -207,18 +205,12 @@ class Hierarchy(object):
                 yield c,indent
 
     def getCategorisationPath(self, object, date=None):
-        if object.id not in self.categorisationcache:
-            object = self.getBoundObject(object) 
-            path = [object] 
-            while True:
-                p = self.getParent(path[-1], date)
-                if p is None: break
-                path.append(p)
-                log.debug("p=%s, path now %s" % (p, path))
-                                
-            path.append(self.getClass(path[-1]))
-            self.categorisationcache[object.id] = path
-        return self.categorisationcache[object.id]
+        object = self.getBoundObject(object) 
+        p = object
+        while True:
+            p = self.getParent(p, date)
+            if p is None: break
+            yield p
                 
     def categorise(self, object, date=None, depth=[0,1,2], returnObjects=True, returnOmklap=False):
         object = self.getBoundObject(object)
@@ -226,11 +218,11 @@ class Hierarchy(object):
             path, omklap = [None for d in depth], 1.0
         else:
             log.debug("Getting categoriation path for %s/%s/%s, depth %s" % (self, object.id, str(object), depth))
-            path = self.getCategorisationPath(object, date)
+            path = list(self.getCategorisationPath(object, date))
             if returnOmklap:
                 omklap = 1
                 for p, c in zip(path[1:-1], path[:-2]):
-                    omklap *= getOmklap(self.db, p, c)
+                    omklap *= self.getOmklap(p, c)
             if returnObjects:
                 l = max(depth)+1
                 path = [object] * (l - len(path)) + path #WvA moet dit niet max(path) zijn??
@@ -242,16 +234,18 @@ class Hierarchy(object):
             return omklap
         return path
     
-_omklaps = None
-def getOmklap(db, parent, child):
-    #TODO: lelijk!
-    global _omklaps
-    if _omklaps is None:
-        _omklaps = set(db.doQuery("select parentid, childid from o_hierarchy where reverse = 1"))
-        #print _omklaps
-    if (parent.id, child.id) in _omklaps: return -1
-    return 1
+    def getOmklap(self, parent, child):
+        #TODO: lelijk!
+        global _omklaps
+        if _omklaps is None:
+            _omklaps = set(self.db.doQuery("select classid, parentid, childid from o_hierarchy where reverse = 1"))
+        clas = self.getClass(child)
+        omklap = -1 if (parent.id, child.id, clas.id) in _omklaps else 1
+        log.debug("omklap(%s, %s, %s) = %s" % (parent.idlabel(), child.idlabel(), clas.idlabel(), omklap))
+               
+        return omklap
             
+_omklaps = None
 
 class DictHierarchy(Hierarchy):
     """Abstract Hierarchy subclass that uses a dictionary to keep track of contained objects"""
@@ -359,9 +353,12 @@ class Set(Cachable, DictHierarchy):
     def getParent(self, o, date=None):
         if type(o) == BoundObject: o = o.objekt 
         parents = dict(o.getAllParents(date))
+        log.debug("%s.getParent(%s), parents=%s, classes=%s" % (self, o, ["%s:%s" % (k,v) for k,v in parents.iteritems()], map(str, self.classes)))
         for c in self.classes:
-            o2 = parents.get(c)
-            if o2 in self:
+            if c not in parents: continue
+            o2 = parents[c]
+            if (o2 is None) or (o2 in self):
+                log.debug(" --> %s from class %s" % (o2 and o2.idlabel(), c.idlabel()))
                 return self.getBoundObject(o2)
     def getChildren(self, o):
         yielded = set()
