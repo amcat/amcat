@@ -313,7 +313,7 @@ class _ParseSaver(object):
     @property
     def _words(self):
         if self._words_cache is None:
-            self._words_cache = word.CachingWordCreator(language=self.analysis.language, db=self.db)
+            self._words_cache = CachingWordCreator(language=self.analysis.language, db=self.db)
         return self._words_cache
     
     def saveTokens(self, sentenceid, tokens):
@@ -393,6 +393,40 @@ class _ParseSaver(object):
                 log.info("%i sentences saved, %i/%i done (%1.1f%%)" % (len(sids), done, n, float(done)/n*100))
                 
 
+class BaseWordCreator(object):
+    def __init__(self, db, language=2):
+        self.db = db
+        self.language = language
+        self.words, self.lemmata, self.strings, self.pos, self.rels = {}, {}, {}, {}, {}
+    def getString(self, string):
+        isword = bool(re.match("^[A-Za-z_]+$", string))
+        return self.getOrCreate("stringid", self.strings, (clean(string),), "words_strings", ("string",), isword=isword)
+    def getLemma(self, string, pos):
+        sid = self.getString(string)
+        return self.getOrCreate("lemmaid", self.lemmata, (sid,  clean(pos)), "words_lemmata", ("stringid","pos"))
+    def getWord(self, string, lemma_or_id, pos=None):
+        if type(lemma_or_id) <> int:
+            lemma_or_id = self.getLemma(lemma_or_id, pos)
+        sid = self.getString(string)
+        return self.getOrCreate("wordid", self.words, (lemma_or_id, sid), "words_words", ("lemmaid", "stringid"))
+    def getPos(self, major, minor, pos):
+        return self.getOrCreate("posid", self.pos, (clean(major), clean(minor), clean(pos)), "parses_pos", ("major","minor","pos"))
+    def getRel(self, name):
+        return self.getOrCreate("relid", self.rels, (clean(name),), "parses_rels", ("name",))
+
+class CachingWordCreator(BaseWordCreator):
+    def getOrCreate(self, idcol, dic, key, table, cols, **extra):
+        id = dic.get(key)
+        if id is None:
+            sql = "SELECT %s FROM %s WHERE %s" % (idcol, table, " AND ".join("%s=%s" % (k, dbtoolkit.quotesql(v)) for (k,v) in zip(cols, key)))
+            id = self.db.getValue(sql)
+            if id is None:
+                data = dict(zip(cols, key))
+                data.update(extra)
+                id = self.db.insert(table, data)
+            dic[key] = id
+        return id
+            
         
 
 if __name__ == '__main__':
