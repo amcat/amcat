@@ -117,7 +117,7 @@ class CodingJob(Cachable):
         else:
             raise Exception("Need either art and coder OR cjaid")
 
-    def idname(self):
+
         return "%i - %s" % (self.id, self.name)
 
         
@@ -178,19 +178,18 @@ CodingjobSet = CodingJobSet
         
 class CodedUnit(object):
     def __init__(self):
-        self._fields = None
+        self._fields = None # {fieldname : deserializer}
         self._values = {}
         
     def __getattr__(self, attr):
         # if not found, check fields
-        if attr.startswith("_"): return super(CodedUnit, self).__getattribute__(attr)
+        if attr == "fields" or attr.startswith("_"): return super(CodedUnit, self).__getattribute__(attr)
         log.debug("__getattr__(%r), in fields %s?" % (attr, self.fields))
         if attr in self.fields:
             if attr not in self._values:
                 self.loadValues()
             val = self._values.get(attr)
-            field = self.annotationschema.getField(attr)
-            return field.deserialize(val)
+            return self.fields[attr](val)
 
         return super(CodedUnit, self).__getattribute__(attr)
 
@@ -209,7 +208,7 @@ class CodedUnit(object):
     @property
     def fields(self):
         if self._fields is None:
-            self._fields = [f.fieldname for f in self.annotationschema.fields]
+            self._fields = dict((f.fieldname, f.deserialize) for f in self.annotationschema.fields)
         return self._fields
     
     def getValue(self, field):
@@ -242,9 +241,6 @@ class CodedArticle(Cachable, CodedUnit):
     def getArticle(self):
         return self.article
 
-    @property
-    def confidence(self):
-        return .99
     #confidence = DBProperty()self.addDBProperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
 
 class CodedSentence(CodedUnit, Cachable):
@@ -308,13 +304,14 @@ def getk06CodedSentences(db):
 
 
 def createCodingJob(project, name, unitschema, articleschema, coders=[]):
+    #TODO: move to CodingJob.Create
     if not type(unitschema) == int: unitschema = unitschema.id
     if not type(articleschema) == int: articleschema = articleschema.id
     cjid = project.db.insert("codingjobs", dict(projectid=project.id, unitschemaid=unitschema, articleschemaid=articleschema, name=name))
     for i, coder in enumerate(coders):
         if not type(coder) == int: coder = coder.id
         project.db.insert("codingjobs_sets", dict(codingjobid=cjid, setnr=i+1, coder_userid=coder), retrieveIdent=False)
-    return CodingJob(project.db, cjid, project=project)
+    return CodingJob(project.db, cjid)
 
 def cloneCodingJob(codingjob, newname = None, coders=[]):
     if newname is None: newname = "%s (kopie)" % (codingjob.label,)
