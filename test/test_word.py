@@ -23,6 +23,24 @@ class TestWord(amcattest.AmcatTestCase):
                 self.assertEqual(x.pos, pos)
                 self.assertEqual(x.lemma.id, lemmastringid)
 
+
+    def testSentiment(self):
+        l = word.SentimentLexicon(self.db, 1)
+        d = l.lemmaidDict()
+        
+        for (lemmaid, lexiconid, sentiment, intensity) in [
+            (91, 1, 100, 0),
+            ]:
+
+            l = word.Lemma(self.db, lemmaid)
+            sl = l.sentimentLemma(lexiconid)
+            self.assertEqual(sl.sentiment, sentiment)
+            self.assertEqual(sl.intensity, intensity)
+            self.assertEqual(sl.lexicon.id, lexiconid)
+            self.assertEqual(sl.lemma.id, lemmaid)
+
+            self.assertEqual(d.get(lemmaid), sl)
+                
 if __name__ == '__main__':
     amcattest.main()
                 

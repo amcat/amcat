@@ -14,6 +14,14 @@ class Lemma(Cachable):
     __dbproperties__ = ["pos"]
     pos = DBProperty()
     lemma = DBProperty(String)
+    sentimentLemmata = ForeignKey(lambda:SentimentLemma)
+
+    def sentimentLemma(self, lexicon):
+        if type(lexicon) <> int: lexicon = lexicon.id
+        for sl in self.sentimentLemmata:
+            if sl.lexicon.id == lexicon:
+                return sl
+    
     @property
     def label(self): return self.lemma.label
 
@@ -27,3 +35,35 @@ class Word(Cachable):
     lemma = DBProperty(Lemma)
     @property
     def label(self): return self.word.label
+
+
+
+class SentimentLexicon(Cachable):
+    __table__ = 'sentimentlexicons'
+    __idcolumn__ = 'lexiconid'
+
+    lemmata = ForeignKey(lambda:SentimentLemma)
+
+    def lemmaidDict(self):
+        return dict((sl.lemmaid, sl) for sl in self.lemmata)
+        
+    
+    
+class SentimentLemma(Cachable):
+    __table__ = 'words_lemmata_sentiment'
+    __idcolumn__ = ('lexiconid', 'lemmaid')
+
+    sentiment = DBProperty()
+    intensity = DBProperty()
+    
+    @property
+    def lexicon(self):
+        return SentimentLexicon(self.db, self.id[0])
+    
+    @property
+    def lemmaid(self): return self.id[1]
+                     
+                     
+    @property
+    def lemma(self):
+        return Lemma(self.db, self.lemmaid)
