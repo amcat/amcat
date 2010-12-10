@@ -1035,7 +1035,7 @@ def ps2pdf(ps):
     if err: raise Exception(err)
     return out
 
-def convertImage(image, informat, outformat=None, quality=None, scale=None):
+def convertImage(image, informat, outformat=None, quality=None, scale=None, trim=False):
     """Call imagemagick 'convert' on the given image bytes, returning image bytes
 
     @param image: the image bytes
@@ -1049,6 +1049,7 @@ def convertImage(image, informat, outformat=None, quality=None, scale=None):
     cmd = 'convert '
     if scale: cmd += ' -geometry %1.2f%%x%1.2f%% ' % (scale*100, scale*100)
     if quality: cmd += ' -quality %i ' % int(quality*100)
+    if trim: cmd += ' -trim '
     
     cmd += ' %s:- %s:-' % (informat, outformat or informat)
     out, err = execute(cmd, image)
