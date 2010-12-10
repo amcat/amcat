@@ -17,9 +17,6 @@ class Lemma(Cachable):
     __labelprop__ = "lemma"
     __dbproperties__ = ["pos"]
     lemma = DBPropertyFactory("stringid", dbfunc=String)
-    brouwers = DBFKPropertyFactory("words_brouwers","cat", dbfunc=BrouwersCat)
-    sentiment = DBPropertyFactory("sentiment", table="vw_lemma_sentiment")
-    intensifier = DBPropertyFactory("intensifier", table="vw_lemma_sentiment")
     
     def __str__(self): return self.lemma.label
 
