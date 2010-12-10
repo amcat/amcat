@@ -15,12 +15,10 @@ LEMMA_SQL = """select distinct l.lemmaid from words_lemmata l inner join words_w
 
 class Rule(object):
     def __init__(self, identifier=None, verbose=False):
-        self.identifier = identifier
         self.verbose = False
+        self.allowPartial = False
     def debug(self, *args, **kargs):
         log.debug(" ".join(map(str, args)) + "".join(" %s=%r" % (k,v) for (k,v) in kargs.iteritems()))
-    def debugindent(self, *args, **kargs):
-        return self.identifier.debugindent(*args, **kargs)
 class DeclarativeRule(Rule):
     def __init__(self, frame, condition=None, postprocess=None, verbose=None, name=None, rulename=None, precheck=None, **roles):
         if verbose is None: verbose = not str(rulename).startswith("_")
@@ -35,7 +33,7 @@ class DeclarativeRule(Rule):
     def getFrame(self, node):
         return self.frame(name=self.name, rule=self)
     def doPrecheck(self, node):
-        return (not self.precheck) or self.precheck(self.identifier, node)
+        return (not self.precheck) or self.precheck(self, node)
     def matches(self, node):
         if not self.doPrecheck(node): return 
         self.debug("  Applying rule %s"% self)
@@ -51,7 +49,7 @@ class DeclarativeRule(Rule):
 
     def doPostProcess(self, frame):
         self.debug("Postproces: %s "% frame)
-        if self.postprocess: frame = self.postprocess(self.identifier, frame)
+        if self.postprocess: frame = self.postprocess(self, frame)
         self.debug("Postproces: ---> %s "% frame)
         return frame
       
@@ -121,11 +119,10 @@ class FirstMatch(Pattern):
     def __init__(self, *rules):
         self.rules = rules
     def getNode(self, rule, node):
-        with rule.debugindent("FirstMatch") as d:
-            for r in self.rules:
-                n = r.getNode(rule, node)
-                if n:
-                    return n
+        for r in self.rules:
+            n = r.getNode(rule, node)
+            if n:
+                return n
 
 class Lowest(Pattern):
     def __init__(self, rel, pos):
@@ -150,10 +147,11 @@ class Highest(Pattern):
         return highest
     
 class Identifier(object):
-    def __init__(self, db):
+    def __init__(self, db, analysisid):
         self.rules = []
         self.db = db
         self.lemma_set_dict = {}
+        self.analysisid = analysisid
     def debug(self, msg=None, indent=None, adddepth=0):
         #if not self.debugfunc: return
         #f\unc = sys._getframe(2+adddepth).f_code.co_name
@@ -171,16 +169,25 @@ class Identifier(object):
         for node in tree.getNodes():
             f = self.getFrame(node)
             if f: yield f
+            
+    def decorate(self, tree):
+        """Find frames and add to the tree"""
+        frames = list(self.findFrames(tree))
+        decorateTree(tree, frames)
+        return frames
+                    
     def getFrame(self, node):
         with self.debugindent("getFrame(%s)" % node):
             frames = set()
             for i, rule in enumerate(self.rules):
                 frame = rule.matches(node)
                 if frame and frame.isComplete():
-                    self.debug("-->  Frame %s found in rule %s!"% (frame, rule))
                     frame.rulerank = i
                     frames.add(frame)
-                if frame: self.debug("Found frame %s, not complete" % frame)
+                    self.debug("-->  Frame %s found in rule %s! frames now %s"% (frame, rule, frames))
+                                        
+                elif frame:
+                    self.debug("Found frame %s, not complete" % frame)
             if frames:
                 frames = sorted(frames, key=framesort)
                 self.debug("Rank ordered frames: %s" % frames)
@@ -226,6 +233,7 @@ class Identifier(object):
                     if key in sourcedict:
                         sources.append(sourcedict[key])
                     key = key.parentNode
+
                 usedsources |= set(sources)
 
                 yield sources, frame
@@ -243,9 +251,9 @@ def framesort(frame):
 class SPORule(DeclarativeRule):
     def __init__(self, rulename, postprocess=None, predicate=Self(), name="spo",  allowPartial=False, **roles):
         roles['predicate'] = predicate
+        DeclarativeRule.__init__(self, SPO, postprocess=postprocess, name=rulename, rulename=rulename, **roles) 
         self.allowPartial = allowPartial
-        DeclarativeRule.__init__(self, SPO, postprocess=postprocess, name=name, rulename=rulename, **roles)
-    
+   
     
 class BronRule(DeclarativeRule):
     def __init__(self, rulename,  match=None, key=Self(), checks=None, postprocess=None, verbose=None, **roles):
@@ -254,7 +262,8 @@ class BronRule(DeclarativeRule):
         self.match = match
         self.checks = checks
     def getFrame(self, node):
-        if not self.doPrecheck(node): return 
+        if not self.doPrecheck(node): return
+        log.debug(`self.match`)
         if self.match:
             pos, entries = self.match
             if pos and (node.word.lemma.pos.lower() <> pos.lower()): return
@@ -300,6 +309,7 @@ class Frame(Identity):
     def get(self, name):
         return self.__dict__.get(name)
     def has(self, *names):
+        log.debug("%s has %s? %s" % (self, names, all(self.get(name) for name in names)))
         for name in names:
             if not self.get(name): return False
         return True
@@ -342,8 +352,10 @@ class Frame(Identity):
 
 
 class Equal(Frame):
-    ARGS = ["subject","object","predicate"]
+    ARGS = ["subject","object","predicate", "source"]
     def isComplete(self):
+        if not self.has('subject','object'):
+            log.debug(str(self.getConstituents()))
         return self.has('subject','object')
             
 class Bron(Frame):
@@ -384,11 +396,12 @@ class SPO(Frame):
         #if self.has('doelkey') ^ self.has('doelobject'): return false # ^ = XOR
         if self.has('subject','predicate','object'): return True
         if self.rule:
+            log.debug("isComplete %s? allowpartial=%r" % (self, self.rule.allowPartial))
             a = self.rule.allowPartial
             if not a: return
             if callable(a):
                 if not a(self): return
-                log.debug("%s %s") % (self, a(self))
+                #log.debug("%s %s" % (self, a(self)))
 
         if self.has('subject', 'predicate'):
             self.name = 'SPO_su'
@@ -488,4 +501,22 @@ def isFrame(frame, name=None):
     if type(name) in (str, unicode): return frame.name == name
     return frame.name in name
 
+
+
+COLORS = ((1,0,0), (0,1,0), (0,0,1), (1,0,1))
+def decorateTree(tree, frames):
+    """Find frames and add to the tree"""
+    for i, frame in enumerate(frames):
+        for rol, node in frame.getConstituents():
+            node.addToGraphLabel("\n%i:%s" % (i, rol))
+            node.graphcolor = COLORS[min(len(COLORS)-1, i)]
+            #node.graphcolor = self.getCol(frame)
+            node.graphshape = 'rect'
+            node.graphalpha=.7
+            node.graphsize=1000
+
+def getHTMLColor(frameno):
+    return toolkit.RGBtoHTML(*COLORS[min(len(COLORS)-1, frameno)])
+
     
+#import amcatlogging; amcatlogging.debugModule()
