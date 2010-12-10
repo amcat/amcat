@@ -86,6 +86,7 @@ def interpret(parse):
             words[node[0]] = node
         triples.append((parent[0], rel, child[0]))
     words = sorted(words.values())
+    print words, triples
     return words, triples
         
 def parseSentences(sentences):
@@ -126,7 +127,8 @@ if __name__ == '__main__':
     #p = BaseAlpinoParser()
     #print p.parse(1234, zin)
     #p.stop()
-
+    import amcatlogging; log = amcatlogging.setup()
+    log.info("Parsing %r" % input)
     for sid, info in  parseSentences(input):
         print sid
         print "\n".join(map(str, info))
