@@ -19,7 +19,7 @@ class User(Cachable):
 
     permissionLevel = DBProperty(table="permissions_users", getcolumn="permissionid", deprecated=True)
     
-    userid, username, fullname, affiliationid, active, email = DBProperties(6)
+    userid, username, fullname, affiliationid, active, email, languageid = DBProperties(7)
     language = DBProperty(lambda : language.Language)
     roles = ForeignKey(lambda : authorisation.Role, table="users_roles")
     projects = ForeignKey(lambda : project.Project, table="permissions_projects_users")

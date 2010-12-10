@@ -1,3 +1,22 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
 from enginebase import QueryEngineBase
 import enginebase
 import tableserial
@@ -38,6 +57,14 @@ class CachingEngineWrapper(QueryEngineBase):
             if self.caching:
                 log.debug("caching result")
                 self.cacheList(result, concepts, filters, distinct)
+            
+            serialisers = list(tableserial.getColumns(result.concepts, IDLabelFactory=self.labelfactory))
+            data = []
+            log.debug("deserializing")
+            for row in result.data:
+                data.append([s.deserialiseSQL(val) for (s, val) in zip(serialisers, row)])
+            result.data = data
+        
         enginebase.postprocess(result, sortfields, limit, offset)
         return result 
 
@@ -117,9 +144,13 @@ class CachingEngineWrapper(QueryEngineBase):
         createsql = "CREATE TABLE %s (\n%s)" % (tablename, ",\n".join(
                 "%s %s" % (c, s.getSQLType()) for (c,s) in zip(columns, serialisers)))
         self.cachedb.doQuery(createsql)
-        self.cachedb.insertmany(tablename, columns, ([s.serialiseSQL(v) for (s,v) in zip(serialisers, row)] for row in table))
+        self.cachedb.insertmany(tablename, columns, ([unicodeToStr(s.serialiseSQL(v)) for (s,v) in zip(serialisers, row)] for row in table))
         self.cachedb.commit()
 
+def unicodeToStr(obj):
+    if type(obj) == unicode: return obj.encode('utf-8')
+    return obj
+        
 def getColumnNames(concepts):
     result = []
     for concept in concepts:
