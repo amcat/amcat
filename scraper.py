@@ -287,7 +287,6 @@ class TextImporter(Scraper):
         if self.tick: files = toolkit.tickerate(files)
         for file in files:
             try:
-                if type(file) in (str, unicode): file = open(file)
                 documents = self.splitFile(context, file)
                 for doc in documents:
                     try:
@@ -309,6 +308,7 @@ class TextImporter(Scraper):
     #########################################################
     ## Methods to override by subclass to control scraping ##
     #########################################################
+
     def getFiles(self, context):
         """Return a sequence of filenames or files to be scraped.
         If strings are returned, they will be opened using open(.), otherwise
@@ -318,8 +318,10 @@ class TextImporter(Scraper):
     def splitFile(self, context, file):
         """Split the given file into documents, returning document objects
         (eg strings) that will be passed onto getArticle(.).
-        Subclasses *may* override. Default returns entire file as one string"""
-        return [file.read()]
+        Subclasses *may* override. Default opens and reads file and returns as one string"""
+        if type(file) in (str, unicode): file = open(file)
+        file = file.read()
+        return [file]
     def getArticle(self, context, file, doc):
         """Convert the given document into one or more ArticleDescriptors
         Subclasses *must* override"""

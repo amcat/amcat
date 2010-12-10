@@ -166,13 +166,11 @@ def splitArticle(db, art):
 
 def getStatistics(db):
     """return a Table with statistics on #assigned, #done etc per analysis"""
-    SQL = """select analysisid, count(sentenceid) as [#assigned], count(started) as [#started],
+    SQL = """select analysisid, count(sentenceid) as [#assigned], sum(cast(isstarted as int)) as [#started],
                  sum(cast(done as int)) as [#done]
-             from parses_jobs_sentences
+             from parses_jobs_sentences with (nolock)
              group by analysisid order by analysisid"""
     return db.doQueryTable(SQL)
-
-
 
 def _filter(text):
     l = len(text.strip().split())
@@ -220,11 +218,11 @@ def getSentences(db, analysis, maxn):
     with db.transaction():
         SQL = """select top %(maxn)i sentenceid from parses_jobs_sentences 
               with (repeatableread,tablockx)
-              where analysisid=%(analysisid)i and started is null and done=0 order by assigned """ % locals()
+              where analysisid=%(analysisid)i and isstarted=0 and done=0 order by assigned """ % locals()
         sids = list(db.getColumn(SQL))
         if sids:
-            SQL = ("update parses_jobs_sentences set started=getdate() where %s" %
-                   db.intSelectionSQL("sentenceid", sids))
+            SQL = ("update parses_jobs_sentences set isstarted=1 where analysisid=%i AND  %s" %
+                   (analysisid, db.intSelectionSQL("sentenceid", sids)))
             db.doQuery(SQL)
     #Create and return sentence objects
     return (sentence.Sentence(db, sid) for sid in sids)
@@ -233,7 +231,7 @@ def reset(db, analysis):
     """Reset all non-completed sentences to non-started and call L{purge}"""
     analysisid = _getid(analysis)
     purge(db, analysis)
-    db.doQuery("update parses_jobs_sentences set started=null where done=0")
+    db.doQuery("update parses_jobs_sentences set isstarted=0 where done=0")
 
 def purge(db, analysis):
     """Remove all already-parsed articles from the parses_jobs_sentences table"""

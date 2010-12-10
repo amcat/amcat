@@ -93,11 +93,8 @@ class Node(object):
             for desc in child.getDescendants(stoplist):
                 yield desc
 
-def getAttr(obj, attr):
-    try:
-        return obj.__getattribute__(attr)
-    except AttributeError:
-        return None
+    def addToGraphLabel(self, label):
+        self.graphlabel = getattr(self, "graphlabel", str(self)) + label
 
 def getNxLabel(node):
     s = getattr(node, "graphlabel", str(node))
@@ -114,12 +111,11 @@ def getNxAttributes(node):
         else: attrs['node_shape'] = shape
     return attrs
     
-def printNetworkxGraph(graph, output=None):
+def printNetworkxGraph(graph, output=None, format='png'):
     import networkx
     import matplotlib.pyplot as plt
     plt.clf()
     plt.figure(figsize=(10,10))
-
     
     labels = {}
     edgelabels = {}
@@ -147,6 +143,16 @@ def printNetworkxGraph(graph, output=None):
     if output:
         return plt.savefig(output)
     else:
+        pformat = 'png' if format == 'html' else format
         s = StringIO.StringIO()
-        plt.savefig(s, format="png")
-        return s.getvalue()
+        plt.savefig(s, format=pformat)
+        result = s.getvalue()
+        if format == 'html':
+            import toolkit
+            result = toolkit.convertImage(result, "png", trim=True)
+            return toolkit.htmlImageObject(result)
+        else:
+            return result
+        
+        
+               

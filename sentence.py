@@ -25,7 +25,7 @@ import dbtoolkit, toolkit, collections
 from cachable import Cachable, DBPropertyFactory, DBFKPropertyFactory,ForeignKey, CachingMeta
 import cachable
 from functools import partial
-import article, word
+import article, word, analysis
 import graph
 
 class SentenceWord(graph.Node, Cachable):
@@ -115,8 +115,8 @@ def endTriples(triples):
     triples = list(triples)
     if triples:
         anid = triples[0][0].analysedSentence.analysisid
-    if anid in NEED_COPULA_FLIP_ANALYSISIDS:
-        triples = list(flipCopula(triples))
+        #if anid in NEED_COPULA_FLIP_ANALYSISIDS:
+        #    triples = list(flipCopula(set(triples)))
     return triples
 
 class AnalysedSentence(Cachable, graph.Graph):
@@ -125,7 +125,6 @@ class AnalysedSentence(Cachable, graph.Graph):
     triples = DBFKPropertyFactory("parses_triples", ["parentbegin","relation", "childbegin"], objfunc=getTriple, endfunc=endTriples)
     words = DBFKPropertyFactory("parses_words", "wordbegin", objfunc=getSentenceWord, orderby="wordbegin")
 
-    #analysis = DBPropertyFactory("analysisid", factory=Sentence)
     def __init__(self, db, id_or_sentenceid, analysisid=None):
         if analysisid:
             idtuple = (id_or_sentenceid, analysisid)
@@ -139,6 +138,10 @@ class AnalysedSentence(Cachable, graph.Graph):
     @property
     def sentence(self):
         return Sentence(self.db, self.id[0])
+
+    @property
+    def analysis(self):
+        return analysis.Analysis(self.db, self.id[1])
 
 
 def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=False, sentence=False):

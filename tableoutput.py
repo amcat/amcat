@@ -2,7 +2,6 @@ from __future__ import with_statement
 import table3, toolkit, sys, csv, idlabel, StringIO, traceback, progress
 
 import logging; log = logging.getLogger(__name__)
-import amcatlogging; amcatlogging.debugModule()
 
 def getTable(table, colnames=None):
     if isinstance(table, (list, tuple)):
@@ -198,7 +197,7 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
         if writecolnames == True: writecolnames = str 
         if writerownames == True: writerownames = str            
         if writecolnames:
-            c = [""] + cols if writerownames else cols
+            c = ([""] + cols) if writerownames else cols
             csvwriter.writerow(map(writecolnames, c))
         pm.worked(5)
         rows = table.getRows()

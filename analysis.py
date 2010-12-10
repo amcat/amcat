@@ -6,6 +6,6 @@ class Analysis(Cachable):
     __table__ = 'parses_analyses'
     __idcolumn__ = 'analysisid'
     label = DBProperty()
-    language = DBProperty(language.Language)
+    language = DBProperty(lambda:language.Language)
 
     
