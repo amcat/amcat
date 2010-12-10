@@ -15,7 +15,6 @@ class ExternalScriptTest(amcattest.AmcatTestCase):
         es = externalscripts.getScript(self.db, 1)
         self.assertEqual(type(inv.getScript()), type(es))
 
-        self.assertRaises(Exception, inv.getProgress().isDone)
         
         
 

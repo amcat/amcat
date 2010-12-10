@@ -34,9 +34,12 @@ class Row(object):
 class ExportScript(externalscripts.ExternalScriptBase):
     def call(self, jobs, exportformat='csv', requireSentence=False):
         return super(ExportScript, self).call(jobs, exportformat, requireSentence=False)
-    
-    def _run(self, jobidlist, out, err, exportformat='csv', requireSentence=False):
+
+    def _run(self, jobidlist, out, err, exportformat='csv', requireSentence=False, rowlimit=None):
         super(ExportScript, self)._run(jobidlist, out, err)
+        self.rowlimit = rowlimit
+        #self.rowlimit = 100
+        
         with self.pm.monitored("Extracting data", 100):
             log.info("Starting export of data %r to format %s" % (jobidlist, exportformat))
             db = dbtoolkit.amcatDB(username='app', password='eno=hoty')
@@ -111,6 +114,7 @@ class ExportScript(externalscripts.ExternalScriptBase):
         cas = list(self.getCodedArticles(jobs))
         log.debug("Got coded articles")
         n = len(cas)
+        ndone = 0
         def dobuffer(arts):
             j =  i[0] +len(arts)
             pct = int(float(i[0] * 100) / n)
@@ -123,8 +127,13 @@ class ExportScript(externalscripts.ExternalScriptBase):
             for cs in ca.sentences:
                 sents = True
                 yield Row(ca,cs)
+                ndone += 1
+                if self.rowlimit and ndone >= self.rowlimit: return
+                                
             if (not sents) and (not self.requireSentence):
                 yield Row(ca, None)
+                ndone += 1
+                if self.rowlimit and ndone >= self.rowlimit: return
 
 
     def cacheRows(self, rows):
@@ -187,6 +196,23 @@ class ExportScript(externalscripts.ExternalScriptBase):
         return (self.getMetaColumns()
                 + list(self.getArticleAnnotationColumns(jobs))
                 + list(self.getUnitAnnotationColumns(jobs)))
-
+    
+    def _getOutputType(self, exportformat='csv', *args):
+        """How to interpret the output file, i.e. return its (mime) type"""
+        if exportformat == 'spss':
+            return "application/spss"
+        elif exportformat == "csv":
+            return "text/csv"
+        else:
+            return super(ExportScript, self)._getOutputType(*args)
+    def _getOutputExtension(self, exportformat='csv', *args):
+        """Suggest an extension for the output file"""
+        if exportformat == 'spss':
+            return ".sav"
+        elif exportformat == "csv":
+            return ".csv"
+        else:
+            return super(ExportScript, self)._getOutputExtension(*args)
+    
 if __name__ == '__main__':
     ExportScript().runFromCommand()

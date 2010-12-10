@@ -47,7 +47,7 @@ class DNNFieldColumn(FieldColumn):
         if self.ontoption in CATEGORIES:
             val = self.field.serializer.set.categorise(val, date=row.art.date, depth=[CATEGORIES[self.ontoption]])[0]
         elif self.ontoption == "dim":
-            val = self.field.serializer.set.categorise(val, date=row.art.date, depth=[2])[0]
+            val = self.field.serializer.set.categorise(val, date=row.art.date, depth=[1])[0]
             if val:
                 val = val.objekt.parents.get(ont.Class(val.objekt.db, 5001))
         return val

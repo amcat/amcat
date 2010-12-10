@@ -94,7 +94,7 @@ class ExternalScript(Cachable):
         cmd = self._getCommand(script, args)
         pid, out, err = self.call(data, *args, **kargs)
         return Invocation.create(db, script=self.id, outfile=out, errfile=err, pid=pid,
-                                 argstr=" ".join(cmd), outputtype=script._getOutputType(args))
+                                 argstr=" ".join(cmd), outputtype=script._getOutputType(*args))
                 
 
     def call(self, data=None, *args, **kargs):
@@ -112,7 +112,7 @@ class ExternalScript(Cachable):
         if 'outfile' in kargs:
             out = kargs['outfile']
         else:
-            out = toolkit.tempfilename(prefix="tmp-script-", suffix=script._getOutputExtension(args))
+            out = toolkit.tempfilename(prefix="tmp-script-", suffix=script._getOutputExtension(*args))
         if 'errfile' in kargs:
             err = kargs['errfile']
         else:
