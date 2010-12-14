@@ -1115,6 +1115,7 @@ def getCallingModuleFilename(depth=1):
 def HSVtoHTML(h, s, v):
     """Convert HSV (HSB) colour to HTML hex string"""
     rgb = colorsys.hsv_to_rgb(h, s, v)
+    if not rgb: raise TypeError("Cannot convert hsv (%s,%s,%s)!" % (h,s,v))
     return RGBtoHTML(*rgb)
 
 def RGBtoHTML(r, g, b): 

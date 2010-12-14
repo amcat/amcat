@@ -44,8 +44,9 @@ class SentimentLexicon(Cachable):
 
     lemmata = ForeignKey(lambda:SentimentLemma)
 
-    def lemmaidDict(self):
+    def lemmaidDict(self, cache=False):
         return dict((sl.lemmaid, sl) for sl in self.lemmata)
+
         
     
     
@@ -53,8 +54,9 @@ class SentimentLemma(Cachable):
     __table__ = 'words_lemmata_sentiment'
     __idcolumn__ = ('lexiconid', 'lemmaid')
 
-    sentiment = DBProperty()
-    intensity = DBProperty()
+    notes = DBProperty()
+    sentiment = DBProperty(constructor = lambda o, db, sent : sent / 100.)
+    intensity = DBProperty(constructor = lambda o, db, intensity : intensity / 100.)
     
     @property
     def lexicon(self):
