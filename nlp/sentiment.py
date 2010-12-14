@@ -1,133 +1,160 @@
-import toolkit, sentence, article, cachable
+import collections
+import word, sentence, toolkit, article
+from analysis import Analysis
+from cachable2 import cache
+import re
 
-
-
-
-SENTIMENT_SQL = """
-select p.sentenceid, wordbegin, sentiment, confidence, intensifier from parses_words p inner join words_words w on p.wordid = w.wordid
-inner join wva.words_sentiment s on w.lemmaid = s.lemmaid
- %s
- where %s
--- and p.analysisid=3
- and ((intensifier <>0) or (sentiment <> 0) or (confidence <> 0))
-order by  p.sentenceid, wordbegin
-"""
-SENTIMENT_SQL = """
-select p.sentenceid, wordbegin, sentiment, intensifier from parses_words p 
-inner join tmp_sentwords w on p.wordid = w.wordid
-where sentenceid in (select sentenceid from sentences where %s)
-"""
-
-
-
-INTENSIFIER_RANGE = 4
-CACHE_WORD = False
-class SentimentSentence(sentence.AnalysedSentence):
-    def __init__(self, *args, **kargs):
-        sentence.AnalysedSentence.__init__(self, *args, **kargs)
-        if CACHE_WORD:
-            self.cacheWords()
-        self.sentimentTokens = {}
-    def addToken(self, wordbegin, *args, **kargs):
-        if wordbegin >= len(self.words):
-            #HACK!
-            word = self.words[-1]
-        else:
-            word = self.words[wordbegin]
-        self.sentimentTokens[wordbegin] = SentimentToken(word, *args, **kargs)
-    def getIntensifiers(self, position):
-        for i in range(max(0, position-INTENSIFIER_RANGE), position):
-            t = self.sentimentTokens.get(i)
-            if t and t.intensification: yield t
-    def getSentiment(self, pos=None):
-        sent = 0.0
-        for position, t in self.sentimentTokens.iteritems():
-            s = t.sentiment# * t.confidence
-            if s:
-                for i in self.getIntensifiers(position):
-                    s *= i.intensification
-            if pos is not None:
-                if pos and s > 0: sent += s
-                elif (not pos) and s < 0: sent -= s
-            else:
-                sent += s
-        return sent
-    def toHTML(self):
-        html = ''
-        for i, word in enumerate(self.words):
-            t = self.sentimentTokens.get(i)
-            if t:
-                html += t.toHTML(list(self.getIntensifiers(i)))
-            else:
-                html += "%s " % word.label
-        return html
-
-def getHSV(sent, conf=1):
-    h = .167 + .167*sent
-    s = conf
-    b = 1
-    return h,s,b
-def getcol(sent, conf=1):
-    return toolkit.HSVtoHTML(*getHSV(sent, conf))
-    
-class SentimentToken(object):
-    def __init__(self, word, sentiment, intensification):
+class Token(object):
+    def __init__(self, word, topic=None, sentiment=None, intensity=None, notes=None):
         self.word = word
+        self.topic = topic
         self.sentiment = sentiment
-        self.intensification = intensification
-    def toHTML(self, intensifiers=[]):
-        sent = self.sentiment
-        for i in intensifiers: sent *= i.intensification
-        styles = []
-        txt = ''
-        if sent:
-            txt += "Total=%+1.1f, from sent=%+1.1f" % (sent, self.sentiment)
-            styles.append("background: %s" % getcol(sent))
-            if intensifiers: txt+= " modifiers %s" % (
-                ",".join("%s/%+1.1f" % (i.word, i.intensification) for i in intensifiers))
-        if self.intensification:
-            styles.append("border: 2px solid %s" % getcol(self.intensification))
-            txt += " Is modifier: %+1.1f" % self.intensification
-        return "<span style='%s' title='%s'>%s</span> " % (";".join(styles), txt, self.word)
+        self.intensity = intensity
+        self.notes = notes
+    def __str__(self):
+        return "Token(word=(%i:%i %s),topic=%s,sentiment=%s,intensity=%s,notes=%s)" % (
+            self.word.sentence.id, self.word.position, self.word.word.lemma, self.topic, self.sentiment, self.intensity, self.notes)
+
+def search(max):
+    """Return [0, 1, -1, 2, -2, .... -max]"""
+    return list(toolkit.flatten(zip(range(max+1), range(0,-(max+1),-1))))[1:]
+
+def searchtokens(tokens, i, pattern):
+    for pos in pattern:
+        j = i + pos 
+        if j < 0: continue
+        if j >= len(tokens): continue
+        if tokens[j].word.sentence <> tokens[i].word.sentence: continue
+        yield j, tokens[j]
+
+    
+class Sentiment(object):
+
+    def __init__(self, lexicon, analysis, topicdict={}, db=None):
+        if type(lexicon) == int: lexicon = word.SentimentLexicon(db, lexicon)
+        if type(analysis) == int: analysis = Analysis(db, analysis)
+        self.lexicon = lexicon
+        self.analysis = analysis
+        self.ldict = lexicon.lemmaidDict()
+        self.topicdict = topicdict
+
+    def getTokens(self, *sents):
+        cache(sents, words=dict(word=dict(lemma=dict(lemma=["string"]))))
+
+        sls = set()
+        for sent in sents:
+            for w in sent.words:
+                sl =self.ldict.get(w.word.lemma.id)
+                if sl: sls.add(sl)
+
+        cache(sls, ['sentiment','intensity'])
+
+        for sent in sents:
+            for w in sent.words:
+                l = w.word.lemma
+                sl = self.ldict.get(l.id)
+                topic = self.topicdict.get(l.id)
+                sent = sl and sl.sentiment
+                intensity = sl and sl.intensity
+                notes = sl and sl.notes
+                yield Token(w, topic, sent, intensity, notes)
+            
+
+    def spreadTopics(self, tokens):
+        originaltopics = [t.topic for t in tokens] 
+        for i, token in enumerate(tokens):
+            if token.topic: continue
+            for j, token2 in searchtokens(tokens, i, search(2)):
+                topic = originaltopics[j]
+                if topic:
+                    token.topic = topic
+                    break
+            
+    def resolveIntensifiers(self, tokens):
+        for i, token in enumerate(tokens):
+            if token.intensity:
+                for j, token2 in searchtokens(tokens, i, search(2)):
+                    if token2.sentiment:
+                        token2.sentiment *= token.intensity
+                        break
+                token.intensity = None
+
+    def resolveConditions(self, tokens):
+        for i, token in enumerate(tokens):
+            if not token.notes: continue
+            m = re.match('topic=([^;]+)', token.notes)
+            if m:
+                topics = m.groups()[0].split(",")
+                if token.topic not in topics:
+                    token.sentiment = None
+                token.notes = None
+                continue
+            m = re.match('previous=([^;]+)', token.notes)
+            if m:
+                previous = m.groups()[0].split(",")
+                if not any(str(token2.word.word.lemma) in previous
+                           for (j, token2) in searchtokens(tokens, i, [-1, -2])):
+                    token.sentiment = None
+                token.notes = None
+                    
+                    
+                
+    def sentimentsPerTopic(self, tokens):
+        result = collections.defaultdict(list)
+        for t in tokens:
+            if t.sentiment:
+                if t.topic:
+                    result[t.topic].append(t.sentiment)
+                result[None].append(t.sentiment)
+        return result
+
+    def totalSentiments(self, tokens):
+        sents = []
+        for t in tokens:
+            if t.sentiment: sents.append(t.sentiment)
+        return self.computeSentiment(sents)
+
+    def resolveSpecial(self, tokens):
+        for i, token in enumerate(tokens):
+            # 'mag/moet/kan beter'
+            if token.word.word.lemma.pos=='A' and str(token.word.word).endswith('er'):
+                for pos in [-1, -2]:
+                    j = i + pos 
+                    if j < 0: continue
+                    if tokens[j].word.sentence <> token.word.sentence: continue
+                    if tokens[j].word.word.lemma.pos=='V' and str(tokens[j].word.word.lemma) in ['kunnen','mogen','moeten']:
+                        token.sentiment = -1
+                        break
+
+    
+    def computeSentiment(self, sentiments):
+        if not sentiments: return None
+        return sum(sentiments) / sum(abs(s) for s in sentiments)
+
+
+
+    def getResolvedTokensForArticle(self, article):
+        sents = [s.getAnalysedSentence(self.analysis.id) for s in article.sentences]
+        tokens = list(self.getTokens(*sents))
+        self.spreadTopics(tokens)
+        self.resolveIntensifiers(tokens)
+        self.resolveConditions(tokens)
+        self.resolveSpecial(tokens)
+        return tokens
+
+    def getSentimentPerTopicForArticle(self, article):
+        tokens = self.getResolvedTokensForArticle(article)
+        for topic, sents in self.sentimentsPerTopic(tokens).iteritems():
+            yield topic, self.computeSentiment(sents)
         
-def getSentimentSentences(db, where, tick=True, restrict=True):
-    #extrajoin = ""
-    #if "storedresultid" in where: extrajoin = "inner join sentences z on z.sentenceid=p.sentenceid inner join storedresults_articles a on z.articleid = a.articleid"
-    #elif "articleid" in where: extrajoin = "inner join sentences z on z.sentenceid=p.sentenceid "
-    SQL = SENTIMENT_SQL % where#(extrajoin, where)
-    if restrict: SQL += " AND analysisid=3"
-    #toolkit.ticker.warn("Querying database\n%s" % SQL)
-    data = db.doQuery(SQL)
-    sids = set(row[0] for row in data)
-    sentences = dict((sid, SentimentSentence(db, (sid,3))) for sid in sids)
-    #sentence.cacheWords(sentences.values())
-    cursent = None
-    if tick: data = toolkit.tickerate(data, detail=1)
-    for sid, pos, sent,  intens in data:
-        sentences[sid].addToken(pos, sent/100., intens/100.)
-    return sentences.values()
-
-
 if __name__ == '__main__':
     import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)
-    where = "sentenceid in (35101048,35101049,35101050,22317334)"
-    html = open('/home/amcat/www/plain/test/sentiment.html', 'w')
-    html.write("<html><table border=1>\n")
-    
-    #where = "storedresultid = 763"
-    articles = {}
-    for s in getSentimentSentences(db, where):
-        aid = s.article.id
-        a = articles.get(aid)
-        if not a:
-            a = article.Article(db, aid)
-            a.cacheProperties("source","date")
-            articles[aid] = a
-        print a.id, a.date.date, a.source.id, s.getSentiment()
-        html.write("<tr><td>%s</td><td>%s</td><td>%+1.2f</td><td>%s</td></tr>\n" % (
-            s.article.id, s.id, s.getSentiment(), s.toHTML()))
-    html.write("</table></html>")
-    import sys; 
-    db.printProfile(stream=sys.stderr)
-    
+    aid = 59074552
+
+    topicdict = dict(db.doQuery("select lemmaid, topic from tmp_olery_topics"))
+    s = Sentiment(2, 3, topicdict, db)
+
+   
+    for topic, sentiment in s.getSentimentPerTopicForArticle(article.Article(db, aid)):
+        print topic, sentiment
