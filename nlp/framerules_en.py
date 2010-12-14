@@ -95,7 +95,7 @@ def childOfConjoinedV(node, *args, **kargs):
 
 
 ALLRULES = [
-        BronRule('1', V_SPEECH_ACTS,source=Child("nsubj"), quote=FirstMatch(Child(["dobj", "ccomp"]), Parent("dep"))),
+        BronRule('1', V_SPEECH_ACTS,source=Child("nsubj"), quote=FirstMatch(Child("ccomp"), Child("dobj"), Parent("dep"))),
         BronRule('ORD', V_ORDERS, source=Child("nsubj"), addressee=Child("dobj"), quote=Serial(Child("dobj"), Child("infmod"))),
 
         BronRule('acc', V_ACCORDING, source=Serial(Child("dep"), Child("pobj")), quote=Parent('prep')),

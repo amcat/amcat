@@ -24,4 +24,4 @@ ATTACK_LEMMATA = "provocation", "offensive", "policy"
 
 USE_LEMMATA = "use",
 
-COPULA_PREDICATE_NOUNS = "victim",
+COPULA_PREDICATE_NOUNS = "victim", "victims",
