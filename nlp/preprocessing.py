@@ -75,6 +75,7 @@ import cPickle as pickle
 from amcatlogging import logExceptions
 import logging; log = logging.getLogger(__name__)
 import ticker
+from preprocesstools import clean
 
 #import amcatlogging; amcatlogging.debugModule()
 
