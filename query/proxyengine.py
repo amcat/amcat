@@ -1,3 +1,22 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
 HOST = 'amcat.vu.nl'
 
 from servertools import *
@@ -6,6 +25,7 @@ import datamodel
 from enginebase import QueryEngineBase, ConceptTable, postprocess
 import filter
 import tableserial
+import logging; log = logging.getLogger(__name__)
 
 class ProxyEngine(QueryEngineBase):
     def __init__(self, datamodel, log=False, profile=False, port=PORT, idlabelfactory=None):
@@ -63,7 +83,7 @@ def queryList(socket, concepts, filters, distinct=False, idlabelfactory=None):
     for c in concepts:
         socket.sendstring(c.label)
     for f in filters:
-        print "Sending filter %s" % f
+        log.info("Sending filter %s" % f)
         if isinstance(f, filter.IntervalFilter):
             filterid, data = FILTER_INTERVAL, [[f.fromValue], [f.toValue]]
         else:

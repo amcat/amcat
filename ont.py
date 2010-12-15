@@ -107,7 +107,7 @@ class Object(Cachable):
         
         if not date: date = my_datetime.now()
         if languageid:
-            kw = self.labels.get(languageid)
+            kw = self.getLabel(languageid)
 
         if (not languageid) or (fallback and kw is None):
             kw = self.keyword

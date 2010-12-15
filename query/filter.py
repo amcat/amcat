@@ -14,6 +14,7 @@ def quotesql(val):
     if isinstance(val, idlabel.IDLabel):
         val = val.id
     return toolkit.quotesql(val)
+    
         
 class ValuesFilter(Filter):
     def __init__(self, concept, *values):

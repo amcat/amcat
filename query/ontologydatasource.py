@@ -8,11 +8,10 @@ import collections
 import categorise
 import cachable
 import amcatmetadatasource # mappedfield
-TEST_INDEX = "/home/amcat/indices/Test politiek nieuws 2010-02-15T12:35:36"
+
 
 class OntologyDataSource(datasource.DataSource):
     def __init__(self, dm, db, index, mappings=None, idlabellang=None):
-        # kargs = dict(username='draft', password='l0weL)WE')
         self.db = db
         datasource.DataSource.__init__(self, mappings)
         self._ont = None
