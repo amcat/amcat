@@ -17,8 +17,8 @@ def getActor(db, obj):
 class ActorIssueDataSource(OntologyDataSource):
     def __init__(self, dm, db, index):
         artfield = MappedField(self, dm.getConcept("article"), ConceptMapper(db, article.Article))
-        issue = SetOntologyField(self, dm.getConcept("issue"), 5002, 5000, 1)
-        actor = SetOntologyField(self,dm.getConcept("actor"), 5003, 5000, 1, conceptmapper=ConceptMapper(db, getActor))
+        issue = SetOntologyField(self, dm.getConcept("issue"), 5002, 5000, 1, languageid=13)
+        actor = SetOntologyField(self,dm.getConcept("actor"), 5003, 5000, 1, conceptmapper=ConceptMapper(db, getActor), languageid=13)
         issuearticle = OntArtField(self, dm.getConcept("issuearticle"), issue)
         coocissue = datasource.Field(self, dm.getConcept("coocissue"))
         issuecooc = datasource.Field(self, dm.getConcept("issuecooc"))

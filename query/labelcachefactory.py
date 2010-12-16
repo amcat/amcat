@@ -26,6 +26,7 @@ class LabelCacheFactory(object):
         self.concept2id = None # {conceptstr : labelcacheid}
         self.labelcaches = {} # {labelcacheid : {id : label}}
     def get(self, concept, value):
+        if self.db is None: return idlabel.IDLabel(value,"CONCEPT %s ID %i" % (concept, value))
         if self.concept2id is None:
             self.concept2id = self.querydict("select concept, conceptid from labels_concepts")
         conceptid = self.concept2id.get(concept)

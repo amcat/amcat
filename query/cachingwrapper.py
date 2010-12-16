@@ -58,12 +58,7 @@ class CachingEngineWrapper(QueryEngineBase):
                 log.debug("caching result")
                 self.cacheList(result, concepts, filters, distinct)
             
-            serialisers = list(tableserial.getColumns(result.concepts, IDLabelFactory=self.labelfactory))
-            data = []
-            log.debug("deserializing")
-            for row in result.data:
-                data.append([s.deserialiseSQL(val) for (s, val) in zip(serialisers, row)])
-            result.data = data
+            
         
         enginebase.postprocess(result, sortfields, limit, offset)
         return result 

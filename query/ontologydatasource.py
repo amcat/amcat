@@ -8,6 +8,7 @@ import collections
 import categorise
 import cachable
 import amcatmetadatasource # mappedfield
+import logging; log = logging.getLogger(__name__)
 
 
 class OntologyDataSource(datasource.DataSource):
@@ -125,13 +126,14 @@ class SetField(OntologyField):
         return ont.Set(self.datasource.db, id)
 
 class SetOntologyField(OntologyField):
-    def __init__(self, ds, concept, setid, supersetid, catid=None, conceptmapper=None):
+    def __init__(self, ds, concept, setid, supersetid, catid=None, conceptmapper=None, languageid=None):
         OntologyField.__init__(self, ds, concept, conceptmapper=conceptmapper)
         self.setid = setid
         self.supersetid = supersetid
         self._set = None
         self._superset = None
         self.objectsPerObject = None
+        self.languageid = None
     @property
     def superset(self):
         if self._superset is None:
@@ -173,9 +175,10 @@ class SetOntologyField(OntologyField):
     def getQuery(self, object):
         objects = set(self.getAllObjects(object))
         objects.add(object)
-        query = " OR ".join("(%s)" % o.getSearchString() for o in objects)
+        query = " OR ".join("(%s)" % o.getSearchString(languageid=self.languageid) for o in objects)
         if type(query) == str: query = query.decode('latin-1')
         query = query.encode('ascii','replace')
+        log.info('Got query %s' % query)
         return query
     def getObject(self, id):
         return ont.Object(self.datasource.db, id)

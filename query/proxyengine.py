@@ -43,8 +43,16 @@ class ProxyEngine(QueryEngineBase):
         data = queryList(sock, concepts, filters, distinct, self.idlabelfactory)
         if not data: data = []
         result = ConceptTable(concepts, data)
-        print "Received table with %i rows" % len(result.data)
+        log.info( "Received table with %i rows" % len(result.data))
         postprocess(result, sortfields, limit, offset)
+        
+        # serialisers = list(tableserial.getColumns(result.concepts, IDLabelFactory=self.idlabelfactory))
+        # data = []
+        # log.debug("deserializing")
+        # for row in result.data:
+            # data.append([s.deserialiseSQL(val) for (s, val) in zip(serialisers, row)])
+        # result.data = data
+        
         return result
 
     def getQuote(self, aid, words):
@@ -63,21 +71,21 @@ def authenticateToServer(socket):
     socket.write(response)
     socket.flush()
 def clienthandshake(socket):
-    print "Sending version no"
+    log.debug( "Sending version number")
     socket.sendint(1) # version no
     socket.flush()
-    print "Reading server version"
+    log.debug( "Reading server version")
     serverversion = socket.readint(checkerror=True)
     if serverversion is None: raise Exception("Server returned invalid serverversion")
-    print "Connected to AmCAT EngineServer version %i" % serverversion
+    log.info( "Connected to AmCAT EngineServer version %i" % serverversion)
     authenticateToServer(socket)
     serverok = socket.readint(checkerror=True)
     if serverok<>1: raise Exception("Server returned invalid OK status %i" % serverok)
-    print "Server ok: %i" % serverok
+    log.info( "Server ok: %i" % serverok)
 
 def queryList(socket, concepts, filters, distinct=False, idlabelfactory=None):
     socket.sendint(REQUEST_LIST_DISTINCT if distinct else REQUEST_LIST)
-    print ">>>", REQUEST_LIST_DISTINCT if distinct else REQUEST_LIST
+    log.info('distinct: %s' % REQUEST_LIST_DISTINCT if distinct else REQUEST_LIST)
     socket.sendint(len(concepts))
     socket.sendint(len(filters))
     for c in concepts:

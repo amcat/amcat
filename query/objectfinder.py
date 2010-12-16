@@ -3,6 +3,7 @@ Objectfinder module. Helps using several kinds of indices through one common int
 """
 
 import lucenelib, article, ont, toolkit, xapian
+import logging; log = logging.getLogger(__name__)
 
 class ObjectFinder(object):
     def __init__(self, index, languageid=101):
@@ -54,6 +55,7 @@ class LuceneFinder(ObjectFinder):
         raise Exception("Not yet implemented")
 
     def searchOnTerm(self, query):
+        log.info('Search for query %s' % query)
         results, time, n = lucenelib.search(self.index, {"X" : query}.items())
         return results["X"].iterkeys()
 
