@@ -157,6 +157,16 @@ class TestToolkitFunctions(unittest.TestCase):
                 self.assertTrue(out in s, "%r not in %s" % (out, s))
                 if filter:
                     self.assertTrue(filter(out))
+
+    def test_pad(self):
+        for (seq, minlength, padwith, chop, out) in (
+            ([1,2,3], 5, None, True, [1,2,3,None,None]),
+            ([1,2,3], 1, None, True, [1]),
+            ([1,2,3], 3, None, True, [1,2,3]),
+            ):
+            self.assertEqual(toolkit.pad(seq, minlength, padwith, chop), out)
             
+            
+                    
 if __name__ == '__main__':
     unittest.main()

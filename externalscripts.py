@@ -34,20 +34,28 @@ ExternalScriptBase:
 
 1) a _caller_ will use the object to find out which arguments are
   needed and to start the background process using
-  L{ExternalScript.call}, after which it can make an entry in the
-  externalscripts_invocations table if desired.
+  L{ExternalScript.call} or L{externalscript.invoke}.
 2) the _process_ called from the command line will do the actual work,
-  generally by running L{ExternalScript.runFromCommand}, which parses
-  the arguments and calls L{ExternalScript._run}.
+  by running this module with the RUN paramter, which calls
+  L{ExternalScriptBase.runFromCommand} on the script object.
 3) a _monitor_ can use the object to interpret the output and error
-  streams of the process, possibly based on the
-  externalscripts_invocations table
+  streams of the process, possibly based on the externalscripts_invocations table
 
-It is possible to run externalscripts from the command line in order to
-execute one of the scripts. This makes it easier to deal with pythonpath
-issues. The usage for that is:
+For implementing an externalscript, subclass from ExternalScriptBase and override
+the _run method, and add the script to the externalscripts database table.
 
-python externalscripts COMMAND SCRIPTID [ARGS] [<DATA]
+To call an externalscript, create the ExternalScript domain object, and use
+call() or invoke() with the appropriate commands.
+
+To monitor an externalscript in a separate process, obtain the Invocation object
+(through ID or as the result of calling invoke()) and call getProgresss()
+
+The best way to run externalscripts from the command line, either in-process
+or in a new process, is through calling this script.
+
+Usage:
+
+python externalscripts.py COMMAND SCRIPTID [ARGS] [<DATA]
 
 Where COMMAND is one of:
 INVOKE: call the script and add a database invocation entry
@@ -57,7 +65,7 @@ RUN: run the script directly
 Where SCRIPTID is the id of the script to call, and args and data are
 passed to the script as normal.
 
-for CALL and INVOKE, DATA *must* be supplied (if need be with </dev/null) or script will hang!
+for CALL and INVOKE, the script can use the ARGS and DATA
 """
 
 import logging; log = logging.getLogger(__name__)
@@ -109,14 +117,12 @@ class ExternalScript(Cachable):
         cmd = self._getCommand(script, args)
         log.debug("Calling %s with data=%r, args=%r, cmd=\n%s" % (script, data, args, cmd))
         
-        if 'outfile' in kargs:
-            out = kargs['outfile']
-        else:
-            out = toolkit.tempfilename(prefix="tmp-script-", suffix=script._getOutputExtension(*args))
-        if 'errfile' in kargs:
-            err = kargs['errfile']
-        else:
-            err = toolkit.tempfilename(prefix="tmp-script-", suffix=".err")
+        
+        out = (kargs['outfile'] if 'outfile' in kargs 
+               else toolkit.tempfilename(prefix="tmp-script-", suffix=script._getOutputExtension(*args)))
+        
+        err = (kargs['errfile'] if 'errfile' in kargs 
+               else toolkit.tempfilename(prefix="tmp-script-", suffix=".err"))
 
         log.info("Calling %s >%s 2>%s" % (cmd, out, err))
 
@@ -167,12 +173,6 @@ class Invocation(Cachable):
 
 class ExternalScriptBase(object):
     """Class that represents an external script such as a codingjob extraction script"""
-    
-    def __init__(self, command=None):
-        """
-        @param filename: name of the command, defaults to 'python /path/modulename.py'
-        """
-        self.command = command 
 
     def interpretStatus(self, errstream):
         """Interpret the err stream of the process
@@ -218,7 +218,7 @@ class ExternalScriptBase(object):
         return args           
     
     def _run(self, data, out, err, *args):
-        """Run the actual script. Subclasses should override and may call this base for loggin
+        """Run the actual script. Subclasses should override and may call this base for logging
         
         @param data: the stream for the data input
         @param out: the output stream to use, which should be interpretable
