@@ -240,7 +240,7 @@ class Hierarchy(object):
         if _omklaps is None:
             _omklaps = set(self.db.doQuery("select classid, parentid, childid from o_hierarchy where reverse = 1"))
         clas = self.getClass(child)
-        omklap = -1 if (parent.id, child.id, clas.id) in _omklaps else 1
+        omklap = -1 if (clas.id, parent.id, child.id) in _omklaps else 1
         log.debug("omklap(%s, %s, %s) = %s" % (parent.idlabel(), child.idlabel(), clas.idlabel(), omklap))
                
         return omklap
