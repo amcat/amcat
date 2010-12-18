@@ -95,6 +95,7 @@ class AnnotationSchemaField(Cachable):
                 if not setid:
                     log.warn("OntologyASF without setid? %s" % (self.params))
                     self._serializer = SchemaFieldSerialiser()
+                    
             else:
                 setid = 201
             self._serializer = OntologyFieldSerialiser(self.schema.db, self.schema.language, int(setid))
@@ -187,6 +188,8 @@ class DBLookupFieldSerialiser(LookupFieldSerialiser):
         
         
 class FromFieldSerialiser(SchemaFieldSerialiser):
+    def __init__(self):
+        SchemaFieldSerialiser.__init__(self, int)
     def deserialise(self, value):
         return NotImplementedError()
     def getLabel(self, value, codedsentence=None):
@@ -243,6 +246,23 @@ class FieldColumn(ObjectColumn):
     def getUnit(self, row):
         return row.ca if self.article else row.cs
     def getCell(self, row):
-        val = getValue(self.getUnit(row), self.field)
-        
-        return val
+        try:
+            val = getValue(self.getUnit(row), self.field)
+            return val
+        except AttributeError, e:
+            log.debug("AttributeError on getting %s.%s: %s" % (row, self.field, e))
+            return None
+            
+                     
+
+if __name__ == '__main__':
+    import amcatlogging; amcatlogging.setup()
+    import dbtoolkit, ont
+    db = dbtoolkit.amcatDB()
+    a = AnnotationSchema(db, 72)
+    obj = ont.Object(db, 11344)
+    f = a.getField("subject")
+    s = f.serializer.set
+    print s.categorise(obj, date=None, depth=[1], returnOmklap=True, returnObjects=True)
+
+    
