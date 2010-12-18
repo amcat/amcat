@@ -10,7 +10,7 @@ nfromtest <- function() {
 
 percentages <- function(v) {v / sum(v)}
 
-predictreport <- function(predicted, testdata=NULL, dowrite=T, imagesdir=DEFAULT.IMAGES) {
+predictreport <- function(predicted, testdata=NULL, dowrite=F, imagesdir=DEFAULT.IMAGES) {
   if (dowrite) {
     write.table(predicted, "/tmp/predicted.txt")
     if (!is.null(testdata)) {write.table(testdata, "/tmp/testdata.txt")}
@@ -29,7 +29,7 @@ confbins <- function(conf) {
   ((conf-0.00000001) %/% .05) * .05
 }
 
-testreport <- function(testdata, dowrite=T, imagesdir=DEFAULT.IMAGES) {
+testreport <- function(testdata, dowrite=F, imagesdir=DEFAULT.IMAGES) {
   d <- prepare(testdata, omit.missing.actual=T)
   if (dowrite) {write.table(testdata, "/tmp/table.txt")}
 

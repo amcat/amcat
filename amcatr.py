@@ -132,7 +132,6 @@ def table2RFrame(table):
     
     cols = rlc.ArgsDict() 
     for col in table.getColumns():
-        print col
         vector = [table.getValue(row, col) for row in table.getRows()]
         types = set(map(type, vector))
         nonnull = types - set([type(None)])
@@ -142,7 +141,6 @@ def table2RFrame(table):
             t = nonnull.pop()
             func = VECTORS.get(t)
         if not func:
-            print col, vector[:20]
             raise Exception("Unknown vector type: %s" % types)
         cols[str(col)] = func(vector)
     return robjects.r["data.frame"].rcall(cols.items())
