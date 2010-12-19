@@ -261,6 +261,8 @@ class Cachable(idlabel.IDLabel):
         @example: User.find(db, username='piet')
         @example: Function.find(db, office=Object(db, 123))
         
+        This is also correct:
+        @example: Function.find(db, office=123)
         """
         def getcols(attr):
             p = cls._getProperty(attr)
@@ -285,7 +287,10 @@ class Cachable(idlabel.IDLabel):
     @classmethod
     def get(cls, db, **props):
         """Same function as find, but raises an error when zero or more than one
-        objects are found."""
+        objects are found.
+        
+        @example: Politician.get(db, object=295)
+        @example: Politician.get(db, Object(db, 295))"""
         obj = cls.find(db, **props)
         if len(obj) is 1: return obj[0]
         
