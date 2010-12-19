@@ -697,10 +697,9 @@ def toJSON(value):
     @type value: anything
     @param value: value you wish to convert to a json-friendly type"""    
     if type(value) == types.GeneratorType:
-        return map(toJSON, tuple(value))
+        return map(toJSON, value)
     
-    if value and value != 'None':
-        return unicode(value)
+    if value: return unicode(value)
     
     return ''
 
@@ -736,15 +735,15 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
 ###########################################################################
 
 MONTHNAMES = (('jan', 'janv', 'ener'),
-              ('feb', 'fevr'),
-              ('mar', 'mrt', 'maa', 'mar'),
+              ('feb', 'fevr', 'feve'),
+              ('mar', 'mrt', 'maa', 'mar', 'mai'),
               ('apr', 'avri', 'abri'),
               ('may', 'mai', 'mei', 'mayo'),
-              ('jun', 'juin'),
+              ('jun', 'juin',),
               ('jul', 'juil'),
               ('aug', 'aout', 'agos'),
               ('sep', 'setem'),
-              ('oct', 'okt'),
+              ('oct', 'okt', 'out'),
               ('nov'),
               ('dec', 'dez', 'dici'))
 """Tuple of 12 tuples containing month name (prefixes)""" 
