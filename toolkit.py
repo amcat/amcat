@@ -446,6 +446,15 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
         else:
             yield subsequence
 
+def pad(sequence, minlength, padwith=None, chopexcess=True):
+    sequence = getseq(sequence, seqtypes=(list,))
+    if len(sequence) > minlength and chopexcess:
+        return sequence[:minlength]
+    elif len(sequence) >= minlength: return sequence
+    else: return sequence + [padwith] * (minlength - len(sequence))
+
+        
+            
 @deprecated
 def buffer(sequence, buffercall, buffersize=100):
     """B{Deprecated: please use splitlist(..., yieldelements=True)}"""

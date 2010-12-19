@@ -254,10 +254,10 @@ class Cachable(idlabel.IDLabel):
     def _getWhere(self, refcolumn=None):
         idcol, oid = refcolumn or self.__idcolumn__, self.id
         if type(idcol) in (str, unicode):
-            if type(oid) != int: raise ValueError("Non-integral id on object %r with scalar idcolumn %r!" % (obj, idcol)) 
+            if type(oid) != int: raise ValueError("Non-integral id on object %r with scalar idcolumn %r!" % (oid, idcol)) 
             return {idcol : oid}
         else:
-            if type(oid) != tuple: raise ValueError("Scalar id on object %r with tuple idcolumn %r!" % (obj, idcol)) 
+            if type(oid) != tuple: raise ValueError("Scalar id on object %r with tuple idcolumn %r!" % (oid, idcol)) 
             return dict(zip(idcol, oid)) 
     
             

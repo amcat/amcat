@@ -22,7 +22,7 @@ import cachable
 from codingjob import getValue
 
 import logging; log = logging.getLogger(__name__)
-import amcatlogging; amcatlogging.debugModule()
+#import amcatlogging; amcatlogging.debugModule()
 
 def getTable(jobs, *args, **kargs):
     return DNNExportScript(*args, **kargs).getTable(jobs)
@@ -67,7 +67,7 @@ class AggrQualColumn(FieldColumn):
             obj = getValue(self.getUnit(row), field)
             if self.ontoption in CATEGORIES:
                 omklap = field.serializer.set.categorise(obj, date=row.art.date, depth=[CATEGORIES[self.ontoption]], returnOmklap=True, returnObjects=False)
-                #log.debug("omklap for %s %s %s = %s" % (self.ontoption, fieldname, obj, omklap))
+                log.debug("omklap for %s %s %s = %s" % (self.ontoption, fieldname, obj, omklap))
                                 
             elif self.ontoption == "dim":
                 cat, omklap = field.serializer.set.categorise(obj, date=row.art.date, depth=[2], returnOmklap=True)
