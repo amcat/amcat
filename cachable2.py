@@ -251,8 +251,8 @@ class Cachable(idlabel.IDLabel):
             rowfunc = lambda *i : cls(db, i)                      
         return db.select(cls.__table__, cls.__idcolumn__, rowfunc=rowfunc)
 
-    def _getWhere(self):
-        idcol, oid = self.__idcolumn__, self.id
+    def _getWhere(self, refcolumn=None):
+        idcol, oid = refcolumn or self.__idcolumn__, self.id
         if type(idcol) in (str, unicode):
             if type(oid) != int: raise ValueError("Non-integral id on object %r with scalar idcolumn %r!" % (obj, idcol)) 
             return {idcol : oid}
@@ -427,11 +427,12 @@ class Property(object):
 class DBProperty(Property):
     """Property that retrieves its value from the database"""
 
-    def __init__(self, targetclass=None, table=None, getcolumn=None, constructor=None, **kargs):
+    def __init__(self, targetclass=None, table=None, getcolumn=None, refcolumn=None, constructor=None, **kargs):
         Property.__init__(self, **kargs)
         self.targetclass = targetclass
         self.table = table
         self.getcolumn = getcolumn
+        self.refcolumn = refcolumn
         
         self.tablehook = None # function obj -> table
         self.constructor = constructor # function(obj, db, values) -> child
@@ -505,7 +506,7 @@ class DBProperty(Property):
     def retrieve(self, obj):
         """Use the database to retrieve the value of this property for obj
         """
-        return obj.db.select(self._getTable(obj), self._getColumns(), obj._getWhere(), alwaysReturnTable=True)
+        return obj.db.select(self._getTable(obj), self._getColumns(), obj._getWhere(self.refcolumn), alwaysReturnTable=True)
     
     def getType(self, obj_or_db=None):
         # if targetclass is a class or tuple of classes, return it 
@@ -536,7 +537,7 @@ class DBProperty(Property):
             val = (val,) # for caching
         else:
             update = dict(zip(cols, val))
-        obj.db.update(self._getTable(obj), update, obj._getWhere())
+        obj.db.update(self._getTable(obj), update, obj._getWhere(self.refcolumn))
         self.cache(obj, val)
 
 
