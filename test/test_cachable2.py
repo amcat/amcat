@@ -270,6 +270,12 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         self.assertEqual(len(list(t.test2s)), 0)
         self.assertEqual(list(t.test2s), [])
         
+    def testFindGet(self):
+        self.assertEqual(len(TestUser.find(self.db, 1)), 1)
+        
+        t = TestUser(self.db, 1)
+        self.assertEqual(t, TestUser.get(self.db, userid=1))        
+        
         
 if __name__ == '__main__':
     #import amcatlogging; amcatlogging.debugModule("cachable2", "amcatmemcache")
