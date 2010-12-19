@@ -206,7 +206,7 @@ class Cachable(idlabel.IDLabel):
         
     @classmethod
     def create(cls, db, idvalues=None, **props):
-        """Create a new instance of this Cachable class, initialised with props
+        """Create a new instance of this Cachable class, initialized with props
 
         Note that the caller is responsible for maintaining the db transaction
         (i.e. for committing after an update).
@@ -243,13 +243,53 @@ class Cachable(idlabel.IDLabel):
         return result
     
     @classmethod
+    def _get_rowfunc(cls, db):
+        if type(cls.__idcolumn__) in (str, unicode):
+            return lambda i : cls(db, i)
+        else: #need to pass arg tuple as single id argument to constructor
+            return lambda *i : cls(db, i)
+    
+    @classmethod
     def getAll(cls, db):
         """Get all known objects of this type"""
-        if type(cls.__idcolumn__) in (str, unicode):
-            rowfunc = lambda i : cls(db, i)
-        else: #need to pass arg tuple as single id argument to constructor
-            rowfunc = lambda *i : cls(db, i)                      
-        return db.select(cls.__table__, cls.__idcolumn__, rowfunc=rowfunc)
+        return db.select(cls.__table__, cls.__idcolumn__, rowfunc=cls._get_rowfunc(db))
+    
+    @classmethod
+    def find(cls, db, **props):
+        """Find objects with given properties
+        
+        @example: User.find(db, username='piet')
+        @example: Function.find(db, office=Object(db, 123))
+        
+        """
+        def getcols(attr):
+            p = cls._getProperty(attr)
+            if not p: raise TypeError("Cannot find property %s.%s" % (cls, key))
+            return p._getColumns()
+        
+        def getvals(value):
+            if isinstance(value, Cachable):
+                return value.id
+            return value
+        
+        def totuple(value):
+            if type(value) in (tuple, list): return value
+            return (value,)
+        
+        where = [(getcols(k), getvals(v)) for k,v in props.items()]
+        where = [zip(totuple(k), totuple(v)) for k,v in where]
+        where = dict([item for sublist in where for item in sublist]) # Flattening list
+        
+        return db.select(cls.__table__, cls.__idcolumn__, where=where, rowfunc=cls._get_rowfunc(db))
+    
+    @classmethod
+    def get(cls, db, **props):
+        """Same function as find, but raises an error when zero or more than one
+        objects are found."""
+        obj = cls.find(db, **props)
+        if len(obj) is 1: return obj[0]
+        
+        raise ValueError("Database returned zero or more than one objects")
 
     def _getWhere(self, refcolumn=None):
         idcol, oid = refcolumn or self.__idcolumn__, self.id
