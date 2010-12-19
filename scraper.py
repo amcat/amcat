@@ -3,6 +3,7 @@ from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup
 from PIL import Image
 import cStringIO, articlecreator
 from datetime import datetime, date
+import sys
 #import wordfrequency
 
 l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
@@ -185,9 +186,13 @@ class ArticleScraper(Scraper):
                             artdescs = [artdescs]
                         for artdesc in artdescs:
                             self.createArticle(artdesc)
+                    except KeyboardInterrupt:
+                        raise KeyboardInterrupt
                     except:
                         self.logException('Article exception %s' % address)
                 self.endPage(context, page)
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt
             except:
                 self.logException('Page exception %s' % str(page))
         self.endScrape(context)
@@ -297,10 +302,14 @@ class TextImporter(Scraper):
                             artdescs = [artdescs]
                         for artdesc in artdescs:
                             self.createArticle(artdesc)
+                    except KeyboardInterrupt:
+                        raise KeyboardInterrupt
                     except Exception, e:
                         import traceback
                         traceback.print_exc()
                         self.logException('Article exception file %s doc %r' % (file, doc[:40]))
+            except KeyboardInterrupt:
+                raise KeyboardInterrupt
             except:
                 self.logException('SplitFile exception %s' % str(file))
         self.endScrape(context)
