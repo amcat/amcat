@@ -57,6 +57,7 @@ class ProxyEngine(QueryEngineBase):
 
     def getQuote(self, aid, words):
         words = " ".join(words)
+        log.info('get quote in articleid %s for words %s' % (aid, words))
         sock = self.connect()
         sock.sendint(REQUEST_QUOTE)
         sock.sendint(aid)

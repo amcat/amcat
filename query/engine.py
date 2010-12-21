@@ -8,6 +8,7 @@ import toolkit
 import table3, tableoutput
 import filter, aggregator # not used, import to allow indirect access
 import enginebase
+import logging; log = logging.getLogger(__name__)
     
 def postprocess(table, sortfields, limit, offset):
     if sortfields:
@@ -71,6 +72,9 @@ class QueryEngine(enginebase.QueryEngineBase):
         #article.db = dbtoolkit.amcatDB()
         import article
         if type(art) == int: art = article.Article(self.db, art)
+        log.info('Calling Article object for quote %s' % args)
+        kargs['quotelen'] = 7
+        kargs['boldfunc'] = lambda w : "<strong>%s</strong>" % w
         q = art.quote(*args, **kargs)
         if not q:
             toolkit.warn("No quote for article %r, args=%s, kargs=%s" % (art, args, kargs))
