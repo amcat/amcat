@@ -7,6 +7,19 @@ from amcatlogging import logExceptions
 
 ANALYSISID=3
 
+def parseSentences(sentences):
+    client = tadpole.TadpoleClient(port=9998)
+    db = dbtoolkit.amcatDB()
+    
+    LOG.info("Lemmatising %i sentences" % len(sentences))
+    for sid, text in sentences:
+        with logExceptions(LOG):
+            text = toolkit.stripAccents(text)
+            tokens = list(client.process(text))
+            #LOG.info("Storing %i tokens for sentence %i" % (len(tokens), s.id))
+            result = [("tokens", tokens)]
+            yield sid, result
+
 if __name__ == '__main__':
     import amcatlogging; amcatlogging.setStreamHandler()
     db  = dbtoolkit.amcatDB()

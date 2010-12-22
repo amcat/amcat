@@ -30,6 +30,9 @@ if analysisid == 4:
 elif analysisid == 5:
     import englishpos
     parse = englishpos.parseSentences
+elif analysisid == 3:
+    import dolemmatise
+    parse = dolemmatise.parseSentences
 else:
     usage()
 
