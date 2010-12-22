@@ -401,6 +401,8 @@ class ArticlesImage(object):
         # Return cache if possible
         if self.row_scores_cache: return self.row_scores_cache
         
+        print('Building cache..')
+        
         # Calculate row scores
         w, h = self.i.size
         
@@ -408,6 +410,8 @@ class ArticlesImage(object):
         for row in xrange(h):
             scores.append(sum(self._getPixelScores(row)))
         self.row_scores_cache = scores
+        
+        print('Done')
         
         return scores
     
