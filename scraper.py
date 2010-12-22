@@ -427,7 +427,10 @@ class ArticlesImage(object):
         @yield: y1, y2"""
         headlines = tuple(self._getHeadlines())
         
-        start = 0; prev = headlines[0]
+        if headlines: 
+            prev = headlines[0]
+            start = 0
+         
         for i, h in enumerate(headlines):
             if (h - prev) > 2:
                 yield headlines[start], headlines[i-1]
