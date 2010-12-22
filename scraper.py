@@ -351,11 +351,11 @@ class ArticlesImage(object):
     For more information on Image._ImageCrop, see PIL Documentation
     """
     def __init__(self, f):
-        self.max = 255 + 255 + 255
-        self.max_white = 2000
-        self.min_headline = 13
+        self.max = 255 #+ 255 + 255
+        self.min_headline = 20
         
-        self.i = Image.open(f)
+        self.oi = Image.open(f)
+        self.bw = self.oi.convert('1')
         self.inv = tuple((self.max - x for x in xrange(self.max + 1)))
         
         self.row_scores_cache = None
@@ -364,10 +364,12 @@ class ArticlesImage(object):
     
     def _getPixelScores(self, r):
         """For each pixel in `r` return an (inverted) score"""
-        w = self.i.size[0]
+        w = self.oi.size[0]
         for c in xrange(w):
-            pixel_score = sum(self.i.getpixel((c, r)))
-            yield self.inv[pixel_score]
+            #pixel_score = sum(self.i.getpixel((c, r)))
+            #yield self.inv[pixel_score]
+            #print self.bw.getpixel((c, r))
+            yield self.inv[self.bw.getpixel((c, r))]
             
     def _getLines(self):
         """"""
@@ -392,7 +394,7 @@ class ArticlesImage(object):
                 yield i
                 
     def _is_white(self, row_score):
-        return (row_score < self.max_white)
+        return (row_score == 0)
     
     @property
     def _row_scores(self):
@@ -401,17 +403,13 @@ class ArticlesImage(object):
         # Return cache if possible
         if self.row_scores_cache: return self.row_scores_cache
         
-        print('Building cache..')
-        
         # Calculate row scores
-        w, h = self.i.size
+        w, h = self.oi.size
         
         scores = []
         for row in xrange(h):
             scores.append(sum(self._getPixelScores(row)))
         self.row_scores_cache = scores
-        
-        print('Done')
         
         return scores
     
@@ -455,7 +453,7 @@ class ArticlesImage(object):
     def article_images(self):
         for a in self.articles:
             upper, lower = self.getYCoordinates(*a)
-            yield self.i.crop((0, upper, self.i.size[0], lower))
+            yield self.oi.crop((0, upper, self.oi.size[0], lower))
             
     def getYCoordinates(self, line1, line2):
         """Get the top y-coordinate and bottom y-coordinate"""
