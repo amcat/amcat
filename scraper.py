@@ -335,6 +335,132 @@ class TextImporter(Scraper):
         """Convert the given document into one or more ArticleDescriptors
         Subclasses *must* override"""
         abstract
+        
+class ArticlesImage(object):
+    """Split one `short news` image to seperate images
+    
+    @example:
+    >>> f = open('image.jpg')
+    >>> i = ArticlesImage(f)
+    >>> tuple(i.article_images)
+    (<Image._ImageCrop image mode=RGB size=250x457 at 0xA26A1CC>,
+    <Image._ImageCrop image mode=RGB size=250x337 at 0xA26A2CC>,
+    <Image._ImageCrop image mode=RGB size=250x337 at 0xA26A2EC>,
+    <Image._ImageCrop image mode=RGB size=250x342 at 0xA26A30C>)
+    
+    For more information on Image._ImageCrop, see PIL Documentation
+    """
+    def __init__(self, f):
+        self.max = 255 + 255 + 255
+        self.max_white = 2000
+        self.min_headline = 13
+        
+        self.i = Image.open(f)
+        self.inv = tuple((self.max - x for x in xrange(self.max + 1)))
+        
+        self.row_scores_cache = None
+    
+    #### PRIVATE FUNCTIONS AND PROPERTIES ####
+    
+    def _getPixelScores(self, r):
+        """For each pixel in `r` return an (inverted) score"""
+        w = self.i.size[0]
+        for c in xrange(w):
+            pixel_score = sum(self.i.getpixel((c, r)))
+            yield self.inv[pixel_score]
+            
+    def _getLines(self):
+        """"""
+        prev = self._is_white(self._row_scores[0])
+        
+        height = 0
+        for s in self._row_scores:
+            white = self._is_white(s)
+            
+            if prev == white:
+                height += 1
+                continue
+            
+            yield (prev, height + 1)
+            prev, height = white, 0
+    
+    def _getHeadlines(self):
+        for i, line in enumerate(self.lines):
+            white, height = line
+            
+            if not white and height > self.min_headline:
+                yield i
+                
+    def _is_white(self, row_score):
+        return (row_score < self.max_white)
+    
+    @property
+    def _row_scores(self):
+        """Return inverted score for each row"""
+        
+        # Return cache if possible
+        if self.row_scores_cache: return self.row_scores_cache
+        
+        # Calculate row scores
+        w, h = self.i.size
+        
+        scores = []
+        for row in xrange(h):
+            scores.append(sum(self._getPixelScores(row)))
+        self.row_scores_cache = scores
+        
+        return scores
+    
+
+    #### PUBLIC FUNCIONS AND PROPERTIES ####
+            
+    @property
+    def lines(self):
+        return tuple(self._getLines())
+    
+    @property
+    def headlines(self):
+        """Get headlines
+        
+        @yield: y1, y2"""
+        headlines = tuple(self._getHeadlines())
+        
+        start = 0; prev = headlines[0]
+        for i, h in enumerate(headlines):
+            if (h - prev) > 2:
+                yield headlines[start], headlines[i-1]
+                start = i
+               
+            if i is (len(headlines) - 1):
+                # End of loop
+                yield headlines[start], h
+            
+            prev = h
+            
+    @property
+    def articles(self):
+        headlines = tuple(self.headlines)
+        for i, h in enumerate(headlines):
+            if i is (len(headlines) - 1):
+                yield h[0], len(self.lines)
+                break
+            
+            yield h[0], headlines[i + 1][0] - 2
+            
+    @property
+    def article_images(self):
+        for a in self.articles:
+            upper, lower = self.getYCoordinates(*a)
+            yield self.i.crop((0, upper, self.i.size[0], lower))
+            
+    def getYCoordinates(self, line1, line2):
+        """Get the top y-coordinate and bottom y-coordinate"""
+        heights = [x[1] for x in self.lines]
+        
+        begin = sum(heights[:line1]) - (heights[line1 - 1] / 2)
+        end = sum(heights[:line2 + 1]) + (heights[line1 + 1] / 2)
+        
+        return begin, end
     
 stripRegExpTuple = (
     (re.compile(ur'<(script|style).*?</(script|style)>', re.IGNORECASE | re.DOTALL), u''),
