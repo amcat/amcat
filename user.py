@@ -28,6 +28,12 @@ class User(Cachable):
     
     affiliation = DBProperty(lambda : Affiliation, getcolumn="affiliationid")
     
+    @classmethod
+    def create(cls, db, **props):
+        
+        
+        super(User, cls).create(db, **props)
+    
     def haspriv(self, privilege, onproject=None):
         """If permission is denied, this function returns False,
         if permission granted it returns True.
