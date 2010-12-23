@@ -68,7 +68,7 @@ class CachingEngineWrapper(QueryEngineBase):
         bitmask = self.getBits(concept.id for concept in concepts)
         filtermask = self.getBits(f.concept.id for f in filters)
         SQL = "SELECT id, concepts, filterconcepts, filtervalues FROM listcachetables WHERE (concepts & %s = %s) AND (filterconcepts & %s = filterconcepts)" % (bitmask, bitmask, filtermask)
-        if not distinct: SQL += " AND (NOT distnct)"
+        if not distinct: SQL += " AND (NOT distinct)"
         log.debug("Querying cache using %s" % SQL)
         for cacheid, cachedconcepts, filterconcepts, filtervalues in self.cachedb.doQuery(SQL):
             log.debug("CHECKING candidate table id %i" % cacheid)
