@@ -1,18 +1,15 @@
-from cachable import Cachable, DBFKPropertyFactory, DBPropertyFactory, CachingMeta, cache
-import cachable
+from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
+from datetime import datetime
+
 import toolkit, idlabel, language
-try:
-    import mx.DateTime as my_datetime
-except:
-    from datetime import datetime as my_datetime
+import logging; log = logging.getLogger(__name__)
 
 DUMMY_CLASSID_PARTYMEMBER = 1
 DUMMY_CLASSID_OFFICE = 2
-import logging; log = logging.getLogger(__name__)
-#import amcatlogging; amcatlogging.debugModule()
+PERSONS_CLASSID = 4003
+PARTYMEMBER_FUNCTIONID = 0
     
-def getParent(db, cidpid):
-    cid, pid = cidpid
+def getParent(obj, db, cid, pid):
     cl = Class(db, cid)
     if pid is None:
         return cl, None
@@ -42,49 +39,70 @@ def getAllDescendants(object, stoplist=None, golist=None):
         for o2 in getAllDescendants(p, stoplist, golist):
             yield o2
 
-def getObject(db, id):
-    return Object(db, id)
-
-class Function(object):
-    def __init__(self, db, ids):
-        self.functionid, office_objectid, self.fromdate, self.todate = ids
-        self.office = Object(db, office_objectid)
-        if self.fromdate.year == 1753: self.fromdate = None
-        self.klass = Class(db, 1) if self.functionid==0 else Class(db, 2) 
-    def __str__(self):
-        return "Function(%s, %s, %s, %s)" % (self.functionid, self.office, self.fromdate and toolkit.writeDate(self.fromdate), self.todate and toolkit.writeDate(self.todate))
-    __repr__ = __str__
-
-def getLangLabel(db, languageidlabel):
-    languageid, label  = languageidlabel 
-    return language.Language(db, languageid), label
+class Function(Cachable):
+    __table__ = "o_politicians_functions"
+    __idcolumn__ = ("functionid", "office_objectid", "fromdate", "todate")
+    
+    functionid, todate = DBProperties(2)
+    _fromdate = DBProperty(getcolumn="fromdate")
+    office = DBProperty(lambda:Object, refcolumn="office_objectid")
+    
+    @property
+    def fromdate(self):
+        if self._fromdate.year != 1753:
+            return self._fromdate
+        
+    @property
+    def klass(self):
+        return Class(db, 1) if self.functionid==0 else Class(db, 2)
+    
+class Label(Cachable):
+    __table__ = 'o_lables'
+    __idcolumn__ = ('objectid', 'languageid')
+    __label__ = 'label'
+    
+    language = DBProperty(lambda:language.Language)
+    
+class Class(Cachable):
+    __table__ = 'o_classes'
+    __idcolumn__ = 'classid'
+    __label__ = 'label'
+    
+class Politician(Cachable):
+    __table__ = 'o_politicians'
+    __idcolumn__ = 'objectid'
+    
+    name, firstname, initials, prefix = DBProperties(4)
+    title, birthdate, birthplace, male = DBProperties(4)
+    
+    functions = ForeignKey(Function)
+    object = DBProperty(lambda:Object)
 
 class Object(Cachable):
     __table__ = 'o_objects'
     __idcolumn__ = 'objectid'
-    __metaclass__ = CachingMeta
 
-    labels = DBFKPropertyFactory("o_labels", ("languageid", "label"), dbfunc = getLangLabel, endfunc=dict)
-    parents = DBFKPropertyFactory("o_hierarchy", ("classid", "parentid"), reffield="childid", dbfunc = getParent, endfunc=dict)
-    children = DBFKPropertyFactory("o_hierarchy", ("classid", "childid"), reffield="parentid", dbfunc = getParent, endfunc=toolkit.multidict)
-
-    name = DBPropertyFactory("name", table="o_politicians")
-    firstname = DBPropertyFactory("firstname", table="o_politicians")
-    prefix = DBPropertyFactory("prefix", table="o_politicians")
-    keyword = DBPropertyFactory(table="o_keywords")
-    male = DBPropertyFactory(table="o_politicians", func=bool)
-
-
-    functions = DBFKPropertyFactory("o_politicians_functions", ("functionid", "office_objectid", "fromdate", "todate"), dbfunc = Function)
-
-    def __init__(self, db, id, languageid=2, **cache):
-        Cachable.__init__(self, db, id, **cache)
-        self.addDBProperty("label", table="dbo.fn_o_labels(%i)" % languageid)
-        self.languageid = languageid
-
-    def getLabel(self, lang):
-        if type(lang) == int: lang = language.Language(self.db, lang)
-        return self.labels.get(lang)
+    labels = ForeignKey(lambda:Label)
+    
+    _parents = ForeignKey(table="o_hierarchy", getcolumn=("classid", "parentid"), refcolumn="childid", constructor=getParent)
+    _children = ForeignKey(table="o_hierarchy", getcolumn=("classid", "childid"), refcolumn="parentid", constructor=getParent)
+    
+    @property
+    def parents(self):
+        return dict(self._parents)
+    
+    @property
+    def children(self):
+        return toolkit.multidict(self._children)
+    
+    # Move to separate class?
+    name = DBProperty(table="o_politicians")
+    firstname = DBProperty(table="o_politicians")
+    prefix = DBProperty(table="o_politicians")
+    keyword = DBProperty(table="o_keywords")
+    male = DBProperty(table="o_politicians")
+    
+    functions = ForeignKey(lambda:Function)
 
     def getAllParents(self, date=None):
         for c, p in self.parents.iteritems():
@@ -93,7 +111,7 @@ class Object(Cachable):
             yield f.klass, f.office
         
     def currentFunctions(self, date=None):
-        if not date: date = my_datetime.now()
+        if not date: date = datetime.now()
         for f in self.functions:
             if f.fromdate and toolkit.cmpDate(date, f.fromdate) < 0: continue
             if f.todate and toolkit.cmpDate(date, f.todate) >= 0: continue
@@ -105,7 +123,7 @@ class Object(Cachable):
         xapian: if true, do not use ^0 weights
         languageid: if given, use labels.get(languageid) rather than o_keywords"""
         
-        if not date: date = my_datetime.now()
+        if not date: date = datetime.now()
         if languageid:
             kw = self.getLabel(languageid)
 
@@ -153,6 +171,7 @@ def function2conds(function):
     if officeid == 2087:
         return ['"europ* parlement*"', "europarle*"]
     return []
+
 
 class Hierarchy(object):
     """
@@ -300,20 +319,14 @@ class BoundObject(idlabel.IDLabel):
         return str(self.objekt)
     def getSearchString(self, *args, **kargs):
         return self.objekt.getSearchString( *args, **kargs)
-#    def __getattr__(self, attr):
-#        return self.objekt.__getattribute__(attr)
-#    def __getattr__(self, attr):
-#        if attr == "objekt": return super(BoundObject, self).__getattr__('objekt')
-#        return self.objekt.__getattribute__(attr)
-
-def getBoundObject(hierarchy, id):
-    return hierarchy.getBoundObject(id)
 
 class Class(Cachable, DictHierarchy):
     __table__ = 'o_classes'
     __idcolumn__ = 'classid'
-    __dbproperties__ = ["label"]
-    objects = DBFKPropertyFactory("o_hierarchy", "childid", dbfunc=Object)
+    __label__ = "label"
+    
+    objects = ForeignKey(lambda: Object, table="o_hierarchy", getcolumn="childid")
+    
     def __init__(self, db, id, **cache):
         Cachable.__init__(self, db, id, **cache)
         DictHierarchy.__init__(self)
@@ -343,10 +356,12 @@ class Class(Cachable, DictHierarchy):
 class Set(Cachable, DictHierarchy):
     __table__ = 'o_sets'
     __idcolumn__ = 'setid'
-    __dbproperties__ = ["name"]
-    __metaclass__ = CachingMeta
-    objects = DBFKPropertyFactory("o_sets_objects", "objectid", dbfunc=Object)
-    classes = DBFKPropertyFactory("o_sets_classes", "classid", dbfunc=Class, orderby="rank")
+    
+    name = DBProperty()
+    
+    objects = ForeignKey(lambda: Object, table="o_sets_objects", getcolumn="objectid")
+    classes = ForeignKey(lambda: Class, table="o_sets_classes", getcolumn="classid")
+    
     def __init__(self, db, id, **cache):
         Cachable.__init__(self, db, id, **cache)
         DictHierarchy.__init__(self)
@@ -392,59 +407,16 @@ class Set(Cachable, DictHierarchy):
             if object in c:
                 return c
 
-# data manipulation functions follow
-            
-def createClass(db, classid, label):
-    db.insert("o_classes", dict(classid=classid, label=label), retrieveIdent=False)
-    return Class(db, classid)
-
-def createObject(klass_or_parent, label, lang=1, sets=[]):
-    if isinstance(klass_or_parent, BoundObject):
-        parent = klass_or_parent
-        cl = klass_or_parent.hierarchy
-    else:
-        parent = None
-        cl = klass_or_parent
-    if not isinstance(cl, Class): raise TypeError("Parent should be Class or BoundObject bound to a Class")
-
-    oid = cl.db.insert("o_objects", dict(nr=None))
-    cl.db.insert("o_hierarchy", dict(childid=oid, parentid=(parent and parent.id), classid=cl.id), retrieveIdent=False)
-    if type(label) == str: label = label.decode('ascii')
-    label = label.encode('ascii')
-    cl.db.insert("o_labels", dict(objectid=oid, languageid=lang, label=label), retrieveIdent=False)
-    for set in sets:
-        cl.db.insert("o_sets_objects", dict(objectid=oid, setid=set),  retrieveIdent=False)
-    return BoundObject(cl, Object(cl.db, oid))
-
-def addLabel(object, label, lang=1):
-    if isinstance(object, BoundObject): object=object.objekt
-    if type(label) == str: label = label.decode('ascii')
-    label = label.encode('ascii')
-    object.db.insert("o_labels", dict(objectid=object.id, languageid=lang, label=label), retrieveIdent=False)
-
-PERSONS_CLASSID = 4003
-PARTYMEMBER_FUNCTIONID = 0
-    
-def createPolitician(db, partij, name, firstname=None, initials=None, prefix=None, sets=[]):
-    label = name
-    if firstname or initials: label += ", " + (firstname or initials)
-    if prefix: label += " " + prefix
-    if type(partij) == int: partij = Object(db, partij)
-    label += " (%s)" % partij.label
-
-    personclass = Class(db, PERSONS_CLASSID)
-    print "Creating object %r" % label
-    o = createObject(personclass, label, sets=sets)
-    db.insert("o_politicians", dict(objectid=o.id, name=name, firstname=firstname, initials=initials, prefix=prefix), retrieveIdent=False)
-    db.insert("o_politicians_functions", dict(objectid=o.id, functionid=PARTYMEMBER_FUNCTIONID, office_objectid=partij.id, fromdate='1753-01-01'), retrieveIdent=False)
-    return o
-    
-
-    
 if __name__ == '__main__':
-    import dbtoolkit, pickle, cachable
-
+    import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)
+    
+    o = Object(db, 644)
+    print o.getSearchString()
+    print list(o.currentFunctions())
+    
+    s = Set(db, 2)
+    print list(s.objects)
 
-    o = createPolitician(db, "hoof", 1373, "piet", prefix="van")
+    #o = createPolitician(db, "hoof", 1373, "piet", prefix="van")
 
