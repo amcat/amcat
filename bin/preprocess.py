@@ -54,7 +54,7 @@ def usage(msg=None):
     if msg: warn("%s\n" % msg)
     warn(__doc__)
     warn("\nAvailable analyses:")
-    for a in analysis.Analysis.getAll(db):
+    for a in analysis.Analysis.all(db):
         if a.id > 0:
             warn(" %i) %s" % (a.id, a.label))
     sys.exit()
@@ -90,7 +90,7 @@ elif action in ('assign', 'get', 'reset', 'store', 'save'):
     try:
         analysisid = int(arg(2))
         ana = analysis.Analysis(db, analysisid)
-        if ana.id == 0 or (not ana in analysis.Analysis.getAll(db)):
+        if ana.id == 0 or (not ana in analysis.Analysis.all(db)):
             raise ValueError("Analysis %i does not exist" % analysisid)
     except Exception, e:
         usage(e)

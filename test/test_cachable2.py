@@ -118,7 +118,7 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         u = TestUser(self.db, 5)
         self.assertFalse(set(u.roles))
         
-        roles = list(TestRole.getAll(self.db))
+        roles = list(TestRole.all(self.db))
         self.assertTrue(roles)
         self.assertTrue(roles[0].label)
 

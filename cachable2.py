@@ -250,7 +250,7 @@ class Cachable(idlabel.IDLabel):
             return lambda *i : cls(db, i)
     
     @classmethod
-    def getAll(cls, db):
+    def all(cls, db):
         """Get all known objects of this type"""
         return db.select(cls.__table__, cls.__idcolumn__, rowfunc=cls._get_rowfunc(db))
     

@@ -89,7 +89,7 @@ def getPrivilege(db, privilege):
     """
     if isinstance(privilege, Privilege):
         return privilege
-    for p in Privilege.getAll(db):
+    for p in Privilege.all(db):
         if privilege in (p.id, p.label):
             return p
     raise ValueError("Privilege %r cannot be found" % privilege)

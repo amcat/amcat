@@ -136,8 +136,6 @@ class FormTable(ObjectTable):
     def __init__(self, form, objects, idcolumn=None):
         """
         @type form: Django Form (django.forms.Form)
-        @param form: Typically a form from model.forms. It doesn't matter
-        whether this object is bound or not.
         
         @type idcolumn: int or tuple
         @param idcolumn: Which column(s) are unique
@@ -145,36 +143,24 @@ class FormTable(ObjectTable):
         @type objects: A cachable object"""        
         super(FormTable, self).__init__(objects)
         
-        # Bound class if it's not, do nothing when it is
-        if not hasattr(form, 'fields'): form = form()
         self.form = form
+        self.idcolumn = toolkit.idlist(idcolumn or self.form.Meta.model.__idcolumn__)
         
-        # Set idcolumn
-        if not idcolumn:
-            try: form.Meta.model
-            except: pass
-            else: idcolumn = form.Meta.model.__idcolumn__
-        self.idcolumn = toolkit.idlist(idcolumn)
-        
-        for name, field in self.__getFields__(form):
-            self.__addColumn__(name, field)
+        for name, field in self._getFields():
+            self._addColumn(name, field)
         
         columns = [c.fieldname for c in self.columns]
         for c in self.idcolumn:
             if c not in columns:
-                self.__addColumn__(c, form.fields[c], visible=False)
+                self._addColumn(c, form.fields[c], visible=False)
                 
-    def __addColumn__(self, name, field, visible=True):
-        label = field.label
-        if label == None:
-            label = name.capitalize()
-        
-        col = self.__createCellfunc__(name)
+    def _addColumn(self, name, field, visible=True):
+        label = field.label or name.capitalize()
+        col = self._createCellfunc(name)
         widget = field.widget.__class__.__name__
         type = field.__class__.__name__
+        choices = field.__dict__.get('choices', None)
         
-        choices = None
-        if hasattr(field, 'choices'): choices = field.choices
         self.addColumn(col, label,
                        choices=choices,
                        fieldname=name,
@@ -183,24 +169,16 @@ class FormTable(ObjectTable):
                        fieldtype=type,
                        visible=visible)
             
-    def __createCellfunc__(self, name):
+    def _createCellfunc(self, name):
         """Create a lambda function outside __init__ avoiding scoping issues"""
         return lambda x:getattr(x, name)
     
-    def __getFields__(self, form):
-        """
-        Get all columns (called a 'field' in a form) to be displayed in the
-        table.
+    def _getFields(self):
+        try: return [(name, self.form.fields[name]) for name in self.form.Meta.table]
+        except:
+            return self.form.fields.items()
         
-        @type form: Django Form
-        @param form: Form object with optional Meta.table
         
-        """
-        if hasattr(form, 'Meta') and hasattr(form.Meta, 'table'):
-            return [(name, form.fields[name]) for name in form.Meta.table]
-        return form.fields.items()
-        
-
 class DictTable(Table):
     """
     Convenience subclass of Table that creates a dict to hold the cell values,

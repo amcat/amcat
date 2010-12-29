@@ -140,7 +140,7 @@ class ExternalScript(Cachable):
 
     
 def getExternalScripts(db, category):
-    for es in ExternalScript.getAll(db):
+    for es in ExternalScript.all(db):
         if es.category == category:
             yield es
     

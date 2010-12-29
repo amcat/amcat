@@ -8,6 +8,9 @@ DUMMY_CLASSID_PARTYMEMBER = 1
 DUMMY_CLASSID_OFFICE = 2
 PERSONS_CLASSID = 4003
 PARTYMEMBER_FUNCTIONID = 0
+
+def cache(*a, **k):
+    pass
     
 def getParent(obj, db, cid, pid):
     cl = Class(db, cid)
@@ -57,16 +60,13 @@ class Function(Cachable):
         return Class(db, 1) if self.functionid==0 else Class(db, 2)
     
 class Label(Cachable):
-    __table__ = 'o_lables'
+    __table__ = 'o_labels'
     __idcolumn__ = ('objectid', 'languageid')
     __label__ = 'label'
     
-    language = DBProperty(lambda:language.Language)
+    label, objectid, languageid = DBProperties(3)
     
-class Class(Cachable):
-    __table__ = 'o_classes'
-    __idcolumn__ = 'classid'
-    __label__ = 'label'
+    language = DBProperty(lambda:language.Language)
     
 class Politician(Cachable):
     __table__ = 'o_politicians'
@@ -81,7 +81,7 @@ class Politician(Cachable):
 class Object(Cachable):
     __table__ = 'o_objects'
     __idcolumn__ = 'objectid'
-
+    
     labels = ForeignKey(lambda:Label)
     
     _parents = ForeignKey(table="o_hierarchy", getcolumn=("classid", "parentid"), refcolumn="childid", constructor=getParent)
@@ -94,6 +94,13 @@ class Object(Cachable):
     @property
     def children(self):
         return toolkit.multidict(self._children)
+    
+    @property
+    def label(self):
+        try:
+            return self.labels.next().label
+        except StopIteration:
+            return 'GEEN LABEL: FIXME'
     
     # Move to separate class?
     name = DBProperty(table="o_politicians")
@@ -325,21 +332,27 @@ class Class(Cachable, DictHierarchy):
     __idcolumn__ = 'classid'
     __label__ = "label"
     
+    label = DBProperty()
+    classid = DBProperty()
+    
     objects = ForeignKey(lambda: Object, table="o_hierarchy", getcolumn="childid")
     
     def __init__(self, db, id, **cache):
         Cachable.__init__(self, db, id, **cache)
         DictHierarchy.__init__(self)
-    def getRoots(self, cachefirst=True):
-        if cachefirst: self.cacheHierarchy()
+        
+    @property
+    def roots(self):
+        self.cacheHierarchy()
         for o in self.getObjects():
             if not o.getParent():
                 yield o
+                
     def getChildren(self, object):
         if type(object) == BoundObject: object = object.objekt
-        children = object.children.get(self)
-        if children:
-            return (self.getBoundObject(c) for c in children)
+        children = object.children.get(self, [])
+        
+        return (self.getBoundObject(c) for c in children)
 
     def getParent(self, object, date=None):
         if type(object) == BoundObject: object = object.objekt
@@ -347,11 +360,8 @@ class Class(Cachable, DictHierarchy):
         if p:
             return self.getBoundObject(p)
     def cacheHierarchy(self):
-        #raise Exception("CACHE CLASS???!?")
         cache(self.objects, "parents", "label", "children")
         super(Class, self).cacheHierarchy()
-    def getClass(self, object):
-        return self
         
 class Set(Cachable, DictHierarchy):
     __table__ = 'o_sets'
