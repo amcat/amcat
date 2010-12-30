@@ -54,31 +54,31 @@ class System(Cachable):
     @property
     @deprecated
     def users(self):
-        return user.User.getAll(self.db)
+        return user.User.all(self.db)
     @property
     @deprecated
     def projects(self):
-        return project.Project.getAll(self.db)
+        return project.Project.all(self.db)
     @property
     @deprecated
     def analyses(self):
-        return analysis.Analysis.getAll(self.db)
+        return analysis.Analysis.all(self.db)
     @property
     @deprecated
     def roles(self):
-        return authorisation.Role.getAll(self.db)
+        return authorisation.Role.all(self.db)
     @property
     @deprecated
     def privileges(self):
-        return authorisation.Privilege.getAll(self.db)
+        return authorisation.Privilege.all(self.db)
     @property
     @deprecated
     def annotationschemas(self):
-        return AnnotationSchema.getAll(self.db)
+        return AnnotationSchema.all(self.db)
     @property
     @deprecated
     def annotationschemafieldtypes(self):
-        return AnnotationSchemaFieldtype.getAll(self.db)
+        return AnnotationSchemaFieldtype.all(self.db)
     
 if __name__ == '__main__':
     import dbtoolkit

@@ -44,6 +44,7 @@ this organisation!
 
 import warnings, os, random, gzip, types, datetime, itertools, re, collections
 import threading, subprocess, sys, colorsys, base64, time, inspect, logging
+import htmlentitydefs
 try: import mx.DateTime
 except: pass
 
@@ -623,36 +624,31 @@ def stripAccents(s, usemap = ACCENTS_MAP):
             s = s.replace(trg, key)
     return s
 
-HTML_ENTITY_MAP = {
-    u'&quot;' : u"'",
-    u'&lt;' : u"<",
-    u'&gt;' : u">",
-    u'&amp;' : u"&",
-    }
-"""Map of html entities to string equivalents"""
-
 def unescapeHtml(text):
-    """Resolves xml-entities in the input text
-
-    From U{http://effbot.org/zone/re-sub.htm#unescape-html}"""
-    #Ugly! Isn't there a standard method for this?
-    #It is only used in scraping...
-    #What does beautiful soup do with entities?
+    """Removes HTML or XML character references and entities from a text string.
+    
+    @param text The HTML (or XML) source text.
+    @return The plain text, as a Unicode string, if necessary.
+    """
     def fixup(m):
-        """Resolve unicode entities"""
         text = m.group(0)
-        try:
-            if text[:3] == "&#x":
-                return unichr(int(text[3:-1], 16))
-            else:
-                return unichr(int(text[2:-1]))
-        except ValueError:
-            pass
+        if text[:2] == "&#":
+            # character reference
+            try:
+                if text[:3] == "&#x":
+                    return unichr(int(text[3:-1], 16))
+                else:
+                    return unichr(int(text[2:-1]))
+            except ValueError:
+                pass
+        else:
+            # named entity
+            try:
+                text = unichr(htmlentitydefs.name2codepoint[text[1:-1]])
+            except KeyError:
+                pass
         return text # leave as is
-    text = re.sub("&#\w+;", fixup, text) # handle unicode-entities
-    for k, v in HTML_ENTITY_MAP.items(): # handle named entities
-        text = text.replace(k, v)
-    return text
+    return re.sub("&#?\w+;", fixup, text)
 
 def clean(string, level=0, lower=False, droptags=False, escapehtml=False, keeptabs=False,
           normalizeWhitespace=True):

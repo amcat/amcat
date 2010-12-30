@@ -114,7 +114,7 @@ class Cachable(idlabel.IDLabel):
     
     def __getattribute__(self, attr):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""
-        if (not "_" in attr) and (attr != 'id'): # skip special attributes
+        if (not "__" in attr) and (attr != 'id'): # skip special attributes
             try:
                 log.debug("Getting attribute %s, property?" % (attr)) 
                 p =  self.__class__._getProperty(attr)
@@ -250,7 +250,7 @@ class Cachable(idlabel.IDLabel):
             return lambda *i : cls(db, i)
     
     @classmethod
-    def getAll(cls, db):
+    def all(cls, db):
         """Get all known objects of this type"""
         return db.select(cls.__table__, cls.__idcolumn__, rowfunc=cls._get_rowfunc(db))
     
