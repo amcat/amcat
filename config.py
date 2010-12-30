@@ -47,10 +47,10 @@ def default(**kargs):
     else:
         return amcatConfig(**kargs)
 
-def amcatConfig(username = "app", password = "eno=hoty", easysoft=None, database="anoko", use_app=None):
+def amcatConfig(username = "app", password = "eno=hoty", easysoft=None, postgres=True, database="anoko", use_app=None):
 
     if easysoft is None:
-        easysoft = sys.version_info[1] == 6
+        easysoft = (not postgres) and sys.version_info[1] == 6
 
     if easysoft:
         host = "Easysoft-AmcatDB"
@@ -59,11 +59,25 @@ def amcatConfig(username = "app", password = "eno=hoty", easysoft=None, database
         import dbtoolkit
         dbtoolkit.ENCODE_UTF8 = True
         setMxODBCErrorHandler = True
+        kargs = True
+    elif postgres:
+        host = "localhost"
+        import psycopg2 as driver
+
+        # unicode handling: automatically get strings as unicode!
+        import psycopg2.extensions
+        psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
+        psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
+
+        setMxODBCErrorHandler = False
+        kargs = True
+        database = "amcat"
     else:
         host = "AmcatDB"
         import mx.ODBC.iODBC as driver
         setMxODBCErrorHandler = False
-    return Configuration(username, password, host, driver=driver, database=database,setMxODBCErrorHandler=setMxODBCErrorHandler)#, kargs=easysoft)
+        kargs = False
+    return Configuration(username, password, host, driver=driver, database=database,setMxODBCErrorHandler=setMxODBCErrorHandler, keywordargs=kargs)
 
 MXODBC_IGNORE_WARNINGS = (15488, # X added to role Y
                           15341, # granted db access to X

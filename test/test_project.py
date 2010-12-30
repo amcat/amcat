@@ -1,21 +1,22 @@
-import dbtoolkit, unittest, project, batch, user, mx.DateTime, datetime, amcattest
+import dbtoolkit, unittest, project, article, user, mx.DateTime, datetime, amcattest
 
 class TestProject(amcattest.AmcatTestCase):
 
     def setUp(self):
-        self.db = dbtoolkit.amcatDB(use_app=True)
+        self.db = dbtoolkit.amcatDB()#use_app=True)
 
-    def testUsers(self):
+    def tesxUsers(self):
         p = project.Project(self.db, 1)
         self.assertIn(user.User(self.db, 2), p.users)
 
     def testType(self):
-        p = project.Project(self.db, 1)
+        p = project.Project(self.db, 292)
         for (propname, types, card) in (
-            ("batches", batch.Batch, True),
+            ("sets", project.Set, True),
+            ("articles", article.Article, True),
             ("users", user.User, True),
-            ("name", str, None),
-            ("insertDate", (mx.DateTime.DateTimeType, datetime.datetime), None),
+            ("name", unicode, None),
+            ("insertDate", datetime.datetime, None),
             ):
             if type(types) not in (tuple, set, list): types = (types,)
             self.assertIn(p.getType(propname), types, "checking type(Project.%s)" % propname)

@@ -454,7 +454,10 @@ class amcatDB(object):
 
     def getUser(self):
         import user
-        uid = self.getValue("select dbo.anoko_user()")
+        if self.dbType == "psycopg2":
+            uid = self.getValue("select amcat_user()")
+        else:
+            uid = self.getValue("select dbo.anoko_user()")
         return user.User(self, uid)
             
     def newBatch(self, projectid, batchname, query, verbose=0):
@@ -603,14 +606,24 @@ class amcatDB(object):
         61 : datetime.datetime,
         104 : bool,
         }
+    _UTYPES = {
+        'text' : unicode,
+        'timestamp' : datetime.datetime,
+        }
         
     def getColumnType(self, table, column):
-        SQL = """select c.xtype from syscolumns c 
+        if self.dbType == "psycopg2":
+            SQL = """select udt_name from information_schema.columns where table_name = %s and lower(column_name) = lower(%s)
+                  """ % (quotesql(table), quotesql(column))
+            utype = self.getValue(SQL)
+            return amcatDB._UTYPES[utype]
+        else:
+            SQL = """select c.xtype from syscolumns c 
               inner join sysobjects o on c.id = o.id
               where o.name = %s and c.name=%s""" % (
-            quotesql(table), quotesql(column))
-        xtype = self.getValue(SQL)
-        return amcatDB._XTYPES[xtype]
+                quotesql(table), quotesql(column))
+            xtype = self.getValue(SQL)
+            return amcatDB._XTYPES[xtype]
 
     def getTableColumns(self, table):
         """ do a funky query to obtain column names and xtypes """
