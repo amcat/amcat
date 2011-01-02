@@ -258,13 +258,14 @@ class amcatDB(object):
         return "UPDATE %(table)s SET %(update)s %(where)s" % locals()
         
 
-    def _selectSQL(self, table, columns, where=None):
+    def _selectSQL(self, table, columns, where=None, distinct=False):
         where = self.whereSQL(where)
         where = "" if where is None else " WHERE %s" % where 
         if not toolkit.isIterable(columns, excludeStrings=True): columns = (columns,)
         columns = ",".join(map(self.escapeFieldName, columns))
+        distinctstr = " DISTINCT " if distinct else ""
         table = self.escapeFieldName(table)
-        return "SELECT %(columns)s FROM %(table)s%(where)s" % locals()
+        return "SELECT %(distinctstr)s %(columns)s FROM %(table)s%(where)s" % locals()
         
     
     def update(self, table, newvals, where):
@@ -294,7 +295,7 @@ class amcatDB(object):
         SQL = "DELETE FROM %(table)s WHERE %(where)s" % locals()
         self.doQuery(SQL)
         
-    def select(self, table, columns, where=None, rowfunc=None, alwaysReturnTable=False):
+    def select(self, table, columns, where=None, rowfunc=None, alwaysReturnTable=False, distinct=False):
         """Create and execute a SELECT statement
 
         @type table: str
@@ -306,10 +307,11 @@ class amcatDB(object):
           AND-joined key=quotesql(val) string
         @param rowfunc: an optional function to call on each row. Should accept
           len(columns) number of arguments
+        @param distinct: if true, do SELECT DISTINCT
         @return: a list containing the data, each item being the result of rowfunc (if given),
           a tuple (if columns is a sequence) or a simple value 
         """
-        SQL = self._selectSQL(table, columns, where)
+        SQL = self._selectSQL(table, columns, where, distinct=distinct)
         data = self.doQuery(SQL)
         if rowfunc:
             return [rowfunc(*col) for col in data]
