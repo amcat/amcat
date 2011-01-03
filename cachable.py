@@ -48,7 +48,10 @@ the Property at the moment it is needed.
 import toolkit, collections, inspect, idlabel, dbtoolkit
 #from functools import partial
 import weakref
-        
+
+import logging; log  =logging.getLogger(__name__)
+#import amcatlogging; amcatlogging.debugModule()
+
 _CACHE = {}
 class CachingMeta(type):
     """
@@ -494,21 +497,19 @@ class ForeignKey(PropertyFactory):
 # SQL String auxilliary functions   #
 #####################################
     
-def quotefield(s):
-    if "(" in s: return s
-    return "[%s]" % s
-def quotefields(s):
-    if type(s) in (str, unicode): s = [s]
-    return ",".join(map(quotefield, s))
 
     
 def sqlWhere(fields, ids):
     if type(fields) in (str, unicode):
-        fields, ids = [fields], [ids]
+        fields = [fields]
+    if type(ids) not in (list, tuple):
+        ids = [ids]
+
     return "(%s)" % " and ".join("(%s = %s)" % (field, dbtoolkit.quotesql(id))
                                  for (field, id) in zip(fields, ids))
         
 def sqlFrom(cachables, table = None, reffield=None):
+    log.debug("sqlFrom(table=%r, reffield=%r)" % (table, reffield))
     c = cachables[0] # prototype, assume all cachables are alike
     if reffield is None: reffield = c.__idcolumn__
     if type(reffield) in (str, unicode):
@@ -546,8 +547,11 @@ class Cacher(object):
             for batch in toolkit.splitlist(cachables, 5000):
                 idcol = prototype.__idcolumn__
                 if type(idcol) in (str, unicode): idcol = [idcol]
-                SQL = "SELECT %s, %s %s" % (quotefields(prototype.__idcolumn__), quotefields(fields),
-                                              sqlFrom(batch, table=table))
+                selectfields = prototype.__idcolumn__
+                if type(selectfields) not in (list, tuple): selectfields = [selectfields]
+                selectfields += fields
+                SQL = "SELECT %s %s" % (", ".join(db.escapeFieldName(f) for f in (selectfields)), sqlFrom(batch, table=table))
+                
                 for row in db.doQuery(SQL):
                     id, values = row[:len(idcol)], row[len(idcol):]
                     self.data[table, id] = dict(zip(fields, values))
@@ -555,12 +559,15 @@ class Cacher(object):
         self.fkdata = collections.defaultdict(lambda  : collections.defaultdict(list)) # {table, reffield, fields, orderby} : {id : values}
 
         for table, reffield, fields, orderby in self.dbfkfields:
+            select = reffield + fields
             for batch in toolkit.splitlist(cachables, 5000):
-                SQL = "SELECT [%s], %s %s " % (reffield, ",".join(map(quotefield, fields)), sqlFrom(batch, table, reffield))
+                SQL = "SELECT %s %s " % (",".join(map(db.escapeFieldName, select)), sqlFrom(batch, table, reffield))
+                log.debug("Caching %s.%s (id=%s) with \n%s" % (table, fields, reffield, SQL))
                 if orderby: SQL += " ORDER BY %s" % orderby
                 for row in cachables[0].db.doQuery(SQL):
-                    id, values = row[0], row[1:]
+                    id, values = row[:len(reffield)], row[len(reffield):]
                     self.fkdata[table, reffield,fields,orderby][id].append(values)
+        log.debug("FK Data = %r" % self.fkdata)
             
     def addDBField(self, field, table=None):
         self.dbfields[table].add(field)
@@ -574,14 +581,24 @@ class Cacher(object):
             return row[field]
 
     def addFKField(self, fields, table,  reffield, orderby):
-        fields = tuple(fields)
-        if type(reffield) == list: raise Exception(reffield)
+        fields, reffield = map(_getTuple, (fields, reffield))
+        log.debug("Adding FKField %r" % locals())
         self.dbfkfields.add((table, reffield, fields, orderby))
     def getFKData(self, fields, table, cachable, reffield, orderby):
-        fields = tuple(fields)
-        return self.fkdata[table, reffield, fields, orderby].get(cachable.id, [])
+        fields, reffield = map(_getTuple, (fields, reffield))
+        id = cachable.id
+        if type(id) not in (list, tuple): id = (id,)
+        #log.debug("Getting FKData table=%(table)s, reffield=%(reffield)s, fields=%(fields)s, orderby=%(orderby)s, " % locals())
+        return self.fkdata[table, reffield, fields, orderby].get(id, [])
 
 
+def _getTuple(cols):
+    if type(cols) in (str, unicode):
+        return (cols,)
+    elif type(cols) == tuple:
+        return cols
+    else:
+        return tuple(cols)
     
 def cacheMultiple(cachables, *propnames):
     """

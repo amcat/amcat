@@ -48,6 +48,7 @@ import amcatmemcache as store
 import logging; log = logging.getLogger(__name__)
 
 #import amcatlogging; amcatlogging.debugModule()
+#import amcatlogging; amcatlogging.infoModule()
 
 class Meta(type):
     """Metaclass to  ensure properties are initialised"""
@@ -215,31 +216,42 @@ class Cachable(idlabel.IDLabel):
         the Cachable object with the returned id. The props are then cached.
         """
 
-        def getcol(key): # find property 'key', get column #1
-            p = cls._getProperty(key)
-            if not p: raise TypeError("Cannot find property %s.%s" % (cls, key))
-            cols = p._getColumns()
-            if type(cols) in (list, tuple): raise TypeError("mulitple columns in create property %s=%r" % (key, cols))
-            return cols
+        def getcolval(key, val): # find property 'key', get column #1
+            try:
+                p = cls._getProperty(key)
+                cols = p._getColumns()
+                if type(cols) in (list, tuple): raise TypeError("mulitple columns in create property %s=%r" % (key, cols))
+                vals = p.objectToDbrow(val)
+                if len(vals) <> 1: raise TypeError("mulitple values in create property %s.%r->%r" % (key, cols, vals))
+                vals = vals[0]
+                return cols, vals
+            except AttributeError:
+                return key,val #assume caller know that (s)he's doing
 
         log.debug("Creating %s with idvalues=%s, props=%s" % (cls.__name__, idvalues, props))
-        dbprops = dict((getcol(k), v) for (k,v) in props.iteritems())
-        log.debug("new props=%s" % (dbprops))
+        dbprops = dict(getcolval(k, v) for (k,v) in props.iteritems())
         
         if idvalues is not None:
             idcol = cls.__idcolumn__
             if type(idcol) not in (list, tuple):
                 idcol, idvalues = [idcol], [idvalues]
+            def getVal(obj):
+                if isinstance(obj, Cachable): return obj.id
+                return obj
+            idvalues = tuple(map(getVal, idvalues))
             dbprops = dict(dbprops.items() + zip(idcol, idvalues))
             db.insert(cls.__table__, dbprops, retrieveIdent=False)
         else:
-            idvalues= db.insert(cls.__table__, dbprops)
+            idvalues= db.insert(cls.__table__, dbprops, retrieveIdent=cls.__idcolumn__)
         result = cls(db, idvalues)
         log.debug("Created object %r" % result)
         for propname, val in props.iteritems():
-            prop = result._getProperty(propname)
-            log.debug("Caching %s.%s <- %s" % (result, propname, val))
-            prop.cache(result, val)
+            try:
+                prop = result._getProperty(propname)
+                log.debug("Caching %s.%s <- %s" % (result, propname, val))
+                prop.cache(result, val)
+            except AttributeError:
+                pass # it's okay, just don't cache it
         return result
     
     @classmethod
@@ -472,7 +484,7 @@ class Property(object):
 class DBProperty(Property):
     """Property that retrieves its value from the database"""
 
-    def __init__(self, targetclass=None, table=None, getcolumn=None, refcolumn=None, constructor=None, **kargs):
+    def __init__(self, targetclass=None, table=None, getcolumn=None, refcolumn=None, constructor=None, distinct=False,orderby=False, **kargs):
         Property.__init__(self, **kargs)
         self.targetclass = targetclass
         self.table = table
@@ -481,12 +493,15 @@ class DBProperty(Property):
         
         self.tablehook = None # function obj -> table
         self.constructor = constructor # function(obj, db, values) -> child
+        self.distinct = distinct
+        self.orderby = orderby
+        
     def _initialise(self, cls, propname):
         if self._initialised: return
         super(DBProperty, self)._initialise(cls, propname)
         if self.targetclass is not None:
             if not callable(self.targetclass):
-                raise ValueError("targetklass should be callable")
+                raise ValueError("targetclass (%s.%s) should be callable" % (self, self.targetclass))
             if ((not inspect.isclass(self.targetclass)) and
                 inspect.getargspec(self.targetclass)[0] == []):
                 # assume targetklass is lambda, so dereference
@@ -513,7 +528,9 @@ class DBProperty(Property):
                 return self.targetclass(obj.db, *dbvalues)
         return dbvalues[0]
 
-    def objectToDbrow(self, obj, *dbvalues):
+
+    
+    def objectToDbrow(self, obj):
         """Convert an amcat object to a db row
         
         @param obj: the "parent object" of the new object
@@ -530,7 +547,8 @@ class DBProperty(Property):
         return [self.objectToDbrow(objects)]
         
     def dataToObjects(self, obj, data):
-        return self.dbrowToObject(obj, *data[0])
+        data = data[0] if data else [None]
+        return self.dbrowToObject(obj, *data)
 
     def _getTable(self, obj=None):
         log.debug("getTable(%r), self.table=%s, self.tablehook=%s" % (obj, self.table, self.tablehook))
@@ -551,7 +569,7 @@ class DBProperty(Property):
     def retrieve(self, obj):
         """Use the database to retrieve the value of this property for obj
         """
-        return obj.db.select(self._getTable(obj), self._getColumns(), obj._getWhere(self.refcolumn), alwaysReturnTable=True)
+        return obj.db.select(self._getTable(obj), self._getColumns(), obj._getWhere(self.refcolumn), alwaysReturnTable=True, distinct=self.distinct)
     
     def getType(self, obj_or_db=None):
         # if targetclass is a class or tuple of classes, return it 
@@ -587,11 +605,14 @@ class DBProperty(Property):
 
 
     def prepareCache(self, cacher):
-        cacher.addDBField(table=self._getTable(), field=self._getColumns())
-    def doCache(self, cacher, obj):
-        val = cacher.getDBData(obj, self._getColumns(), table=self._getTable())
-        val = [(val,)]
+        log.info("%s: Adding %s.%s to cacher" % (self, self._getTable(), self._getColumns()))
+        cacher.addFKField(self._getColumns(), self._getTable(), self.cls.__idcolumn__, self.orderby)
+
+    def doCache(self, cacher, obj=None):
+        val = cacher.getFKData(self._getColumns(), self._getTable(), obj, self.cls.__idcolumn__, self.orderby)
+        log.info("%s: Retrieved %s from cacher" % (self, val))
         self.cache(obj, val, isData=True)
+        
         
 class ForeignKey(DBProperty):
     def __init__(self, targetclass=None, sequencetype=None, constructor=None, includeOwnID=False, **kargs):
@@ -609,11 +630,26 @@ class ForeignKey(DBProperty):
         self.sequencetype = sequencetype
         self.includeOwnID = includeOwnID
 
+
     def dataToObjects(self, obj, data):
         result = (self.dbrowToObject(obj, *row) for row in data)
         if self.sequencetype: result = self.sequencetype(result)
         return result
 
+
+    def dbrowToObject(self, obj, *dbvalues):
+        child = super(ForeignKey, self).dbrowToObject(obj, *dbvalues)
+        # Try to set 'uplink', eg project1.articles[n].project = project1 
+        try:
+            uplinkprop = obj.__class__.__name__.lower()
+            uplink = child._getProperty(uplinkprop)
+            uplink.cache(child, obj)
+        except (AttributeError, NotAPropertyError):
+            pass # it's okay, apparently child doesn't have an uplink with sensible name
+        
+        return child
+
+    
     def objectsToData(self, obj, objects):
         log.debug("FKSerialising %s=%r" % (self, objects))
         return [self.objectToDbrow(o) for o in objects]
@@ -670,10 +706,7 @@ class ForeignKey(DBProperty):
         child.delete(db)
         #uncache to force retrieval, inefficient but for now easier than updating the cache?
         self.uncache(obj)
-    def prepareCache(self, cacher):
-        pass
-    def doCache(self, cacher, obj=None):
-        pass
+
         
 def DBProperties(n):
     """Shortcut to create n DBProperty objects

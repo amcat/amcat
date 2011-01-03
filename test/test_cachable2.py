@@ -23,37 +23,47 @@ class TestUser(Cachable):
     language = DBProperty(lambda : TestLanguage, getcolumn="languageid")
     roles = ForeignKey(TestRole, table="users_roles")
 
-        
+
+class Test3(Cachable):
+    __idcolumn__ = ['testid', 'id2', 'id3']
+    label = DBProperty()
+    
 class Test2(Cachable):
     __table__ = '#test2'
-    __idcolumn__ = ['id', 'id2']
+    __idcolumn__ = ['testid', 'id2']
+    __labelprop__ = 'strval'
     strval = DBProperty()
+    test3s = ForeignKey(Test3)
 class TestChild(Cachable):
     __table__ = '#testchild'
     __idcolumn__ = 'pk'
     label = DBProperty()
-    testid = DBProperty(lambda : Test)
+    test = DBProperty(lambda : Test)
 class Test(Cachable):
     __table__ = '#test'
     __idcolumn__ = 'testid'
+    __labelprop__ = 'strval'
     strval, strval2, intval = DBProperties(3)
-    test2s = ForeignKey(TestChild)
+    testchildren = ForeignKey(TestChild)
+    test2s = ForeignKey(Test2)
    
-class TestAmcatMemcache(amcattest.AmcatTestCase):
+class TestCachable(amcattest.AmcatTestCase):
 
     def setUp(self):
-        self.db = dbtoolkit.amcatDB(use_app=True)
+        super(TestCachable, self).setUp()
         self.createTestTables()
+        self.strtype = unicode if self.db.dbType == "psycopg2" else str
 
     def createTestTables(self):
-        self.db.doQuery("create table #test (testid int identity(1,1) primary key, strval varchar(255) not null, strval2 varchar(255) not null default 'test', intval int null)")
-        self.db.doQuery("create table #test2 (id int, id2 int, strval varchar(255), primary key (id, id2))")
-        self.db.doQuery("create table #testchild (pk int identity(1,1) primary key, testid int not null, label varchar(255) default 'bla')")
-        
-
-    def tearDown(self):
-        self.db.rollback()
-
+        t = self.db.createTable("test", [("testid", "serial", "primary key"), ("strval", "varchar(255)", "not null"),
+                                         ("strval2","varchar(255)","not null", "default 'test'"), ("intval", "int", "null")], temporary=True)
+        t2 = self.db.createTable("test2", [("testid","int"), ("id2", "int"), ("strval", "varchar(255)")], primarykey = ["testid","id2"],temporary=True)
+        tc = self.db.createTable("testchild",[("pk","serial","primary key"), ("testid", "int","not null"), ("label", "varchar(255)", "default 'bla'")],temporary=True)
+        t3 = self.db.createTable("test3", [("testid","int"), ("id2", "int"), ("id3", "int"), ("label", "varchar(255)")], primarykey = ["testid","id2", "id3"],temporary=True)
+        Test.__table__ = t
+        Test2.__table__ = t2
+        TestChild.__table__ = tc
+        Test3.__table__ = t3
 
     def testCacheMultiple(self):
         import project
@@ -63,28 +73,97 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         obj.uncache()
         cacheMultiple([obj], *props)
         #disable db to make sure that we have values cached
-        self.db.conn, conn = None, self.db.conn
-        try:
+        with self.db.disabled():
             val2= [getattr(obj, prop) for prop in props]
             for v, v2 in zip(val, val2):
                 self.assertEqual(v, v2)
-        finally:
-            self.db.conn, conn = conn, self.db.conn
+
+        
+    def testMulticolFK(self):
+        """Test whether retrieving and caching works for multicol foreign keys"""
+        t2 = Test2.create(self.db, (1,2), strval="test1")
+        child1 = Test3.create(self.db, (1, 2, 3))
+        child2 = Test3.create(self.db, (1, 2, 4))
+        self.assertEqual(set(t2.test3s), set([child1, child2]))
+
+        t2.uncache()
+        cache(t2, "test3s")
+        with self.db.disabled():
+            self.assertEqual(set(t2.test3s), set([child1, child2]))
+        
+    def testCacheFK(self):
+        """Test wheter caching works on foreignkey properties"""
+        t = Test.create(self.db, strval="test1")
+        child1 = Test.testchildren.addNewChild(self.db, t)
+        child2 = Test.testchildren.addNewChild(self.db, t)
+        t.uncache()
+        with self.db.disabled():
+            self.assertRaises(Exception, lambda : t.testchildren)
+        t.uncache()
+        cache(t, "testchildren")
+        with self.db.disabled():
+            children = set(t.testchildren)
+            self.assertEqual(children, set([child1, child2]))
+        
+    def testFKParentCached(self):
+        """Test whether the parent property of an FK child is set automatically"""
+        t = Test.create(self.db, strval="test1")
+        child = Test.testchildren.addNewChild(self.db, t)
+        children =  list(t.testchildren) # force cache
+        child.uncache()
+        with self.db.disabled():
+            # child is uncached, so getting test should raise exception
+            self.assertRaises(Exception, lambda : child.test)
+            child2 = list(t.testchildren)[0]
+            # test should be cached from foreign key
+            t2 = child.test
+            self.assertEqual(t, t2)
+
+        
+    def testCreate(self):
+        "test using object as property to create"
+        t = Test.create(self.db, strval="bla")
+        t2 = TestChild.create(self.db, test=t)
+        self.assertEqual(t, t2.test)
+        t2 = TestChild.create(self.db, test=t.id)
+        self.assertEqual(t, t2.test)
+        
+
+    def testAdd(self):
+        #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")
+        for i, (props, strval, strval2, intval) in enumerate([
+                (dict(strval="bla bla"), "bla bla", "test", None),
+                (dict(strval="bla bla", intval=15), "bla bla", "test", 15),
+                (dict(), dbtoolkit.SQLException, None, None), # exception ruins transaction, so leave at end
+                ]):
+            with self.db.transaction():
+                if inspect.isclass(strval) and issubclass(strval, Exception):
+                    self.assertRaises(strval, Test.create, self.db, **props)
+                else:
+                    t = Test.create(self.db, **props)
+                    try:
+                        self.assertEqual(t.id, i+1)
+                        self.assertEqual(t.strval, strval)
+                        self.assertEqual(t.strval2, strval2)
+                        self.assertEqual(t.intval, intval)
+                    finally:
+                        t.uncache()
+                        
+        
 
     def testGetReget(self):
         # getting a property, its cached value, and setting it and regetting it
         # shoule always give the same result
         import project
-        obj = project.Project(self.db, 282)
+        obj = project.Project(self.db, 242)
         prop = "name"
         for obj, prop in [
-            (project.Project(self.db, 282), "name"),
-            (project.Project(self.db, 282), "insertUser"),
-            (project.Project(self.db, 282), "insertDate"),
-            (project.Project(self.db, 282), "batches"),
+            (project.Project(self.db, 242), "name"),
+            (project.Project(self.db, 242), "insertUser"),
+            (project.Project(self.db, 242), "insertdate"),
+            (project.Project(self.db, 242), "articles"),
             ]:
             try:
-                print obj, prop
                 orig = getattr(obj, prop)
                 if getattr(orig, '__iter__', False):
                     orig = list(orig)
@@ -124,9 +203,9 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
 
         t = Test.create(self.db, strval="test1")
         t.uncache()
-        t2 = TestChild.create(self.db, testid=t.id)
-        t3 = TestChild.create(self.db, testid=t.id)
-        self.assertEqual(list(t.test2s), [t2, t3])
+        t2 = TestChild.create(self.db, test=t.id)
+        t3 = TestChild.create(self.db, test=t.id)
+        self.assertEqual(list(t.testchildren), [t2, t3])
         
     def testType(self):
         TestDummy.prop.observedType=None
@@ -148,7 +227,7 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         self.assertEqual(type(u.language), TestLanguage)
         self.assertEqual(u.language.label, 'nl')        
         u = TestUser(self.db, 5)
-        self.assertEqual(u.language, None)
+        self.assertEqual(u.language.id, 1)
         
     def testDBType(self):
         # test get from db
@@ -158,8 +237,8 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
         del u.username
         del u.active
         self.assertRaises(UnknownTypeException, TestUser.username.getType)
-        self.assertEqual(u.getType(TestUser.username), str)
-        self.assertEqual(TestUser.username.getType(), str)
+        self.assertEqual(u.getType(TestUser.username), self.strtype)
+        self.assertEqual(TestUser.username.getType(), self.strtype)
 
         self.assertRaises(UnknownTypeException, TestUser.active.getType)
         self.assertEqual(u.getType(TestUser.active), bool)
@@ -218,60 +297,34 @@ class TestAmcatMemcache(amcattest.AmcatTestCase):
             self.assertEqual(u.language.id, l.id)
         db.rollback()
         
-    def testAdd(self):
-        #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")
-        for i, (props, strval, strval2, intval) in enumerate([
-                (dict(), dbtoolkit.SQLException, None, None),
-                (dict(strval="bla bla"), "bla bla", "test", None),
-                (dict(strval="bla bla", intval=15), "bla bla", "test", 15),
-                ]):
-            if inspect.isclass(strval) and issubclass(strval, Exception):
-                self.assertRaises(strval, Test.create, self.db, **props)
-            else:
-                t = Test.create(self.db, **props)
-                try:
-                    self.assertEqual(t.id, i+1)
-                    self.assertEqual(t.strval, strval)
-                    self.assertEqual(t.strval2, strval2)
-                    self.assertEqual(t.intval, intval)
-                finally:
-                    t.uncache()
-        # test using object as property to create
-        t = Test.create(self.db, strval="bla")
-        t2 = TestChild.create(self.db, testid=t)
-        self.assertEqual(t, t2.testid)
-        t2 = TestChild.create(self.db, testid=t.id)
-        self.assertEqual(t, t2.testid)
-
-        
     def testDelete(self):
         #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")
         
         t = Test.create(self.db, strval="x")
-        self.assertEqual(self.db.getValue("select count(*) from #test"), 1)
+        self.assertEqual(self.db.getValue("select count(*) from %s" % Test.__table__), 1)
         t.delete(self.db)
-        self.assertEqual(self.db.getValue("select count(*) from #test"), 0)
+        self.assertEqual(self.db.getValue("select count(*) from %s" % Test.__table__), 0)
 
-        self.assertEqual(self.db.getValue("select count(*) from #test2"), 0)
+        self.assertEqual(self.db.getValue("select count(*) from %s" % Test2.__table__), 0)
         t = Test2.create(self.db, idvalues=(1,2))
-        self.assertEqual(self.db.getValue("select count(*) from #test2"), 1)
+        self.assertEqual(self.db.getValue("select count(*) from %s" % Test2.__table__), 1)
         t.delete(self.db)
-        self.assertEqual(self.db.getValue("select count(*) from #test2"), 0)
+        self.assertEqual(self.db.getValue("select count(*) from %s" % Test2.__table__), 0)
 
     def testAddFK(self):
         t = Test.create(self.db, strval="test1")
         t.uncache()
-        t1 = Test.test2s.addNewChild(self.db, t)
-        t2 = Test.test2s.addNewChild(self.db, t)
-        self.assertEqual(len(list(t.test2s)), 2)
-        self.assertEqual(list(t.test2s), [t1, t2])
+        t1 = Test.testchildren.addNewChild(self.db, t)
+        t2 = Test.testchildren.addNewChild(self.db, t)
+        self.assertEqual(len(list(t.testchildren)), 2)
+        self.assertEqual(list(t.testchildren), [t1, t2])
         for c in t1, t2:
-            Test.test2s.removeChild(self.db, t, c)
-        self.assertEqual(len(list(t.test2s)), 0)
-        self.assertEqual(list(t.test2s), [])
+            Test.testchildren.removeChild(self.db, t, c)
+        self.assertEqual(len(list(t.testchildren)), 0)
+        self.assertEqual(list(t.testchildren), [])
         
-    def testFindGet(self):
-        self.assertEqual(len(TestUser.find(self.db, 1)), 1)
+    def skip_testFindGet(self):
+        self.assertEqual(len(TestUser.find(self.db, userid=1)), 1)
         
         t = TestUser(self.db, 1)
         self.assertEqual(t, TestUser.get(self.db, userid=1))        
