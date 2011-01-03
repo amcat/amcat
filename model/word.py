@@ -1,5 +1,7 @@
-from cachable2 import Cachable, ForeignKey, DBProperty
-import toolkit, re, dbtoolkit
+from amcat.tools.cachable.cachable import Cachable, ForeignKey, DBProperty
+from amcat.tools import toolkit
+from amcat.db import dbtoolkit
+import re
 
 class String(Cachable):
     __table__ = "words_strings"

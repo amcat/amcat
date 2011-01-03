@@ -1,4 +1,7 @@
-import unittest, amcatmemcache, inspect
+from amcat.test import amcattest
+from amcat.tools.cachable import amcatmemcache
+
+import inspect
 
 class Test: pass
 
@@ -8,7 +11,7 @@ TEST_DATA = ((Test, "headline", 1, "dit is een headline"),
              )
              
 
-class TestAmcatMemcache(unittest.TestCase):
+class TestAmcatMemcache(amcattest.AmcatTestCase):
 
     def testSetGet(self):
         for klass, prop, key, data in TEST_DATA:
@@ -38,4 +41,4 @@ class TestAmcatMemcache(unittest.TestCase):
         
 
 if __name__ == '__main__':
-    unittest.main()
+    amcattest.main()

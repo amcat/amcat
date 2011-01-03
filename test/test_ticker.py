@@ -1,5 +1,6 @@
 from __future__ import with_statement
-import unittest, amcattest, amcatlogging, ticker
+from amcat.test import amcattest
+from amcat.tools.logging import amcatlogging, ticker
 
 class TestLogging(amcattest.AmcatTestCase):
 
@@ -9,7 +10,7 @@ class TestLogging(amcattest.AmcatTestCase):
             for i in range(200):
                 ticker.tick()
         self.assertEqual(len(log), 3)
-        self.assertIn("test/test_ticker.py:10",  amcatlogging.format(log))
+        self.assertIn("test/test_ticker.py:11",  amcatlogging.format(log))
         self.assertIn("INFO] [   100/  1000]", amcatlogging.format(log))
 
     def testTickerClass(self):
@@ -18,7 +19,7 @@ class TestLogging(amcattest.AmcatTestCase):
             for i in range(200):
                 t.tick()
         self.assertEqual(len(log), 2)
-        self.assertIn("test/test_ticker.py:19",  amcatlogging.format(log))
+        self.assertIn("test/test_ticker.py:20",  amcatlogging.format(log))
         self.assertIn("INFO] [   100]", amcatlogging.format(log))
 
     def testTickerate(self):
@@ -27,9 +28,9 @@ class TestLogging(amcattest.AmcatTestCase):
             for i in ticker.tickerate(range(100)):
                 pass
         self.assertEqual(len(log), 11)
-        self.assertIn("test/test_ticker.py:27",  amcatlogging.format(log))
+        self.assertIn("test/test_ticker.py:28",  amcatlogging.format(log))
         self.assertIn("INFO] [   100/   100]", amcatlogging.format(log))
 
 
 if __name__ == '__main__':
-    unittest.main()
+    amcattest.main()

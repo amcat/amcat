@@ -1,8 +1,9 @@
-import toolkit, project, ont, article, dbtoolkit, sentence
-from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
-import cachable
-from table3 import ObjectColumn
-from idlabel import IDLabel
+from amcat.tools import toolkit
+from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools.cachable import cacher
+from amcat.tools.table.table3 import ObjectColumn
+from amcat.tools.idlabel import IDLabel
+
 import logging; log = logging.getLogger(__name__)
 #import amcatlogging; amcatlogging.debugModule()
 

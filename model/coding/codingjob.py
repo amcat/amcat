@@ -1,13 +1,14 @@
-import user, toolkit, project, ont, article, dbtoolkit, sentence
-
-from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties, cache, cacheMultiple
-
-
-
 from functools import partial
-import table3
-from idlabel import IDLabel
-import annotationschema
+
+from amcat.tools import toolkit
+from amcat.db import dbtoolkit
+from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools.cachable.cacher import  cache, cacheMultiple
+from amcat.tools.cachable.latebind import LB
+
+from amcat.tools.table import table3
+from amcat.tools.idlabel import IDLabel
+
 
 import logging; log = logging.getLogger(__name__)
 #import amcatlogging; amcatlogging.debugModule()
@@ -60,10 +61,10 @@ class CodingJob(Cachable):
     __labelprop__ = 'name'
     name, insertdate = DBProperties(2)
 
-    unitSchema = DBProperty(annotationschema.AnnotationSchema, getcolumn="unitschemaid")
-    articleSchema = DBProperty(annotationschema.AnnotationSchema, getcolumn="articleschemaid")
-    project = DBProperty(lambda:project.Project)
-    owner = DBProperty(lambda:user.User, getcolumn="owner_userid")
+    unitSchema = DBProperty(LB("AnnotationSchema", package="amcat.model.coding"), getcolumn="unitschemaid")
+    articleSchema = DBProperty(LB("AnnotationSchema", package="amcat.model.coding"), getcolumn="articleschemaid")
+    project = DBProperty(LB("Project"))
+    owner = DBProperty(LB("User"), getcolumn="owner_userid")
 
     sets = ForeignKey(lambda:CodingJobSet, includeOwnID=True)
         
@@ -135,7 +136,7 @@ class CodingJobSet(Cachable):
     __table__ = 'codingjobs_sets'
     __idcolumn__ = ['codingjobid', 'setnr']
     
-    coder = DBProperty(lambda:user.User, getcolumn="coder_userid")
+    coder = DBProperty(LB("User"), getcolumn="coder_userid")
     articles = ForeignKey(lambda:CodedArticle)
 
     @property
@@ -224,14 +225,14 @@ class CodedArticle(Cachable, CodedUnit):
         Cachable.__init__(self, *args, **kargs)
         CodedUnit.__init__(self)
     
-    article = DBProperty(lambda:article.Article)
+    article = DBProperty(LB("Article"))
     set = DBProperty(CodingJobSet)
 
     def getSentenceTable(self):
         return self.set.job.unitSchema.table
     def createSentence(self, db, arrowid):
         return CodedSentence(db, arrowid, self)
-    sentences = ForeignKey(lambda:CodedSentence, constructor=createSentence)
+    sentences = ForeignKey(LB("parsedSentence"), constructor=createSentence)
     sentences.tablehook=getSentenceTable
 #        self.addDBroperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
 
@@ -246,7 +247,7 @@ class CodedArticle(Cachable, CodedUnit):
 class CodedSentence(CodedUnit, Cachable):
     __idcolumn__ = 'arrowid'
     ca = DBProperty(CodedArticle)
-    sentence = DBProperty(lambda:sentence.Sentence)
+    sentence = DBProperty(LB("Sentence"))
     
     
     def __init__(self, db, arrowid, ca):

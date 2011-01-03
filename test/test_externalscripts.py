@@ -1,6 +1,8 @@
-import externalscripts, amcattest, dbtoolkit
+#import externalscripts, amcattest, dbtoolkit
+from amcat.test import amcattest
 
-class ExternalScriptTest(amcattest.AmcatTestCase):
+class Hide:
+  class ExternalScriptTest(amcattest.AmcatTestCase):
     
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)

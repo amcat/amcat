@@ -23,9 +23,10 @@ from __future__ import unicode_literals, print_function, absolute_import
 Model module containing the classes representing the parses_* tables
 """
 
-from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
 
-import graph, sentence, analysis, word
+from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools.cachable.latebind import LB
+from amcat.tools import graph
 
 class ParsedSentence(Cachable, graph.Graph):
     # NO table, there is no specific table for parsed sentences!
@@ -40,9 +41,11 @@ class ParsedSentence(Cachable, graph.Graph):
             
     @property
     def sentence(self):
-        return Sentence(self.db, self.id[0])
+        from amcat.model import sentence
+        return sentence.Sentence(self.db, self.id[0])
     @property
     def analysis(self):
+        from amcat.model import analysis
         return analysis.Analysis(self.db, self.id[1])
     def getTriples(self):
         for triple in self.triples:
@@ -53,7 +56,7 @@ class ParsedWord(graph.Node, Cachable):
     __table__ = 'parses_words'
     __idcolumn__ = ['sentenceid','analysisid','wordbegin']
     __labelprop__ = 'word'
-    word = DBProperty(lambda: word.Word)
+    word = DBProperty(LB("Word"))
     
     def __init__(self, *args, **kargs):
         Cachable.__init__(self, *args, **kargs)

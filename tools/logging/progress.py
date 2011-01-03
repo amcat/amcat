@@ -1,3 +1,4 @@
+from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -26,10 +27,10 @@ and listeners on the monitor may react to that, e.g. by logging a message
 every 10% of work.
 """
 
-from __future__ import with_statement
 import logging; log = logging.getLogger(__name__)
-import amcatlogging
-import toolkit
+
+from amcat.tools.logging import amcatlogging
+from amcat.tools import toolkit
 import re, sys, traceback
 from contextlib import contextmanager
 import random
@@ -312,24 +313,3 @@ def readLog(logstr, monitorname=None, taskname=None):
         else:
             raise Exception("Cannot interpret action %r" % action)
     return monitor
-        
-if __name__ == '__main__':
-    amcatlogging.setup()
-    
-    import StringIO
-    sio= StringIO.StringIO()
-    amcatlogging.setStreamHandler(sio)
-    
-    p = ProgressMonitor("x33")
-    p.listeners.add(TickLogListener(log, 5))
-    p.start("test")
-
-    
-    for i in range(40):
-        p.worked()
-    for i in tickerate(range(100), log=log, monitor=p, submonitorwork=30):
-        pass#if i > 50: break
-    p.done()
-    p.error("!")
-
-    print readLog(sio.getvalue(), "x33")

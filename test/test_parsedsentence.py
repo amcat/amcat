@@ -1,4 +1,5 @@
-import amcattest, parsedsentence
+from amcat.test import amcattest
+from amcat.model import parsedsentence
 
 from test_sentence import SENTENCES
 

@@ -1,5 +1,6 @@
-from __future__ import with_statement
-import amcattest, progress, amcatlogging
+
+from amcat.test import amcattest
+from amcat.tools.logging import progress, amcatlogging
 
 class TestProgress(amcattest.AmcatTestCase):
 

@@ -17,7 +17,12 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import logging; log = logging.getLogger(__name__)
+
 from amcat.db import dbtoolkit
+from amcat.tools import toolkit
+import collections
+
 
 def sqlWhere(fields, ids):
     if type(fields) in (str, unicode):

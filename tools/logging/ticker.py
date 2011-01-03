@@ -21,7 +21,8 @@
 Give progress feedback on the command line
 """
 
-import time,  math, logging, toolkit
+import time,  math, logging
+from amcat.tools import toolkit
 
 class Ticker(object):
     """

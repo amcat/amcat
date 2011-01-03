@@ -1,12 +1,11 @@
-import amcattest, sentence
+from amcat.test import amcattest
+from amcat.model import sentence
 
 SENTENCES = { # sid, sent, parnr, sentnr, preprocessed_words?
     63985791 : ("Peace activists targeted by FBI call Minneapolis home raids harassment", 1,1),
     }
 
 class TestSentences(amcattest.AmcatTestCase):
-
-
     def test_cacheWords(self): 
         sentences = [sentence.Sentence(self.db, sid) for sid in SENTENCES]
         for s in sentences:

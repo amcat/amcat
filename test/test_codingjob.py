@@ -1,9 +1,7 @@
-import amcattest, codingjob, dbtoolkit, cachable2
+from amcat.test import amcattest
+from amcat.model.coding import codingjob
 
 class TestCodingJob(amcattest.AmcatTestCase):
-
-    def setUp(self):
-        self.db = dbtoolkit.amcatDB(use_app=True)
 
     def xtestObjects(self):
         # check whether we can create objects without errors

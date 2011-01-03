@@ -1,5 +1,9 @@
-import amcattest, dbtoolkit, user, language, inspect
-from cachable2 import Cachable, Property, DBProperty,DBProperties, UnknownTypeException, ForeignKey, cache, cacheMultiple
+from amcat.test import amcattest
+from amcat.db import dbtoolkit
+from amcat.model import language, user, project
+from amcat.tools.cachable.cachable import Cachable, Property, DBProperty,DBProperties, UnknownTypeException, ForeignKey
+from amcat.tools.cachable.cacher import cache, cacheMultiple
+import inspect
 
 class TestDummy(Cachable):
     prop = Property()
@@ -66,7 +70,6 @@ class TestCachable(amcattest.AmcatTestCase):
         Test3.__table__ = t3
 
     def testCacheMultiple(self):
-        import project
         obj = project.Project(self.db, 282)
         props = ["name", "insertUser"]
         val = [getattr(obj, prop) for prop in props]
@@ -154,7 +157,7 @@ class TestCachable(amcattest.AmcatTestCase):
     def testGetReget(self):
         # getting a property, its cached value, and setting it and regetting it
         # shoule always give the same result
-        import project
+        from amcat.model import project
         obj = project.Project(self.db, 242)
         prop = "name"
         for obj, prop in [
