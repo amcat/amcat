@@ -6,22 +6,13 @@ from idlabel import IDLabel
 import logging; log = logging.getLogger(__name__)
 #import amcatlogging; amcatlogging.debugModule()
 
-def paramdict(db, paramstr):
-    d = {}
-    if not paramstr: return d
-    for kv in paramstr.split(","):
-        k,v = kv.split("=")
-        d[k.strip()] = v.strip()
-    return d
 
 class AnnotationSchema(Cachable):
     __idcolumn__ = 'annotationschemaid'
     __table__ = 'annotationschemas'
-    __dbproperties__ = ["name", "articleschema"]
     __labelprop__ = 'name'
     
-    name, articleschema, location = DBProperties(3)
-    params = DBProperty(paramdict)
+    name, isarticleschema, location = DBProperties(3)
     fields = ForeignKey(lambda:AnnotationSchemaField)
     
     @property
@@ -32,10 +23,6 @@ class AnnotationSchema(Cachable):
     def getField(self, fieldname):
         for f in self.fields:
             if f.fieldname == fieldname: return f
-
-    @property
-    def language(self):
-        return int(self.params.get("language", 1))
 
     def SQLSelect(self, extra = []):
         fields = extra + [f.fieldname for f in self.fields]
@@ -77,8 +64,10 @@ class AnnotationSchemaField(Cachable):
 
     schema = DBProperty(AnnotationSchema, getcolumn="annotationschemaid")
     fieldname, label, default = DBProperties(3)
-    params = DBProperty(paramdict)
     fieldtype = DBProperty(AnnotationSchemaFieldType)
+
+    table, keycolumn, labelcolumn, values = DBProperties(4)
+    codebook = DBProperty(lambda: ont.Set)
 
     @property
     def serializer(self):
@@ -88,21 +77,12 @@ class AnnotationSchemaField(Cachable):
         
         ftid = self.fieldtype.id
         if ftid == 5:
-            if self.params:
-                setid = self.params.get("setid") if self.params else None
-                if not setid: setid = self.params.get("set")
-                if not setid: setid = self.params.get("sets")
-                if not setid:
-                    log.warn("OntologyASF without setid? %s" % (self.params))
-                    self._serializer = SchemaFieldSerialiser()
-                    
-            else:
-                setid = 201
-            self._serializer = OntologyFieldSerialiser(self.schema.db, self.schema.language, int(setid))
+            codebookid = self.codebook.id if self.codebook else 201 
+            self._serializer = OntologyFieldSerialiser(self.schema.db, self.schema.language, codebookid)
         elif ftid == 4:
-            self._serializer = AdHocLookupFieldSerialiser(self.params["values"])
+            self._serializer = AdHocLookupFieldSerialiser(self.values)
         elif ftid in (3,8):
-            self._serializer = DBLookupFieldSerialiser(self.schema.db, *map(self.params.get, ["table","key","label"]))
+            self._serializer = DBLookupFieldSerialiser(self.schema.db, self.table, self.keycolumn, self.labelcolumn)
         elif ftid == 12:
             self._serializer = FromFieldSerialiser()
         else:
@@ -158,6 +138,7 @@ class AdHocLookupFieldSerialiser(LookupFieldSerialiser):
 
 class DBLookupFieldSerialiser(LookupFieldSerialiser):
     def __init__(self, db, table, keycol, labelcol):
+        if table is None: raise TypeError("DBLookupFieldSerialiser.table should not be None!")
         self.db = db
         self.keycol = keycol
         self.labelcol = labelcol

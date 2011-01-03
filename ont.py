@@ -1,5 +1,6 @@
 from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
 from datetime import datetime
+import cachable
 
 import toolkit, idlabel, language
 import logging; log = logging.getLogger(__name__)
