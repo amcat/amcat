@@ -1,9 +1,8 @@
-import dbtoolkit, unittest, project, article, user, mx.DateTime, datetime, amcattest
+from amcat.model import project
+from amcat.test import amcattest
+import datetime
 
 class TestProject(amcattest.AmcatTestCase):
-
-    def setUp(self):
-        self.db = dbtoolkit.amcatDB()#use_app=True)
 
     def tesxUsers(self):
         p = project.Project(self.db, 1)

@@ -1,3 +1,4 @@
+from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -102,9 +103,9 @@ def printargs(func):
     argnames = func.func_code.co_varnames[:func.func_code.co_argcount]
     fname = func.func_name
     def echo_func(*args,**kwargs):
-        print "%s(%s)" % (fname, ', '.join(
-            '%s=%r' % entry
-            for entry in zip(argnames,args) + kwargs.items()))
+        print("%s(%s)" % (fname, ', '.join(
+                    '%s=%r' % entry
+                    for entry in zip(argnames,args) + kwargs.items())))
         return func(*args, **kwargs)
     return echo_func
 
@@ -689,7 +690,7 @@ def clean(string, level=0, lower=False, droptags=False, escapehtml=False, keepta
 def warn(string):
     fn, lineno, func = getCaller()
     module = getCallingModule()
-    logging.basicConfig()
+
     log = logging.getLogger()
     rec = log.makeRecord(module, logging.WARN, fn, lineno,
                          string, [], exc_info=None, func=func)
@@ -964,7 +965,7 @@ class ErrorReader(threading.Thread):
             except IOError, e:
                 if e.errno not in (11,):
                     raise
-                print e.errno
+                print(e.errno)
             else:
                 if err.strip():
                     raise Exception("Unexpected message:\n%s" % err)

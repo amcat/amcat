@@ -1,3 +1,4 @@
+from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -29,9 +30,12 @@ Interface Table:
 see tableoutput.py for useful methods for rendering tables in different ways
 """
 
-import toolkit, types, idlabel
-from toolkit import isnull
-from oset import OrderedSet
+from amcat.tools import toolkit, idlabel
+from amcat.tools.toolkit import isnull
+
+import types
+from amcat.contrib.oset import OrderedSet
+
 def trivialCellFunc(row, col): return "%s/%s" % (row, col)
 
 class NamedRow(object):
@@ -324,10 +328,10 @@ if __name__ == '__main__':
                           ])
 
 
-    print tableoutput.table2ascii(t)
+    print(tableoutput.table2ascii(t))
 
     s = SortedTable(t, getColumnByLabel(t, "a2"))
-    print tableoutput.table2ascii(s)
+    print(tableoutput.table2ascii(s))
     
     t2 = ListTable(colnames = ["b1", "b2"],
                    data = [['a','A'],
@@ -336,15 +340,15 @@ if __name__ == '__main__':
                            ['b','B'],
                            ])
     
-    print tableoutput.table2ascii(t2)
+    print(tableoutput.table2ascii(t2))
     m = MergedTable(t, t2)
     m.columnfilter = lambda tab,col : col.label <> "a1"
-    print tableoutput.table2ascii(m)
+    print(tableoutput.table2ascii(m))
 
     l = getColumnByLabel(m, "b1")
-    print l
+    print(l)
     s = SortedTable(m, getColumnByLabel(m, "b1")) 
-    print tableoutput.table2ascii(s)
+    print(tableoutput.table2ascii(s))
 
     import article, dbtoolkit
     a = article.Article(dbtoolkit.amcatDB(), 33308863)
@@ -354,5 +358,5 @@ if __name__ == '__main__':
     id = ObjectColumn("id", lambda a: a.id)
     
     l = ObjectTable([a,a2], [hl, id])
-    print tableoutput.table2ascii(l)
+    print(tableoutput.table2ascii(l))
     

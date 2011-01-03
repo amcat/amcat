@@ -1,3 +1,4 @@
+from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -42,17 +43,15 @@ In general, amcat modules should:
    extra information to all log records from that thread.
 """
 
-from __future__ import with_statement
-
 from contextlib import contextmanager
 import logging
 import logging.handlers
 import threading
-import toolkit
 import thread
 import sys
 import inspect
 
+from amcat.tools import toolkit
 
 _THREAD_CONTEXT = threading.local()
 CONTEXT_FIELDS = ['application','user','host']
@@ -207,7 +206,7 @@ if __name__ == '__main__':
     setStreamHandler()
     debugModule()
     log = logging.getLogger(__name__)
-    print log.level, logging.DEBUG
+    print(log.level, logging.DEBUG)
     log.warning("warn")
     log.info("info")
     log.debug("debug")

@@ -1,3 +1,4 @@
+from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -17,7 +18,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-
 """
 Usage: python test.py [-w] [-v] [-h]
 
@@ -33,10 +33,10 @@ Options:
   -v : verbose
 """
 
-from __future__ import with_statement
 import unittest, os.path, os, inspect, sys
-import warnings, toolkit, dbtoolkit
-import amcatlogging
+from amcat.tools import toolkit
+from amcat.db import dbtoolkit
+from amcat.tools.logging import amcatlogging
 
 
 def getModule(fn):
@@ -101,7 +101,7 @@ def main():
     
 if __name__ == '__main__':
     if "-h" in sys.argv:
-        print __doc__
+        print(__doc__)
         sys.exit()
     testdir = os.path.join(os.getcwd(), os.path.dirname(__file__), "test")
     suites = []

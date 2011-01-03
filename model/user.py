@@ -1,5 +1,26 @@
-from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
-import toolkit, permissions, project, authorisation, language
+from __future__ import unicode_literals, print_function, absolute_import
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools import toolkit
+from amcat.model import permissions, project, authorisation, language
 
 def getProjectRole(db, projectid, roleid):
     return project.Project(db, projectid), authorisation.Role(db, roleid)
@@ -89,11 +110,3 @@ def users(db):
     import system
     return system.System(db).users
         
-if __name__ == '__main__':
-    import dbtoolkit
-    print User.projects.getType()
-    print User.projects.getCardinality()
-    print dbtoolkit.amcatDB().getUser().projects
-    print list(dbtoolkit.amcatDB().getUser().projects)
-    
-

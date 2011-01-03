@@ -1,3 +1,4 @@
+from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -43,9 +44,11 @@ Example usage::
 """
 
 import inspect, types, warnings
-import idlabel, dbtoolkit
-import amcatmemcache as store
 import logging; log = logging.getLogger(__name__)
+
+from amcat.tools import idlabel
+from amcat.db import dbtoolkit
+from amcat.tools.cachable import amcatmemcache as store
 
 #import amcatlogging; amcatlogging.debugModule()
 #import amcatlogging; amcatlogging.infoModule()
@@ -712,8 +715,6 @@ def DBProperties(n):
     """Shortcut to create n DBProperty objects
     (for assigning to a,b = DBProperties(2))""" 
     return [DBProperty() for dummy in range(n)]
-
-from cachable import cacheMultiple, cache
 
 class UnknownTypeException(Exception):
     def __init__(self, prop):

@@ -1,11 +1,10 @@
-import unittest
-import toolkit
+from amcat.tools import toolkit
+from amcat.test import amcattest
 import datetime
-import mx.DateTime
 import random
 import inspect
 
-class TestToolkitFunctions(unittest.TestCase):
+class TestToolkitFunctions(amcattest.AmcatTestCase):
 
     def test_ints2ranges(self):
         for i in range(10):
@@ -55,7 +54,6 @@ class TestToolkitFunctions(unittest.TestCase):
 
     def test_dateoutput(self):
         for date, iso, isotime, yw, ym, yq in (
-            (mx.DateTime.DateTime(1990, 1, 10, 13,1,0), "1990-01-10", "1990-01-10 13:01:00", 1990.02, 1990.01, 1990.1),
             (datetime.datetime(1990, 1, 10, 13,1,0), "1990-01-10", "1990-01-10 13:01:00", 1990.02, 1990.01, 1990.1),
             ):
             self.assertEqual(toolkit.writeDate(date), iso)
@@ -170,4 +168,4 @@ class TestToolkitFunctions(unittest.TestCase):
             
                     
 if __name__ == '__main__':
-    unittest.main()
+    amcattest.main()

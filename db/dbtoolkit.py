@@ -1,19 +1,39 @@
-from __future__ import with_statement
+from __future__ import unicode_literals, print_function, absolute_import
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 
-import base64
-import toolkit, config, sys
+import sys
 import re, collections, time
-#from oset import OrderedSet # for listeners, replace with proper orderedset whenever python gets it
-OrderedSet = set # OrderedSet gaat mis bij pickle, dan maar geen order op de listeners...?
-import table3
 import threading
-import cPickle
+import cPickle as pickle
 from cStringIO import StringIO
 from contextlib import contextmanager
 import datetime
 import random
-from idlabel import IDLabel
+
 import logging; log = logging.getLogger(__name__)
+
+import base64
+from amcat.tools import toolkit
+from . import config
+from amcat.tools.table import table3
+from amcat.tools.idlabel import IDLabel
 
 #import amcatlogging; amcatlogging.infoModule()
 #import amcatlogging; amcatlogging.debugModule()
@@ -82,10 +102,10 @@ class amcatDB(object):
         
         # should be function(string SQL): None or string.
         # Returning string will cause SQL to be changed
-        self.beforeQueryListeners = OrderedSet()
+        self.beforeQueryListeners = set()
         
         # should be function(string SQL, double time, list-of-lists data): None
-        self.afterQueryListeners = OrderedSet()
+        self.afterQueryListeners = set()
 
         if profile:
             self.profiler = ProfilingAfterQueryListener()
@@ -570,50 +590,6 @@ class amcatDB(object):
             i += _MAXTEXTCHARS
         return bytes
 
-
-    def getText(self, aid, type=2):
-        sql = "select text, encoding from texts where articleid=%i and type=%i" % (aid, type)
-        try:
-            txt, enc = self.doQuery(sql)[0]
-        except IndexError:
-            raise Exception("text not found: articleid=%i and type=%i" % (aid, type))
-        if len(txt) > 64000:
-            txt = self.getLongText(aid, type)
-        return decode(txt, enc)
-    
-    def setText(self, aid, text, type=2):
-        bytes, remainder = None, None
-        try:
-            bytes = text.encode('ascii')
-            print "ASCII encoded!"
-        except:
-            pass
-        
-        if not bytes:
-            bytes = text.encode('utf-8')
-            bytes, remainder = bytes[:7000], bytes[7000:]
-            print "%i bytes, %i remainder" % (len(bytes), len(remainder))
-
-        self.doQuery("update texts set text = %s where articleid=%i and type=%i" % (quotesql(bytes.decode('utf-8')), aid, type))
-        while remainder:
-            bytes, remainder = remainder[:7000], remainder[7000:]
-            print "%i bytes, %i remainder" % (len(bytes), len(remainder))
-            self.doQuery("exec append_text_bytes @articleid=%i, @data=%s" % (aid, sqlbytes(bytes)))
-            
-    def updateText(self, aid_or_tid, type_or_None, text):
-        if type_or_None is None:
-            where = "textid = %i" % aid_or_tid
-        else:
-            where = "articleid=%i and type=%i" % (aid_or_tid, type_or_None
-                                                  )
-        text, encoding = encodeText(text)
-        text = quotesql(text)
-        sql = "update texts set text=%s where %s" % (text, where)
-        self.doQuery(sql)
-        sql = "update texts set encoding=%i where %s" % (encoding, where)
-        self.doQuery(sql)
-        return encoding
-
     def isnull(self):
         return "ifnull" if self.mysql else "isnull"
 
@@ -925,14 +901,14 @@ def get_persistent_load(db):
         raise Exception("Unknown persistent id: %r" % id)
     return persistent_load
     
-def persistent_dumps(obj, module=cPickle):
+def persistent_dumps(obj, module=pickle):
     s = StringIO()
     p = module.Pickler(s)
     p.persistent_id = persistent_id
     p.dump(obj)
     return s.getvalue()
     
-def persistent_loads(bytes, db, module=cPickle):
+def persistent_loads(bytes, db, module=pickle):
     s = StringIO(bytes)
     u = module.Unpickler(s)
     u.persistent_load = get_persistent_load(db)
