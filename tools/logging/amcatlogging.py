@@ -110,7 +110,7 @@ def _addModulesToSet(targetset, *modules):
 def setSyslogHandler():
     """Add a sysloghandler to the root logger with contextinjecting and module level filters"""
     root = logging.getLogger()
-    h = logging.handlers.SysLogHandler(address="/dev/log", facility="local0")
+    h = logging.handlers.SysLogHandler(address=b"/dev/log", facility=b"local0")
     h.setFormatter(AmcatFormatter())
     h.addFilter(ContextInjectingFilter())
     h.addFilter(ModuleLevelFilter())
