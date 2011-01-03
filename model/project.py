@@ -18,11 +18,10 @@ from __future__ import unicode_literals, print_function, absolute_import
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from amcat.tools.cachable.latebind import LB
 from amcat.tools.cachable.cachable import Cachable, DBProperty, DBProperties, ForeignKey
-from amcat.model import user, permissions, article, codingjob
 from amcat.tools import toolkit
 from functools import partial
-
 
 class Project(Cachable):
     __table__ = 'projects'
@@ -30,12 +29,12 @@ class Project(Cachable):
     __labelprop__ = 'name'
 
     name, projectid, insertDate, description = DBProperties(4)
-    articles = ForeignKey(lambda: article.Article)
-    sets = ForeignKey(lambda : Set)
+    articles = ForeignKey(LB("Article"))
+    sets = ForeignKey(LB("Set", "project"))
     insertdate = DBProperty()
-    insertUser = DBProperty(lambda : user.User, getcolumn="insertuserid")
-    users = ForeignKey(lambda : user.User, table="permissions_projects_users")
-    codingjobs = ForeignKey(lambda : codingjob.CodingJob)
+    insertUser = DBProperty(LB("User"), getcolumn="insertuserid")
+    users = ForeignKey(LB("User"), table="permissions_projects_users")
+    codingjobs = ForeignKey(LB("CodingJob"))
     
 class Set(Cachable):
     __table__ = 'sets'

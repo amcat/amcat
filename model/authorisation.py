@@ -27,7 +27,7 @@ getPrivilege(db, str or int) returns Privilege object
 
 """
 
-from amcat.tools.cachable import Cachable, DBProperty, ForeignKey
+from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey
 from amcat.model import project, user
 
 ADMIN_ROLE = 1
