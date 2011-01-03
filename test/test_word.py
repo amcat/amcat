@@ -1,4 +1,5 @@
-import amcattest, word
+from amcat.test import amcattest
+from amcat.model import word
 
 class TestWord(amcattest.AmcatTestCase):    
 

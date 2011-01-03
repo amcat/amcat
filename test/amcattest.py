@@ -103,7 +103,7 @@ if __name__ == '__main__':
     if "-h" in sys.argv:
         print(__doc__)
         sys.exit()
-    testdir = os.path.join(os.getcwd(), os.path.dirname(__file__), "test")
+    testdir = os.path.join(os.getcwd(), os.path.dirname(__file__))
     suites = []
     for fn in os.listdir(testdir):
         if fn.startswith("test_") and fn.endswith(".py"):

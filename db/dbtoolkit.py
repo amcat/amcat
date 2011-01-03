@@ -496,7 +496,7 @@ class amcatDB(object):
     sources = property(_getsources)
 
     def getUser(self):
-        import user
+        from amcat.model import user
         if self.dbType == "psycopg2":
             uid = self.getValue("select amcat_user()")
         else:

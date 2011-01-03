@@ -18,41 +18,31 @@ from __future__ import unicode_literals, print_function, absolute_import
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""
-Object-layer module containing classes modelling sentences
-"""
+import logging; log = logging.getLogger(__name__)
 
-from amcat.tools import toolkit
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
-from amcat.tools.cachable.cacher import cache
-from amcat.tools.cachable.latebind import LB
+class LB(object):
+    def __init__(self, classname, modulename=None, package="amcat.model"):
+        self.classname = classname
+        if modulename is None: modulename = classname.lower()
+        self.modulename = modulename
+        self.package = package
+        self.classobject = None
+    def __call__(self):
+        if self.classobject is None:
+            log.debug("Finding class %s.%s.%s" % (self.package, self.modulename, self.classname))
+
+            module = __import__("%s.%s" % (self.package, self.modulename), fromlist=[self.classname])
+            self.classobject = getattr(module, self.classname)
+            log.debug("Got class %s from module %s" % (self.classobject, module))
+        return self.classobject
+
+class MultiLB(object):
+    def __init__(self, *latebinds):
+        self.latebinds = latebinds
+
+    def __call__(self):
+        return tuple(lb() for lb in self.latebinds)
+    
 
 
-class Sentence(Cachable):
-    __table__ = 'sentences'
-    __idcolumn__ = 'sentenceid'
-    __labelprop__ = 'sentence'
-    __dbproperties__ = ["parnr", "sentnr", "encoding"]
-
-    sentence, parnr, sentnr = DBProperties(3)
-
-    article = DBProperty(LB("Article"))
-    parsedSentences = ForeignKey(LB("ParsedSentence"), table="parses_words", distinct=True)
-        
-    def getAnalysedSentence(self, analysis):
-        if type(analysis) <> int: analysis = analysis.id
-        for a in self.analysedSentences:
-            if analysis == a.analysisid:
-                return a
-
-
-def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=False, sentence=False):
-    perword = dict(word = dict(string = []))
-    if lemmata: perword["lemma"] = dict(lemma=["string"], pos=[])
-    if sentiment: perword["lemma"] = dict(lemma=["string"], pos=[], sentiment=[], intensifier=[])
-    what = dict(parsedSentences = dict(words={'word' : perword}))
-    if triples: what["parsedSentences"] = ["triples"]
-    if sentence: what["sentence"] = []
-    print(what)
-    cache(sentences, **what)
-        
+    

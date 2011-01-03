@@ -1,4 +1,6 @@
-import dbtoolkit, user, system, authorisation, project, types, amcattest
+from amcat.test import amcattest
+from amcat.model import user, project, authorisation
+from amcat.db import dbtoolkit
 
 class TestUser(amcattest.AmcatTestCase):
 

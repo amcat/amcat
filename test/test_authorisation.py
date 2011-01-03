@@ -1,9 +1,11 @@
-import unittest, amcattest, authorisation, dbtoolkit, inspect, warnings
-from authorisation import check, AccessDenied
+from amcat.test import amcattest
+from amcat.model import authorisation
+from amcat.model.authorisation import check, AccessDenied
+from amcat.db import dbtoolkit
+import inspect, warnings
 
 class TestAuthorisation(amcattest.AmcatTestCase):
-    def setUp(self):
-        self.db = dbtoolkit.amcatDB(profile=True, use_app=True)
+
     
     def test_roles(self):
         for (input, output) in (
@@ -58,4 +60,4 @@ class TestAuthorisation(amcattest.AmcatTestCase):
         self.assertRaises(AccessDenied, check, self.db, "project_add_user", 3)
         
 if __name__ == '__main__':
-    unittest.main()
+    amcattest.main()

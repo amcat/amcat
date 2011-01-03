@@ -1,4 +1,4 @@
-from amcat.model import project
+from amcat.model import project, article, user
 from amcat.test import amcattest
 import datetime
 
@@ -28,4 +28,4 @@ class TestProject(amcattest.AmcatTestCase):
         
 
 if __name__ == '__main__':
-    unittest.main()
+    amcattest.main()

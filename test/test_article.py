@@ -1,4 +1,6 @@
-import amcattest, article, toolkit
+from amcat.test import amcattest
+from amcat.model import article
+from amcat.tools import toolkit
 
 class TestArticle(amcattest.AmcatTestCase):
 

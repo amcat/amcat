@@ -1,5 +1,5 @@
-import dbtoolkit, analysis
-import amcattest
+from amcat.model import analysis
+from amcat.test import amcattest
 
 class AnalysisTest(amcattest.AmcatTestCase):
 

@@ -505,9 +505,8 @@ class DBProperty(Property):
         if self.targetclass is not None:
             if not callable(self.targetclass):
                 raise ValueError("targetclass (%s.%s) should be callable" % (self, self.targetclass))
-            if ((not inspect.isclass(self.targetclass)) and
-                inspect.getargspec(self.targetclass)[0] == []):
-                # assume targetklass is lambda, so dereference
+            if not inspect.isclass(self.targetclass):
+                # assume targetklass is lambda or latebind.LB, so dereference
                 self.targetclass = self.targetclass()
 
     def dbrowToObject(self, obj, *dbvalues):

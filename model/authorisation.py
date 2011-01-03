@@ -28,7 +28,7 @@ getPrivilege(db, str or int) returns Privilege object
 """
 
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey
-from amcat.model import project, user
+
 
 ADMIN_ROLE = 1
 
@@ -67,6 +67,7 @@ def check(db_or_user, privilege, onproject=None):
         if onproject is None:
             raise ValueError("Cannot check project privilege %s without project" % (p))
         if type(onproject) == int:
+            from amcat.model import project
             onproject = project.Project(db, onproject)
         # global admin can do anything on any project:
         if any(r.id == ADMIN_ROLE for r in userroles): return

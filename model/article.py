@@ -27,10 +27,6 @@ from amcat.tools.cachable.latebind import LB
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools import toolkit
 
-from amcat.model import sentence
-import toolkit
-import sentence, project, sources
-
 import logging; log = logging.getLogger(__name__)
     
 class Article(Cachable):
@@ -44,9 +40,10 @@ class Article(Cachable):
 
     headline, byline, metastring, section, date, length, pagenr, url, externalid, text = DBProperties(10)
 
-    project = DBProperty(lambda : project.Project)
-    source = DBProperty(lambda : sources.Source)
-    sentences = ForeignKey(lambda : sentence.Sentence)
+    project = DBProperty(LB("Project"))
+    medium = DBProperty(LB("Medium"))
+    source = medium
+    sentences = ForeignKey(LB("Sentence"))
 
     @property
     def fullmeta(self):
