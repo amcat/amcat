@@ -106,14 +106,21 @@ if __name__ == '__main__':
     testdir = os.path.join(os.getcwd(), os.path.dirname(__file__), "test")
     suites = []
     for fn in os.listdir(testdir):
-        if fn.endswith(".py"):
+        if fn.startswith("test_") and fn.endswith(".py"):
             for suite in getSuites(os.path.join(testdir, fn)):
                 suites.append(suite)
 
     suite = unittest.TestSuite(suites)
 
     verbosity = 2 if "-v" in sys.argv else 1
-    unittest.TextTestRunner(verbosity=2).run(suite)
+
+    if "-html" in sys.argv:
+        import HTMLTestRunner
+        runner = HTMLTestRunner.HTMLTestRunner(verbosity=verbosity)
+    else:
+        runner = unittest.TextTestRunner(verbosity=verbosity)
+    
+    runner.run(suite)
 
     #if w:
     #    if "-w" in sys.argv:
