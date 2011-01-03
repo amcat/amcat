@@ -10,7 +10,7 @@ class TestLogging(amcattest.AmcatTestCase, logging.Filter):
         self.logs.append(logrecord)
         return True
     
-    def testContext(self): 
+    def testCollect(self): 
         with amcatlogging.collect() as s:
             logging.info("debug message")
             logging.info("debug message")

@@ -178,7 +178,7 @@ def collect(level=logging.DEBUG, destination=None):
     mh = MemoryHandler(destination)
     mh.setLevel(level)
     mh.addFilter(CurrentThreadFilter())
-    mh.addFilter(ModuleLevelFilter())
+    #mh.addFilter(ModuleLevelFilter())
     logger = logging.getLogger()
     logger.addHandler(mh)
     try:
