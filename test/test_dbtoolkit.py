@@ -1,9 +1,7 @@
 import dbtoolkit, unittest, dbtoolkit, amcattest, datetime
 
-class TestProject(amcattest.AmcatTestCase):
+class TestDBToolkit(amcattest.AmcatTestCase):
 
-    def setUp(self):
-        self.db = dbtoolkit.amcatDB(use_app=True)
 
     def testIntSelectionSQL(self):
         for colname, ints, result in[
@@ -12,40 +10,48 @@ class TestProject(amcattest.AmcatTestCase):
             ("bla", [0,1,2,0], "(([bla] in (0,1,2)))"),
             ]:
             sql = self.db.intSelectionSQL(colname, ints)
+            
+            if self.db.dbType == "psycopg2":
+                result = result.replace("[", '"').replace("]", '"')
             self.assertEqual(sql, result)
             # test generator instead of list
             sql = self.db.intSelectionSQL(colname, (i for i in ints))
             self.assertEqual(sql, result)
-def StopHere():
+
     def testUpdateSQL(self):
         for table, where, newvals, result in (
             ("test", dict(a=range(3)), dict(b=1), "UPDATE [test] SET [b]=1 WHERE (([a] in (0,1,2)))"),
             ("test", dict(a=12,c=["a","b"]), dict(b=1,x="b'b"), "UPDATE [test] SET [x]='b''b',[b]=1 WHERE [a] = 12 AND [c] IN ('a','b')"),
             ("test", dict(a="bla'bla"), dict(b=datetime.datetime(2001, 1, 1)), "UPDATE [test] SET [b]='2001-01-01 00:00:00' WHERE [a] = 'bla''bla'"),
             ):
+            if self.db.dbType == "psycopg2":
+                result = result.replace("[", '"').replace("]", '"')
             self.assertEqual(self.db._updateSQL(table, newvals, where), result)
 
     def createTestTable(self):
-        self.db.doQuery("create table #updatetest (id int, i int, s varchar(255), d datetime)")
-        self.db.insert("#updatetest", dict(id=1, i=0), retrieveIdent=False)
-        self.db.insert("#updatetest", dict(id=2, i=0, s='blabla', d='2001-01-01'), retrieveIdent=False)
-        self.db.insert("#updatetest", dict(id=3, i=1, s="x'x", d=datetime.datetime(2010,1,1)),  retrieveIdent=False)
-        return "#updatetest"
-    
+        table = self.db.createTable("updatetest", [("id", "int"), ("i", "int"), ("s", "varchar(255)"), ("d", "timestamp")], temporary=True)
+        self.db.insert(table, dict(id=1, i=0), retrieveIdent=False)
+        self.db.insert(table, dict(id=2, i=0, s='blabla', d='2001-01-01'), retrieveIdent=False)
+        self.db.insert(table, dict(id=3, i=1, s="x'x", d=datetime.datetime(2010,1,1)),  retrieveIdent=False)
+        return table
+
+    def testCreateTestTable(self):
+        self.createTestTable()
+
     def testInsert(self):
         table = self.createTestTable()
-        data = self.db.doQuery("select * from #updatetest order by id")
+        data = self.db.doQuery("select * from %s order by id" % table)
         self.assertTrue(data)
         
     def testUpdate(self):
         table = self.createTestTable()
-        self.db.update("#updatetest", where=dict(i=0), newvals=dict(s="bla'bla", d=None))
-        data = self.db.select(table, ("id","i","s","d"))
+        self.db.update(table, where=dict(i=0), newvals=dict(s="bla'bla", d=None))
+        data = self.db.select(table, ("id","i","s","d"), orderby="id")
         self.assertEqual(data, [(1, 0, "bla'bla", None),
                                 (2, 0, "bla'bla", None),
                                 (3, 1, "x'x", datetime.datetime(2010,1,1)),])
-        self.db.update("#updatetest", where=dict(i=range(2)), newvals=dict(d=datetime.datetime(1990,1,1)))
-        data = self.db.select(table, ("id","i","s","d"))
+        self.db.update(table, where=dict(i=range(2)), newvals=dict(d=datetime.datetime(1990,1,1)))
+        data = self.db.select(table, ("id","i","s","d"), orderby=["id", "i"])
         self.assertEqual(data, [(1, 0, "bla'bla", datetime.datetime(1990,1,1)),
                                 (2, 0, "bla'bla", datetime.datetime(1990,1,1)),
                                 (3, 1, "x'x", datetime.datetime(1990,1,1)),])
@@ -56,7 +62,10 @@ def StopHere():
             ("test", ["a"], dict(x="bla'bla",y=None), "SELECT [a] FROM [test] WHERE [y] is null AND [x] = 'bla''bla'"),
             ("test", ["a"], None, "SELECT [a] FROM [test]"),
             ):
-            self.assertEqual(self.db._selectSQL(table, columns, where), result)
+            if self.db.dbType == "psycopg2":
+                result = result.replace("[", '"').replace("]", '"')
+            out = self.db._selectSQL(table, columns, where).replace("  ", " ")
+            self.assertEqual(out, result)
 
     def testSelect(self):
         table = self.createTestTable()

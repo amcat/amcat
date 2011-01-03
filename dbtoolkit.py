@@ -16,6 +16,7 @@ from idlabel import IDLabel
 import logging; log = logging.getLogger(__name__)
 
 #import amcatlogging; amcatlogging.infoModule()
+#import amcatlogging; amcatlogging.debugModule()
 
 _encoding = {
     0 : 'utf-8',
@@ -258,14 +259,19 @@ class amcatDB(object):
         return "UPDATE %(table)s SET %(update)s %(where)s" % locals()
         
 
-    def _selectSQL(self, table, columns, where=None, distinct=False):
+    def _selectSQL(self, table, columns, where=None, distinct=False, orderby=None):
         where = self.whereSQL(where)
         where = "" if where is None else " WHERE %s" % where 
         if not toolkit.isIterable(columns, excludeStrings=True): columns = (columns,)
         columns = ",".join(map(self.escapeFieldName, columns))
         distinctstr = " DISTINCT " if distinct else ""
         table = self.escapeFieldName(table)
-        return "SELECT %(distinctstr)s %(columns)s FROM %(table)s%(where)s" % locals()
+        if orderby:
+            if type(orderby) in (unicode, str): orderby = [orderby]
+            orderby = " ORDER BY %s" % (", ".join(self.escapeFieldName(col) for col in orderby))
+        else:
+            orderby = ""
+        return "SELECT %(distinctstr)s %(columns)s FROM %(table)s%(where)s%(orderby)s" % locals()
         
     
     def update(self, table, newvals, where):
@@ -295,7 +301,7 @@ class amcatDB(object):
         SQL = "DELETE FROM %(table)s WHERE %(where)s" % locals()
         self.doQuery(SQL)
         
-    def select(self, table, columns, where=None, rowfunc=None, alwaysReturnTable=False, distinct=False):
+    def select(self, table, columns, where=None, rowfunc=None, alwaysReturnTable=False, distinct=False, orderby=None):
         """Create and execute a SELECT statement
 
         @type table: str
@@ -311,7 +317,7 @@ class amcatDB(object):
         @return: a list containing the data, each item being the result of rowfunc (if given),
           a tuple (if columns is a sequence) or a simple value 
         """
-        SQL = self._selectSQL(table, columns, where, distinct=distinct)
+        SQL = self._selectSQL(table, columns, where, distinct=distinct, orderby = orderby)
         data = self.doQuery(SQL)
         if rowfunc:
             return [rowfunc(*col) for col in data]
@@ -341,12 +347,22 @@ class amcatDB(object):
     
     def escapeFieldName(self, f):
         if self.dbType == "psycopg2":
-            return f
+            return '"%s"' % (f,)
         
         return "[%s]"% f.replace('.', '].[')
 
     def parametermark(self):
         return "%s" if self.dbType == "psycopg2" else "?"
+
+    def _getPrimaryKey(self, table):
+        """Get the primary key columns for the table"""
+        SQL = """select column_name from information_schema.key_column_usage u 
+                 inner join information_schema.table_constraints c on u.constraint_name = c.constraint_name and u.table_name = c.table_name
+                 where u.table_name = '%(table)s' and constraint_type = 'PRIMARY KEY'""" % locals()
+        pk = list(self.getColumn(SQL))
+        if not pk:
+            raise Exception("Could not get primary key for %s: \n%s" % (table, SQL))
+        return pk
     
     def insert(self, table, dict, idcolumn="For backwards compatibility", retrieveIdent=1):  
         """
@@ -358,11 +374,16 @@ class amcatDB(object):
             fields = dict.keys()
             values = dict.values()
             fieldsString = ", ".join(map(self.escapeFieldName, fields))
-            if False or self.dbType == "psycopg2":
-                # use parameters for insert. Test whether this works for mssql as well
+            if self.dbType == "psycopg2":
                 paramstr = ",".join(self.parametermark() for i in range(len(fields)))
                 SQL = "INSERT INTO %s (%s) VALUES (%s)" % (table, fieldsString, paramstr)
-                if retrieveIdent and self.dbType=="psycopg2": SQL += " RETURNING id"
+                if retrieveIdent and self.dbType=="psycopg2":
+                    if type(retrieveIdent) in (str, unicode):
+                        retrieveIdent = [retrieveIdent]
+                    if type(retrieveIdent) not in (list, tuple):
+                        # find out column name of primary key
+                        retrieveIdent = self._getPrimaryKey(table)
+                    SQL += " RETURNING %s" % ",".join(map(self.escapeFieldName, retrieveIdent))
                 with self.cursor() as c:
                     #values = map(str, values)
                     c.execute(SQL, values)
@@ -611,6 +632,7 @@ class amcatDB(object):
     _UTYPES = {
         'text' : unicode,
         'timestamp' : datetime.datetime,
+        'bool' : bool,
         }
         
     def getColumnType(self, table, column):
@@ -668,7 +690,36 @@ class amcatDB(object):
             self.doQuery("CREATE TABLE %s (i int)" % table)
             self.insertmany(table, "i", [(i,) for i in ints])
             return "(%s in (select i from %s))" % (self.escapeFieldName(colname), table)
+        
+    def createTable(self, tablename, colspecs, primarykey=None, temporary=False):
+        def colspec_to_sql(col):
+            colname, coltype = col[:2]
+            if coltype.lower() == 'serial' and self.dbType == 'mx.ODBC.unixODBC':
+                coltype = 'int identity(1,1)'
+            if coltype.lower() == 'timestamp' and self.dbType == 'mx.ODBC.unixODBC':
+                coltype = 'datetime'   
+            return '%s %s %s' % (self.escapeFieldName(colname), coltype, ' '.join(col[2:]))
+        
+        if self.dbType not in ('psycopg2', 'mx.ODBC.unixODBC'):
+            raise Exception('Unsupported database (%s) for createTable' % self.dbType)
 
+        cmd = "CREATE TABLE"
+        if temporary:
+            if self.dbType == 'psycopg2':
+                cmd = 'CREATE TEMPORARY TABLE'
+            else:
+                tablename = "#" + tablename
+
+        colspecs = [colspec_to_sql(colspec) for colspec in colspecs]
+        if primarykey: colspecs.append("PRIMARY KEY (%s)" % ", ".join(map(self.escapeFieldName, primarykey)))
+        columns = ",\n   ".join(colspecs)
+        
+        sql = "%s %s (\n   %s\n)" % (cmd, tablename, columns)
+        log.info("Creating table %s with SQL: \n%s" % (tablename, sql))
+        self.doQuery(sql)
+        return tablename
+
+        
     @contextmanager
     def transaction(self):
         try:
@@ -678,7 +729,26 @@ class amcatDB(object):
             raise
         else:
             self.commit()
-    
+            
+    def disable(self):
+        if self.conn is None: return #already disabled
+        self.__backup_conn = self.conn
+        self.conn = None
+    def enable(self):
+        if self.conn is not None: return #already enabled
+        try:
+            self.conn = self.__backup_conn
+        except AttributeError:
+           raise Exception("Cannot enable db, connection not available")
+    @contextmanager
+    def disabled(self):
+        self.disable()
+        try:
+            yield
+        finally:
+            self.enable()
+
+        
 anokoDB = amcatDB
 
 
