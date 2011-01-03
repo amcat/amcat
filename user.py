@@ -22,7 +22,7 @@ class User(Cachable):
     userid, username, fullname, affiliationid, active, email, languageid = DBProperties(7)
     language = DBProperty(lambda : language.Language)
     roles = ForeignKey(lambda : authorisation.Role, table="users_roles")
-    projects = ForeignKey(lambda : project.Project, table="permissions_projects_users")
+    projects = ForeignKey(lambda : project.Project, table="projects_users_roles")
     projectroles = ForeignKey(lambda : (project.Project, authorisation.Role),
                               table="projects_users_roles", sequencetype=toolkit.multidict)
     

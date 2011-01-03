@@ -3,7 +3,7 @@ import dbtoolkit, user, system, authorisation, project, types, amcattest
 class TestUser(amcattest.AmcatTestCase):
 
     def setUp(self):
-        self.db = dbtoolkit.amcatDB(use_app=True)
+        super(TestUser, self).setUp()
         self.app = self.db.getUser()
 
     def testProperties(self):
@@ -29,21 +29,6 @@ class TestUser(amcattest.AmcatTestCase):
         self.assertEqual(user.User.projectroles.getType(), (project.Project, authorisation.Role))
         self.assertSubclass(user.User.projectroles.getCardinality(), dict)
         
-    def testDeprecated(self):
-        db = dbtoolkit.amcatDB()
-        me = db.getUser()
-        self.assertTrue(me.isSuperAdmin)
-        self.assertTrue(me.canViewAllProjects)
-        self.assertFalse(me.canCreateNewProject)
-        
-        app = self.db.getUser()
-        self.assertFalse(app.isSuperAdmin)
-        self.assertFalse(app.canViewAllProjects)
-        self.assertFalse(app.canCreateNewProject)
-
-        for d in (db, self.db):
-            self.assertEqual(user.currentUser(d), d.getUser())
-            self.assertEqual(list(user.users(d)), list(system.System(d).users))
 
 if __name__ == '__main__':
     amcattest.main()

@@ -12,6 +12,7 @@ class Project(Cachable):
     name, projectid, insertDate, description = DBProperties(4)
     articles = ForeignKey(lambda: article.Article)
     sets = ForeignKey(lambda : Set)
+    insertdate = DBProperty()
     insertUser = DBProperty(lambda : user.User, getcolumn="insertuserid")
     users = ForeignKey(lambda : user.User, table="permissions_projects_users")
     codingjobs = ForeignKey(lambda : codingjob.CodingJob)

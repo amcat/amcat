@@ -56,7 +56,6 @@ class TestProgress(amcattest.AmcatTestCase):
             for i in progress.tickerate(range(100), monitor=p, log=log, monitorname="sub", submonitorwork=60):
                 if i > 50: break
         logstr = "\n".join(map(amcatlogging.format, logentries))
-        #print logstr
         l = progress.readLog(logstr, "main")
         l2 = progress.readLog(logstr, "sub")
         l3 = progress.readLog(logstr, taskname="Iteration")
@@ -65,7 +64,7 @@ class TestProgress(amcattest.AmcatTestCase):
             (l2, "sub", "Iteration", .5, progress.STATE_STARTED),
             (l3, "sub", "Iteration", .5, progress.STATE_STARTED),
             ]:
-            #print pm
+
             self.assertEqual(pm.name, name)
             self.assertEqual(pm.taskname, tname)
             self.assertEqual(pm.percentDone(), percent)
