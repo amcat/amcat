@@ -23,7 +23,11 @@ Model module containing the Article class representing documents in the
 articles database table
 """
 
-from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools.cachable.latebind import LB
+from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools import toolkit
+
+from amcat.model import sentence
 import toolkit
 import sentence, project, sources
 
