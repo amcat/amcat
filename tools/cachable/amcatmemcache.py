@@ -22,7 +22,7 @@ python amcatmemcache.py ACTION CLASSNAME PROPNAME KEY
   KEY: the python string representation of the key (282 or 282,12)
 """
 
-import memcache
+import memcache, types
 import logging; LOG = logging.getLogger(__name__)
 
 class UnknownKeyException(EnvironmentError):
@@ -37,17 +37,22 @@ def _getConnection():
 def _connect():
     return memcache.Client(["127.0.0.1:11211"])
 
+def _strftime(date):
+    if type(date) != types.IntType:
+         return date.isoformat()
+    return date
+
 def key2bytes(klass, prop, key):
     """Return a byte-encoding of the key"""
     # memcached requires key chars > 33 and != 127, so use str(.) for now
-    if type(klass) <> str: klass = klass.__name__
+    if type(klass) != str: klass = klass.__name__
     if type(key) == int: key = (key,)
-    if type(key) <> str: key = "_".join("%x" % k for k in key)
+    if type(key) != str: key = "_".join("%s" % _strftime(k) for k in key)
     return "%s_%s_%s" % (klass, prop, key)
 
 def _debug(action, klass, prop, key, data=None):
     keybytes = key2bytes(klass, prop, key)
-    if type(klass) <> str: klass = klass.__name__
+    if type(klass) != str: klass = klass.__name__
     LOG.debug("%s %s(%r).%s (%r) %s" % (action, klass, key, prop, keybytes, data or ""))
     
 

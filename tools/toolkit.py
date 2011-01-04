@@ -873,6 +873,19 @@ def writeDate(datetime, lenient=False):
     """Convenience method for writeDateTime(time=False)"""
     return writeDateTime(datetime, lenient=lenient, time=False)
 
+def _writePrior1900(dt, year, seconds, time):
+    """strftime doesn't work for dates prior to 1900. When found in
+    writeDateTime this function is called to 'manually' write
+    the date."""
+    date = ''
+    if year: date += "%s-" % dt.year
+    date += "%1.2f-%1.2f" % (dt.month, dt.day)
+    if time: date += " %1.2f:%1.2f" % (dt.hour, dt.minute)
+
+    if seconds:
+        return date + ' :%1.2f' % dt.second
+    return date
+
 def writeDateTime(datetimeObj, lenient=False, year=True, seconds=True, time=True):
     """Return the datetime (stlib or mx) as ISOFormat string.
 
@@ -886,6 +899,10 @@ def writeDateTime(datetimeObj, lenient=False, year=True, seconds=True, time=True
     if lenient and ((datetimeObj is None)
                     or type(datetimeObj) in types.StringTypes):
         return datetimeObj
+
+    if datetimeObj.year < 1900:
+        return _writePrior1900(datetimeObj, year, seconds, time)
+
     format = "%Y-%m-%d" if year else "%m-%d"
     if time:
         format += " %H:%M:%S" if seconds else " %H:%M"
