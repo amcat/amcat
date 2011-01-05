@@ -1,7 +1,7 @@
 from amcat.tools.cachable import cacher
 from amcat.tools.cachable.latebind import LB
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
-from amcat.tools import toolkit, idlabel
+from amcat.tools import idlabel
 
 from datetime import datetime
 
@@ -120,7 +120,7 @@ class DictHierarchy(Hierarchy):
         if self.objectdict is None: self.cacheHierarchy()
         if type(object_or_id) <> int: object_or_id = object_or_id.id
         if object_or_id not in self.objectdict:
-            toolkit.warn("Unknown objectid: %i" % object_or_id)
+             pass
         return self.objectdict.get(object_or_id)
     def cacheHierarchy(self):
         if self.objectdict is not None: return

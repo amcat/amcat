@@ -1,7 +1,7 @@
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools.cachable.latebind import LB
 
-from amcat.tools import toolkit, idlabel
+from amcat.tools import toolkit
 from amcat.model.language import Language
 
 from amcat.model.ontology.ontologytoolkit import getParent
