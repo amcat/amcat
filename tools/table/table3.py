@@ -147,7 +147,7 @@ class FormTable(ObjectTable):
         @type objects: A cachable object"""        
         super(FormTable, self).__init__(objects)
         
-        self.form = form
+        self.form = form if hasattr(form, 'fields') else form()
         self.idcolumn = toolkit.idlist(idcolumn or self.form.Meta.model.__idcolumn__)
         
         for name, field in self._getFields():
@@ -156,7 +156,7 @@ class FormTable(ObjectTable):
         columns = [c.fieldname for c in self.columns]
         for c in self.idcolumn:
             if c not in columns:
-                self._addColumn(c, form.fields[c], visible=False)
+                self._addColumn(c, self.form.fields[c], visible=False)
                 
     def _addColumn(self, name, field, visible=True):
         label = field.label or name.capitalize()

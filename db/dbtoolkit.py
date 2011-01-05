@@ -283,6 +283,7 @@ class amcatDB(object):
         where = self.whereSQL(where)
         where = "" if where is None else " WHERE %s" % where 
         if not toolkit.isIterable(columns, excludeStrings=True): columns = (columns,)
+        print(columns)
         columns = ",".join(map(self.escapeFieldName, columns))
         distinctstr = " DISTINCT " if distinct else ""
         table = self.escapeFieldName(table)
@@ -347,10 +348,15 @@ class amcatDB(object):
             return data
         
     def isNullable(self, table, column):
+
         if self.dbType == "mx.ODBC.unixODBC":
             # Information about nullability is stored in 'syscolumns'
             where = "id=OBJECT_ID('%s') AND name=%s" % (table, column)
             return bool(self.select('syscolumns', 'isnullable', where )[0])
+        
+        elif self.dbType == 'psycopg2':
+            where = "table_name='%s' AND column_name='%s'" % (table, column)
+            return bool(self.select('information_schema.columns', 'is_nullable', where )[0])
         
         raise Exception('Unsupported database (%s) for isNullable' % self.dbType)
 
@@ -367,7 +373,7 @@ class amcatDB(object):
     
     def escapeFieldName(self, f):
         if self.dbType == "psycopg2":
-            return '"%s"' % (f,)
+            return f
         
         return "[%s]"% f.replace('.', '].[')
 

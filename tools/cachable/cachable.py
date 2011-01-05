@@ -426,7 +426,7 @@ class Property(object):
         Warning: This is mssql specific"""
         if self._nullable is None:
             table = self._getTable(self.targetclass)
-            column = dbtoolkit.quotesql(self._getColumns()) 
+            column = self._getColumns() 
             self._nullable = db.isNullable(table, column)
             
         return self._nullable
