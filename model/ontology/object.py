@@ -12,20 +12,20 @@ import logging; log = logging.getLogger(__name__)
 
 class Function(Cachable):
     __table__ = "objects_functions"
-    __idcolumn__ = ("functionid", "office_objectid", "fromdate")
+    __idcolumn__ = ("objectid", "functionid", "office_objectid", "fromdate")
     
-    functionid, todate = DBProperties(2)
-    _fromdate = DBProperty(getcolumn="fromdate")
+    functionid, todate, fromdate = DBProperties(3)
     office = DBProperty(lambda : Object, refcolumn="office_objectid")
-    
-    @property
-    def fromdate(self):
-        if self._fromdate.year != 1753:
-            return self._fromdate
+
+    #_fromdate = DBProperty(getcolumn="fromdate") 
+    #@property
+    #def fromdate(self):
+    #    if self._fromdate.year != 1753:
+    #        return self._fromdate
         
-    @property
-    def klass(self):
-        return Class(db, 1) if self.functionid==0 else Class(db, 2)
+    #@property
+    #def klass(self):
+    #    return Class(db, 1) if self.functionid==0 else Class(db, 2)
     
 class Label(Cachable):
     __table__ = 'labels'
@@ -91,10 +91,14 @@ class Object(Cachable):
     def currentFunctions(self, date=None):
         if not date: date = datetime.now()
         for f in self.functions:
-            if f.fromdate and toolkit.cmpDate(date, f.fromdate) < 0: continue
-            if f.todate and toolkit.cmpDate(date, f.todate) >= 0: continue
-            yield f
-    
+            fd = f.fromdate
+            td = f.todate or datetime.now()
+
+            tdf = (date - fd).days
+            tdt = (td - date).days
+
+            if tdf >= 0 and tdt >= 0: yield f
+
     def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):
         """Returns the search string for this object.
         date: if given, use only functions active on this date
@@ -102,11 +106,10 @@ class Object(Cachable):
         languageid: if given, use labels.get(languageid) rather than keywords"""
         
         if not date: date = datetime.now()
-        if languageid:
-            kw = self.getLabel(languageid)
+        kw = self.getLabel(languageid)
 
-        if (not languageid) or (fallback and kw is None):
-            kw = self.keyword
+        #if (not languageid) or (fallback and kw is None):
+        #    kw = self.keyword
         
         if not kw and self.name:
             ln = self.name

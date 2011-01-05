@@ -879,11 +879,11 @@ def _writePrior1900(dt, year, seconds, time):
     the date."""
     date = ''
     if year: date += "%s-" % dt.year
-    date += "%1.2f-%1.2f" % (dt.month, dt.day)
-    if time: date += " %1.2f:%1.2f" % (dt.hour, dt.minute)
+    date += "%0.2i-%0.2i" % (dt.month, dt.day)
+    if time: date += " %0.2i:%0.2i" % (dt.hour, dt.minute)
 
     if seconds:
-        return date + ' :%1.2f' % dt.second
+        return date + ':%0.2i' % dt.second
     return date
 
 def writeDateTime(datetimeObj, lenient=False, year=True, seconds=True, time=True):
