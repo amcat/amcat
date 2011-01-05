@@ -1,7 +1,7 @@
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools.cachable.latebind import LB
 
-from amcat.tools import toolkit
+from amcat.tools.toolkit import multidict
 from amcat.model.language import Language
 
 from amcat.model.ontology.ontologytoolkit import getParent
@@ -16,16 +16,6 @@ class Function(Cachable):
     
     functionid, todate, fromdate = DBProperties(3)
     office = DBProperty(lambda : Object, refcolumn="office_objectid")
-
-    #_fromdate = DBProperty(getcolumn="fromdate") 
-    #@property
-    #def fromdate(self):
-    #    if self._fromdate.year != 1753:
-    #        return self._fromdate
-        
-    #@property
-    #def klass(self):
-    #    return Class(db, 1) if self.functionid==0 else Class(db, 2)
     
 class Label(Cachable):
     __table__ = 'labels'
@@ -43,6 +33,8 @@ class Object(Cachable):
     _parents = ForeignKey(table="trees_objects", getcolumn=("treeid", "parentid"), refcolumn="objectid", constructor=getParent)
     _children = ForeignKey(table="trees_objects", getcolumn=("treeid", "objectid"), refcolumn="parentid", constructor=getParent)
 
+    functions = ForeignKey(lambda:Function)
+
     @property
     def labels(self):
         return dict((l.language, l.label) for l in self._labels)
@@ -53,7 +45,7 @@ class Object(Cachable):
     
     @property
     def children(self):
-        return toolkit.multidict(self._children)
+        return multidict(self._children)
     
     @property
     def label(self):
@@ -73,14 +65,6 @@ class Object(Cachable):
 
         if self.labels.has_key(lan): return self.labels[lan]
     
-    # Move to separate class?
-    #name = DBProperty(table="politicians")
-    #firstname = DBProperty(table="politicians")
-    #prefix = DBProperty(table="politicians")
-    #keyword = DBProperty(table="keywords")
-    #male = DBProperty(table="politicians")
-    
-    functions = ForeignKey(lambda:Function)
 
     def getAllParents(self, date=None):
         for c, p in self.parents.iteritems():
