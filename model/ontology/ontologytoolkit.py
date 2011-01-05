@@ -1,14 +1,23 @@
 import logging; log = logging.getLogger(__name__)
 
 
-def getParent(obj, db, cid, pid):
+def getParent(obj, db, oid, pid):
+    """@param obj: constructor argument.
+    @type obj: model-object
+ 
+    @param oid: objectid (see table `hierarchy`)
+    @param pid: parentid ("")
+
+    @return: Tree, Object or Tree, None when requested
+    object is a direct child of `Tree`.
+    """
     from amcat.model.ontology.object import Object
     from amcat.model.ontology.tree import Tree
 
-    cl = Tree(db, cid)
+    tree = Tree(db, oid)
     if pid is None:
-        return cl, None
-    return cl, Object(db, pid)
+        return tree, None
+    return tree, Object(db, pid)
 
 def getAllAncestors(object, stoplist=None, golist=None):
     if stoplist is None: stoplist = set()
