@@ -615,6 +615,7 @@ class amcatDB(object):
         'text' : unicode,
         'timestamp' : datetime.datetime,
         'bool' : bool,
+        'int4' : int,
         }
         
     def getColumnType(self, table, column):
