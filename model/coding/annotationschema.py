@@ -4,6 +4,9 @@ from amcat.tools.cachable import cacher
 from amcat.tools.table.table3 import ObjectColumn
 from amcat.tools.idlabel import IDLabel
 
+from amcat.model.ontology.codebook import Codebook
+from amcat.model.ontology.object import Object
+
 import logging; log = logging.getLogger(__name__)
 #import amcatlogging; amcatlogging.debugModule()
 
@@ -68,7 +71,7 @@ class AnnotationSchemaField(Cachable):
     fieldtype = DBProperty(AnnotationSchemaFieldType)
 
     table, keycolumn, labelcolumn, values = DBProperties(4)
-    codebook = DBProperty(lambda: ont.Set)
+    codebook = DBProperty(Codebook)
 
     @property
     def serializer(self):
@@ -78,8 +81,8 @@ class AnnotationSchemaField(Cachable):
         
         ftid = self.fieldtype.id
         if ftid == 5:
-            codebookid = self.codebook.id if self.codebook else 201 
-            self._serializer = OntologyFieldSerialiser(self.schema.db, self.schema.language, codebookid)
+            codebookid = self.codebook.id if self.codebook else 201
+            self._serializer = OntologyFieldSerialiser(self.schema.db, codebookid)
         elif ftid == 4:
             self._serializer = AdHocLookupFieldSerialiser(self.values)
         elif ftid in (3,8):
@@ -194,21 +197,20 @@ class FromFieldSerialiser(SchemaFieldSerialiser):
         
         
 class OntologyFieldSerialiser(SchemaFieldSerialiser):
-    def __init__(self, db, language, setid):
+    def __init__(self, db, codebookid):
         self.db = db
-        self.language = language
-        self.setid = setid
+        self.codebookid = codebookid
     def deserialize(self, value):
         if value is None: return None
-        return ont.Object(self.db, value, languageid=self.language)
+        return Object(self.db, value)
     def getTargetType(self):
-        return ont.Object
+        return Object
     @property
-    def set(self):
+    def codebook(self):
         try:
             return self._set
         except AttributeError: pass
-        self._set = ont.Set(self.db, self.setid)
+        self._set = Codebook(self.db, self.codebookid)
         return self._set
 
 
