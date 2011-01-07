@@ -62,7 +62,8 @@ class EasySoft(Configuration):
 class PostgreSQL(Configuration):
     def __init__(self, username, password, host="localhost", database="amcat"):
         Configuration.__init__(self, username, password, host, database)
-    def connect(self):
+        self.drivername = "psycopg2"
+    def connect(self, **kargs):
         import psycopg2
         # unicode handling: automatically get strings as unicode!
         import psycopg2.extensions
