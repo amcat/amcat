@@ -702,8 +702,12 @@ def toJSON(value):
     
     @type value: anything
     @param value: value you wish to convert to a json-friendly type"""    
-    if type(value) == types.GeneratorType:
+    if type(value) in (types.GeneratorType, types.TupleType, types.ListType):
         return map(toJSON, value)
+    elif type(value) in (types.BooleanType, types.IntType):
+        return value
+    elif type(value) is datetime.datetime:
+        return value.ctime()
     
     if value: return unicode(value)
     
