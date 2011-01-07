@@ -9,6 +9,7 @@ from amcat.tools.cachable.latebind import LB
 from amcat.tools.table import table3
 from amcat.tools.idlabel import IDLabel
 
+from amcat.model.coding import annotationschema
 
 import logging; log = logging.getLogger(__name__)
 #import amcatlogging; amcatlogging.debugModule()
@@ -232,8 +233,8 @@ class CodedArticle(Cachable, CodedUnit):
         return self.set.job.unitSchema.table
     def createSentence(self, db, arrowid):
         return CodedSentence(db, arrowid, self)
-    sentences = ForeignKey(LB("parsedSentence"), constructor=createSentence)
-    sentences.tablehook=getSentenceTable
+    sentences = ForeignKey(lambda:CodedSentence, constructor=createSentence)
+    #sentences.tablehook=getSentenceTable
 #        self.addDBroperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
 
     @property
@@ -246,6 +247,7 @@ class CodedArticle(Cachable, CodedUnit):
 
 class CodedSentence(CodedUnit, Cachable):
     __idcolumn__ = 'arrowid'
+    __table__ = 'net_arrows' #TODO: dit is niet altijd zo! zie tablehook hierboven
     ca = DBProperty(CodedArticle)
     sentence = DBProperty(LB("Sentence"))
     
