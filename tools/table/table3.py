@@ -137,7 +137,7 @@ class FormTable(ObjectTable):
     """Wrapper around ObjectTable. Get its default columns from a Form
     object."""
     
-    def __init__(self, form, objects, idcolumn=None):
+    def __init__(self, form, objects, cache=True, idcolumn=None):
         """
         @type form: Django Form (django.forms.Form)
         
@@ -150,8 +150,8 @@ class FormTable(ObjectTable):
         self.form = form if hasattr(form, 'fields') else form()
         self.idcolumn = toolkit.idlist(idcolumn or self.form.Meta.model.__idcolumn__)
         
-        for name, field in self._getFields():
-            self._addColumn(name, field)
+        for fname in self.form.Meta.table:
+            self._addColumn(fname, self.form.fields[fname])
         
         columns = [c.fieldname for c in self.columns]
         for c in self.idcolumn:
@@ -160,10 +160,11 @@ class FormTable(ObjectTable):
                 
     def _addColumn(self, name, field, visible=True):
         label = field.label or name.capitalize()
-        col = self._createCellfunc(name)
+        col = self._createCellfunc(field, name)
         widget = field.widget.__class__.__name__
         type = field.__class__.__name__
-        choices = field.__dict__.get('choices', None)
+        
+        choices = field.choices if hasattr(field, 'choices') else None
         
         self.addColumn(col, label,
                        choices=choices,
@@ -173,14 +174,21 @@ class FormTable(ObjectTable):
                        fieldtype=type,
                        visible=visible)
             
-    def _createCellfunc(self, name):
+    def _createCellfunc(self, field, name):
         """Create a lambda function outside __init__ avoiding scoping issues"""
+        def foreign_key(x):
+            # Custom function for `one to many` or `one to one` relations
+            attr = getattr(x, name)
+            if type(attr) == types.GeneratorType:
+                # One to many relation
+                return (c.id for c in attr)
+            # One to one
+            return getattr(x, name + 'id')
+        
+        if hasattr(field, 'choices'):
+            return foreign_key
         return lambda x:getattr(x, name)
-    
-    def _getFields(self):
-        try: return [(name, self.form.fields[name]) for name in self.form.Meta.table]
-        except:
-            return self.form.fields.items()
+        
         
         
 class DictTable(Table):
