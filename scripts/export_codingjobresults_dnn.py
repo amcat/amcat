@@ -1,27 +1,14 @@
-try:
-    from export_codingjobresults import ExportScript, FieldColumn, Row
-except ImportError, e:
-    try:
-        from mod_python import apache
-        mod = apache.import_module("scripts/export_codingjobresults")
-        ExportScript = mod.ExportScript
-        FieldColumn = mod.FieldColumn
-        Row = mod.Row
-    except ImportError, e2:
-        import sys
-        raise ImportError("Could not import from base class, tried simple import using path\n\n%s\n\n, then tried via apache, but nothing helped\n\n%s\n%s"% (sys.path, e, e2))
-
-
-import toolkit
-import codingjob
-import table3, tableoutput
-import categorise
 import collections
-import ont
-import cachable
-from codingjob import getValue
-
 import logging; log = logging.getLogger(__name__)
+
+from amcat.scripts.export_codingjobresults import ExportScript, FieldColumn, Row
+from amcat.tools import toolkit
+from amcat.model.coding import codingjob
+from amcat.tools.table import table3, tableoutput
+from amcat.model.ontology.object import Object
+from amcat.model.ontology.tree import Tree
+from amcat.model.coding.codingjob import getValue
+
 #import amcatlogging; amcatlogging.debugModule()
 
 def getTable(jobs, *args, **kargs):
@@ -41,15 +28,15 @@ class DNNFieldColumn(FieldColumn):
     def getCell(self, row):
         val = super(DNNFieldColumn, self).getCell(row)
         if val is None: return ""
-        if not issubclass(self.field.getTargetType(), ont.Object):
+        if not issubclass(self.field.getTargetType(), Object):
             return val
-        val = self.field.serializer.set.getBoundObject(val)
+        val = self.field.serializer.codebook.getBoundObject(val)
         if self.ontoption in CATEGORIES:
-            val = self.field.serializer.set.categorise(val, date=row.art.date, depth=[CATEGORIES[self.ontoption]])[0]
+            val = self.field.serializer.codebook.categorise(val, date=row.art.date, depth=[CATEGORIES[self.ontoption]])[0]
         elif self.ontoption == "dim":
-            val = self.field.serializer.set.categorise(val, date=row.art.date, depth=[1])[0]
+            val = self.field.serializer.codebook.categorise(val, date=row.art.date, depth=[1])[0]
             if val:
-                val = val.objekt.parents.get(ont.Class(val.objekt.db, 5001))
+                val = val.objekt.parents.get(Tree(val.objekt.db, 5001))
         return val
 
 class AggrQualColumn(FieldColumn):
@@ -65,42 +52,29 @@ class AggrQualColumn(FieldColumn):
         for fieldname in ("subject", "object"):
             field = self.field.schema.getField(fieldname)
             obj = getValue(self.getUnit(row), field)
-            if self.ontoption in CATEGORIES:
-                omklap = field.serializer.set.categorise(obj, date=row.art.date, depth=[CATEGORIES[self.ontoption]], returnOmklap=True, returnObjects=False)
-                log.debug("omklap for %s %s %s = %s" % (self.ontoption, fieldname, obj, omklap))
-                                
-            elif self.ontoption == "dim":
-                cat, omklap = field.serializer.set.categorise(obj, date=row.art.date, depth=[2], returnOmklap=True)
-                cat = cat[0]
-                if val:
-                    dim = cat.objekt.parents.get(ont.Class(cat.objekt.db, 5001))
-                    if dim:
-                        omklap2 = ont.getOmklap(cat.objekt.db, dim, cat)
-                        omklap *= omklap2
-                    else:
-                        omklap = 0
-                else:
-                    omklap = 0
+            omklap = field.serializer.codebook.categorise(obj, date=row.art.date, depth=[CATEGORIES[self.ontoption]], returnOmklap=True, returnObjects=False)
+            log.debug("omklap for %s %s %s = %s" % (self.ontoption, fieldname, obj, omklap))
+            
             val *= omklap
         return val
         
 CODER_HIERARCHY = {206:280}
 class DNNExportScript(ExportScript):
     def getColumn(self, field, article):
-        if issubclass(field.getTargetType(), ont.Object):
+        if issubclass(field.getTargetType(), Object):
             for option in [None, "cat", "root", "class", "dim"]:
                 yield DNNFieldColumn(field, article, option)
         else:
             yield DNNFieldColumn(field, article)
         if field.fieldname == 'quality':
             #yield AggrQualColumn(field, article)#, ontoption=option)
-            for option in ["cat", "root"]:
+            for option in ["cat"]:
                 yield AggrQualColumn(field, article, ontoption=option)
 
     def getMetaColumns(self):
         return super(DNNExportScript, self).getMetaColumns() + [
-            table3.ObjectColumn("parnr", lambda row: row.cs and row.cs.sentence.parnr, fieldtype=int),
-            table3.ObjectColumn("sentnr", lambda row: row.cs and row.cs.sentence.sentnr, fieldtype=int),
+            #table3.ObjectColumn("parnr", lambda row: row.cs and row.cs.sentence.parnr, fieldtype=int),
+            #table3.ObjectColumn("sentnr", lambda row: row.cs and row.cs.sentence.sentnr, fieldtype=int),
             table3.ObjectColumn("Mediumid", lambda row: row.art.source.id, fieldtype=int),
             ]
 
@@ -115,7 +89,7 @@ class DNNExportScript(ExportScript):
         #cas = []
         #for set in sets: cas += set.articles
         #cachable.cacheMultiple(cas, "article")
-        cachable.cache(jobs, sets=dict(articles=["article"], coder=[]))
+        #cachable.cache(jobs, sets=dict(articles=["article"], coder=[]))
         casPerArt = collections.defaultdict(set)
         for ca in codingjob.getCodedArticlesFromCodingjobs(jobs):
             casPerArt[ca.article].add(ca)
@@ -145,7 +119,6 @@ def test():
     import table2spss
     table2spss.table2sav(t, "/tmp/test.sav")
 
-    db.printProfile() 
 
     
 if __name__ == '__main__':

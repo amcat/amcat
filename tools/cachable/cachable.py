@@ -607,10 +607,12 @@ class DBProperty(Property):
 
 
     def prepareCache(self, cacher):
+        if self.tablehook: return # cannot cache as we don't know the table without getting the object!
         log.info("%s: Adding %s.%s to cacher" % (self, self._getTable(), self._getColumns()))
         cacher.addFKField(self._getColumns(), self._getTable(), self.cls.__idcolumn__, self.orderby)
 
     def doCache(self, cacher, obj=None):
+        if self.tablehook: return
         val = cacher.getFKData(self._getColumns(), self._getTable(), obj, self.cls.__idcolumn__, self.orderby)
         log.info("%s: Retrieved %s from cacher" % (self, val))
         self.cache(obj, val, isData=True)

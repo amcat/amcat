@@ -1,4 +1,6 @@
-from __future__ import unicode_literals, print_function, absolute_import
+from __future__ import print_function, absolute_import
+#TODO: removed unicode_literals as they break keyword arguments
+# (http://bugs.python.org/issue4978). Is fixed in the version on amcatsql2
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #

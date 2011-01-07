@@ -1,84 +1,117 @@
-import os, os.path, sys
+from __future__ import print_function, absolute_import
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 
-__PASSWD_FILE = '.sqlpasswd'
+import os, os.path
 
-class Configuration:
-    def __init__(self, username, password, host="anoko", database="anoko", driver=None, useDSN=False,
-                 keywordargs=False, setMxODBCErrorHandler=False):
-        if not driver: raise Exception("No driver!")
-        self.host = host
+import logging; log = logging.getLogger(__name__)
+
+class Configuration(object):
+    def __init__(self, username, password, host=None, database=None):
         self.username = username
         self.password = password
+        self.host = host
         self.database = database
-        self.driver = driver
-        self.drivername = driver.__name__
-        self.useDSN = useDSN 
-        self.keywordargs = keywordargs
-        self.setMxODBCErrorHandler = setMxODBCErrorHandler
+    def connect(self, **kargs):
+        raise NotImplementedError()
+    
+    def _doConnect(self, driver, **kargs):
+        log.debug("Connecting to %s using %s" % (driver, self))
+        return driver.connect(self.host, self.username, self.password, **kargs)
+    
+    def __str__(self):
+        d = dict(self.__dict__)
+        d["password"] = '*' * len(d["password"])
+        return "%s(%s)" % (self.__class__.__name__, ", ".join("%s=%r" % kv for kv in d.items()))
 
-    def connect(self, *args, **kargs):
-        if self.setMxODBCErrorHandler and "errorhandler" not in kargs:
-            kargs["errorhandler"] = mxODBCErrorHandler()
-        if self.useDSN:
-            return self.driver.connect("DSN=%s" % self.host, user=self.username, password=self.password, *args, **kargs) 
-        elif self.keywordargs:
-            return self.driver.connect(user=self.username, password=self.password, database=self.database, host=self.host)
-        else:
-            return self.driver.connect(self.host, self.username, self.password, *args, **kargs)
-            
+   
+class SQLServer(Configuration):
+    def __init__(self, username, password, host="AmcatDB", database="anoko"):
+        Configuration.__init__(self, username, password, host, database)
+        self.drivername = "mx.ODBC.iODBC"
         
-def default(**kargs):
-    homedir = os.getenv('HOME')
-    if 'use_app' in kargs:
-        return amcatConfig(**kargs)
-    if not homedir:
-        if 'SERVER_SOFTWARE' in os.environ or 'username' in kargs:
-            return amcatConfig(**kargs)
-        raise Exception('Could not determine home directory! Please specify the HOME environemnt variable')
-    passwdfile = os.path.join(homedir, __PASSWD_FILE)
-    if not os.access(passwdfile, os.R_OK):
-        raise Exception('Could not find or read password file in "%s"!' % passwdfile)
+    def connect(self, **kargs):
+        import mx.ODBC.iODBC
+        return self._doConnect(mx.ODBC.iODBC)
+        
+class EasySoft(Configuration):
+    def __init__(self, username, password, host="Easysoft-AmcatDB", database="anoko"):
+        Configuration.__init__(self, username, password, host, database)
+        self.drivername = "mx.ODBC.unixODBC"
+        
+    def connect(self, **kargs):
+        import mx.ODBC.unixODBC
+        return self._doConnect(mx.ODBC.unixODBC,  errorhandler=mxODBCErrorHandler())
 
-    fields = open(passwdfile).read().strip().split(':')
-    if 'username' not in kargs: kargs['username'] = fields[0]
-    if 'password' not in kargs: kargs['password'] = fields[1]
-    if os.name == 'nt':
-        raise Exception("Windows currently not supported -- ask Wouter!")
-    else:
-        return amcatConfig(**kargs)
-
-def amcatConfig(username = "app", password = "eno=hoty", easysoft=None, postgres=True, database="anoko", use_app=None):
-
-    if easysoft is None:
-        easysoft = (not postgres) and sys.version_info[1] == 6
-
-    if easysoft:
-        host = "Easysoft-AmcatDB"
-        #import pyodbc as driver
-        import mx.ODBC.unixODBC as driver
-        import dbtoolkit
-        dbtoolkit.ENCODE_UTF8 = True
-        setMxODBCErrorHandler = True
-        kargs = True
-    elif postgres:
-        host = "localhost"
-        import psycopg2 as driver
-
+class PostgreSQL(Configuration):
+    def __init__(self, username, password, host="localhost", database="amcat"):
+        Configuration.__init__(self, username, password, host, database)
+    def connect(self):
+        import psycopg2
         # unicode handling: automatically get strings as unicode!
         import psycopg2.extensions
         psycopg2.extensions.register_type(psycopg2.extensions.UNICODE)
         psycopg2.extensions.register_type(psycopg2.extensions.UNICODEARRAY)
+        return psycopg2.connect(user=self.username, password=self.password, database=self.database, host=self.host, **kargs)
 
-        setMxODBCErrorHandler = False
-        kargs = True
-        database = "amcat"
-    else:
-        host = "AmcatDB"
-        import mx.ODBC.iODBC as driver
-        setMxODBCErrorHandler = False
-        kargs = False
-    return Configuration(username, password, host, driver=driver, database=database,setMxODBCErrorHandler=setMxODBCErrorHandler, keywordargs=kargs)
+__PASSWD_FILES = ['.amcatrc','.sqlpasswd']
 
+def readconfig(fn):
+    result = {}
+    log.debug("Reading database configuration from %s" % fn)
+    for i, line in enumerate(open(fn)):
+        if ".sqlpasswd" in fn and i==0 and ":" in line:
+            # assume 'old style' configuration
+            un, pwd = line.split(":") 
+            import sys
+            driver = "EasySoft" if sys.version_info[1] == 6 else "SQLServer"
+            return dict(driver=driver, username=un, password=pwd)
+        if "=" in line:
+            key, value = line.split("=", 1)
+            result[key.strip().lower()] = value.strip()
+    return result
+
+APP_CREDENTIALS = "app", "eno=hoty"
+
+def getConfig(use_app=False, **kargs):
+    if use_app:
+        kargs["username"], kargs["password"] = APP_CREDENTIALS
+    homedir = os.getenv('HOME')
+    if "password" not in kargs and not homedir: raise Exception('Could not determine home directory! Please specify the HOME environemnt variable')
+    for fn in __PASSWD_FILES:
+        fn = os.path.join(homedir, fn)
+        if os.access(fn, os.R_OK):
+            d = readconfig(fn)
+            d.update(kargs)
+            kargs = d
+            break
+    if "password" not in kargs: 
+        raise Exception("Could not find amcatdb configuration information in ~/.amcatrc or ~/.sqlpasswd")
+    if "driver" not in kargs:
+        raise Exception("No driver specified")
+    return createConfig(**kargs)
+
+def createConfig(driver, **kargs):
+    if driver not in globals(): raise Exception("Unknown driver: %r" % driver)
+    driverclass = globals()[driver]
+    return driverclass(**kargs)
+    
 MXODBC_IGNORE_WARNINGS = (15488, # X added to role Y
                           15341, # granted db access to X
                           15298, # new login created
@@ -110,6 +143,7 @@ class mxODBCErrorHandler(object):
 
 
 if __name__ == '__main__':
-    c = default()
-    db = c.connect()
-    print db
+    from amcat.tools.logging import amcatlogging; amcatlogging.setup()
+    amcatlogging.debugModule()
+    db = getConfig().connect()
+    print(db)

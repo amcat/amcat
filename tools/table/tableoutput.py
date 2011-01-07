@@ -1,5 +1,8 @@
 from __future__ import with_statement
-import table3, toolkit, sys, csv, idlabel, StringIO, traceback, progress
+from amcat.tools.table import table3
+from amcat.tools import toolkit, idlabel
+from amcat.tools.logging import progress
+import sys, csv, StringIO, traceback
 
 import logging; log = logging.getLogger(__name__)
 

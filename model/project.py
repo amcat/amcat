@@ -36,8 +36,6 @@ class Project(Cachable):
     users = ForeignKey(LB("User"), table="projects_users_roles")
     codingjobs = ForeignKey(LB("CodingJob", package="amcat.model.coding"))
     
-    insertUserid = DBProperty(getcolumn="insertuserid")
-    
 class Set(Cachable):
     __table__ = 'sets'
     __idcolumn__ = 'setid'

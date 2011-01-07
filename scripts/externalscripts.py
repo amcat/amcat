@@ -69,14 +69,18 @@ for CALL and INVOKE, the script can use the ARGS and DATA
 """
 
 import logging; log = logging.getLogger(__name__)
-import toolkit, subprocess, inspect, sys, idlabel, user
-import progress
-from cachable2 import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools import toolkit, idlabel
+from amcat.tools.logging import progress, amcatlogging
+from amcat.model import user
+import subprocess, inspect, sys
+from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 
 def _getClass(modulename, classname):
     """Import the module and return the class contained in it
 
     Apache users should supply an apache-aware importer"""
+    if not modulename.startswith("amcat."): modulename = "amcat."+modulename
+        
     mod = __import__(modulename, fromlist=classname)
     return getattr(mod, classname)
 
@@ -227,7 +231,6 @@ class ExternalScriptBase(object):
         @param args: the arguments as parsed by _parseArgs
         """
         self.out = out
-        import amcatlogging
         amcatlogging.setStreamHandler(err)
         amcatlogging.infoModule()
         self.pm = progress.ProgressMonitor(self.__class__.__name__)
@@ -240,7 +243,7 @@ class ExternalScriptBase(object):
         log.debug("Running %s with args=%s" % (self, args))
         self._run(sys.stdin, sys.stdout, sys.stderr, *args)
 
-import amcatlogging; amcatlogging.debugModule()
+amcatlogging.debugModule()
         
 if __name__ == '__main__':    
 
@@ -254,7 +257,7 @@ if __name__ == '__main__':
     args = sys.argv[3:]
 
     # get externalscript instance
-    import dbtoolkit
+    from amcat.db import dbtoolkit
     db = dbtoolkit.amcatDB(use_app=True)
     script = ExternalScript(db, scriptid)
 

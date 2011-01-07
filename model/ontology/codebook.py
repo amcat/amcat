@@ -15,7 +15,7 @@ PARTYMEMBER_FUNCTIONID = 0
 class Codebook(Cachable, DictHierarchy):
     __table__ = 'codebooks'
     __idcolumn__ = 'codebookid'
-    
+    __labelprop__ = 'name'
     name = DBProperty()
     
     objects = ForeignKey(LB("Object", "object", "amcat.model.ontology"), table="codebooks_objects", getcolumn="objectid")

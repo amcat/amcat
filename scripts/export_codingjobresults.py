@@ -1,29 +1,21 @@
-from __future__ import with_statement
-
-import table3
-import codingjob
-import toolkit
 import collections
-import cachable
-import ont
-from idlabel import IDLabel
-from annotationschema import FieldColumn
 import datetime
-
 import logging; log = logging.getLogger(__name__)
-import ticker
 
-import tableoutput
-import table2spss
+from amcat.tools.table import table3, tableoutput, table2spss
+from amcat.tools import toolkit, idlabel
+from amcat.tools.cachable import cacher
+from amcat.tools.logging import amcatlogging, ticker
+from amcat.model.coding.annotationschema import FieldColumn
+from amcat.model.coding import codingjob
 
-import externalscripts
-
-import dbtoolkit
+from amcat.scripts import externalscripts
+from amcat.db import dbtoolkit
 
 BUFFERSIZE = 500
 
-import amcatlogging; amcatlogging.infoModule()
-import amcatlogging; amcatlogging.infoModule('progress')
+amcatlogging.infoModule()
+amcatlogging.infoModule('progress')
 
 class Row(object):
     def __init__(self, ca, cs):
@@ -40,7 +32,7 @@ class ExportScript(externalscripts.ExternalScriptBase):
         
         with self.pm.monitored("Extracting data", 100):
             log.info("Starting export of data %r to format %s" % (jobidlist, exportformat))
-            db = dbtoolkit.amcatDB(username='app', password='eno=hoty')
+            db = dbtoolkit.amcatDB(username='app', password='eno=hoty', profile=True)
             jobs = [codingjob.Codingjob(db, cjid) for cjid in toolkit.intlist(jobidlist)]
             self.requireSentence = requireSentence
             self.allowidlabel = False
@@ -49,6 +41,7 @@ class ExportScript(externalscripts.ExternalScriptBase):
             log.info("Table created, starting export")
             self.exportTable(t, exportformat, self.pm.submonitor(80, name="export"))
             self.pm.worked(5)
+        db.printProfile()
 
     def exportTable(self, table, format, monitor):
         if format == 'spss':
@@ -82,28 +75,28 @@ class ExportScript(externalscripts.ExternalScriptBase):
             return t
 
     def cacheJobs(self, jobs):
-        cachable.cache(jobs, "unitSchema", "articleSchema", "name", sets=dict(coder=["username"]))
+        cacher.cache(jobs, "unitSchema", "articleSchema", "name", sets=dict(coder=["username"]))
 
     def cacheSchemas(self, jobs):
         schemas = set()
         for j in jobs:
             schemas |= set((j.unitSchema, j.articleSchema))
-        cachable.cache(schemas, "fields","location","params")
+        cacher.cache(schemas, "fields","location")
 
         
     def cacheMeta(self, rows):
         return
         cas = set(row.ca for row in rows)
-        cachable.cacheMultiple(cas, "article")
-        cachable.cacheMultiple(set(ca.article for ca in cas),
+        cacher.cacheMultiple(cas, "article")
+        cacher.cacheMultiple(set(ca.article for ca in cas),
                                "encoding", "headline", "date", "length", "pagenr", "source")
-        cachable.cacheMultiple(set(ca.article.source for ca in cas), "name")
+        cacher.cacheMultiple(set(ca.article.source for ca in cas), "name")
         css = set(row.cs for row in rows if row.cs)
-        #cachable.cache(css, sentence=["parnr","sentnr"])
+        #cacher.cache(css, sentence=["parnr","sentnr"])
         
         
     def getCodedArticles(self, jobs):
-        cachable.cache(jobs, sets=["articles"])
+        cacher.cache(jobs, sets=["articles"])
         return codingjob.getCodedArticlesFromCodingjobs(jobs)
         
     def getRows(self, jobs):
@@ -118,7 +111,7 @@ class ExportScript(externalscripts.ExternalScriptBase):
             pct = int(float(i[0] * 100) / n)
             log.debug("Getting articles %i - %i / %i (%i%%)" % (i[0], j, n, pct))
             i[0] = j
-            cachable.cache(arts, "sentences", "article")
+            cacher.cache(arts, "sentences", "article")
             #log.debug(jobs[0].db.printProfileHTML())
         for ca in toolkit.splitlist(cas, BUFFERSIZE, dobuffer, yieldelements=True):
             sents = False
@@ -154,11 +147,11 @@ class ExportScript(externalscripts.ExternalScriptBase):
         
     def getMetaColumns(self):
             return [
-                table3.ObjectColumn("CodingJob", lambda row: row.ca.set.job, fieldtype=IDLabel),
+                table3.ObjectColumn("CodingJob", lambda row: row.ca.set.job, fieldtype=idlabel.IDLabel),
                 table3.ObjectColumn("Set", lambda row: row.ca.set.setnr, fieldtype=int),
-                table3.ObjectColumn("Coder", lambda row: row.ca.set.coder, fieldtype=IDLabel),
+                table3.ObjectColumn("Coder", lambda row: row.ca.set.coder, fieldtype=idlabel.IDLabel),
                 table3.ObjectColumn("ArticleId", lambda row: row.art.id, fieldtype=int),
-                table3.ObjectColumn("Medium", lambda row: row.art.source, fieldtype=IDLabel),
+                table3.ObjectColumn("Medium", lambda row: row.art.source, fieldtype=idlabel.IDLabel),
                 table3.ObjectColumn("Pagenr", lambda row: row.art.pagenr, fieldtype=int),
                 table3.ObjectColumn("Length", lambda row: row.art.length, fieldtype=int),
                 table3.ObjectColumn("Date", lambda row: row.art.date, fieldtype=datetime.datetime),

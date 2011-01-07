@@ -39,7 +39,10 @@ def _connect():
 
 def _strftime(date):
     if type(date) != types.IntType:
-         return date.isoformat()
+        try:
+            return date.isoformat()
+        except AttributeError:
+            return "%s-%s-%s" % (date.year, date.month, date.day)
     return date
 
 def key2bytes(klass, prop, key):

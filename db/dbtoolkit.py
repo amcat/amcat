@@ -63,7 +63,12 @@ def reportDB():
     return db
 
 
-class amcatDB(object):
+def amcatDB(configuration=None, auto_commit=False, profile=False, **configargs):
+    if configuration is None:
+        configuration = config.getConfig(**configargs)
+    return AmcatDB(configuration, auto_commit, profile, **configargs)
+
+class AmcatDB(object):
     """
     Wrapper around a connection to the anoko SQL Server database with a number
     of general and specialized methods to facilitate easy retrieval
@@ -373,7 +378,7 @@ class amcatDB(object):
     
     def escapeFieldName(self, f):
         if self.dbType == "psycopg2":
-            return f
+            return '"{0}"'.format(f)
         
         return "[%s]"% f.replace('.', '].[')
 
