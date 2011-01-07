@@ -73,6 +73,15 @@ class PostgreSQL(Configuration):
 
 __PASSWD_FILES = ['.amcatrc','.sqlpasswd']
 
+def guessdriver():
+    import subprocess
+    host = subprocess.Popen("hostname", stdout=subprocess.PIPE).communicate()[0]
+    if host.strip() == "amcatsql2":
+        return "PostgreSQL"
+    else:
+        import sys
+        driver = "EasySoft" if sys.version_info[1] == 6 else "SQLServer"
+
 def readconfig(fn):
     result = {}
     log.debug("Reading database configuration from %s" % fn)
@@ -80,9 +89,7 @@ def readconfig(fn):
         if ".sqlpasswd" in fn and i==0 and ":" in line:
             # assume 'old style' configuration
             un, pwd = line.split(":") 
-            import sys
-            driver = "EasySoft" if sys.version_info[1] == 6 else "SQLServer"
-            return dict(driver=driver, username=un, password=pwd)
+            return dict(driver=guessdriver(), username=un, password=pwd)
         if "=" in line:
             key, value = line.split("=", 1)
             result[key.strip().lower()] = value.strip()
@@ -95,17 +102,18 @@ def getConfig(use_app=False, **kargs):
         kargs["username"], kargs["password"] = APP_CREDENTIALS
     homedir = os.getenv('HOME')
     if "password" not in kargs and not homedir: raise Exception('Could not determine home directory! Please specify the HOME environemnt variable')
-    for fn in __PASSWD_FILES:
-        fn = os.path.join(homedir, fn)
-        if os.access(fn, os.R_OK):
-            d = readconfig(fn)
-            d.update(kargs)
-            kargs = d
-            break
+    if homedir:
+        for fn in __PASSWD_FILES:
+            fn = os.path.join(homedir, fn)
+            if os.access(fn, os.R_OK):
+                d = readconfig(fn)
+                d.update(kargs)
+                kargs = d
+                break
     if "password" not in kargs: 
         raise Exception("Could not find amcatdb configuration information in ~/.amcatrc or ~/.sqlpasswd")
     if "driver" not in kargs:
-        raise Exception("No driver specified")
+        kargs["driver"] = guessdriver()
     return createConfig(**kargs)
 
 def createConfig(driver, **kargs):
