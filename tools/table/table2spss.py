@@ -1,16 +1,18 @@
-from __future__ import with_statement
-import dbtoolkit, codingjob, table3, toolkit
+from amcat.db import dbtoolkit
+from amcat.model.coding import codingjob
+from amcat.tools.table import table3
+from amcat.tools import toolkit, idlabel
+from amcat.tools.logging import amcatlogging, progress
+
+
 import sys, csv
 import re
 import datetime
-from idlabel import IDLabel
 import collections
 import os.path
-import progress
-
 import logging; log = logging.getLogger(__name__)
 
-import amcatlogging; amcatlogging.debugModule()
+amcatlogging.debugModule()
 
 def clean(s, maxchars=None):
     if type(s) == str: s = s.decode('latin-1')
@@ -23,7 +25,7 @@ def clean(s, maxchars=None):
 def getSPSSFormat(type):
     #log.debug("Determining format of %s" % type)
     if type == int: return " (F8.0)"
-    if issubclass(type, IDLabel): return " (F8.0)"
+    if issubclass(type, idlabel.IDLabel): return " (F8.0)"
     if type == float: return " (F8.3)"
     if type == str: return " (A255)"
     if type == datetime.datetime: return " (date10)"
@@ -61,7 +63,7 @@ def table2spss(t, writer=sys.stdout, saveas=None, monitor=progress.NullMonitor()
                 if i: writer.write(",")
                 val = t.getValue(row, col)
                 oval = val
-                if val and issubclass(col.fieldtype, IDLabel):
+                if val and issubclass(col.fieldtype, idlabel.IDLabel):
                     valuelabels[col][val.id] = val.label
                     val = val.id
                 if val and col.fieldtype == str:
