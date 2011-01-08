@@ -628,14 +628,14 @@ class AmcatDB(object):
             SQL = """select udt_name from information_schema.columns where table_name = %s and lower(column_name) = lower(%s)
                   """ % (quotesql(table), quotesql(column))
             utype = self.getValue(SQL)
-            return amcatDB._UTYPES[utype]
+            return self._UTYPES[utype]
         else:
             SQL = """select c.xtype from syscolumns c 
               inner join sysobjects o on c.id = o.id
               where o.name = %s and c.name=%s""" % (
                 quotesql(table), quotesql(column))
             xtype = self.getValue(SQL)
-            return amcatDB._XTYPES[xtype]
+            return self._XTYPES[xtype]
 
     def getTableColumns(self, table):
         """ do a funky query to obtain column names and xtypes """
