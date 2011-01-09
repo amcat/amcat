@@ -182,10 +182,11 @@ class FormTable(ObjectTable):
             if type(attr) == types.GeneratorType:
                 # One to many relation
                 return (c.id for c in attr)
+            
             # One to one
-            return getattr(x, name + 'id')
+            return attr.id
         
-        if hasattr(field, 'choices'):
+        if hasattr(field, 'choices'): 
             return foreign_key
         return lambda x:getattr(x, name)
         

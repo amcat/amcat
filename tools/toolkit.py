@@ -401,6 +401,8 @@ def idlist(idcolumn):
     
     if type(idcolumn) in (str, unicode):
         return (idcolumn,)
+    
+    raise TypeError("%s-like objects not supported" % repr(type(idcolumn)))
 
 def intlist(seq=sys.stdin):
     """Return integers from seq, skipping blank lines"""
