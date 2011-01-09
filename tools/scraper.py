@@ -1,12 +1,47 @@
-import log, toolkit, dbtoolkit, re, urllib2, article, urllib
+from __future__ import unicode_literals, print_function, absolute_import
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+(Base) classes for scraping.
+
+ArticleDescriptor is a container for hold article fields (TODO can be replaced by dict??)
+Scraper is an (internal) abstract base class representing any X -> [articles] scraper 
+ArticleScraper is a base class representing scraping from the web. It assumes that sites have
+  are pages that contain articles. To be subclassed by actual scrapers.
+TextImporter is a base class representing importing articles from (e.g. text) files.
+  If assumes that there are files containing documents.
+"""
+
+from amcat.tools import toolkit
+from amcat.db import dbtoolkit
+from amcat.model import article
+
+import logging, re, urllib2, urllib, sys
 from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup
-from PIL import Image
-import cStringIO, articlecreator
+import cStringIO
 from datetime import datetime, date
 import sys
 #import wordfrequency
 
-l = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
+
+log = logging.getLogger(__name__)
 
 class ArticleDescriptor(object):
     def __init__(self, body, headline, date=None, byline=None, pagenr=None, url=None, section=None, imagebytes=None, imagetype=None, fullmeta=None, batch=None, mediumid=None, externalid=None, parentUrl=None, rawtext=False, stripAccents=True, **args):
@@ -39,17 +74,17 @@ class ArticleDescriptor(object):
         if not self.batch: self.batch = batchid
         if not self.mediumid: self.mediumid = mediumid
         if not body and not headline:
-            l.notice('missing body and headline %s' % self.url)
+            log.warn('missing body and headline %s' % self.url)
             return None
         elif not body:
-            l.notice('Missing body %s' % self.url)
+            log.warn('Missing body %s' % self.url)
             return None
-        elif not headline: l.notice('Missing headline %s' % self.url)
+        elif not headline: log.warn('Missing headline %s' % self.url)
         
-        a = articlecreator.createArticle(db, headline, self.date, self.mediumid, self.batch, body, 
-                                  pagenr=self.pagenr, byline=self.byline, url=self.url,
-                                  section=self.section, fullmeta=self.fullmeta, externalid=self.externalid,
-                                  parentUrl=self.parentUrl)
+        a = createArticle(db, headline, self.date, self.mediumid, self.batch, body, 
+                          pagenr=self.pagenr, byline=self.byline, url=self.url,
+                          section=self.section, fullmeta=self.fullmeta, externalid=self.externalid,
+                          parentUrl=self.parentUrl)
         if self.imagebytes:
             imagebytes = convertImage(self.imagebytes, imagescale)
             articlecreator.storeImage(db,a.id,imagebytes, self.imagetype)
@@ -69,19 +104,21 @@ def convertImage(img, scale=.67, quality=.2):
     return img2
 
 class Scraper(object):
-    def __init__(self, db, batch, mediumid, name, date=None, imagescale=.67, tick=False):
+    def __init__(self, db, batch=None, mediumid=None, name=None, date=None, imagescale=.67, tick=False):
         self.db = db
         self.batch = batch
         self.mediumid = mediumid
         self.articleCount, self.downloadCount = 0,0
         self.name = name
         self.date = date
-        self.log = log.Logger(dbtoolkit.amcatDB(), __name__, log.levels.notice)
         self.imagescale = imagescale
-        query = "select url, articleid from articles where batchid = '%i'" % self.batch
-        if self.mediumid: query += " and mediumid = '%i'" % self.mediumid
-        data = self.db.doQuery(query)
-        self.urls = dict(data)
+        if self.batch:
+            query = "select url, articleid from articles where batchid = '%i'" % self.batch
+            if self.mediumid: query += " and mediumid = '%i'" % self.mediumid
+            data = self.db.doQuery(query)
+            self.urls = dict(data)
+        else:
+            self.urls = {}
         self.tick = tick
 
     def urlExists(self, url):
@@ -91,7 +128,7 @@ class Scraper(object):
         if isinstance(context, datetime) or isinstance(context, date):
             bmd = self.batch, self.mediumid, dbtoolkit.quotesql(context)
             sql = "select count(*) from articles where batchid=%i and mediumid=%i and date=%s" % bmd
-            #print sql
+            #printsql
             d = self.db.getValue(sql)
             if d and not self.force:
                 raise Exception("Refusing to scrape, %s articles already exist in batch %i, medium %i, date %s" % tuple([d]+list(bmd)))
@@ -101,16 +138,10 @@ class Scraper(object):
         """ date format as used in most URLs, override as appropriate """
         return date.strftime("%Y%m%d")
                                 
-    def logInfo(self, msg):
-        self.log.info(msg, application=self.name)    
-    def logWarning(self, msg):
-        self.log.warning(msg, application=self.name)
-    def logException(self, msg=""):
-        self.log.error(msg + '\n' + toolkit.returnTraceback(), application=self.name)
     def createArticle(self, artdesc):
         url = artdesc.url
         if artdesc.url and self.urlExists(artdesc):
-            self.logInfo('Skipping duplicate url %r' % artdesc.url)
+            log.info('Skipping duplicate url %r' % artdesc.url)
             return
         result = artdesc.createArticle(self.db, self.batch, self.mediumid, self.date, imagescale = self.imagescale)
         if result:
@@ -119,7 +150,7 @@ class Scraper(object):
         self.linkChildWithParent(artdesc)
         return result
     def logStatistics(self):
-        self.logInfo('Downloaded %i urls. Added %i articles' % (self.downloadCount, self.articleCount))
+        log.info('Downloaded %i urls. Added %i articles' % (self.downloadCount, self.articleCount))
     def resetStatistics(self):
         self.articleCount, self.downloadCount = 0,0
     def convertImage(self, image, *args, **kargs):
@@ -139,7 +170,7 @@ class Scraper(object):
                 (self.batch, toolkit.quotesql(c_desc.parentUrl)))
 
         if not parentid:
-            self.logWarning("Could not find parent article <%s>" % c_desc.parentUrl)
+            log.warning("Could not find parent article <%s>" % c_desc.parentUrl)
         else:
             self.urls[c_desc.parentUrl] = parentid
             self.db.insert("articles_postings",
@@ -155,7 +186,7 @@ class Scraper(object):
         #wordfrequency.save() rob?
 
 class ArticleScraper(Scraper):
-    def __init__(self, db, batch, mediumid, name, date=None, imagescale = .67):
+    def __init__(self, db, batch=None, mediumid=None, name=None, date=None, imagescale = .67):
         Scraper.__init__(self, db, batch, mediumid, name, date, imagescale)
         self.limit_page = None
         self.limit_articlesperpage = None
@@ -170,11 +201,10 @@ class ArticleScraper(Scraper):
         self.startScrape()
         pages = list(set(self.getPages(context)))
         if not pages:
-            self.logException('No pages found for scraper %s / %s, date %s' % (self.__class__, self.name, context))
+            log.warn('No pages found for scraper %s / %s, date %s' % (self.__class__, self.name, context))
             return
         if self.limit_page: pages = sorted(list(pages))[:self.limit_page]                       
         for page in pages:
-            print page
             try:
                 articles = self.getArticles(context, page)
                 if self.limit_articlesperpage: articles = list(articles)[:self.limit_articlesperpage]
@@ -189,12 +219,12 @@ class ArticleScraper(Scraper):
                     except KeyboardInterrupt:
                         raise KeyboardInterrupt
                     except:
-                        self.logException('Article exception %s' % address)
+                        log.warn('Article exception %s' % address)
                 self.endPage(context, page)
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
             except:
-                self.logException('Page exception %s' % str(page))
+                log.warn('Page exception %s' % str(page))
         self.endScrape(context)
     def startScrape(self):
         Scraper.startScrape(self)
@@ -208,7 +238,7 @@ class ArticleScraper(Scraper):
         if self.commitPage:
             self.db.commit()
     def download(self, url, allowRedirect=False, useSoup=False, postdata=None, canretry=True, useStoneSoup=False):
-        self.logInfo('downloading %s' % url)
+        log.info('downloading %s' % url)
         if postdata:
             response = self.session.open(url, urllib.urlencode(postdata))
         else:
@@ -217,7 +247,7 @@ class ArticleScraper(Scraper):
         if url.find('#') > -1: url = url[:url.find('#')]
         if not allowRedirect and response.url != url:
             if canretry:
-                self.logInfo('Redirect attempted, logging in again (-> %r)' % (response.url))
+                log.info('Redirect attempted, logging in again (-> %r)' % (response.url))
                 self.login()
                 self.download(url, allowRedirect, useSoup, postdata, canretry=False)
             else:
@@ -236,7 +266,7 @@ class ArticleScraper(Scraper):
         TODO: use URLs instead of article IDs...?
         """
         if self.urlExists(url):
-            self.logInfo('Skipping duplicate url %r' % url)
+            log.info('Skipping duplicate url %r' % url)
             return
         if date is None: date = self.date
         if date is None: raise Exception("No date for index article %s" % url)
@@ -246,9 +276,9 @@ class ArticleScraper(Scraper):
             for coords in articleDict[a]:
                 coords = ", ".join(str(int(c * self.imagescale)) for c in coords)
                 body += '[%s->%s]\n' % (coords, a.id)
-        a = articlecreator.createArticle(self.db, "[INDEX] page %s" % pagenr, date, self.mediumid, self.batch, body, section=section, url=url, pagenr=pagenr)
+        a = createArticle(self.db, "[INDEX] page %s" % pagenr, date, self.mediumid, self.batch, body, section=section, url=url, pagenr=pagenr)
         if imagebytes:
-            articlecreator.storeImage(self.db,a.id,convertImage(imagebytes), imagetype)
+            storeImage(self.db,a.id,convertImage(imagebytes), imagetype)
         return a
 
     #########################################################
@@ -277,8 +307,6 @@ class ArticleScraper(Scraper):
 
 
 class TextImporter(Scraper):
-    def __init__(self, db, batch, mediumid, name, *args, **kargs):
-        Scraper.__init__(self, db, batch, mediumid, name, *args, **kargs)
 
     #######################################################
     ## Main scraping logic and aux methods               ##
@@ -287,7 +315,7 @@ class TextImporter(Scraper):
         self.startScrape()
         files = list(set(self.getFiles(context)))
         if not files:
-            self.logException('No files found for scraper %s / %s, date %s' % (self.__class__, self.name, context))
+            log.warn('No files found for scraper %s / %s, date %s' % (self.__class__, self.name, context))
             return
         if self.tick: files = toolkit.tickerate(files)
         for file in files:
@@ -307,11 +335,13 @@ class TextImporter(Scraper):
                     except Exception, e:
                         import traceback
                         traceback.print_exc()
-                        self.logException('Article exception file %s doc %r' % (file, doc[:40]))
+                        log.warn('Article exception file %s doc %r' % (file, doc[:40]))
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
-            except:
-                self.logException('SplitFile exception %s' % str(file))
+            except Exception, e:
+                import traceback
+                traceback.print_exc()
+                log.warn('SplitFile exception %s at %s' % (e, str(file)))
         self.endScrape(context)
         
     #########################################################
@@ -351,6 +381,7 @@ class ArticlesImage(object):
     For more information on Image._ImageCrop, see PIL Documentation
     """
     def __init__(self, f):
+        from PIL import Image
         self.max = 255 #+ 255 + 255
         self.min_headline = 20
         
@@ -372,7 +403,6 @@ class ArticlesImage(object):
             yield self.inv[self.bw.getpixel((c, r))]
             
     def _getLines(self):
-        """"""
         prev = self._is_white(self._row_scores[0])
         
         height = 0
@@ -381,7 +411,9 @@ class ArticlesImage(object):
             
             if prev == white:
                 height += 1
+             
                 continue
+                
             
             yield (prev, height + 1)
             prev, height = white, 0
@@ -519,3 +551,76 @@ def removeTags(text):
     return tagsRegExp.sub("", text)  
 
     
+
+
+# TODO This should be merged into the normal .create() structure asap! 
+import binascii, types
+
+def createArticle(db, headline, date, source, batchid, text, texttype=2,
+                  length=None, byline=None, section=None, pagenr=None, fullmeta=None, url=None, externalid=None, parentUrl=None, retrieveArticle=1):
+    """
+    Writes the article object to the database
+    """
+    # TODO link to parent if parentUrl is not None
+
+    if toolkit.isDate(date): date = toolkit.writeDateTime(date, 1)
+    if type(source) != int: source = source.id
+    if type(fullmeta) == dict: fullmeta = `fullmeta`
+
+    if url and len(url) > 490: url = url[:490] + "..."
+
+    (headline, byline, fullmeta, section), encoding = encodeAndLimitLength([headline, byline, fullmeta, section], [740, 999999, 999999, 90])
+    
+    if pagenr and type(pagenr) in (types.StringTypes): pagenr = pagenr.strip()
+    if text: text = text.strip()
+    if length == None and text: length = len(text.split())
+
+    
+    q = {'date' : date,
+         'length' : length,
+         'metastring' : fullmeta,
+         'headline' : headline,
+         'byline' : byline,
+         'section' : section,
+         'pagenr': pagenr,
+         'batchid' : batchid,
+         'mediumid' : source,
+         'url':url,
+         'externalid':externalid,
+         'encoding' : encoding,
+         # We don't store the parentUrl. Instead, we use the articles_postsings
+         # table to store this information. This is done by the scraper class.
+        }
+    aid = db.insert('articles', q)
+    text, encoding = dbtoolkit.encodeText(text)
+    
+    q = {'articleid' : aid,
+         'type' : texttype,
+         'encoding' : encoding,
+         'text' : text}
+    db.insert('texts', q, retrieveIdent=0)
+    
+    if retrieveArticle:
+        return article.Article(db, aid)
+    
+def storeImage(db,id, imgdata, format):
+    from pil import image
+    SQL = "DELETE FROM articles_image WHERE articleid=%i" % (id,)
+    db.doQuery(SQL)                                              
+    imgdata = binascii.hexlify(imgdata)                               
+    SQL = "INSERT INTO articles_image VALUES (%i, 0x%s, %s)" % (id, imgdata, dbtoolkit.quotesql(format))                                                                                         
+    db.doQuery(SQL)      
+
+
+def encodeAndLimitLength(variables, lengths):
+    originals = map(lambda x: x and x.strip(), variables)
+    numchars = 5
+    while True:
+        variables, enc = dbtoolkit.encodeTexts(variables)
+        done = True
+        for i, (var, maxlen, original) in enumerate(zip(variables, lengths, originals)):
+            if var and (len(var) > maxlen):
+                done = False
+                variables[i] = original[:maxlen-numchars] + " ..."
+        if done: return variables, enc
+        numchars += 5

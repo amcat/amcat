@@ -1,23 +1,29 @@
+from __future__ import unicode_literals, print_function, absolute_import
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+Utility functions for working with Ontology objects
+"""
+
 import logging; log = logging.getLogger(__name__)
-
-
-def getParent(obj, db, oid, pid):
-    """@param obj: constructor argument.
-    @type obj: model-object
- 
-    @param oid: objectid (see table `hierarchy`)
-    @param pid: parentid ("")
-
-    @return: Tree, Object or Tree, None when requested
-    object is a direct child of `Tree`.
-    """
-    from amcat.model.ontology.object import Object
-    from amcat.model.ontology.tree import Tree
-
-    tree = Tree(db, oid)
-    if pid is None:
-        return tree, None
-    return tree, Object(db, pid)
+import sys
 
 def getAllAncestors(object, stoplist=None, golist=None):
     if stoplist is None: stoplist = set()
@@ -58,3 +64,18 @@ def function2conds(function):
     if officeid == 2087:
         return ['"europ* parlement*"', "europarle*"]
     return []
+
+def getIndentedList(hierarchy):
+    def recurse(parent, indent):
+        yield indent, parent, hierarchy.isReversed(parent)
+        for c in hierarchy.getChildren(parent):
+            for i, o, r in recurse(c, indent+1):
+                yield i, o, r
+    for root in hierarchy.getRoots():
+        for i, o,r in recurse(root, 0):
+            yield i,o,r
+
+def printHierarchy(hierarchy, file=sys.stdout):
+    for i,o, r in getIndentedList(hierarchy):
+        print("\t"*i, "[-] " if r else "", o,  file=sys.stdout, sep="")
+    

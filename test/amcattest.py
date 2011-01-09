@@ -77,20 +77,29 @@ class AmcatTestCase(unittest.TestCase):
     def assertNotRaises(self, *dummy, **dummy2):
         pass # will fail it is does raise
     def assertSubclass(self, type1, type2):
-        self.assertTrue(issubclass(type1, type2), "%s is not a subclass of %s" % (type1, type2))
+        self.assertTrue(issubclass(type1, type2), "%r is not a subclass of %r" % (type1, type2))
     def assertIn(self, element, sequence, msg=None):
         sequence=toolkit.getseq(sequence, stringok=True) # force permanent sequence
-        self.assertTrue(element in sequence, "%s%s is not in %s" % (msg and "%s: " % msg, element, sequence))
+        self.assertTrue(element in sequence, "%r%r is not in %r" % (msg and "%r: " % msg, element, sequence))
     def assertNotIn(self, element, sequence):
         sequence=toolkit.getseq(sequence, stringok=True) # force permanent sequence
-        self.assertFalse(element in sequence, "%s should not be in %s" % (element, sequence))
+        self.assertFalse(element in sequence, "%r should not be in %r" % (element, sequence))
     def assertNotEmpty(self, sequence):
         original = sequence
         sequence = toolkit.getseq(sequence)
         self.assertTrue(sequence, "empty (converted) sequence: %r --> %r" % (original, sequence))
     def assertIsInstance(self, obj, cls):
-        self.assertTrue(isinstance(obj, cls), "%r is not an instance of %s" % (obj, cls))
+        self.assertTrue(isinstance(obj, cls), "%r is not an instance of %r" % (obj, cls))
+    def assertIs(self, o1, o2):
+        self.assertTrue(o1 is o2, "%r not identical to %r" % (o1, o2))
+    def assertNotIs(self, o1, o2):
+        self.assertTrue(o1 is not o2, "%r identical to %r" % (o1, o2))
+
+    def assertItemsEqual(self, seq1, seq2):
+        s1 = set(seq1)
+        s2 = set(seq2)
         
+        self.assertTrue(s1 == s2, "%r does not have the same items %r" % (s1, s2))
 
 def main():
     amcatlogging.setStreamHandler()

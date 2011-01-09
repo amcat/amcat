@@ -311,7 +311,7 @@ def pairs(seq, lax=False):
 
 
 
-def getseq(sequence, seqtypes=(list, tuple, set), pref=list, stringok=False):
+def getseq(sequence, seqtypes=(list, tuple, set), pref=list, stringok=False, convertscalar=False):
     """Ensures that the sequences is list/tuple/set and changes if necessary
     
     Makes sure that the sequence is a 'proper' sequence (and not
@@ -321,10 +321,16 @@ def getseq(sequence, seqtypes=(list, tuple, set), pref=list, stringok=False):
     @param sequence: the sequence to check
     @param seqtypes: allowable sequence types
     @param pref: the sequence type to change into if necessary
+    @param stringok: treat string/unicode as sequence?
+    @param convertscalar: convert scalar to [scalar]?
     @return: the original sequence if allowed, otherwise pref(sequence)
     """
-    if stringok: seqtypes += (str,unicode)
-    return sequence if isinstance(sequence, seqtypes) else pref(sequence)
+    if isIterable(sequence, excludeStrings=not stringok):
+        return sequence if isinstance(sequence, seqtypes) else pref(sequence)
+    elif convertscalar:
+        return pref([sequence])
+    else:
+        raise TypeError("Cannot create a sequence out of %r" % sequence)
 
 
 def count(seq):
@@ -803,8 +809,10 @@ def _monthnr(monthname):
     """Try to get a month number corresponding to the month
     name (prefix) in monthname"""
     for i, names in enumerate(MONTHNAMES):
-        if any(monthname.startswith(name) for name in names):
-            return i+1
+        for name in names:
+            if monthname.lower().startswith(name.lower()):
+                return i+1
+
         
 def readDate(string, lax=False, rejectPre1970=False, american=False):
     """Try to read a date(time) string with unknown format
@@ -852,9 +860,11 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
         if not date:        
             # For '22 November 2006 Wednesday 10:23 AM (Central European Time)'
             s = datestr.split(' ')
-            for i, prefixes in enumerate(MONTHNAMES):
-                if s[1].startswith(prefixes):
-                    date = int(s[2]), i+1, int(s[0])
+            if len(s)>2:
+                for i, prefixes in enumerate(MONTHNAMES):
+                    if s[1].startswith(prefixes):
+                        date = int(s[2]), i+1, int(s[0])
+                        break
             
         if not date:
             if lax: return
@@ -867,8 +877,10 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
 
         if not time: time = (0, 0, 0)
         return datetime.datetime(*(date + time))
-    except Exception,e :
-        warn("Exception on reading datetime %s:\n%s" % (string, e))
+    except Exception,e:
+        import traceback
+        trace = traceback.format_exc()
+        #warn("Exception on reading datetime %s:\n%s\n%s" % (string, e, trace))
         if lax: return None
         else: raise
 

@@ -1,10 +1,33 @@
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
-from amcat.tools.cachable.latebind import LB
+from __future__ import unicode_literals, print_function, absolute_import
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 
-from amcat.tools.toolkit import multidict
+"""
+Model module representing ontology Objects
+"""
+
+from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools.cachable.latebind import LB, MultiLB
+
+from amcat.tools import toolkit
 from amcat.model.language import Language
 
-from amcat.model.ontology.ontologytoolkit import getParent
 
 from datetime import datetime
 
@@ -24,35 +47,25 @@ class Label(Cachable):
     label, objectid, languageid = DBProperties(3)
     
     language = DBProperty(LB("Language"))
+
     
 class Object(Cachable):
     __table__ = 'objects'
     __idcolumn__ = 'objectid'
     
-    _labels = ForeignKey(lambda:Label)
-    _parents = ForeignKey(table="trees_objects", getcolumn=("treeid", "parentid"), refcolumn="objectid", constructor=getParent)
-    _children = ForeignKey(table="trees_objects", getcolumn=("treeid", "objectid"), refcolumn="parentid", constructor=getParent)
-
-    functions = ForeignKey(lambda:Function)
+    _labels = ForeignKey(Label)
+    functions = ForeignKey(Function)
+    trees  = ForeignKey(LB("Tree", sub="ontology"), table="trees_objects", distinct=True)
 
     @property
     def labels(self):
-        return dict((l.language, l.label) for l in self._labels)
-    
-    @property
-    def parents(self):
-        return dict(self._parents)
-    
-    @property
-    def children(self):
-        return multidict(self._children)
+        return dict((l.language, l) for l in self._labels)
     
     @property
     def label(self):
-        try:
-            return self._labels.next().label
-        except StopIteration:
-            return 'GEEN LABEL: FIXME'
+        l = toolkit.head(self._labels)
+        if l: return l
+        return repr(self)
 
     def getLabel(self, lan):
         """
@@ -64,8 +77,21 @@ class Object(Cachable):
             lan = Language(self.db, lan)
 
         if self.labels.has_key(lan): return self.labels[lan]
-    
 
+
+    def _getTree(self, treeid):
+        for t in self.trees:
+            if t.id == treeid: return t
+
+    def getParent(self, tree):
+        if type(tree) == int: tree = self._getTree(tree)
+        return tree.getParent(self)
+
+    @property
+    def parents(self):
+        for t in self.trees:
+            yield t, self.getParent(t)
+    
     def getAllParents(self, date=None):
         for c, p in self.parents.iteritems():
             yield c, p

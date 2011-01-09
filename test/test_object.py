@@ -1,21 +1,38 @@
 from amcat.model.ontology.object import Object
 from amcat.model.ontology.tree import Tree
-from amcat.model.ontology.codebook import Codebook
+
 from amcat.model.language import Language
 from amcat.test import amcattest
 
 import datetime
 
-class TestOntology(amcattest.AmcatTestCase):    
+PARENTS = ( # objectid, treeid, parentid/None, reverse?
+    (307, 100, None, False),
+    (14409, 100, 2547, False),
+    (587, 6000, 2231, True),
+    )
 
+
+
+class TestObject(amcattest.AmcatTestCase):    
+
+    def testParent(self):
+        for oid, treeid, parentid, reverse in PARENTS:
+            o = Object(self.db, oid)
+            if parentid is None:
+                self.assertEqual(o.getParent(treeid), None)
+            else:
+                self.assertEqual(o.getParent(treeid).id, parentid)
+            self.assertIn(Tree(self.db, treeid), o.trees)
+    
     def testLabels(self):
         for oid, stdlabel, lang, label in (
             (296, "flexibele arbeidsmarkt", 12, "[-] Flexibele / Liberale arbeidsmarkt"),
             ):
             o = Object(self.db, oid)
-            self.assertEqual(o.label, stdlabel)
-            self.assertEqual(o.labels[Language(self.db, lang)], label)
-            self.assertEqual(o.getLabel(lang), label)
+            self.assertEqual(str(o.label), stdlabel)
+            self.assertEqual(str(o.labels[Language(self.db, lang)]), label)
+            self.assertEqual(str(o.getLabel(lang)), label)
             self.assertRaises(KeyError, lambda  : o.labels[-99])
             self.assertEqual(o.getLabel(-99), None)
 
@@ -31,37 +48,6 @@ class TestOntology(amcattest.AmcatTestCase):
             self.assertEqual(nfunctions, len(list(verdonk.currentFunctions(date))))
             #self.assertEqual(searchstring, verdonk.getSearchString(date))
             
-    def testClassHierarchy(self):
-        for oid, parents, children in (
-            (1731, {4003 : None, 9999 : False}, {}),
-            #(1646, None),
-            (10276, {9999: 10275, 4003 : False}, {}),
-            #(10275, {9999: None}, {}),
-
-            ):
-            o = Object(self.db, oid)
-            parentiddict = dict((cl.id, p and p.id) for (cl, p) in o.parents.items())
-            for cl, parent in parents.iteritems():
-                if parent is False:
-                    self.assertNotIn(cl, parentiddict.keys())
-                else:
-                    self.assertIn(cl, parentiddict.keys())
-                    self.assertEqual(parent, parentiddict[cl])
-
-            #childiddict = dict((cl.id, set(c.id for c in cc)) for (cl,cc) in o.children.items())
-
-    def testCategorisation(self):
-        c = Codebook(self.db, 5001)
-        o = Object(self.db, 1560)
-        self.assertEqual([o2.id for o2 in c.getCategorisationPath(o)], [366, 10661])
-        self.assertEqual(c.categorise(o, depth=[1])[0].id, 366)
-        #self.assertEqual(c.categorise(o, depth=[1], returnOmklap=True, returnObjects=False)[0], 1)
-        # dim cosmo?
-                    
-    #TODO: sets, sethierarchy, classes, boundobjects, categorizations
-
-        
-        
 
 
 if __name__ == '__main__': amcattest.main()

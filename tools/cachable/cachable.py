@@ -45,12 +45,13 @@ Example usage::
 
 import inspect, types, warnings
 import logging; log = logging.getLogger(__name__)
+# logs manually commented out because they *really* slow things down
 
 from amcat.tools import idlabel
 from amcat.db import dbtoolkit
 from amcat.tools.cachable import amcatmemcache as store
 
-#import amcatlogging; amcatlogging.debugModule()
+from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 #import amcatlogging; amcatlogging.infoModule()
 
 class Meta(type):
@@ -120,11 +121,11 @@ class Cachable(idlabel.IDLabel):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""
         if (not "__" in attr) and (attr != 'id'): # skip special attributes
             try:
-                log.debug("Getting attribute %s, property?" % (attr)) 
+                #log.debug("Getting attribute %s, property?" % (attr)) 
                 p =  self.__class__._getProperty(attr)
-                log.debug("Got property %s -> %s, calling property.get()" % (attr, p)) 
+                #log.debug("Got property %s -> %s, calling property.get()" % (attr, p)) 
             except (NotAPropertyError, AttributeError), e:
-                log.debug("Property not found, will call super (%s:%s)" % (type(e), e))
+                #log.debug("Property not found, will call super (%s:%s)" % (type(e), e))
                 pass
             else:
                 return p.get(self)
@@ -231,7 +232,7 @@ class Cachable(idlabel.IDLabel):
             except AttributeError:
                 return key,val #assume caller know that (s)he's doing
 
-        log.debug("Creating %s with idvalues=%s, props=%s" % (cls.__name__, idvalues, props))
+        #log.debug("Creating %s with idvalues=%s, props=%s" % (cls.__name__, idvalues, props))
         dbprops = dict(getcolval(k, v) for (k,v) in props.iteritems())
         
         if idvalues is not None:
@@ -247,14 +248,15 @@ class Cachable(idlabel.IDLabel):
         else:
             idvalues= db.insert(cls.__table__, dbprops, retrieveIdent=cls.__idcolumn__)
         result = cls(db, idvalues)
-        log.debug("Created object %r" % result)
+        #log.debug("Created object %r" % result)
         for propname, val in props.iteritems():
             try:
                 prop = result._getProperty(propname)
-                log.debug("Caching %s.%s <- %s" % (result, propname, val))
-                prop.cache(result, val)
             except AttributeError:
                 pass # it's okay, just don't cache it
+            else:
+                #log.debug("Caching %s.%s <- %s" % (result, propname, val))
+                prop.cache(result, val)
         return result
     
     @classmethod
@@ -352,16 +354,18 @@ class Property(object):
         Will call L{dataToObjects} to deserialise the value"""
         if self.deprecated:
             warnings.warn(DeprecationWarning("Property %s has been deprecated" % self))
+        # if the objects dict contains this property, return it
+        #TODO try to re-enable if self.propname in obj.__dict__: return obj.__dict__[self.propname]
         try:
             v = self.getCached(obj)
-            log.debug("Got cached %r.%s = %r" % (obj, self, v))
+            #log.debug("Got cached %r.%s = %r" % (obj, self, v))
         except store.UnknownKeyException:
-            log.debug("%r.%s Not found in cache, retrieving from source" % (obj, self))
+            #log.debug("%r.%s Not found in cache, retrieving from source" % (obj, self))
             v = self.retrieve(obj)
-            log.debug("Retrieved %r.%s = %r, caching" % (obj, self, v))
+            #log.debug("Retrieved %r.%s = %r, caching" % (obj, self, v))
             self.cache(obj, v, isData=True)
         v = self.dataToObjects(obj, v)
-        log.debug("Converted into %r" % v)
+        #log.debug("Converted into %r" % v)
         # remember the type info for later use
         if self.observedType is None: self.observedType = type(v)
         return v
@@ -395,10 +399,13 @@ class Property(object):
         @param isData: unless True, serialise the value before caching
         """
         if not isData:
+            #log.debug("Setting %r.__dict__[%s] <- %r" % (obj, self.propname, value))
+            # TODO Try to re-enable obj.__dict__[self.propname] = value
             value =  self.objectsToData(obj, value)
         self.store.set(obj.id, value)
     def uncache(self, obj):
         """Uncache this property for the given object"""
+        #TODO type to re-enable if self.propname in obj.__dict__: del obj.__dict__[self.propname]
         self.store.delete(obj.id)
     def getCached(self, obj): 
         """Get the cached data value for obj, or raise an UnknownKeyException"""
@@ -516,7 +523,7 @@ class DBProperty(Property):
         @param dbvalues: the row tuple as returned from the db
         @return object: a single 'domain' object
         """
-        log.debug("Creating %r.%s object from %r, targetclass=%s, constructor=%s" % (obj, self, dbvalues, self.targetclass, self.constructor))
+        #log.debug("Creating %r.%s object from %r, targetclass=%s, constructor=%s" % (obj, self, dbvalues, self.targetclass, self.constructor))
         if self.constructor:
             return self.constructor(obj, obj.db, *dbvalues)
         if self.targetclass:
@@ -525,13 +532,12 @@ class DBProperty(Property):
             if type(self.targetclass) == tuple:
                 if len(self.targetclass) != len(dbvalues):
                     raise ValueError("If targetclass is a tuple, #columns should equal #classes")
-                return tuple(c(obj.db, v) for (c, v) in zip(self.targetclass, dbvalues))
+                return tuple((None if v is None else c(obj.db, v))
+                             for (c, v) in zip(self.targetclass, dbvalues))
             else:
                 return self.targetclass(obj.db, *dbvalues)
         return dbvalues[0]
 
-
-    
     def objectToDbrow(self, obj):
         """Convert an amcat object to a db row
         
@@ -545,15 +551,20 @@ class DBProperty(Property):
         return obj
 
     def objectsToData(self, obj, objects):
-        log.debug("Serialising %s=%r" % (self, objects))
+        #log.debug("Serialising %s=%r" % (self, objects))
         return [self.objectToDbrow(objects)]
         
     def dataToObjects(self, obj, data):
         data = data[0] if data else [None]
         return self.dbrowToObject(obj, *data)
 
+    
+    def _getIDColumn(self):
+        if self.refcolumn: return self.refcolumn
+        return self.cls.__idcolumn__
+    
     def _getTable(self, obj=None):
-        log.debug("getTable(%r), self.table=%s, self.tablehook=%s" % (obj, self.table, self.tablehook))
+        #log.debug("getTable(%r), self.table=%s, self.tablehook=%s" % (obj, self.table, self.tablehook))
         if self.table: return self.table
         if self.tablehook: return self.tablehook(obj)
         if obj and getattr(obj, '__table__', None):
@@ -571,7 +582,8 @@ class DBProperty(Property):
     def retrieve(self, obj):
         """Use the database to retrieve the value of this property for obj
         """
-        return obj.db.select(self._getTable(obj), self._getColumns(), obj._getWhere(self.refcolumn), alwaysReturnTable=True, distinct=self.distinct)
+        kargs = dict(orderby=self.orderby) if self.orderby else {}
+        return obj.db.select(self._getTable(obj), self._getColumns(), obj._getWhere(self.refcolumn), alwaysReturnTable=True, distinct=self.distinct, **kargs)
     
     def getType(self, obj_or_db=None):
         # if targetclass is a class or tuple of classes, return it 
@@ -594,7 +606,7 @@ class DBProperty(Property):
     def _update(self, db, obj, val):
         """Create and execute an SQL UPDATE statement to update the db"""
         #TODO: use serialisation method
-        log.debug("UPDATEing %r.%s -> %r" % (obj, self, val))
+        #log.debug("UPDATEing %r.%s -> %r" % (obj, self, val))
         if isinstance(val, idlabel.IDLabel): val = val.id
         cols = self._getColumns()
         if type(cols) in (str, unicode):
@@ -608,13 +620,13 @@ class DBProperty(Property):
 
     def prepareCache(self, cacher):
         if self.tablehook: return # cannot cache as we don't know the table without getting the object!
-        log.info("%s: Adding %s.%s to cacher" % (self, self._getTable(), self._getColumns()))
-        cacher.addFKField(self._getColumns(), self._getTable(), self.cls.__idcolumn__, self.orderby)
+        #log.info("%s: Adding %s.%s/%s to cacher" % (self, self._getTable(), self._getIDColumn(), self._getColumns()))
+        cacher.addFKField(self._getColumns(), self._getTable(), self._getIDColumn(), self.orderby)
 
     def doCache(self, cacher, obj=None):
         if self.tablehook: return
         val = cacher.getFKData(self._getColumns(), self._getTable(), obj, self.cls.__idcolumn__, self.orderby)
-        log.info("%s: Retrieved %s from cacher" % (self, val))
+        #log.info("%s: Retrieved %s from cacher" % (self, val))
         self.cache(obj, val, isData=True)
         
         
@@ -655,11 +667,11 @@ class ForeignKey(DBProperty):
 
     
     def objectsToData(self, obj, objects):
-        log.debug("FKSerialising %s=%r" % (self, objects))
+        #log.debug("FKSerialising %s=%r" % (self, objects))
         return [self.objectToDbrow(o) for o in objects]
     
     def _getTable(self, obj=None):
-        log.debug("getTable(%r), self.table=%s, self.tablehook=%s" % (obj, self.table, self.tablehook))
+        #log.debug("getTable(%r), self.table=%s, self.tablehook=%s" % (obj, self.table, self.tablehook))
         if self.table: return self.table
         if self.tablehook: return self.tablehook(obj)
         try:

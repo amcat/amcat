@@ -2,8 +2,8 @@
 Helper methods to interpret/parse LexisNexis textual data
 """
 
-import re,toolkit
-import articlecreator
+import re
+from amcat.tools import toolkit, scraper
 
 # Regular expressions on text file level:
 RE_ARTICLESPLIT = re.compile(r'^\s+(?:FOCUS - )?\d+ of \d+ DOCUMENTS?\s*$', re.M)
@@ -17,15 +17,19 @@ RE_QUERY3        = re.compile(r'^Terms: (.*)\s*$', re.M|re.IGNORECASE)
 # On Article string level
 umlauts = '\xfc\xe4\xdc\xc4\xf6\xd6'
 
-RE_EXTRACTMETA  = re.compile(r'(.*)^\s*BODY:\s*$(.*)^\s*([A-Z\-]+:.*)', re.M | re.S |re.U)
-RE_EXTRACTMETA2  = re.compile(r'(.*)^\s*(?:BODY|VOLLEDIGE TEKST):\s*$(.*)()', re.M | re.S |re.U)
-RE_EXTRACTMETA3  = re.compile(r'(.*)^\s*GRAPHIC: (.*)()', re.M | re.S |re.U)
-RE_EXTRACTMETA3  = re.compile(r'(.*)^\s*LENGTH: \d+ +(?:woorden|words|palabras)$(.*)()', re.M | re.S |re.U)
-RE_EXTRACTMETA4 = re.compile(r'(.*^\s*[A-Z\-]+:.*?)$(.*)^\s*([A-Z\-]+:.*)', re.M | re.S |re.U)
+RE_EXTRACTMETAS = [
+    re.compile(r'(.*)^\s*BODY:\s*$(.*)^\s*([A-Z\-]+:.*)', re.M | re.S |re.U),
+    re.compile(r'(.*)^\s*(?:BODY|VOLLEDIGE TEKST):\s*$(.*)()', re.M | re.S |re.U),
+#    re.compile(r'(.*)^\s*GRAPHIC: (.*)()', re.M | re.S |re.U),
+#    re.compile(r'(.*)^\s*(?:LENGTH:|L\xc4NGE:) \d+ +(?:woorden|W\xf6rter|words|palabras)$(.*)()', re.M | re.S |re.U),
+#    re.compile(r'(.*^\s*(?:HIGHLIGHT|L\xc4NGE|LONGUEUR):.*?$)(.*)()', re.M | re.S |re.U),
+#    re.compile(r'(.*^\s*[A-Z\-]+:.*?)$(.*)^\s*([A-Z\-]+:.*)', re.M | re.S |re.U),
+    ]
 
 RE_ENDBODY = re.compile(r'(.*)^\s*(LOAD-DATE: .*)', re.M | re.S | re.U)
 
 RE_SPLITMETA    = re.compile(r'^([A?-Z-%s]+):'%umlauts, re.M |re.U)
+RE_GETMETA    = re.compile(r'^([A-Z-]+):(.*)$' , re.M |re.U)
 RE_LENGTH       = re.compile(r'(\d+) (?:words|woorden)', re.U)
 RE_HEADLINEINBODY = re.compile(r'([\w .,:;\'"%s]{5,200})\n\n(.*)' % umlauts, re.M | re.U | re.S)
 
@@ -67,25 +71,18 @@ def parseSection(section):
         return (m.group(1) + m.group(3)).strip(), int(m.group(2))
     return None
 
-def parseArticle(articleString, db, batchid, commit):
-    """
-    Creates a new Article by parsing a Lexis Nexis plain text format article string
+def parseArticle(articleString, sources):
+    """Parse a LN article and return an articledescriptor
+    @return: L{amcat.tools.scraper.ArticleDescriptor}
     """
     # Parse string, extract metadata, interpret prolog
 
-    #print `articleString`
-    #print "******************"
-    
     (prolog, body, meta) = parseLexisNexis(articleString)
-    (date1, medium, possibleheadline) = interpretProlog(prolog, db.sources, meta)
-
-
-    #print `prolog`, '\n', `body`, '\n', `meta`
+    (date1, medium, possibleheadline) = interpretProlog(prolog, sources, meta)
 
     if (medium == 8):
         #print "Doing AD split for %s" % meta.get ('headline', 'missing')[:40]
         body = splitad(body)
-        #print body
 
     # interpret section
     for orig, trans in multilang.items():
@@ -125,12 +122,9 @@ def parseArticle(articleString, db, batchid, commit):
 
     #print "hl:",headline, "\nbody:", len(body), "\n", `body[:100]`, "\n>>>>>>>>>>"
 
-    meta = `meta`
     try:
         if type(headline) == str:
             headline = unicode(headline, 'latin-1')
-        if type(meta) == str:
-            meta = unicode(meta, 'latin-1')
         if type(byline) == str:
             byline = unicode(byline, 'latin-1')
         if type(body) == str:
@@ -139,10 +133,7 @@ def parseArticle(articleString, db, batchid, commit):
         raise Exception('unicode problem %s %s %s: %s' % (headline, meta, byline, e))
     
     #print headline, section
-    if commit:
-        articlecreator.createArticle(db, headline, date1, medium, batchid, body, texttype=2,
-                                     length=length, byline=byline, section=section, pagenr=pagenr, fullmeta=meta, retrieveArticle=0)
-    #article.Article(db, None, batchid, medium, date1, headline, byline, length, pagenr, section, meta, body)
+    return scraper.ArticleDescriptor(body, headline, date1, byline, pagenr, section=section, mediumid=medium, fullmeta = meta)
 
 def parseLexisNexis(text):
     """
@@ -150,32 +141,56 @@ def parseLexisNexis(text):
     Assumes input of the form >>prolog<< (KEY: Value)* BODY: >>body<< (KEY:Value)*
     meta will be a dictionary containing the KEY: Value pairs (excluding BODY:)
     """
-    match = re.match(RE_EXTRACTMETA, text)
-    if not match: match = re.match(RE_EXTRACTMETA2, text)
-    if not match: match = re.match(RE_EXTRACTMETA3, text)
-    if not match: match = re.match(RE_EXTRACTMETA4, text)
-    if not match: print "<text exception='lexisnexis.py:143 could not parse article'>\n%s\n</text>" % text.encode('ascii','replace'); raise Exception("Could not parse article")
+    for pattern in RE_EXTRACTMETAS:
+        
+        match = re.match(pattern, text)
+        if match: break
 
-    body = match.group(2).strip()
-    meta = match.group(1) + match.group(3)
-
-    match = re.match(RE_ENDBODY, body)
     if match:
-        body = match.group(1)
-        meta += "\n\n"+match.group(2)
+        body = match.group(2).strip()
+        meta = match.group(1) + match.group(3)
 
-    fields = re.split(RE_SPLITMETA, meta)
-    # fields contains [prolog, key0, val0, key1, val1,...]
+        match = re.match(RE_ENDBODY, body)
+        if match:
+            body = match.group(1)
+            meta += "\n\n"+match.group(2)
+        fields = re.split(RE_SPLITMETA, meta)
+        # fields contains [prolog, key0, val0, key1, val1,...]
+        prolog = fields[0]
+        fields = toolkit.pairs(fields[1:], 1)
+        # fields now containt [(key0, val0),(key1, val1)...]
 
-    prolog = fields[0]
-    fields = toolkit.pairs(fields[1:], 1)
-    # fields now containt [(key0, val0),(key1, val1)...]
+        meta = {}
+        for key, val in fields:
+            meta[key.lower()] = toolkit.clean(val)    
+    else:
+        # parse 'section' by section, split off newlines
+        # this can possibly be used for all articles, but keep
+        # as fallback for now (the old method "ain't broke")
 
-    meta = {}
-    for key, val in fields:
-        meta[key.lower()] = toolkit.clean(val)
-    
+        sections = re.split(r"\n\s*\n", text)
+        prolog = []
+        meta = {}
+        body = []
+        bodydone = False
+        for section in sections:
+            m = RE_GETMETA.match(toolkit.stripAccents(section))
+            if m:
+                if body: bodydone = True # no more body after first meta after body
+                key, val = m.groups()
+                meta[key.lower()] = toolkit.clean(val)
+            elif not meta: # 'body' before meta is prolog
+                prolog.append(section)
+            elif not bodydone:
+                body.append(section)
+        prolog = "\n\n".join(prolog)
+        body = "\n\n".join(body)
+
+
+    if not body.strip(): raise Exception("Cannot parse body from %r" % text)
+    if not body.strip(): raise Exception("Cannot parse prolog from %r" % text)
     return (prolog, body, meta)
+   
 
 def interpretProlog(text, sources, meta):
     """
@@ -190,25 +205,26 @@ def interpretProlog(text, sources, meta):
     date = None
     mostlikelysource = None
     possibleheadline = None
-    for dateline in toolkit.reverse(lines):
+    for dateline in reversed(lines):
         raw = dateline
         dateline = dateline.strip()
         if date:
             mostlikelysource=dateline # line before date is most likely source
             break
         date = toolkit.readDate(dateline, lax=1, rejectPre1970=True)
+                
         if len(dateline) > 5 and raw[0] <> ' ' and not date:
             possibleheadline = dateline # line after date is possible headline
 
     source = mostlikelysource
-    medium = sources.lookupName(source, 1)
-    for line in toolkit.reverse(lines):
+    medium = sources.lookupName(source)
+    for line in reversed(lines):
         if medium: break
         source = line
         if source.strip().startswith('USA TODAY'): source = 'USA TODAY'
         if 'Gannett Company' in source: source = 'USA TODAY'
         if source.strip().endswith('The Washington Post'): source = 'The Washington Post' 
-        medium = sources.lookupName(source, 1)
+        medium = sources.lookupName(source)
 
     if not medium:
         if 'Newstex Web Blogs' in meta.get('publication-type'):
@@ -252,78 +268,6 @@ def splitad(text):
     
     return text
 
-
-def readfile(txt, db, batchid, commit):
-    texts = split(txt)
-    errors = u''
-    errorCount = 0
-    i = 0
-    if istitlepage(texts[0]): del texts[0]
-    for text in texts:
-        if not text.strip(): continue
-        try:
-            parseArticle(text, db, batchid, commit)
-            i += 1
-        except Exception, e:
-            print `text`
-            #raise
-            import traceback, sys
-            tb = sys.exc_info()[2]
-            tb = " / ".join(traceback.format_tb(tb, 3))
-            
-            tb = toolkit.smart_str(tb, encoding='latin-1', errors='replace')
-            e = toolkit.smart_str(e, encoding='latin-1', errors='replace')
-            errmsg = "%s at %s" % (e, tb)
-            errmsg = toolkit.smart_str(errmsg, encoding='latin-1', errors='replace')
-            
-            errors += '\n%s\n' % errmsg
-            errorCount += 1
-    if commit:
-        db.conn.commit()
-    return i, errors, errorCount
-
-def readfiles(db, projectid, batchname, files, verbose=False, commit=True, fixedquery=None):
-    batches = []
-    query, batchid = None, -1
-    articleCount = 0
-    errors = u''
-    errorCount = 0
-    for file in files:
-        if verbose: print "Reading file.. %s" % file
-        if type(file) in (str, unicode):
-            txt = file
-        else:
-            txt = file.read().strip()
-        if type(txt) == str:
-            txt = txt.decode('windows-1252') # ik gok dat dat hun encoding is
-            txt = txt.replace(u'\r\n', u'\n')
-            txt = txt.replace(u'\xa0', u' ') # nbsp --> normal space
-        
-        #toolkit.stripAccents(file.read()).strip().replace('\r\n', '\n')
-        if fixedquery:
-            q = fixedquery
-        else:
-            q = extractQuery(txt)
-        if not q: raise Exception('Could not extract lexisnexis query from file %s!' % file.name)
-            # errors += 'Could not extract lexisnexis query from file %s!!\n'
-            # errorCount += 1
-            # continue
-        if q <> query:
-            query = q
-            if verbose:
-                print "Creating new batch..."
-                print "Query:", `q`
-            if commit:
-                batchid = db.newBatch(projectid, batchname, query, verbose=1)
-            batches.append(batchid)
-        articleCountFile, errorsFile, fileErrorCount = readfile(txt, db, batchid, commit)
-        articleCount += articleCountFile
-        errors += errorsFile
-        errorCount += fileErrorCount
-
-    return articleCount, batches, errors, errorCount
-
-    
 if __name__ == '__main__':
     import dbtoolkit, sys
     projectid = int(sys.argv[1])

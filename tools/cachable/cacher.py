@@ -23,6 +23,8 @@ from amcat.db import dbtoolkit
 from amcat.tools import toolkit
 import collections
 
+from amcat.tools.logging import amcatlogging
+#amcatlogging.debugModule()
 
 def sqlWhere(fields, ids):
     if type(fields) in (str, unicode):
@@ -52,34 +54,12 @@ class Cacher(object):
     in as few SQL calls as possible
     """
     def __init__(self):
-        self.dbfields = collections.defaultdict(set) # table : fields
-        self.dbfkfields = set() # (table, reffield, fields)
+        self.fields = set() # (table, reffield, fields)
         
-    def getData(self, cachables):
-        self.data = {} # {table, id} : {field : value}
-        if type(cachables) not in (list, set):
-            cachables = list(cachables)
-        if not cachables: return
-        prototype = cachables[0]
-        db = prototype.db
-        if not cachables: return
-        for table, fields in self.dbfields.items():
-            fields = list(fields)
-            for batch in toolkit.splitlist(cachables, 5000):
-                idcol = prototype.__idcolumn__
-                if type(idcol) in (str, unicode): idcol = [idcol]
-                selectfields = prototype.__idcolumn__
-                if type(selectfields) not in (list, tuple): selectfields = [selectfields]
-                selectfields += fields
-                SQL = "SELECT %s %s" % (", ".join(db.escapeFieldName(f) for f in (selectfields)), sqlFrom(batch, table=table))
-                
-                for row in db.doQuery(SQL):
-                    id, values = row[:len(idcol)], row[len(idcol):]
-                    self.data[table, id] = dict(zip(fields, values))
-
-        self.fkdata = collections.defaultdict(lambda  : collections.defaultdict(list)) # {table, reffield, fields, orderby} : {id : values}
-
-        for table, reffield, fields, orderby in self.dbfkfields:
+    def getData(self, db, cachables):
+        self.data = collections.defaultdict(lambda  : collections.defaultdict(list)) # {table, reffield, fields, orderby} : {id : values}
+        log.debug("Fields: %s" % self.fields)
+        for table, reffield, fields, orderby in self.fields:
             select = reffield + fields
             for batch in toolkit.splitlist(cachables, 5000):
                 SQL = "SELECT %s %s " % (",".join(map(db.escapeFieldName, select)), sqlFrom(batch, table, reffield))
@@ -87,31 +67,21 @@ class Cacher(object):
                 if orderby: SQL += " ORDER BY %s" % orderby
                 for row in cachables[0].db.doQuery(SQL):
                     id, values = row[:len(reffield)], row[len(reffield):]
-                    self.fkdata[table, reffield,fields,orderby][id].append(values)
-        log.debug("FK Data = %r" % self.fkdata)
+                    self.data[table, reffield,fields,orderby][id].append(values)
+        log.debug("Cached Data = %r" % self.data)
             
-    def addDBField(self, field, table=None):
-        self.dbfields[table].add(field)
-        
-    def getDBData(self, cachable, field, table=None):
-        id = cachable.id
-        if type(id) <> tuple: id = (id,)
-        row = self.data.get((table, id))
-        if row:
-            if field not in row: print table, row
-            return row[field]
-
-    def addFKField(self, fields, table,  reffield, orderby):
+    def addField(self, fields, table,  reffield, orderby):
         fields, reffield = map(_getTuple, (fields, reffield))
-        log.debug("Adding FKField %r" % locals())
-        self.dbfkfields.add((table, reffield, fields, orderby))
-    def getFKData(self, fields, table, cachable, reffield, orderby):
+        log.debug("Adding field %s from %s (ref=%s)" % (fields, table, reffield))
+        self.fields.add((table, reffield, fields, orderby))
+    addFKField = addField # backwards compatability, TODO refactor
+    def getFieldData(self, fields, table, cachable, reffield, orderby):
         fields, reffield = map(_getTuple, (fields, reffield))
         id = cachable.id
         if type(id) not in (list, tuple): id = (id,)
         #log.debug("Getting FKData table=%(table)s, reffield=%(reffield)s, fields=%(fields)s, orderby=%(orderby)s, " % locals())
-        return self.fkdata[table, reffield, fields, orderby].get(id, [])
-
+        return self.data[table, reffield, fields, orderby].get(id, [])
+    getFKData = getFieldData # backwards compatability, TODO refactor
 
 def _getTuple(cols):
     if type(cols) in (str, unicode):
@@ -125,20 +95,26 @@ def cacheMultiple(cachables, *propnames):
     """
     Cache the given propnames for the given cachables. If possible,
     uses a single SQL statement to cache for all objects.
+
+    @param cachables: a sequence of cachables to cache. MUST all be of the same class
+    @param propnames: the names of properties to cache on these cachables
     """
-    if len(propnames)==1 and toolkit.isSequence(propnames[0], excludeStrings=True): propnames = propnames[0]
-    if type(cachables) not in (list, tuple):
-        if toolkit.isIterable(cachables, excludeStrings=True): cachables = list(cachables)
-        else: cachables = [cachables]
+    if not cachables: return
+    cachables = toolkit.getseq(cachables, convertscalar=True)
+    classes = set(cachable.__class__ for cachable in cachables)
+    if len(classes) != 1: raise Exception("cacheMultiple should receive only cachables of the same class! %r" % (classes))
+    klass = toolkit.head(classes)
+    
     cacher = Cacher()
-    for cachable in cachables:
-        for propname in propnames:
-            prop = cachable._getProperty(propname)
-            if not prop: raise Exception("Cachable %r has not property %s" % (cachable, propname))
-            prop.prepareCache(cacher)
+    log.debug("cacheMultiple klass=%r, props=%r" % (klass, propnames))
+    for propname in propnames:
+        log.debug("Getting property %r" % propname)
+        prop = klass._getProperty(propname)
+        if not prop: raise Exception("Cachable %r has not property %s" % (cachable, propname))
+        prop.prepareCache(cacher)
 
     #toolkit.ticker.warn("Getting data")
-    cacher.getData(cachables)
+    cacher.getData(toolkit.head(cachables).db, cachables)
     #toolkit.ticker.warn("CAching values")
     for cachable in cachables:
         for prop in propnames:
@@ -163,7 +139,7 @@ def cache(cachables, *properties, **structure):
     for prop in properties: structure[prop] = None
     if not toolkit.isIterable(cachables, excludeStrings=True): cachables = [cachables]
     # cache first layer
-    cacheMultiple(cachables, structure.keys())
+    cacheMultiple(cachables, *structure.keys())
     # recurse into next layer
     for prop, struct in structure.iteritems():
         if struct:

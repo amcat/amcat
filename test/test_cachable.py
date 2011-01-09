@@ -24,7 +24,7 @@ class TestUser(Cachable):
     __idcolumn__ = 'userid'
     __labelprop__ = 'username'
     username, email, fullname, active = DBProperties(4)
-    language = DBProperty(lambda : TestLanguage, getcolumn="languageid")
+    language = DBProperty(lambda:TestLanguage, getcolumn="languageid")
     roles = ForeignKey(TestRole, table="users_roles")
 
 
@@ -69,6 +69,20 @@ class TestCachable(amcattest.AmcatTestCase):
         TestChild.__table__ = tc
         Test3.__table__ = t3
 
+    def testCreate(self):
+        "test using object as property to create"
+        t = Test.create(self.db, strval="bla")
+        t2 = TestChild.create(self.db, test=t)
+        self.assertEqual(t, t2.test)
+        t2 = TestChild.create(self.db, test=t.id)
+        self.assertEqual(t, t2.test)
+
+
+    def testGet(self):
+        t2 = Test2.create(self.db, (1,2), strval="test1")
+        
+        
+        
     def testCacheMultiple(self):
         obj = project.Project(self.db, 282)
         props = ["name", "insertUser"]
@@ -123,14 +137,6 @@ class TestCachable(amcattest.AmcatTestCase):
             self.assertEqual(t, t2)
 
         
-    def testCreate(self):
-        "test using object as property to create"
-        t = Test.create(self.db, strval="bla")
-        t2 = TestChild.create(self.db, test=t)
-        self.assertEqual(t, t2.test)
-        t2 = TestChild.create(self.db, test=t.id)
-        self.assertEqual(t, t2.test)
-        
 
     def testAdd(self):
         #import amcatlogging; amcatlogging.debugModule("dbtoolkit","amcatmemcache")
@@ -154,7 +160,7 @@ class TestCachable(amcattest.AmcatTestCase):
                         
         
 
-    def testGetReget(self):
+    def xtestGetReget(self):
         # getting a property, its cached value, and setting it and regetting it
         # shoule always give the same result
         from amcat.model import project

@@ -1,4 +1,4 @@
-from __future__ import unicode_literals, print_function, absolute_import
+from __future__ import print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -35,8 +35,9 @@ from . import config
 from amcat.tools.table import table3
 from amcat.tools.idlabel import IDLabel
 
-#import amcatlogging; amcatlogging.infoModule()
-#import amcatlogging; amcatlogging.debugModule()
+from amcat.tools.logging import amcatlogging
+#amcatlogging.infoModule()
+#amcatlogging.debugModule()
 
 _encoding = {
     0 : 'utf-8',
@@ -46,6 +47,27 @@ _encoding = {
 }
 
 _MAXTEXTCHARS = 8000
+
+_XTYPES = {
+        35 : str,
+        167 : str,
+        175 : str,
+        48 : int,
+        52 : int,
+        56 : int,
+        62 : float,
+        58 : datetime.datetime,
+        61 : datetime.datetime,
+        104 : bool,
+        }
+    
+_UTYPES = {
+        'text' : unicode,
+        'timestamp' : datetime.datetime,
+        'bool' : bool,
+        'int4' : int,
+        }
+
 
 class SQLException(Exception):
     def __init__(self, sql=None, exception=None):
@@ -288,7 +310,7 @@ class AmcatDB(object):
         where = self.whereSQL(where)
         where = "" if where is None else " WHERE %s" % where 
         if not toolkit.isIterable(columns, excludeStrings=True): columns = (columns,)
-        print(columns)
+        #print(columns)
         columns = ",".join(map(self.escapeFieldName, columns))
         distinctstr = " DISTINCT " if distinct else ""
         table = self.escapeFieldName(table)
@@ -426,6 +448,9 @@ class AmcatDB(object):
                     return
 
             valuesString = ", ".join([quotesql(value) for value in values])
+            #TODO: convert fieldsstring into bytes (str), try to get rid of this
+            if type(fieldsString) == unicode: fieldsString = fieldsString.encode("ascii")
+            if type(SQL) == unicode: SQL = SQL.encode("ascii")
             SQL += " (%s) VALUES (%s)" % (fieldsString, valuesString)
         else:
             SQL += " DEFAULT VALUES"
@@ -604,38 +629,20 @@ class AmcatDB(object):
     def isnull(self):
         return "ifnull" if self.mysql else "isnull"
 
-    _XTYPES = {
-        35 : str,
-        167 : str,
-        175 : str,
-        48 : int,
-        52 : int,
-        56 : int,
-        62 : float,
-        58 : datetime.datetime,
-        61 : datetime.datetime,
-        104 : bool,
-        }
-    _UTYPES = {
-        'text' : unicode,
-        'timestamp' : datetime.datetime,
-        'bool' : bool,
-        'int4' : int,
-        }
         
     def getColumnType(self, table, column):
         if self.dbType == "psycopg2":
             SQL = """select udt_name from information_schema.columns where table_name = %s and lower(column_name) = lower(%s)
                   """ % (quotesql(table), quotesql(column))
             utype = self.getValue(SQL)
-            return amcatDB._UTYPES[utype]
+            return _UTYPES[utype]
         else:
             SQL = """select c.xtype from syscolumns c 
               inner join sysobjects o on c.id = o.id
               where o.name = %s and c.name=%s""" % (
                 quotesql(table), quotesql(column))
             xtype = self.getValue(SQL)
-            return amcatDB._XTYPES[xtype]
+            return _XTYPES[xtype]
 
     def getTableColumns(self, table):
         """ do a funky query to obtain column names and xtypes """
@@ -821,6 +828,7 @@ def checklatin1(txt, verbose=False):
 
 
 def encodeText(text):
+    txt = text.replace('\r\n', '\n')
     if type(text) <> unicode:
         text = text.decode('latin-1')
     try:
@@ -878,14 +886,14 @@ class ProfilingAfterQueryListener(object):
             for col in data.getColumns():
                 if col == sort or col.id == sort or col.label.lower() == sort:
                     data = table3.SortedTable(data, (col, False))
-        import tableoutput
+        from amcat.tools.table import tableoutput
         if htmlgenerator:
             if htmlgenerator is True: htmlgenerator = tableoutput.HTMLGenerator()
             htmlgenerator.generate(data, stream)
         else:
             result = tableoutput.table2unicode(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
             if type(result) == unicode: result = result.encode(encoding)
-            print >>stream, result
+            print(result, file=stream)
         if clear:         self.queries = collections.defaultdict(list)
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])

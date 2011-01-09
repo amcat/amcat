@@ -21,17 +21,18 @@ from __future__ import unicode_literals, print_function, absolute_import
 import logging; log = logging.getLogger(__name__)
 
 class LB(object):
-    def __init__(self, classname, modulename=None, package="amcat.model"):
+    def __init__(self, classname, modulename=None, package="amcat.model", sub=None):
         self.classname = classname
         if modulename is None: modulename = classname.lower()
         self.modulename = modulename
         self.package = package
+        self.subpackage = sub
         self.classobject = None
     def __call__(self):
         if self.classobject is None:
             log.debug("Finding class %s.%s.%s" % (self.package, self.modulename, self.classname))
-
-            module = __import__("%s.%s" % (self.package, self.modulename), fromlist=[self.classname])
+            package = ".".join([self.package, self.subpackage]) if self.subpackage else self.package
+            module = __import__("%s.%s" % (package, self.modulename), fromlist=[self.classname])
             self.classobject = getattr(module, self.classname)
             log.debug("Got class %s from module %s" % (self.classobject, module))
         return self.classobject
