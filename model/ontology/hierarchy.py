@@ -5,7 +5,7 @@ from amcat.model.ontology.object import Object
 from amcat.tools import idlabel, toolkit
 
 from amcat.tools.logging import amcatlogging
-amcatlogging.debugModule()
+amcatlogging.infoModule()
 
 class Hierarchy(object):
     """
@@ -97,12 +97,11 @@ class Hierarchy(object):
     
     def getPath(self, object, date=None):
         reverse = False
-        yield self.getObject(object),  reverse
-        while True:
+        object = self.getObject(object)
+        while object:
+            yield object, reverse
             reverse ^= self.isReversed(object) #XOR
             object = self.getParent(object)
-            if object is None: break
-            yield object, reverse
                 
     def categorise(self, object, date=None, depth=3, returnObject=True, returnReverse=False):
         # get categorisation path
@@ -127,51 +126,54 @@ class DictHierarchy(Hierarchy):
         """Create object/parent dicts. Subclass should cache objects and .parent"""
         if hasattr(self, "objectdict"): return
         log.debug("Caching hierarchy for %r/%r" % (id(self), self))
-        self.objectdict, self.parentdict, self.childrendict  = {}, {}, {}
+        self.objectset = set() # set of boundobjects that are 'in' this hierarchy
+        self.objectdict = {} # objectid -> boundobject for all requested objects
+        self.parentdict = {} # boundobject child -> boundobject parent for non-roots
+        self.childrendict = {} # boundobject parent -> set(children) for non-leaves
+        self.reverseset = set() # set of boundobjects that are 'reversed' wrt their parents
         
         try: allobjects = self._getAllObjects()
         except NotImplementedError: allobjects = None
 
-        log.debug("allobjects? %r" % bool(allobjects))
+        log.info("Caching %r, allobjects? %r" % (self, bool(allobjects)))
         
         if allobjects:
             # create dicts from allobjects
-            def getObject(o):
-                if type(o) == int:
-                    if o not in self.objectdict:
-                        self.objectdict[o] = super(DictHierarchy, self).getObject(o)
-                    o = self.objectdict[o]
-                return o
-            
-            for obj, parent in allobjects:
-                obj, parent = map(getObject, (obj, parent))
+            for obj, parent, reversed in allobjects:
+                obj, parent = map(self.getObject, (obj, parent))
+                self.objectset.add(obj)
+                if reversed: self.reverseset.add(obj)
                 if parent:
                     self.parentdict[obj] = parent
                     if parent not in self.childrendict: self.childrendict[parent] = set()
                     self.childrendict[parent].add(obj)
+            log.info("Cached  %r, contains %r items" % (self, len(self.objectset)))
         else:
             # create objectdict using _getObjects
             for obj in self._getObjects():
-                obj = super(DictHierarchy, self).getObject(obj)
-                self.objectdict[obj.id] = obj
-                self.childrendict[obj] = set()
-            # can now use self.getObject(s) as objectdict is filled
-            for obj in self.getObjects():
+                obj = self.getObject(obj)
+                self.objectset.add(obj)
+                if self._isReversed(obj): self.reverseset.add(obj)
                 parent = self.getObject(self._getParent(obj))
                 if parent:
                     self.parentdict[obj] = parent
-                    self.childrendict[parent].add(obj)
+                    try:
+                        self.childrendict[parent].add(obj)
+                    except KeyError:
+                        self.childrendict[parent] = set([obj])
         log.debug("Done with %r.cacheHiearchy" % self)
             
     def getObject(self, object_or_id):
         if object_or_id is None: return
         if not hasattr(self, "objectdict"):self.cacheHierarchy()
         if type(object_or_id) <> int: object_or_id = object_or_id.id
-        return self.objectdict.get(object_or_id)
+        if object_or_id not in self.objectdict:
+            self.objectdict[object_or_id] = super(DictHierarchy, self).getObject(object_or_id)
+        return self.objectdict[object_or_id]
     
     def getObjects(self):
         if not hasattr(self, "objectdict"):self.cacheHierarchy()
-        return self.childrendict # will iterate over keys, so as good as a set?
+        return self.objectset
 
     def getChildren(self, object):
         if not hasattr(self, "objectdict"):self.cacheHierarchy()
@@ -181,9 +183,14 @@ class DictHierarchy(Hierarchy):
         if not hasattr(self, "objectdict"):self.cacheHierarchy()
         return self.parentdict.get(self.getObject(object))
 
+    def isReversed(self, object):
+        if not hasattr(self, "objectdict"):self.cacheHierarchy()
+        return self.getObject(object) in self.reverseset
+        
+    
     def _getAllObjects(self):
         """Hook to provide objects and parents to the caching mechanism
-        @return: sequence of (objectid, parentid) pairs, with parentid None to
+        @return: sequence of (objectid, parentid, reversed) triples, with parentid None to
                   indicate roots
         """
         raise NotImplementedError()

@@ -76,8 +76,9 @@ class Tree(Cachable, DictHierarchy):
         return self.reverse.get(boundobject.objekt)
 
     def _getAllObjects(self):
+        reverse = self.reverse
         for obj, parent in self.objects.iteritems():
-            yield obj.id, parent and parent.id
+            yield obj.id, parent and parent.id, reverse.get(obj)
     
     def cacheHierarchy(self):
         cacher.cache(self, "objects")

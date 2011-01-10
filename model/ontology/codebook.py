@@ -25,22 +25,13 @@ class Codebook(Cachable, DictHierarchy):
     def __init__(self, db, id, **cache):
         Cachable.__init__(self, db, id, **cache)
         DictHierarchy.__init__(self, db)
-    def _getParent(self, o):
-        for t in self.trees:
-            if o in t:
-                return t.getParent(o)
-    def _getObjects(self):
-        return self.objects
-                    
-    def cacheHierarchy(self):
-        log.debug("Caching %r" % self)
-        cacher.cache(self, "objects", "trees")
-        for t in self.trees:
-            #log.debug("Caching %r" % t)
-            t.cacheHierarchy()
-#TODO!        if set((DUMMY_CLASSID_PARTYMEMBER, DUMMY_CLASSID_OFFICE)) & set(c.id for c in self.trees):
-        log.debug("Caching %r.super" % self)
-        super(Codebook, self).cacheHierarchy()
-        log.debug("Done caching %r" % self)
 
+    def _getAllObjects(self):
+        seen = set()
+        for t in self.trees:
+            for obj, parent, reversed in t._getAllObjects():
+                if obj not in seen:
+                    yield obj, parent, reversed
+                    seen.add(obj)
+        
 from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()

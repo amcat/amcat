@@ -75,9 +75,9 @@ class Object(Cachable):
         
         if not hasattr(lan, 'id'):
             lan = Language(self.db, lan)
-
+        
         if self.labels.has_key(lan): return self.labels[lan]
-
+        return self.label
 
     def _getTree(self, treeid):
         for t in self.trees:

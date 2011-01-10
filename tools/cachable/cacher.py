@@ -100,7 +100,7 @@ def cacheMultiple(cachables, *propnames):
     @param propnames: the names of properties to cache on these cachables
     """
     if not cachables: return
-    cachables = toolkit.getseq(cachables, convertscalar=True)
+    cachables = toolkit.getseq(cachables, seqtypes=list, convertscalar=True)
     classes = set(cachable.__class__ for cachable in cachables)
     if len(classes) != 1: raise Exception("cacheMultiple should receive only cachables of the same class! %r" % (classes))
     klass = toolkit.head(classes)

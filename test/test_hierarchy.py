@@ -33,7 +33,8 @@ class DummyDictHierarchy(hierarchy.DictHierarchy):
 
 class DummyDictHierarchy2(hierarchy.DictHierarchy):
     def _getAllObjects(self):
-        return DUMMY_PARENTS.items()
+        for o, p in DUMMY_PARENTS.items():
+            yield o, p, o in DUMMY_REVERSE
     
 class HierarchyTest(amcattest.AmcatTestCase):
     def xtestPrint(self):
@@ -57,7 +58,7 @@ class HierarchyTest(amcattest.AmcatTestCase):
                 self.assertEqual(omklaps, h.categorise(oid, depth=len(objs), returnObject=False, returnReverse=True))                
                 objs.pop(), omklaps.pop()
 
-class Stop:
+
     def testGetObjectIdentity(self):
         "Test h.getObject(x) is x (identity) iff x.hierarchy=h"
         for cls in [hierarchy.Hierarchy, DummyDictHierarchy,DummyDictHierarchy2]:

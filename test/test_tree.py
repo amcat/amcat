@@ -20,7 +20,7 @@ class TestTree(amcattest.AmcatTestCase):
             t = Tree(self.db, tree)
             self.assertEqual(t.getParent(oid), t.getObject(parent))
             self.assertEqual(t.getObject(oid).parent, t.getObject(parent))
-            self.assertEqual(t.isReversed(oid), reverse)
+            self.assertEqual(t.isReversed(oid), reverse, "%r.%r reverse is %s should be %s" % (t, oid, t.isReversed(oid), reverse))
 
 
 if __name__ == '__main__':

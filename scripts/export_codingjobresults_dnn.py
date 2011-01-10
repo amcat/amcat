@@ -9,35 +9,44 @@ from amcat.model.ontology.object import Object
 from amcat.model.ontology.tree import Tree
 from amcat.model.coding.codingjob import getValue
 
-#import amcatlogging; amcatlogging.debugModule()
+from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 def getTable(jobs, *args, **kargs):
     return DNNExportScript(*args, **kargs).getTable(jobs)
 
 CATEGORIES = {"cat":2,"root":1,"class":0}
 
+CODEBOOK_CACHE = {}
+
+def getCodebook(codebook):
+    if codebook.id not in CODEBOOK_CACHE:
+	CODEBOOK_CACHE[codebook.id] = codebook
+    return CODEBOOK_CACHE[codebook.id]
+
 class DNNFieldColumn(FieldColumn):
     def __init__(self, field, article, ontoption=None):
+	log.debug("Created DNNFIeldColumn for %s / %s" % (field, ontoption))
+		
         FieldColumn.__init__(self, field, article)
         self.ontoption = ontoption
         self.label = field.fieldname
         if self.ontoption:
             self.label += self.ontoption
             self.fieldname += ontoption
-        #log.debug("Created DNNFIeldColumn for %s / %s" % (field, ontoption))
+        self.codebook = getCodebook(self.field.serializer.codebook)
     def getCell(self, row):
         val = super(DNNFieldColumn, self).getCell(row)
         if val is None: return ""
         if not issubclass(self.field.getTargetType(), Object):
             return val
-        val = self.field.serializer.codebook.getBoundObject(val)
+        val = self.codebook.getObject(val)
         if self.ontoption in CATEGORIES:
-            val = self.field.serializer.codebook.categorise(val, date=row.art.date, depth=[CATEGORIES[self.ontoption]])[0]
+            val = self.codebook.categorise(val, date=row.art.date, depth=CATEGORIES[self.ontoption])[-1]
         elif self.ontoption == "dim":
-            val = self.field.serializer.codebook.categorise(val, date=row.art.date, depth=[1])[0]
+            val = self.codebook.categorise(val, date=row.art.date, depth=[1])[0]
             if val:
                 val = val.objekt.parents.get(Tree(val.objekt.db, 5001))
-        return val
+        return val.objekt
 
 class AggrQualColumn(FieldColumn):
     def __init__(self, field, article, ontoption='cat'):
@@ -51,21 +60,24 @@ class AggrQualColumn(FieldColumn):
         if val is None: return
         for fieldname in ("subject", "object"):
             field = self.field.schema.getField(fieldname)
+	    codebook = getCodebook(field.serializer.codebook)
             obj = getValue(self.getUnit(row), field)
-            omklap = field.serializer.codebook.categorise(obj, date=row.art.date, depth=[CATEGORIES[self.ontoption]], returnOmklap=True, returnObjects=False)
+            omklap = codebook.categorise(obj, date=row.art.date, depth=CATEGORIES[self.ontoption],
+					 returnReverse=True, returnObject=False)[-1]
             log.debug("omklap for %s %s %s = %s" % (self.ontoption, fieldname, obj, omklap))
             
-            val *= omklap
+	    if omklap: val *= -1
         return val
         
 CODER_HIERARCHY = {206:280}
 class DNNExportScript(ExportScript):
     def getColumn(self, field, article):
         if issubclass(field.getTargetType(), Object):
-            for option in [None, "cat", "root", "class", "dim"]:
+            #for option in [None, "cat", "root", "class", "dim"]:
+	    for option in [None, "cat", "root"]:
                 yield DNNFieldColumn(field, article, option)
         else:
-            yield DNNFieldColumn(field, article)
+            yield FieldColumn(field, article)
         if field.fieldname == 'quality':
             #yield AggrQualColumn(field, article)#, ontoption=option)
             for option in ["cat"]:
