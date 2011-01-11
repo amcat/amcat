@@ -752,18 +752,18 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
 ##                     Date(time) functions                              ##
 ###########################################################################
 
-MONTHNAMES = (('jan', 'janv', 'ener'),
+MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio'),
               ('feb', 'fevr', 'feve'),
               ('mar', 'mrt', 'maa', 'mar', 'mai'),
               ('apr', 'avri', 'abri'),
-              ('may', 'mai', 'mei', 'mayo'),
-              ('jun', 'juin',),
-              ('jul', 'juil'),
+              ('may', 'mai', 'mei', 'mayo', 'maggio'),
+              ('jun', 'juin','giugno'),
+              ('jul', 'juil', 'luglio'),
               ('aug', 'aout', 'agos'),
-              ('sep', 'setem'),
-              ('oct', 'okt', 'out'),
+              ('sep', 'setem', 'settembre'),
+              ('oct', 'okt', 'out', 'ottobre'),
               ('nov'),
-              ('dec', 'dez', 'dici'))
+              ('dec', 'dez', 'dici', 'dicembre'))
 """Tuple of 12 tuples containing month name (prefixes)""" 
 
 class _DateFormat(object):
