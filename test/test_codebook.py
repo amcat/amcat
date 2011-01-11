@@ -3,16 +3,16 @@ from amcat.model.ontology import codebook, ontologytoolkit
 from amcat.db import dbtoolkit
 
 from contextlib import contextmanager
-
+from datetime import datetime
 import logging; log = logging.getLogger(__name__)
 
 TEST_CODEBOOKS = {
-    -99 : ("TEST", [4000, 5000]),
-    -98 : ("TEST", [5000, 4000]),
+    -99 : ("TEST", [4000, 5000, 1, 2]),
+    -98 : ("TEST", [5000, 4000, 2, 1]),
     }
 
 TEST_PARENTS = {
-    -99: {726 : 765},
+    -99: {726 : 765, 1725: None },
     -98: {726 : 10433},
     }
 
@@ -26,8 +26,13 @@ TEST_CATEGORISATION = {
            2083 : (10371, False),
            1034 : (10371, False),
            1721 : (10371, False),
-           }
-     }
+	   1725 : (13898, False), # rutte = partijlid (1 voor 2)
+	   (1725, datetime(2010,1,1)) : (13898, False), # rutte = nog steeds partijlid (-99 doet immers partij...)
+           },
+    -98 : {1725 : (18600, False), # rutte = min az (2 voor 1)
+	   (1725, datetime(2010,1,1)) : (13897, False), # rutte = kamerlid (begin 2010 - 2 voor 1)
+	   },
+    }
 
 class CodebookTest(amcattest.AmcatTestCase):
     
@@ -39,7 +44,6 @@ class CodebookTest(amcattest.AmcatTestCase):
     def createTestCodebook(self):
         try:
             self.db = dbtoolkit.amcatDB()
-            
             for cid, (name, trees) in TEST_CODEBOOKS.items():
                 self.db.insert("o_sets", dict(setid=cid, name=name), retrieveIdent=False)
                 for i, tree in enumerate(trees):
@@ -54,19 +58,14 @@ class CodebookTest(amcattest.AmcatTestCase):
             for cid, catdict in TEST_CATEGORISATION.items():
                 c = codebook.Codebook(self.db, cid)
                 for oid, (root, rev) in catdict.items():
-                    root2, rev2 = c.categorise(oid, returnReverse=True)[0]
+		    if type(oid) == tuple:
+			oid, date = oid
+		    else:
+			oid, date = oid, None
+		    
+                    root2, rev2 = c.categorise(oid, date, returnReverse=True)[0]
                     self.assertEqual(root2.id, root)
                     self.assertEqual(rev2, rev)
-class Stop:
-    def testReversed(self):
-        "Test whether reversed matches expected values"
-        with self.createTestCodebook():
-            for cid, reverseddict in TEST_REVERSED.items():
-                c = codebook.Codebook(self.db, cid)
-                for oid, reversed in reverseddict.items():
-                    self.assertEqual(c.isReversed(oid), reversed, msg="%r.%r.reversed? should be %r but is %r" % (c, oid, reversed, c.isReversed(oid)))
-               
-
 
     def testParents(self):
         "Test whether .trees and .objects corresponds to test codebook"
@@ -77,6 +76,17 @@ class Stop:
                 for o, parent in objects.items():
                     log.info("%r.%s.parent is %r, should be %r" % (c, o, c.getParent(o), c.getObject(parent)))
                     self.assertEqual(c.getParent(o), c.getObject(parent))
+
+class Stop:    
+    def testReversed(self):
+        "Test whether reversed matches expected values"
+        with self.createTestCodebook():
+            for cid, reverseddict in TEST_REVERSED.items():
+                c = codebook.Codebook(self.db, cid)
+                for oid, reversed in reverseddict.items():
+                    self.assertEqual(c.isReversed(oid), reversed, msg="%r.%r.reversed? should be %r but is %r" % (c, oid, reversed, c.isReversed(oid)))
+               
+
 
     def testTrees(self):
         "Test whether .trees and .objects corresponds to test codebook"

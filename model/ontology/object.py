@@ -32,13 +32,14 @@ from amcat.model.language import Language
 from datetime import datetime
 
 import logging; log = logging.getLogger(__name__)
+#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 class Function(Cachable):
     __table__ = "objects_functions"
     __idcolumn__ = ("objectid", "functionid", "office_objectid", "fromdate")
     
     functionid, todate, fromdate = DBProperties(3)
-    office = DBProperty(lambda : Object, refcolumn="office_objectid")
+    office = DBProperty(lambda : Object, getcolumn="office_objectid")
     
 class Label(Cachable):
     __table__ = 'labels'
@@ -100,13 +101,20 @@ class Object(Cachable):
         
     def currentFunctions(self, date=None):
         if not date: date = datetime.now()
+	date = toolkit.toDate(date)
         for f in self.functions:
-            fd = f.fromdate
-            td = f.todate or datetime.now()
+	    #log.debug("Considering function %r for %s" % (f, self))
+	    #TODO can someone explain the logic of the .days manipulation instead
+	    #     of simple (fromdate < date) and ((todate is None) or (todate > date)
+	    #     i.e. add a comment here that does the explaining :-)
+            fd = toolkit.toDate(f.fromdate)
+            td = toolkit.toDate(f.todate) if f.todate else datetime.now()
 
             tdf = (date - fd).days
             tdt = (td - date).days
 
+	    #log.debug("date=%r, fd=%r, td=%r, tdf=%s, tdt=%s, date-fd=%s" % (date, fd, td, tdf, tdt, date-fd))
+	    
             if tdf >= 0 and tdt >= 0: yield f
 
     def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):

@@ -1,9 +1,10 @@
 from amcat.test import amcattest
 from amcat.model.coding import codingjob
+from amcat.tools.cachable import cacher
 
 class TestCodingJob(amcattest.AmcatTestCase):
 
-    def xtestObjects(self):
+    def testObjects(self):
         # check whether we can create objects without errors
         for cjid in [5175]:
             cj = codingjob.Codingjob(self.db, cjid)
@@ -16,17 +17,17 @@ class TestCodingJob(amcattest.AmcatTestCase):
             for cjset in cj.sets:
                 arts = list(cjset.articles)
         
-    def xtestCache(self):
+    def testCache(self):
         c = codingjob.Codingjob(self.db, 5175)
-        cachable2.cache(c, **{'sets': {'articles' : {'article' : {'source' : ["name"]}}}})
+        cacher.cache(c, **{'sets': {'articles' : {'article' : {'source' : ["name"]}}}})
 
-    def xtestGetSentences(self):
+    def testGetSentences(self):
         #test an article with net codings
         cjaid = 16284
         ca = codingjob.CodedArticle(self.db, cjaid)
         s = list(ca.sentences)[0]
         
-    def xtestCodedArticle(self):
+    def testCodedArticle(self):
         # test an article with agenda codings
         cjaid = 1609147
         ca = codingjob.CodedArticle(self.db, cjaid)
@@ -39,7 +40,7 @@ class TestCodingJob(amcattest.AmcatTestCase):
         self.assertEqual(ca.topic.id, 10490)
         self.assertEqual(list(ca.sentences), [])
 
-    def xtestCodedSentence(self):
+    def testCodedSentence(self):
         #test an article with net codings
         cjaid = 16284
         arrowid = 30188
