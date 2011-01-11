@@ -51,7 +51,7 @@ from amcat.tools import idlabel
 from amcat.db import dbtoolkit
 from amcat.tools.cachable import amcatmemcache as store
 
-from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
+#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 #import amcatlogging; amcatlogging.infoModule()
 
 class Meta(type):
@@ -121,7 +121,8 @@ class Cachable(idlabel.IDLabel):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""
         if (not "__" in attr) and (attr != 'id'): # skip special attributes
             try:
-                #log.debug("Getting attribute %s, property?" % (attr)) 
+		#OK this is weird: if I comment the line below I get a segfault on exporting??
+                #log.debug("Getting attribute %s, property?" % (attr))
                 p =  self.__class__._getProperty(attr)
                 #log.debug("Got property %s -> %s, calling property.get()" % (attr, p)) 
             except (NotAPropertyError, AttributeError), e:

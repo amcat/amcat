@@ -98,12 +98,20 @@ class EchoWriter(object):
     def __init__(self, writer):
         self.writer = writer
     def write(self, bytes):
-        sys.stdout.write(bytes)
+        sys.stderr.write(bytes)
         self.writer.write(bytes)
         
 def table2sav(t, filename=None, monitor=progress.NullMonitor()):
     with monitor.monitored("Exporting to .SAV", 100):
         if filename is None: filename = toolkit.tempfilename(suffix=".sav",prefix="table-")
+
+	log.debug("Creating SPSS syntax")
+	#import StringIO
+	#writer = StringIO.StringIO()
+	#table2spss(t, writer=writer, saveas=filename, monitor=monitor.submonitor(80))
+	#sps = writer.getvalue()
+	#log.debug("Wrote syntax:\n%s\n" % (sps))
+	
         log.debug("Executing PSPP")
         pspp = toolkit.executepipe("pspp -p")
         writer = pspp.next()

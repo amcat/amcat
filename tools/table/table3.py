@@ -65,7 +65,8 @@ class Table(object):
         self.rows       = isnull(rows, [])
         self.cellfunc   = cellfunc            
     def getValue(self, row, column):
-        return self.cellfunc(row, column)
+        result =  self.cellfunc(row, column)
+	return result
     def getRows(self):
         return self.rows
     def getNamedRows(self):
@@ -96,10 +97,15 @@ class ObjectColumn(object):
         self.editable = editable
     def getCell(self, row):
         if self.cellfunc:
-            return self.cellfunc(row)
+            result = self.cellfunc(row)
+	    return result
         raise Exception("Not Implemented: ObjectColumn instance should provide cellfunc or override getCell")
     def __str__(self):
         return self.label
+
+def _ObjectTableCellFunc(row, col):
+    result = col.getCell(row)
+    return result
     
 class ObjectTable(Table):
     """
@@ -111,7 +117,7 @@ class ObjectTable(Table):
     def __init__(self, rows = None, columns = None):
         self.rows = rows or []
         self.columns = columns or []
-        self.cellfunc = lambda row, col : col.getCell(row)
+        self.cellfunc = _ObjectTableCellFunc
     def addColumn(self, col, label=None, **kargs):
         """Add column to Table3 object
         

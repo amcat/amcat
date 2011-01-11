@@ -9,7 +9,7 @@ from amcat.model.ontology.object import Object
 from amcat.model.ontology.tree import Tree
 from amcat.model.coding.codingjob import getValue
 
-from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
+#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 def getTable(jobs, *args, **kargs):
     return DNNExportScript(*args, **kargs).getTable(jobs)
@@ -17,11 +17,18 @@ def getTable(jobs, *args, **kargs):
 CATEGORIES = {"cat":2,"root":1,"class":0}
 
 CODEBOOK_CACHE = {}
+DIM_TREE = None
 
 def getCodebook(codebook):
     if codebook.id not in CODEBOOK_CACHE:
 	CODEBOOK_CACHE[codebook.id] = codebook
     return CODEBOOK_CACHE[codebook.id]
+
+def getDimTree(db):
+    global DIM_TREE
+    if DIM_TREE is None:
+	DIM_TREE = Tree(db, 5001)
+    return DIM_TREE
 
 class DNNFieldColumn(FieldColumn):
     def __init__(self, field, article, ontoption=None):
@@ -43,9 +50,10 @@ class DNNFieldColumn(FieldColumn):
         if self.ontoption in CATEGORIES:
             val = self.codebook.categorise(val, date=row.art.date, depth=CATEGORIES[self.ontoption])[-1]
         elif self.ontoption == "dim":
-            val = self.codebook.categorise(val, date=row.art.date, depth=[1])[0]
+            val = self.codebook.categorise(val, date=row.art.date, depth=2)[-1]
             if val:
-                val = val.objekt.parents.get(Tree(val.objekt.db, 5001))
+		val = getDimTree(val.objekt.db).getParent(val)
+		if val is None: return ""
         return val.objekt
 
 class AggrQualColumn(FieldColumn):
@@ -62,6 +70,7 @@ class AggrQualColumn(FieldColumn):
             field = self.field.schema.getField(fieldname)
 	    codebook = getCodebook(field.serializer.codebook)
             obj = getValue(self.getUnit(row), field)
+            if not obj: continue
             omklap = codebook.categorise(obj, date=row.art.date, depth=CATEGORIES[self.ontoption],
 					 returnReverse=True, returnObject=False)[-1]
             log.debug("omklap for %s %s %s = %s" % (self.ontoption, fieldname, obj, omklap))
@@ -74,7 +83,7 @@ class DNNExportScript(ExportScript):
     def getColumn(self, field, article):
         if issubclass(field.getTargetType(), Object):
             #for option in [None, "cat", "root", "class", "dim"]:
-	    for option in [None, "cat", "root"]:
+	    for option in [None, "cat", "root", "dim"]:
                 yield DNNFieldColumn(field, article, option)
         else:
             yield FieldColumn(field, article)

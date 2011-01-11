@@ -32,7 +32,7 @@ class ExportScript(externalscripts.ExternalScriptBase):
         
         with self.pm.monitored("Extracting data", 100):
             log.info("Starting export of data %r to format %s" % (jobidlist, exportformat))
-            db = dbtoolkit.amcatDB(username='app', password='eno=hoty', profile=True)
+            db = dbtoolkit.amcatDB(username='app', password='eno=hoty', driver="SQLServer")
             jobs = [codingjob.Codingjob(db, cjid) for cjid in toolkit.intlist(jobidlist)]
             self.requireSentence = requireSentence
             self.allowidlabel = False
@@ -41,7 +41,7 @@ class ExportScript(externalscripts.ExternalScriptBase):
             log.info("Table created, starting export")
             self.exportTable(t, exportformat, self.pm.submonitor(80, name="export"))
             self.pm.worked(5)
-        db.printProfile()
+	#db.printProfile()
 
     def exportTable(self, table, format, monitor):
         if format == 'spss':
@@ -146,19 +146,25 @@ class ExportScript(externalscripts.ExternalScriptBase):
         
         
     def getMetaColumns(self):
-            return [
-                table3.ObjectColumn("CodingJob", lambda row: row.ca.set.job, fieldtype=idlabel.IDLabel),
-                table3.ObjectColumn("Set", lambda row: row.ca.set.setnr, fieldtype=int),
-                table3.ObjectColumn("Coder", lambda row: row.ca.set.coder, fieldtype=idlabel.IDLabel),
-                table3.ObjectColumn("ArticleId", lambda row: row.art.id, fieldtype=int),
-                table3.ObjectColumn("Medium", lambda row: row.art.source, fieldtype=idlabel.IDLabel),
-                table3.ObjectColumn("Pagenr", lambda row: row.art.pagenr, fieldtype=int),
-                table3.ObjectColumn("Length", lambda row: row.art.length, fieldtype=int),
-                table3.ObjectColumn("Date", lambda row: row.art.date, fieldtype=datetime.datetime),
-                table3.ObjectColumn("Headline", lambda row: row.art.headline, fieldtype=str),
-                table3.ObjectColumn("CodingjobArticleid", lambda row: row.ca.id, fieldtype=int),
-                table3.ObjectColumn("Arrowid", lambda row: row.cs and row.cs.id, fieldtype=int),
-                ]
+	def getDate(row):
+	    d = row.art.date
+	    d2 = toolkit.toDate(d)
+	    return d
+	
+	return [
+	    table3.ObjectColumn("CodingJob", lambda row: row.ca.set.job, fieldtype=idlabel.IDLabel),
+	    table3.ObjectColumn("Set", lambda row: row.ca.set.setnr, fieldtype=int),
+	    table3.ObjectColumn("Coder", lambda row: row.ca.set.coder, fieldtype=idlabel.IDLabel),
+	    table3.ObjectColumn("ArticleId", lambda row: row.art.id, fieldtype=int),
+	    table3.ObjectColumn("Medium", lambda row: row.art.source, fieldtype=idlabel.IDLabel),
+	    table3.ObjectColumn("Pagenr", lambda row: row.art.pagenr, fieldtype=int),
+	    table3.ObjectColumn("Length", lambda row: row.art.length, fieldtype=int),
+	    #table3.ObjectColumn("Date", lambda row: row.art.date, fieldtype=datetime.datetime),
+	    table3.ObjectColumn("Date", getDate, fieldtype=datetime.datetime),
+	    table3.ObjectColumn("Headline", lambda row: row.art.headline, fieldtype=str),
+	    table3.ObjectColumn("CodingjobArticleid", lambda row: row.ca.id, fieldtype=int),
+	    table3.ObjectColumn("Arrowid", lambda row: row.cs and row.cs.id, fieldtype=int),
+	    ]
     
     def getSchemaFields(self, jobs, article):
         fields = []
