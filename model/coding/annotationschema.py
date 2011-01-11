@@ -231,7 +231,8 @@ class FieldColumn(ObjectColumn):
         return row.ca if self.article else row.cs
     def getCell(self, row):
         try:
-            val = getValue(self.getUnit(row), self.field)
+	    unit = self.getUnit(row)
+            val = getValue(unit, self.field)
             return val
         except AttributeError, e:
             log.debug("AttributeError on getting %s.%s: %s" % (row, self.field, e))
