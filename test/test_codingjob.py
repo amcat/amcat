@@ -26,23 +26,12 @@ class TestCodingJob(amcattest.AmcatTestCase):
             cj = codingjob.Codingjob(self.db, cjid)
             unitschema, artschema = cj.unitSchema, cj.articleSchema
             for schema in unitschema, artschema:
-                print schema.id
-                print schema.label
+                #print schema.id
+                #print schema.label
                 schema.table
-                list(schema.fields)            
+                #list(schema.fields)            
             for cjset in cj.sets:
                 arts = list(cjset.articles)
-        
-    def testGetSentences(self):
-        #test an article with net codings
-        cjaid = 16284
-        ca = codedarticle.CodedArticle(self.db, cjaid)
-        s = list(ca.sentences)[0]
-
-    def testCache(self):
-        c = codingjob.Codingjob(self.db, 5175)
-        cacher.cache(c, **{'sets': {'articles' : {'article' : {'source' : ["name"]}}}})
-
         
     def testCodedArticle(self):
         # test an article with agenda codings
@@ -53,8 +42,7 @@ class TestCodingJob(amcattest.AmcatTestCase):
         self.assertEqual(ca.set.job.id, 5175)
         self.assertEqual(ca.set.setnr, 1)
         self.assertEqual(ca.annotationschema.id, 26)
-        self.assertEqual(ca.getValue("topic").id, 10490)
-        self.assertEqual(ca.topic.id, 10490)
+        self.assertEqual(ca.values.topic.id, 10490)
         self.assertEqual(list(ca.sentences), [])
 
     def testCodedSentence(self):
@@ -66,10 +54,14 @@ class TestCodingJob(amcattest.AmcatTestCase):
         self.assertNotEmpty(list(ca.sentences))
         self.assertIn(30188, [cs.id for cs in ca.sentences])
         cs = [cs for cs in ca.sentences if cs.id == 30188][0]
-        self.assertEqual(cs.getValue("object").id, 1625)
-        self.assertEqual(cs.subject.id, 1098)
-        self.assertEqual(cs.predicate, 'idealistisch, niet de hele dag')
+        self.assertEqual(cs.values.subject.id, 1098)
+        self.assertEqual(cs.values.predicate, 'idealistisch, niet de hele dag')
 
+    def testCache(self):
+        c = codingjob.Codingjob(self.db, 5175)
+	cacher.cache(c, **{'sets': {'articles' : {'values' : [], 'article' : {'source' : ["name"]}}}})
+
+        
   
         
         
