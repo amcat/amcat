@@ -74,14 +74,11 @@ class Cacher(object):
         fields, reffield = map(_getTuple, (fields, reffield))
         log.debug("Adding field %s from %s (ref=%s)" % (fields, table, reffield))
         self.fields.add((table, reffield, fields, orderby))
-    addFKField = addField # backwards compatability, TODO refactor
     def getFieldData(self, fields, table, cachable, reffield, orderby):
         fields, reffield = map(_getTuple, (fields, reffield))
         id = cachable.id
         if type(id) not in (list, tuple): id = (id,)
-        #log.debug("Getting FKData table=%(table)s, reffield=%(reffield)s, fields=%(fields)s, orderby=%(orderby)s, " % locals())
         return self.data[table, reffield, fields, orderby].get(id, [])
-    getFKData = getFieldData # backwards compatability, TODO refactor
 
 def _getTuple(cols):
     if type(cols) in (str, unicode):
@@ -114,11 +111,16 @@ def cacheMultiple(cachables, *propnames):
         prop.prepareCache(cacher)
 
     #toolkit.ticker.warn("Getting data")
-    cacher.getData(toolkit.head(cachables).db, cachables)
+    db = toolkit.head(cachables).db
+    cacher.getData(db, cachables)
+
     #toolkit.ticker.warn("CAching values")
     for cachable in cachables:
         for prop in propnames:
             cachable._getProperty(prop).doCache(cacher, cachable)
+
+    for prop in propnames:
+	cachable._getProperty(prop).cachePerObject(db, cachables)
 
 def cache(cachables, *properties, **structure):
     """

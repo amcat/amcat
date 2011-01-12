@@ -73,7 +73,7 @@ def get(klass, prop, key, conn=None):
     """
     keybytes = key2bytes(klass, prop, key)
     val =_getConnection().get(keybytes)
-    _debug("GET", klass, prop, key, "-> %r" % val)
+    _debug("GET", klass, prop, key, "-> %r" % (val,))
     if val is None:
         raise UnknownKeyException(keybytes)
     return val
@@ -89,7 +89,7 @@ def put(klass, prop, key, value, conn=None):
     @param conn: an optional connection object
     """
     keybytes = key2bytes(klass, prop, key)
-    _debug("PUT", klass, prop, key, "<- %r" % value)
+    _debug("PUT", klass, prop, key, "<- %r" % (value,))
     _getConnection().set(keybytes, value)
 
 def delete(klass, prop, key, conn=None):

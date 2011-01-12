@@ -21,8 +21,7 @@ class TestAnnotationSchema(amcattest.AmcatTestCase):
             a = annotationschema.AnnotationSchema(self.db, sid)
             self.assertEqual(a.name, name)
             self.assertEqual(a.table, table)
-            #self.assertEqual(a.isarticleschema, articleschema)
-            #DOES NOT WORK on old db, so disable for now
+            self.assertEqual(a.isarticleschema, articleschema)
 
     def testFields(self):
         for (sid, fieldnames) in [

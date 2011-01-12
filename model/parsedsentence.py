@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
@@ -23,6 +22,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 Model module containing the classes representing the parses_* tables
 """
 
+from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools.cachable.latebind import LB

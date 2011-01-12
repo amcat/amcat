@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -18,6 +17,9 @@ from __future__ import unicode_literals, print_function, absolute_import
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""ORM Module representing users"""
+
+from __future__ import unicode_literals, print_function, absolute_import
 import logging; log = logging.getLogger(__name__)
 
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties

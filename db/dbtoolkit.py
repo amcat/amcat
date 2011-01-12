@@ -1,4 +1,3 @@
-from __future__ import print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -18,6 +17,13 @@ from __future__ import print_function, absolute_import
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""Database abstraction layer
+
+The AmcatDB class contains a database connection and functions to query
+the database at higher level, including L{AmcatDB.select}, L{AmcatDB.insert}, and L{AmcatDB.update}.
+"""
+
+from __future__ import print_function, absolute_import
 import sys
 import re, collections, time
 import threading
@@ -133,11 +139,16 @@ class AmcatDB(object):
         
         # should be function(string SQL, double time, list-of-lists data): None
         self.afterQueryListeners = set()
+        self.profiler = None
+        if profile: self.startProfiling()
 
-        if profile:
+    def startProfiling(self):
+        if self.profiler:
+            self.profiler.clear()
+        else:
             self.profiler = ProfilingAfterQueryListener()
             self.afterQueryListeners.add(self.profiler)
-
+        
 
     ################ picklability #####################
     def __getstate__(self):
@@ -894,7 +905,9 @@ class ProfilingAfterQueryListener(object):
             result = tableoutput.table2unicode(data, formats=["%s", "%s", "%1.5f", "%1.5f", "%4.1f"], useunicode=useunicode)
             if type(result) == unicode: result = result.encode(encoding)
             print(result, file=stream)
-        if clear:         self.queries = collections.defaultdict(list)
+        if clear: self.clear()
+    def clear(self):
+        self.queries = collections.defaultdict(list)
     def reportTable(self, *args, **kargs):
         return table3.ListTable(self.report(*args, **kargs), ["Query", "N", "Time", "AvgTime", "AvgLen"])
     def report(self, replacenumbers=True, maxsqlen=100):

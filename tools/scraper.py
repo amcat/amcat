@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -28,6 +27,8 @@ ArticleScraper is a base class representing scraping from the web. It assumes th
 TextImporter is a base class representing importing articles from (e.g. text) files.
   If assumes that there are files containing documents.
 """
+
+from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools import toolkit
 from amcat.db import dbtoolkit

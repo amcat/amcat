@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -43,6 +42,7 @@ this organisation!
  - deprecated functions and imports
 """
 
+from __future__ import unicode_literals, print_function, absolute_import
 import warnings, os, random, gzip, types, datetime, itertools, re, collections
 import threading, subprocess, sys, colorsys, base64, time, inspect, logging
 import htmlentitydefs

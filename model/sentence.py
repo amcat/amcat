@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -22,6 +21,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 Object-layer module containing classes modelling sentences
 """
 
+from __future__ import unicode_literals, print_function, absolute_import
 from amcat.tools import toolkit
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools.cachable.cacher import cache

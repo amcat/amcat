@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -22,6 +21,8 @@ from __future__ import unicode_literals, print_function, absolute_import
 Model module containing the Article class representing documents in the
 articles database table
 """
+
+from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.cachable.latebind import LB
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties

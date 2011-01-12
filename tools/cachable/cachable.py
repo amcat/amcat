@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -43,6 +42,9 @@ Example usage::
   print o.label    # 'test' from cache
 """
 
+from __future__ import unicode_literals, print_function, absolute_import
+
+
 import inspect, types, warnings
 import logging; log = logging.getLogger(__name__)
 # logs manually commented out because they *really* slow things down
@@ -66,7 +68,6 @@ class Meta(type):
 class NotAPropertyError(TypeError):pass
     
 class Cachable(idlabel.IDLabel):
-    __metaclass__ = Meta
     """Main class of the Cachable structure
     
     A Cachable class has class-level properties that are 
@@ -77,6 +78,9 @@ class Cachable(idlabel.IDLabel):
     and __delattr__ methods. These methods now check whether the
     attribute is a property, and if so call get/set/del on the property    
     """
+
+    __metaclass__ = Meta
+
     
     def __init__(self, db, *id):
         """Create a cachable with db and id
@@ -472,7 +476,7 @@ class Property(object):
             return "%s(%s.%s)" % (self.__class__.__name__, self.cls.__name__, self.propname)
         except AttributeError:
             return "%s(uninitialised)" %  (self.__class__.__name__,)
-
+	
     ################### Caching ###################
 
     def prepareCache(self, cacher):
@@ -489,6 +493,11 @@ class Property(object):
     def doCache(self, cacher, obj=None):
         """Optionally cache the values from the cacher (see L{prepareCache})"""
         pass
+
+    def cachePerObject(self, db, objects):
+	"""Optionally cache the values for these objects"""
+	pass
+    
 
       
         
@@ -622,11 +631,11 @@ class DBProperty(Property):
     def prepareCache(self, cacher):
         if self.tablehook: return # cannot cache as we don't know the table without getting the object!
         #log.info("%s: Adding %s.%s/%s to cacher" % (self, self._getTable(), self._getIDColumn(), self._getColumns()))
-        cacher.addFKField(self._getColumns(), self._getTable(), self._getIDColumn(), self.orderby)
+        cacher.addField(self._getColumns(), self._getTable(), self._getIDColumn(), self.orderby)
 
     def doCache(self, cacher, obj=None):
         if self.tablehook: return
-        val = cacher.getFKData(self._getColumns(), self._getTable(), obj, self.cls.__idcolumn__, self.orderby)
+        val = cacher.getFieldData(self._getColumns(), self._getTable(), obj, self.cls.__idcolumn__, self.orderby)
         #log.info("%s: Retrieved %s from cacher" % (self, val))
         self.cache(obj, val, isData=True)
         
