@@ -84,6 +84,12 @@ class ProgressMonitor(object):
         self._checkstate(STATE_STARTED)
         self.progress += n
         self._fire()
+    def workedTo(self, n):
+        """Progess until n units of work"""
+        if n <= self.progress: return
+        self._checkstate(STATE_STARTED)
+        self.progress = n
+        self._fire()
     def done(self):
         """Indicate that this progress monitor is done
 
@@ -255,12 +261,14 @@ def monitored(taskname, units, monitor=None, monitorname=None, submonitorwork=No
     else:
         monitor.done()
             
-def tickerate(seq, msg=None, log=None, logticks=10, monitor=None, monitorname=None, submonitorwork=None):
-    if type(seq) not in (list, tuple, set):
-        seq = list(seq)
-    n = len(seq)
+def tickerate(seq, msg=None, log=None, logticks=10, monitor=None, monitorname=None, submonitorwork=None, estimate=None):
+    if not estimate:
+        if type(seq) in (list, tuple, set):
+            estimate = len(seq)
+        else:
+            estimate = 1000
     if msg is None: msg = "Iteration"
-    with monitored(msg, n, monitor, monitorname, submonitorwork) as m:
+    with monitored(msg, estimate, monitor, monitorname, submonitorwork) as m:
         if log: m.listeners.add(TickLogListener(log, logticks))
         for elem in seq:
             m.worked(1)
