@@ -79,8 +79,10 @@ def guessdriver():
     if host.strip() == "amcatsql2":
         return "PostgreSQL"
     else:
+        return "SQLServer"
         import sys
         driver = "EasySoft" if sys.version_info[1] == 6 else "SQLServer"
+        
 
 def readconfig(fn):
     result = {}
