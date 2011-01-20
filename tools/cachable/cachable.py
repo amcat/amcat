@@ -61,8 +61,12 @@ class Meta(type):
     def __getattribute__(cls, attr):
         """Get a class attribute, and _initialise it if possible/needed"""
         result = type.__getattribute__(cls, attr)
-        try: result._initialise(cls, attr)
-        except AttributeError: pass # only initialise properies
+        try:
+            initialiser = result._initialise
+        except AttributeError:
+            pass # only initialise properies
+        else:
+            initialiser(cls, attr)
         return result
 
 class NotAPropertyError(TypeError):pass
@@ -125,7 +129,6 @@ class Cachable(idlabel.IDLabel):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""
         if (not "__" in attr) and (attr != 'id'): # skip special attributes
             try:
-		#OK this is weird: if I comment the line below I get a segfault on exporting??
                 #log.debug("Getting attribute %s, property?" % (attr))
                 p =  self.__class__._getProperty(attr)
                 #log.debug("Got property %s -> %s, calling property.get()" % (attr, p)) 
@@ -525,7 +528,7 @@ class DBProperty(Property):
             if not inspect.isclass(self.targetclass):
                 # assume targetklass is lambda or latebind.LB, so dereference
                 self.targetclass = self.targetclass()
-
+    
     def dbrowToObject(self, obj, *dbvalues):
         """Convert a db row to an amcat object
         
@@ -545,7 +548,8 @@ class DBProperty(Property):
                 return tuple((None if v is None else c(obj.db, v))
                              for (c, v) in zip(self.targetclass, dbvalues))
             else:
-                return self.targetclass(obj.db, *dbvalues)
+                obj = self.targetclass(obj.db, *dbvalues)
+                return obj
         return dbvalues[0]
 
     def objectToDbrow(self, obj):
@@ -666,12 +670,15 @@ class ForeignKey(DBProperty):
     def dbrowToObject(self, obj, *dbvalues):
         child = super(ForeignKey, self).dbrowToObject(obj, *dbvalues)
         # Try to set 'uplink', eg project1.articles[n].project = project1 
+        uplinkprop = obj.__class__.__name__.lower()
         try:
-            uplinkprop = obj.__class__.__name__.lower()
             uplink = child._getProperty(uplinkprop)
-            uplink.cache(child, obj)
         except (AttributeError, NotAPropertyError):
+            #log.warn("Cannot find %s on %r->%r" % (uplinkprop, obj, child))
             pass # it's okay, apparently child doesn't have an uplink with sensible name
+        else:
+            uplink.cache(child, obj)
+                        
         
         return child
 
