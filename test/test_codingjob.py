@@ -1,8 +1,49 @@
+import logging; log = logging.getLogger(__name__)
 from amcat.test import amcattest
 from amcat.model.coding import codingjob, codedarticle, codingjobset
 from amcat.tools.cachable import cacher
 
+from amcat.tools.logging import amcatlogging; amcatlogging.debugModule
+
 class TestCodingJob(amcattest.AmcatTestCase):
+
+    def testCache(self):
+        jobids = [5724]
+        jobs = [codingjob.CodingJob(self.db, cjid) for cjid in jobids]
+        codingjob.cacheCodingJobs(jobs, values=True)
+        #log.warn("Cached! Disabling database")
+        with self.db.disabled():
+            for job in jobs:
+                for s in job.sets:
+                    for article in s.articles:
+                        x = article
+                        x = article.set
+                        x = article.set.job
+                        x = article.set.job.unitSchema
+                        x = article.set.job.unitSchema.fields
+                        x = [f.fieldname for f in article.set.job.unitSchema.fields]
+                        x = article.values
+                        for sentence in article.sentences:
+                            x = sentence.codedarticle
+                            x = sentence.values
+
+    def testCache2(self):
+        jobids = [5724]
+        jobs = [codingjob.CodingJob(self.db, cjid) for cjid in jobids]
+
+        css = list(codingjob.getCodedSentencesFromCodingjobs(jobs))
+        with self.db.disabled():
+            for sentence in css:
+                x = sentence.values
+                article = sentence.codedarticle
+                x = article
+                x = article.set
+                x = article.set.job
+                x = article.set.job.unitSchema
+                x = article.set.job.unitSchema.fields
+                x = [f.fieldname for f in article.set.job.unitSchema.fields]
+                x = article.values
+
 
     def testCodingJob(self):
         # test basic properties
@@ -57,12 +98,8 @@ class TestCodingJob(amcattest.AmcatTestCase):
         self.assertEqual(cs.values.subject.id, 1098)
         self.assertEqual(cs.values.predicate, 'idealistisch, niet de hele dag')
 
-    def testCache(self):
-        c = codingjob.Codingjob(self.db, 5175)
-	cacher.cache(c, **{'sets': {'articles' : {'values' : [], 'article' : {'source' : ["name"]}}}})
 
         
-  
         
         
 if __name__ == '__main__':

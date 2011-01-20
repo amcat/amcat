@@ -28,7 +28,7 @@ from collections import namedtuple, defaultdict
 
 import logging; log = logging.getLogger(__name__)
 from amcat.tools.logging import amcatlogging
-amcatlogging.debugModule()
+#amcatlogging.debugModule()
 
 class _CodedValuesSchemaSupport(object):
     def __init__(self, schema):
@@ -39,12 +39,13 @@ class _CodedValuesSchemaSupport(object):
 
     def retrieve(self, obj):
 	idcol = "codingjob_articleid" if self.schema.isarticleschema else "codedsentenceid"
-	#log.debug("Retrieving %s from %s for %s : %s" % (self.fieldnames, self.schema.table, self.schema.id, obj.id))
+	log.debug("Retrieving %s from %s for %s : %s" % (self.fieldnames, self.schema.table, self.schema.id, obj.id))
 	result = obj.db.select(self.schema.table, self.fieldnames, {idcol : obj.id})
 	if not result: return None
 	return result[0]
 
     def retrievemany(self, db, property, objects):
+	log.debug("Retrieving %s from %s for %s %s" % (self.fieldnames, self.schema.table, len(objects), self.schema.id))
 	idcol = "codingjob_articleid" if self.schema.isarticleschema else "codedsentenceid"
 	objectsperid = {}
 	oids = []
@@ -53,11 +54,18 @@ class _CodedValuesSchemaSupport(object):
 	    oids.append(obj.id)
 	    
 	data =  db.select(self.schema.table, [idcol] + self.fieldnames, {idcol : oids})
+        seen = set()
 	for row in data:
 	    id, row = row[0], row[1:]
+            #log.debug("CACHING codedvalues %s->%r <- %s" % (id, objectsperid[id], row))
 	    property.cache(objectsperid[id], row)
+            seen.add(id)
+        for id in set(objectsperid.keys()) - seen:
+            #log.debug("CACHING codedvalues NONE for %s->%r <- NONE" % (id, objectsperid[id]))
+            property.cache(objectsperid[id], [])
 
     def dataToObjects(self, data):
+        if not data: return None
 	des = [f.deserialize(v) for (f,v) in zip(self.fields, data)]
 	return self.nt(*des)
 

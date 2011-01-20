@@ -16,15 +16,6 @@ PARENTS = ( # objectid, treeid, parentid/None, reverse?
 
 class TestObject(amcattest.AmcatTestCase):    
 
-    def testParent(self):
-        for oid, treeid, parentid, reverse in PARENTS:
-            o = Object(self.db, oid)
-            if parentid is None:
-                self.assertEqual(o.getParent(treeid), None)
-            else:
-                self.assertEqual(o.getParent(treeid).id, parentid)
-            self.assertIn(Tree(self.db, treeid), o.trees)
-    
     def testLabels(self):
         for oid, stdlabel, lang, label in (
             (296, "flexibele arbeidsmarkt", 12, "[-] Flexibele / Liberale arbeidsmarkt"),
@@ -34,8 +25,16 @@ class TestObject(amcattest.AmcatTestCase):
             self.assertEqual(str(o.labels[Language(self.db, lang)]), label)
             self.assertEqual(str(o.getLabel(lang)), label)
             self.assertRaises(KeyError, lambda  : o.labels[-99])
-            self.assertEqual(o.getLabel(-99), None)
-
+            self.assertEqual(o.getLabel(-99), stdlabel)
+    def testParent(self):
+        for oid, treeid, parentid, reverse in PARENTS:
+            o = Object(self.db, oid)
+            if parentid is None:
+                self.assertEqual(o.getParent(treeid), None)
+            else:
+                self.assertEqual(o.getParent(treeid).id, parentid)
+            self.assertIn(Tree(self.db, treeid), o.trees)
+    
     def testFunctions(self):
         verdonk = Object(self.db, 1731)
         
