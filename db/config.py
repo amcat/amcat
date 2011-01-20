@@ -81,8 +81,8 @@ def guessdriver():
     else:
         return "SQLServer"
         import sys
-        driver = "EasySoft" if sys.version_info[1] == 6 else "SQLServer"
-        
+        return "EasySoft" if sys.version_info[1] == 6 else "SQLServer"
+
 
 def readconfig(fn):
     result = {}
