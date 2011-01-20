@@ -8,7 +8,7 @@ from amcat.model.ontology.codebook import Codebook
 from amcat.model.ontology.object import Object
 
 import logging; log = logging.getLogger(__name__)
-#import amcatlogging; amcatlogging.debugModule()
+#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 
 class AnnotationSchema(Cachable):
@@ -21,7 +21,10 @@ class AnnotationSchema(Cachable):
     
     @property
     def table(self):
-        return self.location.split(":")[0]
+        table = self.location.split(":")[0]
+        if table == "net_arrows": table = "vw_net_arrows"
+        return table
+    
     
     
     def getField(self, fieldname):
@@ -66,13 +69,18 @@ class AnnotationSchemaField(Cachable):
     __table__ = 'annotationschemas_fields'
     __idcolumn__ = ('annotationschemaid','fieldnr')
 
-    schema = DBProperty(AnnotationSchema, getcolumn="annotationschemaid")
+    
+    annotationschema = DBProperty(AnnotationSchema, getcolumn="annotationschemaid")
     fieldname, label, default = DBProperties(3)
     fieldtype = DBProperty(AnnotationSchemaFieldType)
 
     table, keycolumn, labelcolumn, values = DBProperties(4)
     codebook = DBProperty(Codebook)
 
+    @property
+    def schema(self):
+        return self.annotationschema
+    
     @property
     def serializer(self):
         try:
@@ -100,7 +108,7 @@ class AnnotationSchemaField(Cachable):
 
     def deserialize(self, value):
         val = self.serializer.deserialize(value)
-        log.debug("%s/%s deserialised %r to %r" % (self, self.serializer, value, val))
+        log.debug("%r/%r deserialised %r to %r" % (self, self.serializer, value, val))
         return val
     def getTargetType(self):
         return self.serializer.getTargetType()   
@@ -215,12 +223,18 @@ class OntologyFieldSerialiser(SchemaFieldSerialiser):
 
 
 def getValue(unit, field):
+    log.debug(">>>>>> getValue(%r, %r)" % (unit, field))
     if unit is None: return None
-    return unit.getValue(field.fieldname)
+    values = unit.values
+    if values is None: return None
+    val = getattr(unit.values, field.fieldname)    
+    log.debug(">>>>>> values=%r, fieldname=%r, --> val=%s" % (unit.values, field.fieldname, val))
+    return val
 
 class FieldColumn(ObjectColumn):
     """ObjectColumn based on a AnnotationSchemaField"""
-    def __init__(self, field, article, fieldname=None, label=None):
+    def __init__(self, field, article=None, fieldname=None, label=None):
+        if article is None: article = field.schema.isarticleschema
         if fieldname is None: fieldname = field.fieldname
         if label is None: label = field.label
         ObjectColumn.__init__(self, label, fieldname, fieldtype=field.getTargetType())
@@ -231,11 +245,12 @@ class FieldColumn(ObjectColumn):
         return row.ca if self.article else row.cs
     def getCell(self, row):
         try:
-	    unit = self.getUnit(row)
+            unit = self.getUnit(row)
             val = getValue(unit, self.field)
             return val
         except AttributeError, e:
             log.debug("AttributeError on getting %s.%s: %s" % (row, self.field, e))
+            raise
             return None
             
                      

@@ -10,9 +10,13 @@ class CodedArticle(Cachable):
     #sentences = ForeignKey(LB("CodedSentence", sub="coding"), constructor=createSentence)
     
     article = DBProperty(LB("Article"))
-    set = DBProperty(LB("CodingJobSet", sub="coding"))
+    codingjobset = DBProperty(LB("CodingJobSet", sub="coding"))
     values = CodedValuesProperty(lambda ca: ca.annotationschema)
     sentences = ForeignKey(LB("CodedSentence", sub="coding"))
+
+    @property
+    def set(self):
+        return self.codingjobset
     
     def getSentenceTable(self):
         return self.set.job.unitSchema.table

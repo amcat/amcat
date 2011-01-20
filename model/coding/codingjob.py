@@ -1,16 +1,36 @@
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools.cachable.latebind import LB
+from amcat.tools.cachable import cacher
+from amcat.tools import toolkit
 
 import logging; log = logging.getLogger(__name__)
 
-def getCodedArticlesFromCodingjobs(codingjobs):
+def cacheCodingJobs(codingjobs, values=False, sentences=True, articles=True, schema=True):
+    # TODO make caching smarter so this can be dumber
+    if schema:
+        cacher.cache(codingjobs, unitSchema=[], articleSchema=[])
+        schemas = set(toolkit.flatten((job.unitSchema, job.articleSchema) for job in codingjobs))
+        cacher.cache(schemas, "location", "isarticleschema", fields=["fieldname", "fieldtype","codebook","keycolumn","labelcolumn", "table"])
+    if articles:
+        article = {}
+        if sentences:
+            if values:
+                article['sentences'] = ["values"]
+            else:
+                article['sentences'] = []
+        if values:
+            article['values'] = []
+        cacher.cache(codingjobs, sets=dict(articles=article))
+
+def getCodedArticlesFromCodingjobs(codingjobs, cache=True, cacheSentences=False, cacheValues=True):
+    if cache: cacheCodingJobs(codingjobs, sentences=cacheSentences, values=cacheValues)
     for cj in codingjobs:
         for s in cj.sets:
             for ca in s.articles:
                 yield ca
                     
-def getCodedSentencesFromCodingjobs(codingjobs):
-    cache(codingjobs, sets=dict(articles=dict(article=["sentences"], sentences=[])))
+def getCodedSentencesFromCodingjobs(codingjobs, cache=True, cacheValues=True):
+    if cache: cacheCodingJobs(codingjobs, values=cacheValues)
     for ca in getCodedArticlesFromCodingjobs(codingjobs):
         for cs in ca.sentences:
             yield cs
