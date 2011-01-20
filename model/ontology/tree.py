@@ -29,7 +29,7 @@ from amcat.tools import idlabel
 
 from amcat.model.ontology.hierarchy import Hierarchy, DictHierarchy
 
-from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
+#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 from datetime import datetime
 
@@ -84,7 +84,26 @@ class Tree(Cachable, DictHierarchy):
         cacher.cache(self, "objects")
         log.debug("Cached!")
         super(Tree, self).cacheHierarchy()
-    
+        
+    def cacheLabels(self):
+        log.debug("Caching labels for tree %i..." % self.id)
+        #TODO somehow get rid of direct database access?
+        SQL = """select l.objectid, languageid, label from
+                 labels l inner join trees_objects o on l.objectid = o.objectid
+                 where treeid = %i""" % self.id
+        def cachelabels(oid, labels):
+            o = self.getObject(oid).objekt
+            o._getProperty("labels").cache(o, labels, isData=True)
+        currentoid = None
+        for oid, langid, label in self.db.doQuery(SQL):
+            if currentoid != oid:
+                if currentoid is not None:
+                    cachelabels(currentoid, labels)
+                labels = []
+                currentoid = oid
+            labels.append((langid, label))
+        if currentoid is not None:
+            cachelabels(currentoid, labels)
 
 def run():
     from amcat.db import dbtoolkit

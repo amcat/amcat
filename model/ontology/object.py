@@ -41,31 +41,24 @@ class Function(Cachable):
     functionid, todate, fromdate = DBProperties(3)
     office = DBProperty(lambda : Object, getcolumn="office_objectid")
     
-class Label(Cachable):
-    __table__ = 'labels'
-    __idcolumn__ = ('objectid', 'languageid')
-    
-    label, objectid, languageid = DBProperties(3)
-    
-    language = DBProperty(LB("Language"))
-
+def strmaker():
+    return lambda obj, val: val
     
 class Object(Cachable):
     __table__ = 'objects'
     __idcolumn__ = 'objectid'
     
-    _labels = ForeignKey(Label)
     functions = ForeignKey(Function)
     trees  = ForeignKey(LB("Tree", sub="ontology"), table="trees_objects", distinct=True)
 
-    @property
-    def labels(self):
-        return dict((l.language, l) for l in self._labels)
-    
+    labels = ForeignKey(MultiLB(LB("Language"), strmaker),
+                         table="labels", getcolumn=("languageid", "label"),
+                         sequencetype=dict)
+
     @property
     def label(self):
-        l = toolkit.head(self._labels)
-        if l: return l
+        lang = toolkit.head(sorted(self.labels.keys()))
+        if lang: return self.labels[lang]
         return repr(self)
 
     def getLabel(self, lan):
@@ -73,7 +66,6 @@ class Object(Cachable):
         @param lan: language to get label for
         @type lan: integer or Language object
         """
-        
         if not hasattr(lan, 'id'):
             lan = Language(self.db, lan)
         
@@ -101,20 +93,19 @@ class Object(Cachable):
         
     def currentFunctions(self, date=None):
         if not date: date = datetime.now()
-	date = toolkit.toDate(date)
+        date = toolkit.toDate(date)
         for f in self.functions:
-	    #log.debug("Considering function %r for %s" % (f, self))
-	    #TODO can someone explain the logic of the .days manipulation instead
-	    #     of simple (fromdate < date) and ((todate is None) or (todate > date)
-	    #     i.e. add a comment here that does the explaining :-)
+            #log.debug("Considering function %r for %s" % (f, self))
+            #TODO can someone explain the logic of the .days manipulation instead
+            #     of simple (fromdate < date) and ((todate is None) or (todate > date)
+            #     i.e. add a comment here that does the explaining :-)
             fd = toolkit.toDate(f.fromdate)
             td = toolkit.toDate(f.todate) if f.todate else datetime.now()
 
             tdf = (date - fd).days
             tdt = (td - date).days
 
-	    #log.debug("date=%r, fd=%r, td=%r, tdf=%s, tdt=%s, date-fd=%s" % (date, fd, td, tdf, tdt, date-fd))
-	    
+            #log.debug("date=%r, fd=%r, td=%r, tdf=%s, tdt=%s, date-fd=%s" % (date, fd, td, tdf, tdt, date-fd))
             if tdf >= 0 and tdt >= 0: yield f
 
     def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):
@@ -151,3 +142,5 @@ class Object(Cachable):
         if kw:
             if type(kw) == str: kw = kw.decode('latin-1')
             return kw.replace("\n"," ")
+
+    

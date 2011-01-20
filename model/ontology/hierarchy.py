@@ -3,6 +3,7 @@ import logging; log = logging.getLogger(__name__)
 
 from amcat.model.ontology.object import Object
 from amcat.tools import idlabel, toolkit
+from amcat.tools.cachable import cacher
 
 from amcat.tools.logging import amcatlogging
 amcatlogging.infoModule()
@@ -115,6 +116,10 @@ class Hierarchy(object):
         else:
             return [p[0] for p in path]
 
+    def cacheLabels(self):
+        """Cache the labels for all objects in this hierarchy"""
+        pass        
+        
 
 class DictHierarchy(Hierarchy):
     """Abstract Hierarchy subclass that uses a dictionary to keep track of contained objects
@@ -135,7 +140,7 @@ class DictHierarchy(Hierarchy):
         try: allobjects = self._getAllObjects()
         except NotImplementedError: allobjects = None
 
-        log.info("Caching %r, allobjects? %r" % (self, bool(allobjects)))
+        log.info("Caching %r" % (self))
         
         if allobjects:
             # create dicts from allobjects
@@ -147,7 +152,7 @@ class DictHierarchy(Hierarchy):
                     self.parentdict[obj] = parent
                     if parent not in self.childrendict: self.childrendict[parent] = set()
                     self.childrendict[parent].add(obj)
-            log.info("Cached  %r, contains %r items" % (self, len(self.objectset)))
+            #log.info("Cached  %r, contains %r items" % (self, len(self.objectset)))
         else:
             # create objectdict using _getObjects
             for obj in self._getObjects():
