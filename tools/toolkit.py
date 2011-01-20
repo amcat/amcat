@@ -437,7 +437,7 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
     def _splitlist(sequence, itemsperbatch):
         """Split a sequence or iterable into sublists"""
         if isSequence(sequence): # use slicing
-            for i in range(0, len(sequence), itemsperbatch):
+            for i in xrange(0, len(sequence), itemsperbatch):
                 yield sequence[i:i+itemsperbatch]
         else: # use iterating, copying into a buffer
             # can be more efficient by reusing buffer object...
@@ -448,7 +448,7 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
                     yield bufferlist
                     bufferlist = []
             if bufferlist: yield bufferlist
-        
+    
     for subsequence in _splitlist(sequence, itemsperbatch):
         if buffercall: buffercall(subsequence)
         if yieldelements:
@@ -469,7 +469,26 @@ def pad(sequence, minlength, padwith=None, chopexcess=True):
 def buffer(sequence, buffercall, buffersize=100):
     """B{Deprecated: please use splitlist(..., yieldelements=True)}"""
     return splitlist(sequence, buffersize, buffercall, yieldelements=True)
-            
+
+
+def unique(iterable, key=None):
+    "List unique elements, preserving order. Remember all elements ever seen."
+    # from http://docs.python.org/library/itertools.html#recipes
+    # unique('AAAABBBCCDAABBB') --> A B C D
+    # unique('ABBCcAD', str.lower) --> A B C D
+    seen = set()
+    seen_add = seen.add # for performance?
+    if key is None:
+        for element in itertools.ifilterfalse(seen.__contains__, iterable):
+            seen_add(element)
+            yield element
+    else:
+        for element in iterable:
+            k = key(element)
+            if k not in seen:
+                seen_add(k)
+                yield element
+
 ###########################################################################
 ##                      Mapping functions                                ##
 ###########################################################################
@@ -1114,8 +1133,8 @@ def isDate(obj):
 def isSequence(obj, excludeStrings = False):
     """Check whether obj is a sequence, possibly excluding strings"""
     if excludeStrings and isString(obj): return False
-    try: len(obj); return True
-    except TypeError: return False
+    if hasattr(obj, "__getslice__"): return True
+    else: return False
 
 def isIterable(obj, excludeStrings = False):
     """Check whether obj is iterable, possibly excluding strings"""
