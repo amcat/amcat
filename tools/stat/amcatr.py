@@ -1,7 +1,9 @@
 import rpy2.robjects as robjects
 import rpy2.rlike.container as rlc 
-import table3, tableoutput, sys, toolkit
-from idlabel import IDLabel
+from amcat.tools.table import table3, tableoutput
+import sys
+from amcat.tools import toolkit
+from amcat.tools.idlabel import IDLabel
 
 
 ###########################################

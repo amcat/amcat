@@ -1,4 +1,6 @@
-import re, codingjob, toolkit
+import re
+from amcat.model.coding import codingjob
+from amcat.tools import toolkit
 
 class FeatureSet(object):
     """

@@ -1,7 +1,16 @@
-import codingjob, mlfeature, collections, toolkit, random, fscore, itertools, os, math, table3
+import collections
+import random
+import itertools, os, math
 from functools import partial
 from itertools import izip, ifilter
-import table3
+
+
+
+from amcat.model.coding import codingjob, codedsentence, codedarticle
+from amcat.ml import mlfeature
+from amcat.tools import toolkit
+from amcat.tools.stat import fscore
+from amcat.tools.table import table3
 
 class Match(object):
     def __init__(self, predictions, unit=None, actual=None, context=None):
@@ -87,7 +96,7 @@ class MachineLearner(object):
         self.units |= set(getUnits(unitlevel, data))
 
     def getTargetClass(self, unit):        
-        result =  str(unit.getValue(self.field.fieldname))
+        result =  str(unit.values[self.field.fieldname])
         return result
 
     def getUnits(self, units_or_filter=None):
@@ -113,7 +122,7 @@ class MachineLearner(object):
         self.featureset.start(units)
         if not model: model = self.model
         for match in self.algorithm.predict(units, self.featureset, model):
-            if self.targetFunc and type(match.unit) in (codingjob.CodedSentence, codingjob.CodedArticle):
+            if self.targetFunc and type(match.unit) in (codedsentence.CodedSentence, codedarticle.CodedArticle):
                 match.actual = self.targetFunc(match.unit)
             else:
                 match.actual = "?"
@@ -160,7 +169,7 @@ class MachineLearner(object):
        
 def hasAnnotation(unit, targetfunc):
     if not targetfunc: return True
-    if type(unit) not in (codingjob.CodedArticle, codingjob.CodedSentence): return True
+    if type(unit) not in (codedarticle.CodedArticle, codedsentence.CodedSentence): return True
     return targetfunc(unit) is not None
             
 def getUnits(unitlevel, *data):
@@ -175,13 +184,13 @@ def getUnits(unitlevel, *data):
         elif type(d) == codingjob.CodingJobSet:
             for u in getUnits(unitlevel, *d.articles):
                 yield u
-        elif type(d) == codingjob.CodedArticle:
+        elif type(d) == codedarticle.CodedArticle:
             if unitlevel:
                 for u in d.sentences:
                     yield u
             else:
                 yield d
-        elif type(d) == codingjob.CodedSentence:
+        elif type(d) == codedsentence.CodedSentence:
             if unitlevel:
                 yield d
             else:
@@ -189,7 +198,7 @@ def getUnits(unitlevel, *data):
 
 def fieldTargetFunc(fieldname, typefunc=str):
     print fieldname, typefunc
-    return lambda unit : typefunc(unit.getValue(fieldname))
+    return lambda unit : typefunc(unit.values[fieldname])
 
 def scorers(matches):
     s = fscore.Scorers()

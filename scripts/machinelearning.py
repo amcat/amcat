@@ -7,13 +7,15 @@
 #                where parnr in (1,2,3) and isword=1
 #group by analysisid, articleid, ws.stringid 
 
-import ml, dbwordfeature, mlalgo
+from amcat.ml import ml, dbwordfeature, mlalgo
 
-import externalscripts
-import codingjob, batch
-import dbtoolkit
-import amcatr
+from amcat.scripts import externalscripts
+from amcat.model.coding import codingjob
+from amcat.model import project
+from amcat.db import dbtoolkit
+from amcat.tools.stat import amcatr
 
+import random
 import logging; log = logging.getLogger(__name__)
 
 def readsample(sample):
@@ -45,15 +47,23 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         trainjobs = argToObjects(codingjob.Codingjob, self.db, trainjobids)
         self.field = trainjobs[0].articleSchema.getField(fieldname)
         testjobs = argToObjects(codingjob.Codingjob, self.db, testjobids)  
-        predictbatches = argToObjects(batch.Batch, self.db, predictbatchids)  
-
+        predictsets = argToObjects(project.Set, self.db, predictbatchids)  
+        if sample: sample = float(sample)
+        self.writeCodingJob([], trainjobs[0])
+        return 
         # setup learner and train model
         self.getModel(trainjobs)
 
         # do the required action
-        if testjobs:
-            matches = self.predict(testjobs)
-            self.reportMatches("testreport", matches)
+        #if testjobs:
+        #    matches = self.testmodel(testjobs)
+        #    self.reportMatches("testreport", matches)
+
+        if predictsets:
+            matches = self.predict(predictsets, sample, testjobs)
+            self.writeCodingJob(trainjobs, matches)
+            
+            
 
     def getModel(self, trainjobs):
         log.info("Training model on %s in jobs %s" % (self.field, trainjobs))
@@ -62,8 +72,8 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         where = "select  articleid from codingjobs_articles where %s" % self.db.intSelectionSQL("codingjobid", [job.id for job in trainjobs])
         view = "wva.vw_lemmastringfreqs_nohl"
         view = "wva.vw_lemmastringfreqs_par123"
-        view = "wva.vw_lemmastringfreqs_par12"
-        view = "wva.vw_lemmastringfreqs"
+        #view = "wva.vw_lemmastringfreqs_par12"
+        #view = "wva.vw_lemmastringfreqs"
         fthres = 1
         features = dbwordfeature.getFeatures(self.db, where, view, fthres)
         self.learner.featureset = dbwordfeature.DBWordFeatureSet(self.db, view, features)
@@ -81,10 +91,10 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         log.info("Created model!")
         
     def _getFieldValue(self, unit):
-        val = unit.getValue(self.field)
+        val = getattr(unit.values, self.field.fieldname)
         if val: return val.id
 
-    def predict(self, testjobs):
+    def testModel(self, testjobs):
         testdata = ml.getUnits(False, *testjobs)
         log.info("Testing model on jobs %s" % (testjobs))
         matches = ml.MatchesTable(self.learner.predict(data=testdata))
@@ -97,12 +107,81 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         reportdata = amcatr.call("/home/wva/libpy/ml/r/ml.r", function, table, interpret=True)
         report = amcatr.Report(reportdata)
         report.printReport(out=self.out)
+
+    def getCandidates(self, sets, sample, testjobs=None):
+        #if testdata: codedarticles |= set(u.getArticle() for u in testdata)
+        log.debug("Determining articles to predict")
+        topredict = set()
+        for articleset in sets:
+            topredict |= set(articleset.articles)
+
+        log.debug("Removing train/test articles from %i articles" % (len(topredict),))
+
+        topredict -= set(u.getArticle() for u in self.learner.units)
+        if testjobs:
+            topredict -= set(u.getArticle() for u in ml.getUnits(False, *testjobs))
+
+        
+        if sample:
+            if sample < 0: sample *= len(topredict)
+            sample = int(sample)
+            log.debug("Sampling %i out of %i articles" % (sample, len(topredict)))
+            if sample < len(topredict):
+                topredict = random.sample(topredict, sample)
+
+        log.debug("Will predict %i articles" % len(topredict))
+        return topredict
+
+    def predict(self, sets, sample, testjobs=None):
+        cands = self.getCandidates(sets, sample, testjobs)
+        matches = ml.MatchesTable(self.learner.predict(data=cands))
+        return matches
+
+    
+
+    def writeCodingJob(self, matches, job):
+        cj = cloneCodingJob(self.db, job, newname="MachineLearning job", coders=[34])
+        print cj
+        self.db.commit()
+        return
+        cjset = list(cj.sets)[0]
+        articles = {}
+        for match in result.getRows(): # matchestable contains Match objects as rows
+            a = match.unit.getArticle()
+            ca = articles.get(a)
+            if not ca:
+                ca = codingjob.createCodedArticle(cjset, a)
+                articles[a] = ca
+            data = dict(codingjob_articleid=ca.id)
+            data[self.field.fieldname] = self.getIdForValue(match.getPrediction())
+            data['confidence'] = int(match.getConfidence() * 1000)
+            if self.unitlevel: data['sentenceid']=match.unit.sentence.id
+            kit.db.insert(self.schema.table, data, retrieveIdent=False)
+        kit.write("<h2>Created codingjob %i - <a href='https://amcat.vu.nl/dev/wva/codingjobDetails?codingjobid=%i'>View job</a> - <a href='https://amcat.vu.nl/dev/wva/codingjobResults?projectid=%i&codingjobids=%i'>View results</a></h2>" % (cj.id,cj.id,cj.project.id, cj.id))
+        kit.db.commit()
+    
         
 def argToObjects(cls, db, arg):
     """Create objects cls(db, id) for every id in , delimited arg"""
     if not arg: return None
     return [cls(db, int(id)) for id in arg.split(",")]
-        
+
+
+def createCodingJob(db, project, name, unitschema, articleschema, coders=[]):
+    #TODO: move to CodingJob.Create
+    if not type(unitschema) == int: unitschema = unitschema.id
+    if not type(articleschema) == int: articleschema = articleschema.id
+    cjid = db.insert("codingjobs", dict(projectid=project.id, unitschemaid=unitschema, articleschemaid=articleschema, name=name))
+    for i, coder in enumerate(coders):
+        if not type(coder) == int: coder = coder.id
+        db.insert("codingjobs_sets", dict(codingjobid=cjid, setnr=i+1, coder_userid=coder), retrieveIdent=False)
+    return codingjob.CodingJob(project.db, cjid)
+
+def cloneCodingJob(db, codingjob, newname = None, coders=[]):
+    if newname is None: newname = "%s (kopie)" % (codingjob.label,)
+    return createCodingJob(db, codingjob.project, newname, codingjob.unitSchema, codingjob.articleSchema, coders=coders)
+
+                                        
 class MachineLearning(object):
 
     def writeCodingJob(self, kit, result):
@@ -329,7 +408,7 @@ class MachineLearning(object):
         </div>''' % locals()
         kit.write(html)
 
-import amcatlogging; amcatlogging.infoModule()
+from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
         
 if __name__ == '__main__':
     import dbtoolkit

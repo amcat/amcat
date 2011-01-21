@@ -1,4 +1,8 @@
-import collections, math, article, codingjob, toolkit, re
+import collections, math
+from amcat.model import article
+from amcat.model.coding import codedarticle, codedsentence
+from amcat.tools import toolkit
+import re
 
 PRINTFEATURES = False
 
@@ -81,9 +85,9 @@ def getAID(unit):
         return unit
     if type(unit) == article.Article:
         return unit.id
-    if type(unit) == codingjob.CodedArticle:
+    if type(unit) == codedarticle.CodedArticle:
         return unit.article.id
-    if type(unit) == codingjob.CodedSentence:
+    if type(unit) == codedsentence.CodedSentence:
         return unit.ca.article.id
     
     raise Exception("Help! %s" % type(unit))

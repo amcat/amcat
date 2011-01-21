@@ -1,4 +1,4 @@
-import toolkit
+from amcat.tools import toolkit
 import collections
 avg = toolkit.average
 

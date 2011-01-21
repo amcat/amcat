@@ -1,8 +1,9 @@
-import toolkit, math, os, itertools, collections
-from ml import Match
-import svm
+from amcat.tools import toolkit
+import math, os, itertools, collections
+from amcat.ml.ml import Match
+#import svm
 
-svm.svmc.svm_set_quiet()
+#svm.svmc.svm_set_quiet()
         
 class Algorithm(object):
     """

@@ -45,7 +45,7 @@ class Set(Cachable):
     
     name = DBProperty()
     project = DBProperty(lambda : Project)
-    articles = ForeignKey(lambda : article.Article, table="storedresults_articles")
+    articles = ForeignKey(LB("Article"), table="sets_articles")
     
     def addArticles(self, articles):
         self.db.insertmany("storedresults_articles", ["storedresultid", "articleid"],
