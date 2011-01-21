@@ -2,6 +2,7 @@ from datetime import datetime
 import collections
 import logging; log = logging.getLogger(__name__)
 
+from amcat.tools import toolkit
 from amcat.tools.cachable import cacher
 from amcat.tools.cachable.latebind import LB
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
@@ -10,8 +11,6 @@ from amcat.model.ontology.hierarchy import BoundObject
 
 DUMMY_CLASSID_PARTYMEMBER = 1
 DUMMY_CLASSID_OFFICE = 2
-PARTYMEMBER_FUNCTIONID = 0
-
 #PERSONS_CLASSID = 4003
 
 
@@ -48,9 +47,10 @@ class Codebook(Cachable, DictHierarchy):
             if object.id in self.treesdict[t.id]: 
                 break # other class is first
             if t.id in (DUMMY_CLASSID_PARTYMEMBER, DUMMY_CLASSID_OFFICE):
-                f = _getFunction(object, date, t.id == DUMMY_CLASSID_PARTYMEMBER)
+                f = toolkit.head(object.objekt.currentFunctions(date, party=(t.id == DUMMY_CLASSID_PARTYMEMBER)))
                 log.info("%r.%r.%r(%s) --> %s" % (self, t, object, date, f))
                 if not f: continue
+                f = f.office
                 p = list(super(Codebook, self).getPath(f, date))
                 return [(object, False)] + p
         return super(Codebook, self).getPath(object, date)
@@ -60,13 +60,15 @@ class Codebook(Cachable, DictHierarchy):
             tree.cacheLabels()
 
     
+    def getTree(self, object):
+        """Return the Tree that gives this object its parent in this hierarchy"""
+        for t in self.trees:
+            if object in t: return t
 
 def _getFunction(object, date, party=False):
     """Get a current function (wrt date) for object, if any
     accept party member function iff party is True"""
-    for f in object.objekt.currentFunctions(date):
-        isparty = f.functionid == PARTYMEMBER_FUNCTIONID
-        if party != isparty: continue
+    for f in object.objekt.currentFunctions(date, party=party):
         return f.office
         
 #from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()

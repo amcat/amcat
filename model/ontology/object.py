@@ -34,9 +34,12 @@ from datetime import datetime
 import logging; log = logging.getLogger(__name__)
 #from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
+PARTYMEMBER_FUNCTIONID = 0
+
 class Function(Cachable):
     __table__ = "objects_functions"
     __idcolumn__ = ("objectid", "functionid", "office_objectid", "fromdate")
+    __labelprop__ = 'office'
     
     functionid, todate, fromdate = DBProperties(3)
     office = DBProperty(lambda : Object, getcolumn="office_objectid")
@@ -91,22 +94,28 @@ class Object(Cachable):
         for f in self.currentFunctions(date):
             yield f.klass, f.office
         
-    def currentFunctions(self, date=None):
+    def currentFunctions(self, date=None, party=None):
+        """Yield the current functions of the politician
+        @param date: the date for 'current' (default: now)
+        @param party: if None, yield both membership and functions. If True,
+          yield only party membership. If False, yield only other functions
+        """
         if not date: date = datetime.now()
         date = toolkit.toDate(date)
         for f in self.functions:
-            #log.debug("Considering function %r for %s" % (f, self))
-            #TODO can someone explain the logic of the .days manipulation instead
-            #     of simple (fromdate < date) and ((todate is None) or (todate > date)
-            #     i.e. add a comment here that does the explaining :-)
+            # check party condition
+            if party is not None:
+                isparty = f.functionid == PARTYMEMBER_FUNCTIONID
+                if party != isparty: continue
+
+            # check date condition
             fd = toolkit.toDate(f.fromdate)
-            td = toolkit.toDate(f.todate) if f.todate else datetime.now()
+            if (date - fd).days < 0: continue # fromdate after 'now'
+            if f.todate:
+                td = toolkit.toDate(f.todate)
+                if (td - date).days < 0: continue # todate before 'now'
 
-            tdf = (date - fd).days
-            tdt = (td - date).days
-
-            #log.debug("date=%r, fd=%r, td=%r, tdf=%s, tdt=%s, date-fd=%s" % (date, fd, td, tdf, tdt, date-fd))
-            if tdf >= 0 and tdt >= 0: yield f
+            yield f
 
     def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):
         """Returns the search string for this object.

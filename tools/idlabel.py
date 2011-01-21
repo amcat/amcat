@@ -77,7 +77,7 @@ class IDLabel(Identity):
     def clsidlabel(self):
         return "%s %s" % (type(self).__name__, self.idlabel())
     def idlabel(self):
-        return "%s: %s" % (self.id, self.label)
+        return u"%s: %s" % (self.id, unicode(self))
     def __str__(self):
         try:
             if type(self.label) == unicode:

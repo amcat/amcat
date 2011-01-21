@@ -105,6 +105,10 @@ class Tree(Cachable, DictHierarchy):
         if currentoid is not None:
             cachelabels(currentoid, labels)
 
+    def getTree(self, object):
+        """Return the Tree that gives this object its parent in this hierarchy"""
+        return self
+    
 def run():
     from amcat.db import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)

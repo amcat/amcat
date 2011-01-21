@@ -175,6 +175,9 @@ class ExportScript(externalscripts.ExternalScriptBase):
                 for row in self.getRowsFromCodedArticle(ca):
                     yield row
 
+    def createRow(self, codedarticle, codedsentence=None):
+        return Row(codedarticle, codedsentence)
+                    
     def getRowsFromCodedArticle(self, codedarticle):
         """yield the rows to be extracted from this coded article
         Yields one Row for each codedsentence in each article, and
@@ -184,9 +187,9 @@ class ExportScript(externalscripts.ExternalScriptBase):
         sents = False
         for cs in codedarticle.sentences:
             sents = True
-            yield Row(codedarticle,cs)
+            yield self.createRow(codedarticle,cs)
         if not sents and (not self.requireSentence):
-            yield Row(codedarticle, None)
+            yield self.createRow(codedarticle)
                 
                 
     def cacheRows(self, rows):

@@ -6,7 +6,7 @@ from amcat.tools import idlabel, toolkit
 from amcat.tools.cachable import cacher
 
 from amcat.tools.logging import amcatlogging
-amcatlogging.infoModule()
+#amcatlogging.infoModule()
 
 class Hierarchy(object):
     """
@@ -118,7 +118,11 @@ class Hierarchy(object):
 
     def cacheLabels(self):
         """Cache the labels for all objects in this hierarchy"""
-        pass        
+        pass
+
+    def getTree(self, object):
+        """Return the Tree that gives this object its parent in this hierarchy"""
+        raise NotImplementedError()
         
 
 class DictHierarchy(Hierarchy):
