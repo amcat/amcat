@@ -385,6 +385,20 @@ class AmcatDB(object):
         else:
             return data
         
+    def execute_sp(self, sp, props):
+        """Execute a stored procedure
+        
+        @type sp: str (NOT ESCAPED!)
+        @param sp: name of the stored procedure
+        @type props: iterable
+        @param props: properties to be passed to the stored procedure"""
+        props = ",".join(map(quotesql, props))
+        
+        if self.dbType == 'psycopg2':
+            return self.doQuery("SElECT %s(%s)" % (sp, props))
+            
+        raise Exception('Unsupported database (%s) for execute_sp' % self.dbType)
+        
     def isNullable(self, table, column):
 
         if self.dbType == "mx.ODBC.unixODBC":

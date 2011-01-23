@@ -55,9 +55,19 @@ class User(Cachable):
     
     @classmethod
     def create(cls, db, **props):
+        """Custom create user method. `password` should be in the
+        given properties"""
+        passw = props.pop('password', None)
+        if passw is None:
+            raise Exception("`password` should be in `props`")
         
-        
+        db.execute_sp('create_user', (props['username'], passw))
         super(User, cls).create(db, **props)
+        
+    @classmethod
+    def delete(cls, db):
+        db.execute_sp('delete_user', (self.username,))
+        super(User, cls).delete(db)
     
     def haspriv(self, privilege, onproject=None):
         """If permission is denied, this function returns False,
