@@ -32,18 +32,21 @@ class TestUser(amcattest.AmcatTestCase):
                 "email" : "test@test.com",
                 "fullname" : "Jolly Good",
                 "active" : True,
-                "affiliation" : 1}
+                "affiliation" : 2}
         
         user.User.create(db, **args)
-        self.db.commit()
-        
+        db.commit()   
+        del args['password']
+
         u = user.User.get(db, username=args['username'])
         for k,v in args.items():
-            self.assertEqual(v, getattr(u, k))
+            at = getattr(u,k)
+            self.assertEqual(v, at.id if hasattr(at, 'id') else at)
             
         u.delete()
+        db.commit()
         
-        self.assertRaises(ValueError, user.User.get(db, username=args['username']))
+        self.assertEqual(len(user.User.find(db, username=args['username'])), 0)
 
     def testTypes(self):
         self.assertEqual(user.User.projects.getType(), project.Project)

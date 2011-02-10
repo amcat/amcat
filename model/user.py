@@ -64,10 +64,9 @@ class User(Cachable):
         db.execute_sp('create_user', (props['username'], passw))
         super(User, cls).create(db, **props)
         
-    @classmethod
-    def delete(cls, db):
-        db.execute_sp('delete_user', (self.username,))
-        super(User, cls).delete(db)
+    def delete(self):
+        self.db.execute_sp('delete_user', (self.username,))
+        super(User, self).delete(self.db)
     
     def haspriv(self, privilege, onproject=None):
         """If permission is denied, this function returns False,
