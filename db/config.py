@@ -90,7 +90,7 @@ def readconfig(fn):
     for i, line in enumerate(open(fn)):
         if ".sqlpasswd" in fn and i==0 and ":" in line:
             # assume 'old style' configuration
-            un, pwd = line.split(":") 
+            un, pwd = line.strip().split(":") 
             return dict(driver=guessdriver(), username=un, password=pwd)
         if "=" in line:
             key, value = line.split("=", 1)
