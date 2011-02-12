@@ -21,7 +21,8 @@
 Object-layer module containing classes modelling sentences
 """
 
-from __future__ import unicode_literals, print_function, absolute_import
+#from __future__ import unicode_literals #**kargs problem on "old" amcat
+from __future__ import print_function, absolute_import
 from amcat.tools import toolkit
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools.cachable.cacher import cache
@@ -41,8 +42,8 @@ class Sentence(Cachable):
         
     def getAnalysedSentence(self, analysis):
         if type(analysis) <> int: analysis = analysis.id
-        for a in self.analysedSentences:
-            if analysis == a.analysisid:
+        for a in self.parsedSentences:
+            if analysis == a.analysis.id:
                 return a
 
 
