@@ -700,13 +700,13 @@ class AmcatDB(object):
     def createTable(self, tablename, colspecs, primarykey=None, temporary=False):
         def colspec_to_sql(col):
             colname, coltype = col[:2]
-            if coltype.lower() == 'serial' and self.dbType == 'mx.ODBC.unixODBC':
+            if coltype.lower() == 'serial' and self.dbType in ('mx.ODBC.unixODBC', 'mx.ODBC.iODBC'):
                 coltype = 'int identity(1,1)'
-            if coltype.lower() == 'timestamp' and self.dbType == 'mx.ODBC.unixODBC':
+            if coltype.lower() == 'timestamp' and self.dbType in ('mx.ODBC.unixODBC', 'mx.ODBC.iODBC'):
                 coltype = 'datetime'   
             return '%s %s %s' % (self.escapeFieldName(colname), coltype, ' '.join(col[2:]))
         
-        if self.dbType not in ('psycopg2', 'mx.ODBC.unixODBC'):
+        if self.dbType not in ('psycopg2', 'mx.ODBC.unixODBC', 'mx.ODBC.iODBC'):
             raise Exception('Unsupported database (%s) for createTable' % self.dbType)
 
         cmd = "CREATE TABLE"
