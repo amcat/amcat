@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/local/bin/python2.6
 
-import dbtoolkit
+from amcat.db import dbtoolkit
 import sys
-import tableoutput
+from amcat.tools.table import tableoutput
 
-import amcatlogging; log = amcatlogging.setup()
+from amcat.tools.logging import amcatlogging; log = amcatlogging.setup()
 
 db = dbtoolkit.anokoDB()
 
@@ -24,7 +24,7 @@ if select:
     if output == "plain":
         tableoutput.printTable(res)
     elif output == "csv":
-        tableoutput.table2csv(res)
+        tableoutput.table2csv(res, colnames)
     else:
         print tableoutput.table2unicode(res, colnames)
 else:
