@@ -1,5 +1,6 @@
-import  re, toolkit
-import parse
+import  re
+from amcat.tools import toolkit
+from amcat.nlp import parse
 
 TOKENIZE = "%s/Alpino/Tokenization/tok" 
 PARSE = "ALPINO_HOME=%s/Alpino %s/Alpino/bin/Alpino end_hook=dependencies -notk -parse"

@@ -1,5 +1,5 @@
-import re,os, toolkit, collections
-
+import re,os, collections
+from amcat.tools import toolkit
 abbrevs = ["ir","mr","dr","dhr","ing","drs","mrs","sen","sens","gov","st","jr","rev","vs","gen","adm","sr","lt","sept"]
 months = "Jan Feb Mar Apr Jun Jul Aug Sep Oct Nov Dec".split()
 

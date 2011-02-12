@@ -1,5 +1,4 @@
-from __future__ import with_statement
-import toolkit
+from amcat.tools import toolkit
 from contextlib import contextmanager
 
 AMCAT_RESOURCES = "/home/amcat/resources"

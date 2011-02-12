@@ -1,9 +1,10 @@
-from __future__ import with_statement
-
-import dbtoolkit, article, toolkit, sys, preprocessing
+from amcat.db import dbtoolkit
+from amcat.model import article
+from amcat.tools import toolkit
+import sys
+from amcat.nlp import preprocessing, tadpole
 import logging; LOG = logging.getLogger(__name__)
-import tadpole
-from amcatlogging import logExceptions
+from amcat.tools.logging.amcatlogging import logExceptions
 
 ANALYSISID=3
 

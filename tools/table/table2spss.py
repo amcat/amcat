@@ -34,13 +34,15 @@ def getSPSSFormat(type):
 def _getVarDef(col, seen=set()):
     """Remove duplicates and spaces from field names"""
     fn = col.fieldname.replace(" ","_")
+    fn = fn.replace("-","_")
     if fn in seen:
         for i in xrange(400):
             if "%s_%i" % (fn, i) not in seen:
                 fn = "%s_%i" % (fn, i)
+		break
     seen.add(fn)
     vardef = "%s%s" % (fn, getSPSSFormat(col.fieldtype))
-    log.debug("Col %s vardef %s" % (col, vardef))
+    log.debug("Col %r vardef %r" % (col, vardef))
     col.fieldname = fn # otherwise will get in trouble later
     return vardef
 
@@ -64,8 +66,11 @@ def table2spss(t, writer=sys.stdout, saveas=None, monitor=progress.NullMonitor()
                 val = t.getValue(row, col)
                 oval = val
                 if val and issubclass(col.fieldtype, idlabel.IDLabel):
-                    valuelabels[col][val.id] = val.label
-                    val = val.id
+                    if type(val) == int:
+                        valuelabels[col][val] = "?%i" % val
+                    else:
+                        valuelabels[col][val.id] = val.label
+                        val = val.id
                 if val and col.fieldtype == str:
                     val = '"%s"' % clean(val)
                 if val and col.fieldtype == datetime.datetime:
@@ -97,8 +102,12 @@ def table2spss(t, writer=sys.stdout, saveas=None, monitor=progress.NullMonitor()
 class EchoWriter(object):
     def __init__(self, writer):
         self.writer = writer
+	fn = toolkit.tempfilename(".sps","data")
+	self.log = open(fn, "w")
+	log.warn("Writing spss commands to %s" % fn)
+	
     def write(self, bytes):
-        sys.stderr.write(bytes)
+        self.log.write(bytes)
         self.writer.write(bytes)
         
 def table2sav(t, filename=None, monitor=progress.NullMonitor()):
@@ -116,7 +125,7 @@ def table2sav(t, filename=None, monitor=progress.NullMonitor()):
         pspp = toolkit.executepipe("pspp -p")
         writer = pspp.next()
         monitor.worked(10)
-        #writer = EchoWriter(writer)
+        writer = EchoWriter(writer)
         log.debug("Creating SPS script and sending to PSPP")
         table2spss(t, writer=writer, saveas=filename, monitor=monitor.submonitor(80))
         log.debug("Closing PSPP")

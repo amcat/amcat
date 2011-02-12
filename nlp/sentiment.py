@@ -1,7 +1,8 @@
 import collections
-import word, sentence, toolkit, article
-from analysis import Analysis
-from cachable2 import cache
+from amcat.model import word, sentence, article
+from amcat.model.analysis import Analysis
+from amcat.tools import toolkit
+from amcat.tools.cachable import cacher
 import re
 
 class Token(object):
@@ -39,16 +40,13 @@ class Sentiment(object):
         self.topicdict = topicdict
 
     def getTokens(self, *sents):
-        cache(sents, words=dict(word=dict(lemma=dict(lemma=["string"]))))
-
+        cacher.cache(sents, words=dict(word=dict(lemma=[])))
         sls = set()
         for sent in sents:
             for w in sent.words:
                 sl =self.ldict.get(w.word.lemma.id)
                 if sl: sls.add(sl)
-
-        cache(sls, ['sentiment','intensity'])
-
+	#cacher.cache(sls, ['sentiment','intensity'])
         for sent in sents:
             for w in sent.words:
                 l = w.word.lemma
@@ -58,7 +56,6 @@ class Sentiment(object):
                 intensity = sl and sl.intensity
                 notes = sl and sl.notes
                 yield Token(w, topic, sent, intensity, notes)
-            
 
     def spreadTopics(self, tokens):
         originaltopics = [t.topic for t in tokens] 
@@ -136,10 +133,10 @@ class Sentiment(object):
     def getResolvedTokensForArticle(self, article):
         sents = [s.getAnalysedSentence(self.analysis.id) for s in article.sentences]
         tokens = list(self.getTokens(*sents))
-        self.spreadTopics(tokens)
+	if self.topicdict: self.spreadTopics(tokens)
         self.resolveIntensifiers(tokens)
-        self.resolveConditions(tokens)
-        self.resolveSpecial(tokens)
+        #self.resolveConditions(tokens)
+        #self.resolveSpecial(tokens)
         return tokens
 
     def getSentimentPerTopicForArticle(self, article):
@@ -148,13 +145,13 @@ class Sentiment(object):
             yield topic, self.computeSentiment(sents)
         
 if __name__ == '__main__':
-    import dbtoolkit
+    from amcat.db import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)
     aid = 59074552
 
-    topicdict = dict(db.doQuery("select lemmaid, topic from tmp_olery_topics"))
-    s = Sentiment(2, 3, topicdict, db)
+    s = Sentiment(1, 3, db=db)
 
    
     for topic, sentiment in s.getSentimentPerTopicForArticle(article.Article(db, aid)):
         print topic, sentiment
+

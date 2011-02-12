@@ -3,7 +3,7 @@
 
 from socket import *
 import re
-import lemmata, toolkit
+from amcat.tools import toolkit
 
 
 TADPOLE_POSMAP = {"VZ" : "P",
