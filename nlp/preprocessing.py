@@ -1,5 +1,3 @@
-from __future__ import with_statement
-
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -64,20 +62,24 @@ In each case, the caller is responsible for committing the db transaction.
 """
 
 from itertools import izip, count
-import sbd, re, dbtoolkit, toolkit, traceback, article
-import word
-import tadpole
-import alpino, lemmata
-import table3, sentence
+from amcat.nlp import sbd
+import re, time
+from amcat.db import dbtoolkit
+from amcat.tools import toolkit
+import traceback
+from amcat.model import article
+from amcat.model.analysis import Analysis
+from amcat.model import sentence
+from amcat.nlp import tadpole, alpino
+from amcat.tools.table import table3
 import sys, traceback
-from analysis import Analysis
 import cPickle as pickle
-from amcatlogging import logExceptions
+from amcat.tools.logging.amcatlogging import logExceptions
 import logging; log = logging.getLogger(__name__)
-import ticker
-from preprocesstools import clean
+from amcat.tools.logging import ticker
+from amcat.nlp.preprocesstools import clean
 
-#import amcatlogging; amcatlogging.debugModule()
+#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 def _getid(o):
     return o if type(o) == int else o.id
@@ -140,8 +142,8 @@ def splitArticle(db, art):
     @type art: L{article.Article} 
     @param art: The article to split
     """
-    if art.sentences: return False
-    text = db.getText(art.id)
+    if list(art.sentences): return False
+    text = art.text
     if not text:
         toolkit.warn("Article %s empty, adding headline only" % art.id)
         text = ""
@@ -158,7 +160,7 @@ def splitArticle(db, art):
                 raise Exception("Sentence longer than 6000 characters, this is not normal!")
             db.insert("sentences", {"articleid":art.id, "parnr" : parnr, "sentnr" :
                                         sentnr, "sentence" : sent, 'encoding': encoding})
-    art.removeCached("sentences")
+    del art.sentences
     return True
 
 ###########################################################################
@@ -191,12 +193,12 @@ def getNonemptySentenceTexts(db, analysis, maxn):
     todelete = set()
     result = []
     for sent in getSentences(db, analysis, maxn):
-        text = sent.text.strip()
+        text = sent.sentence.strip()
         nwords = len(text.split())
         if nwords <= 1 or nwords > 60:
             todelete.add(sent.id)
         else:
-            result.append((sent.id, sent.text))
+            result.append((sent.id, sent.sentence))
     if not (result or todelete): return None
     log.info("len(todelete)=%i, len(result)=%i" % (len(todelete), len(result)))
     db.doQuery("DELETE FROM parses_jobs_sentences WHERE analysisid=%i AND %s" % (analysisid, db.intSelectionSQL("sentenceid", todelete)))
@@ -246,11 +248,13 @@ def save(db, analysis, maxn=None):
     @param maxn: if given, save maximum maxn sentences in one go. If not given, repeatedly
                  save sentences until all sentences are done
     """
-    import amcatlogging; amcatlogging.infoModule()
+    from amcat.tools.logging import amcatlogging; amcatlogging.infoModule()
     purge(db, analysis)
     analysisid = _getid(analysis)
     s = _ParseSaver(db, analysis.id)
-    if maxn:
+    if maxn == -1:
+	s.saveAll(keepsaving=True)
+    elif maxn:
         s.saveResults(maxn)
     else:
         s.saveAll()
@@ -291,6 +295,7 @@ def splitArticles(db, articles):
     @param articles: The articles to split
     """
     nsplit = 0
+    articles = list(articles)
     for art in articles:
         with logExceptions():
             if type(art) == int: art = article.Article(db, art)
@@ -377,7 +382,7 @@ class _ParseSaver(object):
         log.debug("Saved and deleted sentences %r" % todelete)
         return todelete
         
-    def saveAll(self, npercommit=500):
+    def saveAll(self, npercommit=500, keepsaving=False):
         """Repeatedly save results from the jobs table to the parses_* tables until done.
         This method internally calls saveResults, which *will* run transactions on self.db"""
         log.debug("Querying database for N")
@@ -389,9 +394,20 @@ class _ParseSaver(object):
         while True:
             with logExceptions(log):
                 sids = self.saveResults(npercommit)
-                if not sids: break
+                if not sids:
+		    if keepsaving:
+			log.info("sleeping 5 seconds")
+			time.sleep(5)
+			continue
+		    else:
+			break
                 done += len(sids)
                 log.info("%i sentences saved, %i/%i done (%1.1f%%)" % (len(sids), done, n, float(done)/n*100))
+		if keepsaving and len(sids) < npercommit:
+		    log.info("sleeping 5 seconds")
+		    time.sleep(5)
+		    continue
+
                 
 
 class BaseWordCreator(object):
@@ -431,9 +447,13 @@ class CachingWordCreator(BaseWordCreator):
         
 
 if __name__ == '__main__':
-    import dbtoolkit, article
-    import amcatlogging; amcatlogging.setStreamHandler()
+    from amcat.db import dbtoolkit
+    from amcat.model import article
+    from amcat.tools.logging import amcatlogging; amcatlogging.setStreamHandler()
     amcatlogging.debugModule()
     db  = dbtoolkit.amcatDB()
-    sids = set(toolkit.intlist())
-    _ParseSaver(db, 3).saveResults(len(sids), sids)
+    aid = 60177011
+    a = article.Article(db, aid)
+    print list(a.sentences)
+    splitArticle(db, a)
+    print list(a.sentences)

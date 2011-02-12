@@ -6,14 +6,13 @@ python dostanford.py ANALYSISID [NPERBATCH]
 TODO: create as proper externalscript
 """
 
-from __future__ import with_statement
 import re
-import toolkit
-import dbtoolkit
-import amcatlogging
+from amcat.tools import toolkit
+from amcat.db import dbtoolkit
+from amcat.tools.logging import amcatlogging
 log = amcatlogging.setup()
 #amcatlogging.debugModule()
-import preprocessing
+from amcat.nlp import preprocessing
 import sys
 
 def usage():
@@ -25,13 +24,13 @@ if len(sys.argv) < 2: usage()
 analysisid=int(sys.argv[1])
 
 if analysisid == 4: 
-    import stanford
+    from amcat.nlp import stanford
     parse = stanford.parseSentences
 elif analysisid == 5:
-    import englishpos
+    from amcat.nlp import englishpos
     parse = englishpos.parseSentences
 elif analysisid == 3:
-    import dolemmatise
+    from amcat.nlp import dolemmatise
     parse = dolemmatise.parseSentences
 else:
     usage()
@@ -50,7 +49,7 @@ while True:
     if not sents:
         log.info("Done!")
         break
-    sents = [(sent.id, sent.text) for sent in sents]
+    sents = [(sent.id, sent.sentence) for sent in sents]
     #log.info("Parsing %i sentences: %r" % (len(sents), sents))
     log.info("Parsing %i sentences: " % (len(sents), ))
     for sid, result in parse(sents):

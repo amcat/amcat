@@ -1,4 +1,4 @@
-import toolkit
+from amcat.tools import toolkit
 
 
 AMCAT_RESOURCES = "/home/amcat/resources"
