@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/local/bin/python2.6
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -39,8 +39,12 @@ if -q is given, only print errors to stderr
 """
 
 import logging; LOG = logging.getLogger(__name__)
-import amcatlogging; amcatlogging.setStreamHandler()
-import sys, dbtoolkit, analysis, preprocessing, toolkit
+from amcat.tools.logging import amcatlogging; amcatlogging.setStreamHandler()
+import sys
+from amcat.db import dbtoolkit
+from amcat.model import analysis
+from amcat.nlp import preprocessing
+from amcat.tools import toolkit
 try:
     import cPickle as pickle
 except:
@@ -84,7 +88,7 @@ if action == "split":
     status("Done!")
 elif action == "stats":
     t = preprocessing.getStatistics(db)
-    import tableoutput
+    from amcat.tools.table import tableoutput
     print tableoutput.table2unicode(t)
 elif action in ('assign', 'get', 'reset', 'store', 'save'):
     try:
