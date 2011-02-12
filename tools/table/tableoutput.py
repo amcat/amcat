@@ -118,10 +118,11 @@ def table2unicode(table, colnames=None, formats=None, useunicode=True, box=True,
 
 class HTMLGenerator(object):
     # use some sort of templating???
-    def __init__(self, tclass=None, rownames=False):
+    def __init__(self, tclass=None, rownames=False, attrhook=None):
         self.tclass = tclass
         self.rownames = rownames
         self.NoneString = ''
+        self.attrhook = attrhook # function(header=False, row=None, col=None) --> dict of attrs
 
     def generate(self, table, stream=sys.stdout):
         self.startTable(table, stream)
@@ -137,8 +138,8 @@ class HTMLGenerator(object):
             self.element(stream, str(col), "th")
         self.close(stream, "tr")
     def generateContent(self, table, stream, row):
-        self.open(stream, "tr")
-        if self.rownames: self.element(stream, str(row), "th")
+        self.open(stream, "tr", **self.getRowAttrs(row))
+        if self.rownames: self.element(stream, str(row), "th", **self.getCellAttrs(row=row))
         for col in table.getColumns():
             try:
                 val = table.getValue(row, col)
@@ -148,7 +149,7 @@ class HTMLGenerator(object):
                 elif type(val) <> str: val = unicode(val).encode('utf-8')
             except Exception:
                 val = '<span style="color:red" title="%s">ERROR</span>' % traceback.format_exc().replace('"', "'")
-            self.element(stream, val, "td")
+            self.element(stream, val, "td", **self.getCellAttrs(row=row, col=col))
         self.close(stream, "tr")
     def startTable(self, table, stream):
         self.open(stream, "table", self.tclass)
@@ -161,9 +162,18 @@ class HTMLGenerator(object):
     def close(self, stream, element):
         stream.write("</%s>\n" % element)
     def element(self, stream, contents, element, *openargs, **openkargs):
+        if '__skip__' in openkargs: return
         self.open(stream, element, *openargs, **openkargs)
         stream.write(contents)
         self.close(stream, element)
+    def getCellAttrs(self, row=None, col=None):
+        if self.attrhook: return self.attrhook(False, row, col)
+        return {}
+    def getRowAttrs(self, row):
+        if self.attrhook: return self.attrhook(True, row, None)
+        return {}
+    
+                       
 
         
 
