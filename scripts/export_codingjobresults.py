@@ -86,7 +86,7 @@ class ExportScript(externalscripts.ExternalScriptBase):
         
         with self.pm.monitored("Extracting data", 100):
             log.info("Starting export of data %r to format %s" % (jobidlist, exportformat))
-            db = dbtoolkit.amcatDB(username='app', password='eno=hoty', driver="SQLServer")
+            db = dbtoolkit.amcatDB(username='app', password='eno=hoty', driver="SQLServer", profile=True)
             jobs = [codingjob.Codingjob(db, cjid) for cjid in toolkit.intlist(jobidlist)]
             self.requireSentence = requireSentence
             self.allowidlabel = False
@@ -95,7 +95,7 @@ class ExportScript(externalscripts.ExternalScriptBase):
             log.info("Table created, starting export")
             self.exportTable(t, exportformat)
             self.pm.worked(5)
-        #db.printProfile()
+        import sys;db.printProfile(stream=sys.stderr)
 
     def exportTable(self, table, format):
         """Export the table to self.out in the requested format

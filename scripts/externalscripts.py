@@ -243,13 +243,27 @@ class ExternalScriptBase(object):
         log.debug("Running %s with args=%s" % (self, args))
         self._run(sys.stdin, sys.stdout, sys.stderr, *args)
 
+def printScripts(db, stream):
+    from amcat.tools.table import table3, tableoutput
+    stream.write("\nExisting Scripts:\n")
+    t = table3.ObjectTable(rows=sorted(ExternalScript.all(db), key=lambda s:s.id))
+    t.addColumn(label="ID", col=lambda s : s.id)
+    t.addColumn(label="Category", col=lambda s : s.category)
+    t.addColumn(label="Label", col=lambda s : s.label)
+    t.addColumn(label="Module", col=lambda s : s.modulename)
+    tableoutput.table2unicode(t, stream=stream, encoding="utf-8")
+    
+
 amcatlogging.debugModule()
         
 if __name__ == '__main__':    
+    from amcat.db import dbtoolkit
+    db = dbtoolkit.amcatDB(use_app=True)
 
     import sys
     if len(sys.argv) < 3:
         print >>sys.stderr, __doc__
+	printScripts(db, sys.stderr)
         sys.exit()
 
     cmd = sys.argv[1].lower()
@@ -257,8 +271,6 @@ if __name__ == '__main__':
     args = sys.argv[3:]
 
     # get externalscript instance
-    from amcat.db import dbtoolkit
-    db = dbtoolkit.amcatDB(use_app=True)
     script = ExternalScript(db, scriptid)
 
     if cmd == "call":

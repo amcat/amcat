@@ -40,7 +40,13 @@ class DNNExportScript(ExportScript):
             casPerArt[ca.article].add(ca)
         for cas in casPerArt.values():
             yield sorted(cas, key=lambda ca:CODER_HIERARCHY.get(ca.set.coder.id, ca.set.coder.id))[0]
-            
+
+
+    def getColumns(self, jobs):
+        if list(jobs):
+            return super(DNNExportScript, self).getColumns(jobs) + netcolumn.getArrowColumns(list(jobs)[0].unitSchema)
+        else:
+            return super(DNNExportScript, self).getColumns(jobs)
 
 def lbl(x):
     from amcat.tools import idlabel
@@ -58,7 +64,7 @@ def test():
     db = dbtoolkit.amcatDB(profile=True)
     arrowid = 686970
     arrowids = 586414, 586481, 585930, 585766, 585769, 585737, 585917
-    #arrowids = [585917]
+    #arrowids = [585737,585917,591758]
     #arrowids = [585766]
     
     
@@ -72,18 +78,19 @@ def test():
         
         for row in rows:
             print "====== %s: %s ---%s(%+1.1f)--> %s =====" % (row.cs.id, row.cs.values.subject, row.cs.values.predicate, row.cs.values.quality, row.cs.values.object)
+            print cs.sentence.article.date
 
-        cols = netcolumn.getArrowColumns(job.unitSchema)
-        for col in cols:
-            c = col.getCell(row)
-            print col, lbl(c)
-
-        for field in "subject", "object", "quality":
-            print "---- %s ----" % field
-            cols = s.getColumnsForField(job.unitSchema.getField(field))
+            cols = netcolumn.getArrowColumns(job.unitSchema)
             for col in cols:
-                print col, lbl(col.getCell(row))
-        print
+                c = col.getCell(row)
+                print col, lbl(c)
+
+            for field in "subject", "object", "quality":
+                print "---- %s ----" % field
+                cols = s.getColumnsForField(job.unitSchema.getField(field))
+                for col in cols:
+                    print col, lbl(col.getCell(row))
+            print
 
     
 if __name__ == '__main__':

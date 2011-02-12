@@ -1,7 +1,7 @@
-from export_codingjobresults import ExportScript, FieldColumn
-import table3
-import codingjob,  ont
-import cachable
+from amcat.scripts.export_codingjobresults import ExportScript, FieldColumn
+from amcat.tools.table import table3
+from amcat.model.coding import codingjob
+from amcat.model.ontology.object import Object
 import logging; log = logging.getLogger(__name__)
 
 def getTable(jobs, *args, **kargs):
@@ -11,8 +11,8 @@ class TwoDigitFieldColumn(FieldColumn):
     """Returns two-digit code for an ontolgoy field
     (capic1, capic2, capic3)"""
     
-    def __init__(self, field, article):
-        FieldColumn.__init__(self, field, article)
+    def __init__(self, field):
+        FieldColumn.__init__(self, field)
         self.label = field.fieldname + (' (two-digit)')
             
     def getCell(self, row):
@@ -24,8 +24,8 @@ class FourDigitFieldColumn(FieldColumn):
     """Returns four-digit code for an ontolgoy field
     (capic1, capic2, capic3)"""
     
-    def __init__(self, field, article):
-        FieldColumn.__init__(self, field, article)
+    def __init__(self, field):
+        FieldColumn.__init__(self, field)
         self.label = field.fieldname + (' (four-digit)')
             
     def getCell(self, row):
@@ -37,14 +37,15 @@ class LabelFieldColumn(FieldColumn):
     """Returns label for an ontolgoy field
     (capic1, capic2, capic3)"""
     
-    def __init__(self, field, article):
-        FieldColumn.__init__(self, field, article)
+    def __init__(self, field):
+        FieldColumn.__init__(self, field)
         self.label = field.fieldname + (' (label)')
             
     def getCell(self, row):
         ontf = super(LabelFieldColumn, self).getCell(row)
         if not ontf: return None
-        lbl = ontf.labels.get(self.field.schema.language)
+	lbl = ontf.getLabel(2)
+        #lbl = ontf.labels.get(self.field.schema.language)
         if lbl is None: lbl = str(ontf)
         return lbl[4:]
 
@@ -56,21 +57,21 @@ class AgendaExportScript(ExportScript):
         self._Cache = None
     
     
-    def getColumn(self, field, article):
-       if issubclass(field.getTargetType(), ont.Object):
+    def getColumnsForField(self, field):
+       if issubclass(field.getTargetType(), Object):
            #if str(field) in ['capic1', 'capic2', 'capic3']:
-           yield TwoDigitFieldColumn(field, article)
-           yield FourDigitFieldColumn(field, article)
-           yield LabelFieldColumn(field, article)
+           yield TwoDigitFieldColumn(field)
+           yield FourDigitFieldColumn(field)
+           yield LabelFieldColumn(field)
        else:
-           yield FieldColumn(field, article)
+           yield FieldColumn(field)
     
     def getColumns(self, jobs):
-        self.cacheFroms(jobs)
+        #self.cacheFroms(jobs)
         
         return (self.getMetaColumns()
                 + [table3.ObjectColumn("Confidence", self.confidence)]
-                + [table3.ObjectColumn("Quasi", self.quasiSentence)]
+        #        + [table3.ObjectColumn("Quasi", self.quasiSentence)]
                 + list(self.getArticleAnnotationColumns(jobs))
                 + list(self.getUnitAnnotationColumns(jobs))
                 )
@@ -92,19 +93,9 @@ class AgendaExportScript(ExportScript):
             
             self._Cache[r.cs.sentence.id].append(r.cs.getValue("from"))
             
-    def getCodedArticles(self, jobs):
-        cachable.cache(jobs, sets=dict(articles=[]))#"confidence"]))
-        return codingjob.getCodedArticlesFromCodingjobs(jobs)
-            
     def confidence(self, row):
-        try:
-            
-            row.ca.fields # force cache
-            row.ca._fields["confidence"] = lambda x:x/1000. # add confidence pseudo-field
-            return row.ca.confidence
-        except Exception, e:
-            log.error(e)
-            return None
+	return row.ca.db.getValue("select confidence from %s where codingjob_articleid=%i" % (row.ca.set.job.articleSchema.table, row.ca.id))
+    
             
     def quasiSentence(self, row):
         """Split a sentence according to the 'from'-field.

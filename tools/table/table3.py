@@ -36,6 +36,8 @@ from amcat.tools.toolkit import isnull
 import types
 from amcat.contrib.oset import OrderedSet
 
+import logging; log = logging.getLogger(__name__)
+
 def trivialCellFunc(row, col): return "%s/%s" % (row, col)
 
 class NamedRow(object):
@@ -104,8 +106,12 @@ class ObjectColumn(object):
         return self.label
 
 def _ObjectTableCellFunc(row, col):
-    result = col.getCell(row)
-    return result
+    try:
+        result = col.getCell(row)
+        return result
+    except Exception, e:
+	import traceback; traceback.print_exc()
+        log.error(e)
     
 class ObjectTable(Table):
     """

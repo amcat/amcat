@@ -8,7 +8,9 @@ from amcat.model.ontology.hierarchy import BoundObject
 from amcat.model.ontology.object import Object
 from amcat.model.ontology.tree import Tree
 
-from sentencetypes import SENTENCE_TYPES_FINE,  SENTENCE_TYPES_COARSE, SUPPORT_CRITICISM_INTERNAL, SUPPORT_CRITICISM
+from amcat.tools.logging import amcatlogging ;amcatlogging.debugModule()
+
+from sentencetypes import SENTENCE_TYPES_FINE,  SENTENCE_TYPES_COARSE, SUPPORT_CRITICISM_INTERNAL, SUPPORT_CRITICISM, IDEAL, MEDIA
 
 CODEBOOK_CACHE = {}
 def getCodebook(codebook):
@@ -23,12 +25,32 @@ def getDimTree(db):
         DIM_TREE = Tree(db, 5001)
     return DIM_TREE
 
+
+def _doExtrapolate(values):
+    d = values._asdict()
+    d["object"],  d["subject"], d["source"] = d["subject"],  d["source"], None
+    if not d["subject"]:
+	d["subject"] = Object(d["object"].db, MEDIA)
+    values = type(values)(**d) # clone
+    return values
+
 class NetColumn(FieldColumn):
     def __init__(self, field, label):
         FieldColumn.__init__(self, field)
         self.label = field.fieldname + label
         self.fieldname += label
-        self.codebook = getCodebook(self.field.serializer.codebook)
+	self.codebook = getCodebook(self.field.serializer.codebook)
+	self.extrapolate = True
+    def getValues(self, row):
+	values = super(NetColumn, self).getValues(row)
+	if values is None or not self.extrapolate: return
+	
+	src, su, obj = [getattr(values, x) for x in  ("source","subject","object")]
+	objtype = self.codebook.categorise(obj, date=row.art.date, depth=1)[-1]
+	if objtype.id == IDEAL:
+	    values = _doExtrapolate(values)
+	return values
+	
     def getCell(self, row):
         val = super(NetColumn, self).getCell(row)
         if val is None: return
@@ -50,10 +72,17 @@ class CategorisationColumn(NetColumn):
     def _getCell(self, obj, row):
         return self.codebook.categorise(obj, date=row.art.date, depth=self.depth)[-1]
 
+class OmklapColumn(NetColumn):
+    def __init__(self, field, label, depth=2):
+        NetColumn.__init__(self, field, label)
+        self.depth = depth
+    def _getCell(self, obj, row):
+        return self.codebook.categorise(obj, date=row.art.date, depth=self.depth, returnReverse=True, returnObject=False)[-1]
+
 
 class DimensionColumn(CategorisationColumn):
     def __init__(self, field, label):
-        CategorisationColumn.__init__(self, field, label, depth=2)
+        CategorisationColumn.__init__(self, field, label, depth=3)
         self.dimtree = getDimTree(self.codebook.db)
     def _getCell(self, obj, row):
         val = super(DimensionColumn, self)._getCell(obj, row)
@@ -81,7 +110,7 @@ class PartyTypeColumn(InstitutionColumn):
 
 class SentenceTypeColumn(ObjectColumn):
     def __init__(self, label, schema, dictionary, internal):
-        ObjectColumn.__init__(self, label)
+        ObjectColumn.__init__(self, label, fieldtype=idlabel.IDLabel)
 	self.schema = schema
 	su = schema.getField("subject")
 	obj = schema.getField("object")
@@ -119,15 +148,15 @@ def getPartyType(party, date):
     return idlabel.IDLabel(4, "Structural Opposition")
         
 COLUMNS = [
-    lambda field : CategorisationColumn(field, "class", 1),
-    lambda field : CategorisationColumn(field, "root", 2),
-    lambda field : CategorisationColumn(field, "cat", 3),
-    lambda field : DimensionColumn(field, "dim"),
-    lambda field : InstitutionColumn(field, "inst"),
-    lambda field : InstitutionColumn(field, "func", functionid=True),
-    lambda field : InstitutionColumn(field, "partyleader", functionid=True, party=True),
-    lambda field : PartyTypeColumn(field, "partytype"),
-    ]
+     lambda field : CategorisationColumn(field, "class", 1),
+     lambda field : CategorisationColumn(field, "root", 2),
+     lambda field : CategorisationColumn(field, "cat", 3),
+     lambda field : DimensionColumn(field, "dim"),
+     lambda field : InstitutionColumn(field, "inst"),
+     lambda field : InstitutionColumn(field, "func", functionid=True),
+     lambda field : InstitutionColumn(field, "partyleader", functionid=True, party=True),
+     lambda field : PartyTypeColumn(field, "partytype"),
+     ]
 
 def getColumnsForField(field):
     if issubclass(field.getTargetType(), Object):
@@ -148,18 +177,16 @@ def getArrowColumns(schema):
 class AggrQualColumn(FieldColumn):
     def __init__(self, field, label='aggrqual'):
         FieldColumn.__init__(self, field, fieldname=label, label=label)
+	su = self.field.schema.getField("subject")
+	obj = self.field.schema.getField("object")
+	self.surootcol = OmklapColumn(su, "x", 2)
+	self.objrootcol = OmklapColumn(obj, "x", 2)
 
     def getCell(self, row):
         val = super(self.__class__, self).getCell(row)
         if val is None: return
-        for fieldname in ("subject", "object"):
-            field = self.field.schema.getField(fieldname)
-            codebook = getCodebook(field.serializer.codebook)
-            obj = annotationschema.getValue(self.getUnit(row), field)
-            if not obj: continue
-            omklap = codebook.categorise(obj, date=row.art.date, depth=1,
-                                         returnReverse=True, returnObject=False)[-1]
-            
+	for col in self.surootcol, self.objrootcol:
+            omklap = col.getCell(row)
             if omklap: val *= -1
         return val
 
