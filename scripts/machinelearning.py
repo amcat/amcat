@@ -10,7 +10,7 @@
 from amcat.ml import ml, dbwordfeature, mlalgo
 
 from amcat.scripts import externalscripts
-from amcat.model.coding import codingjob
+from amcat.model.coding import codingjob, codedarticle
 from amcat.model import project
 from amcat.db import dbtoolkit
 from amcat.tools.stat import amcatr
@@ -49,19 +49,17 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         testjobs = argToObjects(codingjob.Codingjob, self.db, testjobids)  
         predictsets = argToObjects(project.Set, self.db, predictbatchids)  
         if sample: sample = float(sample)
-        self.writeCodingJob([], trainjobs[0])
-        return 
         # setup learner and train model
         self.getModel(trainjobs)
 
         # do the required action
-        #if testjobs:
-        #    matches = self.testmodel(testjobs)
-        #    self.reportMatches("testreport", matches)
+        if testjobs:
+            matches = self.testmodel(testjobs)
+            self.reportMatches("testreport", matches)
 
-        if predictsets:
-            matches = self.predict(predictsets, sample, testjobs)
-            self.writeCodingJob(trainjobs, matches)
+        #if predictsets:
+        #    matches = self.predict(predictsets, sample, testjobs)
+        #    self.writeCodingJob(trainjobs[0], matches)
             
             
 
@@ -91,7 +89,7 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         log.info("Created model!")
         
     def _getFieldValue(self, unit):
-        val = getattr(unit.values, self.field.fieldname)
+        val = getattr(unit.values, self.field.fieldname, None)
         if val: return val.id
 
     def testModel(self, testjobs):
@@ -139,26 +137,23 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
 
     
 
-    def writeCodingJob(self, matches, job):
+    def writeCodingJob(self, job, matches):
         cj = cloneCodingJob(self.db, job, newname="MachineLearning job", coders=[34])
-        print cj
-        self.db.commit()
-        return
         cjset = list(cj.sets)[0]
         articles = {}
-        for match in result.getRows(): # matchestable contains Match objects as rows
+        for match in matches.getRows(): # matchestable contains Match objects as rows
             a = match.unit.getArticle()
             ca = articles.get(a)
             if not ca:
-                ca = codingjob.createCodedArticle(cjset, a)
+                ca = createCodedArticle(self.db, cjset, a)
                 articles[a] = ca
             data = dict(codingjob_articleid=ca.id)
-            data[self.field.fieldname] = self.getIdForValue(match.getPrediction())
+            data[self.field.fieldname] = match.getPrediction()
             data['confidence'] = int(match.getConfidence() * 1000)
-            if self.unitlevel: data['sentenceid']=match.unit.sentence.id
-            kit.db.insert(self.schema.table, data, retrieveIdent=False)
-        kit.write("<h2>Created codingjob %i - <a href='https://amcat.vu.nl/dev/wva/codingjobDetails?codingjobid=%i'>View job</a> - <a href='https://amcat.vu.nl/dev/wva/codingjobResults?projectid=%i&codingjobids=%i'>View results</a></h2>" % (cj.id,cj.id,cj.project.id, cj.id))
-        kit.db.commit()
+            #if self.unitlevel: data['sentenceid']=match.unit.sentence.id
+            self.db.insert(self.field.schema.table, data, retrieveIdent=False)
+        print "Created codingjob %i" % cj.id
+        self.db.commit()
     
         
 def argToObjects(cls, db, arg):
@@ -176,6 +171,13 @@ def createCodingJob(db, project, name, unitschema, articleschema, coders=[]):
         if not type(coder) == int: coder = coder.id
         db.insert("codingjobs_sets", dict(codingjobid=cjid, setnr=i+1, coder_userid=coder), retrieveIdent=False)
     return codingjob.CodingJob(project.db, cjid)
+
+
+def createCodedArticle(db, codingjobset, article):
+    cjid, setnr = codingjobset.id
+    if not type(article) == int: article = article.id 
+    cjaid = db.insert("codingjobs_articles", dict(codingjobid=cjid, setnr=setnr, articleid=article))
+    return codedarticle.CodedArticle(codingjobset.db, cjaid)
 
 def cloneCodingJob(db, codingjob, newname = None, coders=[]):
     if newname is None: newname = "%s (kopie)" % (codingjob.label,)
