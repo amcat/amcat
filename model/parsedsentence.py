@@ -27,6 +27,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools.cachable.latebind import LB
 from amcat.tools import graph
+from amcat.model import sentence, analysis
 
 class ParsedSentence(Cachable, graph.Graph):
     # NO table, there is no specific table for parsed sentences!
