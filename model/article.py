@@ -35,9 +35,9 @@ class Article(Cachable):
     Class representing a newspaper article
     """
     __table__ = 'articles'
+    __table__ = 'vw_tmp_articles'
     __idcolumn__ = 'articleid'
     __labelprop__ = 'headline'
-    __dbproperties__ = ["date", "length", "pagenr", "url", "externalid"]
 
     headline, byline, metastring, section, date, length, pagenr, url, externalid, text = DBProperties(10)
 

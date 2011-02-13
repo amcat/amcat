@@ -41,7 +41,7 @@ class Function(Cachable):
     __idcolumn__ = ("objectid", "functionid", "office_objectid", "fromdate")
     __labelprop__ = 'office'
     
-    functionid, todate, fromdate = DBProperties(3)
+    functionid, todate, fromdate, party = DBProperties(4)
     office = DBProperty(lambda : Object, getcolumn="office_objectid")
     
 def strmaker():
@@ -103,11 +103,6 @@ class Object(Cachable):
         if not date: date = datetime.now()
         date = toolkit.toDate(date)
         for f in self.functions:
-            # check party condition
-            if party is not None:
-                isparty = f.functionid == PARTYMEMBER_FUNCTIONID
-                if party != isparty: continue
-
             # check date condition
             fd = toolkit.toDate(f.fromdate)
             if (date - fd).days < 0: continue # fromdate after 'now'
@@ -115,6 +110,10 @@ class Object(Cachable):
                 td = toolkit.toDate(f.todate)
                 if (td - date).days < 0: continue # todate before 'now'
 
+            # check party condition
+            if party is not None:
+                if bool(party) != bool(f.party):
+                    continue
             yield f
 
     def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):

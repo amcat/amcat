@@ -1,6 +1,7 @@
-import subprocess, re, toolkit
+import subprocess, re
+from amcat.tools import toolkit
 from treebankpos import POS
-import preprocesstools
+from amcat.nlp import preprocesstools
 
 import logging; log = logging.getLogger(__name__)
 

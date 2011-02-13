@@ -170,7 +170,8 @@ class NullMonitor(object):
     def start(self, task=None, units=None): pass
     def done(self): pass
     def worked(self, n=None): pass
-    def error(self, exception, traceback):
+    def error(self, exception, tb):
+        traceback.print_tb(tb, file=sys.stderr)
         raise exception
     def monitored(self, *args, **kargs):
         return monitored("",10,monitor=self)

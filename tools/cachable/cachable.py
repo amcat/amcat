@@ -367,7 +367,8 @@ class Property(object):
         try:
             v = self.getCached(obj)
             #log.debug("Got cached %r.%s = %r" % (obj, self, v))
-        except store.UnknownKeyException:
+        except:
+            # key not found or other error
             #log.debug("%r.%s Not found in cache, retrieving from source" % (obj, self))
             v = self.retrieve(obj)
             #log.debug("Retrieved %r.%s = %r, caching" % (obj, self, v))
@@ -462,7 +463,7 @@ class Property(object):
                 val = self.getCached(obj)
                 val = self.get(obj)
                 self.observedType = type(val)
-            except store.UnknownKeyException:
+            except:
                 pass
         if self.observedType is None:
             raise UnknownTypeException(self)
