@@ -43,7 +43,7 @@ class Set(Cachable):
     __idcolumn__ = 'setid'
     __labelprop__ = 'name'
     
-    name = DBProperty()
+    name, setid = DBProperties(2)
     project = DBProperty(lambda : Project)
     articles = ForeignKey(LB("Article"), table="sets_articles")
     
