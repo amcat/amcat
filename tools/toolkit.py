@@ -45,7 +45,7 @@ this organisation!
 from __future__ import unicode_literals, print_function, absolute_import
 import warnings, os, random, gzip, types, datetime, itertools, re, collections
 import threading, subprocess, sys, colorsys, base64, time, inspect, logging
-import htmlentitydefs
+import htmlentitydefs, string
 try: import mx.DateTime
 except: pass
 
@@ -713,6 +713,9 @@ def clean(string, level=0, lower=False, droptags=False, escapehtml=False, keepta
         string = unescapeHtml(string)
     return string.strip()
 
+def random_alphanum(size=10):
+    return ''.join([random.choice(string.letters + string.digits) for i in range(size)])
+
 
 def warn(string):
     fn, lineno, func = getCaller()
@@ -1215,7 +1218,36 @@ def isnull(x, alt):
     """Return alf if x is None else x"""
     return alt if x is None else x
 
+def hasattrv2(obj, attrs):
+    """Accepts dot-seperated attributes. This allow for non-shallow checking
+    
+    @obj: an object
+    @attrs: dot-seperated attribute
+    
+    @example:
+    >>> class A(object): pass
+    ...
+    >>> class B(object): pass
+    ...
+    >>> B.foo = 'bar'
+    >>> A.B = B
+    >>> hasattrv2(A, 'B.foo')
+    True
+    >>> hasattrv2(A, 'B.bar')
+    False
+    """
+    try: getattrv2(obj, attrs)
+    except AttributeError:
+        return False
+    return True
 
+def getattrv2(obj, attrs):
+    """Accepts dot-seperated attributes. This allows for non-shallow getting
+    
+    (See: hasattrv2)"""
+    for attr in attrs.split('.'):
+        obj = getattr(obj, attr)
+    return obj
 
 ###########################################################################
 ##                 Deprecated functions and imports                      ##
