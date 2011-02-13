@@ -175,7 +175,27 @@ class TestToolkitFunctions(amcattest.AmcatTestCase):
             ):
             self.assertEqual(toolkit.pad(seq, minlength, padwith, chop), out)
             
-            
+    def test_hasattrv2(self):
+        class A(object): pass
+        class B(object): pass
+        
+        B.foo = 'bar'; A.B = B
+        
+        self.assertTrue(toolkit.hasattrv2(A, 'B.foo'))
+        self.assertFalse(toolkit.hasattrv2(A, 'B.bar'))
+        self.assertTrue(toolkit.hasattrv2(A, 'B'))
+        self.assertFalse(toolkit.hasattrv2(A, 'C'))
+        
+    def test_getattrv2(self):
+        class A(object): pass
+        class B(object): pass
+        
+        B.foo = 'bar'; A.B = B
+        
+        self.assertEqual(toolkit.getattrv2(A, 'B.foo'), 'bar')
+        self.assertEqual(toolkit.getattrv2(A, 'B'), B)
+        self.assertRaises(AttributeError, toolkit.getattrv2, *(A, 'B.bar'))
+        self.assertRaises(AttributeError, toolkit.getattrv2, *(A, 'C'))
                     
 if __name__ == '__main__':
     amcattest.main()
