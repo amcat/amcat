@@ -241,7 +241,7 @@ class Cachable(idlabel.IDLabel):
                 return key,val #assume caller know that (s)he's doing
 
         #log.debug("Creating %s with idvalues=%s, props=%s" % (cls.__name__, idvalues, props))
-        dbprops = dict(getcolval(k, v) for (k,v) in props.iteritems())
+        dbprops = dict(getcolval(k, v) for (k,v) in props.iteritems() if v)
         
         if idvalues is not None:
             idcol = cls.__idcolumn__
