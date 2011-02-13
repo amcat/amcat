@@ -79,22 +79,18 @@ class Table(object):
     
 
 OBJECTCOLUMN_PROPERTIES = ('fieldname', 'fieldtype', 'label',
-                           'fieldwidget', 'fieldwidget_attrs',
-                           'visible', 'choices', 'editable')
+                           'visible', 'editable', 'url')
 
 class ObjectColumn(object):
-    def __init__(self, label, cellfunc=None, fieldname=None, fieldtype=None,
-                 fieldwidget=None, fieldwidget_attrs=None, visible=True,
-                 choices=None, editable=True):
+    def __init__(self, label, cellfunc=None, fieldname=None, fieldtype=None, 
+                 visible=True, editable=True, url=None):
         self.label = label
         self.cellfunc = cellfunc
-        self.choices = choices
         self.fieldname = fieldname or label
         self.fieldtype = fieldtype
-        self.fieldwidget = fieldwidget
-        self.fieldwidget_attrs = fieldwidget_attrs
         self.visible = visible
         self.editable = editable
+        self.url = url
     def getCell(self, row):
         if self.cellfunc:
             result = self.cellfunc(row)
@@ -143,18 +139,24 @@ class FormTable(ObjectTable):
     """Wrapper around ObjectTable. Get its default columns from a Form
     object."""
     
-    def __init__(self, form, objects, cache=True, idcolumn=None):
+    def __init__(self, form, objects, rowurl=None, idcolumn=None):
         """
         @type form: Django Form (django.forms.Form)
         
         @type idcolumn: int or tuple
         @param idcolumn: Which column(s) are unique
         
+        @type rowurl: formattable string
+        @param rowurl: keywords will be replaced with value of
+        column-cell.
+        @example rowurl: "/user/{id}/"
+        
         @type objects: A cachable object"""        
         super(FormTable, self).__init__(objects)
         
         self.form = form if hasattr(form, 'fields') else form()
         self.idcolumn = toolkit.idlist(idcolumn or self.form.Meta.model.__idcolumn__)
+        self.rowurl = rowurl
         
         for fname in self.form.Meta.table:
             self._addColumn(fname, self.form.fields[fname])
@@ -167,17 +169,16 @@ class FormTable(ObjectTable):
     def _addColumn(self, name, field, visible=True):
         label = field.label or name.capitalize()
         col = self._createCellfunc(field, name)
-        widget = field.widget.__class__.__name__
         type = field.__class__.__name__
         
-        choices = field.choices if hasattr(field, 'choices') else None
+        url = None
+        if toolkit.hasattrv2(self.form, 'Meta.links'):
+            self.form.Meta.links.get(name, None)
         
         self.addColumn(col, label,
-                       choices=choices,
                        fieldname=name,
-                       fieldwidget=widget,
-                       fieldwidget_attrs=field.widget_attrs(field),
                        fieldtype=type,
+                       url=url,
                        visible=visible)
             
     def _createCellfunc(self, field, name):
@@ -187,10 +188,10 @@ class FormTable(ObjectTable):
             attr = getattr(x, name)
             if type(attr) == types.GeneratorType:
                 # One to many relation
-                return (c.id for c in attr)
+                return len(tuple(attr))
             
             # One to one
-            return attr.id
+            return attr.label
         
         if hasattr(field, 'choices'): 
             return foreign_key
