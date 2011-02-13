@@ -39,17 +39,14 @@ class CodingJob(Cachable):
     __table__ = 'codingjobs'
     __idcolumn__ = 'codingjobid'
     __labelprop__ = 'name'
-    name, insertdate = DBProperties(2)
+    codingjobid, name, insertdate = DBProperties(3)
 
     unitSchema = DBProperty(LB("AnnotationSchema", package="amcat.model.coding"), getcolumn="unitschemaid")
     articleSchema = DBProperty(LB("AnnotationSchema", package="amcat.model.coding"), getcolumn="articleschemaid")
     project = DBProperty(LB("Project"))
-    owner = DBProperty(LB("User"), getcolumn="owner_userid")
+    owner = DBProperty(LB("User"), getcolumn="insertuserid")
 
     sets = ForeignKey(LB("CodingJobSet", sub="coding"), includeOwnID=True)
-        
-    def getLink(self):
-        return "codingjobDetails?codingjobid=%i" % self.id
 
     def getSet(self, setnr):
         for set in self.sets:
