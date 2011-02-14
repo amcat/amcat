@@ -232,9 +232,9 @@ class Cachable(idlabel.IDLabel):
             try:
                 p = cls._getProperty(key)
                 cols = p._getColumns()
-                if type(cols) in (list, tuple): raise TypeError("mulitple columns in create property %s=%r" % (key, cols))
+                if type(cols) in (list, tuple): raise TypeError("Multiple columns in create property %s=%r" % (key, cols))
                 vals = p.objectToDbrow(val)
-                if len(vals) <> 1: raise TypeError("mulitple values in create property %s.%r->%r" % (key, cols, vals))
+                if len(vals) != 1: raise TypeError("Multiple values in create property %s.%r->%r" % (key, cols, vals))
                 vals = vals[0]
                 return cols, vals
             except AttributeError:

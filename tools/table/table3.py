@@ -157,7 +157,7 @@ class FormTable(ObjectTable):
         column-cell.
         @example rowurl: "/user/{id}/"
         
-        @type objects: A cachable object"""        
+        @type objects: A cachable object"""
         super(FormTable, self).__init__(objects)
         
         self.form = form if hasattr(form, 'fields') else form()
@@ -171,6 +171,7 @@ class FormTable(ObjectTable):
         for c in self.idcolumn:
             if c not in columns:
                 self._addColumn(c, self.form.fields[c], visible=False)
+        
                 
     def _addColumn(self, name, field, visible=True):
         label = field.label or name.capitalize()
@@ -195,11 +196,10 @@ class FormTable(ObjectTable):
             if type(attr) == types.GeneratorType:
                 # One to many relation
                 return len(tuple(attr))
-            
             # One to one
             return attr.label
         
-        if hasattr(field, 'choices'): 
+        if hasattr(field, 'count') or hasattr(field, 'choices'):
             return foreign_key
         return lambda x:getattr(x, name)
         

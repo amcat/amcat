@@ -99,6 +99,7 @@ def cacheMultiple(cachables, *propnames):
     if not cachables: return
     cachables = toolkit.getseq(cachables, seqtypes=list, convertscalar=True)
     classes = set(cachable.__class__ for cachable in cachables)
+    if not len(classes): return
     if len(classes) != 1: raise Exception("cacheMultiple should receive only cachables of the same class! %r" % (classes))
     klass = toolkit.head(classes)
     
