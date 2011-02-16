@@ -182,10 +182,12 @@ class AmcatDB(object):
     def _getCursor(self):
         if self.conn is None:
             raise Exception("Cannot query without database connection")
+        log.info("Locking DB (%s)" % self)
         if not self.DB_LOCK.acquire(False):
             raise Exception("Cannot lock database, try again later")
         return self.conn.cursor()
     def _releaseCursor(self, cursor):
+        log.info("Releasing DB (%s)" % self)
         if cursor is not None: 
             try:
                 cursor.close()
