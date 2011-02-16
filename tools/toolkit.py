@@ -305,8 +305,7 @@ def pairs(seq, lax=False):
         if lax:
             return pairs(seq[:-1]) + [(seq[-1], None)]
         else:
-            raise ValueError(
-                "Non-lax pairing needs even number of items in sequence")
+            raise ValueError("Non-lax pairing needs even number of items in sequence")
     return zip(seq[::2], seq[1::2])
 
 
@@ -489,6 +488,18 @@ def unique(iterable, key=None):
                 seen_add(k)
                 yield element
 
+def zipp(*iterables):
+    """Zip function with added functionality
+    At the moment, raises Exception if iterable are not of same size"""
+    #TODO: more elegant if we use iterators rather than coerce to sequence
+    if not iterables: return ()
+    seqs = map(getseq, iterables)
+    l0 = len(seqs[0])
+    if not all(l0 == len(it) for it in seqs[1:]):
+        raise ValueError("Unequal iterable length")
+    return zip(*seqs)
+            
+                
 ###########################################################################
 ##                      Mapping functions                                ##
 ###########################################################################

@@ -174,8 +174,18 @@ class TestToolkitFunctions(amcattest.AmcatTestCase):
             ([1,2,3], 3, None, True, [1,2,3]),
             ):
             self.assertEqual(toolkit.pad(seq, minlength, padwith, chop), out)
-            
-            
-                    
+
+    def test_zipp(self):
+        for (seqs, zipped) in (
+            (([1,2,3], [4,5,6]), [(1,4), (2,5), (3,6)]),
+            (([1,2,3], [4,5]), ValueError),
+            (([1], [4,5]), ValueError),
+            ((), ()),
+            (([1],), [(1,)]),
+            ):
+            if inspect.isclass(zipped) and issubclass(zipped, Exception):
+                self.assertRaises(zipped, toolkit.zipp, *seqs)
+            else:
+                self.assertEqual(zipped, toolkit.zipp(*seqs))
 if __name__ == '__main__':
     amcattest.main()
