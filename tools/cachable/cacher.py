@@ -23,6 +23,7 @@ from amcat.db import dbtoolkit
 from amcat.tools import toolkit
 import collections
 
+from amcat.tools.cachable.property import Property
 from amcat.tools.logging import amcatlogging
 #amcatlogging.debugModule()
 
@@ -106,8 +107,8 @@ def cacheMultiple(cachables, *propnames):
     log.debug("cacheMultiple klass=%r, props=%r" % (klass, propnames))
     for propname in propnames:
         log.debug("Getting property %r" % propname)
-        prop = klass._getProperty(propname)
-        if not prop: raise Exception("Cachable %r has not property %s" % (cachable, propname))
+        prop = getattr(klass, propname, None)
+        if not isinstance(prop, Property): raise Exception("Cachable %r has not property %s" % (cachable, propname))
         prop.prepareCache(cacher)
 
     #toolkit.ticker.warn("Getting data")
@@ -117,10 +118,10 @@ def cacheMultiple(cachables, *propnames):
     #toolkit.ticker.warn("CAching values")
     for cachable in cachables:
         for prop in propnames:
-            cachable._getProperty(prop).doCache(cacher, cachable)
+            getattr(cachable.__class__, prop).doCache(cacher, cachable)
 
     for prop in propnames:
-	cachable._getProperty(prop).cachePerObject(db, cachables)
+	getattr(cachable.__class__, prop).cachePerObject(db, cachables)
 
 def cache(cachables, *properties, **structure):
     """

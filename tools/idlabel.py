@@ -25,19 +25,13 @@ or specifically on an integral id with an associated label (L{IDLabel})
 from __future__ import unicode_literals, print_function, absolute_import
 import logging; log = logging.getLogger(__name__)
 
-class Identity(object):
-    """
-    Simple class representing an object which can be compared to
-    other Identity objects based on an identity() function
-    """
-    def __init__(self, *identity):
-        self.__identity__ = tuple([self.__class__] + list(identity)) if identity else None
-    def identity(self):
-        if self.__identity__ is None: raise Exception("Identity object without identity")
-        return self.__identity__
+class _Identity(object):
+    __slots__ = ()
+    def _identity(self):
+	raise NotImplementedError()
     def __repr__(self):
         try:
-            i = self.identity()
+            i = self._identity()
             if i[0] == self.__class__: i = i[1:]
             return "%s%r" % (type(self).__name__, i)
         except Exception, e:
@@ -46,20 +40,38 @@ class Identity(object):
     def __str__(self):
         return repr(self)
     def __hash__(self):
-        return hash(self.identity())
+        return hash(self._identity())
     def __eq__(self, other):
         if other is None: return False
-        if not isinstance(other, Identity): return False
-        return self.identity() == other.identity()
+        if not isinstance(other, _Identity): return False
+        return self._identity() == other._identity()
     def __cmp__(self, other):
-        if not isinstance(other, Identity): return -1
-        return cmp(self.identity(), other.identity())
+        if not isinstance(other, _Identity): return -1
+        return cmp(self._identity(), other._identity())
+
+
+
+    
+class Identity(object):
+    """
+    Simple class representing an object which can be compared to
+    other Identity objects based on an identity() function
+    """
+    __slots__ = '__identity__'
+    def __init__(self, *identity):
+        self.__identity__ = tuple([self.__class__] + list(identity)) if identity else None
+    def _identity(self):
+	if self.__identity__:
+	    return self.__identity__
+	raise Exception("Identity object without identity")
+
 
 class IDLabel(Identity):
     """
     Simple class representing objects with a label and ID. Identity checks equality
     on class + ID; str( ) returns the label, repr( ) return class(id, label, ..)
     """
+    #__slots__ = ('id', '_label')
     def __init__(self, id, label=None):
         Identity.__init__(self, self.__class__, id)
         self.id = id

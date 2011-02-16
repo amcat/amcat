@@ -10,18 +10,7 @@ class TestAnnotationSchema(amcattest.AmcatTestCase):
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)
 
-    def testSchema(self):
-        # check whether we can create objects without errors
-        for (sid, name, table, articleschema) in [
-            (0, "Leeg","net_arrows", False),
-            (1, "iNetSchema","net_arrows", False),
-            (3, "SimpleArticleAnnotation","articles_annotations", True),
-            ]:
-            
-            a = annotationschema.AnnotationSchema(self.db, sid)
-            self.assertEqual(a.name, name)
-            self.assertEqual(a.table, table)
-            self.assertEqual(a.isarticleschema, articleschema)
+
 
     def testFields(self):
         for (sid, fieldnames) in [
@@ -31,13 +20,26 @@ class TestAnnotationSchema(amcattest.AmcatTestCase):
             ]:
             # test field names
             a = annotationschema.AnnotationSchema(self.db, sid)
-            fns = [f.fieldname for f in a.fields]
+	    fields = list(a.fields)
+            fns = [f.fieldname for f in fields]
             self.assertEqual(fns, fieldnames)
             # test getFieldb
             for f, fn in zip(a.fields, fieldnames):
                 f2 = a.getField(fn)
                 self.assertEqual(f, f2)
 
+    def testSchema(self):
+        # check whether we can create objects without errors
+        for (sid, name, table, articleschema) in [
+            (0, "Leeg","vw_net_arrows", False),
+            (1, "iNetSchema","vw_net_arrows", False),
+            (3, "SimpleArticleAnnotation","articles_annotations", True),
+            ]:
+            
+            a = annotationschema.AnnotationSchema(self.db, sid)
+            self.assertEqual(a.name, name)
+            self.assertEqual(a.table, table)
+            self.assertEqual(a.isarticleschema, articleschema)
     def testSerialisation(self):
         for (sid, fieldname, value, obj, lbl) in [
             (1, 'arrowtype', 4, idlabel.IDLabel(4, 'AFF'), 'AFF'),

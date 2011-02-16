@@ -2,6 +2,7 @@ from amcat.db import dbtoolkit
 from amcat.model.coding import codingjob
 from amcat.tools.table import table3
 from amcat.tools import toolkit, idlabel
+from amcat.tools.cachable import cachable
 from amcat.tools.logging import amcatlogging, progress
 
 
@@ -26,6 +27,7 @@ def getSPSSFormat(type):
     #log.debug("Determining format of %s" % type)
     if type == int: return " (F8.0)"
     if issubclass(type, idlabel.IDLabel): return " (F8.0)"
+    if issubclass(type, cachable.Cachable): return " (F8.0)"
     if type == float: return " (F8.3)"
     if type == str: return " (A255)"
     if type == datetime.datetime: return " (date10)"

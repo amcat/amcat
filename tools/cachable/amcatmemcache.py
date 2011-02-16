@@ -22,8 +22,12 @@ python amcatmemcache.py ACTION CLASSNAME PROPNAME KEY
   KEY: the python string representation of the key (282 or 282,12)
 """
 
-import memcache, types
+import pylibmc as memcache
+#import memcache
+import types
 import logging; LOG = logging.getLogger(__name__)
+
+#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 class UnknownKeyException(EnvironmentError):
     pass
@@ -35,7 +39,7 @@ def _getConnection():
         _CONNECTION = _connect()
     return _CONNECTION
 def _connect():
-    return memcache.Client(["127.0.0.1:11211"])
+    return memcache.Client(["127.0.0.1:11211"], binary=False)
 
 def _strftime(date):
     if type(date) != types.IntType:
@@ -72,8 +76,9 @@ def get(klass, prop, key, conn=None):
       or generator of (tuple-of) primitive
     """
     keybytes = key2bytes(klass, prop, key)
+    #_debug("GET", klass, prop, key)
     val =_getConnection().get(keybytes)
-    _debug("GET", klass, prop, key, "-> %r" % (val,))
+    #_debug("GET", klass, prop, key, "-> %r" % (val,))
     if val is None:
         raise UnknownKeyException(keybytes)
     return val
@@ -89,13 +94,13 @@ def put(klass, prop, key, value, conn=None):
     @param conn: an optional connection object
     """
     keybytes = key2bytes(klass, prop, key)
-    _debug("PUT", klass, prop, key, "<- %r" % (value,))
+    #_debug("PUT", klass, prop, key, "<- %r" % (value,))
     _getConnection().set(keybytes, value)
 
 def delete(klass, prop, key, conn=None):
     """Delete the value for the given key"""
     keybytes = key2bytes(klass, prop, key)
-    _debug("DEL", klass, prop, key)
+    #_debug("DEL", klass, prop, key)
     _getConnection().delete(keybytes)
     
 class CachablePropertyStore(object):

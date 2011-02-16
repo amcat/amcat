@@ -38,6 +38,7 @@ class Article(Cachable):
     __table__ = 'vw_tmp_articles'
     __idcolumn__ = 'articleid'
     __labelprop__ = 'headline'
+    __slots__ = ()
 
     headline, byline, metastring, section, date, length, pagenr, url, externalid, text = DBProperties(10)
 

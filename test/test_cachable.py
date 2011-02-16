@@ -6,6 +6,7 @@ from amcat.tools.cachable.cacher import cache, cacheMultiple
 import inspect
 
 class TestDummy(Cachable):
+    __idcolumn__ = "DUMMY"
     prop = Property()
     prop2 = Property()
 
@@ -33,18 +34,15 @@ class Test3(Cachable):
     label = DBProperty()
     
 class Test2(Cachable):
-    __table__ = '#test2'
     __idcolumn__ = ['testid', 'id2']
     __labelprop__ = 'strval'
     strval = DBProperty()
     test3s = ForeignKey(Test3)
 class TestChild(Cachable):
-    __table__ = '#testchild'
     __idcolumn__ = 'pk'
     label = DBProperty()
     test = DBProperty(lambda : Test)
 class Test(Cachable):
-    __table__ = '#test'
     __idcolumn__ = 'testid'
     __labelprop__ = 'strval'
     strval, strval2, intval = DBProperties(3)
@@ -69,6 +67,27 @@ class TestCachable(amcattest.AmcatTestCase):
         TestChild.__table__ = tc
         Test3.__table__ = t3
 
+
+    def testType(self):
+        TestDummy.prop._observedType=None
+        TestDummy.prop2._observedType=None
+        d = TestDummy(self.db, -1)
+        d.prop = 1
+        d.prop2 = "bla"
+        # test observed from explicit get
+        dummy = d.prop
+        self.assertEqual(TestDummy.prop.getType(), int) 
+        self.assertRaises(UnknownTypeException, TestDummy.prop2.getType) 
+        # test observed from cache on object
+        self.assertEqual(d.getType(TestDummy.prop2), str) 
+
+        
+    def testGet(self):
+        t = Test.create(self.db, strval="x")
+        t2 = TestChild.create(self.db, testid=t.id)
+        b = t2.test
+        self.assertEqual(t, t2.test)
+        
     def testCreate(self):
         "test using object as property to create"
         t = Test.create(self.db, strval="bla")
@@ -78,11 +97,6 @@ class TestCachable(amcattest.AmcatTestCase):
         self.assertEqual(t, t2.test)
 
 
-    def testGet(self):
-        t2 = Test2.create(self.db, (1,2), strval="test1")
-        
-        
-        
     def testCacheMultiple(self):
         obj = project.Project(self.db, 282)
         props = ["name", "insertUser"]
@@ -94,8 +108,7 @@ class TestCachable(amcattest.AmcatTestCase):
             val2= [getattr(obj, prop) for prop in props]
             for v, v2 in zip(val, val2):
                 self.assertEqual(v, v2)
-
-        
+                
     def testMulticolFK(self):
         """Test whether retrieving and caching works for multicol foreign keys"""
         t2 = Test2.create(self.db, (1,2), strval="test1")
@@ -121,7 +134,7 @@ class TestCachable(amcattest.AmcatTestCase):
         with self.db.disabled():
             children = set(t.testchildren)
             self.assertEqual(children, set([child1, child2]))
-        
+
     def testFKParentCached(self):
         """Test whether the parent property of an FK child is set automatically"""
         t = Test.create(self.db, strval="test1")
@@ -136,6 +149,7 @@ class TestCachable(amcattest.AmcatTestCase):
             t2 = child.test
             self.assertEqual(t, t2)
 
+            
         
 
     def testAdd(self):
@@ -157,7 +171,7 @@ class TestCachable(amcattest.AmcatTestCase):
                         self.assertEqual(t.intval, intval)
                     finally:
                         t.uncache()
-                        
+              
         
 
     def xtestGetReget(self):
@@ -216,19 +230,7 @@ class TestCachable(amcattest.AmcatTestCase):
         t3 = TestChild.create(self.db, test=t.id)
         self.assertEqual(list(t.testchildren), [t2, t3])
         
-    def testType(self):
-        TestDummy.prop.observedType=None
-        TestDummy.prop2.observedType=None
-        d = TestDummy(self.db, -1)
-        d.prop = 1
-        d.prop2 = "bla"
-        # test observed from explicit get
-        dummy = d.prop
-        self.assertEqual(TestDummy.prop.getType(), int) 
-        self.assertRaises(UnknownTypeException, TestDummy.prop2.getType) 
-        # test observed from cache on object
-        self.assertEqual(d.getType(TestDummy.prop2), str) 
-
+    
     def testTypedDBProperty(self):
         TestUser.language.observedType=None
         self.assertEqual(TestUser.language.getType(), TestLanguage)
@@ -240,8 +242,8 @@ class TestCachable(amcattest.AmcatTestCase):
         
     def testDBType(self):
         # test get from db
-        TestUser.username.observedType=None
-        TestUser.active.observedType=None
+        TestUser.username._observedType=None
+        TestUser.active._observedType=None
         u = TestUser(self.db, 2)
         del u.username
         del u.active
@@ -268,9 +270,10 @@ class TestCachable(amcattest.AmcatTestCase):
         u2 = TestDummy(self.db, 4)
         self.assertEqual(u2.prop, val)
         del u.prop
-        self.assertRaises(NameError, getattr, u2, 'prop')  # abstract
+        self.assertRaises(Exception, getattr, u2, 'prop')  # abstract
 
-    def testNonProperty(self):
+    def xtestNonProperty(self):
+        # Skip this test since we want to use __slots__
         # do non-property members work as normal
         u = TestDummy(self.db, 4)
         val = 'nogeentest'        

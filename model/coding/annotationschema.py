@@ -68,7 +68,7 @@ class AnnotationSchemaFieldType(Cachable):
 class AnnotationSchemaField(Cachable):
     __table__ = 'annotationschemas_fields'
     __idcolumn__ = ('annotationschemaid','fieldnr')
-
+    __slots__ = ['_serializer']
     
     annotationschema = DBProperty(AnnotationSchema, getcolumn="annotationschemaid")
     fieldname, label, default = DBProperties(3)

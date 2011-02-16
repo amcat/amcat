@@ -48,6 +48,7 @@ def boolmaker():
 class Tree(Cachable, DictHierarchy):
     __table__ = 'trees'
     __idcolumn__ = 'treeid'
+    __slots__ = ['objectset','objectdict','parentdict','childrendict', 'reverseset', 'treesdict']
     
     label = DBProperty()
     treeid = DBProperty()
@@ -93,7 +94,7 @@ class Tree(Cachable, DictHierarchy):
                  where treeid = %i""" % self.id
         def cachelabels(oid, labels):
             o = self.getObject(oid).objekt
-            o._getProperty("labels").cache(o, labels, isData=True)
+            o.__class__.labels.cache(o, labels, isData=True)
         currentoid = None
         for oid, langid, label in self.db.doQuery(SQL):
             if currentoid != oid:

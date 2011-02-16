@@ -18,6 +18,8 @@ class Codebook(Cachable, DictHierarchy):
     __table__ = 'codebooks'
     __idcolumn__ = 'codebookid'
     __labelprop__ = 'name'
+    __slots__ = ['objectset','objectdict','parentdict','childrendict', 'reverseset', 'treesdict']
+
     name = DBProperty()
     
     objects = ForeignKey(LB("Object", sub="ontology"), table="codebooks_objects")
