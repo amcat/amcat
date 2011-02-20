@@ -2,6 +2,17 @@ from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey
 from amcat.tools.cachable.latebind import LB
 
 from amcat.model.coding import codingjob
+import logging; log = logging.getLogger(__name__)
+
+
+def getCodingJobsSetsFromUser(db, userid):
+    SQL = """select codingjobid, setnr from codingjobs_sets
+             where coder_userid = %d""" % userid
+    data = db.doQuery(SQL)
+    log.debug(data)
+    for row in data:
+        yield CodingJobSet(db, row[0], row[1])
+
 
 class CodingJobSet(Cachable):
     __table__ = 'codingjobs_sets'
@@ -26,7 +37,7 @@ class CodingJobSet(Cachable):
                 return a
 
     def getArticles(self):
-        cacheMultiple(self.articles, "article")
+        #cacheMultiple(self.articles, "article")
         return [a.article for a in self.articles]
     def getArticleIDS(self):
         return set(a.id for a in self.getArticles())
