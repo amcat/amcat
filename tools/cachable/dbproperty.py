@@ -62,10 +62,10 @@ class DBProperty(Property):
         if self._initialised: return
         super(DBProperty, self)._initialise(cls, propname)
         if self.targetclasses:
-	    if type(self.targetclasses) in (list, tuple):
-		self.targetclasses = tuple(_dereferenceTargetClass(tc) for tc in self.targetclasses)
-	    else:
-		self.targetclasses = _ensureTuple(_dereferenceTargetClass(self.targetclasses))
+            if type(self.targetclasses) in (list, tuple):
+                self.targetclasses = tuple(_dereferenceTargetClass(tc) for tc in self.targetclasses)
+            else:
+                self.targetclasses = _ensureTuple(_dereferenceTargetClass(self.targetclasses))
     
     def dbrowToObject(self, obj, *dbvalues):
         """Convert a db row to an amcat object
@@ -82,11 +82,11 @@ class DBProperty(Property):
         elif self.targetclasses:
             result = []
             for tc in self.targetclasses:
-		if inspect.isclass(tc) and issubclass(tc, Cachable):
-		    numcols = len(tc._getIDColumns())
-		else:
-		    numcols = 1
-				    
+                if inspect.isclass(tc) and issubclass(tc, Cachable):
+                    numcols = len(tc._getIDColumns())
+                else:
+                    numcols = 1
+                                    
                 vals, dbvalues = dbvalues[:numcols], dbvalues[numcols:]
                 result.append(tc(obj.db, *vals))
             if dbvalues: raise ValueError("Mismatch between targetclasses (%r) ID columns and values, leftover: %r" %
@@ -102,9 +102,9 @@ class DBProperty(Property):
         @param object: a single 'domain' object
         @return dbvalues: the row tuple as it was returned from the db
         """
-	if isinstance(obj, Cachable):
-	    return obj._id
-	
+        if isinstance(obj, Cachable):
+            return obj._id
+        
         if type(obj) not in (list, tuple): obj = (obj, )
         return obj
 
@@ -129,11 +129,11 @@ class DBProperty(Property):
         return self.cls.__table__
     
     def _getColumns(self):
-	#log.debug("_getColumns, self=%r, getcolumns=%r, targetclasses=%r" % (self,self.getcolumns, self.targetclasses))
+        #log.debug("_getColumns, self=%r, getcolumns=%r, targetclasses=%r" % (self,self.getcolumns, self.targetclasses))
         if self.getcolumns: return self.getcolumns
         elif self.targetclasses:
             result =  toolkit.flatten(tc._getIDColumns() for tc in self.targetclasses)
-	    return result
+            return result
         else:
             return (self.propname,)
 

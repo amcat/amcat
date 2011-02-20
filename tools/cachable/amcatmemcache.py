@@ -93,6 +93,7 @@ def put(klass, prop, key, value, conn=None):
       or sequence of (tuple-of) primitive
     @param conn: an optional connection object
     """
+    #LOG.debug(key)
     keybytes = key2bytes(klass, prop, key)
     #_debug("PUT", klass, prop, key, "<- %r" % (value,))
     _getConnection().set(keybytes, value)

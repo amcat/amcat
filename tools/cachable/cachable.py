@@ -59,7 +59,7 @@ class Meta(type):
     def __getattribute__(cls, attr):
         """Get a class attribute, and _initialise it if possible/needed"""
         result = type.__getattribute__(cls, attr)
-	if isinstance(result, Property):
+        if isinstance(result, Property):
             initialiser = result._initialise(cls, attr)
         return result
 
@@ -84,18 +84,18 @@ class Cachable(idlabel._Identity):
         @param db: database connection
         @param id: the id of this object
         """
-	if len(id) <> len(self._getIDColumns()):
-	    raise Exception("Error on creating %s instance: ID %r and idcol %r do not match" % (self.__class__, id, self._getIDColumns()))
+        if len(id) <> len(self._getIDColumns()):
+            raise Exception("Error on creating %s instance: ID %r and idcol %r do not match" % (self.__class__, id, self._getIDColumns()))
         self.db = db
-	self._id = id
+        self._id = id
 
     def _identity(self):
-	return (self.__class__ , self._id)
+        return (self.__class__ , self._id)
 
     @property
     def id(self):
-	if len(self._id) == 1: return self._id[0]
-	return self._id
+        if len(self._id) == 1: return self._id[0]
+        return self._id
 
     @classmethod
     def _getIDColumns(cls):
@@ -122,12 +122,12 @@ class Cachable(idlabel._Identity):
     
     def __getattribute__(self, attr):
         """if attr exists and is a property, use its .get method. Otherwise, call super"""
-	if "_" not in attr and attr not in self.__slots__:
-	    p = getattr(self.__class__, attr)
-	    if isinstance(p, Property):
+        if "_" not in attr and attr not in self.__slots__:
+            p = getattr(self.__class__, attr)
+            if isinstance(p, Property):
                 result = p.get(self)
-		return result
-	return super(Cachable, self).__getattribute__(attr)
+                return result
+        return super(Cachable, self).__getattribute__(attr)
 
 
     def __setattr__(self, attr, value):
@@ -298,7 +298,7 @@ class Cachable(idlabel._Identity):
 
     def _getWhere(self, refcolumns=None):
         if not refcolumns: refcolumns = self._getIDColumns()
-	return dict(toolkit.zipp(refcolumns, self._id))
+        return dict(toolkit.zipp(refcolumns, self._id))
 
     def __unicode__(self):
         return u"%s(%s)" % (self.__class__.__name__, ",".join(map(str, self._id)))
