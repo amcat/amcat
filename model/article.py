@@ -34,7 +34,7 @@ class Article(Cachable):
     """
     Class representing a newspaper article
     """
-    __table__ = 'articles'
+    __table__ = 'vw_tmp_articles'
     __idcolumn__ = 'articleid'
     __labelprop__ = 'headline'
     __slots__ = ()
