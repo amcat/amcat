@@ -11,7 +11,7 @@ from amcat.tools import toolkit
 from amcat.db import dbtoolkit
 from amcat.tools.logging import amcatlogging
 log = amcatlogging.setup()
-#amcatlogging.debugModule()
+amcatlogging.debugModule()
 from amcat.nlp import preprocessing
 import sys
 
@@ -23,7 +23,10 @@ if len(sys.argv) < 2: usage()
     
 analysisid=int(sys.argv[1])
 
-if analysisid == 4: 
+if analysisid == 2:
+    from amcat.nlp import alpino
+    parse = alpino.parseSentences
+elif analysisid == 4: 
     from amcat.nlp import stanford
     parse = stanford.parseSentences
 elif analysisid == 5:
@@ -33,6 +36,7 @@ elif analysisid == 3:
     from amcat.nlp import dolemmatise
     parse = dolemmatise.parseSentences
 else:
+    print "Unknown analysis: %s" % analysisid
     usage()
 
 if len(sys.argv) >= 3:
