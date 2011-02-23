@@ -25,6 +25,7 @@ class Hierarchy(object):
     """
     def __init__(self, db=None):
         self.db = db
+        self._cachedPaths = {} # oid : path
     
     def getParent(self, object):
         """Returns the parent of object
@@ -95,20 +96,40 @@ class Hierarchy(object):
     def cacheHierarchy(self):
        """Optional  method to ask the Hierarchy to cache all objects and child/parent relations"""
        pass
-    
-    def getPath(self, object, date=None):
+
+
+    def _calculatePath(self, object, date=None):
         reverse = False
+        yield object, reverse
+        parent = self.getParent(object)
+        if not parent: return
+        reverse = self.isReversed(object)
+        for o, r in self.getPath(parent, date=date):
+            yield o, r^reverse #^=XOR
+    
+
+    #def _calculatePath(self, object, date=None):        
+    #    reverse = False
+    #    while object:
+    #        yield object, reverse
+    #        reverse ^= self.isReversed(object) #XOR
+    #        object = self.getParent(object)
+
+    def getPath(self, object, date=None):
         object = self.getObject(object)
-        while object:
-            yield object, reverse
-            reverse ^= self.isReversed(object) #XOR
-            object = self.getParent(object)
+        try:
+            return self._cachedPaths[object.id]        
+        except KeyError:
+            self._cachedPaths[object.id] = list(self._calculatePath(object, date))
+            return self._cachedPaths[object.id]
+            
+
                 
     def categorise(self, object, date=None, depth=3, returnObject=True, returnReverse=False):
         # get categorisation path
-        path = list(reversed(list(self.getPath(object, date)))) # list(.(list(.)) efficient?
+        path = self.getPath(object, date)
         # pad / chop to correct length
-        path = toolkit.pad(path, depth, padwith=path[-1])
+        path = list(toolkit.pad(reversed(list(path)), depth, padwithlast=True))
         if returnObject and returnReverse:
             return path
         elif returnReverse:

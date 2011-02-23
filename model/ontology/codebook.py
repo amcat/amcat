@@ -18,7 +18,7 @@ class Codebook(Cachable, DictHierarchy):
     __table__ = 'codebooks'
     __idcolumn__ = 'codebookid'
     __labelprop__ = 'name'
-    __slots__ = ['objectset','objectdict','parentdict','childrendict', 'reverseset', 'treesdict']
+    __slots__ = ['objectset','objectdict','parentdict','childrendict', 'reverseset', 'treesdict', '_cachedPaths']
 
     name = DBProperty()
     

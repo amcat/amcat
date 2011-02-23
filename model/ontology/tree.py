@@ -48,7 +48,7 @@ def boolmaker():
 class Tree(Cachable, DictHierarchy):
     __table__ = 'trees'
     __idcolumn__ = 'treeid'
-    __slots__ = ['objectset','objectdict','parentdict','childrendict', 'reverseset', 'treesdict']
+    __slots__ = ['objectset','objectdict','parentdict','childrendict', 'reverseset', 'treesdict', '_cachedPaths']
     
     label = DBProperty()
     treeid = DBProperty()
