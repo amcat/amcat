@@ -301,9 +301,13 @@ class Cachable(idlabel._Identity):
 	return dict(toolkit.zipp(refcolumns, self._id))
 
     def __unicode__(self):
-        return u"%s(%s)" % (self.__class__.__name__, ",".join(map(str, self._id)))
+        result = self.label
+        if type(result) == str: return result.decode("latin-1")
+        else: return unicode(result)
     def __str__(self):
-        return unicode(self).encode("ascii","replace")
+        result = self.label
+        if type(result) == unicode: return result.encode("ascii","replace")
+        else: return str(result)
     def __repr__(self):
         return str(self)
     def idlabel(self):
