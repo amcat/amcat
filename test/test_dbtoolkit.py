@@ -24,6 +24,10 @@ from amcat.test import amcattest
 
 class TestDBToolkit(amcattest.AmcatTestCase):
 
+    def testDBContext(self):
+        with dbtoolkit.db() as db:
+            self.assertEqual(db.getValue("select top 1 projectid from projects where projectid=2"), 2)
+        self.assertRaises(Exception, db.getValue, "select top 1 projectid from projects")
 
     def testIntSelectionSQL(self):
         for colname, ints, result in[
@@ -107,6 +111,8 @@ class TestDBToolkit(amcattest.AmcatTestCase):
         data = self.db.select(table, ("s","d"), where=dict(id=1), rowfunc=lambda *l : list(l))
         self.assertEqual(data, [[None, None]])
 
+
+        
             
         
 if __name__ == '__main__':

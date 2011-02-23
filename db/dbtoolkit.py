@@ -91,6 +91,15 @@ def reportDB():
     return db
 
 
+@contextmanager
+def db(configuraion=None, auto_commit=False, profile=False, **configargs):
+    c = None
+    try:
+        c = amcatDB(configuraion, auto_commit, profile, **configargs)
+        yield c
+    finally:
+        c.close()
+
 def amcatDB(configuration=None, auto_commit=False, profile=False, **configargs):
     if configuration is None:
         configuration = config.getConfig(**configargs)
@@ -200,6 +209,8 @@ class AmcatDB(object):
         self.conn.commit()
     def rollback(self):
         self.conn.rollback()
+    def close(self):
+        self.conn.close()
 
     def queryDict(self, sql, **kargs):
         res, colnames = self.doQuery(sql, colnames=True, **kargs)
