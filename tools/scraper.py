@@ -38,7 +38,7 @@ import logging, re, urllib2, urllib, sys
 from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup
 import cStringIO
 from datetime import datetime, date
-import sys
+import sys, traceback
 #import wordfrequency
 
 
@@ -220,11 +220,13 @@ class ArticleScraper(Scraper):
                     except KeyboardInterrupt:
                         raise KeyboardInterrupt
                     except:
+                        traceback.print_exc()
                         log.warn('Article exception %s' % address)
                 self.endPage(context, page)
             except KeyboardInterrupt:
                 raise KeyboardInterrupt
             except:
+                traceback.print_exc()
                 log.warn('Page exception %s' % str(page))
         self.endScrape(context)
     def startScrape(self):
@@ -512,6 +514,7 @@ stripRegExpTuple = (
 def stripText(text, removeSpecial=False, stripAccents=True):
     if not text: return text
 
+    
     for regExp, replacement in stripRegExpTuple:
         #print regExp
         text = regExp.sub(replacement, text)
