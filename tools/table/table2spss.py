@@ -67,7 +67,7 @@ def table2spss(t, writer=sys.stdout, saveas=None, monitor=progress.NullMonitor()
                 if i: writer.write(",")
                 val = t.getValue(row, col)
                 oval = val
-                if val and issubclass(col.fieldtype, idlabel.IDLabel):
+                if val and issubclass(col.fieldtype, (idlabel.IDLabel, cachable.Cachable)):
                     if type(val) == int:
                         valuelabels[col][val] = "?%i" % val
                     else:
