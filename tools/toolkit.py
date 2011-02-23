@@ -455,14 +455,29 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
         else:
             yield subsequence
 
-def pad(sequence, minlength, padwith=None, chopexcess=True):
-    sequence = getseq(sequence, seqtypes=(list,))
-    if len(sequence) > minlength and chopexcess:
-        return sequence[:minlength]
-    elif len(sequence) >= minlength: return sequence
-    else: return sequence + [padwith] * (minlength - len(sequence))
-
         
+def pad(sequence, length, padwith=None, chopexcess=True, padwithlast=False):
+    """Pad and/or trim a sequence to the given length
+    @param sequence: the sequence to 'rightsize'
+    @param length: the appropriate length for the sequence
+    @param padwith: what to pad with if sequence is too short
+    @param chopexcess: if true, chop off excess elements
+    @param padwithlast: if true, use last seen value for padding (unless sequence
+                        was empty, in which case padwith is used)
+    """
+    last = padwith
+    i = 0
+    for e in sequence:
+        if i >= length and chopexcess: return
+        yield e
+        i += 1
+        last = e
+    while i < length:
+        if padwithlast:
+            yield last
+        else:
+            yield padwith
+        i += 1
             
 @deprecated
 def buffer(sequence, buffercall, buffersize=100):
