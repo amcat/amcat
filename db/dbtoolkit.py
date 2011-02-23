@@ -122,21 +122,24 @@ class AmcatDB(object):
         
 
     def connect(self, configuration=None, auto_commit=0, **configargs):
-        if not configuration: configuration=config.default(**configargs)
-        self.dbType = configuration.drivername    
-        self.mysql = False #????
-        if self.dbType == "MySQLdb":
-            import MySQLdb.converters
-            conv_dict = MySQLdb.converters.conversions
-            conv_dict[0] = float
-            conv_dict[246] = float
-            conn = configuration.connect(conv=conv_dict)
-            conn.select_db('report')
-            conn.autocommit(False)
-        else:
-            conn = configuration.connect()
-        self.database = configuration.database
-        return conn
+        try:
+            if not configuration: configuration=config.default(**configargs)
+            self.dbType = configuration.drivername    
+            self.mysql = False #????
+            if self.dbType == "MySQLdb":
+                import MySQLdb.converters
+                conv_dict = MySQLdb.converters.conversions
+                conv_dict[0] = float
+                conv_dict[246] = float
+                conn = configuration.connect(conv=conv_dict)
+                conn.select_db('report')
+                conn.autocommit(False)
+            else:
+                conn = configuration.connect()
+            self.database = configuration.database
+            return conn
+        except Exception, e:
+            raise SQLException('[Connect]', e)
 
     def init(self, profile=False):
         self.DB_LOCK = threading.Lock()        
