@@ -15,10 +15,10 @@ class TestArticle(amcattest.AmcatTestCase):
             self.assertEqual(a.source.id, sourceid)
             self.assertEqual(a.project.id, projectid)
             self.assertEqual(a.section, section)
-	    self.assertEqual(a.text[:50], text)
-            self.assertEqual(a.headline, headline)
             self.assertEqual(toolkit.writeDate(a.date), date)
             self.assertEqual(a.length, length)
+	    self.assertEqual(a.text[:50], text)
+            self.assertEqual(a.headline, headline)
     
         
 if __name__ == '__main__':

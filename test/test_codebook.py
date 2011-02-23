@@ -7,8 +7,9 @@ from datetime import datetime
 import logging; log = logging.getLogger(__name__)
 
 TEST_CODEBOOKS = {
-    -99 : ("TEST", [4000, 5000, 1, 2]),
-    -98 : ("TEST", [5000, 4000, 2, 1]),
+    -99 : ("actor, issue, partij, functie", [4000, 5000, 1, 2]),
+    -98 : ("issue, actor, partij, functie", [5000, 4000, 2, 1]),
+    -97 : ("richting, issue, actor, partij, functie", [5001, 5000, 4000, 2, 1]),
     }
 
 TEST_PARENTS = {
@@ -26,12 +27,18 @@ TEST_CATEGORISATION = {
            2083 : (10371, False),
            1034 : (10371, False),
            1721 : (10371, False),
+           616 : (10350, False),
+           2699 : (10339, False),
 	   1725 : (13898, False), # rutte = partijlid (1 voor 2)
 	   (1725, datetime(2010,1,1)) : (13898, False), # rutte = nog steeds partijlid (-99 doet immers partij...)
            },
-    -98 : {1725 : (18600, False), # rutte = min az (2 voor 1)
-	   (1725, datetime(2010,1,1)) : (13897, False), # rutte = kamerlid (begin 2010 - 2 voor 1)
+     -98 : {1725 : (18600, False), # rutte = min az (2 voor 1)
+            (1725, datetime(2010,1,1)) : (13897, False), # rutte = kamerlid (begin 2010 - 2 voor 1)
+           
 	   },
+     -97 : {616 : (16122, False),
+            2699 : (16121, False),
+            },
     }
 
 class CodebookTest(amcattest.AmcatTestCase):
@@ -76,8 +83,7 @@ class CodebookTest(amcattest.AmcatTestCase):
                 for o, parent in objects.items():
                     log.info("%r.%s.parent is %r, should be %r" % (c, o, c.getParent(o), c.getObject(parent)))
                     self.assertEqual(c.getParent(o), c.getObject(parent))
-
-class Stop:    
+  
     def testReversed(self):
         "Test whether reversed matches expected values"
         with self.createTestCodebook():

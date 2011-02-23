@@ -168,12 +168,18 @@ class TestToolkitFunctions(amcattest.AmcatTestCase):
                     self.assertTrue(filter(out))
 
     def test_pad(self):
-        for (seq, minlength, padwith, chop, out) in (
-            ([1,2,3], 5, None, True, [1,2,3,None,None]),
-            ([1,2,3], 1, None, True, [1]),
-            ([1,2,3], 3, None, True, [1,2,3]),
+        for (seq, minlength, padwith, chop, padwithlast, out) in (
+            ([1,2,3],  5, None, True, False, [1,2,3,None,None]),
+            ([1,2,3],  1, None, True, False, [1]),
+            ([1,2,3],  3, None, True, False, [1,2,3]),
+            (range(4), 3, None, True, False, [0,1,2]),
+            (range(2), 3, None, False,False, [0,1,None]),
+            ((),       2, None, True, False, [None, None]),
+            ([1,2],    0, None, True, False, []),
+            ([1,2],    4, None, True, True, [1,2,2,2]),
+            ((),       2, "test", True, True, ["test","test"]),
             ):
-            self.assertEqual(toolkit.pad(seq, minlength, padwith, chop), out)
+            self.assertEqual(list(toolkit.pad(seq, minlength, padwith, chop, padwithlast)), out)
 
     def test_zipp(self):
         for (seqs, zipped) in (

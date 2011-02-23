@@ -45,8 +45,12 @@ class HierarchyTest(amcattest.AmcatTestCase):
         h = DummyHierarchy(self.db)
         for oid, path in TEST_PATH.items():
             p = [(o.id, r) for (o,r) in h.getPath(oid)]
+            p = [(o.id, r) for (o,r) in h.getPath(oid)]
+            print(p)
             self.assertEqual(p, path)
-
+class Stop:
+        
+            
     def testCategorisation(self):
         h = DummyHierarchy(self.db)
         for oid, (objs, omklaps) in   TEST_CATEGORISE.items():
