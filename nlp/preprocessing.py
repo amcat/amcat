@@ -327,6 +327,7 @@ class _ParseSaver(object):
         seen = set()
         for token in tokens:
             position, word, lemma, poscat, posmajor, posminor = token
+            if not posminor: posminor = ''
             if position in seen:
                 log.debug("Already seen position %i (seen=%s), setting new position: %i" % (position, seen, max(seen)+1))
                 position = max(seen) + 1
@@ -343,6 +344,7 @@ class _ParseSaver(object):
                                                 posid=posid, wordid=wordid, 
                                                 analysisid=self.analysis.id), 
                            retrieveIdent=False)
+            
     def saveTriples(self, sentenceid, triples):
         """Save the given triple tuples on the given sentence in the  parses_triples table, making rels as needed"""
         for parentpos, rel, childpos in triples:
@@ -416,6 +418,7 @@ class BaseWordCreator(object):
         self.language = language
         self.words, self.lemmata, self.strings, self.pos, self.rels = {}, {}, {}, {}, {}
     def getString(self, string):
+        string = toolkit.stripAccents(string)
         isword = bool(re.match("^[A-Za-z_]+$", string))
         return self.getOrCreate("stringid", self.strings, (clean(string),), "words_strings", ("string",), isword=isword)
     def getLemma(self, string, pos):

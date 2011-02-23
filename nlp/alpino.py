@@ -54,6 +54,8 @@ def tokenize(sentences):
     return toolkit.execute(cmd, sentences, outonly=True)
 
 def clean(sent):
+    if type(sent) == str: sent = sent.decode("latin-1")
+    sent = toolkit.stripAccents(sent)
     return toolkit.clean(sent, level=1, keeptabs=False)
 
 def parseRaw(input):
@@ -87,7 +89,6 @@ def interpret(parse):
             words[node[0]] = node
         triples.append((parent[0], rel, child[0]))
     words = sorted(words.values())
-    print words, triples
     return words, triples
         
 def parseSentences(sentences):
