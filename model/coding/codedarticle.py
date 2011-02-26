@@ -31,7 +31,7 @@ class CodedArticle(Cachable):
 
     @property
     def annotationschema(self):
-	return self.set.job.articleSchema
+        return self.set.job.articleSchema
     
     def getArticle(self):
         return self.article

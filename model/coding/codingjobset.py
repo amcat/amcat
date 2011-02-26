@@ -36,6 +36,11 @@ class CodingJobSet(Cachable):
             if a.id == cjaid:
                 return a
 
+    def getArticleFromAid(self, aid):
+        for a in self.articles:
+            if a.article.id == aid:
+                return a
+                
     def getArticles(self):
         #cacheMultiple(self.articles, "article")
         return [a.article for a in self.articles]

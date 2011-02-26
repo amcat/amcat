@@ -71,7 +71,8 @@ class AnnotationSchemaField(Cachable):
     __slots__ = ['_serializer']
     
     annotationschema = DBProperty(AnnotationSchema, getcolumn="annotationschemaid")
-    fieldname, label, default = DBProperties(3)
+    fieldname, label, required = DBProperties(3)
+    default = DBProperty(getcolumn='deflt')
     fieldtype = DBProperty(AnnotationSchemaFieldType)
 
     table, keycolumn, labelcolumn, values = DBProperties(4)
