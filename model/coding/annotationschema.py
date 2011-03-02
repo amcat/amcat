@@ -128,6 +128,9 @@ class SchemaFieldSerialiser(object):
 
         @return: a type object such as IDLabel or ont.Object"""
         return self.targettype
+    def getLabels(self):
+        """ @return: dict of IDs and labels if the field has one, None otherwise """
+        return None
     
 class LookupFieldSerialiser(SchemaFieldSerialiser):
     def deserialize(self, value):
