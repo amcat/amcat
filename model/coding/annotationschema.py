@@ -25,8 +25,6 @@ class AnnotationSchema(Cachable):
         if table == "net_arrows": table = "vw_net_arrows"
         return table
     
-    
-    
     def getField(self, fieldname):
         for f in self.fields:
             if f.fieldname == fieldname: return f
@@ -224,6 +222,13 @@ class OntologyFieldSerialiser(SchemaFieldSerialiser):
         except AttributeError: pass
         self._set = Codebook(self.db, self.codebookid)
         return self._set
+    def getLabels(self):
+        try:
+            return self._labels
+        except AttributeError: pass
+
+        self._labels = dict((o.id, unicode(o.label)) for o in self.codebook.objects)
+        return self._labels
 
 
 class FieldColumn(ObjectColumn):
@@ -248,23 +253,23 @@ class FieldColumn(ObjectColumn):
             raise
             return None
     def getValues(self, row):
-	unit = self.getUnit(row)
-	if unit is None: return None
-	values = unit.values
-	return values
-	
+        unit = self.getUnit(row)
+        if unit is None: return None
+        values = unit.values
+        return values
+        
     def getValue(self, row, fieldname = None):
-	if not fieldname: fieldname = self.field.fieldname
-	log.debug(">>>>>> getValue(%r, %r)" % (row, fieldname))
-	values = self.getValues(row)
-	if values is None: return None
-	try:
-	    val = getattr(values, fieldname)
-	except AttributeError:
-	    log.error("%r has no field %r, but it has %r" % (values, fieldname, dir(values)))
-	    raise
-	log.debug(">>>>>> values=%r, fieldname=%r, --> val=%s" % (values, fieldname, val))
-	return val
+        if not fieldname: fieldname = self.field.fieldname
+        log.debug(">>>>>> getValue(%r, %r)" % (row, fieldname))
+        values = self.getValues(row)
+        if values is None: return None
+        try:
+            val = getattr(values, fieldname)
+        except AttributeError:
+            log.error("%r has no field %r, but it has %r" % (values, fieldname, dir(values)))
+            raise
+        log.debug(">>>>>> values=%r, fieldname=%r, --> val=%s" % (values, fieldname, val))
+        return val
 
             
                      
