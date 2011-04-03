@@ -1,20 +1,37 @@
 import collections
 from amcat.model import word, sentence, article
+from amcat.model.word import Word
 from amcat.model.analysis import Analysis
 from amcat.tools import toolkit
 from amcat.tools.cachable import cacher
 import re
 
 class Token(object):
-    def __init__(self, word, topic=None, sentiment=None, intensity=None, notes=None):
-        self.word = word
+    def __init__(self, word, sentence=None, lemma=None, position=None, pos=None,
+                 topic=None, sentiment=None, intensity=None, notes=None):
+        if isinstance(word, Word):
+            self.word = str(word.word)
+            self.lemma = str(word.lemma)
+            self.sentence = word.sentence.id
+            self.position = word.position
+            self.pos = word.lemma.pos
+        else:
+            self.word = word
+            self.lemma = lemma
+            self.sentence = sentence
+            self.position = position
+            self.pos = pos
+
         self.topic = topic
         self.sentiment = sentiment
         self.intensity = intensity
         self.notes = notes
+
+        self.origtopic = topic
+        self.origsent = sentiment
     def __str__(self):
-        return "Token(word=(%i:%i %s),topic=%s,sentiment=%s,intensity=%s,notes=%s)" % (
-            self.word.sentence.id, self.word.position, self.word.word.lemma, self.topic, self.sentiment, self.intensity, self.notes)
+        return "Token(word=(%s:%s %s/%s),topic=%s,sentiment=%s,intensity=%s,notes=%s)" % (
+            self.sentence, self.position, self.lemma, self.pos, self.topic, self.sentiment, self.intensity, self.notes)
 
 def search(max):
     """Return [0, 1, -1, 2, -2, .... -max]"""
@@ -25,7 +42,7 @@ def searchtokens(tokens, i, pattern):
         j = i + pos 
         if j < 0: continue
         if j >= len(tokens): continue
-        if tokens[j].word.sentence <> tokens[i].word.sentence: continue
+        if tokens[j].sentence <> tokens[i].sentence: continue
         yield j, tokens[j]
 
     
@@ -36,7 +53,7 @@ class Sentiment(object):
         if type(analysis) == int: analysis = Analysis(db, analysis)
         self.lexicon = lexicon
         self.analysis = analysis
-        self.ldict = lexicon.lemmaidDict()
+        self.ldict = lexicon and lexicon.lemmaidDict()
         self.topicdict = topicdict
 
     def getTokens(self, *sents):
@@ -89,7 +106,7 @@ class Sentiment(object):
             m = re.match('previous=([^;]+)', token.notes)
             if m:
                 previous = m.groups()[0].split(",")
-                if not any(str(token2.word.word.lemma) in previous
+                if not any(str(token2.lemma) in previous
                            for (j, token2) in searchtokens(tokens, i, [-1, -2])):
                     token.sentiment = None
                 token.notes = None
@@ -114,12 +131,12 @@ class Sentiment(object):
     def resolveSpecial(self, tokens):
         for i, token in enumerate(tokens):
             # 'mag/moet/kan beter'
-            if token.word.word.lemma.pos=='A' and str(token.word.word).endswith('er'):
+            if token.pos=='A' and str(token.word).endswith('er'):
                 for pos in [-1, -2]:
                     j = i + pos 
                     if j < 0: continue
-                    if tokens[j].word.sentence <> token.word.sentence: continue
-                    if tokens[j].word.word.lemma.pos=='V' and str(tokens[j].word.word.lemma) in ['kunnen','mogen','moeten']:
+                    if tokens[j].sentence <> token.sentence: continue
+                    if tokens[j].pos=='V' and str(tokens[j].lemma) in ['kunnen','mogen','moeten']:
                         token.sentiment = -1
                         break
 
@@ -133,7 +150,8 @@ class Sentiment(object):
     def getResolvedTokensForArticle(self, article):
         sents = [s.getAnalysedSentence(self.analysis.id) for s in article.sentences]
         tokens = list(self.getTokens(*sents))
-	if self.topicdict: self.spreadTopics(tokens)
+	#if self.topicdict:
+        self.spreadTopics(tokens)
         self.resolveIntensifiers(tokens)
         #self.resolveConditions(tokens)
         #self.resolveSpecial(tokens)
