@@ -123,11 +123,9 @@ def run():
         
 if __name__ == '__main__':
     from amcat.tools.logging import amcatlogging;     amcatlogging.setup()
-
+    from amcat.db import dbtoolkit
     db = dbtoolkit.amcatDB(profile=True)
-    t = Tree(db, 4000)
+    t = Tree(db, 5101)
     t.cacheHierarchy()
-    from amcat.model.ontology import ontologytoolkit
-    for i, o, r in ontologytoolkit.getIndentedList(t):
-        print("  "*i, o.id)
-        if i > 1: break
+    print(t.getParent(2407))
+    print(240799 in t)

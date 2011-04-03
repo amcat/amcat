@@ -65,7 +65,7 @@ def test():
     arrowid = 686970
     arrowids = 586414, 586481, 585930, 585766, 585769, 585737, 585917
     #arrowids = [585737,585917,591758]
-    #arrowids = [585766]
+    arrowids = [586414, 586481, 585769]
     
     
     for arrowid in arrowids:
@@ -89,7 +89,7 @@ def test():
                 print "---- %s ----" % field
                 cols = s.getColumnsForField(job.unitSchema.getField(field))
                 for col in cols:
-                    print col, lbl(col.getCell(row))
+                    print col, lbl(col.getCell(row)).encode('utf-8')
             print
 
     

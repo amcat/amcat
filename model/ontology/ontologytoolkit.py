@@ -65,13 +65,14 @@ def function2conds(function):
         return ['"europ* parlement*"', "europarle*"]
     return []
 
-def getIndentedList(hierarchy):
+def getIndentedList(hierarchy, roots=None):
     def recurse(parent, indent):
         yield indent, parent, hierarchy.isReversed(parent)
         for c in hierarchy.getChildren(parent):
             for i, o, r in recurse(c, indent+1):
                 yield i, o, r
-    for root in hierarchy.getRoots():
+    if roots is None: roots = hierarchy.getRoots()
+    for root in roots:
         for i, o,r in recurse(root, 0):
             yield i,o,r
 

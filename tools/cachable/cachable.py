@@ -305,10 +305,14 @@ class Cachable(idlabel._Identity):
         if type(result) == str: return result.decode("latin-1")
         else: return unicode(result)
     def __str__(self):
-        result = self.label
+        try:
+            result = self.label
+        except AttributeError:
+            return self.__repr__()
         if type(result) == unicode: return result.encode("ascii","replace")
         else: return str(result)
     def __repr__(self):
+        return "%s(%s)" % (self.__class__, self.id)
         return str(self)
     def idlabel(self):
         return "{0}: {1}".format(self.id, self.label)

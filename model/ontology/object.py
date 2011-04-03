@@ -58,6 +58,11 @@ class Object(Cachable):
                          table="labels", getcolumn=("languageid", "label"),
                          sequencetype=dict)
 
+    name = DBProperty(table="o_politicians")
+    firstname = DBProperty(table="o_politicians")
+    prefix = DBProperty(table="o_politicians")
+    initials = DBProperty(table="o_politicians")
+
     @property
     def label(self):
         lang = toolkit.head(sorted(self.labels.keys()))
@@ -116,6 +121,11 @@ class Object(Cachable):
                     continue
             yield f
 
+    def getParty(self, date=None):
+        r = toolkit.head(self.currentFunctions(date, party=True))
+        return r and r.office
+    
+            
     def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):
         """Returns the search string for this object.
         date: if given, use only functions active on this date

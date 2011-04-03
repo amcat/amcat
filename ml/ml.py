@@ -31,7 +31,6 @@ class Match(object):
     def getActualPosition(self):
         act = self.getActual()
         for i, pred in enumerate(self.predictions):
-            print act, i, pred[0]
             if str(pred[0]) == act:
                 return i
         return None
@@ -122,9 +121,9 @@ class MachineLearner(object):
         self.featureset.start(units)
         if not model: model = self.model
         for match in self.algorithm.predict(units, self.featureset, model):
-            if self.targetFunc and type(match.unit) in (codedsentence.CodedSentence, codedarticle.CodedArticle):
+            try:
                 match.actual = self.targetFunc(match.unit)
-            else:
+            except:
                 match.actual = "?"
             yield match
     def run(self, trainunits_or_filter, testunits_or_filter):
@@ -273,7 +272,9 @@ if __name__ == '__main__':
     ml.units = list(ml.units)[:50]
     ml.targetFunc = fieldTargetFunc("subject")
     ml.featureset.features += list(indexfeature.getWordFeatures(index, 5))
-    ml.algorithm = mlalgo.MaxentAlgorithm()
+    ml.algorithm = mlalgo.MetaAlgorithm(mlalgo.MaxentAlgorithm(),
+                                        mlalgo.LibSVMAlgorithm("RBF", C=1E5, gamma=1E-3, probability=True))
+    #ml.algorithm = mlalgo.MaxentAlgorithm()
     ml.train()
     matches = list(ml.predict())
     

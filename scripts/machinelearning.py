@@ -15,7 +15,7 @@ from amcat.model import project
 from amcat.db import dbtoolkit
 from amcat.tools.stat import amcatr
 
-import random
+import random, csv, sys
 import logging; log = logging.getLogger(__name__)
 
 def readsample(sample):
@@ -54,12 +54,34 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
 
         # do the required action
         if testjobs:
-            matches = self.testmodel(testjobs)
+            matches = self.testModelTable(testjobs)
             self.reportMatches("testreport", matches)
+            
+            # # write matches to csv
+            # matches = list(self.testModel(testjobs))
+            # w = csv.writer(sys.stdout)
+            # header = ["algo", "aid", "cjaid", "actual", "position"]
+            # for i in range(1, 6):
+            #     header += ["pref%i"%i,"conf%i"%i]
+            # w.writerow(header)
 
-        #if predictsets:
-        #    matches = self.predict(predictsets, sample, testjobs)
-        #    self.writeCodingJob(trainjobs[0], matches)
+            # def getCode(id):
+            #     lbl = self.db.getValue("select label from labels where objectid=%s and languageid=2" % id)
+            #     return int(lbl[:4])
+                
+            # for m in matches:
+            #     data = ["maxent", m.unit.article.id, m.unit.id, getCode(m.getActual()), m.getActualPosition()]
+            #     for i in range(1,6):
+            #         val, conf = m.predictions[i-1]
+            #         val = getCode(val)
+                    
+            #         data += [val, conf]
+            #     w.writerow(data)
+                
+
+        if predictsets:
+            matches = self.predict(predictsets, sample, testjobs)
+            self.writeCodingJob(trainjobs[0], matches)
             
             
 
@@ -84,6 +106,7 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
             self.learner.addData(job, unitlevel = False)
 
         self.learner.algorithm = mlalgo.ALGORITHM_FACTORIES["maxent"]()
+        #self.learner.algorithm = mlalgo.ALGORITHM_FACTORIES["libsvm_rbf"]()
         
         self.learner.train()
         log.info("Created model!")
@@ -92,11 +115,15 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         val = getattr(unit.values, self.field.fieldname, None)
         if val: return val.id
 
-    def testModel(self, testjobs):
-        testdata = ml.getUnits(False, *testjobs)
-        log.info("Testing model on jobs %s" % (testjobs))
-        matches = ml.MatchesTable(self.learner.predict(data=testdata))
+    def testModel(self, jobs):
+        testdata = ml.getUnits(False, *jobs)
+        log.info("Predicting model on jobs %s" % (jobs))
+        matches = self.learner.predict(data=testdata)
         return matches
+        
+    def testModelTable(self, testjobs):
+        return ml.MatchesTable(self.testModel(testjobs))
+
     
     def reportMatches(self, function, table):
         log.info( "Creating R data sets")

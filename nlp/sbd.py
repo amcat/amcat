@@ -5,7 +5,7 @@ months = "Jan Feb Mar Apr Jun Jul Aug Sep Oct Nov Dec".split()
 
 expr = None
 
-def split(text, type=2, maxsentlength=2000, abbreviateIfTooLong=False):
+def split(text, type=2, maxsentlength=2000, abbreviateIfTooLong=False, requireCapital=True):
     """python gaat op zoek naar einde van een regel dmv zoeken naar een punt.
     echter hij sluit uit dat het gaat om eigennamen,
     waardoor bv A.den Doolaard niet als einde van een zin wordt gezien.
@@ -24,9 +24,12 @@ def split(text, type=2, maxsentlength=2000, abbreviateIfTooLong=False):
             expr = r"(?<!\b[A-Za-z])"
             for x in lenmap.values(): expr += r"(?<!\b(?:%s))" % "|".join(x)
             #expr += r"(?<Nov(?=. \d))"
-            expr += r"[\.?!](?!\w|,)(?!\s[a-z])|\n\n"
+            if requireCapital:
+                expr += r"[\.?!](?!\w|,)(?!\s[a-z])|\n\n"
+            else:
+                expr += r"[\.?!](?!\w|,)|\n\n"
             expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
-            #print expr
+
             expr = re.compile(expr)
             
         sents = []

@@ -1,7 +1,7 @@
 from amcat.tools import toolkit
 import math, os, itertools, collections
 from amcat.ml.ml import Match
-#import svm
+import svm
 
 #svm.svmc.svm_set_quiet()
         
@@ -64,6 +64,7 @@ class LibSVMAlgorithm(Algorithm):
         for u in units:
             features = featureset.getDict(u)
             if self.probabilities:
+                #print model.predict_probability(features)
                 cls, pred = model.predict_probability(features)
             else:
                 pred = model.predict(features)
