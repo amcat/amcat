@@ -1,10 +1,24 @@
-import dbtoolkit, sys, datetime
-import batch, toolkit
-import ticker
+"""Usage: python deduplicate.py WHAT
 
-import amcatlogging; log = amcatlogging.setup()
+Deduplicates a batch or project, placing the 'dupes' in a new batch
 
+WHAT can be
+
+deduplicate.py 12  -> deduplicates project 12
+deduplicate.py b447 -> deduplicates batch 447
+"""
+
+from amcat.db import dbtoolkit
+import sys, datetime
+from amcat.tools import toolkit
+from amcat.tools.logging import ticker,  amcatlogging
+
+log = amcatlogging.setup()
 db = dbtoolkit.anokoDB()
+
+if len(sys.argv) < 2:
+    print __doc__
+    sys.exit()
 
 arg = sys.argv[1]
 if arg[0] == "s":
@@ -71,9 +85,17 @@ ticker.warn("%i duplicates found" % len(data))
 
 batchname = "Duplicate articles %s" % (datetime.datetime.now())
 batchquery = "Duplicates from %s" % selection
-b = batch.createBatch(projectid, batchname, batchquery, db)
 
-ticker.warn("Created '%s' for duplicates in %s" % (b.clsidlabel(), b.project.clsidlabel()))
+
+def createBatch(project, name, query, db=None):
+    if db is None: db = project.db
+    if type(project) <> int: project = project.id
+    batchid = db.insert('batches', dict(name=name, projectid=project, query=query))
+    return batchid
+
+bid = createBatch(projectid, batchname, batchquery, db)
+
+ticker.warn("Created batch '%s'" % bid)
 
 aids = set(toolkit.flatten(data))
 aidselection = db.intSelectionSQL("articleid", aids)
@@ -113,10 +135,10 @@ for articles in data:
 ticker.warn("Deduplicating %i articles:" % (len(tomove)))
 delete.prnt(outfunc=ticker.warn)
 
-SQL = "update articles set batchid=%i where %s" % (b.id, db.intSelectionSQL("articleid", tomove))
+SQL = "update articles set batchid=%i where %s" % (bid, db.intSelectionSQL("articleid", tomove))
 print SQL
 
-db.doQuery("update articles set batchid=%i where %s" % (b.id, db.intSelectionSQL("articleid", tomove)))
+db.doQuery("update articles set batchid=%i where %s" % (bid, db.intSelectionSQL("articleid", tomove)))
 
 ticker.warn("Committing")
 db.commit()
