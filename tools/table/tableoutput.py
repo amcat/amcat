@@ -5,7 +5,7 @@ from amcat.tools.logging import progress
 import sys, csv, StringIO, traceback
 
 from amcat.tools.logging import amcatlogging;
-amcatlogging.debugModule()
+#amcatlogging.debugModule()
 
 import logging; log = logging.getLogger(__name__)
 
