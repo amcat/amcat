@@ -35,6 +35,10 @@ elif analysisid == 5:
 elif analysisid == 3:
     from amcat.nlp import dolemmatise
     parse = dolemmatise.parseSentences
+elif analysisid == 6:
+    from amcat.nlp import frenchlemma
+    parse = frenchlemma.parseSentences
+    
 else:
     print "Unknown analysis: %s" % analysisid
     usage()
