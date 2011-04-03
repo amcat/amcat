@@ -18,12 +18,12 @@ def getCodebook(codebook):
         CODEBOOK_CACHE[codebook.id] = codebook
     return CODEBOOK_CACHE[codebook.id]
 
-DIM_TREE = None
-def getDimTree(db):
-    global DIM_TREE
-    if DIM_TREE is None:
-        DIM_TREE = Tree(db, 5001)
-    return DIM_TREE
+TREES = {}
+def getTree(db, treeid):
+    if treeid not in TREES:
+        TREES[treeid]  =Tree(db, treeid)
+        #log.debug("Tree %s is now %s" % (treeid, TREES[treeid]))
+    return TREES[treeid]
 
 
 def _doExtrapolate(values):
@@ -47,8 +47,8 @@ class NetColumn(FieldColumn):
 	
 	src, su, obj = [getattr(values, x) for x in  ("source","subject","object")]
 	objtype = self.codebook.categorise(obj, date=row.art.date, depth=1)[-1]
-	if objtype.id == IDEAL:
-	    values = _doExtrapolate(values)
+	#if objtype.id == IDEAL:
+	#    values = _doExtrapolate(values)
 	return values
 	
     def getCell(self, row):
@@ -80,14 +80,17 @@ class OmklapColumn(NetColumn):
         return self.codebook.categorise(obj, date=row.art.date, depth=self.depth, returnReverse=True, returnObject=False)[-1]
 
 
-class DimensionColumn(CategorisationColumn):
-    def __init__(self, field, label):
-        CategorisationColumn.__init__(self, field, label, depth=3)
-        self.dimtree = getDimTree(self.codebook.db)
+class OtherTreeColumn(CategorisationColumn):
+    def __init__(self, field, label, treeid, depth=3):
+        CategorisationColumn.__init__(self, field, label, depth=depth)
+        self.tree = getTree(self.codebook.db, treeid)
     def _getCell(self, obj, row):
-        val = super(DimensionColumn, self)._getCell(obj, row)
-        if not val: return
-        return self.dimtree.getParent(val)
+        val = super(OtherTreeColumn, self)._getCell(obj, row)
+        #log.debug(">> OtherTreeColumn(%s) : looking up %s -> %s" % (self.tree, val.objekt.idlabel(), self.tree.getParent(val)))
+        if val not in self.tree: return
+        # if val has a parent, return it; if not, it is root, so return val
+        return self.tree.getParent(val) or val 
+
 
 class InstitutionColumn(NetColumn):
     def __init__(self, field, label, functionid=False, party=False):
@@ -151,7 +154,9 @@ COLUMNS = [
      lambda field : CategorisationColumn(field, "class", 1),
      lambda field : CategorisationColumn(field, "root", 2),
      lambda field : CategorisationColumn(field, "cat", 3),
-     lambda field : DimensionColumn(field, "dim"),
+     lambda field : OtherTreeColumn(field, "dim", 5001),
+     lambda field : OtherTreeColumn(field, "theme", 5100),
+     lambda field : OtherTreeColumn(field, "kold", 5101),
      lambda field : InstitutionColumn(field, "inst"),
      lambda field : InstitutionColumn(field, "func", functionid=True),
      lambda field : InstitutionColumn(field, "partyleader", functionid=True, party=True),
