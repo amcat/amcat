@@ -24,7 +24,6 @@ Base class for Properties to be used with cachable
 from __future__ import unicode_literals, print_function, absolute_import
 import logging; log = logging.getLogger(__name__)
 from amcat.tools.cachable import amcatmemcache as store
-from amcat.tools.cachable.cachable import Cachable
 from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 class Property(object):
@@ -143,6 +142,7 @@ class Property(object):
         @return a type object  
         """
         #print "%s.getType(obj=%r); observedType=%r" % (self, obj, self.observedType)
+        from amcat.tools.cachable.cachable import Cachable
         if (self._observedType is None
             and isinstance(obj, Cachable)):
             #try to get cached value
