@@ -1,3 +1,5 @@
+#! /usr/local/bin/python2.6
+
 import dbtoolkit, sys, datetime
 import batch, toolkit
 import ticker
