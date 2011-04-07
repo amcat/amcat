@@ -227,6 +227,7 @@ class OntologyFieldSerialiser(SchemaFieldSerialiser):
             return self._labels
         except AttributeError: pass
 
+        # TODO: need to support trees as well? now codebookid 5015 has no labels
         self._labels = dict((o.id, unicode(o.label)) for o in self.codebook.objects)
         return self._labels
 

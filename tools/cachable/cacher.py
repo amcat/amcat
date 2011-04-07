@@ -109,7 +109,7 @@ def cacheMultiple(cachables, *propnames):
     for propname in propnames:
         log.debug("Getting property %r" % propname)
         prop = getattr(klass, propname, None)
-        if not isinstance(prop, Property): raise Exception("Cachable %r has not property %s" % (cachable, propname))
+        if not isinstance(prop, Property): raise Exception("Cachable %r has not property %s" % (klass, propname))
         prop.prepareCache(cacher)
 
     #toolkit.ticker.warn("Getting data")

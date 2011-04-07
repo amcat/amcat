@@ -5,9 +5,11 @@ from amcat.model.coding import codingjob
 import logging; log = logging.getLogger(__name__)
 
 
-def getCodingJobsSetsFromUser(db, userid):
-    SQL = """select codingjobid, setnr from codingjobs_sets
-             where coder_userid = %d""" % userid
+def getCodingJobsSetsFromUser(db, userid, limit=None):
+    limitSQL = 'top %d' % limit if limit else ''
+    SQL = """select %s codingjobid, setnr from codingjobs_sets
+             where coder_userid = %d
+             order by codingjobid desc""" % (limitSQL, userid)
     data = db.doQuery(SQL)
     log.debug(data)
     for row in data:
