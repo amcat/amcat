@@ -5,7 +5,7 @@ from amcat.tools import idlabel
 from amcat.db import dbtoolkit
 
 
-class TestAnnotationSchema(amcattest.AmcatTestCase):
+class TestCodedValues(amcattest.AmcatTestCase):
 
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)
@@ -22,9 +22,26 @@ class TestAnnotationSchema(amcattest.AmcatTestCase):
         self.assertEqual(viasql, "bla")
                            
 
+
+    def testUpdateNewArticleCoding(self):
+        ca = codedarticle.CodedArticle(self.db, 1862599)
+        self.assertEqual(ca.values, None)
+        try:
+            vals = ca.annotationschema.deserializeValues(politiek=True)
+            ca.updateValues(self.db, vals)
+            self.assertNotEqual(ca.values, None)
+            self.assertEqual(ca.values.politiek, True)
+        finally:
+            self.db.rollback()
+            del ca.values
+        self.assertEqual(ca.values, None)
+        
     def testUpdateValidation(self):
         cs = codedsentence.CodedSentence(self.db, 684712)
         self.assertRaises(annotationschema.ValidationError, cs.updateValues, self.db, {})
+        ca = codedarticle.CodedArticle(self.db, 1862599)
+        self.assertRaises(annotationschema.ValidationError, ca.updateValues, self.db, {})
+        
             
     def testUpdateSentenceCoding(self):
         cs = codedsentence.CodedSentence(self.db, 684712)
