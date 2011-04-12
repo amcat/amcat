@@ -41,20 +41,25 @@ def _getConnection():
 def _connect():
     return memcache.Client(["127.0.0.1:11211"], binary=False)
 
-def _strftime(date):
-    if type(date) != types.IntType:
+def _serialise(obj):
+    if type(obj) == unicode:
+        return str(obj)
+    if type(obj) == str:
+        return obj
+    if type(obj) != types.IntType:
         try:
-            return date.isoformat()
+            return obj.isoformat()
         except AttributeError:
-            return "%s-%s-%s" % (date.year, date.month, date.day)
-    return date
+            return "%s-%s-%s" % (obj.year, obj.month, obj.day)
+    return obj
 
 def key2bytes(klass, prop, key):
     """Return a byte-encoding of the key"""
     # memcached requires key chars > 33 and != 127, so use str(.) for now
     if type(klass) != str: klass = klass.__name__
     if type(key) == int: key = (key,)
-    if type(key) != str: key = "_".join("%s" % _strftime(k) for k in key)
+    if not isinstance(key, (str, unicode)): 
+        key = "_".join("%s" % _serialise(k) for k in key)
     return "%s_%s_%s" % (klass, prop, key)
 
 def _debug(action, klass, prop, key, data=None):
