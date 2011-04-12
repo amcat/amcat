@@ -121,6 +121,8 @@ class SchemaFieldSerialiser(object):
     def deserialize(self, value):
         """Convert the given (db) value to a domain object"""
         return value
+    def serialize(self, values):
+        return value
     def getTargetType(self):
         """Return the type of objects dererialisation will yield
 
