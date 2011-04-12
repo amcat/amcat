@@ -28,7 +28,6 @@ class TestAnnotationSchema(amcattest.AmcatTestCase):
             
     def testUpdateSentenceCoding(self):
         cs = codedsentence.CodedSentence(self.db, 684712)
-        print cs.values
         
         vals = cs.annotationschema.deserializeValues(subject=-1234, quality="1", object=-1234)
 
@@ -43,6 +42,19 @@ class TestAnnotationSchema(amcattest.AmcatTestCase):
             del cs.values
         self.assertNotEqual(cs.values.subject.id, -1234)
 
+    def testDeleteSentenceCoding(self):
+        cs = codedsentence.CodedSentence(self.db, 684712)
+        ca = cs.ca
+        try:
+            cs.delete(self.db)
+            viasql = self.db.getValue("select arrowid from net_arrows where arrowid = %i" % cs.id)
+            self.assertEqual(viasql, None)
+            sids = [s.id for s in ca.sentences]
+            self.assertNotIn(cs.id, sids)
+        finally:
+            self.db.rollback()
+            del ca.sentences
+            del cs.codedarticle
         
         
 

@@ -17,3 +17,16 @@ class CodedSentence(Cachable, codedvalues.CodedValues):
     @property
     def annotationschema(self):
         return self.ca.set.job.unitSchema
+
+    def delete(self, db):
+        # Delete values, then delete self and invalidate parent
+        ca = self.ca
+        table = self.annotationschema.table
+        idcol = "codingjob_articleid" if self.annotationschema.isarticleschema else "codedsentenceid"
+        if table.lower() == "vw_net_arrows": table = "net_arrows" #HACK, remove after migrating to amcat3
+        if table == "net_arrows": idcol = "arrowid" #HACK, remove after migrating!
+                
+        db.delete(table, {idcol: self.id})
+        super(CodedSentence, self).delete(db)
+        del ca.sentences
+        del self.codedarticle
