@@ -52,6 +52,33 @@ class TestAnnotationSchema(amcattest.AmcatTestCase):
             self.assertEqual(str(val), lbl)
             self.assertEqual(val, obj)
 
+
+    def testValidateField(self):
+        for (sid,fieldname, value, err) in [
+            (1, 'predicate', None, None),
+            (87, 'topic', None, annotationschema.ValidationError),
+            ]:
+            a = annotationschema.AnnotationSchema(self.db, sid)
+            f = a.getField(fieldname)
+            o = f.deserialize(value)
+            if err:
+                self.assertRaises(err, f.validate, o)
+            else:
+                f.validate(o)
+
+    def testValidateSchema(self):
+        for (sid, values, err) in [
+            (1, {}, None),
+            (87, {}, annotationschema.ValidationError),
+            (87, {"to":1, "topic":-1234},None),
+            ]:
+            a = annotationschema.AnnotationSchema(self.db, sid)
+            objects = a.deserializeValues(**values)
+            if err:
+                self.assertRaises(err, a.validate, objects)
+            else:
+                a.validate(objects)
+            
     
 if __name__ == '__main__':
     amcattest.main()

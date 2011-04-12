@@ -64,7 +64,12 @@ class Identity(object):
 	if self.__identity__:
 	    return self.__identity__
 	raise Exception("Identity object without identity")
-
+    def __eq__(self, other):
+        if other is None: return False
+        try:
+            return self._identity() == other._identity()
+        except AttributeError:
+            return False
 
 class IDLabel(Identity):
     """

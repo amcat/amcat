@@ -1,8 +1,9 @@
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey
 from amcat.tools.cachable.latebind import LB
 from amcat.tools.cachable.codedvaluesproperty import CodedValuesProperty
+from amcat.model.coding import codedvalues
 
-class CodedSentence(Cachable):
+class CodedSentence(Cachable, codedvalues.CodedValues):
     __idcolumn__ = 'codedsentenceid'
     __table__ = 'codedsentences' 
     codedarticle = DBProperty(LB("CodedArticle", sub="coding"))

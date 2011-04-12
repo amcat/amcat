@@ -10,6 +10,8 @@ from amcat.model.ontology.object import Object
 import logging; log = logging.getLogger(__name__)
 #from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
+class ValidationError(ValueError): pass
+class RequiredValueError(ValidationError): pass
 
 class AnnotationSchema(Cachable):
     __idcolumn__ = 'annotationschemaid'
@@ -39,6 +41,24 @@ class AnnotationSchema(Cachable):
     def fieldNames(self):
         return (f.fieldname for f in self.fields)
 
+    def validate(self, values):
+        """Validate whether the given values are a valid coding for this schema
+        raises a VAlidationError if not, returns silenty if ok.
+
+        @param values: Dict of {schemafield : (deserialized) values}
+        """
+        for field in self.fields:
+            field.validate(values.get(field))
+
+    def deserializeValues(self, **values):
+        """Deserialize a {fieldname:valuestr} dict to a {field:value} dict"""
+        objects = {}
+        for (k,v) in values.items():
+            f = self.getField(k)
+            o = f.deserialize(v)
+            objects[f] = o
+        return objects
+            
     def cacheMany(self, units):
         cachable.cache(units, *self.fieldNames())
     
@@ -111,7 +131,10 @@ class AnnotationSchemaField(Cachable):
         return val
     def getTargetType(self):
         return self.serializer.getTargetType()   
-    
+
+    def validate(self, value):
+        if (value is None) and self.required:
+            raise RequiredValueError(self)
 
 
 class SchemaFieldSerialiser(object):
@@ -121,7 +144,7 @@ class SchemaFieldSerialiser(object):
     def deserialize(self, value):
         """Convert the given (db) value to a domain object"""
         return value
-    def serialize(self, values):
+    def serialize(self, value):
         return value
     def getTargetType(self):
         """Return the type of objects dererialisation will yield
@@ -140,6 +163,10 @@ class LookupFieldSerialiser(SchemaFieldSerialiser):
         return result
     def getTargetType(self):
         return IDLabel
+    def serialize(self, value):
+        if value is None: return
+        if type(value) == int: return value
+        return value.id
     
 class AdHocLookupFieldSerialiser(LookupFieldSerialiser):
     def __init__(self, valuestr):
@@ -232,7 +259,10 @@ class OntologyFieldSerialiser(SchemaFieldSerialiser):
         # TODO: need to support trees as well? now codebookid 5015 has no labels
         self._labels = dict((o.id, unicode(o.label)) for o in self.codebook.objects)
         return self._labels
-
+    def serialize(self, value):
+        if value is None: return
+        if type(value) == int: return value
+        return value.id
 
 class FieldColumn(ObjectColumn):
     """ObjectColumn based on a AnnotationSchemaField"""
@@ -274,7 +304,8 @@ class FieldColumn(ObjectColumn):
         log.debug(">>>>>> values=%r, fieldname=%r, --> val=%s" % (values, fieldname, val))
         return val
 
-            
+
+    
                      
 
 if __name__ == '__main__':

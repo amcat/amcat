@@ -1,14 +1,14 @@
 from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey
 from amcat.tools.cachable.codedvaluesproperty import CodedValuesProperty
 from amcat.tools.cachable.latebind import LB
-from amcat.model.coding import codedsentence
+from amcat.model.coding import codedsentence, codedvalues
 
 class CodedArticleStatus(Cachable):
     __table__ = 'codingjob_articles_status'
     __idcolumn__ = 'statusid'
     label = DBProperty()
 
-class CodedArticle(Cachable):
+class CodedArticle(Cachable, codedvalues.CodedValues):
     __table__ = 'codingjobs_articles'
     __idcolumn__ = 'codingjob_articleid'
     #sentences = ForeignKey(LB("CodedSentence", sub="coding"), constructor=createSentence)
@@ -20,6 +20,7 @@ class CodedArticle(Cachable):
     values = CodedValuesProperty(lambda ca: ca.annotationschema)
     sentences = ForeignKey(LB("CodedSentence", sub="coding"))
 
+    
     @property
     def set(self):
         return self.codingjobset
