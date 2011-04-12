@@ -30,3 +30,4 @@ class CodedSentence(Cachable, codedvalues.CodedValues):
         super(CodedSentence, self).delete(db)
         del ca.sentences
         del self.codedarticle
+

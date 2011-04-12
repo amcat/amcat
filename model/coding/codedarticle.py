@@ -37,5 +37,11 @@ class CodedArticle(Cachable, codedvalues.CodedValues):
     def getArticle(self):
         return self.article
 
+    def insertCoding(self, db, sentence, values):
+        cs = CodedArticle.sentences.addNewChild(db, self, sentence=sentence)
+        cs.updateValues(db, values)
+        return cs
+        
+    
     #confidence = DBProperty()self.addDBProperty("confidence", table=job.articleSchema.table, func = lambda c : c and (float(c) / 1000))
 

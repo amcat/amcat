@@ -6,10 +6,8 @@ from amcat.db import dbtoolkit
 
 
 class TestCodedValues(amcattest.AmcatTestCase):
-
     def setUp(self):
         self.db = dbtoolkit.amcatDB(use_app=True)
-
     def tearDown(self):
         self.db.rollback()
         
@@ -72,9 +70,45 @@ class TestCodedValues(amcattest.AmcatTestCase):
             self.db.rollback()
             del ca.sentences
             del cs.codedarticle
-        
-        
+    def testValidateCreateSentenceCoding(self):
+        ca = codedarticle.CodedArticle(self.db, 1754216)
+        sent = list(ca.article.sentences)[2]
+        self.assertRaises(annotationschema.ValidationError, ca.insertCoding, self.db, sent, {})
 
+
+class TestCodedValues(amcattest.AmcatTestCase):
+    def setUp(self):
+        self.db = dbtoolkit.amcatDB(use_app=True)
+    def tearDown(self):
+        self.db.rollback()
+        
+    def testCreateSentenceCoding(self):
+        ca = codedarticle.CodedArticle(self.db, 1754216)
+        vals = ca.set.job.unitSchema.deserializeValues(subject=-1234, quality="1", object=-1234)
+        sent = list(ca.article.sentences)[2]
+        try:
+            cs = ca.insertCoding(self.db, sent, vals)
+            self.assertEqual(cs.values.subject.id, -1234)
+            sids = [s.id for s in ca.sentences]
+            self.assertIn(cs.id, sids)
+            viasql = self.db.getValue("select arrowid from net_arrows where arrowid = %i" % cs.id)
+            self.assertEqual(viasql, cs.id)
+            viasql = self.db.getValue("select codedsentenceid from codedsentences where codedsentenceid = %i" % cs.id)
+            self.assertEqual(viasql, cs.id)
+        finally:
+            self.db.rollback()
+            del ca.sentences
+            del cs.values
+            del cs.codedarticle
+            
+        self.assertEqual(cs.ca, None)
+        
+        viasql = self.db.getValue("select arrowid from net_arrows where arrowid = %i" % cs.id)
+        self.assertEqual(viasql, None)
+        viasql = self.db.getValue("select codedsentenceid from codedsentences where codedsentenceid = %i" % cs.id)
+        self.assertEqual(viasql, None)
+        sids = [s.id for s in ca.sentences]
+        self.assertNotIn(cs.id, sids)
         
 if __name__ == '__main__':
     amcattest.main()
