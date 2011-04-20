@@ -27,7 +27,7 @@ class CodedValues(object):
         idcol = "codingjob_articleid" if schema.isarticleschema else "codedsentenceid"
         table = schema.table
         if table.lower() == "vw_net_arrows": table = "net_arrows" #HACK, remove after migrating to amcat3
-        if table == "net_arrows": idcol = "arrowid" #HACK, remove after migrating!
+        if table in ("net_arrows", "antwerpen_manifesto_arrows"): idcol = "arrowid" #HACK, remove after migrating!
 
         # IF it is an article schema AND values is None, insert rather than update
         if schema.isarticleschema and self.values is None:
