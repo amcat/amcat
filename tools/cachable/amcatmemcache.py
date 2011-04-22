@@ -27,6 +27,9 @@ import pylibmc as memcache
 import types
 import logging; LOG = logging.getLogger(__name__)
 
+import threading
+LOCK = threading.Lock() 
+
 #from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 class UnknownKeyException(EnvironmentError):
@@ -82,7 +85,9 @@ def get(klass, prop, key, conn=None):
     """
     keybytes = key2bytes(klass, prop, key)
     #_debug("GET", klass, prop, key)
-    val =_getConnection().get(keybytes)
+    LOCK.acquire()
+    val = _getConnection().get(keybytes)
+    LOCK.release()
     #_debug("GET", klass, prop, key, "-> %r" % (val,))
     if val is None:
         raise UnknownKeyException(keybytes)
@@ -101,13 +106,17 @@ def put(klass, prop, key, value, conn=None):
     #LOG.debug(key)
     keybytes = key2bytes(klass, prop, key)
     #_debug("PUT", klass, prop, key, "<- %r" % (value,))
+    LOCK.acquire()
     _getConnection().set(keybytes, value)
+    LOCK.release()
 
 def delete(klass, prop, key, conn=None):
     """Delete the value for the given key"""
     keybytes = key2bytes(klass, prop, key)
     #_debug("DEL", klass, prop, key)
+    LOCK.acquire()
     _getConnection().delete(keybytes)
+    LOCK.release()
     
 class CachablePropertyStore(object):
     def __init__(self, klass, prop):
