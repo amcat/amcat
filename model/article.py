@@ -71,3 +71,13 @@ class Article(Cachable):
         for s in self.sentences:
             if s.parnr == parnr and s.sentnr == sentnr:
                 return s
+
+class ArticlePost(Cachable):
+    """
+    Class representing comments on articles
+    """
+    __table__ = 'articles_posts'
+    __idcolumn__ = ('articleid', 'parent_articleid')
+
+    article = DBProperty(Article)
+    parent = DBPropery(Article, dbcolumn='parent_articleid')

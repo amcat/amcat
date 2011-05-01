@@ -1275,6 +1275,11 @@ def getattrv2(obj, attrs):
         obj = getattr(obj, attr)
     return obj
 
+def abstract():
+    """Imitates Java's abstract keyword"""
+    caller = inspect.getouterframes(inspect.currentframe())[1][3]
+    raise NotImplementedError(caller + ' must be implemented in subclass')
+
 ###########################################################################
 ##                 Deprecated functions and imports                      ##
 ###########################################################################
