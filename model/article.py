@@ -80,4 +80,4 @@ class ArticlePost(Cachable):
     __idcolumn__ = ('articleid', 'parent_articleid')
 
     article = DBProperty(Article)
-    parent = DBPropery(Article, dbcolumn='parent_articleid')
+    parent = DBProperty(Article, getcolumn='parent_articleid')
