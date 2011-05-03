@@ -18,7 +18,7 @@ class AnnotationSchema(Cachable):
     __table__ = 'annotationschemas'
     __labelprop__ = 'name'
     
-    name, isarticleschema, location = DBProperties(3)
+    name, isarticleschema, isnet, location = DBProperties(4)
     fields = ForeignKey(lambda:AnnotationSchemaField)
     
     @property
