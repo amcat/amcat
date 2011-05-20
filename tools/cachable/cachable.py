@@ -315,7 +315,9 @@ class Cachable(idlabel._Identity):
         return "%s(%s)" % (self.__class__, self.id)
         return str(self)
     def idlabel(self):
-        return "{0}: {1}".format(self.id, self.label)
+        label = self.label
+        if type(label) <> unicode: label = label.decode("latin-1")
+        return "{0}: {1}".format(self.id, label)
 
 
 def _ensureTuple(vals):

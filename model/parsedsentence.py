@@ -58,6 +58,8 @@ class ParsedWord(graph.Node, Cachable):
     __idcolumn__ = ['sentenceid','analysisid','wordbegin']
     __labelprop__ = 'word'
     word = DBProperty(LB("Word"))
+    posid = DBProperty()
+
     
     def __init__(self, *args, **kargs):
         Cachable.__init__(self, *args, **kargs)
@@ -71,10 +73,10 @@ class ParsedWord(graph.Node, Cachable):
         return sentence.Sentence(self.db, self.id[0])
     @property
     def parsedSentence(self):
-        return ParsedSentence(self.db, self.id[:2])
+        return ParsedSentence(self.db, *self.id[:2])
     def getGraph(self):
         "Implement graph.Node.getGraph by returning the parse tree of the sentence"
-        return self.analysedSentence
+        return self.parsedSentence
 
     def __str__(self):
         return "%i:%s" % (self.position, self.word)
@@ -85,29 +87,41 @@ class ParsedWord(graph.Node, Cachable):
 
 class Relation(Cachable):
     __table__ = "parses_rels"
-    __idcolumn__ = "relationid"
+    __idcolumn__ = "relid"
     __dbproperties__ = ["name"]
     __labelprop__ = 'name'
     name = DBProperty()
     
 class ParsedTriple(Cachable):
     __table__ = 'parses_triples'
-    __idcolumn__ = 'sentenceid','analysisid','childbegin'
-    relation = DBProperty(Relation)
-    parentbegin = DBProperty()
+    __idcolumn__ = 'sentenceid','analysisid','childbegin','parentbegin'
+    relation = DBProperty(Relation, getcolumn="relation")
+    #parentbegin = DBProperty()
 
 
     @property
     def child(self):
-        return ParsedWord(self.db, self.id)
+        return ParsedWord(self.db, *self.id[:3])
     @property
     def parent(self):
-        return ParsedWord(self.db, self.id[:2] + (self.parentbegin,))
+        sid, aid, c, p = self.id
+        return ParsedWord(self.db, sid, aid, p)
         
     @property
     def parsedSentence(self):
-        return ParsedSentence(self.db, self.id[:2])
+        return ParsedSentence(self.db, *self.id[:2])
     @property
     def analysis(self):
         return analysis.Analysis(self.db, self.id[1])
     
+if __name__ == '__main__':
+    from amcat.db import dbtoolkit
+    db = dbtoolkit.amcatDB()
+    ps = ParsedSentence(db, 51280986, 2)
+    #for triple in ps.triples:
+    #    print(triple)
+
+
+    pw = ParsedWord(db, 51280986, 2, 4)
+    for child in pw.children:
+        print(child)

@@ -365,7 +365,7 @@ class AmcatDB(object):
         SQL = self._updateSQL(table, newvals, where)
         self.doQuery(SQL)
 
-    def delete(self, table, where):
+    def delete(self, table, where, verbose=False):
         """Create and execute a DELETE statement
 
         @type table: str
@@ -375,7 +375,10 @@ class AmcatDB(object):
           AND-joined key=quotesql(val) string
         """
         where = self.whereSQL(where)
-        SQL = "DELETE FROM %(table)s WHERE %(where)s" % locals()
+        if verbose:
+            i = self.getValue("select count(*) from {table} where {where}".format(**locals()))
+            log.warn("Will delete {i} rows from {table}".format(**locals()))
+        SQL = "DELETE FROM {table} WHERE {where}".format(**locals())
         self.doQuery(SQL)
         
     def select(self, table, columns, where=None, rowfunc=None, alwaysReturnTable=False, distinct=False, orderby=None):

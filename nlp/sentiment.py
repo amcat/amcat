@@ -45,6 +45,9 @@ def searchtokens(tokens, i, pattern):
         if tokens[j].sentence <> tokens[i].sentence: continue
         yield j, tokens[j]
 
+TOPIC_SPAN = 2
+INTENSIFIER_SPAN = 2
+
     
 class Sentiment(object):
 
@@ -55,6 +58,8 @@ class Sentiment(object):
         self.analysis = analysis
         self.ldict = lexicon and lexicon.lemmaidDict()
         self.topicdict = topicdict
+        self.topicspan = TOPIC_SPAN
+        self.intensifierspan = INTENSIFIER_SPAN
 
     def getTokens(self, *sents):
         cacher.cache(sents, words=dict(word=dict(lemma=[])))
@@ -78,20 +83,24 @@ class Sentiment(object):
         originaltopics = [t.topic for t in tokens] 
         for i, token in enumerate(tokens):
             if token.topic: continue
-            for j, token2 in searchtokens(tokens, i, search(2)):
+            for j, token2 in searchtokens(tokens, i, search(self.topicspan)):
                 topic = originaltopics[j]
                 if topic:
                     token.topic = topic
                     break
             
-    def resolveIntensifiers(self, tokens):
+    def resolveIntensifiers(self, tokens, negators=True, intensifiers=True):
+        nneg, nint = 0, 0
         for i, token in enumerate(tokens):
-            if token.intensity:
-                for j, token2 in searchtokens(tokens, i, search(2)):
+            if token.intensity and ((negators and token.intensity < 0) or (intensifiers and token.intensity > 0)):
+                if token.intensity > 0: nint += 1
+                else: nneg += 1
+                for j, token2 in searchtokens(tokens, i, search(self.intensifierspan)):
                     if token2.sentiment:
                         token2.sentiment *= token.intensity
                         break
                 token.intensity = None
+        return nneg, nint
 
     def resolveConditions(self, tokens):
         for i, token in enumerate(tokens):
@@ -146,6 +155,11 @@ class Sentiment(object):
         return sum(sentiments) / sum(abs(s) for s in sentiments)
 
 
+    def computeSentimentParts(self, sentiments):
+        if not sentiments: return None
+        pos = sum(abs(s) for s in sentiments if s > 0)
+        neg = sum(abs(s) for s in sentiments if s < 0)
+        return pos, neg
 
     def getResolvedTokensForArticle(self, article):
         sents = [s.getAnalysedSentence(self.analysis.id) for s in article.sentences]

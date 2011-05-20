@@ -16,6 +16,12 @@ PARENTS = ( # objectid, treeid, parentid/None, reverse?
 
 class TestObject(amcattest.AmcatTestCase):    
 
+    def testSearchString(self):
+	o = Object(self.db, 698)
+	self.assertEqual(o.getSearchString(languageid=13), "")
+
+class Stop:
+
     def testLabels(self):
         for oid, stdlabel, lang, label in (
             (296, "flexibele arbeidsmarkt", 12, "[-] Flexibele / Liberale arbeidsmarkt"),

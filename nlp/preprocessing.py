@@ -239,8 +239,10 @@ def reset(db, analysis):
 def purge(db, analysis):
     """Remove all already-parsed articles from the parses_jobs_sentences table"""
     analysisid = _getid(analysis)
+    log.info("Purging parsed articles for analysis %i" % analysisid)
     SQL = "delete from parses_jobs_sentences where analysisid=%i and sentenceid in (select sentenceid from parses_words where analysisid=%i)" % (analysisid, analysisid)
     db.doQuery(SQL)
+    log.info("Done purging")
             
 def save(db, analysis, maxn=None):
     """Save pickled parses to the perses_triples/parses_words tables and remove from parses_jobs
@@ -419,6 +421,7 @@ class BaseWordCreator(object):
         self.words, self.lemmata, self.strings, self.pos, self.rels = {}, {}, {}, {}, {}
     def getString(self, string):
         string = toolkit.stripAccents(string)
+        string = string[:750]
         isword = bool(re.match("^[A-Za-z_]+$", string))
         return self.getOrCreate("stringid", self.strings, (clean(string),), "words_strings", ("string",), isword=isword)
     def getLemma(self, string, pos):

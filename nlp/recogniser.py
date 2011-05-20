@@ -1,5 +1,7 @@
-import ont, toolkit, re
-import graph
+from amcat.model.ontology.object import Object
+from amcat.tools import toolkit
+import re
+from amcat.tools import graph
 from itertools import imap, izip
 
 class Recogniser(object):
