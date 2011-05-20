@@ -69,7 +69,7 @@ class Object(Cachable):
         if lang: return self.labels[lang]
         return repr(self)
 
-    def getLabel(self, lan):
+    def getLabel(self, lan, fallback=True):
         """
         @param lan: language to get label for
         @type lan: integer or Language object
@@ -78,7 +78,8 @@ class Object(Cachable):
             lan = Language(self.db, lan)
         
         if self.labels.has_key(lan): return self.labels[lan]
-        return self.label
+	if fallback:
+	    return self.label
 
     def _getTree(self, treeid):
         for t in self.trees:
@@ -131,12 +132,14 @@ class Object(Cachable):
         date: if given, use only functions active on this date
         xapian: if true, do not use ^0 weights
         languageid: if given, use labels.get(languageid) rather than keywords"""
+
         
         if not date: date = datetime.now()
-        kw = self.getLabel(languageid)
+        kw = self.getLabel(languageid, fallback=False)
 
         #if (not languageid) or (fallback and kw is None):
         #    kw = self.keyword
+
         
         if not kw and self.name:
             ln = self.name
@@ -162,3 +165,20 @@ class Object(Cachable):
             return kw.replace("\n"," ")
 
     
+def function2conds(function):
+    officeid = function.office.id
+    if officeid in (380, 707, 729, 1146, 1536, 1924, 2054, 2405, 2411, 2554, 2643):
+        if function.functionid == 2:
+            return ["bewinds*", "minister*"]
+        else:
+            return ["bewinds*", "staatssecret*"]
+
+    if officeid == 901:
+        return ["premier", '"minister president"']
+    if officeid == 548:
+        return ["senator", '"eerste kamer*"']
+    if officeid == 1608:
+        return ["parlement*", '"tweede kamer*"']
+    if officeid == 2087:
+        return ['"europ* parlement*"', "europarle*"]
+    return []
