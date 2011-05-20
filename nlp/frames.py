@@ -1,9 +1,9 @@
 from __future__ import with_statement
-from idlabel import Identity
-import toolkit
+from amcat.tools.idlabel import Identity
+from amcat.tools import toolkit
 import sys
 from contextlib import contextmanager
-import graph
+from amcat.tools import graph
 import logging; log = logging.getLogger(__name__)
 
 ############# INTERFACE ETC. ################
@@ -33,7 +33,12 @@ class DeclarativeRule(Rule):
     def getFrame(self, node):
         return self.frame(name=self.name, rule=self)
     def doPrecheck(self, node):
-        return (not self.precheck) or self.precheck(self, node)
+        pc = self.precheck
+        if pc:
+            if callable(pc): pc = [pc]
+            for c in pc:
+                if not c(self, node): return False
+        return True
     def matches(self, node):
         if not self.doPrecheck(node): return 
         self.debug("  Applying rule %s"% self)
@@ -166,6 +171,7 @@ class Identifier(object):
         finally:
             self.debug("Leaving %s" % msg, indent=-1, adddepth=1) 
     def findFrames(self, tree):
+        n = list(tree.getNodes())
         for node in tree.getNodes():
             f = self.getFrame(node)
             if f: yield f
@@ -254,6 +260,12 @@ class SPORule(DeclarativeRule):
         DeclarativeRule.__init__(self, SPO, postprocess=postprocess, name=rulename, rulename=rulename, **roles) 
         self.allowPartial = allowPartial
    
+class ModalRule(DeclarativeRule):
+    def __init__(self, rulename, postprocess=None, modality=Self(), name="modal",  allowPartial=True, **roles):
+        roles['modality'] = modality
+        DeclarativeRule.__init__(self, ModalFrame, postprocess=postprocess, name=rulename, rulename=rulename, **roles) 
+        self.allowPartial = allowPartial
+
     
 class BronRule(DeclarativeRule):
     def __init__(self, rulename,  match=None, key=Self(), checks=None, postprocess=None, verbose=None, **roles):
@@ -409,6 +421,13 @@ class SPO(Frame):
         if self.has('object', 'predicate'):
             self.name = 'SPO_obj'
             return 2
+        return False
+
+class ModalFrame(Frame):
+    ARGS = ["modality","subject","object"]
+    def isComplete(self):
+        if not self.has("modality"): return False
+        if self.has("subject") or self.has("object"): return True
         return False
 
 class Order(Frame):
