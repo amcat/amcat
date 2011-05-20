@@ -29,8 +29,8 @@ class DNNExportScript(ExportScript):
 
     def getMetaColumns(self):
         return super(DNNExportScript, self).getMetaColumns() + [
-            #table3.ObjectColumn("parnr", lambda row: row.cs and row.cs.sentence.parnr, fieldtype=int),
-            #table3.ObjectColumn("sentnr", lambda row: row.cs and row.cs.sentence.sentnr, fieldtype=int),
+            table3.ObjectColumn("parnr", lambda row: row.cs and row.cs.sentence.parnr, fieldtype=int),
+            table3.ObjectColumn("sentnr", lambda row: row.cs and row.cs.sentence.sentnr, fieldtype=int),
             table3.ObjectColumn("Mediumid", lambda row: row.art.source.id, fieldtype=int),
             ]
 

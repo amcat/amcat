@@ -49,8 +49,15 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         testjobs = argToObjects(codingjob.Codingjob, self.db, testjobids)  
         predictsets = argToObjects(project.Set, self.db, predictbatchids)  
         if sample: sample = float(sample)
+
+	log.warn("Testjobs: %s" % testjobs)
+	log.warn("PredictSets: %s" % predictsets)
+	
+
+
         # setup learner and train model
         self.getModel(trainjobs)
+
 
         # do the required action
         if testjobs:
@@ -174,6 +181,9 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
             if not ca:
                 ca = createCodedArticle(self.db, cjset, a)
                 articles[a] = ca
+	    else: #if not self.unitlevel:
+		print "Skipping duplicate article %r" % (a)
+		continue
             data = dict(codingjob_articleid=ca.id)
             data[self.field.fieldname] = match.getPrediction()
             data['confidence'] = int(match.getConfidence() * 1000)
