@@ -24,7 +24,7 @@ from amcat.tools import toolkit, idlabel
 from amcat.tools.cachable.property import Property, UnknownTypeException
 from amcat.tools.cachable.cachable import Cachable, _ensureTuple, _allowScalar
 import logging; log = logging.getLogger(__name__)
-from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
+#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 def _dereferenceTargetClass(targetclass):
     if not callable(targetclass):
         raise ValueError("targetclass (%s) should be callable" % (targetclass))
