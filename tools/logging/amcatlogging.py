@@ -186,14 +186,14 @@ def collect(level=logging.DEBUG, destination=None):
         logger.removeHandler(mh)
 
 @contextmanager
-def logExceptions(logger=None, basetype=Exception):
+def logExceptions(msg="Exception occured", logger=None, basetype=Exception):
     """Creates a try/catch block that logs exceptions"""
     try:
         yield
     except basetype, e:
         if not logger:
             logger = logging.getLogger(toolkit.getCallingModule())
-        logger.exception(str(e))
+        logger.exception(msg)
         
 def format(records, date=True):
     fmt = AmcatFormatter(date).format
