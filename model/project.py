@@ -17,7 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""ORM Module representing projects and sets"""
+"""ORM Module representing projects"""
 
 from __future__ import unicode_literals, print_function, absolute_import
 from amcat.tools.cachable.latebind import LB
@@ -32,27 +32,12 @@ class Project(Cachable):
 
     name, projectid, insertDate, description = DBProperties(4)
     articles = ForeignKey(LB("Article"))
-    sets = ForeignKey(LB("Set", "project"))
+    sets = ForeignKey(LB("Set"))
     insertdate = DBProperty()
     insertUser = DBProperty(LB("User"), getcolumn="insertuserid")
     users = ForeignKey(LB("User"), table="projects_users_roles")
     codingjobs = ForeignKey(LB("CodingJob", package="amcat.model.coding"))
     
-class Set(Cachable):
-    __table__ = 'sets'
-    __idcolumn__ = 'setid'
-    __labelprop__ = 'name'
-    
-    name, setid = DBProperties(2)
-    project = DBProperty(lambda : Project)
-    articles = ForeignKey(LB("Article"), table="sets_articles")
-    
-    def addArticles(self, articles):
-        self.db.insertmany("storedresults_articles", ["storedresultid", "articleid"],
-                           [(self.id, getAid(a)) for a in articles])
-        self.removeCached("articles")
-    
-
         
 if __name__ == '__main__':
     import dbtoolkit

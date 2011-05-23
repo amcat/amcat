@@ -1,4 +1,5 @@
 from amcat.model import project, article, user
+from amcat.model.set import Set
 from amcat.test import amcattest
 import datetime
 
@@ -11,10 +12,10 @@ class TestProject(amcattest.AmcatTestCase):
     def testType(self):
         p = project.Project(self.db, 292)
         for (propname, types, card) in (
-            ("sets", project.Set, True),
+            ("sets", Set, True),
             ("articles", article.Article, True),
             ("users", user.User, True),
-            ("name", unicode, None),
+            ("name", (str, unicode), None),
             ("insertDate", datetime.datetime, None),
             ):
             if type(types) not in (tuple, set, list): types = (types,)
