@@ -1,6 +1,8 @@
-from frames import *
-from lexicon_nl import *
+from amcat.nlp.frames import *
+from amcat.nlp.lexicon_nl import *
 import logging; log = logging.getLogger(__name__)
+
+ANALYSISID = 2
 
 ##########RULE DEFINITIONS ###################
 
@@ -25,7 +27,7 @@ def getBronIdentifier(db):
 
 def getIdentifier(db, *rulesets):
     if not rulesets: rulesets = [ALLRULES]
-    i = Identifier(db)
+    i = Identifier(db, ANALYSISID)
     for ruleset in rulesets:
         for rule in ruleset:
             rule.identifier = i
