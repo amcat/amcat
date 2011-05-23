@@ -125,7 +125,7 @@ def lucene2terms(queries):
     args = ['"%s"' % q.replace('"', '\\"') for q in queries]
     CMD = 'CLASSPATH=%s java AnokoQueryParser %s' % (CLASSPATH, " ".join(args))
     out, err =  toolkit.execute(CMD)
-    if err: raise("Exception on parsing queries:\n%s\n------------\n" % (err))
+    if err: raise Exception("Exception on parsing queries:\n%s\n------------\n" % (err))
     if out[-1] == "\n": out = out[:-1]
     
     return map(eval, out.split("\n"))
