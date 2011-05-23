@@ -77,7 +77,7 @@ class Cachable(idlabel._Identity):
     """
 
     __metaclass__ = Meta
-    __slots__ = ('db', '_id',)
+    __slots__ = ('db', '_id', 'graph')
     
     def __init__(self, db, *id):
         """Create a cachable with db and id
