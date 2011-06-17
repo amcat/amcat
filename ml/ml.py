@@ -107,6 +107,10 @@ class MachineLearner(object):
             units = self.units
         if self.targetFunc:
             units = ifilter(partial(hasAnnotation, targetfunc=self.targetFunc), units)
+
+	###### HACK ########
+	#units = list(units)[:100]
+	    
         return units
     def train(self, data=None):
         units = list(self.getUnits(data))

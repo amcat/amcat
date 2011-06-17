@@ -12,6 +12,7 @@ from amcat.ml import ml, dbwordfeature, mlalgo
 from amcat.scripts import externalscripts
 from amcat.model.coding import codingjob, codedarticle
 from amcat.model import project
+from amcat.model.set import Set
 from amcat.db import dbtoolkit
 from amcat.tools.stat import amcatr
 
@@ -47,7 +48,7 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         trainjobs = argToObjects(codingjob.Codingjob, self.db, trainjobids)
         self.field = trainjobs[0].articleSchema.getField(fieldname)
         testjobs = argToObjects(codingjob.Codingjob, self.db, testjobids)  
-        predictsets = argToObjects(project.Set, self.db, predictbatchids)  
+        predictsets = argToObjects(Set, self.db, predictbatchids)  
         if sample: sample = float(sample)
 
 	log.warn("Testjobs: %s" % testjobs)
@@ -88,6 +89,7 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
 
         if predictsets:
             matches = self.predict(predictsets, sample, testjobs)
+	    print type(matches)
             self.writeCodingJob(trainjobs[0], matches)
             
             
@@ -96,7 +98,8 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         log.info("Training model on %s in jobs %s" % (self.field, trainjobs))
         self.learner = ml.MachineLearner()
 
-        where = "select  articleid from codingjobs_articles where %s" % self.db.intSelectionSQL("codingjobid", [job.id for job in trainjobs])
+        where = "select articleid from codingjobs_articles where %s" % self.db.intSelectionSQL("codingjobid", [job.id for job in trainjobs])
+	#where = "select top 10 articleid from codingjobs_articles where %s" % self.db.intSelectionSQL("codingjobid", [job.id for job in trainjobs])
         view = "wva.vw_lemmastringfreqs_nohl"
         view = "wva.vw_lemmastringfreqs_par123"
         #view = "wva.vw_lemmastringfreqs_par12"
@@ -166,8 +169,12 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
 
     def predict(self, sets, sample, testjobs=None):
         cands = self.getCandidates(sets, sample, testjobs)
-        matches = ml.MatchesTable(self.learner.predict(data=cands))
-        return matches
+	if cands:
+	    matches = ml.MatchesTable(self.learner.predict(data=cands))
+	    return matches
+	else:
+	    log.warn("No candidates to predict!")
+	    return None
 
     
 
