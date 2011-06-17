@@ -143,6 +143,8 @@ class SchemaFieldSerialiser(object):
         self.targettype = targettype
     def deserialize(self, value):
         """Convert the given (db) value to a domain object"""
+        if type(value) == str:
+            return value.decode('latin-1') # hack for the mssql db, remove later
         return value
     def serialize(self, value):
         return value
