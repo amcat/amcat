@@ -50,7 +50,7 @@ import logging; log = logging.getLogger(__name__)
 
 from amcat.tools import idlabel, toolkit
 
-from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
+from amcat.tools.logging import amcatlogging#; amcatlogging.debugModule()
 
 #import amcatlogging; amcatlogging.infoModule()
 
@@ -315,9 +315,15 @@ class Cachable(idlabel._Identity):
         return "%s(%s)" % (self.__class__, self.id)
         return str(self)
     def idlabel(self):
-        label = self.label
-        if type(label) <> unicode: label = label.decode("latin-1")
-        return "{0}: {1}".format(self.id, label)
+        with amcatlogging.logExceptions():
+            label = self.label
+            if label is None: label = u'<no label>'
+            elif type(label) == str: label = label.decode("latin-1")
+            else: label = unicode(label)
+            label = toolkit.stripAccents(label)
+            label = label.encode("ascii", "replace")
+            return "{0}: {1}".format(self.id, label)
+        return "{0} - ERROR ON GETTING IDLABEL".format(repr(self))
 
 
 def _ensureTuple(vals):

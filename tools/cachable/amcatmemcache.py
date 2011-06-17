@@ -26,7 +26,7 @@ import pylibmc as memcache
 #import memcache
 import types
 import logging; LOG = logging.getLogger(__name__)
-
+from amcat.tools.logging import amcatlogging
 import threading
 LOCK = threading.Lock() 
 
@@ -83,11 +83,12 @@ def get(klass, prop, key, conn=None):
     @return: a cachable value (primitive, tuple-of-primitive,
       or generator of (tuple-of) primitive
     """
-    keybytes = key2bytes(klass, prop, key)
-    #_debug("GET", klass, prop, key)
-    LOCK.acquire()
-    val = _getConnection().get(keybytes)
-    LOCK.release()
+    val = None
+    with amcatlogging.logExceptions():
+	keybytes = key2bytes(klass, prop, key)
+        #_debug("GET", klass, prop, key)
+	with LOCK:
+	    val = _getConnection().get(keybytes)
     #_debug("GET", klass, prop, key, "-> %r" % (val,))
     if val is None:
         raise UnknownKeyException(keybytes)
@@ -103,20 +104,19 @@ def put(klass, prop, key, value, conn=None):
       or sequence of (tuple-of) primitive
     @param conn: an optional connection object
     """
-    #LOG.debug(key)
-    keybytes = key2bytes(klass, prop, key)
-    #_debug("PUT", klass, prop, key, "<- %r" % (value,))
-    LOCK.acquire()
-    _getConnection().set(keybytes, value)
-    LOCK.release()
+    with amcatlogging.logExceptions():
+	keybytes = key2bytes(klass, prop, key)
+        #_debug("PUT", klass, prop, key, "<- %r" % (value,))
+	with LOCK:
+	    _getConnection().set(keybytes, value)
 
 def delete(klass, prop, key, conn=None):
     """Delete the value for the given key"""
-    keybytes = key2bytes(klass, prop, key)
-    #_debug("DEL", klass, prop, key)
-    LOCK.acquire()
-    _getConnection().delete(keybytes)
-    LOCK.release()
+    with amcatlogging.logExceptions():
+	keybytes = key2bytes(klass, prop, key)
+        #_debug("DEL", klass, prop, key)
+	with LOCK:
+	    _getConnection().delete(keybytes)
     
 class CachablePropertyStore(object):
     def __init__(self, klass, prop):
