@@ -1,10 +1,10 @@
-from amcat.tools.cachable.cachable import Cachable, DBProperty
+from django.db import models
 
+class Language(models.Model):    
+    languageid = models.IntegerField(primary_key=True)
+    label = models.CharField(max_length=200)
 
-class Language(Cachable):
-    __table__ = 'languages'
-    __idcolumn__ = 'languageid'
-    
-    label = DBProperty()
+    class Meta():
+        db_table = 'languages'
 
     

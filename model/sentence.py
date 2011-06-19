@@ -21,24 +21,25 @@
 Object-layer module containing classes modelling sentences
 """
 
-#from __future__ import unicode_literals #**kargs problem on "old" amcat
 from __future__ import print_function, absolute_import
-from amcat.tools import toolkit
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
-from amcat.tools.cachable.cacher import cache
-from amcat.tools.cachable.latebind import LB
 
+from django.db import models
 
-class Sentence(Cachable):
-    __table__ = 'sentences'
-    __idcolumn__ = 'sentenceid'
-    __labelprop__ = 'sentence'
-    __dbproperties__ = ["parnr", "sentnr", "encoding"]
+class Sentence(models.Model):
+    #__dbproperties__ = ["parnr", "sentnr", "encoding"]
+    sentenceid = models.IntegerField(primary_key=True)
 
-    sentence, parnr, sentnr = DBProperties(3)
+    sentence = models.TextField()
+    parnr = models.IntegerField()
+    sentnr = models.IntegerField()
 
-    article = DBProperty(LB("Article"))
-    parsedSentences = ForeignKey(LB("ParsedSentence"), table="parses_words", distinct=True)
+    #parsedSentences = ForeignKey(LB("ParsedSentence"), table="parses_words", distinct=True)
+
+    def __unicode__(self):
+        return self.sentence
+
+    class Meta():
+        db_table = 'sentences'
         
     def getAnalysedSentence(self, analysis):
         if type(analysis) <> int: analysis = analysis.id
@@ -48,12 +49,21 @@ class Sentence(Cachable):
 
 
 def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=False, sentence=False):
-    perword = dict(word = dict(string = []))
-    if lemmata: perword["lemma"] = dict(lemma=["string"], pos=[])
-    if sentiment: perword["lemma"] = dict(lemma=["string"], pos=[], sentiment=[], intensifier=[])
+    return
+
+    """perword = dict(word = dict(string = []))
+
+    if lemmata:
+        perword["lemma"] = dict(lemma=["string"], pos=[])
+
+    if sentiment:
+        perword["lemma"] = dict(lemma=["string"], pos=[], sentiment=[], intensifier=[])
+
     what = dict(parsedSentences = dict(words={'word' : perword}))
-    if triples: what["parsedSentences"] = ["triples"]
-    if sentence: what["sentence"] = []
-    print(what)
-    cache(sentences, **what)
-        
+    if triples:
+        what["parsedSentences"] = ["triples"]
+
+    if sentence:
+        what["sentence"] = []
+
+    cache(sentences, **what)"""

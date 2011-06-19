@@ -913,8 +913,12 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
             if len(s)>2:
                 for i, prefixes in enumerate(MONTHNAMES):
                     if s[1].startswith(prefixes):
-                        date = int(s[2]), i+1, int(s[0])
-                        break
+                        try:
+                            date = int(s[2]), i+1, int(s[0])
+                        except:
+                            pass
+                        finally:
+                            break
             
         if not date:
             if lax: return

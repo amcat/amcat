@@ -1,30 +1,34 @@
-from amcat.tools import toolkit
-from amcat.tools.cachable.cachable import Cachable, DBProperty, DBProperties
-from amcat.tools.cachable.latebind import LB
+from django.db import models
 
-def clean(s):
-    return toolkit.clean(s,1,1)
+from amcat.model.language import Language
 
-class Medium(Cachable):
-    __table__ = 'media'
-    __idcolumn__ = 'mediumid'
-    __labelprop__ = 'name'
+class Medium(models.Model):
+    mediumid = models.IntegerField(primary_key=True)
 
-    name, circulation, type, abbrev = DBProperties(4)
-    language = DBProperty(LB("Language"))
+    name = models.CharField(max_length=200)
+    abbrev = models.CharField(max_length=100)
+
+    circulation = models.IntegerField()
+    type = models.IntegerField()
+
+    def __unicode__(self):
+        return self.name
+
+    class Meta():
+        db_table = 'media'
     
 
-class Media(object):
-
-    
-    def clean(self, s):
-        if type(s) == str: s = s.decode("latin-1")
-        return toolkit.clean(s,1,1)
-    def __init__(self, db):
-        self.db = db
-        self.names = {}
-        self.aliasses = {}
-        for medium in Medium.all(self.db):
-            self.names[self.clean(medium.name)] = medium
-    def lookupName(self, name):
-        return self.names.get(self.clean(name))
+#class Media(object):
+#
+#    
+#    def clean(self, s):
+#        if type(s) == str: s = s.decode("latin-1")
+#        return toolkit.clean(s,1,1)
+#    def __init__(self, db):
+#        self.db = db
+#        self.names = {}
+#        self.aliasses = {}
+#        for medium in Medium.all(self.db):
+#            self.names[self.clean(medium.name)] = medium
+#    def lookupName(self, name):
+#        return self.names.get(self.clean(name))

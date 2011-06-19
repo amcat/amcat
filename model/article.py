@@ -24,27 +24,47 @@ articles database table
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from amcat.tools.cachable.latebind import LB
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
+from django.db import models
+
+#from amcat.model.project import Project
+from amcat.model.medium import Medium
+from amcat.model.sentence import Sentence
+
 from amcat.tools import toolkit
 
 import logging; log = logging.getLogger(__name__)
+
+#class ArticleSentences(models.Model):
+#    article = 
     
-class Article(Cachable):
+class Article(models.Model):
     """
     Class representing a newspaper article
     """
-    __table__ = 'vw_tmp_articles'
-    __idcolumn__ = 'articleid'
-    __labelprop__ = 'headline'
-    __slots__ = ()
+    articleid = models.IntegerField(primary_key=True)
 
-    headline, byline, metastring, section, date, length, pagenr, url, externalid, text = DBProperties(10)
+    date = models.DateTimeField()
+    section = models.CharField(null=True, max_length=80)
+    pagenr = models.IntegerField(null=True)
+    headline = models.CharField(max_length=200)
+    byline = models.TextField(null=True, max_length=200)
+    length = models.IntegerField()
+    metastring = models.TextField(null=True)
+    url = models.URLField(null=True)
+    externalid = models.IntegerField(null=True)
+    
+    text = models.TextField()
 
-    project = DBProperty(LB("Project"))
-    medium = DBProperty(LB("Medium"))
-    source = medium
-    sentences = ForeignKey(LB("Sentence"))
+    #project = models.OneToOneField(Project, db_column='projectid')
+    medium = models.OneToOneField(Medium, db_column='mediumid')
+    sentences = models.ManyToManyField(Sentence, db_table='sentences', db_column='sentenceid')
+
+    def __unicode__(self):
+        return self.headline
+
+    class Meta():
+        db_table = 'articles'
+        app_label = 'model'
 
     @property
     def fullmeta(self):
@@ -71,13 +91,3 @@ class Article(Cachable):
         for s in self.sentences:
             if s.parnr == parnr and s.sentnr == sentnr:
                 return s
-
-class ArticlePost(Cachable):
-    """
-    Class representing comments on articles
-    """
-    __table__ = 'articles_posts'
-    __idcolumn__ = ('articleid', 'parent_articleid')
-
-    article = DBProperty(Article)
-    parent = DBProperty(Article, getcolumn='parent_articleid')
