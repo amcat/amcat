@@ -26,7 +26,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
 
-#from amcat.model.project import Project
+from amcat.model.project import Project
 from amcat.model.medium import Medium
 from amcat.model.sentence import Sentence
 
@@ -41,7 +41,7 @@ class Article(models.Model):
     """
     Class representing a newspaper article
     """
-    articleid = models.IntegerField(primary_key=True)
+    id = models.IntegerField(primary_key=True, db_column="article_id")
 
     date = models.DateTimeField()
     section = models.CharField(null=True, max_length=80)
@@ -55,9 +55,9 @@ class Article(models.Model):
     
     text = models.TextField()
 
-    #project = models.OneToOneField(Project, db_column='projectid')
-    medium = models.OneToOneField(Medium, db_column='mediumid')
-    sentences = models.ManyToManyField(Sentence, db_table='sentences', db_column='sentenceid')
+    project = models.OneToOneField(Project)
+    medium = models.OneToOneField(Medium)
+    sentences = models.ManyToManyField(Sentence, db_table="sentences")
 
     def __unicode__(self):
         return self.headline

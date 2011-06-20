@@ -3,7 +3,7 @@ from django.db import models
 from amcat.model.language import Language
 
 class Medium(models.Model):
-    mediumid = models.IntegerField(primary_key=True)
+    id = models.IntegerField(primary_key=True, db_column="medium_id")
 
     name = models.CharField(max_length=200)
     abbrev = models.CharField(max_length=100)
@@ -16,6 +16,7 @@ class Medium(models.Model):
 
     class Meta():
         db_table = 'media'
+        app_label = 'model'
     
 
 #class Media(object):

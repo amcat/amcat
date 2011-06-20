@@ -27,7 +27,7 @@ from django.db import models
 
 class Sentence(models.Model):
     #__dbproperties__ = ["parnr", "sentnr", "encoding"]
-    sentenceid = models.IntegerField(primary_key=True)
+    id = models.IntegerField(primary_key=True, db_column="sentence_id")
 
     sentence = models.TextField()
     parnr = models.IntegerField()

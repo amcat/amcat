@@ -20,27 +20,24 @@
 """ORM Module representing projects"""
 
 from __future__ import unicode_literals, print_function, absolute_import
-from amcat.tools.cachable.latebind import LB
-from amcat.tools.cachable.cachable import Cachable, DBProperty, DBProperties, ForeignKey
+
 from amcat.tools import toolkit
-from functools import partial
+from django.db import models
 
-class Project(Cachable):
-    __table__ = 'projects'
-    __idcolumn__ = 'projectid'
-    __labelprop__ = 'name'
+class Project(models.Model):
+    id = models.IntegerField(primary_key=True, db_column='project_id')
 
-    name, projectid, insertDate, description = DBProperties(4)
-    articles = ForeignKey(LB("Article"))
-    sets = ForeignKey(LB("Set"))
-    insertdate = DBProperty()
-    insertUser = DBProperty(LB("User"), getcolumn="insertuserid")
-    users = ForeignKey(LB("User"), table="projects_users_roles")
-    codingjobs = ForeignKey(LB("CodingJob", package="amcat.model.coding"))
-    
-        
-if __name__ == '__main__':
-    import dbtoolkit
-    p = Project(dbtoolkit.amcatDB(), 1)
-    print(p.getType("name"))
-    print(Project.name.getType())
+    name = models.CharField(max_length=50)
+    description = models.CharField(max_length=200)
+
+    insert_date = models.DateTimeField(db_column='insertdate')
+    #insert_user = models.ForeignKey("model.User")
+    #users = models.ManyToManyField("model.User", table="projects_users_roles")
+    #codingjobs = ForeignKey(LB("CodingJob", package="amcat.model.coding"))    
+
+    def __unicode__(self):
+        return self.name
+
+    class Meta():
+        db_table = 'projects'
+        app_label = 'models'
