@@ -19,7 +19,7 @@
 
 """ORM Module representing projects"""
 
-from __future__ import unicode_literals, print_function, absolute_import
+from __future__ import print_function, absolute_import
 
 from amcat.tools import toolkit
 from django.db import models
@@ -31,9 +31,7 @@ class Project(models.Model):
     description = models.CharField(max_length=200)
 
     insert_date = models.DateTimeField(db_column='insertdate')
-    #insert_user = models.ForeignKey("model.User")
-    #users = models.ManyToManyField("model.User", table="projects_users_roles")
-    #codingjobs = ForeignKey(LB("CodingJob", package="amcat.model.coding"))    
+    insert_user = models.ForeignKey("models.User", db_column='insertuser_id')
 
     def __unicode__(self):
         return self.name

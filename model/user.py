@@ -19,68 +19,79 @@
 
 """ORM Module representing users"""
 
-from __future__ import unicode_literals, print_function, absolute_import
+from __future__ import print_function, absolute_import
 import logging; log = logging.getLogger(__name__)
 
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
-from amcat.tools.cachable.latebind import MultiLB, LB
 from amcat.tools import toolkit
+from amcat.model.language import Language
+from amcat.model.project import Project
+from amcat.model.authorisation import Role, ProjectRole
 
-from amcat.model import authorisation
+from django.db import models
 
-def getProjectRole(db, projectid, roleid):
-    return project.Project(db, projectid), authorisation.Role(db, roleid)
+#def getProjectRole(db, projectid, roleid):
+#    return project.Project(db, projectid), authorisation.Role(db, roleid)
 
-class Affiliation(Cachable):
-    __table__ = 'affiliations'
-    __idcolumn__ = 'affiliationid'
-    __labelprop__ = 'name'
+class Affiliation(models.Model):
+    id = models.IntegerField(primary_key=True, db_column='affiliation_id')
+    name = models.CharField(max_length=200)
     
-    name = DBProperty()
-    users = ForeignKey(LB("User"))
-    
-class User(Cachable):
-    __table__ = 'users'
-    __idcolumn__ = 'userid'
-    __labelprop__ = 'username'
+    def __unicode__(self):
+        return self.name
 
-    userid, username, fullname, affiliationid, active, email, languageid = DBProperties(7)
-    language = DBProperty(LB("Language"))
-    roles = ForeignKey(LB("Role", "authorisation"), table="users_roles")
-    projects = ForeignKey(LB("Project"), table="projects_users_roles")
-    projectroles = ForeignKey(MultiLB(LB("Project"), LB("Role", "authorisation")),
-                              table="projects_users_roles", sequencetype=toolkit.multidict)
+    class Meta():
+        db_table = 'affiliations'
+        app_label = 'models'
     
-    affiliation = DBProperty(LB("Affiliation", "user"), getcolumn="affiliationid")
+class User(models.Model):
+    id = models.IntegerField(primary_key=True, db_column='user_id')
+
+    username = models.CharField(max_length=50)
+    fullname = models.CharField(max_length=100)
+    active = models.BooleanField(default=True)
+    email = models.EmailField(max_length=100)
+
+    affiliation = models.ForeignKey(Affiliation)
+    language = models.ForeignKey(Language)
+    projects = models.ManyToManyField(Project, db_table="projects_users_roles")
+    roles = models.ManyToManyField(Role, db_table="users_roles")
+    p_roles = models.ManyToManyField(ProjectRole)
     
-    @classmethod
-    def create(cls, db, **props):
-        """Custom create user method. `password` should be in the
-        given properties"""
-        passw = props.pop('password', None)
-        if passw is None:
-            raise Exception("`password` should be in `props`")
-        
-        db.execute_sp('create_user', (props['username'], passw))
-        super(User, cls).create(db, **props)
-        
-    def delete(self):
-        self.db.execute_sp('delete_user', (self.username,))
-        super(User, self).delete(self.db)
+    def __unicode__(self):
+        return self.username
+
+    class Meta():
+        db_table = 'users'
+        app_label = 'models'
     
-    def haspriv(self, privilege, onproject=None):
-        """If permission is denied, this function returns False,
-        if permission granted it returns True.
+    #@classmethod
+    #def create(cls, db, **props):
+    #    """Custom create user method. `password` should be in the
+    #    given properties"""
+    #    passw = props.pop('password', None)
+    #    if passw is None:
+    #        raise Exception("`password` should be in `props`")
+    #    
+    #    db.execute_sp('create_user', (props['username'], passw))
+    #    super(User, cls).create(db, **props)
         
-        @type privilege: Privilege object, id, or str
-        @param privilege: The requested privilege
-        @param onproject: The project the privilege is requested on,
-          or None (ignored) for global privileges
-        
-        @return: True or False (see above)"""
-        try: authorisation.check(self, privilege, onproject)
-        except authorisation.AccessDenied:
-            return False
-        
-        return True
+    #def delete(self):
+    #    self.db.execute_sp('delete_user', (self.username,))
+    #    super(User, self).delete(self.db)
+    
+    #def haspriv(self, privilege, onproject=None):
+    #    """If permission is denied, this function returns False,
+    #    if permission granted it returns True.
+    #    
+    #    @type privilege: Privilege object, id, or str
+    #    @param privilege: The requested privilege
+    #    @param onproject: The project the privilege is requested on,
+    #      or None (ignored) for global privileges
+    #    
+    #    @return: True or False (see above)"""
+    #    try: authorisation.check(self, privilege, onproject)
+    #    except authorisation.AccessDenied:
+    #        return False
+    #    
+    #    return True
     

@@ -26,7 +26,6 @@ from __future__ import print_function, absolute_import
 from django.db import models
 
 class Sentence(models.Model):
-    #__dbproperties__ = ["parnr", "sentnr", "encoding"]
     id = models.IntegerField(primary_key=True, db_column="sentence_id")
 
     sentence = models.TextField()

@@ -27,8 +27,7 @@ getPrivilege(db, str or int) returns Privilege object
 
 """
 
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey
-
+from django.db import models
 
 ADMIN_ROLE = 1
 
@@ -95,29 +94,44 @@ def getPrivilege(db, privilege):
             return p
     raise ValueError("Privilege %r cannot be found" % privilege)
 
-
-
 def getRoles(user, onproject=None):
     """Get all roles for the user (on the project)"""
     if onproject is None:
         return user.roles
     return user.projectroles.get(onproject, [])
-    
-class Role(Cachable):
-    __table__ = 'roles'
-    __idcolumn__ = 'roleid'
 
-    label = DBProperty()
+class Role(models.Model):
+    id = models.IntegerField(primary_key=True, db_column='role_id')
+    label = models.CharField(max_length=50)
 
-class Privilege(Cachable):
-    __table__ = 'privileges'
-    __idcolumn__ = 'privilegeid'
-    label = DBProperty()
-    projectlevel = DBProperty()
-    role = DBProperty(Role)
+    def __unicode__(self):
+        return self.label
 
-if __name__ == '__main__':
-    import dbtoolkit
-    check(dbtoolkit.amcatDB(use_app=True), 2, 2)
+    class Meta():
+        db_table = 'roles'
+
+class ProjectRole(models.Model):
+    project = models.ForeignKey("models.Project")
+    user = models.ForeignKey("models.User")
+    role = models.ForeignKey(Role)
+
+    def __unicode__(self):
+        return u"%s, %s" % (self.project, self.role)
+
+    class Meta():
+        db_table = 'projects_users_roles'
+
+class Privilege(models.Model):
+    id = models.IntegerField(primary_key=True, db_column='privilege_id')
+
+    label = models.CharField(max_length=50)
+    projectlevel = models.BooleanField()
+    role = models.ForeignKey(Role)
+
+    def __unicode__(self):
+        return self.label
+
+    class Meta():
+        db_table = 'privileges'
 
     
