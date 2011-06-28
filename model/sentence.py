@@ -32,12 +32,15 @@ class Sentence(models.Model):
     parnr = models.IntegerField()
     sentnr = models.IntegerField()
 
+    article = models.ForeignKey("models.Article")
+
     #parsedSentences = ForeignKey(LB("ParsedSentence"), table="parses_words", distinct=True)
 
     def __unicode__(self):
         return self.sentence
 
     class Meta():
+        app_label = 'models'
         db_table = 'sentences'
         
     def getAnalysedSentence(self, analysis):

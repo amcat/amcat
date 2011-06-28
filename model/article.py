@@ -55,16 +55,15 @@ class Article(models.Model):
     
     text = models.TextField()
 
-    project = models.OneToOneField(Project)
-    medium = models.OneToOneField(Medium)
-    sentences = models.ManyToManyField(Sentence, db_table="sentences")
+    project = models.ForeignKey(Project)
+    medium = models.ForeignKey(Medium)
 
     def __unicode__(self):
         return self.headline
 
     class Meta():
         db_table = 'articles'
-        app_label = 'model'
+        app_label = 'models'
 
     @property
     def fullmeta(self):

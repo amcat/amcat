@@ -109,6 +109,7 @@ class Role(models.Model):
 
     class Meta():
         db_table = 'roles'
+        app_label = 'models'
 
 class ProjectRole(models.Model):
     project = models.ForeignKey("models.Project")
@@ -120,6 +121,8 @@ class ProjectRole(models.Model):
 
     class Meta():
         db_table = 'projects_users_roles'
+        unique_together = ("project", "user", "role")
+        app_label = 'models'
 
 class Privilege(models.Model):
     id = models.IntegerField(primary_key=True, db_column='privilege_id')
@@ -133,5 +136,4 @@ class Privilege(models.Model):
 
     class Meta():
         db_table = 'privileges'
-
-    
+        app_label = 'models'

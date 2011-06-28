@@ -25,3 +25,6 @@ from amcat.model.medium import Medium
 from amcat.model.project import Project
 from amcat.model.sentence import Sentence
 from amcat.model.user import User, Affiliation
+from amcat.model.analysis import Analysis
+from amcat.model.authorisation import Role, ProjectRole, Privilege
+from amcat.model.set import Set

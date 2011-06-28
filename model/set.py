@@ -1,18 +1,41 @@
-from amcat.tools.cachable.cachable import Cachable, DBProperty, DBProperties, ForeignKey
-from amcat.tools.cachable.latebind import LB
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 
-class Set(Cachable):
-    __table__ = 'sets'
-    __idcolumn__ = 'setid'
-    __labelprop__ = 'name'
-    
-    name, setid = DBProperties(2)
-    project = DBProperty(LB("Project"))
-    articles = ForeignKey(LB("Article"), table="sets_articles")
-    owner = DBProperty(LB("User"), getcolumn="ownerid")
+from django.db import models
 
-    def addArticles(self, articles):
-        self.db.insertmany("storedresults_articles", ["storedresultid", "articleid"],
-                           [(self.id, getAid(a)) for a in articles])
-        self.removeCached("articles")
-    
+from amcat.model.project import Project
+from amcat.model.article import Article
+from amcat.model.user import User
+
+class Set(models.Model):
+    id = models.IntegerField(primary_key=True, db_column='setid')
+
+    name = models.CharField(max_length=100)
+
+    project = models.ForeignKey(Project)
+    owner = models.ForeignKey(User)
+
+    articles = models.ManyToManyField(Article, db_table="sets_articles")
+
+    class Meta():
+        db_table = 'sets'
+        app_label = 'models'
+
+    def __unicode__(self):
+        return self.name

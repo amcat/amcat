@@ -43,6 +43,7 @@ class Affiliation(models.Model):
         db_table = 'affiliations'
         app_label = 'models'
     
+    
 class User(models.Model):
     id = models.IntegerField(primary_key=True, db_column='user_id')
 
@@ -53,9 +54,9 @@ class User(models.Model):
 
     affiliation = models.ForeignKey(Affiliation)
     language = models.ForeignKey(Language)
-    projects = models.ManyToManyField(Project, db_table="projects_users_roles")
+    #projects = models.ManyToManyField(Project, db_table="projects_users_roles")
     roles = models.ManyToManyField(Role, db_table="users_roles")
-    p_roles = models.ManyToManyField(ProjectRole)
+    #p_roles = models.ManyToManyField(ProjectRole)
     
     def __unicode__(self):
         return self.username
@@ -64,6 +65,10 @@ class User(models.Model):
         db_table = 'users'
         app_label = 'models'
     
+    @property
+    def projects(self):
+        return (r.project for r in self.projectrole_set.all())
+
     #@classmethod
     #def create(cls, db, **props):
     #    """Custom create user method. `password` should be in the
