@@ -27,7 +27,12 @@ from amcat.model.language import Language
 from amcat.model.project import Project
 from amcat.model.authorisation import Role, ProjectRole
 
+from django.contrib.auth import models as auth_models
 from django.db import models
+
+import random
+
+PASS_ALGORITHM = 'sha1'
 
 #def getProjectRole(db, projectid, roleid):
 #    return project.Project(db, projectid), authorisation.Role(db, roleid)
@@ -54,9 +59,9 @@ class User(models.Model):
 
     affiliation = models.ForeignKey(Affiliation)
     language = models.ForeignKey(Language)
-    #projects = models.ManyToManyField(Project, db_table="projects_users_roles")
     roles = models.ManyToManyField(Role, db_table="users_roles")
-    #p_roles = models.ManyToManyField(ProjectRole)
+
+    password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]")
     
     def __unicode__(self):
         return self.username
@@ -68,6 +73,19 @@ class User(models.Model):
     @property
     def projects(self):
         return (r.project for r in self.projectrole_set.all())
+
+    def set_password(self, raw_password):
+        if raw_password is None:
+            self.active = False
+        else:
+            r1, r2 = random.random(), random.random()
+
+            salt = auth_models.get_hexdigest(PASS_ALGORITHM, str(r1), str(r2))[:5]
+            hsh = auth_models.get_hexdigest(PASS_ALGORITHM, salt, raw_password)
+            self.password = '%s$%s$%s' % (PASS_ALGORITHM, salt, hsh)
+
+    def check_password(self, raw_password):
+        return auth_models.check_password(raw_password, self.password)
 
     #@classmethod
     #def create(cls, db, **props):
