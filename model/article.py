@@ -24,7 +24,7 @@ articles database table
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from django.db import models
+from amcat.tools.model import AmcatModel
 
 from amcat.model.project import Project
 from amcat.model.medium import Medium
@@ -32,12 +32,14 @@ from amcat.model.sentence import Sentence
 
 from amcat.tools import toolkit
 
+from django.db import models
+
 import logging; log = logging.getLogger(__name__)
 
-#class ArticleSentences(models.Model):
+#class ArticleSentences(AmcatModel):
 #    article = 
     
-class Article(models.Model):
+class Article(AmcatModel):
     """
     Class representing a newspaper article
     """

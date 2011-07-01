@@ -17,13 +17,15 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.db import models
+from amcat.tools.model import AmcatModel
 
 from amcat.model.project import Project
 from amcat.model.article import Article
 from amcat.model.user import User
 
-class Set(models.Model):
+from django.db import models
+
+class Set(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='setid')
 
     name = models.CharField(max_length=100)

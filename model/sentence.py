@@ -23,9 +23,11 @@ Object-layer module containing classes modelling sentences
 
 from __future__ import print_function, absolute_import
 
+from amcat.tools.model import AmcatModel
+
 from django.db import models
 
-class Sentence(models.Model):
+class Sentence(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column="sentence_id")
 
     sentence = models.TextField()

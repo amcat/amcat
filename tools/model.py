@@ -17,33 +17,15 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""ORM Module representing projects"""
-
-from __future__ import unicode_literals, print_function, absolute_import
-
-from amcat.tools import toolkit
-from amcat.tools.model import AmcatModel
-
 from django.db import models
 
-class Project(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='project_id')
+class AmcatModel(models.Model):
+    """Replacement for standard Django-model, extending it with
+    amcat-specific features."""
+    def save(self, **kwargs):
+        """TODO"""
+        super(AmcatModel, self).save(**kwargs)
 
-    name = models.CharField(max_length=50)
-    description = models.CharField(max_length=200)
-
-    insert_date = models.DateTimeField(db_column='insertdate')
-    insert_user = models.ForeignKey("models.User", db_column='insertuser_id', related_name='inserted_project')
-
-    owner = models.ForeignKey("models.User", db_column='owner_id')
-
-    def __unicode__(self):
-        return self.name
-
-    @property
-    def users(self):
-        return (r.user for r in self.projectrole_set.all())
-        
     class Meta():
-        db_table = 'projects'
-        app_label = 'models'
+        # https://docs.djangoproject.com/en/dev/topics/db/models/#abstract-base-classes
+        abstract=True

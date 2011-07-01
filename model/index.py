@@ -1,9 +1,10 @@
 from amcat.model.article import Article
 from amcat.model.set import Set
+from amcat.tools.model import AmcatModel
 
 from django.db import models
 
-class Index(models.Model):
+class Index(AmcatModel):
     id = models.IntegerField(db_column='indexid', primary_key=True)
 
     name = models.CharField(max_length=100)

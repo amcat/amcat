@@ -17,10 +17,12 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.db import models
+from amcat.tools.model import AmcatModel
 from amcat.model.language import Language
 
-class Analysis(models.Model):
+from django.db import models
+
+class Analysis(AmcatModel):
     """Object representing an NLP 'preprocessing' analysis"""
     id = models.IntegerField(db_column='analysisid', primary_key=True)
 

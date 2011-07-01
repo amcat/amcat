@@ -16,9 +16,10 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from amcat.tools.model import AmcatModel
 from django.db import models
 
-class String(models.Model):
+class String(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='stringid')
     
     string = models.CharField(max_length=100)
@@ -29,7 +30,7 @@ class String(models.Model):
     def __unicode__(self):
         return self.string
 
-class Lemma(models.Model):
+class Lemma(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='lemmaid')
 
     pos = models.CharField(max_length=1)
@@ -53,7 +54,7 @@ class Lemma(models.Model):
             if sl.lexicon.id == lexicon:
                 return sl
 
-class Word(models.Model):
+class Word(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='wordid')
 
     freq = models.IntegerKey(null=True)
@@ -68,7 +69,7 @@ class Word(models.Model):
         db_table = 'words_words'
         app_label = 'models'
 
-class SentimentLexicon(models.Model):
+class SentimentLexicon(AmcatModel):
     id = models.IntegerKey(db_column='lexiconid')
 
     lemmata = ForeignKey(lambda:SentimentLemma)

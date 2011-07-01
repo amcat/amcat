@@ -1,8 +1,9 @@
-from django.db import models
-
+from amcat.tools.model import AmcatModel
 from amcat.model.language import Language
 
-class Medium(models.Model):
+from django.db import models
+
+class Medium(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column="medium_id")
 
     name = models.CharField(max_length=200)
@@ -16,7 +17,8 @@ class Medium(models.Model):
 
     class Meta():
         db_table = 'media'
-        app_label = 'model'
+        app_label = 'models'
+        verbose_name_plural = 'media'
     
 
 #class Media(object):

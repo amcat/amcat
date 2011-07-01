@@ -25,10 +25,12 @@ import logging; log = logging.getLogger(__name__)
 from amcat.tools import toolkit
 from amcat.model.language import Language
 from amcat.model.project import Project
-from amcat.model.authorisation import Role, ProjectRole
+from amcat.model import authorisation as auth
 
-from django.contrib.auth import models as auth_models
+from django.contrib.auth.models import get_hexdigest, check_password
 from django.db import models
+
+from amcat.tools.model import AmcatModel
 
 import random
 
@@ -37,7 +39,7 @@ PASS_ALGORITHM = 'sha1'
 #def getProjectRole(db, projectid, roleid):
 #    return project.Project(db, projectid), authorisation.Role(db, roleid)
 
-class Affiliation(models.Model):
+class Affiliation(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='affiliation_id')
     name = models.CharField(max_length=200)
     
@@ -49,19 +51,19 @@ class Affiliation(models.Model):
         app_label = 'models'
     
     
-class User(models.Model):
-    id = models.IntegerField(primary_key=True, db_column='user_id')
+class User(AmcatModel):
+    id = models.IntegerField(primary_key=True, db_column='user_id', editable=False)
 
-    username = models.CharField(max_length=50)
+    username = models.SlugField(max_length=50, help_text="Only letters, digits and underscores are allowed.")
     fullname = models.CharField(max_length=100)
     active = models.BooleanField(default=True)
     email = models.EmailField(max_length=100)
 
     affiliation = models.ForeignKey(Affiliation)
     language = models.ForeignKey(Language)
-    roles = models.ManyToManyField(Role, db_table="users_roles")
+    roles = models.ManyToManyField(auth.Role, db_table="users_roles")
 
-    password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]")
+    password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]. Please do not edit directly.")
     
     def __unicode__(self):
         return self.username
@@ -74,47 +76,39 @@ class User(models.Model):
     def projects(self):
         return (r.project for r in self.projectrole_set.all())
 
+    ### Mimic Django-functions ###
     def set_password(self, raw_password):
         if raw_password is None:
             self.active = False
         else:
             r1, r2 = random.random(), random.random()
 
-            salt = auth_models.get_hexdigest(PASS_ALGORITHM, str(r1), str(r2))[:5]
-            hsh = auth_models.get_hexdigest(PASS_ALGORITHM, salt, raw_password)
+            salt = get_hexdigest(PASS_ALGORITHM, str(r1), str(r2))[:5]
+            hsh = get_hexdigest(PASS_ALGORITHM, salt, raw_password)
             self.password = '%s$%s$%s' % (PASS_ALGORITHM, salt, hsh)
 
     def check_password(self, raw_password):
-        return auth_models.check_password(raw_password, self.password)
+        return check_password(raw_password, self.password)
 
-    #@classmethod
-    #def create(cls, db, **props):
-    #    """Custom create user method. `password` should be in the
-    #    given properties"""
-    #    passw = props.pop('password', None)
-    #    if passw is None:
-    #        raise Exception("`password` should be in `props`")
-    #    
-    #    db.execute_sp('create_user', (props['username'], passw))
-    #    super(User, cls).create(db, **props)
+    ### Custom ###
+    def get_roles(self, project=None):
+        if project is None:
+            return self.roles.all()
+        return (r.role for r in self.projectrole_set.all() if r.project==project)
+
+        # Alternatively (if above is too slow):
+        # return (r.role for r in auth.ProjectRole.objects.filter(project=project, user=user))
+
+    def haspriv(self, privilege, onproject=None):
+        """
+        @type privilege: Privilege object, id, or str
+        @param privilege: The requested privilege
+        @param onproject: The project the privilege is requested on,
+          or None (ignored) for global privileges
         
-    #def delete(self):
-    #    self.db.execute_sp('delete_user', (self.username,))
-    #    super(User, self).delete(self.db)
-    
-    #def haspriv(self, privilege, onproject=None):
-    #    """If permission is denied, this function returns False,
-    #    if permission granted it returns True.
-    #    
-    #    @type privilege: Privilege object, id, or str
-    #    @param privilege: The requested privilege
-    #    @param onproject: The project the privilege is requested on,
-    #      or None (ignored) for global privileges
-    #    
-    #    @return: True or False (see above)"""
-    #    try: authorisation.check(self, privilege, onproject)
-    #    except authorisation.AccessDenied:
-    #        return False
-    #    
-    #    return True
-    
+        @return: True or False
+        """
+        try: auth.check(self, privilege, onproject)
+        except auth.AccessDenied:
+            return False    
+        return True
