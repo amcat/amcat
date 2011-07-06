@@ -71,10 +71,18 @@ class User(AmcatModel):
     class Meta():
         db_table = 'users'
         app_label = 'models'
+        ordering = ['username']
     
     @property
     def projects(self):
-        return (r.project for r in self.projectrole_set.all())
+        return Project.objects.filter(projectrole__user=self)
+
+    ### Auth ###
+    def can_read(self, user):
+        return (user == self or user.haspriv('view_all_users'))
+
+    def can_update(self, user):
+        return (user == self or user.haspriv('update_user'))
 
     ### Mimic Django-functions ###
     def set_password(self, raw_password):

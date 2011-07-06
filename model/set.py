@@ -26,13 +26,11 @@ from amcat.model.user import User
 from django.db import models
 
 class Set(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='setid')
+    id = models.IntegerField(primary_key=True, db_column='set_id')
 
     name = models.CharField(max_length=100)
 
     project = models.ForeignKey(Project)
-    owner = models.ForeignKey(User)
-
     articles = models.ManyToManyField(Article, db_table="sets_articles")
 
     class Meta():

@@ -26,6 +26,24 @@ class AmcatModel(models.Model):
         """TODO"""
         super(AmcatModel, self).save(**kwargs)
 
+    def can_read(self, user):
+        """Determine if `user` has read access to this object.
+
+        @return: boolean"""
+        return True
+
+    def can_update(self, user):
+        """Determine if `user` has write access to this object.
+
+        @return: boolean"""
+        return True
+
+    def can_create(self, user):
+        return self.can_update(user)
+
+    def can_delete(self, user):
+        return self.can_update(user)
+
     class Meta():
         # https://docs.djangoproject.com/en/dev/topics/db/models/#abstract-base-classes
         abstract=True

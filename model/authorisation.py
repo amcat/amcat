@@ -57,15 +57,15 @@ def check(user, privilege, project=None):
 
     @return: None (raises exception if denied)
     """
-    def get_priv(priv):
+    def get_priv(priv, prjct):
         if isinstance(priv, models.Model):
             return priv
         elif isinstance(priv, basestring):
-            return Privilege.objects.get(label=priv)
+            return Privilege.objects.get(label=priv, projectlevel=bool(prjct))
         return Privilege.objects.get(id=priv)
 
     roles = user.get_roles()
-    priv = get_priv(privilege)
+    priv = get_priv(privilege, project)
     nrole = priv.role # Needed role
 
     if priv.projectlevel:

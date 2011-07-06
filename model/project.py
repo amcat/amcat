@@ -27,18 +27,21 @@ from amcat.tools.model import AmcatModel
 from django.db import models
 
 class Project(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='project_id')
+    id = models.IntegerField(primary_key=True, db_column='project_id', editable=False)
 
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=200)
 
-    insert_date = models.DateTimeField(db_column='insertdate')
-    insert_user = models.ForeignKey("models.User", db_column='insertuser_id', related_name='inserted_project')
+    insert_date = models.DateTimeField(db_column='insertdate', editable=False)
+    insert_user = models.ForeignKey("models.User", db_column='insertuser_id', related_name='inserted_project', editable=False)
 
     owner = models.ForeignKey("models.User", db_column='owner_id')
 
     def __unicode__(self):
         return self.name
+
+    def can_read(self, user):
+        return (self in user.projects or user.haspriv('view_all_projects'))
 
     @property
     def users(self):
@@ -47,3 +50,4 @@ class Project(AmcatModel):
     class Meta():
         db_table = 'projects'
         app_label = 'models'
+

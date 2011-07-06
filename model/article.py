@@ -38,7 +38,8 @@ import logging; log = logging.getLogger(__name__)
 
 #class ArticleSentences(AmcatModel):
 #    article = 
-    
+
+  
 class Article(AmcatModel):
     """
     Class representing a newspaper article
@@ -54,6 +55,8 @@ class Article(AmcatModel):
     metastring = models.TextField(null=True)
     url = models.URLField(null=True)
     externalid = models.IntegerField(null=True)
+
+    sets = models.ManyToManyField("models.Set", db_table="sets_articles")
     
     text = models.TextField()
 
@@ -67,20 +70,6 @@ class Article(AmcatModel):
         db_table = 'articles'
         app_label = 'models'
 
-    @property
-    def fullmeta(self):
-        "@return: a dictionary representing the 'prose' metastring as a dict"
-        return toolkit.dictFromStr(self.metastring)
-
-    def fulltext(self):
-        "@return: a string containing the headline, byline, and text as paragraphs"
-        result = (self.headline or '') +"\n\n"+ (self.byline or "")+"\n\n"+(self.text or "")
-        return result.replace("\\r","").replace("\r","\n")
-
-    def getArticle(self):
-        "Convenience function also present in CodedArticle, CodedUnit"
-        return self
-
     def words(self):
         "@return: a generator yielding all words in all sentences"
         for sentence in self.sentences:
@@ -92,3 +81,22 @@ class Article(AmcatModel):
         for s in self.sentences:
             if s.parnr == parnr and s.sentnr == sentnr:
                 return s
+
+    ## Auth ##
+    def can_read(self, user):
+        if self.project in user.projects: return True
+        if user.roles.filter(label='admin'): return True
+
+        if user.projectrole_set.filter(project__sets__article=self):
+            return True
+        return False
+
+
+class ArticlePosting(AmcatModel):
+    """Proxy for Article.children and Article.parent"""
+    article = models.ForeignKey(Article, db_column='article_id')
+    parent = models.ForeignKey(Article, db_column='parent_article_id', related_name='articleposting_parent')
+
+    class Meta():
+        db_table = 'articles_postings'
+        app_label = 'models'
