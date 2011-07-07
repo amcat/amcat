@@ -36,9 +36,11 @@ from django.db import models
 
 import logging; log = logging.getLogger(__name__)
 
-#class ArticleSentences(AmcatModel):
-#    article = 
+import re
 
+WORD_RE = re.compile('[{L}{N}]+')
+def word_len(txt):
+    return len(re.sub(WORD_RE, ' ', txt).split())
   
 class Article(AmcatModel):
     """
@@ -55,6 +57,7 @@ class Article(AmcatModel):
     metastring = models.TextField(null=True)
     url = models.URLField(null=True)
     externalid = models.IntegerField(null=True)
+    parent = models.ForeignKey("self", db_column='parent_article_id', null=True)
 
     sets = models.ManyToManyField("models.Set", db_table="sets_articles")
     
@@ -69,6 +72,13 @@ class Article(AmcatModel):
     class Meta():
         db_table = 'articles'
         app_label = 'models'
+
+    def save(self, *args, **kwargs):
+        if self.length is None:
+            self.length = word_len(self.text)
+
+        super(self, Article).save(*args, **kwargs)
+
 
     def words(self):
         "@return: a generator yielding all words in all sentences"
