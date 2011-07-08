@@ -86,6 +86,7 @@ def check(user, privilege, project=None):
 class Role(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='role_id')
     label = models.CharField(max_length=50)
+    projectlevel = models.BooleanField()
 
     def __unicode__(self):
         return self.label
