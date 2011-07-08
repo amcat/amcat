@@ -47,3 +47,4 @@ class AmcatModel(models.Model):
     class Meta():
         # https://docs.djangoproject.com/en/dev/topics/db/models/#abstract-base-classes
         abstract=True
+        app_label = "model"

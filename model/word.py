@@ -41,7 +41,6 @@ class Lemma(AmcatModel):
 
     class Meta():
         db_table = 'words_lemmata'
-        app_label = 'models'
 
     def __unicode__(self):
         return unicode(self.lemma)
@@ -67,7 +66,6 @@ class Word(AmcatModel):
 
     class Meta():
         db_table = 'words_words'
-        app_label = 'models'
 
 class SentimentLexicon(AmcatModel):
     id = models.IntegerKey(db_column='lexiconid')
@@ -76,7 +74,6 @@ class SentimentLexicon(AmcatModel):
 
     class Meta():
         db_table = 'sentimentlexicons'
-        app_label = 'models'
 
     def lemmaidDict(self, cache=False):
         return dict((sl.lemmaid, sl) for sl in self.lemmata)

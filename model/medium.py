@@ -3,21 +3,28 @@ from amcat.model.language import Language
 
 from django.db import models
 
+class MediumSourcetype(AmcatModel):
+    id = models.IntegerField(primary_key=True, db_column="medium_source_id")
+    label = models.CharField(max_length=20)
+
+    class Meta():
+        db_table = 'media_sourcetypes'
+
 class Medium(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column="medium_id")
 
     name = models.CharField(max_length=200)
-    abbrev = models.CharField(max_length=100)
+    abbrev = models.CharField(max_length=10, null=True)
+    circulation = models.IntegerField(null=True)
 
-    circulation = models.IntegerField()
-    type = models.IntegerField()
+    type = models.ForeignKey(MediumSourcetype, db_column='medium_source_id')
+    language = models.ForeignKey("model.Language")
 
     def __unicode__(self):
         return self.name
 
     class Meta():
         db_table = 'media'
-        app_label = 'models'
         verbose_name_plural = 'media'
     
 

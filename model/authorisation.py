@@ -92,11 +92,10 @@ class Role(AmcatModel):
 
     class Meta():
         db_table = 'roles'
-        app_label = 'models'
 
 class ProjectRole(AmcatModel):
-    project = models.ForeignKey("models.Project")
-    user = models.ForeignKey("models.User")
+    project = models.ForeignKey("model.Project")
+    user = models.ForeignKey("model.User")
     role = models.ForeignKey(Role)
 
     def __unicode__(self):
@@ -105,7 +104,6 @@ class ProjectRole(AmcatModel):
     class Meta():
         db_table = 'projects_users_roles'
         unique_together = ("project", "user", "role")
-        app_label = 'models'
 
 class Privilege(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='privilege_id')
@@ -119,4 +117,3 @@ class Privilege(AmcatModel):
 
     class Meta():
         db_table = 'privileges'
-        app_label = 'models'

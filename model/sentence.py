@@ -34,7 +34,7 @@ class Sentence(AmcatModel):
     parnr = models.IntegerField()
     sentnr = models.IntegerField()
 
-    article = models.ForeignKey("models.Article")
+    article = models.ForeignKey("model.Article")
 
     #parsedSentences = ForeignKey(LB("ParsedSentence"), table="parses_words", distinct=True)
 
@@ -42,7 +42,6 @@ class Sentence(AmcatModel):
         return self.sentence
 
     class Meta():
-        app_label = 'models'
         db_table = 'sentences'
         
     def getAnalysedSentence(self, analysis):

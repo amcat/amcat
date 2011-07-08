@@ -30,12 +30,14 @@ class Project(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='project_id', editable=False)
 
     name = models.CharField(max_length=50)
-    description = models.CharField(max_length=200)
+    description = models.CharField(max_length=200, null=True)
 
-    insert_date = models.DateTimeField(db_column='insertdate', editable=False)
-    insert_user = models.ForeignKey("models.User", db_column='insertuser_id', related_name='inserted_project', editable=False)
+    insert_date = models.DateTimeField(db_column='insertdate', auto_now=True)
+    owner = models.ForeignKey("model.User", db_column='owner_id')
 
-    owner = models.ForeignKey("models.User", db_column='owner_id')
+    insert_user = models.ForeignKey("model.User", db_column='insertuser_id',
+                                    related_name='inserted_project',
+                                    editable=False)
 
     def __unicode__(self):
         return self.name
@@ -49,5 +51,4 @@ class Project(AmcatModel):
         
     class Meta():
         db_table = 'projects'
-        app_label = 'models'
 

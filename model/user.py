@@ -47,9 +47,7 @@ class Affiliation(AmcatModel):
         return self.name
 
     class Meta():
-        db_table = 'affiliations'
-        app_label = 'models'
-    
+        db_table = 'affiliations'    
     
 class User(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='user_id', editable=False)
@@ -60,7 +58,7 @@ class User(AmcatModel):
     email = models.EmailField(max_length=100)
 
     affiliation = models.ForeignKey(Affiliation)
-    language = models.ForeignKey(Language)
+    language = models.ForeignKey(Language, default=1)
     roles = models.ManyToManyField(auth.Role, db_table="users_roles")
 
     password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]. Please do not edit directly.")
@@ -70,7 +68,6 @@ class User(AmcatModel):
 
     class Meta():
         db_table = 'users'
-        app_label = 'models'
         ordering = ['username']
     
     @property

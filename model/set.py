@@ -29,13 +29,11 @@ class Set(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='set_id')
 
     name = models.CharField(max_length=100)
-
     project = models.ForeignKey(Project)
     articles = models.ManyToManyField(Article, db_table="sets_articles")
 
     class Meta():
         db_table = 'sets'
-        app_label = 'models'
 
     def __unicode__(self):
         return self.name

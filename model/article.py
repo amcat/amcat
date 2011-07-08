@@ -38,8 +38,13 @@ import logging; log = logging.getLogger(__name__)
 
 import re
 
-WORD_RE = re.compile('[{L}{N}]+')
+WORD_RE = re.compile('[{L}{N}]+') # {L} --> All (unicode) letters
+                                  # {N} --> All numbers
+
 def word_len(txt):
+    """Count words in `txt`
+
+    @type txt: str or unicode"""
     return len(re.sub(WORD_RE, ' ', txt).split())
   
 class Article(AmcatModel):
@@ -57,12 +62,12 @@ class Article(AmcatModel):
     metastring = models.TextField(null=True)
     url = models.URLField(null=True)
     externalid = models.IntegerField(null=True)
-    parent = models.ForeignKey("self", db_column='parent_article_id', null=True)
 
-    sets = models.ManyToManyField("models.Set", db_table="sets_articles")
+    sets = models.ManyToManyField("model.Set", db_table="sets_articles")
     
     text = models.TextField()
 
+    parent = models.ForeignKey("self", null=True)
     project = models.ForeignKey(Project)
     medium = models.ForeignKey(Medium)
 
@@ -71,7 +76,10 @@ class Article(AmcatModel):
 
     class Meta():
         db_table = 'articles'
-        app_label = 'models'
+
+    @property
+    def children(self):
+        return Article.objects.filter(parent=self)
 
     def save(self, *args, **kwargs):
         if self.length is None:
@@ -100,13 +108,3 @@ class Article(AmcatModel):
         if user.projectrole_set.filter(project__sets__article=self):
             return True
         return False
-
-
-class ArticlePosting(AmcatModel):
-    """Proxy for Article.children and Article.parent"""
-    article = models.ForeignKey(Article, db_column='article_id')
-    parent = models.ForeignKey(Article, db_column='parent_article_id', related_name='articleposting_parent')
-
-    class Meta():
-        db_table = 'articles_postings'
-        app_label = 'models'

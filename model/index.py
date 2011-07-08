@@ -5,7 +5,7 @@ from amcat.tools.model import AmcatModel
 from django.db import models
 
 class Index(AmcatModel):
-    id = models.IntegerField(db_column='indexid', primary_key=True)
+    id = models.IntegerField(db_column='index_id', primary_key=True)
 
     name = models.CharField(max_length=100)
     status = models.IntegerField()
@@ -15,7 +15,7 @@ class Index(AmcatModel):
     directory = models.CharField(max_length=500)
     options = models.CharField(max_length=50)
 
-    set = models.ForeignKey(Set, db_column='storedresultid')
+    set = models.ForeignKey(Set, db_column='storedresult_id')
 
     def __unicode__(self):
         return self.name
@@ -30,7 +30,3 @@ class Index(AmcatModel):
     #    for id, dict in aidsDict.iteritems():
     #        for aid in dict.keys():
     #            yield article.Article(self.db, aid)
-
-
-        
-        
