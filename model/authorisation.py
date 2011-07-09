@@ -106,6 +106,9 @@ class ProjectRole(AmcatModel):
         db_table = 'projects_users_roles'
         unique_together = ("project", "user", "role")
 
+    def can_update(self, user):
+        return user.haspriv('add_user', self.project)
+
 class Privilege(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='privilege_id')
 

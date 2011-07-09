@@ -67,7 +67,7 @@ class Article(AmcatModel):
     
     text = models.TextField()
 
-    parent = models.ForeignKey("self", null=True)
+    parent = models.ForeignKey("self", null=True, db_column="parent_article_id")
     project = models.ForeignKey(Project)
     medium = models.ForeignKey(Medium)
 

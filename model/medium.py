@@ -17,7 +17,7 @@ class Medium(AmcatModel):
     abbrev = models.CharField(max_length=10, null=True)
     circulation = models.IntegerField(null=True)
 
-    type = models.ForeignKey(MediumSourcetype, db_column='medium_source_id')
+    #type = models.ForeignKey(MediumSourcetype, db_column='medium_source_id')
     language = models.ForeignKey("model.Language")
 
     def __unicode__(self):
