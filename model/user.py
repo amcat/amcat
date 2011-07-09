@@ -47,7 +47,8 @@ class Affiliation(AmcatModel):
         return self.name
 
     class Meta():
-        db_table = 'affiliations'    
+        db_table = 'affiliations'   
+        ordering = ['name']
     
 class User(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='user_id', editable=False)
