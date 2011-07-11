@@ -89,7 +89,7 @@ class User(AmcatModel):
         the user's password concatenated to their username (for example, if user
         joe has password xyzzy, PostgreSQL will store the md5 hash of xyzzyjoe).
         """
-        return Passwd.objects.get(username=self.username)
+        return self.password
 
     ### Auth ###
     def can_read(self, user):
