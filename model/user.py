@@ -32,7 +32,9 @@ from django.db import models
 
 from amcat.tools.model import AmcatModel
 
-import random
+from amcat.db import dbtoolkit
+
+import md5
 
 PASS_ALGORITHM = 'sha1'
 
@@ -49,11 +51,17 @@ class Affiliation(AmcatModel):
     class Meta():
         db_table = 'affiliations'   
         ordering = ['name']
+
+class Passwd(AmcatModel):
+    username = models.TextField(primary_key=True, db_column="rolname")
+    password = models.TextField(db_column="rolpassword")
     
 class User(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='user_id', editable=False)
 
-    username = models.SlugField(max_length=50, help_text="Only letters, digits and underscores are allowed.")
+    username = models.SlugField(max_length=50, unique=True,
+                                help_text="Only letters, digits and underscores are allowed.")
+
     fullname = models.CharField(max_length=100)
     active = models.BooleanField(default=True)
     email = models.EmailField(max_length=100)
@@ -62,7 +70,7 @@ class User(AmcatModel):
     language = models.ForeignKey(Language, default=1)
     roles = models.ManyToManyField(auth.Role, db_table="users_roles")
 
-    password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]. Please do not edit directly.")
+    #password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]. Please do not edit directly.")
     
     def __unicode__(self):
         return self.username
@@ -75,6 +83,18 @@ class User(AmcatModel):
     def projects(self):
         return Project.objects.filter(projectrole__user=self)
 
+    @property
+    def password(self):
+        """
+        None if no password is set.
+
+        If the password is encrypted, this property will contain the string md5
+        followed by a 32-character hexadecimal MD5 hash. The MD5 hash will be of
+        the user's password concatenated to their username (for example, if user
+        joe has password xyzzy, PostgreSQL will store the md5 hash of xyzzyjoe).
+        """
+        return Passwd.objects.get(username=self.username)
+
     ### Auth ###
     def can_read(self, user):
         return (user == self or user.haspriv('view_all_users'))
@@ -86,12 +106,9 @@ class User(AmcatModel):
     def set_password(self, raw_password):
         if raw_password is None:
             self.active = False
+            self.password = None
         else:
-            r1, r2 = random.random(), random.random()
-
-            salt = get_hexdigest(PASS_ALGORITHM, str(r1), str(r2))[:5]
-            hsh = get_hexdigest(PASS_ALGORITHM, salt, raw_password)
-            self.password = '%s$%s$%s' % (PASS_ALGORITHM, salt, hsh)
+            pass
 
     def check_password(self, raw_password):
         return check_password(raw_password, self.password)

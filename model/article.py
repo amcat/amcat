@@ -46,7 +46,7 @@ def word_len(txt):
 
     @type txt: str or unicode"""
     return len(re.sub(WORD_RE, ' ', txt).split())
-  
+
 class Article(AmcatModel):
     """
     Class representing a newspaper article
