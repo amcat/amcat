@@ -79,17 +79,17 @@ class User(AmcatModel):
     def projects(self):
         return Project.objects.filter(projectrole__user=self)
 
-    @property
-    def password(self):
-        """
-        None if no password is set.
-
-        If the password is encrypted, this property will contain the string md5
-        followed by a 32-character hexadecimal MD5 hash. The MD5 hash will be of
-        the user's password concatenated to their username (for example, if user
-        joe has password xyzzy, PostgreSQL will store the md5 hash of xyzzyjoe).
-        """
-        return self.password
+    #@property
+    #def password(self):
+    #    """
+    #    None if no password is set.
+    #
+    #    If the password is encrypted, this property will contain the string md5
+    #    followed by a 32-character hexadecimal MD5 hash. The MD5 hash will be of
+    #    the user's password concatenated to their username (for example, if user
+    #    joe has password xyzzy, PostgreSQL will store the md5 hash of xyzzyjoe).
+    #    """
+    #    return self.password
 
     ### Auth ###
     def can_read(self, user):
