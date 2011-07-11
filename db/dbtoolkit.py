@@ -30,7 +30,7 @@ class DatabaseError(Exception):
 
 class Database(object):
     """"""
-    def __init__(self, user, pass):
+    def __init__(self, user, passwd):
         self.cursor = connection.cursor()
 
     def set_password(self, username, passwd):
