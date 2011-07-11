@@ -52,10 +52,6 @@ class Affiliation(AmcatModel):
         db_table = 'affiliations'   
         ordering = ['name']
 
-class Passwd(AmcatModel):
-    username = models.TextField(primary_key=True, db_column="rolname")
-    password = models.TextField(db_column="rolpassword")
-    
 class User(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='user_id', editable=False)
 
@@ -70,7 +66,7 @@ class User(AmcatModel):
     language = models.ForeignKey(Language, default=1)
     roles = models.ManyToManyField(auth.Role, db_table="users_roles")
 
-    #password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]. Please do not edit directly.")
+    password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]. Please do not edit directly.")
     
     def __unicode__(self):
         return self.username
