@@ -28,3 +28,10 @@ from amcat.model.user import User, Affiliation
 from amcat.model.analysis import Analysis
 from amcat.model.authorisation import Role, ProjectRole, Privilege
 from amcat.model.set import Set
+
+
+try:
+    from amcat.model.scraper import Scraper, Schedule, Job
+except ImportError:
+    # Scraping module not available, carry on..
+    pass

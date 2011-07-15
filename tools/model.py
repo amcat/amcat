@@ -19,6 +19,8 @@
 
 from django.db import models
 
+import json
+
 class AmcatModel(models.Model):
     """Replacement for standard Django-model, extending it with
     amcat-specific features."""
@@ -48,3 +50,19 @@ class AmcatModel(models.Model):
         # https://docs.djangoproject.com/en/dev/topics/db/models/#abstract-base-classes
         abstract=True
         app_label = "model"
+
+class JSONField(models.TextField):
+    __metaclass__ = models.SubfieldBase
+
+    def __init__(self, *args, **kwargs):
+        if 'default' not in kwargs:
+            kwargs.update(dict(default='{}'))
+        super(JSONField, self).__init__(*args, **kwargs)
+
+    def to_python(self, value):
+        if isinstance(value, basestring):
+            return json.loads(value)
+        return value
+
+    def get_prep_value(self, value):
+        return json.dumps(value)
