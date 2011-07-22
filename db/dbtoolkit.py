@@ -94,17 +94,29 @@ class PostgreSQL(Database):
         return 'md5' + md5.new(passwd+user.username).hexdigest()
 
     def check_password(self, user, entered_password):
-        SQL = "SELECT rolpassword FROM pg_authid WHERE rolname=%s"
-
-        entered_md5 = self.hash_password(user, entered_password)
         correct_md5 = cache.get(PASSWORD_CACHE % user.username)
-        
+        entered_md5 = self.hash_password(user, entered_password)
+
         if not correct_md5:
-            self.cursor.execute(SQL, [user.username])
-            correct_md5 = self.cursor.fetchone()[0]
+            import psycopg2
+
+            db = settings.DATABASES[DEFAULT_DB_ALIAS]
+
+            conn_params = dict(database=db['NAME'])
+            for param in ['USER', 'PASSWORD', 'HOST', 'PORT']:
+                if param in db.keys():
+                    conn_params[param.lower()] = db[param]
+
+            try:
+                psycopg2.connect(**conn_params).cursor()
+            except:
+                return False
+
+            cache.set(PASSWORD_CACHE % user.username, entered_md5)
+
+            return True
 
         if entered_md5 == correct_md5:
-            cache.add(PASSWORD_CACHE % user.username, correct_md5)
             return True
 
         return False
