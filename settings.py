@@ -19,6 +19,8 @@
 
 # Django settings for amcatnavigator project.
 import os
+import threading
+import collections
 
 # Python 2.x vs 3.x
 try:

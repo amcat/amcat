@@ -521,15 +521,26 @@ def zipp(*iterables):
 
 class multidict(collections.defaultdict):
     """A dictionary of key : set pairs"""
-    def __init__(self, seq):
-        """Create a new multidict from a seq of key,value pairs (with duplicate keys)"""
-        collections.defaultdict.__init__(self, set)
+    def __init__(self, seq, ltype=set):
+        """Create a new multidict from a seq of key,value pairs (with duplicate keys).
+
+        @type seq: iterable
+
+        @type ltype: set, list
+        @param ltype: default dict key-value"""
+        collections.defaultdict.__init__(self, ltype)
+
+        add = self.add if ltype is set else self.append
         if seq:
             for kv in seq:
                 if kv:
-                    self.add(*kv)
+                    add(*kv)
+
     def add(self, key, value):
         self[key].add(value)
+
+    def append(self, key, value):
+        self[key].append(value)
 
 def sortByValue(dictionary, reverse=False):
     """Sort a dictionary by values, optionally in descending order"""

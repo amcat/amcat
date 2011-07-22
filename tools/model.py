@@ -17,15 +17,32 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from django.conf import settings
 from django.db import models
+from django.db import connections, DEFAULT_DB_ALIAS
 
 import json
+import copy
+
+__all__ = ['AmcatModel', 'JSONField']
 
 class AmcatModel(models.Model):
     """Replacement for standard Django-model, extending it with
     amcat-specific features."""
     def save(self, **kwargs):
-        """TODO"""
+        dbalias = DEFAULT_DB_ALIAS
+
+        try:
+            from amcatnavigator.utils.auth import get_request
+        except:
+            pass
+        else:
+            rq = get_request()
+            if rq is not None:
+                dbalias = rq.user.db
+
+        # Write changes to database
+        kwargs['using'] = kwargs.get('using', dbalias)
         super(AmcatModel, self).save(**kwargs)
 
     def can_read(self, user):

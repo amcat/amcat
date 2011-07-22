@@ -22,34 +22,40 @@ from __future__ import unicode_literals, print_function, absolute_import
 Model module representing ontology Objects
 """
 
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
-from amcat.tools.cachable.latebind import LB, MultiLB
+from django.db import models
 
+from amcat.tools.model import AmcatModel
 from amcat.tools import toolkit
 from amcat.model.language import Language
-
 
 from datetime import datetime
 
 import logging; log = logging.getLogger(__name__)
-#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 PARTYMEMBER_FUNCTIONID = 0
 
-class Function(Cachable):
-    __table__ = "objects_functions"
-    __idcolumn__ = ("objectid", "functionid", "office_objectid", "fromdate")
-    __labelprop__ = 'office'
-    
-    functionid, todate, fromdate, party = DBProperties(4)
-    office = DBProperty(lambda : Object, getcolumn="office_objectid")
+class Function(AmcatModel):
+    object = models.ForeignKey(Object)
+
+    functionid = models.SmallIntegerField()
+    fromdate = models.DateField()
+    todate = models.DateField()
+
+    office = models.ForeignKey(Object, db_column='office_object_id')
+
+    def __unicode__(self):
+        return self.office
+
+    class Meta():
+        db_table = 'objects_functions'
+        app_label = 'ontology'
+        unique_together = ("objectid", "functionid", "office_objectid", "fromdate")
     
 def strmaker():
     return lambda obj, val: val
     
-class Object(Cachable):
-    __table__ = 'objects'
-    __idcolumn__ = 'objectid'
+class Object(AmcatModel):
+    id = models.IntegerField(primary_key=True, db_column='object_id')
     
     functions = ForeignKey(Function)
     trees  = ForeignKey(LB("Tree", sub="ontology"), table="trees_objects", distinct=True)
@@ -62,6 +68,9 @@ class Object(Cachable):
     firstname = DBProperty(table="o_politicians")
     prefix = DBProperty(table="o_politicians")
     initials = DBProperty(table="o_politicians")
+
+    class Meta():
+        db_table = 'objects'
 
     @property
     def label(self):
@@ -77,9 +86,11 @@ class Object(Cachable):
         if not hasattr(lan, 'id'):
             lan = Language(self.db, lan)
         
-        if self.labels.has_key(lan): return self.labels[lan]
-	if fallback:
-	    return self.label
+        if self.labels.has_key(lan):
+            return self.labels[lan]
+    	
+        if fallback:
+          return self.label
 
     def _getTree(self, treeid):
         for t in self.trees:

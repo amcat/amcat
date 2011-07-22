@@ -22,14 +22,9 @@ from __future__ import unicode_literals, print_function, absolute_import
 Model module representing Trees of ontology Objects
 """
 
-from amcat.tools.cachable import cacher
-from amcat.tools.cachable.latebind import LB, MultiLB
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
 from amcat.tools import idlabel
 
 from amcat.model.ontology.hierarchy import Hierarchy, DictHierarchy
-
-#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
 from datetime import datetime
 
@@ -41,33 +36,26 @@ PERSONS_CLASSID = 4003
 PARTYMEMBER_FUNCTIONID = 0
 
 
-
 def boolmaker():
     return lambda obj, val: bool(val)
 
 class Tree(Cachable, DictHierarchy):
-    __table__ = 'trees'
-    __idcolumn__ = 'treeid'
-    __slots__ = ['objectset','objectdict','parentdict','childrendict', 'reverseset', 'treesdict', '_cachedPaths']
-    
-    label = DBProperty()
-    treeid = DBProperty()
+    id = models.IntegerField(db_column='tree_id', primary_key=True)
+
+    label = models.CharField(max_length=100)
     
     objects = ForeignKey(MultiLB(LB("Object", sub="ontology"), LB("Object", sub="ontology")),
                          table="trees_objects", getcolumn=("objectid","parentid"),
                          sequencetype=dict)
 
 
-
     reverse = ForeignKey(MultiLB(LB("Object", sub="ontology"), boolmaker),
                          table="trees_objects", getcolumn=("objectid", "reverse"),
                          sequencetype=dict)
 
-    
-    
-    def __init__(self, db, id, **cache):
-        Cachable.__init__(self, db, id, **cache)
-        Hierarchy.__init__(self, db)
+    class Meta():
+        db_table = 'trees'
+
 
     def _getParent(self, boundobject):
         return self.objects.get(boundobject.objekt)
@@ -109,23 +97,3 @@ class Tree(Cachable, DictHierarchy):
     def getTree(self, object):
         """Return the Tree that gives this object its parent in this hierarchy"""
         return self
-    
-def run():
-    from amcat.db import dbtoolkit
-    db = dbtoolkit.amcatDB(profile=True)
-    t = Tree(db, 4000)
-    t.cacheHierarchy()
-    from amcat.model.ontology import ontologytoolkit
-    for i, o, r in ontologytoolkit.getIndentedList(t):
-        print("  "*i, o.id)
-        if i > 1: break
-    db.printProfile()
-        
-if __name__ == '__main__':
-    from amcat.tools.logging import amcatlogging;     amcatlogging.setup()
-    from amcat.db import dbtoolkit
-    db = dbtoolkit.amcatDB(profile=True)
-    t = Tree(db, 5101)
-    t.cacheHierarchy()
-    print(t.getParent(2407))
-    print(240799 in t)

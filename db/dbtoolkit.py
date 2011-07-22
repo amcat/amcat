@@ -23,22 +23,46 @@ import md5
 
 __all__ = ['AmCATDB']
 
-from django.db import connection, transaction
+from django.db import connection, connections, transaction, DEFAULT_DB_ALIAS
+from django.conf import settings
+from django.core.cache import cache
+
+PASSWORD_CACHE = 'amcat_password_%s'
 
 class DatabaseError(Exception):
     pass
 
 class Database(object):
     """"""
-    def __init__(self, user, passwd):
-        self.cursor = connection.cursor()
+    def __init__(self, using=None):
+        self.using = using
+        self._cursor = None
 
-    def set_password(self, username, passwd):
+    @property
+    def cursor(self):
+        if self._cursor is None:
+            self._cursor = connection.cursor() if not self.using else connections[self.using]
+
+        return self._cursor
+
+    def hash_password(self, user, passwd):
+        """
+        Return hashed password of user.
+
+        @type user: User object
+        @param user: user to hash password for
+
+        @type passwd: str, unicode
+        @param passwd: raw password
+        """
+        pass
+
+    def set_password(self, user, passwd):
         """
         Set `password` for `user`.
 
-        @type user: str
-        @param user: or 'rolname' for some databases
+        @type user: User
+        @param user: The user for which to alter the password
 
         @type passwd: str, unicode
 
@@ -46,12 +70,12 @@ class Database(object):
         """
         pass
 
-    def check_password(self, username, encr_pass, raw_pass):
+    def check_password(self, user, entered_password):
         """
         Check password for `username`.
 
-        @param encr_pass: hashed (+salted) password stored in database
-        @param raw_pass: raw password given by user
+        @param user: User object for which the password is to be checked
+        @param entered_password: password as entered by user
         """
         pass
 
@@ -66,31 +90,42 @@ class Database(object):
 
 class PostgreSQL(Database):
     """PostgreSQL implementation"""
-    def _get_hash(self, username, passwd):
-        return 'md5' + md5.new(passwd+username).hexdigest()
+    def hash_password(self, user, passwd):
+        return 'md5' + md5.new(passwd+user.username).hexdigest()
 
-    def set_password(self, username, passwd):
-        SQL = "UPDATE pg_authid SET rolpassword=%s WHERE rolname=%s"
-        hash = self._get_hash(username, passwd)
-        cursor.execute(SQL, [hash, username])
+    def check_password(self, user, entered_password):
+        SQL = "SELECT rolpassword FROM pg_authid WHERE rolname=%s"
 
-    def check_password(self, username, encr_pass, raw_pass):
-        return raw_pass == self._get_hash(username, encr_pass)
+        entered_md5 = self.hash_password(user, entered_password)
+        correct_md5 = cache.get(PASSWORD_CACHE % user.username)
+        
+        if not correct_md5:
+            self.cursor.execute(SQL, [user.username])
+            correct_md5 = self.cursor.fetchone()[0]
+
+        if entered_md5 == correct_md5:
+            cache.add(PASSWORD_CACHE % user.username, correct_md5)
+            return True
+
+        return False
+
+    def set_password(self, user, password):
+        SQL = "ALTER USER %s WITH PASSWORD %s"
+        md5pass = self.hash_password(user, password)
+        self.cursor.execute(SQL, [user.username, md5pass])
+
+        cache.delete(PASSWORD_CACHE % user.username)
 
     def create_user(self, username, password):
         SQL = "CREATE USER %s WITH PASSWORD %s"
-        cursor.execute(SQL, [username, password])
-
-    def delete_user(self, username):
-        cursor.execute("DROP USER %s", [username])
-
-
+        self.cursor.execute(SQL, [username, password])
 
 
 VENDORS = { 'postgresql' : PostgreSQL,
             'dummy' : Database }
 
-try:
-    AmCATDB = VENDORS.get(connection.vendor, None)
-except TypeError:
-    raise(DatabaseError("Your database (%s) is not supported!" % connection.vendor))
+def get_database():
+    try:
+        return VENDORS[connection.vendor]()
+    except KeyError:
+        raise DatabaseError("Your database (%s) is not supported!" % connection.vendor)

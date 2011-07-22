@@ -34,12 +34,6 @@ from amcat.tools.model import AmcatModel
 
 from amcat.db import dbtoolkit
 
-import md5
-
-PASS_ALGORITHM = 'sha1'
-
-#def getProjectRole(db, projectid, roleid):
-#    return project.Project(db, projectid), authorisation.Role(db, roleid)
 
 class Affiliation(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='affiliation_id')
@@ -65,8 +59,6 @@ class User(AmcatModel):
     affiliation = models.ForeignKey(Affiliation)
     language = models.ForeignKey(Language, default=1)
     roles = models.ManyToManyField(auth.Role, db_table="users_roles")
-
-    password = models.CharField(max_length=128, help_text="[algo]$[salt]$[hexdigest]. Please do not edit directly.")
     
     def __unicode__(self):
         return self.username
@@ -79,18 +71,6 @@ class User(AmcatModel):
     def projects(self):
         return Project.objects.filter(projectrole__user=self)
 
-    #@property
-    #def password(self):
-    #    """
-    #    None if no password is set.
-    #
-    #    If the password is encrypted, this property will contain the string md5
-    #    followed by a 32-character hexadecimal MD5 hash. The MD5 hash will be of
-    #    the user's password concatenated to their username (for example, if user
-    #    joe has password xyzzy, PostgreSQL will store the md5 hash of xyzzyjoe).
-    #    """
-    #    return self.password
-
     ### Auth ###
     def can_read(self, user):
         return (user == self or user.haspriv('view_all_users'))
@@ -102,12 +82,11 @@ class User(AmcatModel):
     def set_password(self, raw_password):
         if raw_password is None:
             self.active = False
-            self.password = None
         else:
-            pass
+            dbtoolkit.db.set_password(self.username, raw_password)
 
     def check_password(self, raw_password):
-        return check_password(raw_password, self.password)
+        return dbtoolkit.get_database().check_password(self, raw_password)
 
     ### Custom ###
     def get_roles(self, project=None):

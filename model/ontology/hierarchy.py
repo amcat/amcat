@@ -3,7 +3,6 @@ import logging; log = logging.getLogger(__name__)
 
 from amcat.model.ontology.object import Object
 from amcat.tools import idlabel, toolkit
-from amcat.tools.cachable import cacher
 
 from amcat.tools.logging import amcatlogging
 #amcatlogging.infoModule()

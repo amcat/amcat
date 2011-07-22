@@ -1,33 +1,42 @@
 from datetime import datetime
 import collections
-import logging; log = logging.getLogger(__name__)
 
 from amcat.tools import toolkit
-from amcat.tools.cachable import cacher
-from amcat.tools.cachable.latebind import LB
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
+from amcat.tools.model import AmcatModel
 from amcat.model.ontology.hierarchy import DictHierarchy
 from amcat.model.ontology.hierarchy import BoundObject
+
+from django.db import models
+
+import logging; log = logging.getLogger(__name__)
 
 DUMMY_CLASSID_PARTYMEMBER = 1
 DUMMY_CLASSID_OFFICE = 2
 #PERSONS_CLASSID = 4003
 
+class CodebookTree(AmcatModel):
+    codebook = models.ForeignKey(Codebook)
+    tree = models.ForeignKey("Tree")
+    rank = models.IntegerKey()
 
-class Codebook(Cachable, DictHierarchy):
-    __table__ = 'codebooks'
-    __idcolumn__ = 'codebookid'
-    __labelprop__ = 'name'
-    __slots__ = ['objectset','objectdict','parentdict','childrendict', 'reverseset', 'treesdict', '_cachedPaths']
+    class Meta():
+        db_table = 'codebooks_trees'
+        order_by = ('rank',)
 
-    name = DBProperty()
-    
-    objects = ForeignKey(LB("Object", sub="ontology"), table="codebooks_objects")
-    trees = ForeignKey(LB("Tree", sub="ontology"), table="codebooks_trees", orderby="rank")
-    
-    def __init__(self, db, id, **cache):
-        Cachable.__init__(self, db, id, **cache)
-        DictHierarchy.__init__(self, db)
+
+class Codebook(AmcatModel, DictHierarchy):
+    id = models.IntegerField(primary_key=True, db_column='codebook_id')
+
+    name = models.TextField()
+    objects = models.ManyToManyField("ontology.Object", table="codebooks_objects")
+    trees = models.ManyToManyField("Tree", through=CodebookTree)
+
+    def __unicode__(self):
+        return self.name
+
+    class Meta():
+        db_table = 'codebooks'
+        app_label = 'ontology'
 
     def _getAllObjects(self):
         self.treesdict = collections.defaultdict(set) # treeid : objectids that got parent from tree

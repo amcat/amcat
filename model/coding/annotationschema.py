@@ -1,45 +1,41 @@
 from amcat.tools import toolkit
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
-from amcat.tools.cachable import cacher
+
 from amcat.tools.table.table3 import ObjectColumn
 from amcat.tools.idlabel import IDLabel
+from amcat.tools.model import AmcatModel
 
 from amcat.model.ontology.codebook import Codebook
 from amcat.model.ontology.object import Object
 
+from django.db import models
+
 import logging; log = logging.getLogger(__name__)
-#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
 
-class ValidationError(ValueError): pass
-class RequiredValueError(ValidationError): pass
+class ValidationError(ValueError):
+    pass
 
-class AnnotationSchema(Cachable):
-    __idcolumn__ = 'annotationschemaid'
-    __table__ = 'annotationschemas'
-    __labelprop__ = 'name'
-    
-    name, isarticleschema, isnet, location = DBProperties(4)
-    fields = ForeignKey(lambda:AnnotationSchemaField)
-    
-    @property
-    def table(self):
-        table = self.location.split(":")[0]
-        if table == "net_arrows": table = "vw_net_arrows"
-        return table
-    
-    def getField(self, fieldname):
-        for f in self.fields:
-            if f.fieldname == fieldname: return f
+class RequiredValueError(ValidationError):
+    pass
 
-    def SQLSelect(self, extra = []):
-        fields = extra + [f.fieldname for f in self.fields]
-        return "select [%s] from %s " % ("],[".join(fields), self.table)
+class AnnotationSchema(AmcatModel):
+    id = models.IntegerKey(db_column='annotationschema_id', primary_key=True)
+
+    name = models.CharField(max_length=75)
+    description = models.TextField()
+
+    isnet = models.BooleanField()
+    isarticleschema = models.BooleanField()
+    quasisentences = models.BooleanField()
+    
+    def __unicode__(self):
+        return "%s - %s" % (self.id, self.name)
+
+    class Meta():
+        db_table = 'annotationschemas'
+        app_label = 'coding'
 
     def asDict(self, values):
         return dict(zip([f.fieldname for f in self.fields], values))
-
-    def fieldNames(self):
-        return (f.fieldname for f in self.fields)
 
     def validate(self, values):
         """Validate whether the given values are a valid coding for this schema
@@ -58,53 +54,47 @@ class AnnotationSchema(Cachable):
             o = f.deserialize(v)
             objects[f] = o
         return objects
-            
-    def cacheMany(self, units):
-        cachable.cache(units, *self.fieldNames())
-    
-    def idname(self):
-        return "%i - %s" % (self.id, self.name)
-
-    def __hash__(self):
-        return hash(self.id)
-    def __eq__(self, other):
-        return type(other) == AnnotationSchema and other.id == self.id
-
-def getAnnotationschemas(db):
-    """ Iterate over all annotation schema objects """
-    ids = db.doQuery("SELECT annotationschemaid FROM annotationschemas")
-    for a in ids:
-        yield AnnotationSchema(db, a[0])
 
 
-class AnnotationSchemaFieldType(Cachable):
-    __table__ = "annotationschemas_fieldtypes"
-    __idcolumn__ = "fieldtypeid"
-    __labelprop__ = "name"
-    name = DBProperty()
+class AnnotationSchemaFieldType(AmcatModel):
+    id = models.IntegerField(primary_key=True, db_column="fieldtype_id")
+    name = models.CharField(max_length=50)
+
+    def __unicode__(self):
+        return self.name
+
+    class Meta():
+        db_table = 'annotationschemas_fieldtypes'
+        app_label = 'coding'
         
-class AnnotationSchemaField(Cachable):
-    __table__ = 'annotationschemas_fields'
-    __idcolumn__ = ('annotationschemaid','fieldnr')
-    __slots__ = ['_serializer']
-    
-    annotationschema = DBProperty(AnnotationSchema, getcolumn="annotationschemaid")
-    fieldname, label, required = DBProperties(3)
-    default = DBProperty(getcolumn='deflt')
-    fieldtype = DBProperty(AnnotationSchemaFieldType)
+class AnnotationSchemaField(AmcatModel):    
+    annotationschema = models.ForeignKey(AnnotationSchema)
 
-    table, keycolumn, labelcolumn, values = DBProperties(4)
-    codebook = DBProperty(Codebook)
+    fieldname = models.Charfield(max_length=20)
+    label = models.CharField(max_length=30)
+    required = models.BooleanField()
+    default = models.BooleanField(db_column='deflt')
 
-    @property
-    def schema(self):
-        return self.annotationschema
-    
+    fieldtype = models.ForeignKey(AnnotationSchemaFieldType)
+
+    table = models.CharField(max_length=40)
+    keycolumn = models.CharField(max_length=40)
+    labelcolumn = models.CharField(max_length=40)
+    values = models.TextField()
+
+    codebook = models.ForeignKey(Codebook)
+
+    class Meta():
+        db_table = 'annotationschemas_fields'
+        app_label = 'coding'
+        unique_together = ("annotationschema", "fieldnr")
+
     @property
     def serializer(self):
         try:
             return self._serializer
-        except AttributeError: pass
+        except AttributeError:
+            pass
         
         ftid = self.fieldtype.id
         if ftid == 5:
@@ -129,6 +119,7 @@ class AnnotationSchemaField(Cachable):
         val = self.serializer.deserialize(value)
         log.debug("%r/%r deserialised %r to %r" % (self, self.serializer, value, val))
         return val
+
     def getTargetType(self):
         return self.serializer.getTargetType()   
 
@@ -193,23 +184,8 @@ class DBLookupFieldSerialiser(LookupFieldSerialiser):
             return self._labels
         except AttributeError: pass
         
-        # BUG (see part of e-mail below).
-        # 
-        # [ e-mail]
-        # ..certain countries/organizations (I suspect those that were added or changed
-        # by the Swiss team) are still represented with an ID number instead of their name.
-        # When the coders e.g. coded "NATO", AmCAT shows "IDLabel(282)".
-        #
-        # To a similar extent, for the variables "actor1-3", "mp1-3", and "canton1-3",
-        # AmCAT only rarely shows labels. Most of the annotations appear in the form "IDLabel(63)"
-        # (standing here for what the coder wanted to be "206 Delamuraz Jean-Pascal").
-        # [/ e-mail ]
-        #
-        # This is probably causes by iNet, which doesn't select id fields (206) but a row
-        # number (63).
+        # TODO
         
-        result = self.db.select(self.table, [self.keycol, self.labelcol])
-        self._labels = dict((k,v.decode('latin-1')) for k,v in result)
         return self._labels
         
         
@@ -305,19 +281,3 @@ class FieldColumn(ObjectColumn):
             raise
         log.debug(">>>>>> values=%r, fieldname=%r, --> val=%s" % (values, fieldname, val))
         return val
-
-
-    
-                     
-
-if __name__ == '__main__':
-    import amcatlogging; amcatlogging.setup()
-    import dbtoolkit, ont
-    db = dbtoolkit.amcatDB()
-    a = AnnotationSchema(db, 72)
-    obj = ont.Object(db, 11344)
-    f = a.getField("subject")
-    s = f.serializer.set
-    print s.categorise(obj, date=None, depth=[1], returnOmklap=True, returnObjects=True)
-
-    
