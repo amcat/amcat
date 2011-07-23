@@ -22,6 +22,8 @@ import os
 import threading
 import collections
 
+from amcat.tools.toolkit import random_alphanum
+
 # Python 2.x vs 3.x
 try:
     import ConfigParser as configparser
@@ -64,3 +66,5 @@ def filldict(vals, dic):
    
 DATABASES = filldict(sections('db'), dict())
 CACHES = filldict(sections('caching'), dict())
+
+SECRET_KEY = random_alphanum(30)

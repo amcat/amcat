@@ -19,7 +19,7 @@
 
 """Database abstraction layer"""
 
-import md5
+import hashlib
 
 __all__ = ['AmCATDB']
 
@@ -45,17 +45,16 @@ class Database(object):
 
         return self._cursor
 
-    def hash_password(self, user, passwd):
+    def hash_password(self, passwd):
         """
-        Return hashed password of user.
-
-        @type user: User object
-        @param user: user to hash password for
+        Return hashed password of user salted with SECRET_KEY. Hashes may differ in different
+        (server) sessions, since SECRET_KEY is generated at server initialization.
 
         @type passwd: str, unicode
         @param passwd: raw password
         """
-        pass
+        hp = hashlib.sha512(passwd).hexdigest()
+        return hashlib.sha512(hp+settings.SECRET_KEY).hexdigest()
 
     def set_password(self, user, passwd):
         """
@@ -90,36 +89,33 @@ class Database(object):
 
 class PostgreSQL(Database):
     """PostgreSQL implementation"""
-    def hash_password(self, user, passwd):
-        return 'md5' + md5.new(passwd+user.username).hexdigest()
+    def _get_conn_params(self, user, passwd):
+        db = settings.DATABASES[DEFAULT_DB_ALIAS]
+
+        return {
+            'database' : db['NAME'],
+            'user' : user.username,
+            'password' : passwd,
+            'host' : db['HOST'],
+            'port' : db['PORT']
+        }
 
     def check_password(self, user, entered_password):
-        correct_md5 = cache.get(PASSWORD_CACHE % user.username)
-        entered_md5 = self.hash_password(user, entered_password)
+        correct_hash = cache.get(PASSWORD_CACHE % user.username)
+        entered_hash = self.hash_password(entered_password)
 
-        if not correct_md5:
+        if correct_hash != entered_hash:
+            # Wrong cache or password!
             import psycopg2
 
-            db = settings.DATABASES[DEFAULT_DB_ALIAS]
-
-            conn_params = dict(database=db['NAME'])
-            for param in ['USER', 'PASSWORD', 'HOST', 'PORT']:
-                if param in db.keys():
-                    conn_params[param.lower()] = db[param]
-
             try:
-                psycopg2.connect(**conn_params).cursor()
+                psycopg2.connect(**self._get_conn_params(user, entered_password)).cursor()
             except:
                 return False
 
-            cache.set(PASSWORD_CACHE % user.username, entered_md5)
+            cache.set(PASSWORD_CACHE % user.username, entered_hash)
 
-            return True
-
-        if entered_md5 == correct_md5:
-            return True
-
-        return False
+        return True
 
     def set_password(self, user, password):
         SQL = "ALTER USER %s WITH PASSWORD %s"
