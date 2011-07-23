@@ -35,14 +35,13 @@ class DatabaseError(Exception):
 class Database(object):
     """"""
     def __init__(self, using=None):
-        self.using = using
+        self.using = using or DEFAULT_DB_ALIAS
         self._cursor = None
 
     @property
     def cursor(self):
         if self._cursor is None:
-            self._cursor = connection.cursor() if not self.using else connections[self.using]
-
+            self._cursor = connections[self.using].cursor()
         return self._cursor
 
     def hash_password(self, passwd):
@@ -117,23 +116,44 @@ class PostgreSQL(Database):
 
         return True
 
+    @transaction.commit_on_success
     def set_password(self, user, password):
         SQL = "ALTER USER %s WITH PASSWORD %s"
         md5pass = self.hash_password(user, password)
-        self.cursor.execute(SQL, [user.username, md5pass])
+
+        with transaction.commit_manually(using=self.using):
+            self.cursor.execute(SQL, [user.username, md5pass])
+            transaction.commit()
 
         cache.delete(PASSWORD_CACHE % user.username)
 
+    @transaction.commit_on_success
     def create_user(self, username, password):
-        SQL = "CREATE USER %s WITH PASSWORD %s"
-        self.cursor.execute(SQL, [username, password])
+        SQL = "CREATE USER %s WITH PASSWORD "
+
+        # In the SQL-statement above 'user' has to be an identifier. Unfortunately execute()
+        # wraps escape-quotes around it, which results in an error.
+        #
+        # See: http://stackoverflow.com/questions/3382234/python-adds-e-to-string
+        #
+        # The regular expression check `username` for anomalies.
+        import re; ure = re.compile('^[a-zA-Z][a-zA-Z0-9_]+$')
+
+        if not ure.match(username):
+            raise ValueError("This username is not allowed!")
+
+        with transaction.commit_manually(using=self.using):
+            SQL = (SQL % username) + " %s"
+            self.cursor.execute(SQL, [password,])
+            transaction.commit()
+        
 
 
 VENDORS = { 'postgresql' : PostgreSQL,
             'dummy' : Database }
 
-def get_database():
+def get_database(using=DEFAULT_DB_ALIAS):
     try:
-        return VENDORS[connection.vendor]()
+        return VENDORS[connection.vendor](using=using)
     except KeyError:
         raise DatabaseError("Your database (%s) is not supported!" % connection.vendor)

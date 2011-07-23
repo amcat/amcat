@@ -21,6 +21,8 @@ from django.conf import settings
 from django.db import models
 from django.db import connections, DEFAULT_DB_ALIAS
 
+from django.core.exceptions import ValidationError
+
 import json
 import copy
 
@@ -41,6 +43,10 @@ class AmcatModel(models.Model):
             if rq is not None:
                 dbalias = rq.user.db
 
+                # Check permissions for web user..
+                if not self.can_update(rq.user):
+                    raise ValidationError("You're not allowed write-access on %s" % self.__class__.__name__)
+
         # Write changes to database
         kwargs['using'] = kwargs.get('using', dbalias)
         super(AmcatModel, self).save(**kwargs)
@@ -56,9 +62,6 @@ class AmcatModel(models.Model):
 
         @return: boolean"""
         return True
-
-    def can_create(self, user):
-        return self.can_update(user)
 
     def can_delete(self, user):
         return self.can_update(user)

@@ -28,7 +28,8 @@ from amcat.model.project import Project
 from amcat.model import authorisation as auth
 
 from django.contrib.auth.models import get_hexdigest, check_password
-from django.db import models
+from django.core.exceptions import ValidationError
+from django.db import models, DEFAULT_DB_ALIAS
 
 from amcat.tools.model import AmcatModel
 
@@ -36,7 +37,7 @@ from amcat.db import dbtoolkit
 
 
 class Affiliation(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='affiliation_id')
+    id = models.AutoField(primary_key=True, db_column='affiliation_id')
     name = models.CharField(max_length=200)
     
     def __unicode__(self):
@@ -47,14 +48,14 @@ class Affiliation(AmcatModel):
         ordering = ['name']
 
 class User(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='user_id', editable=False)
+    id = models.AutoField(primary_key=True, db_column='user_id', editable=False)
 
-    username = models.SlugField(max_length=50, unique=True,
+    username = models.SlugField(max_length=50, unique=True, editable=False,
                                 help_text="Only letters, digits and underscores are allowed.")
 
-    fullname = models.CharField(max_length=100)
+    fullname = models.CharField(max_length=100, verbose_name="Full name")
     active = models.BooleanField(default=True)
-    email = models.EmailField(max_length=100)
+    email = models.EmailField(max_length=100, unique=True)
 
     affiliation = models.ForeignKey(Affiliation)
     language = models.ForeignKey(Language, default=1)
@@ -77,6 +78,10 @@ class User(AmcatModel):
 
     def can_update(self, user):
         return (user == self or user.haspriv('update_user'))
+
+    @classmethod
+    def can_add(cls, user):
+        return user.haspriv('add_user')
 
     ### Mimic Django-functions ###
     def set_password(self, raw_password):
@@ -110,3 +115,27 @@ class User(AmcatModel):
         except auth.AccessDenied:
             return False    
         return True
+
+    @classmethod
+    def create_user(cls, username, fullname, password, email, affiliation, language, using=DEFAULT_DB_ALIAS):
+        u = User()
+
+        u.username = username
+        u.email = email
+        u.affiliation = affiliation
+        u.language = language
+        u.fullname = fullname
+
+        if not (isinstance(password, basestring) and len(password) > 0):
+            raise ValidationError("Please provide a valid password.")
+
+        # Raise errors when invalid data is submitted
+        u.full_clean()
+
+        # Create database user
+        dbtoolkit.get_database(using=using).create_user(username, password)
+
+        # Create Django user
+        u.save()
+
+        return u
