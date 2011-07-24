@@ -93,6 +93,12 @@ class User(AmcatModel):
     def check_password(self, raw_password):
         return dbtoolkit.get_database().check_password(self, raw_password)
 
+    def is_authenticated(self):
+        return True if hasattr(self, 'db') else False
+
+    def has_perm(self, perm):
+        return self.haspriv(perm)
+
     ### Custom ###
     def get_roles(self, project=None):
         if project is None:
