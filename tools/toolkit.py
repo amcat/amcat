@@ -1295,6 +1295,34 @@ def abstract():
     caller = inspect.getouterframes(inspect.currentframe())[1][3]
     raise NotImplementedError(caller + ' must be implemented in subclass')
 
+class ThreadSafeDict(dict):
+    """
+    Thread-safe dict object.
+
+    @prevents: RuntimeError: dictionary changed size during iteration
+
+    Only useful when you're sure all iteration calls go will consume all yields.
+    """
+    def __init__(self, *args, **kwargs):
+        self.lock = threading.Lock()
+        super(ThreadSafeDict, self).__init__(*args, **kwargs)
+
+    def __iter__(self):
+        self.lock.acquire()
+        for k in super(ThreadSafeDict, self).__iter__():
+            yield k
+        self.lock.release()
+
+    def __delitem__(self, *args):
+        self.lock.acquire()
+        super(ThreadSafeDict, self).__delitem__(*args)
+        self.lock.release()
+
+    def __setitem__(self, *args):
+        self.lock.acquire()
+        super(ThreadSafeDict, self).__setitem__(*args)
+        self.lock.release()
+
 ###########################################################################
 ##                 Deprecated functions and imports                      ##
 ###########################################################################
