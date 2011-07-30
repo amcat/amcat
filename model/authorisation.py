@@ -30,14 +30,13 @@ getPrivilege(db, str or int) returns Privilege object
 from django.db import models
 from amcat.tools.model import AmcatModel
 
-ADMIN_ROLE = 1
+ADMIN_ROLE = 3
 
 class AccessDenied(EnvironmentError):
     def __init__(self, user, privilege, project=None):
-        roles = user.roles.all()
         projectstr = " on %s" % project if project else ""
-        msg = "Access denied for privilege %s%s to %s\nRequired role %s, has roles %s" % (
-            privilege, projectstr, user, privilege.role, [r for r in roles])
+        msg = "Access denied for privilege %s%s to %s\nRequired role %s, has role %s" % (
+            privilege, projectstr, user, privilege.role, user.role)
         EnvironmentError.__init__(self, msg)
 
 def check(user, privilege, project=None):
@@ -49,7 +48,7 @@ def check(user, privilege, project=None):
     @type user: user.User
     @param user: User to check for `privilege`
 
-    @type privilege: Privilege object, id, or str
+    @type privilege: Privilege object or str
     @param privilege: The requested privilege
 
     @param project: The project the privilege is requested on,
@@ -57,31 +56,18 @@ def check(user, privilege, project=None):
 
     @return: None (raises exception if denied)
     """
-    def get_priv(priv, prjct):
-        if isinstance(priv, models.Model):
-            return priv
-        elif isinstance(priv, basestring):
-            return Privilege.objects.get(label=priv, projectlevel=bool(prjct))
-        return Privilege.objects.get(id=priv)
+    if isinstance(privilege, basestring):
+        privilege = Privilege.objects.get(label=privilege, role__projectlevel=bool(project))
 
-    roles = user.get_roles()
-    priv = get_priv(privilege, project)
-    nrole = priv.role # Needed role
+    if not user.is_superuser:
+        nrole = privilege.role # Needed role
+        role = (Role.objects.get(projectrole__user=user, projectrole__project=project)
+                if privilege.role.projectlevel else user.role)
 
-    if priv.projectlevel:
-        if project is None:
-            raise("Cannot check project privilege %s without project" % priv)
+        # Return None if access is OK
+        if role != nrole:
+            raise AccessDenied(user, privilege, project)
         
-        if any(r.id == ADMIN_ROLE for r in roles):
-            # User is admin
-            return
-        
-        # userroles --> projectroles
-        roles = user.get_roles(project)
-        
-    if not any(r.id in (ADMIN_ROLE, nrole.id) for r in roles):
-        raise AccessDenied(user, priv, project)
-
 
 class Role(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='role_id')
@@ -95,8 +81,8 @@ class Role(AmcatModel):
         db_table = 'roles'
 
 class ProjectRole(AmcatModel):
-    project = models.ForeignKey("model.Project")
-    user = models.ForeignKey("model.User")
+    project = models.ForeignKey("model.Project", db_index=True)
+    user = models.ForeignKey("model.User", db_index=True)
     role = models.ForeignKey(Role)
 
     def __unicode__(self):
@@ -104,16 +90,18 @@ class ProjectRole(AmcatModel):
 
     class Meta():
         db_table = 'projects_users_roles'
-        unique_together = ("project", "user", "role")
+        unique_together = ("project", "user")
 
     def can_update(self, user):
-        return user.haspriv('add_user', self.project)
+        return user.haspriv('manage_project_users', self.project)
+
+    def can_delete(self, user):
+        return user.haspriv('manage_project_users', self.project)
 
 class Privilege(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='privilege_id')
 
     label = models.CharField(max_length=50)
-    projectlevel = models.BooleanField()
     role = models.ForeignKey(Role)
 
     def __unicode__(self):

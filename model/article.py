@@ -27,6 +27,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 from amcat.tools.model import AmcatModel
 
 from amcat.model.project import Project
+from amcat.model.authorisation import Role
 from amcat.model.medium import Medium
 from amcat.model.sentence import Sentence
 
@@ -53,23 +54,23 @@ class Article(AmcatModel):
     """
     id = models.IntegerField(primary_key=True, db_column="article_id")
 
-    date = models.DateTimeField()
+    date = models.DateTimeField(db_index=True)
     section = models.CharField(null=True, max_length=80)
     pagenr = models.IntegerField(null=True)
-    headline = models.CharField(max_length=200)
+    headline = models.CharField(max_length=200, db_index=True)
     byline = models.TextField(null=True, max_length=200)
     length = models.IntegerField()
     metastring = models.TextField(null=True)
-    url = models.URLField(null=True)
+    url = models.URLField(null=True, db_index=True)
     externalid = models.IntegerField(null=True)
 
     sets = models.ManyToManyField("model.Set", db_table="sets_articles")
     
     text = models.TextField()
 
-    parent = models.ForeignKey("self", null=True, db_column="parent_article_id")
-    project = models.ForeignKey(Project)
-    medium = models.ForeignKey(Medium)
+    parent = models.ForeignKey("self", null=True, db_column="parent_article_id", db_index=True)
+    project = models.ForeignKey(Project, db_index=True)
+    medium = models.ForeignKey(Medium, db_index=True)
 
     def __unicode__(self):
         return self.headline
@@ -102,9 +103,16 @@ class Article(AmcatModel):
 
     ## Auth ##
     def can_read(self, user):
-        if self.project in user.projects: return True
-        if user.roles.filter(label='admin'): return True
-
-        if user.projectrole_set.filter(project__sets__article=self):
+        if user.is_superuser:
             return True
+
+        # Check default role on project
+        read_meta = model.authorisation.Role.objects.get(label='metareader', projectlevel=True)
+        if self.project.guest_role.id >= read_meta.id:
+            return True
+
+        # Check users role on project
+        if user.projectrole_set.filter(project__sets__article=self, role__id__gt=read_meta.id):
+            return True
+
         return False

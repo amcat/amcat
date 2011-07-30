@@ -39,6 +39,8 @@ class Project(AmcatModel):
                                     related_name='inserted_project',
                                     editable=False)
 
+    guest_role = models.ForeignKey("model.Role")
+
     def __unicode__(self):
         return self.name
 

@@ -47,11 +47,15 @@ class Affiliation(AmcatModel):
         db_table = 'affiliations'   
         ordering = ['name']
 
+    def can_update(self, user):
+        return user.haspriv('manage_users')
+
 class User(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='user_id', editable=False)
 
     username = models.SlugField(max_length=50, unique=True, editable=False,
-                                help_text="Only letters, digits and underscores are allowed.")
+                                help_text="Only letters, digits and underscores are allowed.",
+                                db_index=True)
 
     fullname = models.CharField(max_length=100, verbose_name="Full name")
     active = models.BooleanField(default=True)
@@ -59,7 +63,11 @@ class User(AmcatModel):
 
     affiliation = models.ForeignKey(Affiliation)
     language = models.ForeignKey(Language, default=1)
-    roles = models.ManyToManyField(auth.Role, db_table="users_roles")
+    role = models.ForeignKey(auth.Role, null=False, default=0)
+
+    def delete(self, **kwargs):
+        self.active = False
+        super(User, self).save(**kwargs)
     
     def __unicode__(self):
         return self.username
@@ -74,14 +82,18 @@ class User(AmcatModel):
 
     ### Auth ###
     def can_read(self, user):
-        return (user == self or user.haspriv('view_all_users'))
+        return (user == self or
+                user.haspriv('view_users') or
+                (user.affiliation == self.affiliation and user.haspriv('view_users_same_affiliation')))
 
     def can_update(self, user):
-        return (user == self or user.haspriv('update_user'))
+        return (user == self or
+                user.haspriv('manage_users') or
+                (user.affiliation == self.affiliation and user.haspriv('manage_users_same_affiliation')))
 
     @classmethod
-    def can_add(cls, user):
-        return user.haspriv('add_user')
+    def can_create(cls, user):
+        return user.haspriv('manage_users')
 
     ### Mimic Django-functions ###
     def set_password(self, raw_password):
@@ -99,15 +111,6 @@ class User(AmcatModel):
     def has_perm(self, perm):
         return self.haspriv(perm)
 
-    ### Custom ###
-    def get_roles(self, project=None):
-        if project is None:
-            return self.roles.all()
-        return (r.role for r in self.projectrole_set.all() if r.project==project)
-
-        # Alternatively (if above is too slow):
-        # return (r.role for r in auth.ProjectRole.objects.filter(project=project, user=user))
-
     def haspriv(self, privilege, onproject=None):
         """
         @type privilege: Privilege object, id, or str
@@ -121,6 +124,10 @@ class User(AmcatModel):
         except auth.AccessDenied:
             return False    
         return True
+
+    @property
+    def is_superuser(self):
+        return (self.role.id == auth.ADMIN_ROLE)
 
     @classmethod
     def create_user(cls, username, fullname, password, email, affiliation, language, using=DEFAULT_DB_ALIAS):

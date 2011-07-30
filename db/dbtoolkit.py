@@ -116,7 +116,6 @@ class PostgreSQL(Database):
 
         return True
 
-    @transaction.commit_on_success
     def set_password(self, user, password):
         SQL = "ALTER USER %s WITH PASSWORD %s"
         md5pass = self.hash_password(user, password)
@@ -127,7 +126,7 @@ class PostgreSQL(Database):
 
         cache.delete(PASSWORD_CACHE % user.username)
 
-    @transaction.commit_on_success
+    @transaction.commit_manually
     def create_user(self, username, password):
         SQL = "CREATE USER %s WITH PASSWORD "
 
@@ -136,16 +135,16 @@ class PostgreSQL(Database):
         #
         # See: http://stackoverflow.com/questions/3382234/python-adds-e-to-string
         #
-        # The regular expression check `username` for anomalies.
+        # The regular expression checks `username` for anomalies.
         import re; ure = re.compile('^[a-zA-Z][a-zA-Z0-9_]+$')
 
         if not ure.match(username):
             raise ValueError("This username is not allowed!")
 
-        with transaction.commit_manually(using=self.using):
-            SQL = (SQL % username) + " %s"
-            self.cursor.execute(SQL, [password,])
-            transaction.commit()
+        #with transaction.commit_manually(using=self.using):
+        SQL = (SQL % username) + " %s"
+        self.cursor.execute(SQL, [password,])
+        transaction.commit()
         
 
 
