@@ -107,12 +107,12 @@ class Article(AmcatModel):
             return True
 
         # Check default role on project
-        read_meta = model.authorisation.Role.objects.get(label='metareader', projectlevel=True)
+        read_meta = Role.objects.get(label='metareader', projectlevel=True)
         if self.project.guest_role.id >= read_meta.id:
             return True
 
         # Check users role on project
-        if user.projectrole_set.filter(project__sets__article=self, role__id__gt=read_meta.id):
+        if user.projectrole_set.filter(project__set__article=self, role__id__gt=read_meta.id):
             return True
 
         return False

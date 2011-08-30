@@ -27,6 +27,7 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools import toolkit
 from amcat.model.language import Language
+from amcat.model.ontology.tree import Tree
 
 from datetime import datetime
 
@@ -34,33 +35,17 @@ import logging; log = logging.getLogger(__name__)
 
 PARTYMEMBER_FUNCTIONID = 0
 
-class Function(AmcatModel):
-    object = models.ForeignKey(Object)
 
-    functionid = models.SmallIntegerField()
-    fromdate = models.DateField()
-    todate = models.DateField()
-
-    office = models.ForeignKey(Object, db_column='office_object_id')
-
-    def __unicode__(self):
-        return self.office
-
-    class Meta():
-        db_table = 'objects_functions'
-        app_label = 'ontology'
-        unique_together = ("objectid", "functionid", "office_objectid", "fromdate")
-    
-def strmaker():
-    return lambda obj, val: val
+# def strmaker():
+    # return lambda obj, val: val
     
 class Object(AmcatModel):
     id = models.IntegerField(primary_key=True, db_column='object_id')
     
-    functions = ForeignKey(Function)
-    trees  = ForeignKey(LB("Tree", sub="ontology"), table="trees_objects", distinct=True)
+    #functions = ForeignKey(Function) # TODO: create reverse in Function for this
+    trees  = models.ForeignKey(Tree, table="trees_objects", distinct=True)
 
-    labels = ForeignKey(MultiLB(LB("Language"), strmaker),
+    labels = models.ForeignKey(Language,
                          table="labels", getcolumn=("languageid", "label"),
                          sequencetype=dict)
 
@@ -175,6 +160,24 @@ class Object(AmcatModel):
             if type(kw) == str: kw = kw.decode('latin-1')
             return kw.replace("\n"," ")
 
+            
+class Function(AmcatModel):
+    object = models.ForeignKey(Object)
+
+    functionid = models.SmallIntegerField()
+    fromdate = models.DateField()
+    todate = models.DateField()
+
+    office = models.ForeignKey(Object, db_column='office_object_id')
+
+    def __unicode__(self):
+        return self.office
+
+    class Meta():
+        db_table = 'objects_functions'
+        app_label = 'ontology'
+        unique_together = ("objectid", "functionid", "office_objectid", "fromdate")
+    
     
 def function2conds(function):
     officeid = function.office.id
