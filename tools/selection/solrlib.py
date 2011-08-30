@@ -56,10 +56,16 @@ def createFilters(form):
     startDateTime = form['startDate'].strftime('%Y-%m-%dT00:00:00.000Z') if 'startDate' in form else '*'
     endDateTime = form['endDate'].strftime('%Y-%m-%dT00:00:00.000Z') if 'endDate' in form else '*'
     result = []
-    if startDateTime != '*' and endDateTime != '*': # if at least one of the 2 is a date
+    if startDateTime != '*' or endDateTime != '*': # if at least one of the 2 is a date
         result.append('date:[%s TO %s]' % (startDateTime, endDateTime))
     if 'mediums' in form:
         mediumidQuery = ('mediumid:%d' % m.id for m in form['mediums'])
         result.append(' OR '.join(mediumidQuery))
+    if 'sets' in form:
+        setsQuery = ('sets:%d' % s.id for s in form['sets'])
+        result.append(' OR '.join(setsQuery))
+    
+    projectQuery = ('projectid:%d' % p.id for p in form['projects'])
+    result.append(' OR '.join(projectQuery))
     return result
     
