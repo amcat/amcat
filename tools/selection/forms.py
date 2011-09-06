@@ -41,9 +41,9 @@ class AggregationForm(forms.Form):
         return cleanedData
     
 class ListForm(forms.Form):
-    detailed = forms.BooleanField(initial=False)
-    start = forms.IntegerField(initial=0, min_value=0)
-    count = forms.IntegerField(initial=100, min_value=1, max_value=10000)
+    detailed = forms.BooleanField(initial=False, required=False)
+    start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput)
+    count = forms.IntegerField(initial=100, min_value=1, max_value=10000, widget=forms.HiddenInput)
 
     
 class SaveAsSetForm(forms.Form):
