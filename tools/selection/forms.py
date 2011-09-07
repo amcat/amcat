@@ -32,8 +32,9 @@ from amcat.model.authorisation import Role, ProjectRole
     
 class AggregationForm(forms.Form):
     xAxis = forms.ChoiceField(choices=(('date', 'Date'), ('medium', 'Medium')))
-    yAxis = forms.ChoiceField(choices=(('total', 'Total'), ('searchTerm', 'Search Term'), ('medium', 'Medium')))
-    dateInterval = forms.ChoiceField(choices=(('day', 'Day'), ('week', 'Week'), ('month', 'Month'), ('quarter', 'Quarter'), ('year', 'Year')))
+    yAxis = forms.ChoiceField(choices=(('total', 'Total'), ('searchTerm', 'Search Term'), ('medium', 'Medium')), initial='medium')
+    dateInterval = forms.ChoiceField(choices=(('day', 'Day'), ('week', 'Week'), ('month', 'Month'), ('quarter', 'Quarter'), ('year', 'Year')), initial='month')
+    output = forms.ChoiceField(choices=(('table', 'Table'), ('graph','Graph')),initial='table')
     
     def clean(self):
         cleanedData = self.cleaned_data

@@ -54,11 +54,12 @@ class WebScript(object):
     def __init__(self, generalForm, ownForm):
         self.generalForm = generalForm
         self.ownForm = ownForm
+        self.isIndexSearch = generalForm.cleaned_data['useSolr'] == True
         
     def getArticles(self):
         """ returns an iterable of articles, when Solr is used, including highlighting """
         form = self.generalForm
-        if form.cleaned_data['useSolr'] == False: # make database query
+        if self.isIndexSearch == False: # make database query
             return amcat.tools.selection.database.getQuerySet(**form.cleaned_data)
         else:
             return amcat.tools.selection.solrlib.highlight(form.cleaned_data['query'], filters=amcat.tools.selection.solrlib.createFilters(form.cleaned_data))
@@ -66,7 +67,7 @@ class WebScript(object):
     def getAggregates(self):
         form = self.generalForm
         ownForm = self.ownForm
-        if form.cleaned_data['useSolr'] == False: # make database query
+        if self.isIndexSearch == False: # make database query
             queryset = amcat.tools.selection.database.getQuerySet(**form.cleaned_data)
             xAxis = ownForm.cleaned_data['xAxis']
             yAxis = ownForm.cleaned_data['yAxis']
@@ -119,8 +120,11 @@ class WebScript(object):
         articles = articles[:50]
         return render_to_string('navigator/selection/articlelist.html', { 'articles': articles })
         
+       
         
-    def outputGraph(self, table):
+        
+        
+    def outputTable(self, table, title=None):
         #return render_to_string('navigator/selection/table.html', { 'table': table })
         columns = sorted(table.getColumns(), key=lambda x:x.id if hasattr(x,'id') else x)
         columnsJson = simplejson.dumps([{'mDataProp':'[title]','sTitle':'', 'sType':'objid', 'sWidth':'100px'}] + [{'mDataProp':get_key(col),'sTitle':col, 'sWidth':'70px'} for col in columns], default=encode_json_medium)
@@ -130,72 +134,24 @@ class WebScript(object):
             rowJson['[title]'] = row
             dataJson.append(rowJson)
         dataJson = simplejson.dumps(dataJson, default=encode_json_medium)
-            
         
+        return render_to_string('navigator/selection/tableoutput.html', { 'dataJson':dataJson, 'columnsJson':columnsJson, 'title':title, 'outputType':'table', 'dateType':'month', 'aggregationType':'article'})
         
-        
-    def outputTable(self, table):
-        #return render_to_string('navigator/selection/table.html', { 'table': table })
-        columns = sorted(table.getColumns(), key=lambda x:x.id if hasattr(x,'id') else x)
-        columnsJson = simplejson.dumps([{'mDataProp':'[title]','sTitle':'', 'sType':'objid', 'sWidth':'100px'}] + [{'mDataProp':get_key(col),'sTitle':col, 'sWidth':'70px'} for col in columns], default=encode_json_medium)
-        dataJson = []
-        for row in table.getRows():
-            rowJson = {get_key(col):table.getValue(row, col) for col in columns}
-            rowJson['[title]'] = row
-            dataJson.append(rowJson)
-        dataJson = simplejson.dumps(dataJson, default=encode_json_medium)
-            
-        
-        return """
-        <table id="output-table"></table>
-        <script type="text/javascript">
-            var tableData = %s;
-            var tableColumns = %s;
-            
-            function sortLabels(a, b){ // basic natural sort
-                a = a.toLowerCase();
-                var asplit = a.split(/(\-?[0-9]+)/g);
-                b = b.toLowerCase();
-                var bsplit = b.split(/(\-?[0-9]+)/g);
-                for(var i=0; i<asplit.length; i++){
-                    var diff = parseInt(asplit[i]) - parseInt(bsplit[i]);
-                    if(isNaN(diff)){
-                        diff = asplit[i].localeCompare(bsplit[i]);
-                    }
-                    if(diff != 0){
-                        return diff;
-                    }
-                }
-                return 0;
-            }
-            
-            jQuery.fn.dataTableExt.oSort['objid-asc']  = function(a,b) {
-                return sortLabels(a,b);
-            };
-            jQuery.fn.dataTableExt.oSort['objid-desc']  = function(a,b) {
-                return sortLabels(b,a);
-            };
-            
-            $(document).ready(function(){
-                $('#output-table').dataTable( {
-                    "aaData": tableData,
-                    "aoColumns": tableColumns,
-                    "bPaginate": false,
-                    "bLengthChange": false,
-                    "bFilter": false,
-                    "bSort": true,
-                    "bInfo": false
-                } );
-            });
-            
-            
-
-        </script>
-        """ % (dataJson, columnsJson)
         
     
-class ShowList(WebScript):
-    name = "Show list"
+class ShowSummary(WebScript):
+    name = "Summary"
+    template = None
+    form = forms.ListForm
+    #displayLocation = DISPLAY_IN_MAIN_FORM
+    
+    def run(self):
+        articles = self.getArticles()
+        return self.outputArticleList(articles)
+        
+    
+class ShowArticleTable(WebScript):
+    name = "Article Table"
     template = None
     form = forms.ListForm
     #displayLocation = DISPLAY_IN_MAIN_FORM
@@ -205,15 +161,18 @@ class ShowList(WebScript):
         return self.outputArticleList(articles)
         
         
-class ShowTable(WebScript):
-    name = "Show table"
+class ShowAggregation(WebScript):
+    name = "Aggregation"
     template = "navigator/selection/tableform.html"
     form = forms.AggregationForm
     #displayLocation = DISPLAY_IN_MAIN_FORM
     
     def run(self):
         aggregateTable = self.getAggregates()
-        return self.outputTable(aggregateTable)
+        title = None
+        if self.isIndexSearch == False:
+            title = 'Article count'
+        return self.outputTable(aggregateTable, title)
     
     
         
