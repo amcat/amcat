@@ -28,13 +28,14 @@ from amcat.model.authorisation import Role, ProjectRole
 
 #from amcat.tools.selection import webscripts
 
-
+class EmptyForm(forms.Form): pass
     
 class AggregationForm(forms.Form):
     xAxis = forms.ChoiceField(choices=(('date', 'Date'), ('medium', 'Medium')))
     yAxis = forms.ChoiceField(choices=(('total', 'Total'), ('searchTerm', 'Search Term'), ('medium', 'Medium')), initial='medium')
     dateInterval = forms.ChoiceField(choices=(('day', 'Day'), ('week', 'Week'), ('month', 'Month'), ('quarter', 'Quarter'), ('year', 'Year')), initial='month')
-    output = forms.ChoiceField(choices=(('table', 'Table'), ('graph','Graph')),initial='table')
+    outputType = forms.ChoiceField(choices=(('table', 'Table'), ('graph','Graph')),initial='table')
+    counterType = forms.ChoiceField(choices=(('numberOfArticles', 'Number of Articles'), ('numberOfHits', 'Number of Hits')), initial='numberOfArticles')
     
     def clean(self):
         cleanedData = self.cleaned_data

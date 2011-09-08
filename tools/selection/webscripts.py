@@ -25,15 +25,18 @@ from django.template.loader import render_to_string
 from django.db import connection
     
 from django.db.models import Sum, Count
-from amcat.tools.table.table3 import DictTable
-from amcat.tools.table.tableoutput import table2html
+from amcat.tools.table.table3 import DictTable, ObjectColumn, ObjectTable
+from amcat.tools.table.tableoutput import yieldtablerows
 from amcat.model.medium import Medium
 
 from django.utils import simplejson
+import time, calendar, datetime
 
 import logging
 log = logging.getLogger(__name__)
 #DISPLAY_IN_MAIN_FORM = 'DisplayInMainForm'
+
+TITLE_COLUMN_NAME = '[title]'
 
 def encode_json_medium(obj):
     if isinstance(obj, Medium):
@@ -113,36 +116,93 @@ class WebScript(object):
             # cursor.execute("SELECT count(%s) FROM articles WHERE projectid IN (%s)", [self.baz])
             # rows = cursor.fetchall()
         else:
-            raise Exception("not implemented yet")
+            #raise Exception("not implemented yet")
+            queries = [x.strip() for x in form.cleaned_data['query'].split('\n') if x.strip()]
+            xAxis = ownForm.cleaned_data['xAxis']
+            yAxis = ownForm.cleaned_data['yAxis']
+            counterType = ownForm.cleaned_data['counterType']
+            dateInterval = ownForm.cleaned_data['dateInterval']
+            return amcat.tools.selection.solrlib.basicAggregate(queries, xAxis, yAxis, counterType, dateInterval, filters=amcat.tools.selection.solrlib.createFilters(form.cleaned_data))
         
         
     def outputArticleList(self, articles):
-        articles = articles[:50]
+        articles = articles[:50] # todo remove limit
         return render_to_string('navigator/selection/articlelist.html', { 'articles': articles })
         
        
+    def outputArticleTable(self, articles):
+        articles = articles[:50] # todo remove limit
         
+        columns = [
+            ObjectColumn("id", lambda a: a.id),
+            ObjectColumn("headline", lambda a: a.headline),#a.highlightedHeadline[0] if hasattr('a', 'highlightedHeadline') else a.headline), # does not work since gets stripped away later
+            ObjectColumn("date", lambda a: a.date.strftime('%Y-%m-%d')),
+            ObjectColumn("medium", lambda a: '%s - %s' % (a.medium.id, a.medium.name) ),
+            ObjectColumn("length", lambda a: a.length)
+        ]
         
+        table = ObjectTable(articles, columns)
+        tablerows = yieldtablerows(table) # helper function needed since Django does not support function calling in templates with 2 parameters...
+        return render_to_string('navigator/selection/articletable.html', { 'table': table, 'tablerows':tablerows })
         
-    def outputTable(self, table, title=None):
+       
+        
+    
+        
+    def outputAggregationTable(self, table, title=None):
         #return render_to_string('navigator/selection/table.html', { 'table': table })
         columns = sorted(table.getColumns(), key=lambda x:x.id if hasattr(x,'id') else x)
-        columnsJson = simplejson.dumps([{'mDataProp':'[title]','sTitle':'', 'sType':'objid', 'sWidth':'100px'}] + [{'mDataProp':get_key(col),'sTitle':col, 'sWidth':'70px'} for col in columns], default=encode_json_medium)
+        columnsJson = simplejson.dumps([{'mDataProp':TITLE_COLUMN_NAME,'sTitle':'', 'sType':'objid', 'sWidth':'100px'}] + 
+                                    [{'mDataProp':get_key(col),'sTitle':col, 'sWidth':'70px'} for col in columns], 
+                                  default=encode_json_medium)
         dataJson = []
         for row in table.getRows():
             rowJson = {get_key(col):table.getValue(row, col) for col in columns}
-            rowJson['[title]'] = row
+            rowJson[TITLE_COLUMN_NAME] = row
             dataJson.append(rowJson)
         dataJson = simplejson.dumps(dataJson, default=encode_json_medium)
         
-        return render_to_string('navigator/selection/tableoutput.html', { 'dataJson':dataJson, 'columnsJson':columnsJson, 'title':title, 'outputType':'table', 'dateType':'month', 'aggregationType':'article'})
+        ownForm = self.ownForm
+        datesDict = {}
+        
+        if ownForm.cleaned_data['xAxis'] == 'date':
+            dates = table.getRows()
+            print dates
+            interval = ownForm.cleaned_data['dateInterval']
+            if interval == 'week':
+                for datestr in dates:
+                    year = datestr.split('-')[0]
+                    week = datestr.split('-')[1]
+                    starttime = datetime.datetime.strptime('%s %s 1' % (year, week), '%Y %W %w')
+                    endtime = datetime.datetime.strptime('%s %s 0' % (year, week), '%Y %W %w')
+                    datesDict[datestr] = [starttime.strftime('%Y-%m-%d'), endtime.strftime('%Y-%m-%d')]
+            elif interval == 'month':
+                for datestr in dates:
+                    year = int(datestr.split('-')[0])
+                    month = int(datestr.split('-')[1])
+                    endday = calendar.monthrange(year, month)[1]
+                    datesDict[datestr] = ['%s-%02d-01' % (year, month), '%s-%02d-%02d' % (year, month, endday) ]
+            elif interval == 'quarter':
+                for datestr in dates:
+                    year = datestr.split('-')[0]
+                    quarter = int(datestr.split('-')[1])
+                    startmonth = ((quarter - 1) * 3 + 1)
+                    endmonth = ((quarter - 1) * 3 + 3)
+                    endday = calendar.monthrange(int(year), endmonth)[1]
+                    datesDict[datestr] = ['%s-%02d-01' % (year, startmonth), '%s-%02d-%02d' % (year, endmonth, endday)]
+                    
+        print datesDict
+        datesDictJson = simplejson.dumps(datesDict)
+        
+        return render_to_string('navigator/selection/tableoutput.html', { 'dataJson':dataJson, 'columnsJson':columnsJson, 'title':title, 
+                                                                'ownForm':ownForm, 'aggregationType':'article', 'datesDict':datesDictJson})
         
         
     
 class ShowSummary(WebScript):
     name = "Summary"
     template = None
-    form = forms.ListForm
+    form = forms.EmptyForm
     #displayLocation = DISPLAY_IN_MAIN_FORM
     
     def run(self):
@@ -158,7 +218,7 @@ class ShowArticleTable(WebScript):
     
     def run(self):
         articles = self.getArticles()
-        return self.outputArticleList(articles)
+        return self.outputArticleTable(articles)
         
         
 class ShowAggregation(WebScript):
@@ -172,7 +232,7 @@ class ShowAggregation(WebScript):
         title = None
         if self.isIndexSearch == False:
             title = 'Article count'
-        return self.outputTable(aggregateTable, title)
+        return self.outputAggregationTable(aggregateTable, title)
     
     
         

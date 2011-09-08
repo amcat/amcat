@@ -5,6 +5,9 @@ Requires solrpy
 """
 import solr
 from amcat.model import article
+from amcat.model import medium
+
+from amcat.tools.table.table3 import DictTable
 
 # class HighlightedArticle(article.Article): not working..
     # highlightedHeadline = None
@@ -41,14 +44,82 @@ def highlight(query, snippets=3, start=0, rows=20, filters=[]):
     return result
         
 def articleids(query, start=0, rows=9999, filters=[]):
+    """get only the articleids for a query"""
     response = createSolrConnection().query(query, fields="id", start=start, rows=rows, fq=filters, score=False)
     #articlesDict = article.Article.objects.defer('text').in_bulk(x['id'] for x in response.results) 
-    return (article.Article(x['id']) for x in response.results)
+    return (article.Article(x['id']) for x in response.results) # todo, change this for db efficiency
     
     
-def aggregate(query, xaxis, yaxis, filters=[]):
+def aggregate(queries, xAxis, yAxis, filters=[]):
+    """aggregate using the Solr aggregation function (facet search)
+    
+    not fully working!!
+    """
     #http://localhost:8983/solr/select?indent=on&q=projectid:291&fl=name&facet=true&facet.field=projectid&facet.field=mediumid&facet.query=projectid:291%20AND%20mediumid:7
-    response = createSolrConnection().query(query, fields="id", facet='true', facet_field='projectid', fq=filters, score=False)
+    
+    #http://localhost:8983/solr/select?indent=on&q=test&fq=projectid:291&fl=name&facet=true&&facet.field=mediumid
+    #facet total by medium: http://localhost:8983/solr/select?indent=on&q=test&fq=projectid:291&fl=id&rows=0&facet=true&facet.field=mediumid
+    table = DictTable(0)
+    if xAxis == 'medium' and yAxis == 'searchTerm':
+        for query in queries:
+            print query
+            response = createSolrConnection().query(query, fields="id", facet='true', facet_field='mediumid', facet_mincount=1, fq=filters, score=False, rows=0)
+            for mediumid, count in response.facet_counts['facet_fields']['mediumid'].items():
+                print mediumid, count
+                m = medium.Medium.objects.get(pk=mediumid)
+                table.addValue(m, query, count)
+    elif xAxis == 'date' and yAxis == 'medium':
+        pass
+    elif xAxis == 'date' and yAxis == 'searchTerm':
+        pass
+    else:
+        raise Exception('%s %s combination not possible' % (xAxis, yAxis))
+    return table
+    
+    
+    
+def dateToInterval(date, interval):
+    if interval == 'day':
+        return date.strftime('%Y-%m-%d')
+    elif interval == 'week':
+        return date.strftime('%Y-%W')
+    elif interval == 'month':
+        return date.strftime('%Y-%m')
+    elif interval == 'quarter':
+        return '%s-%s' % (date.year, (date.month-1)//3 + 1)
+    elif interval == 'year':
+        return date.strftime('%Y')
+    raise Exception('invalid interval')
+        
+    
+def basicAggregate(queries, xAxis, yAxis, counter, dateInterval=None, filters=[]):
+    """aggregate by using a counter"""
+    table = DictTable(0)
+    if xAxis == 'medium' and yAxis == 'searchTerm':
+        for query in queries:
+            response = createSolrConnection().query(query, fields="score,mediumid", fq=filters, rows=1000)
+            for a in response.results:
+                x = str(a['mediumid'])
+                y = query
+                table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
+    elif xAxis == 'date' and yAxis == 'medium':
+        for query in queries:
+            response = createSolrConnection().query(query, fields="score,date,mediumid", fq=filters, rows=1000)
+            for a in response.results:
+                x = dateToInterval(a['date'], dateInterval)
+                y = str(a['mediumid'])
+                table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
+    elif xAxis == 'date' and yAxis == 'searchTerm':
+        for query in queries:
+            response = createSolrConnection().query(query, fields="score,date", fq=filters, rows=1000)
+            for a in response.results:
+                x = dateToInterval(a['date'], dateInterval)
+                y = query
+                table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
+    else:
+        raise Exception('%s %s combination not possible' % (xAxis, yAxis))
+    return table
+            
     
     
 def createFilters(form):

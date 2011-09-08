@@ -174,22 +174,24 @@ class HTMLGenerator(object):
         return {}
     
                        
-
+def yieldtablerows(table):
+    for row in table.getRows():
+        yield [table.getValue(row, col) for col in table.getColumns()]
         
 
 def table2html(table, colnames=None, printRowNames = True):
     table = getTable(table, colnames)
     result = "\n<table border='1'>"
-    result += "\n  <tr>"
+    result += "\n  <thead><tr>"
     if printRowNames: result += "\n    <th></th>"
-    result += "%s\n  </tr>" % "".join("\n    <th>%s</th>" % (col,) for col in table.getColumns())
+    result += "%s\n  </tr></thead><tbody>" % "".join("\n    <th>%s</th>" % (col,) for col in table.getColumns())
     for row in table.getRows():
         result += "\n  <tr>"
         if printRowNames: result += "\n    <th>%s</th>" % row
         
         result += "".join("\n    <td>%s</td>" % table.getValue(row, col) for col in table.getColumns())
         result += "</tr>"
-    result += "\n</table>"
+    result += "\n</tbody></table>"
     return result
 
 ####################### table2csv ###################################
