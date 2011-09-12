@@ -1,3 +1,22 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
 """
 Library that makes it easier to access Solr features as used in Amcat3
 
@@ -18,7 +37,7 @@ def createSolrConnection():
     # create a connection to a solr server
     return solr.SolrConnection('http://localhost:8983/solr')
 
-def highlight(query, snippets=3, start=0, rows=20, filters=[]):
+def highlight(query, snippets=3, start=0, length=20, filters=[]):
     #http://localhost:8983/solr/select/?indent=on&q=des&fl=id,headline,body&hl=true&hl.fl=body,headline&hl.snippets=3&hl.mergeContiguous=true&hl.usePhraseHighlighter=true&hl.highlightMultiTerm=true
     response = createSolrConnection().query(query, 
                     highlight=True, 
@@ -29,7 +48,7 @@ def highlight(query, snippets=3, start=0, rows=20, filters=[]):
                     hl_snippets=snippets,
                     hl_mergeContiguous='true', 
                     start=start, 
-                    rows=rows, 
+                    rows=length, 
                     fq=filters)
     scoresDict = dict((x['id'], int(x['score'])) for x in response.results)
     articleids = map(int, response.highlighting.keys())
@@ -40,6 +59,24 @@ def highlight(query, snippets=3, start=0, rows=20, filters=[]):
         a.highlightedHeadline = highlights.get('headline')
         a.highlightedText = highlights.get('body')
         a.hits = scoresDict[int(articleid)]
+        result.append(a)
+    return result
+    
+    
+def getArticles(query, start=0, length=20, filters=[]):
+    response = createSolrConnection().query(query, 
+                    fields="id,score,body,headline", 
+                    start=start, 
+                    rows=length, 
+                    fq=filters)
+    
+    articleids = [x['id'] for x in response.results]
+    articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
+    result = []
+    for d in response.results:
+        articleid = d['id']
+        a = articlesDict[int(articleid)]
+        a.hits = d['score']
         result.append(a)
     return result
         

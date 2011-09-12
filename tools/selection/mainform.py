@@ -56,8 +56,9 @@ class SelectionForm(forms.Form):
         
         classes = inspect.getmembers(webscripts, inspect.isclass)
         # log.info(classes)
-        # print [x[1].__module__ for x in classes]
-        self.fields['action'].choices = ((classname, ws.name) for classname, ws in classes if ws.__module__.endswith('webscripts'))
+        #print [(ws.__module__,ws.__mro__) for name,ws in classes]
+        self.fields['action'].choices = ((classname, ws.name) for classname, ws in classes if ws.__mro__[1] == webscripts.WebScript)
+        #ws.__module__.startswith('amcat.tools.selection.webscripts'))
         #print self.fields['sets'].queryset
     
     def clean(self):

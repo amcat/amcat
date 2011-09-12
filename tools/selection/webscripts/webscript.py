@@ -17,14 +17,14 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.tools.selection import forms
+#from amcat.tools.selection import forms
 import amcat.tools.selection.database
 import amcat.tools.selection.solrlib
 
 from django.template.loader import render_to_string
 from django.db import connection
     
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Min, Max
 from amcat.tools.table.table3 import DictTable, ObjectColumn, ObjectTable
 from amcat.tools.table.tableoutput import yieldtablerows
 from amcat.model.medium import Medium
@@ -48,6 +48,13 @@ def get_key(obj):
         return obj.id
     return obj
     
+class ArticleSetStatistics(object):
+    def __init__(self, articleCount=None, firstDate=None, lastDate=None, mediums=None):
+        self.articleCount = articleCount
+        self.firstDate = firstDate
+        self.lastDate = lastDate
+        self.mediums = mediums
+    
 class WebScript(object):
     name = None # the name of this webscript
     template = None # special markup to display the form
@@ -59,13 +66,33 @@ class WebScript(object):
         self.ownForm = ownForm
         self.isIndexSearch = generalForm.cleaned_data['useSolr'] == True
         
-    def getArticles(self):
+    def getStatistics(self):
+        form = self.generalForm
+        s = ArticleSetStatistics()
+        if self.isIndexSearch == False: # make database query
+            qs = amcat.tools.selection.database.getQuerySet(**form.cleaned_data)
+            s.articleCount = qs.count()
+            result = qs.aggregate(firstDate=Min('date'), lastDate=Max('date'))
+            s.firstDate = result['firstDate']
+            s.lastDate = result['lastDate']
+            mediumids = [x['medium_id'] for x in qs.values('medium_id').distinct()]
+            s.mediums = sorted(Medium.objects.in_bulk(mediumids).values()) # TODO: there must be a more effcient way to get all distinct medium objects...
+            #print s.mediums
+            
+        else:
+            pass
+        return s
+        
+    def getArticles(self, start=0, length=30, highlight=True):
         """ returns an iterable of articles, when Solr is used, including highlighting """
         form = self.generalForm
         if self.isIndexSearch == False: # make database query
-            return amcat.tools.selection.database.getQuerySet(**form.cleaned_data)
+            return amcat.tools.selection.database.getQuerySet(**form.cleaned_data)[start:length].select_related('medium')
         else:
-            return amcat.tools.selection.solrlib.highlight(form.cleaned_data['query'], filters=amcat.tools.selection.solrlib.createFilters(form.cleaned_data))
+            if highlight:
+                return amcat.tools.selection.solrlib.highlight(form.cleaned_data['query'], start=start, length=length, filters=amcat.tools.selection.solrlib.createFilters(form.cleaned_data))
+            else:
+                return amcat.tools.selection.solrlib.getArticles(form.cleaned_data['query'], start=start, length=length, filters=amcat.tools.selection.solrlib.createFilters(form.cleaned_data))
         
     def getAggregates(self):
         form = self.generalForm
@@ -77,7 +104,7 @@ class WebScript(object):
             if xAxis == 'date':
                 dateInterval = ownForm.cleaned_data['dateInterval']
                 dateStrDict = {'day':'YYYY-MM-DD', 'week':'YYYY-WW', 'month':'YYYY-MM', 'quarter':'YYYY-Q', 'year':'YYYY'}
-                xSql = "to_char(date, '%s')" % dateStrDict[dateInterval]
+                xSql = "to_char(date, '%s')" % dateStrDict[dateInterval] # notice: this might be Postgres specific SQL..
             elif xAxis == 'medium':
                 xSql = 'medium_id'
             else:
@@ -125,13 +152,13 @@ class WebScript(object):
             return amcat.tools.selection.solrlib.basicAggregate(queries, xAxis, yAxis, counterType, dateInterval, filters=amcat.tools.selection.solrlib.createFilters(form.cleaned_data))
         
         
-    def outputArticleList(self, articles):
-        articles = articles[:50] # todo remove limit
-        return render_to_string('navigator/selection/articlelist.html', { 'articles': articles })
+    def outputArticleSummary(self, articles, stats=None):
+        #articles = articles[:50] # todo remove limit
+        return render_to_string('navigator/selection/articlesummary.html', { 'articles': articles, 'stats':stats })
         
        
     def outputArticleTable(self, articles):
-        articles = articles[:50] # todo remove limit
+        #articles = articles[:50] # todo remove limit
         
         columns = [
             ObjectColumn("id", lambda a: a.id),
@@ -197,65 +224,3 @@ class WebScript(object):
         return render_to_string('navigator/selection/tableoutput.html', { 'dataJson':dataJson, 'columnsJson':columnsJson, 'title':title, 
                                                                 'ownForm':ownForm, 'aggregationType':'article', 'datesDict':datesDictJson})
         
-        
-    
-class ShowSummary(WebScript):
-    name = "Summary"
-    template = None
-    form = forms.EmptyForm
-    #displayLocation = DISPLAY_IN_MAIN_FORM
-    
-    def run(self):
-        articles = self.getArticles()
-        return self.outputArticleList(articles)
-        
-    
-class ShowArticleTable(WebScript):
-    name = "Article Table"
-    template = None
-    form = forms.ListForm
-    #displayLocation = DISPLAY_IN_MAIN_FORM
-    
-    def run(self):
-        articles = self.getArticles()
-        return self.outputArticleTable(articles)
-        
-        
-class ShowAggregation(WebScript):
-    name = "Aggregation"
-    template = "navigator/selection/tableform.html"
-    form = forms.AggregationForm
-    #displayLocation = DISPLAY_IN_MAIN_FORM
-    
-    def run(self):
-        aggregateTable = self.getAggregates()
-        title = None
-        if self.isIndexSearch == False:
-            title = 'Article count'
-        return self.outputAggregationTable(aggregateTable, title)
-    
-    
-        
-class ShowGraph(WebScript):
-    name = "Show graph"
-    template = "navigator/selection/tableform.html"
-    form = forms.AggregationForm
-    #displayLocation = DISPLAY_IN_MAIN_FORM
-    
-    def run(self):
-        aggregateTable = self.getAggregates()
-        return self.outputGraph(aggregateTable)
-    
-    
-        
-
-
-class SaveAsSet(WebScript):
-    name = "Save as set"
-    template = None
-    form = forms.SaveAsSetForm
-    displayLocation = 'ShowTable'
-    
-    def run(self):
-        pass
-    
