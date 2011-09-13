@@ -19,6 +19,9 @@
 
 from django import forms
 from amcat.tools.selection.webscripts.webscript import WebScript
+from amcat.tools.table.table3 import ObjectColumn, ObjectTable
+from amcat.tools.table.tableoutput import yieldtablerows
+from django.template.loader import render_to_string
 
 class ListForm(forms.Form):
     detailed = forms.BooleanField(initial=False, required=False)
@@ -36,3 +39,21 @@ class ShowArticleTable(WebScript):
         articles = self.getArticles(start=0, length=100, highlight=False)
         return self.outputArticleTable(articles)
         
+    
+       
+    def outputArticleTable(self, articles):
+        #articles = articles[:50] # todo remove limit
+        
+        columns = [
+            ObjectColumn("id", lambda a: a.id),
+            ObjectColumn("headline", lambda a: a.headline),#a.highlightedHeadline[0] if hasattr('a', 'highlightedHeadline') else a.headline), # does not work since gets stripped away later
+            ObjectColumn("date", lambda a: a.date.strftime('%Y-%m-%d')),
+            ObjectColumn("medium", lambda a: '%s - %s' % (a.medium.id, a.medium.name) ),
+            ObjectColumn("length", lambda a: a.length)
+        ]
+        
+        table = ObjectTable(articles, columns)
+        tablerows = yieldtablerows(table) # helper function needed since Django does not support function calling in templates with 2 parameters...
+        return render_to_string('navigator/selection/articletable.html', { 'table': table, 'tablerows':tablerows })
+        
+       

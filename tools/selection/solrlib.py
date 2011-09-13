@@ -65,7 +65,7 @@ def highlight(query, snippets=3, start=0, length=20, filters=[]):
     
 def getArticles(query, start=0, length=20, filters=[]):
     response = createSolrConnection().query(query, 
-                    fields="id,score,body,headline", 
+                    fields="id,score", 
                     start=start, 
                     rows=length, 
                     fq=filters)
@@ -79,6 +79,40 @@ def getArticles(query, start=0, length=20, filters=[]):
         a.hits = d['score']
         result.append(a)
     return result
+    
+def getStats(statsObj, query, filters=[]):
+    response = createSolrConnection().query(query, 
+                    fields="date", 
+                    start=0, 
+                    rows=1, 
+                    sort='date asc',
+                    fq=filters)
+                    
+    statsObj.articleCount = response.numFound
+    
+    if response.numFound == 0:
+        return
+        
+    statsObj.firstDate = response.results[0]['date']
+    
+    response = createSolrConnection().query(query, 
+                    fields="date", 
+                    start=0, 
+                    rows=1, 
+                    sort='date desc',
+                    fq=filters)
+    
+    statsObj.lastDate = response.results[0]['date']
+    
+    
+    response = createSolrConnection().query(query, fields="id", facet='true', facet_field='mediumid', facet_mincount=1, fq=filters, score=False, rows=0)
+    # print response.__dict__
+    mediums = []
+    for mediumid, count in response.facet_counts['facet_fields']['mediumid'].items():
+        m = medium.Medium.objects.get(pk=mediumid)
+        mediums.append(m)
+    statsObj.mediums = sorted(mediums, key=lambda x:x.id)
+    
         
 def articleids(query, start=0, rows=9999, filters=[]):
     """get only the articleids for a query"""
@@ -127,7 +161,11 @@ def dateToInterval(date, interval):
     elif interval == 'year':
         return date.strftime('%Y')
     raise Exception('invalid interval')
-        
+    
+mediumCache = {}    
+def mediumidToObj(mediumid):
+    return mediumCache.setdefault(mediumid, medium.Medium.objects.get(pk=mediumid))
+    
     
 def basicAggregate(queries, xAxis, yAxis, counter, dateInterval=None, filters=[]):
     """aggregate by using a counter"""
@@ -135,20 +173,29 @@ def basicAggregate(queries, xAxis, yAxis, counter, dateInterval=None, filters=[]
     if xAxis == 'medium' and yAxis == 'searchTerm':
         for query in queries:
             response = createSolrConnection().query(query, fields="score,mediumid", fq=filters, rows=1000)
+            table.columns.add(query)
             for a in response.results:
-                x = str(a['mediumid'])
+                x = mediumidToObj(a['mediumid'])
                 y = query
+                table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
+    if xAxis == 'medium' and yAxis == 'total':
+        for query in queries:
+            response = createSolrConnection().query(query, fields="score,mediumid", fq=filters, rows=1000)
+            for a in response.results:
+                x = mediumidToObj(a['mediumid'])
+                y = '[total]'
                 table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
     elif xAxis == 'date' and yAxis == 'medium':
         for query in queries:
             response = createSolrConnection().query(query, fields="score,date,mediumid", fq=filters, rows=1000)
             for a in response.results:
                 x = dateToInterval(a['date'], dateInterval)
-                y = str(a['mediumid'])
+                y = mediumidToObj(a['mediumid'])
                 table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
     elif xAxis == 'date' and yAxis == 'searchTerm':
         for query in queries:
             response = createSolrConnection().query(query, fields="score,date", fq=filters, rows=1000)
+            table.columns.add(query)
             for a in response.results:
                 x = dateToInterval(a['date'], dateInterval)
                 y = query
