@@ -28,12 +28,16 @@ from amcat.model.authorisation import Role, ProjectRole
 
 from amcat.tools.selection import webscripts
 
-import inspect
+#import inspect
 import logging
 log = logging.getLogger(__name__)
 
 
 class ModelMultipleChoiceFieldWithIdLabel(forms.ModelMultipleChoiceField):
+    def label_from_instance(self, obj):
+        return "%s - %s" % (obj.id, obj.name)
+        
+class ModelChoiceFieldWithIdLabel(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return "%s - %s" % (obj.id, obj.name)
 
@@ -54,12 +58,7 @@ class SelectionForm(forms.Form):
         self.fields['sets'].queryset = Set.objects.filter(project__in=projectids)
         self.fields['mediums'].queryset = Medium.objects.filter(article__project__in=projectids).distinct()
         
-        classes = inspect.getmembers(webscripts, inspect.isclass)
-        # log.info(classes)
-        #print [(ws.__module__,ws.__mro__) for name,ws in classes]
-        self.fields['action'].choices = ((classname, ws.name) for classname, ws in classes if ws.__mro__[1] == webscripts.WebScript)
-        #ws.__module__.startswith('amcat.tools.selection.webscripts'))
-        #print self.fields['sets'].queryset
+        self.fields['action'].choices = ((ws.__name__, ws.name) for ws in webscripts.allScripts)#((classname, ws.name) for classname, ws in webscriptClasses )
     
     def clean(self):
         cleanedData = self.cleaned_data

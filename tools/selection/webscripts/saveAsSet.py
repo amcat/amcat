@@ -20,6 +20,7 @@
 from django import forms
 from amcat.tools.selection.webscripts.webscript import WebScript
 from amcat.model.project import Project
+from amcat.model.set import Set
 
     
 class SaveAsSetForm(forms.Form):
@@ -30,7 +31,19 @@ class SaveAsSet(WebScript):
     name = "Save as set"
     template = None
     form = SaveAsSetForm
-    displayLocation = 'ShowTable'
+    displayLocation = ('ShowSummary', 'ShowArticleTable')
+    id = 'SaveAsSet'
     
     def run(self):
-        pass
+        articles = self.getArticles()
+        setname = self.ownForm.cleaned_data['setname']
+        project = self.ownForm.cleaned_data['project']
+        s = Set(name=setname, project=project)
+        s.articles = articles
+        s.save()
+        return render_to_string('navigator/selection/saveAsSet.html', { 'set':s})
+        
+        
+        
+        
+        

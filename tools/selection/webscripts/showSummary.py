@@ -8,7 +8,7 @@ class ShowSummary(WebScript):
     name = "Summary"
     template = None
     form = EmptyForm
-    #displayLocation = DISPLAY_IN_MAIN_FORM
+    
     
     def run(self):
         articles = self.getArticles(start=0, length=30, highlight=True)
@@ -17,6 +17,6 @@ class ShowSummary(WebScript):
         
     
     def outputArticleSummary(self, articles, stats=None):
-        #articles = articles[:50] # todo remove limit
-        return render_to_string('navigator/selection/articlesummary.html', { 'articles': articles, 'stats':stats })
+        actions = self.getActions()
+        return render_to_string('navigator/selection/articlesummary.html', { 'articles': articles, 'stats':stats, 'actions':actions, 'generalForm':self.generalForm, 'ownForm':self.ownForm})
         

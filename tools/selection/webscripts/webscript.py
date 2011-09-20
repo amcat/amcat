@@ -22,15 +22,16 @@ import amcat.tools.selection.database
 import amcat.tools.selection.solrlib
 from django.db.models import Min, Max
 from amcat.model.medium import Medium
-from django.db import connection
+#from django.db import connection
+from django.template.loader import render_to_string
 import time
 
 import logging
 log = logging.getLogger(__name__)
 #DISPLAY_IN_MAIN_FORM = 'DisplayInMainForm'
 
-
-
+import amcat.tools.selection.webscripts
+#from amcat.tools.selection.mainform import SelectionForm
 
     
 class ArticleSetStatistics(object):
@@ -45,12 +46,27 @@ class WebScript(object):
     template = None # special markup to display the form
     form = None # fields specific for this webscript
     displayLocation = None # should be (a list of) another WebScript name that is displayed in the main form
+    id = None # id used in webforms
     
     def __init__(self, generalForm, ownForm):
+        # print type(generalForm)
+        # if type(generalForm) == dict:
+            # generalForm = SelectionForm(generalForm)
+        # print generalForm
+        if not generalForm.is_valid():
+            raise Exception('General Form not valid: %s' % generalForm.errors)
         self.generalForm = generalForm
         self.ownForm = ownForm
         self.isIndexSearch = generalForm.cleaned_data['useSolr'] == True
         self.initTime = time.time()
+        
+        
+    @classmethod
+    def formHtml(cls):
+        if cls.form == None:
+            return ''
+        form = cls.form(prefix=cls.__name__)
+        return render_to_string(cls.template, {'form':form}) if cls.template else form.as_p()
         
     def getStatistics(self):
         form = self.generalForm
@@ -81,7 +97,10 @@ class WebScript(object):
             else:
                 return amcat.tools.selection.solrlib.getArticles(form.cleaned_data['query'], start=start, length=length, filters=amcat.tools.selection.solrlib.createFilters(form.cleaned_data))
         
-        
+    def getActions(self):
+        for ws in amcat.tools.selection.webscripts.actionScripts:
+            if self.__class__.__name__ in ws.displayLocation:
+                yield ws.id, ws.name
         
     
         
