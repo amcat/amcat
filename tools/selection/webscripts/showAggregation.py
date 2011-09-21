@@ -175,5 +175,6 @@ class ShowAggregation(WebScript):
         aggregationType = 'hits' if ownForm.cleaned_data['counterType'] == 'numberOfHits' else 'articles'
         
         return render_to_string('navigator/selection/aggregation.html', { 'dataJson':dataJson, 'columnsJson':columnsJson, 'title':title, 
+                                                                'actions':self.getActions(), 
                                                                 'ownForm':ownForm, 'aggregationType':aggregationType, 'datesDict':datesDictJson})
         

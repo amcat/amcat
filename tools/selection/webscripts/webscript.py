@@ -43,10 +43,11 @@ class ArticleSetStatistics(object):
     
 class WebScript(object):
     name = None # the name of this webscript
-    template = None # special markup to display the form
+    template = None # special markup to display the form, filename
     form = None # fields specific for this webscript
     displayLocation = None # should be (a list of) another WebScript name that is displayed in the main form
     id = None # id used in webforms
+    supportedOutputTypes = () # list of output types as string ("html-json" is output for the amcat web interface)
     
     def __init__(self, generalForm, ownForm):
         # print type(generalForm)
@@ -88,6 +89,7 @@ class WebScript(object):
         
     def getArticles(self, start=0, length=30, highlight=True):
         """ returns an iterable of articles, when Solr is used, including highlighting """
+        if length == -1: length = 999999 # unlimited (well, sort of ;)
         form = self.generalForm
         if self.isIndexSearch == False: # make database query
             return amcat.tools.selection.database.getQuerySet(**form.cleaned_data)[start:length].select_related('medium')

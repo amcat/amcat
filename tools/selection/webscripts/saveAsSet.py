@@ -18,6 +18,7 @@
 ###########################################################################
 
 from django import forms
+from django.template.loader import render_to_string
 from amcat.tools.selection.webscripts.webscript import WebScript
 from amcat.model.project import Project
 from amcat.model.set import Set
@@ -35,13 +36,13 @@ class SaveAsSet(WebScript):
     id = 'SaveAsSet'
     
     def run(self):
-        articles = self.getArticles()
+        articles = self.getArticles(start=0, length=-1)
         setname = self.ownForm.cleaned_data['setname']
         project = self.ownForm.cleaned_data['project']
         s = Set(name=setname, project=project)
-        s.articles = articles
-        s.save()
-        return render_to_string('navigator/selection/saveAsSet.html', { 'set':s})
+        # s.save()
+        # s.articles.add(articles)
+        return render_to_string('navigator/selection/saveAsSet.html', {'set':s})
         
         
         

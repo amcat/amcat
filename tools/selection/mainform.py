@@ -50,13 +50,14 @@ class SelectionForm(forms.Form):
     startDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     action = forms.ChoiceField(choices=())
+    output = forms.CharField(required=False)
     
     def __init__(self, *args, **kwargs):
         super(SelectionForm, self).__init__(*args, **kwargs)
         projectids = map(int, args[0].getlist('projects')) # assumed is that the first argument is a QueryDict
         #print args, projectids
         self.fields['sets'].queryset = Set.objects.filter(project__in=projectids)
-        self.fields['mediums'].queryset = Medium.objects.filter(article__project__in=projectids).distinct()
+        self.fields['mediums'].queryset = Medium.objects.filter(article__project__in=projectids).distinct().order_by('pk')
         
         self.fields['action'].choices = ((ws.__name__, ws.name) for ws in webscripts.allScripts)#((classname, ws.name) for classname, ws in webscriptClasses )
     
@@ -80,6 +81,10 @@ class SelectionForm(forms.Form):
             cleanedData['useSolr'] = False
         else:
             cleanedData['useSolr'] = True
+            
+        if 'output' not in cleanedData:
+            cleanedData['output'] = 'json-html'
+            
         return cleanedData
 
     #TODO: only projects assigned to user should be listed

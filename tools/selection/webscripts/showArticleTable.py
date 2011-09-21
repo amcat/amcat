@@ -24,7 +24,7 @@ from amcat.tools.table.tableoutput import yieldtablerows
 from django.template.loader import render_to_string
 
 class ListForm(forms.Form):
-    detailed = forms.BooleanField(initial=False, required=False)
+    #detailed = forms.BooleanField(initial=False, required=False)
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput)
     count = forms.IntegerField(initial=100, min_value=1, max_value=10000, widget=forms.HiddenInput)
 
@@ -54,6 +54,6 @@ class ShowArticleTable(WebScript):
         
         table = ObjectTable(articles, columns)
         tablerows = yieldtablerows(table) # helper function needed since Django does not support function calling in templates with 2 parameters...
-        return render_to_string('navigator/selection/articletable.html', { 'table': table, 'tablerows':tablerows })
+        return render_to_string('navigator/selection/articletable.html', { 'table': table, 'tablerows':tablerows, 'actions':self.getActions()})
         
        
