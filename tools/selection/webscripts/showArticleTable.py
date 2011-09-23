@@ -54,6 +54,6 @@ class ShowArticleTable(WebScript):
         
         table = ObjectTable(articles, columns)
         tablerows = yieldtablerows(table) # helper function needed since Django does not support function calling in templates with 2 parameters...
-        return render_to_string('navigator/selection/articletable.html', { 'table': table, 'tablerows':tablerows, 'actions':self.getActions()})
+        return render_to_string('navigator/selection/articletable.html', { 'table': table, 'tablerows':tablerows, 'actions':self.getActions(), 'generalForm':self.generalForm, 'ownForm':self.ownForm})
         
        

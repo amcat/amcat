@@ -47,7 +47,7 @@ class AggregationForm(forms.Form):
 def encode_json_medium(obj):
     if isinstance(obj, Medium):
         return "%s - %s" % (obj.id, obj.name)
-    raise TypeError("%r is not JSON serializable" % (o,))
+    raise TypeError("%r is not JSON serializable" % (obj,))
     
 def get_key(obj):
     if hasattr(obj, 'id'):
