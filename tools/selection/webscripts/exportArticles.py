@@ -25,6 +25,12 @@ from django.http import HttpResponse
 from amcat.tools.table.table3 import ObjectColumn, ObjectTable
 from amcat.tools.table.tableoutput import table2csv
 import csv
+
+from openpyxl.workbook import Workbook
+from openpyxl.writer.dump_worksheet import ExcelDumpWriter
+import zipfile
+from cStringIO import StringIO
+
     
 class ExportArticles(forms.Form):
     columns = forms.MultipleChoiceField(
@@ -57,7 +63,7 @@ class ExportArticles(WebScript):
     form = ExportArticles
     displayLocation = ('ShowSummary', 'ShowArticleTable')
     id = 'ExportArticles'
-    supportedOutputTypes = ('csv-tab', 'csv-semicolon', 'csv-comma')
+    supportedOutputTypes = ('csv-tab', 'csv-semicolon', 'csv-comma','xlsx')
     
     def run(self):
         length = self.ownForm.cleaned_data['limit']
@@ -70,6 +76,8 @@ class ExportArticles(WebScript):
             textLambda = lambda a:a.text[:31900]
         else:
             textLambda = lambda a:a.text
+        
+        output = self.generalForm.cleaned_data['output']
         
         colDict = { # mapping of names to article object attributes
             'articleid': ObjectColumn("id", lambda a: a.id),
@@ -88,14 +96,15 @@ class ExportArticles(WebScript):
             'headline': ObjectColumn('Headline', lambda a:a.headline),
             'text': ObjectColumn('Article Text', textLambda)
         }
+        if output == 'xlsx':
+            colDict['date'] = ObjectColumn('Date', lambda a: a.date)
         columns = [colDict[col] for col in cols]
         
         table = ObjectTable(articles, columns)
         
-        response = HttpResponse(mimetype='text/csv')
-        response['Content-Disposition'] = 'attachment; filename=exportArticles.csv'
         
-        output = self.generalForm.cleaned_data['output']
+        
+        
         if output == 'csv-tab':
             delimiter = '\t'
         elif output == 'csv-semicolon':
@@ -103,7 +112,27 @@ class ExportArticles(WebScript):
         elif output == 'csv-comma':
             delimiter = ':'
         
-        table2csv(table, csvwriter=csv.writer(response, dialect='excel', delimiter=delimiter), writecolnames=True, writerownames=False, tabseparated=False)
+        if output == 'xlsx':
+            wb = Workbook(optimized_write = True)
+            ws = wb.create_sheet()
+            for row in table.getRows():
+                ws.append([table.getValue(row, column) for column in table.getColumns()])
+            writer = ExcelDumpWriter(wb)
+            response = HttpResponse(mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = 'attachment; filename=exportArticles.xlsx'
+            # need to do a little bit more work here, since the openpyxl library only supports writing to a filename, while we need a buffer here..
+            buffer = StringIO()
+            zf = zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED)
+            writer.write_data(zf)
+            zf.close()
+            buffer.flush()
+            buffervalue = buffer.getvalue()
+            buffer.close()
+            response.write(buffervalue)
+        else:
+            response = HttpResponse(mimetype='text/csv')
+            response['Content-Disposition'] = 'attachment; filename=exportArticles.csv'
+            table2csv(table, csvwriter=csv.writer(response, dialect='excel', delimiter=delimiter), writecolnames=True, writerownames=False, tabseparated=False)
         
         return response
         
