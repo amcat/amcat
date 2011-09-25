@@ -1,3 +1,23 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+
 """
 Interface definition and general functionality for amcat Scripts.
 
@@ -14,6 +34,14 @@ can be moved to more suitable locations in the future
 """
 
 from django import forms
+from django.http import QueryDict
+
+
+class ArticleIterator(object):
+    """
+        Class representing a list of articles that can be iterated over
+    """
+    pass
 
 class Script(object):
     """
@@ -33,9 +61,13 @@ class Script(object):
 
     def __init__(self, options=None, **kargs):
         """Default __init__ validates and stores the options form"""
-        options = _validate_form(self.options_form, options, **kargs)
-        self.options = options.cleaned_data
-        self._options_raw = options
+        if self.options_form == None:
+            self.options = self._options_raw = None
+        else:
+            options = _validate_form(self.options_form, options, **kargs)
+            self.options = options.cleaned_data
+            self._options_raw = options
+        
         
     
     def run(self, input=None):
@@ -43,13 +75,7 @@ class Script(object):
         and should return a result of type output_type or raise an exception"""
         pass
 
-    @classmethod
-    def run_cli(cls):
-        """Handle command line interface invocation of this script"""
-        parser = argument_parser_from_script(cls)
-        args = parser.parse_args()
-        instance = cls(args.__dict__)
-        instance.run(None)
+        
         # TODO: handle input and output in a sensible manner!
     
 def _validate_form(options_form, options, **kargs):
@@ -69,7 +95,7 @@ def _validate_form(options_form, options, **kargs):
     @return: The validated options form
     """
     if not isinstance(options, forms.Form):
-        if isinstance(options, dict):
+        if isinstance(options, dict) or isinstance(options, QueryDict):
             options = options_form(options)
         else:
             if options is not None: kargs['options'] = options
@@ -82,56 +108,3 @@ def _validate_form(options_form, options, **kargs):
         raise ValueError("Invalid or missing options: %r" % options.errors)
     return options
    
-
-###############################################################
-##         Aux method for CLI invocation                     ##
-###############################################################
-
-import argparse
-
-def argument_parser_from_script(script_class):
-    """Create an argparse.ArgumentParser from a Script class object"""
-    parser = argparse.ArgumentParser(description=script_class.__doc__)
-    used_prefixes = set("-h") # keep track of -X options used; -h -> help
-    if script_class.options_form:
-        form = script_class.options_form()
-        for name, field in form.fields.items():
-           add_argument_from_field(parser, name, field) 
-    return parser
-
-def add_argument_from_field(parser, name, field):
-    """
-    Call parser.add_argument with the appropriate parameters
-    to add this django.forms.Field to the argparse.ArgumentParsers parser.
-    """
-    name = name.lower()
-    if field.required and not field.initial: # positional argument
-        argname = [name]
-    else: # optional argument
-        argname = ["--"+name]
-        prefix = "-" + name[0]
-        if prefix not in parser._option_string_actions:
-            argname.append("-"+name[0])
-    # determine help text from label, help_text, and default
-    helpfields = [x for x in [field.label, field.help_text] if x]
-    if field.initial is not None: helpfields.append("Default: %s" % field.initial)
-    help = ". ".join(helpfields)
-    # set type OR action_const as extra arguments depending on type
-    args = {} # flexible parameters to add_argument
-    if isinstance(field, forms.BooleanField) and field.initial is not None:
-        args["action"] = "store_const"
-        args["const"] = not field.initial
-    else:
-        args["type"] = argument_type_from_field(field)
-    parser.add_argument(*argname, help = help, default=field.initial, **args)
-
-
-_FIELD_MAP = {
-    forms.IntegerField : int,
-    forms.BooleanField : bool,
-    }
-def argument_type_from_field(field):
-    """Get the proper python type to parse a command line option"""
-    for (ftype, type) in _FIELD_MAP.iteritems():
-        if isinstance(field, ftype): return type
-    return str
