@@ -135,7 +135,7 @@ class ShowAggregation(WebScript):
                                   default=encode_json_medium)
         dataJson = []
         for row in table.getRows():
-            rowJson = {get_key(col):table.getValue(row, col) for col in columns}
+            rowJson = dict([(get_key(col),table.getValue(row, col)) for col in columns])
             rowJson[TITLE_COLUMN_NAME] = row
             dataJson.append(rowJson)
         dataJson = simplejson.dumps(dataJson, default=encode_json_medium)
