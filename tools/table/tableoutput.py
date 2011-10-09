@@ -2,7 +2,7 @@ from __future__ import with_statement
 from amcat.tools.table import table3
 from amcat.tools import toolkit, idlabel
 from amcat.tools.logging import progress
-import sys, csv, StringIO, traceback
+import sys, csv, StringIO, traceback, json
 
 from amcat.tools.logging import amcatlogging;
 #amcatlogging.debugModule()
@@ -181,6 +181,8 @@ def yieldtablerows(table):
 
 def table2html(table, colnames=None, printRowNames = True):
     table = getTable(table, colnames)
+    if table.rowNamesRequired == True:
+        printRowNames = True
     result = "\n<table border='1'>"
     result += "\n  <thead><tr>"
     if printRowNames: result += "\n    <th></th>"
@@ -202,6 +204,8 @@ def getstr(val):
     if type(val) == unicode: return val.encode('utf-8')
     return str(val)
 
+"""
+commented this code, since it is overwritten by following function anyway..
 def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
               tabseparated=False, monitor=progress.NullMonitor()):
     with monitor.monitored("Exporting to CSV", 100) as pm:
@@ -227,11 +231,13 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
                 values = [writerownames(row)] if writerownames else []
                 values += map(getstr, (table.getValue(row,col) for col in cols))
                 csvwriter.writerow(values)
-
+"""
 
 def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
               tabseparated=False):
     table = getTable(table, colnames)
+    if table.rowNamesRequired == True:
+        writerownames = True
     if csvwriter is None:
         dialect = csv.excel_tab if tabseparated else csv.excel
         csvwriter = csv.writer(outfile, dialect=dialect)
@@ -249,6 +255,20 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
         values += map(getstr, (table.getValue(row,col) for col in cols))
         csvwriter.writerow(values)
 
+        
+def table2json(table, colnames=None, writecolnames=True, writerownames=False):
+    table = getTable(table, colnames)
+    cols = list(table.getColumns())
+    result = []
+    if writecolnames:
+        c = ([""] + cols) if writerownames else cols
+        result.append(c)
+    rows = table.getRows()
+    for row in rows:
+        values = [writerownames(row)] if writerownames else []
+        values += (table.getValue(row,col) for col in cols)
+        result.append(values)
+    return json.dumps(result, default=lambda o:unicode(o), indent=2)
 
 if __name__ == '__main__':
     t = table3.DictTable(default=0)

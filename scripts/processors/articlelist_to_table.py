@@ -18,13 +18,13 @@
 ###########################################################################
 
 from amcat.tools import table
-from amcat.scripts import script
-from amcat.scripts.searchscripts import selection_form
+from amcat.scripts import script, forms
+#import amcat.scripts.forms
 
 
 class ArticleListToTable(script.Script):
     input_type = script.ArticleIterator
-    options_form = selection_form.ArticleColumnsForm
+    options_form = forms.ArticleColumnsForm
     output_type = table.table3.Table
 
 
@@ -34,17 +34,17 @@ class ArticleListToTable(script.Script):
         # else:
         textLambda = lambda a:a.text
         colDict = { # mapping of names to article object attributes
-            'articleid': table.table3.ObjectColumn("id", lambda a: a.id),
+            'article_id': table.table3.ObjectColumn("Article ID", lambda a: a.id),
             'date': table.table3.ObjectColumn('Date', lambda a: a.date),
-            'mediumid': table.table3.ObjectColumn('Medium ID', lambda a:a.medium_id),
-            'mediumname': table.table3.ObjectColumn('Medium Name', lambda a:a.medium.name),
-            'projectid': table.table3.ObjectColumn('Project ID', lambda a:a.project_id),
-            'projectname': table.table3.ObjectColumn('Project Name', lambda a:a.project.name),
+            'medium_id': table.table3.ObjectColumn('Medium ID', lambda a:a.medium_id),
+            'medium_name': table.table3.ObjectColumn('Medium Name', lambda a:a.medium.name),
+            'project_id': table.table3.ObjectColumn('Project ID', lambda a:a.project_id),
+            'project_name': table.table3.ObjectColumn('Project Name', lambda a:a.project.name),
             'pagenr': table.table3.ObjectColumn('Page number', lambda a:a.pagenr),
             'section': table.table3.ObjectColumn('Section', lambda a:a.section),
             'length': table.table3.ObjectColumn('Length', lambda a:a.length),
             'url': table.table3.ObjectColumn('url', lambda a:a.url),
-            'parentid': table.table3.ObjectColumn('Parent Article ID', lambda a:a.parent_id),
+            'parent_id': table.table3.ObjectColumn('Parent Article ID', lambda a:a.parent_id),
             'externalid': table.table3.ObjectColumn('External ID', lambda a:a.externalid),
             'additionalMetadata': table.table3.ObjectColumn('Additional Metadata', lambda a:a.metastring),
             'headline': table.table3.ObjectColumn('Headline', lambda a:a.headline),

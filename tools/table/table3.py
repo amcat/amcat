@@ -58,17 +58,19 @@ class NamedRow(object):
             yield self.table.getValue( self.row, c)
 
 class Table(object):
-    def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc):
+    def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc, rowNamesRequired = False):
         """
         columns and rows can be given or omitted if getColumns/getRows is overridden (default [])
         cellfunc can be given as (row,col)->value, or omitted if gteValue is overridden (default: trivialcellfunc)
+        rowNamesRequired indicates if rownames are required to be printed, in order to have a meaningful table
         """
         self.columns    = isnull(columns, []) 
         self.rows       = isnull(rows, [])
-        self.cellfunc   = cellfunc            
+        self.cellfunc   = cellfunc
+        self.rowNamesRequired = rowNamesRequired
     def getValue(self, row, column):
         result =  self.cellfunc(row, column)
-	return result
+        return result
     def getRows(self):
         return self.rows
     def getNamedRows(self):
@@ -117,9 +119,7 @@ class ObjectTable(Table):
     that has a getCell(row) -> value function
     """
     def __init__(self, rows = None, columns = None):
-        self.rows = rows or []
-        self.columns = columns or []
-        self.cellfunc = _ObjectTableCellFunc
+        Table.__init__(self, columns=columns or [], rows = rows or [], cellfunc = _ObjectTableCellFunc)
     def addColumn(self, col, label=None, **kargs):
         """Add column to Table3 object
         

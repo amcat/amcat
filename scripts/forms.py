@@ -44,22 +44,22 @@ class ModelChoiceFieldWithIdLabel(forms.ModelChoiceField):
 class ArticleColumnsForm(forms.Form):
     columns = forms.MultipleChoiceField( # columns are used to indicate which columns should be loaded from the database (for performance reasons)
         choices=(
-            ('articleid', 'Article ID'),
+            ('article_id', 'Article ID'),
             ('date','Date'),
-            ('mediumid','Medium ID'),
-            ('mediumname','Medium Name'),
-            ('projectid','Project ID'),
-            ('projectname','Project Name'),
+            ('medium_id','Medium ID'),
+            ('medium_name','Medium Name'),
+            ('project_id','Project ID'),
+            ('project_name','Project Name'),
             ('pagenr','Page number'),
             ('section','Section'),
             ('length','Length'),
             ('url','url'),
-            ('parentid','Parent Article ID'),
+            ('parent_id','Parent Article ID'),
             ('externalid','External ID'),
             ('additionalMetadata','Additional Metadata'),
             ('headline','Headline'),
             ('text','Article Text')
-        )
+        ), initial = ('article_id', 'date', 'medium_id', 'medium_name', 'headline')
     )
 
 class SelectionForm(forms.Form):
