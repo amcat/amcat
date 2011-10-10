@@ -35,13 +35,31 @@ can be moved to more suitable locations in the future
 
 from django import forms
 from django.http import QueryDict
-
+from django.utils.datastructures import MergeDict
 
 class ArticleIterator(object):
     """
         Class representing a list of articles that can be iterated over
     """
     pass
+    
+# various output types, that act like a fileObj
+class JsonStream(object): pass
+class CsvStream(object): pass
+class ExcelStream(object): pass
+class HtmlStream(object): pass
+
+class InvalidFormException(Exception):
+    def __init__(self, message, errors):
+        Exception.__init__(self, message)
+        self.errors = errors
+
+
+class ErrorMsg(object):
+    def __init__(self, message, code=None, **kargs):
+        self.message = message
+        self.code = code
+        self.kargs = kargs
 
 class Script(object):
     """
@@ -95,7 +113,7 @@ def _validate_form(options_form, options, **kargs):
     @return: The validated options form
     """
     if not isinstance(options, forms.Form):
-        if isinstance(options, dict) or isinstance(options, QueryDict):
+        if isinstance(options, dict) or isinstance(options, QueryDict) or isinstance(options, MergeDict):
             options = options_form(options)
         else:
             if options is not None: kargs['options'] = options
@@ -105,6 +123,7 @@ def _validate_form(options_form, options, **kargs):
     if not options.is_bound:
         raise ValueError("Cannot call %r script with unbound form" % self.__class__.__name__)
     if not options.is_valid():
-        raise ValueError("Invalid or missing options: %r" % options.errors)
+        errorDict = dict([(k, [unicode(e) for e in v]) for k,v in options.errors.items()]) 
+        raise InvalidFormException("Invalid or missing options: %r" % options.errors, errorDict)
     return options
    

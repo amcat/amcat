@@ -19,7 +19,7 @@
 
 from django import forms
 from amcat.scripts.output import commandline
-import inspect
+from amcat.scripts import scriptmanager
 import argparse
 
 ###############################################################
@@ -37,12 +37,9 @@ def run_cli(cls):
     handleOutput(out, instance.output_type)
 
 def handleOutput(out, output_type):
-    classes = inspect.getmembers(commandline, inspect.isclass)
-    for classname, cls in classes:
-        if hasattr(cls, 'input_type') and cls.input_type == output_type:
-            print cls().run(out)
-            return
-    print "no output possible"
+    cls = scriptmanager.findScript(output_type, str)
+    if not cls: print "no output possible"
+    else: print cls().run(out)
             
 
 def argument_parser_from_script(script_class):

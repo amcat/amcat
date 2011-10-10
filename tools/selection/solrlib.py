@@ -167,9 +167,13 @@ def mediumidToObj(mediumid):
     return mediumCache.setdefault(mediumid, medium.Medium.objects.get(pk=mediumid))
     
     
+def increaseCounter(table, x, y, a, counter):
+    table.addValue(x, y, table.getValue(x, y) + (int(a['score']) if counter == 'numberOfHits' else 1))
+    
 def basicAggregate(queries, xAxis, yAxis, counter, dateInterval=None, filters=[]):
     """aggregate by using a counter"""
     table = DictTable(0)
+    table.rowNamesRequired = True
     if xAxis == 'medium' and yAxis == 'searchTerm':
         for query in queries:
             response = createSolrConnection().query(query, fields="score,mediumid", fq=filters, rows=1000)
@@ -177,21 +181,21 @@ def basicAggregate(queries, xAxis, yAxis, counter, dateInterval=None, filters=[]
             for a in response.results:
                 x = mediumidToObj(a['mediumid'])
                 y = query
-                table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
+                increaseCounter(table, x, y, a, counter)
     if xAxis == 'medium' and yAxis == 'total':
         for query in queries:
             response = createSolrConnection().query(query, fields="score,mediumid", fq=filters, rows=1000)
             for a in response.results:
                 x = mediumidToObj(a['mediumid'])
                 y = '[total]'
-                table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
+                increaseCounter(table, x, y, a, counter)
     elif xAxis == 'date' and yAxis == 'medium':
         for query in queries:
             response = createSolrConnection().query(query, fields="score,date,mediumid", fq=filters, rows=1000)
             for a in response.results:
                 x = dateToInterval(a['date'], dateInterval)
                 y = mediumidToObj(a['mediumid'])
-                table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
+                increaseCounter(table, x, y, a, counter)
     elif xAxis == 'date' and yAxis == 'searchTerm':
         for query in queries:
             response = createSolrConnection().query(query, fields="score,date", fq=filters, rows=1000)
@@ -199,7 +203,7 @@ def basicAggregate(queries, xAxis, yAxis, counter, dateInterval=None, filters=[]
             for a in response.results:
                 x = dateToInterval(a['date'], dateInterval)
                 y = query
-                table.addValue(x, y, table.getValue(x, y) + (a['score'] if counter == 'numberOfHits' else 1))
+                increaseCounter(table, x, y, a, counter)
     else:
         raise Exception('%s %s combination not possible' % (xAxis, yAxis))
     return table

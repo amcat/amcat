@@ -17,6 +17,45 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.scripts.output.commandline import *
-from amcat.scripts.output.json import *
-from amcat.scripts.output.html import *
+import amcat.scripts.output
+from amcat.scripts import script
+import inspect 
+
+import logging
+log = logging.getLogger(__name__)
+
+
+outputClasses = {
+    'json': script.JsonStream,
+    'csv': script.CsvStream,
+    'excel': script.ExcelStream,
+    'html': script.HtmlStream
+}
+
+def findAllScripts():
+    classes = inspect.getmembers(amcat.scripts.output, inspect.isclass)
+    for classname, cls in classes:
+        if hasattr(cls, 'input_type') and hasattr(cls, 'output_type'): # if the class is a Script
+            yield cls
+
+
+def findScript(inputClass, outputClass):
+    """
+    This function will try to find a script that can take argument inputClass as input
+    and return outputClass
+    It will return None if no script is found
+    """
+    if type(outputClass) in (str, unicode):
+        if not outputClass in outputClasses:
+            raise Exception('invalid output class: %s' % outputClass)
+        outputClass = outputClasses[outputClass]
+    log.debug('Finding script, input: %s output: %s' % (inputClass, outputClass))
+    for script in scripts:
+        if script.input_type == inputClass and script.output_type == outputClass:
+            return script
+    log.warn('Script not found, input: %s output: %s. Scripts: %s' % (inputClass, outputClass, scripts))
+    return None
+            
+            
+scripts = list(findAllScripts())
+

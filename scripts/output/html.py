@@ -17,6 +17,45 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.scripts.output.commandline import *
-from amcat.scripts.output.json import *
-from amcat.scripts.output.html import *
+from amcat.tools.table import tableoutput
+from amcat.tools.table import table3
+from amcat.scripts import script
+from django.utils import simplejson
+import amcat.scripts.forms
+from django.template.loader import render_to_string
+from django import forms
+
+class HtmlTemplateForm(forms.Form):
+    template = forms.CharField(required=False)
+    
+
+class TableToHtml(script.Script):
+    input_type = table3.Table
+    options_form = HtmlTemplateForm
+    output_type = script.HtmlStream
+
+
+    def run(self, tableObj):
+        if self.options['template']:
+            return render_to_string(self.options['template'], {'table':tableObj})
+        return tableoutput.table2html(tableObj, printRowNames=False)
+       
+       
+class ArticleListToHtml(script.Script):
+    input_type = script.ArticleIterator
+    options_form = HtmlTemplateForm
+    output_type = script.HtmlStream
+
+
+    def run(self, articlelist):
+        return render_to_string(self.options['template'], {'articlelist':articlelist})
+        
+        
+        
+class ErrormsgToHtml(script.Script):
+    input_type = script.ErrorMsg
+    options_form = None
+    output_type = script.HtmlStream
+    
+    def run(self, errorMsg):
+        return simplejson.dumps({'error':{'message':errorMsg.message}})
