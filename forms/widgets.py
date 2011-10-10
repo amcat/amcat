@@ -22,10 +22,9 @@ Replacement for the standard Django forms.widgets module. It contains all
 standard widgets plus extra (amcat-specific) widgets.
 """
 
-from django.forms.widgets import *
 from django.forms import widgets
 
-__ALL__ = list(widgets.__ALL__) + ["JQuerySelect", "JQueryMultipleSelect"]
+__all__ = ["JQuerySelect", "JQueryMultipleSelect"]
 
 class JQuerySelect(widgets.Select):
     def _build_attrs(attrs=None, **kwargs):

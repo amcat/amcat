@@ -18,21 +18,17 @@
 ###########################################################################
 
 """
-Replacement for Django Forms.fields module. This module contains all standard
-fields and more.
+Replacement for Django Forms.forms module. This module contains all standard
+forms and more.
 """
 import csv
 
 from amcat.model.user import User
-
-from django.forms.fields import *
-from django.forms import fields
 from django import forms
+from django.forms import fields
+from django.db import models
 
-from django.core.exceptions import ValidationError
-
-
-__ALL__ = list(fields.__ALL__) + ['JSONField', 'UserField', 'CSVField']
+__all__ = ['JSONField', 'UserField', 'CSVField']
 
 class JSONField(models.TextField):
     __metaclass__ = models.SubfieldBase
@@ -80,7 +76,7 @@ class CSVField(forms.FileField):
         A FileField for CSVFiles.
 
         @type columns: dictionary
-        @param columns: this dictionary contains the names and fields of the
+        @param columns: this dictionary contains the names and forms of the
         columns to be specified in the CSV file. For example:
 
         csv = CSVField({
