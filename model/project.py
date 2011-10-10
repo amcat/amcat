@@ -32,7 +32,7 @@ class Project(AmcatModel):
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=200, null=True)
 
-    insert_date = models.DateTimeField(db_column='insertdate', auto_now=True)
+    insert_date = models.DateTimeField(db_column='insertdate', auto_now_add=True)
     owner = models.ForeignKey("model.User", db_column='owner_id')
 
     insert_user = models.ForeignKey("model.User", db_column='insertuser_id',

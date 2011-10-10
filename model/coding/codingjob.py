@@ -1,7 +1,11 @@
-from amcat.tools.cachable.cachable import Cachable, DBProperty, ForeignKey, DBProperties
-from amcat.tools.cachable.latebind import LB
-from amcat.tools.cachable import cacher
 from amcat.tools import toolkit
+from amcat.tools.model import AmcatModel
+
+from amcat.model.coding.annotationschema import AnnotationSchema
+from amcat.model.user import User
+from amcat.model.project import Project
+
+from django.db import models
 
 import logging; log = logging.getLogger(__name__)
 
@@ -35,18 +39,26 @@ def getCodedSentencesFromCodingjobs(codingjobs, cache=True, cacheValues=True):
         for cs in ca.sentences:
             yield cs
             
-class CodingJob(Cachable):
-    __table__ = 'codingjobs'
-    __idcolumn__ = 'codingjobid'
-    __labelprop__ = 'name'
-    codingjobid, name, insertdate = DBProperties(3)
+class CodingJob(AmcatModel):
+    id = model.IntegerKey(primary_key=True, db_column='codingjob_id')
 
-    unitSchema = DBProperty(LB("AnnotationSchema", package="amcat.model.coding"), getcolumn="unitschemaid")
-    articleSchema = DBProperty(LB("AnnotationSchema", package="amcat.model.coding"), getcolumn="articleschemaid")
-    project = DBProperty(LB("Project"))
-    owner = DBProperty(LB("User"), getcolumn="insertuserid")
+    name = models.CharField(max_length=100)
 
-    sets = ForeignKey(LB("CodingJobSet", sub="coding"), includeOwnID=True)
+    unitschema = models.ForeignKey(AnnotationSchema)
+    articleschema = models.ForeignKey(AnnotationSchema)
+
+    insertdate = models.DateTimeField()
+    insertuser = models.ForeignKey(User)
+
+    project = models.ForeignKey(Project)
+
+    #sets = ForeignKey(LB("CodingJobSet", sub="coding"), includeOwnID=True)
+
+    def __unicode__(self):
+        return self.name
+
+    class Meta():
+        db_table = 'codingjobs'
 
     def getSet(self, setnr):
         for set in self.sets:

@@ -5,7 +5,9 @@ from amcat.tools.idlabel import IDLabel
 from amcat.tools.model import AmcatModel
 
 from amcat.model.ontology.codebook import Codebook
-from amcat.model.ontology.object import Object
+from amcat.model.ontology.code import Code
+
+from amcat.model.project import Project
 
 from django.db import models
 
@@ -19,7 +21,7 @@ class RequiredValueError(ValidationError):
     pass
 
 class AnnotationSchema(AmcatModel):
-    id = models.IntegerKey(db_column='annotationschema_id', primary_key=True)
+    id = models.IntegerField(db_column='annotationschema_id', primary_key=True)
 
     name = models.CharField(max_length=75)
     description = models.TextField()
@@ -27,6 +29,8 @@ class AnnotationSchema(AmcatModel):
     isnet = models.BooleanField()
     isarticleschema = models.BooleanField()
     quasisentences = models.BooleanField()
+
+    project = models.ForeignKey(Project)
     
     def __unicode__(self):
         return "%s - %s" % (self.id, self.name)
@@ -71,7 +75,7 @@ class AnnotationSchemaFieldType(AmcatModel):
 class AnnotationSchemaField(AmcatModel):    
     annotationschema = models.ForeignKey(AnnotationSchema)
 
-    fieldname = models.Charfield(max_length=20)
+    fieldname = models.CharField(max_length=20)
     label = models.CharField(max_length=30)
     required = models.BooleanField()
     default = models.BooleanField(db_column='deflt')
@@ -143,7 +147,7 @@ class SchemaFieldSerialiser(object):
     def getTargetType(self):
         """Return the type of objects dererialisation will yield
 
-        @return: a type object such as IDLabel or ont.Object"""
+        @return: a type object such as IDLabel or ont.Code"""
         return self.targettype
     def getLabels(self):
         """ @return: dict of IDs and labels if the field has one, None otherwise """
@@ -220,9 +224,9 @@ class OntologyFieldSerialiser(SchemaFieldSerialiser):
         self.codebookid = codebookid
     def deserialize(self, value):
         if value is None: return None
-        return Object(self.db, value)
+        return Code(self.db, value)
     def getTargetType(self):
-        return Object
+        return Code
     @property
     def codebook(self):
         try:

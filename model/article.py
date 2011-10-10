@@ -64,7 +64,7 @@ class Article(AmcatModel):
     url = models.URLField(null=True, db_index=True)
     externalid = models.IntegerField(null=True)
 
-    sets = models.ManyToManyField("model.Set", db_table="sets_articles")
+    #sets = models.ManyToManyField("model.Set", db_table="sets_articles")
     
     text = models.TextField()
 

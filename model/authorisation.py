@@ -65,7 +65,7 @@ def check(user, privilege, project=None):
                 if privilege.role.projectlevel else user.role)
 
         # Return None if access is OK
-        if role != nrole:
+        if role.id >= nrole.id:
             raise AccessDenied(user, privilege, project)
         
 
