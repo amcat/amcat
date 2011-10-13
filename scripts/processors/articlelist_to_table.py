@@ -18,21 +18,25 @@
 ###########################################################################
 
 from amcat.tools import table
-from amcat.scripts import script, forms
-#import amcat.scripts.forms
+from amcat.scripts import script
+from django import forms
+import amcat.scripts.forms
+
+class ArticleListToTableForm(amcat.scripts.forms.ArticleColumnsForm):
+    limitTextLength = forms.BooleanField(initial=True, required=False)
 
 
 class ArticleListToTable(script.Script):
     input_type = script.ArticleIterator
-    options_form = forms.ArticleColumnsForm
+    options_form = ArticleListToTableForm
     output_type = table.table3.Table
 
 
     def run(self, articles):
-        # if self.ownForm.cleaned_data['limitTextLength']:
-            # textLambda = lambda a:a.text[:31900]
-        # else:
-        textLambda = lambda a:a.text
+        if self.options['limitTextLength'] == True:
+            textLambda = lambda a:a.text[:31900]
+        else:
+            textLambda = lambda a:a.text
         colDict = { # mapping of names to article object attributes
             'article_id': table.table3.ObjectColumn("Article ID", lambda a: a.id),
             'date': table.table3.ObjectColumn('Date', lambda a: a.date),

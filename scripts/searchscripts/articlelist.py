@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
     
 class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.ArticleColumnsForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
-    length = forms.IntegerField(initial=50, min_value=1, max_value=10000, widget=forms.HiddenInput, required=False)
+    length = forms.IntegerField(initial=50, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
     highlight = forms.BooleanField(initial=False, required=False)
 
 class ArticleListScript(script.Script):

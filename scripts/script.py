@@ -49,16 +49,26 @@ class CsvStream(object): pass
 class ExcelStream(object): pass
 class HtmlStream(object): pass
 
+class ArticleSetStatistics(object):
+    def __init__(self, articleCount=None, firstDate=None, lastDate=None, mediums=[]):
+        self.articleCount = articleCount
+        self.firstDate = firstDate
+        self.lastDate = lastDate
+        #self.mediums = mediums
+
 class InvalidFormException(Exception):
     def __init__(self, message, errors):
         Exception.__init__(self, message)
         self.errors = errors
 
+    def getErrorDict(self):
+        return dict([(k, [unicode(e) for e in v]) for k,v in self.errors.items()]) 
 
 class ErrorMsg(object):
-    def __init__(self, message, code=None, **kargs):
+    def __init__(self, message, code=None, fields=None, **kargs):
         self.message = message
         self.code = code
+        self.fields = fields
         self.kargs = kargs
 
 class Script(object):
@@ -123,7 +133,6 @@ def _validate_form(options_form, options, **kargs):
     if not options.is_bound:
         raise ValueError("Cannot call %r script with unbound form" % self.__class__.__name__)
     if not options.is_valid():
-        errorDict = dict([(k, [unicode(e) for e in v]) for k,v in options.errors.items()]) 
-        raise InvalidFormException("Invalid or missing options: %r" % options.errors, errorDict)
+        raise InvalidFormException("Invalid or missing options: %r" % options.errors, options.errors)
     return options
    

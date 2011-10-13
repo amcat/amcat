@@ -38,7 +38,7 @@ class TableToHtml(script.Script):
     def run(self, tableObj):
         if self.options['template']:
             return render_to_string(self.options['template'], {'table':tableObj})
-        return tableoutput.table2html(tableObj, printRowNames=False)
+        return tableoutput.table2htmlDjango(tableObj)
        
        
 class ArticleListToHtml(script.Script):
@@ -49,6 +49,16 @@ class ArticleListToHtml(script.Script):
 
     def run(self, articlelist):
         return render_to_string(self.options['template'], {'articlelist':articlelist})
+        
+        
+class ArticleSetStatisticsToHtml(script.Script):
+    input_type = script.ArticleSetStatistics
+    options_form = HtmlTemplateForm
+    output_type = script.HtmlStream
+
+
+    def run(self, statsObj):
+        return render_to_string(self.options['template'], {'stats':statsObj})
         
         
         

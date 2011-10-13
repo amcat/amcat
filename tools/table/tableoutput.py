@@ -5,6 +5,9 @@ from amcat.tools.logging import progress
 import sys, csv, StringIO, traceback, json
 
 from amcat.tools.logging import amcatlogging;
+
+from django.template import Template, Context
+
 #amcatlogging.debugModule()
 
 import logging; log = logging.getLogger(__name__)
@@ -195,6 +198,36 @@ def table2html(table, colnames=None, printRowNames = True):
         result += "</tr>"
     result += "\n</tbody></table>"
     return result
+    
+def table2htmlDjango(table, writecolnames=True, writerownames=False):
+    if table.rowNamesRequired == True:
+        writerownames = True
+    t = Template("""<table class="display">
+        {% if writecolnames %}
+        <thead>
+            {% if writerownames %}
+                <th></th>
+            {% endif %}
+            {% for header in table.getColumns %}
+                <th>{{header}}</th>
+            {% endfor %}
+        </thead>
+        {% endif %}
+        <tbody>
+            {% for row in table %}
+                <tr>
+                    {% if writerownames %}
+                        <td>{{row.row}}</td>
+                    {% endif %}
+                    {% for col in row %}
+                        <td>{{col}}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+       </tbody>
+    </table>""")
+    c = Context({"table": table, 'writecolnames':writecolnames, 'writerownames':writerownames})
+    return t.render(c)
 
 ####################### table2csv ###################################
 

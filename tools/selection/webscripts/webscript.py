@@ -78,8 +78,8 @@ class WebScript(object):
             result = qs.aggregate(firstDate=Min('date'), lastDate=Max('date'))
             s.firstDate = result['firstDate']
             s.lastDate = result['lastDate']
-            mediumids = [x['medium_id'] for x in qs.values('medium_id').distinct()]
-            s.mediums = sorted(Medium.objects.in_bulk(mediumids).values(), key=lambda x:x.id) # TODO: there must be a more effcient way to get all distinct medium objects...
+            # mediumids = [x['medium_id'] for x in qs.values('medium_id').distinct()]
+            # s.mediums = sorted(Medium.objects.in_bulk(mediumids).values(), key=lambda x:x.id) # TODO: there must be a more effcient way to get all distinct medium objects...
             #print s.mediums
             
         else:

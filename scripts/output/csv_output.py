@@ -20,60 +20,42 @@
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
 from amcat.scripts import script
-from django.utils import simplejson
 import amcat.scripts.forms
 from amcat.model.medium import Medium
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
+import csv
+from cStringIO import StringIO
 
-def encode_json(obj):
-    """ also encode Django objects to Json, preferebly by id-name""" 
-    if isinstance(obj, Medium):
-        return "%s - %s" % (obj.id, obj.name)
-    raise TypeError("%r is not JSON serializable" % (obj,))
-    
-
-class TableToJson(script.Script):
+class TableToCSV(script.Script):
     input_type = table3.Table
     options_form = None
-    output_type = script.JsonStream
+    output_type = script.CsvStream
 
 
     def run(self, tableObj):
-        return tableoutput.table2json(tableObj, colnames=True)
+        buffer = StringIO()
+        tableoutput.table2csv(tableObj, csvwriter=csv.writer(buffer, dialect='excel', delimiter=';'), writecolnames=True, writerownames=False, tabseparated=False)
+        return buffer
        
        
-class DictToJson(script.Script):
-    input_type = dict
-    options_form = None
-    output_type = script.JsonStream
+# class DictToCSV(script.Script):
+    # input_type = dict
+    # options_form = None
+    # output_type = script.CsvStream
 
 
-    def run(self, dictObj):
-        return simplejson.dumps(dictObj, default=encode_json)
+    # def run(self, dictObj):
+        # return simplejson.dumps(dictObj, default=encode_json)
        
        
-class ArticleListToJson(script.Script):
+class ArticleListToCSV(script.Script):
     input_type = script.ArticleIterator
     options_form = amcat.scripts.forms.ArticleColumnsForm
-    output_type = script.JsonStream
+    output_type = script.CsvStream
 
 
     def run(self, articleList):
         tableObj = ArticleListToTable(self.options).run(articleList)
-        #data = [(a.id, a.headline) for a in articleList] # TODO: pick correct columns, or change this to table3 obj, using articlelist_to_table script
-        return tableoutput.table2json(tableObj, colnames=True)
+        return TableToCSV().run(tableObj)
         
         
-        
-class ErrormsgToJson(script.Script):
-    input_type = script.ErrorMsg
-    options_form = None
-    output_type = script.JsonStream
-    
-    def run(self, errorMsg):
-        msgDict = {'message':errorMsg.message}
-        if errorMsg.code:
-            msgDict['code'] = errorMsg.code
-        if errorMsg.fields:
-            msgDict['fields'] = errorMsg.fields
-        return simplejson.dumps({'error':msgDict})

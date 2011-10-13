@@ -182,11 +182,18 @@ def basicAggregate(queries, xAxis, yAxis, counter, dateInterval=None, filters=[]
                 x = mediumidToObj(a['mediumid'])
                 y = query
                 increaseCounter(table, x, y, a, counter)
-    if xAxis == 'medium' and yAxis == 'total':
+    elif xAxis == 'medium' and yAxis == 'total':
         for query in queries:
             response = createSolrConnection().query(query, fields="score,mediumid", fq=filters, rows=1000)
             for a in response.results:
                 x = mediumidToObj(a['mediumid'])
+                y = '[total]'
+                increaseCounter(table, x, y, a, counter)
+    elif xAxis == 'date' and yAxis == 'total':
+        for query in queries:
+            response = createSolrConnection().query(query, fields="score,date", fq=filters, rows=1000)
+            for a in response.results:
+                x = dateToInterval(a['date'], dateInterval)
                 y = '[total]'
                 increaseCounter(table, x, y, a, counter)
     elif xAxis == 'date' and yAxis == 'medium':

@@ -20,60 +20,56 @@
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
 from amcat.scripts import script
-from django.utils import simplejson
 import amcat.scripts.forms
-from amcat.model.medium import Medium
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 
-def encode_json(obj):
-    """ also encode Django objects to Json, preferebly by id-name""" 
-    if isinstance(obj, Medium):
-        return "%s - %s" % (obj.id, obj.name)
-    raise TypeError("%r is not JSON serializable" % (obj,))
-    
+from openpyxl.workbook import Workbook
+from openpyxl.writer.dump_worksheet import ExcelDumpWriter
+import zipfile
+#from cStringIO import StringIO
+import io
 
-class TableToJson(script.Script):
+
+class TableToXlsx(script.Script):
     input_type = table3.Table
     options_form = None
-    output_type = script.JsonStream
+    output_type = script.ExcelStream
 
 
     def run(self, tableObj):
-        return tableoutput.table2json(tableObj, colnames=True)
+        wb = Workbook(optimized_write = True)
+        ws = wb.create_sheet()
+        for row in tableObj.getRows():
+            ws.append([tableObj.getValue(row, column) for column in tableObj.getColumns()])
+        writer = ExcelDumpWriter(wb)
+        # need to do a little bit more work here, since the openpyxl library only supports writing to a filename, while we need a buffer here..
+        #buffer = StringIO()
+        buffer = io.BytesIO()
+        zf = zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED)
+        writer.write_data(zf)
+        zf.close()
+        buffer.flush()
+        return buffer
        
        
-class DictToJson(script.Script):
-    input_type = dict
-    options_form = None
-    output_type = script.JsonStream
+# class DictToCSV(script.Script):
+    # input_type = dict
+    # options_form = None
+    # output_type = script.CsvStream
 
 
-    def run(self, dictObj):
-        return simplejson.dumps(dictObj, default=encode_json)
+    # def run(self, dictObj):
+        # return simplejson.dumps(dictObj, default=encode_json)
        
        
-class ArticleListToJson(script.Script):
+class ArticleListToXlsx(script.Script):
     input_type = script.ArticleIterator
     options_form = amcat.scripts.forms.ArticleColumnsForm
-    output_type = script.JsonStream
+    output_type = script.ExcelStream
 
 
     def run(self, articleList):
         tableObj = ArticleListToTable(self.options).run(articleList)
-        #data = [(a.id, a.headline) for a in articleList] # TODO: pick correct columns, or change this to table3 obj, using articlelist_to_table script
-        return tableoutput.table2json(tableObj, colnames=True)
+        return TableToXlsx().run(tableObj)
         
         
-        
-class ErrormsgToJson(script.Script):
-    input_type = script.ErrorMsg
-    options_form = None
-    output_type = script.JsonStream
-    
-    def run(self, errorMsg):
-        msgDict = {'message':errorMsg.message}
-        if errorMsg.code:
-            msgDict['code'] = errorMsg.code
-        if errorMsg.fields:
-            msgDict['fields'] = errorMsg.fields
-        return simplejson.dumps({'error':msgDict})
