@@ -28,7 +28,7 @@ from amcat.tools.model import AmcatModel
 from django.db import models
 
 class Sentence(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column="sentence_id")
+    id = models.AutoField(primary_key=True, db_column="sentence_id")
 
     sentence = models.TextField()
     parnr = models.IntegerField()

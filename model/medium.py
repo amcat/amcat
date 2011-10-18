@@ -4,14 +4,14 @@ from amcat.model.language import Language
 from django.db import models
 
 class MediumSourcetype(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column="medium_source_id")
+    id = models.AutoField(primary_key=True, db_column="medium_source_id")
     label = models.CharField(max_length=20)
 
     class Meta():
         db_table = 'media_sourcetypes'
 
 class Medium(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column="medium_id")
+    id = models.AutoField(primary_key=True, db_column="medium_id")
 
     name = models.CharField(max_length=200)
     abbrev = models.CharField(max_length=10, null=True)

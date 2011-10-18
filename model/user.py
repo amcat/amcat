@@ -130,7 +130,13 @@ class User(AmcatModel):
         return (self.role.id == auth.ADMIN_ROLE)
 
     @classmethod
-    def create_user(cls, username, fullname, password, email, affiliation, language, using=DEFAULT_DB_ALIAS):
+    def create_user(cls, username, fullname, password, email, affiliation, language, using=DEFAULT_DB_ALIAS, force=False):
+        """
+        @param force: force creation of user (i.e., ignore UserAlreadyExists exception raised by
+        dbtoolkit. Might be useful for unittests.
+
+        @type force: boolean
+        """
         u = User()
 
         u.username = username
@@ -146,7 +152,10 @@ class User(AmcatModel):
         u.full_clean()
 
         # Create database user
-        dbtoolkit.get_database(using=using).create_user(username, password)
+        try:
+            dbtoolkit.get_database(using=using).create_user(username, password)
+        except dbtoolkit.UserAlreadyExists as e:
+            if not force: raise e
 
         # Create Django user
         u.save()
