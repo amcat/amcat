@@ -32,6 +32,9 @@ PASSWORD_CACHE = 'amcat_password_%s'
 class DatabaseError(Exception):
     pass
 
+class UserAlreadyExists(DatabaseError):
+    pass
+
 class Database(object):
     """"""
     def __init__(self, using=None):
@@ -79,7 +82,8 @@ class Database(object):
 
     def create_user(self, username, password):
         """
-        Create user.
+        Create user. Might throw a dbtoolkit.UserAlreadyExists exception
+        when a user already exists.
 
         @param username: username of user
         @param password: raw password for new user
@@ -141,10 +145,14 @@ class PostgreSQL(Database):
         if not ure.match(username):
             raise ValueError("This username is not allowed!")
 
-        #with transaction.commit_manually(using=self.using):
-        SQL = (SQL % username) + " %s"
-        self.cursor.execute(SQL, [password,])
-        transaction.commit()
+        try:
+            SQL = (SQL % username) + " %s"
+            self.cursor.execute(SQL, [password,])
+        except:
+            transaction.rollback(using=self.using)
+            raise UserAlreadyExists()
+        else:
+            transaction.commit(using=self.using)
         
 
 

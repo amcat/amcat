@@ -20,7 +20,7 @@ from amcat.tools.model import AmcatModel
 from django.db import models
 
 class String(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='stringid')
+    id = models.AutoField(primary_key=True, db_column='stringid')
     
     string = models.CharField(max_length=100)
 
@@ -31,7 +31,7 @@ class String(AmcatModel):
         return self.string
 
 class Lemma(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='lemmaid')
+    id = models.AutoField(primary_key=True, db_column='lemmaid')
 
     pos = models.CharField(max_length=1)
     lemma = models.ForeignKey(String, db_column='stringid')
@@ -54,7 +54,7 @@ class Lemma(AmcatModel):
                 return sl
 
 class Word(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='wordid')
+    id = models.AutoField(primary_key=True, db_column='wordid')
 
     freq = models.IntegerKey(null=True)
     word = models.ForeignKey(String)

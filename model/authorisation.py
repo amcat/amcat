@@ -65,12 +65,12 @@ def check(user, privilege, project=None):
                 if privilege.role.projectlevel else user.role)
 
         # Return None if access is OK
-        if role.id >= nrole.id:
+        if role.id < nrole.id:
             raise AccessDenied(user, privilege, project)
         
 
 class Role(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='role_id')
+    id = models.AutoField(primary_key=True, db_column='role_id')
     label = models.CharField(max_length=50)
     projectlevel = models.BooleanField()
 
@@ -99,7 +99,7 @@ class ProjectRole(AmcatModel):
         return user.haspriv('manage_project_users', self.project)
 
 class Privilege(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='privilege_id')
+    id = models.AutoField(primary_key=True, db_column='privilege_id')
 
     label = models.CharField(max_length=50)
     role = models.ForeignKey(Role)

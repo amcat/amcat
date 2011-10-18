@@ -52,7 +52,7 @@ class Article(AmcatModel):
     """
     Class representing a newspaper article
     """
-    id = models.IntegerField(primary_key=True, db_column="article_id")
+    id = models.AutoField(primary_key=True, db_column="article_id")
 
     date = models.DateTimeField(db_index=True)
     section = models.CharField(null=True, max_length=80)

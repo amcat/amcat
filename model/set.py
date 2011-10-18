@@ -26,7 +26,7 @@ from amcat.model.user import User
 from django.db import models
 
 class Set(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='set_id')
+    id = models.AutoField(primary_key=True, db_column='set_id')
 
     name = models.CharField(max_length=100)
     project = models.ForeignKey(Project)

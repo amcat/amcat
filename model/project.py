@@ -27,7 +27,7 @@ from amcat.tools.model import AmcatModel
 from django.db import models
 
 class Project(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='project_id', editable=False)
+    id = models.AutoField(primary_key=True, db_column='project_id', editable=False)
 
     name = models.CharField(max_length=50)
     description = models.CharField(max_length=200, null=True)
