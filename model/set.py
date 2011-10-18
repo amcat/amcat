@@ -37,3 +37,8 @@ class Set(AmcatModel):
 
     def __unicode__(self):
         return self.name
+        
+    def setType(self):
+        """this function should return to which kind of object a set belongs to, in order to group a list of sets into subgroups"""
+        pass
+        

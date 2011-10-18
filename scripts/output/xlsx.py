@@ -39,8 +39,13 @@ class TableToXlsx(script.Script):
     def run(self, tableObj):
         wb = Workbook(optimized_write = True)
         ws = wb.create_sheet()
+        
+        ws.append(([""] if tableObj.rowNamesRequired else []) + map(unicode, list(tableObj.getColumns()))) # write column names
+        
         for row in tableObj.getRows():
-            ws.append([tableObj.getValue(row, column) for column in tableObj.getColumns()])
+            values = [unicode(row)] if tableObj.rowNamesRequired else []
+            values += [tableObj.getValue(row, column) for column in tableObj.getColumns()]
+            ws.append(values)
         writer = ExcelDumpWriter(wb)
         # need to do a little bit more work here, since the openpyxl library only supports writing to a filename, while we need a buffer here..
         #buffer = StringIO()
