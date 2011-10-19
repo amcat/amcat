@@ -79,10 +79,11 @@ class Role(AmcatModel):
 
     class Meta():
         db_table = 'roles'
+        app_label = 'amcat'
 
 class ProjectRole(AmcatModel):
-    project = models.ForeignKey("model.Project", db_index=True)
-    user = models.ForeignKey("model.User", db_index=True)
+    project = models.ForeignKey("amcat.Project", db_index=True)
+    user = models.ForeignKey("amcat.User", db_index=True)
     role = models.ForeignKey(Role)
 
     def __unicode__(self):
@@ -91,6 +92,7 @@ class ProjectRole(AmcatModel):
     class Meta():
         db_table = 'projects_users_roles'
         unique_together = ("project", "user")
+        app_label = 'amcat'
 
     def can_update(self, user):
         return user.haspriv('manage_project_users', self.project)

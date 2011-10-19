@@ -18,7 +18,7 @@ class Medium(AmcatModel):
     circulation = models.IntegerField(null=True)
 
     #type = models.ForeignKey(MediumSourcetype, db_column='medium_source_id')
-    language = models.ForeignKey("model.Language")
+    language = models.ForeignKey("amcat.Language")
 
     def __unicode__(self):
         return self.name

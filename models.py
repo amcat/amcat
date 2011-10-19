@@ -17,41 +17,11 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""ORM Module representing projects"""
-
-from __future__ import unicode_literals, print_function, absolute_import
-
-from amcat.tools import toolkit
-from amcat.tools.model import AmcatModel
-
-from django.db import models
-
-class Project(AmcatModel):
-    id = models.AutoField(primary_key=True, db_column='project_id', editable=False)
-
-    name = models.CharField(max_length=50)
-    description = models.CharField(max_length=200, null=True)
-
-    insert_date = models.DateTimeField(db_column='insertdate', auto_now_add=True)
-    owner = models.ForeignKey("amcat.User", db_column='owner_id')
-
-    insert_user = models.ForeignKey("amcat.User", db_column='insertuser_id',
-                                    related_name='inserted_project',
-                                    editable=False)
-
-    guest_role = models.ForeignKey("amcat.Role")
-
-    def __unicode__(self):
-        return self.name
-
-    def can_read(self, user):
-        return (self in user.projects or user.haspriv('view_all_projects'))
-
-    @property
-    def users(self):
-        return (r.user for r in self.projectrole_set.all())
-        
-    class Meta():
-        db_table = 'projects'
-        app_label = 'amcat'
-
+from amcat.model.article import *
+from amcat.model.authorisation import *
+from amcat.model.language import *
+from amcat.model.medium import *
+from amcat.model.set import *
+from amcat.model.user import *
+from amcat.model.project import *
+from amcat.model.sentence import *  

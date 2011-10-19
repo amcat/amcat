@@ -11,3 +11,4 @@ class Language(AmcatModel):
 
     class Meta():
         db_table = 'languages'
+        app_label = 'amcat'

@@ -75,6 +75,7 @@ class User(AmcatModel):
     class Meta():
         db_table = 'users'
         ordering = ['username']
+        app_label = 'amcat'
     
     @property
     def projects(self):
