@@ -111,3 +111,4 @@ class Privilege(AmcatModel):
 
     class Meta():
         db_table = 'privileges'
+        app_label = 'amcat'

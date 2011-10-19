@@ -46,6 +46,7 @@ class Affiliation(AmcatModel):
     class Meta():
         db_table = 'affiliations'   
         ordering = ['name']
+        app_label = 'amcat'
 
     def can_update(self, user):
         return user.haspriv('manage_users')
