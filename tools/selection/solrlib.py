@@ -37,8 +37,9 @@ def createSolrConnection():
     # create a connection to a solr server
     return solr.SolrConnection('http://localhost:8983/solr')
 
-def highlight(query, snippets=3, start=0, length=20, filters=[]):
+def highlight(queries, snippets=3, start=0, length=20, filters=[]):
     #http://localhost:8983/solr/select/?indent=on&q=des&fl=id,headline,body&hl=true&hl.fl=body,headline&hl.snippets=3&hl.mergeContiguous=true&hl.usePhraseHighlighter=true&hl.highlightMultiTerm=true
+    query = '(%s)' % ') OR ('.join(queries)
     response = createSolrConnection().query(query, 
                     highlight=True, 
                     fields="id,score,body,headline", 
@@ -63,7 +64,9 @@ def highlight(query, snippets=3, start=0, length=20, filters=[]):
     return result
     
     
-def getArticles(query, start=0, length=20, filters=[]):
+def getArticles(queries, start=0, length=20, filters=[]):
+    #if len(queries) == 1:
+    query = '(%s)' % ') OR ('.join(queries)
     response = createSolrConnection().query(query, 
                     fields="id,score", 
                     start=start, 
@@ -76,7 +79,7 @@ def getArticles(query, start=0, length=20, filters=[]):
     for d in response.results:
         articleid = d['id']
         a = articlesDict[int(articleid)]
-        a.hits = d['score']
+        a.hits = int(d['score'])
         result.append(a)
     return result
     
@@ -114,11 +117,20 @@ def getStats(statsObj, query, filters=[]):
     statsObj.mediums = sorted(mediums, key=lambda x:x.id)
     
         
-def articleids(query, start=0, rows=9999, filters=[]):
+def articleids(queries, start=0, length=9999, filters=[]):
     """get only the articleids for a query"""
-    response = createSolrConnection().query(query, fields="id", start=start, rows=rows, fq=filters, score=False)
-    #articlesDict = article.Article.objects.defer('text').in_bulk(x['id'] for x in response.results) 
-    return (article.Article(x['id']) for x in response.results) # todo, change this for db efficiency
+    query = '(%s)' % ') OR ('.join(queries)
+    response = createSolrConnection().query(query, fields="id", start=start, rows=length, fq=filters, score=False)
+    return [x['id'] for x in response.results]
+    
+    
+def articleidsDict(queries, start=0, length=9999, filters=[]):
+    """get only the articleids for a query"""
+    result = {}
+    for query in queries:
+        response = createSolrConnection().query(query, fields="id", start=start, rows=length, fq=filters, score=False)
+        result[query] = [x['id'] for x in response.results]
+    return result
     
     
 def aggregate(queries, xAxis, yAxis, filters=[]):

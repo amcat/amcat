@@ -48,6 +48,14 @@ class JsonStream(object): pass
 class CsvStream(object): pass
 class ExcelStream(object): pass
 class HtmlStream(object): pass
+class ArticleidList(object): pass
+class ArticleidDictPerQuery(object): pass
+
+class ImageMap(object):
+    def __init__(self, mapHtml, image, articleCount):
+        self.mapHtml = mapHtml
+        self.image = image
+        self.articleCount = articleCount
 
 class ArticleSetStatistics(object):
     def __init__(self, articleCount=None, firstDate=None, lastDate=None, mediums=[]):

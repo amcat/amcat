@@ -24,6 +24,7 @@ from django.utils import simplejson
 import amcat.scripts.forms
 from django.template.loader import render_to_string
 from django import forms
+import base64
 
 class HtmlTemplateForm(forms.Form):
     template = forms.CharField(required=False)
@@ -59,6 +60,19 @@ class ArticleSetStatisticsToHtml(script.Script):
 
     def run(self, statsObj):
         return render_to_string(self.options['template'], {'stats':statsObj})
+        
+                
+class ImageMapToHtml(script.Script):
+    input_type = script.ImageMap
+    options_form = HtmlTemplateForm
+    output_type = script.HtmlStream
+
+
+    def run(self, imagemapObj):
+        imgBase64 = base64.encodestring(imagemapObj.image)
+        articleCount = imagemapObj.articleCount
+        mapHtml = imagemapObj.mapHtml
+        return render_to_string(self.options['template'], {'imgBase64':imgBase64, 'articleCount':articleCount, 'mapHtml':mapHtml})
         
         
         
