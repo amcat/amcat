@@ -55,20 +55,20 @@ class Article(AmcatModel):
     id = models.AutoField(primary_key=True, db_column="article_id")
 
     date = models.DateTimeField(db_index=True)
-    section = models.CharField(null=True, max_length=80)
-    pagenr = models.IntegerField(null=True)
+    section = models.CharField(blank=True, null=True, max_length=80)
+    pagenr = models.IntegerField(blank=True, null=True)
     headline = models.CharField(max_length=200, db_index=True)
-    byline = models.TextField(null=True, max_length=200)
+    byline = models.TextField(blank=True, null=True, max_length=200)
     length = models.IntegerField()
     metastring = models.TextField(null=True)
     url = models.URLField(null=True, db_index=True)
-    externalid = models.IntegerField(null=True)
+    externalid = models.IntegerField(blank=True, null=True)
 
     #sets = models.ManyToManyField("amcat.Set", db_table="sets_articles")
     
     text = models.TextField()
 
-    parent = models.ForeignKey("self", null=True, db_column="parent_article_id", db_index=True)
+    parent = models.ForeignKey("self", null=True, db_column="parent_article_id", db_index=True, blank=True)
     project = models.ForeignKey(Project, db_index=True)
     medium = models.ForeignKey(Medium, db_index=True)
 
@@ -87,7 +87,7 @@ class Article(AmcatModel):
         if self.length is None:
             self.length = word_len(self.text)
 
-        super(self, Article).save(*args, **kwargs)
+        super(Article, self).save(*args, **kwargs)
 
 
     def words(self):

@@ -28,11 +28,12 @@ from django.db import models
 class Set(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='set_id')
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, unique=True)
     project = models.ForeignKey(Project)
     articles = models.ManyToManyField(Article, db_table="sets_articles")
 
     class Meta():
+        app_label = 'amcat'
         db_table = 'sets'
 
     def __unicode__(self):
