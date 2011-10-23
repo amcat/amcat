@@ -136,11 +136,15 @@ def _validate_form(options_form, options, **kargs):
         else:
             if options is not None: kargs['options'] = options
             options = options_form(kargs)
+
     if not isinstance(options, options_form):
         raise ValueError("Provided options form class %s is not an instance of required options_form class %s" % (options.__class__, options_form.__class__))
+
     if not options.is_bound:
         raise ValueError("Cannot call %r script with unbound form" % self.__class__.__name__)
+
     if not options.is_valid():
         raise InvalidFormException("Invalid or missing options: %r" % options.errors, options.errors)
+
     return options
    

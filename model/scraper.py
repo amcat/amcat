@@ -20,7 +20,7 @@
 """ORM Module representing scrapers"""
 
 from django.db import models
-from amcat.tools.model import JSONField
+from amcat.forms.fields import JSONField
 
 import json
 
