@@ -45,6 +45,8 @@ class ArticleColumnsForm(forms.Form):
     columns = forms.MultipleChoiceField( # columns are used to indicate which columns should be loaded from the database (for performance reasons)
         choices=(
             ('article_id', 'Article ID'),
+            ('hits', 'Hits'),
+            ('keywordInContext', 'Keyword in Context'),
             ('date','Date'),
             ('medium_id','Medium ID'),
             ('medium_name','Medium Name'),
@@ -107,6 +109,7 @@ class SelectionForm(forms.Form):
             cleanedData['useSolr'] = False
         else:
             cleanedData['useSolr'] = True
+            cleanedData['queries'] = [x.strip() for x in cleanedData['query'].split('\n') if x.strip()]
             
         # if 'output' not in cleanedData:
             # cleanedData['output'] = 'json-html'

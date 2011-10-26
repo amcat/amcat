@@ -35,6 +35,26 @@ class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.Art
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
     length = forms.IntegerField(initial=50, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
     highlight = forms.BooleanField(initial=False, required=False)
+    
+    def clean_start(self):
+        data = self.cleaned_data['start']
+        if data == None:
+            data = 0
+        return data
+        
+    def clean_length(self):
+        data = self.cleaned_data['length']
+        if data == None:
+            data = 50
+        if data == -1:
+            data = 999999 # unlimited (well, sort of ;)
+        return data
+        
+    def clean_columns(self):
+        data = self.cleaned_data['columns']
+        if self.cleaned_data['query'] == '' and ('keywordInContext' in data or 'hits' in data):
+            self._errors["columns"] = self.error_class(['Keyword in Context and Hits columns require a query'])
+        return data
 
 class ArticleListScript(script.Script):
     input_type = None
@@ -44,18 +64,17 @@ class ArticleListScript(script.Script):
 
     def run(self, input=None):
         """ returns an iterable of articles, when Solr is used, including highlighting """
-        start = self.options['start'] or 0
-        length = self.options['length'] or 50
-        if length == -1: length = 999999 # unlimited (well, sort of ;)
-        #log.info('length %d' % length)
+        start = self.options['start']
+        length = self.options['length']
+        
         if self.options['useSolr'] == False: # make database query
             return database.getQuerySet(**self.options)[start:length].select_related('medium')
         else:
-            queries = [x.strip() for x in self.options['query'].split('\n') if x.strip()]
+            
             if self.options['highlight']:
-                return solrlib.highlight(queries, start=start, length=length, filters=solrlib.createFilters(self.options))
+                return solrlib.highlightArticles(self.options)
             else:
-                return solrlib.getArticles(queries, start=start, length=length, filters=solrlib.createFilters(self.options))
+                return solrlib.getArticles(self.options)
         
         
 if __name__ == '__main__':

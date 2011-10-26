@@ -22,122 +22,200 @@ Library that makes it easier to access Solr features as used in Amcat3
 
 Requires solrpy
 """
-import solr
+import solr, re
 from amcat.model import article
 from amcat.model import medium
 
 from amcat.tools.table.table3 import DictTable
+import logging
+log = logging.getLogger(__name__)
 
-# class HighlightedArticle(article.Article): not working..
-    # highlightedHeadline = None
-    # highlightedBody = None
-    # hits = None
-
-def createSolrConnection():
-    # create a connection to a solr server
-    return solr.SolrConnection('http://localhost:8983/solr')
-
-def highlight(queries, snippets=3, start=0, length=20, filters=[]):
-    #http://localhost:8983/solr/select/?indent=on&q=des&fl=id,headline,body&hl=true&hl.fl=body,headline&hl.snippets=3&hl.mergeContiguous=true&hl.usePhraseHighlighter=true&hl.highlightMultiTerm=true
-    query = '(%s)' % ') OR ('.join(queries)
-    response = createSolrConnection().query(query, 
-                    highlight=True, 
-                    fields="id,score,body,headline", 
-                    hl_fl="body,headline", 
-                    hl_usePhraseHighlighter='true', 
-                    hl_highlightMultiTerm='true',
-                    hl_snippets=snippets,
-                    hl_mergeContiguous='true', 
-                    start=start, 
-                    rows=length, 
-                    fq=filters)
-    scoresDict = dict((x['id'], int(x['score'])) for x in response.results)
-    articleids = map(int, response.highlighting.keys())
+    
+def doQuery(query, form, kargs, additionalFilters=None):
+    filters = createFilters(form)
+    if additionalFilters:
+        filters += additionalFilters
+    solrResponse = solr.SolrConnection('http://localhost:8983/solr').query(query, 
+                    fq=filters,
+                    **kargs)
+    return solrResponse
+    
+    
+def parseSolrHighlightingToArticles(solrResponse):
+    scoresDict = dict((x['id'], int(x['score'])) for x in solrResponse.results)
+    articleids = map(int, solrResponse.highlighting.keys())
     articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
-    result = []
-    for articleid, highlights in response.highlighting.iteritems():
+    for articleid, highlights in solrResponse.highlighting.iteritems():
         a = articlesDict[int(articleid)]
         a.highlightedHeadline = highlights.get('headline')
         a.highlightedText = highlights.get('body')
         a.hits = scoresDict[int(articleid)]
-        result.append(a)
+        yield a
+        
+        
+def getContext(snippet):
+    """returns a dict which splits the snippet in the part before the first hit, the hit itself and after the hit.
+    Hits after the first hit are surrounded by [[brackets]]"""
+    split = re.split('</?em>', snippet, 2)
+    if not split or len(split) < 2:
+        return None
+    return {'before':split[0], 'hit':split[1], 'after':split[2].replace('<em>', '[[').replace('</em>', ']]')}
+        
+        
+def parseSolrHighlightingToContextDict(solrResponse):
+    result = {}
+    for articleid, highlights in solrResponse.highlighting.iteritems():
+        item = {}
+        highlightedHeadline = highlights.get('headline')
+        if highlightedHeadline:
+            item['headline'] = getContext(highlightedHeadline[0])#[getContext(highlight) for highlight in highlightedHeadline]
+        highlightedText = highlights.get('body')
+        #log.info(highlights)
+        if highlightedText:
+            item['text'] = getContext(highlightedText[0])#[getContext(highlight) for highlight in highlightedText]
+        result[int(articleid)] = item
     return result
     
     
-def getArticles(queries, start=0, length=20, filters=[]):
+def highlightArticles(form, snippets=3):
+    #http://localhost:8983/solr/select/?indent=on&q=des&fl=id,headline,body&hl=true&hl.fl=body,headline&hl.snippets=3&hl.mergeContiguous=true&hl.usePhraseHighlighter=true&hl.highlightMultiTerm=true
+    query = '(%s)' % ') OR ('.join(form['queries'])
+    kargs = dict(
+        highlight=True, 
+        fields="id,score,body,headline", 
+        hl_fl="body,headline", 
+        hl_usePhraseHighlighter='true', 
+        hl_highlightMultiTerm='true',
+        hl_snippets=snippets,
+        hl_mergeContiguous='true', 
+        start=form['start'], 
+        rows=form['length'])
+    solrResponse = doQuery(query, form, kargs)
+    return parseSolrHighlightingToArticles(solrResponse)
+    
+    
+
+def getArticles(form):
     #if len(queries) == 1:
-    query = '(%s)' % ') OR ('.join(queries)
-    response = createSolrConnection().query(query, 
-                    fields="id,score", 
-                    start=start, 
-                    rows=length, 
-                    fq=filters)
+    query = '(%s)' % ') OR ('.join(form['queries'])
+    kargs = dict( 
+            fields="id,score", 
+            start=form['start'], 
+            rows=form['length'])
+    kargsMainQuery = kargs.copy()
+    if 'keywordInContext' in form['columns']:
+        kargsMainQuery.update(dict(
+            highlight=True, 
+            fields="id,score,body", 
+            hl_fl="body", 
+            hl_usePhraseHighlighter='true', 
+            hl_highlightMultiTerm='true',
+            hl_snippets=1,
+            hl_mergeContiguous='false', 
+        ))
+        
+    solrResponse = doQuery(query, form, kargsMainQuery)
     
-    articleids = [x['id'] for x in response.results]
+    if 'keywordInContext' in form['columns']:
+        contextDict = parseSolrHighlightingToContextDict(solrResponse)
+        #log.debug(contextDict)
+    else:
+        contextDict = {}
+        
+    articleids = [x['id'] for x in solrResponse.results]
+    
+    hitsTable = DictTable(0)
+    hitsTable.rowNamesRequired = True
+        
+    if len(form['queries']) > 1 and 'hits' in form['columns']:
+        additionalFilters = [' OR '.join(['id:%d' % id for id in articleids])]
+        for singleQuery in form['queries']:
+            hitsTable.columns.add(singleQuery)
+            solrResponseSingleQuery = doQuery(singleQuery, form, kargs, additionalFilters)
+            for d in solrResponseSingleQuery.results:
+                articleid = int(d['id'])
+                hits = int(d['score'])
+                #log.info('add %s %s %s' % (articleid, singleQuery, hits)) 
+                hitsTable.addValue(articleid, singleQuery, hits) 
+    else:        
+        hitsTable.columns.add(query)
+        for d in solrResponse.results:
+            articleid = int(d['id'])
+            hits = int(d['score'])
+            #hitsTable.addValue(query, articleid, hits)
+            hitsTable.addValue(articleid, query, hits)
+    
+    
     articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
-    result = []
-    for d in response.results:
-        articleid = d['id']
-        a = articlesDict[int(articleid)]
-        a.hits = int(d['score'])
-        result.append(a)
-    return result
+    for articleid, a in articlesDict.items():
+        a.hits = hitsTable.getNamedRow(articleid)
+        a.keywordInContext = contextDict.get(articleid)
+        yield a
     
-def getStats(statsObj, query, filters=[]):
-    response = createSolrConnection().query(query, 
-                    fields="date", 
-                    start=0, 
-                    rows=1, 
-                    sort='date asc',
-                    fq=filters)
-                    
-    statsObj.articleCount = response.numFound
+def getStats(statsObj, form):
+    query = '(%s)' % ') OR ('.join(form['queries'])
     
-    if response.numFound == 0:
+    kargs = dict( 
+                fields="date", 
+                start=0, 
+                rows=1, 
+                sort='date asc')
+    solrResponse = doQuery(query, form, kargs)
+    statsObj.articleCount = solrResponse.numFound
+    
+    if solrResponse.numFound == 0:
         return
         
-    statsObj.firstDate = response.results[0]['date']
+    statsObj.firstDate = solrResponse.results[0]['date']
     
-    response = createSolrConnection().query(query, 
-                    fields="date", 
-                    start=0, 
-                    rows=1, 
-                    sort='date desc',
-                    fq=filters)
+    kargs = dict( 
+                fields="date", 
+                start=0, 
+                rows=1, 
+                sort='date desc')
+    solrResponse = doQuery(query, form, kargs)
     
-    statsObj.lastDate = response.results[0]['date']
+    statsObj.lastDate = solrResponse.results[0]['date']
     
+    kargs = dict( 
+                fields="id", 
+                facet='true', 
+                facet_field='mediumid', 
+                facet_mincount=1, 
+                score=False, 
+                rows=0)
+    solrResponse = doQuery(query, form, kargs)
     
-    response = createSolrConnection().query(query, fields="id", facet='true', facet_field='mediumid', facet_mincount=1, fq=filters, score=False, rows=0)
-    # print response.__dict__
     mediums = []
-    for mediumid, count in response.facet_counts['facet_fields']['mediumid'].items():
+    for mediumid, count in solrResponse.facet_counts['facet_fields']['mediumid'].items():
         m = medium.Medium.objects.get(pk=mediumid)
         mediums.append(m)
     statsObj.mediums = sorted(mediums, key=lambda x:x.id)
     
         
-def articleids(queries, start=0, length=9999, filters=[]):
+def articleids(form):
     """get only the articleids for a query"""
-    query = '(%s)' % ') OR ('.join(queries)
-    response = createSolrConnection().query(query, fields="id", start=start, rows=length, fq=filters, score=False)
-    return [x['id'] for x in response.results]
+    query = '(%s)' % ') OR ('.join(form['queries'])
+    kargs = dict(fields="id", start=form['start'], rows=form['length'], score=False)
+    solrResponse = doQuery(query, form, args)
+    return [x['id'] for x in solrResponse.results]
     
     
-def articleidsDict(queries, start=0, length=9999, filters=[]):
+def articleidsDict(form):
     """get only the articleids for a query"""
     result = {}
-    for query in queries:
-        response = createSolrConnection().query(query, fields="id", start=start, rows=length, fq=filters, score=False)
-        result[query] = [x['id'] for x in response.results]
+    for query in form['queries']:
+        args = dict(fields="id", start=form['start'], rows=form['length'], score=False)
+        solrResponse = doQuery(query, form, args)
+        result[query] = [x['id'] for x in solrResponse.results]
     return result
     
-    
+"""
 def aggregate(queries, xAxis, yAxis, filters=[]):
-    """aggregate using the Solr aggregation function (facet search)
+    "" "aggregate using the Solr aggregation function (facet search)
     
     not fully working!!
-    """
+    "" "
     #http://localhost:8983/solr/select?indent=on&q=projectid:291&fl=name&facet=true&facet.field=projectid&facet.field=mediumid&facet.query=projectid:291%20AND%20mediumid:7
     
     #http://localhost:8983/solr/select?indent=on&q=test&fq=projectid:291&fl=name&facet=true&&facet.field=mediumid
@@ -158,7 +236,7 @@ def aggregate(queries, xAxis, yAxis, filters=[]):
     else:
         raise Exception('%s %s combination not possible' % (xAxis, yAxis))
     return table
-    
+""" 
     
     
 def dateToInterval(date, interval):
@@ -179,50 +257,57 @@ def mediumidToObj(mediumid):
     return mediumCache.setdefault(mediumid, medium.Medium.objects.get(pk=mediumid))
     
     
-def increaseCounter(table, x, y, a, counter):
-    table.addValue(x, y, table.getValue(x, y) + (int(a['score']) if counter == 'numberOfHits' else 1))
+def increaseCounter(table, x, y, a, counterType):
+    table.addValue(x, y, table.getValue(x, y) + (int(a['score']) if counterType == 'numberOfHits' else 1))
     
-def basicAggregate(queries, xAxis, yAxis, counter, dateInterval=None, filters=[]):
+def basicAggregate(form):
     """aggregate by using a counter"""
     table = DictTable(0)
     table.rowNamesRequired = True
+    queries = form['queries']
+    xAxis = form['xAxis']
+    yAxis = form['yAxis']
+    counterType = form['counterType']
+    dateInterval = form['dateInterval']
+    rowLimit = 1000000
+    
     if xAxis == 'medium' and yAxis == 'searchTerm':
         for query in queries:
-            response = createSolrConnection().query(query, fields="score,mediumid", fq=filters, rows=1000)
+            solrResponse = doQuery(query, form, dict(fields="score,mediumid", rows=rowLimit))
             table.columns.add(query)
-            for a in response.results:
+            for a in solrResponse.results:
                 x = mediumidToObj(a['mediumid'])
                 y = query
-                increaseCounter(table, x, y, a, counter)
+                increaseCounter(table, x, y, a, counterType)
     elif xAxis == 'medium' and yAxis == 'total':
         for query in queries:
-            response = createSolrConnection().query(query, fields="score,mediumid", fq=filters, rows=1000)
-            for a in response.results:
+            solrResponse = doQuery(query, form, dict(fields="score,mediumid", rows=rowLimit))
+            for a in solrResponse.results:
                 x = mediumidToObj(a['mediumid'])
                 y = '[total]'
-                increaseCounter(table, x, y, a, counter)
+                increaseCounter(table, x, y, a, counterType)
     elif xAxis == 'date' and yAxis == 'total':
         for query in queries:
-            response = createSolrConnection().query(query, fields="score,date", fq=filters, rows=1000)
-            for a in response.results:
+            solrResponse = doQuery(query, form, dict(fields="score,date", rows=rowLimit))
+            for a in solrResponse.results:
                 x = dateToInterval(a['date'], dateInterval)
                 y = '[total]'
-                increaseCounter(table, x, y, a, counter)
+                increaseCounter(table, x, y, a, counterType)
     elif xAxis == 'date' and yAxis == 'medium':
         for query in queries:
-            response = createSolrConnection().query(query, fields="score,date,mediumid", fq=filters, rows=1000)
-            for a in response.results:
+            solrResponse = doQuery(query, form, dict(fields="score,date,mediumid", rows=rowLimit))
+            for a in solrResponse.results:
                 x = dateToInterval(a['date'], dateInterval)
                 y = mediumidToObj(a['mediumid'])
-                increaseCounter(table, x, y, a, counter)
+                increaseCounter(table, x, y, a, counterType)
     elif xAxis == 'date' and yAxis == 'searchTerm':
         for query in queries:
-            response = createSolrConnection().query(query, fields="score,date", fq=filters, rows=1000)
+            solrResponse = doQuery(query, form, dict(fields="score,date", rows=rowLimit))
             table.columns.add(query)
-            for a in response.results:
+            for a in solrResponse.results:
                 x = dateToInterval(a['date'], dateInterval)
                 y = query
-                increaseCounter(table, x, y, a, counter)
+                increaseCounter(table, x, y, a, counterType)
     else:
         raise Exception('%s %s combination not possible' % (xAxis, yAxis))
     return table
