@@ -31,6 +31,20 @@ log = logging.getLogger(__name__)
 class ArticleidsForm(amcat.scripts.forms.SelectionForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
     length = forms.IntegerField(initial=50, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
+    
+    def clean_start(self):
+        data = self.cleaned_data['start']
+        if data == None:
+            data = 0
+        return data
+        
+    def clean_length(self):
+        data = self.cleaned_data['length']
+        if data == None:
+            data = 50
+        if data == -1:
+            data = 999999 # unlimited (well, sort of ;)
+        return data
 
 class ArticleidsScript(script.Script):
     input_type = None
@@ -39,15 +53,12 @@ class ArticleidsScript(script.Script):
 
 
     def run(self, input=None):
-        start = self.options['start'] or 0
-        length = self.options['length'] or 50
-        if length == -1: length = 999999 # unlimited (well, sort of ;)
-        #log.info('length %d' % length)
+        start = self.options['start']
+        length = self.options['length']
         if self.options['useSolr'] == False: # make database query
             return database.getQuerySet(**self.options)[start:length].values_list('article_id', flat=True)
         else:
-            queries = [x.strip() for x in self.options['query'].split('\n') if x.strip()]
-            return solrlib.articleids(queries, start=start, length=length, filters=solrlib.createFilters(self.options))
+            return solrlib.articleids(self.options)
 
             
 class ArticleidsDictScript(script.Script):
@@ -57,14 +68,10 @@ class ArticleidsDictScript(script.Script):
 
 
     def run(self, input=None):
-        start = self.options['start'] or 0
-        length = self.options['length'] or 50
-        if length == -1: length = 999999 # unlimited (well, sort of ;)
         if self.options['useSolr'] == False: # make database query
             raise Exception('This works only for Solr searches')
         else:
-            queries = [x.strip() for x in self.options['query'].split('\n') if x.strip()]
-            return solrlib.articleidsDict(queries, start=start, length=length, filters=solrlib.createFilters(self.options))
+            return solrlib.articleidsDict(self.options)
 
         
         
