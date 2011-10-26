@@ -27,16 +27,16 @@ from django.forms import widgets
 __all__ = ["JQuerySelect", "JQueryMultipleSelect"]
 
 class JQuerySelect(widgets.Select):
-    def _build_attrs(attrs=None, **kwargs):
+    def _build_attrs(self, attrs=None, **kwargs):
         attrs = dict() if attrs is None else attrs
         attrs.update(kwargs)
         return attrs
 
-    def render(self, attrs=None, *args, **kwargs):
+    def render(self, name, value, attrs=None):
         attrs = self._build_attrs(attrs, **{'class' : 'multiselect'})
-        return super(JQuerySelect, self).render(*args, attrs=attrs, **kwargs)
+        return super(JQuerySelect, self).render(name, value, attrs=attrs)
      
 class JQueryMultipleSelect(JQuerySelect):
-    def render(self, attrs=None, *args, **kwargs):
+    def render(self, name, value, attrs=None, *args, **kwargs):
         attrs = self._build_attrs(attrs, multiple='multiple')
-        return super(JQueryMultipleSelect, self).render(*args, attrs=attrs, **kwargs)
+        return super(JQueryMultipleSelect, self).render(name, value, attrs=attrs)
