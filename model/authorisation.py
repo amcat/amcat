@@ -61,8 +61,13 @@ def check(user, privilege, project=None):
 
     if not user.is_superuser:
         nrole = privilege.role # Needed role
-        role = (Role.objects.get(projectrole__user=user, projectrole__project=project)
-                if privilege.role.projectlevel else user.role)
+
+        try:
+            role = (Role.objects.get(projectrole__user=user, projectrole__project=project)
+                    if privilege.role.projectlevel else user.role)
+        except Role.DoesNotExist:
+            # User has no role on this project!
+            raise AccessDenied(user, privilege, project)
 
         # Return None if access is OK
         if role.id < nrole.id:
