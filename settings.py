@@ -32,7 +32,7 @@ except ImportError:
 
 DEBUG = True
 
-INSTALLED_APPS = ('amcat.model',)
+INSTALLED_APPS = ('amcat',)
     
 # Databases / Caches are defined in ~/.amcatrc3. Example file:
 # 
