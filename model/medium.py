@@ -26,6 +26,7 @@ class Medium(AmcatModel):
     class Meta():
         db_table = 'media'
         verbose_name_plural = 'media'
+        app_label = 'amcat'
     
 
 #class Media(object):

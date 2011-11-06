@@ -44,6 +44,10 @@ class NamedRow(object):
     def __init__(self, table, row):
         self.table = table
         self.row = row
+    def get(self, column):
+         for col in self.table.getColumns():
+            if str(col) == column:
+                return self.table.getValue(self.row, col)
     def __getattr__(self, attr):
         if attr <> 'table':
             for col in self.table.getColumns():
@@ -76,6 +80,11 @@ class Table(object):
     def getNamedRows(self):
         for r in self.getRows():
             yield NamedRow(self, r)
+    def getNamedRow(self, rowname):
+        for r in self.getRows():
+            if r == rowname:
+                return NamedRow(self, r)
+        return None
     def getColumns(self):
         return self.columns                
     def __iter__(self):

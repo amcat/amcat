@@ -21,10 +21,15 @@ from amcat.tools import table
 from amcat.scripts import script
 from django import forms
 import amcat.scripts.forms
+import logging
+log = logging.getLogger(__name__)
 
 class ArticleListToTableForm(amcat.scripts.forms.ArticleColumnsForm):
     limitTextLength = forms.BooleanField(initial=True, required=False)
 
+    
+def lambdaHitFactory(query):
+    return lambda a: a.hits.get(query)
 
 class ArticleListToTable(script.Script):
     input_type = script.ArticleIterator
@@ -37,6 +42,15 @@ class ArticleListToTable(script.Script):
             textLambda = lambda a:a.text[:31900]
         else:
             textLambda = lambda a:a.text
+            
+        hitsColumns = []
+        if 'hits' in self.options['columns']:
+            articles = list(articles)
+            for query in articles[0].hits.table.getColumns():
+                hitsColumns.append(table.table3.ObjectColumn("Hit Count for: %s" % query[:100], lambdaHitFactory(query)))
+        
+        #log.info(hitsColumns)
+        
         colDict = { # mapping of names to article object attributes
             'article_id': table.table3.ObjectColumn("Article ID", lambda a: a.id),
             'date': table.table3.ObjectColumn('Date', lambda a: a.date),
@@ -52,10 +66,21 @@ class ArticleListToTable(script.Script):
             'externalid': table.table3.ObjectColumn('External ID', lambda a:a.externalid),
             'additionalMetadata': table.table3.ObjectColumn('Additional Metadata', lambda a:a.metastring),
             'headline': table.table3.ObjectColumn('Headline', lambda a:a.headline),
-            'text': table.table3.ObjectColumn('Article Text', textLambda)
+            'text': table.table3.ObjectColumn('Article Text', textLambda),
+            'keywordInContext': [table.table3.ObjectColumn('Context before', lambda a:a.keywordInContext['text']['before']), 
+                                table.table3.ObjectColumn('Context hit', lambda a:a.keywordInContext['text']['hit']), 
+                                table.table3.ObjectColumn('Context after', lambda a:a.keywordInContext['text']['after'])],
+            'hits': hitsColumns
         }
         #print self.options
-        columns = [colDict[col] for col in self.options['columns']]
+        columns = []
+        for col in self.options['columns']:
+            col = colDict[col] 
+            if type(col) == list:
+                for c in col:
+                    columns.append(c)
+            else:
+                columns.append(col)
         
         tableObj = table.table3.ObjectTable(articles, columns)
         return tableObj

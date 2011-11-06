@@ -113,13 +113,8 @@ class AggregationScript(script.Script):
             return table3
         else:
             #raise Exception("not implemented yet")
-            queries = [x.strip() for x in self.options['query'].split('\n') if x.strip()]
-            xAxis = self.options['xAxis']
-            yAxis = self.options['yAxis']
-            counterType = self.options['counterType']
-            dateInterval = self.options['dateInterval']
-            return solrlib.basicAggregate(queries, xAxis, yAxis, counterType, dateInterval, 
-                                    filters=solrlib.createFilters(self.options))
+            
+            return solrlib.basicAggregate(self.options)
             
         
         
