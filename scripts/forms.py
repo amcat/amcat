@@ -41,28 +41,66 @@ class ModelChoiceFieldWithIdLabel(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return "%s - %s" % (obj.id, obj.name)
         
+        
+class DateIntervalForm(forms.Form):
+    interval = forms.ChoiceField(
+            choices=(
+                ('day', 'Day'), 
+                ('week', 'Week'), 
+                ('month', 'Month'), 
+                ('quarter', 'Quarter'), 
+                ('year', 'Year')
+            ), initial='month')
+        
+class InlineTableOutputForm(forms.Form):
+    """Form with all the possible outputs for a table3 object"""
+    output = forms.ChoiceField(choices=(
+        ('csv', 'CSV'),
+        ('excel', 'Excel (.xslx)'),
+        ('spss', 'SPSS (.sav)'), 
+        ('json-html', 'Inline HTML')
+     ), initial='json-html')
+        
+class TableOutputForm(forms.Form):
+    """Form with all the possible outputs for a table3 object"""
+    output = forms.ChoiceField(choices=(
+        ('csv', 'CSV'),
+        ('excel', 'Excel (.xslx)'),
+        ('spss', 'SPSS (.sav)'), 
+        ('html', 'HTML')
+     ), initial='csv')
+        
 class ArticleColumnsForm(forms.Form):
     columns = forms.MultipleChoiceField( # columns are used to indicate which columns should be loaded from the database (for performance reasons)
-        choices=(
-            ('article_id', 'Article ID'),
-            ('hits', 'Hits'),
-            ('keywordInContext', 'Keyword in Context'),
-            ('date','Date'),
-            ('medium_id','Medium ID'),
-            ('medium_name','Medium Name'),
-            ('project_id','Project ID'),
-            ('project_name','Project Name'),
-            ('pagenr','Page number'),
-            ('section','Section'),
-            ('length','Length'),
-            ('url','url'),
-            ('parent_id','Parent Article ID'),
-            ('externalid','External ID'),
-            ('additionalMetadata','Additional Metadata'),
-            ('headline','Headline'),
-            ('text','Article Text')
-        ), initial = ('article_id', 'date', 'medium_id', 'medium_name', 'headline')
+            choices=(
+                ('article_id', 'Article ID'),
+                ('hits', 'Hits'),
+                ('keywordInContext', 'Keyword in Context'),
+                ('date','Date'),
+                ('interval', 'Interval'),
+                ('medium_id','Medium ID'),
+                ('medium_name','Medium Name'),
+                ('project_id','Project ID'),
+                ('project_name','Project Name'),
+                ('pagenr','Page number'),
+                ('section','Section'),
+                ('length','Length'),
+                ('url','url'),
+                ('parent_id','Parent Article ID'),
+                ('externalid','External ID'),
+                ('additionalMetadata','Additional Metadata'),
+                ('headline','Headline'),
+                ('text','Article Text')
+            ), initial = ('article_id', 'date', 'medium_id', 'medium_name', 'headline')
     )
+    columnInterval = forms.ChoiceField(
+            choices=(
+                ('day', 'Day'), 
+                ('week', 'Week'), 
+                ('month', 'Month'), 
+                ('quarter', 'Quarter'), 
+                ('year', 'Year')
+            ), initial='month', label='Column Interval', required=False)
 
 class SelectionForm(forms.Form):
     projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.all()) # TODO: change to projects of user

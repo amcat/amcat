@@ -25,7 +25,11 @@ import amcat.scripts.forms
 from django import forms
 import itertools
 import xml.sax.saxutils
+import collections
 import tempfile, os, subprocess, re
+
+from amcat.tools.table.table3 import DictTable
+from amcat.tools import table
 
 import logging
 log = logging.getLogger(__name__)
@@ -39,7 +43,7 @@ class ClustermapScript(script.Script):
 
     def run(self, articleidDict):
         allArticleids = set(itertools.chain(*articleidDict.values()))
-        
+
         objects = []
         for id in allArticleids:
             objects.append("""
@@ -50,9 +54,9 @@ class ClustermapScript(script.Script):
         objects = '\n'.join(objects)
 
         classifications = []
-        for keyword, articleids in articleidDict.items():
-            keywordStr = xml.sax.saxutils.escape(keyword)
-            keywordQuote = xml.sax.saxutils.quoteattr(keyword)
+        for query, articleids in articleidDict.items():
+            keywordStr = xml.sax.saxutils.escape(query)
+            keywordQuote = xml.sax.saxutils.quoteattr(query)
             articleidStr = ' '.join(map(str, articleids))
             classifications.append("""
             <Classification ID=%s>
@@ -96,7 +100,7 @@ class ClustermapScript(script.Script):
         if mapHtml == '':
             raise Exception('Clustermap error: %s' % err)
         
-        log.info(mapHtml[:1000])
+        #log.info(mapHtml[:1000])
 
         mapHtml = re.sub('<AREA', '<AREA onclick="return false"', mapHtml)
         mapHtml = re.sub('onMouseOut="JavaScript:clearAll\(\);"', '', mapHtml)
@@ -109,10 +113,44 @@ class ClustermapScript(script.Script):
         os.remove(xmlfilepath)
         os.remove(imgfilepath)
         
-        return script.ImageMap(mapHtml, image, articleCount)
+        clusterTable = ClustermapTableScript().run(articleidDict)
+        
+        return script.ImageMap(mapHtml, image, articleCount, clusterTable)
         
         
         
+def increaseCounter(table, x, y):
+    table.addValue(x, y, table.getValue(x, y) + 1)
+    
+        
+class ClustermapTableScript(script.Script):
+    input_type = script.ArticleidDictPerQuery
+    options_form = None
+    output_type = table.table3.Table
+        
+    def run(self, articleidDict):
+        if len(articleidDict.keys()) < 2:
+            raise Exception('Needs at least two queries')
+        
+        allArticleids = set(itertools.chain(*articleidDict.values()))
+        counterDict = collections.defaultdict(lambda:0)
+        for aid in allArticleids:
+            key = []
+            for query, articleids in articleidDict.items():
+                if aid in articleids:
+                    key.append(1)
+                else:
+                    key.append(0)
+            counterDict[tuple(key)] += 1
+        
+        resultTable = DictTable('')#table3.Table(columns=articleidDict.keys() + ['total'])
+        i = 0
+        for key, total in counterDict.items():
+            for val, query in zip(key, articleidDict.keys()):
+                resultTable.addValue(i, query, val)
+            resultTable.addValue(i, '[total]', total)
+            i += 1
+        return resultTable
         
 if __name__ == '__main__':
     cli.run_cli(ClustermapScript)

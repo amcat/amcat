@@ -19,6 +19,7 @@
 
 from amcat.tools import table
 from amcat.scripts import script
+from amcat.tools.toolkit import dateToInterval
 from django import forms
 import amcat.scripts.forms
 import logging
@@ -46,6 +47,8 @@ class ArticleListToTable(script.Script):
         hitsColumns = []
         if 'hits' in self.options['columns']:
             articles = list(articles)
+            if not hasattr(articles[0], 'hits'):
+                raise Exception('No hits attribute for article. Make sure you run a Solr query')
             for query in articles[0].hits.table.getColumns():
                 hitsColumns.append(table.table3.ObjectColumn("Hit Count for: %s" % query[:100], lambdaHitFactory(query)))
         
@@ -67,6 +70,7 @@ class ArticleListToTable(script.Script):
             'additionalMetadata': table.table3.ObjectColumn('Additional Metadata', lambda a:a.metastring),
             'headline': table.table3.ObjectColumn('Headline', lambda a:a.headline),
             'text': table.table3.ObjectColumn('Article Text', textLambda),
+            'interval':table.table3.ObjectColumn('Interval', lambda a:dateToInterval(a.date, self.options['columnInterval'])),
             'keywordInContext': [table.table3.ObjectColumn('Context before', lambda a:a.keywordInContext['text']['before']), 
                                 table.table3.ObjectColumn('Context hit', lambda a:a.keywordInContext['text']['hit']), 
                                 table.table3.ObjectColumn('Context after', lambda a:a.keywordInContext['text']['after'])],

@@ -25,6 +25,7 @@ Requires solrpy
 import solr, re
 from amcat.model import article
 from amcat.model import medium
+from amcat.tools.toolkit import dateToInterval
 
 from amcat.tools.table.table3 import DictTable
 import logging
@@ -239,18 +240,7 @@ def aggregate(queries, xAxis, yAxis, filters=[]):
 """ 
     
     
-def dateToInterval(date, interval):
-    if interval == 'day':
-        return date.strftime('%Y-%m-%d')
-    elif interval == 'week':
-        return date.strftime('%Y-%W')
-    elif interval == 'month':
-        return date.strftime('%Y-%m')
-    elif interval == 'quarter':
-        return '%s-%s' % (date.year, (date.month-1)//3 + 1)
-    elif interval == 'year':
-        return date.strftime('%Y')
-    raise Exception('invalid interval')
+
     
 mediumCache = {}    
 def mediumidToObj(mediumid):

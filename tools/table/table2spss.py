@@ -1,8 +1,8 @@
 from amcat.db import dbtoolkit
-from amcat.model.coding import codingjob
+#from amcat.model.coding import codingjob
 from amcat.tools.table import table3
 from amcat.tools import toolkit, idlabel
-from amcat.tools.cachable import cachable
+#from amcat.tools.cachable import cachable
 from amcat.tools.logging import amcatlogging, progress
 
 
@@ -27,7 +27,7 @@ def getSPSSFormat(type):
     #log.debug("Determining format of %s" % type)
     if type == int: return " (F8.0)"
     if issubclass(type, idlabel.IDLabel): return " (F8.0)"
-    if issubclass(type, cachable.Cachable): return " (F8.0)"
+    #if issubclass(type, cachable.Cachable): return " (F8.0)"
     if type == float: return " (F8.3)"
     if type == str: return " (A255)"
     if type == datetime.datetime: return " (date10)"
@@ -37,6 +37,7 @@ def _getVarDef(col, seen=set()):
     """Remove duplicates and spaces from field names"""
     fn = col.fieldname.replace(" ","_")
     fn = fn.replace("-","_")
+    fn = re.sub('[^a-zA-Z0-9_]+', '', fn)
     if fn in seen:
         for i in xrange(400):
             if "%s_%i" % (fn, i) not in seen:
@@ -50,12 +51,19 @@ def _getVarDef(col, seen=set()):
 
 def table2spss(t, writer=sys.stdout, saveas=None, monitor=progress.NullMonitor()):
     with monitor.monitored("Creating SPSS LIST DATA syntax", 100) as pm:
-        cols = t.getColumns()
+        cols = list(t.getColumns())
+        if not isinstance(cols[0], table3.ObjectColumn):
+            cols = [table3.ObjectColumn(col, fieldtype=str, fieldname=col) for col in cols]
+            log.debug('cols are no ObjectColumn, changed to : %s' % cols)
+        for col in cols:
+            if col.fieldtype == None: col.fieldtype = str
+            if col.fieldname == None: col.fieldname = col.label
 
         seen = set()
         vardefs = " ".join(_getVarDef(col, seen) for col in cols)
 
         log.debug("Writing var list")
+        log.info(vardefs)
         writer.write("DATA LIST LIST\n / %s .\nBEGIN DATA.\n" % vardefs)
 
         pm.worked(5)
@@ -67,7 +75,7 @@ def table2spss(t, writer=sys.stdout, saveas=None, monitor=progress.NullMonitor()
                 if i: writer.write(",")
                 val = t.getValue(row, col)
                 oval = val
-                if val and issubclass(col.fieldtype, (idlabel.IDLabel, cachable.Cachable)):
+                if val and issubclass(col.fieldtype, (idlabel.IDLabel, )):
                     if type(val) == int:
                         valuelabels[col][val] = "?%i" % val
                     else:

@@ -22,3 +22,4 @@ from amcat.scripts.output.json import *
 from amcat.scripts.output.html import *
 from amcat.scripts.output.csv_output import *
 from amcat.scripts.output.xlsx import *
+from amcat.scripts.output.spss import *

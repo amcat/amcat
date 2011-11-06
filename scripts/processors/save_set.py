@@ -16,3 +16,39 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+
+
+
+from amcat.scripts import script
+from amcat.scripts import cli
+import amcat.scripts.forms
+from django import forms
+from amcat.model.project import Project
+from amcat.model.set import Set
+
+import logging
+log = logging.getLogger(__name__)
+
+class SaveAsSetForm(forms.Form):
+    setname = forms.CharField()
+    project =  forms.ModelChoiceField(queryset=Project.objects.all()) # TODO: change to projects of user
+
+
+class SaveAsSetScript(script.Script):
+    input_type = script.ArticleidList
+    options_form = SaveAsSetForm
+    output_type = boolean
+
+
+    def run(self, articleids):
+        setname = self.options['setname']
+        project = self.options['project']
+        s = Set(name=setname, project=project)
+        s.save()
+        # TODO: add articles in bulk to set
+        # s.articles.add(articles)
+        return True
+    
+        
+if __name__ == '__main__':
+    cli.run_cli(SaveAsSetScript)

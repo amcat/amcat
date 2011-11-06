@@ -72,7 +72,13 @@ class ImageMapToHtml(script.Script):
         imgBase64 = base64.encodestring(imagemapObj.image)
         articleCount = imagemapObj.articleCount
         mapHtml = imagemapObj.mapHtml
-        return render_to_string(self.options['template'], {'imgBase64':imgBase64, 'articleCount':articleCount, 'mapHtml':mapHtml})
+        tableHtml = TableToHtml().run(imagemapObj.table)
+        return render_to_string(self.options['template'], 
+                                    {'imgBase64':imgBase64, 
+                                    'articleCount':articleCount, 
+                                    'mapHtml':mapHtml,
+                                    'tableHtml':tableHtml
+                                   })
         
         
         

@@ -17,46 +17,40 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import amcat.scripts.output
+
 from amcat.scripts import script
-import inspect 
+from amcat.scripts import cli
+import amcat.scripts.forms
+from amcat.tools import table
+from django import forms
+from amcat.tools.table.table3 import DictTable
+
 
 import logging
 log = logging.getLogger(__name__)
 
 
-outputClasses = {
-    'json': script.JsonStream,
-    'csv': script.CsvStream,
-    'excel': script.ExcelStream,
-    'html': script.HtmlStream,
-    'spss': script.SPSSData
-}
-
-def findAllScripts():
-    classes = inspect.getmembers(amcat.scripts.output, inspect.isclass)
-    for classname, cls in classes:
-        if hasattr(cls, 'input_type') and hasattr(cls, 'output_type'): # if the class is a Script
-            yield cls
+class AssociationsForm(forms.Form):
+    pass # other form elements here
 
 
-def findScript(inputClass, outputClass):
-    """
-    This function will try to find a script that can take argument inputClass as input
-    and return outputClass
-    It will return None if no script is found
-    """
-    if type(outputClass) in (str, unicode):
-        if not outputClass in outputClasses:
-            raise Exception('invalid output class: %s' % outputClass)
-        outputClass = outputClasses[outputClass]
-    log.debug('Finding script, input: %s output: %s' % (inputClass, outputClass))
-    for script in scripts:
-        if script.input_type == inputClass and script.output_type == outputClass:
-            return script
-    log.warn('Script not found, input: %s output: %s. Scripts: %s' % (inputClass, outputClass, scripts))
-    return None
-            
-            
-scripts = list(findAllScripts())
+class AssociationsScript(script.Script):
+    input_type = table.table3.Table
+    options_form = AssociationsForm
+    output_type = table.table3.Table
 
+
+    def run(self, articleTable):
+        queries = (c.label.replace('Hit Count for: ', '') for c in articleTable.getColumns()[1:]) # first column is interval
+        
+        # start dummy code
+        resultTable = DictTable(0)
+        resultTable.rowNamesRequired = True # make sure row names are printed
+        for query in queries:
+            resultTable.columns.add(query)
+            resultTable.rows.add(query)
+        return resultTable
+
+        
+if __name__ == '__main__':
+    cli.run_cli(AssociationsScript)

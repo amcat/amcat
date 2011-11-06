@@ -1015,6 +1015,23 @@ def cmpDate(date1, date2):
     """Compares to date-like arguments (see L{toDate}), returning cmp-score"""
     date1, date2 = map(toDate, (date1, date2))
     return cmp(date1, date2)
+    
+    
+
+def dateToInterval(date, interval):
+    """returns the interval as string, such as 2002-04.
+    Supported intervals: day, week, month, quarter, year"""
+    if interval == 'day':
+        return date.strftime('%Y-%m-%d')
+    elif interval == 'week':
+        return date.strftime('%Y-%W')
+    elif interval == 'month':
+        return date.strftime('%Y-%m')
+    elif interval == 'quarter':
+        return '%s-%s' % (date.year, (date.month-1)//3 + 1)
+    elif interval == 'year':
+        return date.strftime('%Y')
+    raise Exception('invalid interval')
 
 
 ###########################################################################
