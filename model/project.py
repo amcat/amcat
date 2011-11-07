@@ -21,12 +21,21 @@
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from amcat.tools import toolkit
 from amcat.tools.model import AmcatModel
 
 from django.db import models
 
+ROLEID_PROJECT_READER = 11
+
 class Project(AmcatModel):
+    """Model for table projects.
+
+    Projects are the main organizing unit in AmCAT. Most other objects are
+    contained within a project: articles, sets, codingjobs etc.
+
+    Projects have users in different roles. For most authorisation questions,
+    AmCAT uses the role of the user in the project that an object is contained in
+    """
     id = models.AutoField(primary_key=True, db_column='project_id', editable=False)
 
     name = models.CharField(max_length=50)
@@ -39,7 +48,7 @@ class Project(AmcatModel):
                                     related_name='inserted_project',
                                     editable=False)
 
-    guest_role = models.ForeignKey("amcat.Role")
+    guest_role = models.ForeignKey("amcat.Role", default=ROLEID_PROJECT_READER)
 
     def __unicode__(self):
         return self.name
@@ -49,9 +58,23 @@ class Project(AmcatModel):
 
     @property
     def users(self):
+        """Get a list of all users with some role in this project"""
         return (r.user for r in self.projectrole_set.all())
         
     class Meta():
         db_table = 'projects'
         app_label = 'amcat'
 
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestProject(amcattest.PolicyTestCase):
+    def test_create(self):
+        """Can we create a project and access its attributes?"""
+        p = amcattest.create_test_project(name="Test")
+        self.assertEqual(p.name, "Test")
+
+        
