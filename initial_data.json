@@ -1,0 +1,245 @@
+[
+  {
+    "pk": 0, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": false, 
+      "label": "reader"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": false, 
+      "label": "read/write"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": false, 
+      "label": "admin"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": false, 
+      "label": "superadmin"
+    }
+  }, 
+  {
+    "pk": 10, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": true, 
+      "label": "metareader"
+    }
+  }, 
+  {
+    "pk": 11, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": true, 
+      "label": "reader"
+    }
+  }, 
+  {
+    "pk": 12, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": true, 
+      "label": "read/write"
+    }
+  }, 
+  {
+    "pk": 13, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": true, 
+      "label": "admin"
+    }
+  }, 
+  {
+    "pk": 1, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 3, 
+      "label": "manage_users"
+    }
+  }, 
+  {
+    "pk": 2, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 2, 
+      "label": "manage_users_same_affiliation"
+    }
+  }, 
+  {
+    "pk": 3, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 3, 
+      "label": "view_users"
+    }
+  }, 
+  {
+    "pk": 4, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 0, 
+      "label": "view_users_same_affiliation"
+    }
+  }, 
+  {
+    "pk": 5, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 3, 
+      "label": "view_all_projects"
+    }
+  }, 
+  {
+    "pk": 6, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 1, 
+      "label": "create_project"
+    }
+  }, 
+  {
+    "pk": 7, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 1, 
+      "label": "manage_media"
+    }
+  }, 
+  {
+    "pk": 8, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 3, 
+      "label": "manage_site"
+    }
+  }, 
+  {
+    "pk": 9, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 12, 
+      "label": "add_articles"
+    }
+  }, 
+  {
+    "pk": 10, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 13, 
+      "label": "manage_project_users"
+    }
+  }, 
+  {
+    "pk": 11, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 12, 
+      "label": "manage_codebooks"
+    }
+  }, 
+  {
+    "pk": 12, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 12, 
+      "label": "manage_schemas"
+    }
+  }, 
+  {
+    "pk": 13, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 12, 
+      "label": "manage_sets"
+    }
+  }, 
+  {
+    "pk": 14, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 12, 
+      "label": "manage_project"
+    }
+  }, 
+  {
+    "pk": 15, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 12, 
+      "label": "manage_codingjobs"
+    }
+  }, 
+  {
+    "pk": 16, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 10, 
+      "label": "read_meta"
+    }
+  }, 
+  {
+    "pk": 17, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 11, 
+      "label": "read_articles"
+    }
+  }, 
+  {
+    "pk": 18, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 3, 
+      "label": "sentry.can_view"
+    }
+  },
+  {
+    "pk": 1, 
+    "model": "amcat.language", 
+    "fields": {
+      "label": "EN"
+    }
+  },
+  {
+    "pk": 2, 
+    "model": "amcat.language", 
+    "fields": {
+      "label": "FR"
+    }
+  },
+  {
+    "pk": 3, 
+    "model": "amcat.language", 
+    "fields": {
+      "label": "DE"
+    }
+  },
+  {
+    "pk": 4, 
+    "model": "amcat.language", 
+    "fields": {
+      "label": "NL"
+    }
+  },
+  {
+    "pk": 1, 
+    "model": "amcat.affiliation", 
+    "fields": {
+      "name": "Admins"
+    }
+  }
+]
