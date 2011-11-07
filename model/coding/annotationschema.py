@@ -67,4 +67,7 @@ class AnnotationSchema(AmcatModel):
 from amcat.tools import amcattest
 
 class TestAnnotationSchema(amcattest.PolicyTestCase):
-    pass
+    def test_create(self):
+        """Test whether annotation schema objects can be created"""
+        s = amcattest.create_test_schema(name='test')
+        self.assertEqual(s.name, 'test')

@@ -68,6 +68,13 @@ def create_test_project(**kargs):
     from amcat.model.project import Project
     u = create_test_user()
     return Project.objects.create(owner=u, insert_user=u, **kargs)
+    
+def create_test_schema(**kargs):
+    """Create a test schema to be used in unit testing"""
+    from amcat.model.coding.annotationschema import AnnotationSchema
+    p = create_test_project()
+    return AnnotationSchema.objects.create(project=p, **kargs)
+
 
 
 class PolicyTestCase(unittest.TestCase):
@@ -81,7 +88,9 @@ class PolicyTestCase(unittest.TestCase):
     This will make sure that both the defining module and the TARGET_MODULE are compliant
     """
     
-    PYLINT_IGNORE = ("C0321", "W0232", "R0903", "R0904", "C0103", "R0913", "C0302", "W0404",
+    PYLINT_IGNORE = ("C0321", "C0103", "C0302",
+                     "W0232", "W0404",
+                     "R0903", "R0904", "R0913", "R0201",
                      "E1101", # 'X has no member Y' easily mislead by django magic members
                      )
     PYLINT_IGNORE_EXTRA = () 

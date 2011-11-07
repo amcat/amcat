@@ -2,12 +2,12 @@ from amcat.tools import toolkit
 
 from amcat.tools.idlabel import IDLabel
 
-from amcat.model.ontology.codebook import Codebook
-from amcat.model.ontology.code import Code
+#from amcat.model.ontology.codebook import Codebook
+#from amcat.model.ontology.code import Code
 
 import logging; log = logging.getLogger(__name__)
 
-class SchemaFieldSerialiser(object):
+class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
     def __init__(self, targettype):
         self.targettype = targettype
@@ -27,7 +27,7 @@ class SchemaFieldSerialiser(object):
         """ @return: dict of IDs and labels if the field has one, None otherwise """
         return None
     
-class LookupFieldSerialiser(SchemaFieldSerialiser):
+class LookupFieldSerialiser(BaseSerialiser):
     def deserialize(self, value):
         if value is None: return None
         label = self.getLabels().get(value, None)
@@ -68,9 +68,9 @@ class DBLookupFieldSerialiser(LookupFieldSerialiser):
         return self._labels
         
         
-class FromFieldSerialiser(SchemaFieldSerialiser):
+class FromFieldSerialiser(BaseSerialiser):
     def __init__(self):
-        SchemaFieldSerialiser.__init__(self, int)
+        BaseSerialiser.__init__(self, int)
     def deserialise(self, value):
         return NotImplementedError()
     def getLabel(self, value, codedsentence=None):
@@ -92,7 +92,7 @@ class FromFieldSerialiser(SchemaFieldSerialiser):
         return IDLabel
         
         
-class OntologyFieldSerialiser(SchemaFieldSerialiser):
+class OntologyFieldSerialiser(BaseSerialiser):
     def __init__(self, db, codebookid):
         self.db = db
         self.codebookid = codebookid

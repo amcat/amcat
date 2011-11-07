@@ -241,5 +241,97 @@
     "fields": {
       "name": "Admins"
     }
+  },
+  {
+    "pk" : 1, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "normal",
+      "serialiserclassname" : "BaseSerialiser"
+    }
+  },
+  {
+    "pk" : 2, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "integer",
+      "serialiserclassname" : "BaseSerialiser"
+    }
+  },
+  {
+    "pk" : 3, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "DB choice",
+      "serialiserclassname" : "DBLookupFieldSerialiser"
+    }
+  },
+  {
+    "pk" : 4, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "Ad hoc choice",
+      "serialiserclassname" : "AdHocLookupFieldSerialiser"
+    }
+  },
+  {
+    "pk" : 5, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "DB ontology",
+      "serialiserclassname" : "OntologyFieldSerialiser"
+    }
+  },
+{
+    "pk" : 6, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "Decimal",
+      "serialiserclassname" : "BaseSerialiser"
+    }
+  },
+  {
+    "pk" : 7, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "Boolean",
+      "serialiserclassname" : "BaseSerialiser"
+    }
+  },
+  {
+    "pk" : 8, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "DB filtered choice",
+      "serialiserclassname" : "BaseSerialiser"
+    }
+  },
+  {  "pk" : 9, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "Quality",
+      "serialiserclassname" : "BaseSerialiser"
+    }
+  },
+  {  "pk" : 10, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "Area",
+      "serialiserclassname" : "BaseSerialiser"
+    }
+  },
+  {  "pk" : 11, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "Arrowreference",
+      "serialiserclassname" : "BaseSerialiser"
+    }
+  },
+  {  "pk" : 12, 
+    "model": "amcat.annotationschemafieldtype",
+    "fields" : {
+      "name" : "Interval",
+      "serialiserclassname" : "FromFieldSerialiser"
+    }
   }
 ]
