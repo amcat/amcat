@@ -17,15 +17,24 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Model module for Article Sets. A Set is a generic collection of articles,
+either created manually or as a result of importing articles or assigning
+coding jobs.
+"""
+
 from amcat.tools.model import AmcatModel
 
 from amcat.model.project import Project
 from amcat.model.article import Article
-from amcat.model.user import User
 
 from django.db import models
 
 class Set(AmcatModel):
+    """
+    Model for the sets table. A set is part of a project and contains articles.
+    It can also be seen as a 'tag' for articles.
+    """
     id = models.AutoField(primary_key=True, db_column='set_id')
 
     name = models.CharField(max_length=100, unique=True)
@@ -40,6 +49,26 @@ class Set(AmcatModel):
         return self.name
         
     def setType(self):
-        """this function should return to which kind of object a set belongs to, in order to group a list of sets into subgroups"""
+        """
+        This function should return to which kind of object a set belongs to,
+        in order to group a list of sets into subgroups"""
+        #TODO: why is this here? And why is it called 'set', not 'get'?
         pass
+        
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestArticleSet(amcattest.PolicyTestCase):
+    def test_create(self):
+        """Can we create a set with some articles and retrieve the articles?"""       
+        s = amcattest.create_test_set()
+        i = 7
+        for _x in range(i):
+            s.articles.add(amcattest.create_test_article())
+        self.assertEqual(i, len(s.articles.all()))
+
         

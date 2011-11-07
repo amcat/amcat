@@ -59,8 +59,7 @@ def create_test_user():
     """Create a user to be used in unit testing"""
     from amcat.model.user import Affiliation, User
     aff = Affiliation.objects.all()[0]
-    nusers = len(User.objects.all())
-    username = "testuser_%i" % nusers
+    username = "testuser_%i" % len(User.objects.all())
     return User.objects.create(affiliation=aff, username=username, email=username)
 
 def create_test_project(**kargs):
@@ -75,7 +74,25 @@ def create_test_schema(**kargs):
     p = create_test_project()
     return AnnotationSchema.objects.create(project=p, **kargs)
 
+def create_test_article(**kargs):
+    """Create a test article"""
+    from amcat.model.article import Article
+    from amcat.model.medium import Medium
+    from amcat.model.language import Language
+    if "project" not in kargs: kargs["project"] = create_test_project()
+    if "date" not in kargs: kargs["date"] = "2000-01-01"
+    l = Language.objects.get(pk=1)
+    m = Medium.objects.create(language=l)
+    return Article.objects.create(medium=m, **kargs)
 
+
+def create_test_set(**kargs):
+    """Create a test (Article) set"""
+    from amcat.model.set import Set
+    if "name" not in kargs: kargs["name"] = "testset_%i" % len(Set.objects.all())
+    if "project" not in kargs: kargs["project"] = create_test_project()
+    return Set.objects.create(**kargs)
+    
 
 class PolicyTestCase(unittest.TestCase):
     """
@@ -89,7 +106,7 @@ class PolicyTestCase(unittest.TestCase):
     """
     
     PYLINT_IGNORE = ("C0321", "C0103", "C0302",
-                     "W0232", "W0404",
+                     "W0232", "W0404", "W0511",
                      "R0903", "R0904", "R0913", "R0201",
                      "E1101", # 'X has no member Y' easily mislead by django magic members
                      )

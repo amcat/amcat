@@ -31,6 +31,7 @@ from amcat.tools.model import AmcatModel
 from amcat.model.coding.annotationschema import AnnotationSchema
 from amcat.model.user import User
 from amcat.model.project import Project
+from amcat.model.set import Set
 
 from django.db import models
 
@@ -62,6 +63,20 @@ class CodingJob(AmcatModel):
         app_label = 'amcat'
 
 
+class CodingJobSet(AmcatModel):
+    """
+    Model class for table codingjobs_sets. A set is a collection of articles to be coded
+    by a certain coder using the schema in the coding job
+    """
+    id = models.AutoField(primary_key=True, db_column='codingjobset_id')
+    codingjob = models.ForeignKey(CodingJob)
+    coder = models.ForeignKey(User)
+    articleset = models.ForeignKey(Set)
+
+    class Meta():
+        db_table = 'codingjobs_sets'
+        app_label = 'amcat'
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -76,3 +91,24 @@ class TestCodingJob(amcattest.PolicyTestCase):
         s = amcattest.create_test_schema()
         j = CodingJob.objects.create(project=p, unitschema=s, articleschema=s, insertuser=u)
         self.assertIsNotNone(j)
+        self.assertEqual(j.project, Project.objects.get(pk=p.id))
+        
+class TestCodingJobSet(amcattest.PolicyTestCase):
+    def test_create(self):
+        """Can we create a coding job set with articles?"""
+        u = amcattest.create_test_user()
+        p = amcattest.create_test_project()
+        s = amcattest.create_test_schema()
+        j = CodingJob.objects.create(project=p, unitschema=s, articleschema=s, insertuser=u)
+
+        s = amcattest.create_test_set()
+        s.articles.add(amcattest.create_test_article())
+        s.articles.add(amcattest.create_test_article())
+
+        cs = CodingJobSet.objects.create(codingjob=j, coder=u, articleset=s)
+        cs.articleset.articles.add(amcattest.create_test_article())
+        self.assertEqual(3, len(s.articles.all()))
+        self.assertEqual(s, cs.articleset)
+        
+        
+        

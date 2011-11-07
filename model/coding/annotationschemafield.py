@@ -139,6 +139,6 @@ class TestAnnotationSchemaField(amcattest.PolicyTestCase):
         fieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
         a = amcattest.create_test_schema()
         a = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
-        print(repr(a.label))
+
         
         

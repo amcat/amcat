@@ -29,9 +29,6 @@ from amcat.tools.model import AmcatModel
 from amcat.model.project import Project
 from amcat.model.authorisation import Role
 from amcat.model.medium import Medium
-from amcat.model.sentence import Sentence
-
-from amcat.tools import toolkit
 
 from django.db import models
 
@@ -68,7 +65,8 @@ class Article(AmcatModel):
     
     text = models.TextField()
 
-    parent = models.ForeignKey("self", null=True, db_column="parent_article_id", db_index=True, blank=True)
+    parent = models.ForeignKey("self", null=True, db_column="parent_article_id",
+                               db_index=True, blank=True)
     project = models.ForeignKey(Project, db_index=True)
     medium = models.ForeignKey(Medium, db_index=True)
 
@@ -81,6 +79,7 @@ class Article(AmcatModel):
 
     @property
     def children(self):
+        """Return a sequence of all child articles (eg reactions to a post)"""
         return Article.objects.filter(parent=self)
 
     def save(self, *args, **kwargs):
@@ -117,3 +116,27 @@ class Article(AmcatModel):
             return True
 
         return False
+
+
+
+    
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestArticle(amcattest.PolicyTestCase):
+    def test_create(self):
+        """Can we create an article object?"""
+        a = amcattest.create_test_article()
+        self.assertIsNotNone(a)
+
+    def test_unicode(self):
+        """Test unicode headlines"""
+        for offset in range(1, 10000, 1000):
+            s = "".join(unichr(offset + c) for c in range(1, 1000, 100))
+            a = amcattest.create_test_article(headline=s)
+            self.assertIsInstance(a.headline, unicode)
+            self.assertEqual(a.headline, s)
