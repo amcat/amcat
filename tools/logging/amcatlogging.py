@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -36,25 +35,25 @@ Additionally, it contains a number of useful classes for managing logging
   can place itself on using L{debugModule} and L{infoModule}
 
 In general, amcat modules should:
-1. Normal (library) modules should not use this module (except the auxilliary functions and debugModule)
+1. Normal (library) modules should not use this module
+   (except the auxilliary functions and debugModule)
 2. Applications (e.g. the web site, daemons, scripts) should install a handler on
    the root by calling L{setSyslogHandler} or L{setStreamHandler}
 3. Thread-based applications (e.g. the web site) can call setContext to add useful
    extra information to all log records from that thread.
 """
+from __future__ import unicode_literals, print_function, absolute_import
 
 from contextlib import contextmanager
 import logging
-import logging.handlers
+from logging.handlers import SysLogHandler
 import threading
 import thread
-import sys
-import inspect
 
 from amcat.tools import toolkit
 
 _THREAD_CONTEXT = threading.local()
-CONTEXT_FIELDS = ['application','user','host']
+CONTEXT_FIELDS = ['application', 'user', 'host']
 
 QUIET_MODULES = set()
 DEBUG_MODULES = set()
@@ -63,6 +62,10 @@ INFO_MODULES = set(['__main__', 'ticker'])
 logging.getLogger().setLevel(logging.DEBUG)
 
 class AmcatFormatter(logging.Formatter):
+    """
+    Formatter to insert file, line, and level
+    also includes 'context fields' that have been inserted
+    """
     def __init__(self, date=False):
         logging.Formatter.__init__(self)
         self.date = date
@@ -70,7 +73,7 @@ class AmcatFormatter(logging.Formatter):
         s = "["
         if self.date: s += self.formatTime(record)[:19] +" "
         s += "%(pathname)s:%(lineno)d " % record.__dict__
-        for f in 'application','user','host':
+        for f in 'application', 'user', 'host':
             s2 = getattr(record, f, None)
             if s2: s += s2 +" "
         s += "%(levelname)s] %(msg)s" % record.__dict__
@@ -79,6 +82,9 @@ class AmcatFormatter(logging.Formatter):
         return s
 
 class ContextInjectingFilter(logging.Filter):
+    """
+    Filter to inject context from the current thread using the _THREAD_CONTEXT
+    """
     def filter(self, record):
         for field in CONTEXT_FIELDS:
             val = getattr(_THREAD_CONTEXT, field, None)
@@ -87,6 +93,9 @@ class ContextInjectingFilter(logging.Filter):
         return True
 
 class ModuleLevelFilter(logging.Filter):
+    """
+    Filter to ignore errors based on message level and module level
+    """
     def filter(self, record):
         #print record, record.name
         if record.levelno < logging.ERROR and record.name in QUIET_MODULES: return False
@@ -96,21 +105,25 @@ class ModuleLevelFilter(logging.Filter):
         return False
 
 def quietModule(*modules):
+    """Add the given modules to the list of modules from which to report only errors"""
     _addModulesToSet(QUIET_MODULES, *modules)
 def infoModule(*modules):
+    """Add the given modules to the list of modules from which to report also info messages"""
     _addModulesToSet(INFO_MODULES, *modules)
 def debugModule(*modules):
+    """Add the given modules to the list of modules from which to report all messages (inc debug)"""
     _addModulesToSet(DEBUG_MODULES, *modules)
 
 def _addModulesToSet(targetset, *modules):
+    """Add the given modules to the targetset"""
     if not modules: modules = [toolkit.getCallingModule(depth=2)]
-    targetset |= set(modules)
+    targetset.update(modules)
 
     
 def setSyslogHandler():
     """Add a sysloghandler to the root logger with contextinjecting and module level filters"""
     root = logging.getLogger()
-    h = logging.handlers.SysLogHandler(address=b"/dev/log", facility=b"local0")
+    h = SysLogHandler(address=b"/dev/log", facility=b"local0")
     h.setFormatter(AmcatFormatter())
     h.addFilter(ContextInjectingFilter())
     h.addFilter(ModuleLevelFilter())
@@ -126,6 +139,9 @@ def setStreamHandler(*args, **kargs):
 
 @contextmanager
 def streamHandler(stream):
+    """
+    Log handler that emits messsages to the given stream
+    """
     root = logging.getLogger()
     h = logging.StreamHandler(stream)
     h.setFormatter(AmcatFormatter(date=True))
@@ -139,6 +155,10 @@ def streamHandler(stream):
         stream.write("REMOVED HANDLER")
 
 def setup():
+    """
+    Convenience function for command line scripts.
+    Sets up stream handler and returns a logger to use.
+    """
     setStreamHandler()
     return logging.getLogger('__main__')
     
@@ -190,24 +210,67 @@ def logExceptions(msg="Exception occured", logger=None, basetype=Exception):
     """Creates a try/catch block that logs exceptions"""
     try:
         yield
-    except basetype, e:
+    except basetype:
         if not logger:
             logger = logging.getLogger(toolkit.getCallingModule())
         logger.exception(msg)
         
-def format(records, date=True):
+def format_records(records, date=True):
+    """Format a set of records using the AmcatFormatter"""
     fmt = AmcatFormatter(date).format
     if isinstance(records, logging.LogRecord):
         records = (records,)
-    return "\n".join(map(fmt, records))
+    return "\n".join(fmt(r) for r in records)
 
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
 
-if __name__ == '__main__':
-    setStreamHandler()
-    debugModule()
-    log = logging.getLogger(__name__)
-    print(log.level, logging.DEBUG)
-    log.warning("warn")
-    log.info("info")
-    log.debug("debug")
-    #logging.warning("test")
+class TestLogging(amcattest.PolicyTestCase):
+    PYLINT_IGNORE_EXTRA = "W0703", 
+    
+    def testCollect(self):
+        """Test whether collect() properly collects log records"""
+        with collect() as s:
+            logging.info("debug message")
+            logging.info("debug message")
+        self.assertEqual(2, len(s))
+        self.assertIn("INFO] debug message", format_records(s))
+
+    def testCollectException(self):
+        """Test whether collect properly collect exceptions?"""
+        with collect() as s:
+            try:
+                _x = 1/0
+            except ZeroDivisionError:
+                logging.exception("Exception")
+        self.assertIn('integer division or modulo by zero', format_records(s))
+        self.assertIn('_x = 1/0', format_records(s))
+        
+    def testLogExceptions(self):
+        """Test whether logExceptions() works and does not raise the exception"""
+        with collect() as s:
+            with logExceptions():
+                raise Exception("!")
+        self.assertEqual(len(s), 1)
+        self.assertIn('raise Exception("!")', format_records(s))
+        
+    def testModuleLevel(self):
+        """Test whether the module level filter works"""
+        log = logging.getLogger(__name__)
+        log.addFilter(ModuleLevelFilter())
+        infoModule()
+        with collect() as s:
+            log.debug("debug message")
+            log.info("info message")
+            log.warn("warn message")
+        self.assertEqual(len(s), 2)
+        debugModule()
+        with collect() as s:
+            log.debug("debug message")
+            log.info("info message")
+            log.warn("warn message")
+        self.assertEqual(len(s), 3)
+            
