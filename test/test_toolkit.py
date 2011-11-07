@@ -1,11 +1,12 @@
 from amcat.tools import toolkit
-from amcat.test import amcattest
+from amcat.tools import amcattest
 import datetime
 import random
 import inspect
 
-class TestToolkitFunctions(amcattest.AmcatTestCase):
-
+class TestToolkitFunctions(amcattest.PolicyTestCase):
+    TARGET_MODULE = toolkit
+    
     def test_ints2ranges(self):
         for i in range(10):
             seq = [random.randint(-100, 100) for dummy in range(100)]
