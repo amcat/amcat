@@ -1,4 +1,28 @@
-from amcat.tools import toolkit
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+Model module containing AnnotationSchema, representing a annotation or coding
+schema to be used for manual coding
+"""
+
+from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
 from amcat.model.project import Project
@@ -9,13 +33,16 @@ import logging; log = logging.getLogger(__name__)
 
 
 class ValidationError(ValueError):
+    """Error in validating a field"""
     pass
 
 class RequiredValueError(ValidationError):
+    """Validation Error used when a required field is missing"""
     pass
 
 class AnnotationSchema(AmcatModel):
-    id = models.IntegerField(db_column='annotationschema_id', primary_key=True)
+    """Model for table annotationschemas: A coding schema used for manual coding"""
+    id = models.AutoField(db_column='annotationschema_id', primary_key=True)
 
     name = models.CharField(max_length=75)
     description = models.TextField()
@@ -33,24 +60,11 @@ class AnnotationSchema(AmcatModel):
         db_table = 'annotationschemas'
         app_label = 'amcat'
 
-    def asDict(self, values):
-        return dict(zip([f.fieldname for f in self.fields], values))
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
 
-    def validate(self, values):
-        """Validate whether the given values are a valid coding for this schema
-        raises a VAlidationError if not, returns silenty if ok.
-
-        @param values: Dict of {schemafield : (deserialized) values}
-        """
-        for field in self.fields:
-            field.validate(values.get(field))
-
-    def deserializeValues(self, **values):
-        """Deserialize a {fieldname:valuestr} dict to a {field:value} dict"""
-        objects = {}
-        for (k,v) in values.items():
-            f = self.getField(k)
-            o = f.deserialize(v)
-            objects[f] = o
-        return objects
-
+class TestAnnotationSchema(amcattest.PolicyTestCase):
+    pass

@@ -22,12 +22,10 @@
 from __future__ import print_function, absolute_import
 import logging; log = logging.getLogger(__name__)
 
-from amcat.tools import toolkit
 from amcat.model.language import Language
 from amcat.model.project import Project
 from amcat.model import authorisation as auth
 
-from django.contrib.auth.models import get_hexdigest, check_password
 from django.core.exceptions import ValidationError
 from django.db import models, DEFAULT_DB_ALIAS
 
@@ -37,6 +35,10 @@ from amcat.db import dbtoolkit
 
 
 class Affiliation(AmcatModel):
+    """
+    Model for table affiliations. Users are categorised by affiliation, and
+    some permissions are granted only for ones own  affiliation
+    """
     id = models.AutoField(primary_key=True, db_column='affiliation_id')
     name = models.CharField(max_length=200)
     
@@ -52,6 +54,9 @@ class Affiliation(AmcatModel):
         return user.haspriv('manage_users')
 
 class User(AmcatModel):
+    """
+    Model for table users. Every registered AmCAT user has one entry in the users table
+    """
     id = models.AutoField(primary_key=True, db_column='user_id', editable=False)
 
     username = models.SlugField(max_length=50, unique=True, editable=False,
@@ -80,18 +85,21 @@ class User(AmcatModel):
     
     @property
     def projects(self):
+        """Return a sequence of all projects the current user has a role in"""
         return Project.objects.filter(projectrole__user=self)
 
     ### Auth ###
     def can_read(self, user):
         return (user == self or
                 user.haspriv('view_users') or
-                (user.affiliation == self.affiliation and user.haspriv('view_users_same_affiliation')))
+                (user.affiliation == self.affiliation and
+                 user.haspriv('view_users_same_affiliation')))
 
     def can_update(self, user):
         return (user == self or
                 user.haspriv('manage_users') or
-                (user.affiliation == self.affiliation and user.haspriv('manage_users_same_affiliation')))
+                (user.affiliation == self.affiliation and
+                 user.haspriv('manage_users_same_affiliation')))
 
     @classmethod
     def can_create(cls, user):
@@ -99,18 +107,22 @@ class User(AmcatModel):
 
     ### Mimic Django-functions ###
     def set_password(self, raw_password):
+        """Set the users password to raw_password"""
         if raw_password is None:
             self.active = False
         else:
             dbtoolkit.db.set_password(self.username, raw_password)
 
     def check_password(self, raw_password):
+        """Returns True iff the raw_password is correct for this user""" 
         return dbtoolkit.get_database().check_password(self, raw_password)
 
     def is_authenticated(self):
+        """Returns True iff the current user is authenticated"""
         return True if hasattr(self, 'db') else False
 
     def has_perm(self, perm):
+        """Returns True iff this user has this perm(ission)"""
         return self.haspriv(perm)
 
     def haspriv(self, privilege, onproject=None):
@@ -129,10 +141,12 @@ class User(AmcatModel):
 
     @property
     def is_superuser(self):
+        """Returns True iff the current user is admin"""
         return (self.role.id == auth.ADMIN_ROLE)
 
     @classmethod
-    def create_user(cls, username, fullname, password, email, affiliation, language, using=DEFAULT_DB_ALIAS, force=False):
+    def create_user(cls, username, fullname, password, email, affiliation,
+                    language, using=DEFAULT_DB_ALIAS, force=False):
         """
         @param force: force creation of user (i.e., ignore UserAlreadyExists exception raised by
         dbtoolkit. Might be useful for unittests.
@@ -163,3 +177,17 @@ class User(AmcatModel):
         u.save()
 
         return u
+
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestUser(amcattest.PolicyTestCase):
+    def test_create(self):
+        """Test whether we can create a user"""        
+        u = amcattest.create_test_user()
+        self.assertIsNotNone(u)
