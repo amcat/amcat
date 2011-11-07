@@ -65,6 +65,8 @@ def filldict(vals, dic):
     return dic
    
 DATABASES = filldict(sections('db'), dict())
+if os.environ.get("DJANGO_DB_ENGINE"):
+    DATABASES["default"]["ENGINE"] = os.environ.get("DJANGO_DB_ENGINE")
 CACHES = filldict(sections('caching'), dict())
 
 SECRET_KEY = random_alphanum(30)
