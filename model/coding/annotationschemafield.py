@@ -82,7 +82,7 @@ class AnnotationSchemaField(AmcatModel):
     
     id = models.AutoField(primary_key=True, db_column="annotationschemafield_id")
 
-    annotationschema = models.ForeignKey(AnnotationSchema)
+    annotationschema = models.ForeignKey(AnnotationSchema, related_name='fields')
     fieldnr = models.IntegerField()
     
     fieldname = models.CharField(max_length=20, blank=False, null=False)

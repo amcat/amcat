@@ -8,7 +8,7 @@
 # Free Software Foundation, either version 3 of the License, or (at your  #
 # option) any later version.                                              #
 #                                                                         #
-# AmCAT is distributed in the hodsacearg453qptiojmpe that it will be useful, but WITHOUT    #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
 # License for more details.                                               #
@@ -17,17 +17,16 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.model.article import *
-from amcat.model.authorisation import *
-from amcat.model.language import *
-from amcat.model.medium import *
-from amcat.model.set import *
-from amcat.model.user import *
-from amcat.model.project import *
-from amcat.model.sentence import *  
+"""
+Test module to make sure that the amcat facilities for manual coding work
+as expected. The tests on the individual model classes should test whether
+they work separately. This tests whether the end-use of the classes taken
+together works as intended (eg a sort of integration test).
+"""
 
-from amcat.model.coding.annotationschema import *
-from amcat.model.coding.annotationschemafield import *
 
-from amcat.model.coding.codingjob import *
-from amcat.model.coding.annotation import *
+from amcat.tools import amcattest
+
+class TestAnnotations(amcattest.PolicyTestCase):
+    def test_test(self):
+        print(1)

@@ -86,13 +86,28 @@ def create_test_article(**kargs):
     return Article.objects.create(medium=m, **kargs)
 
 
-def create_test_set(**kargs):
+def create_test_set(articles=0, **kargs):
     """Create a test (Article) set"""
     from amcat.model.set import Set
     if "name" not in kargs: kargs["name"] = "testset_%i" % len(Set.objects.all())
     if "project" not in kargs: kargs["project"] = create_test_project()
-    return Set.objects.create(**kargs)
-    
+    s = Set.objects.create(**kargs)
+    if articles:
+        for _x in range(int(articles)):
+            s.articles.add(create_test_article())
+    return s
+            
+
+def create_test_job(**kargs):
+    """Create a test Coding Job"""
+    from amcat.model.coding.codingjob import CodingJob
+    if "insertuser" not in kargs: kargs["insertuser"] = create_test_user()
+    if "project" not in kargs: kargs["project"] = create_test_project()
+    if "unitschema" not in kargs: kargs["unitschema"] = create_test_schema()
+    if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema()
+    return CodingJob.objects.create(**kargs)
+
+
 
 class PolicyTestCase(unittest.TestCase):
     """

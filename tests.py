@@ -8,3 +8,5 @@ location and import here
 
 from amcat.tools.logging.amcatlogging import TestLogging
 from amcat.tools.amcattest import TestAmcatTest
+
+from amcat.coding.test_coding import *
