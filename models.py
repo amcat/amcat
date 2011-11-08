@@ -30,3 +30,4 @@ from amcat.model.coding.annotationschema import *
 from amcat.model.coding.annotationschemafield import *
 
 from amcat.model.coding.codingjob import *
+from amcat.model.coding.annotation import *
