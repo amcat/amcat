@@ -30,7 +30,8 @@ from amcat.tools import hg, toolkit
 from amcat.tools.logging import amcatlogging
 
 
-REPOLOC = "ssh://amcat.vu.nl:2222//home/amcat/hg/amcat3/{reponame}"
+#REPOLOC = "ssh://amcat.vu.nl:2222//home/amcat/hg/amcat3/{reponame}"
+REPOLOC = "/home/amcat/hg/amcat3/{reponame}"
 REPONAMES = ("amcat", "amcatscraping", "amcatnavigator")
 
 OUTDIR_DEFAULT = '/home/amcat/www/api'
