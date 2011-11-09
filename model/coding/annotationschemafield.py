@@ -101,6 +101,9 @@ class AnnotationSchemaField(AmcatModel):
         app_label = 'amcat'
         unique_together = ("annotationschema", "fieldnr")
 
+    def __unicode__(self):
+        return self.fieldname
+    
     @property
     def serializer(self):
         """Get the serialiser for this field"""
