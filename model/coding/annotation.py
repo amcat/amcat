@@ -66,6 +66,7 @@ class AnnotationValue(AmcatModel):
     class Meta():
         db_table = 'annotations_values'
         app_label = 'amcat'
+        unique_together = ("annotation", "field")
 
     
 ###########################################################################
