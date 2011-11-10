@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -30,6 +29,8 @@ Interface Table:
 see tableoutput.py for useful methods for rendering tables in different ways
 """
 
+from __future__ import unicode_literals, print_function, absolute_import
+
 from amcat.tools import toolkit, idlabel
 from amcat.tools.toolkit import isnull
 
@@ -38,6 +39,7 @@ from amcat.contrib.oset import OrderedSet
 
 import logging; log = logging.getLogger(__name__)
 
+
 def trivialCellFunc(row, col): return "%s/%s" % (row, col)
 
 class NamedRow(object):
@@ -45,11 +47,11 @@ class NamedRow(object):
         self.table = table
         self.row = row
     def get(self, column):
-         for col in self.table.getColumns():
+        for col in self.table.getColumns():
             if str(col) == column:
                 return self.table.getValue(self.row, col)
     def __getattr__(self, attr):
-        if attr <> 'table':
+        if attr != 'table':
             for col in self.table.getColumns():
                 if str(col) == attr:
                     return self.table.getValue(self.row, col)
@@ -62,7 +64,8 @@ class NamedRow(object):
             yield self.table.getValue( self.row, c)
 
 class Table(object):
-    def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc, rowNamesRequired = False):
+    def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc,
+                 rowNamesRequired = False):
         """
         columns and rows can be given or omitted if getColumns/getRows is overridden (default [])
         cellfunc can be given as (row,col)->value, or omitted if gteValue is overridden (default: trivialcellfunc)
@@ -107,17 +110,26 @@ class ObjectColumn(object):
     def getCell(self, row):
         if self.cellfunc:
             result = self.cellfunc(row)
-	    return result
-        raise Exception("Not Implemented: ObjectColumn instance should provide cellfunc or override getCell")
+            return result
+        raise NotImplementedError("Not Implemented: ObjectColumn instance should"
+                                  +"provide cellfunc or override getCell")
     def __str__(self):
         return self.label
+
+class AttributeColumn(ObjectColumn):
+    def __init__(self, attribute, label=None, **kargs):
+        if not label: label = attribute
+        super(AttributeColumn, self).__init__(label, **kargs)
+        self.attribute = attribute
+    def getCell(self, row):
+        return getattr(row, self.attribute)
 
 def _ObjectTableCellFunc(row, col):
     try:
         result = col.getCell(row)
         return result
     except Exception, e:
-	import traceback; traceback.print_exc()
+        import traceback; traceback.print_exc()
         log.error(e)
     
 class ObjectTable(Table):
@@ -128,14 +140,16 @@ class ObjectTable(Table):
     that has a getCell(row) -> value function
     """
     def __init__(self, rows = None, columns = None):
-        Table.__init__(self, columns=columns or [], rows = rows or [], cellfunc = _ObjectTableCellFunc)
+        Table.__init__(self, columns=columns or [], rows = rows or [],
+                       cellfunc = _ObjectTableCellFunc)
     def addColumn(self, col, label=None, **kargs):
         """Add column to Table3 object
         
-        @type col: ObjectColumn or (lambda-)function
+        @type col: ObjectColumn, string, or (lambda-)function
         @param col: Column you want to add to this table. If it is
         a function, it will be called with an object every time
-        a cell is created. The returned data will be used to fill it.
+        a cell is created. The returned data will be used to fill it. If
+        if is a string, use it as an attribute getter 
         
         @type label: str or unicode
         @param label: String for user-friendly column-identification.
@@ -148,6 +162,8 @@ class ObjectTable(Table):
             if label == '<lambda>': label = ''
             
             col = ObjectColumn(label, col, **kargs)
+        elif type(col) in (str, unicode):
+            col = AttributeColumn(col, label, **kargs)
         self.columns.append(col)
         
 class FormTable(ObjectTable):
@@ -270,7 +286,8 @@ class SortedTable(Table):
         Table.__init__(self, cellfunc = table.getValue)
         self.table = table
         self.sort = []
-        if not toolkit.isSequence(sort, excludeStrings=True) or (len(sort) == 2 and type(sort[1]) == bool):
+        if not toolkit.isSequence(sort, excludeStrings=True) or (
+            len(sort) == 2 and type(sort[1]) == bool):
             sort = [sort]
         for col in sort:
             if toolkit.isSequence(col): self.sort.append((col[0], col[1]))
@@ -324,7 +341,8 @@ class ColumnViewTable(Table):
         self.uselabel = uselabel
     def getColumns(self):
         for col in self.table.getColumns():
-            if col in self.columns or (self.uselabel and isinstance(col, idlabel.IDLabel) and col.label in self.columns):
+            if col in self.columns or (
+                self.uselabel and isinstance(col, idlabel.IDLabel) and col.label in self.columns):
                 yield col
     def getRows(self):
         return self.table.getRows()
@@ -348,46 +366,102 @@ def getColumnByLabel(table, label):
     for c in table.getColumns():
         if stringify(c) == label: return c
 
-            
+
+
+                 
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
         
-if __name__ == '__main__':
-    import tableoutput
-    t = ListTable(colnames = ["a1", "a2", "a3"],
-                  data = [[1,2,3],
-                          [7,8,9],
-                          [4,5,6],
-                          ])
+from amcat.tools import amcattest
+
+def _striplines(x):
+    return "\n".join(l.strip() for l in x.split("\n")).strip()
+
+class TestTable(amcattest.PolicyTestCase):
+    def test_list_table(self):
+        """Can we create a list table and output as ascii"""
+        from . import tableoutput
+
+        t = ListTable(colnames = ["a1", "a2", "a3"],
+                      data = [[1,2,3],
+                              [74321,8,9],
+                              [4,5,"asdf"],
+                              ])
+        result = tableoutput.table2ascii(t)
+        correct= u'''
+a1    | a2 | a3    
+------+----+-----
+1     | 2  | 3     
+74321 | 8  | 9     
+4     | 5  | asdf'''
+        self.assertEquals( _striplines(result), _striplines(correct.strip()))
+
+    def test_object_table(self):
+        """Does creating object tables work"""
+        from . import tableoutput
+        class Test(object):
+            def __init__(self, a, b, c):
+                self.a=a
+                self.b=b
+                self.c=c
+            
+        l = ObjectTable(rows=[Test(1,2,3), Test("bla",None, 7), Test(-1, -1, None)])
+        l.addColumn(lambda x: x.a, "de a")
+        l.addColumn("b")
+        l.addColumn(ObjectColumn("en de C", lambda x: x.c))
+        
+        result = tableoutput.table2unicode(l)
+        # get rid of pesky unicode
+        result = result.translate(dict((a, 65+a%26) for a in range(0x2500, 0x2600)))
+
+        correct = '''OKKKKKKEKKKKEKKKKKKKKKR
+L de a K b  K en de C L
+ZIIIIIIQIIIIQIIIIIIIIIC
+L 1    K 2  K 3       L
+L bla  K    K 7       L
+L -1   K -1 K         L
+UKKKKKKHKKKKHKKKKKKKKKX'''
+        self.assertEquals( _striplines(result), _striplines(correct.strip()))
+            
+# if __name__ == '__main__':
+#     import tableoutput
+#     t = ListTable(colnames = ["a1", "a2", "a3"],
+#                   data = [[1,2,3],
+#                           [7,8,9],
+#                           [4,5,6],
+#                           ])
 
 
-    print(tableoutput.table2ascii(t))
+#     print(tableoutput.table2ascii(t))
 
-    s = SortedTable(t, getColumnByLabel(t, "a2"))
-    print(tableoutput.table2ascii(s))
+#     s = SortedTable(t, getColumnByLabel(t, "a2"))
+#     print(tableoutput.table2ascii(s))
     
-    t2 = ListTable(colnames = ["b1", "b2"],
-                   data = [['a','A'],
-                           ['c','C'],
-                           ['d','D'],
-                           ['b','B'],
-                           ])
+#     t2 = ListTable(colnames = ["b1", "b2"],
+#                    data = [['a','A'],
+#                            ['c','C'],
+#                            ['d','D'],
+#                            ['b','B'],
+#                            ])
     
-    print(tableoutput.table2ascii(t2))
-    m = MergedTable(t, t2)
-    m.columnfilter = lambda tab,col : col.label <> "a1"
-    print(tableoutput.table2ascii(m))
+#     print(tableoutput.table2ascii(t2))
+#     m = MergedTable(t, t2)
+#     m.columnfilter = lambda tab,col : col.label <> "a1"
+#     print(tableoutput.table2ascii(m))
 
-    l = getColumnByLabel(m, "b1")
-    print(l)
-    s = SortedTable(m, getColumnByLabel(m, "b1")) 
-    print(tableoutput.table2ascii(s))
+#     l = getColumnByLabel(m, "b1")
+#     print(l)
+#     s = SortedTable(m, getColumnByLabel(m, "b1")) 
+#     print(tableoutput.table2ascii(s))
 
-    import article, dbtoolkit
-    a = article.Article(dbtoolkit.amcatDB(), 33308863)
-    a2 = article.Article(dbtoolkit.amcatDB(), 33308864)
+#     import article, dbtoolkit
+#     a = article.Article(dbtoolkit.amcatDB(), 33308863)
+#     a2 = article.Article(dbtoolkit.amcatDB(), 33308864)
 
-    hl = ObjectColumn("headline", lambda a: a.headline)
-    id = ObjectColumn("id", lambda a: a.id)
+#     hl = ObjectColumn("headline", lambda a: a.headline)
+#     id = ObjectColumn("id", lambda a: a.id)
     
-    l = ObjectTable([a,a2], [hl, id])
-    print(tableoutput.table2ascii(l))
+#     l = ObjectTable([a,a2], [hl, id])
+#     print(tableoutput.table2ascii(l))
     
