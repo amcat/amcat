@@ -28,10 +28,16 @@ that it should go to the www/api directory.
 import subprocess, sys, os.path, os, tempfile, datetime
 from amcat.tools import hg, toolkit
 from amcat.tools.logging import amcatlogging
+from amcat.tools import toolkit
 
 
-#REPOLOC = "ssh://amcat.vu.nl:2222//home/amcat/hg/amcat3/{reponame}"
-REPOLOC = "/home/amcat/hg/amcat3/{reponame}"
+GRAPHSCRIPT = "{path}/create_model_graphs.py".format(path=toolkit.get_script_path())
+GRAPHCMD = "PYTHONPATH={tmpdir} python {GRAPHSCRIPT}"
+GRAPHDEST = '{outdir}/model_{reponame}_{branch}.html'
+WWWGRAPHDEST = '{wwwroot}/model_{reponame}_{branch}.html'
+
+REPOLOC = "ssh://amcat.vu.nl:2222//home/amcat/hg/amcat3/{reponame}"
+REPOLOC_NOSSH = "/home/amcat/hg/amcat3/{reponame}"
 REPONAMES = ("amcat", "amcatscraping", "amcatnavigator")
 
 OUTDIR_DEFAULT = '/home/amcat/www/api'
@@ -49,6 +55,7 @@ if len(sys.argv) > 1:
 else:
     outdir = OUTDIR_DEFAULT
     wwwroot = WWWROOT_DEFAULT
+    REPOLOC = REPOLOC_NOSSH # allows cron to run 
 
 log = amcatlogging.setup()
 
@@ -80,11 +87,22 @@ for reponame in REPONAMES:
         cmd = r'epydoc -v --simple-term -n "AmCAT Documentation {reponame} ({branch})"'
         cmd += r' --navlink="<a href=\"{wwwroot}/index.html\" target="_top">AmCAT Documentation Index</a>"'
         cmd += r' -o "{docdest}" "{repo.repo}" > {logfile} 2>&1'
-        toolkit.execute(cmd.format(**locals()))
+        #toolkit.execute(cmd.format(**locals()))
         indexfile.write("<li><a href='{wwwdocdest}/index.html'>{reponame} ({branch})</a>".format(**locals()))
         indexfile.write("<a href='{wwwdocdest}/{reponame}-module.html'>(no frames)</a>".format(**locals()))
         indexfile.write("<a href='{wwwlogdest}'>(log)</a>".format(**locals()))
 
+
+        if reponame == 'amcat':
+            log.info("Creating model graph for {reponame}".format(**locals()))
+            log.info(GRAPHCMD.format(**locals()))
+            html, err = toolkit.execute(GRAPHCMD.format(**locals()))
+            if err: html = "Error on generating graph:<pre>{err}</pre>".format(**locals())
+            open(GRAPHDEST.format(**locals()), 'w').write(html)
+            wwwgraphdest = WWWGRAPHDEST.format(**locals())
+            indexfile.write("<a href='{wwwgraphdest}'>(model graph)</a>".format(**locals()))
+            
+        
 script= sys.argv[0]
 stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         

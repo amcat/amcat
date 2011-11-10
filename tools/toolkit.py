@@ -170,6 +170,9 @@ def openfile(filename, mode = None, skipheader=False):
     return f
 
 
+def get_script_path():
+    return os.path.split(os.path.normpath(os.path.join(os.getcwd(), sys.argv[0])))[0]
+
 def mkdir(newdir):
     """
     Create the directory C{newdir}; and parents as needed

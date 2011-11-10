@@ -26,6 +26,7 @@ location and import here
 
 
 from amcat.tools.logging.amcatlogging import TestLogging
-from amcat.tools.amcattest import TestAmcatTest
+from amcat.tools.amcattest import *
+from amcat.tools.djangotoolkit import *
 
 from amcat.model.coding.test_coding import *
