@@ -89,8 +89,8 @@ for reponame in REPONAMES:
         cmd += r' -o "{docdest}" "{repo.repo}" > {logfile} 2>&1'
         toolkit.execute(cmd.format(**locals()))
         indexfile.write("<li><a href='{wwwdocdest}/index.html'>{reponame} ({branch})</a>".format(**locals()))
-        indexfile.write("<a href='{wwwdocdest}/{reponame}-module.html'>(no frames)</a>".format(**locals()))
-        indexfile.write("<a href='{wwwlogdest}'>(log)</a>".format(**locals()))
+        indexfile.write(" | <a href='{wwwdocdest}/{reponame}-module.html'>(no frames)</a>".format(**locals()))
+        indexfile.write(" | <a href='{wwwlogdest}'>(log)</a>".format(**locals()))
 
 
         if reponame == 'amcat':
@@ -100,7 +100,7 @@ for reponame in REPONAMES:
             if err: html = "Error on generating graph:<pre>{err}</pre>".format(**locals())
             open(GRAPHDEST.format(**locals()), 'w').write(html)
             wwwgraphdest = WWWGRAPHDEST.format(**locals())
-            indexfile.write("<a href='{wwwgraphdest}'>(model graph)</a>".format(**locals()))
+            indexfile.write("| <a href='{wwwgraphdest}'>(model graph)</a>".format(**locals()))
             
         
 script= sys.argv[0]
