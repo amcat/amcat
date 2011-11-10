@@ -259,11 +259,11 @@ class Identifier(object):
         result = set()
         for node in alpino.nodes(nodelist):
             if node.pos == 'pron' and node.word.lower() in ANAPHORA:
-                as = ANAPHORA[node.word.lower()]
-                if type(as) == tuple:
-                    as = self._disambiguate(node, as)
-                result.add(AnaphoricReference(as, node, self.rec))
-                node.indexed().anaphora = 'pron %s' % as.label
+                anas = ANAPHORA[node.word.lower()]
+                if type(anas) == tuple:
+                    anas = self._disambiguate(node, anas)
+                result.add(AnaphoricReference(anas, node, self.rec))
+                node.indexed().anaphora = 'pron %s' % anas.label
                 debug("Anaphora: %s<br/>"% (node.word or node.root or node.id))
         return result
 
