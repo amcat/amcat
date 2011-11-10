@@ -76,6 +76,7 @@ class CodingJobSet(AmcatModel):
     class Meta():
         db_table = 'codingjobs_sets'
         app_label = 'amcat'
+
     
 ###########################################################################
 #                          U N I T   T E S T S                            #

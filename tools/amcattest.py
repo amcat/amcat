@@ -53,8 +53,7 @@ LICENSE = """###################################################################
 """
 
 from . import toolkit
-
-
+    
 def create_test_user():
     """Create a user to be used in unit testing"""
     from amcat.model.user import Affiliation, User
@@ -107,6 +106,15 @@ def create_test_job(**kargs):
     if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema()
     return CodingJob.objects.create(**kargs)
 
+def create_test_annotation(**kargs):
+    """Create a test annotation object"""
+    from amcat.model.coding.codingjob import CodingJobSet
+    from amcat.model.coding.annotation import Annotation
+    
+    j = create_test_job()
+    s = create_test_set(articles=2)
+    cs = CodingJobSet.objects.create(codingjob=j, articleset=s, coder=j.insertuser)
+    return Annotation.objects.create(codingjobset=cs, article=s.articles.all()[0], **kargs)
 
 
 class PolicyTestCase(unittest.TestCase):
@@ -121,9 +129,10 @@ class PolicyTestCase(unittest.TestCase):
     """
     
     PYLINT_IGNORE = ("C0321", "C0103", "C0302",
-                     "W0232", "W0404", "W0511",
-                     "R0903", "R0904", "R0913", "R0201",
+                     "W0232", "W0404", "W0511", "W0142",
+                     "R0903", "R0904", "R0913", "R0201", 'R0902',
                      "E1101", # 'X has no member Y' easily mislead by django magic members
+                     "E1103", # pylint sucks at inheritance
                      )
     PYLINT_IGNORE_EXTRA = () 
     TARGET_MODULE = None
@@ -197,3 +206,7 @@ class TestAmcatTest(PolicyTestCase):
         p = create_test_project()
         p2 = create_test_project()
         self.assertNotEqual(p, p2)
+
+        
+        
+        

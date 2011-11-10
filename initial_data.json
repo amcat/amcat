@@ -247,7 +247,7 @@
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "normal",
-      "serialiserclassname" : "BaseSerialiser"
+      "serialiserclassname" : "TextSerialiser"
     }
   },
   {
@@ -255,7 +255,7 @@
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "integer",
-      "serialiserclassname" : "BaseSerialiser"
+      "serialiserclassname" : "IntSerialiser"
     }
   },
   {
@@ -287,7 +287,7 @@
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "Decimal",
-      "serialiserclassname" : "BaseSerialiser"
+      "serialiserclassname" : "TextSerialiser"
     }
   },
   {
@@ -295,7 +295,7 @@
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "Boolean",
-      "serialiserclassname" : "BaseSerialiser"
+      "serialiserclassname" : "TextSerialiser"
     }
   },
   {
@@ -303,28 +303,28 @@
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "DB filtered choice",
-      "serialiserclassname" : "BaseSerialiser"
+      "serialiserclassname" : "TextSerialiser"
     }
   },
   {  "pk" : 9, 
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "Quality",
-      "serialiserclassname" : "BaseSerialiser"
+      "serialiserclassname" : "TextSerialiser"
     }
   },
   {  "pk" : 10, 
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "Area",
-      "serialiserclassname" : "BaseSerialiser"
+      "serialiserclassname" : "TextSerialiser"
     }
   },
   {  "pk" : 11, 
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "Arrowreference",
-      "serialiserclassname" : "BaseSerialiser"
+      "serialiserclassname" : "TextSerialiser"
     }
   },
   {  "pk" : 12, 
@@ -332,6 +332,30 @@
     "fields" : {
       "name" : "Interval",
       "serialiserclassname" : "FromFieldSerialiser"
+    }
+  },
+  {  "pk" : 0,
+    "model": "amcat.annotationstatus",
+    "fields" : {
+      "label" : "Not started"
+    }
+  },
+  {  "pk" : 1,
+    "model": "amcat.annotationstatus",
+    "fields" : {
+      "label" : "In Progress"
+    }
+  },
+  {  "pk" : 2,
+    "model": "amcat.annotationstatus",
+    "fields" : {
+      "label" : "Finished"
+    }
+  },
+  {  "pk" : 9,
+    "model": "amcat.annotationstatus",
+    "fields" : {
+      "label" : "Irrelevant"
     }
   }
 ]

@@ -68,6 +68,7 @@ class AnnotationSchemaFieldType(AmcatModel):
         """Create a serialiser object for this field type with the given field"""
         pass
 
+    
     class Meta():
         db_table = 'annotationschemas_fieldtypes'
         app_label = 'amcat'
@@ -105,25 +106,32 @@ class AnnotationSchemaField(AmcatModel):
         return self.fieldname
     
     @property
-    def serializer(self):
+    def serialiser(self):
         """Get the serialiser for this field"""
-        return self.fieldtype.serialiser(self)
-
-    def deserialize(self, value):
-        """Deserialise the given value, e.g. transform a db value to a model object"""
-        val = self.serializer.deserialize(value)
-        log.debug("%r/%r deserialised %r to %r" % (self, self.serializer, value, val))
-        return val
-
-    def getTargetType(self):
-        """Get the target type for this field"""
-        return self.serializer.getTargetType()   
+        return self.fieldtype.serialiserclass(self)
 
     def validate(self, value):
         """Validate the given value for this field"""
         if (value is None) and self.required:
             raise RequiredValueError(self)
 
+    def possible_values(self):
+        """Get the possible values
+
+        @return: a sequence of (deserialised) values
+                 or None if the field is not a 'drop down'
+        """
+        raise NotImplementedError()
+
+    def value_description(self, value):
+        """Get a description for the given (desrialised) value"""
+        raise NotImplementedError()
+
+    
+    def value_label(self, value):
+        """Get a description for the given (deserialised) value"""
+        raise NotImplementedError()
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -134,14 +142,32 @@ class TestAnnotationSchemaFieldType(amcattest.PolicyTestCase):
     def test_get_serialiser(self):
         """Are the built in field types present and bound to the right class?"""
         fieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
-        self.assertEqual(fieldtype.serialiserclass, serialiser.BaseSerialiser)
+        self.assertEqual(fieldtype.serialiserclass, serialiser.TextSerialiser)
 
 class TestAnnotationSchemaField(amcattest.PolicyTestCase):
     def test_create_field(self):
         """Can we create a schema field object on a schema"""
         fieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
         a = amcattest.create_test_schema()
-        a = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
+        f = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
+        self.assertIsNotNone(f)
+        
+    def test_values(self):
+        """test the possible_values and describe_value functions"""
+        fieldtype = AnnotationSchemaFieldType.objects.get(pk=1) # 
+        a = amcattest.create_test_schema()
+        f = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
+        v = f.possible_values()
+        self.assertIsNone(v) # for pk 1
 
+        fieldtype = AnnotationSchemaFieldType.objects.get(pk=3) # lookup field
+        f = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
+        v = f.possible_values()
+        self.assertTrue(v) # lookup should have values!
+        # test possible values
+        for val in v:
+            f.describe_value(val)
+        
+        
         
         
