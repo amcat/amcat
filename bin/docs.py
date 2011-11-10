@@ -25,14 +25,15 @@ in REPONAMES at REPOLOC. If destination is not given, assume
 that it should go to the www/api directory.
 """
 
-import subprocess, sys, os.path, os, tempfile, datetime
+import subprocess, sys, os.path, os, tempfile, datetime, shutil
 from amcat.tools import hg, toolkit
 from amcat.tools.logging import amcatlogging
 from amcat.tools import toolkit
 
 
 GRAPHSCRIPT = "{path}/create_model_graphs.py".format(path=toolkit.get_script_path())
-GRAPHCMD = "PYTHONPATH={tmpdir} python {GRAPHSCRIPT}"
+GRAPHCMD = "PYTHONPATH=~/tmp:{tmpdir} DJANGO_SETTINGS_MODULE=amcat.settings python2.6 {GRAPHSCRIPT}"
+#~/tmp = hack for old amcat!
 GRAPHDEST = '{outdir}/model_{reponame}_{branch}.html'
 WWWGRAPHDEST = '{wwwroot}/model_{reponame}_{branch}.html'
 
@@ -101,7 +102,7 @@ for reponame in REPONAMES:
             open(GRAPHDEST.format(**locals()), 'w').write(html)
             wwwgraphdest = WWWGRAPHDEST.format(**locals())
             indexfile.write("| <a href='{wwwgraphdest}'>(model graph)</a>".format(**locals()))
-            
+    shutil.rmtree(tmpdir)
         
 script= sys.argv[0]
 stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
