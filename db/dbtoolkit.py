@@ -36,7 +36,6 @@ class UserAlreadyExists(DatabaseError):
     pass
 
 class Database(object):
-    """"""
     def __init__(self, using=None):
         self.using = using or DEFAULT_DB_ALIAS
         self._cursor = None
