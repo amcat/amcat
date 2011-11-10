@@ -87,7 +87,7 @@ for reponame in REPONAMES:
         cmd = r'epydoc -v --simple-term -n "AmCAT Documentation {reponame} ({branch})"'
         cmd += r' --navlink="<a href=\"{wwwroot}/index.html\" target="_top">AmCAT Documentation Index</a>"'
         cmd += r' -o "{docdest}" "{repo.repo}" > {logfile} 2>&1'
-        #toolkit.execute(cmd.format(**locals()))
+        toolkit.execute(cmd.format(**locals()))
         indexfile.write("<li><a href='{wwwdocdest}/index.html'>{reponame} ({branch})</a>".format(**locals()))
         indexfile.write("<a href='{wwwdocdest}/{reponame}-module.html'>(no frames)</a>".format(**locals()))
         indexfile.write("<a href='{wwwlogdest}'>(log)</a>".format(**locals()))
