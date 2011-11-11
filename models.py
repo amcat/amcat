@@ -25,3 +25,4 @@ from amcat.model.set import *
 from amcat.model.user import *
 from amcat.model.project import *
 from amcat.model.sentence import *  
+
