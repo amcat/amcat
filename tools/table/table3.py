@@ -40,98 +40,96 @@ from amcat.contrib.oset import OrderedSet
 import logging; log = logging.getLogger(__name__)
 
 
-def trivialCellFunc(row, col): return "%s/%s" % (row, col)
+def trivialCellFunc(row, col):
+    """'Default' cell function that returns a string representation row/col"""
+    return "%s/%s" % (row, col)
+
+class Table(object):
+    """Generic interface on rectangular tables.
+
+    Supports read access using getRows/getColumns/getValue and
+    using index access to and iteration over the 'Named' rows
+    e.g. print row[1].colA; for row in table: print(row.colB)
+
+    This is primarily meant for subclassing, but a base implementation
+    works by giving columns and rows as sequences and a function that
+    maps column and row to a value.
+    """
+    def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc,
+                 rowNamesRequired = False):
+        """
+        @param columns: a sequence of columns, or None if getColumns is overridden
+        @param rows:a sequence of rows, or None if getRows is overridden
+        @param cellfunc: a function taking a row and column argument, or None
+                         if getValue is overridden.
+        @param rowNamesRequired: a hint to output functions that rownames should be printed
+        """
+        self.columns    = isnull(columns, []) 
+        self.rows       = isnull(rows, [])
+        self.cellfunc   = cellfunc
+        self.rowNamesRequired = rowNamesRequired
+
+    # Basic table interface
+    def getValue(self, row, column):
+        """Get the value corresponding to this row and column"""
+        result =  self.cellfunc(row, column)
+        return result
+    def getRows(self):
+        """Get a sequence of objects representing the rows"""
+        return self.rows
+    def getColumns(self):
+        """Get a sequence of objects representing the columns"""
+        return self.columns
+
+    # Convenience access using iteration / index and NamedRows
+    def getNamedRows(self):
+        """Get a sequence of NamedRow objects that can be used to access the values"""
+        for r in self.getRows():
+            yield NamedRow(self, r)
+    def getNamedRow(self, rowname):
+        """Get a NamedRow object for the given row(name)"""
+        for r in self.getRows():
+            if r == rowname:
+                return NamedRow(self, r)
+        return None       
+    def __iter__(self):
+        return iter(self.getNamedRows())
+    def __getitem__(self, index):
+        """Get the n-th column"""
+        return list(self.getRows())[index]
+    
 
 class NamedRow(object):
+    """Interface for a row in a table that supports attribute and index access"""
     def __init__(self, table, row):
         self.table = table
         self.row = row
     def get(self, column):
+        """Get the specified column on this row?"""
         for col in self.table.getColumns():
             if str(col) == column:
                 return self.table.getValue(self.row, col)
     def __getattr__(self, attr):
+        """If attr is the str(col) for any column, return that column"""
         if attr != 'table':
             for col in self.table.getColumns():
                 if str(col) == attr:
                     return self.table.getValue(self.row, col)
         return super(NamedRow, self).__getattribute__(attr)
     def __getitem__(self, index):
+        """Get the n-th column"""
         col = list(self.table.getColumns())[index]
         return self.table.getValue(self.row, col)
     def __iter__(self):
+        """Iterate over the columns"""
         for c in self.table.getColumns():
             yield self.table.getValue( self.row, c)
 
-class Table(object):
-    def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc,
-                 rowNamesRequired = False):
-        """
-        columns and rows can be given or omitted if getColumns/getRows is overridden (default [])
-        cellfunc can be given as (row,col)->value, or omitted if gteValue is overridden (default: trivialcellfunc)
-        rowNamesRequired indicates if rownames are required to be printed, in order to have a meaningful table
-        """
-        self.columns    = isnull(columns, []) 
-        self.rows       = isnull(rows, [])
-        self.cellfunc   = cellfunc
-        self.rowNamesRequired = rowNamesRequired
-    def getValue(self, row, column):
-        result =  self.cellfunc(row, column)
-        return result
-    def getRows(self):
-        return self.rows
-    def getNamedRows(self):
-        for r in self.getRows():
-            yield NamedRow(self, r)
-    def getNamedRow(self, rowname):
-        for r in self.getRows():
-            if r == rowname:
-                return NamedRow(self, r)
-        return None
-    def getColumns(self):
-        return self.columns                
-    def __iter__(self):
-        return iter(self.getNamedRows())
     
-
+# Why are these here?
 OBJECTCOLUMN_PROPERTIES = ('fieldname', 'fieldtype', 'label',
                            'visible', 'editable', 'url')
 
-class ObjectColumn(object):
-    def __init__(self, label, cellfunc=None, fieldname=None, fieldtype=None, 
-                 visible=True, editable=True, url=None):
-        self.label = label
-        self.cellfunc = cellfunc
-        self.fieldname = fieldname or label
-        self.fieldtype = fieldtype
-        self.visible = visible
-        self.editable = editable
-        self.url = url
-    def getCell(self, row):
-        if self.cellfunc:
-            result = self.cellfunc(row)
-            return result
-        raise NotImplementedError("Not Implemented: ObjectColumn instance should"
-                                  +"provide cellfunc or override getCell")
-    def __str__(self):
-        return self.label
-
-class AttributeColumn(ObjectColumn):
-    def __init__(self, attribute, label=None, **kargs):
-        if not label: label = attribute
-        super(AttributeColumn, self).__init__(label, **kargs)
-        self.attribute = attribute
-    def getCell(self, row):
-        return getattr(row, self.attribute)
-
-def _ObjectTableCellFunc(row, col):
-    try:
-        result = col.getCell(row)
-        return result
-    except Exception, e:
-        import traceback; traceback.print_exc()
-        log.error(e)
-    
 class ObjectTable(Table):
     """
     Convenience subclass of Table that assumes the rows contain
@@ -140,8 +138,7 @@ class ObjectTable(Table):
     that has a getCell(row) -> value function
     """
     def __init__(self, rows = None, columns = None):
-        Table.__init__(self, columns=columns or [], rows = rows or [],
-                       cellfunc = _ObjectTableCellFunc)
+        Table.__init__(self, columns=columns or [], rows = rows or [])
     def addColumn(self, col, label=None, **kargs):
         """Add column to Table3 object
         
@@ -165,6 +162,39 @@ class ObjectTable(Table):
         elif type(col) in (str, unicode):
             col = AttributeColumn(col, label, **kargs)
         self.columns.append(col)
+    def getValue(self, row, column):
+        """Get the column-value for the given row object"""
+        return column.getCell(row)
+        
+class ObjectColumn(object):
+    """An ObjectColumn is a column on an ObjectTable that gets a value
+    on an object by calling the cellfunc(obj)"""
+    def __init__(self, label, cellfunc=None, fieldname=None, fieldtype=None, 
+                 visible=True, editable=True, url=None):
+        self.label = label
+        self.cellfunc = cellfunc
+        self.fieldname = fieldname or label
+        self.fieldtype = fieldtype
+        self.visible = visible
+        self.editable = editable
+        self.url = url
+    def getCell(self, row):
+        """Calculate/get the value of this column for the given row object
+        Default implementation calls self.rowfunc
+        """
+        return self.cellfunc(row)
+    def __str__(self):
+        return self.label
+
+class AttributeColumn(ObjectColumn):
+    """An ObjectColumn subclass that works as an attribute getter"""
+    def __init__(self, attribute, label=None, **kargs):
+        if not label: label = attribute
+        super(AttributeColumn, self).__init__(label, **kargs)
+        self.attribute = attribute
+    def getCell(self, row):
+        """Returns the right attribute of the given row object"""  
+        return getattr(row, self.attribute)
         
 class FormTable(ObjectTable):
     """Wrapper around ObjectTable. Get its default columns from a Form
@@ -201,7 +231,7 @@ class FormTable(ObjectTable):
     def _addColumn(self, name, field, visible=True):
         label = field.label or name.capitalize()
         col = self._createCellfunc(field, name)
-        type = field.__class__.__name__
+        fieldtype = field.__class__.__name__
         
         url = None
         if toolkit.hasattrv2(self.form, 'Meta.links'):
@@ -209,7 +239,7 @@ class FormTable(ObjectTable):
         
         self.addColumn(col, label,
                        fieldname=name,
-                       fieldtype=type,
+                       fieldtype=fieldtype,
                        url=url,
                        visible=visible)
             
@@ -240,7 +270,8 @@ class DictTable(Table):
                        self.getValue)
         self.data = {}
         self.default = default
-    def addValue(self,row, col, value):
+    def addValue(self, row, col, value):
+        """Set the given value in the data dict"""
         self.data[row, col] = value
         self.columns.add(col)
         self.rows.add(row)
@@ -264,13 +295,14 @@ class ListTable(Table):
        if the data is not subscriptable
     """
     def __init__(self, data=None, colnames=None):
-        Table.__init__(self, rows=data or [])
+        super(ListTable, self).__init__(rows=data or [])
         self.colnames = colnames
     def getColumns(self):
         if not (self.colnames or self.rows): return []
         colnames = self.colnames or range(len(toolkit.head(self.rows)))
         return [idlabel.IDLabel(i, colname) for (i, colname) in enumerate(colnames)]
     def addRow(self, *row):
+        """Append a row of values to the internal list-of-lists"""
         self.rows.append(row)
     def getValue(self, row, col):
         if col.id >= len(row): return None
@@ -295,8 +327,9 @@ class SortedTable(Table):
     def getColumns(self):
         return self.table.getColumns()
     def cmp(self, a, b):
+        """Compare rows a and b for use in sorting"""
         for col, asc in self.sort:
-            ab = [self.getValue(x, col) for x in (a,b)]
+            ab = [self.getValue(x, col) for x in (a, b)]
             return cmp(*ab) * (1 if asc else -1)
         return 0
     def getRows(self):
@@ -389,7 +422,7 @@ class TestTable(amcattest.PolicyTestCase):
                               [4,5,"asdf"],
                               ])
         result = tableoutput.table2ascii(t)
-        correct= u'''
+        correct = u'''
 a1    | a2 | a3    
 ------+----+-----
 1     | 2  | 3     
@@ -402,11 +435,9 @@ a1    | a2 | a3
         from . import tableoutput
         class Test(object):
             def __init__(self, a, b, c):
-                self.a=a
-                self.b=b
-                self.c=c
+                self.a, self.b, self.c = a, b, c
             
-        l = ObjectTable(rows=[Test(1,2,3), Test("bla",None, 7), Test(-1, -1, None)])
+        l = ObjectTable(rows=[Test(1, 2, 3), Test("bla",None, 7), Test(-1, -1, None)])
         l.addColumn(lambda x: x.a, "de a")
         l.addColumn("b")
         l.addColumn(ObjectColumn("en de C", lambda x: x.c))
