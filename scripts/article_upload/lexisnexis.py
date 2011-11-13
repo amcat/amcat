@@ -28,6 +28,7 @@ from amcat.scripts import script
 from amcat.tools import toolkit
 
 from amcat.model.article import Article
+from amcat.model.medium import Medium
 
 import re
 import collections
@@ -304,12 +305,37 @@ class LexisNexis(script.Script):
 
     def body_to_article(self, headline, byline, text, date, source, meta):
         """
+        Create an Article-object based on given parameters. It raises an
+        error (Medium.DoesNotExist) when the given source does not have
+        an entry in the database.
+
+        @param headline: headline of new Article-object
+        @type headline: unicode / str
+
+        @param byline: byline for new Article
+        @type byline: NoneType, unicode, str
+
+        @param text: text for new Article
+        @type text: unicode / str
+
+        @param date: date(time) for new Article
+        @type date: datetime.date, datetime.datetime
+
+        @param source: medium-label for new Article
+        @type source: unicode / str
+
+        @param meta: object containing all sorts of meta-information, most of
+                     it suitable for metastring. However, some information
+                     (author, length) will be extracted.
+        @type meta: dictionary
+
+        @return Article-object
         
         """
         art = Article(headline=headline, byline=byline, text=text, date=date)
         art.medium = Medium.objects.get(name__iexact=source)
 
-        def _get_and_delte_key(dic, key):
+        def _get_key(dic, key):
             for k in dic.keys():
                 if BODY_KEYS_MAP.get(k.lower(), None) == key:
                     res = meta[k]
@@ -319,8 +345,10 @@ class LexisNexis(script.Script):
         # Author / Section
         art.author = _get_key(meta, 'author')
         art.section = _get_key(meta, 'section')
+        art.length = int(_get_key(meta, 'length').split()[0])
+        art.metastring = str(meta)
 
-        return art, meta
+        return art
 
     def run(self, input):
         assert(isinstance(input, basestring))
@@ -330,5 +358,7 @@ class LexisNexis(script.Script):
 
         articles = self.split_body(body)
         articles = [self.parse_article(a) for a in articles]
+        
+        return [self.body_to_article(*a) for a in articles]
 
 
