@@ -60,6 +60,7 @@ class Article(AmcatModel):
     metastring = models.TextField(null=True)
     url = models.URLField(null=True, db_index=True)
     externalid = models.IntegerField(blank=True, null=True)
+    author = models.CharField(max_length=100, blank=True, null=True)
 
     #sets = models.ManyToManyField("amcat.Set", db_table="sets_articles")
     
