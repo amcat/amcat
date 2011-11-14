@@ -31,4 +31,6 @@ from amcat.model.coding.annotationschemafield import *
 from amcat.model.coding.codingjob import *
 from amcat.model.coding.annotation import *
 
-from amcat.model.ontology.object import *
+from amcat.model.ontology.code import *
+from amcat.model.ontology.codebook import *
+

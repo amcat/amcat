@@ -1,85 +1,93 @@
-from datetime import datetime
-import collections
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 
-from amcat.tools import toolkit
-from amcat.tools.model import AmcatModel
-from amcat.model.ontology.hierarchy import DictHierarchy
-from amcat.model.ontology.hierarchy import BoundCode
+"""
+Model module representing ontology Codebooks
+"""
 
-from django.db import models
+from __future__ import unicode_literals, print_function, absolute_import
 
 import logging; log = logging.getLogger(__name__)
 
-DUMMY_CLASSID_PARTYMEMBER = 1
-DUMMY_CLASSID_OFFICE = 2
-#PERSONS_CLASSID = 4003
+from django.db import models
 
-class Codebook(AmcatModel, DictHierarchy):
-    id = models.IntegerField(primary_key=True, db_column='codebook_id')
+from amcat.tools.model import AmcatModel
+from amcat.model.ontology.code import Code
+from amcat.model.project import Project
+
+class Codebook(AmcatModel):
+    id = models.AutoField(primary_key=True, db_column='codebook_id')
+
+    bases = models.ManyToManyField("amcat.Codebook", db_table="codebooks_bases")
+    project = models.ForeignKey(Project)
 
     name = models.TextField()
-    codes = models.ManyToManyField("ontology.Code", db_table="codebooks_codes")
-    #trees = models.ManyToManyField("Tree", through=CodebookTree)
 
     def __unicode__(self):
         return self.name
 
     class Meta():
         db_table = 'codebooks'
-        app_label = 'ontology'
+        app_label = 'amcat'
 
-    def _getAllCodes(self):
-        self.treesdict = collections.defaultdict(set) # treeid : codeids that got parent from tree
-        seen = set()
-        for t in self.trees:
-            for obj, parent, reversed in t._getAllCodes():
-                if obj not in seen:
-                    self.treesdict[t.id].add(obj)
-                    yield obj, parent, reversed
-                    seen.add(obj)
+    def add_code(self, code, parent=None, hide=False):
+        if parent and hide: raise ValueError("Hidden objects cannot specify parent")
+        if isinstance(parent, CodebookCode): parent = parent.code
+        if isinstance(code, CodebookCode): code = code.code
+        return CodebookCode.objects.create(codebook=self, code=code, parentcode=parent, hide=hide)
 
-
-    def getPath(self, code, date=None):
-        """Check whether we need to use functions to categorise
-        this code; if so, start super.getPath from function-parent
-        and add to that path"""
-        code =self.getCode(code)
-        for t in self.trees:
-            if code.id in self.treesdict[t.id]: 
-                break # other class is first
-            if t.id in (DUMMY_CLASSID_PARTYMEMBER, DUMMY_CLASSID_OFFICE):
-                f = toolkit.head(code.objekt.currentFunctions(date, party=(t.id == DUMMY_CLASSID_PARTYMEMBER)))
-                log.info("%r.%r.%r(%s) --> %s" % (self, t, code, date, f))
-                if not f: continue
-                f = f.office
-                p = list(super(Codebook, self).getPath(f, date))
-                return [(code, False)] + p
-        return super(Codebook, self).getPath(code, date)
-        
-    def cacheLabels(self):
-        for tree in self.trees:
-            tree.cacheLabels()
-
+    @property
+    def codes(self):
+        for co in self.codebookcodes.all():
+            yield co.code
     
-    def getTree(self, code):
-        """Return the Tree that gives this code its parent in this hierarchy"""
-        for t in self.trees:
-            if code in t: return t
+class CodebookCode(AmcatModel):
+    id = models.AutoField(primary_key=True, db_column='codebook_object_id')
+    
+    codebook = models.ForeignKey(Codebook, db_index=True, related_name="codebookcodes")
+    
+    code = models.ForeignKey(Code, db_index=True, related_name="+")
+    parent = models.ForeignKey(Code, db_index=True, related_name="+",null=True)
 
-class CodebookTree(AmcatModel):
-    codebook = models.ForeignKey(Codebook)
-    tree = models.ForeignKey("Tree")
-    rank = models.IntegerField()
-
+    hide = models.BooleanField(default=False)
+               
+    
     class Meta():
-        db_table = 'codebooks_trees'
-        ordering = ('rank',)
-
-def _getFunction(code, date, party=False):
-    """Get a current function (wrt date) for code, if any
-    accept party member function iff party is True"""
-    for f in code.objekt.currentFunctions(date, party=party):
-        return f.office
+        db_table = 'codebook_codes'
+        app_label = 'amcat'
+    
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
         
-#from amcat.tools.logging import amcatlogging; amcatlogging.debugModule()
+from amcat.tools import amcattest
 
+class TestCodebook(amcattest.PolicyTestCase):
+    def test_create(self):
+        """Can we create objects?"""
+        p = amcattest.create_test_project()
+        c = Codebook.objects.create(project=p, name="Test")
+
+        o = Code.objects.create()
+        co = c.add_code(o)
+        co2 = c.add_code(Code.objects.create(), parent=o)
+        
+        self.assertIn(co, c.codebookcodes.all())
+        self.assertIn(o, c.codes)
+        self.assertEqual(co2.parent, o)

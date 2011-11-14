@@ -1,4 +1,3 @@
-from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -19,14 +18,15 @@ from __future__ import unicode_literals, print_function, absolute_import
 ###########################################################################
 
 """
-Model module representing ontology Codes
+Model module representing codebook Codes
 """
+
+from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.tools import toolkit
-
 from amcat.model.language import Language
 
 from datetime import datetime
@@ -34,30 +34,19 @@ from datetime import datetime
 import logging; log = logging.getLogger(__name__)
 
 PARTYMEMBER_FUNCTIONID = 0
-
-def strmaker():
-    return lambda obj, val: val
-    
+  
 class Code(AmcatModel):
-    id = models.IntegerField(primary_key=True, db_column='code_id')
+    id = models.AutoField(primary_key=True, db_column='code_id')
     
-    """functions = ForeignKey(Function)
-    trees  = ForeignKey(LB("Tree", sub="ontology"), table="trees_codes", distinct=True)
-
-    labels = ForeignKey(MultiLB(LB("Language"), strmaker),
-                         table="labels", getcolumn=("languageid", "label"),
-                         sequencetype=dict)
-
-    name = DBProperty(table="o_politicians")
-    firstname = DBProperty(table="o_politicians")
-    prefix = DBProperty(table="o_politicians")
-    initials = DBProperty(table="o_politicians")"""
+    #functions = ForeignKey(Function) # TODO: create reverse in Function f
 
     class Meta():
         db_table = 'codes'
+        app_label = 'amcat'
 
     @property
     def label(self):
+        return self.labels.all().order_by('language__id')[0].label
         lang = toolkit.head(sorted(self.labels.keys()))
         if lang: return self.labels[lang]
         return repr(self)
@@ -65,132 +54,51 @@ class Code(AmcatModel):
     def getLabel(self, lan, fallback=True):
         """
         @param lan: language to get label for
-        @type lan: integer or Language code
+        @type lan: Language object or int
+        @param fallback: If True, return another label if language not found
         """
-        if not hasattr(lan, 'id'):
-            lan = Language(self.db, lan)
-        
-        if self.labels.has_key(lan):
-            return self.labels[lan]
-    	
-        if fallback:
-          return self.label
+        if type(lan) == int: lan = Language.objects.get(pk=lan)
 
-    def _getTree(self, treeid):
-        for t in self.trees:
-            if t.id == treeid: return t
-
-    def getParent(self, tree):
-        if type(tree) == int: tree = self._getTree(tree)
-        return tree.getParent(self)
-
-    @property
-    def parents(self):
-        for t in self.trees:
-            yield t, self.getParent(t)
-    
-    def getAllParents(self, date=None):
-        for c, p in self.parents.iteritems():
-            yield c, p
-        for f in self.currentFunctions(date):
-            yield f.klass, f.office
-        
-    def currentFunctions(self, date=None, party=None):
-        """Yield the current functions of the politician
-        @param date: the date for 'current' (default: now)
-        @param party: if None, yield both membership and functions. If True,
-          yield only party membership. If False, yield only other functions
-        """
-        if not date: date = datetime.now()
-        date = toolkit.toDate(date)
-        for f in self.functions:
-            # check date condition
-            fd = toolkit.toDate(f.fromdate)
-            if (date - fd).days < 0: continue # fromdate after 'now'
-            if f.todate:
-                td = toolkit.toDate(f.todate)
-                if (td - date).days < 0: continue # todate before 'now'
-
-            # check party condition
-            if party is not None:
-                if bool(party) != bool(f.party):
-                    continue
-            yield f
-
-    def getParty(self, date=None):
-        r = toolkit.head(self.currentFunctions(date, party=True))
-        return r and r.office
-    
+        try:
+            return self.labels.get(language=lan).label
+        except Label.DoesNotExist:
+            if fallback:
+                return self.label
             
-    def getSearchString(self, date=None, xapian=False, languageid=None, fallback=False):
-        """Returns the search string for this code.
-        date: if given, use only functions active on this date
-        xapian: if true, do not use ^0 weights
-        languageid: if given, use labels.get(languageid) rather than keywords"""
 
-        
-        if not date: date = datetime.now()
-        kw = self.getLabel(languageid, fallback=False)
 
-        #if (not languageid) or (fallback and kw is None):
-        #    kw = self.keyword
+class Label(AmcatModel):
+    id = models.AutoField(primary_key=True, db_column='label_id')
+    label = models.TextField(blank=False,null=False)
 
-        
-        if not kw and self.name:
-            ln = self.name
-            if "-" in ln or " " in ln:
-                ln = '"%s"' % ln.replace("-", " ")
-            conds = []
-            if self.firstname:
-                conds.append(self.firstname)
-            for function in self.currentFunctions(date):
-                k = function.office.getSearchString()
-                if not k: k = '"%s"' % str(function.office).replace("-"," ")
-                conds.append(k)
-                conds += function2conds(function)
-            if conds:
-                if xapian:
-                    kw = "%s AND (%s)" % (ln, " OR ".join("%s" % x.strip() for x in conds),)
-                else:
-                    kw = "%s AND (%s)" % (ln, " OR ".join("%s^0" % x.strip() for x in conds),)
-            else:
-                kw = ln
-        if kw:
-            if type(kw) == str: kw = kw.decode('latin-1')
-            return kw.replace("\n"," ")
+    code = models.ForeignKey(Code, db_index=True, related_name="labels")
+    language = models.ForeignKey(Language, db_index=True, related_name="+")
 
-class Function(AmcatModel):
-    code = models.ForeignKey(Code)
-
-    functionid = models.SmallIntegerField()
-    fromdate = models.DateField()
-    todate = models.DateField()
-
-    office = models.ForeignKey(Code, db_column='office_code_id')
-
-    def __unicode__(self):
-        return self.office
 
     class Meta():
-        db_table = 'codes_functions'
-        app_label = 'ontology'
-        unique_together = ("code", "functionid", "office", "fromdate")
+        db_table = 'labels'
+        app_label = 'amcat'
 
-    
-def function2conds(function):
-    officeid = function.office.id
-    if officeid in (380, 707, 729, 1146, 1536, 1924, 2054, 2405, 2411, 2554, 2643):
-        if function.functionid == 2:
-            return ["bewinds*", "minister*"]
-        else:
-            return ["bewinds*", "staatssecret*"]
 
-    if officeid == 901:
-        return ["premier", '"minister president"']
-    if officeid == 548:
-        return ["senator", '"eerste kamer*"']
-    if officeid == 1608:
-        return ["parlement*", '"tweede kamer*"']
-    if officeid == 2087:
-        return ['"europ* parlement*"', "europarle*"]
-    return []
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestCode(amcattest.PolicyTestCase):
+    def test_label(self):
+        """Can we create objects and assign labels?"""
+        o = Code.objects.create()
+        l = Language.objects.create()
+        l2 = Language.objects.create()
+        Label.objects.create(code=o, language=l, label="bla")
+        self.assertEqual(o.getLabel(l), "bla")
+        self.assertEqual(o.getLabel(l2), "bla", "Code.getLabel fallback does not work")
+        Label.objects.create(code=o, language=l2, label="blx")
+        self.assertEqual(o.getLabel(l2), "blx")
+        self.assertEqual(o.getLabel(Language.objects.create()), "bla")
+
+        self.assertEqual(o.label, "bla")
