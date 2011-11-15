@@ -122,9 +122,15 @@ def create_test_code(label=None, language=None, **kargs):
     if language is None: language = Language.objects.get(pk=1)
     if label is None: label = "testcode_%i" % len(Code.objects.all())
     o = Code.objects.create(**kargs)
-    Label.objects.create(language=language, label=label, code=o)
+    o.add_label(language, label)
     return o
-    
+
+def create_test_codebook(**kargs):
+    from amcat.model.codebook.codebook import Codebook
+    if "project" not in kargs: kargs["project"] = create_test_project()
+    if "name" not in kargs: kargs["name"] = "testcodebook_%i" % Codebook.objects.count()
+    return Codebook.objects.create(**kargs)
+
 
 class PolicyTestCase(unittest.TestCase):
     """

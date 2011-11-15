@@ -38,24 +38,27 @@ PARTYMEMBER_FUNCTIONID = 0
 class Code(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='code_id')
     
-    #functions = ForeignKey(Function) # TODO: create reverse in Function f
-
     class Meta():
         db_table = 'codes'
         app_label = 'amcat'
 
     @property
     def label(self):
-        return self.labels.all().order_by('language__id')[0].label
-        lang = toolkit.head(sorted(self.labels.keys()))
-        if lang: return self.labels[lang]
-        return repr(self)
-
-    def getLabel(self, lan, fallback=True):
+        try:
+            return self.labels.all().order_by('language__id')[0].label
+        except IndexError:
+            return '<{0.__class__.__name__}: {0.id}>'.format(self)
+            return repr(super(AmcatModel, self))
+        
+    def __unicode__(self):
+        return self.label
+    
+    def get_label(self, lan, fallback=True):
         """
         @param lan: language to get label for
         @type lan: Language object or int
         @param fallback: If True, return another label if language not found
+        @return: string or None
         """
         if type(lan) == int: lan = Language.objects.get(pk=lan)
 
@@ -63,8 +66,15 @@ class Code(AmcatModel):
             return self.labels.get(language=lan).label
         except Label.DoesNotExist:
             if fallback:
-                return self.label
-            
+                try:
+                    return self.labels.all().order_by('language__id')[0].label
+                except IndexError:
+                    return None
+
+
+    def add_label(self, language, label):
+        Label.objects.create(language=language, label=label, code=self)
+        
 
 
 class Label(AmcatModel):
@@ -94,12 +104,22 @@ class TestCode(amcattest.PolicyTestCase):
         # simple label
         o = amcattest.create_test_code(label="bla")
         self.assertEqual(o.label, "bla")
+        self.assertEqual(unicode(o), o.label)
         # fallback with 'unknown' language
         l2 = Language.objects.create()
-        self.assertEqual(o.getLabel(l2), "bla")
+        self.assertEqual(o.get_label(l2), "bla")
         # second label
         Label.objects.create(code=o, language=l2, label="blx")
-        self.assertEqual(o.getLabel(l2), "blx")
-        self.assertEqual(o.getLabel(Language.objects.create()), "bla")
-
+        self.assertEqual(o.get_label(l2), "blx")
+        self.assertEqual(o.get_label(Language.objects.create()), "bla")
         self.assertEqual(o.label, "bla")
+
+        # does .label return something sensible on objects without labels?
+        o2 = Code.objects.create()
+        self.assertRegexpMatches(o2.label, r'^<Code: \d+>$')
+        self.assertIsNone(o2.get_label(l2))
+
+        # does .label and .get_label return a unicode object under all circumstances
+        self.assertIsInstance(o.label, unicode)
+        self.assertIsInstance(o.get_label(l2), unicode)
+        self.assertIsInstance(o2.label, unicode)

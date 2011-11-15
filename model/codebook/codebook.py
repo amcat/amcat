@@ -28,13 +28,12 @@ import logging; log = logging.getLogger(__name__)
 from django.db import models
 
 from amcat.tools.model import AmcatModel
-from amcat.model.ontology.code import Code
+from amcat.model.codebook.code import Code
 from amcat.model.project import Project
 
 class Codebook(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='codebook_id')
 
-    bases = models.ManyToManyField("amcat.Codebook", db_table="codebooks_bases")
     project = models.ForeignKey(Project)
 
     name = models.TextField()
@@ -53,6 +52,10 @@ class Codebook(AmcatModel):
         return CodebookCode.objects.create(codebook=self, code=code, parent=parent, hide=hide)
 
     @property
+    def bases(self):
+        for codebookbase in self.codebookbase_set.all():
+            yield codebookbase.supercodebook
+    
     def get_hierarchy(self):
         """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
         
@@ -62,12 +65,40 @@ class Codebook(AmcatModel):
         if listed, otherwise in the first base that listed it.
         """
         hide = set(self.codebookcodes.filter(hide=True))
-        result = dict((co.code, co.parent) for co in
-                      self.codebookcodes.filter(hide=False))
+        # go through hierarchy sources in reverse order and update result dict
+        # so newest overrides oldest
+        result = {}
+        for base in reversed(list(self.bases)):
+            result.update(base.get_hierarchy())
+        result.update(dict((co.code, co.parent) for co in
+                           self.codebookcodes.filter(hide=False)))
+        for co in self.codebookcodes.filter(hide=True):
+            del result[co.code]
         return result
+
+    def add_base(self, codebook, rank=None):
+        if rank is None:
+            maxrank = self.codebookbase_set.aggregate(models.Max('rank'))['rank__max']
+            rank = maxrank+1 if maxrank is not None else 0
+        return CodebookBase.objects.create(subcodebook=self, supercodebook=codebook, rank=rank)
+    
+class CodebookBase(AmcatModel):
+    """Many-to-many field (codebook : codebook) with ordering"""
+    id = models.AutoField(primary_key=True, db_column='codebook_base_id')
+    supercodebook = models.ForeignKey(Codebook, db_index=True, related_name="+")
+    subcodebook = models.ForeignKey(Codebook, db_index=True)
+    
+    rank = models.IntegerField(default=0, null=False)
+    
+    class Meta():
+        db_table = 'codebook_bases'
+        app_label = 'amcat'
+        ordering = ['rank']
+        unique_together = ("supercodebook", "subcodebook")
     
             
 class CodebookCode(AmcatModel):
+    """Many-to-many field (codebook : code) with additional properties"""
     id = models.AutoField(primary_key=True, db_column='codebook_object_id')
     
     codebook = models.ForeignKey(Codebook, db_index=True, related_name="codebookcodes")
@@ -80,6 +111,7 @@ class CodebookCode(AmcatModel):
     class Meta():
         db_table = 'codebook_codes'
         app_label = 'amcat'
+        unique_together = ("codebook", "code")
     
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -90,10 +122,9 @@ from amcat.tools import amcattest
 class TestCodebook(amcattest.PolicyTestCase):
     def test_create(self):
         """Can we create objects?"""
-        p = amcattest.create_test_project()
-        c = Codebook.objects.create(project=p, name="Test")
+        c = amcattest.create_test_codebook()
 
-        o = Code.objects.create()
+        o = amcattest.create_test_code()
         co = c.add_code(o)
         co2 = c.add_code(Code.objects.create(), parent=o)
         
@@ -104,8 +135,73 @@ class TestCodebook(amcattest.PolicyTestCase):
 
     def test_hierarchy(self):
         """Does the code/parent base class resolution work"""
-        # simple case: one hierarchy
-        p = amcattest.create_test_project()
-        A = Codebook.objects.create(project=p, name="Test")
+        # test codes and dense hierarchy serialiseation for easier comparisons
+        a,b,c,d,e,f = [amcattest.create_test_code(label=l) for l in "abcdef"]
+        def standardize(codebook):
+            return ";".join(sorted({"{0}:{1}".format(*cp) for cp in codebook.get_hierarchy().items()}))
 
+        # A: a
+        #    +b
+        #     +c
+        A = amcattest.create_test_codebook(name="A")
+        A.add_code(a)
+        A.add_code(b, a)
+        A.add_code(c, b)
+        self.assertEqual(standardize(A), 'a:None;b:a;c:b')
+
+        # D: d
+        #    +e
+        #    +f
+        D = amcattest.create_test_codebook(name="D")
+        D.add_code(d)
+        D.add_code(e, d)
+        D.add_code(f, d)
+        self.assertEqual(standardize(D), 'd:None;e:d;f:d')
         
+        # A+D: a
+        #      +b
+        #       +c
+        #      d
+        #      +e
+        #      +f
+        AD = amcattest.create_test_codebook(name="A+D")
+        AD.add_base(A)
+        AD.add_base(D)
+        self.assertEqual(standardize(AD), 'a:None;b:a;c:b;d:None;e:d;f:d')
+        # now let's hide c and redefine e to be under b
+        AD.add_code(c, hide=True) 
+        AD.add_code(e, parent=b)
+        self.assertEqual(standardize(AD), 'a:None;b:a;d:None;e:b;f:d')
+
+        # Test precendence between bases
+        # B: b
+        #    +d
+        #    +e
+        B = amcattest.create_test_codebook(name="B")
+        B.add_code(b)
+        B.add_code(d, b)
+        B.add_code(e, b)
+        self.assertEqual(standardize(B), 'b:None;d:b;e:b')
+        # D+B: d     B+D: b
+        #      +e         +d
+        #      +f          +f
+        #      b          +e
+        DB = amcattest.create_test_codebook(name="D+B")
+        DB.add_base(D)
+        DB.add_base(B)
+        self.assertEqual(standardize(DB), 'b:None;d:None;e:d;f:d')
+        BD = amcattest.create_test_codebook(name="B+D")
+        BD.add_base(B)
+        BD.add_base(D)
+        self.assertEqual(standardize(BD), 'b:None;d:b;e:b;f:d')
+        
+    def test_unique(self):
+        from django.db import IntegrityError
+        A = amcattest.create_test_codebook(name="A")
+        B = amcattest.create_test_codebook(name="B")
+        A.add_base(B)
+        self.assertRaises(IntegrityError, A.add_base, B)
+        self.assertRaises(IntegrityError, A.add_base, B)
+        c = amcattest.create_test_code()
+        A.add_code(c)
+        self.assertRaises(IntegrityError, A.add_code, c)
