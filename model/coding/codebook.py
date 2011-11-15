@@ -28,7 +28,7 @@ import logging; log = logging.getLogger(__name__)
 from django.db import models
 
 from amcat.tools.model import AmcatModel
-from amcat.model.codebook.code import Code
+from amcat.model.coding.code import Code
 from amcat.model.project import Project
 
 class Codebook(AmcatModel):

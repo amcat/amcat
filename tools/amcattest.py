@@ -117,7 +117,7 @@ def create_test_annotation(**kargs):
     return Annotation.objects.create(codingjobset=cs, article=s.articles.all()[0], **kargs)
 
 def create_test_code(label=None, language=None, **kargs):
-    from amcat.model.codebook.code import Code, Label
+    from amcat.model.coding.code import Code, Label
     from amcat.model.language import Language
     if language is None: language = Language.objects.get(pk=1)
     if label is None: label = "testcode_%i" % len(Code.objects.all())
@@ -126,7 +126,7 @@ def create_test_code(label=None, language=None, **kargs):
     return o
 
 def create_test_codebook(**kargs):
-    from amcat.model.codebook.codebook import Codebook
+    from amcat.model.coding.codebook import Codebook
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "name" not in kargs: kargs["name"] = "testcodebook_%i" % Codebook.objects.count()
     return Codebook.objects.create(**kargs)
