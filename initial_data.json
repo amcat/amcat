@@ -259,22 +259,6 @@
     }
   },
   {
-    "pk" : 3, 
-    "model": "amcat.annotationschemafieldtype",
-    "fields" : {
-      "name" : "DB choice",
-      "serialiserclassname" : "DBLookupFieldSerialiser"
-    }
-  },
-  {
-    "pk" : 4, 
-    "model": "amcat.annotationschemafieldtype",
-    "fields" : {
-      "name" : "Ad hoc choice",
-      "serialiserclassname" : "AdHocLookupFieldSerialiser"
-    }
-  },
-  {
     "pk" : 5, 
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
@@ -295,14 +279,6 @@
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "Boolean",
-      "serialiserclassname" : "TextSerialiser"
-    }
-  },
-  {
-    "pk" : 8, 
-    "model": "amcat.annotationschemafieldtype",
-    "fields" : {
-      "name" : "DB filtered choice",
       "serialiserclassname" : "TextSerialiser"
     }
   },
