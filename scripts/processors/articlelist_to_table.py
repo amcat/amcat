@@ -43,20 +43,22 @@ class ArticleListToTable(script.Script):
             textLambda = lambda a:a.text[:31900]
         else:
             textLambda = lambda a:a.text
+             
             
         hitsColumns = []
         if 'hits' in self.options['columns']:
             articles = list(articles)
-            if not hasattr(articles[0], 'hits'):
-                raise Exception('No hits attribute for article. Make sure you run a Solr query')
-            for query in articles[0].hits.table.getColumns():
-                hitsColumns.append(table.table3.ObjectColumn("Hit Count for: %s" % query[:100], lambdaHitFactory(query)))
+            if len(articles) > 0:
+                if not hasattr(articles[0], 'hits'):
+                    raise Exception('No hits attribute for article. Make sure you run a Solr query')
+                for query in articles[0].hits.table.getColumns():
+                    hitsColumns.append(table.table3.ObjectColumn("Hit Count for: %s" % query[:100], lambdaHitFactory(query)))
         
         #log.info(hitsColumns)
         
         colDict = { # mapping of names to article object attributes
             'article_id': table.table3.ObjectColumn("Article ID", lambda a: a.id),
-            'date': table.table3.ObjectColumn('Date', lambda a: a.date),
+            'date': table.table3.ObjectColumn('Date', lambda a: a.date.strftime('%d-%m-%Y')),
             'medium_id': table.table3.ObjectColumn('Medium ID', lambda a:a.medium_id),
             'medium_name': table.table3.ObjectColumn('Medium Name', lambda a:a.medium.name),
             'project_id': table.table3.ObjectColumn('Project ID', lambda a:a.project_id),
@@ -87,6 +89,7 @@ class ArticleListToTable(script.Script):
                 columns.append(col)
         
         tableObj = table.table3.ObjectTable(articles, columns)
+        
         return tableObj
         
         

@@ -103,6 +103,13 @@ def getArticles(form):
             fields="id,score", 
             start=form['start'], 
             rows=form['length'])
+            
+    if form['sortColumn']:
+        if form['sortColumn'] == 'medium__id': form['sortColumn'] = 'mediumid'
+        if form['sortColumn'] not in ('id', 'date', 'mediumid', 'score', 'headline'):
+            raise Exception('Cannot sort on %s' % form['sortColumn'])
+        kargs['sort'] = '%s %s' % (form['sortColumn'], form['sortOrder'])
+            
     kargsMainQuery = kargs.copy()
     if 'keywordInContext' in form['columns']:
         kargsMainQuery.update(dict(
@@ -133,25 +140,32 @@ def getArticles(form):
         for singleQuery in form['queries']:
             hitsTable.columns.add(singleQuery)
             solrResponseSingleQuery = doQuery(singleQuery, form, kargs, additionalFilters)
+            articleIdList = []
             for d in solrResponseSingleQuery.results:
                 articleid = int(d['id'])
+                articleIdList.append(articleid)
                 hits = int(d['score'])
                 #log.info('add %s %s %s' % (articleid, singleQuery, hits)) 
                 hitsTable.addValue(articleid, singleQuery, hits) 
     else:        
         hitsTable.columns.add(query)
+        articleIdList = []
         for d in solrResponse.results:
             articleid = int(d['id'])
+            articleIdList.append(articleid)
             hits = int(d['score'])
             #hitsTable.addValue(query, articleid, hits)
             hitsTable.addValue(articleid, query, hits)
     
     
     articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
-    for articleid, a in articlesDict.items():
+    result = []
+    for articleid in articleIdList:
+        a = articlesDict[articleid]
         a.hits = hitsTable.getNamedRow(articleid)
         a.keywordInContext = contextDict.get(articleid)
-        yield a
+        result.append(a)
+    return result
     
 def getStats(statsObj, form):
     query = '(%s)' % ') OR ('.join(form['queries'])
