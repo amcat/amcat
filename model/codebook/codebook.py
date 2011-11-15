@@ -39,24 +39,34 @@ class Codebook(AmcatModel):
 
     name = models.TextField()
 
-    def __unicode__(self):
-        return self.name
-
     class Meta():
         db_table = 'codebooks'
         app_label = 'amcat'
 
+    def __unicode__(self):
+        return self.name
+    
     def add_code(self, code, parent=None, hide=False):
         if parent and hide: raise ValueError("Hidden objects cannot specify parent")
         if isinstance(parent, CodebookCode): parent = parent.code
         if isinstance(code, CodebookCode): code = code.code
-        return CodebookCode.objects.create(codebook=self, code=code, parentcode=parent, hide=hide)
+        return CodebookCode.objects.create(codebook=self, code=code, parent=parent, hide=hide)
 
     @property
-    def codes(self):
-        for co in self.codebookcodes.all():
-            yield co.code
+    def get_hierarchy(self):
+        """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
+        
+        A code is in a codebook if (a) it is listed in its direct codebookcodes, or
+        (b) if it is in any of the base codebooks and not explicitly hidden in this codebook.
+        The parent of a code is its parent in the codebook it came from, ie in this codebook
+        if listed, otherwise in the first base that listed it.
+        """
+        hide = set(self.codebookcodes.filter(hide=True))
+        result = dict((co.code, co.parent) for co in
+                      self.codebookcodes.filter(hide=False))
+        return result
     
+            
 class CodebookCode(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='codebook_object_id')
     
@@ -65,8 +75,7 @@ class CodebookCode(AmcatModel):
     code = models.ForeignKey(Code, db_index=True, related_name="+")
     parent = models.ForeignKey(Code, db_index=True, related_name="+",null=True)
 
-    hide = models.BooleanField(default=False)
-               
+    hide = models.BooleanField(default=False)               
     
     class Meta():
         db_table = 'codebook_codes'
@@ -89,5 +98,14 @@ class TestCodebook(amcattest.PolicyTestCase):
         co2 = c.add_code(Code.objects.create(), parent=o)
         
         self.assertIn(co, c.codebookcodes.all())
-        self.assertIn(o, c.codes)
+        #self.assertIn(o, c.codes)
         self.assertEqual(co2.parent, o)
+
+
+    def test_hierarchy(self):
+        """Does the code/parent base class resolution work"""
+        # simple case: one hierarchy
+        p = amcattest.create_test_project()
+        A = Codebook.objects.create(project=p, name="Test")
+
+        

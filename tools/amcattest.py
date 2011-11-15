@@ -116,6 +116,15 @@ def create_test_annotation(**kargs):
     cs = CodingJobSet.objects.create(codingjob=j, articleset=s, coder=j.insertuser)
     return Annotation.objects.create(codingjobset=cs, article=s.articles.all()[0], **kargs)
 
+def create_test_code(label=None, language=None, **kargs):
+    from amcat.model.codebook.code import Code, Label
+    from amcat.model.language import Language
+    if language is None: language = Language.objects.get(pk=1)
+    if label is None: label = "testcode_%i" % len(Code.objects.all())
+    o = Code.objects.create(**kargs)
+    Label.objects.create(language=language, label=label, code=o)
+    return o
+    
 
 class PolicyTestCase(unittest.TestCase):
     """

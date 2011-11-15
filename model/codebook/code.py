@@ -18,7 +18,7 @@
 ###########################################################################
 
 """
-Model module representing ontology Hierarchies
+Model module representing codebook Codes
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
@@ -26,22 +26,60 @@ from __future__ import unicode_literals, print_function, absolute_import
 from django.db import models
 
 from amcat.tools.model import AmcatModel
-from amcat.model.object import Object
+from amcat.tools import toolkit
+from amcat.model.language import Language
+
+from datetime import datetime
 
 import logging; log = logging.getLogger(__name__)
 
-class Hiearchy(AmcatModel):
-    id = models.AutoField(primary_key=True, db_column='object_id')
-
-    child = models.ForiegnKey(Object, db_index=True)
-    parent = models.ForiegnKey(Object, db_index=True, null=True)
+PARTYMEMBER_FUNCTIONID = 0
+  
+class Code(AmcatModel):
+    id = models.AutoField(primary_key=True, db_column='code_id')
     
-    
-    # functions = ForeignKey(Function) # TODO: create reverse in Function f
+    #functions = ForeignKey(Function) # TODO: create reverse in Function f
 
     class Meta():
-        db_table = 'hierarchies'
+        db_table = 'codes'
         app_label = 'amcat'
+
+    @property
+    def label(self):
+        return self.labels.all().order_by('language__id')[0].label
+        lang = toolkit.head(sorted(self.labels.keys()))
+        if lang: return self.labels[lang]
+        return repr(self)
+
+    def getLabel(self, lan, fallback=True):
+        """
+        @param lan: language to get label for
+        @type lan: Language object or int
+        @param fallback: If True, return another label if language not found
+        """
+        if type(lan) == int: lan = Language.objects.get(pk=lan)
+
+        try:
+            return self.labels.get(language=lan).label
+        except Label.DoesNotExist:
+            if fallback:
+                return self.label
+            
+
+
+class Label(AmcatModel):
+    id = models.AutoField(primary_key=True, db_column='label_id')
+    label = models.TextField(blank=False,null=False)
+
+    code = models.ForeignKey(Code, db_index=True, related_name="labels")
+    language = models.ForeignKey(Language, db_index=True, related_name="+")
+
+
+    class Meta():
+        db_table = 'labels'
+        app_label = 'amcat'
+
+
 
 
 ###########################################################################
@@ -50,16 +88,17 @@ class Hiearchy(AmcatModel):
         
 from amcat.tools import amcattest
 
-class TestHierarchy(amcattest.PolicyTestCase):
+class TestCode(amcattest.PolicyTestCase):
     def test_label(self):
         """Can we create objects and assign labels?"""
-        o = Object.objects.create()
-        l = Language.objects.create()
+        # simple label
+        o = amcattest.create_test_code(label="bla")
+        self.assertEqual(o.label, "bla")
+        # fallback with 'unknown' language
         l2 = Language.objects.create()
-        Label.objects.create(object=o, language=l, label="bla")
-        self.assertEqual(o.getLabel(l), "bla")
-        self.assertEqual(o.getLabel(l2), "bla", "Object.getLabel fallback does not work")
-        Label.objects.create(object=o, language=l2, label="blx")
+        self.assertEqual(o.getLabel(l2), "bla")
+        # second label
+        Label.objects.create(code=o, language=l2, label="blx")
         self.assertEqual(o.getLabel(l2), "blx")
         self.assertEqual(o.getLabel(Language.objects.create()), "bla")
 
