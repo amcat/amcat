@@ -61,6 +61,7 @@ class CodedArticle(Identity):
         return a
 
     def create_sentence_annotation(self, sentence):
+        """Create a new sentence annotation on the given sentence"""
         return Annotation.objects.create(codingjobset=self.codingjobset, article=self.article,
                                  sentence=sentence)
     
