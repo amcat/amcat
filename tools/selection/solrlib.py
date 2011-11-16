@@ -331,7 +331,9 @@ def createFilters(form):
     if 'sets' in form:
         setsQuery = ('sets:%d' % s.id for s in form['sets'])
         result.append(' OR '.join(setsQuery))
-    
+    if 'articleids' in form:
+        articleidQuery = ('id:%d' % a for a in form['articleids'])
+        result.append(' OR '.join(articleidQuery))
     projectQuery = ('projectid:%d' % p.id for p in form['projects'])
     result.append(' OR '.join(projectQuery))
     return result

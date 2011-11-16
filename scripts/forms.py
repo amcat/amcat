@@ -107,6 +107,7 @@ class SelectionForm(forms.Form):
     sets = ModelMultipleChoiceFieldWithIdLabel(queryset=Set.objects.none(), required=False)
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.none(), required=False)
     query = forms.CharField(widget=forms.Textarea, required=False)
+    articleids = forms.CharField(widget=forms.Textarea, required=False)
     datetype = forms.ChoiceField(choices=(('all', 'All Dates'), ('before', 'Before'), ('after', 'After'), ('between', 'Between')))
     startDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
@@ -149,6 +150,10 @@ class SelectionForm(forms.Form):
             cleanedData['useSolr'] = True
             cleanedData['queries'] = [x.strip() for x in cleanedData['query'].split('\n') if x.strip()]
             
+        try:
+            cleanedData['articleids'] = [int(x.strip()) for x in cleanedData['articleids'].split('\n') if x.strip()]
+        except:
+            self._errors["articleids"] = self.error_class(['Invalid article ID list'])
         # if 'output' not in cleanedData:
             # cleanedData['output'] = 'json-html'
             
