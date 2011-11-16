@@ -97,6 +97,13 @@ class Table(object):
     def __getitem__(self, index):
         """Get the n-th column"""
         return list(self.getRows())[index]
+
+
+    def getColumnByLabel(self, label):
+        """Return the column that matches the given label, or None"""
+        stringify = unicode if type(label) == unicode else str
+        for c in self.getColumns():
+            if stringify(c) == label: return c
     
 
 class NamedRow(object):
@@ -197,8 +204,7 @@ class AttributeColumn(ObjectColumn):
         return getattr(row, self.attribute)
         
 class FormTable(ObjectTable):
-    """Wrapper around ObjectTable. Get its default columns from a Form
-    object."""
+    """Table that gets its default columns from a Form object."""
     
     def __init__(self, form, objects, rowurl=None, idcolumn=None):
         """
@@ -229,6 +235,7 @@ class FormTable(ObjectTable):
         
                 
     def _addColumn(self, name, field, visible=True):
+        """Add the given column, using the form to supply extra information"""
         label = field.label or name.capitalize()
         col = self._createCellfunc(field, name)
         fieldtype = field.__class__.__name__
@@ -246,7 +253,7 @@ class FormTable(ObjectTable):
     def _createCellfunc(self, field, name):
         """Create a lambda function outside __init__ avoiding scoping issues"""
         def foreign_key(x):
-            # Custom function for `one to many` or `one to one` relations
+            """Custom function for `one to many` or `one to one` relations"""
             attr = getattr(x, name)
             if type(attr) == types.GeneratorType:
                 # One to many relation
@@ -277,13 +284,6 @@ class DictTable(Table):
         self.rows.add(row)
     def getValue(self, row, col):
         return self.data.get((row, col), self.default)
-    def __getstate__(self):
-        d = self.__dict__
-        if d['cellfunc'] == self.getValue: del d['cellfunc']
-        return d
-    def __setstate__(self, d):
-        if 'cellfunc' not in d: d['cellfunc'] = self.getValue
-        self.__dict__ = d
     
 DataTable = DictTable
 
@@ -308,15 +308,28 @@ class ListTable(Table):
         if col.id >= len(row): return None
         return row[col.id]
 
-class SortedTable(Table):
+class WrappedTable(Table):
+    """Base class for encapsulating another table to provide a different 'view' on it"""
+    def __init__(self, table, *args, **kargs):
+        super(WrappedTable, self).__init__(*args, **kargs)
+        self.table = table
+    def getColumns(self):
+        return self.table.getColumns()
+    def getRows(self):
+        return self.table.getRows()
+    def getValue(self, row, col):
+        return self.table.getValue(row, col)
+        
+        
+    
+class SortedTable(WrappedTable):
     """
     Encapsulated another table object and "jit"-sorts rows as needed
     sort can be a columns, a (column, bool) pair, or a list of columns or pairs
     addsortindicator only works if columns are IDLabels
     """
     def __init__(self, table, sort):
-        Table.__init__(self, cellfunc = table.getValue)
-        self.table = table
+        super(SortedTable, self).__init__(table)
         self.sort = []
         if not toolkit.isSequence(sort, excludeStrings=True) or (
             len(sort) == 2 and type(sort[1]) == bool):
@@ -324,8 +337,6 @@ class SortedTable(Table):
         for col in sort:
             if toolkit.isSequence(col): self.sort.append((col[0], col[1]))
             else: self.sort.append((col, True))
-    def getColumns(self):
-        return self.table.getColumns()
     def cmp(self, a, b):
         """Compare rows a and b for use in sorting"""
         for col, asc in self.sort:
@@ -343,6 +354,7 @@ class MergedTable(Table):
         """
         tables can be any number of Table objects
         """
+        super(MergedTable, self).__init__()
         self.tables = list(tables)
         self.columnfilter = lambda t, c: True # table, column -> bool
     def getColumns(self):
@@ -355,7 +367,7 @@ class MergedTable(Table):
     def getRows(self):
         # Iterators would be good here!
         rowss = [t.getRows() for t in self.tables]
-        for i in range(max(map(len, rowss))):
+        for i in range(max(len(rows) for rows in rowss)):
             row = []
             for rows in rowss:
                 if len(rows) <= i: row.append(None)
@@ -367,37 +379,33 @@ class MergedTable(Table):
         if not row: return None
         return table.getValue(row, col)
 
-class ColumnViewTable(Table):
+class ColumnViewTable(WrappedTable):
+    """Table wrapper that hides unselected columns"""
     def __init__(self, table, columns, uselabel=True):
-        self.table = table
-        self.columns = set(columns)
+        """
+        @param table: the underlying table
+        @param columns: the columns or column labels to include
+        @param uselabel (default): if True, allow matching on labels
+        """
+        super(ColumnViewTable, self).__init__(table, columns=set(columns))
         self.uselabel = uselabel
     def getColumns(self):
         for col in self.table.getColumns():
             if col in self.columns or (
                 self.uselabel and isinstance(col, idlabel.IDLabel) and col.label in self.columns):
                 yield col
-    def getRows(self):
-        return self.table.getRows()
-    def getValue(self, row, col):
-        return self.table.getValue(row, col)
 
-class PostProcessTable(Table):
+class PostProcessTable(WrappedTable):
+    """A postprocess table is a tablewrapper that 'postprocesses'
+    the underlying table cell values with the given cellfunc"""
+    
     def __init__(self, table, valuefunc=None):
-        self.table = table
+        super(PostProcessTable, self).__init__(table)
         self.valuefunc = valuefunc
-    def getColumns(self):
-        return self.table.getColumns()
-    def getRows(self):
-        return self.table.getRows()
     def getValue(self, row, col):
         v = self.table.getValue(row, col)
         return self.valuefunc(self, v, row, col)
     
-def getColumnByLabel(table, label):
-    stringify = unicode if type(label) == unicode else str
-    for c in table.getColumns():
-        if stringify(c) == label: return c
 
 
 
@@ -409,6 +417,7 @@ def getColumnByLabel(table, label):
 from amcat.tools import amcattest
 
 def _striplines(x):
+    """Strip each line in x to make comparison easier"""
     return "\n".join(l.strip() for l in x.split("\n")).strip()
 
 class TestTable(amcattest.PolicyTestCase):
@@ -437,7 +446,7 @@ a1    | a2 | a3
             def __init__(self, a, b, c):
                 self.a, self.b, self.c = a, b, c
             
-        l = ObjectTable(rows=[Test(1, 2, 3), Test("bla",None, 7), Test(-1, -1, None)])
+        l = ObjectTable(rows=[Test(1, 2, 3), Test("bla", None, 7), Test(-1, -1, None)])
         l.addColumn(lambda x: x.a, "de a")
         l.addColumn("b")
         l.addColumn(ObjectColumn("en de C", lambda x: x.c))
@@ -454,6 +463,22 @@ L bla  K    K 7       L
 L -1   K -1 K         L
 UKKKKKKHKKKKHKKKKKKKKKX'''
         self.assertEquals( _striplines(result), _striplines(correct.strip()))
+
+    def test_sort_preprocess(self):
+        """Do the wrapped tables work?"""
+        t = ListTable(colnames = ["a1", "a2", "a3"],
+                      data = [[1, 2, 3], [7, 8, 9], [4, 5, -4]])
+
+        s = SortedTable(t, t.getColumns()[1])
+        self.assertEqual([list(row) for row in s], [[1, 2, 3], [4, 5, -4], [7, 8, 9]])
+        v = ColumnViewTable(s, ["a1", "a3"])
+        self.assertEqual([list(row) for row in v], [[1, 3], [4, -4], [7, 9]])
+
+        p = PostProcessTable(t, valuefunc=lambda t, x, r, c:x*x)
+        self.assertEqual([list(row) for row in p], [[1, 4, 9], [49, 64, 81], [16, 25, 16]])
+        s = SortedTable(p, t.getColumns()[2])
+        self.assertEqual([list(row) for row in s], [[1, 4, 9], [16, 25, 16], [49, 64, 81]])
+        
             
 # if __name__ == '__main__':
 #     import tableoutput
