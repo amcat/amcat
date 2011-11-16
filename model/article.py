@@ -43,6 +43,7 @@ def word_len(txt):
     """Count words in `txt`
 
     @type txt: str or unicode"""
+    if not txt: return 0 # Safe handling of txt=None
     return len(re.sub(WORD_RE, ' ', txt).split())
 
 class Article(AmcatModel):
