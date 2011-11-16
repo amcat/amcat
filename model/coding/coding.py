@@ -89,7 +89,7 @@ def get_table_sentence_annotations_article(codedarticle):
     """
     result = ObjectTable(rows = list(codedarticle.sentence_annotations))
     for field in codedarticle.codingjobset.codingjob.unitschema.fields.all():
-        result.addColumn(partial(get_value, field), field.get_label())
+        result.addColumn(partial(get_value, field), field.label)
     return result
 
 
@@ -117,11 +117,11 @@ class TestCoding(amcattest.PolicyTestCase):
 
         create = AnnotationSchemaField.objects.create
         self.textfield = create(annotationschema=self.schema, fieldnr=1, fieldtype=texttype, 
-                                fieldname="Text")
+                                label="Text")
         self.intfield = create(annotationschema=self.schema,  fieldnr=2, fieldtype=inttype, 
-                               fieldname="Number")
+                               label="Number")
         self.codefield = create(annotationschema=self.schema, fieldnr=3, fieldtype=codetype, 
-                                fieldname="Code", codebook=self.codebook)
+                                label="Code", codebook=self.codebook)
 
         self.users = [amcattest.create_test_user() for _x in range(2)]
         self.jobs = [amcattest.create_test_job(articleschema=self.schema, unitschema=self.schema)

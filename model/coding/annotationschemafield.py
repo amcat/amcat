@@ -84,32 +84,21 @@ class AnnotationSchemaField(AmcatModel):
     id = models.AutoField(primary_key=True, db_column="annotationschemafield_id")
 
     annotationschema = models.ForeignKey(AnnotationSchema, related_name='fields')
-    fieldnr = models.IntegerField()
+    fieldnr = models.IntegerField(default=0)
     
-    fieldname = models.CharField(max_length=20, blank=False, null=False)
-    label = models.CharField(max_length=30, blank=False, null=True)
+    label = models.CharField(max_length=50)
     required = models.BooleanField()
     default = models.BooleanField(db_column='deflt')
     fieldtype = models.ForeignKey(AnnotationSchemaFieldType)
     
-    
-    #table = models.CharField(max_length=40)
-    #keycolumn = models.CharField(max_length=40)
-    #labelcolumn = models.CharField(max_length=40)
-    #values = models.TextField()
-    codebook = models.ForeignKey(Codebook, null=True)
+    codebook = models.ForeignKey(Codebook, null=True) # for codebook fields
 
     class Meta():
         db_table = 'annotationschemas_fields'
         app_label = 'amcat'
-        unique_together = ("annotationschema", "fieldnr")
 
     def __unicode__(self):
-        return self.fieldname
-    
-    def get_label(self):
-        """Return the label of the field, or fieldname is label is None"""
-        return self.label if (self.label is not None) else self.fieldname
+        return self.label
 
     @property
     def serialiser(self):

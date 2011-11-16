@@ -102,6 +102,8 @@ class CodebookSerialiser(BaseSerialiser):
             raise ValueError("{c} not in {self.codebook}".format(**locals()))
         return c
     def serialise(self, value):
+        if value not in  self.codebook.codes:
+            raise ValueError("{value} not in {self.codebook}".format(**locals()))
         return value.id
     @property
     def possible_values(self):
@@ -151,7 +153,8 @@ class TestSerialiser(amcattest.PolicyTestCase):
         s = CodebookSerialiser(DummyField)
         self.assertEqual(s.serialise(c), c.id)
         self.assertEqual(s.deserialise(c.id), c)
-        d = amcattest.create_test_code()
+        d = amcattest.create_test_code(label="not in codebook")
+        self.assertRaises(ValueError, s.serialise, d)
         self.assertRaises(ValueError, s.deserialise, d.id)
         self.assertRaises(ValueError, s.deserialise, -9999999999999999)
         

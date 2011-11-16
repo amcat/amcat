@@ -120,7 +120,6 @@ def create_test_annotation(**kargs):
     """Create a test annotation object"""
     from amcat.model.coding.codingjob import CodingJobSet
     from amcat.model.coding.annotation import Annotation
-    
 
     if "codingjobset" not in kargs:
         j = create_test_job()
