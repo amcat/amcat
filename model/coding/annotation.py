@@ -29,7 +29,6 @@ import logging; log = logging.getLogger(__name__)
 from django.db import models
 
 from amcat.tools.model import AmcatModel
-from amcat.tools.idlabel import Identity
 from amcat.model.coding.codingjob import CodingJobSet
 from amcat.model.coding.annotationschemafield import AnnotationSchemaField
 from amcat.model.article import Article
@@ -120,36 +119,6 @@ class AnnotationValue(AmcatModel):
         app_label = 'amcat'
         unique_together = ("annotation", "field")
 
-
-class CodedArticle(Identity):
-    """Convenience class to represent an article in a codingjobset
-    and expose the article and sentence annotations
-    
-    @param codingjobset_or_annotation: Either a job set, or an annotation
-    @param article: the coded article, or None if an annotation was given as first argument
-    """
-    def __init__(self, codingjobset_or_annotation, article=None):
-        if article is None:
-            codingjobset = codingjobset_or_annotation.codingjobset
-            article = codingjobset_or_annotation.article
-        else:
-            codingjobset = codingjobset_or_annotation
-        super(CodedArticle, self).__init__(codingjobset.id, article.id)
-        self.codingjobset = codingjobset
-        self.article = article
-
-    @property
-    def annotation(self):
-        """Get the  article annotation for this coded article"""
-        result = self.codingjobset.annotations.filter(article=self.article, sentence__isnull=True)
-        if result: return result[0]
-
-    @property
-    def sentence_annotations(self):
-        """Get the sentence annotations for this coded article"""
-        return self.codingjobset.annotations.filter(article=self.article, sentence__isnull=False)
-        
-    
     
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -228,16 +197,5 @@ class TestAnnotation(amcattest.PolicyTestCase):
         self.assertEqual(v3.value, c)
 
         self.assertEqual(list(a.get_values()), [(strfield, "abc"), (intfield, 1), (codefield, c)])
-        
-    def test_codedarticle(self):
-        """Test whether CodedArticle annotation retrieval works"""
-        a = amcattest.create_test_annotation()
-        s = amcattest.create_test_sentence()
-        a2 = amcattest.create_test_annotation(sentence=s, codingjobset=a.codingjobset)
-        a3 = amcattest.create_test_annotation(sentence=s, codingjobset=a.codingjobset)
-        ca = CodedArticle(a)
-
-        self.assertEqual(set(ca.sentence_annotations), {a2, a3})
-        self.assertEqual(ca.annotation, a)
         
         

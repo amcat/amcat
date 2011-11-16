@@ -32,4 +32,5 @@ from amcat.model.coding.codingjob import *
 from amcat.model.coding.annotation import *
 from amcat.model.coding.code import *
 from amcat.model.coding.codebook import *
+from amcat.model.coding.codedarticle import *
 

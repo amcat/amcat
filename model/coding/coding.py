@@ -24,7 +24,8 @@ Convenience functions to extract information about codings
 from functools import partial
 
 from amcat.model.coding.codingjob import CodingJobSet
-from amcat.model.coding.annotation import Annotation, STATUS_COMPLETE, CodedArticle
+from amcat.model.coding.annotation import Annotation, STATUS_COMPLETE
+from amcat.model.coding.codedarticle import CodedArticle
 from amcat.model.coding.annotationschemafield import AnnotationSchemaField
 from amcat.model.coding.annotationschemafield import AnnotationSchemaFieldType
 
