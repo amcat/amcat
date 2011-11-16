@@ -59,8 +59,9 @@ class Article(AmcatModel):
     byline = models.TextField(blank=True, null=True, max_length=200)
     length = models.IntegerField()
     metastring = models.TextField(null=True)
-    url = models.URLField(null=True, db_index=True)
+    url = models.URLField(null=True, blank=True, db_index=True)
     externalid = models.IntegerField(blank=True, null=True)
+    author = models.CharField(max_length=100, blank=True, null=True)
 
     #sets = models.ManyToManyField("amcat.Set", db_table="sets_articles")
     
@@ -117,7 +118,6 @@ class Article(AmcatModel):
             return True
 
         return False
-
 
 
     

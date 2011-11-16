@@ -182,11 +182,11 @@ def yieldtablerows(table):
         yield [table.getValue(row, col) for col in table.getColumns()]
         
 
-def table2html(table, colnames=None, printRowNames = True):
+def table2html(table, colnames=None, printRowNames = True, border=True):
     table = getTable(table, colnames)
     if table.rowNamesRequired == True:
         printRowNames = True
-    result = "\n<table border='1'>"
+    result = "\n<table border='1'>" if border else "\n<table>"
     result += "\n  <thead><tr>"
     if printRowNames: result += "\n    <th></th>"
     result += "%s\n  </tr></thead><tbody>" % "".join("\n    <th>%s</th>" % (col,) for col in table.getColumns())

@@ -33,8 +33,15 @@ log = logging.getLogger(__name__)
     
 class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.ArticleColumnsForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
-    length = forms.IntegerField(initial=50, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
+    length = forms.IntegerField(initial=100, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
     highlight = forms.BooleanField(initial=False, required=False)
+    sortColumn = forms.CharField(required=False)
+    sortOrder = forms.ChoiceField(
+                    choices=(
+                        ('asc', 'Ascending'), 
+                        ('desc', 'Descending'),
+                     ),
+                    initial = 'asc', required=False)
     
     def clean_start(self):
         data = self.cleaned_data['start']
@@ -45,7 +52,7 @@ class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.Art
     def clean_length(self):
         data = self.cleaned_data['length']
         if data == None:
-            data = 50
+            data = 100
         if data == -1:
             data = 999999 # unlimited (well, sort of ;)
         return data
@@ -55,6 +62,12 @@ class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.Art
         if self.cleaned_data['query'] == '' and ('keywordInContext' in data or 'hits' in data):
             self._errors["columns"] = self.error_class(['Keyword in Context and Hits columns require a query'])
         return data
+        
+    # def clean_sortColumn(self):
+        # if self.cleaned_data['sortColumn'] in ('id', 'date', 'medium_id'):
+            # return self.cleaned_data['sortColumn']
+        # return None
+        
 
 class ArticleListScript(script.Script):
     input_type = None
@@ -63,12 +76,16 @@ class ArticleListScript(script.Script):
 
 
     def run(self, input=None):
-        """ returns an iterable of articles, when Solr is used, including highlighting """
+        """ returns an iterable of articles, when Solr is used, possibly including highlighting """
         start = self.options['start']
         length = self.options['length']
         
         if self.options['useSolr'] == False: # make database query
-            return database.getQuerySet(**self.options)[start:length].select_related('medium')
+            qs = database.getQuerySet(**self.options)
+            if self.options['sortColumn']:
+                qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '') + self.options['sortColumn'])
+            qs = qs[start:start+length].select_related('medium')
+            return qs
         else:
             
             if self.options['highlight']:

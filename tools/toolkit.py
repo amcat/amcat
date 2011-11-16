@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -169,6 +170,9 @@ def openfile(filename, mode = None, skipheader=False):
     if skipheader: f.readline()
     return f
 
+
+def get_script_path():
+    return os.path.split(os.path.normpath(os.path.join(os.getcwd(), sys.argv[0])))[0]
 
 def mkdir(newdir):
     """
@@ -812,24 +816,24 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
 ###########################################################################
 
 MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio'),
-              ('feb', 'fevr', 'feve'),
+              ('feb', 'fevr', 'feve', 'février'),
               ('mar', 'mrt', 'maa', 'mar', 'mai'),
               ('apr', 'avri', 'abri'),
-              ('may', 'mai', 'mei', 'mayo', 'maggio'),
+              ('may', 'mai', 'mei', 'mayo', 'maggio', 'märz'),
               ('jun', 'juin','giugno'),
               ('jul', 'juil', 'luglio'),
-              ('aug', 'aout', 'agos'),
+              ('aug', 'aout', 'agos', 'août', u'août', u'ao\u0171t'),
               ('sep', 'setem', 'settembre'),
               ('oct', 'okt', 'out', 'ottobre'),
               ('nov'),
-              ('dec', 'dez', 'dici', 'dicembre'))
+              ('dec', 'dez', 'dici', 'dicembre', 'décembre'))
 """Tuple of 12 tuples containing month name (prefixes)""" 
 
 class _DateFormat(object):
     """Format definition for parsing dates"""
     def __init__(self, expr, yeargroup=3, monthgroup=2, daygroup=1,
                  monthisname=False, swapamerican=False):
-        self.expr = expr
+        self.expr = re.compile(expr, re.UNICODE)
         self.yeargroup = yeargroup
         self.monthgroup = monthgroup
         self.daygroup = daygroup
@@ -890,7 +894,7 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
     """
     if string == None: return None
     try:
-        datestr = stripAccents(string)
+        datestr = string
 
         time = None
         if ':' in datestr:

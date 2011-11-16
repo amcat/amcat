@@ -30,7 +30,8 @@ outputClasses = {
     'csv': script.CsvStream,
     'excel': script.ExcelStream,
     'html': script.HtmlStream,
-    'spss': script.SPSSData
+    'spss': script.SPSSData,
+    'datatables': script.DataTableJsonData
 }
 
 def findAllScripts():

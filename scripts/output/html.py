@@ -26,6 +26,9 @@ from django.template.loader import render_to_string
 from django import forms
 import base64
 
+import logging
+log = logging.getLogger(__name__)
+
 class HtmlTemplateForm(forms.Form):
     template = forms.CharField(required=False)
     

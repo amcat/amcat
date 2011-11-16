@@ -49,6 +49,7 @@ class CsvStream(object): pass
 class ExcelStream(object): pass
 class HtmlStream(object): pass
 class SPSSData(object): pass
+class DataTableJsonData(object): pass
 class ArticleidList(object): pass
 class ArticleidDictPerQuery(object): pass
 

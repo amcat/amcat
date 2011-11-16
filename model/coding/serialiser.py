@@ -1,122 +1,162 @@
-from amcat.tools import toolkit
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 
-from amcat.tools.idlabel import IDLabel
+"""
+(De)Serialisation support for annotation values
 
-#from amcat.model.ontology.codebook import Codebook
-#from amcat.model.ontology.code import Code
+Annotation Values need to be serialised and deserialised based on the
+schema field that they are an annotation of.
+
+Definitions:
+Serialised Value: a primitive type (currently: str or int)
+Deserialised Value: a domain object, possibly a django Model instance
+
+"""
 
 import logging; log = logging.getLogger(__name__)
 
+from amcat.model.coding.code import Code
+
 class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
-    def __init__(self, targettype):
-        self.targettype = targettype
-    def deserialize(self, value):
-        """Convert the given (db) value to a domain object"""
-        if type(value) == str:
-            return value.decode('latin-1') # hack for the mssql db, remove later
-        return value
-    def serialize(self, value):
-        return value
-    def getTargetType(self):
-        """Return the type of objects dererialisation will yield
-
-        @return: a type object such as IDLabel or ont.Code"""
-        return self.targettype
-    def getLabels(self):
-        """ @return: dict of IDs and labels if the field has one, None otherwise """
-        return None
-    
-class LookupFieldSerialiser(BaseSerialiser):
-    def deserialize(self, value):
-        if value is None: return None
-        label = self.getLabels().get(value, None)
-        result = IDLabel(value, label)
-        return result
-    def getTargetType(self):
-        return IDLabel
-    def serialize(self, value):
-        if value is None: return
-        if type(value) == int: return value
-        return value.id
-    
-class AdHocLookupFieldSerialiser(LookupFieldSerialiser):
-    def __init__(self, valuestr):
-        self._labels = {}
-        for i, val in enumerate(valuestr.split(";")):
-            if ":" in val:
-                i, val = val.split(":")
-                i = int(i)
-                self._labels[i] = val
-    def getLabels(self):
-        return self._labels
-
-class DBLookupFieldSerialiser(LookupFieldSerialiser):
-    def __init__(self, db, table, keycol, labelcol):
-        if table is None: raise TypeError("DBLookupFieldSerialiser.table should not be None!")
-        self.db = db
-        self.keycol = keycol
-        self.labelcol = labelcol
-        self.table = table
-    def getLabels(self):
-        try:
-            return self._labels
-        except AttributeError: pass
-        
-        # TODO
-        
-        return self._labels
-        
-        
-class FromFieldSerialiser(BaseSerialiser):
-    def __init__(self):
-        BaseSerialiser.__init__(self, int)
+    def __init__(self, field, deserialised_type=str, serialised_type=str):
+        self.field = field
+        self.deserialised_type = deserialised_type
+        self.serialised_type = serialised_type
     def deserialise(self, value):
-        return NotImplementedError()
-    def getLabel(self, value, codedsentence=None):
-        froms = []
-        for s in codedsentence.ca.sentences:
-            if s.sentence == codedsentence.sentence:
-                val = s.getValue(self.fieldname)
-                if not val: val = 0
-                froms.append(val)
-        froms.sort()
-        if not value: value = 0
-        i = froms.index(value)
-        
-        if i == len(froms)-1: to = None
-        else: to = froms[i+1]
+        """Convert the given serialised value to a domain object
 
-        return " ".join(codedsentence.sentence.text.split()[value:to])
-    def getTargetType(self):
-        return IDLabel
-        
-        
-class OntologyFieldSerialiser(BaseSerialiser):
-    def __init__(self, db, codebookid):
-        self.db = db
-        self.codebookid = codebookid
-    def deserialize(self, value):
-        if value is None: return None
-        return Code(self.db, value)
-    def getTargetType(self):
-        return Code
+        @param value: The value to be deserialized, which should be of type self.serialized_type
+        @return: a value of type self.deserialized_Type. Raises an error if value could not
+                 be deserialized
+        """
+        return self.deserialised_type(value)
+    def serialise(self, value):
+        """Convert the given domain object to a serialised value
+
+        @param value: The value to be serialized, which should be of type self.deserialized_type
+        @return: a value of type self.serialized_Type. Raises an error if value could not
+                 be serialized
+        """
+        return self.serialised_type(value)
     @property
-    def codebook(self):
-        try:
-            return self._set
-        except AttributeError: pass
-        self._set = Codebook(self.db, self.codebookid)
-        return self._set
-    def getLabels(self):
-        try:
-            return self._labels
-        except AttributeError: pass
+    def possible_values(self):
+        """Get the possible values
 
-        # TODO: need to support trees as well? now codebookid 5015 has no labels
-        self._labels = dict((o.id, unicode(o.label)) for o in self.codebook.objects)
-        return self._labels
-    def serialize(self, value):
-        if value is None: return
-        if type(value) == int: return value
+        @return: a sequence of (deserialised) values
+                 or None if this serialiser in not for a 'drop down' field
+        """
+        return None
+
+    def value_description(self, value, language=None):
+        """Get a description for the given (desrialised) value
+
+        @param language: an optional preferred language, which may be ignored
+        """
+        return unicode(value)
+    
+    def value_label(self, value, language=None):
+        """Get a label for the given (deserialised) value
+
+        @param language: an optional preferred language, which may be ignored
+        """
+        return unicode(value)
+    
+class TextSerialiser(BaseSerialiser):
+    """Simple str - str serialiser"""
+    def __init__(self, field):
+        super(TextSerialiser, self).__init__(field, str, str)
+
+class IntSerialiser(BaseSerialiser):
+    """Simple int - int serialiser"""
+    def __init__(self, field):
+        super(IntSerialiser, self).__init__(field, int, int)
+
+class CodebookSerialiser(BaseSerialiser):
+    """int - amcat.model.coding.Code serialiser"""
+    def __init__(self, field):
+        super(CodebookSerialiser, self).__init__(field, Code, int)
+        self.codebook = field.codebook
+    def deserialise(self, value):
+        try:
+            c = Code.objects.get(pk=value)
+        except Code.DoesNotExist:
+            raise ValueError("Code with id {} could not be found".format(value))
+        if c not in self.codebook.codes:
+            raise ValueError("{c} not in {self.codebook}".format(**locals()))
+        return c
+    def serialise(self, value):
         return value.id
+    @property
+    def possible_values(self):
+        return self.codebook.codes
+
+    def value_description(self, value, language=None):
+        return unicode(value)
+    
+    def value_label(self, value, language=None):
+        return value.get_label(language)
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestSerialiser(amcattest.PolicyTestCase):
+    PYLINT_IGNORE_EXTRA = ["W0613"] # unused argument on virtual method
+    def test_textserialiser(self):
+        """Test the str serialiser"""
+        t = TextSerialiser(None)
+        self.assertEqual(t.deserialise(12), '12')
+        self.assertEqual(t.serialise('abc'), 'abc')
+        self.assertIsNone(t.possible_values)
+    def test_intserialiser(self):
+        """Test the int serialiser"""
+        t = IntSerialiser(None)
+        self.assertEqual(t.deserialise(12), 12)
+        self.assertEqual(t.serialise('-99'), -99)
+        self.assertRaises(ValueError, t.serialise, 'abc')
+        self.assertIsNone(t.possible_values)
+    
+    def test_codebookserialiser(self):
+        """Test the codebook serialiser"""
+        from amcat.model.language import Language
+        A = amcattest.create_test_codebook(name="A")
+        c = amcattest.create_test_code(label="bla")
+
+        l2 = Language.objects.create()
+        c.add_label(language=l2, label="blx")
+
+        A.add_code(c)
+        class DummyField(object):
+            """Dummy class so DummyField.codebook works"""
+            codebook = A
+        s = CodebookSerialiser(DummyField)
+        self.assertEqual(s.serialise(c), c.id)
+        self.assertEqual(s.deserialise(c.id), c)
+        d = amcattest.create_test_code()
+        self.assertRaises(ValueError, s.deserialise, d.id)
+        self.assertRaises(ValueError, s.deserialise, -9999999999999999)
+        
+        self.assertEqual([c], s.possible_values)
+        
+        self.assertEqual("bla", s.value_label(c))
+        self.assertEqual("blx", s.value_label(c, l2))
+        

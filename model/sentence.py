@@ -28,13 +28,22 @@ from amcat.tools.model import AmcatModel
 from django.db import models
 
 class Sentence(AmcatModel):
+    """Model for sentences.
+
+    A sentence is a natural sentence in an article
+    created by sentence boundary detection. Manual coding and preprocessing
+    is often based on sentences
+    """
+    
+
+    
     id = models.AutoField(primary_key=True, db_column="sentence_id")
 
     sentence = models.TextField()
     parnr = models.IntegerField()
     sentnr = models.IntegerField()
 
-    article = models.ForeignKey("amcat.Article")
+    article = models.ForeignKey("amcat.Article", related_name='sentences')
 
     #parsedSentences = ForeignKey(LB("ParsedSentence"), table="parses_words", distinct=True)
 
@@ -44,30 +53,38 @@ class Sentence(AmcatModel):
     class Meta():
         db_table = 'sentences'
         app_label = 'amcat'
+
+
+    
+    
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
         
-    def getAnalysedSentence(self, analysis):
-        if type(analysis) <> int: analysis = analysis.id
-        for a in self.parsedSentences:
-            if analysis == a.analysis.id:
-                return a
+from amcat.tools import amcattest
 
+class TestSentence(amcattest.PolicyTestCase):
 
-def cacheWords(sentences, words=True, lemmata=False, triples=False, sentiment=False, sentence=False):
-    return
+    def test_get_sentences(self):
+        """Test retrieving all (unicode) sentences for an article"""
+        a = amcattest.create_test_article()
+        sentences = []
+        for i, offset in enumerate(range(22, 20000, 1000)):
+            sentnr = i % 7
+            parnr = i // 7
+            sent = "".join(unichr(offset + c) for c in range(47, 1000, 100))
+            sentences += [(parnr, sentnr, sent)]
+            Sentence.objects.create(article = a, parnr = parnr, sentnr = sentnr, sentence=sent)
+        from amcat.model.article import Article
+        aid = a.id
+        del a
+        a2 = Article.objects.get(pk = aid)
+        sentences2 = [(s.parnr, s.sentnr, s.sentence) for s in a2.sentences.all()]
 
-    """perword = dict(word = dict(string = []))
+        self.assertEqual(set(sentences), set(sentences2))
 
-    if lemmata:
-        perword["lemma"] = dict(lemma=["string"], pos=[])
-
-    if sentiment:
-        perword["lemma"] = dict(lemma=["string"], pos=[], sentiment=[], intensifier=[])
-
-    what = dict(parsedSentences = dict(words={'word' : perword}))
-    if triples:
-        what["parsedSentences"] = ["triples"]
-
-    if sentence:
-        what["sentence"] = []
-
-    cache(sentences, **what)"""
+            
+            
+            
+        

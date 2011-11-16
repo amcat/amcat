@@ -12,3 +12,4 @@ syntax: regexp
 ^\.project$
 syntax: regexp
 ^\.pydevproject$
+.coverage

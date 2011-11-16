@@ -1,7 +1,4 @@
-import os, sys, toolkit, base64, odict, collections, re
-
-def printError(name, msg):
-    toolkit.warn(msg)
+import os, sys, toolkit, base64, collections, re
 
 class Node(object):
     def __init__(self, id, label=None, weight=1, rank=None):
@@ -32,8 +29,8 @@ MAIN_GRAPH = 1
 
 class Graph(object):
     def __init__(self, digraph=True, label=None, theme=None):
-        self.nodes = odict.OrderedDict() # id : Node
-        self.edges = odict.OrderedDict() # subjNode, objNode : [Edge, ..]
+        self.nodes = collections.OrderedDict() # id : Node
+        self.edges = collections.OrderedDict() # subjNode, objNode : [Edge, ..]
         self.digraph = digraph
         self.label = label
         self.theme = theme or DotTheme()
@@ -243,9 +240,9 @@ def dotattrs(attrs, style):
 
 HEADER_SMALL = "node [fontsize=10,height=.1]; graph [ranksep=.25]; edge [fontsize=10];"
 
-def dot2img(dot, format="jpg", errListener = printError, layout="dot"):
+def dot2img(dot, format="jpg", layout="dot"):
     cmd = 'dot -T%s -K%s' % (format, layout)
-    img, err = toolkit.execute(cmd, dot, listener=errListener)
+    img = toolkit.execute(cmd, dot, outonly=True)
     return img
 
 def dot2object(dot,*args,**kargs):

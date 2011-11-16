@@ -17,20 +17,38 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""
-Test cases that are automatically detected and run by django
+from amcat.tools.table import table3
+from amcat.scripts import script
+from django.utils import simplejson
+from django import forms
+import datetime
 
-Please don't include test cases here directly, but place them in an appropriate
-location and import here
-"""
+
+class DataTableForm(forms.Form):
+    sEcho = forms.IntegerField(required=False)
+    
+    
+import logging
+log = logging.getLogger(__name__)
+
+class TableToDatatable(script.Script):
+    input_type = table3.Table
+    options_form = DataTableForm
+    output_type = script.DataTableJsonData
 
 
-from amcat.tools.logging.amcatlogging import *
-from amcat.tools.amcattest import *
-from amcat.tools.djangotoolkit import *
-from amcat.tools.table.table3 import *
-
-from amcat.model.coding.coding import *
-from amcat.model.coding.serialiser import *
-
-from amcat.scripts.article_upload.tests import *
+    def run(self, tableObj):
+        tableData = []
+        
+        for row in tableObj.getRows():
+            rowList = []
+            for column in tableObj.getColumns():
+                rowList.append(tableObj.getValue(row, column))
+            tableData.append(rowList)
+        dictObj = {}
+        dictObj['aaData'] = tableData
+        dictObj['iTotalRecords'] = 9999
+        dictObj['iTotalDisplayRecords'] = 9999 if len(tableData) > 0 else 0
+        dictObj['sEcho'] = self.options['sEcho']
+        
+        return simplejson.dumps(dictObj, default = lambda obj: obj.strftime('%d-%m-%Y') if isinstance(obj, datetime.datetime) else None)

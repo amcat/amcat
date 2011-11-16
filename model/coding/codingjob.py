@@ -76,6 +76,7 @@ class CodingJobSet(AmcatModel):
     class Meta():
         db_table = 'codingjobs_sets'
         app_label = 'amcat'
+
     
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -86,26 +87,17 @@ from amcat.tools import amcattest
 class TestCodingJob(amcattest.PolicyTestCase):
     def test_create(self):
         """Can we create a dummy coding job?"""
-        u = amcattest.create_test_user()
         p = amcattest.create_test_project()
-        s = amcattest.create_test_schema()
-        j = CodingJob.objects.create(project=p, unitschema=s, articleschema=s, insertuser=u)
+        j = amcattest.create_test_job(project=p)
         self.assertIsNotNone(j)
         self.assertEqual(j.project, Project.objects.get(pk=p.id))
         
 class TestCodingJobSet(amcattest.PolicyTestCase):
     def test_create(self):
         """Can we create a coding job set with articles?"""
-        u = amcattest.create_test_user()
-        p = amcattest.create_test_project()
-        s = amcattest.create_test_schema()
-        j = CodingJob.objects.create(project=p, unitschema=s, articleschema=s, insertuser=u)
-
-        s = amcattest.create_test_set()
-        s.articles.add(amcattest.create_test_article())
-        s.articles.add(amcattest.create_test_article())
-
-        cs = CodingJobSet.objects.create(codingjob=j, coder=u, articleset=s)
+        j = amcattest.create_test_job()
+        s = amcattest.create_test_set(articles=2)
+        cs = CodingJobSet.objects.create(codingjob=j, articleset=s, coder=j.insertuser)
         cs.articleset.articles.add(amcattest.create_test_article())
         self.assertEqual(3, len(s.articles.all()))
         self.assertEqual(s, cs.articleset)

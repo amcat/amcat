@@ -29,7 +29,7 @@ are ontology coding types.
 
 from amcat.tools.model import AmcatModel
 
-#from amcat.model.ontology.codebook import Codebook
+from amcat.model.coding.codebook import Codebook
 
 from amcat.model.coding.annotationschema import AnnotationSchema, RequiredValueError
 
@@ -68,6 +68,7 @@ class AnnotationSchemaFieldType(AmcatModel):
         """Create a serialiser object for this field type with the given field"""
         pass
 
+    
     class Meta():
         db_table = 'annotationschemas_fieldtypes'
         app_label = 'amcat'
@@ -82,39 +83,38 @@ class AnnotationSchemaField(AmcatModel):
     
     id = models.AutoField(primary_key=True, db_column="annotationschemafield_id")
 
-    annotationschema = models.ForeignKey(AnnotationSchema)
+    annotationschema = models.ForeignKey(AnnotationSchema, related_name='fields')
     fieldnr = models.IntegerField()
     
     fieldname = models.CharField(max_length=20, blank=False, null=False)
-    label = models.CharField(max_length=30)
+    label = models.CharField(max_length=30, blank=False, null=True)
     required = models.BooleanField()
     default = models.BooleanField(db_column='deflt')
     fieldtype = models.ForeignKey(AnnotationSchemaFieldType)
-    table = models.CharField(max_length=40)
-    keycolumn = models.CharField(max_length=40)
-    labelcolumn = models.CharField(max_length=40)
-    values = models.TextField()
-    #codebook = models.ForeignKey(Codebook)
+    
+    
+    #table = models.CharField(max_length=40)
+    #keycolumn = models.CharField(max_length=40)
+    #labelcolumn = models.CharField(max_length=40)
+    #values = models.TextField()
+    codebook = models.ForeignKey(Codebook, null=True)
 
     class Meta():
         db_table = 'annotationschemas_fields'
         app_label = 'amcat'
         unique_together = ("annotationschema", "fieldnr")
 
+    def __unicode__(self):
+        return self.fieldname
+    
+    def get_label(self):
+        """Return the label of the field, or fieldname is label is None"""
+        return self.label if (self.label is not None) else self.fieldname
+
     @property
-    def serializer(self):
+    def serialiser(self):
         """Get the serialiser for this field"""
-        return self.fieldtype.serialiser(self)
-
-    def deserialize(self, value):
-        """Deserialise the given value, e.g. transform a db value to a model object"""
-        val = self.serializer.deserialize(value)
-        log.debug("%r/%r deserialised %r to %r" % (self, self.serializer, value, val))
-        return val
-
-    def getTargetType(self):
-        """Get the target type for this field"""
-        return self.serializer.getTargetType()   
+        return self.fieldtype.serialiserclass(self)
 
     def validate(self, value):
         """Validate the given value for this field"""
@@ -131,14 +131,16 @@ class TestAnnotationSchemaFieldType(amcattest.PolicyTestCase):
     def test_get_serialiser(self):
         """Are the built in field types present and bound to the right class?"""
         fieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
-        self.assertEqual(fieldtype.serialiserclass, serialiser.BaseSerialiser)
+        self.assertEqual(fieldtype.serialiserclass, serialiser.TextSerialiser)
 
 class TestAnnotationSchemaField(amcattest.PolicyTestCase):
     def test_create_field(self):
         """Can we create a schema field object on a schema"""
         fieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
         a = amcattest.create_test_schema()
-        a = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
-
+        f = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
+        self.assertIsNotNone(f)
+        
+        
         
         
