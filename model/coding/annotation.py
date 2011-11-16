@@ -26,8 +26,6 @@ to a specific coding job set.
 
 import logging; log = logging.getLogger(__name__)
 
-from types import StringTypes
-
 from django.db import models
 
 from amcat.tools.model import AmcatModel
@@ -142,6 +140,17 @@ class AnnotationValue(AmcatModel):
     strval = models.CharField(blank=True, null=True, max_length=80)
     intval = models.IntegerField(null=True)
 
+    def save(self, *args, **kargs):
+        #Enforce constraint field.schema == annotation.schema
+        if self.field.annotationschema != self.annotation.schema:
+            raise ValueError("Field schema {0!r} and annotation schema {1!r} don't match"
+                             .format(self.field.annotationschema, self.annotation.schema))
+        #Enforce constraint (strval IS NOT NULL) OR (intval IS NOT NULL)
+        if self.strval is None and self.intval is None:
+            raise ValueError("annotationvalue.strval and .intval cannot both be None")
+        super(AnnotationValue, self).save(*args, **kargs)
+
+    
     @property
     def serialised_value(self):
         """Get the 'serialised' (raw) value for this annotationvalue"""
@@ -163,12 +172,6 @@ class AnnotationValue(AmcatModel):
         else: self.intval = serval
         self.save()
 
-    def save(self, *args, **kwargs):
-        #Enforce constraint (strval IS NOT NULL) OR (intval IS NOT NULL)
-        if self.strval is None and self.intval is None:
-            raise ValueError("annotationvalue.strval and .intval cannot both be None")
-        super(AnnotationValue, self).save(*args, **kwargs)
-        
     class Meta():
         db_table = 'annotations_values'
         app_label = 'amcat'
@@ -183,7 +186,9 @@ from amcat.tools import amcattest
 
 
 def _valuestr(annotation):
-    return ";".join("{0.label}:{1!r}".format(f,v) for (f,v) in annotation.get_values())
+    """Dense representation of annotation values for quick comparison"""
+    return ";".join("{0.label}:{1!r}".format(*fv) for (fv) in
+                    sorted(annotation.get_values(), key=lambda fv:fv[0].label))
         
 
 class TestAnnotation(amcattest.PolicyTestCase):
@@ -210,6 +215,8 @@ class TestAnnotation(amcattest.PolicyTestCase):
                                fieldtype=intfieldtype)
         self.codefield = create(annotationschema=self.schema, fieldnr=3, label="code",
                                 fieldtype=codefieldtype, codebook=self.codebook)
+
+        self.job = amcattest.create_test_job(unitschema=self.schema, articleschema=self.schema)
         
     def test_create(self):
         """Can we create an annotation?"""
@@ -254,7 +261,7 @@ class TestAnnotation(amcattest.PolicyTestCase):
             
     def test_create_value(self):
         """Can we create an annotation value?"""
-        a = amcattest.create_test_annotation()
+        a = amcattest.create_test_annotation(job=self.job)
         v = AnnotationValue.objects.create(annotation=a, field=self.strfield,
                                            intval=1, strval="abc")
         v2 = AnnotationValue.objects.create(annotation=a, field=self.intfield,
@@ -270,13 +277,19 @@ class TestAnnotation(amcattest.PolicyTestCase):
         self.assertEqual(list(a.get_values()),
                          [(self.strfield, "abc"), (self.intfield, 1), (self.codefield, self.c)])
 
+        # null values for both value fields
+        self.assertRaises(ValueError, AnnotationValue.objects.create,
+                          annotation=amcattest.create_test_annotation(job=self.job),
+                          field=self.strfield)
+
+        # field does not exist in (newly created) schema
         self.assertRaises(ValueError, AnnotationValue.objects.create,
                           annotation=amcattest.create_test_annotation(),
-                          field=self.strfield)
-        
+                          field=self.strfield, strval="abc")
         
     def test_update_value(self):
-        a = amcattest.create_test_annotation()
+        """Does update_value on a annotationvalue work?"""
+        a = amcattest.create_test_annotation(job=self.job)
         v = AnnotationValue.objects.create(annotation=a, field=self.intfield, intval=1)
         v.update_value("99")
         self.assertEqual(v.value, 99)
@@ -294,13 +307,18 @@ class TestAnnotation(amcattest.PolicyTestCase):
         
 
     def test_update_values(self):
-        a = amcattest.create_test_annotation()
+        """Does update_values on an annotation work?"""
+        a = amcattest.create_test_annotation(job=self.job)
         self.assertEqual(_valuestr(a), "")
-        v = AnnotationValue.objects.create(annotation=a, field=self.intfield, intval=12)
+        AnnotationValue.objects.create(annotation=a, field=self.intfield, intval=12)
         self.assertEqual(_valuestr(a), "number:12")
         a.update_values({self.strfield:"bla"})
         self.assertEqual(_valuestr(a), "text:'bla'")
         a.update_values({self.strfield:None, self.intfield:"999", self.codefield:self.c})
         
-        self.assertEqual(_valuestr(a), "number:999;code:<Code: CODED>")
+        self.assertEqual(_valuestr(a), "code:<Code: CODED>;number:999")
         
+        newfield = AnnotationSchemaField.objects.create(
+            annotationschema=amcattest.create_test_schema(),
+            label="text", fieldtype=self.strfield.fieldtype)
+        self.assertRaises(ValueError, a.update_values, {newfield : "3"})

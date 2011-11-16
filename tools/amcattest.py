@@ -116,16 +116,16 @@ def create_test_job(**kargs):
     if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema()
     return CodingJob.objects.create(**kargs)
 
-def create_test_annotation(**kargs):
+def create_test_annotation(job=None, **kargs):
     """Create a test annotation object"""
     from amcat.model.coding.codingjob import CodingJobSet
     from amcat.model.coding.annotation import Annotation
 
     if "codingjobset" not in kargs:
-        j = create_test_job()
+        if job is None: job = create_test_job()
         s = create_test_set(articles=2)
-        kargs["codingjobset"] = CodingJobSet.objects.create(codingjob=j, articleset=s, 
-                                                            coder=j.insertuser)
+        kargs["codingjobset"] = CodingJobSet.objects.create(codingjob=job, articleset=s, 
+                                                            coder=job.insertuser)
     if "article" not in kargs: kargs["article"] = kargs["codingjobset"].articleset.articles.all()[0]
     return Annotation.objects.create(**kargs)
 
