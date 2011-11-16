@@ -29,7 +29,7 @@ are ontology coding types.
 
 from amcat.tools.model import AmcatModel
 
-#from amcat.model.ontology.codebook import Codebook
+from amcat.model.coding.codebook import Codebook
 
 from amcat.model.coding.annotationschema import AnnotationSchema, RequiredValueError
 
@@ -91,11 +91,13 @@ class AnnotationSchemaField(AmcatModel):
     required = models.BooleanField()
     default = models.BooleanField(db_column='deflt')
     fieldtype = models.ForeignKey(AnnotationSchemaFieldType)
-    table = models.CharField(max_length=40)
-    keycolumn = models.CharField(max_length=40)
-    labelcolumn = models.CharField(max_length=40)
-    values = models.TextField()
-    #codebook = models.ForeignKey(Codebook)
+    
+    
+    #table = models.CharField(max_length=40)
+    #keycolumn = models.CharField(max_length=40)
+    #labelcolumn = models.CharField(max_length=40)
+    #values = models.TextField()
+    codebook = models.ForeignKey(Codebook, null=True)
 
     class Meta():
         db_table = 'annotationschemas_fields'
