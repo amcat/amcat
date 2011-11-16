@@ -18,24 +18,27 @@
 ###########################################################################
 
 """
-Model module representing codebook Codes
+Model module representing codebook Codes and Labels
+
+A Code is a concept that can be found in a text, e.g. an actor, issue, etc. 
+Codes can have multiple labels in different languages, and they can 
+be included in different Codebooks.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+import logging; log = logging.getLogger(__name__)
 
 from django.db import models
 
 from amcat.tools.model import AmcatModel
-from amcat.tools import toolkit
 from amcat.model.language import Language
 
-from datetime import datetime
-
-import logging; log = logging.getLogger(__name__)
 
 PARTYMEMBER_FUNCTIONID = 0
   
 class Code(AmcatModel):
+    """Model class for table codes"""
+
     id = models.AutoField(primary_key=True, db_column='code_id')
     
     class Meta():
@@ -44,11 +47,11 @@ class Code(AmcatModel):
 
     @property
     def label(self):
+        """Get the label with the lowest language id, or a repr-like string"""
         try:
             return self.labels.all().order_by('language__id')[0].label
         except IndexError:
             return '<{0.__class__.__name__}: {0.id}>'.format(self)
-            return repr(super(AmcatModel, self))
         
     def __unicode__(self):
         return self.label
@@ -73,13 +76,17 @@ class Code(AmcatModel):
 
 
     def add_label(self, language, label):
+        """Add the label in the given language"""
         Label.objects.create(language=language, label=label, code=self)
         
 
 
 class Label(AmcatModel):
+    """Model class for table labels. Essentially a many-to-many relation
+    between codes and langauges with a label attribute"""
+
     id = models.AutoField(primary_key=True, db_column='label_id')
-    label = models.TextField(blank=False,null=False)
+    label = models.TextField(blank=False, null=False)
 
     code = models.ForeignKey(Code, db_index=True, related_name="labels")
     language = models.ForeignKey(Language, db_index=True, related_name="+")
@@ -88,6 +95,7 @@ class Label(AmcatModel):
     class Meta():
         db_table = 'labels'
         app_label = 'amcat'
+        unique_together = ('code','language')
 
 
 

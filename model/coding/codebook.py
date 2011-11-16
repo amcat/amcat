@@ -18,7 +18,9 @@
 ###########################################################################
 
 """
-Model module representing ontology Codebooks
+Model module representing ontology Codebooks. Codebooks are hierarchical
+collections of codes that can be used as a source of objects to be coded, 
+or to derive automatically generated search terms from. 
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
@@ -32,6 +34,8 @@ from amcat.model.coding.code import Code
 from amcat.model.project import Project
 
 class Codebook(AmcatModel):
+    """Model class for table codebooks"""
+
     id = models.AutoField(primary_key=True, db_column='codebook_id')
 
     project = models.ForeignKey(Project)
@@ -46,6 +50,7 @@ class Codebook(AmcatModel):
         return self.name
     
     def add_code(self, code, parent=None, hide=False):
+        """Add the given code to the hierarchy, with given parent (or hide)"""
         if parent and hide: raise ValueError("Hidden objects cannot specify parent")
         if isinstance(parent, CodebookCode): parent = parent.code
         if isinstance(code, CodebookCode): code = code.code
@@ -53,6 +58,7 @@ class Codebook(AmcatModel):
 
     @property
     def bases(self):
+        """Return the base codebooks in the right order"""
         for codebookbase in self.codebookbase_set.all():
             yield codebookbase.supercodebook
     
@@ -64,7 +70,6 @@ class Codebook(AmcatModel):
         The parent of a code is its parent in the codebook it came from, ie in this codebook
         if listed, otherwise in the first base that listed it.
         """
-        hide = set(self.codebookcodes.filter(hide=True))
         # go through hierarchy sources in reverse order and update result dict
         # so newest overrides oldest
         result = {}
@@ -72,11 +77,18 @@ class Codebook(AmcatModel):
             result.update(base.get_hierarchy())
         result.update(dict((co.code, co.parent) for co in
                            self.codebookcodes.filter(hide=False)))
+        # Remove 'hide' objects from the result, and return
         for co in self.codebookcodes.filter(hide=True):
             del result[co.code]
         return result
 
+    @property
+    def codes(self):
+        """Returns the sequence of codes that are in this hierarchy"""
+        return self.get_hierarchy().keys()
+
     def add_base(self, codebook, rank=None):
+        """Add the given codebook as a base to this codebook"""
         if rank is None:
             maxrank = self.codebookbase_set.aggregate(models.Max('rank'))['rank__max']
             rank = maxrank+1 if maxrank is not None else 0
@@ -104,7 +116,7 @@ class CodebookCode(AmcatModel):
     codebook = models.ForeignKey(Codebook, db_index=True, related_name="codebookcodes")
     
     code = models.ForeignKey(Code, db_index=True, related_name="+")
-    parent = models.ForeignKey(Code, db_index=True, related_name="+",null=True)
+    parent = models.ForeignKey(Code, db_index=True, related_name="+", null=True)
 
     hide = models.BooleanField(default=False)               
     
@@ -135,10 +147,13 @@ class TestCodebook(amcattest.PolicyTestCase):
 
     def test_hierarchy(self):
         """Does the code/parent base class resolution work"""
-        # test codes and dense hierarchy serialiseation for easier comparisons
-        a,b,c,d,e,f = [amcattest.create_test_code(label=l) for l in "abcdef"]
         def standardize(codebook):
-            return ";".join(sorted({"{0}:{1}".format(*cp) for cp in codebook.get_hierarchy().items()}))
+            """return a dense hierarchy serialiseation for easier comparisons"""
+
+            return ";".join(sorted({"{0}:{1}".format(*cp) 
+                                    for cp in codebook.get_hierarchy().items()}))
+
+        a, b, c, d, e, f = [amcattest.create_test_code(label=l) for l in "abcdef"]
 
         # A: a
         #    +b
@@ -196,6 +211,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         self.assertEqual(standardize(BD), 'b:None;d:b;e:b;f:d')
         
     def test_unique(self):
+        """Test the uniqueness constraints"""
         from django.db import IntegrityError
         A = amcattest.create_test_codebook(name="A")
         B = amcattest.create_test_codebook(name="B")

@@ -263,7 +263,7 @@
     "model": "amcat.annotationschemafieldtype",
     "fields" : {
       "name" : "DB ontology",
-      "serialiserclassname" : "OntologyFieldSerialiser"
+      "serialiserclassname" : "CodebookSerialiser"
     }
   },
 {

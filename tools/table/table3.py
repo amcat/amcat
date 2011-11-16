@@ -154,7 +154,7 @@ class ObjectTable(Table):
         
         @type return: NoneType 
         """
-        if type(col) == types.FunctionType:
+        if hasattr(col, '__call__'): # function
             if label is None: label = col.__name__
             if label == '<lambda>': label = ''
             

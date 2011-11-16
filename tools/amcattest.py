@@ -84,6 +84,16 @@ def create_test_article(**kargs):
     m = Medium.objects.create(language=l)
     return Article.objects.create(medium=m, **kargs)
 
+def create_test_sentence(**kargs):
+    """Create a test sentence"""    
+    from amcat.model.sentence import Sentence
+    if "article" not in kargs: kargs["article"] = create_test_article()
+    if "sentence" not in kargs: 
+        kargs["sentence"] = "Test sentence number %i." % len(Sentence.objects.all())
+    if "parnr" not in kargs: kargs["parnr"] = 1
+    if "sentnr" not in kargs: kargs["sentnr"] = 1
+    return Sentence.objects.create(**kargs)
+
 
 def create_test_set(articles=0, **kargs):
     """Create a test (Article) set"""
@@ -111,13 +121,18 @@ def create_test_annotation(**kargs):
     from amcat.model.coding.codingjob import CodingJobSet
     from amcat.model.coding.annotation import Annotation
     
-    j = create_test_job()
-    s = create_test_set(articles=2)
-    cs = CodingJobSet.objects.create(codingjob=j, articleset=s, coder=j.insertuser)
-    return Annotation.objects.create(codingjobset=cs, article=s.articles.all()[0], **kargs)
+
+    if "codingjobset" not in kargs:
+        j = create_test_job()
+        s = create_test_set(articles=2)
+        kargs["codingjobset"] = CodingJobSet.objects.create(codingjob=j, articleset=s, 
+                                                            coder=j.insertuser)
+    if "article" not in kargs: kargs["article"] = kargs["codingjobset"].articleset.articles.all()[0]
+    return Annotation.objects.create(**kargs)
 
 def create_test_code(label=None, language=None, **kargs):
-    from amcat.model.coding.code import Code, Label
+    """Create a test code with a label"""
+    from amcat.model.coding.code import Code
     from amcat.model.language import Language
     if language is None: language = Language.objects.get(pk=1)
     if label is None: label = "testcode_%i" % len(Code.objects.all())
@@ -126,6 +141,7 @@ def create_test_code(label=None, language=None, **kargs):
     return o
 
 def create_test_codebook(**kargs):
+    """Create a test codebook"""
     from amcat.model.coding.codebook import Codebook
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "name" not in kargs: kargs["name"] = "testcodebook_%i" % Codebook.objects.count()
@@ -221,7 +237,7 @@ class TestAmcatTest(PolicyTestCase):
         p = create_test_project()
         p2 = create_test_project()
         self.assertNotEqual(p, p2)
-
+        
         
         
         

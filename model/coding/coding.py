@@ -21,6 +21,8 @@
 Convenience functions to extract information about codings
 """
 
+from functools import partial
+
 from amcat.model.coding.codingjob import CodingJobSet
 from amcat.model.coding.annotation import Annotation, STATUS_COMPLETE, CodedArticle
 from amcat.model.coding.annotationschemafield import AnnotationSchemaField
@@ -75,13 +77,19 @@ def get_table_articles_per_set(cjsets):
     result.addColumn(lambda a: a.annotation and a.annotation.comments, "comments")
     return result
 
-def get_table_sentence_annotations_article(cjset, article):
+def get_value(field, annotation):
+    """Return the (deserialized) value for field in this annotation"""
+    return dict(annotation.get_values()).get(field)
+
+def get_table_sentence_annotations_article(codedarticle):
     """Return a table of sentence annotations x fields
 
     The cells contain domain (deserialized) objects
     """
-    _x = cjset, article
-    raise NotImplementedError()
+    result = ObjectTable(rows = list(codedarticle.sentence_annotations))
+    for field in codedarticle.codingjobset.codingjob.unitschema.fields.all():
+        result.addColumn(partial(get_value, field), field.get_label())
+    return result
 
 
         
@@ -94,17 +102,28 @@ from amcat.tools import amcattest
 class TestCoding(amcattest.PolicyTestCase):
 
     def setUp(self):
+        from amcat.model.coding.annotation import AnnotationValue
         # create a coding job set with a sensible schema and some articles to 'code'
         self.schema = amcattest.create_test_schema()
-        for i, (ftype, label) in enumerate([
-                (AnnotationSchemaFieldType.objects.get(pk=1), "text"),
-                (AnnotationSchemaFieldType.objects.get(pk=2), "number"),
-                ]):
-            AnnotationSchemaField.objects.create(annotationschema=self.schema,
-                                                 fieldnr=i, fieldtype=ftype, fieldname=label)
+        self.codebook = amcattest.create_test_codebook()
+        self.code = amcattest.create_test_code(label="CODED")
+        self.codebook.add_code(self.code)
+        
+
+        texttype = AnnotationSchemaFieldType.objects.get(pk=1)
+        inttype = AnnotationSchemaFieldType.objects.get(pk=2)
+        codetype = AnnotationSchemaFieldType.objects.get(pk=5)
+
+        create = AnnotationSchemaField.objects.create
+        self.textfield = create(annotationschema=self.schema, fieldnr=1, fieldtype=texttype, 
+                                fieldname="Text")
+        self.intfield = create(annotationschema=self.schema,  fieldnr=2, fieldtype=inttype, 
+                               fieldname="Number")
+        self.codefield = create(annotationschema=self.schema, fieldnr=3, fieldtype=codetype, 
+                                fieldname="Code", codebook=self.codebook)
 
         self.users = [amcattest.create_test_user() for _x in range(2)]
-        self.jobs = [amcattest.create_test_job(articleschema=self.schema, name="job%i"%i)
+        self.jobs = [amcattest.create_test_job(articleschema=self.schema, unitschema=self.schema)
                      for i in range(2)]
         self.asets = [amcattest.create_test_set(articles=2 * (i+1)) for i in range(5)]
 
@@ -126,18 +145,33 @@ class TestCoding(amcattest.PolicyTestCase):
         self.an2.set_status(STATUS_COMPLETE)
         self.an2.comments = 'Makkie!'
         self.an2.save()
+
+        sent = amcattest.create_test_sentence()
+        self.sa1 = Annotation.objects.create(codingjobset=self.cjsets[0], article=self.articles[0], 
+                                             sentence=sent)
+        self.sa2 = Annotation.objects.create(codingjobset=self.cjsets[0], article=self.articles[0], 
+                                             sentence=sent)
+        create = AnnotationValue.objects.create
+        create(annotation=self.sa1, field=self.intfield, intval=1)
+        create(annotation=self.sa1, field=self.textfield, strval="bla")
+        create(annotation=self.sa2, field=self.textfield, strval="blx")
+        create(annotation=self.sa1, field=self.codefield, intval=self.code.id)
+
+        
         
     def test_general(self):
         """Test whether the setUp works"""
         self.assertEqual(self.cjsets[0].coder, self.users[0])
 
         
-    def xtest_table_annotations(self):
+    def test_table_annotations(self):
         """Is the annotations table correct?"""
-        s = self._getset()
-        a = s.articleset.articles.all()[0]
-        t = get_table_sentence_annotations_article(s, a)
+        ca = CodedArticle(self.an1)
+        t = get_table_sentence_annotations_article(ca)
         self.assertIsNotNone(t)
+        #from amcat.tools.table import tableoutput; print(tableoutput.table2unicode(t))
+        aslist = [tuple(r) for r in t]
+        self.assertEqual(aslist, [('bla', 1, self.code), ('blx', None, None)])
         
     def test_table_articles_per_set(self):
         """Is the articles per set table correct?"""
@@ -153,10 +187,11 @@ class TestCoding(amcattest.PolicyTestCase):
         sets = [self.cjsets[i] for i in (0, 0, 1, 1, 1, 1)]
         articles = [self.articles[i] for i in range(6)]
         annotations = [self.an1, self.an2] + [None]*4
-        correct = [CodedArticle(*saa) for saa in zip(sets, articles, annotations)]
- 
-        self.assertEqual(result, correct)
-                             
+        self.assertEqual(len(result), len(sets))
+        for result, aset, article, annotation in zip(result, sets, articles, annotations):
+            ca = CodedArticle(aset, article)
+            self.assertEqual(ca, result)
+            self.assertEqual(annotation, result.annotation)
 
 
     def test_get_article_annotation(self):
@@ -164,8 +199,6 @@ class TestCoding(amcattest.PolicyTestCase):
         self.assertEqual(self.an1, get_article_annotation(self.cjsets[0], self.articles[0]))
         self.assertIsNone(get_article_annotation(self.cjsets[1], self.articles[2]))
         
-        
-
     def test_table_sets_per_user(self):
         """Is the sets per user table correct"""
         t = get_table_sets_per_user(self.users[0])

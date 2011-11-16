@@ -107,9 +107,8 @@ class AnnotationValue(AmcatModel):
     def serialised_value(self):
         """Get the 'serialised' (raw) value for this annotationvalue"""
         stype = self.field.serialiser.deserialised_type
-        if stype == int: return self.intval
         if stype == str: return self.strval
-        raise ValueError("Unknown deserialised type in %s: %s" % (self.field, stype) )
+        return self.intval
 
     @property
     def value(self):
@@ -124,24 +123,31 @@ class AnnotationValue(AmcatModel):
 
 class CodedArticle(Identity):
     """Convenience class to represent an article in a codingjobset
-    and expose the article annotation"""
-    def __init__(self, codingjobset, article, annotation=False):
+    and expose the article and sentence annotations
+    
+    @param codingjobset_or_annotation: Either a job set, or an annotation
+    @param article: the coded article, or None if an annotation was given as first argument
+    """
+    def __init__(self, codingjobset_or_annotation, article=None):
+        if article is None:
+            codingjobset = codingjobset_or_annotation.codingjobset
+            article = codingjobset_or_annotation.article
+        else:
+            codingjobset = codingjobset_or_annotation
         super(CodedArticle, self).__init__(codingjobset.id, article.id)
         self.codingjobset = codingjobset
         self.article = article
-        if annotation is not False:
-            self._annotation = annotation
+
     @property
     def annotation(self):
-        """Get the (cached) article annotation for this coded article"""
-        try:
-            return self._annotation
-        except AttributeError:
-            result = self.codingjobset.annotations.filter(article=self.article, sentence=None)
-            if result: self._annotation = result[0]
-            else: self._annotation = None
-            return self._annotation
-    
+        """Get the  article annotation for this coded article"""
+        result = self.codingjobset.annotations.filter(article=self.article, sentence__isnull=True)
+        if result: return result[0]
+
+    @property
+    def sentence_annotations(self):
+        """Get the sentence annotations for this coded article"""
+        return self.codingjobset.annotations.filter(article=self.article, sentence__isnull=False)
         
     
     
@@ -190,27 +196,48 @@ class TestAnnotation(amcattest.PolicyTestCase):
             a = Annotation.objects.get(pk=a.id)
             self.assertEqual(a.comments, s)
             
-        
-        
-
-class TestAnnotationValue(amcattest.PolicyTestCase):
-    def test_create(self):
+    def test_create_value(self):
         """Can we create an annotation value?"""
         from amcat.model.coding.annotationschemafield import AnnotationSchemaFieldType
         strfieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
         intfieldtype = AnnotationSchemaFieldType.objects.get(pk=2)
+        codefieldtype = AnnotationSchemaFieldType.objects.get(pk=5)
+
+
+        codebook = amcattest.create_test_codebook()
+        c = amcattest.create_test_code(label="CODED")
+        codebook.add_code(c)
+
         schema = amcattest.create_test_schema()
         strfield = AnnotationSchemaField.objects.create(annotationschema=schema, fieldnr=1,
                                                         fieldtype=strfieldtype)
         intfield = AnnotationSchemaField.objects.create(annotationschema=schema, fieldnr=2,
                                                         fieldtype=intfieldtype)
-
+        codefield = AnnotationSchemaField.objects.create(annotationschema=schema, fieldnr=3,
+                                                        fieldtype=codefieldtype, codebook=codebook)
         a = amcattest.create_test_annotation()
         v = AnnotationValue.objects.create(annotation=a, field=strfield, intval=1, strval="abc")
         v2 = AnnotationValue.objects.create(annotation=a, field=intfield, intval=1, strval="abc")
+
+
+        v3 = AnnotationValue.objects.create(annotation=a, field=codefield, intval=c.id)
         
         self.assertIn(v, a.values.all())
         self.assertEqual(v.value, "abc")
         self.assertEqual(v2.value, 1)
+        self.assertEqual(v3.value, c)
 
-        self.assertEqual(list(a.get_values()), [(strfield, "abc"), (intfield, 1)])
+        self.assertEqual(list(a.get_values()), [(strfield, "abc"), (intfield, 1), (codefield, c)])
+        
+    def test_codedarticle(self):
+        """Test whether CodedArticle annotation retrieval works"""
+        a = amcattest.create_test_annotation()
+        s = amcattest.create_test_sentence()
+        a2 = amcattest.create_test_annotation(sentence=s, codingjobset=a.codingjobset)
+        a3 = amcattest.create_test_annotation(sentence=s, codingjobset=a.codingjobset)
+        ca = CodedArticle(a)
+
+        self.assertEqual(set(ca.sentence_annotations), {a2, a3})
+        self.assertEqual(ca.annotation, a)
+        
+        

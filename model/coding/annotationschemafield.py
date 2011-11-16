@@ -87,7 +87,7 @@ class AnnotationSchemaField(AmcatModel):
     fieldnr = models.IntegerField()
     
     fieldname = models.CharField(max_length=20, blank=False, null=False)
-    label = models.CharField(max_length=30)
+    label = models.CharField(max_length=30, blank=False, null=True)
     required = models.BooleanField()
     default = models.BooleanField(db_column='deflt')
     fieldtype = models.ForeignKey(AnnotationSchemaFieldType)
@@ -107,6 +107,10 @@ class AnnotationSchemaField(AmcatModel):
     def __unicode__(self):
         return self.fieldname
     
+    def get_label(self):
+        """Return the label of the field, or fieldname is label is None"""
+        return self.label if (self.label is not None) else self.fieldname
+
     @property
     def serialiser(self):
         """Get the serialiser for this field"""
@@ -117,23 +121,6 @@ class AnnotationSchemaField(AmcatModel):
         if (value is None) and self.required:
             raise RequiredValueError(self)
 
-    def possible_values(self):
-        """Get the possible values
-
-        @return: a sequence of (deserialised) values
-                 or None if the field is not a 'drop down'
-        """
-        raise NotImplementedError()
-
-    def value_description(self, value):
-        """Get a description for the given (desrialised) value"""
-        raise NotImplementedError()
-
-    
-    def value_label(self, value):
-        """Get a description for the given (deserialised) value"""
-        raise NotImplementedError()
-    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -153,22 +140,6 @@ class TestAnnotationSchemaField(amcattest.PolicyTestCase):
         a = amcattest.create_test_schema()
         f = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
         self.assertIsNotNone(f)
-        
-    def test_values(self):
-        """test the possible_values and describe_value functions"""
-        fieldtype = AnnotationSchemaFieldType.objects.get(pk=1) # 
-        a = amcattest.create_test_schema()
-        f = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
-        v = f.possible_values()
-        self.assertIsNone(v) # for pk 1
-
-        fieldtype = AnnotationSchemaFieldType.objects.get(pk=3) # lookup field
-        f = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
-        v = f.possible_values()
-        self.assertTrue(v) # lookup should have values!
-        # test possible values
-        for val in v:
-            f.describe_value(val)
         
         
         
