@@ -30,19 +30,47 @@ from amcat.tools import hg, toolkit
 from amcat.tools.logging import amcatlogging
 from amcat.tools import toolkit
 
+from amcat.tools.table import table3, tableoutput
+
+
+HTML="""<html>
+  <head>
+   <link rel="stylesheet" href="/amcat.css" type="text/css" />
+   <title>AmCAT Documentation</title>
+  </head>
+  <body>
+    <div class="header"> </div>  
+    <div class="sidebar"><h3>Links</h3>
+     <ul>
+     <li> <a href="http://amcat.vu.nl/api">Documentation</a></li>
+     <li> <a href="http://amcat.vu.nl/api">Unit tests</a></li>
+     <li><a href="http://amcat.vu.nl/api/model_amcat_trunk.html">Object model</a></li>
+      <li><a href="http://code.google.com/p/amcat/w">Wiki</a></li>
+      <li><a href="http://code.google.com/p/amcat/source/list">Source</a></li>
+     </ul>
+    </div>
+    <div class="content">{content}</div>
+  </body>
+</html>
+"""
 
 GRAPHSCRIPT = "{path}/create_model_graphs.py".format(path=toolkit.get_script_path())
-GRAPHCMD = "PYTHONPATH=~/tmp:{tmpdir} DJANGO_SETTINGS_MODULE=amcat.settings python2.6 {GRAPHSCRIPT}"
-#~/tmp = hack for old amcat!
+GRAPHCMD = "PYTHONPATH={tmpdir} DJANGO_SETTINGS_MODULE=amcat.settings python {GRAPHSCRIPT}"
 GRAPHDEST = '{outdir}/model_{reponame}_{branch}.html'
 WWWGRAPHDEST = '{wwwroot}/model_{reponame}_{branch}.html'
 
-REPOLOC = "ssh://amcat.vu.nl:2222//home/amcat/hg/amcat3/{reponame}"
-REPOLOC_NOSSH = "/home/amcat/hg/amcat3/{reponame}"
-REPONAMES = ("amcat", "amcatscraping", "amcatnavigator")
+SOURCE = "http://code.google.com/p/amcat/source/browse?name={branch}&repo={reponame2}"
 
-OUTDIR_DEFAULT = '/home/amcat/www/api'
+REPOLOC = "https://code.google.com/p/{reponame}"
+REPONAMES = ["amcat", "amcat.scraping", "amcat.navigator"]
+
+    
+OUTDIR_DEFAULT = '/var/www/api'
 WWWROOT_DEFAULT = 'http://amcat.vu.nl/api'
+
+EPYDOCCMD = ('epydoc -v --simple-term -n "AmCAT Documentation {reponame} ({branch}) --show-sourcecode'
+             +' --navlink="<a href=\"{wwwroot}/index.html\" target="_top">AmCAT Documentation Index</a>'
+             +' -o "{docdest}" "{repo.repo}" ')
 
 DOCDEST = '{outdir}/{reponame}/{branch}/'
 LOGFILE = '{outdir}/log_{reponame}_{branch}.txt'
@@ -50,24 +78,29 @@ INDEX = '{outdir}/index.html'
 WWWDOCDEST = '{wwwroot}/{reponame}/{branch}/'
 WWWLOGDEST = '{wwwroot}/log_{reponame}_{branch}.txt'
 
+
+TESTFILE = '{outdir}/test_{reponame}_{branch}.txt'
+WWWTESTDEST = '{wwwroot}/test_{reponame}_{branch}.txt'
+COVERAGEFILE = '{outdir}/cov_{reponame}_{branch}.txt'
+WWWCOVERAGEDEST = '{wwwroot}/cov_{reponame}_{branch}.txt'
+
+TESTCMD = ("PYTHONPATH={tmpdir} DJANGO_SETTINGS_MODULE=amcat.settings python-coverage run"
+           +" manage.py test --noinput {testapp}")
+COVERAGECMD = "python-coverage report --omit=/usr" 
+
 if len(sys.argv) > 1:
     outdir = sys.argv[1]
     wwwroot = 'file://{outdir}'.format(**locals())
 else:
     outdir = OUTDIR_DEFAULT
     wwwroot = WWWROOT_DEFAULT
-    REPOLOC = REPOLOC_NOSSH # allows cron to run 
 
 log = amcatlogging.setup()
 
 if not os.path.exists(outdir): os.makedirs(outdir) # make sure target exists
 
-indexfile = open(INDEX.format(**locals()), "w")
-indexfile.write("""<html><head><title>AmCAT Documentation</title></head><body><h1>AmCAT Documentation </h1>
-Click on the packages / versions below to browse the inline
-documentation of the AmCAT repositories:\n\n<ul>
-""")
-
+doc = table3.ObjectTable()
+test = table3.ObjectTable()
 
 for reponame in REPONAMES:
     repolocation = REPOLOC.format(**locals())
@@ -78,34 +111,87 @@ for reponame in REPONAMES:
     repo = hg.clone(repolocation, repodir)
 
     for branch in repo.listbranches():
-        wwwdocdest = WWWDOCDEST.format(**locals())
-        wwwlogdest = WWWLOGDEST.format(**locals())
+        row = dict(repo=reponame, branch=branch)
+        doc.rows.append(row)
+
+        # prepare variables, update to selected branch
         docdest = DOCDEST.format(**locals())
         logfile = LOGFILE.format(**locals())
-        log.info("Documenting {reponame}::{branch} to {wwwdocdest}".format(**locals()))
+        log.info("Documenting {reponame}::{branch}".format(**locals()))
         repo.update(revision=branch)
+
+        # run epydoc
         if not os.path.exists(docdest): os.makedirs(docdest) # make sure target exists
-        cmd = r'epydoc -v --simple-term -n "AmCAT Documentation {reponame} ({branch})"'
-        cmd += r' --navlink="<a href=\"{wwwroot}/index.html\" target="_top">AmCAT Documentation Index</a>"'
-        cmd += r' -o "{docdest}" "{repo.repo}" > {logfile} 2>&1'
-        toolkit.execute(cmd.format(**locals()))
-        indexfile.write("<li><a href='{wwwdocdest}/index.html'>{reponame} ({branch})</a>".format(**locals()))
-        indexfile.write(" | <a href='{wwwdocdest}/{reponame}-module.html'>(no frames)</a>".format(**locals()))
-        indexfile.write(" | <a href='{wwwlogdest}'>(log)</a>".format(**locals()))
-
-
+        out, err = toolkit.execute(EPYDOCCMD.format(**locals()))
+        open(LOGFILE.format(**locals()), 'w').write("{0}\n----\n{1}".format(out, err))
+        
+        # add entries for table
+        wwwdocdest = WWWDOCDEST.format(**locals())
+        row["frames"] = '{wwwdocdest}index.html'.format(**locals())
+        row["noframes"] = '{wwwdocdest}{reponame}-module.html'.format(**locals())
+        row["log"] = WWWLOGDEST.format(**locals())
+        reponame2 = "default" if reponame=="amcat" else reponame.replace("amcat.","")
+        row["source"] = SOURCE.format(**locals())
+                
         if reponame == 'amcat':
+            # create model graph (only for repo amcat, hard hack atm..)
             log.info("Creating model graph for {reponame}".format(**locals()))
             log.info(GRAPHCMD.format(**locals()))
             html, err = toolkit.execute(GRAPHCMD.format(**locals()))
             if err: html = "Error on generating graph:<pre>{err}</pre>".format(**locals())
-            open(GRAPHDEST.format(**locals()), 'w').write(html)
+            open(GRAPHDEST.format(**locals()), 'w').write(HTML.format(content=html))
             wwwgraphdest = WWWGRAPHDEST.format(**locals())
-            indexfile.write("| <a href='{wwwgraphdest}'>(model graph)</a>".format(**locals()))
+            row["model"] = wwwgraphdest
+
+            # run unit tests (only for repo amcat...)
+            for testapp in ["amcat"]:
+                testrow = dict(repo=reponame, branch=branch, testapp=testapp)
+                test.rows.append(testrow)
+                
+                log.info("Running unit tests for {reponame}:{branch}:{testapp}".format(**locals()))
+                appname = reponame.replace(".","")
+                log.info(TESTCMD.format(**locals()))
+                out, err = toolkit.execute(TESTCMD.format(**locals()))
+                testrow["testresult"] = err.split("\n")[-2].strip()
+                open(TESTFILE.format(**locals()), 'w').write(err)
+                testrow["testreport"] = WWWTESTDEST.format(**locals())
+                log.info("Determining unit test coverage for {reponame}".format(**locals()))
+                log.info(COVERAGECMD.format(**locals()))
+                cov = toolkit.execute(COVERAGECMD.format(**locals()), outonly=True)
+                testrow["coverage"] = cov.split("\n")[-2].strip()
+                open(COVERAGEFILE.format(**locals()), 'w').write(cov)
+                testrow["coveragereport"] = WWWCOVERAGEDEST.format(**locals())
+        
+        
     shutil.rmtree(tmpdir)
         
 script= sys.argv[0]
 stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-indexfile.write("""</ul>(Documentation generated by {script} at {stamp})</body></html>""".format(**locals()))
 
+
+content = "<h1>AmCAT Documentation </h1>"
+
+doc.addColumn(lambda r:r["repo"], "Repository")
+doc.addColumn(lambda r:r["branch"], "Branch")
+doc.addColumn(lambda r:"<a href='{frames}'>frames</a> | <a href='{noframes}'>no frames</a>".format(**r), "API Documentation")
+doc.addColumn(lambda r:"<a href='{log}'>(log)</a>".format(**r), "Log")
+#doc.addColumn(lambda r:"<a href='{model}'>View</a>".format(**r) if r.get("model") else "-" , "Model")
+doc.addColumn(lambda r:"<a href='{source}'>Source</a>".format(**r), "Source")
+
+content += tableoutput.table2html(doc, printRowNames=False, border=False)
+
+content += "<h1>Unit test results</h1>"
+
+
+test.addColumn(lambda r:r["repo"], "Repository")
+test.addColumn(lambda r:r["branch"], "Branch")
+test.addColumn(lambda r:r["testapp"], "App")
+test.addColumn(lambda r:"<a href='{testreport}'>{testresult}</a>".format(**r), "Unit test")
+test.addColumn(lambda r:"<a href='{coveragereport}'>{coverage}</a>".format(**r), "Coverage")
+
+content += tableoutput.table2html(test, printRowNames=False, border=False)
+
+content += "<p></p><p><i>Documentation generated by {script} at {stamp})".format(**locals())
+
+
+open(INDEX.format(**locals()), "w").write(HTML.format(content=content))

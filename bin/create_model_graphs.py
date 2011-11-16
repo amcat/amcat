@@ -5,11 +5,11 @@ from amcat.tools.dot import dot2object
 from amcat.tools import djangotoolkit
 from django_extensions.management.modelviz import generate_dot
 
-
 for name, models, stoplist in [
     ('Projects & Authorisation', ('ProjectRole', 'Privilege'), ()),
     ('Articles', ['Sentence'], ('Project',)),
-    ('Coding Jobs', ['CodingJobSet', 'AnnotationSchemaField'],('Project','User')),
+    ('Coding Jobs', ['CodingJobSet', 'AnnotationSchemaField'],('Project','User', 'Codebook')),
+    ('Codebook', ['Codebook', 'CodebookCode', 'Code', 'Label', 'CodebookBase'], ['Project']),
     ('Annotations', ['AnnotationValue'], ('Project', 'User','Article', 'CodingJobSet', 'AnnotationSchemaField')),
     ]:
 
@@ -20,5 +20,7 @@ for name, models, stoplist in [
 
     dot = generate_dot(['amcat'], include_models=",".join(modelnames))
     dot = dot.replace("digraph name {", "digraph name {\ngraph [rankdir=LR];")
+    
     print dot2object(dot)
+
 

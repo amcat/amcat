@@ -21,6 +21,10 @@
 Toolkit with useful methods for mercurial
 
 Uses toolkit.execute to run hg as external process
+
+See http://mercurial.selenic.com/wiki/MercurialApi: For the vast
+majority of third party code, the best approach is to use Mercurial's
+published, documented, and stable API: the command line interface
 """
 
 import toolkit, os.path
@@ -63,6 +67,7 @@ def getLastEditUser(fn):
 def clone(repo, dest):
     """Clone the repository to destination"""
     cmd = 'hg clone {repo} {dest}'.format(**locals())
+    print(cmd)
     toolkit.execute(cmd, outonly=True)
     return Repository(dest)
 
