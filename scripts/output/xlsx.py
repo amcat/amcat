@@ -19,21 +19,20 @@
 
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
-from amcat.scripts import script
+from amcat.scripts import script, types
 import amcat.scripts.forms
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 
 from openpyxl.workbook import Workbook
 from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 import zipfile
-#from cStringIO import StringIO
 import io
 
 
 class TableToXlsx(script.Script):
     input_type = table3.Table
     options_form = None
-    output_type = script.ExcelStream
+    output_type = types.ExcelData
 
 
     def run(self, tableObj):
@@ -54,23 +53,14 @@ class TableToXlsx(script.Script):
         writer.write_data(zf)
         zf.close()
         buffer.flush()
-        return buffer
+        return buffer.getvalue()
        
-       
-# class DictToCSV(script.Script):
-    # input_type = dict
-    # options_form = None
-    # output_type = script.CsvStream
-
-
-    # def run(self, dictObj):
-        # return simplejson.dumps(dictObj, default=encode_json)
        
        
 class ArticleListToXlsx(script.Script):
-    input_type = script.ArticleIterator
+    input_type = types.ArticleIterator
     options_form = amcat.scripts.forms.ArticleColumnsForm
-    output_type = script.ExcelStream
+    output_type = types.ExcelData
 
 
     def run(self, articleList):

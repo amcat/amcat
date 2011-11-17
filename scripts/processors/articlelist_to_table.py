@@ -17,8 +17,12 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script that converts a list of Article objects to a table
+"""
+
 from amcat.tools import table
-from amcat.scripts import script
+from amcat.scripts import script, types
 from amcat.tools.toolkit import dateToInterval
 from django import forms
 import amcat.scripts.forms
@@ -33,7 +37,7 @@ def lambdaHitFactory(query):
     return lambda a: a.hits.get(query)
 
 class ArticleListToTable(script.Script):
-    input_type = script.ArticleIterator
+    input_type = types.ArticleIterator
     options_form = ArticleListToTableForm
     output_type = table.table3.Table
 

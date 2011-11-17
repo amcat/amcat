@@ -17,11 +17,14 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script that will run a search on the database or Solr and return only the articleids
+Useful for performance reasons, when returning Article objects takes too much time
+"""
 
-from amcat.scripts import script
-from amcat.scripts import cli
+from amcat.scripts import script, types
+from amcat.scripts.tools import cli, solrlib, database
 import amcat.scripts.forms
-from amcat.tools.selection import solrlib, database
 from django import forms
 
 import logging
@@ -46,17 +49,18 @@ class ArticleidsForm(amcat.scripts.forms.SelectionForm):
             data = 999999 # unlimited (well, sort of ;)
         return data
 
+        
 class ArticleidsScript(script.Script):
     input_type = None
     options_form = ArticleidsForm
-    output_type = script.ArticleidList
+    output_type = types.ArticleidList
 
 
-    def run(self, input=None):
+    def run(self, input=None): 
         start = self.options['start']
         length = self.options['length']
         if self.options['useSolr'] == False: # make database query
-            return database.getQuerySet(**self.options)[start:length].values_list('article_id', flat=True)
+            return database.getQuerySet(**self.options)[start:start+length].values_list('article_id', flat=True)
         else:
             return solrlib.articleids(self.options)
 
@@ -64,7 +68,7 @@ class ArticleidsScript(script.Script):
 class ArticleidsDictScript(script.Script):
     input_type = None
     options_form = ArticleidsForm
-    output_type = script.ArticleidDictPerQuery
+    output_type = types.ArticleidDictPerQuery
 
 
     def run(self, input=None):

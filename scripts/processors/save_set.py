@@ -17,10 +17,13 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script that stores matching articles as set
+"""
 
 
 from amcat.scripts import script
-from amcat.scripts import cli
+from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from django import forms
 from amcat.model.project import Project

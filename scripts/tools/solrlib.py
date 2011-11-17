@@ -192,20 +192,20 @@ def getStats(statsObj, form):
     
     statsObj.lastDate = solrResponse.results[0]['date']
     
-    kargs = dict( 
-                fields="id", 
-                facet='true', 
-                facet_field='mediumid', 
-                facet_mincount=1, 
-                score=False, 
-                rows=0)
-    solrResponse = doQuery(query, form, kargs)
+    # kargs = dict( 
+                # fields="id", 
+                # facet='true', 
+                # facet_field='mediumid', 
+                # facet_mincount=1, 
+                # score=False, 
+                # rows=0)
+    # solrResponse = doQuery(query, form, kargs)
     
-    mediums = []
-    for mediumid, count in solrResponse.facet_counts['facet_fields']['mediumid'].items():
-        m = medium.Medium.objects.get(pk=mediumid)
-        mediums.append(m)
-    statsObj.mediums = sorted(mediums, key=lambda x:x.id)
+    # mediums = []
+    # for mediumid, count in solrResponse.facet_counts['facet_fields']['mediumid'].items():
+        # m = medium.Medium.objects.get(pk=mediumid)
+        # mediums.append(m)
+    # statsObj.mediums = sorted(mediums, key=lambda x:x.id)
     
         
 def articleids(form):
@@ -274,6 +274,7 @@ def basicAggregate(form):
     counterType = form['counterType']
     dateInterval = form['dateInterval']
     rowLimit = 1000000
+    singleQuery = '(%s)' % ') OR ('.join(form['queries'])
     
     if xAxis == 'medium' and yAxis == 'searchTerm':
         for query in queries:
@@ -284,26 +285,23 @@ def basicAggregate(form):
                 y = query
                 increaseCounter(table, x, y, a, counterType)
     elif xAxis == 'medium' and yAxis == 'total':
-        for query in queries:
-            solrResponse = doQuery(query, form, dict(fields="score,mediumid", rows=rowLimit))
-            for a in solrResponse.results:
-                x = mediumidToObj(a['mediumid'])
-                y = '[total]'
-                increaseCounter(table, x, y, a, counterType)
+        solrResponse = doQuery(singleQuery, form, dict(fields="score,mediumid", rows=rowLimit))
+        for a in solrResponse.results:
+            x = mediumidToObj(a['mediumid'])
+            y = '[total]'
+            increaseCounter(table, x, y, a, counterType)
     elif xAxis == 'date' and yAxis == 'total':
-        for query in queries:
-            solrResponse = doQuery(query, form, dict(fields="score,date", rows=rowLimit))
-            for a in solrResponse.results:
-                x = dateToInterval(a['date'], dateInterval)
-                y = '[total]'
-                increaseCounter(table, x, y, a, counterType)
+        solrResponse = doQuery(singleQuery, form, dict(fields="score,date", rows=rowLimit))
+        for a in solrResponse.results:
+            x = dateToInterval(a['date'], dateInterval)
+            y = '[total]'
+            increaseCounter(table, x, y, a, counterType)
     elif xAxis == 'date' and yAxis == 'medium':
-        for query in queries:
-            solrResponse = doQuery(query, form, dict(fields="score,date,mediumid", rows=rowLimit))
-            for a in solrResponse.results:
-                x = dateToInterval(a['date'], dateInterval)
-                y = mediumidToObj(a['mediumid'])
-                increaseCounter(table, x, y, a, counterType)
+        solrResponse = doQuery(singleQuery, form, dict(fields="score,date,mediumid", rows=rowLimit))
+        for a in solrResponse.results:
+            x = dateToInterval(a['date'], dateInterval)
+            y = mediumidToObj(a['mediumid'])
+            increaseCounter(table, x, y, a, counterType)
     elif xAxis == 'date' and yAxis == 'searchTerm':
         for query in queries:
             solrResponse = doQuery(query, form, dict(fields="score,date", rows=rowLimit))

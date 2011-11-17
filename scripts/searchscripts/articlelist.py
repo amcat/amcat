@@ -17,11 +17,14 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script that will run a search on the database or Solr and return the matching Article objects
+"""
 
-from amcat.scripts import script
-from amcat.scripts import cli
+
+from amcat.scripts import script, types
+from amcat.scripts.tools import cli, solrlib, database
 import amcat.scripts.forms
-from amcat.tools.selection import solrlib, database
 from django import forms
 
 import logging
@@ -72,7 +75,7 @@ class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.Art
 class ArticleListScript(script.Script):
     input_type = None
     options_form = ArticleListForm
-    output_type = script.ArticleIterator
+    output_type = types.ArticleIterator
 
 
     def run(self, input=None):

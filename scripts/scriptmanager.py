@@ -18,7 +18,7 @@
 ###########################################################################
 
 import amcat.scripts.output
-from amcat.scripts import script
+from amcat.scripts import script, types
 import inspect 
 
 import logging
@@ -26,12 +26,12 @@ log = logging.getLogger(__name__)
 
 
 outputClasses = {
-    'json': script.JsonStream,
-    'csv': script.CsvStream,
-    'excel': script.ExcelStream,
-    'html': script.HtmlStream,
-    'spss': script.SPSSData,
-    'datatables': script.DataTableJsonData
+    'json': types.JsonData,
+    'csv': types.CsvData,
+    'excel': types.ExcelData,
+    'html': types.HtmlData,
+    'spss': types.SPSSData,
+    'datatables': types.DataTableJsonData
 }
 
 def findAllScripts():

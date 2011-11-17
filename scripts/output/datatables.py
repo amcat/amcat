@@ -18,7 +18,7 @@
 ###########################################################################
 
 from amcat.tools.table import table3
-from amcat.scripts import script
+from amcat.scripts import script, types
 from django.utils import simplejson
 from django import forms
 import datetime
@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 class TableToDatatable(script.Script):
     input_type = table3.Table
     options_form = DataTableForm
-    output_type = script.DataTableJsonData
+    output_type = types.DataTableJsonData
 
 
     def run(self, tableObj):

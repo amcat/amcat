@@ -17,13 +17,16 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script that will return a table with the associations between the queries.
+Requires as input a table with as first column the interval, and as following columns the number of hits per query
+"""
 
 from amcat.scripts import script
-from amcat.scripts import cli
+from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from amcat.tools import table
 from django import forms
-from amcat.tools.table.table3 import DictTable
 
 
 import logging
@@ -44,7 +47,7 @@ class AssociationsScript(script.Script):
         queries = (c.label.replace('Hit Count for: ', '') for c in articleTable.getColumns()[1:]) # first column is interval
         
         # start dummy code
-        resultTable = DictTable(0)
+        resultTable = table.table3.DictTable(0)
         resultTable.rowNamesRequired = True # make sure row names are printed
         for query in queries:
             resultTable.columns.add(query)

@@ -17,18 +17,19 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script that creates a cluster map, showing the overlap between queries
+Requires a dictionary with articleids per query as input
+"""
 
-from amcat.scripts import script
-from amcat.scripts import cli
+from amcat.scripts import script, types
+from amcat.scripts.tools import cli
 import amcat.scripts.forms
-#from amcat.scripts.searchscripts.articleids import ArticleidsScript
 from django import forms
 import itertools
 import xml.sax.saxutils
 import collections
 import tempfile, os, subprocess, re
-
-from amcat.tools.table.table3 import DictTable
 from amcat.tools import table
 
 import logging
@@ -36,9 +37,10 @@ log = logging.getLogger(__name__)
 
 
 class ClustermapScript(script.Script):
-    input_type = script.ArticleidDictPerQuery
+    """Creates a cluster map using Aduna ClusterMap and outputs the html and image"""
+    input_type = types.ArticleidDictPerQuery
     options_form = None
-    output_type = script.ImageMap
+    output_type = types.ImageMap
 
 
     def run(self, articleidDict):
@@ -86,22 +88,20 @@ class ClustermapScript(script.Script):
         os.write(xmlfiledesc, clusterXml)
         os.close(xmlfiledesc)
         
-        log.info('temp files: %s and %s' % (imgfilepath, xmlfilepath))
+        log.debug('temp files: %s and %s' % (imgfilepath, xmlfilepath))
         
         cmd = """ \
         java -Xmx800M \
-        -classpath /home/amcat/lib/java:/home/amcat/resources/jars/aduna-clustermap-2006.1.jar:/home/amcat/resources/jars/aduna-clustermap-2006.1-resources.jar \
+        -classpath ../../contrib/java:../../contrib/java/aduna-clustermap-2006.1.jar:../../contrib/java/aduna-clustermap-2006.1-resources.jar \
         Cluster "%s" "%s"
         """ % (xmlfilepath, imgfilepath)
 
-        #mapHtml, errorMessage = toolkit.execute(cmd)
-        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=os.path.dirname(__file__))
         mapHtml, err = proc.communicate()
-        if mapHtml == '':
+        if mapHtml == '': # no output
             raise Exception('Clustermap error: %s' % err)
-        
-        #log.info(mapHtml[:1000])
 
+        # default html contains some stuff that should be modified
         mapHtml = re.sub('<AREA', '<AREA onclick="return false"', mapHtml)
         mapHtml = re.sub('onMouseOut="JavaScript:clearAll\(\);"', '', mapHtml)
         mapHtml = re.sub('onMouseOver="JavaScript:setTitleAndUrl\(.*?\);"', '', mapHtml)
@@ -115,7 +115,7 @@ class ClustermapScript(script.Script):
         
         clusterTable = ClustermapTableScript().run(articleidDict)
         
-        return script.ImageMap(mapHtml, image, articleCount, clusterTable)
+        return types.ImageMap(mapHtml, image, articleCount, clusterTable)
         
         
         
@@ -124,7 +124,9 @@ def increaseCounter(table, x, y):
     
         
 class ClustermapTableScript(script.Script):
-    input_type = script.ArticleidDictPerQuery
+    """creates a clustermap as table"""
+    
+    input_type = types.ArticleidDictPerQuery
     options_form = None
     output_type = table.table3.Table
         
@@ -143,7 +145,7 @@ class ClustermapTableScript(script.Script):
                     key.append(0)
             counterDict[tuple(key)] += 1
         
-        resultTable = DictTable('')#table3.Table(columns=articleidDict.keys() + ['total'])
+        resultTable = table.table3.DictTable('')#table3.Table(columns=articleidDict.keys() + ['total'])
         i = 0
         for key, total in counterDict.items():
             for val, query in zip(key, articleidDict.keys()):

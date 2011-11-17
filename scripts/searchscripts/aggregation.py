@@ -17,18 +17,24 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script that performs a query on the database or on Solr and returns a table with the aggregated data.
+the x and y axis can be chosen. When using Solr the counter can be set to 'numberOfHits' to aggragate the hit count.
+Also aggregation by searchTerm is Solr specific.
+"""
+
 from amcat.scripts import script
-from amcat.scripts import cli
+from amcat.scripts.tools import cli, solrlib, database
 import amcat.scripts.forms
-from amcat.tools.selection import solrlib, database
 from django import forms
-from amcat.tools.table.table3 import DictTable
 from django.db.models import Sum, Count
 from amcat.model.medium import Medium
 from amcat.tools import table
 
 
-class AggregationForm(forms.Form):
+
+class AggregationForm(amcat.scripts.forms.SelectionForm):
+    """the form used by the Aggregation script"""
     xAxis = forms.ChoiceField(choices=(
                                 ('date', 'Date'), 
                                 ('medium', 'Medium')
@@ -50,9 +56,8 @@ class AggregationForm(forms.Form):
                         ('numberOfArticles', 'Number of Articles'), 
                         ('numberOfHits', 'Number of Hits')
                    ), initial='numberOfArticles')
-    
 
-class AggregationScriptForm(amcat.scripts.forms.SelectionForm, AggregationForm):
+class AggregationScriptForm(AggregationForm, amcat.scripts.forms.SelectionForm):
     pass
     
     
@@ -66,7 +71,7 @@ class AggregationScript(script.Script):
         """ returns a table containing the aggregations"""
         
         if self.options['useSolr'] == False: # make database query
-            queryset = amcat.tools.selection.database.getQuerySet(**self.options)
+            queryset = database.getQuerySet(**self.options)
             xAxis = self.options['xAxis']
             yAxis = self.options['yAxis']
             if xAxis == 'date':
@@ -98,12 +103,12 @@ class AggregationScript(script.Script):
             data = queryset.extra(select=select_data).values(*vals).annotate(count=Count('id'))
             xDict = {}
             if xAxis == 'medium':
-                xDict = Medium.objects.in_bulk(set(row['x'] for row in data))
+                xDict = Medium.objects.in_bulk(set(row['x'] for row in data)) # retrieve the Medium objects
             yDict = {}
             if yAxis == 'medium':
-                yDict = Medium.objects.in_bulk(set(row['y'] for row in data))
+                yDict = Medium.objects.in_bulk(set(row['y'] for row in data)) # retrieve the Medium objects
             
-            table3 = DictTable(0)
+            table3 = table.table3.DictTable(0) # the start aggregation count is 0
             table3.rowNamesRequired = True # make sure row names are printed
             for row in data:
                 x = row['x']
@@ -112,8 +117,6 @@ class AggregationScript(script.Script):
                 table3.addValue(xDict.get(x, x), yDict.get(y, y), count)
             return table3
         else:
-            #raise Exception("not implemented yet")
-            
             return solrlib.basicAggregate(self.options)
             
         

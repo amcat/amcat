@@ -24,64 +24,25 @@ Interface definition and general functionality for amcat Scripts.
 A Script is a generic "pluggable" functional element that can be
 called from e.g. the Django site, as a standalone web interface, or as
 a command line script.
-
-Three subclasses of Script are also defined:
-SearchScript takes no input and returns a Table or ArticleList;
-Processor takes a Table or ArticleList as input and has flexible
-output; and ArticleImporter takes a string as input and has a
-(sequence of) (not yet saved) Articles as output. These subclasses
-can be moved to more suitable locations in the future
 """
 
 from django import forms
 from django.http import QueryDict
 from django.utils.datastructures import MergeDict
 
-class ArticleIterator(object):
-    """
-        Class representing a list of articles that can be iterated over
-    """
-    pass
-    
-# various output types, that act like a fileObj
-class JsonStream(object): pass
-class CsvStream(object): pass
-class ExcelStream(object): pass
-class HtmlStream(object): pass
-class SPSSData(object): pass
-class DataTableJsonData(object): pass
-class ArticleidList(object): pass
-class ArticleidDictPerQuery(object): pass
-
-class ImageMap(object):
-    def __init__(self, mapHtml, image, articleCount, table):
-        self.mapHtml = mapHtml
-        self.image = image
-        self.articleCount = articleCount
-        self.table = table
-
-class ArticleSetStatistics(object):
-    def __init__(self, articleCount=None, firstDate=None, lastDate=None, mediums=[]):
-        self.articleCount = articleCount
-        self.firstDate = firstDate
-        self.lastDate = lastDate
-        #self.mediums = mediums
 
 class InvalidFormException(Exception):
+    """ exception which is raised when the form contains one or more fields in error """
     def __init__(self, message, errors):
         Exception.__init__(self, message)
         self.errors = errors
 
     def getErrorDict(self):
+        """returns the fields containing errors as dict, with the fieldname as key and the errors as value (in a list, there can be more than one)"""
         return dict([(k, [unicode(e) for e in v]) for k,v in self.errors.items()]) 
-
-class ErrorMsg(object):
-    def __init__(self, message, code=None, fields=None, **kargs):
-        self.message = message
-        self.code = code
-        self.fields = fields
-        self.kargs = kargs
-
+ 
+        
+        
 class Script(object):
     """
     'Abstract' class representing a modular piece of
@@ -107,15 +68,13 @@ class Script(object):
             self.options = options.cleaned_data
             self._options_raw = options
         
-        
-    
     def run(self, input=None):
         """Run is invoked with the input, which should be of type input_type,
         and should return a result of type output_type or raise an exception"""
         pass
 
         
-        # TODO: handle input and output in a sensible manner!
+        
     
 def _validate_form(options_form, options, **kargs):
     """Check whether a filled in form is valid given the form requirement

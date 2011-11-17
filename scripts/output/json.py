@@ -19,7 +19,7 @@
 
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
-from amcat.scripts import script
+from amcat.scripts import script, types
 from django.utils import simplejson
 import amcat.scripts.forms
 from amcat.model.medium import Medium
@@ -35,7 +35,7 @@ def encode_json(obj):
 class TableToJson(script.Script):
     input_type = table3.Table
     options_form = None
-    output_type = script.JsonStream
+    output_type = types.JsonData
 
 
     def run(self, tableObj):
@@ -45,7 +45,7 @@ class TableToJson(script.Script):
 class DictToJson(script.Script):
     input_type = dict
     options_form = None
-    output_type = script.JsonStream
+    output_type = types.JsonData
 
 
     def run(self, dictObj):
@@ -53,22 +53,21 @@ class DictToJson(script.Script):
        
        
 class ArticleListToJson(script.Script):
-    input_type = script.ArticleIterator
+    input_type = types.ArticleIterator
     options_form = amcat.scripts.forms.ArticleColumnsForm
-    output_type = script.JsonStream
+    output_type = types.JsonData
 
 
     def run(self, articleList):
         tableObj = ArticleListToTable(self.options).run(articleList)
-        #data = [(a.id, a.headline) for a in articleList] # TODO: pick correct columns, or change this to table3 obj, using articlelist_to_table script
         return tableoutput.table2json(tableObj, colnames=True)
         
         
         
 class ErrormsgToJson(script.Script):
-    input_type = script.ErrorMsg
+    input_type = types.ErrorMsg
     options_form = None
-    output_type = script.JsonStream
+    output_type = types.JsonData
     
     def run(self, errorMsg):
         msgDict = {'message':errorMsg.message}

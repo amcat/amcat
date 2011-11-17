@@ -19,7 +19,7 @@
 
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
-from amcat.scripts import script
+from amcat.scripts import script, types
 
 class TableToString(script.Script):
     input_type = table3.Table
@@ -32,7 +32,7 @@ class TableToString(script.Script):
        
        
 class ArticleListToString(script.Script):
-    input_type = script.ArticleIterator
+    input_type = types.ArticleIterator
     options_form = None
     output_type = str
 

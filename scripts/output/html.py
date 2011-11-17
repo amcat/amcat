@@ -19,7 +19,7 @@
 
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
-from amcat.scripts import script
+from amcat.scripts import script, types
 from django.utils import simplejson
 import amcat.scripts.forms
 from django.template.loader import render_to_string
@@ -36,7 +36,7 @@ class HtmlTemplateForm(forms.Form):
 class TableToHtml(script.Script):
     input_type = table3.Table
     options_form = HtmlTemplateForm
-    output_type = script.HtmlStream
+    output_type = types.HtmlData
 
 
     def run(self, tableObj):
@@ -46,9 +46,9 @@ class TableToHtml(script.Script):
        
        
 class ArticleListToHtml(script.Script):
-    input_type = script.ArticleIterator
+    input_type = types.ArticleIterator
     options_form = HtmlTemplateForm
-    output_type = script.HtmlStream
+    output_type = types.HtmlData
 
 
     def run(self, articlelist):
@@ -56,9 +56,9 @@ class ArticleListToHtml(script.Script):
         
         
 class ArticleSetStatisticsToHtml(script.Script):
-    input_type = script.ArticleSetStatistics
+    input_type = types.ArticleSetStatistics
     options_form = HtmlTemplateForm
-    output_type = script.HtmlStream
+    output_type = types.HtmlData
 
 
     def run(self, statsObj):
@@ -66,9 +66,9 @@ class ArticleSetStatisticsToHtml(script.Script):
         
                 
 class ImageMapToHtml(script.Script):
-    input_type = script.ImageMap
+    input_type = types.ImageMap
     options_form = HtmlTemplateForm
-    output_type = script.HtmlStream
+    output_type = types.HtmlData
 
 
     def run(self, imagemapObj):
@@ -86,9 +86,9 @@ class ImageMapToHtml(script.Script):
         
         
 class ErrormsgToHtml(script.Script):
-    input_type = script.ErrorMsg
+    input_type = types.ErrorMsg
     options_form = None
-    output_type = script.HtmlStream
+    output_type = types.HtmlData
     
     def run(self, errorMsg):
         return simplejson.dumps({'error':{'message':errorMsg.message}})

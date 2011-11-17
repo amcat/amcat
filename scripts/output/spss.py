@@ -19,7 +19,7 @@
 
 from amcat.tools.table import table2spss
 from amcat.tools.table import table3
-from amcat.scripts import script
+from amcat.scripts import script, types
 
 
 import logging
@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 class TableToSPSS(script.Script):
     input_type = table3.Table
     options_form = None
-    output_type = script.SPSSData
+    output_type = types.SPSSData
 
 
     def run(self, tableObj):

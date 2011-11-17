@@ -17,45 +17,12 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.tools.table import tableoutput
-from amcat.tools.table import table3
-from amcat.scripts import script, types
-import amcat.scripts.forms
-from amcat.model.medium import Medium
-from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
-import csv
-from cStringIO import StringIO
-
-class TableToCSV(script.Script):
-    input_type = table3.Table
-    options_form = None
-    output_type = types.CsvData
-
-
-    def run(self, tableObj):
-        buffer = StringIO()
-        tableoutput.table2csv(tableObj, csvwriter=csv.writer(buffer, dialect='excel', delimiter=';'), writecolnames=True, writerownames=False, tabseparated=False)
-        return buffer.getvalue()
-       
-       
-# class DictToCSV(script.Script):
-    # input_type = dict
-    # options_form = None
-    # output_type = script.CsvStream
-
-
-    # def run(self, dictObj):
-        # return simplejson.dumps(dictObj, default=encode_json)
-       
-       
-class ArticleListToCSV(script.Script):
-    input_type = types.ArticleIterator
-    options_form = amcat.scripts.forms.ArticleColumnsForm
-    output_type = types.CsvData
-
-
-    def run(self, articleList):
-        tableObj = ArticleListToTable(self.options).run(articleList)
-        return TableToCSV().run(tableObj)
+class SolrDeamon(object):
+    def __init__(self):
+        pass
         
+    def run():
+        # get dirty articles
+        # run solr
+        # mark articles as not-dirty
         
