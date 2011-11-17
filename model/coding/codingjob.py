@@ -31,7 +31,7 @@ from amcat.tools.model import AmcatModel
 from amcat.model.coding.annotationschema import AnnotationSchema
 from amcat.model.user import User
 from amcat.model.project import Project
-from amcat.model.set import Set
+from amcat.model.articleset import ArticleSet
 
 from django.db import models
 
@@ -71,7 +71,7 @@ class CodingJobSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='codingjobset_id')
     codingjob = models.ForeignKey(CodingJob)
     coder = models.ForeignKey(User)
-    articleset = models.ForeignKey(Set)
+    articleset = models.ForeignKey(ArticleSet)
 
     class Meta():
         db_table = 'codingjobs_sets'

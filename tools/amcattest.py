@@ -97,10 +97,10 @@ def create_test_sentence(**kargs):
 
 def create_test_set(articles=0, **kargs):
     """Create a test (Article) set"""
-    from amcat.model.set import Set
-    if "name" not in kargs: kargs["name"] = "testset_%i" % len(Set.objects.all())
+    from amcat.model.articleset import ArticleSet
+    if "name" not in kargs: kargs["name"] = "testset_%i" % len(ArticleSet.objects.all())
     if "project" not in kargs: kargs["project"] = create_test_project()
-    s = Set.objects.create(**kargs)
+    s = ArticleSet.objects.create(**kargs)
     if articles:
         for _x in range(int(articles)):
             s.articles.add(create_test_article())

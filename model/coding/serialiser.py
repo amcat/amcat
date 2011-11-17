@@ -143,7 +143,7 @@ class TestSerialiser(amcattest.PolicyTestCase):
         A = amcattest.create_test_codebook(name="A")
         c = amcattest.create_test_code(label="bla")
 
-        l2 = Language.objects.create()
+        l2 = Language.objects.create(label="XXX")
         c.add_label(language=l2, label="blx")
 
         A.add_code(c)

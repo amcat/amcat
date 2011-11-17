@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from __future__ import unicode_literals
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -19,12 +18,14 @@ from __future__ import unicode_literals
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-
 """
 This module contains a (semi-machine readable) lexisnexis parser.
 """
 
+from __future__ import unicode_literals
+
 from amcat.scripts import script
+from amcat.scripts.types  import ArticleIterator
 from amcat.tools import toolkit
 
 from amcat.model.article import Article
@@ -73,7 +74,7 @@ class ParseError(Exception):
 
 class LexisNexis(script.Script):
     input_type = unicode
-    output_type = script.ArticleIterator
+    output_type = ArticleIterator
 
     def split_header(self, doc):
         """

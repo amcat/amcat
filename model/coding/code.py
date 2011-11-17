@@ -114,7 +114,7 @@ class TestCode(amcattest.PolicyTestCase):
         self.assertEqual(o.label, "bla")
         self.assertEqual(unicode(o), o.label)
         # fallback with 'unknown' language
-        l2 = Language.objects.create()
+        l2 = Language.objects.create(label='zzz')
         self.assertEqual(o.get_label(l2), "bla")
         # second label
         Label.objects.create(code=o, language=l2, label="blx")

@@ -30,7 +30,7 @@ from amcat.model.article import Article
 
 from django.db import models
 
-class Set(AmcatModel):
+class ArticleSet(AmcatModel):
     """
     Model for the sets table. A set is part of a project and contains articles.
     It can also be seen as a 'tag' for articles.
@@ -39,11 +39,11 @@ class Set(AmcatModel):
 
     name = models.CharField(max_length=100, unique=True)
     project = models.ForeignKey(Project)
-    articles = models.ManyToManyField(Article, db_table="sets_articles")
+    articles = models.ManyToManyField(Article, db_table="articlesets_articles")
 
     class Meta():
         app_label = 'amcat'
-        db_table = 'sets'
+        db_table = 'articlesets'
 
     def __unicode__(self):
         return self.name

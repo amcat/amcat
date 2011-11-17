@@ -21,7 +21,7 @@ from amcat.model.article import *
 from amcat.model.authorisation import *
 from amcat.model.language import *
 from amcat.model.medium import *
-from amcat.model.set import *
+from amcat.model.articleset import *
 from amcat.model.user import *
 from amcat.model.project import *
 from amcat.model.sentence import *  
