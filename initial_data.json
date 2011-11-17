@@ -211,28 +211,21 @@
     "pk": 1, 
     "model": "amcat.language", 
     "fields": {
-      "label": "EN"
+      "label": "en"
     }
   },
   {
     "pk": 2, 
     "model": "amcat.language", 
     "fields": {
-      "label": "FR"
+      "label": "nl"
     }
   },
   {
     "pk": 3, 
     "model": "amcat.language", 
     "fields": {
-      "label": "DE"
-    }
-  },
-  {
-    "pk": 4, 
-    "model": "amcat.language", 
-    "fields": {
-      "label": "NL"
+      "label": "de"
     }
   },
   {
