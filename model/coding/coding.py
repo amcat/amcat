@@ -18,9 +18,9 @@
 ###########################################################################
 
 """
-Model module containing Annotations
+Model module containing Codings
 
-An annotation is a hook for the annotation values on a specific article linked
+A coding is a hook for the coding values on a specific article linked
 to a specific coding job set.
 """
 
@@ -30,14 +30,14 @@ from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.model.coding.codingjob import CodingJobSet
-from amcat.model.coding.annotationschemafield import AnnotationSchemaField
+from amcat.model.coding.codingschemafield import CodingSchemaField
 from amcat.model.article import Article
 from amcat.model.sentence import Sentence
 
 
-class AnnotationStatus(AmcatModel):
+class CodingStatus(AmcatModel):
     """
-    Helder class for annotation status
+    Helder class for coding status
     """
 
     id = models.IntegerField(primary_key=True, db_column='status_id')
@@ -47,34 +47,34 @@ class AnnotationStatus(AmcatModel):
         return self.label
     
     class Meta():
-        db_table = 'annotations_status'
+        db_table = 'codings_status'
         app_label = 'amcat'
 
 
 STATUS_NOTSTARTED, STATUS_INPROGRESS, STATUS_COMPLETE, STATUS_IRRELEVANT = 0, 1, 2, 9
         
-class Annotation(AmcatModel):
+class Coding(AmcatModel):
     """
-    Model class for annotations. Annotations provide the link between a Coding Job Set
-    and actual Annotation Values. 
+    Model class for codings. Codings provide the link between a Coding Job Set
+    and actual Coding Values. 
     """
 
-    id = models.AutoField(primary_key=True, db_column='annotation_id')
+    id = models.AutoField(primary_key=True, db_column='coding_id')
     
-    codingjobset = models.ForeignKey(CodingJobSet, related_name="annotations")
+    codingjobset = models.ForeignKey(CodingJobSet, related_name="codings")
     article = models.ForeignKey(Article)
     sentence = models.ForeignKey(Sentence, null=True)
 
     comments = models.TextField(blank=True, null=True)
-    status = models.ForeignKey(AnnotationStatus, default=0)
+    status = models.ForeignKey(CodingStatus, default=0)
     
     class Meta():
-        db_table = 'annotations'
+        db_table = 'codings'
         app_label = 'amcat'
 
     @property
     def schema(self):
-        """Get the annotation schema that this annotation is based on"""
+        """Get the coding schema that this coding is based on"""
         if self.sentence is None:
             return self.codingjobset.codingjob.articleschema
         else:
@@ -112,55 +112,55 @@ class Annotation(AmcatModel):
 
 
     def set_status(self, status):
-        """Set the status of this annotation, deserialising status as needed"""
-        if type(status) == int: status = AnnotationStatus.objects.get(pk=status)
+        """Set the status of this coding, deserialising status as needed"""
+        if type(status) == int: status = CodingStatus.objects.get(pk=status)
         self.status = status
 
     def create_value(self, field, value):
-        """Create a new annotation value on this annotation
+        """Create a new coding value on this coding
 
-        @param field: the annotation schema field
+        @param field: the coding schema field
         @param value: the deserialized value
         """
-        a = AnnotationValue(annotation=self, field=field)
+        a = CodingValue(coding=self, field=field)
         a.update_value(value)
         a.save()
         
         
-class AnnotationValue(AmcatModel):
+class CodingValue(AmcatModel):
     """
-    Model class for annotation values. 
+    Model class for coding values. 
     """
     
-    id = models.AutoField(primary_key=True, db_column='annotationvalue_id')
+    id = models.AutoField(primary_key=True, db_column='codingvalue_id')
 
-    annotation = models.ForeignKey(Annotation, related_name='values')
-    field = models.ForeignKey(AnnotationSchemaField)
+    coding = models.ForeignKey(Coding, related_name='values')
+    field = models.ForeignKey(CodingSchemaField)
 
     strval = models.CharField(blank=True, null=True, max_length=80)
     intval = models.IntegerField(null=True)
 
     def save(self, *args, **kargs):
-        #Enforce constraint field.schema == annotation.schema
-        if self.field.annotationschema != self.annotation.schema:
-            raise ValueError("Field schema {0!r} and annotation schema {1!r} don't match"
-                             .format(self.field.annotationschema, self.annotation.schema))
+        #Enforce constraint field.schema == coding.schema
+        if self.field.codingschema != self.coding.schema:
+            raise ValueError("Field schema {0!r} and coding schema {1!r} don't match"
+                             .format(self.field.codingschema, self.coding.schema))
         #Enforce constraint (strval IS NOT NULL) OR (intval IS NOT NULL)
         if self.strval is None and self.intval is None:
-            raise ValueError("annotationvalue.strval and .intval cannot both be None")
-        super(AnnotationValue, self).save(*args, **kargs)
+            raise ValueError("codingvalue.strval and .intval cannot both be None")
+        super(CodingValue, self).save(*args, **kargs)
 
     
     @property
     def serialised_value(self):
-        """Get the 'serialised' (raw) value for this annotationvalue"""
+        """Get the 'serialised' (raw) value for this codingvalue"""
         stype = self.field.serialiser.deserialised_type
         if stype == str: return self.strval
         return self.intval
 
     @property
     def value(self):
-        """Get the 'deserialised' (object) value for this annotationvalue"""
+        """Get the 'deserialised' (object) value for this codingvalue"""
         return self.field.serialiser.deserialise(self.serialised_value)
     
     def update_value(self, value):
@@ -173,9 +173,9 @@ class AnnotationValue(AmcatModel):
         self.save()
 
     class Meta():
-        db_table = 'annotations_values'
+        db_table = 'codings_values'
         app_label = 'amcat'
-        unique_together = ("annotation", "field")
+        unique_together = ("coding", "field")
 
     
 ###########################################################################
@@ -185,20 +185,20 @@ class AnnotationValue(AmcatModel):
 from amcat.tools import amcattest
 
 
-def _valuestr(annotation):
-    """Dense representation of annotation values for quick comparison"""
+def _valuestr(coding):
+    """Dense representation of coding values for quick comparison"""
     return ";".join("{0.label}:{1!r}".format(*fv) for (fv) in
-                    sorted(annotation.get_values(), key=lambda fv:fv[0].label))
+                    sorted(coding.get_values(), key=lambda fv:fv[0].label))
         
 
-class TestAnnotation(amcattest.PolicyTestCase):
+class TestCoding(amcattest.PolicyTestCase):
 
     def setUp(self):
-        """Set up a simple annotation schema with fields to use for testing"""
-        from amcat.model.coding.annotationschemafield import AnnotationSchemaFieldType
-        strfieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
-        intfieldtype = AnnotationSchemaFieldType.objects.get(pk=2)
-        codefieldtype = AnnotationSchemaFieldType.objects.get(pk=5)
+        """Set up a simple coding schema with fields to use for testing"""
+        from amcat.model.coding.codingschemafield import CodingSchemaFieldType
+        strfieldtype = CodingSchemaFieldType.objects.get(pk=1)
+        intfieldtype = CodingSchemaFieldType.objects.get(pk=2)
+        codefieldtype = CodingSchemaFieldType.objects.get(pk=5)
 
 
         self.codebook = amcattest.create_test_codebook()
@@ -208,65 +208,65 @@ class TestAnnotation(amcattest.PolicyTestCase):
         self.codebook.add_code(self.c2)
 
         self.schema = amcattest.create_test_schema()
-        create = AnnotationSchemaField.objects.create
-        self.strfield = create(annotationschema=self.schema, fieldnr=1, label="text",
+        create = CodingSchemaField.objects.create
+        self.strfield = create(codingschema=self.schema, fieldnr=1, label="text",
                                fieldtype=strfieldtype)
-        self.intfield = create(annotationschema=self.schema, fieldnr=2, label="number",
+        self.intfield = create(codingschema=self.schema, fieldnr=2, label="number",
                                fieldtype=intfieldtype)
-        self.codefield = create(annotationschema=self.schema, fieldnr=3, label="code",
+        self.codefield = create(codingschema=self.schema, fieldnr=3, label="code",
                                 fieldtype=codefieldtype, codebook=self.codebook)
 
         self.job = amcattest.create_test_job(unitschema=self.schema, articleschema=self.schema)
         
     def test_create(self):
-        """Can we create an annotation?"""
+        """Can we create an coding?"""
         schema2 = amcattest.create_test_schema()
         j = amcattest.create_test_job(unitschema=self.schema, articleschema=schema2)
         s = amcattest.create_test_set(articles=2)
         js = CodingJobSet.objects.create(codingjob=j, articleset=s, coder=j.insertuser)
-        a = amcattest.create_test_annotation(codingjobset=js)
+        a = amcattest.create_test_coding(codingjobset=js)
         self.assertIsNotNone(a)
         self.assertIn(a.article, s.articles.all())
         self.assertEqual(a.schema, schema2)
-        a2 = amcattest.create_test_annotation(codingjobset=js,
+        a2 = amcattest.create_test_coding(codingjobset=js,
                                               sentence=amcattest.create_test_sentence())
         self.assertEqual(a2.schema, self.schema)
 
 
     def test_status(self):
         """Is initial status 0? Can we set it?"""
-        a = amcattest.create_test_annotation()
+        a = amcattest.create_test_coding()
         self.assertEqual(a.status.id, 0)
-        self.assertEqual(a.status, AnnotationStatus.objects.get(pk=STATUS_NOTSTARTED))
+        self.assertEqual(a.status, CodingStatus.objects.get(pk=STATUS_NOTSTARTED))
         a.set_status(STATUS_INPROGRESS)
-        self.assertEqual(a.status, AnnotationStatus.objects.get(pk=1))
+        self.assertEqual(a.status, CodingStatus.objects.get(pk=1))
         a.set_status(STATUS_COMPLETE)
-        self.assertEqual(a.status, AnnotationStatus.objects.get(pk=2))
+        self.assertEqual(a.status, CodingStatus.objects.get(pk=2))
         a.set_status(STATUS_IRRELEVANT)
-        self.assertEqual(a.status, AnnotationStatus.objects.get(pk=9))
+        self.assertEqual(a.status, CodingStatus.objects.get(pk=9))
         a.set_status(STATUS_NOTSTARTED)
-        self.assertEqual(a.status, AnnotationStatus.objects.get(pk=0))
+        self.assertEqual(a.status, CodingStatus.objects.get(pk=0))
         
     def test_comments(self):
         """Can we set and read comments?"""
-        a = amcattest.create_test_annotation()
+        a = amcattest.create_test_coding()
         self.assertIsNone(a.comments)
 
         for offset in range(4563, 20000, 1000):
             s = "".join(unichr(offset + c) for c in range(12, 1000, 100))
             a.comments = s
             a.save()
-            a = Annotation.objects.get(pk=a.id)
+            a = Coding.objects.get(pk=a.id)
             self.assertEqual(a.comments, s)
             
     def test_create_value(self):
-        """Can we create an annotation value?"""
-        a = amcattest.create_test_annotation(job=self.job)
-        v = AnnotationValue.objects.create(annotation=a, field=self.strfield,
+        """Can we create an coding value?"""
+        a = amcattest.create_test_coding(job=self.job)
+        v = CodingValue.objects.create(coding=a, field=self.strfield,
                                            intval=1, strval="abc")
-        v2 = AnnotationValue.objects.create(annotation=a, field=self.intfield,
+        v2 = CodingValue.objects.create(coding=a, field=self.intfield,
                                             intval=1, strval="abc")
-        v3 = AnnotationValue.objects.create(annotation=a, field=self.codefield,
+        v3 = CodingValue.objects.create(coding=a, field=self.codefield,
                                             intval=self.c.id)
         
         self.assertIn(v, a.values.all())
@@ -278,24 +278,24 @@ class TestAnnotation(amcattest.PolicyTestCase):
                          [(self.strfield, "abc"), (self.intfield, 1), (self.codefield, self.c)])
 
         # null values for both value fields
-        self.assertRaises(ValueError, AnnotationValue.objects.create,
-                          annotation=amcattest.create_test_annotation(job=self.job),
+        self.assertRaises(ValueError, CodingValue.objects.create,
+                          coding=amcattest.create_test_coding(job=self.job),
                           field=self.strfield)
 
         # field does not exist in (newly created) schema
-        self.assertRaises(ValueError, AnnotationValue.objects.create,
-                          annotation=amcattest.create_test_annotation(),
+        self.assertRaises(ValueError, CodingValue.objects.create,
+                          coding=amcattest.create_test_coding(),
                           field=self.strfield, strval="abc")
         
     def test_update_value(self):
-        """Does update_value on a annotationvalue work?"""
-        a = amcattest.create_test_annotation(job=self.job)
-        v = AnnotationValue.objects.create(annotation=a, field=self.intfield, intval=1)
+        """Does update_value on a codingvalue work?"""
+        a = amcattest.create_test_coding(job=self.job)
+        v = CodingValue.objects.create(coding=a, field=self.intfield, intval=1)
         v.update_value("99")
         self.assertEqual(v.value, 99)
         self.assertRaises(Exception, v.update_value, "abv")
         
-        v2 = AnnotationValue.objects.create(annotation=a, field=self.codefield, intval=self.c.id)
+        v2 = CodingValue.objects.create(coding=a, field=self.codefield, intval=self.c.id)
         v2.update_value(self.c2)
         self.assertEqual(v2.value, self.c2)
         
@@ -307,10 +307,10 @@ class TestAnnotation(amcattest.PolicyTestCase):
         
 
     def test_update_values(self):
-        """Does update_values on an annotation work?"""
-        a = amcattest.create_test_annotation(job=self.job)
+        """Does update_values on an coding work?"""
+        a = amcattest.create_test_coding(job=self.job)
         self.assertEqual(_valuestr(a), "")
-        AnnotationValue.objects.create(annotation=a, field=self.intfield, intval=12)
+        CodingValue.objects.create(coding=a, field=self.intfield, intval=12)
         self.assertEqual(_valuestr(a), "number:12")
         a.update_values({self.strfield:"bla"})
         self.assertEqual(_valuestr(a), "text:'bla'")
@@ -318,7 +318,7 @@ class TestAnnotation(amcattest.PolicyTestCase):
         
         self.assertEqual(_valuestr(a), "code:<Code: CODED>;number:999")
         
-        newfield = AnnotationSchemaField.objects.create(
-            annotationschema=amcattest.create_test_schema(),
+        newfield = CodingSchemaField.objects.create(
+            codingschema=amcattest.create_test_schema(),
             label="text", fieldtype=self.strfield.fieldtype)
         self.assertRaises(ValueError, a.update_values, {newfield : "3"})

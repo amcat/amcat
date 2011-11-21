@@ -26,10 +26,10 @@ from amcat.model.user import *
 from amcat.model.project import *
 from amcat.model.sentence import *  
 
-from amcat.model.coding.annotationschema import *
-from amcat.model.coding.annotationschemafield import *
+from amcat.model.coding.codingschema import *
+from amcat.model.coding.codingschemafield import *
 from amcat.model.coding.codingjob import *
-from amcat.model.coding.annotation import *
+from amcat.model.coding.coding import *
 from amcat.model.coding.code import *
 from amcat.model.coding.codebook import *
 from amcat.model.coding.codedarticle import *

@@ -20,15 +20,15 @@
 """
 Model module containing Codingjobs
 
-Coding Jobs are sets of articles assigned to users for manual annotation.
-Each coding job has annotationschemas for articles and/or sentences. A coding
+Coding Jobs are sets of articles assigned to users for manual coding.
+Each coding job has codingschemas for articles and/or sentences. A coding
 job can consists of multiple sets, which represent a set of articles assigned
 to an individual coder. 
 """
 
 from amcat.tools.model import AmcatModel
 
-from amcat.model.coding.annotationschema import AnnotationSchema
+from amcat.model.coding.codingschema import CodingSchema
 from amcat.model.user import User
 from amcat.model.project import Project
 from amcat.model.articleset import ArticleSet
@@ -47,8 +47,8 @@ class CodingJob(AmcatModel):
 
     name = models.CharField(max_length=100)
 
-    unitschema = models.ForeignKey(AnnotationSchema, related_name='+')
-    articleschema = models.ForeignKey(AnnotationSchema, related_name='+')
+    unitschema = models.ForeignKey(CodingSchema, related_name='+')
+    articleschema = models.ForeignKey(CodingSchema, related_name='+')
 
     insertdate = models.DateTimeField(auto_now_add=True)
     insertuser = models.ForeignKey(User)

@@ -18,12 +18,12 @@
 ###########################################################################
 
 """
-Model module containing AnnotationSchemaField and -Type.
+Model module containing CodingSchemaField and -Type.
 
-AnnotationSchemaFields are the concrete fields in an AnnotationSchema, e.g.
+CodingSchemaFields are the concrete fields in an CodingSchema, e.g.
 the subject field in a net coding schema.
 
-AnnotationSchemaFieldTypes are the types of field, e.g. both subject and object
+CodingSchemaFieldTypes are the types of field, e.g. both subject and object
 are ontology coding types.
 """
 
@@ -31,7 +31,7 @@ from amcat.tools.model import AmcatModel
 
 from amcat.model.coding.codebook import Codebook
 
-from amcat.model.coding.annotationschema import AnnotationSchema, RequiredValueError
+from amcat.model.coding.codingschema import CodingSchema, RequiredValueError
 
 from . import serialiser
 
@@ -39,14 +39,14 @@ from django.db import models
 
 import logging; log = logging.getLogger(__name__)
 
-class AnnotationSchemaFieldType(AmcatModel):
+class CodingSchemaFieldType(AmcatModel):
     """
-    Model for annotationschemas_fieldtypes
+    Model for codingschemas_fieldtypes
 
-    Field Types are the types of fields available for annotation schemas. They determine
+    Field Types are the types of fields available for coding schemas. They determine
     how values are (de)serialised and which options are available. Most functionality
     is handled by instantiating a Serialiser object using the SerialiserClass column and
-    the concrete AnnotationSchemaField from which the serialiser can get details.
+    the concrete CodingSchemaField from which the serialiser can get details.
 
     For example, a dropdown field is always numeric of type, but the available options are
     determined by parameters in the schema field definition.
@@ -70,31 +70,31 @@ class AnnotationSchemaFieldType(AmcatModel):
 
     
     class Meta():
-        db_table = 'annotationschemas_fieldtypes'
+        db_table = 'codingschemas_fieldtypes'
         app_label = 'amcat'
         
-class AnnotationSchemaField(AmcatModel):
-    """Model for annotationschemas_fields
+class CodingSchemaField(AmcatModel):
+    """Model for codingschemas_fields
 
-    Fields are the concrete fields in an annotation schema. Every value in an actual
-    annotation is bound to an annotation schema field, which can e.g. (de)serialise
+    Fields are the concrete fields in an coding schema. Every value in an actual
+    coding is bound to an coding schema field, which can e.g. (de)serialise
     and validate the coded values.
     """
     
-    id = models.AutoField(primary_key=True, db_column="annotationschemafield_id")
+    id = models.AutoField(primary_key=True, db_column="codingschemafield_id")
 
-    annotationschema = models.ForeignKey(AnnotationSchema, related_name='fields')
+    codingschema = models.ForeignKey(CodingSchema, related_name='fields')
     fieldnr = models.IntegerField(default=0)
     
     label = models.CharField(max_length=50)
     required = models.BooleanField()
     default = models.BooleanField(db_column='deflt')
-    fieldtype = models.ForeignKey(AnnotationSchemaFieldType)
+    fieldtype = models.ForeignKey(CodingSchemaFieldType)
     
     codebook = models.ForeignKey(Codebook, null=True) # for codebook fields
 
     class Meta():
-        db_table = 'annotationschemas_fields'
+        db_table = 'codingschemas_fields'
         app_label = 'amcat'
 
     def __unicode__(self):
@@ -116,18 +116,18 @@ class AnnotationSchemaField(AmcatModel):
         
 from amcat.tools import amcattest
         
-class TestAnnotationSchemaFieldType(amcattest.PolicyTestCase):
+class TestCodingSchemaFieldType(amcattest.PolicyTestCase):
     def test_get_serialiser(self):
         """Are the built in field types present and bound to the right class?"""
-        fieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
+        fieldtype = CodingSchemaFieldType.objects.get(pk=1)
         self.assertEqual(fieldtype.serialiserclass, serialiser.TextSerialiser)
 
-class TestAnnotationSchemaField(amcattest.PolicyTestCase):
+class TestCodingSchemaField(amcattest.PolicyTestCase):
     def test_create_field(self):
         """Can we create a schema field object on a schema"""
-        fieldtype = AnnotationSchemaFieldType.objects.get(pk=1)
+        fieldtype = CodingSchemaFieldType.objects.get(pk=1)
         a = amcattest.create_test_schema()
-        f = AnnotationSchemaField.objects.create(annotationschema=a, fieldnr=1, fieldtype=fieldtype)
+        f = CodingSchemaField.objects.create(codingschema=a, fieldnr=1, fieldtype=fieldtype)
         self.assertIsNotNone(f)
         
         

@@ -69,9 +69,9 @@ def create_test_project(**kargs):
     
 def create_test_schema(**kargs):
     """Create a test schema to be used in unit testing"""
-    from amcat.model.coding.annotationschema import AnnotationSchema
+    from amcat.model.coding.codingschema import CodingSchema
     p = create_test_project()
-    return AnnotationSchema.objects.create(project=p, **kargs)
+    return CodingSchema.objects.create(project=p, **kargs)
 
 def create_test_article(**kargs):
     """Create a test article"""
@@ -116,10 +116,10 @@ def create_test_job(**kargs):
     if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema()
     return CodingJob.objects.create(**kargs)
 
-def create_test_annotation(job=None, **kargs):
-    """Create a test annotation object"""
+def create_test_coding(job=None, **kargs):
+    """Create a test coding object"""
     from amcat.model.coding.codingjob import CodingJobSet
-    from amcat.model.coding.annotation import Annotation
+    from amcat.model.coding.coding import Coding
 
     if "codingjobset" not in kargs:
         if job is None: job = create_test_job()
@@ -127,7 +127,7 @@ def create_test_annotation(job=None, **kargs):
         kargs["codingjobset"] = CodingJobSet.objects.create(codingjob=job, articleset=s, 
                                                             coder=job.insertuser)
     if "article" not in kargs: kargs["article"] = kargs["codingjobset"].articleset.articles.all()[0]
-    return Annotation.objects.create(**kargs)
+    return Coding.objects.create(**kargs)
 
 def create_test_code(label=None, language=None, **kargs):
     """Create a test code with a label"""

@@ -18,10 +18,10 @@
 ###########################################################################
 
 """
-(De)Serialisation support for annotation values
+(De)Serialisation support for coding values
 
-Annotation Values need to be serialised and deserialised based on the
-schema field that they are an annotation of.
+Coding Values need to be serialised and deserialised based on the
+schema field that they are an coding of.
 
 Definitions:
 Serialised Value: a primitive type (currently: str or int)

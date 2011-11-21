@@ -237,7 +237,7 @@
   },
   {
     "pk" : 1, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "normal",
       "serialiserclassname" : "TextSerialiser"
@@ -245,7 +245,7 @@
   },
   {
     "pk" : 2, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "integer",
       "serialiserclassname" : "IntSerialiser"
@@ -253,7 +253,7 @@
   },
   {
     "pk" : 5, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "DB ontology",
       "serialiserclassname" : "CodebookSerialiser"
@@ -261,7 +261,7 @@
   },
 {
     "pk" : 6, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Decimal",
       "serialiserclassname" : "TextSerialiser"
@@ -269,62 +269,69 @@
   },
   {
     "pk" : 7, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Boolean",
       "serialiserclassname" : "TextSerialiser"
     }
   },
   {  "pk" : 9, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Quality",
       "serialiserclassname" : "TextSerialiser"
     }
   },
   {  "pk" : 10, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Area",
       "serialiserclassname" : "TextSerialiser"
     }
   },
   {  "pk" : 11, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Arrowreference",
       "serialiserclassname" : "TextSerialiser"
     }
   },
   {  "pk" : 12, 
-    "model": "amcat.annotationschemafieldtype",
+    "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Interval",
       "serialiserclassname" : "FromFieldSerialiser"
     }
   },
   {  "pk" : 0,
-    "model": "amcat.annotationstatus",
+    "model": "amcat.codingstatus",
     "fields" : {
       "label" : "Not started"
     }
   },
   {  "pk" : 1,
-    "model": "amcat.annotationstatus",
+    "model": "amcat.codingstatus",
     "fields" : {
       "label" : "In Progress"
     }
   },
   {  "pk" : 2,
-    "model": "amcat.annotationstatus",
+    "model": "amcat.codingstatus",
     "fields" : {
       "label" : "Finished"
     }
   },
   {  "pk" : 9,
-    "model": "amcat.annotationstatus",
+    "model": "amcat.codingstatus",
     "fields" : {
       "label" : "Irrelevant"
+    }
+  },
+  {  "pk" : 0,
+    "model": "amcat.functions",
+    "fields" : {
+      "label" : "0",
+      "description" : "general taxonomic more-specific-than relation"
     }
   }
 ]

@@ -18,7 +18,7 @@
 ###########################################################################
 
 """
-Model module containing AnnotationSchema, representing a annotation or coding
+Model module containing CodingSchema, representing a coding or coding
 schema to be used for manual coding
 """
 
@@ -40,9 +40,9 @@ class RequiredValueError(ValidationError):
     """Validation Error used when a required field is missing"""
     pass
 
-class AnnotationSchema(AmcatModel):
-    """Model for table annotationschemas: A coding schema used for manual coding"""
-    id = models.AutoField(db_column='annotationschema_id', primary_key=True)
+class CodingSchema(AmcatModel):
+    """Model for table codingschemas: A coding schema used for manual coding"""
+    id = models.AutoField(db_column='codingschema_id', primary_key=True)
 
     name = models.CharField(max_length=75)
     description = models.TextField(null=True)
@@ -57,7 +57,7 @@ class AnnotationSchema(AmcatModel):
         return "%s - %s" % (self.id, self.name)
 
     class Meta():
-        db_table = 'annotationschemas'
+        db_table = 'codingschemas'
         app_label = 'amcat'
 
 ###########################################################################
@@ -66,8 +66,8 @@ class AnnotationSchema(AmcatModel):
         
 from amcat.tools import amcattest
 
-class TestAnnotationSchema(amcattest.PolicyTestCase):
+class TestCodingSchema(amcattest.PolicyTestCase):
     def test_create(self):
-        """Test whether annotation schema objects can be created"""
+        """Test whether coding schema objects can be created"""
         s = amcattest.create_test_schema(name='test')
         self.assertEqual(s.name, 'test')
