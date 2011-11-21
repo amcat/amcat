@@ -30,7 +30,7 @@ from amcat.tools.amcattest import *
 from amcat.tools.djangotoolkit import *
 from amcat.tools.table.table3 import *
 
-from amcat.model.coding.coding import *
+from amcat.model.coding.codingtoolkit import *
 from amcat.model.coding.serialiser import *
 
 from amcat.scripts.article_upload.tests import *

@@ -107,7 +107,17 @@ class CodebookBase(AmcatModel):
         app_label = 'amcat'
         ordering = ['rank']
         unique_together = ("supercodebook", "subcodebook")
-    
+
+class Functions(AmcatModel):
+    """Specification of code book parent-child relations"""
+    id = models.IntegerField(primary_key=True, db_column='function_id')
+    label = models.CharField(max_length=100, null=False, unique=True)
+    description = models.TextField(null=True)
+
+    class Meta():
+        db_table = 'codebook_functions'
+        app_label = 'amcat'
+        
             
 class CodebookCode(AmcatModel):
     """Many-to-many field (codebook : code) with additional properties"""
@@ -117,13 +127,20 @@ class CodebookCode(AmcatModel):
     
     code = models.ForeignKey(Code, db_index=True, related_name="+")
     parent = models.ForeignKey(Code, db_index=True, related_name="+", null=True)
-
     hide = models.BooleanField(default=False)               
+
+    validfrom = models.DateTimeField(null=True)
+    validto = models.DateTimeField(null=True)
+
+    function = models.ForeignKey(Functions, default=0)
+    candidate = models.BooleanField(default=False)
+    party = models.BooleanField(default=False)
+    
     
     class Meta():
         db_table = 'codebook_codes'
         app_label = 'amcat'
-        unique_together = ("codebook", "code")
+        unique_together = ("codebook", "code", "validfrom")
     
 ###########################################################################
 #                          U N I T   T E S T S                            #

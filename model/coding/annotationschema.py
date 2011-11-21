@@ -45,7 +45,7 @@ class AnnotationSchema(AmcatModel):
     id = models.AutoField(db_column='annotationschema_id', primary_key=True)
 
     name = models.CharField(max_length=75)
-    description = models.TextField()
+    description = models.TextField(null=True)
 
     isnet = models.BooleanField()
     isarticleschema = models.BooleanField()

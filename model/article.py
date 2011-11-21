@@ -53,10 +53,10 @@ class Article(AmcatModel):
     id = models.AutoField(primary_key=True, db_column="article_id")
 
     date = models.DateTimeField(db_index=True)
-    section = models.CharField(blank=True, null=True, max_length=80)
+    section = models.CharField(blank=True, null=True, max_length=500)
     pagenr = models.IntegerField(blank=True, null=True)
-    headline = models.CharField(max_length=200, db_index=True)
-    byline = models.TextField(blank=True, null=True, max_length=200)
+    headline = models.TextField(db_index=True)
+    byline = models.TextField(blank=True, null=True, max_length=500)
     length = models.IntegerField()
     metastring = models.TextField(null=True)
     url = models.URLField(null=True, blank=True, db_index=True)

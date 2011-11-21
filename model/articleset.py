@@ -35,11 +35,17 @@ class ArticleSet(AmcatModel):
     Model for the sets table. A set is part of a project and contains articles.
     It can also be seen as a 'tag' for articles.
     """
-    id = models.AutoField(primary_key=True, db_column='set_id')
+    id = models.AutoField(primary_key=True, db_column='articleset_id')
 
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
     project = models.ForeignKey(Project)
     articles = models.ManyToManyField(Article, db_table="articlesets_articles")
+
+    codingjobset = models.BooleanField(default=False)
+    batch = models.BooleanField(default=False)
+    
+    provenance = models.TextField(null=True)
+    
 
     class Meta():
         app_label = 'amcat'

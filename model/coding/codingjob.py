@@ -71,7 +71,9 @@ class CodingJobSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='codingjobset_id')
     codingjob = models.ForeignKey(CodingJob)
     coder = models.ForeignKey(User)
-    articleset = models.ForeignKey(ArticleSet)
+    articleset = models.ForeignKey(ArticleSet, related_name="+")
+    
+    setnr = models.IntegerField(null=True) # for importing old sets
 
     class Meta():
         db_table = 'codingjobs_sets'

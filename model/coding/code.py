@@ -93,7 +93,7 @@ class Label(AmcatModel):
 
 
     class Meta():
-        db_table = 'labels'
+        db_table = 'codes_labels'
         app_label = 'amcat'
         unique_together = ('code','language')
 
