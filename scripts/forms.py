@@ -21,7 +21,7 @@
 from django import forms
 from amcat.model.project import Project
 from amcat.model.user import User
-from amcat.model.set import Set
+from amcat.model.articleset import ArticleSet
 from amcat.model.medium import Medium
 from amcat.model.article import Article
 from amcat.model.authorisation import Role, ProjectRole
@@ -104,7 +104,7 @@ class ArticleColumnsForm(forms.Form):
 
 class SelectionForm(forms.Form):
     projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.all()) # TODO: change to projects of user
-    sets = ModelMultipleChoiceFieldWithIdLabel(queryset=Set.objects.none(), required=False)
+    sets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False)
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.none(), required=False)
     query = forms.CharField(widget=forms.Textarea, required=False)
     articleids = forms.CharField(widget=forms.Textarea, required=False)
@@ -123,7 +123,7 @@ class SelectionForm(forms.Form):
             return
         projectids = map(int, projectids)
         #print args, projectids
-        self.fields['sets'].queryset = Set.objects.filter(project__in=projectids)
+        self.fields['sets'].queryset = ArticleSet.objects.filter(project__in=projectids)
         self.fields['mediums'].queryset = Medium.objects.filter(article__project__in=projectids).distinct().order_by('pk')
         
         #self.fields['action'].choices = ((ws.__name__, ws.name) for ws in webscripts.allScripts)#((classname, ws.name) for classname, ws in webscriptClasses )
