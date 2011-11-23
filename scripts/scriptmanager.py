@@ -42,9 +42,9 @@ outputClasses = {
 def findAllScripts():
     """iterates over all available scripts"""
     classes = inspect.getmembers(amcat.scripts.output, inspect.isclass)
-    for classname, cls in classes:
+    for _classname, cls in classes:
         if hasattr(cls, 'input_type') and hasattr(cls, 'output_type'): # if the class is a Script
-            log.debug('found script %s' % classname)
+            #log.debug('found script %s' % classname)
             yield cls
 
 

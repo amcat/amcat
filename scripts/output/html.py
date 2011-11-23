@@ -29,9 +29,24 @@ import base64
 import logging
 log = logging.getLogger(__name__)
 
+
+
 class HtmlTemplateForm(forms.Form):
     template = forms.CharField(required=False)
     
+    
+                    
+class ObjectToHtml(script.Script):
+    """ general script that can be used to render any object as html, using a template"""
+    input_type = object
+    options_form = HtmlTemplateForm
+    output_type = types.HtmlData
+
+
+    def run(self, statsObj):
+        return render_to_string(self.options['template'], {'object':object})
+        
+        
 
 class TableToHtml(script.Script):
     input_type = table3.Table
@@ -45,6 +60,7 @@ class TableToHtml(script.Script):
         return tableoutput.table2htmlDjango(tableObj)
        
        
+       
 class ArticleListToHtml(script.Script):
     input_type = types.ArticleIterator
     options_form = HtmlTemplateForm
@@ -55,6 +71,7 @@ class ArticleListToHtml(script.Script):
         return render_to_string(self.options['template'], {'articlelist':articlelist})
         
         
+        
 class ArticleSetStatisticsToHtml(script.Script):
     input_type = types.ArticleSetStatistics
     options_form = HtmlTemplateForm
@@ -63,6 +80,7 @@ class ArticleSetStatisticsToHtml(script.Script):
 
     def run(self, statsObj):
         return render_to_string(self.options['template'], {'stats':statsObj})
+        
         
                 
 class ImageMapToHtml(script.Script):
@@ -91,4 +109,4 @@ class ErrormsgToHtml(script.Script):
     output_type = types.HtmlData
     
     def run(self, errorMsg):
-        return simplejson.dumps({'error':{'message':errorMsg.message}})
+        return simplejson.dumps({'error':{'message':errorMsg.message}}) # BUG: this is not html...
