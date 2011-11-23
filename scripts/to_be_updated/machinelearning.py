@@ -12,7 +12,7 @@ from amcat.ml import ml, dbwordfeature, mlalgo
 from amcat.scripts import externalscripts
 from amcat.model.coding import codingjob, codedarticle
 from amcat.model import project
-from amcat.model.set import Set
+from amcat.model.articleset import ArticleSet
 from amcat.db import dbtoolkit
 from amcat.tools.stat import amcatr
 
@@ -48,7 +48,7 @@ class MachineLearningScript(externalscripts.ExternalScriptBase):
         trainjobs = argToObjects(codingjob.Codingjob, self.db, trainjobids)
         self.field = trainjobs[0].articleSchema.getField(fieldname)
         testjobs = argToObjects(codingjob.Codingjob, self.db, testjobids)  
-        predictsets = argToObjects(Set, self.db, predictbatchids)  
+        predictsets = argToObjects(ArticleSet, self.db, predictbatchids)  
         if sample: sample = float(sample)
 
 	log.warn("Testjobs: %s" % testjobs)

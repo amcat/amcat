@@ -27,7 +27,7 @@ from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from django import forms
 from amcat.model.project import Project
-from amcat.model.set import Set
+from amcat.model.articleset import ArticleSet
 
 import logging
 log = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class SaveAsSetScript(script.Script):
     def run(self, articleids):
         setname = self.options['setname']
         project = self.options['project']
-        s = Set(name=setname, project=project)
+        s = ArticleSet(name=setname, project=project)
         s.save()
         # TODO: add articles in bulk to set
         # s.articles.add(articles)
