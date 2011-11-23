@@ -111,7 +111,7 @@ class User(AmcatModel):
         if raw_password is None:
             self.active = False
         else:
-            dbtoolkit.db.set_password(self.username, raw_password)
+            dbtoolkit.get_database().set_password(self.username, raw_password)
 
     def check_password(self, raw_password):
         """Returns True iff the raw_password is correct for this user""" 

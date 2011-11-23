@@ -89,6 +89,7 @@ class Database(object):
         """
         pass
 
+
 class PostgreSQL(Database):
     """PostgreSQL implementation"""
     def _get_conn_params(self, user, passwd):
@@ -153,9 +154,22 @@ class PostgreSQL(Database):
         else:
             transaction.commit(using=self.using)
         
+class Sqlite(Database):
+    """Sqlite implementation, does not implement user"""
+
+    def check_password(self, user, entered_password):
+        return True
+
+    def set_password(self, user, password):
+        return True
+
+    def create_user(self, username, password):
+        return True
+        
 
 
 VENDORS = { 'postgresql' : PostgreSQL,
+            'sqlite': Sqlite,
             'dummy' : Database }
 
 def get_database(using=DEFAULT_DB_ALIAS):

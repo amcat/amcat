@@ -29,7 +29,8 @@ functions create_test_* create test objects for use in unit tests
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-import unittest, os.path, os, inspect
+import os.path, os, inspect
+from django.test import TestCase
 
 
 LICENSE = """###########################################################################
@@ -54,12 +55,21 @@ LICENSE = """###################################################################
 
 from . import toolkit
     
-def create_test_user():
+def create_test_user(**kargs):
     """Create a user to be used in unit testing"""
-    from amcat.model.user import Affiliation, User
-    aff = Affiliation.objects.all()[0]
-    username = "testuser_%i" % len(User.objects.all())
-    return User.objects.create(affiliation=aff, username=username, email=username)
+    from amcat.model.user import Affiliation, User#, Language
+    if 'affiliation' not in kargs:
+        kargs['affiliation'] = Affiliation.objects.all()[0]
+    if 'username' not in kargs:
+        kargs['username'] = "testuser_%i" % User.objects.count()
+    if 'email' not in kargs:
+        kargs['email'] = "testuser_%i@example.com" % User.objects.count()
+    if 'fullname' not in kargs:
+        kargs['fullname'] = kargs['username']
+    # if 'language' not in kargs:
+        # kargs['language'] = Language.objects.all()[0]
+    return User.objects.create(**kargs)
+    #return User.create_user(**kargs)
 
 def create_test_project(**kargs):
     """Create a project to be used in unit testing"""
@@ -147,7 +157,7 @@ def create_test_codebook(**kargs):
     return Codebook.objects.create(**kargs)
 
 
-class PolicyTestCase(unittest.TestCase):
+class PolicyTestCase(TestCase):
     """
     TestCase subclass that can be used to easily check whether a module is
     'AmCAT compliant'. Checks for license banner and pylint.

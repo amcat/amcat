@@ -114,4 +114,4 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         """Test the list_queries context manager"""
         with list_queries() as l:
             amcattest.create_test_user()
-        self.assertEqual(len(l), 3) # get affiliation, create user, select user
+        self.assertEqual(len(l), 4) # get affiliation, create user, select user x2

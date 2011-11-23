@@ -34,3 +34,4 @@ from amcat.model.coding.codingtoolkit import *
 from amcat.model.coding.serialiser import *
 
 from amcat.scripts.article_upload.tests import *
+from amcat.scripts.scriptmanager import *

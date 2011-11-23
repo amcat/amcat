@@ -17,8 +17,13 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Contains functions that make it easier to find scripts
+Later it can be extended with finding scripts that are stored in the database
+"""
+
 import amcat.scripts.output
-from amcat.scripts import script, types
+from amcat.scripts import types
 import inspect 
 
 import logging
@@ -35,9 +40,11 @@ outputClasses = {
 }
 
 def findAllScripts():
+    """iterates over all available scripts"""
     classes = inspect.getmembers(amcat.scripts.output, inspect.isclass)
     for classname, cls in classes:
         if hasattr(cls, 'input_type') and hasattr(cls, 'output_type'): # if the class is a Script
+            log.debug('found script %s' % classname)
             yield cls
 
 
@@ -55,9 +62,28 @@ def findScript(inputClass, outputClass):
     for script in scripts:
         if script.input_type == inputClass and script.output_type == outputClass:
             return script
-    log.warn('Script not found, input: %s output: %s. Scripts: %s' % (inputClass, outputClass, scripts))
+    log.warn('Script not found, input: %s output: %s. Scripts: %s' % \
+                                                    (inputClass, outputClass, scripts))
     return None
             
             
 scripts = list(findAllScripts())
+
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+from amcat.tools import table
+
+class TestScriptManager(amcattest.PolicyTestCase):
+    def test_find(self):
+        """Test whether we can find certain basic scripts"""  
+        self.assertIsNotNone(scripts)        
+        self.assertIsNotNone(findScript(table.table3.Table, 'csv'))
+        self.assertIsNotNone(findScript(table.table3.Table, 'html'))
+        self.assertIsNotNone(findScript(table.table3.Table, 'json'))
+        self.assertRaises(Exception, findScript, table.table3.Table, 'not-exisiting-outputclass')
 
