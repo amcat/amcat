@@ -51,4 +51,4 @@ class TableToDatatable(script.Script):
         dictObj['iTotalDisplayRecords'] = 9999 if len(tableData) > 0 else 0
         dictObj['sEcho'] = self.options['sEcho']
         
-        return simplejson.dumps(dictObj, default = lambda obj: obj.strftime('%d-%m-%Y') if isinstance(obj, datetime.datetime) else None)
+        return simplejson.dumps(dictObj, default = lambda obj: obj.strftime('%d-%m-%Y') if isinstance(obj, datetime.datetime) else unicode(obj))

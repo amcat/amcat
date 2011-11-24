@@ -60,7 +60,7 @@ class ArticleidsScript(script.Script):
         start = self.options['start']
         length = self.options['length']
         if self.options['useSolr'] == False: # make database query
-            return database.getQuerySet(**self.options)[start:start+length].values_list('article_id', flat=True)
+            return database.getQuerySet(**self.options)[start:start+length].values_list('id', flat=True)
         else:
             return solrlib.articleids(self.options)
 

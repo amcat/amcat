@@ -30,6 +30,7 @@ class ArticleIterator(object):
     """Class representing a list of articles that can be iterated over"""
     pass
     
+class ObjectIterator(object): pass
 class JsonData(object): pass
 class CsvData(object): pass
 class ExcelData(object): pass

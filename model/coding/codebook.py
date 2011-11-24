@@ -131,16 +131,13 @@ class CodebookCode(AmcatModel):
 
     validfrom = models.DateTimeField(null=True)
     validto = models.DateTimeField(null=True)
-
     function = models.ForeignKey(Functions, default=0)
-    candidate = models.BooleanField(default=False)
-    party = models.BooleanField(default=False)
     
     
     class Meta():
         db_table = 'codebooks_codes'
         app_label = 'amcat'
-        unique_together = ("codebook", "code", "validfrom") # TODO: does not work since NULL!=NULL
+        #unique_together = ("codebook", "code", "function_id", "validfrom") # TODO: does not really work since NULL!=NULL
     
 ###########################################################################
 #                          U N I T   T E S T S                            #

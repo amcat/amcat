@@ -4,10 +4,10 @@ A number of functions that help the Amcat3 selection page to retrieve selections
 
 from amcat.model import article
 
-def getQuerySet(projects, sets=None, mediums=None, startDate=None, endDate=None, articleids=None, **kargs):
+def getQuerySet(projects, articlesets=None, mediums=None, startDate=None, endDate=None, articleids=None, **kargs):
     queryset = article.Article.objects.filter(project__in=projects)
-    if sets:
-        queryset = queryset.filter(set__in=sets)
+    if articlesets:
+        queryset = queryset.filter(articleset__in=articlesets)
     if mediums:
         queryset = queryset.filter(medium__in=mediums)
     if startDate:

@@ -18,42 +18,48 @@
 ###########################################################################
 
 """
-Script that stores matching articles as set
+Script that converts a list of Article objects to a table
 """
 
-
+from amcat.tools import table
 from amcat.scripts import script, types
-from amcat.scripts.tools import cli
-import amcat.scripts.forms
+from amcat.tools.toolkit import dateToInterval
 from django import forms
-from amcat.model.article import Article
-from amcat.model.project import Project
-from amcat.model.articleset import ArticleSet
-
+import amcat.scripts.forms
 import logging
 log = logging.getLogger(__name__)
 
-class SaveAsSetForm(forms.Form):
-    setname = forms.CharField()
-    setproject = forms.ModelChoiceField(queryset=Project.objects.all()) # TODO: change to projects of user
+class ObjectsToTableForm(amcat.scripts.forms.GeneralColumnsForm):
+    pass
 
-
-class SaveAsSetScript(script.Script):
-    input_type = types.ArticleidList
-    options_form = SaveAsSetForm
-    output_type = ArticleSet
-
-
-    def run(self, articleids):
-        setname = self.options['setname']
-        setproject = self.options['setproject']
-        #articles = Article.objects.filter(id__in=articleids)
-        #log.info('articles %s' % articles)
-        s = ArticleSet(name=setname, project=setproject)
-        s.save()
-        s.articles.add(*articleids)
-        return s
-    
         
-if __name__ == '__main__':
-    cli.run_cli(SaveAsSetScript)
+def getAttribute(object, column):
+    if '.' in column:
+        firstpart = column.split('.')[0]
+        column = '.'.join(column.split('.')[1:])
+        return getAttribute(getattr(object, firstpart), column)
+    #log.info('%s %s' % (object, column))
+    result = getattr(object, column)
+    log.info('attr %s' % result)
+    return result
+        
+def columnFunctionFactory(column):
+    return lambda o: getAttribute(o, column)
+        
+
+class ObjectsToTable(script.Script):
+    input_type = types.ObjectIterator
+    options_form = ObjectsToTableForm
+    output_type = table.table3.Table
+
+
+    def run(self, objects):
+        columns = []
+        for column in self.options['columns']:
+            columns.append(table.table3.ObjectColumn(column, columnFunctionFactory(column)))
+        
+        tableObj = table.table3.ObjectTable(objects, columns)
+        
+        return tableObj
+        
+        

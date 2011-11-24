@@ -28,6 +28,7 @@ from amcat.model import medium
 from amcat.tools.toolkit import dateToInterval
 
 from amcat.tools.table.table3 import DictTable
+import time
 import logging
 log = logging.getLogger(__name__)
 
@@ -36,9 +37,11 @@ def doQuery(query, form, kargs, additionalFilters=None):
     filters = createFilters(form)
     if additionalFilters:
         filters += additionalFilters
+    startTime = time.time() 
     solrResponse = solr.SolrConnection('http://localhost:8983/solr').query(query, 
                     fq=filters,
                     **kargs)
+    log.info("found %s results in %2f ms! \r" % (len(solrResponse.results),((time.time() - startTime) * 1000)))
     return solrResponse
     
     
@@ -100,9 +103,9 @@ def getArticles(form):
     #if len(queries) == 1:
     query = '(%s)' % ') OR ('.join(form['queries'])
     kargs = dict( 
-            fields="id,score", 
-            start=form['start'], 
-            rows=form['length'])
+            fields="id,score",
+            rows=form['length']
+            )
             
     if form['sortColumn']:
         if form['sortColumn'] == 'medium__id': form['sortColumn'] = 'mediumid'
@@ -111,6 +114,11 @@ def getArticles(form):
         kargs['sort'] = '%s %s' % (form['sortColumn'], form['sortOrder'])
             
     kargsMainQuery = kargs.copy()
+    
+    kargsMainQuery.update(dict(
+        start=form['start']
+        ))
+        
     if 'keywordInContext' in form['columns']:
         kargsMainQuery.update(dict(
             highlight=True, 
@@ -140,19 +148,19 @@ def getArticles(form):
         for singleQuery in form['queries']:
             hitsTable.columns.add(singleQuery)
             solrResponseSingleQuery = doQuery(singleQuery, form, kargs, additionalFilters)
-            articleIdList = []
+            #articleIdList = []
             for d in solrResponseSingleQuery.results:
                 articleid = int(d['id'])
-                articleIdList.append(articleid)
+                #articleIdList.append(articleid)
                 hits = int(d['score'])
-                #log.info('add %s %s %s' % (articleid, singleQuery, hits)) 
+                log.info('add %s %s %s' % (articleid, singleQuery, hits)) 
                 hitsTable.addValue(articleid, singleQuery, hits) 
     else:        
         hitsTable.columns.add(query)
-        articleIdList = []
+        #articleIdList = []
         for d in solrResponse.results:
             articleid = int(d['id'])
-            articleIdList.append(articleid)
+            #articleIdList.append(articleid)
             hits = int(d['score'])
             #hitsTable.addValue(query, articleid, hits)
             hitsTable.addValue(articleid, query, hits)
@@ -160,7 +168,7 @@ def getArticles(form):
     
     articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
     result = []
-    for articleid in articleIdList:
+    for articleid in articleids:
         a = articlesDict[articleid]
         a.hits = hitsTable.getNamedRow(articleid)
         a.keywordInContext = contextDict.get(articleid)
@@ -326,8 +334,8 @@ def createFilters(form):
     if 'mediums' in form:
         mediumidQuery = ('mediumid:%d' % m.id for m in form['mediums'])
         result.append(' OR '.join(mediumidQuery))
-    if 'sets' in form:
-        setsQuery = ('sets:%d' % s.id for s in form['sets'])
+    if 'articlesets' in form:
+        setsQuery = ('sets:%d' % s.id for s in form['articlesets'])
         result.append(' OR '.join(setsQuery))
     if 'articleids' in form:
         articleidQuery = ('id:%d' % a for a in form['articleids'])
