@@ -334,7 +334,11 @@ class LexisNexis(script.Script):
         
         """
         art = Article(headline=headline, byline=byline, text=text, date=date)
-        art.medium = Medium.objects.get(name__iexact=source)
+
+        try:
+            art.medium = Medium.objects.get(name__iexact=source)
+        except Medium.DoesNotExist:
+            raise Article.DoesNotExist("Medium '%s' does not exist in database" % source)
 
         def _get_key(dic, key):
             for k in dic.keys():
