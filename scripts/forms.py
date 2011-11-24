@@ -70,6 +70,17 @@ class TableOutputForm(forms.Form):
         ('html', 'HTML')
      ), initial='csv')
         
+        
+class GeneralColumnsForm(forms.Form):
+    """represents column for any object, as a string seperated with ,"""
+    columns = forms.CharField()
+
+    def clean_columns(self):
+        data = self.cleaned_data['columns']
+        data = [x.strip() for x in data.split(',') if x.strip()]
+        return data
+        
+        
 class ArticleColumnsForm(forms.Form):
     columns = forms.MultipleChoiceField( # columns are used to indicate which columns should be loaded from the database (for performance reasons)
             choices=(
@@ -104,7 +115,7 @@ class ArticleColumnsForm(forms.Form):
 
 class SelectionForm(forms.Form):
     projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.all()) # TODO: change to projects of user
-    sets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False)
+    articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False)
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.none(), required=False)
     query = forms.CharField(widget=forms.Textarea, required=False)
     articleids = forms.CharField(widget=forms.Textarea, required=False)
@@ -123,7 +134,7 @@ class SelectionForm(forms.Form):
             return
         projectids = map(int, projectids)
         #print args, projectids
-        self.fields['sets'].queryset = ArticleSet.objects.filter(project__in=projectids)
+        self.fields['articlesets'].queryset = ArticleSet.objects.filter(project__in=projectids)
         self.fields['mediums'].queryset = Medium.objects.filter(article__project__in=projectids).distinct().order_by('pk')
         
         #self.fields['action'].choices = ((ws.__name__, ws.name) for ws in webscripts.allScripts)#((classname, ws.name) for classname, ws in webscriptClasses )

@@ -18,42 +18,33 @@
 ###########################################################################
 
 """
-Script that stores matching articles as set
+Script that exports codingjobs to table
 """
 
-
+from amcat.tools import table
 from amcat.scripts import script, types
-from amcat.scripts.tools import cli
-import amcat.scripts.forms
+from amcat.tools.toolkit import dateToInterval
 from django import forms
-from amcat.model.article import Article
-from amcat.model.project import Project
-from amcat.model.articleset import ArticleSet
-
+import amcat.scripts.forms
+from amcat.model.coding.codingjob import CodingJob
 import logging
 log = logging.getLogger(__name__)
 
-class SaveAsSetForm(forms.Form):
-    setname = forms.CharField()
-    setproject = forms.ModelChoiceField(queryset=Project.objects.all()) # TODO: change to projects of user
+class CodingjobsForm(amcat.scripts.forms.TableOutputForm):
+    codingjobs = amcat.scripts.forms.ModelMultipleChoiceFieldWithIdLabel(queryset=CodingJob.objects.all()) # TODO: change to codingjobs in projects of user
 
-
-class SaveAsSetScript(script.Script):
-    input_type = types.ArticleidList
-    options_form = SaveAsSetForm
-    output_type = ArticleSet
-
-
-    def run(self, articleids):
-        setname = self.options['setname']
-        setproject = self.options['setproject']
-        #articles = Article.objects.filter(id__in=articleids)
-        #log.info('articles %s' % articles)
-        s = ArticleSet(name=setname, project=setproject)
-        s.save()
-        s.articles.add(*articleids)
-        return s
     
+class ExportCodingjobsScript(script.Script):
+    input_type = None
+    options_form = CodingjobsForm
+    output_type = table.table3.Table
+
+
+    def run(self):
         
-if __name__ == '__main__':
-    cli.run_cli(SaveAsSetScript)
+        tableObj = table.table3.DictTable(0)
+        tableObj.columns.add(self.options['codingjobs'][0].name) #dummy data
+        tableObj.rows.add('die bla')
+        return tableObj
+        
+        

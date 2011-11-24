@@ -29,13 +29,8 @@ import amcat.scripts.forms
 import logging
 log = logging.getLogger(__name__)
 
-class ObjectsToTableForm(forms.Form):
-    columns = forms.CharField()
-
-    def clean_columns(self):
-        data = self.cleaned_data['columns']
-        data = [x.strip() for x in data.split(',') if x.strip()]
-        return data
+class ObjectsToTableForm(amcat.scripts.forms.GeneralColumnsForm):
+    pass
 
         
 def getAttribute(object, column):
@@ -43,8 +38,10 @@ def getAttribute(object, column):
         firstpart = column.split('.')[0]
         column = '.'.join(column.split('.')[1:])
         return getAttribute(getattr(object, firstpart), column)
-    log.info('%s %s' % (object, column))
-    return getattr(object, column)
+    #log.info('%s %s' % (object, column))
+    result = getattr(object, column)
+    log.info('attr %s' % result)
+    return result
         
 def columnFunctionFactory(column):
     return lambda o: getAttribute(o, column)

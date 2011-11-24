@@ -43,8 +43,8 @@ class ObjectToHtml(script.Script):
     output_type = types.HtmlData
 
 
-    def run(self, statsObj):
-        return render_to_string(self.options['template'], {'object':object})
+    def run(self, obj):
+        return render_to_string(self.options['template'], {'object':obj})
         
         
 

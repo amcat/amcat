@@ -28,6 +28,7 @@ import amcat.scripts.forms
 from django import forms
 from amcat.model.project import Project
 import amcat.model
+import amcat.scripts.forms
 
 import logging
 log = logging.getLogger(__name__)
@@ -37,13 +38,14 @@ log = logging.getLogger(__name__)
 
 
     
-class ViewModelForm(forms.Form):
+class ViewModelForm(amcat.scripts.forms.GeneralColumnsForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
     length = forms.IntegerField(initial=100, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
     model = forms.CharField()
+    search = forms.CharField(required=False)
     projects = forms.ModelMultipleChoiceField(queryset=Project.objects.all(), required=False) # TODO: change to projects of user
     
-    sortColumn = forms.CharField(required=False)
+    sortColumnNr = forms.IntegerField(required=False)
     sortOrder = forms.ChoiceField(
                     choices=(
                         ('asc', 'Ascending'), 
@@ -101,8 +103,13 @@ class FindObjectsScript(script.Script):
             if self.options['model'].__name__ != 'Project':
                 kargs['project__in'] = self.options['projects']
         qs = self.options['model'].objects.filter(**kargs)
-        if self.options['sortColumn']:
-            qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '') + self.options['sortColumn'])
+        if self.options['sortColumnNr']:
+            column = self.options['columns'][self.options['sortColumnNr']]
+            qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '') + column)
+            
+            
+        #TODO: implement search
+            
         qs = qs[start:start+length]
         return qs
 
