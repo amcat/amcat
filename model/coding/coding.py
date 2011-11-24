@@ -137,7 +137,7 @@ class CodingValue(AmcatModel):
     coding = models.ForeignKey(Coding, related_name='values')
     field = models.ForeignKey(CodingSchemaField)
 
-    strval = models.CharField(blank=True, null=True, max_length=80)
+    strval = models.CharField(blank=True, null=True, max_length=500)
     intval = models.IntegerField(null=True)
 
     def save(self, *args, **kargs):
