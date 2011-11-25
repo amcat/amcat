@@ -220,7 +220,7 @@ def table2htmlDjango(table, writecolnames=True, writerownames=False):
                         <td>{{row.row}}</td>
                     {% endif %}
                     {% for col in row %}
-                        <td>{{col}}</td>
+                        <td>{{col|default_if_none:"-" }}</td>
                     {% endfor %}
                 </tr>
             {% endfor %}

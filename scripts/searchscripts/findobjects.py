@@ -42,6 +42,7 @@ class ViewModelForm(amcat.scripts.forms.GeneralColumnsForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
     length = forms.IntegerField(initial=100, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
     model = forms.CharField()
+    select_related = forms.BooleanField(required=False, initial=False)
     search = forms.CharField(required=False)
     projects = forms.ModelMultipleChoiceField(queryset=Project.objects.all(), required=False) # TODO: change to projects of user
     
@@ -70,16 +71,22 @@ class ViewModelForm(amcat.scripts.forms.GeneralColumnsForm):
         return data
         
     def clean_model(self):
+        """return the corresponding model with the provided string.
+        Also handles . for instance 'coding.CodingJob' will find class 'coding.codingjob.CodingJob'"""
         data = self.cleaned_data['model']
-        
-        if '.' in data:
-            split = data.split('.')
-            clss = getattr(amcat.model, split[0])
-            moduleobj = getattr(clss, split[1].lower())
-            data = split[1]
-        else:
-            moduleobj = getattr(amcat.model, data.lower())
-        data = getattr(moduleobj, data)
+        try:
+            if '.' in data:
+                split = data.split('.')
+                clss = getattr(amcat.model, split[0].lower())
+                moduleobj = getattr(clss, split[1].lower())
+                data = split[1]
+            else:
+                moduleobj = getattr(amcat.model, data.lower())
+            if data.islower(): data = data.capitalize() # to make sure "medium" can also be used, not only "Medium" (for example)
+            data = getattr(moduleobj, data)
+        except Exception,e:
+            log.exception('finding model problem')
+            self._errors["model"] = self.error_class(['Invalid model name'])
         # if not hasattr(amcat.model, data.lower()):
             # self._errors["modelname"] = self.error_class(['Invalid model name'])
             # return None
@@ -103,6 +110,8 @@ class FindObjectsScript(script.Script):
             if self.options['model'].__name__ != 'Project':
                 kargs['project__in'] = self.options['projects']
         qs = self.options['model'].objects.filter(**kargs)
+        if self.options['select_related'] == True:
+            qs = qs.select_related()
         if self.options['sortColumnNr']:
             column = self.options['columns'][self.options['sortColumnNr']]
             qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '') + column)

@@ -40,7 +40,7 @@ def getAttribute(object, column):
         return getAttribute(getattr(object, firstpart), column)
     #log.info('%s %s' % (object, column))
     result = getattr(object, column)
-    log.info('attr %s' % result)
+    #log.info('attr %s' % result)
     return result
         
 def columnFunctionFactory(column):
