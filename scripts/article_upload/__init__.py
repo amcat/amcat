@@ -1,3 +1,4 @@
-from lexisnexis import *
+from .lexisnexis import *
+from .text import *
 
-__all__ = ['LexisNexis']
+__all__ = ['LexisNexis', 'Text']
