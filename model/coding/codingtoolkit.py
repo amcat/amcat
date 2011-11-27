@@ -39,12 +39,13 @@ def get_table_sets_per_user(users):
     try: iter(users)
     except TypeError: users = [users]
     result = ObjectTable(rows = list(CodingJobSet.objects.filter(coder__in=users)))
-    result.addColumn("coder")
+    result.addColumn("id")
     result.addColumn("codingjob")
+    result.addColumn("coder")
     result.addColumn(lambda s: s.codingjob.insertuser, "insertuser")
     result.addColumn(lambda s :s.codingjob.insertdate, "insertdate")
     result.addColumn(lambda s :s.articleset.articles.count(), "narticles")
-    result.addColumn(lambda s :s.codings.filter(sentence=None, status_id=2).count(),
+    result.addColumn(lambda s :s.codings.filter(sentence=None, status=2).count(),
                      "ncomplete")
     return result
 

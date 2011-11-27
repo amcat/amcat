@@ -39,14 +39,17 @@ class TableToDatatable(script.Script):
 
     def run(self, tableObj):
         tableData = []
-        
         for row in tableObj.getRows():
             rowList = []
             for column in tableObj.getColumns():
                 rowList.append(tableObj.getValue(row, column))
             tableData.append(rowList)
+            
+        tableColumns = [{'sTitle':column, 'sName':column} for column in tableObj.getColumns()] 
+           
         dictObj = {}
         dictObj['aaData'] = tableData
+        dictObj['aoColumns'] = tableColumns
         dictObj['iTotalRecords'] = 9999
         dictObj['iTotalDisplayRecords'] = 9999 if len(tableData) > 0 else 0
         dictObj['sEcho'] = self.options['sEcho']
