@@ -34,7 +34,7 @@ class TestLexisNexis(unittest.TestCase):
     def test_split_body(self):
         splitted = self.split()
 
-        self.assertEquals(len(list(self.parser.split_body(splitted[1]))), 4)
+        self.assertEquals(len(list(self.parser.split_body(splitted[1]))), 5)
 
     def test_parse_header(self):
         splitted = self.split()
@@ -52,7 +52,7 @@ class TestLexisNexis(unittest.TestCase):
         for art in arts: art[3] = str(art[3])
 
         # Tests..
-        self.assertEquals(len(arts), len(self.test_body_sols))
+        self.assertEquals(len(arts), 5)
 
         for i, art in enumerate(self.test_body_sols):
             self.assertEquals(art, arts[i])
@@ -62,7 +62,7 @@ class TestLexisNexis(unittest.TestCase):
             Medium.objects.get(name__iexact=source)
         except Medium.DoesNotExist:
             l = Language.objects.get(id=1)
-            Medium(name=source, abbrev=source, circulation=1, language=l).save()
+            Medium(name=source, abbrev=source[0:5], circulation=1, language=l).save()
 
     def _create_project(self):
         aff = Affiliation(name="dummy")

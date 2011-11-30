@@ -54,7 +54,7 @@ RES = {
 WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "LÄNGE", "UPDATE", "SPRACHE",
                         "PUBLICATION-TYPE", "CODE-REVUE", "AUTEUR", "RUBRIQUE",
                         "LANGUE", "DATE-CHARGEMENT", "TYPE-PUBLICATION",
-                        "LONGUEUR"]
+                        "LONGUEUR", "LOAD-DATE"]
 
 BODY_KEYS_MAP = {
     # LexisNexis --> Article model
@@ -65,7 +65,11 @@ BODY_KEYS_MAP = {
     "auteur" : "author",
     "rubrique" : "section",
     "langue" : "language",
-    "longueur" : "length"
+    "longueur" : "length",
+    "length" : "length",
+    "language" : "language",
+    "section" : "section",
+    "author" : "author"
 }
 
 
@@ -285,20 +289,23 @@ class LexisNexis(script.Script):
                     break
 
         # Headline still not found? Get first not-well known body key
-        if headline is None:
-            for key in meta.keys():
-                if key not in WELL_KNOWN_BODY_KEYS:
-                    headline = u"%s: %s" % (key, meta[key])
-                    del meta[key]
+        #if headline is None:
+        #    for key in meta.keys():
+        #        if key not in WELL_KNOWN_BODY_KEYS:
+        #            headline = u"%s: %s" % (key, meta[key])
+        #            del meta[key]
 
         # Least-reliable method, choose the smallest element in
         # uit which does matches the copyright regular expression,
         # as it is probably the headline
         if headline is None:
-            for ui in uit:
+            for ui in uit[0:-1]:
                 if not RES["COPYRIGHT"].match(ui):
                     headline = ui
                     break
+
+        if headline is None:
+            headline = "No headline found!"
 
         # Get text, the biggest element in uit
         text = uit[-1]
@@ -338,7 +345,7 @@ class LexisNexis(script.Script):
         try:
             art.medium = Medium.objects.get(name__iexact=source)
         except Medium.DoesNotExist:
-            raise Article.DoesNotExist("Medium '%s' does not exist in database" % source)
+            raise Medium.DoesNotExist("Medium '%s' does not exist in database" % source)
 
         def _get_key(dic, key):
             for k in dic.keys():
