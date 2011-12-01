@@ -142,7 +142,7 @@ class User(AmcatModel):
     @property
     def is_superuser(self):
         """Returns True iff the current user is admin"""
-        return (self.role.id == auth.ADMIN_ROLE)
+        return (self.role.id >= auth.ADMIN_ROLE)
 
     @classmethod
     def create_user(cls, username, fullname, password, email, affiliation,
