@@ -1,4 +1,4 @@
-from amcat.db import dbtoolkit
+from amcat.tools import dbtoolkit
 #from amcat.model.coding import codingjob
 from amcat.tools.table import table3
 from amcat.tools import toolkit, idlabel
