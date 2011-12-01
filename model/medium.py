@@ -37,7 +37,7 @@ class Medium(AmcatModel):
 
         try:
             return MediumDict.objects.get(**query).medium
-        except Medium.DoesNotExist:
+        except MediumDict.DoesNotExist:
             raise Medium.DoesNotExist("%s could be found in medium nor medium_dict" % name)
 
     def __unicode__(self):
