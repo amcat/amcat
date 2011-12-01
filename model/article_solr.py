@@ -20,15 +20,15 @@
 """
 Model module for the SOLR queue
 """
-
-from amcat.tools.model import AmcatModel
-
-from amcat.model.article import Article
+from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
 
-import logging; log = logging.getLogger(__name__)
+from amcat.tools.model import AmcatModel
+from amcat.tools import dbtoolkit
+from amcat.model.article import Article
 
+import logging; log = logging.getLogger(__name__)
 
 class SolrArticle(AmcatModel):
     """
@@ -44,7 +44,28 @@ class SolrArticle(AmcatModel):
         db_table = 'solr_articles'
         app_label = 'amcat'
 
+        
+def create_triggers():
+    """Create the triggers for update/insert articles
 
+    Assumes postgres DB with plpgsql language active
+    """
+    db = dbtoolkit.PostgreSQL()
+
+    sql = """BEGIN
+                IF (TG_OP = 'DELETE') THEN
+                  INSERT INTO solr_articles (article_id, started) SELECT OLD.article_id, true;
+                  RETURN OLD;
+                ELSE
+                  INSERT INTO solr_articles (article_id, started) SELECT NEW.article_id, true;
+                  RETURN NEW;
+                END IF;
+             END;"""
+    db.create_trigger("articles", "solr_queue_articles", sql, actions=("INSERT","UPDATE"))
+    db.create_trigger("articlesets_articles", "solr_queue_articlesets", sql,
+                      actions=("INSERT","DELETE"))
+
+        
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -57,3 +78,44 @@ class TestSolrArticle(amcattest.PolicyTestCase):
         a = amcattest.create_test_article()
         q = SolrArticle.objects.create(article=a)
         self.assertFalse(q.started)
+
+    def _flush_queue(self):
+        """Flush the articles queue"""
+        for sa in list(SolrArticle.objects.all()): sa.delete()
+
+    def _all_articles(self):
+        """List all articles on the queue"""
+        return [sa.article for sa in SolrArticle.objects.all()]
+        
+    def test_article_trigger(self):
+        """Is a created or update article in the queue?"""
+        if not dbtoolkit.is_postgres(): return # no triggers in sqlite
+        
+        self._flush_queue()
+        a = amcattest.create_test_article()
+        self.assertIn(a,  self._all_articles())
+        
+        self._flush_queue()
+        self.assertNotIn(a,  self._all_articles())
+        a.headline = "bla bla"
+        a.save()
+        self.assertIn(a,  self._all_articles())
+        
+        
+    def test_articleset_trigger(self):
+        """Is a article added/removed from a set in the queue?"""
+        if not dbtoolkit.is_postgres(): return # no triggers in sqlite
+        
+        a = amcattest.create_test_article()
+        aset = amcattest.create_test_set() 
+        self._flush_queue()
+        self.assertNotIn(a,  self._all_articles())
+
+        aset.articles.add(a)
+        self.assertIn(a,  self._all_articles())
+        
+        self._flush_queue()
+        self.assertNotIn(a, self._all_articles())
+        aset.articles.remove(a)
+        self.assertIn(a, self._all_articles())
+        

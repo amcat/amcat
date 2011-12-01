@@ -2,9 +2,11 @@
 from django.core.management import execute_manager
 from django.db.models.signals import post_syncdb
 from django.db import connection, transaction
+from django.db.utils import DatabaseError
+
 import amcat.models
-
-
+from amcat.model import article_solr
+from amcat.tools import dbtoolkit
     
 try:
     import settings # Assumed to be in the same directory.
@@ -15,9 +17,12 @@ except ImportError:
 
 
 def postsync(sender, **kwargs):
-    print "Performing post-syncdb operations"
-    set_permissions()
-    
+    if dbtoolkit.is_postgres():
+        print "Performing post-syncdb operations"
+        set_permissions()
+        create_triggers()
+    else:
+        print "Skipping post-syncdb for non-postgres db"
     
 def set_permissions():
     print "Setting permissions on tables"
@@ -30,8 +35,10 @@ def set_permissions():
     cursor.execute("SELECT relname FROM pg_class WHERE relkind = 'S';")
     for relname in cursor.fetchall():
         cursor.execute("GRANT ALL ON %s TO public" % relname)
+    transaction.commit_unless_managed()
 
-
+def create_triggers():
+    article_solr.create_triggers()
 
 post_syncdb.connect(postsync, sender=amcat.models)
     
