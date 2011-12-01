@@ -55,7 +55,8 @@ class DateIntervalForm(forms.Form):
 class InlineTableOutputForm(forms.Form):
     """Form with all the possible outputs for a table3 object"""
     output = forms.ChoiceField(choices=(
-        ('csv', 'CSV'),
+        ('csv', 'CSV (semicolon separated)'),
+        ('comma-csv', 'CSV (comma separated)'),
         ('excel', 'Excel (.xslx)'),
         ('spss', 'SPSS (.sav)'), 
         ('json-html', 'Inline HTML')
@@ -64,7 +65,8 @@ class InlineTableOutputForm(forms.Form):
 class TableOutputForm(forms.Form):
     """Form with all the possible outputs for a table3 object"""
     output = forms.ChoiceField(choices=(
-        ('csv', 'CSV'),
+        ('csv', 'CSV (semicolon separated)'),
+        ('comma-csv', 'CSV (comma separated)'),
         ('excel', 'Excel (.xslx)'),
         ('spss', 'SPSS (.sav)'), 
         ('html', 'HTML')

@@ -32,7 +32,8 @@ class ArticleIterator(object):
     
 class ObjectIterator(object): pass
 class JsonData(object): pass
-class CsvData(object): pass
+class CsvCommaData(object): pass
+class CsvSemicolonData(object): pass
 class ExcelData(object): pass
 class HtmlData(object): pass
 class SPSSData(object): pass

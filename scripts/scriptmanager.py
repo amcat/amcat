@@ -32,7 +32,8 @@ log = logging.getLogger(__name__)
 
 outputClasses = {
     'json': types.JsonData,
-    'csv': types.CsvData,
+    'comma-csv': types.CsvCommaData,
+    'csv': types.CsvSemicolonData,
     'excel': types.ExcelData,
     'html': types.HtmlData,
     'spss': types.SPSSData,

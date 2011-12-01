@@ -26,16 +26,30 @@ from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 import csv
 from cStringIO import StringIO
 
-class TableToCSV(script.Script):
+def tableToCsv(tableObj, delimiter):
+    buffer = StringIO()
+    tableoutput.table2csv(tableObj, csvwriter=csv.writer(buffer, dialect='excel', delimiter=delimiter), 
+                                writecolnames=True, writerownames=False, tabseparated=False)
+    return buffer.getvalue()
+    
+class TableToCommaCSV(script.Script):
     input_type = table3.Table
     options_form = None
-    output_type = types.CsvData
+    output_type = types.CsvCommaData
 
 
     def run(self, tableObj):
-        buffer = StringIO()
-        tableoutput.table2csv(tableObj, csvwriter=csv.writer(buffer, dialect='excel', delimiter=';'), writecolnames=True, writerownames=False, tabseparated=False)
-        return buffer.getvalue()
+        return tableToCsv(tableObj, ',')
+       
+class TableToSemicolonCSV(script.Script):
+    input_type = table3.Table
+    options_form = None
+    output_type = types.CsvSemicolonData
+
+
+    def run(self, tableObj):
+        return tableToCsv(tableObj, ';')
+        
        
        
 # class DictToCSV(script.Script):
@@ -48,14 +62,26 @@ class TableToCSV(script.Script):
         # return simplejson.dumps(dictObj, default=encode_json)
        
        
-class ArticleListToCSV(script.Script):
+class ArticleListToSemicolonCSV(script.Script):
     input_type = types.ArticleIterator
     options_form = amcat.scripts.forms.ArticleColumnsForm
-    output_type = types.CsvData
+    output_type = types.CsvCommaData
 
 
     def run(self, articleList):
         tableObj = ArticleListToTable(self.options).run(articleList)
-        return TableToCSV().run(tableObj)
+        return TableToCommaCSV().run(tableObj)
+        
+        
+       
+class ArticleListToCommaCSV(script.Script):
+    input_type = types.ArticleIterator
+    options_form = amcat.scripts.forms.ArticleColumnsForm
+    output_type = types.CsvSemicolonData
+
+
+    def run(self, articleList):
+        tableObj = ArticleListToTable(self.options).run(articleList)
+        return TableToSemicolonCSV().run(tableObj)
         
         
