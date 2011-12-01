@@ -8,7 +8,7 @@
 # Free Software Foundation, either version 3 of the License, or (at your  #
 # option) any later version.                                              #
 #                                                                         #
-# AmCAT is distributed in the hodsacearg453qptiojmpe that it will be useful, but WITHOUT    #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
 # License for more details.                                               #
@@ -17,23 +17,43 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.model.article import *
-from amcat.model.authorisation import *
-from amcat.model.language import *
-from amcat.model.medium import *
-from amcat.model.articleset import *
-from amcat.model.user import *
-from amcat.model.project import *
-from amcat.model.sentence import *  
+"""
+Model module for the SOLR queue
+"""
 
-from amcat.model.article_solr import *
+from amcat.tools.model import AmcatModel
+
+from amcat.model.article import Article
+
+from django.db import models
+
+import logging; log = logging.getLogger(__name__)
 
 
-from amcat.model.coding.codingschema import *
-from amcat.model.coding.codingschemafield import *
-from amcat.model.coding.codingjob import *
-from amcat.model.coding.coding import *
-from amcat.model.coding.code import *
-from amcat.model.coding.codebook import *
-from amcat.model.coding.codedarticle import *
+class SolrArticle(AmcatModel):
+    """
+    An article on the Solr Queue needs to be updated
+    """
+    
+    id = models.AutoField(primary_key=True, db_column="solr_article_id")
+    article = models.ForeignKey(Article, db_index=True)
+    started = models.BooleanField(default=False)
 
+
+    class Meta():
+        db_table = 'solr_articles'
+        app_label = 'amcat'
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestSolrArticle(amcattest.PolicyTestCase):
+    def test_create(self):
+        """Can we add an article to the queue"""
+        a = amcattest.create_test_article()
+        q = SolrArticle.objects.create(article=a)
+        self.assertFalse(q.started)
