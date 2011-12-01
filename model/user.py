@@ -31,7 +31,7 @@ from django.db import models, DEFAULT_DB_ALIAS
 
 from amcat.tools.model import AmcatModel
 
-from amcat.db import dbtoolkit
+from amcat.tools import dbtoolkit
 
 
 class Affiliation(AmcatModel):
