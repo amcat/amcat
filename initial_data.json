@@ -30,7 +30,15 @@
       "projectlevel": false, 
       "label": "superadmin"
     }
-  }, 
+  },
+  {
+    "pk": 4, 
+    "model": "amcat.role", 
+    "fields": {
+      "projectlevel": false, 
+      "label": "developer"
+    }
+  },
   {
     "pk": 10, 
     "model": "amcat.role", 
