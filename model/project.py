@@ -51,6 +51,7 @@ class Project(AmcatModel):
     guest_role = models.ForeignKey("amcat.Role", default=ROLEID_PROJECT_READER)
 
     active = models.BooleanField(default=True)
+    indexed = models.BooleanField(default=True)
     
     def __unicode__(self):
         return self.name
