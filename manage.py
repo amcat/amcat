@@ -43,4 +43,6 @@ def create_triggers():
 post_syncdb.connect(postsync, sender=amcat.models)
     
 if __name__ == "__main__":
+    from amcat.tools.logging import amcatlogging
+    amcatlogging.setup()
     execute_manager(settings)
