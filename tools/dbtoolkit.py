@@ -19,13 +19,17 @@
 
 """Database abstraction layer"""
 
+from __future__ import unicode_literals, print_function, absolute_import
+
 import hashlib
 
 __all__ = ['AmCATDB']
 
-from django.db import connection, connections, transaction, DEFAULT_DB_ALIAS
+from django.db import connection, connections, transaction, DEFAULT_DB_ALIAS, utils
 from django.conf import settings
 from django.core.cache import cache
+
+import logging; log = logging.getLogger(__name__)
 
 PASSWORD_CACHE = 'amcat_password_%s'
 
@@ -68,7 +72,7 @@ class Database(object):
 
         @return None
         """
-        pass
+        raise NotImplementedError()
 
     def check_password(self, user, entered_password):
         """
@@ -77,7 +81,7 @@ class Database(object):
         @param user: User object for which the password is to be checked
         @param entered_password: password as entered by user
         """
-        pass
+        raise NotImplementedError()
 
     def create_user(self, username, password):
         """
@@ -87,7 +91,7 @@ class Database(object):
         @param username: username of user
         @param password: raw password for new user
         """
-        pass
+        raise NotImplementedError()
 
 
 class PostgreSQL(Database):
@@ -153,7 +157,49 @@ class PostgreSQL(Database):
             raise UserAlreadyExists()
         else:
             transaction.commit(using=self.using)
+
+    def run_if_needed(self, sql, ok_errors=("already exists", "does not exist")):
+        """Run the sql, ignoring any errors that contain an ok_error
+        This *will* rollback the transaction on error to avoid the 'error state' error"""
+        transaction.commit_unless_managed()
+        try:
+            cursor = connection.cursor()
+            cursor.execute(sql)
+            transaction.commit_unless_managed()
+        except utils.DatabaseError, e:
+            log.warn(str(e))
+            for ok_error in ok_errors:
+                if ok_error in str(e):
+                    transaction.rollback_unless_managed()
+                    return
+            raise
+
+    def create_trigger(self, table, name, code, when="AFTER",
+                       actions=("INSERT","UPDATE","DELETE"), language="plpgsql"):
+        """Create a trigger on the table
+
+        This will drop the old trigger and create the language if needed.
+        Because it relies on catching exceptions, the function will manage the transactions!
+        """
+        cursor = connection.cursor()
+
+        # install the language if needed
+        self.run_if_needed("CREATE LANGUAGE {language}".format(**locals()))
+
+        funcname = "{name}_trigger".format(**locals())
         
+        cursor.execute("""CREATE OR REPLACE FUNCTION {funcname}() RETURNS TRIGGER
+                          AS $$ \n{code}\n $$ LANGUAGE {language}""".format(**locals()))
+
+        self.run_if_needed("DROP TRIGGER {name} ON {table}".format(**locals()))
+
+        actionsql = " OR ".join(actions)
+        
+        cursor.execute("""CREATE TRIGGER {name} {when} {actionsql} ON {table}
+                          FOR EACH ROW EXECUTE PROCEDURE {funcname}();""".format(**locals()))
+
+        transaction.commit_unless_managed()
+            
 class Sqlite(Database):
     """Sqlite implementation, does not implement user"""
 
@@ -177,3 +223,7 @@ def get_database(using=DEFAULT_DB_ALIAS):
         return VENDORS[connection.vendor](using=using)
     except KeyError:
         raise DatabaseError("Your database (%s) is not supported!" % connection.vendor)
+
+def is_postgres():
+    """Is the current database postgres?"""
+    return connections.databases['default']['ENGINE'] == 'django.db.backends.postgresql_psycopg2'
