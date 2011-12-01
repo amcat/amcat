@@ -125,11 +125,11 @@ class PostgreSQL(Database):
         return True
 
     def set_password(self, user, password):
-        SQL = "ALTER USER %s WITH PASSWORD %s"
-        md5pass = self.hash_password(user, password)
-
-        with transaction.commit_manually(using=self.using):
-            self.cursor.execute(SQL, [user.username, md5pass])
+        SQL = "ALTER USER %s WITH PASSWORD '%s'"
+        #md5pass = self.hash_password(user, password)
+        
+        with transaction.commit_manually():
+            self.cursor.execute(SQL % (user.username, password))
             transaction.commit()
 
         cache.delete(PASSWORD_CACHE % user.username)

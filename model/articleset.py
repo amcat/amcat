@@ -50,6 +50,7 @@ class ArticleSet(AmcatModel):
     class Meta():
         app_label = 'amcat'
         db_table = 'articlesets'
+        unique_together = ('name', 'project')
 
     def __unicode__(self):
         return self.name
