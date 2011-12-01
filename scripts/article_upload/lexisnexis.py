@@ -343,7 +343,7 @@ class LexisNexis(script.Script):
         art = Article(headline=headline, byline=byline, text=text, date=date)
 
         try:
-            art.medium = Medium.objects.get(name__iexact=source)
+            art.medium = Medium.get_by_name(source)
         except Medium.DoesNotExist:
             raise Medium.DoesNotExist("Medium '%s' does not exist in database" % source)
 

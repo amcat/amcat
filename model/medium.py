@@ -23,7 +23,7 @@ class Medium(AmcatModel):
     @classmethod
     def get_by_name(cls, name, ignore_case=True):
         """
-        Get a medium by label, accounting for MediumDict.
+        Get a medium by label, accounting for MediumAlias.
 
         @param label: label to look for
         @param ignore_case: use __iexact
@@ -36,8 +36,8 @@ class Medium(AmcatModel):
             pass
 
         try:
-            return MediumDict.objects.get(**query).medium
-        except Medium.DoesNotExist:
+            return MediumAlias.objects.get(**query).medium
+        except MediumAlias.DoesNotExist:
             raise Medium.DoesNotExist("%s could be found in medium nor medium_dict" % name)
 
     def __unicode__(self):
@@ -48,9 +48,9 @@ class Medium(AmcatModel):
         verbose_name_plural = 'media'
         app_label = 'amcat'
     
-class MediumDict(AmcatModel):
+class MediumAlias(AmcatModel):
     """
-    Provide multiple names names per medium. Please use get_by_name on
+    Provide multiple names per medium. Please use get_by_name on
     Medium to select a medium.
     """
     medium = models.ForeignKey(Medium)
@@ -60,6 +60,6 @@ class MediumDict(AmcatModel):
         return self.name
 
     class Meta():
-        db_table = 'media_dict'
-        verbose_name_plural = 'media_dicts'
+        db_table = 'media_alias'
+        verbose_name_plural = 'media_aliases'
         app_label = 'amcat'

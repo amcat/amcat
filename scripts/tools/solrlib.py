@@ -220,7 +220,7 @@ def articleids(form):
     """get only the articleids for a query"""
     query = '(%s)' % ') OR ('.join(form['queries'])
     kargs = dict(fields="id", start=form['start'], rows=form['length'], score=False)
-    solrResponse = doQuery(query, form, args)
+    solrResponse = doQuery(query, form, kargs)
     return [x['id'] for x in solrResponse.results]
     
     
@@ -228,8 +228,8 @@ def articleidsDict(form):
     """get only the articleids for a query"""
     result = {}
     for query in form['queries']:
-        args = dict(fields="id", start=form['start'], rows=form['length'], score=False)
-        solrResponse = doQuery(query, form, args)
+        kargs = dict(fields="id", start=form['start'], rows=form['length'], score=False)
+        solrResponse = doQuery(query, form, kargs)
         result[query] = [x['id'] for x in solrResponse.results]
     return result
     

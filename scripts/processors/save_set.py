@@ -34,9 +34,23 @@ import logging
 log = logging.getLogger(__name__)
 
 class SaveAsSetForm(forms.Form):
-    setname = forms.CharField()
-    setproject = forms.ModelChoiceField(queryset=Project.objects.all()) # TODO: change to projects of user
+    setname = forms.CharField(required=False)
+    setproject = forms.ModelChoiceField(queryset=Project.objects.all(), required=False) # TODO: change to projects of user
+    existingset = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False) #TODO: change to articlesets inside project
 
+    
+    def clean(self):
+        cleanedData = self.cleaned_data
+        if cleanedData['existingset']:
+            if 'setproject' in cleanedData: del cleanedData['setproject']
+            if 'setname' in cleanedData: del cleanedData['setname']
+        else:
+            if not cleanedData.get('setname'):
+                self._errors["setname"] = self.error_class(["Missing Set Name"])
+            if not cleanedData.get('setproject'):
+                self._errors["setproject"] = self.error_class(["Missing Project"])
+        return cleanedData
+        
 
 class SaveAsSetScript(script.Script):
     input_type = types.ArticleidList
@@ -45,12 +59,11 @@ class SaveAsSetScript(script.Script):
 
 
     def run(self, articleids):
-        setname = self.options['setname']
-        setproject = self.options['setproject']
-        #articles = Article.objects.filter(id__in=articleids)
-        #log.info('articles %s' % articles)
-        s = ArticleSet(name=setname, project=setproject)
-        s.save()
+        if self.options['existingset']:
+            s = self.options['existingset']
+        else:
+            s = ArticleSet(name=self.options['setname'], project=self.options['setproject'])
+            s.save()
         s.articles.add(*articleids)
         return s
     
