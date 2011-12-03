@@ -3,7 +3,7 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-def sendmail(_from, to, subject, html, text):
+def sendmail(_from, to, subject, html, text, smtp_host, smtp_user, smtp_pass):
     # Create message container - the correct MIME type is multipart/alternative.
     msg = MIMEMultipart('alternative')
     msg['Subject'] = subject
@@ -21,10 +21,10 @@ def sendmail(_from, to, subject, html, text):
     msg.attach(part2)
     
     # Send the message via local SMTP server.
-    s = smtplib.SMTP('content-analysis.org', 587, 'amcat.fsw.vu.nl')
-    s.login('helpdesk@contentanalysis.nl','knzhrm!!')
+    s = smtplib.SMTP(smtp_host, 587, 'amcat-sql2.vu.nl')
+    s.login(smtp_user, smtp_pass)
     
     # sendmail function takes 3 arguments: sender's address, recipient's address
     # and message to send - here it is sent as one string.
-    s.sendmail(_from, to, msg.as_string())
-    s.quit()
+    print s.sendmail(_from, to, msg.as_string())
+    print s.quit()
