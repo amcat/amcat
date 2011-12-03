@@ -137,7 +137,8 @@ class CodebookCode(AmcatModel):
     class Meta():
         db_table = 'codebooks_codes'
         app_label = 'amcat'
-        #unique_together = ("codebook", "code", "function_id", "validfrom") # TODO: does not really work since NULL!=NULL
+        #unique_together = ("codebook", "code", "function_id", "validfrom")
+        # TODO: does not really work since NULL!=NULL
     
 ###########################################################################
 #                          U N I T   T E S T S                            #
