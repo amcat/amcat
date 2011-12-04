@@ -28,6 +28,8 @@ from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToMan
 from contextlib import contextmanager
 import logging; LOG = logging.getLogger(__name__)
 
+from amcat.tools.table.table3 import ObjectTable
+
 def get_related(appmodel):
     """Get a sequence of model classes related to the given model class"""
     # from modelviz.py:222 vv
@@ -88,7 +90,27 @@ def list_queries(dest=None):
         dest += connection.queries[nqueries:]
     finally:
         settings.DEBUG = debug_old_value
-        
+
+
+def query_list_to_table(queries, output=False, **outputoptions):
+    """Convert a django query list (list of dict with keys time and sql) into a table3
+    If output is non-False, output the table with the given options
+    Specify print, "print", or a stream for output to be printed immediately
+    """
+    t =  ObjectTable(rows = queries)
+    t.addColumn(lambda x:x["sql"], "Query")
+    t.addColumn(lambda x:x["time"], "Time")
+    if output:
+        if "stream" not in outputoptions and output is not True:
+            if output in (print, "print"):
+                import sys
+                outputoptions["stream"] = sys.stdout
+            else:
+                outputoptions["stream"] = output
+        t.output(**outputoptions)
+    return t
+                           
+   
         
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -114,4 +136,5 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         """Test the list_queries context manager"""
         with list_queries() as l:
             amcattest.create_test_user()
-        self.assertEqual(len(l), 4) # get affiliation, create user, select user x2
+        #query_list_to_table(l, output=print)
+        self.assertIn(len(l), [4, 5]) # get affil., create user, select user x2, (pg) get idval
