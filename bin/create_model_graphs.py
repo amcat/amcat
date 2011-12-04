@@ -8,9 +8,9 @@ from django_extensions.management.modelviz import generate_dot
 for name, models, stoplist in [
     ('Projects & Authorisation', ('ProjectRole', 'Privilege'), ()),
     ('Articles', ['Sentence'], ('Project',)),
-    ('Coding Jobs', ['CodingJobSet', 'AnnotationSchemaField'],('Project','User', 'Codebook')),
+    ('Coding Jobs', ['CodingJobSet', 'CodingSchemaField'],('Project','User', 'Codebook')),
     ('Codebook', ['Codebook', 'CodebookCode', 'Code', 'Label', 'CodebookBase'], ['Project']),
-    ('Annotations', ['AnnotationValue'], ('Project', 'User','Article', 'CodingJobSet', 'AnnotationSchemaField')),
+    ('Codings', ['CodingValue'], ('Project', 'User','Article', 'CodingJobSet', 'CodingSchemaField')),
     ]:
 
     print "<h1>Model graph for %s</h1>" % name

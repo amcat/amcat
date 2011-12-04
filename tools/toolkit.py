@@ -1090,7 +1090,7 @@ class ErrorReader(threading.Thread):
                     raise Exception("Unexpected message:\n%s" % err)
             time.sleep(0.1)
             
-def executepipe(cmd, listener=None, listenOut=False, outonly=False):
+def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
     """Execute a command, yielding an input pipe for writing,
     then yielding out and err, using threads to avoid deadlock
     
@@ -1112,7 +1112,7 @@ def executepipe(cmd, listener=None, listenOut=False, outonly=False):
       if there is any data on the error stream
     """
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE, close_fds=True)
+                         stderr=subprocess.PIPE, close_fds=True, **kargs)
     outr = _Reader(p.stdout, "out", listenOut and listener)
     errr = _Reader(p.stderr, "err", listener)
     outr.start()

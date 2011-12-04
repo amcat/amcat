@@ -87,8 +87,9 @@ WWWTESTDEST = '{wwwroot}/test_{reponame}_{branch}.txt'
 COVERAGEFILE = '{outdir}/cov_{reponame}_{branch}.txt'
 WWWCOVERAGEDEST = '{wwwroot}/cov_{reponame}_{branch}.txt'
 
+CWD = "{tmpdir}/amcat"
 TESTCMD = ("PYTHONPATH={tmpdir} DJANGO_SETTINGS_MODULE=amcat.settings python-coverage run"
-           +" {tmpdir}/amcat/manage.py test --noinput {testapp}")
+           +" manage.py test --noinput {testapp}")
 COVERAGECMD = "python-coverage report --omit=/usr" 
 
 
@@ -162,7 +163,7 @@ for reponame in REPONAMES:
                 log.info("Running unit tests for {reponame}:{branch}:{testapp}".format(**locals()))
                 appname = reponame.replace(".","")
                 log.info(TESTCMD.format(**locals()))
-                out, err = toolkit.execute(TESTCMD.format(**locals()))
+                out, err = toolkit.execute(TESTCMD.format(**locals()), cwd=CWD.format(**locals()))
                 log.info("Test out: {out!r}".format(**locals()))
                 log.info("Test err: {err!r}".format(**locals()))
                 testrow["testresult"] = err.split("\n")[-2].strip()
@@ -170,7 +171,7 @@ for reponame in REPONAMES:
                 testrow["testreport"] = WWWTESTDEST.format(**locals())
                 log.info("Determining unit test coverage for {reponame}".format(**locals()))
                 log.info(COVERAGECMD.format(**locals()))
-                cov = toolkit.execute(COVERAGECMD.format(**locals()), outonly=True)
+                cov = toolkit.execute(COVERAGECMD.format(**locals()), outonly=True, cwd=CWD.format(**locals()))
                 testrow["coverage"] = cov.split("\n")[-2].strip()
                 open(COVERAGEFILE.format(**locals()), 'w').write(cov)
                 testrow["coveragereport"] = WWWCOVERAGEDEST.format(**locals())
