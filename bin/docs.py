@@ -88,7 +88,7 @@ COVERAGEFILE = '{outdir}/cov_{reponame}_{branch}.txt'
 WWWCOVERAGEDEST = '{wwwroot}/cov_{reponame}_{branch}.txt'
 
 TESTCMD = ("PYTHONPATH={tmpdir} DJANGO_SETTINGS_MODULE=amcat.settings python-coverage run"
-           +" manage.py test --noinput {testapp}")
+           +" {tmpdir}/amcat/manage.py test --noinput {testapp}")
 COVERAGECMD = "python-coverage report --omit=/usr" 
 
 
@@ -163,6 +163,8 @@ for reponame in REPONAMES:
                 appname = reponame.replace(".","")
                 log.info(TESTCMD.format(**locals()))
                 out, err = toolkit.execute(TESTCMD.format(**locals()))
+                log.info("Test out: {out!r}".format(**locals()))
+                log.info("Test err: {err!r}".format(**locals()))
                 testrow["testresult"] = err.split("\n")[-2].strip()
                 open(TESTFILE.format(**locals()), 'w').write(err)
                 testrow["testreport"] = WWWTESTDEST.format(**locals())

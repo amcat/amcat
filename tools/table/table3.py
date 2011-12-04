@@ -428,8 +428,6 @@ def _striplines(x):
 class TestTable(amcattest.PolicyTestCase):
     def test_list_table(self):
         """Can we create a list table and output as ascii"""
-        from . import tableoutput
-
         t = ListTable(colnames = ["a1", "a2", "a3"],
                       data = [[1,2,3],
                               [74321,8,9],
@@ -446,7 +444,6 @@ a1    | a2 | a3
 
     def test_object_table(self):
         """Does creating object tables work"""
-        from . import tableoutput
         class Test(object):
             def __init__(self, a, b, c):
                 self.a, self.b, self.c = a, b, c
