@@ -33,6 +33,8 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools import toolkit, idlabel
 from amcat.tools.toolkit import isnull
+from amcat.tools.table import tableoutput
+
 
 import types
 from amcat.contrib.oset import OrderedSet
@@ -104,7 +106,10 @@ class Table(object):
         stringify = unicode if type(label) == unicode else str
         for c in self.getColumns():
             if stringify(c) == label: return c
-    
+
+    def output(self, **kargs):
+        """Output the table; see tableoutput.table2unicode for options"""
+        return tableoutput.table2unicode(self, **kargs)
 
 class NamedRow(object):
     """Interface for a row in a table that supports attribute and index access"""

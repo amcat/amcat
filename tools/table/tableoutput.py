@@ -1,5 +1,4 @@
 from __future__ import with_statement
-from amcat.tools.table import table3
 from amcat.tools import toolkit, idlabel
 from amcat.tools.logging import progress
 import sys, csv, StringIO, traceback, json
@@ -14,6 +13,7 @@ import logging; log = logging.getLogger(__name__)
 
 def getTable(table, colnames=None):
     if isinstance(table, (list, tuple)):
+        from amcat.tools.table import table3
         table = table3.ListTable(table, colnames)
     return table
 
