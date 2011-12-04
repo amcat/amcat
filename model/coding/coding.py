@@ -82,7 +82,7 @@ class Coding(AmcatModel):
         
     def get_values(self):
         """Return a sequence of field, (deserialized) value pairs"""
-        for value in self.values.all():
+        for value in self.values.order_by('field__fieldnr'):
             yield value.field, value.value
 
     def update_values(self, values):
