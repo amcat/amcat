@@ -30,6 +30,7 @@ functions create_test_* create test objects for use in unit tests
 
 from __future__ import unicode_literals, print_function, absolute_import
 import os.path, os, inspect
+from contextlib import contextmanager
 from django.test import TestCase
 
 
@@ -232,6 +233,22 @@ class PolicyTestCase(TestCase):
         if self.TARGET_MODULE:
             self.test_policy_pylint(mod=self.TARGET_MODULE)
 
+    @contextmanager
+    def checkMaxQueries(self, n=0, action="Query", **outputargs):
+        """Check that the action took at most n queries (which should be collected in seq)"""
+        # lazy import to prevent cycles
+        from amcat.tools.djangotoolkit import list_queries
+        with list_queries(**outputargs) as l:
+            yield
+        m = len(l)     
+        if m > n:
+            msg = """{} should take at most {} queries, but used {}""".format(action, n, m)
+            for i, q in enumerate(l):
+                msg += "\n({}) {}".format(i+1, q["sql"])
+            self.fail(msg)
+    
+
+            
 class TestAmcatTest(PolicyTestCase):
     PYLINT_IGNORE_EXTRA = "E1103",
 

@@ -23,14 +23,12 @@ Testing module to test # of queries used for retrieving manual codings
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-
+from amcat.model.language import Language
 from amcat.model.coding.codingjob import CodingJobSet
 from amcat.model.coding.codingschemafield import CodingSchemaField
 from amcat.model.coding.codingschemafield import CodingSchemaFieldType
 
-from amcat.tools.djangotoolkit import list_queries
 from amcat.tools import amcattest
-from contextlib import contextmanager
 
 import random
 
@@ -71,18 +69,6 @@ class TestNQueries(amcattest.PolicyTestCase):
         return result # don't use iterator to allow use as statement (eg non-lazy eval)
 
 
-    @contextmanager
-    def checkMaxQueries(self, n=0, action="Query", **outputargs):
-        """Check that the action took at most n queries (which should be collected in seq)"""
-        with list_queries(**outputargs) as l:
-            yield
-        m = len(l)     
-        if m > n:
-            msg = """{action} should take at most {n} queries, but used {m}""".format(**locals())
-            for i, q in enumerate(l):
-                msg += "\n({}) {}".format(i+1, q["sql"])
-            self.fail(msg)
-    
     def test_get_values(self):
         """Test whether get_values is cached for primitive types"""
 
@@ -157,6 +143,21 @@ class TestNQueries(amcattest.PolicyTestCase):
         with self.checkMaxQueries(0, "Subcodebook code membership (cached)"):
             self.assertIn(c.code, B.codes)
         
+    def test_codebook_labels(self):
+        """Does caching the codebook_labels work"""
+        language = Language.objects.get(pk=1)
+        A = amcattest.create_test_codebook()
+        for i in range(100):
+            A.add_code(amcattest.create_test_code(label=str(i), language=language), None)
+        codes = list(A.codes)
+        with self.checkMaxQueries(1, "Getting labels for a codebook"):
+            A.cache_labels(language)
+            for x in codes:
+                x.get_label(language)
+
+        
+
+        
     def test_jobset_allcodes(self):
         """Test whether getting all codes for a set is efficient"""
         types = [self.inttype, self.codetype]
@@ -173,3 +174,5 @@ class TestNQueries(amcattest.PolicyTestCase):
         with self.checkMaxQueries(0, "Getting pre-fetched codings and values"):
             for c in codings:
                 _x = [v for (_k, v) in c.get_values()]
+
+                

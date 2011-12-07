@@ -33,7 +33,6 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.model.language import Language
 
-
 PARTYMEMBER_FUNCTIONID = 0
   
 class Code(AmcatModel):
@@ -45,6 +44,11 @@ class Code(AmcatModel):
         db_table = 'codes'
         app_label = 'amcat'
 
+
+    def __init__(self, *args, **kargs):
+        super(Code, self).__init__(*args, **kargs)
+        self._labelcache = {}
+        
     @property
     def label(self):
         """Get the label with the lowest language id, or a repr-like string"""
@@ -55,6 +59,21 @@ class Code(AmcatModel):
         
     def __unicode__(self):
         return self.label
+
+    def _get_label(self, language):
+        """Get the label (string) for the given language object, or raise label.DoesNotExist"""
+        try:
+            lbl = self._labelcache[language]
+            if lbl is None: raise Label.DoesNotExist()
+            return lbl
+        except KeyError:
+            try:
+                lbl = self.labels.get(language=language).label
+                self._labelcache[language] = lbl
+                return lbl
+            except Label.DoesNotExist:
+                self._labelcache[language] = None
+                raise
     
     def get_label(self, lan, fallback=True):
         """
@@ -66,7 +85,7 @@ class Code(AmcatModel):
         if type(lan) == int: lan = Language.objects.get(pk=lan)
 
         try:
-            return self.labels.get(language=lan).label
+            return self._get_label(language=lan)
         except Label.DoesNotExist:
             if fallback:
                 try:
@@ -74,10 +93,14 @@ class Code(AmcatModel):
                 except IndexError:
                     return None
 
-
     def add_label(self, language, label):
         """Add the label in the given language"""
         Label.objects.create(language=language, label=label, code=self)
+        self._cache_label(language, label)
+
+    def _cache_label(self, language, label):
+        """Cache the given label (string) for the given language object"""
+        self._labelcache[language] = label
         
 
 
@@ -107,6 +130,8 @@ class Label(AmcatModel):
 from amcat.tools import amcattest
 
 class TestCode(amcattest.PolicyTestCase):
+    PYLINT_IGNORE_EXTRA = 'W0212', #  'protected' member access
+    
     def test_label(self):
         """Can we create objects and assign labels?"""
         # simple label
@@ -117,7 +142,7 @@ class TestCode(amcattest.PolicyTestCase):
         l2 = Language.objects.create(label='zzz')
         self.assertEqual(o.get_label(l2), "bla")
         # second label
-        Label.objects.create(code=o, language=l2, label="blx")
+        o.add_label(l2, "blx")
         self.assertEqual(o.get_label(l2), "blx")
         self.assertEqual(o.get_label(Language.objects.create()), "bla")
         self.assertEqual(o.label, "bla")
@@ -131,3 +156,21 @@ class TestCode(amcattest.PolicyTestCase):
         self.assertIsInstance(o.label, unicode)
         self.assertIsInstance(o.get_label(l2), unicode)
         self.assertIsInstance(o2.label, unicode)
+
+    def test_cache(self):
+        """Are label lookups cached?"""
+        l = Language.objects.create(label='zzz')
+        o = amcattest.create_test_code(label="bla", language=l)
+        with self.checkMaxQueries(0, "Get cached label"):
+            self.assertEqual(o.get_label(l), "bla")
+        o = Code.objects.get(pk=o.id)
+        with self.checkMaxQueries(1, "Get new label"):
+            self.assertEqual(o.get_label(l), "bla")
+        with self.checkMaxQueries(0, "Get cached label"):
+            self.assertEqual(o.get_label(l), "bla")
+        o = Code.objects.get(pk=o.id)
+        o._cache_label(l, "onzin")
+        with self.checkMaxQueries(0, "Get manually cached label"):
+            self.assertEqual(o.get_label(l), "onzin")
+            
+            

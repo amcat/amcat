@@ -31,7 +31,7 @@ from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.tools.caching import cached, invalidates
-from amcat.model.coding.code import Code
+from amcat.model.coding.code import Code, Label
 from amcat.model.project import Project
 
 # Setup thread-local cache for codebooks
@@ -125,6 +125,12 @@ class Codebook(AmcatModel):
             maxrank = self.codebookbase_set.aggregate(models.Max('rank'))['rank__max']
             rank = maxrank+1 if maxrank is not None else 0
         return CodebookBase.objects.create(subcodebook=self, supercodebook=codebook, rank=rank)
+
+    def cache_labels(self, language):
+        """Ask the codebook to cache the labels on its objects in that language"""
+        q = Label.objects.filter(language=language, code__in=self.codes)
+        for l in q:
+            self.get_code(l.code_id)._cache_label(language, l.label)
     
 class CodebookBase(AmcatModel):
     """Many-to-many field (codebook : codebook) with ordering"""
@@ -179,6 +185,8 @@ class CodebookCode(AmcatModel):
 from amcat.tools import amcattest
 
 class TestCodebook(amcattest.PolicyTestCase):
+    PYLINT_IGNORE_EXTRA = "W0212",
+    
     def test_create(self):
         """Can we create objects?"""
         c = amcattest.create_test_codebook()
