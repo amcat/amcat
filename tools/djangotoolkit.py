@@ -27,6 +27,7 @@ from django.db.models import get_model
 from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
 from contextlib import contextmanager
 import logging; LOG = logging.getLogger(__name__)
+import collections, re 
 
 from amcat.tools.table.table3 import ObjectTable
 
@@ -72,7 +73,7 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
 
 
 @contextmanager   
-def list_queries(dest=None):
+def list_queries(dest=None, output=False, outputopts={}):
     """Context manager to print django queries
 
     Any queries that were used in the context are placed in dest,
@@ -90,16 +91,26 @@ def list_queries(dest=None):
         dest += connection.queries[nqueries:]
     finally:
         settings.DEBUG = debug_old_value
-
-
-def query_list_to_table(queries, output=False, **outputoptions):
+        if output:
+            query_list_to_table(dest, output=output, **outputopts)
+       
+def query_list_to_table(queries, maxqlen=80, output=False, normalise_numbers=True, **outputoptions):
     """Convert a django query list (list of dict with keys time and sql) into a table3
     If output is non-False, output the table with the given options
     Specify print, "print", or a stream for output to be printed immediately
     """
-    t =  ObjectTable(rows = queries)
-    t.addColumn(lambda x:x["sql"], "Query")
-    t.addColumn(lambda x:x["time"], "Time")
+    time = collections.defaultdict(list)
+    for q in queries:
+        query = q["sql"]
+        if normalise_numbers:
+            query = re.sub(r"\d+", "#", query)
+        #print(query)
+        time[query].append(float(q["time"]))
+    t =  ObjectTable(rows = time.items())
+    t.addColumn(lambda (k, v) : len(v), "N")
+    t.addColumn(lambda (k, v) : k[:maxqlen], "Query")
+    t.addColumn(lambda (k, v):  "%1.4f" % sum(v), "Cum.")
+    t.addColumn(lambda (k, v):  "%1.4f" % (sum(v) / len(v)), "Avg.")
     if output:
         if "stream" not in outputoptions and output is not True:
             if output in (print, "print"):
@@ -119,7 +130,9 @@ def query_list_to_table(queries, output=False, **outputoptions):
 from amcat.tools import amcattest
 
 class TestDjangoToolkit(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = 'W0212', # use protected _meta
+    PYLINT_IGNORE_EXTRA = ('W0212', # use protected _meta
+			   'W0102', # 'dangerous' {} default
+			   )
     def test_related_models(self):
         """Test get_related_models function. Note: depends on the actual amcat model"""
         

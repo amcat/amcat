@@ -21,6 +21,8 @@
 Convenience functions to extract information about codings
 """
 
+from __future__ import unicode_literals, print_function, absolute_import
+
 from functools import partial
 
 from amcat.model.coding.codingjob import CodingJobSet
@@ -101,7 +103,7 @@ def get_table_sentence_codings_article(codedarticle):
         
 from amcat.tools import amcattest
 
-class TestCoding(amcattest.PolicyTestCase):
+class TestCodingToolkit(amcattest.PolicyTestCase):
 
     def setUp(self):
         from amcat.model.coding.coding import CodingValue
@@ -171,7 +173,7 @@ class TestCoding(amcattest.PolicyTestCase):
         ca = CodedArticle(self.an1)
         t = get_table_sentence_codings_article(ca)
         self.assertIsNotNone(t)
-        #from amcat.tools.table import tableoutput; print(tableoutput.table2unicode(t))
+        #print(t.output())
         aslist = [tuple(r) for r in t]
         self.assertEqual(aslist, [('bla', 1, self.code), ('blx', None, None)])
         
@@ -211,6 +213,23 @@ class TestCoding(amcattest.PolicyTestCase):
         self.assertIsNotNone(t)
 
         
+    def test_nqueries_table_sentence_codings(self):
+        """Check for efficient retrieval of codings"""
+        from amcat.model.coding.coding import CodingValue
+        from amcat.tools.djangotoolkit import list_queries
+        ca = CodedArticle(self.an1)
 
+        # create 1000 sentence annotations
+        for i in range(1):
+            sent = amcattest.create_test_sentence()
+            sa = Coding.objects.create(codingjobset=self.cjsets[0], article=self.articles[0], 
+                                       sentence=sent)
+            CodingValue.objects.create(coding=sa, field=self.intfield, intval=i)
+        
+        with list_queries() as l:
+            t = get_table_sentence_codings_article(ca)
+            t.output() # force getting all values
+	#query_list_to_table(l, output=print, maxqlen=190)
+        self.assertTrue(len(l) < 30, "Retrieving table used %i queries" % len(l))
 
         

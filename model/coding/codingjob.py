@@ -27,11 +27,14 @@ to an individual coder.
 """
 
 from amcat.tools.model import AmcatModel
+from amcat.tools.caching import set_cache
 
 from amcat.model.coding.codingschema import CodingSchema
 from amcat.model.user import User
 from amcat.model.project import Project
 from amcat.model.articleset import ArticleSet
+
+
 
 from django.db import models
 
@@ -69,7 +72,7 @@ class CodingJobSet(AmcatModel):
     by a certain coder using the schema in the coding job
     """
     id = models.AutoField(primary_key=True, db_column='codingjobset_id')
-    codingjob = models.ForeignKey(CodingJob)
+    codingjob = models.ForeignKey(CodingJob, related_name="sets")
     coder = models.ForeignKey(User)
     articleset = models.ForeignKey(ArticleSet, related_name="+")
     
@@ -79,6 +82,24 @@ class CodingJobSet(AmcatModel):
         db_table = 'codingjobs_sets'
         app_label = 'amcat'
 
+    def get_codings(self):
+        """Return a sequence of codings with pre-fetched values"""
+        # late import to prevent cycles
+        from amcat.model.coding.coding import CodingValue
+        
+        q = CodingValue.objects.filter(coding__codingjobset__exact=self)
+        q = q.select_related("field__fieldtype", "value__strval", "value__intval", "coding")
+        q = q.order_by("coding", 'field__fieldnr')
+        # possible optimzation: use running values list because of sort order
+        values_per_coding = {} # coding : [(field, value), ...]
+        for val in q:
+            values_per_coding.setdefault(val.coding, []).append((val.field,  val.value))
+        for coding, values in values_per_coding.iteritems():
+            set_cache(coding, coding.get_values.__name__, values)
+            yield coding
+
+
+        
     
 ###########################################################################
 #                          U N I T   T E S T S                            #

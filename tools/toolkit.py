@@ -517,7 +517,7 @@ def zipp(*iterables):
     if not all(l0 == len(it) for it in seqs[1:]):
         raise ValueError("Unequal iterable length")
     return zip(*seqs)
-            
+
                 
 ###########################################################################
 ##                      Mapping functions                                ##

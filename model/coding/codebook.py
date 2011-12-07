@@ -30,11 +30,31 @@ import logging; log = logging.getLogger(__name__)
 from django.db import models
 
 from amcat.tools.model import AmcatModel
+from amcat.tools.caching import cached, invalidates
 from amcat.model.coding.code import Code
 from amcat.model.project import Project
 
+# Setup thread-local cache for codebooks
+import threading
+_local_cache = threading.local()
+_local_cache.codebooks = {}
+    
+def get_codebook(codebook_id):
+    """Create the codebook with the given id, possibly retrieving it
+    from cache"""
+    try:
+        return _local_cache.codebooks[codebook_id]
+    except KeyError:
+        _local_cache.codebooks[codebook_id] = Codebook.objects.get(pk=codebook_id)
+        return _local_cache.codebooks[codebook_id]
+
+
 class Codebook(AmcatModel):
-    """Model class for table codebooks"""
+    """Model class for table codebooks
+
+    Codebook caches values, so please use the provided methods to add or remove
+    objects and bases or call the reset() method after changing them manually.
+    """
 
     id = models.AutoField(primary_key=True, db_column='codebook_id')
 
@@ -48,20 +68,15 @@ class Codebook(AmcatModel):
 
     def __unicode__(self):
         return self.name
-    
-    def add_code(self, code, parent=None, hide=False):
-        """Add the given code to the hierarchy, with given parent (or hide)"""
-        if parent and hide: raise ValueError("Hidden objects cannot specify parent")
-        if isinstance(parent, CodebookCode): parent = parent.code
-        if isinstance(code, CodebookCode): code = code.code
-        return CodebookCode.objects.create(codebook=self, code=code, parent=parent, hide=hide)
 
     @property
+    @cached
     def bases(self):
         """Return the base codebooks in the right order"""
-        for codebookbase in self.codebookbase_set.all():
-            yield codebookbase.supercodebook
-    
+        return [get_codebook(codebookbase.supercodebook_id)
+                for codebookbase in self.codebookbase_set.all()]
+
+    @cached
     def get_hierarchy(self):
         """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
         
@@ -75,11 +90,12 @@ class Codebook(AmcatModel):
         result = {}
         for base in reversed(list(self.bases)):
             result.update(base.get_hierarchy())
-        result.update(dict((co.code, co.parent) for co in
-                           self.codebookcodes.filter(hide=False)))
         # Remove 'hide' objects from the result, and return
-        for co in self.codebookcodes.filter(hide=True):
-            del result[co.code]
+        for co in self.codebookcodes.select_related("code", "parent"):
+            if co.hide:
+                del result[co.code]
+            else:
+                result[co.code] = co.parent
         return result
 
     @property
@@ -87,6 +103,22 @@ class Codebook(AmcatModel):
         """Returns the sequence of codes that are in this hierarchy"""
         return self.get_hierarchy().keys()
 
+    def get_code(self, code_id):
+        """Return the code with the requested id. Raises a ValueError if not found"""
+        # it might be useful to create a id : code mapping in get_hierarchy, but works for now
+        for c in self.codes:
+            if c.id == code_id: return c
+        raise ValueError("Code with id {} not found in codebook {}".format(id, self.name))
+    
+    @invalidates
+    def add_code(self, code, parent=None, hide=False):
+        """Add the given code to the hierarchy, with given parent (or hide)"""
+        if parent and hide: raise ValueError("Hidden objects cannot specify parent")
+        if isinstance(parent, CodebookCode): parent = parent.code
+        if isinstance(code, CodebookCode): code = code.code
+        return CodebookCode.objects.create(codebook=self, code=code, parent=parent, hide=hide)
+
+    @invalidates
     def add_base(self, codebook, rank=None):
         """Add the given codebook as a base to this codebook"""
         if rank is None:
@@ -225,7 +257,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         BD.add_base(D)
         self.assertEqual(standardize(BD), 'b:None;d:b;e:b;f:d')
         
-    def test_unique(self):
+    def _test_unique(self):
         """Test the uniqueness constraints - does not work anymore since null!=null"""
         #from django.db import IntegrityError
         return
@@ -237,3 +269,19 @@ class TestCodebook(amcattest.PolicyTestCase):
         # c = amcattest.create_test_code()
         # A.add_code(c)
         # self.assertRaises(IntegrityError, A.add_code, c)
+
+    def test_get_codebook(self):
+        """Test whether using get_codebook results in shared objects"""
+        cid = amcattest.create_test_codebook().pk
+        c1 = get_codebook(cid)
+        c2 = get_codebook(cid)
+        self.assertIs(c1, c2)
+        c3 = amcattest.create_test_codebook()
+        self.assertIsNot(c1, c3)
+        c4 = get_codebook(c3.id)
+        self.assertEqual(c3, c4)        
+        self.assertIsNot(c1, c4)   
+        self.assertNotEqual(c1, c4)
+        
+        
+        

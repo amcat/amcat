@@ -29,9 +29,12 @@ from amcat.tools.logging.amcatlogging import *
 from amcat.tools.amcattest import *
 from amcat.tools.djangotoolkit import *
 from amcat.tools.table.table3 import *
+from amcat.tools.caching import *
 
 from amcat.model.coding.codingtoolkit import *
 from amcat.model.coding.serialiser import *
 
 from amcat.scripts.article_upload.tests import *
 from amcat.scripts.scriptmanager import *
+
+from amcat.model.coding.test_nqueries import *

@@ -88,19 +88,29 @@ class IntSerialiser(BaseSerialiser):
     def __init__(self, field):
         super(IntSerialiser, self).__init__(field, int, int)
 
-class CodebookSerialiser(BaseSerialiser):
+
+_memo = {}
+def CodebookSerialiser(field):
+    """Retrieve/Create a memoized codebooksereialiser for the given field.codebook"""
+    # no harm if threads access concurrently, so no need to use local store or mutex
+    # limited total no of codebooks, so no harm in memoising all of them
+    # or should we memoise on codebook level, ie have a general codebook factory?
+    codebookid = field.codebook_id
+    try:
+        return _memo[codebookid]
+    except KeyError:
+        _memo[codebookid] = _CodebookSerialiser(field)
+        return  _memo[codebookid]
+        
+class _CodebookSerialiser(BaseSerialiser):
     """int - amcat.model.coding.Code serialiser"""
     def __init__(self, field):
-        super(CodebookSerialiser, self).__init__(field, Code, int)
+        super(_CodebookSerialiser, self).__init__(field, Code, int)
         self.codebook = field.codebook
+        
     def deserialise(self, value):
-        try:
-            c = Code.objects.get(pk=value)
-        except Code.DoesNotExist:
-            raise ValueError("Code with id {} could not be found".format(value))
-        if c not in self.codebook.codes:
-            raise ValueError("{c} not in {self.codebook}".format(**locals()))
-        return c
+        return self.codebook.get_code(value)
+            
     def serialise(self, value):
         if value not in  self.codebook.codes:
             raise ValueError("{value} not in {self.codebook}".format(**locals()))
@@ -121,6 +131,12 @@ class CodebookSerialiser(BaseSerialiser):
         
 from amcat.tools import amcattest
 
+class _DummyField(object):
+    """Dummy coding schema field object with codebook"""
+    def __init__(self, codebook):
+        self.codebook = codebook
+        self.codebook_id = codebook.id
+
 class TestSerialiser(amcattest.PolicyTestCase):
     PYLINT_IGNORE_EXTRA = ["W0613"] # unused argument on virtual method
     def test_textserialiser(self):
@@ -136,6 +152,17 @@ class TestSerialiser(amcattest.PolicyTestCase):
         self.assertEqual(t.serialise('-99'), -99)
         self.assertRaises(ValueError, t.serialise, 'abc')
         self.assertIsNone(t.possible_values)
+        
+    def test_codebookserialiser_memoisation(self):
+        """Does memoisation work?"""
+        A = amcattest.create_test_codebook(name="A")
+        B = amcattest.create_test_codebook(name="B")
+        s1 = CodebookSerialiser(_DummyField(A))
+        s2 = CodebookSerialiser(_DummyField(A))
+        self.assertIs(s1, s2)
+        s3 = CodebookSerialiser(_DummyField(B))
+        self.assertNotEqual(s2, s3)
+        
     
     def test_codebookserialiser(self):
         """Test the codebook serialiser"""
@@ -147,10 +174,7 @@ class TestSerialiser(amcattest.PolicyTestCase):
         c.add_label(language=l2, label="blx")
 
         A.add_code(c)
-        class DummyField(object):
-            """Dummy class so DummyField.codebook works"""
-            codebook = A
-        s = CodebookSerialiser(DummyField)
+        s = CodebookSerialiser(_DummyField(A))
         self.assertEqual(s.serialise(c), c.id)
         self.assertEqual(s.deserialise(c.id), c)
         d = amcattest.create_test_code(label="not in codebook")

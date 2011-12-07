@@ -28,6 +28,7 @@ import logging; log = logging.getLogger(__name__)
 
 from django.db import models
 
+from amcat.tools.caching import cached, invalidates
 from amcat.tools.model import AmcatModel
 from amcat.model.coding.codingjob import CodingJobSet
 from amcat.model.coding.codingschemafield import CodingSchemaField
@@ -79,12 +80,15 @@ class Coding(AmcatModel):
             return self.codingjobset.codingjob.articleschema
         else:
             return self.codingjobset.codingjob.unitschema
-        
+
+    @cached
     def get_values(self):
         """Return a sequence of field, (deserialized) value pairs"""
-        for value in self.values.order_by('field__fieldnr'):
-            yield value.field, value.value
+        return [(v.field, v.value) for v in (
+                self.values.order_by('field__fieldnr')
+                .select_related("field__fieldtype", "value__strval", "value__intval"))]
 
+    @invalidates
     def update_values(self, values):
         """Update the current values
 
@@ -104,7 +108,7 @@ class Coding(AmcatModel):
                 # This field from current was encountered, so don't delete below                    
                 del current[field]
             else: 
-                self.create_value(field, value)
+                self.set_value(field, value)
         #delete remaining values in current
         for value in current.values():
             # implicit delete by not listing in values mapping 
@@ -116,7 +120,8 @@ class Coding(AmcatModel):
         if type(status) == int: status = CodingStatus.objects.get(pk=status)
         self.status = status
 
-    def create_value(self, field, value):
+    @invalidates
+    def set_value(self, field, value):
         """Create a new coding value on this coding
 
         @param field: the coding schema field
@@ -162,7 +167,7 @@ class CodingValue(AmcatModel):
     def value(self):
         """Get the 'deserialised' (object) value for this codingvalue"""
         return self.field.serialiser.deserialise(self.serialised_value)
-    
+
     def update_value(self, value):
         """Update to the given (deserialised) value by serialising and
         updating strval or intval, as appropriate"""
@@ -310,7 +315,7 @@ class TestCoding(amcattest.PolicyTestCase):
         """Does update_values on an coding work?"""
         a = amcattest.create_test_coding(job=self.job)
         self.assertEqual(_valuestr(a), "")
-        CodingValue.objects.create(coding=a, field=self.intfield, intval=12)
+        a.set_value(self.intfield, 12)
         self.assertEqual(_valuestr(a), "number:12")
         a.update_values({self.strfield:"bla"})
         self.assertEqual(_valuestr(a), "text:'bla'")
@@ -322,3 +327,5 @@ class TestCoding(amcattest.PolicyTestCase):
             codingschema=amcattest.create_test_schema(),
             label="text", fieldtype=self.strfield.fieldtype)
         self.assertRaises(ValueError, a.update_values, {newfield : "3"})
+
+
