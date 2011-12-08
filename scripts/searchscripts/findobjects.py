@@ -72,16 +72,22 @@ class ViewModelForm(amcat.scripts.forms.GeneralColumnsForm):
         
     def clean_model(self):
         """return the corresponding model with the provided string.
-        Also handles . for instance 'coding.CodingJob' will find class 'coding.codingjob.CodingJob'"""
+        Also handles . for instance 'coding.CodingJob' will find class 'coding.codingjob.CodingJob'
+        but also 'authorisation.ProjectRole' will find the corresponding class"""
         data = self.cleaned_data['model']
         try:
-            if '.' in data:
+            if '.' in data: # this code is ugly..
                 split = data.split('.')
                 clss = getattr(amcat.model, split[0].lower())
-                moduleobj = getattr(clss, split[1].lower())
-                data = split[1]
+                try:
+                    moduleobj = getattr(clss, split[1].lower())
+                    data = split[1]
+                except AttributeError: 
+                    moduleobj = clss
+                    data = split[1]
             else:
                 moduleobj = getattr(amcat.model, data.lower())
+            log.info('moduleobj: %s, data: %s' % (moduleobj, data))
             if data.islower(): data = data.capitalize() # to make sure "medium" can also be used, not only "Medium" (for example)
             data = getattr(moduleobj, data)
         except Exception,e:
