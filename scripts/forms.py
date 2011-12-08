@@ -116,7 +116,7 @@ class ArticleColumnsForm(forms.Form):
             ), initial='month', label='Column Interval', required=False)
 
 class SelectionForm(forms.Form):
-    projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.all()) # TODO: change to projects of user
+    projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.order_by('-pk').filter(active=1)) # TODO: change to projects of user
     articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False)
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.none(), required=False)
     query = forms.CharField(widget=forms.Textarea, required=False)
@@ -135,11 +135,9 @@ class SelectionForm(forms.Form):
         if type(projectids) != list:
             return
         projectids = map(int, projectids)
-        #print args, projectids
-        self.fields['articlesets'].queryset = ArticleSet.objects.filter(project__in=projectids)
-        self.fields['mediums'].queryset = Medium.objects.filter(article__project__in=projectids).distinct().order_by('pk')
         
-        #self.fields['action'].choices = ((ws.__name__, ws.name) for ws in webscripts.allScripts)#((classname, ws.name) for classname, ws in webscriptClasses )
+        self.fields['articlesets'].queryset = ArticleSet.objects.order_by('-pk').filter(project__in=projectids)
+        self.fields['mediums'].queryset = Medium.objects.filter(article__project__in=projectids).distinct().order_by('pk')
     
     def clean(self):
         cleanedData = self.cleaned_data
