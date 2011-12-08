@@ -292,16 +292,17 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
 def table2json(table, colnames=None, writecolnames=True, writerownames=False):
     table = getTable(table, colnames)
     cols = list(table.getColumns())
-    result = []
+    headersjson = []
     if writecolnames:
         c = ([""] + cols) if writerownames else cols
-        result.append(c)
+        headersjson.append(c)
     rows = table.getRows()
+    rowsjson = []
     for row in rows:
         values = [writerownames(row)] if writerownames else []
         values += (table.getValue(row,col) for col in cols)
-        result.append(values)
-    return json.dumps(result, default=lambda o:unicode(o), indent=2)
+        rowsjson.append(values)
+    return json.dumps({'headers':headersjson, 'rows':rowsjson}, default=lambda o:unicode(o), indent=2)
 
 if __name__ == '__main__':
     t = table3.DictTable(default=0)

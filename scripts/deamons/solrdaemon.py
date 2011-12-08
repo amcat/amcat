@@ -58,7 +58,7 @@ class SolrDeamon(Daemon):
                 solrArticlesQueryset = SolrArticle.objects.filter(pk__in=solrArticleIds) # we need a new queryset since after slicing update() is no longer allowed by Django..
                 if solrArticles.count() == 0:
                     log.debug('going to sleep')
-                    time.sleep(1)
+                    time.sleep(5)
                 solrArticlesQueryset.update(started=True)
                     
                 index_solr_articles.start(Article.objects.filter(pk__in=solrArticles.values_list('article', flat=True))) 

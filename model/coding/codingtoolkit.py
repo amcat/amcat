@@ -33,14 +33,14 @@ from amcat.model.coding.codingschemafield import CodingSchemaFieldType
 
 from amcat.tools.table.table3 import ObjectTable
 
-def get_table_sets_per_user(users):
+def get_table_sets_per_user(users, **additionalFilters):
     """Return a table of all sets per user
 
     Columns: ids, jobname, coder, issuer, issuedate, #articles, #completed, #inprogress
     """
     try: iter(users)
     except TypeError: users = [users]
-    result = ObjectTable(rows = list(CodingJobSet.objects.filter(coder__in=users)))
+    result = ObjectTable(rows = list(CodingJobSet.objects.filter(coder__in=users, **additionalFilters)))
     result.addColumn("id")
     result.addColumn("codingjob")
     result.addColumn("coder")
@@ -71,11 +71,12 @@ def get_table_articles_per_set(cjsets):
     Columns: set, coder, article, articlemeta, status, comments
     """
     result = ObjectTable(rows = list(get_coded_articles(cjsets)))
-    result.addColumn(lambda a: a.codingjobset.codingjob, "codingjob")
-    result.addColumn(lambda a: a.codingjobset.coder, "coder")
+    #result.addColumn(lambda a: a.codingjobset.codingjob, "codingjob")
+    #result.addColumn(lambda a: a.codingjobset.coder, "coder")
     result.addColumn(lambda a: a.article.id, "articleid")
     result.addColumn(lambda a: a.article.headline, "headline")
     result.addColumn(lambda a: a.article.date, "date")
+    result.addColumn(lambda a: a.article.length, "length")
     result.addColumn(lambda a: a.article.medium, "medium")
     result.addColumn(lambda a: a.coding and a.coding.status, "status")
     result.addColumn(lambda a: a.coding and a.coding.comments, "comments")
@@ -91,7 +92,7 @@ def get_table_sentence_codings_article(codedarticle):
     The cells contain domain (deserialized) objects
     """
     result = ObjectTable(rows = list(codedarticle.sentence_codings))
-    for field in codedarticle.codingjobset.codingjob.unitschema.fields.all():
+    for field in codedarticle.codingjobset.codingjob.unitschema.fields.order_by('fieldnr').all():
         result.addColumn(partial(get_value, field), field.label)
     return result
 
@@ -181,7 +182,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         """Is the articles per set table correct?"""
         t = get_table_articles_per_set([self.cjsets[i] for i in [0, 1]])
         #from amcat.tools.table import tableoutput; print; print(tableoutput.table2unicode(t))
-        self.assertEqual([row.codingjob for row in t], [self.jobs[i] for i in [0] * 6])
+        #self.assertEqual([row.codingjob for row in t], [self.jobs[i] for i in [0] * 6])
         self.assertEqual([(row.status and row.status.id) for row in t], [0, 2]+[None]*4)
         
 

@@ -108,7 +108,7 @@ class Codebook(AmcatModel):
         # it might be useful to create a id : code mapping in get_hierarchy, but works for now
         for c in self.codes:
             if c.id == code_id: return c
-        raise ValueError("Code with id {} not found in codebook {}".format(id, self.name))
+        raise ValueError("Code with id {} not found in codebook {}".format(code_id, self.name))
     
     @invalidates
     def add_code(self, code, parent=None, hide=False):

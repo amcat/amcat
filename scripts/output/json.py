@@ -29,6 +29,8 @@ def encode_json(obj):
     """ also encode Django objects to Json, preferebly by id-name""" 
     if isinstance(obj, Medium):
         return "%s - %s" % (obj.id, obj.name)
+    if isinstance(obj, table3.Table):
+        return simplejson.JSONDecoder().decode(TableToJson().run(obj)) # TODO: this is very ugly and inefficient.. (double encoding..)
     raise TypeError("%r is not JSON serializable" % (obj,))
     
 
