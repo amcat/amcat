@@ -292,10 +292,8 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
 def table2json(table, colnames=None, writecolnames=True, writerownames=False):
     table = getTable(table, colnames)
     cols = list(table.getColumns())
-    headersjson = []
-    if writecolnames:
-        c = ([""] + cols) if writerownames else cols
-        headersjson.append(c)
+    if writerownames == True: writerownames = str 
+    headersjson = [[""] + cols] if writerownames else cols
     rows = table.getRows()
     rowsjson = []
     for row in rows:
