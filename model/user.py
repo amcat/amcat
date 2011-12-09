@@ -115,7 +115,7 @@ class User(AmcatModel):
 
     def check_password(self, raw_password):
         """Returns True iff the raw_password is correct for this user""" 
-        return dbtoolkit.get_database().check_password(self, raw_password)
+        return dbtoolkit.get_database().check_password(self.username, raw_password)
 
     def is_authenticated(self):
         """Returns True iff the current user is authenticated"""
@@ -150,8 +150,6 @@ class User(AmcatModel):
         """
         @param force: force creation of user (i.e., ignore UserAlreadyExists exception raised by
         dbtoolkit. Might be useful for unittests.
-
-        @type force: boolean
         """
         u = User()
 
@@ -191,3 +189,5 @@ class TestUser(amcattest.PolicyTestCase):
         """Test whether we can create a user"""        
         u = amcattest.create_test_user()
         self.assertIsNotNone(u)
+
+        

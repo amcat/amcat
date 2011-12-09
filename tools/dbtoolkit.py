@@ -17,69 +17,55 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""Database abstraction layer"""
+"""Module to supply database-specific operations needed by AmCAT"""
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-import hashlib
-
-__all__ = ['AmCATDB']
+import hashlib, re
+from contextlib import contextmanager
 
 from django.db import connection, connections, transaction, DEFAULT_DB_ALIAS, utils
+from django.db.utils import DatabaseError
 from django.conf import settings
 from django.core.cache import cache
 
 import logging; log = logging.getLogger(__name__)
 
-PASSWORD_CACHE = 'amcat_password_%s'
-
-class DatabaseError(Exception):
-    pass
+PASSWORD_CACHE = 'amcat_password_{username}'
 
 class UserAlreadyExists(DatabaseError):
+    """User already exists in the database"""
     pass
 
 class Database(object):
+    """Base class for database-specific functions needed by AmCAT""" 
+    
     def __init__(self, using=None):
         self.using = using or DEFAULT_DB_ALIAS
         self._cursor = None
 
     @property
     def cursor(self):
+        """Get a cursor on the database.
+        This is a shared cursor, so beware of rollbacks and multithreading
+        """
+        
         if self._cursor is None:
             self._cursor = connections[self.using].cursor()
         return self._cursor
 
-    def hash_password(self, passwd):
+
+    def set_password(self, username, passwd):
         """
-        Return hashed password of user salted with SECRET_KEY. Hashes may differ in different
-        (server) sessions, since SECRET_KEY is generated at server initialization.
-
-        @type passwd: str, unicode
-        @param passwd: raw password
-        """
-        hp = hashlib.sha512(passwd).hexdigest()
-        return hashlib.sha512(hp+settings.SECRET_KEY).hexdigest()
-
-    def set_password(self, user, passwd):
-        """
-        Set `password` for `user`.
-
-        @type user: User
-        @param user: The user for which to alter the password
-
-        @type passwd: str, unicode
-
-        @return None
+        Set the password for the given user.
+        Passes silently for databases without authorisation
         """
         raise NotImplementedError()
 
-    def check_password(self, user, entered_password):
+    def check_password(self, username, entered_password):
         """
         Check password for `username`.
-
-        @param user: User object for which the password is to be checked
-        @param entered_password: password as entered by user
+        Returns True if the password matches or if the database does not support authorisation
         """
         raise NotImplementedError()
 
@@ -87,77 +73,81 @@ class Database(object):
         """
         Create user. Might throw a dbtoolkit.UserAlreadyExists exception
         when a user already exists.
-
-        @param username: username of user
-        @param password: raw password for new user
         """
         raise NotImplementedError()
 
 
+    def delete_user(self, username):
+        """
+        Delete the user user. Use with care :-)
+        """
+        raise NotImplementedError()
+
+    
 class PostgreSQL(Database):
     """PostgreSQL implementation"""
-    def _get_conn_params(self, user, passwd):
+    
+    def _get_conn_params(self, username, passwd):
+        """Get the keyword arguments needed to connect to the db"""
         db = settings.DATABASES[DEFAULT_DB_ALIAS]
-
+        passwd = "'%s'" % re.escape(passwd)
         return {
             'database' : db['NAME'],
-            'user' : user.username,
+            'user' : username,
             'password' : passwd,
             'host' : db['HOST'],
             'port' : db['PORT']
         }
 
-    def check_password(self, user, entered_password):
-        correct_hash = cache.get(PASSWORD_CACHE % user.username)
-        entered_hash = self.hash_password(entered_password)
+    def check_password(self, username, entered_password):
+        import psycopg2 # lazy import to prevent global dependency
+        username = self.check_username(username)
+        correct_hash = cache.get(PASSWORD_CACHE.format(**locals()))
+        entered_hash = hash_password(entered_password)
 
-        if correct_hash != entered_hash:
-            # Wrong cache or password!
-            import psycopg2
-
-            try:
-                psycopg2.connect(**self._get_conn_params(user, entered_password)).cursor()
-            except:
-                return False
-
-            cache.set(PASSWORD_CACHE % user.username, entered_hash)
-
-        return True
-
-    def set_password(self, user, password):
-        SQL = "ALTER USER %s WITH PASSWORD '%s'"
-        #md5pass = self.hash_password(user, password)
+        if correct_hash == entered_hash: return True
         
+        # Password does not match cache (which might not exist). --> try logging in
+        try:
+            params = self._get_conn_params(username, entered_password)
+            psycopg2.connect(**params).cursor()
+            cache.set(PASSWORD_CACHE.format(**locals()), entered_hash)
+            return True
+        except psycopg2.OperationalError, e:
+            if "password authentication failed" in str(e):
+                return False
+            raise
+
+    def set_password(self, username, password):
+        username = self.check_username(username)
+        SQL = "ALTER USER {username} WITH PASSWORD %s".format(**locals())
         with transaction.commit_manually():
-            self.cursor.execute(SQL % (user.username, password))
+            self.cursor.execute(SQL, [password])
             transaction.commit()
 
-        cache.delete(PASSWORD_CACHE % user.username)
+        cache.delete(PASSWORD_CACHE.format(**locals()))
 
     @transaction.commit_manually
     def create_user(self, username, password):
-        SQL = "CREATE USER %s WITH PASSWORD "
-
-        # In the SQL-statement above 'user' has to be an identifier. Unfortunately execute()
-        # wraps escape-quotes around it, which results in an error.
-        #
-        # See: http://stackoverflow.com/questions/3382234/python-adds-e-to-string
-        #
-        # The regular expression checks `username` for anomalies.
-        import re; ure = re.compile('^[a-zA-Z][a-zA-Z0-9_]+$')
-
-        if not ure.match(username):
-            raise ValueError("This username is not allowed!")
-
+        username = self.check_username(username)
+        SQL = "CREATE USER {username} WITH PASSWORD %s".format(**locals())
+        
         try:
-            SQL = (SQL % username) + " %s"
-            self.cursor.execute(SQL, [password,])
-        except:
-            transaction.rollback(using=self.using)
-            raise UserAlreadyExists()
-        else:
-            transaction.commit(using=self.using)
+            self.execute_transaction(SQL, password, use_savepoint=False)
+        except DatabaseError, e:
+            if "already exists" in str(e):
+                raise UserAlreadyExists()
+            else:
+                raise
 
+
+    @transaction.commit_manually
+    def delete_user(self, username):
+        username = self.check_username(username) 
+        SQL = "DROP  USER IF EXISTS {username}".format(**locals())
+        self.execute_transaction(SQL, use_savepoint=False)
+            
+        
     def run_if_needed(self, sql, ok_errors=("already exists", "does not exist")):
         """Run the sql, ignoring any errors that contain an ok_error
         This *will* rollback the transaction on error to avoid the 'error state' error"""
@@ -166,8 +156,8 @@ class PostgreSQL(Database):
             cursor = connection.cursor()
             cursor.execute(sql)
             transaction.commit_unless_managed()
-        except utils.DatabaseError, e:
-            log.warn(str(e))
+        except DatabaseError, e:
+            log.debug(str(e))
             for ok_error in ok_errors:
                 if ok_error in str(e):
                     transaction.rollback_unless_managed()
@@ -199,26 +189,74 @@ class PostgreSQL(Database):
                           FOR EACH ROW EXECUTE PROCEDURE {funcname}();""".format(**locals()))
 
         transaction.commit_unless_managed()
-            
+
+    
+    def check_username(self, username):
+        """Postgres usernames are identifiers, this means that
+        1) They cannot be passed as SQL arguments, so we need to do string formatting ourselves,
+           so we must check them to prevent injection
+        2) They are case insensitive (!), so we will lower them
+
+        @return the lowercase username, or raise a ValueError
+        
+        See also: http://stackoverflow.com/questions/3382234/python-adds-e-to-string
+        """
+        username = username.lower()
+        if not re.match('^[a-z][a-z0-9_]+$', username):
+            raise ValueError("This username is not allowed!")
+        return username
+
+    @contextmanager
+    def transaction(self, use_savepoint=True):
+        if use_savepoint: sid = transaction.savepoint()
+        try:
+            yield
+        except:
+            if use_savepoint:
+                transaction.savepoint_rollback(sid)
+            else:
+                transaction.rollback()
+            raise
+        else:
+            if use_savepoint:
+                transaction.savepoint_commit(sid)
+            else:
+                transaction.commit()
+    
+    def execute_transaction(self, sql, *arguments, **kargs):
+        cursor = self.cursor
+        with self.transaction(**kargs):
+            log.debug("EXECUTING {sql} ({arguments})".format(**locals()))
+            cursor.execute(sql, arguments)
+        
 class Sqlite(Database):
-    """Sqlite implementation, does not implement user"""
+    """Sqlite implementation, passes silently on authorisation methods"""
 
     def check_password(self, user, entered_password):
         return True
 
     def set_password(self, user, password):
-        return True
+        pass
 
     def create_user(self, username, password):
-        return True
+        pass
         
 
+def hash_password(passwd):
+    """
+    Return hashed password of user salted with SECRET_KEY. Hashes may differ in different
+    (server) sessions, since SECRET_KEY is generated at server initialization.
+    """
+    hp = hashlib.sha512(passwd).hexdigest()
+    return hashlib.sha512(hp+settings.SECRET_KEY).hexdigest()
+    
 
 VENDORS = { 'postgresql' : PostgreSQL,
             'sqlite': Sqlite,
             'dummy' : Database }
 
 def get_database(using=DEFAULT_DB_ALIAS):
+    """Get a database object for this session"""
     try:
         return VENDORS[connection.vendor](using=using)
     except KeyError:
@@ -227,3 +265,69 @@ def get_database(using=DEFAULT_DB_ALIAS):
 def is_postgres():
     """Is the current database postgres?"""
     return connections.databases['default']['ENGINE'] == 'django.db.backends.postgresql_psycopg2'
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+from amcat.tools.logging import amcatlogging; amcatlogging.infoModule()
+
+class TestDBToolkit(amcattest.PolicyTestCase):
+
+    PYLINT_IGNORE_EXTRA = "W0612","W0613" # unused arg/var string format false positive
+    
+    def x_test_users_passwords(self):
+        """Create u new user, set its password, check, change password, check"""
+        # Lijkt niet te werken vanuit django testing, maar wel als (django) standalone :-(
+        username = 'TestDBToolkit_test_users_passwords_testuser'
+        password = b'pass123'
+        log.info("Creating user {username} with password {password}".format(**locals()))
+        db = get_database()
+        try:
+            try:
+                db.create_user(username, password)
+            except UserAlreadyExists:
+                log.info("Test user existed, ignoring")
+
+            self.assertTrue(db.check_password(username, password))
+            self.assertFalse(db.check_password(username, "one two three four five"))
+
+            password2 = "!@$!%$^^%'&&%^4*&^"
+            db.set_password(username, password2)
+            self.assertTrue(db.check_password(username, password2))
+            self.assertFalse(db.check_password(username, password))
+        finally:
+            try:
+                db.delete_user(username)
+            except Exception, e:
+                log.error(e)
+                import traceback
+                traceback.print_exc()
+
+            
+        
+def run_test():
+    #for some reason, django testing gets in the way of creating users
+    # (the call succeeds, but can't log on with the credentials)
+    #running the same code from the command line does work
+    # this might be connected with http://code.google.com/p/amcat/issues/detail?id=49
+    # run with python -c "from amcat.tools import dbtoolkit; dbtoolkit.run_test()"    
+    from amcat.tools.logging import amcatlogging
+    log = amcatlogging.setup()
+
+    class Dummy(TestDBToolkit):
+        def __init__(self):pass
+        def assertTrue(self, test):
+            if not test:
+                print("%r is not True" % test)
+                import traceback
+                traceback.print_exc()
+        def assertFalse(self, test):
+            if test:
+                print("%r is not False" % test)
+                import traceback
+                traceback.print_exc()
+                
+    TestDBToolkit.x_test_users_passwords(Dummy())
