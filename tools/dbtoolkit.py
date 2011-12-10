@@ -120,10 +120,11 @@ class PostgreSQL(Database):
 
     def set_password(self, username, password):
         username = self.check_username(username)
-        SQL = "ALTER USER {username} WITH PASSWORD %s".format(**locals())
-        with transaction.commit_manually():
+        SQL = "ALTER USER {username} WITH PASSWORD %s".format(username=username)
+
+        with transaction.commit_manually(using=self.using):
             self.cursor.execute(SQL, [password])
-            transaction.commit()
+            transaction.commit(using=self.using)
 
         cache.delete(PASSWORD_CACHE.format(**locals()))
 
@@ -232,10 +233,10 @@ class PostgreSQL(Database):
 class Sqlite(Database):
     """Sqlite implementation, passes silently on authorisation methods"""
 
-    def check_password(self, user, entered_password):
+    def check_password(self, username, entered_password):
         return True
 
-    def set_password(self, user, password):
+    def set_password(self, username, password):
         pass
 
     def create_user(self, username, password):
