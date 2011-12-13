@@ -268,11 +268,15 @@ def aggregate(queries, xAxis, yAxis, filters=[]):
     
 mediumCache = {}    
 def mediumidToObj(mediumid):
-    return mediumCache.setdefault(mediumid, medium.Medium.objects.get(pk=mediumid))
+    try:
+        return mediumCache[mediumid]
+    except KeyError:
+        mediumCache[mediumid] = medium.Medium.objects.get(pk=mediumid)
+        return mediumCache[mediumid]
     
     
-def increaseCounter(table, x, y, a, counterType):
-    table.addValue(x, y, table.getValue(x, y) + (int(a['score']) if counterType == 'numberOfHits' else 1))
+def increaseCounter(table, x, y, a, counterLambda):
+    table.addValue(x, y, table.getValue(x, y) + counterLambda(a))
     
 def basicAggregate(form):
     """aggregate by using a counter"""
@@ -285,6 +289,10 @@ def basicAggregate(form):
     dateInterval = form['dateInterval']
     rowLimit = 1000000
     singleQuery = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
+    if counterType == 'numberOfHits':
+        counterLambda = lambda a: int(a['score'])
+    else:
+        counterLambda = lambda a: 1
     
     if xAxis == 'medium' and yAxis == 'searchTerm':
         for query in queries:
@@ -293,25 +301,26 @@ def basicAggregate(form):
             for a in solrResponse.results:
                 x = mediumidToObj(a['mediumid'])
                 y = query.label
-                increaseCounter(table, x, y, a, counterType)
+                increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'medium' and yAxis == 'total':
         solrResponse = doQuery(singleQuery, form, dict(fields="score,mediumid", rows=rowLimit))
         for a in solrResponse.results:
             x = mediumidToObj(a['mediumid'])
             y = '[total]'
-            increaseCounter(table, x, y, a, counterType)
+            increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'date' and yAxis == 'total':
         solrResponse = doQuery(singleQuery, form, dict(fields="score,date", rows=rowLimit))
         for a in solrResponse.results:
             x = dateToInterval(a['date'], dateInterval)
             y = '[total]'
-            increaseCounter(table, x, y, a, counterType)
+            increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'date' and yAxis == 'medium':
         solrResponse = doQuery(singleQuery, form, dict(fields="score,date,mediumid", rows=rowLimit))
+        counterDict = {}
         for a in solrResponse.results:
             x = dateToInterval(a['date'], dateInterval)
             y = mediumidToObj(a['mediumid'])
-            increaseCounter(table, x, y, a, counterType)
+            increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'date' and yAxis == 'searchTerm':
         for query in queries:
             solrResponse = doQuery(query.query, form, dict(fields="score,date", rows=rowLimit))
@@ -319,7 +328,7 @@ def basicAggregate(form):
             for a in solrResponse.results:
                 x = dateToInterval(a['date'], dateInterval)
                 y = query.label
-                increaseCounter(table, x, y, a, counterType)
+                increaseCounter(table, x, y, a, counterLambda)
     else:
         raise Exception('%s %s combination not possible' % (xAxis, yAxis))
     log.debug('created table')
