@@ -68,7 +68,7 @@ class CodedArticle(Identity):
     @property
     def sentence_codings(self):
         """Get the sentence codings for this coded article"""
-        return self.codingjobset.codings.filter(article=self.article, sentence__isnull=False)
+        return self.codingjobset.codings.filter(article=self.article, sentence__isnull=False).order_by('sentence__parnr', 'sentence__sentnr')
 
     
     
