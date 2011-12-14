@@ -22,6 +22,12 @@ from amcat.scripts.output import commandline
 from amcat.scripts import scriptmanager
 import argparse
 
+import logging
+logging.basicConfig(format='[%(asctime)s] [%(name)s] %(message)s', level=logging.DEBUG)
+log = logging.getLogger(__name__)
+
+logging.getLogger('django.db.backends').setLevel(logging.ERROR) 
+
 ###############################################################
 ##         Aux method for CLI invocation                     ##
 ###############################################################
