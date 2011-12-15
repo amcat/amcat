@@ -40,7 +40,7 @@ def get_table_jobs_per_user(users, **additionalFilters):
     """
     try: iter(users)
     except TypeError: users = [users]
-    jobs = list(CodingJob.objects.filter(coder__in=users, **additionalFilters))
+    jobs = list(CodingJob.objects.filter(coder__in=users, **additionalFilters).order_by("-id"))
     result = ObjectTable(rows=jobs)
     result.addColumn("id")
     result.addColumn("name")
@@ -174,9 +174,8 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         ca = CodedArticle(self.an1)
         t = get_table_sentence_codings_article(ca)
         self.assertIsNotNone(t)
-        #print(t.output())
         aslist = [tuple(r) for r in t]
-        self.assertEqual(aslist, [('bla', 1, self.code), ('blx', None, None)])
+        self.assertEqual(aslist, [(3, 1, 'bla', 1, self.code), (4, 1, 'blx', None, None)])
         
     def test_table_articles_per_set(self):
         """Is the articles per job table correct?"""
@@ -209,7 +208,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         t = get_table_jobs_per_user(self.users[0])
         #from amcat.tools.table.tableoutput import table2unicode; print(table2unicode(t))
         self.assertEqual(len([row.id for row in t]), 4)
-        self.assertEqual([row.narticles for row in t], [2, 4, 6, 8])
+        self.assertEqual([row.narticles for row in t], [8, 6, 4, 2]) # default newest job first
         
         self.assertIsNotNone(t)
 
