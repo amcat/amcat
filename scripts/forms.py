@@ -115,6 +115,17 @@ class ArticleColumnsForm(forms.Form):
                 ('year', 'Year')
             ), initial='month', label='Column Interval', required=False)
 
+            
+            
+class SearchQuery(object):
+    """
+    represents a query object that contains both a (Solr) query and an optional label
+    """
+    def __init__(self, query, label=None):
+        self.query = query
+        self.label = label or query
+            
+            
 class SelectionForm(forms.Form):
     projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.order_by('-pk').filter(active=1)) # TODO: change to projects of user
     articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False)
@@ -124,8 +135,7 @@ class SelectionForm(forms.Form):
     datetype = forms.ChoiceField(choices=(('all', 'All Dates'), ('before', 'Before'), ('after', 'After'), ('between', 'Between')))
     startDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
-    #action = forms.ChoiceField(choices=())
-    #output = forms.CharField(required=False)
+    # queries will be added by clean(), that contains a list of SearchQuery objects
     
     def __init__(self, *args, **kwargs):
         super(SelectionForm, self).__init__(*args, **kwargs)
@@ -159,7 +169,22 @@ class SelectionForm(forms.Form):
             cleanedData['useSolr'] = False
         else:
             cleanedData['useSolr'] = True
-            cleanedData['queries'] = [x.strip() for x in cleanedData['query'].split('\n') if x.strip()]
+            cleanedData['queries'] = []
+            queries = [x.strip() for x in cleanedData['query'].split('\n') if x.strip()] # split lines
+            for query in queries:
+                if '#' in query:
+                    label = query.split('#')[0]
+                    if len(label) == 0 or len(label) > 20:
+                        self._errors["query"] = self.error_class(['Invalid query label (before the #)'])
+                    query = query.split('#')[1]
+                    if len(query) == 0:
+                        self._errors["query"] = self.error_class(['Invalid query (after the #)'])
+                else: 
+                    label = None
+                if '[' in query:
+                    for query2 in cleanedData['queries']:
+                        query = query.replace('[%s]' % query2.label, '(%s)' % query2.query)
+                cleanedData['queries'].append(SearchQuery(query, label))
             
         try:
             cleanedData['articleids'] = [int(x.strip()) for x in cleanedData['articleids'].split('\n') if x.strip()]

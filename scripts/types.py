@@ -19,7 +19,7 @@
 
 
 """
-Definition of various input and output types.
+Definition of various input and output types for scripts.
 These types can be implemented as dict, string or any other basic type.
 They are defined here, so scripts can reference to them as required input or output.
 """

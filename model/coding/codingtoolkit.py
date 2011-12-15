@@ -80,8 +80,9 @@ def get_table_articles_per_job(jobs):
     result.addColumn(lambda a: a.article.id, "articleid")
     result.addColumn(lambda a: a.article.headline, "headline")
     result.addColumn(lambda a: a.article.date, "date")
-    result.addColumn(lambda a: a.article.length, "length")
     result.addColumn(lambda a: a.article.medium, "medium")
+    result.addColumn(lambda a: a.article.pagenr, "pagenr")
+    result.addColumn(lambda a: a.article.length, "length")
     result.addColumn(lambda a: a.coding and a.coding.status, "status")
     result.addColumn(lambda a: a.coding and a.coding.comments, "comments")
     return result
@@ -96,6 +97,8 @@ def get_table_sentence_codings_article(codedarticle):
     The cells contain domain (deserialized) objects
     """
     result = ObjectTable(rows = list(codedarticle.sentence_codings))
+    result.addColumn('id')
+    result.addColumn(lambda x:x.sentence_id, 'sentence')
     for field in codedarticle.codingjob.unitschema.fields.order_by('fieldnr').all():
         result.addColumn(partial(get_value, field), field.label)
     return result

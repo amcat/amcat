@@ -83,7 +83,7 @@ def parseSolrHighlightingToContextDict(solrResponse):
     
 def highlightArticles(form, snippets=3):
     #http://localhost:8983/solr/select/?indent=on&q=des&fl=id,headline,body&hl=true&hl.fl=body,headline&hl.snippets=3&hl.mergeContiguous=true&hl.usePhraseHighlighter=true&hl.highlightMultiTerm=true
-    query = '(%s)' % ') OR ('.join(form['queries'])
+    query = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
     kargs = dict(
         highlight=True, 
         fields="id,score,body,headline", 
@@ -101,7 +101,7 @@ def highlightArticles(form, snippets=3):
 
 def getArticles(form):
     #if len(queries) == 1:
-    query = '(%s)' % ') OR ('.join(form['queries'])
+    query = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
     kargs = dict( 
             fields="id,score",
             rows=form['length']
@@ -143,27 +143,29 @@ def getArticles(form):
     hitsTable = DictTable(0)
     hitsTable.rowNamesRequired = True
         
-    if len(form['queries']) > 1 and 'hits' in form['columns']:
-        additionalFilters = [' OR '.join(['id:%d' % id for id in articleids])]
-        for singleQuery in form['queries']:
-            hitsTable.columns.add(singleQuery)
-            solrResponseSingleQuery = doQuery(singleQuery, form, kargs, additionalFilters)
+    if 'hits' in form['columns']:
+        if len(form['queries']) > 1:
+            additionalFilters = [' OR '.join(['id:%d' % id for id in articleids])]
+            for singleQuery in form['queries']:
+                hitsTable.columns.add(singleQuery.label)
+                solrResponseSingleQuery = doQuery(singleQuery.query, form, kargs, additionalFilters)
+                #articleIdList = []
+                for d in solrResponseSingleQuery.results:
+                    articleid = int(d['id'])
+                    #articleIdList.append(articleid)
+                    hits = int(d['score'])
+                    log.info('add %s %s %s' % (articleid, singleQuery.label, hits)) 
+                    hitsTable.addValue(articleid, singleQuery.label, hits) 
+        else: # only 1 query
+            queryLabel = form['queries'][0].label
+            hitsTable.columns.add(queryLabel)
             #articleIdList = []
-            for d in solrResponseSingleQuery.results:
+            for d in solrResponse.results:
                 articleid = int(d['id'])
                 #articleIdList.append(articleid)
                 hits = int(d['score'])
-                log.info('add %s %s %s' % (articleid, singleQuery, hits)) 
-                hitsTable.addValue(articleid, singleQuery, hits) 
-    else:        
-        hitsTable.columns.add(query)
-        #articleIdList = []
-        for d in solrResponse.results:
-            articleid = int(d['id'])
-            #articleIdList.append(articleid)
-            hits = int(d['score'])
-            #hitsTable.addValue(query, articleid, hits)
-            hitsTable.addValue(articleid, query, hits)
+                #hitsTable.addValue(query, articleid, hits)
+                hitsTable.addValue(articleid, queryLabel, hits)
     
     
     articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
@@ -176,7 +178,7 @@ def getArticles(form):
     return result
     
 def getStats(statsObj, form):
-    query = '(%s)' % ') OR ('.join(form['queries'])
+    query = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
     
     kargs = dict( 
                 fields="date", 
@@ -218,7 +220,7 @@ def getStats(statsObj, form):
         
 def articleids(form):
     """get only the articleids for a query"""
-    query = '(%s)' % ') OR ('.join(form['queries'])
+    query = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
     kargs = dict(fields="id", start=form['start'], rows=form['length'], score=False)
     solrResponse = doQuery(query, form, kargs)
     return [x['id'] for x in solrResponse.results]
@@ -229,8 +231,8 @@ def articleidsDict(form):
     result = {}
     for query in form['queries']:
         kargs = dict(fields="id", start=form['start'], rows=form['length'], score=False)
-        solrResponse = doQuery(query, form, kargs)
-        result[query] = [x['id'] for x in solrResponse.results]
+        solrResponse = doQuery(query.query, form, kargs)
+        result[query.label] = [x['id'] for x in solrResponse.results]
     return result
     
 """
@@ -266,11 +268,15 @@ def aggregate(queries, xAxis, yAxis, filters=[]):
     
 mediumCache = {}    
 def mediumidToObj(mediumid):
-    return mediumCache.setdefault(mediumid, medium.Medium.objects.get(pk=mediumid))
+    try:
+        return mediumCache[mediumid]
+    except KeyError:
+        mediumCache[mediumid] = medium.Medium.objects.get(pk=mediumid)
+        return mediumCache[mediumid]
     
     
-def increaseCounter(table, x, y, a, counterType):
-    table.addValue(x, y, table.getValue(x, y) + (int(a['score']) if counterType == 'numberOfHits' else 1))
+def increaseCounter(table, x, y, a, counterLambda):
+    table.addValue(x, y, table.getValue(x, y) + counterLambda(a))
     
 def basicAggregate(form):
     """aggregate by using a counter"""
@@ -282,44 +288,50 @@ def basicAggregate(form):
     counterType = form['counterType']
     dateInterval = form['dateInterval']
     rowLimit = 1000000
-    singleQuery = '(%s)' % ') OR ('.join(form['queries'])
+    singleQuery = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
+    if counterType == 'numberOfHits':
+        counterLambda = lambda a: int(a['score'])
+    else:
+        counterLambda = lambda a: 1
     
     if xAxis == 'medium' and yAxis == 'searchTerm':
         for query in queries:
-            solrResponse = doQuery(query, form, dict(fields="score,mediumid", rows=rowLimit))
-            table.columns.add(query)
+            solrResponse = doQuery(query.query, form, dict(fields="score,mediumid", rows=rowLimit))
+            table.columns.add(query.label)
             for a in solrResponse.results:
                 x = mediumidToObj(a['mediumid'])
-                y = query
-                increaseCounter(table, x, y, a, counterType)
+                y = query.label
+                increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'medium' and yAxis == 'total':
         solrResponse = doQuery(singleQuery, form, dict(fields="score,mediumid", rows=rowLimit))
         for a in solrResponse.results:
             x = mediumidToObj(a['mediumid'])
             y = '[total]'
-            increaseCounter(table, x, y, a, counterType)
+            increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'date' and yAxis == 'total':
         solrResponse = doQuery(singleQuery, form, dict(fields="score,date", rows=rowLimit))
         for a in solrResponse.results:
             x = dateToInterval(a['date'], dateInterval)
             y = '[total]'
-            increaseCounter(table, x, y, a, counterType)
+            increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'date' and yAxis == 'medium':
         solrResponse = doQuery(singleQuery, form, dict(fields="score,date,mediumid", rows=rowLimit))
+        counterDict = {}
         for a in solrResponse.results:
             x = dateToInterval(a['date'], dateInterval)
             y = mediumidToObj(a['mediumid'])
-            increaseCounter(table, x, y, a, counterType)
+            increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'date' and yAxis == 'searchTerm':
         for query in queries:
-            solrResponse = doQuery(query, form, dict(fields="score,date", rows=rowLimit))
-            table.columns.add(query)
+            solrResponse = doQuery(query.query, form, dict(fields="score,date", rows=rowLimit))
+            table.columns.add(query.label)
             for a in solrResponse.results:
                 x = dateToInterval(a['date'], dateInterval)
-                y = query
-                increaseCounter(table, x, y, a, counterType)
+                y = query.label
+                increaseCounter(table, x, y, a, counterLambda)
     else:
         raise Exception('%s %s combination not possible' % (xAxis, yAxis))
+    log.debug('created table')
     return table
             
     
