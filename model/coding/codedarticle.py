@@ -20,7 +20,7 @@
 """
 Module for the CodedArticle convenience class
 
-A CodedArticle represents an article in a codingjob set and provides a convenient
+A CodedArticle represents an article in a codingjob and provides a convenient
 way to access article and sentence codings. CodedArticles have no direct
 representation in the database.
 """
@@ -31,44 +31,43 @@ from amcat.tools.idlabel import Identity
 from amcat.model.coding.coding import Coding
 
 class CodedArticle(Identity):
-    """Convenience class to represent an article in a codingjobset
+    """Convenience class to represent an article in a codingjob
     and expose the article and sentence codings
     
-    @param codingjobset_or_coding: Either a job set, or an coding
+    @param codingjob_or_coding: Either a job or an coding
     @param article: the coded article, or None if an coding was given as first argument
     """
-    def __init__(self, codingjobset_or_coding, article=None):
+    def __init__(self, codingjob_or_coding, article=None):
         if article is None:
-            codingjobset = codingjobset_or_coding.codingjobset
-            article = codingjobset_or_coding.article
+            self.codingjob = codingjob_or_coding.codingjob
+            self.article = codingjob_or_coding.article
         else:
-            codingjobset = codingjobset_or_coding
-        super(CodedArticle, self).__init__(codingjobset.id, article.id)
-        self.codingjobset = codingjobset
-        self.article = article
+            self.codingjob = codingjob_or_coding
+            self.article = article
+        super(CodedArticle, self).__init__(self.codingjob.id, self.article.id)
 
     @property
     def coding(self):
         """Get the  article coding for this coded article"""
-        result = self.codingjobset.codings.filter(article=self.article, sentence__isnull=True)
+        result = self.codingjob.codings.filter(article=self.article, sentence__isnull=True)
         if result: return result[0]
 
     def get_or_create_coding(self):
         """Get or create the article coding for this coded article"""
         a = self.coding
         if a is None:
-            a = Coding.objects.create(codingjobset=self.codingjobset, article=self.article)
+            a = Coding.objects.create(codingjob=self.codingjob, article=self.article)
         return a
 
     def create_sentence_coding(self, sentence):
         """Create a new sentence coding on the given sentence"""
-        return Coding.objects.create(codingjobset=self.codingjobset, article=self.article,
+        return Coding.objects.create(codingjob=self.codingjob, article=self.article,
                                  sentence=sentence)
     
     @property
     def sentence_codings(self):
         """Get the sentence codings for this coded article"""
-        return self.codingjobset.codings.filter(article=self.article, sentence__isnull=False)
+        return self.codingjob.codings.filter(article=self.article, sentence__isnull=False)
 
     
     
@@ -85,8 +84,8 @@ class TestCodedArticle(amcattest.PolicyTestCase):
         """Test whether CodedArticle coding retrieval works"""
         a = amcattest.create_test_coding()
         s = amcattest.create_test_sentence()
-        a2 = amcattest.create_test_coding(sentence=s, codingjobset=a.codingjobset)
-        a3 = amcattest.create_test_coding(sentence=s, codingjobset=a.codingjobset)
+        a2 = amcattest.create_test_coding(sentence=s, codingjob=a.codingjob)
+        a3 = amcattest.create_test_coding(sentence=s, codingjob=a.codingjob)
         ca = CodedArticle(a)
 
         self.assertEqual(set(ca.sentence_codings), {a2, a3})
@@ -101,7 +100,7 @@ class TestCodedArticle(amcattest.PolicyTestCase):
         self.assertEqual(ca.get_or_create_coding(), a)
 
         codingids = {a.id for a in Coding.objects.all()}
-        ca = CodedArticle(ca.codingjobset, amcattest.create_test_article())
+        ca = CodedArticle(ca.codingjob, amcattest.create_test_article())
         self.assertIsNone(ca.coding)
         a2 = ca.get_or_create_coding()
         self.assertNotIn(a2.id, codingids)

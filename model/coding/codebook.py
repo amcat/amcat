@@ -90,6 +90,7 @@ class Codebook(AmcatModel):
         result = {}
         for base in reversed(list(self.bases)):
             result.update(base.get_hierarchy())
+
         # Remove 'hide' objects from the result, and return
         for co in self.codebookcodes.select_related("code", "parent"):
             if co.hide:

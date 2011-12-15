@@ -32,6 +32,7 @@ Deserialised Value: a domain object, possibly a django Model instance
 import logging; log = logging.getLogger(__name__)
 
 from amcat.model.coding.code import Code
+from amcat.model.coding.codebook import get_codebook
 
 class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
@@ -46,6 +47,7 @@ class BaseSerialiser(object):
         @return: a value of type self.deserialized_Type. Raises an error if value could not
                  be deserialized
         """
+        if value is None: return None
         return self.deserialised_type(value)
     def serialise(self, value):
         """Convert the given domain object to a serialised value
@@ -54,6 +56,7 @@ class BaseSerialiser(object):
         @return: a value of type self.serialized_Type. Raises an error if value could not
                  be serialized
         """
+        if value is None: return None
         return self.serialised_type(value)
     @property
     def possible_values(self):
@@ -106,15 +109,19 @@ class _CodebookSerialiser(BaseSerialiser):
     """int - amcat.model.coding.Code serialiser"""
     def __init__(self, field):
         super(_CodebookSerialiser, self).__init__(field, Code, int)
-        self.codebook = field.codebook
+        self.codebook = get_codebook(field.codebook_id)
         
     def deserialise(self, value):
-        return self.codebook.get_code(value)
+        try:
+            return self.codebook.get_code(value)
+        except ValueError:
+            # code was removed from codebook
+            return Code.objects.get(pk=value)
             
     def serialise(self, value):
-        if value not in  self.codebook.codes:
-            raise ValueError("{value} not in {self.codebook}".format(**locals()))
+        if value is None: return None
         return value.id
+    
     @property
     def possible_values(self):
         return self.codebook.codes
@@ -178,9 +185,12 @@ class TestSerialiser(amcattest.PolicyTestCase):
         self.assertEqual(s.serialise(c), c.id)
         self.assertEqual(s.deserialise(c.id), c)
         d = amcattest.create_test_code(label="not in codebook")
-        self.assertRaises(ValueError, s.serialise, d)
-        self.assertRaises(ValueError, s.deserialise, d.id)
-        self.assertRaises(ValueError, s.deserialise, -9999999999999999)
+        #(de)serialising a code from outside codebook should not raise errors:
+
+        self.assertEqual(s.serialise(d), d.id)
+        self.assertEqual(s.deserialise(d.id), d)
+
+        self.assertRaises(Exception, s.deserialise, -9999999999999999)
         
         self.assertEqual([c], s.possible_values)
         

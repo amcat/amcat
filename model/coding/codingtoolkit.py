@@ -25,7 +25,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from functools import partial
 
-from amcat.model.coding.codingjob import CodingJobSet
+from amcat.model.coding.codingjob import CodingJob
 from amcat.model.coding.coding import Coding, STATUS_COMPLETE
 from amcat.model.coding.codedarticle import CodedArticle
 from amcat.model.coding.codingschemafield import CodingSchemaField
@@ -33,46 +33,50 @@ from amcat.model.coding.codingschemafield import CodingSchemaFieldType
 
 from amcat.tools.table.table3 import ObjectTable
 
-def get_table_sets_per_user(users, **additionalFilters):
-    """Return a table of all sets per user
+def get_table_jobs_per_user(users, **additionalFilters):
+    """Return a table of all jobs per user
 
     Columns: ids, jobname, coder, issuer, issuedate, #articles, #completed, #inprogress
     """
     try: iter(users)
     except TypeError: users = [users]
-    result = ObjectTable(rows = list(CodingJobSet.objects.filter(coder__in=users, **additionalFilters)))
+    jobs = list(CodingJob.objects.filter(coder__in=users, **additionalFilters))
+    result = ObjectTable(rows=jobs)
     result.addColumn("id")
-    result.addColumn("codingjob")
+    result.addColumn("name")
     result.addColumn("coder")
-    result.addColumn(lambda s: s.codingjob.insertuser, "insertuser")
-    result.addColumn(lambda s :s.codingjob.insertdate, "insertdate")
+    result.addColumn(lambda s: s.insertuser, "insertuser")
+    result.addColumn(lambda s :s.insertdate, "insertdate")
     result.addColumn(lambda s :s.articleset.articles.count(), "narticles")
     result.addColumn(lambda s :s.codings.filter(sentence=None, status=2).count(),
                      "ncomplete")
     return result
 
-def get_article_coding(cjset, article):
+def get_article_coding(job, article):
     """Find the 'article coding' for the given article"""
-    result = cjset.codings.filter(article=article, sentence=None)
+    result = job.codings.filter(article=article, sentence=None)
     assert len(result) <= 1
     if result: return result[0]
 
-def get_coded_articles(cjsets):
+def get_coded_articles(jobs):
     """Return a sequence of CodedArticle objects"""
-    try: iter(cjsets)
-    except TypeError: cjsets = [cjsets]
-    for cjset in cjsets:
-        for article in cjset.articleset.articles.all():
-            yield CodedArticle(cjset, article)
+    try: iter(jobs)
+    except TypeError: jobs = [jobs]
+    for job in jobs:
+        for article in job.articleset.articles.all():
+            yield CodedArticle(job, article)
 
-def get_table_articles_per_set(cjsets):
+def get_table_articles_per_job(jobs):
     """Return a table of all articles in a cjset with status
 
     Columns: set, coder, article, articlemeta, status, comments
     """
-    result = ObjectTable(rows = list(get_coded_articles(cjsets)))
+    result = ObjectTable(rows = list(get_coded_articles(jobs)))
     #result.addColumn(lambda a: a.codingjobset.codingjob, "codingjob")
-    #result.addColumn(lambda a: a.codingjobset.coder, "coder")
+
+    result.addColumn(lambda a: a.job.id, "jobid")
+    result.addColumn(lambda a: a.job.name, "job")
+    result.addColumn(lambda a: a.coder, "coder")
     result.addColumn(lambda a: a.article.id, "articleid")
     result.addColumn(lambda a: a.article.headline, "headline")
     result.addColumn(lambda a: a.article.date, "date")
@@ -92,7 +96,7 @@ def get_table_sentence_codings_article(codedarticle):
     The cells contain domain (deserialized) objects
     """
     result = ObjectTable(rows = list(codedarticle.sentence_codings))
-    for field in codedarticle.codingjobset.codingjob.unitschema.fields.order_by('fieldnr').all():
+    for field in codedarticle.codingjob.unitschema.fields.order_by('fieldnr').all():
         result.addColumn(partial(get_value, field), field.label)
     return result
 
@@ -128,33 +132,26 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
                                 label="Code", codebook=self.codebook)
 
         self.users = [amcattest.create_test_user() for _x in range(2)]
-        self.jobs = [amcattest.create_test_job(articleschema=self.schema, unitschema=self.schema)
-                     for i in range(2)]
-        self.asets = [amcattest.create_test_set(articles=2 * (i+1)) for i in range(5)]
 
-        self.cjsets = []
-        self.articles = []
-        for a in self.asets:
-            self.articles += list(a.articles.all())
-        for (job, aset, user) in zip([0, 0, 0, 1, 1],
-                                     [0, 1, 2, 3, 4],
-                                     [0, 0, 0, 0, 1]):
-            
-            cjset = CodingJobSet.objects.create(codingjob=self.jobs[job],
-                                                articleset=self.asets[aset],
-                                                coder=self.users[user])
-            self.cjsets += [cjset]
-
-        self.an1 = Coding.objects.create(codingjobset=self.cjsets[0], article=self.articles[0])
-        self.an2 = Coding.objects.create(codingjobset=self.cjsets[0], article=self.articles[1])
+        self.articles, self.jobs, self.asets = [], [], []
+        for i, user in enumerate([0,0,0,0,1]):
+            aset = amcattest.create_test_set(articles=2 * (i+1))
+            self.articles += list(aset.articles.all())
+            self.asets.append(aset)
+            job = amcattest.create_test_job(articleschema=self.schema, unitschema=self.schema,
+                                            coder = self.users[user], articleset=aset)
+            self.jobs.append(job)
+                    
+        self.an1 = Coding.objects.create(codingjob=self.jobs[0], article=self.articles[0])
+        self.an2 = Coding.objects.create(codingjob=self.jobs[0], article=self.articles[1])
         self.an2.set_status(STATUS_COMPLETE)
         self.an2.comments = 'Makkie!'
         self.an2.save()
 
         sent = amcattest.create_test_sentence()
-        self.sa1 = Coding.objects.create(codingjobset=self.cjsets[0], article=self.articles[0], 
+        self.sa1 = Coding.objects.create(codingjob=self.jobs[0], article=self.articles[0], 
                                              sentence=sent)
-        self.sa2 = Coding.objects.create(codingjobset=self.cjsets[0], article=self.articles[0], 
+        self.sa2 = Coding.objects.create(codingjob=self.jobs[0], article=self.articles[0], 
                                              sentence=sent)
         create = CodingValue.objects.create
         create(coding=self.sa1, field=self.intfield, intval=1)
@@ -166,7 +163,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         
     def test_general(self):
         """Test whether the setUp works"""
-        self.assertEqual(self.cjsets[0].coder, self.users[0])
+        self.assertEqual(self.jobs[0].coder, self.users[0])
 
         
     def test_table_codings(self):
@@ -179,8 +176,8 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         self.assertEqual(aslist, [('bla', 1, self.code), ('blx', None, None)])
         
     def test_table_articles_per_set(self):
-        """Is the articles per set table correct?"""
-        t = get_table_articles_per_set([self.cjsets[i] for i in [0, 1]])
+        """Is the articles per job table correct?"""
+        t = get_table_articles_per_job([self.jobs[i] for i in [0, 1]])
         #from amcat.tools.table import tableoutput; print; print(tableoutput.table2unicode(t))
         #self.assertEqual([row.codingjob for row in t], [self.jobs[i] for i in [0] * 6])
         self.assertEqual([(row.status and row.status.id) for row in t], [0, 2]+[None]*4)
@@ -188,27 +185,27 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
 
     def test_get_coded_articles(self):
         """Test the get_coded_articles function"""
-        result = list(get_coded_articles(self.cjsets[i] for i in [0, 1]))
-        sets = [self.cjsets[i] for i in (0, 0, 1, 1, 1, 1)]
+        result = list(get_coded_articles(self.jobs[i] for i in [0, 1]))
+        jobs = [self.jobs[i] for i in (0, 0, 1, 1, 1, 1)]
         articles = [self.articles[i] for i in range(6)]
         codings = [self.an1, self.an2] + [None]*4
-        self.assertEqual(len(result), len(sets))
-        for result, aset, article, coding in zip(result, sets, articles, codings):
-            ca = CodedArticle(aset, article)
+        self.assertEqual(len(result), len(jobs))
+        for result, job, article, coding in zip(result, jobs, articles, codings):
+            ca = CodedArticle(job, article)
             self.assertEqual(ca, result)
             self.assertEqual(coding, result.coding)
 
 
     def test_get_article_coding(self):
         """Correctly identify the article coding for an article"""
-        self.assertEqual(self.an1, get_article_coding(self.cjsets[0], self.articles[0]))
-        self.assertIsNone(get_article_coding(self.cjsets[1], self.articles[2]))
+        self.assertEqual(self.an1, get_article_coding(self.jobs[0], self.articles[0]))
+        self.assertIsNone(get_article_coding(self.jobs[1], self.articles[2]))
         
-    def test_table_sets_per_user(self):
+    def test_table_jobs_per_user(self):
         """Is the sets per user table correct"""
-        t = get_table_sets_per_user(self.users[0])
+        t = get_table_jobs_per_user(self.users[0])
         #from amcat.tools.table.tableoutput import table2unicode; print(table2unicode(t))
-        self.assertEqual([row.codingjob for row in t], [self.jobs[i] for i in [0, 0, 0, 1]])
+        self.assertEqual(len([row.id for row in t]), 4)
         self.assertEqual([row.narticles for row in t], [2, 4, 6, 8])
         
         self.assertIsNotNone(t)
@@ -223,7 +220,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         # create 1000 sentence annotations
         for i in range(1):
             sent = amcattest.create_test_sentence()
-            sa = Coding.objects.create(codingjobset=self.cjsets[0], article=self.articles[0], 
+            sa = Coding.objects.create(codingjob=self.jobs[0], article=self.articles[0], 
                                        sentence=sent)
             CodingValue.objects.create(coding=sa, field=self.intfield, intval=i)
         

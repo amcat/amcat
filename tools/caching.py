@@ -28,8 +28,11 @@ value on the object
 Use reset and set_cache to manually clear and set the cache
 """
 
+from __future__ import unicode_literals, print_function, absolute_import
+
 CACHE_PREFIX = "_amcat_tools_caching_cache"
 
+import logging; log = logging.getLogger(__name__)
 from functools import wraps, partial
 
 def cached(func, cache_attr=CACHE_PREFIX):
@@ -43,8 +46,10 @@ def cached(func, cache_attr=CACHE_PREFIX):
         """Decorator inner function: Return the cached value or execute func and cache results"""
         cache = _get_cache(self, cache_attr)
         try:
+            log.info("Querying cache %r.%s" % (self, cache_attr))
             return cache[func.__name__]
         except KeyError:
+            log.info("Not found, setting cache for %r.%s" % (self, cache_attr))
             return _set_cache_value(cache, func.__name__, func(self))
     return inner
 
@@ -67,6 +72,8 @@ def invalidates_named(cache_attr):
 
 def _reset(obj, cache_attr):
     """Reset the cache on the object in this value"""
+    log.info("Resetting %r.%s" % (obj, cache_attr))
+
     setattr(obj, cache_attr, {})
 
 def reset(obj, cache_attr=""):
@@ -216,3 +223,4 @@ class TestCaching(amcattest.PolicyTestCase):
         self.assertEqual(t.get_y(), 1)
         self.assertTrue(t.changed)
         
+#from amcat.tools.logging import amcatlogging; amcatlogging.infoModule()

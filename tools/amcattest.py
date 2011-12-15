@@ -125,19 +125,18 @@ def create_test_job(**kargs):
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "unitschema" not in kargs: kargs["unitschema"] = create_test_schema()
     if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema()
+    if "coder" not in kargs: kargs["coder"] = create_test_user()
+    if "articleset" not in kargs: kargs["articleset"] = create_test_set(articles=1)
     return CodingJob.objects.create(**kargs)
 
-def create_test_coding(job=None, **kargs):
+def create_test_coding(**kargs):
     """Create a test coding object"""
-    from amcat.model.coding.codingjob import CodingJobSet
     from amcat.model.coding.coding import Coding
 
-    if "codingjobset" not in kargs:
-        if job is None: job = create_test_job()
-        s = create_test_set(articles=2)
-        kargs["codingjobset"] = CodingJobSet.objects.create(codingjob=job, articleset=s, 
-                                                            coder=job.insertuser)
-    if "article" not in kargs: kargs["article"] = kargs["codingjobset"].articleset.articles.all()[0]
+    if "codingjob" not in kargs:
+        kargs["codingjob"] = create_test_job()
+        
+    if "article" not in kargs: kargs["article"] = kargs["codingjob"].articleset.articles.all()[0]
     return Coding.objects.create(**kargs)
 
 def create_test_code(label=None, language=None, **kargs):
@@ -152,10 +151,11 @@ def create_test_code(label=None, language=None, **kargs):
 
 def create_test_codebook(**kargs):
     """Create a test codebook"""
-    from amcat.model.coding.codebook import Codebook
+    from amcat.model.coding.codebook import Codebook, get_codebook
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "name" not in kargs: kargs["name"] = "testcodebook_%i" % Codebook.objects.count()
-    return Codebook.objects.create(**kargs)
+    c = Codebook.objects.create(**kargs)
+    return get_codebook(c.id)
 
 
 class PolicyTestCase(TestCase):

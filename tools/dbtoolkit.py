@@ -24,7 +24,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 import hashlib, re
 from contextlib import contextmanager
 
-from django.db import connection, connections, transaction, DEFAULT_DB_ALIAS, utils
+from django.db import connection, connections, transaction, DEFAULT_DB_ALIAS
 from django.db.utils import DatabaseError
 from django.conf import settings
 from django.core.cache import cache
@@ -208,6 +208,7 @@ class PostgreSQL(Database):
 
     @contextmanager
     def transaction(self, use_savepoint=True):
+        """Context manager for wrapping code in a (savepoint) transaction)"""
         if use_savepoint: sid = transaction.savepoint()
         try:
             yield
@@ -224,8 +225,10 @@ class PostgreSQL(Database):
                 transaction.commit()
     
     def execute_transaction(self, sql, *arguments, **kargs):
+        """Execute sql within a transaction.
+        Extra arguments are passed to the transaction context manager"""
         cursor = self.cursor
-        with self.transaction(**kargs):
+        with self.transaction(*arguments, **kargs):
             log.debug("EXECUTING {sql} ({arguments})".format(**locals()))
             cursor.execute(sql, arguments)
         
@@ -241,6 +244,8 @@ class Sqlite(Database):
     def create_user(self, username, password):
         pass
         
+    def delete_user(self, username):
+        pass
 
 def hash_password(passwd):
     """
@@ -276,8 +281,10 @@ from amcat.tools.logging import amcatlogging; amcatlogging.infoModule()
 
 class TestDBToolkit(amcattest.PolicyTestCase):
 
-    PYLINT_IGNORE_EXTRA = "W0612","W0613" # unused arg/var string format false positive
-    
+    PYLINT_IGNORE_EXTRA = ("W0612", "W0613", # unused arg/var string format false positive
+                           "W0703", # catch exception
+                           "W0231", "W0221", # for dummy methods in external call
+                           )
     def x_test_users_passwords(self):
         """Create u new user, set its password, check, change password, check"""
         # Lijkt niet te werken vanuit django testing, maar wel als (django) standalone :-(
@@ -300,6 +307,7 @@ class TestDBToolkit(amcattest.PolicyTestCase):
             self.assertFalse(db.check_password(username, password))
         finally:
             try:
+
                 db.delete_user(username)
             except Exception, e:
                 log.error(e)
@@ -309,15 +317,17 @@ class TestDBToolkit(amcattest.PolicyTestCase):
             
         
 def run_test():
-    #for some reason, django testing gets in the way of creating users
-    # (the call succeeds, but can't log on with the credentials)
-    #running the same code from the command line does work
-    # this might be connected with http://code.google.com/p/amcat/issues/detail?id=49
-    # run with python -c "from amcat.tools import dbtoolkit; dbtoolkit.run_test()"    
-    from amcat.tools.logging import amcatlogging
-    log = amcatlogging.setup()
+    """
+    for some reason, django testing gets in the way of creating users
+    (the call succeeds, but can't log on with the credentials)
+    running the same code from the command line does work
+    this might be connected with http://code.google.com/p/amcat/issues/detail?id=49
+    run with python -c "from amcat.tools import dbtoolkit; dbtoolkit.run_test()"
+    """
+    from amcat.tools.logging.amcatlogging import setup; setup()
 
     class Dummy(TestDBToolkit):
+        """Dummy class for testing externally"""
         def __init__(self):pass
         def assertTrue(self, test):
             if not test:

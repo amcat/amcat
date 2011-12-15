@@ -21,9 +21,7 @@
 Model module containing Codingjobs
 
 Coding Jobs are sets of articles assigned to users for manual coding.
-Each coding job has codingschemas for articles and/or sentences. A coding
-job can consists of multiple sets, which represent a set of articles assigned
-to an individual coder. 
+Each coding job has codingschemas for articles and/or sentences.
 """
 
 from amcat.tools.model import AmcatModel
@@ -47,6 +45,7 @@ class CodingJob(AmcatModel):
     """
 
     id = models.AutoField(primary_key=True, db_column='codingjob_id')
+    project = models.ForeignKey(Project)
 
     name = models.CharField(max_length=100)
 
@@ -54,9 +53,11 @@ class CodingJob(AmcatModel):
     articleschema = models.ForeignKey(CodingSchema, related_name='+')
 
     insertdate = models.DateTimeField(auto_now_add=True)
-    insertuser = models.ForeignKey(User)
+    insertuser = models.ForeignKey(User, related_name="+")
 
-    project = models.ForeignKey(Project)
+    coder = models.ForeignKey(User)
+    articleset = models.ForeignKey(ArticleSet, related_name="+")
+    
 
     def __unicode__(self):
         return self.name
@@ -66,28 +67,12 @@ class CodingJob(AmcatModel):
         app_label = 'amcat'
 
 
-class CodingJobSet(AmcatModel):
-    """
-    Model class for table codingjobs_sets. A set is a collection of articles to be coded
-    by a certain coder using the schema in the coding job
-    """
-    id = models.AutoField(primary_key=True, db_column='codingjobset_id')
-    codingjob = models.ForeignKey(CodingJob, related_name="sets")
-    coder = models.ForeignKey(User)
-    articleset = models.ForeignKey(ArticleSet, related_name="+")
-    
-    setnr = models.IntegerField(null=True) # for importing old sets
-
-    class Meta():
-        db_table = 'codingjobs_sets'
-        app_label = 'amcat'
-
     def get_codings(self):
         """Return a sequence of codings with pre-fetched values"""
         # late import to prevent cycles
         from amcat.model.coding.coding import CodingValue
         
-        q = CodingValue.objects.filter(coding__codingjobset__exact=self)
+        q = CodingValue.objects.filter(coding__codingjob__exact=self)
         q = q.select_related("field__fieldtype", "value__strval", "value__intval", "coding")
         q = q.order_by("coding", 'field__fieldnr')
         # possible optimzation: use running values list because of sort order
@@ -109,21 +94,16 @@ from amcat.tools import amcattest
 
 class TestCodingJob(amcattest.PolicyTestCase):
     def test_create(self):
-        """Can we create a dummy coding job?"""
+        """Can we create a coding job with articles?"""
         p = amcattest.create_test_project()
         j = amcattest.create_test_job(project=p)
         self.assertIsNotNone(j)
         self.assertEqual(j.project, Project.objects.get(pk=p.id))
+        j.articleset.articles.add(amcattest.create_test_article())
+        j.articleset.articles.add(amcattest.create_test_article())
+        j.articleset.articles.add(amcattest.create_test_article())
+        self.assertEqual(1+3, len(j.articleset.articles.all()))
         
-class TestCodingJobSet(amcattest.PolicyTestCase):
-    def test_create(self):
-        """Can we create a coding job set with articles?"""
-        j = amcattest.create_test_job()
-        s = amcattest.create_test_set(articles=2)
-        cs = CodingJobSet.objects.create(codingjob=j, articleset=s, coder=j.insertuser)
-        cs.articleset.articles.add(amcattest.create_test_article())
-        self.assertEqual(3, len(s.articles.all()))
-        self.assertEqual(s, cs.articleset)
         
         
         

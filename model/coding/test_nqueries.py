@@ -24,7 +24,7 @@ Testing module to test # of queries used for retrieving manual codings
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.model.language import Language
-from amcat.model.coding.codingjob import CodingJobSet
+from amcat.model.coding import codebook
 from amcat.model.coding.codingschemafield import CodingSchemaField
 from amcat.model.coding.codingschemafield import CodingSchemaFieldType
 
@@ -56,14 +56,12 @@ class TestNQueries(amcattest.PolicyTestCase):
 
         s = amcattest.create_test_set(articles=narticles)
         articles = list(s.articles.all())
-        codingjobset = CodingJobSet.objects.create(codingjob=job, articleset=s, 
-                                                   coder=job.insertuser)
                 
         fields = list(job.unitschema.fields.all())
         result = []
         for values in codings:
             random.shuffle(articles)
-            c = amcattest.create_test_coding(codingjobset=codingjobset, article=articles[0])
+            c = amcattest.create_test_coding(codingjob=job, article=articles[0])
             c.update_values(dict(zip(fields, values)))
             result.append(c)
         return result # don't use iterator to allow use as statement (eg non-lazy eval)
@@ -87,6 +85,9 @@ class TestNQueries(amcattest.PolicyTestCase):
         """Test whether deserialisation from the ontology using low-level calls is efficient"""
         c1, _c2 = self._add_codings(self._create_job([self.codetype]), [(self.code,), (self.code,)])
 
+        with self.checkMaxQueries(2, "Cache codebook"):
+            self.codebook.get_hierarchy()
+            
         with self.checkMaxQueries(1, "get values"):
             q = c1.values.order_by('field__fieldnr')
             q = q.select_related("field__fieldtype", "value__strval", "value__intval")
@@ -97,7 +98,7 @@ class TestNQueries(amcattest.PolicyTestCase):
 
         with self.checkMaxQueries(0, "Get serialiser, fieldtype should be in select_related"):
             serialiser = value.field.serialiser
-
+            
         with self.checkMaxQueries(0, "Deserialise codebook value"):
             code = serialiser.deserialise(serval)
             self.assertEqual(code, self.code)
@@ -105,6 +106,11 @@ class TestNQueries(amcattest.PolicyTestCase):
     def test_ontology_deserialisation(self):
         """Test whether normal ontology deserialization is efficient"""
         c1, c2 = self._add_codings(self._create_job([self.codetype]), [(self.code,)]*2)
+
+        
+        with self.checkMaxQueries(2, "Cache codebook"):
+            self.codebook.get_hierarchy()
+            
         with self.checkMaxQueries(2, "Get codingvalue for one coding"):
             code, = [v for (_k, v) in c1.get_values()]
             self.assertEqual(self.code, code)
@@ -150,8 +156,9 @@ class TestNQueries(amcattest.PolicyTestCase):
         for i in range(100):
             A.add_code(amcattest.create_test_code(label=str(i), language=language), None)
         codes = list(A.codes)
-        with self.checkMaxQueries(1, "Getting labels for a codebook"):
+        with self.checkMaxQueries(1, "Caching labels for a codebook"):
             A.cache_labels(language)
+        with self.checkMaxQueries(0, "Getting cached labels for a codebook"):
             for x in codes:
                 x.get_label(language)
 
@@ -164,12 +171,13 @@ class TestNQueries(amcattest.PolicyTestCase):
         vals = [(12, self.code)]
         job = self._create_job(types)
         codings = self._add_codings(job, vals * 25, narticles=1)
-        cjset = job.sets.all()[0]
-        
 
-
-        with self.checkMaxQueries(1, "Getting all codings for a set"):
-            codings = list(cjset.get_codings())
+        with self.checkMaxQueries(2, "Caching codebook"):
+            c = codebook.get_codebook(self.codebook.id)
+            list(c.get_hierarchy())
+            
+        with self.checkMaxQueries(1, "Getting all codings for a job"):
+            codings = list(job.get_codings())
 
         with self.checkMaxQueries(0, "Getting pre-fetched codings and values"):
             for c in codings:
