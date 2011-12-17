@@ -137,7 +137,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         self.users = [amcattest.create_test_user() for _x in range(2)]
 
         self.articles, self.jobs, self.asets = [], [], []
-        for i, user in enumerate([0,0,0,0,1]):
+        for i, user in enumerate([0, 0, 0, 0, 1]):
             aset = amcattest.create_test_set(articles=2 * (i+1))
             self.articles += list(aset.articles.all())
             self.asets.append(aset)
@@ -175,7 +175,9 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         t = get_table_sentence_codings_article(ca)
         self.assertIsNotNone(t)
         aslist = [tuple(r) for r in t]
-        self.assertEqual(aslist, [(3, 1, 'bla', 1, self.code), (4, 1, 'blx', None, None)])
+        self.assertEqual(len(aslist), 2)
+        self.assertEqual(aslist[0][2:], ('bla', 1, self.code))
+        self.assertEqual(aslist[1][2:], ('blx', None, None))
         
     def test_table_articles_per_set(self):
         """Is the articles per job table correct?"""
