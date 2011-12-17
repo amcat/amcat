@@ -225,13 +225,13 @@ class PostgreSQL(Database):
             else:
                 transaction.commit()
     
-    def execute_transaction(self, sql, *arguments, **kargs):
+    def execute_transaction(self, sql, *sqlarguments, **kargs):
         """Execute sql within a transaction.
         Extra arguments are passed to the transaction context manager"""
         cursor = self.cursor
-        with self.transaction(*arguments, **kargs):
-            log.debug("EXECUTING {sql} ({arguments})".format(**locals()))
-            cursor.execute(sql, arguments)
+        with self.transaction(**kargs):
+            log.debug("EXECUTING {sql} ({sqlarguments})".format(**locals()))
+            cursor.execute(sql, sqlarguments)
         
 class Sqlite(Database):
     """Sqlite implementation, passes silently on authorisation methods"""
