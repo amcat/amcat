@@ -53,7 +53,7 @@ def sendmail(sender, recipient, subject, html, plain):
     """Send an email from sender to recipient using the unix sendmail command"""
     mail = _create_message(sender, recipient, subject, html, plain)
     cmd = "%s -t" % SENDMAIL
-    out = toolkit.execute(cmd, mail, outOnly=True)
+    out = toolkit.execute(cmd, mail, outonly=True)
     if out.strip(): raise Exception(out)
     
 if __name__ == '__main__':

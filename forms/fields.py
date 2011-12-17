@@ -27,6 +27,7 @@ from amcat.model.user import User
 from django import forms
 from django.forms import fields
 from django.db import models
+from django.core.exceptions import ValidationError 
 
 __all__ = ['JSONField', 'UserField', 'CSVField']
 
