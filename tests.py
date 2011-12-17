@@ -31,6 +31,7 @@ from amcat.tools.djangotoolkit import *
 from amcat.tools.table.table3 import *
 from amcat.tools.caching import *
 from amcat.tools.dbtoolkit import *
+from amcat.tools.sendmail import *
 
 from amcat.model.coding.codingtoolkit import *
 from amcat.model.coding.serialiser import *

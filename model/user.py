@@ -168,8 +168,8 @@ class User(AmcatModel):
         # Create database user
         try:
             dbtoolkit.get_database(using=using).create_user(username, password)
-        except dbtoolkit.UserAlreadyExists as e:
-            if not force: raise e
+        except dbtoolkit.UserAlreadyExists:
+            if not force: raise
 
         # Create Django user
         u.save()
