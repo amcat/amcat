@@ -237,7 +237,7 @@
     }
   },
   {
-    "pk": 4,
+    "pk": 0,
     "model": "amcat.language",
     "fields": {
       "label": "?"
