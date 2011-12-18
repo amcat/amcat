@@ -50,6 +50,10 @@ def get_codebook(codebook_id):
         _local_cache.codebooks[codebook_id] = Codebook.objects.get(pk=codebook_id)
         return _local_cache.codebooks[codebook_id]
 
+def clear_codebook_cache():
+    """Clear the local codebook cache manually, ie in between test runs"""
+    _local_cache.codebooks = {}
+    
 
 class Codebook(AmcatModel):
     """Model class for table codebooks
@@ -195,6 +199,11 @@ class CodebookCode(AmcatModel):
         self.validate()
         super(CodebookCode, self).save(*args, **kargs)
 
+    @cached
+    def get_codebook(self):
+        """Get the cached codebook belonging to this code"""
+        return get_codebook(self.codebook_id)
+        
     def validate(self):
         """Validate whether this relation obeys validity constraints:
         1) a relation can't specify a parent and hide at the same time
@@ -207,7 +216,8 @@ class CodebookCode(AmcatModel):
             raise ValueError("A codebook code validfrom ({}) is later than its validto ({})"
                              .format(self.validfrom, self.validto))
         # uniqueness constraints:
-        for co in get_codebook(self.codebook_id).codebookcodes:
+        for co in self.get_codebook().codebookcodes:
+            
             if co == self: continue # 
             if co.code != self.code: continue
             if self.validfrom and co.validto and self.validfrom >= co.validto: continue
@@ -231,6 +241,7 @@ from amcat.tools import amcattest
 
 class TestCodebook(amcattest.PolicyTestCase):
     PYLINT_IGNORE_EXTRA = "W0212",
+
     
     def test_create(self):
         """Can we create objects?"""
@@ -342,10 +353,11 @@ class TestCodebook(amcattest.PolicyTestCase):
         
     def test_validation(self):
         """Test whether codebookcode validation works"""
-        a, b, c, d, e, f = [amcattest.create_test_code(label=l) for l in "abcdef"]
+        a, b, c, d = [amcattest.create_test_code(label=l) for l in "abcd"]
         A = amcattest.create_test_codebook(name="A")
         self.assertRaises(ValueError, A.add_code, a, b, hide=True)
-        self.assertRaises(ValueError, A.add_code, a, validfrom=datetime(2010, 1, 1), validto=datetime(1900,1,1))
+        self.assertRaises(ValueError, A.add_code, a, validfrom=datetime(2010, 1, 1),
+                          validto=datetime(1900, 1, 1))
         A.add_code(a)
         A.add_code(b)
         A.add_code(c, a)
@@ -357,22 +369,28 @@ class TestCodebook(amcattest.PolicyTestCase):
         A.add_code(d, b, validfrom=datetime(2010, 1, 1))
 
         self.assertRaises(ValueError, A.add_code, d, a)
-        self.assertRaises(ValueError, A.add_code, d, a, validto=datetime(1900,1,1))
-        self.assertRaises(ValueError, A.add_code, d, a, validfrom=datetime(1900,1,1))
+        self.assertRaises(ValueError, A.add_code, d, a, validto=datetime(1900, 1, 1))
+        self.assertRaises(ValueError, A.add_code, d, a, validfrom=datetime(1900, 1, 1))
+
+        # different code book should be ok
+        B = amcattest.create_test_codebook(name="B")
+        B.add_code(a)
+        B.add_code(c, a)
+        
         
     def test_get_timebound_functions(self):
         """Test whether time-bound functions are returned correctly"""
-        a, b, c, d, e, f = [amcattest.create_test_code(label=l) for l in "abcdef"]
+        a, b, c = [amcattest.create_test_code(label=l) for l in "abc"]
         A = amcattest.create_test_codebook(name="A")
         A.add_code(a)
         A.add_code(c, a, validfrom=datetime(2010, 1, 1))
         self.assertEqual(self.standardize(A), 'a:None;c:a')
-        self.assertEqual(self.standardize(A, date=datetime(1900,1,1)), 'a:None')
+        self.assertEqual(self.standardize(A, date=datetime(1900, 1, 1)), 'a:None')
         A.add_code(b)
         A.add_code(c, b, validto=datetime(2010, 1, 1))
-        self.assertEqual(self.standardize(A, date=datetime(2009,12,31)), 'a:None;b:None;c:b')
-        self.assertEqual(self.standardize(A, date=datetime(2010,1,1)), 'a:None;b:None;c:a')
-        self.assertEqual(self.standardize(A, date=datetime(2010,1,2)), 'a:None;b:None;c:a')
+        self.assertEqual(self.standardize(A, date=datetime(2009, 12, 31)), 'a:None;b:None;c:b')
+        self.assertEqual(self.standardize(A, date=datetime(2010, 1, 1)), 'a:None;b:None;c:a')
+        self.assertEqual(self.standardize(A, date=datetime(2010, 1, 2)), 'a:None;b:None;c:a')
         
      
         

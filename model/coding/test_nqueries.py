@@ -36,6 +36,7 @@ class TestNQueries(amcattest.PolicyTestCase):
     PYLINT_IGNORE_EXTRA = ["W0613"]
 
     def setUp(self):
+        super(TestNQueries, self).setUp()
         self.texttype = CodingSchemaFieldType.objects.get(pk=1)
         self.inttype = CodingSchemaFieldType.objects.get(pk=2)
         self.codetype = CodingSchemaFieldType.objects.get(pk=5)

@@ -200,6 +200,7 @@ class TestCoding(amcattest.PolicyTestCase):
 
     def setUp(self):
         """Set up a simple coding schema with fields to use for testing"""
+        super(TestCoding, self).setUp()
         from amcat.model.coding.codingschemafield import CodingSchemaFieldType
         strfieldtype = CodingSchemaFieldType.objects.get(pk=1)
         intfieldtype = CodingSchemaFieldType.objects.get(pk=2)

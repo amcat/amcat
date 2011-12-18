@@ -178,6 +178,13 @@ class PolicyTestCase(TestCase):
     PYLINT_IGNORE_EXTRA = () 
     TARGET_MODULE = None
 
+    def setUp(self):
+        # codebooks have a global id:object cache, which is messed up by clearing the database
+        # between test cases. So, reset it before every test to be sure.
+        from amcat.model.coding.codebook import clear_codebook_cache
+        clear_codebook_cache()
+        super(PolicyTestCase, self).setUp()
+    
     def _getmodule(self):
         """
         Get the target module for testing. If TARGET_MODULE is specified, use that,
