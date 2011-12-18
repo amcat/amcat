@@ -26,7 +26,9 @@ or to derive automatically generated search terms from.
 from __future__ import unicode_literals, print_function, absolute_import
 
 import logging; log = logging.getLogger(__name__)
+from datetime import datetime
 
+        
 from django.db import models
 
 from amcat.tools.model import AmcatModel
@@ -76,23 +78,37 @@ class Codebook(AmcatModel):
         return [get_codebook(codebookbase.supercodebook_id)
                 for codebookbase in self.codebookbase_set.all()]
 
+    @property
     @cached
-    def get_hierarchy(self):
+    def codebookcodes(self):
+        """Return a list of codebookcodes with code and parent prefetched.
+        This functions mainly to provide caching for the codebook codes"""
+        return list(self.codebookcode_set.select_related("code", "parent"))
+    
+    def get_hierarchy(self, date=None):
         """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
         
         A code is in a codebook if (a) it is listed in its direct codebookcodes, or
         (b) if it is in any of the base codebooks and not explicitly hidden in this codebook.
         The parent of a code is its parent in the codebook it came from, ie in this codebook
         if listed, otherwise in the first base that listed it.
+        
+        If date is not given, the current date is used as default
+        If validfrom and/or validto are given, only consider codebook codes
+          where validfrom <= date < validto.
         """
         # go through hierarchy sources in reverse order and update result dict
         # so newest overrides oldest
+        if date is None: date = datetime.now()
         result = {}
         for base in reversed(list(self.bases)):
-            result.update(base.get_hierarchy())
+            result.update(base.get_hierarchy(date))
 
         # Remove 'hide' objects from the result, and return
-        for co in self.codebookcodes.select_related("code", "parent"):
+        for co in self.codebookcodes:
+            if co.validfrom and date < co.validfrom: continue
+            if co.validto and date >= co.validto: continue
+            
             if co.hide:
                 del result[co.code]
             else:
@@ -112,12 +128,14 @@ class Codebook(AmcatModel):
         raise ValueError("Code with id {} not found in codebook {}".format(code_id, self.name))
     
     @invalidates
-    def add_code(self, code, parent=None, hide=False):
-        """Add the given code to the hierarchy, with given parent (or hide)"""
-        if parent and hide: raise ValueError("Hidden objects cannot specify parent")
+    def add_code(self, code, parent=None, **kargs):
+        """Add the given code to the hierarchy, with optional given parent.
+        Any extra arguments are passed to the CodebookCode constructor.
+        Possible arguments include hide, validfrom, validto
+        """
         if isinstance(parent, CodebookCode): parent = parent.code
         if isinstance(code, CodebookCode): code = code.code
-        return CodebookCode.objects.create(codebook=self, code=code, parent=parent, hide=hide)
+        return CodebookCode.objects.create(codebook=self, code=code, parent=parent, **kargs)
 
     @invalidates
     def add_base(self, codebook, rank=None):
@@ -132,6 +150,7 @@ class Codebook(AmcatModel):
         q = Label.objects.filter(language=language, code__in=self.codes)
         for l in q:
             self.get_code(l.code_id)._cache_label(language, l.label)
+
     
 class CodebookBase(AmcatModel):
     """Many-to-many field (codebook : codebook) with ordering"""
@@ -162,7 +181,7 @@ class CodebookCode(AmcatModel):
     """Many-to-many field (codebook : code) with additional properties"""
     id = models.AutoField(primary_key=True, db_column='codebook_object_id')
     
-    codebook = models.ForeignKey(Codebook, db_index=True, related_name="codebookcodes")
+    codebook = models.ForeignKey(Codebook, db_index=True)
     
     code = models.ForeignKey(Code, db_index=True, related_name="+")
     parent = models.ForeignKey(Code, db_index=True, related_name="+", null=True)
@@ -171,7 +190,32 @@ class CodebookCode(AmcatModel):
     validfrom = models.DateTimeField(null=True)
     validto = models.DateTimeField(null=True)
     function = models.ForeignKey(Functions, default=0)
-    
+
+    def save(self, *args, **kargs):
+        self.validate()
+        super(CodebookCode, self).save(*args, **kargs)
+
+    def validate(self):
+        """Validate whether this relation obeys validity constraints:
+        1) a relation can't specify a parent and hide at the same time
+        2) a relation cannot have a validfrom later than the validto
+        3) a child can't occur twice unless the periods are non-overlapping
+        """
+        if self.parent and self.hide:
+            raise ValueError("A codebook code can either hide or provide a parent, not both!")
+        if self.validto and self.validfrom and self.validto < self.validfrom:
+            raise ValueError("A codebook code validfrom ({}) is later than its validto ({})"
+                             .format(self.validfrom, self.validto))
+        # uniqueness constraints:
+        for co in get_codebook(self.codebook_id).codebookcodes:
+            if co == self: continue # 
+            if co.code != self.code: continue
+            if self.validfrom and co.validto and self.validfrom >= co.validto: continue
+            if self.validto and co.validfrom and self.validto <= co.validfrom: continue
+            raise ValueError("Codebook code {!r} overlaps with {!r}".format(self, co))
+        
+    def __unicode__(self):
+        return "{0.code}:{0.parent} ({0.codebook}, {0.validfrom}-{0.validto})".format(self)
     
     class Meta():
         db_table = 'codebooks_codes'
@@ -196,18 +240,20 @@ class TestCodebook(amcattest.PolicyTestCase):
         co = c.add_code(o)
         co2 = c.add_code(Code.objects.create(), parent=o)
         
-        self.assertIn(co, c.codebookcodes.all())
+        self.assertIn(co, c.codebookcodes)
         #self.assertIn(o, c.codes)
         self.assertEqual(co2.parent, o)
 
 
+        
+    def standardize(self, codebook, **kargs):
+        """return a dense hierarchy serialiseation for easier comparisons"""
+        
+        return ";".join(sorted({"{0}:{1}".format(*cp) 
+                                for cp in codebook.get_hierarchy(**kargs).items()}))
+
     def test_hierarchy(self):
         """Does the code/parent base class resolution work"""
-        def standardize(codebook):
-            """return a dense hierarchy serialiseation for easier comparisons"""
-
-            return ";".join(sorted({"{0}:{1}".format(*cp) 
-                                    for cp in codebook.get_hierarchy().items()}))
 
         a, b, c, d, e, f = [amcattest.create_test_code(label=l) for l in "abcdef"]
 
@@ -218,7 +264,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         A.add_code(a)
         A.add_code(b, a)
         A.add_code(c, b)
-        self.assertEqual(standardize(A), 'a:None;b:a;c:b')
+        self.assertEqual(self.standardize(A), 'a:None;b:a;c:b')
 
         # D: d
         #    +e
@@ -227,7 +273,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         D.add_code(d)
         D.add_code(e, d)
         D.add_code(f, d)
-        self.assertEqual(standardize(D), 'd:None;e:d;f:d')
+        self.assertEqual(self.standardize(D), 'd:None;e:d;f:d')
         
         # A+D: a
         #      +b
@@ -238,11 +284,11 @@ class TestCodebook(amcattest.PolicyTestCase):
         AD = amcattest.create_test_codebook(name="A+D")
         AD.add_base(A)
         AD.add_base(D)
-        self.assertEqual(standardize(AD), 'a:None;b:a;c:b;d:None;e:d;f:d')
+        self.assertEqual(self.standardize(AD), 'a:None;b:a;c:b;d:None;e:d;f:d')
         # now let's hide c and redefine e to be under b
         AD.add_code(c, hide=True) 
         AD.add_code(e, parent=b)
-        self.assertEqual(standardize(AD), 'a:None;b:a;d:None;e:b;f:d')
+        self.assertEqual(self.standardize(AD), 'a:None;b:a;d:None;e:b;f:d')
 
         # Test precendence between bases
         # B: b
@@ -252,7 +298,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         B.add_code(b)
         B.add_code(d, b)
         B.add_code(e, b)
-        self.assertEqual(standardize(B), 'b:None;d:b;e:b')
+        self.assertEqual(self.standardize(B), 'b:None;d:b;e:b')
         # D+B: d     B+D: b
         #      +e         +d
         #      +f          +f
@@ -260,11 +306,11 @@ class TestCodebook(amcattest.PolicyTestCase):
         DB = amcattest.create_test_codebook(name="D+B")
         DB.add_base(D)
         DB.add_base(B)
-        self.assertEqual(standardize(DB), 'b:None;d:None;e:d;f:d')
+        self.assertEqual(self.standardize(DB), 'b:None;d:None;e:d;f:d')
         BD = amcattest.create_test_codebook(name="B+D")
         BD.add_base(B)
         BD.add_base(D)
-        self.assertEqual(standardize(BD), 'b:None;d:b;e:b;f:d')
+        self.assertEqual(self.standardize(BD), 'b:None;d:b;e:b;f:d')
         
     def _test_unique(self):
         """Test the uniqueness constraints - does not work anymore since null!=null"""
@@ -291,6 +337,45 @@ class TestCodebook(amcattest.PolicyTestCase):
         self.assertEqual(c3, c4)        
         self.assertIsNot(c1, c4)   
         self.assertNotEqual(c1, c4)
+    
         
         
+    def test_validation(self):
+        """Test whether codebookcode validation works"""
+        a, b, c, d, e, f = [amcattest.create_test_code(label=l) for l in "abcdef"]
+        A = amcattest.create_test_codebook(name="A")
+        self.assertRaises(ValueError, A.add_code, a, b, hide=True)
+        self.assertRaises(ValueError, A.add_code, a, validfrom=datetime(2010, 1, 1), validto=datetime(1900,1,1))
+        A.add_code(a)
+        A.add_code(b)
+        A.add_code(c, a)
+        self.assertRaises(ValueError, A.add_code, c, a)
+        self.assertRaises(ValueError, A.add_code, c, b)
+        self.assertRaises(ValueError, A.add_code, c, hide=True)
         
+        A.add_code(d, a, validto=datetime(2010, 1, 1))
+        A.add_code(d, b, validfrom=datetime(2010, 1, 1))
+
+        self.assertRaises(ValueError, A.add_code, d, a)
+        self.assertRaises(ValueError, A.add_code, d, a, validto=datetime(1900,1,1))
+        self.assertRaises(ValueError, A.add_code, d, a, validfrom=datetime(1900,1,1))
+        
+    def test_get_timebound_functions(self):
+        """Test whether time-bound functions are returned correctly"""
+        a, b, c, d, e, f = [amcattest.create_test_code(label=l) for l in "abcdef"]
+        A = amcattest.create_test_codebook(name="A")
+        A.add_code(a)
+        A.add_code(c, a, validfrom=datetime(2010, 1, 1))
+        self.assertEqual(self.standardize(A), 'a:None;c:a')
+        self.assertEqual(self.standardize(A, date=datetime(1900,1,1)), 'a:None')
+        A.add_code(b)
+        A.add_code(c, b, validto=datetime(2010, 1, 1))
+        self.assertEqual(self.standardize(A, date=datetime(2009,12,31)), 'a:None;b:None;c:b')
+        self.assertEqual(self.standardize(A, date=datetime(2010,1,1)), 'a:None;b:None;c:a')
+        self.assertEqual(self.standardize(A, date=datetime(2010,1,2)), 'a:None;b:None;c:a')
+        
+     
+        
+        
+
+       
