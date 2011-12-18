@@ -26,10 +26,11 @@ from __future__ import unicode_literals, print_function, absolute_import
 from functools import partial
 
 from amcat.model.coding.codingjob import CodingJob
-from amcat.model.coding.coding import Coding, STATUS_COMPLETE
+from amcat.model.coding.coding import Coding, CodingStatus, STATUS_COMPLETE
 from amcat.model.coding.codedarticle import CodedArticle
 from amcat.model.coding.codingschemafield import CodingSchemaField
 from amcat.model.coding.codingschemafield import CodingSchemaFieldType
+from django import forms
 
 from amcat.tools.table.table3 import ObjectTable
 
@@ -69,14 +70,9 @@ def get_coded_articles(jobs):
 def get_table_articles_per_job(jobs):
     """Return a table of all articles in a cjset with status
 
-    Columns: set, coder, article, articlemeta, status, comments
+    Columns: article, articlemeta, status, comments
     """
     result = ObjectTable(rows = list(get_coded_articles(jobs)))
-    #result.addColumn(lambda a: a.codingjobset.codingjob, "codingjob")
-
-    result.addColumn(lambda a: a.job.id, "jobid")
-    result.addColumn(lambda a: a.job.name, "job")
-    result.addColumn(lambda a: a.coder, "coder")
     result.addColumn(lambda a: a.article.id, "articleid")
     result.addColumn(lambda a: a.article.headline, "headline")
     result.addColumn(lambda a: a.article.date, "date")
@@ -103,7 +99,46 @@ def get_table_sentence_codings_article(codedarticle):
         result.addColumn(partial(get_value, field), field.label)
     return result
 
+    
+def _getFieldObj(field):
+    """returns a matching Django Field object 
+    for a amcat.model.coding.codingschemafield.CodingSchemaField object"""
+    val = field.default
+    if unicode(field.fieldtype) in ('Boolean', 'DB ontology'):
+        fieldObj = forms.CharField(label=field.label, initial=val, 
+                                    widget=forms.TextInput(), required=field.required)
+    elif unicode(field.fieldtype) == 'integer':
+        fieldObj = forms.IntegerField(label=field.label, initial=val, 
+                            widget=forms.TextInput(), required=field.required)
+    elif unicode(field.fieldtype) == 'Decimal':
+        fieldObj = forms.DecimalField(label=field.label, initial=val, 
+                            widget=forms.TextInput(), required=field.required)
+    elif unicode(field.fieldtype) == 'Area':
+        fieldObj = forms.IntegerField(label=field.label, initial=val, 
+                            required=field.required, widget=forms.TextInput())
+    else:
+        fieldObj = forms.CharField(label=field.label, initial=val,
+                            widget=forms.TextInput(), required=field.required)
+    return fieldObj
+        
+        
+class CodingSchemaForm(forms.Form):
+    """Dummy form that should be initiated with dynamic fields, based on the coding schema
+    
+    Requires as first argument an AnnotationSchema"""
 
+    def __init__(self, schema, *args, **kargs):
+        super(CodingSchemaForm, self).__init__(*args, **kargs)
+        for field in schema.fields.order_by('fieldnr').all():
+            self.fields['field_%s' % field.id] = _getFieldObj(field)
+    
+            
+class CodingStatusCommentForm(forms.Form):
+    """Form that represents the coding status and comment"""
+
+    comment = forms.CharField(label='Comment', required=False)
+    status = forms.ModelChoiceField(queryset=CodingStatus.objects.all(), empty_label=None)
+    
         
 ###########################################################################
 #                          U N I T   T E S T S                            #
