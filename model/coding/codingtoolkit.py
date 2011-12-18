@@ -28,11 +28,14 @@ from functools import partial
 from amcat.model.coding.codingjob import CodingJob
 from amcat.model.coding.coding import Coding, CodingStatus, STATUS_COMPLETE
 from amcat.model.coding.codedarticle import CodedArticle
+from amcat.model.coding.code import Code
 from amcat.model.coding.codingschemafield import CodingSchemaField
 from amcat.model.coding.codingschemafield import CodingSchemaFieldType
 from django import forms
 
 from amcat.tools.table.table3 import ObjectTable
+
+import logging; log = logging.getLogger(__name__)
 
 def get_table_jobs_per_user(users, **additionalFilters):
     """Return a table of all jobs per user
@@ -83,11 +86,14 @@ def get_table_articles_per_job(jobs):
     result.addColumn(lambda a: a.coding and a.coding.comments, "comments")
     return result
 
-def get_value(field, coding):
+def get_value(field, language, coding):
     """Return the (deserialized) value for field in this coding"""
-    return dict(coding.get_values()).get(field)
+    value = dict(coding.get_values()).get(field)
+    if type(value) == Code:
+        value = value.get_label(language)
+    return value
 
-def get_table_sentence_codings_article(codedarticle):
+def get_table_sentence_codings_article(codedarticle, language):
     """Return a table of sentence codings x fields
 
     The cells contain domain (deserialized) objects
@@ -96,7 +102,7 @@ def get_table_sentence_codings_article(codedarticle):
     result.addColumn('id')
     result.addColumn(lambda x:x.sentence_id, 'sentence')
     for field in codedarticle.codingjob.unitschema.fields.order_by('fieldnr').all():
-        result.addColumn(partial(get_value, field), field.label)
+        result.addColumn(partial(get_value, field, language), field.label)
     return result
 
     
@@ -207,11 +213,11 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
     def test_table_codings(self):
         """Is the codings table correct?"""
         ca = CodedArticle(self.an1)
-        t = get_table_sentence_codings_article(ca)
+        t = get_table_sentence_codings_article(ca, ca.codingjob.coder.language)
         self.assertIsNotNone(t)
         aslist = [tuple(r) for r in t]
         self.assertEqual(len(aslist), 2)
-        self.assertEqual(aslist[0][2:], ('bla', 1, self.code))
+        self.assertEqual(aslist[0][2:], ('bla', 1, unicode(self.code)))
         self.assertEqual(aslist[1][2:], ('blx', None, None))
         
     def test_table_articles_per_set(self):
@@ -264,7 +270,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
             CodingValue.objects.create(coding=sa, field=self.intfield, intval=i)
         
         with list_queries() as l:
-            t = get_table_sentence_codings_article(ca)
+            t = get_table_sentence_codings_article(ca, ca.codingjob.coder.language)
             t.output() # force getting all values
 	#query_list_to_table(l, output=print, maxqlen=190)
         self.assertTrue(len(l) < 30, "Retrieving table used %i queries" % len(l))
