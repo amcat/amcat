@@ -62,8 +62,9 @@ def invalidates(func, cache_attr=CACHE_PREFIX):
     @wraps(func)
     def inner(self, *args, **kargs):
         """Decorator inner function: reset the cache and run func as normal"""
+        f = func(self, *args, **kargs)
         _reset(self, cache_attr)
-        return func(self, *args, **kargs)
+        return f
     return inner
 
 def invalidates_named(cache_attr):
