@@ -63,8 +63,10 @@ def findScript(inputClass, outputClass):
     for script in scripts:
         if script.input_type == inputClass and script.output_type == outputClass:
             return script
-    log.warn('Script not found, input: %s output: %s. Scripts: %s' % \
-                                                    (inputClass, outputClass, scripts))
+
+    if not (inputClass is None or outputClass is None):
+        log.warn('Script not found, input: %s output: %s. Scripts: %s' % \
+                                        (inputClass, outputClass, scripts))
     return None
             
             

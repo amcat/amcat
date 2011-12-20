@@ -101,7 +101,7 @@ class Form(forms.Form):
     """
     Standard form for scrapers. Each scraper-form has to inherit this one.
     """
-    threads = forms.IntegerField(initial=1)
+    threads = forms.IntegerField(initial=3)
 
     set = forms.CharField(max_length=100)
     project = forms.IntegerField(initial=-1)
@@ -323,6 +323,8 @@ class GoogleScraper(HTTPScraper):
         self.domain = domain
         self.pps = pps
 
+        self.scraped_urls = [] 
+
         # Init cookies
         self.getdoc(self.google_url)
 
@@ -334,7 +336,8 @@ class GoogleScraper(HTTPScraper):
             'hl' : 'nl',
             'btnG' : 'Zoeken',
             'q' : q,
-            'start' : page * self.pps
+            'start' : page * self.pps,
+            'complete' : 0 # disable Google Instant
         }
 
         return self.google_url + urllib.urlencode(query)
@@ -342,21 +345,25 @@ class GoogleScraper(HTTPScraper):
     def formatterm(self, date):
         return None
 
-    def init(self, date, page=0):
+    def init(self, page=0):
         """
         @type date: datetime.date, datetime.datetime
         @param date: date to scrape for.
         """
+        date = self.options['date']
         term = self.formatterm(date)
         url = self._genurl(term, page)
 
         results = self.getdoc(url).cssselect('h3.r > a.l')
         for a in results:
             url = a.get('href')
-            yield objects.HTMLDocument(url=url, date=date)
+
+            if url not in self.scraped_urls:
+                self.scraped_urls.append(url)
+                yield objects.HTMLDocument(url=url, date=date)
 
         if len(results) == self.pps:
-            for d in self.init(date, page=page+1):
+            for d in self.init(page=page+1):
                 yield d
 
 class PhpBBScraper(HTTPScraper):

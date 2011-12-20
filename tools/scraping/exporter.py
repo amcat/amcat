@@ -76,9 +76,6 @@ class Exporter(object):
         self.set.articles.add(art)
         self.set.save()
 
-        if not art.parent:
-            log.info(art.headline)
-
         doc.id = art.id
         return art.id if return_id else art
 

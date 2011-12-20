@@ -44,8 +44,12 @@ def run_cli(cls):
 
 def handleOutput(out, output_type):
     cls = scriptmanager.findScript(output_type, str)
-    if not cls: print "no output possible"
-    else: print cls().run(out)
+    if not cls:
+        # Use logging?
+        #print "no output possible"
+        pass
+    else:
+        print cls().run(out)
             
 
 def argument_parser_from_script(script_class):
