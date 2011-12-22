@@ -432,8 +432,7 @@ if __name__ == '__main__':
     from amcat.tools.djangotoolkit import list_queries
     
     with list_queries(output=print, printtime=True):
-        c.get_hierarchy()
-    with list_queries(output=print, printtime=True):
         set(c.codes)
+    with list_queries(output=print, printtime=True):
         set(c.codes)
     
