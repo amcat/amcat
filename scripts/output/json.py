@@ -23,6 +23,7 @@ from amcat.scripts import script, types
 from django.utils import simplejson
 import amcat.scripts.forms
 from amcat.model.medium import Medium
+import datetime
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 
 def encode_json(obj):
@@ -31,6 +32,8 @@ def encode_json(obj):
         return "%s - %s" % (obj.id, obj.name)
     if isinstance(obj, table3.Table):
         return simplejson.JSONDecoder().decode(TableToJson().run(obj)) # TODO: this is very ugly and inefficient.. (double encoding..)
+    if isinstance(obj, datetime.datetime):
+        return obj.strftime('%Y-%m-%d %H:%M')
     raise TypeError("%r is not JSON serializable" % (obj,))
     
 

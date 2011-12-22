@@ -87,7 +87,7 @@ class Codebook(AmcatModel):
     def codebookcodes(self):
         """Return a list of codebookcodes with code and parent prefetched.
         This functions mainly to provide caching for the codebook codes"""
-        return list(self.codebookcode_set.select_related("code", "parent"))
+        return list(self.codebookcode_set.filter(hide=False).select_related("code", "parent"))
     
     def get_hierarchy(self, date=None):
         """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
@@ -120,6 +120,7 @@ class Codebook(AmcatModel):
         return result
 
     @property
+    @cached
     def codes(self):
         """Returns the sequence of codes that are in this hierarchy"""
         return self.get_hierarchy().keys()
@@ -203,6 +204,11 @@ class CodebookCode(AmcatModel):
     def get_codebook(self):
         """Get the cached codebook belonging to this code"""
         return get_codebook(self.codebook_id)
+        
+    @cached
+    def get_code(self):
+        """Get the cached code object"""
+        return self.get_codebook().get_code(self.code_id)
         
     def validate(self):
         """Validate whether this relation obeys validity constraints:

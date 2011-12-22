@@ -29,7 +29,7 @@ are ontology coding types.
 
 from amcat.tools.model import AmcatModel
 
-from amcat.model.coding.codebook import Codebook
+from amcat.model.coding.codebook import Codebook, get_codebook
 
 from amcat.model.coding.codingschema import CodingSchema, RequiredValueError
 
@@ -109,6 +109,9 @@ class CodingSchemaField(AmcatModel):
         """Validate the given value for this field"""
         if (value is None) and self.required:
             raise RequiredValueError(self)
+            
+    def get_codebook(self):
+        return get_codebook(self.codebook_id)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
