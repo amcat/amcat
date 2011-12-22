@@ -87,7 +87,7 @@ class Codebook(AmcatModel):
     def codebookcodes(self):
         """Return a list of codebookcodes with code and parent prefetched.
         This functions mainly to provide caching for the codebook codes"""
-        return list(self.codebookcode_set.filter(hide=False).select_related("code", "parent"))
+        return list(self.codebookcode_set.select_related("code", "parent"))
     
     def get_hierarchy(self, date=None):
         """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
@@ -120,10 +120,16 @@ class Codebook(AmcatModel):
         return result
 
     @property
-    @cached
     def codes(self):
-        """Returns the sequence of codes that are in this hierarchy"""
-        return self.get_hierarchy().keys()
+        """Returns a set of codes that are in this hierarchy
+        All codes that would be in the hierarchy for a certain date are included
+        (ie date restrictions are not taken into account)
+        """
+        codes = set(co.code for co in self.codebookcodes if not co.hide)
+        for base in self.bases:
+            codes |= base.codes
+        codes -= set(co.code for co in self.codebookcodes if co.hide)
+        return codes
 
     def get_code(self, code_id):
         """Return the code with the requested id. Raises a ValueError if not found"""
@@ -303,7 +309,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         AD.add_base(D)
         self.assertEqual(self.standardize(AD), 'a:None;b:a;c:b;d:None;e:d;f:d')
         # now let's hide c and redefine e to be under b
-        AD.add_code(c, hide=True) 
+        AD.add_code(c, hide=True)
         AD.add_code(e, parent=b)
         self.assertEqual(self.standardize(AD), 'a:None;b:a;d:None;e:b;f:d')
 
@@ -399,7 +405,35 @@ class TestCodebook(amcattest.PolicyTestCase):
         self.assertEqual(self.standardize(A, date=datetime(2010, 1, 2)), 'a:None;b:None;c:a')
         
      
+    def test_codes(self):
+        """Test the codes property"""
+        a, b, c, d = [amcattest.create_test_code(label=l) for l in "abcd"]
         
-        
+        A = amcattest.create_test_codebook(name="A")
+        A.add_code(a)
+        A.add_code(b, a)
+        A.add_code(c, a, validfrom=datetime(1910, 1, 1), validto=datetime(1920, 1, 1))
 
-       
+        self.assertEqual(A.codes, set([a, b, c]))
+
+        B = amcattest.create_test_codebook(name="B")
+        B.add_code(d, b)
+        self.assertEqual(B.codes, set([d]))
+
+        B.add_base(A)
+        self.assertEqual(B.codes, set([a, b, c, d]))
+        
+                         
+                         
+        
+if __name__ == '__main__':
+    c = get_codebook(-5001)
+    import time
+    from amcat.tools.djangotoolkit import list_queries
+    
+    with list_queries(output=print, printtime=True):
+        c.get_hierarchy()
+    with list_queries(output=print, printtime=True):
+        set(c.codes)
+        set(c.codes)
+    

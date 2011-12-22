@@ -28,6 +28,7 @@ from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToMan
 from contextlib import contextmanager
 import logging; LOG = logging.getLogger(__name__)
 import collections, re 
+import time
 
 from amcat.tools.table.table3 import ObjectTable
 
@@ -73,13 +74,14 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
 
 
 @contextmanager   
-def list_queries(dest=None, output=False, outputopts={}):
+def list_queries(dest=None, output=False, printtime=False, outputopts={}):
     """Context manager to print django queries
 
     Any queries that were used in the context are placed in dest,
     which is also yielded.
     Note: this will set settings.DEBUG to True temporarily.
     """
+    t = time.time()
     if dest is None: dest = []
     from django.conf import settings
     from django.db import connection
@@ -92,7 +94,9 @@ def list_queries(dest=None, output=False, outputopts={}):
     finally:
         settings.DEBUG = debug_old_value
         if output:
+            print("Total time: %1.4f" % (time.time() - t))
             query_list_to_table(dest, output=output, **outputopts)
+            
        
 def query_list_to_table(queries, maxqlen=80, output=False, normalise_numbers=True, **outputoptions):
     """Convert a django query list (list of dict with keys time and sql) into a table3
