@@ -89,6 +89,12 @@ class Codebook(AmcatModel):
         This functions mainly to provide caching for the codebook codes"""
         return list(self.codebookcode_set.select_related("code", "parent"))
     
+    def get_codebookcodes(self, code):
+        """Return a sequence of codebookcode objects for this code in the codebook"""
+        for co in self.codebookcodes:
+            if co.code_id == code.id: 
+                yield co
+    
     def get_hierarchy(self, date=None):
         """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
         
@@ -120,6 +126,7 @@ class Codebook(AmcatModel):
         return result
 
     @property
+    @cached
     def codes(self):
         """Returns a set of codes that are in this hierarchy
         All codes that would be in the hierarchy for a certain date are included

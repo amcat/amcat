@@ -106,18 +106,7 @@ def get_table_sentence_codings_article(codedarticle, language):
     return result
 
     
-    
-def getCodes(codebook):
-    """Returns a dictionary with all codes and their codebookcodebookcodes"""
-    codeDict = {}
-    print(codebook, len(codebook.codebookcodes))
-    for cc in codebook.codebookcodes:
-        code = cc.get_code()
-        if code in codeDict:
-            codeDict[code].append(cc)
-        else:
-            codeDict[code] = [cc]
-    return codeDict
+ 
     
     
 def _getFieldObj(field):

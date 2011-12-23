@@ -127,7 +127,7 @@ class SearchQuery(object):
             
             
 class SelectionForm(forms.Form):
-    projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.order_by('-pk').filter(active=1)) # TODO: change to projects of user
+    projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.order_by('-pk')) # TODO: change to projects of user
     articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False)
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.none(), required=False)
     query = forms.CharField(widget=forms.Textarea, required=False)
