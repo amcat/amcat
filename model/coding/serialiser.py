@@ -100,7 +100,7 @@ class QualitySerialiser(BaseSerialiser):
     @property
     def possible_values(self):
         return range(-10, 15, 5) # 15 because end point is ommitted
-    def value_label(self, value):
+    def value_label(self, value, language=None):
         if value == 0: return "0"
         return "%+1.1f" % (value / 10.)
     
@@ -138,11 +138,9 @@ class _CodebookSerialiser(BaseSerialiser):
     @property
     def possible_values(self):
         return self.codebook.codes
-
-    def value_description(self, value, language=None):
-        return unicode(value)
     
     def value_label(self, value, language=None):
+        self.codebook.cache_labels(language)
         return value.get_label(language)
 
 ###########################################################################
@@ -196,7 +194,8 @@ class TestSerialiser(amcattest.PolicyTestCase):
     def test_qualityserialiser(self):
         """Test the boolean serialiser"""
         b = QualitySerialiser(None)
-        self.assertEqual({b.value_label(l) for l in b.possible_values}, {'-1.0', '-0.5', '0' ,'+0.5', '+1.0'})
+        self.assertEqual({b.value_label(l) for l in b.possible_values},
+                         {'-1.0', '-0.5', '0' , '+0.5', '+1.0'})
         for x in b.possible_values:
             self.assertEqual(b.deserialise(b.serialise(x)), x)
 
@@ -222,7 +221,7 @@ class TestSerialiser(amcattest.PolicyTestCase):
 
         self.assertRaises(Exception, s.deserialise, -9999999999999999)
         
-        self.assertEqual([c], s.possible_values)
+        self.assertEqual({c}, set(s.possible_values))
         
         self.assertEqual("bla", s.value_label(c))
         self.assertEqual("blx", s.value_label(c, l2))

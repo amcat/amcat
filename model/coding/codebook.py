@@ -171,6 +171,13 @@ class Codebook(AmcatModel):
 
     def cache_labels(self, language):
         """Ask the codebook to cache the labels on its objects in that language"""
+        # HACK to cache cache labels per language
+        if not hasattr(self, '_cache_labels_languages'):
+            self._cache_labels_languages = set()
+        elif language in self._cache_labels_languages:
+            return
+        self._cache_labels_languages.add(language)
+
         q = Label.objects.filter(language=language, code__in=self.codes)
         for l in q:
             self.get_code(l.code_id)._cache_label(language, l.label)
@@ -443,7 +450,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         A.add_code(e, a)
 
         self.assertEqual(set(_copairs(A, a)), {(a, None)})
-        self.assertEqual(set(_copairs(A, c)), {(c,a), (c,b)})
+        self.assertEqual(set(_copairs(A, c)), {(c, a), (c, b)})
         self.assertEqual(set(_copairs(A, d)), {(d, a)})
         self.assertEqual(set(_copairs(A, e)), {(e, a)})
         
@@ -453,7 +460,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         B.add_base(A)
         self.assertEqual(set(_copairs(B, d)), {(d, b)})
         self.assertEqual(set(_copairs(B, e)), {(e, b), (e, a)})
-        self.assertEqual(set(_copairs(B, c)), {(c,a), (c,b)})
+        self.assertEqual(set(_copairs(B, c)), {(c, a), (c, b)})
         
         
         
