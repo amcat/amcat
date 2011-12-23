@@ -67,13 +67,6 @@ class BaseSerialiser(object):
         """
         return None
 
-    def value_description(self, value, language=None):
-        """Get a description for the given (desrialised) value
-
-        @param language: an optional preferred language, which may be ignored
-        """
-        return unicode(value)
-    
     def value_label(self, value, language=None):
         """Get a label for the given (deserialised) value
 
@@ -91,6 +84,26 @@ class IntSerialiser(BaseSerialiser):
     def __init__(self, field):
         super(IntSerialiser, self).__init__(field, int, int)
 
+class BooleanSerialiser(BaseSerialiser):
+    """Boolean serialiser with 'possible values'"""
+    def __init__(self, field):
+        super(BooleanSerialiser, self).__init__(self, bool, int)
+
+    @property
+    def possible_values(self):
+        return [True, False]
+        
+class QualitySerialiser(BaseSerialiser):
+    """Boolean serialiser with 'possible values'"""
+    def __init__(self, field):
+        super(QualitySerialiser, self).__init__(self, int, int)
+    @property
+    def possible_values(self):
+        return range(-10, 15, 5) # 15 because end point is ommitted
+    def value_label(self, value):
+        if value == 0: return "0"
+        return "%+1.1f" % (value / 10.)
+    
 
 _memo = {}
 def CodebookSerialiser(field):
@@ -169,8 +182,25 @@ class TestSerialiser(amcattest.PolicyTestCase):
         self.assertIs(s1, s2)
         s3 = CodebookSerialiser(_DummyField(B))
         self.assertNotEqual(s2, s3)
-        
+
+
+    def test_booleanserialiser(self):
+        """Test the boolean serialiser"""
+        b = BooleanSerialiser(None)
+        self.assertEqual({b.value_label(l) for l in b.possible_values}, {'True', 'False'})
+        self.assertEqual(b.serialise(True), 1)
+        self.assertEqual(b.deserialise(1), True)
+        self.assertEqual(b.serialise(False), 0)
+        self.assertEqual(b.deserialise(0), False)
     
+    def test_qualityserialiser(self):
+        """Test the boolean serialiser"""
+        b = QualitySerialiser(None)
+        self.assertEqual({b.value_label(l) for l in b.possible_values}, {'-1.0', '-0.5', '0' ,'+0.5', '+1.0'})
+        for x in b.possible_values:
+            self.assertEqual(b.deserialise(b.serialise(x)), x)
+
+        
     def test_codebookserialiser(self):
         """Test the codebook serialiser"""
         from amcat.model.language import Language
