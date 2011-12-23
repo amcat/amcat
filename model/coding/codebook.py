@@ -90,10 +90,16 @@ class Codebook(AmcatModel):
         return list(self.codebookcode_set.select_related("code", "parent"))
     
     def get_codebookcodes(self, code):
-        """Return a sequence of codebookcode objects for this code in the codebook"""
-        for co in self.codebookcodes:
-            if co.code_id == code.id: 
-                yield co
+        """Return a sequence of codebookcode objects for this code in the codebook
+
+        Iterate over own codebookcodes and bases, in order. For every parent,
+        yield a codebookcode, until the first non-time-limited parent is found.
+        """
+        for codebook in [self] + self.bases:
+            for co in codebook.codebookcodes:
+                if co.code_id == code.id: 
+                    yield co
+                    if not (co.validfrom or co.validto): return
     
     def get_hierarchy(self, date=None):
         """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
@@ -341,19 +347,6 @@ class TestCodebook(amcattest.PolicyTestCase):
         BD.add_base(B)
         BD.add_base(D)
         self.assertEqual(self.standardize(BD), 'b:None;d:b;e:b;f:d')
-        
-    def _test_unique(self):
-        """Test the uniqueness constraints - does not work anymore since null!=null"""
-        #from django.db import IntegrityError
-        return
-        # A = amcattest.create_test_codebook(name="A")
-        # B = amcattest.create_test_codebook(name="B")
-        # A.add_base(B)
-        # self.assertRaises(IntegrityError, A.add_base, B)
-        # self.assertRaises(IntegrityError, A.add_base, B)
-        # c = amcattest.create_test_code()
-        # A.add_code(c)
-        # self.assertRaises(IntegrityError, A.add_code, c)
 
     def test_get_codebook(self):
         """Test whether using get_codebook results in shared objects"""
@@ -430,8 +423,42 @@ class TestCodebook(amcattest.PolicyTestCase):
         B.add_base(A)
         self.assertEqual(B.codes, set([a, b, c, d]))
         
-                         
-                         
+    def test_codebookcodes(self):
+        """Test the get_codebookcodes function"""
+        def _copairs(codebook, code):
+            """Get (child, parent) pairs for codebookcodes"""
+            for co in codebook.get_codebookcodes(code):
+                yield co.code, co.parent
+            
+            
+        
+        a, b, c, d, e = [amcattest.create_test_code(label=l) for l in "abcde"]
+        
+        A = amcattest.create_test_codebook(name="A")
+        A.add_code(a)
+        A.add_code(b)
+        A.add_code(c, a, validfrom=datetime(1910, 1, 1), validto=datetime(1920, 1, 1))
+        A.add_code(c, b, validfrom=datetime(1920, 1, 1), validto=datetime(1930, 1, 1))
+        A.add_code(d, a)
+        A.add_code(e, a)
+
+        self.assertEqual(set(_copairs(A, a)), {(a, None)})
+        self.assertEqual(set(_copairs(A, c)), {(c,a), (c,b)})
+        self.assertEqual(set(_copairs(A, d)), {(d, a)})
+        self.assertEqual(set(_copairs(A, e)), {(e, a)})
+        
+        B = amcattest.create_test_codebook(name="B")
+        B.add_code(d, b)
+        B.add_code(e, b, validfrom=datetime(2012, 1, 1))
+        B.add_base(A)
+        self.assertEqual(set(_copairs(B, d)), {(d, b)})
+        self.assertEqual(set(_copairs(B, e)), {(e, b), (e, a)})
+        self.assertEqual(set(_copairs(B, c)), {(c,a), (c,b)})
+        
+        
+        
+
+
         
 if __name__ == '__main__':
     c = get_codebook(-5001)
