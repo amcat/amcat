@@ -29,18 +29,7 @@ a command line script.
 from django import forms
 from django.http import QueryDict
 from django.utils.datastructures import MergeDict
-
-
-class InvalidFormException(Exception):
-    """ exception which is raised when the form contains one or more fields in error """
-    def __init__(self, message, errors):
-        Exception.__init__(self, message)
-        self.errors = errors
-
-    def getErrorDict(self):
-        """returns the fields containing errors as dict, with the fieldname as key and the errors as value (in a list, there can be more than one)"""
-        return dict([(k, [unicode(e) for e in v]) for k,v in self.errors.items()]) 
- 
+from amcat.forms import InvalidFormException
         
         
 class Script(object):

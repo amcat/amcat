@@ -86,13 +86,19 @@ def get_table_articles_per_job(jobs):
     result.addColumn(lambda a: a.coding and a.coding.comments, "comments")
     return result
 
-def get_value(field, language, coding):
+def get_value(field, coding):
     """Return the (deserialized) value for field in this coding"""
     value = dict(coding.get_values()).get(field)
-    if type(value) == Code:
-        value = value.get_label(language)
     return value
 
+def get_label(field, language, coding):
+    """Return a label"""
+    value = get_value(field, coding)
+    if value is None: return ''
+    return field.serialiser.value_label(value, language)
+    
+
+    
 def get_table_sentence_codings_article(codedarticle, language):
     """Return a table of sentence codings x fields
 
@@ -102,11 +108,11 @@ def get_table_sentence_codings_article(codedarticle, language):
     result.addColumn('id')
     result.addColumn(lambda x:x.sentence_id, 'sentence')
     for field in codedarticle.codingjob.unitschema.fields.order_by('fieldnr').all():
-        result.addColumn(partial(get_value, field, language), field.label)
+        result.addColumn(partial(get_label, field, language), field.label)
     return result
 
     
- 
+
     
     
 def _getFieldObj(field):
