@@ -53,12 +53,11 @@ class UploadScript(script.Script):
                 for doc in parsed:
                     yield document
 
-    def parse_document(self, text):
+    def parse_document(self, document):
         """
-        Parse the text as one or more documents.
+        Parse the document as one or more articles.
 
-        @type text: unicode string
-        @param text: (fragment of) text file containing one document
+        @param document: object received from split_text, e.g. a string fragment
         @return: None, an Article or a sequence of Article(s)
         """
         raise NotImplementedError()
@@ -68,6 +67,6 @@ class UploadScript(script.Script):
         Split the text into one or more fragments representing individual documents.
 
         @type text: unicode string
-        @return: a sequence of unicode strings
+        @return: a sequence of objects (e.g. strings) to pass to parse_documents
         """
         return [text]
