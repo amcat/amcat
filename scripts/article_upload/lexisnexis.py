@@ -24,8 +24,8 @@ This module contains a (semi-machine readable) lexisnexis parser.
 
 from __future__ import unicode_literals
 
-from amcat.scripts import script
-from amcat.scripts.types  import ArticleIterator
+from amcat.scripts.article_upload.upload import UploadScript, ParseError
+
 from amcat.tools import toolkit
 
 from amcat.model.article import Article
@@ -73,13 +73,9 @@ BODY_KEYS_MAP = {
 }
 
 
-class ParseError(Exception):
-    pass
 
-class LexisNexis(script.Script):
-    input_type = unicode
-    output_type = ArticleIterator
-
+class LexisNexis(UploadScript):
+    
     def split_header(self, doc):
         """
         Split header from rest of articles.
@@ -230,7 +226,7 @@ class LexisNexis(script.Script):
                     ut = []
 
                     # Before traversing downwards, traverse upwards, to include
-                    # all uit text 'till a BODY_META is found.
+                    # all uit text until a BODY_META is found.
                     j = i - 1;
                     while j >= 0 and not RES["BODY_META"].match(art[j]) and not art[j].startswith(' '):
                         if art[j].strip() in uit:
@@ -362,15 +358,14 @@ class LexisNexis(script.Script):
 
         return art
 
-    def run(self, input):
-        assert(isinstance(input, basestring))
-
-        header, body = self.split_header(input)
+    def split_text(self, text):        
+        header, body = self.split_header(text)
         header = self.parse_header(header)
 
-        articles = self.split_body(body)
-        articles = [self.parse_article(a) for a in articles]
-        
-        return [self.body_to_article(*a) for a in articles]
+        return self.split_body(body)
 
-
+    def parse_document(self, text):
+        fields = self.parse_article(text)
+        return self.body_to_article(*fields)
+    
+    

@@ -14,8 +14,8 @@ class Medium(AmcatModel):
     id = models.AutoField(primary_key=True, db_column="medium_id")
 
     name = models.CharField(max_length=200)
-    abbrev = models.CharField(max_length=10, null=True)
-    circulation = models.IntegerField(null=True)
+    abbrev = models.CharField(max_length=10, null=True, blank=True)
+    circulation = models.IntegerField(null=True, blank=True)
 
     #type = models.ForeignKey(MediumSourcetype, db_column='medium_source_id')
     language = models.ForeignKey("amcat.Language")

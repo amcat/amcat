@@ -19,29 +19,28 @@
 ###########################################################################
 
 """
-This module contains a (semi-machine readable) lexisnexis parser.
+Plugin for uploading plain text files
 """
 
 from __future__ import unicode_literals
 
 from django import forms
 
-from amcat.scripts import script
-from amcat.scripts.types  import ArticleIterator
-from amcat.tools import toolkit
+from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.model.article import Article
 from amcat.model.medium import Medium
+
 
 class TextForm(forms.Form):
     medium = forms.ModelChoiceField(queryset=Medium.objects.all())
     headline = forms.CharField()
     date = forms.DateField()
 
-class Text(script.Script):
-    input_type = unicode
-    output_type = ArticleIterator
+class Text(UploadScript):
     options_form = TextForm
 
-    def run(self, input):
-        return (Article(text=input, **self.options),)
+    def parse_document(self, text):
+        return Article(text=text, **self.options)
+    
+
