@@ -90,7 +90,7 @@ class PostgreSQL(Database):
     def _get_conn_params(self, username, passwd):
         """Get the keyword arguments needed to connect to the db"""
         db = settings.DATABASES[DEFAULT_DB_ALIAS]
-        passwd = "'%s'" % re.escape(passwd)
+        #passwd = "'%s'" % re.escape(passwd)
         return {
             'database' : db['NAME'],
             'user' : username,
