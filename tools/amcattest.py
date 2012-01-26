@@ -118,7 +118,7 @@ def create_test_set(articles=0, **kargs):
     return s
             
 
-def create_test_job(**kargs):
+def create_test_job(narticles=1, **kargs):
     """Create a test Coding Job"""
     from amcat.model.coding.codingjob import CodingJob
     if "insertuser" not in kargs: kargs["insertuser"] = create_test_user()
@@ -126,7 +126,7 @@ def create_test_job(**kargs):
     if "unitschema" not in kargs: kargs["unitschema"] = create_test_schema()
     if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema()
     if "coder" not in kargs: kargs["coder"] = create_test_user()
-    if "articleset" not in kargs: kargs["articleset"] = create_test_set(articles=1)
+    if "articleset" not in kargs: kargs["articleset"] = create_test_set(articles=narticles)
     return CodingJob.objects.create(**kargs)
 
 def create_test_coding(**kargs):
