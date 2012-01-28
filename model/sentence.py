@@ -24,6 +24,7 @@ Object-layer module containing classes modelling sentences
 from __future__ import print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
+from amcat.model.analysis import Triple
 
 from django.db import models
 
@@ -35,24 +36,20 @@ class Sentence(AmcatModel):
     is often based on sentences
     """
     
-
-    
     id = models.AutoField(primary_key=True, db_column="sentence_id")
-
     sentence = models.TextField()
     parnr = models.IntegerField()
     sentnr = models.IntegerField()
-
     article = models.ForeignKey("amcat.Article", related_name='sentences')
-
-    #parsedSentences = ForeignKey(LB("ParsedSentence"), table="parses_words", distinct=True)
 
     def __unicode__(self):
         return self.sentence
-
     class Meta():
         db_table = 'sentences'
         app_label = 'amcat'
+
+    def get_triples(self, analysis):
+        return Triple.objects.filter(parent__sentence=self, analysis=analysis)
 
 
     

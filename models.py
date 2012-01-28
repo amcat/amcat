@@ -28,6 +28,9 @@ from amcat.model.sentence import *
 
 from amcat.model.article_solr import *
 
+from amcat.model.word import *
+from amcat.model.analysis import *
+
 
 from amcat.model.coding.codingschema import *
 from amcat.model.coding.codingschemafield import *
@@ -36,4 +39,3 @@ from amcat.model.coding.coding import *
 from amcat.model.coding.code import *
 from amcat.model.coding.codebook import *
 from amcat.model.coding.codedarticle import *
-
