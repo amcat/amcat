@@ -30,6 +30,8 @@ __all__ = ['AmcatModel']
 class AmcatModel(models.Model):
     """Replacement for standard Django-model, extending it with
     amcat-specific features."""
+    __label__ = 'label'
+
     def _get_db_and_rq(self, rq=None):
         try:
             from amcatnavigator.utils.auth import get_request
@@ -83,3 +85,10 @@ class AmcatModel(models.Model):
         # https://docs.djangoproject.com/en/dev/topics/db/models/#abstract-base-classes
         abstract=True
         app_label = "model"
+
+    def __unicode__(self):
+        try:
+            return unicode(getattr(self, self.__label__))
+        except AttributeError:
+            return unicode(self.id)
+

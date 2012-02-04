@@ -35,6 +35,7 @@ class Sentence(AmcatModel):
     created by sentence boundary detection. Manual coding and preprocessing
     is often based on sentences
     """
+    __label__ = 'sentence'
     
     id = models.AutoField(primary_key=True, db_column="sentence_id")
     sentence = models.TextField()
@@ -42,8 +43,6 @@ class Sentence(AmcatModel):
     sentnr = models.IntegerField()
     article = models.ForeignKey("amcat.Article", related_name='sentences')
 
-    def __unicode__(self):
-        return self.sentence
     class Meta():
         db_table = 'sentences'
         app_label = 'amcat'

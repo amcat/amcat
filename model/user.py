@@ -39,12 +39,11 @@ class Affiliation(AmcatModel):
     Model for table affiliations. Users are categorised by affiliation, and
     some permissions are granted only for ones own  affiliation
     """
+    __label__ = 'name'
+
     id = models.AutoField(primary_key=True, db_column='affiliation_id')
     name = models.CharField(max_length=200)
     
-    def __unicode__(self):
-        return self.name
-
     class Meta():
         db_table = 'affiliations'   
         ordering = ['name']
@@ -57,6 +56,8 @@ class User(AmcatModel):
     """
     Model for table users. Every registered AmCAT user has one entry in the users table
     """
+    __label__ = 'username'
+
     id = models.AutoField(primary_key=True, db_column='user_id', editable=False)
 
     username = models.SlugField(max_length=50, unique=True, editable=False,
@@ -75,9 +76,6 @@ class User(AmcatModel):
         self.active = False
         super(User, self).save(**kwargs)
     
-    def __unicode__(self):
-        return self.username
-
     class Meta():
         db_table = 'users'
         ordering = ['username']

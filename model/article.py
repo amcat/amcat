@@ -50,6 +50,8 @@ class Article(AmcatModel):
     """
     Class representing a newspaper article
     """
+    __label__ = 'headline'
+
     id = models.AutoField(primary_key=True, db_column="article_id")
 
     date = models.DateTimeField(db_index=True)
@@ -71,9 +73,6 @@ class Article(AmcatModel):
                                db_index=True, blank=True)
     project = models.ForeignKey(Project, db_index=True)
     medium = models.ForeignKey(Medium, db_index=True)
-
-    def __unicode__(self):
-        return self.headline
 
     class Meta():
         db_table = 'articles'

@@ -51,13 +51,11 @@ class CodingSchemaFieldType(AmcatModel):
     For example, a dropdown field is always numeric of type, but the available options are
     determined by parameters in the schema field definition.
     """
+    __label__ = 'name'
     
     id = models.IntegerField(primary_key=True, db_column="fieldtype_id")
     name = models.CharField(max_length=50)
     serialiserclassname = models.CharField(max_length=50, db_column="serialiserclass")
-
-    def __unicode__(self):
-        return self.name
 
     @property
     def serialiserclass(self):
@@ -96,9 +94,6 @@ class CodingSchemaField(AmcatModel):
     class Meta():
         db_table = 'codingschemas_fields'
         app_label = 'amcat'
-
-    def __unicode__(self):
-        return self.label
 
     @property
     def serialiser(self):

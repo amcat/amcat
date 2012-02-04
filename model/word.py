@@ -20,6 +20,8 @@ from amcat.tools.model import AmcatModel
 from django.db import models
 
 class Lemma(AmcatModel):
+    __label__ = 'lemma'
+
     id = models.AutoField(primary_key=True, db_column='lemma_id')
 
     pos = models.CharField(max_length=1)
@@ -33,21 +35,17 @@ class Lemma(AmcatModel):
     class Meta():
         db_table = 'words_lemmata'
 
-    def __unicode__(self):
-        return self.lemma
-    
     class Meta():
         db_table = 'words_lemmata'
         app_label = 'amcat'
 
 class Word(AmcatModel):
+    __label__ = 'word'
+
     id = models.AutoField(primary_key=True, db_column='word_id')
 
     word = models.CharField(max_length=500)
     lemma = models.ForeignKey(Lemma)
-
-    def __unicode__(self):
-        return unicode(self.word)
 
     class Meta():
         db_table = 'words_words'

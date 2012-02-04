@@ -57,9 +57,6 @@ class Code(AmcatModel):
         except IndexError:
             return '<{0.__class__.__name__}: {0.id}>'.format(self)
         
-    def __unicode__(self):
-        return self.label
-
     def _get_label(self, language):
         """Get the label (string) for the given language object, or raise label.DoesNotExist"""
         try:

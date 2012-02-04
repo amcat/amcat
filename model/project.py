@@ -36,6 +36,8 @@ class Project(AmcatModel):
     Projects have users in different roles. For most authorisation questions,
     AmCAT uses the role of the user in the project that an object is contained in
     """
+    __label__ = 'name'
+
     id = models.AutoField(primary_key=True, db_column='project_id', editable=False)
 
     name = models.CharField(max_length=50)
@@ -53,9 +55,6 @@ class Project(AmcatModel):
     active = models.BooleanField(default=True)
     indexed = models.BooleanField(default=True)
     
-    def __unicode__(self):
-        return self.name
-
     def can_read(self, user):
         return (self in user.projects or user.haspriv('view_all_projects'))
 

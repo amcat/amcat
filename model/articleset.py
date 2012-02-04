@@ -35,6 +35,8 @@ class ArticleSet(AmcatModel):
     Model for the sets table. A set is part of a project and contains articles.
     It can also be seen as a 'tag' for articles.
     """
+    __label__ = 'name'
+
     id = models.AutoField(primary_key=True, db_column='articleset_id')
 
     name = models.CharField(max_length=100)
@@ -52,9 +54,6 @@ class ArticleSet(AmcatModel):
         db_table = 'articlesets'
         unique_together = ('name', 'project')
 
-    def __unicode__(self):
-        return self.name
-        
     def setType(self):
         """
         This function should return to which kind of object a set belongs to,

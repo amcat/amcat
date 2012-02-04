@@ -79,9 +79,6 @@ class Role(AmcatModel):
     label = models.CharField(max_length=50)
     projectlevel = models.BooleanField()
 
-    def __unicode__(self):
-        return self.label
-
     class Meta():
         db_table = 'roles'
         app_label = 'amcat'
@@ -110,9 +107,6 @@ class Privilege(AmcatModel):
 
     label = models.CharField(max_length=50)
     role = models.ForeignKey(Role)
-
-    def __unicode__(self):
-        return self.label
 
     class Meta():
         db_table = 'privileges'

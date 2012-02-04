@@ -40,13 +40,9 @@ class CodingStatus(AmcatModel):
     """
     Helder class for coding status
     """
-
     id = models.IntegerField(primary_key=True, db_column='status_id')
     label = models.CharField(max_length=50)
 
-    def __unicode__(self):
-        return self.label
-    
     class Meta():
         db_table = 'codings_status'
         app_label = 'amcat'

@@ -30,9 +30,6 @@ class Analysis(AmcatModel):
     label = models.CharField(max_length=100)
     language = models.ForeignKey(Language)
 
-    def __unicode__(self):
-        return self.label
-    
     class Meta():
         db_table = 'parses_analyses'
         app_label = 'amcat'
@@ -44,9 +41,6 @@ class Relation(AmcatModel):
     class Meta():
         db_table = 'parses_relations'
         app_label = 'amcat'
-    def __unicode__(self):
-        return self.label
-
         
 class Pos(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='pos_id')
@@ -59,6 +53,8 @@ class Pos(AmcatModel):
         app_label = 'amcat'
 
 class Token(AmcatModel):
+    __label__ = 'word'
+
     id = models.AutoField(primary_key=True, db_column='token_id')
 
     sentence = models.ForeignKey("amcat.Sentence", related_name="tokens")
@@ -69,9 +65,6 @@ class Token(AmcatModel):
     class Meta():
         db_table = 'parses_tokens'
         app_label = 'amcat'
-    def __unicode__(self):
-        return unicode(self.word)
-
 
 class Triple(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='triple_id')

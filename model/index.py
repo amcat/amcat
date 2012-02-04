@@ -5,6 +5,8 @@ from amcat.tools.model import AmcatModel
 from django.db import models
 
 class Index(AmcatModel):
+    __label__ = 'name'
+
     id = models.IntegerField(db_column='index_id', primary_key=True)
 
     name = models.CharField(max_length=100)
@@ -16,9 +18,6 @@ class Index(AmcatModel):
     options = models.CharField(max_length=50)
 
     set = models.ForeignKey(Set, db_column='storedresult_id')
-
-    def __unicode__(self):
-        return self.name
 
     class Meta():
         db_table = 'indices'

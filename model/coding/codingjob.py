@@ -43,6 +43,7 @@ class CodingJob(AmcatModel):
     Model class for table codingjobs. A Coding Job is a container of sets of articles
     assigned to coders in a project with a specified unit and article schema
     """
+    __label__ = 'name'
 
     id = models.AutoField(primary_key=True, db_column='codingjob_id')
     project = models.ForeignKey(Project)
@@ -58,10 +59,6 @@ class CodingJob(AmcatModel):
     coder = models.ForeignKey(User)
     articleset = models.ForeignKey(ArticleSet, related_name="+")
     
-
-    def __unicode__(self):
-        return self.name
-
     class Meta():
         db_table = 'codingjobs'
         app_label = 'amcat'

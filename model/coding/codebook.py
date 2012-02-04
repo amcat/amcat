@@ -61,19 +61,15 @@ class Codebook(AmcatModel):
     Codebook caches values, so please use the provided methods to add or remove
     objects and bases or call the reset() method after changing them manually.
     """
+    __label__ = 'name'
 
     id = models.AutoField(primary_key=True, db_column='codebook_id')
-
     project = models.ForeignKey(Project)
-
     name = models.TextField()
 
     class Meta():
         db_table = 'codebooks'
         app_label = 'amcat'
-
-    def __unicode__(self):
-        return self.name
 
     @property
     @cached

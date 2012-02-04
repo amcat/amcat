@@ -25,6 +25,8 @@ from amcat.forms.fields import JSONField
 import json
 
 class Scraper(models.Model):
+    __label__ = 'verbose_name'
+
     class_name = models.CharField(max_length=50, db_index=True)
     verbose_name = models.CharField(max_length=100)
 
@@ -38,9 +40,6 @@ class Scraper(models.Model):
         return dict(username=self.username, password=self.password,
                     email=self.email, **self.extra_data)
 
-    def __unicode__(self):
-        return self.verbose_name
-        
     class Meta():
         app_label = 'model'
         db_table = 'scrapers'

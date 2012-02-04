@@ -11,6 +11,8 @@ class MediumSourcetype(AmcatModel):
         db_table = 'media_sourcetypes'
 
 class Medium(AmcatModel):
+    __label__ = 'name'
+
     id = models.AutoField(primary_key=True, db_column="medium_id")
 
     name = models.CharField(max_length=200)
@@ -40,9 +42,6 @@ class Medium(AmcatModel):
         except MediumAlias.DoesNotExist:
             raise Medium.DoesNotExist("%s could be found in medium nor medium_dict" % name)
 
-    def __unicode__(self):
-        return self.name
-
     class Meta():
         db_table = 'media'
         verbose_name_plural = 'media'
@@ -53,11 +52,10 @@ class MediumAlias(AmcatModel):
     Provide multiple names per medium. Please use get_by_name on
     Medium to select a medium.
     """
+    __label__ = 'name'
+
     medium = models.ForeignKey(Medium)
     name = models.CharField(max_length=200)
-
-    def __unicode__(self):
-        return self.name
 
     class Meta():
         db_table = 'media_alias'
