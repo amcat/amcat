@@ -23,19 +23,25 @@ from amcat.scripts import script, types
 import amcat.scripts.forms
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 
-from openpyxl.workbook import Workbook
-from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 import zipfile
 import io
 
 
 class TableToXlsx(script.Script):
+
+    
     input_type = table3.Table
     options_form = None
     output_type = types.ExcelData
 
 
     def run(self, tableObj):
+
+        # Import openpyxl "lazy" to prevent global dependency
+        from openpyxl.workbook import Workbook
+        from openpyxl.writer.dump_worksheet import ExcelDumpWriter
+
+        
         wb = Workbook(optimized_write = True)
         ws = wb.create_sheet()
         
