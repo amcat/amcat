@@ -157,7 +157,16 @@ def create_test_codebook(**kargs):
     c = Codebook.objects.create(**kargs)
     return get_codebook(c.id)
 
-
+def create_test_word(lemma=None, word=None, language=None, pos="N"):
+    """Create a test word"""
+    from amcat.model.word import Word, Lemma
+    from amcat.model.language import Language
+    if language is None: language = Language.objects.get(pk=1)
+    if not lemma: lemma = "testlemma_%i" % Lemma.objects.count()
+    if not word: word = "testword_%i" % Word.objects.count()
+    l = Lemma.objects.create(pos=pos, lemma=lemma, language=language)
+    return Word.objects.create(lemma=l, word=word)
+    
 class PolicyTestCase(TestCase):
     """
     TestCase subclass that can be used to easily check whether a module is

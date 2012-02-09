@@ -25,7 +25,7 @@ from django.db import models
 
 class Analysis(AmcatModel):
     """Object representing an NLP 'preprocessing' analysis"""
-    id = models.IntegerField(db_column='analysis_id', primary_key=True)
+    id = models.AutoField(db_column='analysis_id', primary_key=True)
 
     label = models.CharField(max_length=100)
     language = models.ForeignKey(Language)
@@ -65,6 +65,12 @@ class Token(AmcatModel):
     class Meta():
         db_table = 'parses_tokens'
         app_label = 'amcat'
+        unique_together = ("sentence", "analysis", "position")
+        ordering = ['sentence', 'position']
+        
+    def __unicode__(self):
+        return unicode(self.word)
+
 
 class Triple(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='triple_id')
@@ -77,4 +83,28 @@ class Triple(AmcatModel):
     class Meta():
         db_table = 'parses_triples'
         app_label = 'amcat'
+        unique_together = ("analysis", "parent")
 
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestTriples(amcattest.PolicyTestCase):
+    def test_get_tokens_order(self):
+        
+        s = amcattest.create_test_sentence()
+        w1, w2, w3 = [amcattest.create_test_word(word=x) for x in "abc"]
+        a = Analysis.objects.create(label="X", language=w1.lemma.language)
+        print a
+        t1 = Token.objects.create(sentence=s, position=3, word=w3, analysis=a)
+        t2 = Token.objects.create(sentence=s, position=1, word=w2, analysis=a)
+        t3 = Token.objects.create(sentence=s, position=2, word=w1, analysis=a)
+
+                
+        self.assertEqual(list(s.tokens.all()), [t2,t3,t1])
+
+        
