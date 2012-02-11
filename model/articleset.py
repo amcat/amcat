@@ -39,7 +39,7 @@ class ArticleSet(AmcatModel):
 
     id = models.AutoField(primary_key=True, db_column='articleset_id')
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=500)
     project = models.ForeignKey(Project)
     articles = models.ManyToManyField(Article, db_table="articlesets_articles")
 
