@@ -49,6 +49,7 @@ import logging
 from logging.handlers import SysLogHandler
 import threading
 import thread
+import tempfile
 
 from amcat.tools import toolkit
 
@@ -137,6 +138,18 @@ def setStreamHandler(*args, **kargs):
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
 
+def setFileHandler(filename, directory=None):
+    """add a RotatingFileHanlder to the root logger with module level filters"""
+    root = logging.getLogger()
+    if directory is None: directory = tempfile.gettempdir()
+    fn = os.path.join(directory, filename)
+    
+    h = logging.handlers.RotatingFileHandler(filename=fn, maxBytes = 1024*1024*5, backupCount = 3)
+    h.setFormatter(AmcatFormatter(date=True))
+    h.addFilter(ModuleLevelFilter())
+    root.addHandler(h)
+
+
 @contextmanager
 def streamHandler(stream):
     """
@@ -154,6 +167,9 @@ def streamHandler(stream):
         root.removeHandler(h)
         stream.write("REMOVED HANDLER")
 
+
+
+        
 def setup():
     """
     Convenience function for command line scripts.

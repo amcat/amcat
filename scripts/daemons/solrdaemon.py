@@ -21,7 +21,8 @@
 Daemon that checks if there are any Articles on the queue
 and indexes them with Solr.
 """
-import time, sys, logging
+import time, sys, logging, argparse
+log = logging.getLogger(__name__)
 
 from django.db import transaction
 
@@ -29,17 +30,6 @@ from amcat.contrib.daemon import Daemon
 from amcat.scripts.daemons.index_solr_articles import index_articles
 from amcat.model.article_solr import SolrArticle
 from amcat.model.article import Article
-
-# temporary file handler, for debug purposes
-formatter = logging.Formatter(
-	'[%(asctime)-6s %(name)s %(levelname)s] %(message)s')
-fileLogger = logging.handlers.RotatingFileHandler(filename='/tmp/solrdeamon.log',
-                                                  maxBytes = 1024*1024*5, backupCount = 3)
-fileLogger.setLevel(logging.DEBUG)
-fileLogger.setFormatter(formatter)
-logging.getLogger('').addHandler(fileLogger)
-
-log = logging.getLogger(__name__)
 
  
 class SolrDeamon(Daemon):
@@ -70,23 +60,17 @@ class SolrDeamon(Daemon):
             except:
                 log.exception('while loop exception')
                 time.sleep(60)
-                
-            
 
     
 if __name__ == "__main__":
     daemon = SolrDeamon('/tmp/solr-daemon.pid')
-    if len(sys.argv) == 2:
-        if 'start' == sys.argv[1]:
-            daemon.start()
-        elif 'stop' == sys.argv[1]:
-            daemon.stop()
-        elif 'restart' == sys.argv[1]:
-            daemon.restart()
-        else:
-            print "Unknown command"
-            sys.exit(2)
-        sys.exit(0)
-    else:
-        print "usage: %s start|stop|restart" % sys.argv[0]
-        sys.exit(2)
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('command', choices=['start', 'stop', 'restart'],
+                   help='Control the SOLR Daemon')
+    args = parser.parse_args()
+
+    # get action corresponding to start/stop/restart and execute it
+    action = getattr(SolrDeamon, args.command)
+    action()
+    
