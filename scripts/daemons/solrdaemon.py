@@ -21,21 +21,20 @@
 Daemon that checks if there are any Articles on the queue
 and indexes them with Solr.
 """
+import time, sys, logging
 
-from daemon import Daemon
-import time, sys
+from django.db import transaction
 
-import index_solr_articles
-
+from amcat.contrib.daemon import Daemon
+from amcat.scripts.daemons.index_solr_articles import index_articles
 from amcat.model.article_solr import SolrArticle
 from amcat.model.article import Article
 
-import logging
-
 # temporary file handler, for debug purposes
 formatter = logging.Formatter(
-	'%(asctime)-6s: %(name)s - %(levelname)s - %(message)s')
-fileLogger = logging.handlers.RotatingFileHandler(filename='/tmp/solrdeamon.log', maxBytes = 1024*1024*5, backupCount = 3)
+	'[%(asctime)-6s %(name)s %(levelname)s] %(message)s')
+fileLogger = logging.handlers.RotatingFileHandler(filename='/tmp/solrdeamon.log',
+                                                  maxBytes = 1024*1024*5, backupCount = 3)
 fileLogger.setLevel(logging.DEBUG)
 fileLogger.setFormatter(formatter)
 logging.getLogger('').addHandler(fileLogger)
@@ -44,6 +43,8 @@ log = logging.getLogger(__name__)
 
  
 class SolrDeamon(Daemon):
+    
+    @transaction.commit_manually
     def run(self):
         """
             Main daemon function.
@@ -51,17 +52,19 @@ class SolrDeamon(Daemon):
             if found it calls the solr indexer and removes the items from the queue
             Else it continues sleeping
         """
+        log.info("SOLRDaemon started")
         while True:
             try:
-                solrArticles = SolrArticle.objects.all()[:10000]
+                solrArticles = SolrArticle.objects.filter(started=False)[:10000]
                 solrArticleIds = [sa.id for sa in solrArticles]
-                solrArticlesQueryset = SolrArticle.objects.filter(pk__in=solrArticleIds) # we need a new queryset since after slicing update() is no longer allowed by Django..
+                 # we need a new queryset since after slicing update() is no longer allowed by Django..
+                solrArticlesQueryset = SolrArticle.objects.filter(pk__in=solrArticleIds)
                 if solrArticles.count() == 0:
                     log.debug('going to sleep')
                     time.sleep(5)
                 solrArticlesQueryset.update(started=True)
                     
-                index_solr_articles.start(Article.objects.filter(pk__in=solrArticles.values_list('article', flat=True))) 
+                index_articles(Article.objects.filter(pk__in=solrArticles.values_list('article', flat=True))) 
                     
                 solrArticlesQueryset.delete()
             except:
