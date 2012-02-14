@@ -1,6 +1,5 @@
 from __future__ import with_statement
 from amcat.tools import toolkit, idlabel
-from amcat.tools.logging import progress
 import sys, csv, StringIO, traceback, json
 
 from amcat.tools.logging import amcatlogging;
