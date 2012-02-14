@@ -33,8 +33,8 @@ from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.tools.caching import cached, invalidates
-from amcat.model.coding.code import Code, Label
-from amcat.model.project import Project
+from amcat.models.coding.code import Code, Label
+from amcat.models.project import Project
 
 # Setup thread-local cache for codebooks
 import threading

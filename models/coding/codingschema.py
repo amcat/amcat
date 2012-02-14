@@ -25,7 +25,7 @@ schema to be used for manual coding
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
-from amcat.model.project import Project
+from amcat.models.project import Project
 
 from django.db import models
 

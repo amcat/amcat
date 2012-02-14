@@ -19,12 +19,12 @@
 
 
 from django import forms
-from amcat.model.project import Project
-from amcat.model.user import User
-from amcat.model.articleset import ArticleSet
-from amcat.model.medium import Medium
-from amcat.model.article import Article
-from amcat.model.authorisation import Role, ProjectRole
+from amcat.models.project import Project
+from amcat.models.user import User
+from amcat.models.articleset import ArticleSet
+from amcat.models.medium import Medium
+from amcat.models.article import Article
+from amcat.models.authorisation import Role, ProjectRole
 
 #from amcat.tools.selection import webscripts
 

@@ -22,9 +22,9 @@
 from __future__ import print_function, absolute_import
 import logging; log = logging.getLogger(__name__)
 
-from amcat.model.language import Language
-from amcat.model.project import Project
-from amcat.model import authorisation as auth
+from amcat.models.language import Language
+from amcat.models.project import Project
+from amcat.models import authorisation as auth
 
 from django.core.exceptions import ValidationError
 from django.db import models, DEFAULT_DB_ALIAS

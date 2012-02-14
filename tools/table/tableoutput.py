@@ -2,7 +2,7 @@ from __future__ import with_statement
 from amcat.tools import toolkit, idlabel
 import sys, csv, StringIO, traceback, json
 
-from amcat.tools.logging import amcatlogging;
+from amcat.tools import amcatlogging;
 
 from django.template import Template, Context
 

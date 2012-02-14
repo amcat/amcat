@@ -5,7 +5,7 @@ from django.db import connection, transaction
 from django.db.utils import DatabaseError
 
 import amcat.models
-from amcat.model import article_solr
+from amcat.models import article_solr
 from amcat.tools import dbtoolkit
     
 try:
@@ -43,6 +43,6 @@ def create_triggers():
 post_syncdb.connect(postsync, sender=amcat.models)
     
 if __name__ == "__main__":
-    from amcat.tools.logging import amcatlogging
+    from amcat.tools import amcatlogging
     amcatlogging.setup()
     execute_manager(settings)

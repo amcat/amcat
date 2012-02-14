@@ -17,25 +17,25 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.model.article import *
-from amcat.model.authorisation import *
-from amcat.model.language import *
-from amcat.model.medium import *
-from amcat.model.articleset import *
-from amcat.model.user import *
-from amcat.model.project import *
-from amcat.model.sentence import *  
+from amcat.models.article import *
+from amcat.models.authorisation import *
+from amcat.models.language import *
+from amcat.models.medium import *
+from amcat.models.articleset import *
+from amcat.models.user import *
+from amcat.models.project import *
+from amcat.models.sentence import *  
 
-from amcat.model.article_solr import *
+from amcat.models.article_solr import *
 
-from amcat.model.word import *
-from amcat.model.analysis import *
+from amcat.models.word import *
+from amcat.models.analysis import *
 
 
-from amcat.model.coding.codingschema import *
-from amcat.model.coding.codingschemafield import *
-from amcat.model.coding.codingjob import *
-from amcat.model.coding.coding import *
-from amcat.model.coding.code import *
-from amcat.model.coding.codebook import *
-from amcat.model.coding.codedarticle import *
+from amcat.models.coding.codingschema import *
+from amcat.models.coding.codingschemafield import *
+from amcat.models.coding.codingjob import *
+from amcat.models.coding.coding import *
+from amcat.models.coding.code import *
+from amcat.models.coding.codebook import *
+from amcat.models.coding.codedarticle import *

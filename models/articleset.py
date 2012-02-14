@@ -25,8 +25,8 @@ coding jobs.
 
 from amcat.tools.model import AmcatModel
 
-from amcat.model.project import Project
-from amcat.model.article import Article
+from amcat.models.project import Project
+from amcat.models.article import Article
 
 from django.db import models
 

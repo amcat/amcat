@@ -23,7 +23,7 @@ forms and more.
 """
 import csv
 
-from amcat.model.user import User
+from amcat.models.user import User
 from django import forms
 from django.forms import fields
 from django.db import models

@@ -25,12 +25,12 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from functools import partial
 
-from amcat.model.coding.codingjob import CodingJob
-from amcat.model.coding.coding import Coding, CodingStatus, STATUS_COMPLETE
-from amcat.model.coding.codedarticle import CodedArticle
-from amcat.model.coding.code import Code
-from amcat.model.coding.codingschemafield import CodingSchemaField
-from amcat.model.coding.codingschemafield import CodingSchemaFieldType
+from amcat.models.coding.codingjob import CodingJob
+from amcat.models.coding.coding import Coding, CodingStatus, STATUS_COMPLETE
+from amcat.models.coding.codedarticle import CodedArticle
+from amcat.models.coding.code import Code
+from amcat.models.coding.codingschemafield import CodingSchemaField
+from amcat.models.coding.codingschemafield import CodingSchemaFieldType
 from django import forms
 
 from amcat.tools.table.table3 import ObjectTable
@@ -117,7 +117,7 @@ def get_table_sentence_codings_article(codedarticle, language):
     
 def _getFieldObj(field):
     """returns a matching Django Field object 
-    for a amcat.model.coding.codingschemafield.CodingSchemaField object"""
+    for a amcat.models.coding.codingschemafield.CodingSchemaField object"""
     val = field.default
     if unicode(field.fieldtype) in ('Boolean', 'DB ontology'):
         fieldObj = forms.CharField(label=field.label, initial=val, 
@@ -164,7 +164,7 @@ from amcat.tools import amcattest
 class TestCodingToolkit(amcattest.PolicyTestCase):
 
     def setUp(self):
-        from amcat.model.coding.coding import CodingValue
+        from amcat.models.coding.coding import CodingValue
         # create a coding job set with a sensible schema and some articles to 'code'
         self.schema = amcattest.create_test_schema()
         self.codebook = amcattest.create_test_codebook()
@@ -267,7 +267,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         
     def test_nqueries_table_sentence_codings(self):
         """Check for efficient retrieval of codings"""
-        from amcat.model.coding.coding import CodingValue
+        from amcat.models.coding.coding import CodingValue
         from amcat.tools.djangotoolkit import list_queries
         ca = CodedArticle(self.an1)
 

@@ -30,7 +30,7 @@ import subprocess, sys, os.path, os, tempfile, datetime, shutil
 
 stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 from amcat.tools import hg, toolkit
-from amcat.tools.logging import amcatlogging
+from amcat.tools import amcatlogging
 from amcat.tools import toolkit
 
 from amcat.tools.table import table3, tableoutput

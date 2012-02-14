@@ -2,7 +2,7 @@
 A number of functions that help the Amcat3 selection page to retrieve selections from the database
 """
 
-from amcat.model import article
+from amcat.models import article
 
 def getQuerySet(projects, articlesets=None, mediums=None, startDate=None, endDate=None, articleids=None, **kargs):
     queryset = article.Article.objects.filter(project__in=projects)

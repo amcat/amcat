@@ -26,9 +26,9 @@ from amcat.scripts import script, types
 from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from django import forms
-from amcat.model.article import Article
-from amcat.model.project import Project
-from amcat.model.articleset import ArticleSet
+from amcat.models.article import Article
+from amcat.models.project import Project
+from amcat.models.articleset import ArticleSet
 
 import logging
 log = logging.getLogger(__name__)

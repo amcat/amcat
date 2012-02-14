@@ -26,7 +26,7 @@ from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.tools import dbtoolkit
-from amcat.model.article import Article
+from amcat.models.article import Article
 
 import logging; log = logging.getLogger(__name__)
 

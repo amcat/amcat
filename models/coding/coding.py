@@ -30,10 +30,10 @@ from django.db import models
 
 from amcat.tools.caching import cached, invalidates
 from amcat.tools.model import AmcatModel
-from amcat.model.coding.codingjob import CodingJob
-from amcat.model.coding.codingschemafield import CodingSchemaField
-from amcat.model.article import Article
-from amcat.model.sentence import Sentence
+from amcat.models.coding.codingjob import CodingJob
+from amcat.models.coding.codingschemafield import CodingSchemaField
+from amcat.models.article import Article
+from amcat.models.sentence import Sentence
 
 
 class CodingStatus(AmcatModel):
@@ -197,7 +197,7 @@ class TestCoding(amcattest.PolicyTestCase):
     def setUp(self):
         """Set up a simple coding schema with fields to use for testing"""
         super(TestCoding, self).setUp()
-        from amcat.model.coding.codingschemafield import CodingSchemaFieldType
+        from amcat.models.coding.codingschemafield import CodingSchemaFieldType
         strfieldtype = CodingSchemaFieldType.objects.get(pk=1)
         intfieldtype = CodingSchemaFieldType.objects.get(pk=2)
         codefieldtype = CodingSchemaFieldType.objects.get(pk=5)

@@ -1,5 +1,5 @@
 from amcat.tools.model import AmcatModel
-from amcat.model.language import Language
+from amcat.models.language import Language
 
 from django.db import models
 

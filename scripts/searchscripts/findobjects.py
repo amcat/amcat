@@ -26,8 +26,8 @@ from amcat.scripts import script, types
 from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from django import forms
-from amcat.model.project import Project
-import amcat.model
+from amcat.models.project import Project
+import amcat.models
 import amcat.scripts.forms
 
 import logging
@@ -78,7 +78,7 @@ class ViewModelForm(amcat.scripts.forms.GeneralColumnsForm):
         try:
             if '.' in data: # this code is ugly..
                 split = data.split('.')
-                clss = getattr(amcat.model, split[0].lower())
+                clss = getattr(amcat.models, split[0].lower())
                 try:
                     moduleobj = getattr(clss, split[1].lower())
                     data = split[1]
@@ -86,14 +86,14 @@ class ViewModelForm(amcat.scripts.forms.GeneralColumnsForm):
                     moduleobj = clss
                     data = split[1]
             else:
-                moduleobj = getattr(amcat.model, data.lower())
+                moduleobj = getattr(amcat.models, data.lower())
             log.info('moduleobj: %s, data: %s' % (moduleobj, data))
             if data.islower(): data = data.capitalize() # to make sure "medium" can also be used, not only "Medium" (for example)
             data = getattr(moduleobj, data)
         except Exception,e:
             log.exception('finding model problem')
             self._errors["model"] = self.error_class(['Invalid model name'])
-        # if not hasattr(amcat.model, data.lower()):
+        # if not hasattr(amcat.models, data.lower()):
             # self._errors["modelname"] = self.error_class(['Invalid model name'])
             # return None
         return data

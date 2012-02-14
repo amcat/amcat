@@ -138,7 +138,7 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
 			   'W0102', # 'dangerous' {} default
 			   )
     def test_related_models(self):
-        """Test get_related_models function. Note: depends on the actual amcat model"""
+        """Test get_related_models function. Note: depends on the actual amcat.models"""
         
         for start, stoplist, result in [
             (('Project',), (), ['Affiliation', 'Language', 'Project', 'Role', 'User']),

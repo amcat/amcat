@@ -27,10 +27,10 @@ Each coding job has codingschemas for articles and/or sentences.
 from amcat.tools.model import AmcatModel
 from amcat.tools.caching import set_cache
 
-from amcat.model.coding.codingschema import CodingSchema
-from amcat.model.user import User
-from amcat.model.project import Project
-from amcat.model.articleset import ArticleSet
+from amcat.models.coding.codingschema import CodingSchema
+from amcat.models.user import User
+from amcat.models.project import Project
+from amcat.models.articleset import ArticleSet
 
 
 
@@ -67,7 +67,7 @@ class CodingJob(AmcatModel):
     def get_codings(self):
         """Return a sequence of codings with pre-fetched values"""
         # late import to prevent cycles
-        from amcat.model.coding.coding import CodingValue
+        from amcat.models.coding.coding import CodingValue
         
         q = CodingValue.objects.filter(coding__codingjob__exact=self)
         q = q.select_related("field__fieldtype", "value__strval", "value__intval", "coding")

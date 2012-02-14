@@ -23,10 +23,10 @@ Testing module to test # of queries used for retrieving manual codings
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from amcat.model.language import Language
-from amcat.model.coding import codebook
-from amcat.model.coding.codingschemafield import CodingSchemaField
-from amcat.model.coding.codingschemafield import CodingSchemaFieldType
+from amcat.models.language import Language
+from amcat.models.coding import codebook
+from amcat.models.coding.codingschemafield import CodingSchemaField
+from amcat.models.coding.codingschemafield import CodingSchemaFieldType
 
 from amcat.tools import amcattest
 

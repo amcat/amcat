@@ -2,11 +2,11 @@ from django.utils import unittest
 from django.conf import settings
 
 from amcat.scripts.article_upload import lexisnexis
-from amcat.model.medium import Medium
-from amcat.model.language import Language
-from amcat.model.project import Project
-from amcat.model.user import Affiliation, User
-from amcat.model.authorisation import Role
+from amcat.models.medium import Medium
+from amcat.models.language import Language
+from amcat.models.project import Project
+from amcat.models.user import Affiliation, User
+from amcat.models.authorisation import Role
 
 import os
 import chardet

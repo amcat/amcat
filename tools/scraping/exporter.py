@@ -17,10 +17,10 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.model.article import Article
-from amcat.model.medium import Medium
-from amcat.model.project import Project
-from amcat.model.articleset import ArticleSet
+from amcat.models.article import Article
+from amcat.models.medium import Medium
+from amcat.models.project import Project
+from amcat.models.articleset import ArticleSet
 
 import logging
 log = logging.getLogger(__name__)

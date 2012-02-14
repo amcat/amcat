@@ -18,8 +18,8 @@
 ###########################################################################
 
 from amcat.tools.model import AmcatModel
-from amcat.model.language import Language
-from amcat.model.word import Word
+from amcat.models.language import Language
+from amcat.models.word import Word
 
 from django.db import models
 

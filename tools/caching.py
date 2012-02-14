@@ -224,4 +224,4 @@ class TestCaching(amcattest.PolicyTestCase):
         self.assertEqual(t.get_y(), 1)
         self.assertTrue(t.changed)
         
-#from amcat.tools.logging import amcatlogging; amcatlogging.infoModule()
+#from amcat.tools import amcatlogging; amcatlogging.infoModule()

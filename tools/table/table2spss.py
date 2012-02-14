@@ -1,9 +1,9 @@
 from amcat.tools import dbtoolkit
-#from amcat.model.coding import codingjob
+#from amcat.models.coding import codingjob
 from amcat.tools.table import table3
 from amcat.tools import toolkit, idlabel
 #from amcat.tools.cachable import cachable
-from amcat.tools.logging import amcatlogging, progress
+from amcat.tools import amcatlogging
 
 
 import sys, csv

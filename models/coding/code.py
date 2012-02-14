@@ -31,7 +31,7 @@ import logging; log = logging.getLogger(__name__)
 from django.db import models
 
 from amcat.tools.model import AmcatModel
-from amcat.model.language import Language
+from amcat.models.language import Language
 
 PARTYMEMBER_FUNCTIONID = 0
   

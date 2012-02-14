@@ -32,7 +32,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools import toolkit
 from amcat.db import dbtoolkit
-from amcat.model import article
+from amcat.models import article
 
 import logging, re, urllib2, urllib, sys
 from BeautifulSoup import BeautifulSoup, BeautifulStoneSoup

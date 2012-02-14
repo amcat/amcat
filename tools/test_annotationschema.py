@@ -1,7 +1,7 @@
 from amcat.test import amcattest
 
-from amcat.model.coding.annotationschema import AnnotationSchema
-from amcat.model.project import Project
+from amcat.models.coding.annotationschema import AnnotationSchema
+from amcat.models.project import Project
 
 from amcat.tools import idlabel
 from amcat.db import dbtoolkit

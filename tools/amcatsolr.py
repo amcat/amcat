@@ -24,7 +24,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 import solr
 import datetime, time
-from amcat.model.article import Article
+from amcat.models.article import Article
 from django.db import connection
 import re
 

@@ -26,9 +26,9 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
 
-from amcat.model.project import Project
-from amcat.model.authorisation import Role
-from amcat.model.medium import Medium
+from amcat.models.project import Project
+from amcat.models.authorisation import Role
+from amcat.models.medium import Medium
 
 from django.db import models
 

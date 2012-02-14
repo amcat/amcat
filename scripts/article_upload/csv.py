@@ -32,8 +32,8 @@ from django import forms
 
 from amcat.scripts.article_upload.upload import UploadScript
 
-from amcat.model.article import Article
-from amcat.model.medium import Medium
+from amcat.models.article import Article
+from amcat.models.medium import Medium
 
 from amcat.tools.toolkit import readDate
 

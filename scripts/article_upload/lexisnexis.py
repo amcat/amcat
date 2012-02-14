@@ -28,8 +28,8 @@ from amcat.scripts.article_upload.upload import UploadScript, ParseError
 
 from amcat.tools import toolkit
 
-from amcat.model.article import Article
-from amcat.model.medium import Medium
+from amcat.models.article import Article
+from amcat.models.medium import Medium
 
 import re
 import collections

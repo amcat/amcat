@@ -29,9 +29,9 @@ are ontology coding types.
 
 from amcat.tools.model import AmcatModel
 
-from amcat.model.coding.codebook import Codebook, get_codebook
+from amcat.models.coding.codebook import Codebook, get_codebook
 
-from amcat.model.coding.codingschema import CodingSchema, RequiredValueError
+from amcat.models.coding.codingschema import CodingSchema, RequiredValueError
 
 from . import serialiser
 

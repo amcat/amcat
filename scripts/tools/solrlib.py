@@ -23,8 +23,8 @@ Library that makes it easier to access Solr features as used in Amcat3
 Requires solrpy
 """
 import solr, re
-from amcat.model import article
-from amcat.model import medium
+from amcat.models import article
+from amcat.models import medium
 from amcat.tools.toolkit import dateToInterval
 
 from amcat.tools.table.table3 import DictTable

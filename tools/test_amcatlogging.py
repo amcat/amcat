@@ -18,11 +18,11 @@
 ###########################################################################
 
 """
-Test cases for amcat.tools.logging
+Test cases for amcat.tools
 """
 
 from amcat.tools import amcattest
-from amcat.tools.logging import amcatlogging
+from amcat.tools import amcatlogging
 import logging, StringIO
 
 # TODO: this tester emits quite a lot of log messages.

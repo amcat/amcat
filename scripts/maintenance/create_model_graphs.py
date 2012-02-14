@@ -1,4 +1,4 @@
-from amcat.tools.logging import amcatlogging
+from amcat.tools import amcatlogging
 amcatlogging.setup()
 
 from amcat.tools.dot import dot2img

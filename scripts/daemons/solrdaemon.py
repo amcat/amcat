@@ -28,7 +28,7 @@ from django.db import transaction
 
 from amcat.contrib.daemon import Daemon
 from amcat.tools.amcatsolr import index_articles
-from amcat.model.article_solr import SolrArticle
+from amcat.models.article_solr import SolrArticle
 
  
 class SolrDeamon(Daemon):

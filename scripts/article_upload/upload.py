@@ -26,7 +26,7 @@ TODO: merge this with scraper base
 from amcat.scripts import script
 from amcat.scripts.types import ArticleIterator
 
-from amcat.model.article import Article
+from amcat.models.article import Article
 
 class ParseError(Exception):
     pass

@@ -26,7 +26,7 @@ from amcat.scripts import script, types
 from amcat.tools.toolkit import dateToInterval
 from django import forms
 import amcat.scripts.forms
-from amcat.model.coding.codingjob import CodingJob
+from amcat.models.coding.codingjob import CodingJob
 import logging
 log = logging.getLogger(__name__)
 

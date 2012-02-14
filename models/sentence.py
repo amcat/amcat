@@ -24,7 +24,7 @@ Object-layer module containing classes modelling sentences
 from __future__ import print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
-from amcat.model.analysis import Triple
+from amcat.models.analysis import Triple
 
 from django.db import models
 
@@ -72,7 +72,7 @@ class TestSentence(amcattest.PolicyTestCase):
             sent = "".join(unichr(offset + c) for c in range(47, 1000, 100))
             sentences += [(parnr, sentnr, sent)]
             Sentence.objects.create(article = a, parnr = parnr, sentnr = sentnr, sentence=sent)
-        from amcat.model.article import Article
+        from amcat.models.article import Article
         aid = a.id
         del a
         a2 = Article.objects.get(pk = aid)

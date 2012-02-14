@@ -21,7 +21,7 @@ from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
 from amcat.scripts import script, types
 import amcat.scripts.forms
-from amcat.model.medium import Medium
+from amcat.models.medium import Medium
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 import csv
 from cStringIO import StringIO

@@ -20,7 +20,7 @@
 import datetime
 import types
 
-from amcat.model.scraper import Scraper
+from amcat.models.scraper import Scraper
 
 ##############
 #### MISC ####
@@ -130,10 +130,10 @@ def get_scrapers():
 def get_scraper_model(scraper_class):
     """Return a model for `scraper_class`.
 
-    Raises amcat.model.scraping.Scraper.DoesNotExists when the model isn't found.
+    Raises amcat.models.scraping.Scraper.DoesNotExists when the model isn't found.
 
     @type scraper_class: class
     @param scraper_class: scraper
 
-    @return amcat.model.scraping.Scraper object"""
+    @return amcat.models.scraping.Scraper object"""
     return Scraper.objects.get(class_name=scraper_class.__name__)

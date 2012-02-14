@@ -31,8 +31,8 @@ Deserialised Value: a domain object, possibly a django Model instance
 
 import logging; log = logging.getLogger(__name__)
 
-from amcat.model.coding.code import Code
-from amcat.model.coding.codebook import get_codebook
+from amcat.models.coding.code import Code
+from amcat.models.coding.codebook import get_codebook
 
 class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
@@ -119,7 +119,7 @@ def CodebookSerialiser(field):
         return  _memo[codebookid]
         
 class _CodebookSerialiser(BaseSerialiser):
-    """int - amcat.model.coding.Code serialiser"""
+    """int - amcat.models.coding.Code serialiser"""
     def __init__(self, field):
         super(_CodebookSerialiser, self).__init__(field, Code, int)
         self.codebook = get_codebook(field.codebook_id)
@@ -202,7 +202,7 @@ class TestSerialiser(amcattest.PolicyTestCase):
         
     def test_codebookserialiser(self):
         """Test the codebook serialiser"""
-        from amcat.model.language import Language
+        from amcat.models.language import Language
         A = amcattest.create_test_codebook(name="A")
         c = amcattest.create_test_code(label="bla")
 

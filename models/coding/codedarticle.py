@@ -28,7 +28,7 @@ representation in the database.
 import logging; log = logging.getLogger(__name__)
 
 from amcat.tools.idlabel import Identity
-from amcat.model.coding.coding import Coding
+from amcat.models.coding.coding import Coding
 
 class CodedArticle(Identity):
     """Convenience class to represent an article in a codingjob

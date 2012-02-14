@@ -1,5 +1,5 @@
-from amcat.model.article import Article
-from amcat.model.set import Set
+from amcat.models.article import Article
+from amcat.models.set import Set
 from amcat.tools.model import AmcatModel
 
 from django.db import models

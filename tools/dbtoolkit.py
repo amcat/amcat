@@ -278,7 +278,7 @@ def is_postgres():
 ###########################################################################
         
 from amcat.tools import amcattest
-from amcat.tools.logging import amcatlogging; amcatlogging.infoModule()
+from amcat.tools import amcatlogging; amcatlogging.infoModule()
 
 class TestDBToolkit(amcattest.PolicyTestCase):
 
@@ -325,7 +325,7 @@ def run_test():
     this might be connected with http://code.google.com/p/amcat/issues/detail?id=49
     run with python -c "from amcat.tools import dbtoolkit; dbtoolkit.run_test()"
     """
-    from amcat.tools.logging.amcatlogging import setup; setup()
+    from amcat.tools.amcatlogging import setup; setup()
 
     class Dummy(TestDBToolkit):
         """Dummy class for testing externally"""

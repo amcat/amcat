@@ -28,7 +28,7 @@ from amcat.scripts.tools import cli, solrlib, database
 import amcat.scripts.forms
 from django import forms
 from django.db.models import Sum, Count
-from amcat.model.medium import Medium
+from amcat.models.medium import Medium
 from amcat.tools import table
 
 
