@@ -27,14 +27,12 @@ log = logging.getLogger(__name__)
 from django.db import transaction
 
 from amcat.contrib.daemon import Daemon
-from amcat.scripts.daemons.index_solr_articles import index_articles
+from amcat.tools.amcatsolr import index_articles
 from amcat.model.article_solr import SolrArticle
-from amcat.model.article import Article
 
  
 class SolrDeamon(Daemon):
     
-    @transaction.commit_manually
     def run(self):
         """
             Main daemon function.
@@ -45,20 +43,21 @@ class SolrDeamon(Daemon):
         log.info("SOLRDaemon started")
         while True:
             try:
-                solrArticles = SolrArticle.objects.filter(started=False)[:10000]
-                solrArticleIds = [sa.id for sa in solrArticles]
+                to_index = [sa.id for sa in SolrArticle.objects.filter(started=False)[:10000]]
                  # we need a new queryset since after slicing update() is no longer allowed by Django..
                 solrArticlesQueryset = SolrArticle.objects.filter(pk__in=solrArticleIds)
+                
                 if solrArticles.count() == 0:
-                    log.debug('going to sleep')
+                    log.debug('No articles, sleeping')
                     time.sleep(5)
-                solrArticlesQueryset.update(started=True)
+                else:
+                    log.debug('Will index {n} articles'.format(n=len(to_index)))
                     
-                index_articles(Article.objects.filter(pk__in=solrArticles.values_list('article', flat=True))) 
-                    
-                solrArticlesQueryset.delete()
+                index_articles(to_index)
+
+                SolrArticle.objects.filter(pk__in=to_index).delete()
             except:
-                log.exception('while loop exception')
+                log.error('while loop exception', exc_info=True)
                 time.sleep(60)
 
     
@@ -69,7 +68,6 @@ if __name__ == "__main__":
     parser.add_argument('command', choices=['start', 'stop', 'restart'],
                    help='Control the SOLR Daemon')
     args = parser.parse_args()
-
     # get action corresponding to start/stop/restart and execute it
     action = getattr(SolrDeamon, args.command)
     action()

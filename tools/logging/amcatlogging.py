@@ -62,6 +62,10 @@ INFO_MODULES = set(['__main__', 'ticker'])
 
 logging.getLogger().setLevel(logging.DEBUG)
 
+class SilentException(Exception):
+    """Exception subclass that will be suppressed by the ModuleLevelFilter"""
+    pass
+
 class AmcatFormatter(logging.Formatter):
     """
     Formatter to insert file, line, and level
@@ -98,6 +102,7 @@ class ModuleLevelFilter(logging.Filter):
     Filter to ignore errors based on message level and module level
     """
     def filter(self, record):
+        if record.exc_info and issubclass(record.exc_info[0], SilentException): return False
         #print record, record.name
         if record.levelno < logging.ERROR and record.name in QUIET_MODULES: return False
         if record.levelno >= logging.WARNING: return True
@@ -111,10 +116,11 @@ def quietModule(*modules):
 def infoModule(*modules):
     """Add the given modules to the list of modules from which to report also info messages"""
     _addModulesToSet(INFO_MODULES, *modules)
-def debugModule(*modules):
+def debug_module(*modules):
     """Add the given modules to the list of modules from which to report all messages (inc debug)"""
     _addModulesToSet(DEBUG_MODULES, *modules)
-
+debugModule = debug_module
+    
 def _addModulesToSet(targetset, *modules):
     """Add the given modules to the targetset"""
     if not modules: modules = [toolkit.getCallingModule(depth=2)]
