@@ -107,9 +107,8 @@ def distribute_tasks(tasks, action, nthreads=4, queue_size=10, retry_exceptions=
 #                          U N I T   T E S T S                            #
 ###########################################################################
         
-from amcat.tools import amcattest
-from amcat.tools import amcatlogging
-amcatlogging.debug_module()
+from amcat.tools import amcattest, amcatlogging
+#amcatlogging.debug_module()
 
 class TestMultithread(amcattest.PolicyTestCase):
     def test_tasks(self):
