@@ -53,7 +53,8 @@ def _clean(text):
     #See also:      http://mail-archives.apache.org/mod_mbox/lucene-solr-user/200901.mbox
     #                     /%3C2c138bed0901040803x4cc07a29i3e022e7f375fc5f@mail.gmail.com%3E
     if not text: return None
-    return  re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
+    text = re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
+    return text
 
 def _include(article):
     """Should we include this article in the index?"""
@@ -76,7 +77,8 @@ def _ids_to_solr_mutations(article_ids):
     idstr = ",".join(str(a.id) for a in articles if _include(a))
     cursor = connection.cursor()
     if idstr:
-        sql = "SELECT articleset_id, article_id FROM articlesets_articles WHERE article_id in (%s)" % idstr
+        sql = """SELECT articleset_id, article_id FROM articlesets_articles
+                 WHERE article_id in (%s)""" % idstr
         cursor.execute(sql)
         for setid, articleid in cursor.fetchall():
             setsDict[articleid].append(setid)
@@ -87,10 +89,10 @@ def _ids_to_solr_mutations(article_ids):
     for a in articles:
         if _include(a):
             to_add.append(dict(id=a.id,
-                         headline=_stripChars(a.headline), 
-                         body=_stripChars(a.text),
-                         byline=_stripChars(a.byline), 
-                         section=_stripChars(a.section),
+                         headline=_clean(a.headline), 
+                         body=_clean(a.text),
+                         byline=_clean(a.byline), 
+                         section=_clean(a.section),
                          projectid=a.project_id,
                          mediumid=a.medium_id,
                          date=a.date.replace(tzinfo=GMT1()),
@@ -112,7 +114,9 @@ def index_articles(article_ids):
     
     log.info("adding/updating %s articles, removing %s" % (len(to_add), len(to_remove)))
 
-    s = solr.SolrConnection('http://localhost:8983/solr')
+    # make sure to use b'..' or the request becomes unicode,
+    # breaking the utf-8 encoding of the article texts (ARGH!)
+    s = solr.SolrConnection(b'http://localhost:8983/solr')
     if to_add:
         s.add_many(to_add)
     if to_remove:
@@ -142,12 +146,7 @@ def index_articles_from_db(maxn=10000, nthreads=5, batch_size=100, dry_run=False
                              retry_exceptions=True, batch_size=batch_size)
         SolrArticle.objects.filter(article_id__in=to_index).delete()
     return to_index
-                 
-if __name__ == '__main__':
-    from amcat.tools import amcatlogging
-    amcatlogging.setup()
-    amcatlogging.debug_module()
-    index_articles([1,2])
+
 
     
 
@@ -157,6 +156,8 @@ if __name__ == '__main__':
         
 from amcat.tools import amcattest
 
+    
+    
 
 class TestSolr(amcattest.PolicyTestCase):
     def test_ids2solr(self):
@@ -221,3 +222,36 @@ class TestSolr(amcattest.PolicyTestCase):
         self.assertEqual(list(SolrArticle.objects.all()), [])
         indexed = index_articles_from_db(dry_run=True)
         self.assertEqual(indexed, [])
+
+    
+
+    def test_unicode(self):
+        """
+        Test whether unicode is handled correctly before passing it on to solr
+        To run this test, set RUN_SOLR=YES
+        (it will actually call solr, so do not run on production machines!)
+        """
+        import os
+        if not os.environ.get("RUN_SOLR", "NO").lower().startswith("y"): return
+
+        SolrArticle.objects.all().delete()
+        
+        p1 = amcattest.create_test_project(active=True, indexed=True)
+        body =  "".join(unichr(c) for c in range(1100, 2000))
+        headline =  "".join(unichr(c) for c in range(100))
+        a1 = amcattest.create_test_article(headline=headline, text=body, project=p1)
+        SolrArticle.objects.create(article=a1)
+
+        body = "heel m\xf3\xf3i, \u671d\u65e5\u65b0\u805e joh"
+        a2 = amcattest.create_test_article(headline="test", text=body, project=p1)
+        SolrArticle.objects.create(article=a2)
+        
+        index_articles([a1.id, a2.id])
+    
+if __name__ == '__main__':
+    from amcat.tools import amcatlogging
+    amcatlogging.setup()
+    amcatlogging.debug_module()
+
+    test_unicode()
+ 
