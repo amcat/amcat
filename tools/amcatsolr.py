@@ -27,6 +27,9 @@ import solr
 from django.db import connection
 from amcat.models.article import Article
 
+from amcat.tools.multithread import distribute_tasks
+from amcat.models.article_solr import SolrArticle
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -94,6 +97,11 @@ def _ids_to_solr_mutations(article_ids):
     
 
 def index_articles(article_ids):
+    """
+    Index the given article ids. Determines which needs to be updated and/or deleted,
+    and processes these mutations.
+    """
+    
     to_add, to_remove = _ids_to_solr_mutations(article_ids)   
     
     log.info("adding/updating %s articles, removing %s" % (len(to_add), len(to_remove)))
@@ -106,6 +114,28 @@ def index_articles(article_ids):
         s.delete_many(to_remove)
     s.commit()
 
+
+def index_articles_from_db(maxn=10000, nthreads=5, batch_size=100, dry_run=False):
+    """
+    Index articles that are in the 'to-do' table (model SolrArticle)
+
+    Retrieve up to maxn articles, process them in n threads in batches
+    of size. After processing, remove the articles from the index.
+
+    @param dry_run: if True, do not actually index the articles
+                    (for testing only! the articles will be deleted from the todo table)
+    
+    @return: the list of indexed article ids.
+    """
+    
+    to_index = [sa.article_id for sa in SolrArticle.objects.all()[:maxn]]
+    if to_index:
+        log.debug('Will index {n} articles'.format(n=len(to_index)))
+        if not dry_run:
+            distribute_tasks(to_index, index_articles, nthreads=nthreads,
+                             retry_exceptions=True, batch_size=batch_size)
+        SolrArticle.objects.filter(article_id__in=to_index).delete()
+    return to_index
                  
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
@@ -124,6 +154,7 @@ from amcat.tools import amcattest
 
 class TestSolr(amcattest.PolicyTestCase):
     def test_ids2solr(self):
+        """Test whether the mutations are retrieved correctly and efficiently"""
         p1 = amcattest.create_test_project(active=True, indexed=True)
         p2 = amcattest.create_test_project(active=True, indexed=False)
 
@@ -144,6 +175,7 @@ class TestSolr(amcattest.PolicyTestCase):
         
     
     def test_ids2solr_remove_only(self):
+        """Test whether a job with only removals will not give SQL error"""
         p = amcattest.create_test_project(active=False, indexed=True)
         a1 = amcattest.create_test_article(project=p)
         a2 = amcattest.create_test_article(project=p)
@@ -154,6 +186,32 @@ class TestSolr(amcattest.PolicyTestCase):
         self.assertEqual(set(to_remove), set([a1.id, a2.id]))
 
             
+    def test_index_from_db(self):
+        """Test whether the correct articles are retrieved from the index"""
+
+        # make sure the 'queue' is empty
+        SolrArticle.objects.all().delete()
+        self.assertEqual(list(SolrArticle.objects.all()), [])
+        indexed = index_articles_from_db(dry_run=True)
+        self.assertEqual(indexed, [])
+
+        # add two articles
+        p = amcattest.create_test_project(active=True, indexed=True)
+        a1 = amcattest.create_test_article(project=p)
+        a2 = amcattest.create_test_article(project=p)
+
+        # The triggers won't work on sqlite so add them manually in that case.
+        from amcat.tools.dbtoolkit import is_postgres
+        if not is_postgres():
+            SolrArticle.objects.create(article=a1)
+            SolrArticle.objects.create(article=a2)
+
+        indexed = index_articles_from_db(maxn = 1, dry_run=True)
+        self.assertEqual(len(indexed), 1)
+        indexed += index_articles_from_db(maxn = 1, dry_run=True)
+        self.assertEqual(set(indexed), set([a1.id, a2.id]))
         
-        
-        
+        # check that the todo table is indeed empty 
+        self.assertEqual(list(SolrArticle.objects.all()), [])
+        indexed = index_articles_from_db(dry_run=True)
+        self.assertEqual(indexed, [])

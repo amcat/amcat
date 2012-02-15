@@ -111,16 +111,17 @@ class ModuleLevelFilter(logging.Filter):
         if record.levelno >= logging.DEBUG and record.name in DEBUG_MODULES: return True
         return False
 
-def quietModule(*modules):
+def quiet_module(*modules):
     """Add the given modules to the list of modules from which to report only errors"""
     _addModulesToSet(QUIET_MODULES, *modules)
-def infoModule(*modules):
+def info_module(*modules):
     """Add the given modules to the list of modules from which to report also info messages"""
     _addModulesToSet(INFO_MODULES, *modules)
 def debug_module(*modules):
     """Add the given modules to the list of modules from which to report all messages (inc debug)"""
     _addModulesToSet(DEBUG_MODULES, *modules)
-debugModule = debug_module
+# backwards compatability
+debugModule, infoModule, quietModule = debug_module, info_module, quiet_module
     
 def _addModulesToSet(targetset, *modules):
     """Add the given modules to the targetset"""

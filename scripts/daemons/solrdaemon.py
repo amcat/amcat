@@ -27,17 +27,11 @@ log = logging.getLogger(__name__)
 from django.db import transaction
 
 from amcat.contrib.daemon import Daemon
-from amcat.tools.amcatsolr import index_articles
+from amcat.tools.amcatsolr import index_articles_from_db
 from amcat.tools.multithread import distribute_tasks
 from amcat.models.article_solr import SolrArticle
 
-
-NTHREADS = 5
-BATCH_SIZE = 100
-
-
 class SolrDeamon(Daemon):
-
     
     def run(self):
         """
@@ -49,28 +43,21 @@ class SolrDeamon(Daemon):
         log.info("SOLRDaemon started")
         while True:
             try:
-                to_index = [sa.article_id for sa in SolrArticle.objects.all()[:10000]]
-
-                if not to_index:
-                    log.debug('No articles, sleeping')
-                    time.sleep(5)
-                else:
-                    log.debug('Will index {n} articles'.format(n=len(to_index)))
-
-                distribute_tasks(to_index, index_articles, nthreads=NTHREADS,
-                                 retry_exceptions=True, batch_size=BATCH_SIZE)
-
-                SolrArticle.objects.filter(article_id__in=to_index).delete()
+                indexed = index_articles_from_db()
+                if not indexed:
+                    log.info('No articles found, sleeping for 1 minute')
+                    time.sleep(60)
+                    
             except:
-                log.error('while loop exception', exc_info=True)
+                log.error('while loop exception, sleeping for 1 minute', exc_info=True)
                 time.sleep(60)
 
     
 if __name__ == "__main__":
     from amcat.tools import amcatlogging
     amcatlogging.setFileHandler("solrdaemon.log")
-    amcatlogging.debug_module()
-    amcatlogging.debug_module('amcat.tools.amcatsolr')
+    amcatlogging.info_module()
+    amcatlogging.info_module('amcat.tools.amcatsolr')
     daemon = SolrDeamon('/tmp/solr-daemon.pid')
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('command', choices=['start', 'stop', 'restart'],
