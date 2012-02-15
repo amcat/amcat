@@ -50,6 +50,7 @@ from logging.handlers import SysLogHandler
 import threading
 import thread
 import tempfile
+import os.path
 
 from amcat.tools import toolkit
 
@@ -144,13 +145,13 @@ def setStreamHandler(*args, **kargs):
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
 
-def setFileHandler(filename, directory=None):
+def setFileHandler(filename, directory=None, filesize=50):
     """add a RotatingFileHanlder to the root logger with module level filters"""
     root = logging.getLogger()
     if directory is None: directory = tempfile.gettempdir()
     fn = os.path.join(directory, filename)
     
-    h = logging.handlers.RotatingFileHandler(filename=fn, maxBytes = 1024*1024*5, backupCount = 3)
+    h = logging.handlers.RotatingFileHandler(filename=fn, maxBytes = 1024*1024*filesize, backupCount = 3)
     h.setFormatter(AmcatFormatter(date=True))
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)

@@ -52,7 +52,12 @@ def _include(article):
 
 def _ids_to_solr_mutations(article_ids):
     """Given a sequence of ids, return a pair of (article dicts to add, ids to remove)"""
-    articles = Article.objects.filter(pk__in=article_ids).select_related('project__active', 'project__indexed')
+    log.debug(len(article_ids))
+    log.debug(article_ids)
+    articles = list(Article.objects.filter(pk__in=article_ids)
+                    .select_related('project__active', 'project__indexed'))
+
+    log.debug(len(articles))
 
     # cache set membership
     # TODO: use django querysets instead of sql
@@ -61,11 +66,14 @@ def _ids_to_solr_mutations(article_ids):
     setsDict = collections.defaultdict(list)
     idstr = ",".join(str(a.id) for a in articles if _include(a))
     cursor = connection.cursor()
-    sql = "SELECT articleset_id, article_id FROM articlesets_articles WHERE article_id in (%s)" % idstr
-    cursor.execute(sql)
-    for setid, articleid in cursor.fetchall():
-        setsDict[articleid].append(setid)
+    if idstr:
+        sql = "SELECT articleset_id, article_id FROM articlesets_articles WHERE article_id in (%s)" % idstr
+        cursor.execute(sql)
+        for setid, articleid in cursor.fetchall():
+            setsDict[articleid].append(setid)
 
+    log.debug(len(articles))
+    
     to_add, to_remove = [], []
     for a in articles:
         if _include(a):
@@ -88,12 +96,13 @@ def _ids_to_solr_mutations(article_ids):
 def index_articles(article_ids):
     to_add, to_remove = _ids_to_solr_mutations(article_ids)   
     
-    log.debug("adding/updating %s articles, removing %s" % (len(to_add), len(to_remove)))
+    log.info("adding/updating %s articles, removing %s" % (len(to_add), len(to_remove)))
 
     s = solr.SolrConnection('http://localhost:8983/solr')
     if to_add:
         s.add_many(to_add)
     if to_remove:
+        log.debug("Removing ids: %s" % to_remove)
         s.delete_many(to_remove)
     s.commit()
 
@@ -134,3 +143,17 @@ class TestSolr(amcattest.PolicyTestCase):
         
         
     
+    def test_ids2solr_remove_only(self):
+        p = amcattest.create_test_project(active=False, indexed=True)
+        a1 = amcattest.create_test_article(project=p)
+        a2 = amcattest.create_test_article(project=p)
+        with self.checkMaxQueries(1, "Get mutations"):
+            to_add, to_remove = _ids_to_solr_mutations([a1.id, a2.id])
+
+        self.assertEqual(len(to_add), 0)
+        self.assertEqual(set(to_remove), set([a1.id, a2.id]))
+
+            
+        
+        
+        
