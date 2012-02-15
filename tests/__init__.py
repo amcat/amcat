@@ -33,6 +33,7 @@ from amcat.tools.caching import *
 from amcat.tools.dbtoolkit import *
 from amcat.tools.sendmail import *
 from amcat.tools.multithread import *
+from amcat.tools.amcatsolr import *
 
 from amcat.models.coding.codingtoolkit import *
 from amcat.models.coding.serialiser import *
@@ -40,4 +41,5 @@ from amcat.models.coding.serialiser import *
 from amcat.scripts.article_upload.tests import *
 from amcat.scripts.scriptmanager import *
 
-from amcat.models.coding.test_nqueries import *
+from amcat.tests.test_nqueries import *
+from amcat.tests.test_toolkit import *
