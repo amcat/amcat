@@ -22,7 +22,7 @@ Function for adding/removing Amcat articles to Solr from the model
 """
 from __future__ import unicode_literals, print_function, absolute_import
 
-import datetime, time, collections, re
+import datetime, collections, re
 import solr
 from django.db import connection
 from amcat.models.article import Article
@@ -35,22 +35,28 @@ log = logging.getLogger(__name__)
 
 class GMT1(datetime.tzinfo):
     """very basic timezone object, needed for solrpy library.."""
-    def utcoffset(self,dt):
+    def utcoffset(self, dt):
         return datetime.timedelta(hours=1)
-    def tzname(self,dt):
+    def tzname(self, dt):
         return "GMT +1"
-    def dst(self,dt):
+    def dst(self, dt):
         return datetime.timedelta(0) 
       
-def _stripChars(text):
-    """required to avoid:
-    SolrException: HTTP code=400, reason=Illegal character ((CTRL-CHAR, code 20))  at [row,col {unknown-source}]: [3519,150]
-    regexp copied from: http://mail-archives.apache.org/mod_mbox/lucene-solr-user/200901.mbox/%3C2c138bed0901040803x4cc07a29i3e022e7f375fc5f@mail.gmail.com%3E
+def _clean(text):
     """
+    Clean the text for indexing.
+
+    Strip certain control characters to avoid illegal character exception
+    """
+    #SolrException: HTTP code=400, reason=Illegal character ((CTRL-CHAR, code 20))
+    #               at [row,col {unknown-source}]: [3519,150]
+    #See also:      http://mail-archives.apache.org/mod_mbox/lucene-solr-user/200901.mbox
+    #                     /%3C2c138bed0901040803x4cc07a29i3e022e7f375fc5f@mail.gmail.com%3E
     if not text: return None
-    return  re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text);
+    return  re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
 
 def _include(article):
+    """Should we include this article in the index?"""
     return article.project.active and article.project.indexed
 
 def _ids_to_solr_mutations(article_ids):
