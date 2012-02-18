@@ -82,7 +82,7 @@ def _validate_form(options_form, options, **kargs):
     @return: The validated options form
     """
     if not isinstance(options, forms.Form):
-        if isinstance(options, dict) or isinstance(options, QueryDict) or isinstance(options, MergeDict):
+        if isinstance(options, (dict, QueryDict, MergeDict)):
             options = options_form(options)
         else:
             if options is not None: kargs['options'] = options

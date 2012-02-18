@@ -17,28 +17,36 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models.article import *
-from amcat.models.authorisation import *
-from amcat.models.language import *
-from amcat.models.medium import *
-from amcat.models.articleset import *
-from amcat.models.user import *
-from amcat.models.project import *
-from amcat.models.sentence import *  
+"""
+Script to be run daily for data input (scraping, preprocessing etc.
+"""
 
-from amcat.models.article_solr import *
+from datetime import date, timedelta
 
-from amcat.models.word import *
-from amcat.models.analysis import *
+from django import forms
 
-from amcat.models.coding.codingschema import *
-from amcat.models.coding.codingschemafield import *
-from amcat.models.coding.codingjob import *
-from amcat.models.coding.coding import *
-from amcat.models.coding.code import *
-from amcat.models.coding.codebook import *
-from amcat.models.coding.codedarticle import *
+from amcat.scripts.script import Script
+from amcat.scripts.tools import cli
+import amcat.scripts.forms
 
-from amcat.models.scraper import *
+#from amcat.model.scraper import Scraper
 
+class DailyForm(forms.Form):
+    date = forms.DateField(initial= date.today() - timedelta(days=1))
+    dummy = forms.BooleanField(required=False,initial=False)
 
+class DailyScript(Script):
+    input_type = None
+    options_form = DailyForm
+    output_type = None
+
+    def run(self, _input):
+        #date = self.options['date']
+        print self.options['dummy']
+
+            
+        
+
+        
+if __name__ == '__main__':
+    cli.run_cli(DailyScript)

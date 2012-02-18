@@ -25,7 +25,10 @@ from amcat.forms.fields import JSONField
 import json
 
 class Scraper(models.Model):
-    class_name = models.CharField(max_length=100, db_index=True)
+    id = models.AutoField(primary_key=True, db_column="scraper_id")
+
+    module = models.CharField(max_length=100)
+    class_name = models.CharField(max_length=100)
     label = models.CharField(max_length=100)
 
     username = models.CharField(max_length=50, null=True)
@@ -33,11 +36,33 @@ class Scraper(models.Model):
     email = models.EmailField(null=True)
 
     run_daily = models.BooleanField(default=False)
-    
-    def get_data(self):
-        return dict(username=self.username, password=self.password,
-                    email=self.email, **self.extra_data)
 
     class Meta():
         app_label = 'amcat'
         db_table = 'scrapers'
+
+    def get_scraper(self):
+        module = __import__(self.module, fromlist=self.class_name)
+        return getattr(module, self.class_name)
+
+
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+
+
+class TestScraperModel(amcattest.PolicyTestCase):
+    def test_get_scraper(self):
+        """Can we get a scraper from the db?"""
+
+        s =Scraper.objects.create(module='amcat.models.scraper',
+                                  class_name='TestScraperModel')
+        self.assertEqual(s.get_scraper().__class__, TestScraperModel)
+        
+
+
