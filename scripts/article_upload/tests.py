@@ -1,7 +1,7 @@
 from django.utils import unittest
 from django.conf import settings
 
-from amcat.scripts.article_upload import lexisnexis
+from amcat.scripts.article_upload import lexisnexis, mediargus
 from amcat.models.medium import Medium
 from amcat.models.language import Language
 from amcat.models.project import Project
@@ -114,3 +114,23 @@ class TestLexisNexis(unittest.TestCase):
             p.project = dp
             p.full_clean()
 
+
+
+
+class TestMediargus(unittest.TestCase):
+
+    def setUp(self):
+        self.test_file = os.path.join(os.path.dirname(__file__), 'test_files', 'mediargus.txt')
+        self.test_text = open(self.test_file).read().decode('latin-1')
+
+    def test_split(self):
+        articles = mediargus.Mediargus().split_text(self.test_text)
+        self.assertEqual(len(articles), 100)
+        for article in articles:
+            self.assertEqual(len(article), 2)
+        
+    def test_parse(self):
+        articles = mediargus.Mediargus().split_text(self.test_text)
+        a = mediargus.Mediargus().parse_document(articles[0])
+        self.assertEqual(a.headline, 'Het compromis is springlevend')
+        
