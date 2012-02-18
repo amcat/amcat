@@ -69,7 +69,7 @@ def add_argument_from_field(parser, name, field):
     to add this django.forms.Field to the argparse.ArgumentParsers parser.
     """
     name = name.lower()
-    if field.required and not field.initial: # positional argument
+    if field.required and field.initial is None: # positional argument
         argname = [name]
     else: # optional argument
         argname = ["--"+name]
