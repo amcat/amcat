@@ -25,52 +25,19 @@ from amcat.forms.fields import JSONField
 import json
 
 class Scraper(models.Model):
-    __label__ = 'verbose_name'
-
-    class_name = models.CharField(max_length=50, db_index=True)
-    verbose_name = models.CharField(max_length=100)
+    class_name = models.CharField(max_length=100, db_index=True)
+    label = models.CharField(max_length=100)
 
     username = models.CharField(max_length=50, null=True)
     password = models.CharField(max_length=25, null=True)
     email = models.EmailField(null=True)
 
-    extra_data = JSONField()
-
+    run_daily = models.BooleanField(default=False)
+    
     def get_data(self):
         return dict(username=self.username, password=self.password,
                     email=self.email, **self.extra_data)
 
     class Meta():
-        app_label = 'model'
+        app_label = 'amcat'
         db_table = 'scrapers'
-
-class Schedule(models.Model):
-    scraper = models.ForeignKey(Scraper)
-
-    interval = models.CharField(max_length=50)
-    arguments = JSONField(help_text="JSON-object containing arguments",
-                          db_column="arguments")
-
-    class Meta():
-        app_label = 'model'
-        db_table = 'scrapers_schedules'
-
-class Job(models.Model):
-    started = models.DateTimeField(auto_now=True, db_index=True)
-    ended = models.DateTimeField(null=True)
-
-    arguments = JSONField()
-
-    scraper = models.ForeignKey(Scraper, db_index=True)
-
-    def __unicode__(self):
-        return '%s started at %s' % (self.scraper.class_name, self.started)
-
-    class Meta():
-        app_label = 'model'
-        db_table = 'scrapers_jobs'
-
-    @property
-    def output(self):
-        """Get output from logs and return it"""
-        return ''

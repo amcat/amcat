@@ -8,7 +8,7 @@
 # Free Software Foundation, either version 3 of the License, or (at your  #
 # option) any later version.                                              #
 #                                                                         #
-# AmCAT is distributed in the hodsacearg453qptiojmpe that it will be useful, but WITHOUT    #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
 # License for more details.                                               #
@@ -31,7 +31,6 @@ from amcat.models.article_solr import *
 from amcat.models.word import *
 from amcat.models.analysis import *
 
-
 from amcat.models.coding.codingschema import *
 from amcat.models.coding.codingschemafield import *
 from amcat.models.coding.codingjob import *
@@ -39,3 +38,7 @@ from amcat.models.coding.coding import *
 from amcat.models.coding.code import *
 from amcat.models.coding.codebook import *
 from amcat.models.coding.codedarticle import *
+
+from amcat.models.scraper import Scraper
+
+

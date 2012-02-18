@@ -112,7 +112,7 @@ def index_articles(article_ids):
     
     to_add, to_remove = _ids_to_solr_mutations(article_ids)   
     
-    log.info("adding/updating %s articles, removing %s" % (len(to_add), len(to_remove)))
+    log.debug("adding/updating %s articles, removing %s" % (len(to_add), len(to_remove)))
 
     # make sure to use b'..' or the request becomes unicode,
     # breaking the utf-8 encoding of the article texts (ARGH!)
@@ -140,11 +140,12 @@ def index_articles_from_db(maxn=10000, nthreads=5, batch_size=100, dry_run=False
     
     to_index = [sa.article_id for sa in SolrArticle.objects.all()[:maxn]]
     if to_index:
-        log.debug('Will index {n} articles'.format(n=len(to_index)))
+        log.info('Will index {n} articles'.format(n=len(to_index)))
         if not dry_run:
             distribute_tasks(to_index, index_articles, nthreads=nthreads,
                              retry_exceptions=True, batch_size=batch_size)
-        SolrArticle.objects.filter(article_id__in=to_index).delete()
+        log.info('Removing {n} articles from todo list'.format(n=len(to_index)))
+        SolrArticle.objects.filter(article__in=to_index).delete()
     return to_index
 
 
