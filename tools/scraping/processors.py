@@ -203,6 +203,17 @@ class Scraper(script.Script):
         if close_exporter:
             self.exporter.close()
 
+
+
+class DateForm(forms.Form):
+    """
+    Standard form for scrapers. Each scraper-form has to inherit this one.
+    """
+    date = forms.DateField()
+
+class DatedScraper(Scraper):
+    options_form = DateForm
+
 class HTTPScraper(Scraper):
     def __init__(self, options=None, **kargs):
         super(HTTPScraper, self).__init__(options, **kargs)
