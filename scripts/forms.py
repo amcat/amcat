@@ -20,15 +20,9 @@
 
 from django import forms
 from amcat.models.project import Project
-from amcat.models.user import User
 from amcat.models.articleset import ArticleSet
 from amcat.models.medium import Medium
-from amcat.models.article import Article
-from amcat.models.authorisation import Role, ProjectRole
 
-#from amcat.tools.selection import webscripts
-
-#import inspect
 import logging
 log = logging.getLogger(__name__)
 
@@ -147,7 +141,7 @@ class SelectionForm(forms.Form):
         projectids = map(int, projectids)
         
         self.fields['articlesets'].queryset = ArticleSet.objects.order_by('-pk').filter(project__in=projectids)
-        self.fields['mediums'].queryset = Medium.objects.filter(article__project__in=projectids).distinct().order_by('pk')
+        self.fields['mediums'].queryset = Medium.objects.all().order_by('pk')
     
     def clean(self):
         cleanedData = self.cleaned_data
