@@ -22,11 +22,11 @@ from amcat.scripts.output import commandline
 from amcat.scripts import scriptmanager
 import argparse
 
-import logging
-logging.basicConfig(format='[%(asctime)s] [%(name)s] %(message)s', level=logging.DEBUG)
-log = logging.getLogger(__name__)
+import logging; log = logging.getLogger(__name__)
+#logging.basicConfig(format='[%(asctime)s] [%(name)s] %(message)s', level=logging.DEBUG)
+#logging.getLogger('django.db.backends').setLevel(logging.ERROR)
 
-logging.getLogger('django.db.backends').setLevel(logging.ERROR) 
+
 
 ###############################################################
 ##         Aux method for CLI invocation                     ##
@@ -34,6 +34,9 @@ logging.getLogger('django.db.backends').setLevel(logging.ERROR)
 
 def run_cli(cls):
     """Handle command line interface invocation of this script"""
+    from amcat.tools import amcatlogging
+    amcatlogging.setup()
+    
     parser = argument_parser_from_script(cls)
     args = parser.parse_args()
     options = args.__dict__
@@ -45,9 +48,7 @@ def run_cli(cls):
 def handleOutput(out, output_type):
     cls = scriptmanager.findScript(output_type, str)
     if not cls:
-        # Use logging?
-        #print "no output possible"
-        pass
+        print(out)
     else:
         print cls().run(out)
             
@@ -60,7 +61,7 @@ def argument_parser_from_script(script_class):
         form = script_class.options_form()
         for name, field in form.fields.items():
            add_argument_from_field(parser, name, field) 
-    parser.add_argument('--output', help='set output type', default='print')
+    #parser.add_argument('--output', help='set output type', default='print')
     return parser
 
 def add_argument_from_field(parser, name, field):

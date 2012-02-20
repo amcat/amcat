@@ -29,14 +29,19 @@ from amcat.scripts.script import Script
 from amcat.models.article import Article
 
 from amcat.scripts.tools import cli
+from amcat.scraping.htmltools import HTTPOpener
+
+import logging; log = logging.getLogger(__name__)
 
 class Scraper(Script):
     output_type = Article
 
     def run(self, input):
+        log.info("Getting units...")
         for u in self.get_units():
+            log.info("Scraping unit %s" % getattr(u.props, "url", None))
             for a in self.scrape_unit(u):
-                yield a
+                log.info("Article: %s" % a)
     
     def get_units(self):
         return [None]
@@ -51,10 +56,28 @@ class DateForm(forms.Form):
     date = forms.DateField()
 
 class DatedScraper(Scraper):
+    """Base class for scrapers that work for a certain date"""
     options_form = DateForm
+    
+class DBScraperForm(DateForm):
+    """
+    Form for dated scrapers that need credentials
+    """
+    username = forms.CharField()
+    password = forms.CharField()
 
+class DBScraper(Scraper):
+    """Base class for (dated) scrapers that require a login"""
+    options_form = DBScraperForm
 
-if __name__ == '__main__':
-    cli.run_cli(DatedScraper)
+class HTTPScraper(Scraper):
+    """Base class for scrapers that require an http opener"""
+    def __init__(self, *args, **kargs):
+        super(HTTPScraper, self).__init__(*args, **kargs)
+        self.opener = HTTPOpener()
+    def getdoc(self, url):
+        """Legacy/convenience function"""
+        return self.opener.getdoc(url)
+
 
 

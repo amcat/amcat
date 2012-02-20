@@ -18,8 +18,8 @@
 ###########################################################################
 """Document objects returned by various scraping-functions."""
 
-from amcat.tools.scraping.toolkit import dictionary
-from html2text import html2text
+from amcat.scraping.toolkit import dictionary
+from amcat.contrib.html2text import html2text
 
 from lxml import html
 from lxml import etree
@@ -102,9 +102,8 @@ class HTMLDocument(Document):
     """Document object for HTML documents. This means that all properties are converted to
     MarkDown compatible text in `getprops`. Moreover, lxml.html objects (or even lists of
     lxml.html objects) are converted to text before returning."""
-    def __init__(self, *args, **kargs):
-        self.doc = None # Used to store lxml object
-
+    def __init__(self, doc=None, *args, **kargs):
+        self.doc = doc # lxml object
         super(HTMLDocument, self).__init__(*args, **kargs)
 
     def _convert(self, val):
@@ -143,9 +142,15 @@ class HTMLDocument(Document):
             yield (k, self._convert(v))
 
     def prepare(self, processor, force=False):
-        if (self.doc is None or force) and hasattr(self.props, 'url'):
-            if hasattr(processor, 'getdoc'):
+        print "XXXXXXXXXXXXXXXXXXX"
+        log.info("Preparing %s using processor %s, getdoc=%s" % (getattr(self.props, "url", None),
+                                                                 processor, getattr(processor, "getdoc", None)))
+        if (self.doc is None or force):
+            try:
                 self.doc = processor.getdoc(self.props.url)
+            except AttributeError:
+                                                                     
+                pass # no need to prepare if opener or url not known
 
 
 class IndexDocument(HTMLDocument):
@@ -183,3 +188,61 @@ class IndexDocument(HTMLDocument):
 
         return dict(headline=headline, text="\n".join(text),
                     page=self.page, **self.props.__dict__)
+
+
+
+    
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestDocument(amcattest.PolicyTestCase):
+    def test_set_get(self):
+        doc = Document()
+
+        doc.foo = 'bar'
+
+        print(doc.getprops())
+        self.assertEqual(doc.foo, 'bar')
+        self.assertEqual(doc.getprops()['foo'], 'bar')
+
+    def test_del(self):
+        doc = Document()
+
+        doc.foo = 'bar'; del doc.foo
+        self.assertRaises(AttributeError, lambda: doc.foo)
+
+        def delete(): del doc.foo
+        self.assertRaises(AttributeError, delete)
+
+    def test_updateprops(self):
+        doc = Document()
+
+        dic = dict(a='b', b='c')
+        doc.updateprops(dic)
+
+        self.assertEqual(dic, doc.getprops())
+        self.assertNotEqual({}, doc.getprops())
+
+
+    def test_return_types(self):
+        doc = Document()
+
+        self.assertEqual(dict, type(doc.getprops()))
+
+    def test_copy(self):
+        doc = Document()
+
+        doc.foo = ['bar', 'list']
+        doc.spam = 'ham'
+
+        self.assertEqual(doc.spam, 'ham')
+        doc_b = doc.copy()
+        self.assertFalse(doc_b.getprops() is doc.getprops())
+        self.assertEqual(doc_b.spam, 'ham')
+        self.assertTrue(doc_b.foo == doc.foo)
+        self.assertFalse(doc_b.foo is doc.foo)
+

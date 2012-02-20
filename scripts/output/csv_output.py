@@ -51,7 +51,6 @@ class TableToSemicolonCSV(script.Script):
         return tableToCsv(tableObj, ';')
         
        
-       
 # class DictToCSV(script.Script):
     # input_type = dict
     # options_form = None

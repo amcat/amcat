@@ -65,9 +65,8 @@ def findScript(inputClass, outputClass):
             return script
 
     if not (inputClass is None or outputClass is None):
-        log.warn('Script not found, input: %s output: %s. Scripts: %s' % \
-                                        (inputClass, outputClass, scripts))
-    return None
+        log.warn('No script found for {inputClass} -> {outputClass}'.format(**locals()))
+
             
             
 scripts = list(findAllScripts())

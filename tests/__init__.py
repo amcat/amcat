@@ -45,3 +45,5 @@ from amcat.tests.test_nqueries import *
 from amcat.tests.test_toolkit import *
 
 from amcat.scraping.controller import *
+from amcat.scraping.htmltools import *
+from amcat.scraping.document import *
