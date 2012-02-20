@@ -33,7 +33,6 @@ import amcat.scripts.forms
 
 class DailyForm(forms.Form):
     date = forms.DateField(initial= date.today() - timedelta(days=1))
-    dummy = forms.BooleanField(required=False,initial=False)
 
 class DailyScript(Script):
     input_type = None
@@ -42,7 +41,7 @@ class DailyScript(Script):
 
     def run(self, _input):
         #date = self.options['date']
-        print self.options['dummy']
+        print self.options['scrape']
 
             
         

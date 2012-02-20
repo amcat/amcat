@@ -84,15 +84,18 @@ def create_test_schema(**kargs):
     p = create_test_project()
     return CodingSchema.objects.create(project=p, **kargs)
 
+def create_test_medium(**kargs):
+    from amcat.models.medium import Medium
+    from amcat.models.language import Language
+    if "language" not in kargs: kargs["language"] = Language.objects.get(pk=1)
+    return Medium.objects.create(**kargs)
+    
 def create_test_article(**kargs):
     """Create a test article"""
     from amcat.models.article import Article
-    from amcat.models.medium import Medium
-    from amcat.models.language import Language
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = "2000-01-01"
-    l = Language.objects.get(pk=1)
-    m = Medium.objects.create(language=l)
+    if "medium" not in kargs: kargs["medium"] = create_test_medium()
     return Article.objects.create(medium=m, **kargs)
 
 def create_test_sentence(**kargs):

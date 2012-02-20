@@ -17,31 +17,44 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+
 """
-Test cases that are automatically detected and run by django
-
-Please don't include test cases here directly, but place them in an appropriate
-location and import here
+A Scraper is an object that knows how to scrape a certain resource. A scraper
+is called by the controller, 
 """
 
+from django import forms
 
-from amcat.tools.amcatlogging import *
-from amcat.tools.amcattest import *
-from amcat.tools.djangotoolkit import *
-from amcat.tools.table.table3 import *
-from amcat.tools.caching import *
-from amcat.tools.dbtoolkit import *
-from amcat.tools.sendmail import *
-from amcat.tools.multithread import *
-from amcat.tools.amcatsolr import *
+from amcat.scripts.script import Script
+from amcat.models.article import Article
 
-from amcat.models.coding.codingtoolkit import *
-from amcat.models.coding.serialiser import *
+from amcat.scripts.tools import cli
 
-from amcat.scripts.article_upload.tests import *
-from amcat.scripts.scriptmanager import *
+class Scraper(Script):
+    output_type = Article
 
-from amcat.tests.test_nqueries import *
-from amcat.tests.test_toolkit import *
+    def run(self, input):
+        for u in self.get_units():
+            for a in self.scrape_unit(u):
+                yield a
+    
+    def get_units(self):
+        return [None]
 
-from amcat.scraping.controller import *
+    def scrape_unit(self, unit):
+        return []
+
+class DateForm(forms.Form):
+    """
+    Form for scrapers that operate on a date
+    """
+    date = forms.DateField()
+
+class DatedScraper(Scraper):
+    options_form = DateForm
+
+
+if __name__ == '__main__':
+    cli.run_cli(DatedScraper)
+
+

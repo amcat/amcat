@@ -71,7 +71,7 @@ class Article(AmcatModel):
 
     parent = models.ForeignKey("self", null=True, db_column="parent_article_id",
                                db_index=True, blank=True)
-    project = models.ForeignKey(Project, db_index=True)
+    project = models.ForeignKey(Project, db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
 
     class Meta():

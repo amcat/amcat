@@ -41,11 +41,10 @@ class Scraper(models.Model):
         app_label = 'amcat'
         db_table = 'scrapers'
 
-    def get_scraper(self):
+    def get_scraper_class(self):
         module = __import__(self.module, fromlist=self.class_name)
         return getattr(module, self.class_name)
-
-
+    
 
 
 ###########################################################################
@@ -62,7 +61,7 @@ class TestScraperModel(amcattest.PolicyTestCase):
 
         s =Scraper.objects.create(module='amcat.models.scraper',
                                   class_name='TestScraperModel')
-        self.assertEqual(s.get_scraper().__class__, TestScraperModel)
+        self.assertEqual(s.get_scraper_class(), TestScraperModel)
         
 
 

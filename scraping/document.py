@@ -35,6 +35,12 @@ import types
 
 import logging; log = logging.getLogger(__name__)
 
+
+
+_ARTICLE_PROPS = [
+    'date', 'section', 'pagenr', 'headline', 'byline', 'length',
+    'url', 'externalid', 'text', 'parent', 'medium', 'author'
+]
 class Properties(object):
     pass
 
@@ -75,6 +81,22 @@ class Document(object):
         """This method prepares the document for processing. See HTMLDocument for
         sample usage."""
         pass
+
+    def create_article(self):
+        """Convert the document object into an article"""
+        art = Article()
+
+        # All properties in _ARTICLES_PROPS are set on a new Article,
+        # else in Article.metastring.
+        _metastring = dict()
+        for prop, value in doc.getprops().items():
+            if prop in _ARTICLE_PROPS:
+                setattr(art, prop, value)
+            else:
+                _metastring[prop] = value
+
+        art.metastring = str(_metastring)
+        return art
 
 class HTMLDocument(Document):
     """Document object for HTML documents. This means that all properties are converted to
