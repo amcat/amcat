@@ -20,6 +20,7 @@
 
 from amcat.scraping.toolkit import dictionary
 from amcat.contrib.html2text import html2text
+from amcat.models.article import Article
 
 from lxml import html
 from lxml import etree
@@ -89,7 +90,7 @@ class Document(object):
         # All properties in _ARTICLES_PROPS are set on a new Article,
         # else in Article.metastring.
         _metastring = dict()
-        for prop, value in doc.getprops().items():
+        for prop, value in self.getprops().items():
             if prop in _ARTICLE_PROPS:
                 setattr(art, prop, value)
             else:

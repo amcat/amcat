@@ -17,7 +17,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import datetime
 import types
 
 from amcat.models.scraper import Scraper
