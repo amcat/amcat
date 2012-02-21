@@ -33,7 +33,6 @@ class Scraper(models.Model):
 
     username = models.CharField(max_length=50, null=True)
     password = models.CharField(max_length=25, null=True)
-    email = models.EmailField(null=True)
 
     run_daily = models.BooleanField(default=False)
 
@@ -44,9 +43,20 @@ class Scraper(models.Model):
     def get_scraper_class(self):
         module = __import__(self.module, fromlist=self.class_name)
         return getattr(module, self.class_name)
+
+    def get_scraper(self, **options):
+        scraper_class = self.get_scraper_class()
+        scraper_options = dict(username=self.username, password=self.password)
+        scraper_options.update(options)
+        return scraper_class(**scraper_options)
+
+
+def get_scrapers(**options):
+    """Return all daily scrapers, instantiated with the given
+    options plus information from the database"""
+    for s in Scraper.objects.filter(run_daily=True):
+        yield s.get_scraper(**options)
     
-
-
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -54,11 +64,11 @@ class Scraper(models.Model):
 from amcat.tools import amcattest
 
 
-
-class TestScraperModel(amcattest.PolicyTestCase):
+class TestScrapers(amcattest.PolicyTestCase):
+    
     def test_get_scraper(self):
         """Can we get a scraper from the db?"""
-
+        
         s =Scraper.objects.create(module='amcat.models.scraper',
                                   class_name='TestScraperModel')
         self.assertEqual(s.get_scraper_class(), TestScraperModel)

@@ -83,7 +83,7 @@ class Document(object):
         sample usage."""
         pass
 
-    def create_article(self):
+    def create_article(self, doc):
         """Convert the document object into an article"""
         art = Article()
 
