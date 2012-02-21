@@ -67,7 +67,7 @@ class ThreadedController(Controller):
         super(ThreadedController, self).__init__(project, articleset)
         self.nthreads = nthreads
 
-    def _scrape_to_queue(self, scraper, queue):
+    def scrape_to_queue(self, scraper, queue):
         """
         Start and join the multithreaded processing of the scraper,
         placing resulting documents on the given queue for saving
@@ -85,6 +85,7 @@ class ThreadedController(Controller):
         qpt.input_queue.join()
    
 
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

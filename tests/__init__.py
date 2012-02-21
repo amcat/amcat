@@ -24,7 +24,6 @@ Please don't include test cases here directly, but place them in an appropriate
 location and import here
 """
 
-
 from amcat.tools.amcatlogging import *
 from amcat.tools.amcattest import *
 from amcat.tools.djangotoolkit import *
@@ -43,6 +42,7 @@ from amcat.scripts.scriptmanager import *
 
 from amcat.tests.test_nqueries import *
 from amcat.tests.test_toolkit import *
+from amcat.tests.test_scraping import *
 
 from amcat.scraping.controller import *
 from amcat.scraping.htmltools import *

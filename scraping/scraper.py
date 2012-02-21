@@ -81,3 +81,22 @@ class HTTPScraper(Scraper):
 
 
 
+class MultiScraper(object):
+    """
+    Class that encapsulated multiple scrapers behind a single scraper interface
+    Does not formally inherit from Scraper because it is not a runnable script
+    """
+
+    def __init__(self, scrapers):
+        """@param scrapers: instantiated Scraper objects ('Ready to start scraping') """
+        self.scrapers = scrapers
+
+    def get_units(self):
+        for scraper in self.scrapers:
+            for unit in scraper.get_units():
+                yield (scraper, unit)
+
+    def scrape_unit(self, unit):
+        (scraper, unit) = unit
+        scraper.scrape_unit(unit)
+
