@@ -31,15 +31,15 @@ from amcat.models.article import Article
 
 class TestDatedScraper(DatedScraper):
     def get_units(self):
-        self.output = []
         return "abcd"
     def scrape_unit(self, unit):
-        return Article(headline=unit, 
-        self.output.unit.upper()
+        return Article(headline=unit, section="TestDatedScraper")
 
 class TestDBScraper(DBScraper):
     def get_units(self):
-        self.output
+        return [1,2,3,4,5]
+    def scrape_unit(self, unit):
+        return Article(headline=unit, section="TestDBScraper")
 
 
     
@@ -65,4 +65,4 @@ class TestScraping(amcattest.PolicyTestCase):
 
     def test_multiscraper(self):
         scrapers = set(get_scrapers(date=date.today()))     
-        s = MultiScraper
+        s = MultiScraper(scrapers)
