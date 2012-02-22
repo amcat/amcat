@@ -24,32 +24,105 @@ is called by the controller,
 """
 
 from django import forms
+from django.core.exceptions import ObjectDoesNotExist
+
 
 from amcat.scripts.script import Script
 from amcat.models.article import Article
+from amcat.models.project import Project
+from amcat.models.medium import Medium
 
 from amcat.scripts.tools import cli
 from amcat.scraping.htmltools import HTTPOpener
+from amcat.scraping.document import Document
 
 import logging; log = logging.getLogger(__name__)
 
+class ScraperForm(forms.Form):
+    """Form for scrapers"""
+    projectid = forms.ModelChoiceField(queryset=Project.objects.all())
+
 class Scraper(Script):
     output_type = Article
+    options_form = ScraperForm
 
+    # if non-None, Medium on articles will be automatically set to a
+    # medium with this name (which will be created if necessary)
+    medium_name = None
+
+    def __init__(self, *args, **kargs):
+        super(Scraper, self).__init__(*args, **kargs)
+        self.medium = _get_medium(self.medium_name)
+        self.project = self.options['projectid']
+    
     def run(self, input):
-        log.info("Getting units...")
+        log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"
+                 .format(**locals()))
         for u in self.get_units():
-            log.info("Scraping unit %s" % getattr(u.props, "url", None))
+            log.info("Scraping unit %s" % u)
             for a in self.scrape_unit(u):
                 log.info("Article: %s" % a)
     
     def get_units(self):
+        """
+        Split the scraping job into a number of 'units' that can be processed independently
+        of each other. 
+        
+        @return: a sequence of arbitrary objects to be passed to scrape_unit
+        """
+        self._initialize()
+        return self._get_units()
+
+    def _get_units(self):
+        """
+        'Protected' method to do the actual work of getting units. Will be called by get_units
+        after running any needed initialization. By default, returns a single 'None' unit.
+        Subclasses that override this method are encouraged to yield rather than return
+        units to facilitate multithreaded
+        
+        @return: a sequence of arbitrary objects to be passed to scrape_unit
+        """
         return [None]
-
+    
     def scrape_unit(self, unit):
-        return []
+        """
+        Scrape a single unit of work. Subclasses can override _scrape_unit to have project
+        and medium filled in automatically.
+        @return: a sequence of Article objects ready to .save()
+        """
+        for article in self._scrape_unit(unit):
+            yield self._postprocess_article(article)
 
-class DateForm(forms.Form):
+            
+    def _scrape_unit(self, unit):
+        """
+        'Protected' method to parse the articles from one unit. Subclasses should override
+        this method (or the base scrape_unit). This method may be called from different threads
+        so ensure thread-safe access to any globals or instance members.
+        
+        @return: an Article object or a Document object that
+                 can be converted to an article. Either object can have the project
+                 and medium properties unset as they will be set automatically if provided
+        """
+        raise NotImplementedError
+
+    def _initialize(self):
+        """
+        Perform any intialization needed before starting the processing.
+        """
+        pass
+    
+    def _postprocess_article(self, article):
+        """
+        Finalize an article. This should convert the output of _scrape_unit to the required
+        output for scrape_unit, e.g. convert to Article, add project and/or medium
+        """
+        if isinstance(article, Document):
+            article = article.create_article()
+        _set_default(article, "project", self.project)
+        _set_default(article, "medium", self.medium)
+        return article
+class DateForm(ScraperForm):
     """
     Form for scrapers that operate on a date
     """
@@ -58,6 +131,10 @@ class DateForm(forms.Form):
 class DatedScraper(Scraper):
     """Base class for scrapers that work for a certain date"""
     options_form = DateForm
+    def _postprocess_article(self, article):
+        article = super(DatedScraper, self)._postprocess_article(article)
+        article.date = self.options['date']
+        return article
     
 class DBScraperForm(DateForm):
     """
@@ -66,20 +143,46 @@ class DBScraperForm(DateForm):
     username = forms.CharField()
     password = forms.CharField()
 
-class DBScraper(Scraper):
+class DBScraper(DatedScraper):
     """Base class for (dated) scrapers that require a login"""
     options_form = DBScraperForm
+
+    def _login(self, username, password):
+        """Login to the resource to scrape, if needed. Will be called
+        at the start of get_units()"""
+        pass
+    
+    def _initialize(self):
+        self._login(self.options['username'], self.options['password'])
 
 class HTTPScraper(Scraper):
     """Base class for scrapers that require an http opener"""
     def __init__(self, *args, **kargs):
         super(HTTPScraper, self).__init__(*args, **kargs)
+        # TODO: this should be moved to _initialize, but then _initialize should
+        # be moved to some sort of listener-structure as HTTPScraper is expected to
+        # be inherited from besides eg DBScraper in a "diamon-shaped" multi-inheritance
         self.opener = HTTPOpener()
     def getdoc(self, url):
         """Legacy/convenience function"""
         return self.opener.getdoc(url)
 
 
+def _get_medium(medium_name):
+    if medium_name is None: return None
+    try:
+        return Medium.objects.get(name=medium_name)
+    except Medium.DoesNotExist:
+        return Medium.objects.create(name=medium_name)
+
+
+def _set_default(obj, attr, val):
+    try:
+        if getattr(obj, attr, None) is not None: return
+    except ObjectDoesNotExist:
+        pass # django throws DNE on x.y if y is not set and not nullable
+    setattr(obj, attr, val)
+        
 
 class MultiScraper(object):
     """
@@ -98,5 +201,8 @@ class MultiScraper(object):
 
     def scrape_unit(self, unit):
         (scraper, unit) = unit
-        scraper.scrape_unit(unit)
+        return scraper.scrape_unit(unit)
 
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    cli.run_cli(Scraper)

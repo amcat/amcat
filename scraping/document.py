@@ -19,7 +19,7 @@
 """Document objects returned by various scraping-functions."""
 
 from amcat.scraping.toolkit import dictionary
-from amcat.contrib.html2text import html2text
+from html2text import html2text
 from amcat.models.article import Article
 
 from lxml import html
@@ -83,7 +83,7 @@ class Document(object):
         sample usage."""
         pass
 
-    def create_article(self, doc):
+    def create_article(self):
         """Convert the document object into an article"""
         art = Article()
 

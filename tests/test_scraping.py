@@ -24,22 +24,29 @@ would otherwise be imported and because it combines functionality of the
 model.scraper, scraping.scraper, and scraping.controller modules
 """
 
-from amcat.scraping.scraper import DatedScraper, DBScraper
+from amcat.scraping.scraper import DatedScraper, DBScraper, MultiScraper
 from amcat.models.scraper import Scraper, get_scrapers
 from datetime import date
 from amcat.models.article import Article
+from amcat.scraping.controller import SimpleController
 
 class TestDatedScraper(DatedScraper):
-    def get_units(self):
+    medium_name = 'test_mediumxyz'
+    def _get_units(self):
         return "abcd"
-    def scrape_unit(self, unit):
-        return Article(headline=unit, section="TestDatedScraper")
+    def _scrape_unit(self, unit):
+        yield Article(headline=unit, section="TestDatedScraper")
 
 class TestDBScraper(DBScraper):
-    def get_units(self):
+    medium_name = 'test_medium2'
+    def _login(self, username, password):
+        self.username = username
+    def _get_units(self):
         return [1,2,3,4,5]
-    def scrape_unit(self, unit):
-        return Article(headline=unit, section="TestDBScraper")
+    def _scrape_unit(self, unit):
+        if getattr(self, "username", None) is None:
+            raise Exception("Not logged in!")
+        yield Article(headline=unit, section="TestDBScraper")
 
 
     
@@ -50,19 +57,49 @@ class TestDBScraper(DBScraper):
         
 from amcat.tools import amcattest, amcatlogging
 
+def _project_headlineset(project):
+    return set(a.headline for a in project.articles.all())
+    
 class TestScraping(amcattest.PolicyTestCase):
     def setUp(self):
         Scraper.objects.all().delete()
-        ds = Scraper.objects.create(module='amcat.tests.test_scraping',
-                                  class_name='TestDatedScraper', run_daily=True)
-        dbs =Scraper.objects.create(module='amcat.tests.test_scraping',
-                                  class_name='TestDBScraper', run_daily=True,
-                                    username='test', password='test')
+        self.ds = Scraper.objects.create(module='amcat.tests.test_scraping',
+                                         class_name='TestDatedScraper', run_daily=True)
+        self.dbs =Scraper.objects.create(module='amcat.tests.test_scraping',
+                                         class_name='TestDBScraper', run_daily=True,
+                                         username='test', password='test')
+        self.project = amcattest.create_test_project(name='scrapetest')
     
     def test_get_scrapers(self):
-        scrapers = set(get_scrapers(date=date.today()))        
+        scrapers = set(get_scrapers(date=date.today(), projectid=self.project.id))        
         self.assertEqual({s.__class__ for s in scrapers}, {TestDatedScraper, TestDBScraper})
 
-    def test_multiscraper(self):
-        scrapers = set(get_scrapers(date=date.today()))     
-        s = MultiScraper(scrapers)
+        
+    def test_run_scraper(self):
+        self.project.articles.all().delete()
+        s = self.ds.get_scraper(date = date.today(), projectid=self.project.id)
+        articles = set(SimpleController().scrape(s))
+        self.assertEqual(set(self.project.articles.all()), articles)
+        self.assertEqual(set("abcd"), _project_headlineset(self.project))
+
+    def test_multi_scraper(self):
+        p2 = amcattest.create_test_project(name="test2")
+        ds = self.ds.get_scraper(date = date.today(), projectid=self.project.id)
+        dbs = self.dbs.get_scraper(date = date.today(), projectid=p2.id)
+        m = MultiScraper([ds, dbs])
+        articles = SimpleController().scrape(m)
+        self.assertEqual(set("abcd"), _project_headlineset(self.project))
+        self.assertEqual(set("12345"), _project_headlineset(p2))
+        
+        
+    def test_medium_name(self):
+        from amcat.models.medium import Medium
+        
+        Medium.objects.all().delete()
+        self.assertRaises(Medium.DoesNotExist,
+                          Medium.objects.get, name=TestDatedScraper.medium_name)
+        s = self.ds.get_scraper(date = date.today(), projectid=self.project.id)
+        self.assertEqual(s.medium.name, TestDatedScraper.medium_name)
+        self.assertEqual(Medium.objects.get(name=TestDatedScraper.medium_name), s.medium)
+        
+        

@@ -20,7 +20,7 @@ class Medium(AmcatModel):
     circulation = models.IntegerField(null=True, blank=True)
 
     #type = models.ForeignKey(MediumSourcetype, db_column='medium_source_id')
-    language = models.ForeignKey("amcat.Language")
+    language = models.ForeignKey("amcat.Language", null=True)
 
     @classmethod
     def get_by_name(cls, name, ignore_case=True):

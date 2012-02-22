@@ -110,6 +110,16 @@ def printargs(func):
         return func(*args, **kwargs)
     return echo_func
 
+def to_list(func):
+    """
+    This decorator puts the result of the function (presumably a generator)
+    in a list (or other sequence type). Useful to force generator functions to
+    run without having clumsy syntax like l=[]; for x in y: l.append(x); return l
+    """
+    def _to_list(*args, **kargs):
+        return list(func(*args, **kargs))
+    return _to_list
+                    
 ###########################################################################
 ##                      Statistical Functions                            ##
 ###########################################################################

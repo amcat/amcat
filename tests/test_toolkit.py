@@ -1,3 +1,26 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+Test module for amcat.tools.toolkit
+"""
+
 from amcat.tools import toolkit
 from amcat.tools import amcattest
 import datetime
@@ -216,6 +239,14 @@ class TestToolkitFunctions(amcattest.PolicyTestCase):
         self.assertEqual(toolkit.getattrv2(A, 'B'), B)
         self.assertRaises(AttributeError, toolkit.getattrv2, *(A, 'B.bar'))
         self.assertRaises(AttributeError, toolkit.getattrv2, *(A, 'C'))
-                    
+
+    def test_to_list(self):
+        @toolkit.to_list
+        def gen(n):
+            return (i for i in range(n))
+
+        self.assertEqual(gen(n=12), list(range(12)))
+        
+        
 if __name__ == '__main__':
     amcattest.main()
