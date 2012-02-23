@@ -58,10 +58,8 @@ class Scraper(Script):
     def run(self, input):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"
                  .format(**locals()))
-        for u in self.get_units():
-            log.info("Scraping unit %s" % u)
-            for a in self.scrape_unit(u):
-                log.info("Article: %s" % a)
+        from amcat.scraping.controller import SimpleController
+        SimpleController().scrape(self)
     
     def get_units(self):
         """
@@ -90,8 +88,11 @@ class Scraper(Script):
         and medium filled in automatically.
         @return: a sequence of Article objects ready to .save()
         """
+        log.info("Scraping unit %s" % unit)
         for article in self._scrape_unit(unit):
-            yield self._postprocess_article(article)
+            article = self._postprocess_article(article)
+            log.debug(".. yields article %s" % article)
+            yield article
 
             
     def _scrape_unit(self, unit):
@@ -133,7 +134,7 @@ class DatedScraper(Scraper):
     options_form = DateForm
     def _postprocess_article(self, article):
         article = super(DatedScraper, self)._postprocess_article(article)
-        article.date = self.options['date']
+        _set_default(article, "date", self.options['date'])
         return article
     
 class DBScraperForm(DateForm):

@@ -82,7 +82,11 @@ class AmcatFormatter(logging.Formatter):
         for f in 'application', 'user', 'host':
             s2 = getattr(record, f, None)
             if s2: s += s2 +" "
-        s += "%(levelname)s] %(msg)s" % record.__dict__
+        s += "%(levelname)s]" % record.__dict__
+        if isinstance(record.msg, unicode):
+            s += record.msg
+        else:
+            s += unicode(record.msg, encoding="latin-1")
         if getattr(record, 'exc_info', None):
             s += "\n"+self.formatException(record.exc_info)
         return s

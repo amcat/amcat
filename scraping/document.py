@@ -152,7 +152,9 @@ class HTMLDocument(Document):
             except AttributeError:
                                                                      
                 pass # no need to prepare if opener or url not known
-
+            
+    def __str__(self):
+        return "HTMLDocument(url=%s)" % getattr(self.props, "url", None)
 
 class IndexDocument(HTMLDocument):
     """
