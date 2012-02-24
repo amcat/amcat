@@ -131,6 +131,6 @@ class TestMediargus(unittest.TestCase):
         
     def test_parse(self):
         articles = mediargus.Mediargus().split_text(self.test_text)
-        a = mediargus.Mediargus().parse_document(articles[0])
-        self.assertEqual(a.headline, 'Het compromis is springlevend')
+        a = mediargus.Mediargus().parse_document(articles[99])
+        self.assertEqual(a.headline, 'Maatschappijkritiek en actualiteit als inspiratie')
         

@@ -42,27 +42,32 @@ from amcat.tools.toolkit import readDate
 class Mediargus(UploadScript):
 
     def split_text(self, text):
-        partitions = text.partition("\n\n\n\n\n\n\n")
-        data = partitions[0].split("\n\n\n")
-        bodies = partitions[2].split("\n\n\n\n\n\n\n")
-        
+        text = text.replace('\r\n','\n')
+        text = text.replace('\r','\n')
+        partitions = text.partition('\n\n\n\n\n\n\n')
+        data = partitions[0].split('\n\n\n')
+        bodies = partitions[2].split('\n\n\n\n\n\n')
         return zip(data, bodies)
 
     def parse_document(self, tupleText):
         lines = tupleText[0].split('\n')
         kargs = {}
-        kargs[externalid] = int(lines[0].partition(' ')[0].strip('?')) #? ?
-        kargs[headline] = lines[0].parition(' ')[2]
+        kargs['externalid'] = int(lines[0].partition('. ')[0].lstrip('?'))
+        kargs['headline'] = lines[0].partition(' ')[2]
         
         data = lines[2].split(', ')
-        kargs[medium] = data[0]        
-        kargs[date] = readDate(data[1])
-        kargs[pagenr] = int(data[2].strip('p.'))
-        kargs[length] = int(data[3].strip('w.'))
+        kargs['medium'] = Medium(data[0])        
+        kargs['date'] = readDate(data[1])
+        pagenr = data[2].strip('p.')
+        length = data[3].strip('w.')
+        
+        kargs['pagenr'] = int(pagenr)
+        kargs['length'] = int(length)
         
         lines = tupleText[1].split('\n')
-        kargs[text] = lines[index(kargs[headline])+2:]
-         
+        kargs['text'] = lines[lines.index(kargs['headline'])+2:]
+        print kargs['text']
+        
         return Article(**kargs)
 
 
