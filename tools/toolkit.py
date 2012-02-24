@@ -96,6 +96,12 @@ def cached(func):
     inner._vals = vals
     return inner
 
+def dictionary(func):
+    """This decorator converts a generator yielding (key, value) to a dictionary."""
+    def _dictionary(*args, **kwargs):
+        return dict(tuple(func(*args, **kwargs)))
+    return _dictionary
+
 def printargs(func):
     """This decorator dumps out the arguments passed to a function before calling it
 
