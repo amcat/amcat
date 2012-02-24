@@ -29,21 +29,23 @@ from amcat.scripts.script import Script
 from amcat.scripts.tools import cli
 import amcat.scripts.forms
 
-#from amcat.model.scraper import Scraper
+from amcat.scraping.scraper import DateForm, MultiScraper
+from amcat.scraping.controller import SimpleController
+from amcat.models.scraper import get_scrapers
 
-class DailyForm(forms.Form):
-    date = forms.DateField(initial= date.today() - timedelta(days=1))
 
 class DailyScript(Script):
-    input_type = None
-    options_form = DailyForm
-    output_type = None
+    options_form = DateForm
 
     def run(self, _input):
-        #date = self.options['date']
-        print self.options['scrape']
+        date = self.options['date']
+        project = self.options['projectid']
+        
+        scrapers = list(get_scrapers(date=date, projectid=project.id))
+        m = MultiScraper(scrapers)
 
-            
+        c = SimpleController()
+        c.scrape(m)
         
 
         
