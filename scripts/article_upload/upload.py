@@ -28,6 +28,8 @@ from amcat.scripts.types import ArticleIterator
 
 from amcat.models.article import Article
 
+from amcat.scraping.scraper import ScraperForm
+
 class ParseError(Exception):
     pass
 
@@ -40,6 +42,7 @@ class UploadScript(script.Script):
     
     input_type = unicode
     output_type = ArticleIterator
+    options_form = ScraperForm
     
     def run(self, input):
         assert(isinstance(input, basestring))

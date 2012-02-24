@@ -34,7 +34,7 @@ from django import forms
 from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.models.article import Article
-from amcat.models.medium import Medium
+from amcat.models.medium import Medium, get_or_create_medium
 
 from amcat.tools.toolkit import readDate
 
@@ -44,32 +44,39 @@ class Mediargus(UploadScript):
     def split_text(self, text):
         text = text.replace('\r\n','\n')
         text = text.replace('\r','\n')
+
         partitions = text.partition('\n\n\n\n\n\n\n')
-        data = partitions[0].split('\n\n\n')
+        metas = partitions[0].split('\n\n\n')
         bodies = partitions[2].split('\n\n\n\n\n\n')
-        return zip(data, bodies)
+        return zip(metas, bodies)
 
     def parse_document(self, tupleText):
-        lines = tupleText[0].split('\n')
+        meta, body = tupleText
+        meta = meta.strip()
+        meta = meta.split('\n')
         kargs = {}
-        kargs['externalid'] = int(lines[0].partition('. ')[0].lstrip('?'))
-        kargs['headline'] = lines[0].partition(' ')[2]
+        kargs['externalid'] = int(meta[0].split('.')[0].lstrip('?'))
+        kargs['headline'] = meta[0].partition('. ')[2]
         
-        data = lines[2].split(', ')
-        kargs['medium'] = Medium(data[0])        
-        kargs['date'] = readDate(data[1])
-        pagenr = data[2].strip('p.')
-        length = data[3].strip('w.')
+        medium_name, date, pagenr, length = meta[2].split(', ')
+        kargs['medium'] = get_or_create_medium(medium_name)
+        kargs['date'] = readDate(date)
+        kargs['pagenr'] = int(pagenr.strip('p.'))
+        kargs['length']  = int(length.strip('w.'))
         
-        kargs['pagenr'] = int(pagenr)
-        kargs['length'] = int(length)
+        body = body.split('\n')
+        kargs['section'] = body[2]
         
-        lines = tupleText[1].split('\n')
-        kargs['text'] = lines[lines.index(kargs['headline'])+2:]
-        print kargs['text']
+        kargs['text'] = '\n'.join(body[5:])
+        
+        kargs['project'] = self.options['projectid']
         
         return Article(**kargs)
 
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    a = cli.run_cli(Mediargus, handle_output=False)
 
-
+    for a1 in a:
+        a1.save()
 

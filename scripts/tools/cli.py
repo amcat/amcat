@@ -21,6 +21,7 @@ from django import forms
 from amcat.scripts.output import commandline
 from amcat.scripts import scriptmanager
 import argparse
+import sys
 
 import logging; log = logging.getLogger(__name__)
 #logging.basicConfig(format='[%(asctime)s] [%(name)s] %(message)s', level=logging.DEBUG)
@@ -32,7 +33,7 @@ import logging; log = logging.getLogger(__name__)
 ##         Aux method for CLI invocation                     ##
 ###############################################################
 
-def run_cli(cls):
+def run_cli(cls, handle_output=True):
     """Handle command line interface invocation of this script"""
     from amcat.tools import amcatlogging
     amcatlogging.setup()
@@ -41,9 +42,13 @@ def run_cli(cls):
     args = parser.parse_args()
     options = args.__dict__
     instance = cls(options)
-    out = instance.run(None)
+
+    input = sys.stdin.read().decode('latin-1') if cls.input_type else None
+    out = instance.run(input)
     
-    handleOutput(out, instance.output_type)
+    if handle_output:
+        out = handleOutput(out, instance.output_type)
+    return out
 
 def handleOutput(out, output_type):
     cls = scriptmanager.findScript(output_type, str)

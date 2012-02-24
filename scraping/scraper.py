@@ -30,7 +30,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from amcat.scripts.script import Script
 from amcat.models.article import Article
 from amcat.models.project import Project
-from amcat.models.medium import Medium
+from amcat.models.medium import Medium, get_or_create_medium
 
 from amcat.scripts.tools import cli
 from amcat.scraping.htmltools import HTTPOpener
@@ -52,7 +52,7 @@ class Scraper(Script):
 
     def __init__(self, *args, **kargs):
         super(Scraper, self).__init__(*args, **kargs)
-        self.medium = _get_medium(self.medium_name)
+        self.medium = get_or_create_medium(self.medium_name)
         self.project = self.options['projectid']
     
     def run(self, input):
@@ -169,12 +169,7 @@ class HTTPScraper(Scraper):
         return self.opener.getdoc(url)
 
 
-def _get_medium(medium_name):
-    if medium_name is None: return None
-    try:
-        return Medium.objects.get(name=medium_name)
-    except Medium.DoesNotExist:
-        return Medium.objects.create(name=medium_name)
+
 
 
 def _set_default(obj, attr, val):

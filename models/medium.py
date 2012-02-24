@@ -46,6 +46,18 @@ class Medium(AmcatModel):
         db_table = 'media'
         verbose_name_plural = 'media'
         app_label = 'amcat'
+
+def get_or_create_medium(medium_name):
+    """
+    Finds a medium object or creates a new one if not found
+    @type medium_name: unicode
+    @return: a Medium object (or None if medium_name was None)
+    """
+    if medium_name is None: return None
+    try:
+        return Medium.objects.get(name=medium_name)
+    except Medium.DoesNotExist:
+        return Medium.objects.create(name=medium_name)
     
 class MediumAlias(AmcatModel):
     """
