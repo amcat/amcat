@@ -34,7 +34,6 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools.caching import cached, invalidates
 from amcat.models.coding.code import Code, Label
-from amcat.models.project import Project
 
 # Setup thread-local cache for codebooks
 import threading
@@ -64,7 +63,7 @@ class Codebook(AmcatModel):
     __label__ = 'name'
 
     id = models.AutoField(primary_key=True, db_column='codebook_id')
-    project = models.ForeignKey(Project)
+    project = models.ForeignKey("amcat.Project")
     name = models.TextField()
 
     class Meta():
@@ -178,7 +177,6 @@ class Codebook(AmcatModel):
         for l in q:
             self.get_code(l.code_id)._cache_label(language, l.label)
 
-    
 class CodebookBase(AmcatModel):
     """Many-to-many field (codebook : codebook) with ordering"""
     id = models.AutoField(primary_key=True, db_column='codebook_base_id')

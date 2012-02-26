@@ -25,7 +25,6 @@ schema to be used for manual coding
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
-from amcat.models.project import Project
 
 from django.db import models
 
@@ -51,8 +50,8 @@ class CodingSchema(AmcatModel):
     isarticleschema = models.BooleanField()
     quasisentences = models.BooleanField()
 
-    project = models.ForeignKey(Project)
-    
+    project = models.ForeignKey("amcat.Project")
+
     def __unicode__(self):
         return "%s - %s" % (self.id, self.name)
 

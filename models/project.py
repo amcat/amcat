@@ -22,8 +22,11 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
+from amcat.models.coding.codebook import Codebook
+from amcat.models.coding.codingschema import CodingSchema
 
 from django.db import models
+from django.db.models import Q
 
 ROLEID_PROJECT_READER = 11
 
@@ -54,6 +57,24 @@ class Project(AmcatModel):
 
     active = models.BooleanField(default=True)
     indexed = models.BooleanField(default=True)
+
+    # Coding fields
+    codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
+    codebooks = models.ManyToManyField("amcat.Codebook", related_name="projects_set")
+
+    def get_codingschemas(self):
+        """
+        Return all codingschemas connected to this project. This returns codingschemas
+        owned by it and linked to it.
+        """
+        return CodingSchema.objects.filter(Q(projects_set=self)|Q(project=self))
+
+    def get_codebooks(self):
+        """
+        Return all codebooks connected to this project. This returns codebooks 
+        owned by it and linked to it.
+        """
+        return Codebook.objects.filter(Q(projects_set=self)|Q(project=self))
     
     def can_read(self, user):
         return (self in user.projects or user.haspriv('view_all_projects'))
