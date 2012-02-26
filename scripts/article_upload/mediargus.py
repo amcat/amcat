@@ -1,3 +1,4 @@
+#! /usr/bin/python
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -19,7 +20,7 @@
 
 
 """
-Plugin for uploading csv files
+Plugin for uploading mediargus text files
 """
 
 
@@ -35,7 +36,6 @@ from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.models.article import Article
 from amcat.models.medium import Medium, get_or_create_medium
-
 from amcat.tools.toolkit import readDate
 
 
@@ -69,7 +69,7 @@ class Mediargus(UploadScript):
         
         kargs['text'] = '\n'.join(body[5:])
         
-        kargs['project'] = self.options['projectid']
+        kargs['project'] = self.options['project']
         
         return Article(**kargs)
 

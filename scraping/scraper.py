@@ -40,7 +40,7 @@ import logging; log = logging.getLogger(__name__)
 
 class ScraperForm(forms.Form):
     """Form for scrapers"""
-    projectid = forms.ModelChoiceField(queryset=Project.objects.all())
+    project = forms.ModelChoiceField(queryset=Project.objects.all())
 
 class Scraper(Script):
     output_type = Article
@@ -53,7 +53,7 @@ class Scraper(Script):
     def __init__(self, *args, **kargs):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = get_or_create_medium(self.medium_name)
-        self.project = self.options['projectid']
+        self.project = self.options['project']
     
     def run(self, input):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"

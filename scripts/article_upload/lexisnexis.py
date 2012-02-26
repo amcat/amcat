@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
@@ -30,6 +31,7 @@ from amcat.tools import toolkit
 
 from amcat.models.article import Article
 from amcat.models.medium import Medium
+from amcat.tools.djangotoolkit import get_or_create
 
 import re
 import collections
@@ -338,10 +340,8 @@ class LexisNexis(UploadScript):
         """
         art = Article(headline=headline, byline=byline, text=text, date=date)
 
-        try:
-            art.medium = Medium.get_by_name(source)
-        except Medium.DoesNotExist:
-            raise Medium.DoesNotExist("Medium '%s' does not exist in database" % source)
+
+	art.medium = get_or_create(Medium, name=source)
 
         def _get_key(dic, key):
             for k in dic.keys():
@@ -356,6 +356,8 @@ class LexisNexis(UploadScript):
         art.length = int(_get_key(meta, 'length').split()[0])
         art.metastring = str(meta)
 
+	art.project = self.options['project']
+
         return art
 
     def split_text(self, text):        
@@ -368,4 +370,11 @@ class LexisNexis(UploadScript):
         fields = self.parse_article(text)
         return self.body_to_article(*fields)
     
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    a = cli.run_cli(LexisNexis, handle_output=False)
+
+    for a1 in a:
+        a1.save()
+
     

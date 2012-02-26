@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#! /usr/bin/python
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -30,9 +30,10 @@ from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.models.article import Article
 from amcat.models.medium import Medium
+from amcat.tools.djangotoolkit import get_or_create
 
 
-class TextForm(forms.Form):
+class TextForm(UploadScript.options_form):
     medium = forms.ModelChoiceField(queryset=Medium.objects.all())
     headline = forms.CharField()
     date = forms.DateField()
@@ -40,7 +41,21 @@ class TextForm(forms.Form):
 class Text(UploadScript):
     options_form = TextForm
 
+    def _validate_form(self):
+	# If affiliation is given as a string, get or create the affiliation
+	med = self.bound_form.data['medium']
+	if isinstance(med, basestring):
+	    self.bound_form.data['medium'] = get_or_create(Medium, name=med).id
+	super(Text, self)._validate_form()
+
     def parse_document(self, text):
         return Article(text=text, **self.options)
     
+
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    a = cli.run_cli(Text, handle_output=False)
+
+    for a1 in a:
+        a1.save()
 

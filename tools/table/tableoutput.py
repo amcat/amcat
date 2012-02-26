@@ -1,4 +1,5 @@
-from __future__ import with_statement
+from __future__ import with_statement, absolute_import
+
 from amcat.tools import toolkit, idlabel
 import sys, csv, StringIO, traceback, json
 

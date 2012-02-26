@@ -28,7 +28,7 @@ from amcat.models.project import Project
 from amcat.models import authorisation as auth
 
 from django.core.exceptions import ValidationError
-from django.db import models, DEFAULT_DB_ALIAS
+from django.db import models, DEFAULT_DB_ALIAS, connections
 
 from amcat.tools.model import AmcatModel
 
@@ -143,6 +143,14 @@ class User(AmcatModel):
         """Returns True iff the current user is admin"""
         return (self.role.id >= auth.ADMIN_ROLE)
 
+def current_user(using=DEFAULT_DB_ALIAS):
+    """Return the current user from the configured db"""
+    
+    username = connections.databases[using]['USER']
+    return User.objects.get(username=username)
+
+
+    
 def create_user(username, fullname, email, affiliation, language, role=None,
 		password=None, using=DEFAULT_DB_ALIAS, insert_if_db_user_exists=False):
         """
@@ -177,6 +185,9 @@ def _random_password(length=8, chars=string.letters + string.digits):
     #http://code.activestate.com/recipes/59873/
     return ''.join([random.choice(chars) for i in range(length)])
 
+if __name__ == '__main__':
+    print(current_user().fullname)
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -188,5 +199,8 @@ class TestUser(amcattest.PolicyTestCase):
         """Test whether we can create a user"""        
         u = amcattest.create_test_user()
         self.assertIsNotNone(u)
+
+    def test_current_user(self):
+	u = get_current_user()
 
         
