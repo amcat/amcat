@@ -1,3 +1,4 @@
+from amcat.tools.djangotoolkit import get_or_create
 from amcat.tools.model import AmcatModel
 from amcat.models.language import Language
 
@@ -54,11 +55,8 @@ def get_or_create_medium(medium_name):
     @return: a Medium object (or None if medium_name was None)
     """
     if medium_name is None: return None
-    try:
-        return Medium.objects.get(name=medium_name)
-    except Medium.DoesNotExist:
-        return Medium.objects.create(name=medium_name)
-    
+    return get_or_create(medium, name=medium_name)
+
 class MediumAlias(AmcatModel):
     """
     Provide multiple names per medium. Please use get_by_name on

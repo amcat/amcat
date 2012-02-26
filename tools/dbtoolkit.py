@@ -83,6 +83,12 @@ class Database(object):
         """
         raise NotImplementedError()
 
+    def user_exists(self, username):
+	"""
+	Does the user exist?
+	"""
+	raise NotImplementedError()
+
     
 class PostgreSQL(Database):
     """PostgreSQL implementation"""
@@ -147,7 +153,14 @@ class PostgreSQL(Database):
         username = self.check_username(username) 
         SQL = "DROP  USER IF EXISTS {username}".format(**locals())
         self.execute_transaction(SQL, use_savepoint=False)
-            
+
+    def user_exists(self, username):
+	SQL = "SELECT usename FROM pg_catalog.pg_user WHERE usename=%s"
+	cursor = connection.cursor()
+	cursor.execute(SQL, [username])
+	return bool(cursor.fetchone())
+    
+	
         
     def run_if_needed(self, sql, ok_errors=("already exists", "does not exist")):
         """Run the sql, ignoring any errors that contain an ok_error
@@ -293,6 +306,7 @@ class TestDBToolkit(amcattest.PolicyTestCase):
         password = b'pass123'
         log.info("Creating user {username} with password {password}".format(**locals()))
         db = get_database()
+
         try:
             try:
                 db.create_user(username, password)
@@ -300,7 +314,9 @@ class TestDBToolkit(amcattest.PolicyTestCase):
                 log.info("Test user existed, ignoring")
 
             self.assertTrue(db.check_password(username, password))
-            self.assertFalse(db.check_password(username, "one two three four five"))
+            self.assertFalse(db.check_password(username, "wrong_password"))
+
+	    self.assertTrue(db.user_exists(username))
 
             password2 = "!@$!%$^^%'&&%^4*&^"
             db.set_password(username, password2)
@@ -315,8 +331,8 @@ class TestDBToolkit(amcattest.PolicyTestCase):
                 import traceback
                 traceback.print_exc()
 
-            
-        
+	self.assertFalse(db.user_exists(username))
+	
 def run_test():
     """
     for some reason, django testing gets in the way of creating users
@@ -332,13 +348,12 @@ def run_test():
         def __init__(self):pass
         def assertTrue(self, test):
             if not test:
-                print("%r is not True" % test)
-                import traceback
-                traceback.print_exc()
+                raise Exception("%r is not True" % test)
         def assertFalse(self, test):
-            if test:
-                print("%r is not False" % test)
-                import traceback
-                traceback.print_exc()
+	    self.assertTrue(not test)
                 
     TestDBToolkit.x_test_users_passwords(Dummy())
+
+
+if __name__ == '__main__':
+    run_test()

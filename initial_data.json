@@ -244,13 +244,6 @@
     }
   },
   {
-    "pk": 1, 
-    "model": "amcat.affiliation", 
-    "fields": {
-      "name": "Admins"
-    }
-  },
-  {
     "pk" : 1, 
     "model": "amcat.codingschemafieldtype",
     "fields" : {
