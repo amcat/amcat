@@ -21,6 +21,7 @@
 
 from __future__ import print_function, absolute_import
 import logging; log = logging.getLogger(__name__)
+import string, random
 
 from amcat.models.language import Language
 from amcat.models.project import Project
@@ -142,39 +143,39 @@ class User(AmcatModel):
         """Returns True iff the current user is admin"""
         return (self.role.id >= auth.ADMIN_ROLE)
 
-    @classmethod
-    def create_user(cls, username, fullname, password, email, affiliation,
-                    language, using=DEFAULT_DB_ALIAS, force=False):
+def create_user(username, fullname, email, affiliation, language, role=None,
+		password=None, using=DEFAULT_DB_ALIAS, insert_if_db_user_exists=False):
         """
-        @param force: force creation of user (i.e., ignore UserAlreadyExists exception raised by
-        dbtoolkit. Might be useful for unittests.
+	Create a user with the given attributes, creating both the db user and
+	the entry in the users table
+
+	@param password: use the given password, or a random password if None
+	@param insert_if_db_user_exists: create the User object even if the user already
+	                                 exists as a database user
+        @return: A User object with the .password field set.
+	         If the db user already existed, .password will be None
         """
-        u = User()
+	# create and validate the User object before creating the db user
+	fields = {k:v for (k,v) in locals().items()
+		  if k in ["username","fullname","email","affiliation","language", "role"]}
+        u = User(**fields)
+	u.full_clean()
 
-        u.username = username
-        u.email = email
-        u.affiliation = affiliation
-        u.language = language
-        u.fullname = fullname
-
-        if not (isinstance(password, basestring) and len(password) > 0):
-            raise ValidationError("Please provide a valid password.")
-
-        # Raise errors when invalid data is submitted
-        u.full_clean()
-
-        # Create database user
+	if not password: password = _random_password()
         try:
             dbtoolkit.get_database(using=using).create_user(username, password)
         except dbtoolkit.UserAlreadyExists:
-            if not force: raise
-
-        # Create Django user
+            if not insert_if_db_user_exists: raise
+	    password = None
+	    
+        # Create Django user and return with .password
         u.save()
-
+	u.password = password
         return u
 
-
+def _random_password(length=8, chars=string.letters + string.digits):
+    #http://code.activestate.com/recipes/59873/
+    return ''.join([random.choice(chars) for i in range(length)])
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

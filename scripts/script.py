@@ -29,7 +29,7 @@ a command line script.
 from django import forms
 from django.http import QueryDict
 from django.utils.datastructures import MergeDict
-from amcat.forms import InvalidFormException
+from amcat.forms import validate
         
         
 class Script(object):
@@ -50,52 +50,47 @@ class Script(object):
 
     def __init__(self, options=None, **kargs):
         """Default __init__ validates and stores the options form"""
-        if self.options_form == None:
-            self.options = self._options_raw = None
-        else:
-            options = _validate_form(self.options_form, options, **kargs)
-            self.options = options.cleaned_data
-            self._options_raw = options
-        
+	if self.options_form is None:
+	    self.options = self.options_raw = None
+	else:
+	    self.bound_form = self._bind_form(options, **kargs)
+	    self._validate_form()
+            self.options = self.bound_form.cleaned_data
+
+
     def run(self, input=None):
         """Run is invoked with the input, which should be of type input_type,
         and should return a result of type output_type or raise an exception"""
         pass
 
+    def _validate_form(self):
+	"""Validate self.bound_form, raising an exception if invalid"""
+	validate(self.bound_form)
+
         
-        
+    def _bind_form(self, options=None, **kargs):
+	"""
+	Create a bound form from the options and key-word arguments. Will raise
+	a ValueError if no bound instance of the form for this script could be
+	created
+
+	@param options: Either a bound options form or a dict with option value
+	                with which to create a bound form
+        @param kargs:   If options is None, keyword arguments to use to create a
+	                bound form
+	@return:        A bound form of type self.options_form
+        """
+	if isinstance(options, self.options_form):
+	    if not options.is_bound:
+		raise ValueError("Please provide a bound options form")
+	    return options
+	elif isinstance(options, forms.Form):
+	    raise ValueError("Invalid options form type: {0}".format(self.options_form))
+	if not isinstance(options, (dict, QueryDict, MergeDict)):
+	    options = kargs
+	return self.options_form(options)
+	
     
-def _validate_form(options_form, options, **kargs):
-    """Check whether a filled in form is valid given the form requirement
-
-    If options is not given or is not a django form, attempt to create a bound options_form
-    by calling options_form with either the options (if it is a dict) or the kargs dict.
-
-    Checks whether the options form given or thus created is bound and valid, raising
-    a ValueError if not
     
-    @type options_form: django.forms.Form
-    @param options_form: The Form to validate against, or None if optional
-    @param options: Either the filled-in options form, or a dict containing options with which
-                    to create a bound 'options_form'
-    @param kargs: The options with which to create a bound 'options_form'
-    @return: The validated options form
-    """
-    if not isinstance(options, forms.Form):
-        if isinstance(options, (dict, QueryDict, MergeDict)):
-            options = options_form(options)
-        else:
-            if options is not None: kargs['options'] = options
-            options = options_form(kargs)
 
-    if not isinstance(options, options_form):
-        raise ValueError("Provided options form class %s is not an instance of required options_form class %s" % (options.__class__, options_form.__class__))
-
-    if not options.is_bound:
-        raise ValueError("Cannot call %r script with unbound form" % self.__class__.__name__)
-
-    if not options.is_valid():
-        raise InvalidFormException("Invalid or missing options: %r" % options.errors, options.errors)
-
-    return options
    

@@ -71,6 +71,13 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
         models |= new
         
 
+def get_or_create(model_class, **attributes):
+    """Retrieve the instance of model_class identified by the given attributes,
+    or if not found, create a new instance with these attributes"""
+    try:
+        return model_class.objects.get(**attributes)
+    except model_class.DoesNotExist:
+        return model_class.objects.create(**attributes)
 
 
 @contextmanager   
@@ -135,8 +142,8 @@ from amcat.tools import amcattest
 
 class TestDjangoToolkit(amcattest.PolicyTestCase):
     PYLINT_IGNORE_EXTRA = ('W0212', # use protected _meta
-			   'W0102', # 'dangerous' {} default
-			   )
+               'W0102', # 'dangerous' {} default
+               )
     def test_related_models(self):
         """Test get_related_models function. Note: depends on the actual amcat.models"""
         
@@ -155,3 +162,14 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
             amcattest.create_test_user()
         #query_list_to_table(l, output=print)
         self.assertIn(len(l), [4, 5]) # get affil., create user, select user x2, (pg) get idval
+
+    def test_get_or_create(self):
+	"""Test the get or create operation"""
+	from amcat.models.medium import Medium
+	name = "dsafdsafdsafDSA_amcat_test_medium"
+	Medium.objects.filter(name=name).delete()
+	self.assertRaises(Medium.DoesNotExist, Medium.objects.get, name=name)
+	m = get_or_create(Medium, name=name)
+	self.assertEqual(m.name, name)
+	m2 = get_or_create(Medium, name=name)
+	self.assertEqual(m, m2)
