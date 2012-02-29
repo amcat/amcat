@@ -53,6 +53,7 @@ class ArticleSet(AmcatModel):
         app_label = 'amcat'
         db_table = 'articlesets'
         unique_together = ('name', 'project')
+        ordering = ['name']
 
     def setType(self):
         """

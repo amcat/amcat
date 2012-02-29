@@ -56,6 +56,7 @@ class CodingSchema(AmcatModel):
         return "%s - %s" % (self.id, self.name)
 
     class Meta():
+        ordering = ['name']
         db_table = 'codingschemas'
         app_label = 'amcat'
 
