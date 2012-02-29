@@ -36,7 +36,7 @@ class JQuerySelect(widgets.Select):
         attrs = self._build_attrs(attrs, **{'class' : 'multiselect'})
         return super(JQuerySelect, self).render(name, value, attrs=attrs)
      
-class JQueryMultipleSelect(JQuerySelect):
+class JQueryMultipleSelect(JQuerySelect, widgets.SelectMultiple):
     def render(self, name, value, attrs=None, *args, **kwargs):
         attrs = self._build_attrs(attrs, multiple='multiple')
         return super(JQueryMultipleSelect, self).render(name, value, attrs=attrs)

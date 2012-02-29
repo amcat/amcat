@@ -67,6 +67,7 @@ class Codebook(AmcatModel):
     name = models.TextField()
 
     class Meta():
+        ordering = ['name']
         db_table = 'codebooks'
         app_label = 'amcat'
 
