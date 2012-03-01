@@ -102,8 +102,7 @@ def scrape_logged(controller, scrapers):
     """
     counts = {s : 0 for s in scrapers}
     log_stream = StringIO()
-    with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream),
-                                      add_module_filter=False):
+    with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for a in controller.scrape(MultiScraper(scrapers)):
             scraper = getattr(a, "scraper", None)
             counts[scraper] += 1
@@ -201,7 +200,7 @@ def production_test_logged_multithreaded_error():
     s1 = TestDatedScraper(date = date.today(), project=p.id)
     s2 = TestErrorScraper(date = date.today(), project=p.id)
         
-    counts, log = scrape_logged(ThreadedController(), [s1, s2])
+    counts, log = scrape_logged(ThreadedController(), [s2])
 
     print("Scraping finished:")
     for c, n in counts.items():

@@ -52,7 +52,7 @@ class QueueProcessorThread(Thread):
             try:
                 result = self.action(task)
             except:
-                log.error("Exception on executing task %r" % task, exc_info=True)
+                log.exception("Exception on executing task {task}".format(**locals()))
                 self.problem_list.append(task) # list append is thread safe
             else:
                 if self.output_action is not None:
@@ -110,7 +110,7 @@ def distribute_tasks(tasks, action, nthreads=4, queue_size=10, retry_exceptions=
     
     log.debug("Waiting until queue is empty")
     queue.join()
-    
+
     while problems and retry_exceptions:
         log.debug('Retrying {n} problematic tasks'.format(n=len(problems)))
         # use a temporary list to hold problems and clear problems list before retrying

@@ -30,6 +30,8 @@ from datetime import date
 from amcat.models.article import Article
 from amcat.scraping.controller import SimpleController, ThreadedController, scrape_logged
 
+import logging; log = logging.getLogger(__name__)
+
 class TestDatedScraper(DatedScraper):
     medium_name = 'test_mediumxyz'
     def _get_units(self):
@@ -44,6 +46,7 @@ class TestDBScraper(DBScraper):
     def _get_units(self):
         return [1,2,3,4,5]
     def _scrape_unit(self, unit):
+        log.debug("Scraping %i" % unit)
         if getattr(self, "username", None) is None:
             raise Exception("Not logged in!")
         yield Article(headline=unit, section="TestDBScraper")
@@ -115,8 +118,10 @@ class TestScraping(amcattest.PolicyTestCase):
         dbs = self.dbs.get_scraper(date = date.today(), project=self.project.id)
         
         counts, log = scrape_logged(SimpleController(), [ds, dbs])
-        print(counts)
-        print(log)
+        counts = {c.__class__.__name__ : n for (c,n) in counts.items()}
+        self.assertEqual(counts, dict(TestDatedScraper=4, TestDBScraper=5))
+
+        self.assertIn("DEBUG] Scraping 5", log)
 
         
     def test_medium_name(self):

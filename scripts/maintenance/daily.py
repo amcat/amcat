@@ -23,15 +23,59 @@ Script to be run daily for data input (scraping, preprocessing etc.
 
 from datetime import date, timedelta
 
+import logging; log = logging.getLogger(__name__)
+
 from django import forms
 
 from amcat.scripts.script import Script
 from amcat.scripts.tools import cli
 import amcat.scripts.forms
 
-from amcat.scraping.scraper import DateForm, MultiScraper
-from amcat.scraping.controller import SimpleController
+from amcat.scraping.controller import ThreadedController, scrape_logged
 from amcat.models.scraper import get_scrapers
+from amcat.scraping.scraper import DateForm
+
+from amcat.tools import amcatlogging, toolkit, sendmail
+
+from amcat.tools.table.table3 import ListTable
+from amcat.tools.table.tableoutput import table2html
+
+MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
+
+<p>The following scrapers were run:</p>
+{table}
+
+<h3>Log Details</h3>
+<pre>
+{messages}
+</pre>"""
+
+
+MAIL_ASCII = MAIL_HTML
+for tag in ["h3", "p", "pre"]:
+    MAIL_ASCII = MAIL_ASCII.replace("<%s>"%tag, "").replace("</%s>"%tag, "")
+
+EMAIL = "amcat-scraping@googlegroups.com"
+
+def send_email(count, messages):
+
+    counts = [(s.__class__.__name__, n) for (s,n) in count.items()]
+    n = sum(count.values())
+    counts.append(("Total", n))
+    t = ListTable(counts, colnames=["Scraper", "#Articles"])
+    counts_ascii = t.output(useunicode=False, box=False)
+    counts_html = table2html(t, printRowNames=False)
+
+    datestr = toolkit.writeDate(date.today())
+
+    mail_ascii = MAIL_ASCII.format(table=counts_ascii, **locals())
+    mail_html = MAIL_HTML.format(table=counts_html, **locals())
+
+    subject = "Daily scraping for {datestr}: {n} articles".format(**locals())
+    
+    sendmail.sendmail("vanatteveldt@gmail.com", EMAIL, subject, mail_html, mail_ascii)
+
+    
 
 
 class DailyScript(Script):
@@ -39,15 +83,26 @@ class DailyScript(Script):
 
     def run(self, _input):
         date = self.options['date']
-        project = self.options['projectid']
-        
-        scrapers = list(get_scrapers(date=date, projectid=project.id))
-        m = MultiScraper(scrapers)
+        project = self.options['project']
 
-        c = SimpleController()
-        c.scrape(m)
+        amcatlogging.debug_module("amcat.scraping.scraper")
+        amcatlogging.debug_module("amcat.scraping.controller")
         
+        scrapers = list(get_scrapers(date=date, project=project.id))
+        log.info("Starting scraping with {} scrapers: {}".format(
+                len(scrapers), [s.__class__.__name__ for s in scrapers]))
 
+        count, messages =  scrape_logged(ThreadedController(), scrapers)
+
+        log.info("Sending email...")
+        
+        send_email(count, messages)
+
+        log.info("Done")
         
 if __name__ == '__main__':
+
+    #scrapers = list(get_scrapers(date="2012-01-01", project=3))
+    #create_email({s : 101 for s in scrapers}, "bla bla bla")
+            
     cli.run_cli(DailyScript)

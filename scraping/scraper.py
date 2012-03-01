@@ -36,7 +36,7 @@ from amcat.scripts.tools import cli
 from amcat.scraping.htmltools import HTTPOpener
 from amcat.scraping.document import Document
 
-from amcat.tools.toolkit import retry
+from amcat.tools.toolkit import retry, to_list
 
 import logging; log = logging.getLogger(__name__)
 
@@ -83,7 +83,8 @@ class Scraper(Script):
         @return: a sequence of arbitrary objects to be passed to scrape_unit
         """
         return [None]
-    
+
+    @to_list
     def scrape_unit(self, unit):
         """
         Scrape a single unit of work. Subclasses can override _scrape_unit to have project
@@ -125,6 +126,7 @@ class Scraper(Script):
         _set_default(article, "project", self.project)
         _set_default(article, "medium", self.medium)
         return article
+    
 class DateForm(ScraperForm):
     """
     Form for scrapers that operate on a date
@@ -154,7 +156,7 @@ class DBScraper(DatedScraper):
         """Login to the resource to scrape, if needed. Will be called
         at the start of get_units()"""
         pass
-    
+
     def _initialize(self):
         self._login(self.options['username'], self.options['password'])
 
@@ -164,15 +166,12 @@ class HTTPScraper(Scraper):
         super(HTTPScraper, self).__init__(*args, **kargs)
         # TODO: this should be moved to _initialize, but then _initialize should
         # be moved to some sort of listener-structure as HTTPScraper is expected to
-        # be inherited from besides eg DBScraper in a "diamon-shaped" multi-inheritance
+        # be inherited from besides eg DBScraper in a "diamond-shaped" multi-inheritance
         self.opener = HTTPOpener()
+        
     def getdoc(self, url):
         """Legacy/convenience function"""
         return self.opener.getdoc(url)
-
-
-
-
 
 def _set_default(obj, attr, val):
     try:
@@ -200,7 +199,8 @@ class MultiScraper(object):
                     yield (scraper, u)
             except:
                 log.exception("%s.get_units failed after retrying, giving up" % scraper.__class__.__name__)
-            
+
+    @to_list
     def scrape_unit(self, unit):
         """Call the craper for the given unit. Will yield article objects
         with a .scraper custom attribute indicating the 'concrete' scraper"""

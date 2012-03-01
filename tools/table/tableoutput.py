@@ -192,7 +192,7 @@ def table2html(table, colnames=None, printRowNames = True, border=True):
     result += "%s\n  </tr></thead><tbody>" % "".join("\n    <th>%s</th>" % (col,) for col in table.getColumns())
     for row in table.getRows():
         result += "\n  <tr>"
-        if printRowNames: result += "\n    <th>%s</th>" % row
+        if printRowNames: result += "\n    <th>%s</th>" % (row,)
         
         result += "".join("\n    <td>%s</td>" % table.getValue(row, col) for col in table.getColumns())
         result += "</tr>"
