@@ -24,11 +24,25 @@ coding jobs.
 """
 
 from amcat.tools.model import AmcatModel
+from amcat.tools.djangotoolkit import get_or_create
 
 from amcat.models.project import Project
 from amcat.models.article import Article
 
 from django.db import models
+
+def get_or_create_articleset(name, project):
+    """
+    Finds an articleset based on its name. If it does not exists, it creates
+    one and returns that one instead.
+
+    @type name: unicode
+    @param name: name attribute of ArticleSet
+    @type project: project.Project
+    @param project: project attribute of ArticleSet
+    @return: ArticleSet object or None if name is None
+    """
+    return get_or_create(ArticleSet, name=name, project=project) if name else None
 
 class ArticleSet(AmcatModel):
     """

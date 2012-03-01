@@ -27,7 +27,6 @@ from amcat.models.language import Language
 from amcat.models.project import Project
 from amcat.models import authorisation as auth
 
-from django.core.exceptions import ValidationError
 from django.db import models, DEFAULT_DB_ALIAS, connections
 
 from amcat.tools.model import AmcatModel

@@ -30,7 +30,8 @@ from django.core.exceptions import ObjectDoesNotExist
 from amcat.scripts.script import Script
 from amcat.models.article import Article
 from amcat.models.project import Project
-from amcat.models.medium import Medium, get_or_create_medium
+from amcat.models.medium import get_or_create_medium
+from amcat.models.articleset import ArticleSet, get_or_create_articleset
 
 from amcat.scripts.tools import cli
 from amcat.scraping.htmltools import HTTPOpener
@@ -43,6 +44,18 @@ import logging; log = logging.getLogger(__name__)
 class ScraperForm(forms.Form):
     """Form for scrapers"""
     project = forms.ModelChoiceField(queryset=Project.objects.all())
+    
+    articleset = forms.CharField(max_length=
+        ArticleSet._meta.get_field_by_name('name')[0].max_length,
+        required = False
+    )
+
+    def clean_articleset(self):
+        """
+        Get or create articleset based on its name
+        """
+        return get_or_create_articleset(self.cleaned_data['articleset'],
+                                        self.cleaned_data['project'])
 
 class Scraper(Script):
     output_type = Article
@@ -61,7 +74,7 @@ class Scraper(Script):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"
                  .format(**locals()))
         from amcat.scraping.controller import SimpleController
-        SimpleController().scrape(self)
+        SimpleController(self.options['articleset']).scrape(self)
     
     def get_units(self):
         """
