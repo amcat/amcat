@@ -55,7 +55,7 @@ def get_or_create_medium(medium_name):
     @return: a Medium object (or None if medium_name was None)
     """
     if medium_name is None: return None
-    return get_or_create(medium, name=medium_name)
+    return get_or_create(Medium, name=medium_name)
 
 class MediumAlias(AmcatModel):
     """

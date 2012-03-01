@@ -82,7 +82,7 @@ class AmcatFormatter(logging.Formatter):
         for f in 'application', 'user', 'host':
             s2 = getattr(record, f, None)
             if s2: s += s2 +" "
-        s += "%(levelname)s]" % record.__dict__
+        s += "%(levelname)s] " % record.__dict__
         if isinstance(record.msg, unicode):
             s += record.msg
         else:
@@ -149,6 +149,7 @@ def setStreamHandler(*args, **kargs):
     h.setFormatter(AmcatFormatter(date=True))
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
+    return h
 
 def setFileHandler(filename, directory=None, filesize=50):
     """add a RotatingFileHanlder to the root logger with module level filters"""
@@ -161,25 +162,26 @@ def setFileHandler(filename, directory=None, filesize=50):
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
 
-
+@contextmanager
+def install_handler(handler, add_module_filter=True):
+    """Set up and remove the given handler with the normal formatter and filter"""
+    root = logging.getLogger()
+    handler.setFormatter(AmcatFormatter(date=True))
+    if add_module_filter:
+        handler.addFilter(ModuleLevelFilter())
+    try:
+        root.addHandler(handler)
+        yield handler
+    finally:
+        root.removeHandler(handler)
+    
 @contextmanager
 def streamHandler(stream):
     """
     Log handler that emits messsages to the given stream
     """
-    root = logging.getLogger()
     h = logging.StreamHandler(stream)
-    h.setFormatter(AmcatFormatter(date=True))
-    h.addFilter(ModuleLevelFilter())
-    try:
-        root.addHandler(h)
-        stream.write("INSTALLED HANDLER")
-        yield h
-    finally:
-        root.removeHandler(h)
-        stream.write("REMOVED HANDLER")
-
-
+    return install_handler(h)
 
         
 def setup():

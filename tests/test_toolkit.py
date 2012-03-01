@@ -21,8 +21,7 @@
 Test module for amcat.tools.toolkit
 """
 
-from amcat.tools import toolkit
-from amcat.tools import amcattest
+from amcat.tools import toolkit, amcattest, amcatlogging
 import datetime
 import random
 import inspect
@@ -246,6 +245,22 @@ class TestToolkitFunctions(amcattest.PolicyTestCase):
             return (i for i in range(n))
 
         self.assertEqual(gen(n=12), list(range(12)))
+
+
+    def test_retry(self):
+        x = [3]
+        def f():
+            x[0] -= 1
+            if x[0]: raise amcatlogging.SilentException("...")
+            return 1
+
+        with amcatlogging.collect() as log:
+            self.assertEqual(toolkit.retry(f), 1)
+        self.assertEqual(len(log), 2)
+
+        x = [5]
+        self.assertRaises(amcatlogging.SilentException, toolkit.retry, f)
+        
         
         
 if __name__ == '__main__':

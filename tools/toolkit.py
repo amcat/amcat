@@ -827,6 +827,24 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
     else:
         return s
 
+def retry(function, ntries=3, logger=None, *args, **kargs):
+    """Try calling the function with args and kargs. If an exception
+    occurs, log it, and retry for up to ntries-1 times. Will return
+    the first time the function returns without exception. Will re-raise
+    the exception of the function when out of retries"""
+    if not logger:
+        logger = logging.getLogger(getCallingModule())
+    while True:
+        try:
+            return function(*args, **kargs)
+        except:
+            ntries -= 1
+            if not ntries:
+                raise
+            logger.exception("Error on calling %s(*%r, **%r), %i retries left" 
+                             % (function.__name__, args, kargs, ntries))
+    
+    
 ###########################################################################
 ##                     Date(time) functions                              ##
 ###########################################################################

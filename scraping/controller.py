@@ -21,9 +21,15 @@
 Module for controlling scrapers
 """
 
+import logging; log = logging.getLogger(__name__)
+from cStringIO import StringIO
+
 from amcat.tools.toolkit import to_list
 from amcat.tools.multithread import distribute_tasks, QueueProcessorThread, add_to_queue_action
-import logging; log = logging.getLogger(__name__)
+from amcat.tools import amcatlogging
+
+from amcat.scraping.scraper import MultiScraper
+
 
 class Controller(object):
     """
@@ -87,6 +93,25 @@ class ThreadedController(Controller):
         return result
    
 
+def scrape_logged(controller, scrapers):
+    """Use the controller and MultiScraper to scrape the given scrapers.
+
+    @return: a tuple (counts, log)
+             counts: a mapping of number of articles scraper per scraper
+             log: a string representation of the log messages from the scrapers
+    """
+    counts = {s : 0 for s in scrapers}
+    log_stream = StringIO()
+    with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream),
+                                      add_module_filter=False):
+        for a in controller.scrape(MultiScraper(scrapers)):
+            scraper = getattr(a, "scraper", None)
+            counts[scraper] += 1
+
+    return counts, log_stream.getvalue()
+    
+    
+    
     
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -162,6 +187,31 @@ def production_test_multithreaded_saving():
     assert set(s.articles.all()) == set(articles)
     
     log.info("[OK] Production test Multithreaded Saving passed")
+
+def production_test_logged_multithreaded_error():
+    """
+    Test whether multithreaded saving works.
+    Threaded commit does not work in unit test, code below actually creates
+        projects and articles, so run on test database only!
+    """
+    from amcat.models.project import Project
+    from amcat.tests.test_scraping import TestDatedScraper, TestErrorScraper
+    p = Project.objects.get(pk=2)
+    
+    s1 = TestDatedScraper(date = date.today(), project=p.id)
+    s2 = TestErrorScraper(date = date.today(), project=p.id)
+        
+    counts, log = scrape_logged(ThreadedController(), [s1, s2])
+
+    print("Scraping finished:")
+    for c, n in counts.items():
+        print("%s : %i" % (c.__class__.__name__, n))
+    if log:
+        print("\nDetails:\n%s" % log)
+    import time;time.sleep(.1)
+         
     
 if __name__ == '__main__':
-    production_test_multithreaded_saving()
+    #production_test_multithreaded_saving()
+    amcatlogging.setup()
+    production_test_logged_multithreaded_error()

@@ -55,12 +55,12 @@ LICENSE = """###################################################################
 """
 
 from . import toolkit
-    
+
 def create_test_user(**kargs):
     """Create a user to be used in unit testing"""
     from amcat.models.user import Affiliation, User#, Language
     if 'affiliation' not in kargs:
-        kargs['affiliation'] = Affiliation.objects.all()[0]
+        kargs['affiliation'] = Affiliation.objects.create()
     if 'username' not in kargs:
         kargs['username'] = "testuser_%i" % User.objects.count()
     if 'email' not in kargs:

@@ -28,7 +28,7 @@ from amcat.scraping.scraper import DatedScraper, DBScraper, MultiScraper
 from amcat.models.scraper import Scraper, get_scrapers
 from datetime import date
 from amcat.models.article import Article
-from amcat.scraping.controller import SimpleController
+from amcat.scraping.controller import SimpleController, ThreadedController, scrape_logged
 
 class TestDatedScraper(DatedScraper):
     medium_name = 'test_mediumxyz'
@@ -49,6 +49,23 @@ class TestDBScraper(DBScraper):
         yield Article(headline=unit, section="TestDBScraper")
 
 
+class TestErrorScraper(DatedScraper):
+    medium_name = 'test_mediumxyz'
+    def __init__(self, *args, **kargs):
+        super(TestErrorScraper, self).__init__(self, *args, **kargs)
+        self.ue = 1
+        self.se = 2
+    def _get_units(self):
+        if self.ue:
+            self.ue -= 1
+            raise Exception("Error from scraper._get_units")
+        return "abcd"
+    def _scrape_unit(self, unit):
+        if self.se:
+            self.se -= 1
+            raise Exception("Error from scraper._scrape_unit")
+
+        yield Article(headline=unit, section="TestDatedScraper")
     
 
 ###########################################################################
@@ -71,26 +88,36 @@ class TestScraping(amcattest.PolicyTestCase):
         self.project = amcattest.create_test_project(name='scrapetest')
     
     def test_get_scrapers(self):
-        scrapers = set(get_scrapers(date=date.today(), projectid=self.project.id))        
+        scrapers = set(get_scrapers(date=date.today(), project=self.project.id))        
         self.assertEqual({s.__class__ for s in scrapers}, {TestDatedScraper, TestDBScraper})
 
         
     def test_run_scraper(self):
         self.project.articles.all().delete()
-        s = self.ds.get_scraper(date = date.today(), projectid=self.project.id)
+        s = self.ds.get_scraper(date = date.today(), project=self.project.id)
         articles = set(SimpleController().scrape(s))
         self.assertEqual(set(self.project.articles.all()), articles)
         self.assertEqual(set("abcd"), _project_headlineset(self.project))
 
     def test_multi_scraper(self):
         p2 = amcattest.create_test_project(name="test2")
-        ds = self.ds.get_scraper(date = date.today(), projectid=self.project.id)
-        dbs = self.dbs.get_scraper(date = date.today(), projectid=p2.id)
+        ds = self.ds.get_scraper(date = date.today(), project=self.project.id)
+        dbs = self.dbs.get_scraper(date = date.today(), project=p2.id)
         m = MultiScraper([ds, dbs])
         articles = SimpleController().scrape(m)
         self.assertEqual(set("abcd"), _project_headlineset(self.project))
         self.assertEqual(set("12345"), _project_headlineset(p2))
+        self.assertEqual(len("abcd"), len([a for a in articles if a.scraper == ds]))
+        self.assertEqual(len("12345"), len([a for a in articles if a.scraper == dbs]))
+
+    def test_logged_scraper(self):
+        ds = self.ds.get_scraper(date = date.today(), project=self.project.id)
+        dbs = self.dbs.get_scraper(date = date.today(), project=self.project.id)
         
+        counts, log = scrape_logged(SimpleController(), [ds, dbs])
+        print(counts)
+        print(log)
+
         
     def test_medium_name(self):
         from amcat.models.medium import Medium
@@ -98,7 +125,7 @@ class TestScraping(amcattest.PolicyTestCase):
         Medium.objects.all().delete()
         self.assertRaises(Medium.DoesNotExist,
                           Medium.objects.get, name=TestDatedScraper.medium_name)
-        s = self.ds.get_scraper(date = date.today(), projectid=self.project.id)
+        s = self.ds.get_scraper(date = date.today(), project=self.project.id)
         self.assertEqual(s.medium.name, TestDatedScraper.medium_name)
         self.assertEqual(Medium.objects.get(name=TestDatedScraper.medium_name), s.medium)
         
