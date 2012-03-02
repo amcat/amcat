@@ -38,16 +38,20 @@ from amcat.models.coding.code import Code, Label
 # Setup thread-local cache for codebooks
 import threading
 _local_cache = threading.local()
-_local_cache.codebooks = {}
-    
+
 def get_codebook(codebook_id):
     """Create the codebook with the given id, possibly retrieving it
     from cache"""
     try:
-        return _local_cache.codebooks[codebook_id]
+        books = _local_cache.codebooks
+    except AttributeError:
+        _local_cache.codebooks = {}
+        books = _local_cache.codebooks
+    try:
+        return books[codebook_id]
     except KeyError:
-        _local_cache.codebooks[codebook_id] = Codebook.objects.get(pk=codebook_id)
-        return _local_cache.codebooks[codebook_id]
+        books[codebook_id] = Codebook.objects.get(pk=codebook_id)
+        return books[codebook_id]
 
 def clear_codebook_cache():
     """Clear the local codebook cache manually, ie in between test runs"""
@@ -192,12 +196,13 @@ class CodebookBase(AmcatModel):
         ordering = ['rank']
         unique_together = ("supercodebook", "subcodebook")
 
-class Functions(AmcatModel):
+class Function(AmcatModel):
     """Specification of code book parent-child relations"""
     id = models.IntegerField(primary_key=True, db_column='function_id')
     label = models.CharField(max_length=100, null=False, unique=True)
     description = models.TextField(null=True)
 
+    __label__ = 'label'
     class Meta():
         db_table = 'codebooks_functions'
         app_label = 'amcat'
@@ -215,7 +220,7 @@ class CodebookCode(AmcatModel):
 
     validfrom = models.DateTimeField(null=True)
     validto = models.DateTimeField(null=True)
-    function = models.ForeignKey(Functions, default=0)
+    function = models.ForeignKey(Function, default=0)
 
     def save(self, *args, **kargs):
         self.validate()
