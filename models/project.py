@@ -53,7 +53,7 @@ class Project(AmcatModel):
                                     related_name='inserted_project',
                                     editable=False)
 
-    guest_role = models.ForeignKey("amcat.Role", default=ROLEID_PROJECT_READER)
+    guest_role = models.ForeignKey("amcat.Role", default=ROLEID_PROJECT_READER, null=True)
 
     active = models.BooleanField(default=True)
     indexed = models.BooleanField(default=True)
