@@ -44,7 +44,7 @@ import logging; log = logging.getLogger(__name__)
 class ScraperForm(forms.Form):
     """Form for scrapers"""
     project = forms.ModelChoiceField(queryset=Project.objects.all())
-    
+
     articleset = forms.CharField(max_length=
         ArticleSet._meta.get_field_by_name('name')[0].max_length,
         required = False
@@ -138,6 +138,7 @@ class Scraper(Script):
         _set_default(article, "project", self.project)
         _set_default(article, "medium", self.medium)
         return article
+
 class DateForm(ScraperForm):
     """
     Form for scrapers that operate on a date
@@ -179,9 +180,9 @@ class HTTPScraper(Scraper):
         # be moved to some sort of listener-structure as HTTPScraper is expected to
         # be inherited from besides eg DBScraper in a "diamon-shaped" multi-inheritance
         self.opener = HTTPOpener()
-    def getdoc(self, url):
+    def getdoc(self, url, encoding=None):
         """Legacy/convenience function"""
-        return self.opener.getdoc(url)
+        return self.opener.getdoc(url, encoding)
 
 
 

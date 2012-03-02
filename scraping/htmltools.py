@@ -34,17 +34,20 @@ class HTTPOpener(object):
         self.opener = urllib2.build_opener(c)
         self.opener.addheaders = HEADERS.items()
         
-    def getdoc(self, url):
+    def getdoc(self, url, encoding=None):
         """Fetch a document from `url`. This method tries to determine the encoding of the document
         by looking at the HTTP headers. If those are missing, it leaves lxml to decide the
         encoding. 
+
+        @param encoding: force an encoding (if not present in headers)
+        @type encoding: instanceof basestring
 
         @param url: url to fetch
         """
         log.info('Retrieving "%s"' % urllib.unquote(url))
         response = self.opener.open(url)
         try:
-            html_string = get_unicode(response)
+            html_string = get_unicode(response, encoding)
         except: # decoding failed, use lxml default
             return html.parse(response).getroot()
         else: # decoding succeeded, use fromstring
@@ -54,11 +57,11 @@ ENCODING_HEADER = 'content-type'
 ENCODING_KEY = 'charset'
 
 
-def get_unicode(http_response):
+def get_unicode(http_response, encoding=None):
     """Get the decoded unicode from response.
     Raises an exception if the encoding could not be found or applied
     """
-    enc = get_encoding(http_response)
+    enc = encoding or get_encoding(http_response)
     return http_response.read().decode(enc)                        
 
 

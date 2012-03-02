@@ -114,7 +114,6 @@ class HTMLDocument(Document):
             return val.strip()
 
         if t in (html.HtmlElement, etree._Element):
-            #return html2text(html.tostring(val)).strip()
             try:
                 return html2text(html.tostring(val)).strip() #encoding=str
             except (parser.HTMLParseError, TypeError) as e:
@@ -143,7 +142,6 @@ class HTMLDocument(Document):
             yield (k, self._convert(v))
 
     def prepare(self, processor, force=False):
-        print "XXXXXXXXXXXXXXXXXXX"
         log.info("Preparing %s using processor %s, getdoc=%s" % (getattr(self.props, "url", None),
                                                                  processor, getattr(processor, "getdoc", None)))
         if (self.doc is None or force):
