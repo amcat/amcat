@@ -47,14 +47,21 @@ class UploadScript(script.Script):
     def run(self, input):
         assert(isinstance(input, basestring))
 
+        docs = []
+        
         parts = self.split_text(input)
         for part in parts:
             parsed = self.parse_document(part)
             if isinstance(parsed, Article):
-                yield parsed
+                docs.append(parsed)
             elif parsed is not None:
                 for doc in parsed:
-                    yield document
+                    docs.append(doc)
+
+        for doc in docs:
+            doc.save()
+
+        self.options['articleset'].articles.add(*docs)
 
     def parse_document(self, document):
         """
