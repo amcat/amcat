@@ -1,6 +1,5 @@
 from amcat.tools.djangotoolkit import get_or_create
 from amcat.tools.model import AmcatModel
-from amcat.models.language import Language
 
 from django.db import models
 

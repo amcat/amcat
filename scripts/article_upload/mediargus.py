@@ -77,6 +77,4 @@ if __name__ == '__main__':
     from amcat.scripts.tools import cli
     a = cli.run_cli(Mediargus, handle_output=False)
 
-    for a1 in a:
-        a1.save()
 

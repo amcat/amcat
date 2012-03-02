@@ -120,7 +120,6 @@ from amcat.tools import amcattest, amcatlogging
 from amcat.scraping.scraper import Scraper
 from amcat.models.article import Article
 from datetime import date
-from django.db import transaction
                 
 class _TestScraper(Scraper):
     medium_name = 'xxx'
