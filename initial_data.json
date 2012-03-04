@@ -336,7 +336,7 @@
     }
   },
   {  "pk" : 0,
-    "model": "amcat.functions",
+    "model": "amcat.function",
     "fields" : {
       "label" : "0",
       "description" : "general taxonomic more-specific-than relation"
