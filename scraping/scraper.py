@@ -35,18 +35,16 @@ from amcat.models.articleset import ArticleSet, get_or_create_articleset
 
 from amcat.scripts.tools import cli
 from amcat.scraping.htmltools import HTTPOpener
-from amcat.scraping.document import Document, HTMLDocument
+from amcat.scraping.document import Document
 
-from amcat.tools.toolkit import retry, to_list
+from amcat.tools.toolkit import retry
 
 import logging; log = logging.getLogger(__name__)
-import urlparse
-import urllib
 
 class ScraperForm(forms.Form):
     """Form for scrapers"""
     project = forms.ModelChoiceField(queryset=Project.objects.all())
-    
+
     articleset = forms.CharField(max_length=
         ArticleSet._meta.get_field_by_name('name')[0].max_length,
         required = False
@@ -98,8 +96,7 @@ class Scraper(Script):
         @return: a sequence of arbitrary objects to be passed to scrape_unit
         """
         return [None]
-
-    @to_list
+    
     def scrape_unit(self, unit):
         """
         Scrape a single unit of work. Subclasses can override _scrape_unit to have project
@@ -141,7 +138,7 @@ class Scraper(Script):
         _set_default(article, "project", self.project)
         _set_default(article, "medium", self.medium)
         return article
-    
+
 class DateForm(ScraperForm):
     """
     Form for scrapers that operate on a date
@@ -171,7 +168,7 @@ class DBScraper(DatedScraper):
         """Login to the resource to scrape, if needed. Will be called
         at the start of get_units()"""
         pass
-
+    
     def _initialize(self):
         self._login(self.options['username'], self.options['password'])
 
@@ -181,95 +178,14 @@ class HTTPScraper(Scraper):
         super(HTTPScraper, self).__init__(*args, **kargs)
         # TODO: this should be moved to _initialize, but then _initialize should
         # be moved to some sort of listener-structure as HTTPScraper is expected to
-        # be inherited from besides eg DBScraper in a "diamond-shaped" multi-inheritance
+        # be inherited from besides eg DBScraper in a "diamon-shaped" multi-inheritance
         self.opener = HTTPOpener()
-        
-    def getdoc(self, url):
+    def getdoc(self, url, encoding=None):
         """Legacy/convenience function"""
-        return self.opener.getdoc(url)
+        return self.opener.getdoc(url, encoding)
 
-class PhpBBScraper(HTTPScraper, DBScraper):
-    
-    def _login(self, username, password):
-        form = self.getdoc(INDEX_URL).cssselect('form')[0]
 
-        self.opener.open(form.get('action'), urlencode({
-            'user' : username,
-            'passwrd' : password,
-            'cookielength' : '-1'
-        })).read()
-    
-    def _get_units(self):
-        """
-        PhpBB forum scraper
-        """
-        index = self.getdoc(self.index_url)
 
-        for cat_title, cat_doc in self.get_categories(index):
-            for page in self.get_pages(cat_doc):
-                for fbg in page.cssselect('.forumbg'):
-                    if 'announcement' in fbg.get('class'):
-                        continue
-
-                    for a in fbg.cssselect('.topics > li a.topictitle'):
-                        url = urlparse.urljoin(self.index_url, a.get('href'))
-                        yield HTMLDocument(headline=a.text, url=url, category=cat_title)
-
-    def get_pages(self, cat_doc, debug=False):
-        """Get each page specified in pagination division."""
-        yield cat_doc # First page, is always available
-
-        if cat_doc.cssselect('.pagination .page-sep'):
-            pages = cat_doc.cssselect('.pagination a')
-            try:
-                pages = int(pages[-1].text)
-            except:
-                pages = int(pages[-2].text)
-
-            spage = cat_doc.cssselect('.pagination span a')[0]
-
-            if int(spage.text) != 1:
-                url = list(urlparse.urlsplit(spage.get('href')))
-
-                query = dict([(k, v[-1]) for k,v in urlparse.parse_qs(url[3]).items()])
-                ppp = int(query['start'])
-
-                for pag in range(1, pages):
-                    query['start'] = pag*ppp
-                    url[3] = urllib.urlencode(query)
-
-                    yield self.getdoc(urlparse.urljoin(self.index_url, urlparse.urlunsplit(url)))
-
-    def get_categories(self, index):
-        """
-        @yield: (category_name, lxml_doc)
-        """
-        hrefs = index.cssselect('.topiclist a.forumtitle')
-
-        for href in hrefs:
-            url = urlparse.urljoin(self.index_url, href.get('href'))
-            yield href.text, self.getdoc(url)
-    
-    def _scrape_unit(self, thread):
-        fipo = True # First post?
-        for page in self.get_pages(thread.doc, debug=True):
-            for post in page.cssselect('.post'):
-                ca = thread if fipo else thread.copy(parent=thread)
-                ca.props.date = atoolkit.readDate(post.cssselect('.author')[0].text_content()[-22:])
-                ca.props.text = post.cssselect('.content')
-
-                try:
-                    ca.props.author = post.cssselect('.author strong')[0].text_content()
-                except:
-                    try:
-                        ca.props.author = post.cssselect('.author a')[0].text_content()
-                    except:
-                        # Least reliable method
-                        ca.props.author = post.cssselect('.author')[0].text_content().split()[0]
-
-                yield ca
-
-                fipo = False
 
 
 def _set_default(obj, attr, val):
@@ -298,8 +214,7 @@ class MultiScraper(object):
                     yield (scraper, u)
             except:
                 log.exception("%s.get_units failed after retrying, giving up" % scraper.__class__.__name__)
-
-    @to_list
+            
     def scrape_unit(self, unit):
         """Call the craper for the given unit. Will yield article objects
         with a .scraper custom attribute indicating the 'concrete' scraper"""

@@ -56,7 +56,7 @@ class Document(object):
         """@param parent: """
         self.props = Properties()
         self.parent = parent
-        self.id = None
+        self.article = None
 
         for k,v in kargs.items():
             setattr(self.props, k, v)
@@ -97,6 +97,8 @@ class Document(object):
                 _metastring[prop] = value
 
         art.metastring = str(_metastring)
+        self.article = art
+
         return art
 
 class HTMLDocument(Document):
@@ -114,7 +116,6 @@ class HTMLDocument(Document):
             return val.strip()
 
         if t in (html.HtmlElement, etree._Element):
-            #return html2text(html.tostring(val)).strip()
             try:
                 return html2text(html.tostring(val)).strip() #encoding=str
             except (parser.HTMLParseError, TypeError) as e:
@@ -143,7 +144,6 @@ class HTMLDocument(Document):
             yield (k, self._convert(v))
 
     def prepare(self, processor, force=False):
-        print "XXXXXXXXXXXXXXXXXXX"
         log.info("Preparing %s using processor %s, getdoc=%s" % (getattr(self.props, "url", None),
                                                                  processor, getattr(processor, "getdoc", None)))
         if (self.doc is None or force):
@@ -170,7 +170,7 @@ class IndexDocument(HTMLDocument):
         self.children.append(child)
 
     def getprops(self):
-        committed = [(child.id is not None) for child in self.children]
+        committed = [(child.article.id is not None) for child in self.children]
         if not all(committed):
             raise(ValueError("Please yield the index-page *after* all children."))
 
@@ -187,7 +187,7 @@ class IndexDocument(HTMLDocument):
         for child in self.children:
             for coord in child.coords:
                 coord = ", ".join(map(str, coord))
-                text.append("[%s -> %s]" % (coord, child.id))
+                text.append("[%s -> %s]" % (coord, child.article.id))
 
         return dict(headline=headline, text="\n".join(text),
                     page=self.page, **self.props.__dict__)
