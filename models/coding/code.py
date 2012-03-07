@@ -69,6 +69,7 @@ class Code(AmcatModel):
         
     def _get_label(self, language):
         """Get the label (string) for the given language object, or raise label.DoesNotExist"""
+        if type(language) != int: language = language.id
         try:
             lbl = self._labelcache[language]
             if lbl is None: raise Label.DoesNotExist()
@@ -81,24 +82,28 @@ class Code(AmcatModel):
             except Label.DoesNotExist:
                 self._labelcache[language] = None
                 raise
-    
-    def get_label(self, lan, fallback=True):
+
+    def label_is_cached(self, language):
+        if type(language) != int: language = language.id
+        return language in self._labelcache
+            
+    def get_label(self, *languages):
         """
         @param lan: language to get label for
         @type lan: Language object or int
         @param fallback: If True, return another label if language not found
         @return: string or None
         """
-        if type(lan) == int: lan = Language.objects.get(pk=lan)
-
+        for lan in languages:
+            try:
+                return self._get_label(language=lan)
+            except Label.DoesNotExist:
+                pass
+        #fallback
         try:
-            return self._get_label(language=lan)
-        except Label.DoesNotExist:
-            if fallback:
-                try:
-                    return self.labels.all().order_by('language__id')[0].label
-                except IndexError:
-                    return None
+            return self.labels.all().order_by('language__id')[0].label
+        except IndexError:
+            pass
 
     def add_label(self, language, label):
         """Add the label in the given language"""
@@ -107,6 +112,7 @@ class Code(AmcatModel):
 
     def _cache_label(self, language, label):
         """Cache the given label (string) for the given language object"""
+        if type(language) != int: language = language.id
         self._labelcache[language] = label
 
 

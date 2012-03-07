@@ -52,7 +52,7 @@ def cached(func, cache_attr=CACHE_PREFIX):
         """Decorator inner function: Return the cached value or execute func and cache results"""
         cache = _get_cache(self, cache_attr)
         try:
-            log.info("Querying cache %r.%s" % (self, cache_attr))
+            #log.debug("Querying cache %r.%s" % (self, cache_attr))
             return cache[func.__name__]
         except KeyError:
             log.info("Not found, setting cache for %r.%s" % (self, cache_attr))

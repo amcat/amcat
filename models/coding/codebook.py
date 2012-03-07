@@ -97,9 +97,28 @@ class Codebook(AmcatModel):
                 if co.validfrom and date < co.validfrom: continue
                 if co.validto and date >= co.validto: continue
                 return co
-                    
+
+
+    def _get_hierarchy_ids(self, date=None, include_hidden=False):
+        """Return id:id/None mappings for get_hierarchy"""
+        if date is None: date = datetime.now()
+        result = {}
+        for base in reversed(list(self.bases)):
+            result.update(base._get_hierarchy_ids(date))
+
+        for co in self.codebookcodes:
+            if co.validfrom and date < co.validfrom: continue
+            if co.validto and date >= co.validto: continue
+
+            if co.hide:
+                if not include_hidden:
+                    del result[co._code_id]
+            else:
+                result[co._code_id] = co._parent_id
+        return result
+    
     def get_hierarchy(self, date=None, include_hidden=False):
-        """Return a mapping of code, parent pairs that forms the hierarchy of this codebook
+        """Return a sequence of code, parent pairs that forms the hierarchy of this codebook
         
         A code is in a codebook if (a) it is listed in its direct codebookcodes, or
         (b) if it is in any of the base codebooks and not explicitly hidden in this codebook.
@@ -110,24 +129,15 @@ class Codebook(AmcatModel):
         If validfrom and/or validto are given, only consider codebook codes
           where validfrom <= date < validto.
         """
-        # go through hierarchy sources in reverse order and update result dict
-        # so newest overrides oldest
-        if date is None: date = datetime.now()
-        result = {}
-        for base in reversed(list(self.bases)):
-            result.update(base.get_hierarchy(date))
-
-        # Remove 'hide' objects from the result, and return
-        for co in self.codebookcodes:
-            if co.validfrom and date < co.validfrom: continue
-            if co.validto and date >= co.validto: continue
-            
-            if co.hide:
-                if not include_hidden:
-                    del result[co.code]
-            else:
-                result[co._code] = co._parent
-        return result
+        hierarchy = self._get_hierarchy_ids(date, include_hidden)
+        code_ids = set(hierarchy.keys()) | set(hierarchy.values()) - {None}
+        codes = {c.id : c for c in get_codes(code_ids)}
+        
+        
+        for codeid, parentid in hierarchy.iteritems():
+            code = codes[codeid]
+            parent = codes[parentid] if parentid is not None else None
+            yield code, parent
 
     def _get_code_ids(self, include_hidden=False):
         """Returns a set of code_ids that are in this hierarchy
@@ -180,16 +190,17 @@ class Codebook(AmcatModel):
 
     def cache_labels(self, language):
         """Ask the codebook to cache the labels on its objects in that language"""
-        # HACK to cache cache labels per language
-        if not hasattr(self, '_cache_labels_languages'):
-            self._cache_labels_languages = set()
-        elif language in self._cache_labels_languages:
-            return
-        self._cache_labels_languages.add(language)
 
-        q = Label.objects.filter(language=language, code__in=self._get_code_ids(include_hidden=True))
+        # which labels need to be cached?
+        codes = {c.id : c for c in  get_codes(self._get_code_ids(include_hidden=True))
+                 if not c.label_is_cached(language)}
+        if not codes: return
+        
+        q = Label.objects.filter(language=language, code__in=codes)
         for l in q:
-            get_code(l.code_id)._cache_label(language, l.label)
+            codes.pop(l.code_id)._cache_label(language, l.label)
+        for code in codes.values():
+            code._cache_label(language, None)
 
     def get_roots(self, include_missing_parents=False, **kargs):
         """
@@ -200,7 +211,7 @@ class Codebook(AmcatModel):
         """
         parents = set()
         children = set()
-        for child, parent in self.get_hierarchy(**kargs).iteritems():
+        for child, parent in self.get_hierarchy(**kargs):
             if parent is None: yield child
             parents.add(parent)
             children.add(child)
@@ -214,7 +225,7 @@ class Codebook(AmcatModel):
         @return: the children of code in this codebook
         @param kargs: passed to get_hierarchy (e.g. date, include_hidden)
         """
-        return (c for (c,p ) in self.get_hierarchy(**kargs).iteritems() if p==code)
+        return (c for (c,p ) in self.get_hierarchy(**kargs) if p==code)
         
             
 class CodebookBase(AmcatModel):
@@ -338,7 +349,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         """return a dense hierarchy serialiseation for easier comparisons"""
         
         return ";".join(sorted({"{0}:{1}".format(*cp) 
-                                for cp in codebook.get_hierarchy(**kargs).items()}))
+                                for cp in codebook.get_hierarchy(**kargs)}))
 
     def test_hierarchy(self):
         """Does the code/parent base class resolution work"""
@@ -532,26 +543,51 @@ class TestCodebook(amcattest.PolicyTestCase):
         """Does caching labels work?"""
         from amcat.models.language import Language
         lang = Language.objects.get(pk=1)
-        codes = [amcattest.create_test_code(label=l, language=lang) for l in "abcdef"]
+        codes = {amcattest.create_test_code(label=l, language=lang) for l in "abcdef"}
+        morecodes = {amcattest.create_test_code(label=l, language=lang) for l in "abcdef"}
+
         h = amcattest.create_test_code(label="hidden", language=lang)
         
+        B = amcattest.create_test_codebook(name="B")
+        map(B.add_code, morecodes)
         A = amcattest.create_test_codebook(name="A")
         map(A.add_code, codes)
         A.add_code(h, hide=True)
-
+        C = amcattest.create_test_codebook(name="C")
+        A.add_base(C)
+        C.add_base(B)
+        n_bases = 3
         
         clear_cache(Code)
-        with self.checkMaxQueries(3, "Cache Codes"): # 1. bases, 2. codebookcodes, 3. codes
-            self.assertEqual(set(A.get_codes(include_hidden=True)), set(codes) | {h})
+        maxq = n_bases * 2 + 1 # base + codebookcodes per base, codes
+        with self.checkMaxQueries(maxq, "Cache Codes"):
+            self.assertEqual(set(A.get_codes(include_hidden=True)),
+                             codes | {h} | morecodes)
         
-        with self.checkMaxQueries(1, "Cache labels"):
+        with self.checkMaxQueries(1, "Cache labels"): # labels
             A.cache_labels(lang)
 
+        with self.checkMaxQueries(0, "Cache labels again"):
+            A.cache_labels(lang)
+            
+        A._cache_labels_languages = set()
+        clear_cache(Code)
+        with self.checkMaxQueries(2, "Cache labels directly"): # codes, labels
+            A.cache_labels(lang)
+        
         with self.checkMaxQueries(0, "Print labels"):
             for c in codes:
-                x = c.get_label(lang)
-                x = str(c)
-                
+                c.get_label(lang)
+                str(c)
+                unicode(c)
+                repr(c)
+
+        with self.checkMaxQueries(0, "Print labels via hierarchy"):
+            for c,p in A.get_hierarchy(include_hidden=True):
+                c.get_label(lang)
+                str(c)
+                unicode(c)
+            
 
     def test_get_codes(self):
         """Does get_codes work without using too many queries?"""
@@ -572,7 +608,7 @@ class TestCodebook(amcattest.PolicyTestCase):
 
         with self.checkMaxQueries(2, "Get Code ids"):
             self.assertEqual(set(A._get_code_ids()), {c.id for c in codes})
-        
+
         clear_cache(Code)
         with self.checkMaxQueries(2, "Get Codes"):
             self.assertEqual(set(A.get_codes()), set(codes)) 
