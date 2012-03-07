@@ -30,10 +30,16 @@ Use reset and set_cache to manually clear and set the cache
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-CACHE_PREFIX = "_amcat_tools_caching_cache"
 
 import logging; log = logging.getLogger(__name__)
 from functools import wraps, partial
+
+
+###########################################################################
+#                       M E T H O D   C A C H I N G                       #
+###########################################################################
+
+CACHE_PREFIX = "_amcat_tools_caching_cache_"
 
 def cached(func, cache_attr=CACHE_PREFIX):
     """Memoise the output of func
@@ -99,6 +105,63 @@ def set_cache(obj, name, value, cache_attr=""):
     _set_cache_value(_get_cache(obj, CACHE_PREFIX + cache_attr), name, value)
     
 
+
+
+###########################################################################
+#                       O B J E C T   C A C H I N G                       #
+###########################################################################
+
+# Setup thread-local cache for codebooks
+import threading
+_object_cache = threading.local()
+
+def _get_object_cache(model):
+    key = CACHE_PREFIX + model.__name__
+    try:
+        return getattr(_object_cache, key)
+    except AttributeError:
+        cache = {}
+        setattr(_object_cache, key, cache)
+        return cache
+
+def get_object(model, pk, create_if_needed=True):
+    """Create the model object with the given pk, possibly retrieving it
+    from cache"""
+    cache = _get_object_cache(model)
+    try:
+        return cache[pk]
+    except KeyError:
+        if create_if_needed:
+            cache[pk] = model.objects.get(pk=pk)
+            return cache[pk]
+
+
+def get_objects(model, pks):
+    """
+    Get or create the model objects, using one query for all creates
+    Does not preserve the order of objects in pks!
+    """
+    todo = set()
+    for pk in pks:
+        obj = get_object(model, pk, create_if_needed=False)
+        if obj is None:
+            todo.add(pk)
+        else:
+            yield obj
+    if not todo: return
+    cache = _get_object_cache(model)
+    for obj in model.objects.filter(pk__in=todo):
+        cache[obj.id] = obj
+        yield obj
+    
+def clear_cache(model):
+    """Clear the local codebook cache manually, ie in between test runs"""
+    key = CACHE_PREFIX + model.__name__
+    setattr(_object_cache, key , {})
+
+    
+    
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -223,5 +286,33 @@ class TestCaching(amcattest.PolicyTestCase):
         reset(t, "y_cache")
         self.assertEqual(t.get_y(), 1)
         self.assertTrue(t.changed)
+
+    def test_object_cache(self):
+        from amcat.models.project import Project
+        pid = amcattest.create_test_project().id
+        with self.checkMaxQueries(1, "Get project"):
+            p = get_object(Project, pid)
+        with self.checkMaxQueries(1, "Get cached project"):
+            p2 = get_object(Project, pid)
+        self.assertIs(p, p2)
+
+        clear_cache(Project)
+        with self.checkMaxQueries(1, "Get cleared project"):
+            p3 = get_object(Project, pid)
+        self.assertIsNot(p, p3)
+        self.assertEqual(p, p3)
+        
+    def test_get_objects(self):
+        from amcat.models.project import Project
+        pids = [amcattest.create_test_project().id for _x in range(10)]
+        
+        with self.checkMaxQueries(1, "Get multiple projects"):
+            ps = list(get_objects(Project, pids))
+        
+        with self.checkMaxQueries(0, "Get multiple cached projects"):
+            ps = list(get_objects(Project, pids))
+        
+        with self.checkMaxQueries(0, "Get multiple cached projects one by one"):
+            ps = [get_objects(Project, pid) for pid in pids]
         
 #from amcat.tools import amcatlogging; amcatlogging.infoModule()

@@ -32,9 +32,16 @@ from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.models.language import Language
+from amcat.tools.caching import get_object, get_objects
 
 PARTYMEMBER_FUNCTIONID = 0
-  
+
+def get_code(code_id):
+    return get_object(Code, code_id)
+
+def get_codes(code_id):
+    return get_objects(Code, code_id)
+
 class Code(AmcatModel):
     """Model class for table codes"""
 
@@ -51,7 +58,10 @@ class Code(AmcatModel):
         
     @property
     def label(self):
-        """Get the label with the lowest language id, or a repr-like string"""
+        """Get the (cached) label with the lowest language id, or a repr-like string"""
+        if self._labelcache:
+            key = sorted(self._labelcache)[0]
+            return self.get_label(key)
         try:
             return self.labels.all().order_by('language__id')[0].label
         except IndexError:
@@ -98,7 +108,6 @@ class Code(AmcatModel):
     def _cache_label(self, language, label):
         """Cache the given label (string) for the given language object"""
         self._labelcache[language] = label
-        
 
 
 class Label(AmcatModel):
