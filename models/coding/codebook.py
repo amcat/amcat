@@ -139,13 +139,13 @@ class Codebook(AmcatModel):
             parent = codes[parentid] if parentid is not None else None
             yield code, parent
 
-    def _get_code_ids(self, include_hidden=False):
+    def _get_code_ids(self, include_hidden=False, include_parents=False):
         """Returns a set of code_ids that are in this hierarchy
         @param include_hidden: if True, include codes hidden by *this* codebook (e.g. not by its bases)
         """
         code_ids = set()
         for base in self.bases:
-            code_ids |= base._get_code_ids()
+            code_ids |= base._get_code_ids(include_parents=include_parents)
         if include_hidden:
             code_ids |= set(co._code_id for co in self.codebookcodes)
         else:
@@ -154,6 +154,9 @@ class Codebook(AmcatModel):
                     code_ids.discard(co._code_id)
                 else:
                     code_ids.add(co._code_id)
+        if include_parents:
+            code_ids |= set(co._parent_id for co in self.codebookcodes)
+            code_ids -= {None}
         return code_ids
 
     def get_codes(self, include_hidden=False):
@@ -192,7 +195,7 @@ class Codebook(AmcatModel):
         """Ask the codebook to cache the labels on its objects in that language"""
 
         # which labels need to be cached?
-        codes = {c.id : c for c in  get_codes(self._get_code_ids(include_hidden=True))
+        codes = {c.id : c for c in  get_codes(self._get_code_ids(include_hidden=True, include_parents=True))
                  if not c.label_is_cached(language)}
         if not codes: return
         
@@ -589,6 +592,33 @@ class TestCodebook(amcattest.PolicyTestCase):
                 unicode(c)
             
 
+    def test_cache_labels_language(self):
+        """Does caching labels for multiple language work
+        esp. caching non-existence of a label"""
+        from amcat.models.language import Language
+        l1 = Language.objects.get(pk=1)
+        a = amcattest.create_test_code(label="a", language=l1) 
+        l2 = Language.objects.get(pk=2)
+        b = amcattest.create_test_code(label="b", language=l2)
+        A = amcattest.create_test_codebook(name="A")
+        A.add_code(a); A.add_code(b)
+        
+        with self.checkMaxQueries(4, "Cache labels"):
+            A.cache_labels(l1)
+            A.cache_labels(l2)
+
+        a, b = map(get_code, [a.id, b.id])
+            
+        with self.checkMaxQueries(0, "Get exisitng labels"):
+            self.assertEqual(a.get_label(l1), "a")
+            self.assertEqual(b.get_label(l2), "b")
+            
+        with self.checkMaxQueries(0, "Get non-existing labels"):
+            self.assertEqual(a.get_label(l2, l1), "a")
+            self.assertEqual(b.get_label(l1, l2), "b")
+            
+        
+                
     def test_get_codes(self):
         """Does get_codes work without using too many queries?"""
         codes = [amcattest.create_test_code(label=l) for l in "abcdef"]
