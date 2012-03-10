@@ -8,6 +8,7 @@ syntax: glob
 *.orig
 *~
 \#*\#
+.\#*
 syntax: regexp
 ^\.project$
 syntax: regexp

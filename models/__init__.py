@@ -24,7 +24,8 @@ from amcat.models.medium import *
 from amcat.models.articleset import *
 from amcat.models.user import *
 from amcat.models.project import *
-from amcat.models.sentence import *  
+from amcat.models.sentence import *
+from amcat.models.sentiment import *  
 
 from amcat.models.article_solr import *
 

@@ -19,31 +19,27 @@
 from amcat.tools.model import AmcatModel
 from django.db import models
 
-class Lemma(AmcatModel):
-    __label__ = 'lemma'
+from amcat.models.language import Language
+from amcat.models.word import Lemma
 
-    id = models.AutoField(primary_key=True, db_column='lemma_id')
-
-    pos = models.CharField(max_length=1)
-    lemma = models.CharField(max_length=500)
-    language = models.ForeignKey("amcat.Language", related_name="+")
-    
-    class Meta():
-        db_table = 'words_lemmata'
+class SentimentLexicon(AmcatModel):
+    id = models.AutoField(primary_key=True, db_column='lexicon_id')
+    language = models.ForeignKey(Language)
+    label = models.CharField(max_length=500)
 
     class Meta():
-        db_table = 'words_lemmata'
+        db_table = 'sentimentlexica'
         app_label = 'amcat'
 
-class Word(AmcatModel):
-    __label__ = 'word'
-
-    id = models.AutoField(primary_key=True, db_column='word_id')
-
-    word = models.CharField(max_length=500)
+class SentimentLemma(AmcatModel):
+    id = models.AutoField(primary_key=True)
+    lexicon = models.ForeignKey(SentimentLexicon)
     lemma = models.ForeignKey(Lemma)
 
+    sentiment = models.FloatField()
+    intensifier = models.FloatField()
+
     class Meta():
-        db_table = 'words_words'
+	db_table = 'sentiment_lemmata'
         app_label = 'amcat'
 

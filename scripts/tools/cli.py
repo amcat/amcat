@@ -20,8 +20,11 @@
 from django import forms
 from amcat.scripts.output import commandline
 from amcat.scripts import scriptmanager
+from amcat.scripts.script import Script
 import argparse
 import sys
+from amcat.tools import toolkit, amcatlogging
+import types
 
 import logging; log = logging.getLogger(__name__)
 #logging.basicConfig(format='[%(asctime)s] [%(name)s] %(message)s', level=logging.DEBUG)
@@ -33,17 +36,43 @@ import logging; log = logging.getLogger(__name__)
 ##         Aux method for CLI invocation                     ##
 ###############################################################
 
-def run_cli(cls, handle_output=True):
+def get_main_script(module):
+    if type(module) == type(''):
+	module_name = module
+	module = __import__(module_name)
+	for part in module_name.split('.')[1:]:
+	    module = getattr(module, part)
+    for name in dir(module):
+	obj = getattr(module, name)
+	if (isinstance(obj, (type, types.ClassType)) and
+	    issubclass(obj, Script)):
+	    return obj
+    raise Exception("Cannot find Script module in %r" % module)
+
+def run_cli(cls=None, handle_output=None):
     """Handle command line interface invocation of this script"""
-    from amcat.tools import amcatlogging
     amcatlogging.setup()
-    
+
+    if cls is None:
+	mod = toolkit.getCallingModule()
+	cls = get_main_script(mod)
+
+    if handle_output is None:
+	handle_output = cls.output_type != None
+
     parser = argument_parser_from_script(cls)
     args = parser.parse_args()
     options = args.__dict__
     instance = cls(options)
 
-    input = sys.stdin.read().decode('latin-1') if cls.input_type else None
+    input = None
+    if cls.input_type in (file, str, unicode):
+	input = sys.stdin
+    if cls.input_type in (str, unicode):
+	input = input.read()
+    if cls.input_type == unicode:
+	input = input.decode('latin-1')
+
     out = instance.run(input)
     
     if handle_output:
