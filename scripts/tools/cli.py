@@ -103,14 +103,15 @@ def add_argument_from_field(parser, name, field):
     Call parser.add_argument with the appropriate parameters
     to add this django.forms.Field to the argparse.ArgumentParsers parser.
     """
-    name = name.lower()
+    # set options name to lowercase variant, remember name for storage
+    optname = name.lower()
     if field.required and field.initial is None: # positional argument
-        argname = [name]
+        argname = [optname]
     else: # optional argument
-        argname = ["--"+name]
-        prefix = "-" + name[0]
+        argname = ["--"+optname]
+        prefix = "-" + optname[0]
         if prefix not in parser._option_string_actions:
-            argname.append("-"+name[0])
+            argname.append("-"+optname[0])
     # determine help text from label, help_text, and default
     helpfields = [x for x in [field.label, field.help_text] if x]
     if field.initial is not None: helpfields.append("Default: {field.initial}".format(**locals()))
@@ -119,13 +120,13 @@ def add_argument_from_field(parser, name, field):
     args = {} # flexible parameters to add_argument
     if isinstance(field, forms.ModelMultipleChoiceField) or isinstance(field, forms.MultipleChoiceField):
         args["nargs"] = '+'
-        argname = ['--' + name] # problem: now the field appears to be optional, but at least it knows which values belong to this argument
+        argname = ['--' + optname] # problem: now the field appears to be optional, but at least it knows which values belong to this argument
     if isinstance(field, forms.BooleanField) and field.initial is not None:
         args["action"] = "store_const"
         args["const"] = not field.initial
     else:
         args["type"] = argument_type_from_field(field)
-    parser.add_argument(*argname, help = help, default=field.initial, **args)
+    parser.add_argument(*argname, help = help, default=field.initial, dest=name, **args)
 
 
 _FIELD_MAP = {
