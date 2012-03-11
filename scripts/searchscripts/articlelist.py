@@ -36,7 +36,8 @@ log = logging.getLogger(__name__)
     
 class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.ArticleColumnsForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
-    length = forms.IntegerField(initial=100, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
+    length = forms.IntegerField(initial=100, min_value=1, max_value=9999999,
+                                widget=forms.HiddenInput, required=False)
     highlight = forms.BooleanField(initial=False, required=False)
     sortColumn = forms.CharField(required=False)
     sortOrder = forms.ChoiceField(
@@ -73,6 +74,12 @@ class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.Art
         
 
 class ArticleListScript(script.Script):
+    """
+    Main script for conducting a selection query in amcat, either on the database or on Solr.
+    """
+
+
+    
     input_type = None
     options_form = ArticleListForm
     output_type = types.ArticleIterator
@@ -96,6 +103,10 @@ class ArticleListScript(script.Script):
             else:
                 return solrlib.getArticles(self.options)
         
-        
+
+
+
+            
+            
 if __name__ == '__main__':
-    cli.run_cli(ArticleListScript)
+    cli.run_cli()

@@ -96,7 +96,7 @@ def create_test_article(**kargs):
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = "2000-01-01"
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
-    return Article.objects.create(medium=m, **kargs)
+    return Article.objects.create(**kargs)
 
 def create_test_sentence(**kargs):
     """Create a test sentence"""    

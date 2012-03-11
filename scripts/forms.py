@@ -121,12 +121,14 @@ class SearchQuery(object):
             
             
 class SelectionForm(forms.Form):
-    projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.order_by('-pk')) # TODO: change to projects of user
+    # TODO: change to projects of user
+    projects = ModelMultipleChoiceFieldWithIdLabel(queryset=Project.objects.order_by('-pk')) 
     articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False)
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.none(), required=False)
     query = forms.CharField(widget=forms.Textarea, required=False)
     articleids = forms.CharField(widget=forms.Textarea, required=False)
-    datetype = forms.ChoiceField(choices=(('all', 'All Dates'), ('before', 'Before'), ('after', 'After'), ('between', 'Between')))
+    datetype = forms.ChoiceField(choices=(('all', 'All Dates'), ('before', 'Before'), ('after', 'After'),
+                                          ('between', 'Between')), initial='all')
     startDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     # queries will be added by clean(), that contains a list of SearchQuery objects

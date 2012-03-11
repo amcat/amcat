@@ -18,33 +18,45 @@
 ###########################################################################
 
 """
-Test cases that are automatically detected and run by django
-
-Please don't include test cases here directly, but place them in an appropriate
-location and import here
+Testing module for the article selection scripts
 """
 
-from amcat.tools.amcatlogging import *
-from amcat.tools.amcattest import *
-from amcat.tools.djangotoolkit import *
-from amcat.tools.table.table3 import *
-from amcat.tools.caching import *
-from amcat.tools.dbtoolkit import *
-from amcat.tools.sendmail import *
-from amcat.tools.multithread import *
-from amcat.tools.amcatsolr import *
+from __future__ import unicode_literals, print_function, absolute_import
 
-from amcat.models.coding.codingtoolkit import *
-from amcat.models.coding.serialiser import *
+from amcat.tools import amcattest
 
-from amcat.scripts.article_upload.tests import *
-from amcat.scripts.scriptmanager import *
+from amcat.scripts.searchscripts.articlelist import ArticleListScript
 
-from amcat.tests.test_nqueries import *
-from amcat.tests.test_toolkit import *
-from amcat.tests.test_scraping import *
-from amcat.tests.test_selection import *
+DEFAULTS = dict(datetype="all", columns=['article_id'])
 
-from amcat.scraping.controller import *
-from amcat.scraping.htmltools import *
-from amcat.scraping.document import *
+class TestArticleList(amcattest.PolicyTestCase):
+
+    def _run(self, **kargs):
+        options = DEFAULTS.copy()
+        options.update(kargs)
+        return ArticleListScript(**options).run()
+    
+    def test_selection(self):
+        """Can we select articles outside the project?"""
+        
+        p = amcattest.create_test_project()
+        arts = {amcattest.create_test_article(project=p) for i in range(10)}
+
+        
+        articles = self._run(projects=[p.id])
+        self.assertEqual(set(articles), arts)
+        
+        p2 = amcattest.create_test_project()
+        s = amcattest.create_test_set(project=p2)
+        s.articles.add(*arts)
+
+        articles = self._run(projects=[p2.id])
+        self.assertEqual(len(articles), 0)
+
+        
+        articles = self._run(projects=[p2.id], articlesets=[s.id])
+        self.assertEqual(set(articles), arts)
+
+        
+
+        

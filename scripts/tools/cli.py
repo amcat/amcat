@@ -113,7 +113,7 @@ def add_argument_from_field(parser, name, field):
             argname.append("-"+name[0])
     # determine help text from label, help_text, and default
     helpfields = [x for x in [field.label, field.help_text] if x]
-    if field.initial is not None: helpfields.append("Default: %s" % field.initial)
+    if field.initial is not None: helpfields.append("Default: {field.initial}".format(**locals()))
     help = ". ".join(helpfields)
     # set type OR action_const as extra arguments depending on type
     args = {} # flexible parameters to add_argument
