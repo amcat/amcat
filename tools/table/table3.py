@@ -35,8 +35,9 @@ from amcat.tools import toolkit, idlabel
 from amcat.tools.toolkit import isnull
 from amcat.tools.table import tableoutput
 
+from collections import namedtuple
 
-import types
+import types, re
 from amcat.contrib.oset import OrderedSet
 
 import logging; log = logging.getLogger(__name__)
@@ -111,6 +112,24 @@ class Table(object):
         """Output the table; see tableoutput.table2unicode for options"""
         return tableoutput.table2unicode(self, **kargs)
 
+    def to_list(self, tuple_name="row"):
+        """Return the data in the table as a sequence of named tuples
+
+        @param tuple_name: the name for the named tuples, or None to get simple tuples
+        """
+        cols = self.getColumns()
+        if tuple_name:
+            colnames = [re.sub(r"\W", "", str(col)) for col in cols]
+            t = namedtuple(tuple_name, colnames, rename=True)
+            factory = lambda values: t(*values)
+        else:
+            factory = tuple
+        for row in self.getRows():
+            yield factory([self.getValue(row, col) for col in cols])
+            
+
+            
+    
 class NamedRow(object):
     """Interface for a row in a table that supports attribute and index access"""
     def __init__(self, table, row):
