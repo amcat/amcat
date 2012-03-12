@@ -31,7 +31,7 @@ Deserialised Value: a domain object, possibly a django Model instance
 
 import logging; log = logging.getLogger(__name__)
 
-from amcat.models.coding.code import Code
+from amcat.models.coding.code import Code, get_code
 from amcat.models.coding.codebook import get_codebook
 
 class BaseSerialiser(object):
@@ -126,7 +126,7 @@ class _CodebookSerialiser(BaseSerialiser):
         
     def deserialise(self, value):
         try:
-            return self.codebook.get_code(value)
+            return get_code(value)
         except ValueError:
             # code was removed from codebook
             return Code.objects.get(pk=value)
