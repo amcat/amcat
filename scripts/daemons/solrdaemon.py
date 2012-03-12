@@ -43,24 +43,32 @@ class SolrDeamon(Daemon):
         log.info("SOLRDaemon started")
         while True:
             try:
-                indexed = index_articles_from_db()
-                if not indexed:
-                    log.info('No articles found, sleeping for 1 minute')
+                result = self.run_action()
+                if not result:
+                    log.info('No results found, sleeping for 1 minute')
                     time.sleep(60)
                     
             except:
                 log.error('while loop exception, sleeping for 1 minute', exc_info=True)
                 time.sleep(60)
 
+    def run_action(self):
+        return index_articles_from_db(nthreads=1)
+
+    def test(self):
+        from amcat.tools import amcatlogging
+        amcatlogging.setup()
+        self.run_action()
+                
     
 if __name__ == "__main__":
     from amcat.tools import amcatlogging
     amcatlogging.setFileHandler("solrdaemon.log")
     amcatlogging.info_module()
-    amcatlogging.info_module('amcat.tools.amcatsolr')
+    amcatlogging.debug_module('amcat.tools.amcatsolr')
     daemon = SolrDeamon('/tmp/solr-daemon.pid')
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['start', 'stop', 'restart'],
+    parser.add_argument('command', choices=['test', 'start', 'stop', 'restart'],
                    help='Control the SOLR Daemon')
     args = parser.parse_args()
     # get action corresponding to start/stop/restart and execute it

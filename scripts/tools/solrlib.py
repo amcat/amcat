@@ -346,13 +346,16 @@ def createFilters(form):
     if 'mediums' in form:
         mediumidQuery = ('mediumid:%d' % m.id for m in form['mediums'])
         result.append(' OR '.join(mediumidQuery))
-    if 'articlesets' in form:
-        setsQuery = ('sets:%d' % s.id for s in form['articlesets'])
-        result.append(' OR '.join(setsQuery))
     if 'articleids' in form:
         articleidQuery = ('id:%d' % a for a in form['articleids'])
         result.append(' OR '.join(articleidQuery))
-    projectQuery = ('projectid:%d' % p.id for p in form['projects'])
-    result.append(' OR '.join(projectQuery))
+    if 'articlesets' in form and form['articlesets']:
+        setsQuery = ('sets:%d' % s.id for s in form['articlesets'])
+        result.append(' OR '.join(setsQuery))
+    else:
+        projectQuery = ('projectid:%d' % p.id for p in form['projects'])
+        result.append(' OR '.join(projectQuery))
+
+
     return result
     
