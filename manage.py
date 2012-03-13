@@ -5,7 +5,7 @@ from django.db import connection, transaction
 from django.db.utils import DatabaseError
 
 import amcat.models
-from amcat.models import article_solr
+from amcat.models import article_preprocessing
 from amcat.tools import dbtoolkit
     
 try:
@@ -38,7 +38,7 @@ def set_permissions():
     transaction.commit_unless_managed()
 
 def create_triggers():
-    article_solr.create_triggers()
+    article_preprocessing.create_triggers()
 
 post_syncdb.connect(postsync, sender=amcat.models)
     

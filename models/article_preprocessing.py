@@ -18,8 +18,12 @@
 ###########################################################################
 
 """
-Model module for the SOLR queue
+Model module for the Preprocessing queue
+
+Articles on the preprocessing queue need to be checked to see if preprocessing
+needs to be done. 
 """
+
 from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
@@ -30,18 +34,16 @@ from amcat.models.article import Article
 
 import logging; log = logging.getLogger(__name__)
 
-class SolrArticle(AmcatModel):
+class ArticlePreprocessing(AmcatModel):
     """
     An article on the Solr Queue needs to be updated
     """
     
     id = models.AutoField(primary_key=True, db_column="solr_article_id")
     article = models.ForeignKey(Article, db_index=True)
-    started = models.BooleanField(default=False)
-
 
     class Meta():
-        db_table = 'solr_articles'
+        db_table = 'articles_preprocessing_queue'
         app_label = 'amcat'
 
         
@@ -54,17 +56,17 @@ def create_triggers():
 
     sql = """BEGIN
                 IF (TG_OP = 'DELETE') THEN
-                  INSERT INTO solr_articles (article_id, started) SELECT OLD.article_id, true;
+                  INSERT INTO articles_preprocessing_queue (article_id) SELECT OLD.article_id, true;
                   RETURN OLD;
                 ELSE
-                  INSERT INTO solr_articles (article_id, started) SELECT NEW.article_id, true;
+                  INSERT INTO articles_preprocessing_queue (article_id) SELECT NEW.article_id, true;
                   RETURN NEW;
                 END IF;
              END;"""
-    db.create_trigger("articles", "solr_queue_articles", sql, actions=("INSERT","UPDATE"))
-    db.create_trigger("articlesets_articles", "solr_queue_articlesets", sql,
+    db.create_trigger("articles", "preprocessing_queue_articles", sql, actions=("INSERT","UPDATE"))
+    db.create_trigger("articlesets_articles", "preprocessing_queue_articlesets", sql,
                       actions=("INSERT","DELETE"))
-
+    print("CREATED TRIGGER FOR PREPROCESSING")
         
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -72,20 +74,19 @@ def create_triggers():
         
 from amcat.tools import amcattest
 
-class TestSolrArticle(amcattest.PolicyTestCase):
+class TestArticlePreprocessing(amcattest.PolicyTestCase):
     def test_create(self):
         """Can we add an article to the queue"""
         a = amcattest.create_test_article()
-        q = SolrArticle.objects.create(article=a)
-        self.assertFalse(q.started)
+        q = ArticlePreprocessing.objects.create(article=a)
 
     def _flush_queue(self):
         """Flush the articles queue"""
-        for sa in list(SolrArticle.objects.all()): sa.delete()
+        for sa in list(ArticlePreprocessing.objects.all()): sa.delete()
 
     def _all_articles(self):
         """List all articles on the queue"""
-        return [sa.article for sa in SolrArticle.objects.all()]
+        return [sa.article for sa in ArticlePreprocessing.objects.all()]
         
     def test_article_trigger(self):
         """Is a created or update article in the queue?"""

@@ -27,7 +27,7 @@ from amcat.models.project import *
 from amcat.models.sentence import *
 from amcat.models.sentiment import *  
 
-from amcat.models.article_solr import *
+from amcat.models.article_preprocessing import *
 
 from amcat.models.word import *
 from amcat.models.analysis import *
