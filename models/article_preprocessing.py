@@ -56,17 +56,16 @@ def create_triggers():
 
     sql = """BEGIN
                 IF (TG_OP = 'DELETE') THEN
-                  INSERT INTO articles_preprocessing_queue (article_id) SELECT OLD.article_id, true;
+                  INSERT INTO articles_preprocessing_queue (article_id) SELECT OLD.article_id;
                   RETURN OLD;
                 ELSE
-                  INSERT INTO articles_preprocessing_queue (article_id) SELECT NEW.article_id, true;
+                  INSERT INTO articles_preprocessing_queue (article_id) SELECT NEW.article_id;
                   RETURN NEW;
                 END IF;
              END;"""
-    db.create_trigger("articles", "preprocessing_queue_articles", sql, actions=("INSERT","UPDATE"))
+    db.create_trigger("articles", "preprocessing_queue_articles", sql, actions=("INSERT","UPDATE", "DELETE"))
     db.create_trigger("articlesets_articles", "preprocessing_queue_articlesets", sql,
                       actions=("INSERT","DELETE"))
-    print("CREATED TRIGGER FOR PREPROCESSING")
         
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -86,7 +85,7 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
 
     def _all_articles(self):
         """List all articles on the queue"""
-        return [sa.article for sa in ArticlePreprocessing.objects.all()]
+        return {sa.article_id for sa in ArticlePreprocessing.objects.all()}
         
     def test_article_trigger(self):
         """Is a created or update article in the queue?"""
@@ -94,13 +93,13 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         
         self._flush_queue()
         a = amcattest.create_test_article()
-        self.assertIn(a,  self._all_articles())
+        self.assertIn(a.id,  self._all_articles())
         
         self._flush_queue()
-        self.assertNotIn(a,  self._all_articles())
+        self.assertNotIn(a.id,  self._all_articles())
         a.headline = "bla bla"
         a.save()
-        self.assertIn(a,  self._all_articles())
+        self.assertIn(a.id,  self._all_articles())
         
         
     def test_articleset_trigger(self):
@@ -110,13 +109,20 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         a = amcattest.create_test_article()
         aset = amcattest.create_test_set() 
         self._flush_queue()
-        self.assertNotIn(a,  self._all_articles())
+        self.assertNotIn(a.id,  self._all_articles())
 
         aset.articles.add(a)
-        self.assertIn(a,  self._all_articles())
+        self.assertIn(a.id,  self._all_articles())
         
         self._flush_queue()
-        self.assertNotIn(a, self._all_articles())
+        self.assertNotIn(a.id, self._all_articles())
         aset.articles.remove(a)
-        self.assertIn(a, self._all_articles())
+        self.assertIn(a.id, self._all_articles())
+        
+        self._flush_queue()
+        self.assertNotIn(a.id, self._all_articles())
+        aid = a.id
+        a.delete()
+        self.assertIn(aid, self._all_articles())
+        
         
