@@ -127,7 +127,7 @@ class HTMLDocument(Document):
             val = tuple(val)
 
             if all([type(e) in (html.HtmlElement, etree._Element) for e in val]):
-                return "\n\n".join(map(self._convert, val))            
+                return "\n\n".join(map(self._convert, val))
 
         # Unknown type
         return val
@@ -150,9 +150,9 @@ class HTMLDocument(Document):
             try:
                 self.doc = processor.getdoc(self.props.url)
             except AttributeError:
-                                                                     
+
                 pass # no need to prepare if opener or url not known
-            
+
     def __str__(self):
         return "HTMLDocument(url=%s)" % getattr(self.props, "url", None)
 
@@ -163,7 +163,7 @@ class IndexDocument(HTMLDocument):
     def __init__(self, page=None, **kargs):
         self.children = []
         self.page = page
-        
+
         super(IndexDocument, self).__init__(**kargs)
 
     def addchild(self, child):
@@ -193,13 +193,15 @@ class IndexDocument(HTMLDocument):
                     page=self.page, **self.props.__dict__)
 
 
+    def __str__(self):
+        return "IndexDocument(url=%s)" % getattr(self.props, "url", None)
 
-    
+
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestDocument(amcattest.PolicyTestCase):
