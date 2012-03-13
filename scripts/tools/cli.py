@@ -18,7 +18,6 @@
 ###########################################################################
 
 from django import forms
-from amcat.scripts.output import commandline
 from amcat.scripts import scriptmanager
 from amcat.scripts.script import Script
 import argparse
@@ -74,7 +73,7 @@ def run_cli(cls=None, handle_output=None):
 	input = input.decode('latin-1')
 
     out = instance.run(input)
-    
+
     if handle_output:
         out = handleOutput(out, instance.output_type)
     return out
@@ -85,7 +84,7 @@ def handleOutput(out, output_type):
         print(out)
     else:
         print cls().run(out)
-            
+
 
 def argument_parser_from_script(script_class):
     """Create an argparse.ArgumentParser from a Script class object"""
@@ -94,7 +93,7 @@ def argument_parser_from_script(script_class):
     if script_class.options_form:
         form = script_class.options_form()
         for name, field in form.fields.items():
-           add_argument_from_field(parser, name, field) 
+           add_argument_from_field(parser, name, field)
     #parser.add_argument('--output', help='set output type', default='print')
     return parser
 
@@ -126,7 +125,8 @@ def add_argument_from_field(parser, name, field):
         args["const"] = not field.initial
     else:
         args["type"] = argument_type_from_field(field)
-    parser.add_argument(*argname, help = help, default=field.initial, dest=name, **args)
+
+    parser.add_argument(*argname, help = help, default=field.initial, metavar=name, **args)
 
 
 _FIELD_MAP = {
