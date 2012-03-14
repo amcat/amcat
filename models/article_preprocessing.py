@@ -40,7 +40,7 @@ class ArticlePreprocessing(AmcatModel):
     """
     
     id = models.AutoField(primary_key=True, db_column="solr_article_id")
-    article = models.ForeignKey(Article, db_index=True)
+    article_id = models.IntegerField()
 
     class Meta():
         db_table = 'articles_preprocessing_queue'
@@ -79,13 +79,6 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         a = amcattest.create_test_article()
         q = ArticlePreprocessing.objects.create(article=a)
 
-    def _flush_queue(self):
-        """Flush the articles queue"""
-        for sa in list(ArticlePreprocessing.objects.all()): sa.delete()
-
-    def _all_articles(self):
-        """List all articles on the queue"""
-        return {sa.article_id for sa in ArticlePreprocessing.objects.all()}
         
     def test_article_trigger(self):
         """Is a created or update article in the queue?"""
@@ -124,5 +117,22 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         aid = a.id
         a.delete()
         self.assertIn(aid, self._all_articles())
+
+    @classmethod
+    def _flush_queue(cls):
+        """Flush the articles queue"""
+        for sa in list(ArticlePreprocessing.objects.all()): sa.delete()
+
+    @classmethod
+    def _all_articles(cls):
+        """List all articles on the queue"""
+        return {sa.article_id for sa in ArticlePreprocessing.objects.all()}
         
-        
+if __name__ == '__main__':
+
+    a = amcattest.create_test_article()
+    print(a.id, TestArticlePreprocessing._all_articles())
+    TestArticlePreprocessing._flush_queue()
+    a.delete()
+    print(TestArticlePreprocessing._all_articles())
+    
