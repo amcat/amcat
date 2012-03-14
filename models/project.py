@@ -56,7 +56,6 @@ class Project(AmcatModel):
     guest_role = models.ForeignKey("amcat.Role", default=ROLEID_PROJECT_READER, null=True)
 
     active = models.BooleanField(default=True)
-    indexed = models.BooleanField(default=True)
 
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")

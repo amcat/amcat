@@ -21,7 +21,9 @@
 Model module for the Preprocessing queue
 
 Articles on the preprocessing queue need to be checked to see if preprocessing
-needs to be done. 
+needs to be done.
+
+See http://code.google.com/p/amcat/wiki/Preprocessing
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
@@ -31,12 +33,14 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools import dbtoolkit
 from amcat.models.article import Article
+from amcat.models.analysis import Analysis
+from amcat.models.project import Project
 
 import logging; log = logging.getLogger(__name__)
 
 class ArticlePreprocessing(AmcatModel):
     """
-    An article on the Solr Queue needs to be updated
+    An article on the Preprocessing Queue needs to be checked for preprocessing
     """
     
     id = models.AutoField(primary_key=True, db_column="solr_article_id")
@@ -66,6 +70,37 @@ def create_triggers():
     db.create_trigger("articles", "preprocessing_queue_articles", sql, actions=("INSERT","UPDATE", "DELETE"))
     db.create_trigger("articlesets_articles", "preprocessing_queue_articlesets", sql,
                       actions=("INSERT","DELETE"))
+
+class ArticleAnalysis(AmcatModel):
+    """
+    The Article Analysis table keeps track of which articles are / need to be preprocessed
+    """
+
+    id = models.AutoField(primary_key=True, db_column="article_analysis_id")
+    
+    article_id = models.ForeignKey(Article)
+    analysis_id = models.ForeignKey(Analysis)
+    started = models.BooleanField(default=False)
+    done = models.BooleanField(default=False)
+    delete = models.BooleanField(default=False)
+    
+    class Meta():
+        db_table = 'articles_analyses'
+        app_label = 'amcat'
+
+class ProjectAnalysis(AmcatModel):
+    """
+    Explicit many-to-many projects - analyses. Hopefully this can be removed
+    when prefetch_related hits the main branch.
+    """
+    id = models.AutoField(primary_key=True, db_column='articleset_article_id')
+    project = models.ForeignKey(Project)
+    analysis = models.ForeignKey(Analysis)
+
+    class Meta():
+        app_label = 'amcat'
+        db_table = "projects_analyses"
+    
         
 ###########################################################################
 #                          U N I T   T E S T S                            #

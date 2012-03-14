@@ -117,7 +117,7 @@ def create_test_set(articles=0, **kargs):
     s = ArticleSet.objects.create(**kargs)
     if articles:
         for _x in range(int(articles)):
-            s.articles.add(create_test_article())
+            s.add(create_test_article())
     return s
             
 
@@ -169,7 +169,13 @@ def create_test_word(lemma=None, word=None, language=None, pos="N"):
     if not word: word = "testword_%i" % Word.objects.count()
     l = Lemma.objects.create(pos=pos, lemma=lemma, language=language)
     return Word.objects.create(lemma=l, word=word)
-    
+
+def create_test_analysis(**kargs):
+    from amcat.models.analysis import Analysis
+    from amcat.models.language import Language
+    if 'language' not in kargs: kargs['language'] = Language.objects.get(pk=1)
+    return Analysis.objects.create(**kargs)
+
 class PolicyTestCase(TestCase):
     """
     TestCase subclass that can be used to easily check whether a module is

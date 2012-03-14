@@ -49,3 +49,5 @@ from amcat.tests.test_selection import *
 from amcat.scraping.controller import *
 from amcat.scraping.htmltools import *
 from amcat.scraping.document import *
+
+from amcat.nlp.preprocessing import *
