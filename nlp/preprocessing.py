@@ -61,8 +61,26 @@ def _get_analysis_ids(projects):
     return multidict((pa.project_id, pa.analysis_id)
                      for pa in ProjectAnalysis.objects.filter(project__in=projects))
     
+def _get_analyses_per_article(articles):
+    """
+    For each article, determine which analyses should be processed by what analyses
+    based on direct and indirect (via articleset) project membership
     
+    @return: a sequence of analysis ids per article id
+    """
+    projects_per_article = _get_active_project_ids(articles)
 
+    all_projects = reduce(set.union, projects_per_article.values())
+    analyses_per_project = get_analysis_ids(all_projects)
+
+
+    result = {}
+    for article, projects in projects_per_article.iteritems():
+        result[article] = reduce(set.union, (analyses_per_project.get(p, set())
+                                             for project in projects))
+    return result
+
+            
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
