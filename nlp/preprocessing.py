@@ -27,59 +27,76 @@ from amcat.models.article import Article
 from amcat.models.project import Project
 from amcat.models.articleset import ArticleSetArticle
 from amcat.models.article_preprocessing import ProjectAnalysis
-from amcat.tools.toolkit import multidict
+from amcat.tools.toolkit import multidict, wrapped
 
 def _get_active_project_ids(articles):
     """
     Get all active project ids that the articles are a part of, either directly or
     through articleset membership
 
-    @return: a dictionary of projects per article
+    @return: a sequence of article id : project id pairs
     """
-    a = Project.objects.filter(articles__in = articles).distinct()
-
     aids = [a.id for a in articles]
-    direct = (Article.objects.filter(pk__in=aids, project__active=True).only("id", "project"))
+    # direct project membership
+    for a in Article.objects.filter(pk__in=aids, project__active=True).only("id", "project"):
+        yield a.id, a.project_id
 
-    result = {a.id : {a.project_id} for a in direct}
-
-
+    # indirect membership via sets
     # use many-to-many model to build up query from lowest point
-    indirect = (ArticleSetArticle.objects.filter(article__in = aids, articleset__project__active=True)
-                .only("article", "articleset__project").select_related("articleset"))
-    for asa in indirect:
-        result.setdefault(asa.article_id, set()).add(asa.articleset.project_id)
-
-    return result
+    for asa in (ArticleSetArticle.objects
+                .filter(article__in = aids, articleset__project__active=True)
+                .only("article", "articleset__project").select_related("articleset")):
+        yield asa.article_id, asa.articleset.project_id
 
 def _get_analysis_ids(projects):
     """
     Get all analyses that the projects are involved in
 
-    @return: a dictionary of analyses per project
+    @return: a sequence of project id : analysis id pairs
     """
-    return multidict((pa.project_id, pa.analysis_id)
-                     for pa in ProjectAnalysis.objects.filter(project__in=projects))
-    
+    for pa in ProjectAnalysis.objects.filter(project__in=projects):
+        yield pa.project_id, pa.analysis_id
+
 def _get_analyses_per_article(articles):
     """
     For each article, determine which analyses should be processed by what analyses
     based on direct and indirect (via articleset) project membership
     
-    @return: a sequence of analysis ids per article id
+    @return: a sequence of article id : analysis id pairs.
     """
-    projects_per_article = _get_active_project_ids(articles)
+    projects_per_article = list(_get_active_project_ids(articles))
+    
+    all_projects = {p for (a,p) in projects_per_article}
+    analyses_per_project = multidict(_get_analysis_ids(all_projects))
 
-    all_projects = reduce(set.union, projects_per_article.values())
-    analyses_per_project = get_analysis_ids(all_projects)
+    for article, project in projects_per_article:
+        for analysis in analyses_per_project.get(project, set()):
+            yield article, analysis
+          
+def _get_articles_preprocessing_actions(articles):
+    """
+    For the given articles, determine which analyses need to be performed
+    and which analyses have already been performed or which analyses need
+    to be deleted.
 
+    @return: a tuple of (additions, deletions), where
+            additions: a list of (article, analysis) paris
+            deletions: a list of ArticleAnalysis ids
+    """
+    required = set(_get_analyses_per_article(articles))
+    for aa in ArticleAnalysis.filter(article__in=articles):
+        try:
+            # remove this analysis from the required analyses
+            required.pop((aa.article_id, aa.analysis_id))
+        except KeyError:
+            # it wasn't on the required analyses, so add to deletions
+            deletions.append(aa.id)
 
-    result = {}
-    for article, projects in projects_per_article.iteritems():
-        result[article] = reduce(set.union, (analyses_per_project.get(p, set())
-                                             for project in projects))
-    return result
-
+    return required, deletions
+        
+            
+        
+    
             
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -89,6 +106,53 @@ from amcat.tools import amcattest
 
 class TestPreprocessing(amcattest.PolicyTestCase):
 
+    def test_analyses_per_article(self):
+        p1, p2, p3 = [amcattest.create_test_project(active=x<2) for x in range(3)]
+        a1 = amcattest.create_test_article(project=p1)
+        a2 = amcattest.create_test_article(project=p2)
+        a3 = amcattest.create_test_article(project=p2)
+        a4 = amcattest.create_test_article(project=p3)
+        articles = {a1, a2, a3, a4}
+        
+        # baseline: no articles have any analysis
+        with self.checkMaxQueries(n=3): # 2 for projects/article, 1 for analyses/project
+            outcome = multidict(_get_analyses_per_article(articles))
+            self.assertEqual(outcome, {})
+
+        # let's add some analyses to the active projects
+        n1, n2, n3 = [amcattest.create_test_analysis() for _x in range(3)]
+        ProjectAnalysis.objects.create(project=p1, analysis=n1)
+        ProjectAnalysis.objects.create(project=p1, analysis=n2)
+        ProjectAnalysis.objects.create(project=p2, analysis=n2)
+        ProjectAnalysis.objects.create(project=p2, analysis=n3)
+        with self.checkMaxQueries(n=3):
+            outcome = multidict(_get_analyses_per_article(articles))
+            self.assertEqual(outcome, {a1.id : {n1.id, n2.id},
+                                       a2.id : {n2.id, n3.id},
+                                       a3.id : {n2.id, n3.id}})
+            
+        # adding an analysis to an inactive project has no effect
+        ProjectAnalysis.objects.create(project=p3, analysis=n3)
+        with self.checkMaxQueries(n=3):
+            outcome = multidict(_get_analyses_per_article(articles))
+            self.assertEqual(outcome, {a1.id : {n1.id, n2.id},
+                                       a2.id : {n2.id, n3.id},
+                                       a3.id : {n2.id, n3.id}})
+            
+        # adding an article to a project via a set does have effect
+        s1 = amcattest.create_test_set(project=p1)
+        s2 = amcattest.create_test_set(project=p2)
+        s1.add(a4)
+        s1.add(a2)
+        ProjectAnalysis.objects.create(project=p3, analysis=n2)
+        with self.checkMaxQueries(n=3):
+            outcome = multidict(_get_analyses_per_article(articles))
+            self.assertEqual(outcome, {a1.id : {n1.id, n2.id},
+                                       a2.id : {n1.id, n2.id, n3.id},
+                                       a3.id : {n2.id, n3.id},
+                                       a4.id : {n1.id, n2.id}})
+        
+    
     def test_get_projects(self):
         p = amcattest.create_test_project()
         a = amcattest.create_test_article(project=p)
@@ -98,33 +162,37 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         p3 = amcattest.create_test_project(active=False)
         a4 = amcattest.create_test_article(project=p3)
         with self.checkMaxQueries(n=2):
-            self.assertEqual(_get_active_project_ids([a, a2, a3, a4]),
-                             {a.id : {p.id}, a2.id : {p2.id}, a3.id : {p2.id}})
+            outcome = multidict(_get_active_project_ids([a, a2, a3, a4]))
+            self.assertEqual(outcome, {a.id : {p.id}, a2.id : {p2.id}, a3.id : {p2.id}})
 
         # now let's add a to p2 via a set
         s = amcattest.create_test_set(project=p2)
         s.add(a)
         with self.checkMaxQueries(n=2):
-            self.assertEqual(_get_active_project_ids([a, a2, a3, a4]),
-                             {a.id : {p.id, p2.id}, a2.id : {p2.id}, a3.id : {p2.id}})
+            outcome = multidict(_get_active_project_ids([a, a2, a3, a4]))
+            self.assertEqual(outcome, {a.id : {p.id, p2.id}, a2.id : {p2.id}, a3.id : {p2.id}})
         
         # now let's add a4 (whose project is inactive) to that set
         s.add(a4)
         with self.checkMaxQueries(n=2):
-            self.assertEqual(_get_active_project_ids([a, a2, a3, a4]),
-                             {a.id : {p.id, p2.id}, a2.id : {p2.id}, a3.id : {p2.id}, a4.id : {p2.id}})
-        
+            outcome = multidict(_get_active_project_ids([a, a2, a3, a4]))
+            self.assertEqual(outcome, {a.id : {p.id, p2.id}, a2.id : {p2.id},
+                                       a3.id : {p2.id}, a4.id : {p2.id}})
+
+            
         
     def test_get_analysis_ids(self):
         p1, p2 = [amcattest.create_test_project() for _x in range(2)]
         a1, a2, a3 = [amcattest.create_test_analysis() for _x in range(3)]
         with self.checkMaxQueries(n=1):
-            self.assertEqual(_get_analysis_ids([p1,p2]), {})
+            outcome = multidict(_get_analysis_ids([p1,p2]))
+            self.assertEqual(outcome, {})
 
         ProjectAnalysis.objects.create(project=p1, analysis=a1)
         ProjectAnalysis.objects.create(project=p1, analysis=a2)
         ProjectAnalysis.objects.create(project=p2, analysis=a2)
         
         with self.checkMaxQueries(n=1):
-            self.assertEqual(_get_analysis_ids([p1,p2]), {p1.id : {a1.id, a2.id}, p2.id : {a2.id}})
+            outcome = multidict(_get_analysis_ids([p1,p2]))
+            self.assertEqual(outcome, {p1.id : {a1.id, a2.id}, p2.id : {a2.id}})
             

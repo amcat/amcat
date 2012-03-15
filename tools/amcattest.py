@@ -256,7 +256,7 @@ class PolicyTestCase(TestCase):
     def test_policy_pylint_target(self):
         """Does the TARGET_MODULE (if applicable) pass pylint checking?"""
         if self.TARGET_MODULE:
-            self.test_policy_pylint(mod=self.TARGET_MODULE)
+            self.test_policy_lint(mod=self.TARGET_MODULE)
 
     @contextmanager
     def checkMaxQueries(self, n=0, action="Query", **outputargs):
