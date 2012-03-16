@@ -61,7 +61,7 @@ class UploadScript(script.Script):
         for doc in docs:
             doc.save()
 
-        self.options['articleset'].articles.add(*docs)
+        self.options['articleset'].add(*docs)
 
     def parse_document(self, document):
         """
