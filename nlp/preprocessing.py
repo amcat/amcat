@@ -26,7 +26,7 @@ See http://code.google.com/p/amcat/wiki/Preprocessing
 from amcat.models.article import Article
 from amcat.models.project import Project
 from amcat.models.articleset import ArticleSetArticle
-from amcat.models.article_preprocessing import ProjectAnalysis
+from amcat.models.article_preprocessing import ProjectAnalysis, ArticleAnalysis
 from amcat.tools.toolkit import multidict, wrapped
 
 def _get_active_project_ids(articles):
@@ -84,10 +84,11 @@ def _get_articles_preprocessing_actions(articles):
             deletions: a list of ArticleAnalysis ids
     """
     required = set(_get_analyses_per_article(articles))
-    for aa in ArticleAnalysis.filter(article__in=articles):
+    deletions = []
+    for aa in ArticleAnalysis.objects.filter(article__in=articles):
         try:
             # remove this analysis from the required analyses
-            required.pop((aa.article_id, aa.analysis_id))
+            required.remove((aa.article_id, aa.analysis_id))
         except KeyError:
             # it wasn't on the required analyses, so add to deletions
             deletions.append(aa.id)
@@ -105,6 +106,43 @@ def _get_articles_preprocessing_actions(articles):
 from amcat.tools import amcattest
 
 class TestPreprocessing(amcattest.PolicyTestCase):
+
+    
+    def test_articles_preprocessing_actions(self):
+        p1, p2 = [amcattest.create_test_project() for x in range(2)]
+        a1, a2, a3 = [amcattest.create_test_article(project=p) for p in [p1, p2, p2]]
+        articles = {a1, a2, a3}
+        
+        # baseline: no articles need any analysis, and no deletions are needed
+        with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
+            additions, deletions = _get_articles_preprocessing_actions(articles)
+            self.assertEqual(set(additions), set())
+            self.assertEqual(set(deletions), set())
+
+        # add some analyses to the active projects
+        n1, n2, n3 = [amcattest.create_test_analysis() for _x in range(3)]
+        ProjectAnalysis.objects.create(project=p1, analysis=n1)
+        ProjectAnalysis.objects.create(project=p1, analysis=n2)
+        ProjectAnalysis.objects.create(project=p2, analysis=n2)
+            
+        with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
+            additions, deletions = _get_articles_preprocessing_actions(articles)
+            self.assertEqual(multidict(additions), {1: {1,2}, 2:{2}, 3:{2}})
+            self.assertEqual(set(deletions), set())
+
+        # add some existing analyses
+        ArticleAnalysis.objects.create(article=a1, analysis=n1)
+        ArticleAnalysis.objects.create(article=a2, analysis=n1)
+        ArticleAnalysis.objects.create(article=a3, analysis=n2)
+        
+        with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
+            additions, deletions = _get_articles_preprocessing_actions(articles)
+            self.assertEqual(multidict(additions), {1: {2}, 2:{2}})
+        todel = set()
+        for aaid in deletions:
+            aa = ArticleAnalysis.objects.get(pk=aaid)
+            todel.add((aa.article_id, aa.analysis_id))
+            self.assertEqual(set(todel), {(2, 1)})
 
     def test_analyses_per_article(self):
         p1, p2, p3 = [amcattest.create_test_project(active=x<2) for x in range(3)]

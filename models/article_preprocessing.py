@@ -78,8 +78,8 @@ class ArticleAnalysis(AmcatModel):
 
     id = models.AutoField(primary_key=True, db_column="article_analysis_id")
     
-    article_id = models.ForeignKey(Article)
-    analysis_id = models.ForeignKey(Analysis)
+    article = models.ForeignKey(Article)
+    analysis = models.ForeignKey(Analysis)
     started = models.BooleanField(default=False)
     done = models.BooleanField(default=False)
     delete = models.BooleanField(default=False)
