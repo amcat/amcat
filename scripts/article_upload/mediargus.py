@@ -45,9 +45,9 @@ class Mediargus(UploadScript):
         text = text.replace('\r\n','\n')
         text = text.replace('\r','\n')
 
-        partitions = text.partition('\n\n\n\n\n\n\n')
+        partitions = text.partition('\n\n\n\n\n\n')
         metas = partitions[0].split('\n\n\n')
-        bodies = partitions[2].split('\n\n\n\n\n\n')
+        bodies = partitions[2].split('\n\n\n\n\n')
         return zip(metas, bodies)
 
     def parse_document(self, tupleText):
