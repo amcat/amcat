@@ -77,16 +77,17 @@ class ArticleSet(AmcatModel):
         #TODO: why is this here? And why is it called 'set', not 'get'?
         pass
         
-    def add(self, article):
-        ArticleSetArticle.objects.create(articleset=self, article=article)
+    def add(self, *articles):
+        for article in articles:
+            ArticleSetArticle.objects.create(articleset=self, article=article)
 
     
 class ArticleSetArticle(AmcatModel):
     """
-    ManyToMany table for article sets. An explicit model allows more prefecting in
+    ManyToMany table for article sets. An explicit model allows more prefeting in
     django queries and doesn't cost anything
     """
-    id = models.AutoField(primary_key=True, db_column='articleset_article_id')
+    id = models.AutoField(primary_key=True, db_column='id')
     articleset = models.ForeignKey(ArticleSet)
     article = models.ForeignKey(Article)
 
