@@ -57,7 +57,7 @@ class TestArticleList(amcattest.PolicyTestCase):
         # add second project with articles from first project in set
         p2 = amcattest.create_test_project()
         s = amcattest.create_test_set(project=p2)
-        s.articles.add(*arts)
+        s.add(*arts)
         # selecting on only project should give {}, but on set should give articles
         self.assertEqual(self.list(projects=[p2.id]), set())
         self.assertEqual(self.list(projects=[p2.id], articlesets=[s.id]), arts)
@@ -81,7 +81,7 @@ class TestArticleList(amcattest.PolicyTestCase):
         # add second project with articles from first project in set
         p2 = amcattest.create_test_project()
         s = amcattest.create_test_set(project=p2)
-        s.articles.add(*(arts1|arts2))
+        s.add(*(arts1|arts2))
         x = self.aggr(projects=[p2.id], articlesets=[s.id], xAxis='medium')
 
     def test_form(self):
