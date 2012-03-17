@@ -21,7 +21,9 @@
 Model module for the Preprocessing queue
 
 Articles on the preprocessing queue need to be checked to see if preprocessing
-needs to be done. 
+needs to be done.
+
+See http://code.google.com/p/amcat/wiki/Preprocessing
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
@@ -31,16 +33,18 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools import dbtoolkit
 from amcat.models.article import Article
+from amcat.models.analysis import Analysis
+from amcat.models.project import Project
 
 import logging; log = logging.getLogger(__name__)
 
 class ArticlePreprocessing(AmcatModel):
     """
-    An article on the Solr Queue needs to be updated
+    An article on the Preprocessing Queue needs to be checked for preprocessing
     """
     
     id = models.AutoField(primary_key=True, db_column="solr_article_id")
-    article = models.ForeignKey(Article, db_index=True)
+    article_id = models.IntegerField()
 
     class Meta():
         db_table = 'articles_preprocessing_queue'
@@ -56,17 +60,47 @@ def create_triggers():
 
     sql = """BEGIN
                 IF (TG_OP = 'DELETE') THEN
-                  INSERT INTO articles_preprocessing_queue (article_id) SELECT OLD.article_id, true;
+                  INSERT INTO articles_preprocessing_queue (article_id) SELECT OLD.article_id;
                   RETURN OLD;
                 ELSE
-                  INSERT INTO articles_preprocessing_queue (article_id) SELECT NEW.article_id, true;
+                  INSERT INTO articles_preprocessing_queue (article_id) SELECT NEW.article_id;
                   RETURN NEW;
                 END IF;
              END;"""
-    db.create_trigger("articles", "preprocessing_queue_articles", sql, actions=("INSERT","UPDATE"))
+    db.create_trigger("articles", "preprocessing_queue_articles", sql, actions=("INSERT","UPDATE", "DELETE"))
     db.create_trigger("articlesets_articles", "preprocessing_queue_articlesets", sql,
                       actions=("INSERT","DELETE"))
-    print("CREATED TRIGGER FOR PREPROCESSING")
+
+class ArticleAnalysis(AmcatModel):
+    """
+    The Article Analysis table keeps track of which articles are / need to be preprocessed
+    """
+
+    id = models.AutoField(primary_key=True, db_column="article_analysis_id")
+    
+    article = models.ForeignKey(Article)
+    analysis = models.ForeignKey(Analysis)
+    started = models.BooleanField(default=False)
+    done = models.BooleanField(default=False)
+    delete = models.BooleanField(default=False)
+    
+    class Meta():
+        db_table = 'articles_analyses'
+        app_label = 'amcat'
+
+class ProjectAnalysis(AmcatModel):
+    """
+    Explicit many-to-many projects - analyses. Hopefully this can be removed
+    when prefetch_related hits the main branch.
+    """
+    id = models.AutoField(primary_key=True, db_column='articleset_article_id')
+    project = models.ForeignKey(Project)
+    analysis = models.ForeignKey(Analysis)
+
+    class Meta():
+        app_label = 'amcat'
+        db_table = "projects_analyses"
+    
         
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -80,13 +114,6 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         a = amcattest.create_test_article()
         q = ArticlePreprocessing.objects.create(article=a)
 
-    def _flush_queue(self):
-        """Flush the articles queue"""
-        for sa in list(ArticlePreprocessing.objects.all()): sa.delete()
-
-    def _all_articles(self):
-        """List all articles on the queue"""
-        return [sa.article for sa in ArticlePreprocessing.objects.all()]
         
     def test_article_trigger(self):
         """Is a created or update article in the queue?"""
@@ -94,13 +121,13 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         
         self._flush_queue()
         a = amcattest.create_test_article()
-        self.assertIn(a,  self._all_articles())
+        self.assertIn(a.id,  self._all_articles())
         
         self._flush_queue()
-        self.assertNotIn(a,  self._all_articles())
+        self.assertNotIn(a.id,  self._all_articles())
         a.headline = "bla bla"
         a.save()
-        self.assertIn(a,  self._all_articles())
+        self.assertIn(a.id,  self._all_articles())
         
         
     def test_articleset_trigger(self):
@@ -110,13 +137,37 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         a = amcattest.create_test_article()
         aset = amcattest.create_test_set() 
         self._flush_queue()
-        self.assertNotIn(a,  self._all_articles())
+        self.assertNotIn(a.id,  self._all_articles())
 
         aset.articles.add(a)
-        self.assertIn(a,  self._all_articles())
+        self.assertIn(a.id,  self._all_articles())
         
         self._flush_queue()
-        self.assertNotIn(a, self._all_articles())
+        self.assertNotIn(a.id, self._all_articles())
         aset.articles.remove(a)
-        self.assertIn(a, self._all_articles())
+        self.assertIn(a.id, self._all_articles())
         
+        self._flush_queue()
+        self.assertNotIn(a.id, self._all_articles())
+        aid = a.id
+        a.delete()
+        self.assertIn(aid, self._all_articles())
+
+    @classmethod
+    def _flush_queue(cls):
+        """Flush the articles queue"""
+        for sa in list(ArticlePreprocessing.objects.all()): sa.delete()
+
+    @classmethod
+    def _all_articles(cls):
+        """List all articles on the queue"""
+        return {sa.article_id for sa in ArticlePreprocessing.objects.all()}
+        
+if __name__ == '__main__':
+
+    a = amcattest.create_test_article()
+    print(a.id, TestArticlePreprocessing._all_articles())
+    TestArticlePreprocessing._flush_queue()
+    a.delete()
+    print(TestArticlePreprocessing._all_articles())
+    

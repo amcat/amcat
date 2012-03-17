@@ -116,16 +116,24 @@ def printargs(func):
         return func(*args, **kwargs)
     return echo_func
 
+def wrapped(wrapper_function, *wrapper_args, **wrapper_kargs):
+    """
+    Decorator to wrap the inner function with an arbitrary function
+    """
+    def inner(func):
+        def innermost(*args, **kargs):
+            result = func(*args, **kargs)
+            return wrapper_function(result, *wrapper_args, **wrapper_kargs)
+        return innermost
+    return inner
+
 def to_list(func):
     """
-    This decorator puts the result of the function (presumably a generator)
-    in a list (or other sequence type). Useful to force generator functions to
-    run without having clumsy syntax like l=[]; for x in y: l.append(x); return l
+    This decorator puts the result of a (generator) function in a list.
     """
-    def _to_list(*args, **kargs):
-        return list(func(*args, **kargs))
-    return _to_list
-                    
+    return wrapped(list)(func)
+
+
 ###########################################################################
 ##                      Statistical Functions                            ##
 ###########################################################################

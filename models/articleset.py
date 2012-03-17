@@ -44,6 +44,7 @@ def get_or_create_articleset(name, project):
     """
     return get_or_create(ArticleSet, name=name, project=project) if name else None
 
+
 class ArticleSet(AmcatModel):
     """
     Model for the sets table. A set is part of a project and contains articles.
@@ -54,8 +55,8 @@ class ArticleSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='articleset_id')
 
     name = models.CharField(max_length=500)
-    project = models.ForeignKey(Project)
-    articles = models.ManyToManyField(Article, db_table="articlesets_articles")
+    project = models.ForeignKey(Project, related_name='articlesets')
+    articles = models.ManyToManyField(Article, through="amcat.ArticleSetArticle", related_name="articlesets")
 
     codingjobset = models.BooleanField(default=False)
     batch = models.BooleanField(default=False)
@@ -76,7 +77,25 @@ class ArticleSet(AmcatModel):
         #TODO: why is this here? And why is it called 'set', not 'get'?
         pass
         
+    def add(self, *articles):
+        for article in articles:
+            ArticleSetArticle.objects.create(articleset=self, article=article)
 
+    
+class ArticleSetArticle(AmcatModel):
+    """
+    ManyToMany table for article sets. An explicit model allows more prefeting in
+    django queries and doesn't cost anything
+    """
+    id = models.AutoField(primary_key=True, db_column='id')
+    articleset = models.ForeignKey(ArticleSet)
+    article = models.ForeignKey(Article)
+
+    class Meta():
+        app_label = 'amcat'
+        db_table="articlesets_articles"
+    
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

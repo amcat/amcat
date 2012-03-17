@@ -114,7 +114,10 @@ def add_argument_from_field(parser, name, field):
     # determine help text from label, help_text, and default
     helpfields = [x for x in [field.label, field.help_text] if x]
     if field.initial is not None: helpfields.append("Default: {field.initial}".format(**locals()))
+    if isinstance(field, forms.ChoiceField):
+        helpfields.append("Possible values are %s" % "; ".join("%s (%s)" % (kv) for kv in field.choices))
     help = ". ".join(helpfields)
+
     # set type OR action_const as extra arguments depending on type
     args = {} # flexible parameters to add_argument
     if isinstance(field, forms.ModelMultipleChoiceField) or isinstance(field, forms.MultipleChoiceField):

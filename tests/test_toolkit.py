@@ -246,6 +246,14 @@ class TestToolkitFunctions(amcattest.PolicyTestCase):
 
         self.assertEqual(gen(n=12), list(range(12)))
 
+    def test_wrapper(self):
+        @toolkit.wrapped(sum)
+        def gen(n):
+            return (i for i in range(n))
+
+        self.assertEqual(gen(n=3), sum(range(3)))
+
+
 
     def test_retry(self):
         x = [3]
