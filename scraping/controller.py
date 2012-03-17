@@ -41,7 +41,7 @@ class Controller(object):
 
     def __init__(self, articleset=None):
         self.articleset = articleset
-    
+
     def scrape(self, scraper):
         """Run the given scraper using the control logic of this controller"""
         raise NotImplementedError()
@@ -50,7 +50,7 @@ class Controller(object):
         log.info("Saving article %s" % article)
         article.save()
         if self.articleset:
-            self.articleset.articles.add(article)
+            self.articleset.add(article)
             self.articleset.save()
         return article
 
@@ -81,8 +81,8 @@ class ThreadedController(Controller):
         distribute_tasks(tasks=scraper.get_units(), action=scraper.scrape_unit,
                          nthreads=self.nthreads, retry_exceptions=3,
                          output_action=add_to_queue_action(queue))
-        
-        
+
+
     def scrape(self, scraper):
         result = []
         qpt = QueueProcessorThread(self.save, name="Storer", output_action=result.append)
@@ -91,7 +91,7 @@ class ThreadedController(Controller):
         qpt.input_queue.done=True
         qpt.input_queue.join()
         return result
-   
+
 
 def scrape_logged(controller, scrapers):
     """Use the controller and MultiScraper to scrape the given scrapers.
@@ -108,10 +108,10 @@ def scrape_logged(controller, scrapers):
             counts[scraper] += 1
 
     return counts, log_stream.getvalue()
-    
-    
-    
-    
+
+
+
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -120,18 +120,18 @@ from amcat.tools import amcattest, amcatlogging
 from amcat.scraping.scraper import Scraper
 from amcat.models.article import Article
 from datetime import date
-                
+
 class _TestScraper(Scraper):
     medium_name = 'xxx'
     def __init__(self, projectid, n=10):
         super(_TestScraper, self).__init__(projectid=projectid)
         self.n = n
-        
+
     def _get_units(self):
         return range(self.n)
     def _scrape_unit(self, unit):
         yield Article(headline=str(unit), date=date.today())
-                
+
 class TestController(amcattest.PolicyTestCase):
     def test_scraper(self):
         """Does the simple controller and saving work?"""
@@ -141,7 +141,7 @@ class TestController(amcattest.PolicyTestCase):
         articles = c.scrape(ts)
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(set(articles), set(p.articles.all()))
-        
+
     def test_set(self):
         """Are scraped articles added to the set?"""
         p = amcattest.create_test_project()
@@ -183,7 +183,7 @@ def production_test_multithreaded_saving():
     assert s.articles.count() == ts.n
     assert articles is not None
     assert set(s.articles.all()) == set(articles)
-    
+
     log.info("[OK] Production test Multithreaded Saving passed")
 
 def production_test_logged_multithreaded_error():
@@ -195,10 +195,10 @@ def production_test_logged_multithreaded_error():
     from amcat.models.project import Project
     from amcat.tests.test_scraping import TestDatedScraper, TestErrorScraper
     p = Project.objects.get(pk=2)
-    
+
     s1 = TestDatedScraper(date = date.today(), project=p.id)
     s2 = TestErrorScraper(date = date.today(), project=p.id)
-        
+
     counts, log = scrape_logged(ThreadedController(), [s2])
 
     print("Scraping finished:")
@@ -207,8 +207,8 @@ def production_test_logged_multithreaded_error():
     if log:
         print("\nDetails:\n%s" % log)
     import time;time.sleep(.1)
-         
-    
+
+
 if __name__ == '__main__':
     #production_test_multithreaded_saving()
     amcatlogging.setup()
