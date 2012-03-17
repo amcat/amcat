@@ -17,13 +17,10 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.conf import settings
 from django.db import models
-from django.db import connections, DEFAULT_DB_ALIAS
+from django.db import DEFAULT_DB_ALIAS
 
 from django.core.exceptions import ValidationError
-
-import copy
 
 __all__ = ['AmcatModel']
 
@@ -38,7 +35,7 @@ class AmcatModel(models.Model):
         except:
             pass
         else: rq = get_request()
-            
+
         return DEFAULT_DB_ALIAS if not rq else rq.user.db, rq
 
 

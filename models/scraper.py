@@ -20,11 +20,11 @@
 """ORM Module representing scrapers"""
 
 from django.db import models
-from amcat.forms.fields import JSONField
+from amcat.tools.model import AmcatModel
 
-import json
+class Scraper(AmcatModel):
+    __label__ = 'label'
 
-class Scraper(models.Model):
     id = models.AutoField(primary_key=True, db_column="scraper_id")
 
     module = models.CharField(max_length=100)
@@ -56,22 +56,22 @@ def get_scrapers(**options):
     options plus information from the database"""
     for s in Scraper.objects.filter(run_daily=True):
         yield s.get_scraper(**options)
-    
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 
 class TestScrapers(amcattest.PolicyTestCase):
-    
+
     def test_get_scraper(self):
         """Can we get a scraper from the db?"""
-        
+
         s =Scraper.objects.create(module='amcat.models.scraper',
                                   class_name='TestScraperModel')
         self.assertEqual(s.get_scraper_class(), TestScraperModel)
-        
+
 
 
