@@ -82,9 +82,10 @@ def _get_articles_preprocessing_actions(articles):
     @return: a tuple of (additions, deletions), where
             additions: a list of (article, analysis) paris
             deletions: a list of ArticleAnalysis ids
+            undeletions: a list of ArticleAnalysis ids
     """
     required = set(_get_analyses_per_article(articles))
-    deletions = []
+    deletions, undeletions = [], []
     for aa in ArticleAnalysis.objects.filter(article__in=articles):
         try:
             # remove this analysis from the required analyses
@@ -92,12 +93,27 @@ def _get_articles_preprocessing_actions(articles):
         except KeyError:
             # it wasn't on the required analyses, so add to deletions
             deletions.append(aa.id)
+        else:
+            # it was on the required analyses, undelete if needed
+            if aa.delete:
+                undeletions.append(aa.id)
 
-    return required, deletions
+    return required, deletions, undeletions
         
-            
-        
-    
+
+def set_preprocessing_actions(articles):
+    """
+    For the given articles, make sure that the actual state in the articles_analyses
+    table matches the desired state from project membership and projects_analyses.
+    """
+    required, deletions, undeletions = _get_articles_preprocessing_actions(articles)
+    if required:
+        for artid, anid in required:
+            ArticleAnalysis.objects.create(article_id=artid, analysis_id=anid)
+    if deletions:
+        ArticleAnalysis.objects.filter(id__in=deletions).update(delete=True)
+    if undeletions:
+        ArticleAnalysis.objects.filter(id__in=deletions).update(delete=False)
             
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -107,6 +123,54 @@ from amcat.tools import amcattest
 
 class TestPreprocessing(amcattest.PolicyTestCase):
 
+    def _get_analyses(self, articles):
+        return {(aa.article_id, aa.analysis_id) : aa.delete
+                for aa in ArticleAnalysis.objects.filter(article__in=articles)}
+    
+    def test_set_preprocessing_actions(self):
+        p1, p2 = [amcattest.create_test_project() for _x in range(2)]
+        a1, a2 = [amcattest.create_test_article(project=p) for p in [p1, p2]]
+        n1 = amcattest.create_test_analysis()
+        articles = {a1, a2}
+
+        # baseline: no analyses
+        with self.checkMaxQueries(n=4): # 4 for querying, 0 for mutations
+            set_preprocessing_actions(articles)
+        self.assertEqual(self._get_analyses(articles), {})
+
+        # test addition: activate analysis 1 on p1
+        ProjectAnalysis.objects.create(project=p1, analysis=n1)
+        with self.checkMaxQueries(n=5): # 4 for querying, 1 for mutations
+            set_preprocessing_actions(articles)
+        ProjectAnalysis.objects.create(project=p1, analysis=n1)
+        self.assertEqual(self._get_analyses(articles), {(a1.id, p1.id) : False})
+        
+        # test another addition: activate analysis 1 on p2
+        ProjectAnalysis.objects.create(project=p2, analysis=n1)
+        with self.checkMaxQueries(n=5): # 4 for querying, 1 for mutations
+            set_preprocessing_actions(articles)
+        ProjectAnalysis.objects.create(project=p1, analysis=n1)
+        self.assertEqual(self._get_analyses(articles), {(a1.id, n1.id) : False,
+                                                        (a2.id, n1.id) : False})
+        
+        # test deletions: deactivate project 1
+        p1.active = False
+        p1.save()
+        with self.checkMaxQueries(n=5): # 4 for querying, 1 for mutations
+            set_preprocessing_actions(articles)
+        ProjectAnalysis.objects.create(project=p1, analysis=n1)
+        self.assertEqual(self._get_analyses(articles), {(a1.id, n1.id) : True,
+                                                        (a2.id, n1.id) : False})
+
+        # test re-activation: reactivate project 1
+        p1.active = True
+        p1.save()
+        with self.checkMaxQueries(n=5): # 4 for querying, 1 for mutations
+            set_preprocessing_actions(articles)
+        ProjectAnalysis.objects.create(project=p1, analysis=n1)
+        self.assertEqual(self._get_analyses(articles), {(a1.id, n1.id) : False,
+                                                        (a2.id, n1.id) : False})
+        
     
     def test_articles_preprocessing_actions(self):
         p1, p2 = [amcattest.create_test_project() for x in range(2)]
@@ -115,9 +179,10 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         
         # baseline: no articles need any analysis, and no deletions are needed
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
-            additions, deletions = _get_articles_preprocessing_actions(articles)
+            additions, deletions, undeletions = _get_articles_preprocessing_actions(articles)
             self.assertEqual(set(additions), set())
             self.assertEqual(set(deletions), set())
+            self.assertEqual(set(undeletions), set())
 
         # add some analyses to the active projects
         n1, n2, n3 = [amcattest.create_test_analysis() for _x in range(3)]
@@ -126,9 +191,10 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         ProjectAnalysis.objects.create(project=p2, analysis=n2)
             
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
-            additions, deletions = _get_articles_preprocessing_actions(articles)
+            additions, deletions, undeletions = _get_articles_preprocessing_actions(articles)
             self.assertEqual(multidict(additions), {1: {1,2}, 2:{2}, 3:{2}})
             self.assertEqual(set(deletions), set())
+            self.assertEqual(set(undeletions), set())
 
         # add some existing analyses
         ArticleAnalysis.objects.create(article=a1, analysis=n1)
@@ -136,13 +202,45 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         ArticleAnalysis.objects.create(article=a3, analysis=n2)
         
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
-            additions, deletions = _get_articles_preprocessing_actions(articles)
+            additions, deletions, undeletions = _get_articles_preprocessing_actions(articles)
             self.assertEqual(multidict(additions), {1: {2}, 2:{2}})
         todel = set()
         for aaid in deletions:
             aa = ArticleAnalysis.objects.get(pk=aaid)
             todel.add((aa.article_id, aa.analysis_id))
             self.assertEqual(set(todel), {(2, 1)})
+            self.assertEqual(set(undeletions), set())
+
+    def test_articles_preprocessing_reactivate(self):
+        """Are deleted analyses undeleted when they are reactivated?"""
+        p1 = amcattest.create_test_project()
+        a1 = amcattest.create_test_article(project=p1)
+        n1 = amcattest.create_test_analysis()
+        ProjectAnalysis.objects.create(project=p1, analysis=n1)
+
+        # baseline: check that required=actual gives a no-op
+        aa = ArticleAnalysis.objects.create(article=a1, analysis=n1)
+        with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
+            additions, deletions, undeletions = _get_articles_preprocessing_actions([a1])
+            self.assertEqual(multidict(additions), {})
+            self.assertEqual(list(deletions), [])
+            self.assertEqual(set(undeletions), set())
+
+        # now set the aa to delete and see if it is reactivated
+        aa.delete=True
+        aa.save()
+        with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
+            additions, deletions, undeletions = _get_articles_preprocessing_actions([a1])
+            self.assertEqual(multidict(additions), {})
+            self.assertEqual(list(deletions), [])
+            self.assertEqual(set(undeletions), {aa.id})
+
+        
+        
+
+            
+        
+        
 
     def test_analyses_per_article(self):
         p1, p2, p3 = [amcattest.create_test_project(active=x<2) for x in range(3)]

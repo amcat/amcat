@@ -87,6 +87,7 @@ class ArticleAnalysis(AmcatModel):
     class Meta():
         db_table = 'articles_analyses'
         app_label = 'amcat'
+        unique_together = ('article', 'analysis')
 
 class ProjectAnalysis(AmcatModel):
     """
