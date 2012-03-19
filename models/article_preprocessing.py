@@ -43,7 +43,7 @@ class ArticlePreprocessing(AmcatModel):
     An article on the Preprocessing Queue needs to be checked for preprocessing
     """
     
-    id = models.AutoField(primary_key=True, db_column="solr_article_id")
+    id = models.AutoField(primary_key=True)
     article_id = models.IntegerField()
 
     class Meta():
@@ -94,7 +94,7 @@ class ProjectAnalysis(AmcatModel):
     Explicit many-to-many projects - analyses. Hopefully this can be removed
     when prefetch_related hits the main branch.
     """
-    id = models.AutoField(primary_key=True, db_column='articleset_article_id')
+    id = models.AutoField(primary_key=True)
     project = models.ForeignKey(Project)
     analysis = models.ForeignKey(Analysis)
 

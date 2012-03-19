@@ -29,22 +29,21 @@ from amcat.models.articleset import ArticleSetArticle
 from amcat.models.article_preprocessing import ProjectAnalysis, ArticleAnalysis
 from amcat.tools.toolkit import multidict, wrapped
 
-def _get_active_project_ids(articles):
+def _get_active_project_ids(articleids):
     """
     Get all active project ids that the articles are a part of, either directly or
     through articleset membership
 
     @return: a sequence of article id : project id pairs
     """
-    aids = [a.id for a in articles]
     # direct project membership
-    for a in Article.objects.filter(pk__in=aids, project__active=True).only("id", "project"):
+    for a in Article.objects.filter(pk__in=articleids, project__active=True).only("id", "project"):
         yield a.id, a.project_id
 
     # indirect membership via sets
     # use many-to-many model to build up query from lowest point
     for asa in (ArticleSetArticle.objects
-                .filter(article__in = aids, articleset__project__active=True)
+                .filter(article__in = articleids, articleset__project__active=True)
                 .only("article", "articleset__project").select_related("articleset")):
         yield asa.article_id, asa.articleset.project_id
 
@@ -57,14 +56,14 @@ def _get_analysis_ids(projects):
     for pa in ProjectAnalysis.objects.filter(project__in=projects):
         yield pa.project_id, pa.analysis_id
 
-def _get_analyses_per_article(articles):
+def _get_analyses_per_article(articleids):
     """
     For each article, determine which analyses should be processed by what analyses
     based on direct and indirect (via articleset) project membership
     
     @return: a sequence of article id : analysis id pairs.
     """
-    projects_per_article = list(_get_active_project_ids(articles))
+    projects_per_article = list(_get_active_project_ids(articleids))
     
     all_projects = {p for (a,p) in projects_per_article}
     analyses_per_project = multidict(_get_analysis_ids(all_projects))
@@ -73,7 +72,7 @@ def _get_analyses_per_article(articles):
         for analysis in analyses_per_project.get(project, set()):
             yield article, analysis
           
-def _get_articles_preprocessing_actions(articles):
+def _get_articles_preprocessing_actions(articleids):
     """
     For the given articles, determine which analyses need to be performed
     and which analyses have already been performed or which analyses need
@@ -84,9 +83,9 @@ def _get_articles_preprocessing_actions(articles):
             deletions: a list of ArticleAnalysis ids
             undeletions: a list of ArticleAnalysis ids
     """
-    required = set(_get_analyses_per_article(articles))
+    required = set(_get_analyses_per_article(articleids))
     deletions, undeletions = [], []
-    for aa in ArticleAnalysis.objects.filter(article__in=articles):
+    for aa in ArticleAnalysis.objects.filter(article__in=articleids):
         try:
             # remove this analysis from the required analyses
             required.remove((aa.article_id, aa.analysis_id))
@@ -101,19 +100,19 @@ def _get_articles_preprocessing_actions(articles):
     return required, deletions, undeletions
         
 
-def set_preprocessing_actions(articles):
+def set_preprocessing_actions(articleids):
     """
     For the given articles, make sure that the actual state in the articles_analyses
     table matches the desired state from project membership and projects_analyses.
     """
-    required, deletions, undeletions = _get_articles_preprocessing_actions(articles)
+    required, deletions, undeletions = _get_articles_preprocessing_actions(articleids)
     if required:
         for artid, anid in required:
             ArticleAnalysis.objects.create(article_id=artid, analysis_id=anid)
     if deletions:
         ArticleAnalysis.objects.filter(id__in=deletions).update(delete=True)
     if undeletions:
-        ArticleAnalysis.objects.filter(id__in=deletions).update(delete=False)
+        ArticleAnalysis.objects.filter(id__in=undeletions).update(delete=False)
             
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -131,7 +130,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         p1, p2 = [amcattest.create_test_project() for _x in range(2)]
         a1, a2 = [amcattest.create_test_article(project=p) for p in [p1, p2]]
         n1 = amcattest.create_test_analysis()
-        articles = {a1, a2}
+        articles = {a1.id, a2.id}
 
         # baseline: no analyses
         with self.checkMaxQueries(n=4): # 4 for querying, 0 for mutations
@@ -175,7 +174,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
     def test_articles_preprocessing_actions(self):
         p1, p2 = [amcattest.create_test_project() for x in range(2)]
         a1, a2, a3 = [amcattest.create_test_article(project=p) for p in [p1, p2, p2]]
-        articles = {a1, a2, a3}
+        articles = {a1.id, a2.id, a3.id}
         
         # baseline: no articles need any analysis, and no deletions are needed
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
@@ -221,7 +220,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         # baseline: check that required=actual gives a no-op
         aa = ArticleAnalysis.objects.create(article=a1, analysis=n1)
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
-            additions, deletions, undeletions = _get_articles_preprocessing_actions([a1])
+            additions, deletions, undeletions = _get_articles_preprocessing_actions([a1.id])
             self.assertEqual(multidict(additions), {})
             self.assertEqual(list(deletions), [])
             self.assertEqual(set(undeletions), set())
@@ -230,7 +229,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         aa.delete=True
         aa.save()
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
-            additions, deletions, undeletions = _get_articles_preprocessing_actions([a1])
+            additions, deletions, undeletions = _get_articles_preprocessing_actions([a1.id])
             self.assertEqual(multidict(additions), {})
             self.assertEqual(list(deletions), [])
             self.assertEqual(set(undeletions), {aa.id})
@@ -248,7 +247,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         a2 = amcattest.create_test_article(project=p2)
         a3 = amcattest.create_test_article(project=p2)
         a4 = amcattest.create_test_article(project=p3)
-        articles = {a1, a2, a3, a4}
+        articles = {a1.id, a2.id, a3.id, a4.id}
         
         # baseline: no articles have any analysis
         with self.checkMaxQueries(n=3): # 2 for projects/article, 1 for analyses/project
@@ -297,21 +296,22 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         a3 = amcattest.create_test_article(project=p2)
         p3 = amcattest.create_test_project(active=False)
         a4 = amcattest.create_test_article(project=p3)
+        articleids = {a.id, a2.id, a3.id, a4.id}
         with self.checkMaxQueries(n=2):
-            outcome = multidict(_get_active_project_ids([a, a2, a3, a4]))
+            outcome = multidict(_get_active_project_ids(articleids))
             self.assertEqual(outcome, {a.id : {p.id}, a2.id : {p2.id}, a3.id : {p2.id}})
 
         # now let's add a to p2 via a set
         s = amcattest.create_test_set(project=p2)
         s.add(a)
         with self.checkMaxQueries(n=2):
-            outcome = multidict(_get_active_project_ids([a, a2, a3, a4]))
+            outcome = multidict(_get_active_project_ids(articleids))
             self.assertEqual(outcome, {a.id : {p.id, p2.id}, a2.id : {p2.id}, a3.id : {p2.id}})
         
         # now let's add a4 (whose project is inactive) to that set
         s.add(a4)
         with self.checkMaxQueries(n=2):
-            outcome = multidict(_get_active_project_ids([a, a2, a3, a4]))
+            outcome = multidict(_get_active_project_ids(articleids))
             self.assertEqual(outcome, {a.id : {p.id, p2.id}, a2.id : {p2.id},
                                        a3.id : {p2.id}, a4.id : {p2.id}})
 

@@ -26,7 +26,6 @@ coding jobs.
 from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import get_or_create
 
-from amcat.models.project import Project
 from amcat.models.article import Article
 
 from django.db import models
@@ -55,7 +54,7 @@ class ArticleSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='articleset_id')
 
     name = models.CharField(max_length=500)
-    project = models.ForeignKey(Project, related_name='articlesets')
+    project = models.ForeignKey("amcat.Project", related_name='articlesets')
     articles = models.ManyToManyField(Article, through="amcat.ArticleSetArticle", related_name="articlesets")
 
     codingjobset = models.BooleanField(default=False)

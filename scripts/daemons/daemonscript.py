@@ -96,8 +96,8 @@ class DaemonScript(Script):
         Function to be called for action 'test'.
         Default sets up stderr logging and calls run_action once
         """
-        from amcat.tools import amcatlogging
-        amcatlogging.setup()
+        #from amcat.tools import amcatlogging
+        #amcatlogging.setup() 
         self.run_action()
                 
     def _get_filename(self, suffix="log"):

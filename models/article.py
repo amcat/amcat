@@ -26,7 +26,6 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
 
-from amcat.models.project import Project
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 
@@ -71,7 +70,7 @@ class Article(AmcatModel):
 
     parent = models.ForeignKey("self", null=True, db_column="parent_article_id",
                                db_index=True, blank=True)
-    project = models.ForeignKey(Project, db_index=True, related_name="articles")
+    project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
 
     class Meta():
