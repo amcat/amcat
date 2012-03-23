@@ -25,27 +25,55 @@ Van den Bosch, A., Busser, G.J., Daelemans, W., and Canisius, S., CLIN 2007.
 
 import telnetlib
 
+class Frog(object):
 
-
-
-def process_sentences(sentences):
-    t = telnetlib.Telnet("localhost", 12345)
-    for sentence in sentences:
+    def __init__(self, host='localhost', port=12345):
+        self.host = host
+        self.port = port
+    
+    @property
+    def conn(self):
         try:
-            _sent_sentence(t, sentence)
+            return self._conn
+        except AttributeError:
+            self._conn = telnetlib.Telnet(self.host, self.port)
+            return self._conn
+
+    def _reset_connection(Self):
+        try:
+            del self._conn
+        except AttributeError:
+            pass
+        
+    def process_sentences(self, sentences):
+        for sentenceid, sentence in sentences:
+            try:
+                result = self.process_sentence(sentence)
+                yield sentenceid, sentence
+            except:
+                log.exception("Error on processing %i: %r" % (sentenceid, sentence))
+                self._reset_connection()
             
+    def process_sentence(self, sentence):
+        return self._do_process(sentence)
+            
+    def _do_process(self, sentence):
+        if not sentence.endswith("\n"):
+            sentence += "\n"
+        self.conn.write(sentence)
+        result = self.conn.read_until("READY")
+        result = result[:-len("READY")].strip()
+        return result
+        
 
 
-t = telnetlib.Telnet("localhost", 12345)
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
 
-print("> connected, sending...")
-t.write("de katjes liepen door het gras\n")
-print("> sent, receiving...")
-print t.read_until("READY")
-print "---------"
-t.write("toen gingen we naar 't huis terug\n")
-print t.read_until("READY")
-
-t.close()
-
+class TestFrog(amcattest.PolicyTestCase):
+    f = Frog()
+    print f.process_sentence("het zij zo")
 
