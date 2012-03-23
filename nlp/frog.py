@@ -48,14 +48,18 @@ class Frog(object):
     def process_sentences(self, sentences):
         for sentenceid, sentence in sentences:
             try:
-                result = self.process_sentence(sentence)
-                yield sentenceid, sentence
+                tokens = list(self.process_sentence(sentence))
             except:
                 log.exception("Error on processing %i: %r" % (sentenceid, sentence))
                 self._reset_connection()
+            else:
+                for token in tokens:
+                    yield sentenceid, token
             
     def process_sentence(self, sentence):
-        return self._do_process(sentence)
+        for line in self._do_process(sentence):
+            position, word, lemma, pos = [line[i] for i in (0,1,2,4)]
+            yield (int(position)-1, word, lemma) + read_pos(pos)
             
     def _do_process(self, sentence):
         if not sentence.endswith("\n"):
@@ -63,9 +67,32 @@ class Frog(object):
         self.conn.write(sentence)
         result = self.conn.read_until("READY")
         result = result[:-len("READY")].strip()
-        return result
-        
+        for line in result.split("\n"):
+            if not line.strip(): continue
+            yield line.split("\t")
 
+
+TADPOLE_POSMAP = {"VZ" : "P",
+                  "N" : "N",
+                  "ADJ" : "A",
+                  "LET" : ".",
+                  "VNW" : "O",
+                  "LID" : "D",
+                  "SPEC" : "M",
+                  "TW" : "Q",
+                  "WW" : "V",
+                  "BW" : "B",
+                  "VG" : "C",
+                  "TSW" : "I",
+                  "MWU" : "U",
+                  "" : "?",
+                  }
+                  
+def read_pos(pos):
+    major, minor = pos.split("(")
+    minor = minor.split(")")[0]
+    poscat = TADPOLE_POSMAP[major]
+    return poscat, major, minor
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -74,6 +101,19 @@ class Frog(object):
 from amcat.tools import amcattest
 
 class TestFrog(amcattest.PolicyTestCase):
-    f = Frog()
-    print f.process_sentence("het zij zo")
+    def test_process_sentence(self):
+        f = Frog()
+        tokens = list(f.process_sentence("de groenste huizen"))
+        lemmata = [token[2] for token in tokens]
+        self.assertEqual(lemmata, ["de", "groen", "huis"])
+        poscats = [token[3] for token in tokens]
+        self.assertEqual(poscats, ["D", "A", "N"])
 
+    def test_read_pos(self):
+        for input, poscat, major, minor in [
+            ("BW()", "B", "BW", ""),
+            ]:
+            p, m, n = read_pos(input)
+            self.assertEqual(p, poscat)
+            self.assertEqual(m, major)
+            self.assertEqual(n, minor)
