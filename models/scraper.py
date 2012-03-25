@@ -36,6 +36,10 @@ class Scraper(AmcatModel):
 
     run_daily = models.BooleanField(default=False)
 
+    # Storage options
+    articleset = models.ForeignKey("amcat.ArticleSet", null=True)
+
+
     class Meta():
         app_label = 'amcat'
         db_table = 'scrapers'
