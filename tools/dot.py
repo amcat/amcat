@@ -115,7 +115,9 @@ class Graph(object):
             self.theme.base = wmin - (min*self.theme.scale)
 
 class DotTheme(object):
-    def __init__(self, edgelabels=True, shape="ellipse", isolated=False, edgefont="Helvetica", nodefont="Helvetica",header="", scale=1, base=0, green=False):
+    def __init__(self, edgelabels=True, shape="ellipse", isolated=False,
+                 edgefont="Helvetica", nodefont="Helvetica",header="", scale=1, base=0, green=False,
+                 arrows=True, edgesize=None):
         self.edgelabels = edgelabels
         self.shape = shape
         self.isolated=  isolated
@@ -126,6 +128,7 @@ class DotTheme(object):
         self.graphattrs = {"size" : "40,40", "center" : "true"}
         self.base = base
         self.green = green
+        self.arrows = arrows
     def getEdgeDot(self, edge, graph, subgraph):
         style = self.getEdgeStyle(edge)
         attrs = dict(edge.attrs)
@@ -210,6 +213,8 @@ class DotTheme(object):
         return a
     def getEdgeDefaultAttrs(self, graph):
         a = dict(fontname=self.edgefont)
+        if not self.arrows: a["dir"] = 'none'
+        if self.edgesize: a["fontsize"] = self.edgesize
         return a
     def getNodeDefaultAttrs(self, graph):
         a = dict(fontname=self.nodefont,shape=self.shape)
@@ -225,6 +230,7 @@ class BWDotTheme(DotTheme):
         if edge.sign < 0:
             style["dashed"] = None
         return style
+
     
 
 
