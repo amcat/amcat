@@ -137,7 +137,7 @@ class TestFrog(amcattest.PolicyTestCase):
     def test_triples(self):
         from amcat.models.sentence import Sentence
         s = Sentence(sentence="hij gaf hem een boek")
-        f = Frog(None, triples=True)
+        f = Frog(None, triples=True, port=12346)
         triples = set(f.get_triples(s))
         self.assertEqual(triples, {Triple(s.id, 0, 1, 'su'),
                                    Triple(s.id, 2, 1, 'obj2'),

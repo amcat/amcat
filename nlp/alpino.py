@@ -22,6 +22,7 @@ Preprocess using Alpino
 See http://www.let.rug.nl/vannoord/alp/Alpino/ 
 """
 import os
+from os.path import exists
 
 import logging; log = logging.getLogger(__name__)
 
@@ -34,9 +35,9 @@ ALPINO_HOME="/home/amcat/resources/Alpino"
 ALPINO_OPTIONS = "end_hook=dependencies -parse"
 
 class Alpino(AnalysisScript):
-    def __init__(self, analysis, alpino_home=None, alpino_options=ALPINO_OPTIONS):
+    def __init__(self, analysis, alpino_home=ALPINO_HOME, alpino_options=ALPINO_OPTIONS):
         super(Alpino, self).__init__(analysis, triples=True)
-        if alpino_home is None: alpino_home = os.environ['ALPINO_HOME']
+        if not exists(alpino_home): alpino_home = os.environ['ALPINO_HOME']
         self.alpino_home = alpino_home
         self.alpino_options = alpino_options
 
