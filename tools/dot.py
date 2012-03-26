@@ -176,8 +176,9 @@ class DotTheme(object):
         if f: attrs['fontname'] = f
         s = self.getNodeShape(node, graph)
         if s: attrs['shape'] = s
-        attrs['label'] = node.id
+        attrs['label'] = node.id if node.label is None else node.label
         a = dotattrs(attrs, style)
+        print attrs
         return '%s [%s];' % (self.getNodeID(node, graph, subgraph), a)
     def getNodeID(self, node, graph, subgraph=None):
         if subgraph:
