@@ -20,7 +20,7 @@
 
 """
 A Scraper is an object that knows how to scrape a certain resource. A scraper
-is called by the controller, 
+is called by the controller,
 """
 
 from django import forms
@@ -69,18 +69,18 @@ class Scraper(Script):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = get_or_create_medium(self.medium_name)
         self.project = self.options['project']
-    
+
     def run(self, input):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"
                  .format(**locals()))
         from amcat.scraping.controller import SimpleController
         SimpleController(self.options['articleset']).scrape(self)
-    
+
     def get_units(self):
         """
         Split the scraping job into a number of 'units' that can be processed independently
-        of each other. 
-        
+        of each other.
+
         @return: a sequence of arbitrary objects to be passed to scrape_unit
         """
         self._initialize()
@@ -92,11 +92,11 @@ class Scraper(Script):
         after running any needed initialization. By default, returns a single 'None' unit.
         Subclasses that override this method are encouraged to yield rather than return
         units to facilitate multithreaded
-        
+
         @return: a sequence of arbitrary objects to be passed to scrape_unit
         """
         return [None]
-    
+
     def scrape_unit(self, unit):
         """
         Scrape a single unit of work. Subclasses can override _scrape_unit to have project
@@ -109,13 +109,13 @@ class Scraper(Script):
             log.debug(".. yields article %s" % article)
             yield article
 
-            
+
     def _scrape_unit(self, unit):
         """
         'Protected' method to parse the articles from one unit. Subclasses should override
         this method (or the base scrape_unit). This method may be called from different threads
         so ensure thread-safe access to any globals or instance members.
-        
+
         @return: an Article object or a Document object that
                  can be converted to an article. Either object can have the project
                  and medium properties unset as they will be set automatically if provided
@@ -127,7 +127,7 @@ class Scraper(Script):
         Perform any intialization needed before starting the processing.
         """
         pass
-    
+
     def _postprocess_article(self, article):
         """
         Finalize an article. This should convert the output of _scrape_unit to the required
@@ -152,7 +152,7 @@ class DatedScraper(Scraper):
         article = super(DatedScraper, self)._postprocess_article(article)
         _set_default(article, "date", self.options['date'])
         return article
-    
+
 class DBScraperForm(DateForm):
     """
     Form for dated scrapers that need credentials
@@ -168,7 +168,7 @@ class DBScraper(DatedScraper):
         """Login to the resource to scrape, if needed. Will be called
         at the start of get_units()"""
         pass
-    
+
     def _initialize(self):
         self._login(self.options['username'], self.options['password'])
 
@@ -194,7 +194,7 @@ def _set_default(obj, attr, val):
     except ObjectDoesNotExist:
         pass # django throws DNE on x.y if y is not set and not nullable
     setattr(obj, attr, val)
-        
+
 
 class MultiScraper(object):
     """
@@ -214,11 +214,11 @@ class MultiScraper(object):
                     yield (scraper, u)
             except:
                 log.exception("%s.get_units failed after retrying, giving up" % scraper.__class__.__name__)
-            
+
     def scrape_unit(self, unit):
         """Call the craper for the given unit. Will yield article objects
         with a .scraper custom attribute indicating the 'concrete' scraper"""
-        
+
         (scraper, unit) = unit
         for a in scraper.scrape_unit(unit):
             a.scraper = scraper

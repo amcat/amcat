@@ -50,7 +50,14 @@ class Scraper(AmcatModel):
 
     def get_scraper(self, **options):
         scraper_class = self.get_scraper_class()
-        scraper_options = dict(username=self.username, password=self.password)
+
+        scraper_options = {
+            'username' : self.username,
+            'password' : self.password,
+            'project' : self.articleset.project.id,
+            'articleset' : self.articleset.name
+        }
+
         scraper_options.update(options)
         return scraper_class(**scraper_options)
 
