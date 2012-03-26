@@ -22,6 +22,7 @@ Script to be run daily for data input (scraping, preprocessing etc.
 """
 
 from datetime import date
+from django import forms
 
 import logging; log = logging.getLogger(__name__)
 
@@ -30,7 +31,6 @@ from amcat.scripts.tools import cli
 
 from amcat.scraping.controller import ThreadedController, scrape_logged
 from amcat.models.scraper import get_scrapers
-from amcat.scraping.scraper import DateForm
 
 from amcat.tools import amcatlogging, toolkit, sendmail
 
@@ -72,18 +72,19 @@ def send_email(count, messages):
 
     sendmail.sendmail("martijn.bastiaan@gmail.com", EMAIL, subject, mail_html, mail_ascii)
 
+class DateForm(forms.Form):
+    date = forms.DateField()
 
 class DailyScript(Script):
     options_form = DateForm
 
     def run(self, _input):
         date = self.options['date']
-        project = self.options['project']
 
         amcatlogging.debug_module("amcat.scraping.scraper")
         amcatlogging.debug_module("amcat.scraping.controller")
 
-        scrapers = list(get_scrapers(date=date, project=project.id))
+        scrapers = list(get_scrapers(date=date))
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
 

@@ -49,6 +49,7 @@ class Controller(object):
     def save(self, article):
         log.info("Saving article %s" % article)
         article.save()
+
         if self.articleset:
             self.articleset.add(article)
             self.articleset.save()
