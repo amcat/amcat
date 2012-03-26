@@ -169,7 +169,10 @@ class ObjectTable(Table):
     that has a getCell(row) -> value function
     """
     def __init__(self, rows = None, columns = None):
-        Table.__init__(self, columns=columns or [], rows = rows or [])
+        Table.__init__(self, columns=[], rows = rows or [])
+        if columns:
+            for column in columns:
+                self.addColumn(column)
     def addColumn(self, col, label=None, **kargs):
         """Add column to Table3 object
         

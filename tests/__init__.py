@@ -52,3 +52,4 @@ from amcat.scraping.document import *
 
 from amcat.nlp.preprocessing import*
 from amcat.nlp.frog import *
+from amcat.nlp.analysisscript import *

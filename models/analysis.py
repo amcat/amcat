@@ -17,6 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import json
+
 from amcat.tools.model import AmcatModel
 from amcat.models.language import Language
 from amcat.models.word import Word
@@ -30,10 +32,25 @@ class Analysis(AmcatModel):
     label = models.CharField(max_length=100)
     language = models.ForeignKey(Language)
 
+    
+    module = models.CharField(max_length=100)
+    class_name = models.CharField(max_length=100)
+    arguments = models.TextField(null=True)
+
     class Meta():
         db_table = 'parses_analyses'
         app_label = 'amcat'
 
+    def get_script_class(self):
+        module = __import__(self.module, fromlist=self.class_name)
+        return getattr(module, self.class_name)
+
+    def get_script(self, **options):
+        script_class = self.get_script_class()
+        script_options = {} if self.arguments is None else json.loads(self.arguments)
+        script_options.update(options)
+        return script_class(self, **script_options)
+        
 class Relation(AmcatModel):
     id = models.IntegerField(db_column='relation_id', primary_key=True)
     label = models.CharField(max_length=100)
@@ -99,7 +116,6 @@ class TestTriples(amcattest.PolicyTestCase):
         s = amcattest.create_test_sentence()
         w1, w2, w3 = [amcattest.create_test_word(word=x) for x in "abc"]
         a = Analysis.objects.create(label="X", language=w1.lemma.language)
-        print a
         t1 = Token.objects.create(sentence=s, position=3, word=w3, analysis=a)
         t2 = Token.objects.create(sentence=s, position=1, word=w2, analysis=a)
         t3 = Token.objects.create(sentence=s, position=2, word=w1, analysis=a)
@@ -107,4 +123,21 @@ class TestTriples(amcattest.PolicyTestCase):
                 
         self.assertEqual(list(s.tokens.all()), [t2,t3,t1])
 
+    def test_get_analysis(self):
+        from amcat.nlp.frog import Frog
+        l = Language.objects.create()
+        a = Analysis.objects.create(language=l, label='test',
+                                    module='amcat.nlp.frog', class_name='Frog')
+        self.assertEqual(a.get_script_class(), Frog)
+        f =a.get_script()
+        self.assertEqual(type(f), Frog)
+        self.assertFalse(f.triples)
         
+        
+        a = Analysis.objects.create(language=l, label='test',
+                                    module='amcat.nlp.frog', class_name='Frog',
+                                    arguments=json.dumps(dict(triples=True)))
+        
+        f =a.get_script()
+        self.assertTrue(f.triples)
+                                    

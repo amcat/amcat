@@ -25,12 +25,15 @@ Van den Bosch, A., Busser, G.J., Daelemans, W., and Canisius, S., CLIN 2007.
 
 import telnetlib
 
-class Frog(object):
+from amcat.nlp.analysisscript import AnalysisScript, Token, Triple
 
-    def __init__(self, host='localhost', port=12345):
+class Frog(AnalysisScript):
+
+    def __init__(self, analysis, host='localhost', port=12345, triples=False):
+        super(Frog, self).__init__(analysis, triples=triples)
         self.host = host
         self.port = port
-    
+
     @property
     def conn(self):
         try:
@@ -39,29 +42,36 @@ class Frog(object):
             self._conn = telnetlib.Telnet(self.host, self.port)
             return self._conn
 
-    def _reset_connection(Self):
+    def _reset_connection(self):
         try:
             del self._conn
         except AttributeError:
             pass
-        
-    def process_sentences(self, sentences):
-        for sentenceid, sentence in sentences:
-            try:
-                tokens = list(self.process_sentence(sentence))
-            except:
-                log.exception("Error on processing %i: %r" % (sentenceid, sentence))
-                self._reset_connection()
-            else:
-                for token in tokens:
-                    yield sentenceid, token
+
+    def preprocess_sentence(self, sentence):
+        try:
+            return list(self._do_process(sentence.sentence))
+        except:
+            self._reset_connection()
+            raise 
             
-    def process_sentence(self, sentence):
-        for line in self._do_process(sentence):
+    def get_tokens(self, sentence, memo=None):
+        if memo is None: memo = self.preprocess_sentence(sentence)
+        for line in memo:
             position, word, lemma, pos = [line[i] for i in (0,1,2,4)]
-            yield (int(position)-1, word, lemma) + read_pos(pos)
+            yield Token(sentence.id, int(position)-1, word, lemma, *read_pos(pos))
+
+    def get_triples(self, sentence, memo=None):
+        if memo is None: memo = self.preprocess_sentence(sentence)
+        for line in memo:
+            position, parent = [int(line[i]) for i in (0, -2)]
+            if parent != 0:
+                rel = line[-1]
+                yield Triple(sentence.id, position-1, parent-1, rel)
+            
             
     def _do_process(self, sentence):
+        if type(sentence) != str: sentence = str(sentence)
         if not sentence.endswith("\n"):
             sentence += "\n"
         self.conn.write(sentence)
@@ -72,26 +82,27 @@ class Frog(object):
             yield line.split("\t")
 
 
-TADPOLE_POSMAP = {"VZ" : "P",
-                  "N" : "N",
-                  "ADJ" : "A",
-                  "LET" : ".",
-                  "VNW" : "O",
-                  "LID" : "D",
-                  "SPEC" : "M",
-                  "TW" : "Q",
-                  "WW" : "V",
-                  "BW" : "B",
-                  "VG" : "C",
-                  "TSW" : "I",
-                  "MWU" : "U",
-                  "" : "?",
-                  }
+FROG_POSMAP = {"VZ" : "P",
+               "N" : "N",
+               "ADJ" : "A",
+               "LET" : ".",
+               "VNW" : "O",
+               "LID" : "D",
+               "SPEC" : "M",
+               "TW" : "Q",
+               "WW" : "V",
+               "BW" : "B",
+               "VG" : "C",
+               "TSW" : "I",
+               "MWU" : "U",
+               "" : "?",
+               }
                   
 def read_pos(pos):
+    """Convert a frog pos string to a poscat, major, minor tuple"""
     major, minor = pos.split("(")
     minor = minor.split(")")[0]
-    poscat = TADPOLE_POSMAP[major]
+    poscat = FROG_POSMAP[major]
     return poscat, major, minor
 
 ###########################################################################
@@ -102,11 +113,14 @@ from amcat.tools import amcattest
 
 class TestFrog(amcattest.PolicyTestCase):
     def test_process_sentence(self):
-        f = Frog()
-        tokens = list(f.process_sentence("de groenste huizen"))
-        lemmata = [token[2] for token in tokens]
+        from amcat.models.sentence import Sentence
+        s = Sentence(sentence="de groenste huizen")
+        f = Frog(None)
+        tokens, triples = f.process_sentence(s)
+        tokens = list(tokens)
+        lemmata = [token.lemma for token in tokens]
         self.assertEqual(lemmata, ["de", "groen", "huis"])
-        poscats = [token[3] for token in tokens]
+        poscats = [token.pos for token in tokens]
         self.assertEqual(poscats, ["D", "A", "N"])
 
     def test_read_pos(self):
@@ -117,3 +131,20 @@ class TestFrog(amcattest.PolicyTestCase):
             self.assertEqual(p, poscat)
             self.assertEqual(m, major)
             self.assertEqual(n, minor)
+
+
+    def test_triples(self):
+        from amcat.models.sentence import Sentence
+        s = Sentence(sentence="hij gaf hem een boek")
+        f = Frog(None, triples=True)
+        triples = set(f.get_triples(s))
+        self.assertEqual(triples, {Triple(s.id, 0, 1, 'su'),
+                                   Triple(s.id, 2, 1, 'obj2'),
+                                   Triple(s.id, 3, 4, 'det'),
+                                   Triple(s.id, 4, 1, 'obj1'),
+                                   })
+                                   
+        
+        
+        
+        
