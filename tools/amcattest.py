@@ -32,7 +32,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 import os.path, os, inspect
 from contextlib import contextmanager
 from django.test import TestCase
-
+from unittest import TestLoader
 
 LICENSE = """###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
@@ -291,4 +291,20 @@ class TestAmcatTest(PolicyTestCase):
         
         
         
-        
+
+
+
+
+class TestDiscoverer(TestLoader):
+    def __init__(self, *args, **kargs):
+        super(TestDiscoverer, self).__init__(*args, **kargs)
+        self.test_classes = set()
+    def suiteClass(self, tests):
+        for test in tests:
+            if test:
+                self.test_classes.add(test.__class__)
+
+def get_test_classes(module="amcat"):
+    d = TestDiscoverer()
+    d.discover("amcat.nlp", pattern="*.py")
+    return d.test_classes

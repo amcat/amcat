@@ -21,35 +21,10 @@
 Test cases that are automatically detected and run by django
 
 Please don't include test cases here directly, but place them in an appropriate
-location and import here
+location: either the module that it is testing (for straightforward test cases)
+or a special module in the amcat.tests package. 
 """
 
-from amcat.tools.amcatlogging import *
-from amcat.tools.amcattest import *
-from amcat.tools.djangotoolkit import *
-from amcat.tools.table.table3 import *
-from amcat.tools.caching import *
-from amcat.tools.dbtoolkit import *
-from amcat.tools.sendmail import *
-from amcat.tools.multithread import *
-#from amcat.tools.amcatsolr import *
-
-from amcat.models.coding.codingtoolkit import *
-from amcat.models.coding.serialiser import *
-
-from amcat.scripts.article_upload.tests import *
-from amcat.scripts.scriptmanager import *
-from amcat.scripts.daemons.daemonscript import *
-
-from amcat.tests.test_nqueries import *
-from amcat.tests.test_toolkit import *
-from amcat.tests.test_scraping import *
-from amcat.tests.test_selection import *
-
-from amcat.scraping.controller import *
-from amcat.scraping.htmltools import *
-from amcat.scraping.document import *
-
-from amcat.nlp.preprocessing import*
-from amcat.nlp.frog import *
-from amcat.nlp.analysisscript import *
+from amcat.tools.amcattest import get_test_classes
+for cls in get_test_classes("amcat"):
+    locals()[cls.__name__] = cls
