@@ -50,7 +50,7 @@ class Frog(AnalysisScript):
 
     def preprocess_sentence(self, sentence):
         try:
-            return list(self._do_process(sentence.sentence))
+            return list(self._do_process(sentence.sentence.encode("utf-8")))
         except:
             self._reset_connection()
             raise 
@@ -100,6 +100,7 @@ FROG_POSMAP = {"VZ" : "P",
                   
 def read_pos(pos):
     """Convert a frog pos string to a poscat, major, minor tuple"""
+    pos = pos.split("_")[0]
     major, minor = pos.split("(")
     minor = minor.split(")")[0]
     poscat = FROG_POSMAP[major]

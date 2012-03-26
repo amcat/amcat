@@ -23,7 +23,7 @@ Abstract analysis scripts for preprocessing
 from collections import namedtuple
 
 Token = namedtuple("Token", ["sentence_id", "position", "word", "lemma", "pos", "major", "minor"])
-Triple = namedtuple("Triple", ['Sentence_id', "child", "parent", "relation"])
+Triple = namedtuple("Triple", ['sentence_id', "child", "parent", "relation"])
 
 
 class AnalysisScript(object):
