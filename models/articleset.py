@@ -107,7 +107,7 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s = amcattest.create_test_set()
         i = 7
         for _x in range(i):
-            s.articles.add(amcattest.create_test_article())
+            s.add(amcattest.create_test_article())
         self.assertEqual(i, len(s.articles.all()))
 
         

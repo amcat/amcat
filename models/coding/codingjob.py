@@ -96,9 +96,9 @@ class TestCodingJob(amcattest.PolicyTestCase):
         j = amcattest.create_test_job(project=p)
         self.assertIsNotNone(j)
         self.assertEqual(j.project, Project.objects.get(pk=p.id))
-        j.articleset.articles.add(amcattest.create_test_article())
-        j.articleset.articles.add(amcattest.create_test_article())
-        j.articleset.articles.add(amcattest.create_test_article())
+        j.articleset.add(amcattest.create_test_article())
+        j.articleset.add(amcattest.create_test_article())
+        j.articleset.add(amcattest.create_test_article())
         self.assertEqual(1+3, len(j.articleset.articles.all()))
         
         
