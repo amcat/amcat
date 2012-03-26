@@ -50,9 +50,12 @@ class Controller(object):
         log.info("Saving article %s" % article)
         article.save()
 
-        if self.articleset:
-            self.articleset.add(article)
-            self.articleset.save()
+        articleset = article.scraper.articleset if hasattr(article, 'scraper') else self.articleset
+
+        if articleset:
+            articleset.add(article)
+            articleset.save()
+
         return article
 
 class SimpleController(Controller):

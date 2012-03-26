@@ -69,12 +69,13 @@ class Scraper(Script):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = get_or_create_medium(self.medium_name)
         self.project = self.options['project']
+        self.articleset = self.options['articleset']
 
     def run(self, input):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"
                  .format(**locals()))
         from amcat.scraping.controller import SimpleController
-        SimpleController(self.options['articleset']).scrape(self)
+        SimpleController(self.articleset).scrape(self)
 
     def get_units(self):
         """

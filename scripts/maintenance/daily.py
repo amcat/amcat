@@ -30,7 +30,9 @@ from amcat.scripts.script import Script
 from amcat.scripts.tools import cli
 
 from amcat.scraping.controller import ThreadedController, scrape_logged
+from amcat.scraping.scraper import DateForm
 from amcat.models.scraper import get_scrapers
+from amcat.models.project import Project
 
 from amcat.tools import amcatlogging, toolkit, sendmail
 
@@ -72,11 +74,11 @@ def send_email(count, messages):
 
     sendmail.sendmail("martijn.bastiaan@gmail.com", EMAIL, subject, mail_html, mail_ascii)
 
-class DateForm(forms.Form):
-    date = forms.DateField()
+class DailyForm(DateForm):
+    project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
 
 class DailyScript(Script):
-    options_form = DateForm
+    options_form = DailyForm
 
     def run(self, _input):
         date = self.options['date']
