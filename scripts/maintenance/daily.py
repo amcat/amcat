@@ -72,7 +72,7 @@ def send_email(count, messages):
 
     subject = "Daily scraping for {datestr}: {n} articles".format(**locals())
 
-    sendmail.sendmail("martijn.bastiaan@gmail.com", EMAIL, subject, mail_html, mail_ascii)
+    sendmail.sendmail("wouter@vanatteveldt.com", EMAIL, subject, mail_html, mail_ascii)
 
 class DailyForm(DateForm):
     project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
