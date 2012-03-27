@@ -64,7 +64,7 @@ class SaveAsSetScript(script.Script):
         else:
             s = ArticleSet(name=self.options['setname'], project=self.options['setproject'])
             s.save()
-        s.articles.add(*articleids)
+        s.add(*articleids)
         return s
     
         
