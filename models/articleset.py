@@ -78,7 +78,10 @@ class ArticleSet(AmcatModel):
         
     def add(self, *articles):
         for article in articles:
-            ArticleSetArticle.objects.create(articleset=self, article=article)
+            if type(article) == int:
+                ArticleSetArticle.objects.create(articleset=self, article_id=article)
+            else:
+                ArticleSetArticle.objects.create(articleset=self, article=article)
 
     
 class ArticleSetArticle(AmcatModel):
