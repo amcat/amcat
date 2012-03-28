@@ -34,6 +34,7 @@ from contextlib import contextmanager
 from django.test import TestCase
 from unittest import TestLoader
 
+
 LICENSE = """###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -221,6 +222,14 @@ class PolicyTestCase(TestCase):
         # between test cases. So, reset it before every test to be sure.
         from amcat.models.coding.codebook import clear_codebook_cache
         clear_codebook_cache()
+
+        # Make sure that current_user() exists
+        try:
+            from amcat.models.user import current_user, current_username, User
+            current_user()
+        except User.DoesNotExist:
+            create_test_user(username = current_username())
+        
         super(PolicyTestCase, self).setUp()
     
     def _getmodule(self):
@@ -326,5 +335,5 @@ class TestDiscoverer(TestLoader):
 
 def get_test_classes(module="amcat"):
     d = TestDiscoverer()
-    d.discover("amcat.nlp", pattern="*.py")
+    d.discover(module, pattern="*.py")
     return d.test_classes

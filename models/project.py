@@ -27,7 +27,7 @@ from amcat.models.coding.codingschema import CodingSchema
 
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle
-
+from amcat.models.user import current_user
 
 from django.db import models
 from django.db.models import Q
@@ -100,6 +100,11 @@ class Project(AmcatModel):
     class Meta():
         db_table = 'projects'
         app_label = 'amcat'
+
+    def save(self, *args, **kargs):
+        if self.insert_user_id is None:
+            self.insert_user = current_user()
+        super(Project, self).save(*args, **kargs)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

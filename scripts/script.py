@@ -30,7 +30,8 @@ from django import forms
 from django.http import QueryDict
 from django.utils.datastructures import MergeDict
 from amcat.forms import validate
-        
+from amcat.models.user import current_user
+
         
 class Script(object):
     """
@@ -89,8 +90,25 @@ class Script(object):
 	if not isinstance(options, (dict, QueryDict, MergeDict)):
 	    options = kargs
 	return self.options_form(options)
-	
-    
-    
 
-   
+    @classmethod
+    def get_empty_form(cls, **options):
+        """
+        Get an 'empty form', possibly initialized with options such as user or project
+        """
+        f = cls.options_form
+        try:
+            get_empty = f.get_empty
+        except AttributeError:
+            return f()
+        else:
+            return get_empty(**options)
+            
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+        
+from amcat.tools import amcattest
+
+class TestScript(amcattest.PolicyTestCase):
+    pass

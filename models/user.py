@@ -24,7 +24,6 @@ import logging; log = logging.getLogger(__name__)
 import string, random
 
 from amcat.models.language import Language
-from amcat.models.project import Project
 from amcat.models import authorisation as auth
 
 from django.db import models, DEFAULT_DB_ALIAS, connections
@@ -142,11 +141,12 @@ class User(AmcatModel):
         """Returns True iff the current user is admin"""
         return (self.role.id >= auth.ADMIN_ROLE)
 
+def current_username(using=DEFAULT_DB_ALIAS):
+    return connections.databases[using]['USER']
+    
 def current_user(using=DEFAULT_DB_ALIAS):
     """Return the current user from the configured db"""
-    
-    username = connections.databases[using]['USER']
-    return User.objects.get(username=username)
+    return User.objects.get(username=current_username(using))
 
 
     
@@ -183,6 +183,9 @@ def create_user(username, fullname, email, affiliation, language, role=None,
 def _random_password(length=8, chars=string.letters + string.digits):
     #http://code.activestate.com/recipes/59873/
     return ''.join([random.choice(chars) for i in range(length)])
+
+# late import to avoid cycles
+from amcat.models.project import Project
 
 if __name__ == '__main__':
     print(current_user().fullname)
