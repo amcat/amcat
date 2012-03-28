@@ -37,6 +37,8 @@ class Analysis(AmcatModel):
     class_name = models.CharField(max_length=100)
     arguments = models.TextField(null=True)
 
+    active = models.BooleanField(default=True)
+    
     class Meta():
         db_table = 'parses_analyses'
         app_label = 'amcat'

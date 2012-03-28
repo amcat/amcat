@@ -131,8 +131,35 @@ def query_list_to_table(queries, maxqlen=80, output=False, normalise_numbers=Tru
                 outputoptions["stream"] = output
         t.output(**outputoptions)
     return t
-                           
-   
+
+from django.dispatch import Signal
+from types import NoneType
+
+def receiver(signal, sender=None, **kwargs):
+    """
+    A decorator for connecting receivers to signals. Used by passing in the
+    signal and keyword arguments to connect::
+
+        @receiver(post_save, sender=MyModel)
+        def signal_receiver(sender, **kwargs):
+            ...
+
+    """
+    def _decorator(func):
+        if isinstance(signal, Signal):
+            signals = [signal]
+        else:
+            signals = signal
+        if isinstance(sender, (NoneType, type)):
+            senders = [sender]
+        else:
+            senders = sender
+        for sig in signals:
+            for sen in senders:
+                sig.connect(func, sen, **kwargs)
+        return func
+    return _decorator
+       
         
 ###########################################################################
 #                          U N I T   T E S T S                            #

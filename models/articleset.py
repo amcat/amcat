@@ -83,6 +83,8 @@ class ArticleSet(AmcatModel):
             else:
                 ArticleSetArticle.objects.create(articleset=self, article=article)
 
+    def remove(self, *articles):
+        ArticleSetArticle.objects.filter(articleset=self, article__in=articles).delete()
     
 class ArticleSetArticle(AmcatModel):
     """

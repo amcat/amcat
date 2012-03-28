@@ -32,9 +32,13 @@ from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.tools import dbtoolkit
+from amcat.tools.djangotoolkit import receiver
 from amcat.models.article import Article
+from amcat.models.articleset import ArticleSetArticle, ArticleSet
 from amcat.models.analysis import Analysis
 from amcat.models.project import Project
+
+from django.db.models.signals import post_save, post_delete
 
 import logging; log = logging.getLogger(__name__)
 
@@ -49,28 +53,7 @@ class ArticlePreprocessing(AmcatModel):
     class Meta():
         db_table = 'articles_preprocessing_queue'
         app_label = 'amcat'
-
-        
-def create_triggers():
-    """Create the triggers for update/insert articles
-
-    Assumes postgres DB with plpgsql language active
-    """
-    db = dbtoolkit.PostgreSQL()
-
-    sql = """BEGIN
-                IF (TG_OP = 'DELETE') THEN
-                  INSERT INTO articles_preprocessing_queue (article_id) SELECT OLD.article_id;
-                  RETURN OLD;
-                ELSE
-                  INSERT INTO articles_preprocessing_queue (article_id) SELECT NEW.article_id;
-                  RETURN NEW;
-                END IF;
-             END;"""
-    db.create_trigger("articles", "preprocessing_queue_articles", sql, actions=("INSERT","UPDATE", "DELETE"))
-    db.create_trigger("articlesets_articles", "preprocessing_queue_articlesets", sql,
-                      actions=("INSERT","DELETE"))
-
+     
 class ArticleAnalysis(AmcatModel):
     """
     The Article Analysis table keeps track of which articles are / need to be preprocessed
@@ -101,7 +84,34 @@ class ProjectAnalysis(AmcatModel):
     class Meta():
         app_label = 'amcat'
         db_table = "projects_analyses"
-    
+
+
+# Signal handlers to make sure the article preprocessing queue is filled
+def _add_to_queue(aid):
+    ArticlePreprocessing.objects.create(article_id = aid)
+
+@receiver([post_save, post_delete], Article)
+def handle_article(sender, instance, **kargs):
+    _add_to_queue(instance.id)
+
+@receiver([post_save, post_delete], ArticleSetArticle)
+def handle_articlesetarticle(sender, instance, **kargs):
+    _add_to_queue(instance.article_id)
+        
+@receiver([post_save], Project)
+def handle_project(sender, instance, **kargs):
+    for aid in instance.get_all_articles():
+        _add_to_queue(aid)
+        
+@receiver([post_save, post_delete], ProjectAnalysis)
+def handle_projectanalysis(sender, instance, **kargs):
+    for aid in instance.project.get_all_articles():
+        _add_to_queue(aid)
+
+@receiver([post_save], ArticleSet)
+def handle_articleset(sender, instance, **kargs):
+    for a in instance.articles.all().only("id"):
+        _add_to_queue(a.id)
         
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -110,16 +120,9 @@ class ProjectAnalysis(AmcatModel):
 from amcat.tools import amcattest
 
 class TestArticlePreprocessing(amcattest.PolicyTestCase):
-    def test_create(self):
-        """Can we add an article to the queue"""
-        a = amcattest.create_test_article()
-        q = ArticlePreprocessing.objects.create(article=a)
-
-        
+    
     def test_article_trigger(self):
         """Is a created or update article in the queue?"""
-        if not dbtoolkit.is_postgres(): return # no triggers in sqlite
-        
         self._flush_queue()
         a = amcattest.create_test_article()
         self.assertIn(a.id,  self._all_articles())
@@ -131,29 +134,60 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         self.assertIn(a.id,  self._all_articles())
         
         
-    def test_articleset_trigger(self):
+    def test_articleset_triggers(self):
         """Is a article added/removed from a set in the queue?"""
-        if not dbtoolkit.is_postgres(): return # no triggers in sqlite
         
         a = amcattest.create_test_article()
         aset = amcattest.create_test_set() 
         self._flush_queue()
         self.assertNotIn(a.id,  self._all_articles())
 
-        aset.articles.add(a)
+        aset.add(a)
         self.assertIn(a.id,  self._all_articles())
         
         self._flush_queue()
-        self.assertNotIn(a.id, self._all_articles())
-        aset.articles.remove(a)
+        aset.remove(a)
         self.assertIn(a.id, self._all_articles())
         
         self._flush_queue()
-        self.assertNotIn(a.id, self._all_articles())
         aid = a.id
         a.delete()
         self.assertIn(aid, self._all_articles())
 
+        
+        b = amcattest.create_test_article()
+        aset.add(b)
+        self._flush_queue()
+        aset.project = amcattest.create_test_project()
+        aset.save()
+        self.assertIn(b.id, self._all_articles())
+        
+        
+        
+
+    def test_project_triggers(self):
+        """Check trigger on project (de)activation and analyses being added/removed from project?"""
+        
+        a,b = [amcattest.create_test_article() for _i in range(2)]
+        s = amcattest.create_test_set(project=a.project)
+        self.assertNotEqual(a.project, b.project)
+        s.add(b)
+        
+        self._flush_queue()
+        a.project.active=True
+        a.project.save()
+        self.assertIn(a.id, self._all_articles())
+        self.assertIn(b.id, self._all_articles())
+
+        self._flush_queue()
+        n = amcattest.create_test_analysis()
+        ProjectAnalysis.objects.create(project=a.project, analysis=n)
+        self.assertIn(a.id, self._all_articles())
+        self.assertIn(b.id, self._all_articles())
+        
+        
+        
+        
     @classmethod
     def _flush_queue(cls):
         """Flush the articles queue"""

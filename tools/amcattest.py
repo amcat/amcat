@@ -56,6 +56,13 @@ LICENSE = """###################################################################
 
 from . import toolkit
 
+# use unique ids for different model objects to avoid false negatives
+ID = 99999
+def _get_next_id():
+    global ID
+    ID += 1
+    return ID
+
 def create_test_user(**kargs):
     """Create a user to be used in unit testing"""
     from amcat.models.user import Affiliation, User#, Language
@@ -69,6 +76,7 @@ def create_test_user(**kargs):
         kargs['fullname'] = kargs['username']
     # if 'language' not in kargs:
         # kargs['language'] = Language.objects.all()[0]
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return User.objects.create(**kargs)
     #return User.create_user(**kargs)
 
@@ -76,18 +84,21 @@ def create_test_project(**kargs):
     """Create a project to be used in unit testing"""
     from amcat.models.project import Project
     u = create_test_user()
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return Project.objects.create(owner=u, insert_user=u, **kargs)
     
 def create_test_schema(**kargs):
     """Create a test schema to be used in unit testing"""
     from amcat.models.coding.codingschema import CodingSchema
     p = create_test_project()
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return CodingSchema.objects.create(project=p, **kargs)
 
 def create_test_medium(**kargs):
     from amcat.models.medium import Medium
     from amcat.models.language import Language
     if "language" not in kargs: kargs["language"] = Language.objects.get(pk=1)
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return Medium.objects.create(**kargs)
     
 def create_test_article(**kargs):
@@ -96,6 +107,7 @@ def create_test_article(**kargs):
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "date" not in kargs: kargs["date"] = "2000-01-01"
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return Article.objects.create(**kargs)
 
 def create_test_sentence(**kargs):
@@ -106,6 +118,7 @@ def create_test_sentence(**kargs):
         kargs["sentence"] = "Test sentence number %i." % len(Sentence.objects.all())
     if "parnr" not in kargs: kargs["parnr"] = 1
     if "sentnr" not in kargs: kargs["sentnr"] = 1
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return Sentence.objects.create(**kargs)
 
 
@@ -114,6 +127,7 @@ def create_test_set(articles=0, **kargs):
     from amcat.models.articleset import ArticleSet
     if "name" not in kargs: kargs["name"] = "testset_%i" % len(ArticleSet.objects.all())
     if "project" not in kargs: kargs["project"] = create_test_project()
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     s = ArticleSet.objects.create(**kargs)
     if articles:
         for _x in range(int(articles)):
@@ -130,6 +144,7 @@ def create_test_job(narticles=1, **kargs):
     if "articleschema" not in kargs: kargs["articleschema"] = create_test_schema()
     if "coder" not in kargs: kargs["coder"] = create_test_user()
     if "articleset" not in kargs: kargs["articleset"] = create_test_set(articles=narticles)
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return CodingJob.objects.create(**kargs)
 
 def create_test_coding(**kargs):
@@ -140,6 +155,7 @@ def create_test_coding(**kargs):
         kargs["codingjob"] = create_test_job()
         
     if "article" not in kargs: kargs["article"] = kargs["codingjob"].articleset.articles.all()[0]
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return Coding.objects.create(**kargs)
 
 def create_test_code(label=None, language=None, **kargs):
@@ -148,6 +164,7 @@ def create_test_code(label=None, language=None, **kargs):
     from amcat.models.language import Language
     if language is None: language = Language.objects.get(pk=1)
     if label is None: label = "testcode_%i" % len(Code.objects.all())
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     o = Code.objects.create(**kargs)
     o.add_label(language, label)
     return o
@@ -157,6 +174,7 @@ def create_test_codebook(**kargs):
     from amcat.models.coding.codebook import Codebook, get_codebook
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "name" not in kargs: kargs["name"] = "testcodebook_%i" % Codebook.objects.count()
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     c = Codebook.objects.create(**kargs)
     return get_codebook(c.id)
 
@@ -168,12 +186,14 @@ def create_test_word(lemma=None, word=None, language=None, pos="N"):
     if not lemma: lemma = "testlemma_%i" % Lemma.objects.count()
     if not word: word = "testword_%i" % Word.objects.count()
     l = Lemma.objects.create(pos=pos, lemma=lemma, language=language)
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return Word.objects.create(lemma=l, word=word)
 
 def create_test_analysis(**kargs):
     from amcat.models.analysis import Analysis
     from amcat.models.language import Language
     if 'language' not in kargs: kargs['language'] = Language.objects.get(pk=1)
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     return Analysis.objects.create(**kargs)
 
 class PolicyTestCase(TestCase):
