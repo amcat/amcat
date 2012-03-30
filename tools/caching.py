@@ -124,7 +124,7 @@ def _get_object_cache(model):
         setattr(_object_cache, key, cache)
         return cache
 
-def get_object(model, pk, create_if_needed=True):
+def get_object(model, pk, create_if_needed=True, pkname='pk'):
     """Create the model object with the given pk, possibly retrieving it
     from cache"""
     cache = _get_object_cache(model)
@@ -132,7 +132,7 @@ def get_object(model, pk, create_if_needed=True):
         return cache[pk]
     except KeyError:
         if create_if_needed:
-            cache[pk] = model.objects.get(pk=pk)
+            cache[pk] = model.objects.get(**{pkname : pk})
             return cache[pk]
 
 
