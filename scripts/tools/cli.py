@@ -48,13 +48,15 @@ def get_main_script(module):
 	    return obj
     raise Exception("Cannot find Script module in %r" % module)
 
-def run_cli(cls=None, handle_output=None):
+def get_script(depth=2):
+    mod = toolkit.getCallingModule(depth=depth)
+    return get_main_script(mod)
+
+def run_cli(cls=None, handle_output=None, get_script_depth=2):
     """Handle command line interface invocation of this script"""
     amcatlogging.setup()
 
-    if cls is None:
-	mod = toolkit.getCallingModule()
-	cls = get_main_script(mod)
+    if cls is None: cls = get_script(get_script_depth)
 
     if handle_output is None:
 	handle_output = cls.output_type != None

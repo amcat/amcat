@@ -28,16 +28,17 @@ from amcat.scripts.types import ArticleIterator
 
 from amcat.models.article import Article
 
-from amcat.scraping.scraper import ScraperForm
+from amcat.scraping.scraper import ScraperForm, Scraper
 
 class ParseError(Exception):
     pass
 
-class UploadScript(script.Script):
-    """Base class for Upload Scripts. By default, loops over fragments created
-    by split_text and calls parse_documents on them.
+class UploadScript(Scraper):
+    """Base class for Upload Scripts, which are scraper scripts driven by the
+    the script input.
 
-    Subclasses should override parse_document and may override split_text
+    For legacy reasons, parse_document and split_text may be used instead of the standard
+    get_units and scrape_unit.
     """
     
     input_type = unicode
@@ -45,27 +46,23 @@ class UploadScript(script.Script):
     options_form = ScraperForm
     
     def run(self, input):
-        assert(isinstance(input, basestring))
+        assert(isinstance(input, unicode))
+        self.input_text = input
+        super(UploadScript, self).run(input)
 
-        docs = []
+
+    def _get_units(self):
+        return self.split_text(self.input_text)
+
+    def _scrape_unit(self, unit):
+        result =  self.parse_document(unit)
+        if isinstance(result, Article):
+            result = [result]
+        return result
         
-        parts = self.split_text(input)
-        for part in parts:
-            parsed = self.parse_document(part)
-            if isinstance(parsed, Article):
-                docs.append(parsed)
-            elif parsed is not None:
-                for doc in parsed:
-                    docs.append(doc)
-
-        for doc in docs:
-            doc.save()
-
-        self.options['articleset'].add(*docs)
-
     def parse_document(self, document):
         """
-        Parse the document as one or more articles.
+        Parse the document as one or more articles, provided for legacy purposes
 
         @param document: object received from split_text, e.g. a string fragment
         @return: None, an Article or a sequence of Article(s)
@@ -80,3 +77,5 @@ class UploadScript(script.Script):
         @return: a sequence of objects (e.g. strings) to pass to parse_documents
         """
         return [text]
+
+    

@@ -24,10 +24,12 @@ is called by the controller,
 """
 
 from django import forms
+from django.forms.widgets import HiddenInput
 from django.core.exceptions import ObjectDoesNotExist
 
 
 from amcat.scripts.script import Script
+from amcat.models.articleset import ArticleSet
 from amcat.models.article import Article
 from amcat.models.project import Project
 from amcat.models.medium import get_or_create_medium
@@ -45,18 +47,32 @@ class ScraperForm(forms.Form):
     """Form for scrapers"""
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
-    articleset = forms.CharField(max_length=
-        ArticleSet._meta.get_field_by_name('name')[0].max_length,
-        required = False
-    )
+    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False)
+    articleset_name = forms.CharField(
+        max_length=ArticleSet._meta.get_field_by_name('name')[0].max_length,
+        required = False)
 
-    def clean_articleset(self):
-        """
-        Get or create articleset based on its name
-        """
-        return get_or_create_articleset(self.cleaned_data['articleset'],
-                                        self.cleaned_data['project'])
+    def clean_articleset_name(self):
+        name = self.cleaned_data['articleset_name']
+        if not name: return
+        if self.cleaned_data['articleset']: 
+            raise forms.ValidationError("Cannot specify both articleset and articleset_name")
 
+        project = self.cleaned_data['project']
+        s = ArticleSet.objects.create(project=project, name=name)
+        self.cleaned_data['articleset'] = s
+
+
+    @classmethod
+    def get_empty(cls, project=None, **_options):
+        f = cls()
+        if project:
+            f.fields['project'].initial = project.id
+            f.fields['project'].widget = HiddenInput()
+            
+            f.fields['articleset'].queryset = ArticleSet.objects.filter(project=project)
+        return f
+    
 class Scraper(Script):
     output_type = Article
     options_form = ScraperForm
@@ -140,6 +156,9 @@ class Scraper(Script):
         _set_default(article, "medium", self.medium)
         return article
 
+
+
+    
 class DateForm(ScraperForm):
     """
     Form for scrapers that operate on a date

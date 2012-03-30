@@ -49,13 +49,11 @@ class Text(UploadScript):
 	super(Text, self)._validate_form()
 
     def parse_document(self, text):
-        return Article(text=text, **self.options)
-    
+        metadata = {k:v for (k,v) in self.options.items()
+                   if k in ["medium", "headline", "project", "date"]}
+        return Article(text=text, **metadata)
 
 if __name__ == '__main__':
-    from amcat.scripts.tools import cli
-    a = cli.run_cli(Text, handle_output=False)
-
-    for a1 in a:
-        a1.save()
+    from amcat.scripts.tools.cli import run_cli
+    run_cli(handle_output=False)
 
