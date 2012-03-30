@@ -1223,6 +1223,53 @@ def convertImage(image, informat, outformat=None, quality=None, scale=None, trim
         warn(err)
     return out
 
+def import_attribute(module, attribute=None):
+    """
+    Import and return the attribute from the module
+    If attribute is None, assume module is of form mo.du.le.attribute
+    """
+    if attribute is None:
+        if "." in module:
+            module, attribute = module.rsplit(".", 1)
+        else:
+            raise ImportError("Attribute not given and module not qualified")
+    mod = __import__(module, fromlist=[str(attribute)])
+    try:
+        return getattr(mod, attribute)
+    except AttributeError:
+        raise ImportError("Module %r has no attribute %r" % (module, attribute))
+
+def guess_module(filename):
+    """
+    'Guess' te module name represented by the filename by getting its shortest route
+    to the system path, *skipping the first member* if it is the current working directory
+    """
+    filename = os.path.abspath(filename)
+
+    path = sys.path
+    if path[0] == os.getcwd(): del path[0]
+    path = set(path)
+    dirname, filename = os.path.split(filename)
+    module = [os.path.splitext(filename)[0]]
+    while True:
+        tail, head = os.path.split(dirname)
+        module.insert(0, head)
+        if dirname in path:
+            return ".".join(module)            
+        if tail == dirname: raise ValueError("Cannot find module for %s" % filename)
+        dirname = tail
+        
+def get_class_from_module(module, superclass):
+    m = import_attribute(module)
+    for name in dir(m):
+        obj = getattr(m, name)
+        if (isinstance(obj, (type, types.ClassType)) and
+            issubclass(obj, superclass) and
+            obj.__module__ == module):
+            return obj        
+    raise ValueError("Cannot find a %s subclass in %r" % (superclass.__name__, module))
+  
+    
 ###########################################################################
 ##                          Type Checking                                ##
 ###########################################################################

@@ -25,10 +25,44 @@ from amcat.tools import toolkit, amcattest, amcatlogging
 import datetime
 import random
 import inspect
+import os.path
+from amcat.models.article import Article # for get_class test
 
-class TestToolkitFunctions(amcattest.PolicyTestCase):
+class TestToolkit(amcattest.PolicyTestCase):
     TARGET_MODULE = toolkit
+
+    def test_get_class_from_module(self):
+        m = TestToolkit.__module__
+        cls = toolkit.get_class_from_module(m, amcattest.PolicyTestCase)
+        self.assertEqual(cls, self.__class__)
+        cls = toolkit.get_class_from_module(m, TestToolkit)
+        self.assertEqual(cls, TestToolkit)
+        import unittest
+        cls = toolkit.get_class_from_module(m, unittest.TestCase)
+        self.assertEqual(cls, TestToolkit)
+
+        self.assertRaises(ValueError, toolkit.get_class_from_module, m, Article.__class__)
     
+    def test_guess_module(self):
+        f = toolkit.__file__
+        self.assertEqual(toolkit.guess_module(f), "amcat.tools.toolkit")
+        f = os.path.dirname(f)
+        self.assertEqual(toolkit.guess_module(f), "amcat.tools")
+        self.assertRaises(ValueError, toolkit.guess_module,
+                          "/__wva_does_not_exist/amcat/tools/toolkit.py")
+    
+    def test_import_attribute(self):
+        t = toolkit.import_attribute("amcat.tests.test_toolkit", "TestToolkit")
+        self.assertEqual(t, TestToolkit)
+        t = toolkit.import_attribute("amcat.tests.test_toolkit.TestToolkit")
+        self.assertRaises(ImportError, toolkit.import_attribute, "__wva_does_not_exist")
+        self.assertRaises(ImportError, toolkit.import_attribute,
+                          "amcat.tests.test_toolkit", "__wva_does_not_exist")
+        self.assertRaises(ImportError, toolkit.import_attribute,
+                          "amcat.tests.test_toolkit.__wva_does_not_exist")
+
+        self.assertEqual(toolkit.import_attribute(u"amcat.nlp.frog").__name__, "amcat.nlp.frog")
+        
     def test_ints2ranges(self):
         for i in range(10):
             seq = [random.randint(-100, 100) for dummy in range(100)]

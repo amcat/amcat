@@ -20,30 +20,9 @@
 """ORM Module representing scrapers"""
 
 from django.db import models
+from amcat.tools.toolkit import import_attribute
 from amcat.tools.model import AmcatModel
-
-from django.core.serializers.json import DjangoJSONEncoder
-import StringIO, simplejson
-class JsonField(models.Field): 
-    __metaclass__ = models.SubfieldBase 
-    serialize_to_string = True 
-    def get_internal_type(self): 
-        return "TextField" 
-    def value_to_string(self, obj): 
-        return self.get_prep_value(self._get_val_from_obj(obj)) 
-    def get_prep_value(self, value): 
-        if value: 
-            stream = StringIO.StringIO() 
-            simplejson.dump(value, stream, cls=DjangoJSONEncoder) 
-            value = stream.getvalue() 
-            stream.close() 
-            return value 
-        return None 
-    def to_python(self, value): 
-        if isinstance(value, (str, unicode)): 
-            value = StringIO.StringIO(value) 
-            return simplejson.load(value) 
-        return value 
+from amcat.tools.djangotoolkit import JsonField
 
 class Plugin(AmcatModel):
     __label__ = 'label'
@@ -64,8 +43,7 @@ class Plugin(AmcatModel):
         db_table = 'plugins'
 
     def get_class(self):
-        module = __import__(self.module, fromlist=self.class_name)
-        return getattr(module, self.class_name)
+        return import_attribute(self.module, self.class_name)
 
     def get_instance(self, **options):
         cls= self.get_class()

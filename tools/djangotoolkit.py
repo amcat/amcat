@@ -23,12 +23,13 @@ Useful functions for dealing with django (models)x
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from django.db.models import get_model
-from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
 from contextlib import contextmanager
+import collections, re, time, StringIO, simplejson
 import logging; LOG = logging.getLogger(__name__)
-import collections, re 
-import time
+
+from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
+from django.core.serializers.json import DjangoJSONEncoder
+from django.db import models
 
 from amcat.tools.table.table3 import ObjectTable
 
@@ -62,8 +63,8 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
     @param stoplist: models whose children we don't care about
     @return: sequence of model classes
     """
-    models = set([get_model(applabel, modelname) for modelname in modelnames])
-    stops = set([get_model(applabel, stop) for stop in stoplist])
+    models = set([models.get_model(applabel, modelname) for modelname in modelnames])
+    stops = set([models.get_model(applabel, stop) for stop in stoplist])
     while True:
         related = set(get_all_related(models - stops)) # seed from non-stop models
         new = related - models
@@ -161,6 +162,28 @@ def receiver(signal, sender=None, **kwargs):
     return _decorator
        
         
+class JsonField(models.Field): 
+    __metaclass__ = models.SubfieldBase 
+    serialize_to_string = True 
+    def get_internal_type(self): 
+        return "TextField" 
+    def value_to_string(self, obj): 
+        return self.get_prep_value(self._get_val_from_obj(obj)) 
+    def get_prep_value(self, value): 
+        if value: 
+            stream = StringIO.StringIO() 
+            simplejson.dump(value, stream, cls=DjangoJSONEncoder) 
+            value = stream.getvalue() 
+            stream.close() 
+            return value 
+        return None 
+    def to_python(self, value): 
+        if isinstance(value, (str, unicode)): 
+            value = StringIO.StringIO(value) 
+            return simplejson.load(value) 
+        return value 
+
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
