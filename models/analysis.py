@@ -22,36 +22,25 @@ import json
 from amcat.tools.model import AmcatModel
 from amcat.models.language import Language
 from amcat.models.word import Word
+from amcat.models.plugin import Plugin
 
 from django.db import models
 
 class Analysis(AmcatModel):
     """Object representing an NLP 'preprocessing' analysis"""
     id = models.AutoField(db_column='analysis_id', primary_key=True)
-
-    label = models.CharField(max_length=100)
     language = models.ForeignKey(Language)
+    plugin = models.ForeignKey(Plugin, null=True)
 
-    
-    module = models.CharField(max_length=100)
-    class_name = models.CharField(max_length=100)
-    arguments = models.TextField(null=True)
-
-    active = models.BooleanField(default=True)
+    def get_script(self, **options):
+        return self.plugin.get_instance(analysis=self, **options)
     
     class Meta():
         db_table = 'parses_analyses'
         app_label = 'amcat'
 
-    def get_script_class(self):
-        module = __import__(self.module, fromlist=self.class_name)
-        return getattr(module, self.class_name)
-
-    def get_script(self, **options):
-        script_class = self.get_script_class()
-        script_options = {} if self.arguments is None else json.loads(self.arguments)
-        script_options.update(options)
-        return script_class(self, **script_options)
+    def __unicode__(self):
+        return self.plugin.label
         
 class Relation(AmcatModel):
     id = models.IntegerField(db_column='relation_id', primary_key=True)
@@ -117,28 +106,25 @@ class TestTriples(amcattest.PolicyTestCase):
         
         s = amcattest.create_test_sentence()
         w1, w2, w3 = [amcattest.create_test_word(word=x) for x in "abc"]
-        a = Analysis.objects.create(label="X", language=w1.lemma.language)
+        a = Analysis.objects.create(language=w1.lemma.language)
         t1 = Token.objects.create(sentence=s, position=3, word=w3, analysis=a)
         t2 = Token.objects.create(sentence=s, position=1, word=w2, analysis=a)
         t3 = Token.objects.create(sentence=s, position=2, word=w1, analysis=a)
-
                 
         self.assertEqual(list(s.tokens.all()), [t2,t3,t1])
 
     def test_get_analysis(self):
         from amcat.nlp.frog import Frog
         l = Language.objects.create()
-        a = Analysis.objects.create(language=l, label='test',
-                                    module='amcat.nlp.frog', class_name='Frog')
-        self.assertEqual(a.get_script_class(), Frog)
+        p = Plugin.objects.create(label='test', module='amcat.nlp.frog', class_name='Frog')
+        a = Analysis.objects.create(language=l, plugin=p)
+        self.assertEqual(a.plugin.get_class(), Frog)
         f =a.get_script()
         self.assertEqual(type(f), Frog)
         self.assertFalse(f.triples)
         
-        
-        a = Analysis.objects.create(language=l, label='test',
-                                    module='amcat.nlp.frog', class_name='Frog',
-                                    arguments=json.dumps(dict(triples=True)))
+        a.plugin = Plugin.objects.create(label='test',module='amcat.nlp.frog', class_name='Frog',
+                                         arguments=dict(triples=True))
         
         f =a.get_script()
         self.assertTrue(f.triples)

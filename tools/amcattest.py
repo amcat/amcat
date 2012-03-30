@@ -187,8 +187,7 @@ def create_test_word(lemma=None, word=None, language=None, pos="N"):
     if not lemma: lemma = "testlemma_%i" % Lemma.objects.count()
     if not word: word = "testword_%i" % Word.objects.count()
     l = Lemma.objects.create(pos=pos, lemma=lemma, language=language)
-    if "id" not in kargs: kargs["id"] = _get_next_id()
-    return Word.objects.create(lemma=l, word=word)
+    return Word.objects.create(id=_get_next_id(), lemma=l, word=word)
 
 def create_test_analysis(**kargs):
     from amcat.models.analysis import Analysis

@@ -77,6 +77,13 @@ BODY_KEYS_MAP = {
 
 
 class LexisNexis(UploadScript):
+    """
+    Script for importing files from Lexis Nexis. The files should be in plain text 
+    format with a 'cover page'. The script will extract the metadata (headline, source,
+    date etc.) from the file automatically.
+    """
+
+    name = 'Lexis Nexis'
     
     def split_header(self, doc):
         """

@@ -103,7 +103,19 @@ class Script(object):
             return f()
         else:
             return get_empty(**options)
-            
+
+    @classmethod
+    def name(cls):
+        return cls.__name__
+    
+    @classmethod
+    def description(cls):
+        return cls.__doc__
+
+    @classmethod
+    def module(cls):
+        return cls.__module__
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
