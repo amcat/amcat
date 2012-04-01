@@ -31,11 +31,8 @@ from amcat.scripts.tools import cli
 from amcat.models.user import User, current_user
 from amcat.models.project import Project
 from amcat.models.authorisation import Role, ProjectRole
-from amcat.forms.fields import UserField
-
 
 PROJECT_ROLE_READER=11
-
 
 class AddProjectForm(forms.ModelForm):
     owner = forms.ModelChoiceField(queryset=User.objects.all())
@@ -50,21 +47,21 @@ class AddProjectForm(forms.ModelForm):
         if user is None: user = current_user()
         obj.fields['owner'].initial = user.id
         return obj
-        
+
     class Meta:
         model = Project
-	fields = ['name','description','active']
+        fields = ['name','description','active']
 
-        
+
 class AddProject(Script):
     """Add a project to the database."""
-    
+
     options_form = AddProjectForm
     output_type = Project
 
     def run(self, _input=None):
-	p = Project.objects.create(**self.options)
-	
+        p = Project.objects.create(**self.options)
+
         # Add user to project (as admin)
         pr = ProjectRole(project=p, user=self.options['owner'])
         pr.role = Role.objects.get(projectlevel=True, label='admin')
@@ -74,12 +71,12 @@ class AddProject(Script):
 
 if __name__ == '__main__':
     cli.run_cli(AddProject)
-    
+
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestAddProject(amcattest.PolicyTestCase):
@@ -97,5 +94,5 @@ class TestAddProject(amcattest.PolicyTestCase):
 
         f = AddProject.get_empty_form(user=u)
         self.assertEqual(f.fields['owner'].initial, u.id)
-        
+
 
