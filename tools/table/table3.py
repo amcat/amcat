@@ -216,7 +216,11 @@ class ObjectColumn(object):
         """Calculate/get the value of this column for the given row object
         Default implementation calls self.rowfunc
         """
-        return self.cellfunc(row)
+        try:
+            return self.cellfunc(row)
+        except:
+            log.error("Exception on getting column %r on row %r" % (self.label, row))
+            raise 
     def __str__(self):
         return self.label
 

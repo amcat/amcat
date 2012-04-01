@@ -94,7 +94,7 @@ class ArticleListScript(script.Script):
             qs = database.getQuerySet(**self.options)
             if self.options['sortColumn']:
                 qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '') + self.options['sortColumn'])
-            qs = qs[start:start+length].select_related('medium')
+            qs = qs[start:start+length].select_related('medium__name', 'medium')
             return qs
         else:
             
@@ -103,10 +103,5 @@ class ArticleListScript(script.Script):
             else:
                 return solrlib.getArticles(self.options)
         
-
-
-
-            
-            
 if __name__ == '__main__':
     cli.run_cli()

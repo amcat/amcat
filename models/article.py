@@ -117,6 +117,9 @@ class Article(AmcatModel):
 
         return False
 
+    def __repr__(self):
+        return "<Article %s: %r>" % (self.id, self.headline)
+
 
     
 

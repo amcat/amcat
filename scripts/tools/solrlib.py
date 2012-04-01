@@ -72,11 +72,12 @@ def parseSolrHighlightingToContextDict(solrResponse):
         item = {}
         highlightedHeadline = highlights.get('headline')
         if highlightedHeadline:
-            item['headline'] = getContext(highlightedHeadline[0])#[getContext(highlight) for highlight in highlightedHeadline]
-        highlightedText = highlights.get('body')
-        #log.info(highlights)
-        if highlightedText:
-            item['text'] = getContext(highlightedText[0])#[getContext(highlight) for highlight in highlightedText]
+            item['headline'] = getContext(highlightedHeadline[0])
+            item['text'] = item['headline']  
+        else:
+            highlightedText = highlights.get('body')
+            if highlightedText:
+                item['text'] = getContext(highlightedText[0])
         result[int(articleid)] = item
     return result
     
@@ -168,7 +169,7 @@ def getArticles(form):
                 hitsTable.addValue(articleid, queryLabel, hits)
     
     
-    articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
+    articlesDict = article.Article.objects.defer('text').select_related('medium__name').in_bulk(articleids)
     result = []
     for articleid in articleids:
         a = articlesDict[articleid]

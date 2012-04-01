@@ -76,10 +76,15 @@ class ArticleListToTable(script.Script):
             'additionalMetadata': table.table3.ObjectColumn('Additional Metadata', lambda a:a.metastring),
             'headline': table.table3.ObjectColumn('Headline', lambda a:a.headline),
             'text': table.table3.ObjectColumn('Article Text', textLambda),
-            'interval':table.table3.ObjectColumn('Interval', lambda a:dateToInterval(a.date, self.options['columnInterval'])),
-            'keywordInContext': [table.table3.ObjectColumn('Context before', lambda a:a.keywordInContext['text']['before']), 
-                                table.table3.ObjectColumn('Context hit', lambda a:a.keywordInContext['text']['hit']), 
-                                table.table3.ObjectColumn('Context after', lambda a:a.keywordInContext['text']['after'])],
+            'interval':table.table3.ObjectColumn(
+                'Interval', lambda a:dateToInterval(a.date, self.options['columnInterval'])),
+            'keywordInContext': [table.table3.ObjectColumn(
+                    'Context before', lambda a:a.keywordInContext.get('text',{}).get('before')),
+                                table.table3.ObjectColumn(
+                    'Context hit', lambda a:a.keywordInContext.get('text',{}).get('hit')),
+                                table.table3.ObjectColumn(
+                    'Context after', lambda a:a.keywordInContext.get('text',{}).get('after')),
+                                 ],
             'hits': hitsColumns
         }
         #print self.options

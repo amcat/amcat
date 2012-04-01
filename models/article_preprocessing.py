@@ -200,9 +200,8 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         
 if __name__ == '__main__':
 
+    t = TestArticlePreprocessing()
+    t._flush_queue()
+
     a = amcattest.create_test_article()
-    print(a.id, TestArticlePreprocessing._all_articles())
-    TestArticlePreprocessing._flush_queue()
-    a.delete()
-    print(TestArticlePreprocessing._all_articles())
-    
+    print(a.id, t._all_articles())
