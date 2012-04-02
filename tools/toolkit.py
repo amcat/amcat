@@ -411,9 +411,10 @@ def totuple(v):
     @type idcolumn: tuple, list, str, int, unicode, or None
     @param idcolumn: value to convert to a tuple"""
     if v is None: return ()
-    elif type(v) in (str, unicode, int): return (v,)
+    elif type(v) in (str, unicode, int, long): return (v,)
 
     return v
+
 
 def idlist(idcolumn):
     """Function to convert a idcolumn value to a list.
