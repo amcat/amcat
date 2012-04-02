@@ -215,6 +215,14 @@
       "label": "sentry.can_view"
     }
   },
+{
+    "pk": 19, 
+    "model": "amcat.privilege", 
+    "fields": {
+      "role": 2, 
+      "label": "add_plugins"
+    }
+  },
   {
     "pk": 1, 
     "model": "amcat.language", 

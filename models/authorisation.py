@@ -44,7 +44,7 @@ def check(user, privilege, project=None):
 
     If permission is denied, will raise L{AccessDenied}; otherwise will
     return silently
-    
+
     @type user: user.User
     @param user: User to check for `privilege`
 
@@ -72,7 +72,7 @@ def check(user, privilege, project=None):
         # Return None if access is OK
         if role.id < nrole.id:
             raise AccessDenied(user, privilege, project)
-        
+
 
 class Role(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='role_id')

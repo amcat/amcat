@@ -70,7 +70,7 @@ class AddProject(Script):
         return p
 
 if __name__ == '__main__':
-    cli.run_cli(AddProject)
+    cli.run_cli()
 
 
 ###########################################################################

@@ -56,11 +56,11 @@ except: pass
 
 def _deprecationwarning(msg):
     warnings.warn(DeprecationWarning(msg))
-        
+
 def deprecated(func, msg = 'Call to deprecated function %(funcname)s.'):
     """
     Decorate a function to mark deprecated
-    
+
     This is a decorator which can be used to mark functions
     as deprecated. It will result in a warning being emitted
     when the function is used.
@@ -70,7 +70,7 @@ def deprecated(func, msg = 'Call to deprecated function %(funcname)s.'):
     def new_func(*args, **kwargs):
         """Print a warning and then call the original function"""
         warnings.warn(DeprecationWarning(msg % dict(funcname=func.__name__)),
-                      stacklevel=2)        
+                      stacklevel=2)
         return func(*args, **kwargs)
     new_func.__name__ = func.__name__
     new_func.__doc__ = ("B{Deprecated: %s}" %
@@ -226,9 +226,9 @@ def mkdir(newdir):
 def tmp():
     """
     Return the proper temp dir for this os.
-    
+
     Note: The windows behaviour is usually incorrect
-    @return: string containing the temp dir name 
+    @return: string containing the temp dir name
     """
     if os.name == u'nt': return u'd:/tmp'
     else: return u'/tmp'
@@ -275,7 +275,7 @@ def writefile(string, fn = None, tmpsuffix = None, tmpprefix="temp-",
 def flatten(seq):
     """Flattens one level of a sequence of sequences"""
     return itertools.chain(*seq)
-    
+
 
 def ints2ranges(seq, presorted=False):
     """Converts a seuence of integers into from, to pairs
@@ -285,7 +285,7 @@ def ints2ranges(seq, presorted=False):
 
     i.e.
     >>> set(flatten(range(fro, to+1) for (fro, to) in ints2ranges(seq))) == set(seq)
-    
+
     for all sequences of integers
 
     @param seq: any iterable of ints
@@ -340,7 +340,7 @@ def pairs(seq, lax=False):
 
 def getseq(sequence, seqtypes=(list, tuple, set), pref=list, stringok=False, convertscalar=False):
     """Ensures that the sequences is list/tuple/set and changes if necessary
-    
+
     Makes sure that the sequence is a 'proper' sequence (and not
     an iterator/generator). If it is, return the sequence, otherwise
     create a list out of it and return that.
@@ -404,31 +404,31 @@ def chomped(seq=sys.stdin, skipblanks=True, transform=None):
             e = transform(e)
             if skipblanks and not e: continue
         yield e
-        
+
 def totuple(v):
     """Function to convert `value` to a tuple.
-        
+
     @type idcolumn: tuple, list, str, int, unicode, or None
     @param idcolumn: value to convert to a tuple"""
     if v is None: return ()
     elif type(v) in (str, unicode, int): return (v,)
-    
+
     return v
-        
+
 def idlist(idcolumn):
     """Function to convert a idcolumn value to a list.
-    
+
     An __idcolumn__ may be a str or tuple. This function
     removes the necessity to check as it always returns
     the latter.
-    
+
     @type idcolumn: tuple, str or None
     @param idcolumn: value to convert to a tuple"""
     if not idcolumn: return ()
-    
+
     if type(idcolumn) in (str, unicode):
         return (idcolumn,)
-    
+
     raise TypeError("%s-like objects not supported" % repr(type(idcolumn)))
 
 def intlist(seq=sys.stdin):
@@ -439,16 +439,16 @@ def intlist(seq=sys.stdin):
 def naturalSortKey(key):
     """Return a  sort key for an element that sorts numbers sensibly"""
     if type(key) != unicode: key = str(key)
-    convert = lambda text: int(text) if text.isdigit() else text 
+    convert = lambda text: int(text) if text.isdigit() else text
     return map(convert, re.split('([0-9]+)', key))
 
 @deprecated
 def naturalSort(sequence):
     """B{Deprecated: use sorted(key=naturalSortKey)}"""
-    return sorted(sequence, key=naturalSortKey) 
+    return sorted(sequence, key=naturalSortKey)
 
 
-                
+
 def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False):
     """Split a list into smaller lists
 
@@ -475,7 +475,7 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
                     yield bufferlist
                     bufferlist = []
             if bufferlist: yield bufferlist
-    
+
     for subsequence in _splitlist(sequence, itemsperbatch):
         if buffercall: buffercall(subsequence)
         if yieldelements:
@@ -483,7 +483,7 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
         else:
             yield subsequence
 
-        
+
 def pad(sequence, length, padwith=None, chopexcess=True, padwithlast=False):
     """Pad and/or trim a sequence to the given length
     @param sequence: the sequence to 'rightsize'
@@ -506,7 +506,7 @@ def pad(sequence, length, padwith=None, chopexcess=True, padwithlast=False):
         else:
             yield padwith
         i += 1
-            
+
 @deprecated
 def buffer(sequence, buffercall, buffersize=100):
     """B{Deprecated: please use splitlist(..., yieldelements=True)}"""
@@ -542,7 +542,7 @@ def zipp(*iterables):
         raise ValueError("Unequal iterable length")
     return zip(*seqs)
 
-                
+
 ###########################################################################
 ##                      Mapping functions                                ##
 ###########################################################################
@@ -618,8 +618,8 @@ def prnt(string, *args, **kargs):
     stream.write(string)
     if end: stream.write(end)
 
-    
-            
+
+
 class Counter(collections.defaultdict):
     """Subclass of defaultdict(int) that simplifies counting stuff"""
     def __init__(self, keys=None):
@@ -670,7 +670,7 @@ ACCENTS_MAP =  {u'a': u'\xe0\xe1\xe2\xe3\xe4\xe5',
                 u'o': u'\xf3\xf2\xf4\xf6',
                 u'u': u'\xf9\xfa\xfb\xfc',
                 u'y': u'\xfd\xff',
-                
+
                 u'A' : u'\xc0\xc1\xc2\xc3\xc4\xc5',
                 u'C' : u'\xc7',
                 u'E' : u'\xc8\xc9\xca\xcb',
@@ -719,7 +719,7 @@ def stripAccents(s, usemap = ACCENTS_MAP):
 
 def unescapeHtml(text):
     """Removes HTML or XML character references and entities from a text string.
-    
+
     @param text The HTML (or XML) source text.
     @return The plain text, as a Unicode string, if necessary.
     """
@@ -790,22 +790,22 @@ def warn(string):
     rec = log.makeRecord(module, logging.WARN, fn, lineno,
                          string, [], exc_info=None, func=func)
     log.handle(rec)
-    
+
 def toJSON(value):
     """Convert `value` to a string json can encode. Generators are converted
     to lists, NoneTypes to empty strings.
-    
+
     @type value: anything
-    @param value: value you wish to convert to a json-friendly type"""    
+    @param value: value you wish to convert to a json-friendly type"""
     if type(value) in (types.GeneratorType, types.TupleType, types.ListType):
         return map(toJSON, value)
     elif type(value) in (types.BooleanType, types.IntType):
         return value
     elif type(value) is datetime.datetime:
         return value.ctime()
-    
+
     if value: return unicode(value)
-    
+
     return ''
 
 def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
@@ -849,10 +849,10 @@ def retry(function, ntries=3, logger=None, *args, **kargs):
             ntries -= 1
             if not ntries:
                 raise
-            logger.exception("Error on calling %s(*%r, **%r), %i retries left" 
+            logger.exception("Error on calling %s(*%r, **%r), %i retries left"
                              % (function.__name__, args, kargs, ntries))
-    
-    
+
+
 ###########################################################################
 ##                     Date(time) functions                              ##
 ###########################################################################
@@ -869,7 +869,7 @@ MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio'),
               ('oct', 'okt', 'out', 'ottobre'),
               ('nov'),
               ('dec', 'dez', 'dici', 'dicembre', 'décembre'))
-"""Tuple of 12 tuples containing month name (prefixes)""" 
+"""Tuple of 12 tuples containing month name (prefixes)"""
 
 class _DateFormat(object):
     """Format definition for parsing dates"""
@@ -898,7 +898,7 @@ class _DateFormat(object):
         if american and self.swapamerican:
             m, d = d, m
         return y, m, d
-         
+
 _DATEFORMATS = (
     _DateFormat("(\d{4})[-/](\d{1,2})[-/](\d{1,2})", 1,2,3),
     _DateFormat("(\d{1,2})[-/](\d{1,2})[-/](\d{4})", 3,2,1,swapamerican=True),
@@ -920,7 +920,7 @@ def _monthnr(monthname):
             if monthname.lower().startswith(name.lower()):
                 return i+1
 
-        
+
 def readDate(string, lax=False, rejectPre1970=False, american=False):
     """Try to read a date(time) string with unknown format
 
@@ -932,7 +932,7 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
     @param rejectPre1970: if True, reject dates before 1970 (to catch
       problems with incorrect parses)
     @param american: prefer MDY over DMY
-    @return: a \C{datetime.datetime} object 
+    @return: a \C{datetime.datetime} object
     """
     if string == None: return None
     try:
@@ -954,7 +954,7 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
         for df in _DATEFORMATS:
             date = df.readDate(datestr, american=american)
             if date: break
-        
+
         datestr = datestr.lower()
         if not date:
             # For 'October 20, 2010'
@@ -963,8 +963,8 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
                     month_plus_day, year = datestr.split(',')
                     day = month_plus_day.split(' ')[1]
                     date = int(year), i+1, int(day)
-        
-        if not date:        
+
+        if not date:
             # For '22 November 2006 Wednesday 10:23 AM (Central European Time)'
             s = datestr.split(' ')
             if len(s)>2:
@@ -976,7 +976,7 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
                             pass
                         finally:
                             break
-            
+
         if not date:
             if lax: return
             raise ValueError("Could not parse datetime string '%s'" % (string))
@@ -1061,8 +1061,8 @@ def cmpDate(date1, date2):
     """Compares to date-like arguments (see L{toDate}), returning cmp-score"""
     date1, date2 = map(toDate, (date1, date2))
     return cmp(date1, date2)
-    
-    
+
+
 
 def dateToInterval(date, interval):
     """returns the interval as string, such as 2002-04.
@@ -1118,7 +1118,7 @@ class ErrorReader(threading.Thread):
         fd = self.stream.fileno()
         fl = fcntl.fcntl(fd, fcntl.F_GETFL)
         fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-        
+
     def run(self):
         while True:
             try:
@@ -1131,11 +1131,11 @@ class ErrorReader(threading.Thread):
                 if err.strip():
                     raise Exception("Unexpected message:\n%s" % err)
             time.sleep(0.1)
-            
+
 def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
     """Execute a command, yielding an input pipe for writing,
     then yielding out and err, using threads to avoid deadlock
-    
+
     Useful for large sending input streams for processes with
     simple communication (everything in, then everything out)
 
@@ -1194,7 +1194,7 @@ def execute(cmd, inputbytes=None, **kargs):
         #print "Writing %i bytes" % len(inputbytes)
         pipe.write(inputbytes)
     return gen.next()
-    
+
 def ps2pdf(ps):
     """Call ps2pdf on the given ps bytes, returning pdf bytes"""
     out, err = execute("ps2pdf - -", ps)
@@ -1216,7 +1216,7 @@ def convertImage(image, informat, outformat=None, quality=None, scale=None, trim
     if scale: cmd += ' -geometry %1.2f%%x%1.2f%% ' % (scale*100, scale*100)
     if quality: cmd += ' -quality %i ' % int(quality*100)
     if trim: cmd += ' -trim '
-    
+
     cmd += ' %s:- %s:-' % (informat, outformat or informat)
     out, err = execute(cmd, image)
     if err and err.strip():
@@ -1232,7 +1232,7 @@ def import_attribute(module, attribute=None):
         if "." in module:
             module, attribute = module.rsplit(".", 1)
         else:
-            raise ImportError("Attribute not given and module not qualified")
+            return __import__(module)
     mod = __import__(module, fromlist=[str(attribute)])
     try:
         return getattr(mod, attribute)
@@ -1255,21 +1255,26 @@ def guess_module(filename):
         tail, head = os.path.split(dirname)
         module.insert(0, head)
         if dirname in path:
-            return ".".join(module)            
+            return ".".join(module)
         if tail == dirname: raise ValueError("Cannot find module for %s" % filename)
         dirname = tail
-        
-def get_class_from_module(module, superclass):
+
+
+def get_classes_from_module(module, superclass):
     m = import_attribute(module)
     for name in dir(m):
         obj = getattr(m, name)
         if (isinstance(obj, (type, types.ClassType)) and
             issubclass(obj, superclass) and
             obj.__module__ == module):
-            return obj        
+            yield obj
+
+def get_class_from_module(module, superclass):
+    for obj in get_classes_from_module(module, superclass):
+        return obj
     raise ValueError("Cannot find a %s subclass in %r" % (superclass.__name__, module))
-  
-    
+
+
 ###########################################################################
 ##                          Type Checking                                ##
 ###########################################################################
@@ -1297,7 +1302,7 @@ def isIterable(obj, excludeStrings = False):
     except TypeError: return False
 
 
-    
+
 ###########################################################################
 ##                         Misc. functions                               ##
 ###########################################################################
@@ -1311,7 +1316,7 @@ def getCaller(depth=1):
     """
     depth = depth + 1 # me, caller, caller's caller
     return inspect.stack()[depth][1:4]
-    
+
 def getCallingModule(depth=1):
     """Return the module name of the caller (see L{getCaller})"""
     depth = depth + 1 # me, caller, caller's caller
@@ -1331,7 +1336,7 @@ def HSVtoHTML(h, s, v):
     if not rgb: raise TypeError("Cannot convert hsv (%s,%s,%s)!" % (h,s,v))
     return RGBtoHTML(*rgb)
 
-def RGBtoHTML(r, g, b): 
+def RGBtoHTML(r, g, b):
     """Convert RGB colour to HTML hex string"""
     hexcolor = '#%02x%02x%02x' % (r*255, g*255, b*255)
     return hexcolor
@@ -1349,7 +1354,7 @@ def getREGroups(regExp, text, flags=re.DOTALL, groups=(1,), match=True):
     """Return the selected groups from the regexp, or None(s) if no match
 
     Convenience function for::
-    
+
       >>>m = re.match(regExp, text)
       ...if m:
       ...  a = m.group(1)
@@ -1362,7 +1367,7 @@ def getREGroups(regExp, text, flags=re.DOTALL, groups=(1,), match=True):
         return match.group(*groups)
     if len(groups) == 1:
         return None
-    return (None,) * len(groups) 
+    return (None,) * len(groups)
 
 
 def isnull(x, alt):
@@ -1371,10 +1376,10 @@ def isnull(x, alt):
 
 def hasattrv2(obj, attrs):
     """Accepts dot-seperated attributes. This allow for non-shallow checking
-    
+
     @obj: an object
     @attrs: dot-seperated attribute
-    
+
     @example:
     >>> class A(object): pass
     ...
@@ -1394,7 +1399,7 @@ def hasattrv2(obj, attrs):
 
 def getattrv2(obj, attrs):
     """Accepts dot-seperated attributes. This allows for non-shallow getting
-    
+
     (See: hasattrv2)"""
     for attr in attrs.split('.'):
         obj = getattr(obj, attr)
@@ -1482,7 +1487,7 @@ class _ticker_proxy(object):
         import ticker as _ticker
         return getattr(_ticker.ticker(), name)
 ticker = _ticker_proxy()
-    
+
 class Debug:
     """B{Deprecated: please use amcatlogging}"""
     @deprecated
@@ -1501,8 +1506,8 @@ class Debug:
     def fail(self, level):
         """B{Deprecated: please use amcatlogging}"""
         self(level, " FAILED!")
-    
-    
+
+
 @deprecated
 def dictFromStr(string, unicode=False):
     """B{deprecated: what is this for?} Create a dictionary from a string"""
@@ -1559,4 +1564,3 @@ def intSelection(db, *args, **kargs):
 if __name__ == '__main__':
     import amcatlogging ;amcatlogging.setStreamHandler()
     warn("zoiets?")
-

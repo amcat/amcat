@@ -35,22 +35,9 @@ import logging; log = logging.getLogger(__name__)
 ##         Aux method for CLI invocation                     ##
 ###############################################################
 
-def get_main_script(module):
-    if type(module) == type(''):
-	module_name = module
-	module = __import__(module_name)
-	for part in module_name.split('.')[1:]:
-	    module = getattr(module, part)
-    for name in dir(module):
-	obj = getattr(module, name)
-	if (isinstance(obj, (type, types.ClassType)) and
-	    issubclass(obj, Script)):
-	    return obj
-    raise Exception("Cannot find Script module in %r" % module)
-
 def get_script(depth=2):
-    mod = toolkit.getCallingModule(depth=depth)
-    return get_main_script(mod)
+    module = toolkit.getCallingModule(depth=depth)
+    return toolkit.get_class_from_module(module, Script)
 
 def run_cli(cls=None, handle_output=None, get_script_depth=2):
     """Handle command line interface invocation of this script"""

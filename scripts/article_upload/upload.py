@@ -77,5 +77,3 @@ class UploadScript(Scraper):
         @return: a sequence of objects (e.g. strings) to pass to parse_documents
         """
         return [text]
-
-    

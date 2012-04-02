@@ -41,7 +41,7 @@ FIELDS = "text", "date", "pagenr", "section", "headline", "byline",  "url", "ext
 REQUIRED = [True] * 2 + [False] * (len(FIELDS) - 2)
 PARSERS = dict(date=readDate, pagenr=int, externalid=int)
 
-class CSVForm(forms.Form):
+class CSVForm(UploadScript.options_form):
     medium = forms.ModelChoiceField(queryset=Medium.objects.all())
 
     def __init__(self, *args, **kargs):

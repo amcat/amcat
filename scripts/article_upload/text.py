@@ -41,13 +41,6 @@ class TextForm(UploadScript.options_form):
 class Text(UploadScript):
     options_form = TextForm
 
-    def _validate_form(self):
-	# If affiliation is given as a string, get or create the affiliation
-	med = self.bound_form.data['medium']
-	if isinstance(med, basestring):
-	    self.bound_form.data['medium'] = get_or_create(Medium, name=med).id
-	super(Text, self)._validate_form()
-
     def parse_document(self, text):
         metadata = {k:v for (k,v) in self.options.items()
                    if k in ["medium", "headline", "project", "date"]}
@@ -56,4 +49,3 @@ class Text(UploadScript):
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
     run_cli(handle_output=False)
-

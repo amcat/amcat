@@ -32,17 +32,17 @@ from django.utils.datastructures import MergeDict
 from amcat.forms import validate
 from amcat.models.user import current_user
 
-        
+
 class Script(object):
     """
     'Abstract' class representing a modular piece of
     functionality. Scripts have three key parameters, specified as class variables:
     - input_type: a class representing the type of input expected by the script, such as
-      None, unicode, Table, or ArticleList. The command line equivalent would be 
+      None, unicode, Table, or ArticleList. The command line equivalent would be
       a (deserialized) stdin stream
     - options: a Django form of required and optional options. The CLI equivalent
       are the command line options and arguments. Can be None
-    - output_type: a class representing the output that the script will produce. 
+    - output_type: a class representing the output that the script will produce.
     """
 
     input_type = None
@@ -51,12 +51,13 @@ class Script(object):
 
     def __init__(self, options=None, **kargs):
         """Default __init__ validates and stores the options form"""
-	if self.options_form is None:
-	    self.options = self.options_raw = None
-	else:
-	    self.bound_form = self._bind_form(options, **kargs)
-	    self._validate_form()
+        if self.options_form is None:
+            self.options = self.options_raw = None
+        else:
+            self.bound_form = self._bind_form(options, **kargs)
+            self._validate_form()
             self.options = self.bound_form.cleaned_data
+            print "!!!!!!!!!", self.options
 
 
     def run(self, input=None):
@@ -65,31 +66,31 @@ class Script(object):
         pass
 
     def _validate_form(self):
-	"""Validate self.bound_form, raising an exception if invalid"""
-	validate(self.bound_form)
+        """Validate self.bound_form, raising an exception if invalid"""
+        validate(self.bound_form)
 
-        
+
     def _bind_form(self, options=None, **kargs):
-	"""
-	Create a bound form from the options and key-word arguments. Will raise
-	a ValueError if no bound instance of the form for this script could be
-	created
-
-	@param options: Either a bound options form or a dict with option value
-	                with which to create a bound form
-        @param kargs:   If options is None, keyword arguments to use to create a
-	                bound form
-	@return:        A bound form of type self.options_form
         """
-	if isinstance(options, self.options_form):
-	    if not options.is_bound:
-		raise ValueError("Please provide a bound options form")
-	    return options
-	elif isinstance(options, forms.Form):
-	    raise ValueError("Invalid options form type: {0}".format(self.options_form))
-	if not isinstance(options, (dict, QueryDict, MergeDict)):
-	    options = kargs
-	return self.options_form(options)
+        Create a bound form from the options and key-word arguments. Will raise
+        a ValueError if no bound instance of the form for this script could be
+        created
+
+        @param options: Either a bound options form or a dict with option value
+                        with which to create a bound form
+        @param kargs:   If options is None, keyword arguments to use to create a
+                        bound form
+        @return:        A bound form of type self.options_form
+        """
+        if isinstance(options, self.options_form):
+            if not options.is_bound:
+                raise ValueError("Please provide a bound options form")
+            return options
+        elif isinstance(options, forms.Form):
+            raise ValueError("Invalid options form type: {0}".format(self.options_form))
+        if not isinstance(options, (dict, QueryDict, MergeDict)):
+            options = kargs
+        return self.options_form(options)
 
     @classmethod
     def get_empty_form(cls, **options):
@@ -107,7 +108,7 @@ class Script(object):
     @classmethod
     def name(cls):
         return cls.__name__
-    
+
     @classmethod
     def description(cls):
         return cls.__doc__
@@ -115,11 +116,11 @@ class Script(object):
     @classmethod
     def module(cls):
         return cls.__module__
-    
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestScript(amcattest.PolicyTestCase):

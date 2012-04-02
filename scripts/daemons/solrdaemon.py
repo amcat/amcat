@@ -27,9 +27,10 @@ log = logging.getLogger(__name__)
 from django.db import transaction
 
 from amcat.contrib.daemon import Daemon
-from amcat.tools.amcatsolr import index_articles_from_db
+#from amcat.tools.amcatsolr import index_articles_from_db
+#from amcat.models.article_solr import SolrArticle
+
 from amcat.tools.multithread import distribute_tasks
-from amcat.models.article_solr import SolrArticle
 
 class SolrDeamon(Daemon):
     

@@ -42,9 +42,9 @@ class Affiliation(AmcatModel):
 
     id = models.AutoField(primary_key=True, db_column='affiliation_id')
     name = models.CharField(max_length=200)
-    
+
     class Meta():
-        db_table = 'affiliations'   
+        db_table = 'affiliations'
         ordering = ['name']
         app_label = 'amcat'
 
@@ -74,12 +74,12 @@ class User(AmcatModel):
     def delete(self, **kwargs):
         self.active = False
         super(User, self).save(**kwargs)
-    
+
     class Meta():
         db_table = 'users'
         ordering = ['username']
         app_label = 'amcat'
-    
+
     @property
     def projects(self):
         """Return a sequence of all projects the current user has a role in"""
@@ -111,7 +111,7 @@ class User(AmcatModel):
             dbtoolkit.get_database().set_password(self.username, raw_password)
 
     def check_password(self, raw_password):
-        """Returns True iff the raw_password is correct for this user""" 
+        """Returns True iff the raw_password is correct for this user"""
         return dbtoolkit.get_database().check_password(self.username, raw_password)
 
     def is_authenticated(self):
@@ -128,12 +128,12 @@ class User(AmcatModel):
         @param privilege: The requested privilege
         @param onproject: The project the privilege is requested on,
           or None (ignored) for global privileges
-        
+
         @return: True or False
         """
         try: auth.check(self, privilege, onproject)
         except auth.AccessDenied:
-            return False    
+            return False
         return True
 
     @property
@@ -143,41 +143,41 @@ class User(AmcatModel):
 
 def current_username(using=DEFAULT_DB_ALIAS):
     return connections.databases[using]['USER']
-    
+
 def current_user(using=DEFAULT_DB_ALIAS):
     """Return the current user from the configured db"""
     return User.objects.get(username=current_username(using))
 
 
-    
+
 def create_user(username, fullname, email, affiliation, language, role=None,
-		password=None, using=DEFAULT_DB_ALIAS, insert_if_db_user_exists=False):
+                password=None, using=DEFAULT_DB_ALIAS, insert_if_db_user_exists=False):
         """
-	Create a user with the given attributes, creating both the db user and
-	the entry in the users table
+        Create a user with the given attributes, creating both the db user and
+        the entry in the users table
 
-	@param password: use the given password, or a random password if None
-	@param insert_if_db_user_exists: create the User object even if the user already
-	                                 exists as a database user
+        @param password: use the given password, or a random password if None
+        @param insert_if_db_user_exists: create the User object even if the user already
+                                         exists as a database user
         @return: A User object with the .password field set.
-	         If the db user already existed, .password will be None
+                 If the db user already existed, .password will be None
         """
-	# create and validate the User object before creating the db user
-	fields = {k:v for (k,v) in locals().items()
-		  if k in ["username","fullname","email","affiliation","language", "role"]}
+        # create and validate the User object before creating the db user
+        fields = {k:v for (k,v) in locals().items()
+                  if k in ["username","fullname","email","affiliation","language", "role"]}
         u = User(**fields)
-	u.full_clean()
+        u.full_clean()
 
-	if not password: password = _random_password()
+        if not password: password = _random_password()
         try:
             dbtoolkit.get_database(using=using).create_user(username, password)
         except dbtoolkit.UserAlreadyExists:
             if not insert_if_db_user_exists: raise
-	    password = None
-	    
+            password = None
+
         # Create Django user and return with .password
         u.save()
-	u.password = password
+        u.password = password
         return u
 
 def _random_password(length=8, chars=string.letters + string.digits):
@@ -193,16 +193,14 @@ if __name__ == '__main__':
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestUser(amcattest.PolicyTestCase):
     def test_create(self):
-        """Test whether we can create a user"""        
+        """Test whether we can create a user"""
         u = amcattest.create_test_user()
         self.assertIsNotNone(u)
 
     def test_current_user(self):
-	u = get_current_user()
-
-        
+        u = get_current_user()
