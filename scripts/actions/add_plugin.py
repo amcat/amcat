@@ -30,7 +30,6 @@ from django import forms
 from django.forms.widgets import HiddenInput
 
 from amcat.scripts.script import Script
-from amcat.scripts.tools import cli
 from amcat.models.plugin import Plugin
 from amcat.models.analysis import Analysis
 from amcat.models.language import Language
@@ -92,7 +91,7 @@ class AddPlugin(Script):
             else:
                 raise forms.ValidationError("If module is not given,"
                                             "class name needs to be fully qualified")
-        elif set(form.data['class_name']) & {".","/"}:
+        elif set(form.data['class_name']) & set([".","/"]):
             raise forms.ValidationError("If module name is given, class name %r cannot contain"
                                         ". or / characters" % form.data['class_name'])
         plugin_class = toolkit.import_attribute(form.data['module'], form.data['class_name'])
@@ -150,4 +149,5 @@ def get_classes(type, module="amcat.scripts"):
                     yield c
 
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli()

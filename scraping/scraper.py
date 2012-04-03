@@ -35,7 +35,6 @@ from amcat.models.project import Project
 from amcat.models.medium import get_or_create_medium
 from amcat.models.articleset import ArticleSet, get_or_create_articleset
 
-from amcat.scripts.tools import cli
 from amcat.scraping.htmltools import HTTPOpener
 from amcat.scraping.document import Document
 

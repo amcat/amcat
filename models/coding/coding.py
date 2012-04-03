@@ -92,7 +92,7 @@ class Coding(AmcatModel):
         Fields that are not included in the mapping, or whose value are set to
         None, will be removed from the values
         """
-        current = {v.field : v for v in self.values.all()}
+        current = dict((v.field,  v) for v in self.values.all())
 
         for field, value in values.items():
             if field in current:

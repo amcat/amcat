@@ -185,7 +185,7 @@ class TestSerialiser(amcattest.PolicyTestCase):
     def test_booleanserialiser(self):
         """Test the boolean serialiser"""
         b = BooleanSerialiser(None)
-        self.assertEqual({b.value_label(l) for l in b.possible_values}, {'True', 'False'})
+        self.assertEqual(set(b.value_label(l) for l in b.possible_values), set(['True', 'False']))
         self.assertEqual(b.serialise(True), 1)
         self.assertEqual(b.deserialise(1), True)
         self.assertEqual(b.serialise(False), 0)
@@ -194,8 +194,8 @@ class TestSerialiser(amcattest.PolicyTestCase):
     def test_qualityserialiser(self):
         """Test the boolean serialiser"""
         b = QualitySerialiser(None)
-        self.assertEqual({b.value_label(l) for l in b.possible_values},
-                         {'-1.0', '-0.5', '0' , '+0.5', '+1.0'})
+        self.assertEqual(set(b.value_label(l) for l in b.possible_values),
+                         set('-1.0', '-0.5', '0' , '+0.5', '+1.0'))
         for x in b.possible_values:
             self.assertEqual(b.deserialise(b.serialise(x)), x)
 
@@ -221,7 +221,7 @@ class TestSerialiser(amcattest.PolicyTestCase):
 
         self.assertRaises(Exception, s.deserialise, -9999999999999999)
         
-        self.assertEqual({c}, set(s.possible_values))
+        self.assertEqual(set([c]), set(s.possible_values))
         
         self.assertEqual("bla", s.value_label(c))
         self.assertEqual("blx", s.value_label(c, l2))

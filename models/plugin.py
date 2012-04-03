@@ -102,7 +102,7 @@ class TestPlugin(amcattest.PolicyTestCase):
 
         self.assertEqual(s.get_instance().a, 123)
         self.assertEqual(s.get_instance().b, "bla")
-        self.assertEqual(s.get_instance(b=dict(x={1, 2, 3})).b, {'x' : {1, 2, 3}})
+        self.assertEqual(s.get_instance(b=dict(x=set([1, 2, 3]))).b, {'x' : set([1, 2, 3])})
 
     def test_plugins_by_type(self):
         """Does getting plugins by type work correctly?"""

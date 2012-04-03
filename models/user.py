@@ -163,8 +163,8 @@ def create_user(username, fullname, email, affiliation, language, role=None,
                  If the db user already existed, .password will be None
         """
         # create and validate the User object before creating the db user
-        fields = {k:v for (k,v) in locals().items()
-                  if k in ["username","fullname","email","affiliation","language", "role"]}
+        fields = dict((k, v) for (k,v) in locals().items()
+                  if k in ["username","fullname","email","affiliation","language", "role"])
         u = User(**fields)
         u.full_clean()
 

@@ -196,7 +196,7 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
     @classmethod
     def _all_articles(cls):
         """List all articles on the queue"""
-        return {sa.article_id for sa in ArticlePreprocessing.objects.all()}
+        return set([sa.article_id for sa in ArticlePreprocessing.objects.all()])
         
 if __name__ == '__main__':
 

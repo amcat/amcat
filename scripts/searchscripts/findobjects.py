@@ -23,7 +23,6 @@ Script that will run a search on the database or Solr and return the matching Ar
 
 
 from amcat.scripts import script, types
-from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from django import forms
 from amcat.models.project import Project
@@ -131,4 +130,5 @@ class FindObjectsScript(script.Script):
         
         
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli(FindObjectsScript)

@@ -130,8 +130,8 @@ class Codebook(AmcatModel):
           where validfrom <= date < validto.
         """
         hierarchy = self._get_hierarchy_ids(date, include_hidden)
-        code_ids = set(hierarchy.keys()) | set(hierarchy.values()) - {None}
-        codes = {c.id : c for c in get_codes(code_ids)}
+        code_ids = set(hierarchy.keys()) | set(hierarchy.values()) - set([None])
+        codes = dict((c.id, c) for c in get_codes(code_ids))
 
 
         for codeid, parentid in hierarchy.iteritems():
@@ -157,7 +157,7 @@ class Codebook(AmcatModel):
                     code_ids.add(co._code_id)
         if include_parents:
             code_ids |= set(co._parent_id for co in self.codebookcodes)
-            code_ids -= {None}
+            code_ids -= set([None])
         return code_ids
 
     def get_codes(self, include_hidden=False):
@@ -198,9 +198,9 @@ class Codebook(AmcatModel):
         """Ask the codebook to cache the labels on its objects in that language"""
 
         # which labels need to be cached?
-        codes = {c.id : c
-                 for c in  get_codes(self._get_code_ids(include_hidden=True, include_parents=True))
-                 if not c.label_is_cached(language)}
+        codes = dict((c.id,  c)
+                     for c in  get_codes(self._get_code_ids(include_hidden=True, include_parents=True))
+                     if not c.label_is_cached(language))
         if not codes: return
 
         q = Label.objects.filter(language=language, code__in=codes)
@@ -358,8 +358,8 @@ class TestCodebook(amcattest.PolicyTestCase):
     def standardize(self, codebook, **kargs):
         """return a dense hierarchy serialiseation for easier comparisons"""
 
-        return ";".join(sorted({"{0}:{1}".format(*cp)
-                                for cp in codebook.get_hierarchy(**kargs)}))
+        return ";".join(sorted(set("{0}:{1}".format(*cp)
+                                   for cp in codebook.get_hierarchy(**kargs))))
 
     def test_hierarchy(self):
         """Does the code/parent base class resolution work"""
@@ -516,18 +516,18 @@ class TestCodebook(amcattest.PolicyTestCase):
         A.add_code(d, a)
         A.add_code(e, a)
 
-        self.assertEqual(set(_copairs(A, a)), {(a, None)})
-        self.assertEqual(set(_copairs(A, c)), {(c, a), (c, b)})
-        self.assertEqual(set(_copairs(A, d)), {(d, a)})
-        self.assertEqual(set(_copairs(A, e)), {(e, a)})
+        self.assertEqual(set(_copairs(A, a)), set([(a, None)]))
+        self.assertEqual(set(_copairs(A, c)), set([(c, a), (c, b)]))
+        self.assertEqual(set(_copairs(A, d)), set([(d, a)]))
+        self.assertEqual(set(_copairs(A, e)), set([(e, a)]))
 
         B = amcattest.create_test_codebook(name="B")
         B.add_code(d, b)
         B.add_code(e, b, validfrom=datetime(2012, 1, 1))
         B.add_base(A)
-        self.assertEqual(set(_copairs(B, d)), {(d, b)})
-        self.assertEqual(set(_copairs(B, e)), {(e, b), (e, a)})
-        self.assertEqual(set(_copairs(B, c)), {(c, a), (c, b)})
+        self.assertEqual(set(_copairs(B, d)), set([(d, b)]))
+        self.assertEqual(set(_copairs(B, e)), set([(e, b), (e, a)]))
+        self.assertEqual(set(_copairs(B, c)), set([(c, a), (c, b)]))
 
 
     def test_roots_children(self):
@@ -541,11 +541,11 @@ class TestCodebook(amcattest.PolicyTestCase):
         A.add_code(d, c)
         A.add_code(f, a)
 
-        self.assertEqual(set(A.get_roots()), {a, b})
-        self.assertEqual(set(A.get_roots(include_missing_parents=True)), {a, b, c})
+        self.assertEqual(set(A.get_roots()), set([a, b]))
+        self.assertEqual(set(A.get_roots(include_missing_parents=True)), set([a, b, c]))
 
-        self.assertEqual(set(A.get_children(a)), {e, f})
-        self.assertEqual(set(A.get_children(c)), {d})
+        self.assertEqual(set(A.get_children(a)), set([e, f]))
+        self.assertEqual(set(A.get_children(c)), set([d]))
         self.assertEqual(set(A.get_children(d)), set())
 
 
@@ -553,8 +553,8 @@ class TestCodebook(amcattest.PolicyTestCase):
         """Does caching labels work?"""
         from amcat.models.language import Language
         lang = Language.objects.get(pk=1)
-        codes = {amcattest.create_test_code(label=l, language=lang) for l in "abcdef"}
-        morecodes = {amcattest.create_test_code(label=l, language=lang) for l in "abcdef"}
+        codes = set(amcattest.create_test_code(label=l, language=lang) for l in "abcdef")
+        morecodes = set(amcattest.create_test_code(label=l, language=lang) for l in "abcdef")
 
         h = amcattest.create_test_code(label="hidden", language=lang)
 
@@ -572,7 +572,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         maxq = n_bases * 2 + 1 # base + codebookcodes per base, codes
         with self.checkMaxQueries(maxq, "Cache Codes"):
             self.assertEqual(set(A.get_codes(include_hidden=True)),
-                             codes | {h} | morecodes)
+                             codes | set([h]) | morecodes)
 
         with self.checkMaxQueries(1, "Cache labels"): # labels
             A.cache_labels(lang)
@@ -644,7 +644,7 @@ class TestCodebook(amcattest.PolicyTestCase):
             list(B.bases)
 
         with self.checkMaxQueries(2, "Get Code ids"):
-            self.assertEqual(set(A._get_code_ids()), {c.id for c in codes})
+            self.assertEqual(set(A._get_code_ids()), set(c.id for c in codes))
 
         clear_cache(Code)
         with self.checkMaxQueries(2, "Get Codes"):

@@ -23,7 +23,7 @@ Useful for performance reasons, when returning Article objects takes too much ti
 """
 
 from amcat.scripts import script, types
-from amcat.scripts.tools import cli, solrlib, database
+from amcat.scripts.tools import solrlib, database
 import amcat.scripts.forms
 from django import forms
 
@@ -80,4 +80,5 @@ class ArticleidsDictScript(script.Script):
         
         
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli(ArticleidsScript)

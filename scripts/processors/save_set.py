@@ -23,7 +23,6 @@ Script that stores matching articles as set
 
 
 from amcat.scripts import script, types
-from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from django import forms
 from amcat.models.article import Article
@@ -69,4 +68,5 @@ class SaveAsSetScript(script.Script):
     
         
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli(SaveAsSetScript)

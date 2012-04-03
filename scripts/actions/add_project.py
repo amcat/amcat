@@ -27,7 +27,6 @@ import logging; log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.scripts.tools import cli
 from amcat.models.user import User, current_user
 from amcat.models.project import Project
 from amcat.models.authorisation import Role, ProjectRole
@@ -70,6 +69,7 @@ class AddProject(Script):
         return p
 
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli()
 
 

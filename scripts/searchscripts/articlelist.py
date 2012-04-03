@@ -23,7 +23,7 @@ Script that will run a search on the database or Solr and return the matching Ar
 
 
 from amcat.scripts import script, types
-from amcat.scripts.tools import cli, solrlib, database
+from amcat.scripts.tools import solrlib, database
 import amcat.scripts.forms
 from django import forms
 
@@ -104,4 +104,5 @@ class ArticleListScript(script.Script):
                 return solrlib.getArticles(self.options)
         
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli()

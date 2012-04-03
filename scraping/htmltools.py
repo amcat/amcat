@@ -68,7 +68,7 @@ def get_unicode(http_response, encoding=None):
 def get_encoding(http_response):
     """Return charset (from HTTP-Headers). Raises an exception if no encoding could be found"""
     headers = http_response.getheaders() if hasattr(http_response, 'getheaders') else http_response.headers
-    headers = {k.lower() : v for (k,v) in dict(headers).iteritems()}
+    headers = dict((k.lower(),  v) for (k,v) in dict(headers).iteritems())
     if ENCODING_HEADER in headers:
         for kvpair in headers[ENCODING_HEADER].split(';'):
             if not "=" in kvpair: continue

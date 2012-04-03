@@ -89,7 +89,7 @@ class TestCodedArticle(amcattest.PolicyTestCase):
         a3 = amcattest.create_test_coding(sentence=s, codingjob=a.codingjob)
         ca = CodedArticle(a)
 
-        self.assertEqual(set(ca.sentence_codings), {a2, a3})
+        self.assertEqual(set(ca.sentence_codings), set([a2, a3]))
         self.assertEqual(ca.coding, a)
 
     def test_create_codings(self):
@@ -100,7 +100,7 @@ class TestCodedArticle(amcattest.PolicyTestCase):
         self.assertEqual(ca.coding, a)
         self.assertEqual(ca.get_or_create_coding(), a)
 
-        codingids = {a.id for a in Coding.objects.all()}
+        codingids = set(a.id for a in Coding.objects.all())
         ca = CodedArticle(ca.codingjob, amcattest.create_test_article())
         self.assertIsNone(ca.coding)
         a2 = ca.get_or_create_coding()

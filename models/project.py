@@ -123,11 +123,11 @@ class TestProject(amcattest.PolicyTestCase):
         """Does getting all articles work?"""
         p1, p2 = [amcattest.create_test_project() for _x in [1,2]]
         a1, a2 = [amcattest.create_test_article(project=p) for p in [p1, p2]]
-        self.assertEqual(set(p1.get_all_articles()), {a1.id})
+        self.assertEqual(set(p1.get_all_articles()), set([a1.id]))
         
         s = amcattest.create_test_set(project=p1)
-        self.assertEqual(set(p1.get_all_articles()), {a1.id})
+        self.assertEqual(set(p1.get_all_articles()), set([a1.id]))
         s.add(a2)
-        self.assertEqual(set(p1.get_all_articles()), {a1.id, a2.id})
+        self.assertEqual(set(p1.get_all_articles()), set([a1.id, a2.id]))
         
         

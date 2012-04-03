@@ -23,7 +23,6 @@ Requires as input a table with as first column the interval, and as following co
 """
 
 from amcat.scripts import script
-from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from amcat.tools import table
 from django import forms
@@ -56,4 +55,6 @@ class AssociationsScript(script.Script):
 
         
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli(AssociationsScript)
+    

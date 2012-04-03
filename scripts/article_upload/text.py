@@ -42,8 +42,8 @@ class Text(UploadScript):
     options_form = TextForm
 
     def parse_document(self, text):
-        metadata = {k:v for (k,v) in self.options.items()
-                   if k in ["medium", "headline", "project", "date"]}
+        metadata = dict((k, v) for (k,v) in self.options.items()
+                        if k in ["medium", "headline", "project", "date"])
         return Article(text=text, **metadata)
 
 if __name__ == '__main__':

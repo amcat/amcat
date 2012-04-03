@@ -23,7 +23,6 @@ Requires a dictionary with articleids per query as input
 """
 
 from amcat.scripts import script, types
-from amcat.scripts.tools import cli
 import amcat.scripts.forms
 from django import forms
 import itertools
@@ -155,4 +154,5 @@ class ClustermapTableScript(script.Script):
         return resultTable
         
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli(ClustermapScript)

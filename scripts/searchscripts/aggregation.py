@@ -24,7 +24,7 @@ Also aggregation by searchTerm is Solr specific.
 """
 
 from amcat.scripts import script
-from amcat.scripts.tools import cli, solrlib, database
+from amcat.scripts.tools import solrlib, database
 import amcat.scripts.forms
 from django import forms
 from django.db.models import Sum, Count
@@ -122,4 +122,5 @@ class AggregationScript(script.Script):
         
         
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli(AggregationScript)
