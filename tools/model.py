@@ -45,11 +45,11 @@ class AmcatModel(models.Model):
 
         if rq is not None:
             # Check permissions for web user..
-            if not self.pk and not self.__class__.can_create(rq.user):
-                raise ValidationError("You're not allowed create-access on %s"
-                                      % self.__class__.__name__)
-
-            if not self.can_update(rq.user):
+            if not self.pk:
+                if not self.__class__.can_create(rq.user):
+                    raise ValidationError("You're not allowed create-access on %s"
+                                          % self.__class__.__name__)
+            elif not self.can_update(rq.user):
                 raise ValidationError("You're not allowed to update %s" % self)
 
         super(AmcatModel, self).save(using=using or dbalias, **kwargs)
