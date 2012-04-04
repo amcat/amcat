@@ -51,28 +51,28 @@ class AddUser(Script):
     If the user already exists in the database but not in the users table,
     he/she will be added to that table.
     """
-    
+
     options_form = AddUserForm
     output_type = User
 
     def _validate_form(self):
-	# If affiliation is given as a string, get or create the affiliation
-	aff = self.bound_form.data['affiliation']
-	if isinstance(aff, basestring):
-	    self.bound_form.data['affiliation'] = get_or_create(Affiliation, name=aff).id
-	role = self.bound_form.data['role']
-	if isinstance(role, basestring):
-	    self.bound_form.data['role'] = Role.objects.get(label=role).id
+        # If affiliation is given as a string, get or create the affiliation
+        aff = self.bound_form.data['affiliation']
+        if isinstance(aff, basestring):
+            self.bound_form.data['affiliation'] = get_or_create(Affiliation, name=aff).id
+        role = self.bound_form.data['role']
+        if isinstance(role, basestring):
+            self.bound_form.data['role'] = Role.objects.get(label=role, projectlevel=False).id
 
-	super(AddUser, self)._validate_form()
+        super(AddUser, self)._validate_form()
 
     def run(self, _input):
-	u = create_user(insert_if_db_user_exists=True, **self.options)
-	if u.password:
-	    log.info("Created new database user %r with password=%r" % (u.username, u.password))
-	else:
-	    log.info("Created User object for database user %r" % (u.username))
-	return u
+        u = create_user(insert_if_db_user_exists=True, **self.options)
+        if u.password:
+            log.info("Created new database user %r with password=%r" % (u.username, u.password))
+        else:
+            log.info("Created User object for database user %r" % (u.username))
+        return u
 
 if __name__ == '__main__':
     cli.run_cli(AddUser)
