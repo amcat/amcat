@@ -34,6 +34,8 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools.caching import cached, invalidates, get_object, clear_cache
 from amcat.models.coding.code import Code, Label, get_code, get_codes
+from django.core.exceptions import ValidationError
+
 
 def get_codebook(codebook_id):
     """Create the codebook with the given id, possibly retrieving it
@@ -179,7 +181,7 @@ class Codebook(AmcatModel):
     @invalidates
     def add_code(self, code, parent=None, **kargs):
         """Add the given code to the hierarchy, with optional given parent.
-        Any extra arguments are passed to the CodebookCode constructor.
+        Any extra arguments` are passed to the CodebookCode constructor.
         Possible arguments include hide, validfrom, validto
         """
         if isinstance(parent, CodebookCode): parent = parent.code
@@ -199,7 +201,8 @@ class Codebook(AmcatModel):
 
         # which labels need to be cached?
         codes = dict((c.id,  c)
-                     for c in  get_codes(self._get_code_ids(include_hidden=True, include_parents=True))
+                     for c in  get_codes(self._get_code_ids(include_hidden=True,
+                                                            include_parents=True))
                      if not c.label_is_cached(language))
         if not codes: return
 
@@ -234,6 +237,13 @@ class Codebook(AmcatModel):
         """
         return (c for (c, p) in self.get_hierarchy(**kargs) if p==code)
 
+    def _check_not_a_base(self, base):
+        """Raises a ValidationError iff base is an ancestor of this codebook"""
+        for b in self.bases:
+            if b == base: raise ValidationError('Circular codebook hierarchy: '
+                                                'Codebook {self} has {base} as base!'
+                                                .format(**locals()))
+            b._check_not_a_base(base)
 
 class CodebookBase(AmcatModel):
     """Many-to-many field (codebook : codebook) with ordering"""
@@ -248,6 +258,11 @@ class CodebookBase(AmcatModel):
         app_label = 'amcat'
         ordering = ['rank']
         unique_together = ("codebook", "base")
+
+    def save(self, *args, **kargs):
+        """Check that there are no loops"""
+        self.base._check_not_a_base(self.codebook)
+        super(CodebookBase, self).save(*args, **kargs)
 
 class Function(AmcatModel):
     """Specification of code book parent-child relations"""
@@ -360,6 +375,17 @@ class TestCodebook(amcattest.PolicyTestCase):
 
         return ";".join(sorted(set("{0}:{1}".format(*cp)
                                    for cp in codebook.get_hierarchy(**kargs))))
+
+    def test_circular(self):
+        """Are circular bases prevented from saving?"""
+        A, B, C, D, E = [amcattest.create_test_codebook() for _x in range(5)]
+        A.add_base(B)
+        self.assertRaises(ValidationError, B.add_base, A)
+        A.add_base(C)
+        A.add_base(D)
+        A.add_base(E)
+        D.add_base(B)
+        self.assertRaises(ValidationError, B.add_base, A)
 
     def test_hierarchy(self):
         """Does the code/parent base class resolution work"""
