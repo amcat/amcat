@@ -141,14 +141,14 @@ class Codebook(AmcatModel):
             parent = codes[parentid] if parentid is not None else None
             yield code, parent
 
-    def _get_code_ids(self, include_hidden=False, include_parents=False):
+    def get_code_ids(self, include_hidden=False, include_parents=False):
         """Returns a set of code_ids that are in this hierarchy
         @param include_hidden: if True, include codes hidden by *this* codebook
                                (e.g. not by its bases)
         """
         code_ids = set()
         for base in self.bases:
-            code_ids |= base._get_code_ids(include_parents=include_parents)
+            code_ids |= base.get_code_ids(include_parents=include_parents)
         if include_hidden:
             code_ids |= set(co._code_id for co in self.codebookcodes)
         else:
@@ -169,7 +169,7 @@ class Codebook(AmcatModel):
         @param include_hidden: if True, include codes hidden by *this* codebook
                                (e.g. not by its bases)
         """
-        ids = self._get_code_ids(include_hidden=include_hidden)
+        ids = self.get_code_ids(include_hidden=include_hidden)
         codes = list(get_codes(ids))
         return codes
 
@@ -201,7 +201,7 @@ class Codebook(AmcatModel):
 
         # which labels need to be cached?
         codes = dict((c.id,  c)
-                     for c in  get_codes(self._get_code_ids(include_hidden=True,
+                     for c in  get_codes(self.get_code_ids(include_hidden=True,
                                                             include_parents=True))
                      if not c.label_is_cached(language))
         if not codes: return
@@ -670,7 +670,7 @@ class TestCodebook(amcattest.PolicyTestCase):
             list(B.bases)
 
         with self.checkMaxQueries(2, "Get Code ids"):
-            self.assertEqual(set(A._get_code_ids()), set(c.id for c in codes))
+            self.assertEqual(set(A.get_code_ids()), set(c.id for c in codes))
 
         clear_cache(Code)
         with self.checkMaxQueries(2, "Get Codes"):

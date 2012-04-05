@@ -115,6 +115,11 @@ class Code(AmcatModel):
         if type(language) != int: language = language.id
         self._labelcache[language] = label
 
+    @classmethod
+    def create(cls, label, language):
+        code = cls.objects.create()
+        Label.objects.create(label=label, language=language, code=code)
+        return code
 
 class Label(AmcatModel):
     """Model class for table labels. Essentially a many-to-many relation
@@ -131,8 +136,6 @@ class Label(AmcatModel):
         db_table = 'codes_labels'
         app_label = 'amcat'
         unique_together = ('code','language')
-
-
 
 
 ###########################################################################
