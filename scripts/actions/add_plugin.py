@@ -33,7 +33,7 @@ from amcat.scripts.script import Script
 from amcat.models.plugin import Plugin
 from amcat.models.analysis import Analysis
 from amcat.models.language import Language
-from amcat.tools import toolkit
+from amcat.tools import classtools
 
 class AddPluginForm(forms.ModelForm):
 
@@ -82,7 +82,7 @@ class AddPlugin(Script):
             if "/" in form.data['class_name']:
                 # filename, so find and import module and class is first defined Script class
                 form.data['module'] = guess_module(form.data['class_name'])
-                cls = toolkit.get_class_from_module(form.data['module'], Script)
+                cls = classtools.get_class_from_module(form.data['module'], Script)
                 form.data['class_name'] = cls.__name__
             elif "." in form.data['class_name']:
                 # qualified class name, so split into module and class
@@ -94,12 +94,12 @@ class AddPlugin(Script):
         elif set(form.data['class_name']) & set([".","/"]):
             raise forms.ValidationError("If module name is given, class name %r cannot contain"
                                         ". or / characters" % form.data['class_name'])
-        plugin_class = toolkit.import_attribute(form.data['module'], form.data['class_name'])
+        plugin_class = classtools.import_attribute(form.data['module'], form.data['class_name'])
         if not form.data['label']:
             form.data['label'] = form.data['class_name']
         if not form.data['description']:
             if plugin_class.__doc__ is None:
-                plugin_module =  toolkit.import_attribute(form.data['module'])
+                plugin_module =  classtools.import_attribute(form.data['module'])
                 form.data['description'] = plugin_module.__doc__.strip()
             else:
                 form.data['description'] = plugin_class.__doc__.strip()
@@ -126,14 +126,13 @@ class AddPlugin(Script):
             a = Analysis.objects.create(language=language, plugin=p)
         return p
 
-
 def get_classes(type, module="amcat.scripts"):
-    for c in toolkit.get_classes_from_module(module, type):
+    for c in classtools.get_classes_from_module(module, type):
         try:
             Plugin.objects.get(class_name=c.__name__, module=c.__module__)
         except Plugin.DoesNotExist:
             yield c
-    p = toolkit.import_attribute(module)
+    p = classtools.import_attribute(module)
     if "__init__.py" in p.__file__:
         # package -> loop contents
         dir = os.path.dirname(p.__file__)

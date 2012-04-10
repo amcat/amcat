@@ -20,9 +20,11 @@
 """ORM Module representing scrapers"""
 
 from django.db import models
-from amcat.tools.toolkit import import_attribute
 from amcat.tools.model import AmcatModel
+from amcat.tools import classtools
 from amcat.tools.djangotoolkit import JsonField
+
+
 
 class Plugin(AmcatModel):
     """A Plugin is a piece of code that provide a specific function that can
@@ -36,7 +38,7 @@ class Plugin(AmcatModel):
     class_name = models.CharField(max_length=100)
     label = models.CharField(max_length=100)
     description = models.TextField(null=True)
-    type = models.CharField(max_length=100)
+    type = models.ForeignKey("amcat.PluginType", null=True)
 
     arguments = JsonField(null=True, blank=False)
     active = models.BooleanField(default=True)
@@ -50,7 +52,7 @@ class Plugin(AmcatModel):
 
     def get_class(self):
         """Return the class defined by this plugin"""
-        return import_attribute(self.module, self.class_name)
+        return classtools.import_attribute(self.module, self.class_name)
 
     def get_instance(self, **options):
         """Return a new instance of this plugin using the options provided"""
@@ -64,11 +66,47 @@ class Plugin(AmcatModel):
     def can_create(cls, user):
         return user.haspriv('add_plugins')
 
-def plugins_by_type(plugin_type, active=True, **options):
-    """Return instances of all plugins matching the type"""
-    plugins = Plugin.objects.filter(type=plugin_type)
-    if active is not None: plugins = plugins.filter(active=active)
-    return (plugin.get_instance(**options) for plugin in plugins)
+
+class PluginType(AmcatModel):
+    """A plugin type defines a type of plugins with a specific function
+
+    A type has a plugin reference that points to the 'expected superclass' which is used
+    to enumerate and/or check possible plugins. This creates a circular reference which is
+    'solved' by making plugin.type nullable
+    """
+
+    id = models.AutoField(primary_key=True, db_column="plugintype_id")
+
+    label = models.CharField(max_length=100)
+    package = models.CharField(max_length=100)
+    superclass = models.ForeignKey(Plugin)
+    description = models.TextField()
+
+    class Meta():
+        app_label = 'amcat'
+        db_table = 'plugintypes'
+
+    def get_plugins(self, active=True, **options):
+        """Return instances of all plugins of this type"""
+        plugins = Plugin.objects.filter(type=self)
+        if active is not None: plugins = plugins.filter(active=active)
+        return (plugin.get_instance(**options) for plugin in plugins)
+
+    def get_classes(self,  skip_existing_plugins=True):
+        """
+        Return the python classes in this type's package that are a subclass
+        of the type superclass. Useful to enumerate possible plugins to
+        register.
+        """
+        superclass = self.superclass.get_class()
+        for cls in classtools.get_classes_from_package(self.package, superclass):
+            if cls == superclass: continue
+            if skip_existing_plugins:
+                try:
+                    Plugin.objects.get(class_name=cls.__name__, module=cls.__module__)
+                except Plugin.DoesNotExist: pass
+                else: continue # plugin existed
+            yield cls
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -76,23 +114,47 @@ def plugins_by_type(plugin_type, active=True, **options):
 
 from amcat.tools import amcattest
 
+_X = 0
 class _TestPlug(object):
     """Silly plugin class for testing"""
+    @classmethod
+    def create(cls, type=None, label=None):
+        if label is None:
+            global _X
+            _X += 1
+            label = "plugin_%i" % _X
+        return Plugin.objects.create(label=label, module=cls.__module__,
+                                     class_name=cls.__name__, type=type)
+
+class _TestPlug1(_TestPlug):
+    """Yet another silly plugin test class"""
     def __init__(self, a, b=2):
         self.a = a
         self.b = b
 
-class _TestPlug2(object):
+class _TestPlug2(_TestPlug1):
     """Yet another silly plugin test class"""
+
+class _TestPlug3(_TestPlug):
+    """Yet another silly plugin test class"""
+
 
 class TestPlugin(amcattest.PolicyTestCase):
 
+    def test_get_classes(self):
+        spr = PluginType.objects.get(label="NLP Preprocessing")
+        from amcat.nlp.frog import Frog
+        from amcat.nlp.alpino import Alpino
+        self.assertEqual(set([Frog, Alpino]) - set(spr.get_classes()), set())
+        Plugin.objects.create(class_name="Frog", module="amcat.nlp.frog")
+        self.assertNotIn(Frog, set(spr.get_classes()))
+        self.assertIn(Frog, set(spr.get_classes(skip_existing_plugins=False)))
+
+
     def test_get_plugin(self):
         """Can we get a plugin object from the db?"""
-
-        s = Plugin.objects.create(module='amcat.models.plugin',
-                                  class_name='_TestPlug')
-        self.assertEqual(s.get_class(), _TestPlug)
+        s = _TestPlug1.create()
+        self.assertEqual(s.get_class(), _TestPlug1)
         self.assertRaises(TypeError, s.get_instance) # argument a missing
         self.assertEqual(s.get_instance(a=999).a, 999)      # argument via options
 
@@ -106,18 +168,20 @@ class TestPlugin(amcattest.PolicyTestCase):
 
     def test_plugins_by_type(self):
         """Does getting plugins by type work correctly?"""
-        Plugin.objects.create(module='amcat.models.plugin', class_name='_TestPlug')
-        Plugin.objects.create(module='amcat.models.plugin', class_name='_TestPlug', type='a')
-        Plugin.objects.create(module='amcat.models.plugin', class_name='_TestPlug', type='a')
-        s = Plugin.objects.create(module='amcat.models.plugin', class_name='_TestPlug2', type='b')
+        spr = _TestPlug.create()
+        a = PluginType.objects.create(superclass = spr)
+        b = PluginType.objects.create(superclass = spr)
+        _TestPlug1.create(type=a)
+        _TestPlug2.create(type=a)
+        s = _TestPlug3.create(type=b)
 
-        self.assertEqual([x.__class__ for x in plugins_by_type('b')], [_TestPlug2])
-        self.assertRaises(TypeError, list, plugins_by_type, 'a') # argument a missing
-        self.assertEqual([x.__class__ for x in plugins_by_type('a', a=1)], [_TestPlug, _TestPlug])
+        self.assertEqual([x.__class__ for x in b.get_plugins()], [_TestPlug3])
+        self.assertRaises(TypeError, list, a.get_plugins) # argument a missing
+        self.assertEqual([x.__class__ for x in a.get_plugins(a=1)], [_TestPlug1, _TestPlug2])
 
         s.active = False
         s.save()
-        self.assertEqual([x.__class__ for x in plugins_by_type('b')], [])
+        self.assertEqual([x.__class__ for x in b.get_plugins()], [])
 
     def test_can_create(self):
         """Are only admins allowed to create new plugins??"""

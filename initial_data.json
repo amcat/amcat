@@ -346,8 +346,44 @@
   {  "pk" : 0,
     "model": "amcat.function",
     "fields" : {
-      "label" : "0",
+      "label" : "generic",
       "description" : "general taxonomic more-specific-than relation"
+    }
+  },
+  {  "pk" : 1,
+    "model": "amcat.plugin",
+    "fields" : {
+      "label" : "Analysis Script",
+      "description" : "Superclass for NLP Analysis plugins",
+      "class_name" : "AnalysisScript",
+      "module" : "amcat.nlp.analysisscript"
+    }
+  },
+  {"pk" : 2,
+    "model": "amcat.plugin",
+    "fields" : {
+      "label" : "Article Upload",	
+      "description" : "Superclass for Article Upload plugins",
+      "class_name" : "UploadScript",
+      "module" : "amcat.scripts.article_upload.upload.UploadScript"
+    }
+  },
+  {"pk" : 1,
+    "model": "amcat.plugintype",
+    "fields" : {
+      "label" : "NLP Preprocessing",	
+      "description" : "Plugin for NLP Preprocessing analyses",
+      "superclass" : 1,
+      "package" : "amcat.nlp"
+    }
+  },
+  {"pk" : 2,
+    "model": "amcat.plugintype",
+    "fields" : {
+      "label" : "Article Upload",	
+      "description" : "Plugin for uploading new articles",
+      "superclass" : 2,
+      "package" : "amcat.scripts"
     }
   }
 ]

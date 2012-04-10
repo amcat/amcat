@@ -60,18 +60,18 @@ def _get_analyses_per_article(articleids):
     """
     For each article, determine which analyses should be processed by what analyses
     based on direct and indirect (via articleset) project membership
-    
+
     @return: a sequence of article id : analysis id pairs.
     """
     projects_per_article = list(_get_active_project_ids(articleids))
-    
+
     all_projects = {p for (a,p) in projects_per_article}
     analyses_per_project = multidict(_get_analysis_ids(all_projects))
 
     for article, project in projects_per_article:
         for analysis in analyses_per_project.get(project, set()):
             yield article, analysis
-          
+
 def _get_articles_preprocessing_actions(articleids):
     """
     For the given articles, determine which analyses need to be performed
@@ -98,7 +98,7 @@ def _get_articles_preprocessing_actions(articleids):
                 undeletions.append(aa.id)
 
     return required, deletions, undeletions
-        
+
 
 def set_preprocessing_actions(articleids):
     """
@@ -113,11 +113,11 @@ def set_preprocessing_actions(articleids):
         ArticleAnalysis.objects.filter(id__in=deletions).update(delete=True)
     if undeletions:
         ArticleAnalysis.objects.filter(id__in=undeletions).update(delete=False)
-            
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestPreprocessing(amcattest.PolicyTestCase):
@@ -125,7 +125,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
     def _get_analyses(self, articles):
         return {(aa.article_id, aa.analysis_id) : aa.delete
                 for aa in ArticleAnalysis.objects.filter(article__in=articles)}
-    
+
     def test_set_preprocessing_actions(self):
         p1, p2 = [amcattest.create_test_project() for _x in range(2)]
         a1, a2 = [amcattest.create_test_article(project=p) for p in [p1, p2]]
@@ -143,7 +143,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
             set_preprocessing_actions(articles)
         ProjectAnalysis.objects.create(project=p1, analysis=n1)
         self.assertEqual(self._get_analyses(articles), {(a1.id, p1.id) : False})
-        
+
         # test another addition: activate analysis 1 on p2
         ProjectAnalysis.objects.create(project=p2, analysis=n1)
         with self.checkMaxQueries(n=5): # 4 for querying, 1 for mutations
@@ -151,7 +151,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         ProjectAnalysis.objects.create(project=p1, analysis=n1)
         self.assertEqual(self._get_analyses(articles), {(a1.id, n1.id) : False,
                                                         (a2.id, n1.id) : False})
-        
+
         # test deletions: deactivate project 1
         p1.active = False
         p1.save()
@@ -169,13 +169,13 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         ProjectAnalysis.objects.create(project=p1, analysis=n1)
         self.assertEqual(self._get_analyses(articles), {(a1.id, n1.id) : False,
                                                         (a2.id, n1.id) : False})
-        
-    
+
+
     def test_articles_preprocessing_actions(self):
         p1, p2 = [amcattest.create_test_project() for x in range(2)]
         a1, a2, a3 = [amcattest.create_test_article(project=p) for p in [p1, p2, p2]]
         articles = {a1.id, a2.id, a3.id}
-        
+
         # baseline: no articles need any analysis, and no deletions are needed
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
             additions, deletions, undeletions = _get_articles_preprocessing_actions(articles)
@@ -188,7 +188,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         ProjectAnalysis.objects.create(project=p1, analysis=n1)
         ProjectAnalysis.objects.create(project=p1, analysis=n2)
         ProjectAnalysis.objects.create(project=p2, analysis=n2)
-            
+
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
             additions, deletions, undeletions = _get_articles_preprocessing_actions(articles)
             self.assertEqual(multidict(additions), {1: {1,2}, 2:{2}, 3:{2}})
@@ -199,7 +199,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         ArticleAnalysis.objects.create(article=a1, analysis=n1)
         ArticleAnalysis.objects.create(article=a2, analysis=n1)
         ArticleAnalysis.objects.create(article=a3, analysis=n2)
-        
+
         with self.checkMaxQueries(n=4): # 3 for needed, 1 for existing
             additions, deletions, undeletions = _get_articles_preprocessing_actions(articles)
             self.assertEqual(multidict(additions), {1: {2}, 2:{2}})
@@ -234,12 +234,12 @@ class TestPreprocessing(amcattest.PolicyTestCase):
             self.assertEqual(list(deletions), [])
             self.assertEqual(set(undeletions), {aa.id})
 
-        
-        
 
-            
-        
-        
+
+
+
+
+
 
     def test_analyses_per_article(self):
         p1, p2, p3 = [amcattest.create_test_project(active=x<2) for x in range(3)]
@@ -248,7 +248,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         a3 = amcattest.create_test_article(project=p2)
         a4 = amcattest.create_test_article(project=p3)
         articles = {a1.id, a2.id, a3.id, a4.id}
-        
+
         # baseline: no articles have any analysis
         with self.checkMaxQueries(n=3): # 2 for projects/article, 1 for analyses/project
             outcome = multidict(_get_analyses_per_article(articles))
@@ -265,7 +265,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
             self.assertEqual(outcome, {a1.id : {n1.id, n2.id},
                                        a2.id : {n2.id, n3.id},
                                        a3.id : {n2.id, n3.id}})
-            
+
         # adding an analysis to an inactive project has no effect
         ProjectAnalysis.objects.create(project=p3, analysis=n3)
         with self.checkMaxQueries(n=3):
@@ -273,7 +273,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
             self.assertEqual(outcome, {a1.id : {n1.id, n2.id},
                                        a2.id : {n2.id, n3.id},
                                        a3.id : {n2.id, n3.id}})
-            
+
         # adding an article to a project via a set does have effect
         s1 = amcattest.create_test_set(project=p1)
         s2 = amcattest.create_test_set(project=p2)
@@ -286,8 +286,8 @@ class TestPreprocessing(amcattest.PolicyTestCase):
                                        a2.id : {n1.id, n2.id, n3.id},
                                        a3.id : {n2.id, n3.id},
                                        a4.id : {n1.id, n2.id}})
-        
-    
+
+
     def test_get_projects(self):
         p = amcattest.create_test_project()
         a = amcattest.create_test_article(project=p)
@@ -307,7 +307,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         with self.checkMaxQueries(n=2):
             outcome = multidict(_get_active_project_ids(articleids))
             self.assertEqual(outcome, {a.id : {p.id, p2.id}, a2.id : {p2.id}, a3.id : {p2.id}})
-        
+
         # now let's add a4 (whose project is inactive) to that set
         s.add(a4)
         with self.checkMaxQueries(n=2):
@@ -315,8 +315,8 @@ class TestPreprocessing(amcattest.PolicyTestCase):
             self.assertEqual(outcome, {a.id : {p.id, p2.id}, a2.id : {p2.id},
                                        a3.id : {p2.id}, a4.id : {p2.id}})
 
-            
-        
+
+
     def test_get_analysis_ids(self):
         p1, p2 = [amcattest.create_test_project() for _x in range(2)]
         a1, a2, a3 = [amcattest.create_test_analysis() for _x in range(3)]
@@ -327,8 +327,7 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         ProjectAnalysis.objects.create(project=p1, analysis=a1)
         ProjectAnalysis.objects.create(project=p1, analysis=a2)
         ProjectAnalysis.objects.create(project=p2, analysis=a2)
-        
+
         with self.checkMaxQueries(n=1):
             outcome = multidict(_get_analysis_ids([p1,p2]))
             self.assertEqual(outcome, {p1.id : {a1.id, a2.id}, p2.id : {a2.id}})
-            
