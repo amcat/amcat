@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -784,8 +783,9 @@ def random_alphanum(size=10):
 
 
 def warn(string):
-    fn, lineno, func = getCaller()
-    module = getCallingModule()
+    from amcat.tools import classtools
+    fn, lineno, func = classtools.get_caller()
+    module = classtools.get_calling_module()
 
     log = logging.getLogger()
     rec = log.makeRecord(module, logging.WARN, fn, lineno,
@@ -859,17 +859,17 @@ def retry(function, ntries=3, logger=None, *args, **kargs):
 ###########################################################################
 
 MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio'),
-              ('feb', 'fevr', 'feve', 'février'),
+              ('feb', 'fevr', 'feve', 'f\xe9vrier'),
               ('mar', 'mrt', 'maa', 'mar', 'mai'),
               ('apr', 'avri', 'abri'),
-              ('may', 'mai', 'mei', 'mayo', 'maggio', 'märz'),
+              ('may', 'mai', 'mei', 'mayo', 'maggio', 'm\xe4rz'),
               ('jun', 'juin','giugno'),
               ('jul', 'juil', 'luglio'),
-              ('aug', 'aout', 'agos', 'août', u'août', u'ao\u0171t'),
+              ('aug', 'aout', 'agos', u'ao\u0171t'),
               ('sep', 'setem', 'settembre'),
               ('oct', 'okt', 'out', 'ottobre'),
               ('nov'),
-              ('dec', 'dez', 'dici', 'dicembre', 'décembre'))
+              ('dec', 'dez', 'dici', 'dicembre', 'd\xe9cembre'))
 """Tuple of 12 tuples containing month name (prefixes)"""
 
 class _DateFormat(object):
@@ -1224,56 +1224,6 @@ def convertImage(image, informat, outformat=None, quality=None, scale=None, trim
         warn(err)
     return out
 
-def import_attribute(module, attribute=None):
-    """
-    Import and return the attribute from the module
-    If attribute is None, assume module is of form mo.du.le.attribute
-    """
-    if attribute is None:
-        if "." in module:
-            module, attribute = module.rsplit(".", 1)
-        else:
-            return __import__(module)
-    mod = __import__(module, fromlist=[str(attribute)])
-    try:
-        return getattr(mod, attribute)
-    except AttributeError:
-        raise ImportError("Module %r has no attribute %r" % (module, attribute))
-
-def guess_module(filename):
-    """
-    'Guess' te module name represented by the filename by getting its shortest route
-    to the system path, *skipping the first member* if it is the current working directory
-    """
-    filename = os.path.abspath(filename)
-
-    path = sys.path
-    if path[0] == os.getcwd(): del path[0]
-    path = set(path)
-    dirname, filename = os.path.split(filename)
-    module = [os.path.splitext(filename)[0]]
-    while True:
-        tail, head = os.path.split(dirname)
-        module.insert(0, head)
-        if dirname in path:
-            return ".".join(module)
-        if tail == dirname: raise ValueError("Cannot find module for %s" % filename)
-        dirname = tail
-
-
-def get_classes_from_module(module, superclass):
-    m = import_attribute(module)
-    for name in dir(m):
-        obj = getattr(m, name)
-        if (isinstance(obj, (type, types.ClassType)) and
-            issubclass(obj, superclass) and
-            obj.__module__ == module):
-            yield obj
-
-def get_class_from_module(module, superclass):
-    for obj in get_classes_from_module(module, superclass):
-        return obj
-    raise ValueError("Cannot find a %s subclass in %r" % (superclass.__name__, module))
 
 
 ###########################################################################
@@ -1309,27 +1259,7 @@ def isIterable(obj, excludeStrings = False):
 ###########################################################################
 # Please try to keep this one clean...
 
-def getCaller(depth=1):
-    """Return the filename, lineno, function of the caller
 
-    A depth of 1 signifies the caller of the function calling this function.
-    Depth 2 would be its caller etc.
-    """
-    depth = depth + 1 # me, caller, caller's caller
-    return inspect.stack()[depth][1:4]
-
-def getCallingModule(depth=1):
-    """Return the module name of the caller (see L{getCaller})"""
-    depth = depth + 1 # me, caller, caller's caller
-    caller = inspect.stack()[depth]
-    return caller[0].f_globals['__name__']
-
-
-def getCallingModuleFilename(depth=1):
-    """Return the module name of the caller (see L{getCaller})"""
-    depth = depth + 1 # me, caller, caller's caller
-    caller = inspect.stack()[depth]
-    return caller[1]
 
 def HSVtoHTML(h, s, v):
     """Convert HSV (HSB) colour to HTML hex string"""

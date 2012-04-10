@@ -22,7 +22,7 @@ from amcat.scripts import scriptmanager
 from amcat.scripts.script import Script
 import argparse
 import sys
-from amcat.tools import toolkit, amcatlogging
+from amcat.tools import amcatlogging, classtools
 import types
 
 import logging; log = logging.getLogger(__name__)
@@ -36,8 +36,8 @@ import logging; log = logging.getLogger(__name__)
 ###############################################################
 
 def get_script(depth=2):
-    module = toolkit.getCallingModule(depth=depth)
-    return toolkit.get_class_from_module(module, Script)
+    module = classtools.get_calling_module(depth=depth)
+    return classtools.get_class_from_module(module, Script)
 
 def run_cli(cls=None, handle_output=None, get_script_depth=2):
     """Handle command line interface invocation of this script"""
@@ -46,7 +46,7 @@ def run_cli(cls=None, handle_output=None, get_script_depth=2):
     if cls is None: cls = get_script(get_script_depth)
 
     if handle_output is None:
-	handle_output = cls.output_type != None
+        handle_output = cls.output_type != None
 
     parser = argument_parser_from_script(cls)
     args = parser.parse_args()
@@ -55,11 +55,11 @@ def run_cli(cls=None, handle_output=None, get_script_depth=2):
 
     input = None
     if cls.input_type in (file, str, unicode):
-	input = sys.stdin
+        input = sys.stdin
     if cls.input_type in (str, unicode):
-	input = input.read()
+        input = input.read()
     if cls.input_type == unicode:
-	input = input.decode('latin-1')
+        input = input.decode('latin-1')
 
     out = instance.run(input)
 

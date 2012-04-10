@@ -52,7 +52,7 @@ import thread
 import tempfile
 import os.path
 
-from amcat.tools import toolkit
+from amcat.tools import classtools
 
 _THREAD_CONTEXT = threading.local()
 CONTEXT_FIELDS = ['application', 'user', 'host']
@@ -129,7 +129,7 @@ debugModule, infoModule, quietModule = debug_module, info_module, quiet_module
     
 def _addModulesToSet(targetset, *modules):
     """Add the given modules to the targetset"""
-    if not modules: modules = [toolkit.getCallingModule(depth=2)]
+    if not modules: modules = [classtools.get_calling_module(depth=2)]
     targetset.update(modules)
 
     
@@ -242,7 +242,7 @@ def logExceptions(msg="Exception occured", logger=None, basetype=Exception):
         yield
     except basetype:
         if not logger:
-            logger = logging.getLogger(toolkit.getCallingModule())
+            logger = logging.getLogger(classtools.get_calling_module())
         logger.exception(msg)
         
 def format_records(records, date=True):

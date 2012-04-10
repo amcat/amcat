@@ -25,44 +25,10 @@ from amcat.tools import toolkit, amcattest, amcatlogging
 import datetime
 import random
 import inspect
-import os.path
-from amcat.models.article import Article # for get_class test
 
 class TestToolkit(amcattest.PolicyTestCase):
     TARGET_MODULE = toolkit
 
-    def test_get_class_from_module(self):
-        m = TestToolkit.__module__
-        cls = toolkit.get_class_from_module(m, amcattest.PolicyTestCase)
-        self.assertEqual(cls, self.__class__)
-        cls = toolkit.get_class_from_module(m, TestToolkit)
-        self.assertEqual(cls, TestToolkit)
-        import unittest
-        cls = toolkit.get_class_from_module(m, unittest.TestCase)
-        self.assertEqual(cls, TestToolkit)
-
-        self.assertRaises(ValueError, toolkit.get_class_from_module, m, Article.__class__)
-    
-    def test_guess_module(self):
-        f = toolkit.__file__
-        self.assertEqual(toolkit.guess_module(f), "amcat.tools.toolkit")
-        f = os.path.dirname(f)
-        self.assertEqual(toolkit.guess_module(f), "amcat.tools")
-        self.assertRaises(ValueError, toolkit.guess_module,
-                          "/__wva_does_not_exist/amcat/tools/toolkit.py")
-    
-    def test_import_attribute(self):
-        t = toolkit.import_attribute("amcat.tests.test_toolkit", "TestToolkit")
-        self.assertEqual(t, TestToolkit)
-        t = toolkit.import_attribute("amcat.tests.test_toolkit.TestToolkit")
-        self.assertRaises(ImportError, toolkit.import_attribute, "__wva_does_not_exist")
-        self.assertRaises(ImportError, toolkit.import_attribute,
-                          "amcat.tests.test_toolkit", "__wva_does_not_exist")
-        self.assertRaises(ImportError, toolkit.import_attribute,
-                          "amcat.tests.test_toolkit.__wva_does_not_exist")
-
-        self.assertEqual(toolkit.import_attribute(u"amcat.nlp.frog").__name__, "amcat.nlp.frog")
-        
     def test_ints2ranges(self):
         for i in range(10):
             seq = [random.randint(-100, 100) for dummy in range(100)]
@@ -80,8 +46,8 @@ class TestToolkit(amcattest.PolicyTestCase):
             ((x for x in []), {}),
             ):
             self.assertEqual(dict(toolkit.multidict(input)), output)
-            
-            
+
+
     def test_readdate(self):
         for s, date, american, lax in (
             ("22 maart 1980" , datetime.datetime(1980, 3, 22,0,0,0), False, True),
@@ -90,7 +56,7 @@ class TestToolkit(amcattest.PolicyTestCase):
             ("1980-3-22" , datetime.datetime(1980, 3, 22,0,0,0), False, True),
             ("1980-3-22T01:00:05" , datetime.datetime(1980, 3, 22,1,0,5), False, True),
             ("1980-3-22 01:00" , datetime.datetime(1980, 3, 22,1,0,0), False, True),
-            ("1980-3-22 01:00:00:00" , datetime.datetime(1980, 3, 22,0,0,0), False, True), # illegal time = 0
+            ("1980-3-22 01:00:00:00" , datetime.datetime(1980, 3, 22,0,0,0), False, True), #time->0
             ("1980-13-22 01:00:00:00" , None, False, True), # illegal date --> None
             ("1980-13-22 01:00:00" , ValueError, False, False), # illegal date --> Error
             ("1980-3-22 27:00:00" , ValueError, False, False), # illegal time --> Error
@@ -110,7 +76,7 @@ class TestToolkit(amcattest.PolicyTestCase):
             else:
                 date2 = toolkit.readDate(s, lax=lax, american=american)
                 self.assertEqual(date2, date)
-                
+
 
     def test_dateoutput(self):
         for date, iso, isotime, yw, ym, yq in (
@@ -148,8 +114,8 @@ class TestToolkit(amcattest.PolicyTestCase):
                 l2 = toolkit.getseq(seq, stringok=stringok, convertscalar=convscal)
                 if result is True: self.assertTrue(seq is l2)
                 else: self.assertEqual(l2, result)
-                
-            
+
+
     def test_execute(self):
         for cmd, input, output, error in (
             ("cat", "testje", "testje", ""),
@@ -167,7 +133,7 @@ class TestToolkit(amcattest.PolicyTestCase):
                 if not error:
                     out = toolkit.execute(cmd, input, outonly=True)
                     self.assertEqual(out, output)
-                
+
     def test_convert(self):
         PNG = '\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x02\x00\x00\x00\x03\x08\x02\x00\x00\x006\x88I\xd6\x00\x00\x00\tpHYs\x00\x00\x0e\xc4\x00\x00\x0e\xc4\x01\x95+\x0e\x1b\x00\x00\x00\x14IDAT\x08\x99c\xb4\xc8\x9f\xc6\xc0\xc0\xc0\xc4\xc0\xc0\x80\xa0\x00\x17}\x01CX\xc0\xa8\x0e\x00\x00\x00\x00IEND\xaeB`\x82'
         GIFSTART = 'GIF89a\x02\x00\x03\x00\xf0\x00\x008o\x96'
@@ -186,7 +152,7 @@ class TestToolkit(amcattest.PolicyTestCase):
             ((i for i in (1,2,3)), [[1,2],[3]], 2, {}),
             ((i for i in (1,2,3)), [1,2,3], 2, dict(yieldelements=True)),
             ((i for i in (1,2,3)), [2,3,4], 2, dict(buffercall=plusone,yieldelements=True)),
-            
+
             ):
             o = toolkit.splitlist(input, itemsperbatch,  **options)
             self.assertEqual(list(o), output)
@@ -207,7 +173,7 @@ class TestToolkit(amcattest.PolicyTestCase):
             ([1,2,3,4], lambda x : not x%2, 2),
             ([4,3,2,1], lambda x : not x%2, 4),
             ([3,1], lambda x : not x%2, None),
-            
+
             ):
             self.assertEqual(output, toolkit.head(input, filter))
             self.assertEqual(output, toolkit.head(tuple(input), filter))
@@ -250,24 +216,24 @@ class TestToolkit(amcattest.PolicyTestCase):
                 self.assertRaises(zipped, toolkit.zipp, *seqs)
             else:
                 self.assertEqual(zipped, toolkit.zipp(*seqs))
-            
+
     def test_hasattrv2(self):
         class A(object): pass
         class B(object): pass
-        
+
         B.foo = 'bar'; A.B = B
-        
+
         self.assertTrue(toolkit.hasattrv2(A, 'B.foo'))
         self.assertFalse(toolkit.hasattrv2(A, 'B.bar'))
         self.assertTrue(toolkit.hasattrv2(A, 'B'))
         self.assertFalse(toolkit.hasattrv2(A, 'C'))
-        
+
     def test_getattrv2(self):
         class A(object): pass
         class B(object): pass
-        
+
         B.foo = 'bar'; A.B = B
-        
+
         self.assertEqual(toolkit.getattrv2(A, 'B.foo'), 'bar')
         self.assertEqual(toolkit.getattrv2(A, 'B'), B)
         self.assertRaises(AttributeError, toolkit.getattrv2, *(A, 'B.bar'))
@@ -302,8 +268,8 @@ class TestToolkit(amcattest.PolicyTestCase):
 
         x = [5]
         self.assertRaises(amcatlogging.SilentException, toolkit.retry, f)
-        
-        
-        
+
+
+
 if __name__ == '__main__':
     amcattest.main()
