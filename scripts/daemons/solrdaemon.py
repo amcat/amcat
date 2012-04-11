@@ -29,9 +29,6 @@ import logging
 log = logging.getLogger(__name__)
 
 from amcat.scripts.daemons.daemonscript import DaemonScript
-from amcat.tools.multithread import distribute_tasks
-from amcat.nlp.solr import Solr
-from amcat.tools.amcatsolr import index_articles, delete_articles
 from amcat.models.analysis import Analysis
 from amcat.models.article_preprocessing import ArticleAnalysis
 
@@ -43,22 +40,32 @@ class SolrDeamon(DaemonScript):
     and updates them
     """
 
-    def __init__(self, *args, **kargs):
-        super(SolrDeamon, self).__init__(*args, **kargs)
-        self.analysis = Analysis.objects.get(plugin__module=Solr.__module__,
-                                             plugin__class_name=Solr.__name__)
+    def run_daemon(self):
+        from amcat.nlp.solr import Solr
+        self.script = Solr(Analysis.objects.get(plugin=Solr.get_plugin()))
+        super(SolrDeamon, self).run_daemon()
+
     def run_action(self):
+        log.debug("Running analysis for %s : %s" % (self.script, self.script.analysis))
+        articles = ArticleAnalysis.objects.filter(analysis=self.script.analysis)
         # add articles
-        q = ArticleAnalysis.objects.filter(analysis=self.analysis, done=False, delete=False)
-        q = q.select_related("article")
-        aas = list(q[:BATCH])
-        log.info("aas: %r" % aas)
-        index_articles([aa.article for aa in aas])
-        log.info("Setting done=True on %i articles" % len(aas))
-        ArticleAnalysis.objects.filter(pk__in=(aa.id for aa in aas)).update(done=True)
+        to_add = list(articles.filter(done=False, delete=False)[:BATCH])
+        if to_add:
+            self.script.add_articles([a.article_id for a in to_add])
+            log.info("Setting done=True on %i articles" % len(to_add))
+            ArticleAnalysis.objects.filter(pk__in=(a.id for a in to_add)).update(done=True)
+        # remove articles
+        to_delete = list(articles.filter(delete=True)[:BATCH])
+        if to_delete:
+            self.script.delete_articles([a.article_id for a in to_delete])
+            log.info("Removing %i articles from analysis" % len(to_delete))
+            ArticleAnalysis.objects.filter(pk__in=(a.id for a in to_delete)).delete()
+        
+        
+        
 
 if __name__ == "__main__":
     from amcat.tools import amcatlogging
-    amcatlogging.debug_module("amcat.tools.amcatsolr")
+    amcatlogging.debug_module()
     from amcat.scripts.tools.cli import run_cli
     run_cli()

@@ -31,6 +31,7 @@ from django.http import QueryDict
 from django.utils.datastructures import MergeDict
 from amcat.forms import validate
 from amcat.models.user import current_user
+from amcat.models.plugin import Plugin, PluginType
 
 
 class Script(object):
@@ -116,11 +117,60 @@ class Script(object):
     def module(cls):
         return cls.__module__
 
+    @classmethod
+    def get_plugin(cls):
+        """
+        Get the Plugin object corresponding to this class, if any
+        """
+        try:
+            return Plugin.objects.get(class_name=cls.__name__, module=cls.__module__)
+        except Plugin.DoesNotExist:
+            return None
+
+    @classmethod
+    def get_plugin_type(cls):
+        """
+        Get the PluginType object corresponding to this class, if any
+        If the corresponding plugin has a Type, return it.
+        If not, check whether it 'is' a type, e.g. there is a type defined by this plugin
+        """
+        p = cls.get_plugin()
+        if not p:
+            return None
+        if p.type:
+            return p.type
+        else:
+            try:
+                return PluginType.objects.get(superclass=p)
+            except PluginType.DoesNotExist:
+                return None
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
 from amcat.tools import amcattest
 
+class _TestPlugin(Script):
+    "test plugin"
+
+class _TestPlugin2(Script):
+    "another test plugin"
+
 class TestScript(amcattest.PolicyTestCase):
-    pass
+    def test_get_plugin(self):
+        c = _TestPlugin
+        self.assertEqual(c.get_plugin(), None)
+        p = Plugin.objects.create(class_name=c.__name__, module=c.__module__)
+        self.assertEqual(c.get_plugin(), p)
+
+    def test_get_plugin_type(self):
+        c = _TestPlugin
+        Plugin.objects.create(class_name=c.__name__, module=c.__module__)
+        self.assertEqual(c.get_plugin_type(), None)
+        t = PluginType.objects.create(superclass=c.get_plugin())
+        
+        self.assertEqual(c.get_plugin_type(), t)
+        d = _TestPlugin2
+        Plugin.objects.create(class_name=d.__name__, module=d.__module__, type=t)
+        self.assertEqual(d.get_plugin_type(), t)

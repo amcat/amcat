@@ -49,7 +49,7 @@ class ArticlePreprocessing(AmcatModel):
     """
 
     id = models.AutoField(primary_key=True)
-    article_id = models.IntegerField()
+    article = models.ForeignKey(Article)
 
     class Meta():
         db_table = 'articles_preprocessing_queue'
@@ -61,8 +61,7 @@ class ArticlePreprocessing(AmcatModel):
         direct = Article.objects.filter(project=project).only("id")
         direct = str(direct.query)
         indirect = ArticleSetArticle.objects.filter(articleset__project=project).only("article")
-        # need to get rid of articlesets_articles.id
-        indirect = "SELECT " + str(indirect.query).split(",",1)[1] 
+        indirect = "SELECT " + str(indirect.query).split(",",1)[1] # drop articlesets_articles.id
 
         table = cls._meta.db_table
         idcol = "article_id"

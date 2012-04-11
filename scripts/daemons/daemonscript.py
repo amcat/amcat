@@ -72,8 +72,8 @@ class DaemonScript(Script):
             try:
                 result = self.run_action()
                 if not result:
-                    log.info('No results found, sleeping for 1 minute')
-                    time.sleep(60)
+                    log.info('No results found, sleeping for 5 seconds')
+                    time.sleep(5)
             except StopDeamon:
                 log.exception('StopDaemon received, quitting')
                 try:
