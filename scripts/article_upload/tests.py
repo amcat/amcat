@@ -1,3 +1,7 @@
+import os
+import json
+import datetime
+
 from django.utils import unittest
 from django.conf import settings
 
@@ -7,11 +11,7 @@ from amcat.models.language import Language
 from amcat.models.project import Project
 from amcat.models.user import Affiliation, User
 from amcat.models.authorisation import Role
-
-import os
-import chardet
-import json
-import datetime
+from amcat.tools import amcattest
 
 class TestLexisNexis(unittest.TestCase):
     def setUp(self):
@@ -21,7 +21,7 @@ class TestLexisNexis(unittest.TestCase):
         self.test_body_sols = json.load(open(os.path.join(dir, 'test_body_sols.json')))
         self.test_header_sols = json.load(open(os.path.join(dir, 'test_header_sols.json')))
 
-        self.parser = lexisnexis.LexisNexis()
+        self.parser = lexisnexis.LexisNexis(project=amcattest.create_test_project().id)
 
     def split(self):
         return self.parser.split_header(self.test_text)
@@ -81,17 +81,19 @@ class TestLexisNexis(unittest.TestCase):
 
         return dp
 
+    def test_meta(self):
+
+        a = list(self.parser.split_body(self.split()[1]))[0]
+        meta = self.parser.parse_article(a)[-1]
+        self.assertEqual(meta.pop('length').split()[0], "306")
 
     def test_body_to_article(self):
         articles = self.parser.split_body(self.split()[1])
         articles = [self.parser.parse_article(a) for a in articles]
 
-        self.assertRaises(Medium.DoesNotExist, self.parser.body_to_article, *articles[0])
-
         # Only testing the first article. If this contains correct
         # data, we assume the implementation is correct. However,
         # we do test the remaining articles with full_clean().
-        self._create_medium(u"B\u00f6rsen-Zeitung")
 
         art = self.parser.body_to_article(*articles[0])
         self.assertEquals(art.length, 306)
@@ -101,7 +103,9 @@ class TestLexisNexis(unittest.TestCase):
         self.assertEquals(art.date, datetime.datetime(2011, 8, 31))
         self.assertEquals(art.medium.name, u"B\u00f6rsen-Zeitung")
         self.assertEquals(art.author, "MF Tokio")
-        self.assertEquals(art.metastring, "{u'UPDATE': u'2. September 2011', u'SPRACHE': u'GERMAN; DEUTSCH', u'PUBLICATION-TYPE': u'Zeitung'}")
+        self.assertEquals(eval(art.metastring), {u'update': u'2. September 2011',
+                                                 u'language': u'GERMAN; DEUTSCH',
+                                                 u'publication-type': u'Zeitung'})
 
         # Setup environment
         dp = self._create_project()
@@ -128,9 +132,8 @@ class TestMediargus(unittest.TestCase):
         self.assertEqual(len(articles), 100)
         for article in articles:
             self.assertEqual(len(article), 2)
-        
+
     def test_parse(self):
         articles = mediargus.Mediargus().split_text(self.test_text)
         a = mediargus.Mediargus().parse_document(articles[99])
         self.assertEqual(a.headline, 'Maatschappijkritiek en actualiteit als inspiratie')
-        

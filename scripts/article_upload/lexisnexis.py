@@ -1,5 +1,4 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -37,6 +36,8 @@ import re
 import collections
 import StringIO
 
+import logging; log = logging.getLogger(__name__)
+
 # Regular expressions used for parsing document
 RES = {
     # Match at least 20 whitespace characters, followed by # of # DOCUMENTS.
@@ -53,7 +54,7 @@ RES = {
     "COPYRIGHT" : re.compile("^Copyright \d{4}.*")
 }
 
-WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "LÄNGE", "UPDATE", "SPRACHE",
+WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "L\xc4NGE", "UPDATE", "SPRACHE",
                         "PUBLICATION-TYPE", "CODE-REVUE", "AUTEUR", "RUBRIQUE",
                         "LANGUE", "DATE-CHARGEMENT", "TYPE-PUBLICATION",
                         "LONGUEUR", "LOAD-DATE"]
@@ -62,7 +63,7 @@ BODY_KEYS_MAP = {
     # LexisNexis --> Article model
     "autor" : "author",
     "rubrik" : "section",
-    "länge" : "length",
+    "l\xe4nge" : "length",
     "sprache" : "language",
     "auteur" : "author",
     "rubrique" : "section",
@@ -78,13 +79,13 @@ BODY_KEYS_MAP = {
 
 class LexisNexis(UploadScript):
     """
-    Script for importing files from Lexis Nexis. The files should be in plain text 
+    Script for importing files from Lexis Nexis. The files should be in plain text
     format with a 'cover page'. The script will extract the metadata (headline, source,
     date etc.) from the file automatically.
     """
 
     name = 'Lexis Nexis'
-    
+
     def split_header(self, doc):
         """
         Split header from rest of articles.
@@ -102,7 +103,7 @@ class LexisNexis(UploadScript):
         for i, line in enumerate(splitted):
             if RES["DOCUMENT_COUNT"].match(line):
                 break
-            
+
             header.append(line)
 
         # Add rest to body
@@ -147,7 +148,7 @@ class LexisNexis(UploadScript):
                 # An integer too far!
                 i -= 1
 
-            i += 1 
+            i += 1
 
         # Clean values and create 'real' dict
         return dict([(key.strip(), "\n".join(vals).strip()) for key, vals in meta.items()])
@@ -195,7 +196,7 @@ class LexisNexis(UploadScript):
 
         return True
 
-        
+
 
     def parse_article(self, art):
         """
@@ -226,6 +227,8 @@ class LexisNexis(UploadScript):
             mo = RES["BODY_META"].match(line)
             if mo:
                 key, val = mo.groups()
+                key = key.lower()
+                key = BODY_KEYS_MAP.get(key, key)
                 meta[key] = val.strip()
             elif line.strip():
                 # Unidentified text found!
@@ -237,7 +240,8 @@ class LexisNexis(UploadScript):
                     # Before traversing downwards, traverse upwards, to include
                     # all uit text until a BODY_META is found.
                     j = i - 1;
-                    while j >= 0 and not RES["BODY_META"].match(art[j]) and not art[j].startswith(' '):
+                    while (j >= 0 and not RES["BODY_META"].match(art[j])
+                           and not art[j].startswith(' ')):
                         if art[j].strip() in uit:
                             del uit[uit.index(art[j])]
 
@@ -256,7 +260,7 @@ class LexisNexis(UploadScript):
                     uit_indented.append(line.strip())
                 else:
                     uit.append(line.strip())
-            
+
             i += 1
 
         # Get date and source
@@ -343,31 +347,26 @@ class LexisNexis(UploadScript):
         @type meta: dictionary
 
         @return Article-object
-        
+
         """
         art = Article(headline=headline, byline=byline, text=text, date=date)
 
 
-	art.medium = get_or_create(Medium, name=source)
+        art.medium = get_or_create(Medium, name=source)
 
-        def _get_key(dic, key):
-            for k in dic.keys():
-                if BODY_KEYS_MAP.get(k.lower(), None) == key:
-                    res = meta[k]
-                    del meta[k]
-                    return res
 
         # Author / Section
-        art.author = _get_key(meta, 'author')
-        art.section = _get_key(meta, 'section')
-        art.length = int(_get_key(meta, 'length').split()[0])
+        meta = meta.copy()
+        art.author = meta.pop('author', None)
+        art.section = meta.pop('section', None)
+        art.length = int(meta.pop('length').split()[0])
         art.metastring = str(meta)
 
-	art.project = self.options['project']
+        art.project = self.options['project']
 
         return art
 
-    def split_text(self, text):        
+    def split_text(self, text):
         header, body = self.split_header(text)
         header = self.parse_header(header)
 
@@ -375,13 +374,15 @@ class LexisNexis(UploadScript):
 
     def parse_document(self, text):
         fields = self.parse_article(text)
-        return self.body_to_article(*fields)
+        try:
+            return self.body_to_article(*fields)
+        except:
+            log.error("Error on processing fields: {fields}".format(**locals()))
+            raise
+
     
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
-    a = cli.run_cli(LexisNexis, handle_output=False)
+    cli.run_cli(handle_output=False)
 
-    for a1 in a:
-        a1.save()
 
-    

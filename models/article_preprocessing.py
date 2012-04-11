@@ -39,6 +39,7 @@ from amcat.models.analysis import Analysis
 from amcat.models.project import Project
 
 from django.db.models.signals import post_save, post_delete
+from django.db import connection
 
 import logging; log = logging.getLogger(__name__)
 
@@ -46,27 +47,53 @@ class ArticlePreprocessing(AmcatModel):
     """
     An article on the Preprocessing Queue needs to be checked for preprocessing
     """
-    
+
     id = models.AutoField(primary_key=True)
     article_id = models.IntegerField()
 
     class Meta():
         db_table = 'articles_preprocessing_queue'
         app_label = 'amcat'
-     
+
+    @classmethod
+    def narticles_in_queue(cls, project):
+        # construct subqueries using django querysets
+        direct = Article.objects.filter(project=project).only("id")
+        direct = str(direct.query)
+        indirect = ArticleSetArticle.objects.filter(articleset__project=project).only("article")
+        # need to get rid of articlesets_articles.id
+        indirect = "SELECT " + str(indirect.query).split(",",1)[1] 
+
+        table = cls._meta.db_table
+        idcol = "article_id"
+        sql = """SELECT COUNT(DISTINCT {idcol}) FROM {table}
+                 WHERE {idcol} IN ({direct})
+                 OR {idcol} IN ({indirect})""".format(**locals())
+
+        log.info("Determining articles in queue for project {project.id} using sql {sql}"
+                 .format(**locals()))
+        
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        result = cursor.fetchall()
+        return result[0][0]
+
+
+        
+
 class ArticleAnalysis(AmcatModel):
     """
     The Article Analysis table keeps track of which articles are / need to be preprocessed
     """
 
     id = models.AutoField(primary_key=True, db_column="article_analysis_id")
-    
+
     article = models.ForeignKey(Article)
     analysis = models.ForeignKey(Analysis)
     started = models.BooleanField(default=False)
     done = models.BooleanField(default=False)
     delete = models.BooleanField(default=False)
-    
+
     class Meta():
         db_table = 'articles_analyses'
         app_label = 'amcat'
@@ -84,11 +111,19 @@ class ProjectAnalysis(AmcatModel):
     class Meta():
         app_label = 'amcat'
         db_table = "projects_analyses"
+        unique_together = ('project', 'analysis')
 
+    def narticles(self, **filter):
+        # TODO: this is not very efficient for large projects!
+        aids = self.project.get_all_articles()
+        q = ArticleAnalysis.objects.filter(article__in=aids, analysis=self.analysis)
+        if filter: q = q.filter(**filter)
+        return q.count()
 
 # Signal handlers to make sure the article preprocessing queue is filled
-def _add_to_queue(aid):
-    ArticlePreprocessing.objects.create(article_id = aid)
+def _add_to_queue(*aids):
+    for aid in aids:
+        ArticlePreprocessing.objects.create(article_id = aid)
 
 @receiver([post_save, post_delete], Article)
 def handle_article(sender, instance, **kargs):
@@ -97,82 +132,91 @@ def handle_article(sender, instance, **kargs):
 @receiver([post_save, post_delete], ArticleSetArticle)
 def handle_articlesetarticle(sender, instance, **kargs):
     _add_to_queue(instance.article_id)
-        
+
 @receiver([post_save], Project)
 def handle_project(sender, instance, **kargs):
-    for aid in instance.get_all_articles():
-        _add_to_queue(aid)
-        
+    _add_to_queue(*instance.get_all_articles())
+
 @receiver([post_save, post_delete], ProjectAnalysis)
 def handle_projectanalysis(sender, instance, **kargs):
-    for aid in instance.project.get_all_articles():
-        _add_to_queue(aid)
+    _add_to_queue(*instance.project.get_all_articles())
 
 @receiver([post_save], ArticleSet)
 def handle_articleset(sender, instance, **kargs):
-    for a in instance.articles.all().only("id"):
-        _add_to_queue(a.id)
-        
+    _add_to_queue(*(a.id for a in instance.articles.all().only("id")))
+
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestArticlePreprocessing(amcattest.PolicyTestCase):
-    
+
+    def test_narticles_in_queue(self):
+        # articles added to a project are on the queue
+        p = amcattest.create_test_project()
+        self.assertEqual(ArticlePreprocessing.narticles_in_queue(p), 0)
+        [amcattest.create_test_article(project=p) for _i in range(10)]
+        self.assertEqual(ArticlePreprocessing.narticles_in_queue(p), 10)
+
+        # articles added to a set in the project are on the queue
+        arts = [amcattest.create_test_article() for _i in range(10)]
+        s = amcattest.create_test_set(project=p)
+        self.assertEqual(ArticlePreprocessing.narticles_in_queue(p), 10)
+        map(s.add, arts)
+        self.assertEqual(ArticlePreprocessing.narticles_in_queue(p), 20)
+        
     def test_article_trigger(self):
         """Is a created or update article in the queue?"""
         self._flush_queue()
         a = amcattest.create_test_article()
         self.assertIn(a.id,  self._all_articles())
-        
+
         self._flush_queue()
         self.assertNotIn(a.id,  self._all_articles())
         a.headline = "bla bla"
         a.save()
         self.assertIn(a.id,  self._all_articles())
-        
-        
+
+
     def test_articleset_triggers(self):
         """Is a article added/removed from a set in the queue?"""
-        
+
         a = amcattest.create_test_article()
-        aset = amcattest.create_test_set() 
+        aset = amcattest.create_test_set()
         self._flush_queue()
         self.assertNotIn(a.id,  self._all_articles())
 
         aset.add(a)
         self.assertIn(a.id,  self._all_articles())
-        
+
         self._flush_queue()
         aset.remove(a)
         self.assertIn(a.id, self._all_articles())
-        
+
         self._flush_queue()
         aid = a.id
         a.delete()
         self.assertIn(aid, self._all_articles())
 
-        
+
         b = amcattest.create_test_article()
         aset.add(b)
         self._flush_queue()
         aset.project = amcattest.create_test_project()
         aset.save()
         self.assertIn(b.id, self._all_articles())
-        
-        
-        
 
     def test_project_triggers(self):
         """Check trigger on project (de)activation and analyses being added/removed from project?"""
-        
+
         a,b = [amcattest.create_test_article() for _i in range(2)]
         s = amcattest.create_test_set(project=a.project)
         self.assertNotEqual(a.project, b.project)
         s.add(b)
-        
+
         self._flush_queue()
         a.project.active=True
         a.project.save()
@@ -184,10 +228,10 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         ProjectAnalysis.objects.create(project=a.project, analysis=n)
         self.assertIn(a.id, self._all_articles())
         self.assertIn(b.id, self._all_articles())
-        
-        
-        
-        
+
+
+
+
     @classmethod
     def _flush_queue(cls):
         """Flush the articles queue"""
@@ -197,7 +241,7 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
     def _all_articles(cls):
         """List all articles on the queue"""
         return set([sa.article_id for sa in ArticlePreprocessing.objects.all()])
-        
+
 if __name__ == '__main__':
 
     t = TestArticlePreprocessing()

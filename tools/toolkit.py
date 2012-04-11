@@ -842,7 +842,8 @@ def retry(function, ntries=3, logger=None, *args, **kargs):
     the first time the function returns without exception. Will re-raise
     the exception of the function when out of retries"""
     if not logger:
-        logger = logging.getLogger(getCallingModule())
+        from amcat.tools import classtools
+        logger = logging.getLogger(classtools.get_calling_module())
     while True:
         try:
             return function(*args, **kargs)
@@ -865,7 +866,7 @@ MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio'),
               ('may', 'mai', 'mei', 'mayo', 'maggio', 'm\xe4rz'),
               ('jun', 'juin','giugno'),
               ('jul', 'juil', 'luglio'),
-              ('aug', 'aout', 'agos', u'ao\u0171t'),
+              ('aug', 'aout', 'agos', u'ao\xfbt'),
               ('sep', 'setem', 'settembre'),
               ('oct', 'okt', 'out', 'ottobre'),
               ('nov'),

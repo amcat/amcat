@@ -57,7 +57,6 @@ class Script(object):
             self.bound_form = self._bind_form(options, **kargs)
             self._validate_form()
             self.options = self.bound_form.cleaned_data
-            print "!!!!!!!!!", self.options
 
 
     def run(self, input=None):

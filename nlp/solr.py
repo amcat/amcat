@@ -1,4 +1,3 @@
-#!/usr/bin/python
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -19,34 +18,26 @@
 ###########################################################################
 
 """
-Daemon that checks if there are any Articles on the articles_preprocessing_queue
-and adjusts the articles_analysis table as necessary
+Preprocess using ILK Frog
+See http://ilk.uvt.nl/frog/ and
+Van den Bosch, A., Busser, G.J., Daelemans, W., and Canisius, S., CLIN 2007.
 """
 
-from amcat.scripts.daemons.daemonscript import DaemonScript
+import telnetlib
 
-from amcat.models.article_preprocessing import ArticlePreprocessing
-from amcat.nlp.preprocessing import set_preprocessing_actions
+from amcat.nlp.analysisscript import AnalysisScript, Token, Triple
 
-import logging; log = logging.getLogger(__name__)
+class Solr(AnalysisScript):
 
-BATCH = 1000
+    def __init__(self, analysis):
+        super(Frog, self).__init__(analysis, triples=False, tokens=False)
 
-class PreprocessingDaemon(DaemonScript):
-    def run_action(self):
-        aids = set()
-        preprocess_ids = list()
 
-        for ap in ArticlePreprocessing.objects.all()[:BATCH]:
-            aids.add(ap.article_id)
-            preprocess_ids.append(ap.id)
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
 
-        if not aids: return False
+from amcat.tools import amcattest
 
-        ArticlePreprocessing.objects.filter(pk__in=preprocess_ids).delete()
-        log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
-        set_preprocessing_actions(aids)
-
-if __name__ == '__main__':
-    from amcat.scripts.tools.cli import run_cli
-    run_cli()
+class TestSolr(amcattest.PolicyTestCase):
+    pass

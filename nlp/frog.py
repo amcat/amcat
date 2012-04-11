@@ -82,6 +82,11 @@ class Frog(AnalysisScript):
             yield line.split("\t")
 
 
+class FrogTriples(Frog):
+    """Use the Frog memory based dependency parser"""
+    def __init__(self, analysis, host='localhost', port=12346, triples=True):
+        super(FrogTriples, self).__init__(analysis, host, port, triples)
+    
 FROG_POSMAP = {"VZ" : "P",
                "N" : "N",
                "ADJ" : "A",

@@ -28,12 +28,17 @@ import logging; log = logging.getLogger(__name__)
 
 from django import forms
 from django.forms.widgets import HiddenInput
+from django.core.exceptions import ValidationError
+
 
 from amcat.scripts.script import Script
 from amcat.models.plugin import Plugin
 from amcat.models.analysis import Analysis
 from amcat.models.language import Language
 from amcat.tools import classtools
+from amcat.nlp.analysisscript import AnalysisScript
+
+
 
 class AddPluginForm(forms.ModelForm):
 
@@ -51,6 +56,12 @@ class AddPluginForm(forms.ModelForm):
             self.fields[field].required = False
             self.fields[field].help_text = 'Default based on %s' % default
 
+    def clean_analysis_language(self):
+        if self.data["analysis_language"]:
+            return Language(int(self.data["analysis_language"]))
+        elif self.cleaned_data["type"].superclass.get_class() == AnalysisScript:
+            raise ValidationError("Please provide the language for an analysis plugin")
+
     @classmethod
     def get_empty(cls, type=None, **_options):
         f = cls()
@@ -58,7 +69,9 @@ class AddPluginForm(forms.ModelForm):
             f.fields['type'].initial = type
             f.fields['type'].widget = HiddenInput()
 
-            if type != 'amcat.nlp.analysisscript.AnalysisScript':
+            if type.superclass.get_class() == AnalysisScript:
+                f.fields['analysis_language'].required = True
+            else:
                 f.fields['analysis_language'].widget = HiddenInput()
 
         return f
@@ -94,7 +107,11 @@ class AddPlugin(Script):
         elif set(form.data['class_name']) & set([".","/"]):
             raise forms.ValidationError("If module name is given, class name %r cannot contain"
                                         ". or / characters" % form.data['class_name'])
-        plugin_class = classtools.import_attribute(form.data['module'], form.data['class_name'])
+        try:
+            plugin_class = classtools.import_attribute(form.data['module'], form.data['class_name'])
+        except ImportError as e:
+            raise forms.ValidationError("Class %s.%s could not be imported: %s" %
+                                        (form.data['module'], form.data['class_name'], e))
         if not form.data['label']:
             form.data['label'] = form.data['class_name']
         if not form.data['description']:
@@ -116,36 +133,19 @@ class AddPlugin(Script):
                     lan = Language.objects.get(label=lan)
                 form.data['analysis_language'] = lan.id
 
-        return self.options_form(form.data) # hack: re-bind form to propagate data
+        f =  self.options_form(form.data) # hack: re-bind form to propagate data
+        print("XXXXXXXXXXX", f.data)
+        return f
 
 
     def run(self, _input=None):
+        print(">>>>>>>>>", self.options)
         language = self.options.pop('analysis_language')
         p = Plugin.objects.create(**self.options)
         if language:
             a = Analysis.objects.create(language=language, plugin=p)
         return p
 
-def get_classes(type, module="amcat.scripts"):
-    for c in classtools.get_classes_from_module(module, type):
-        try:
-            Plugin.objects.get(class_name=c.__name__, module=c.__module__)
-        except Plugin.DoesNotExist:
-            yield c
-    p = classtools.import_attribute(module)
-    if "__init__.py" in p.__file__:
-        # package -> loop contents
-        dir = os.path.dirname(p.__file__)
-        for item in os.listdir(dir):
-            fn = os.path.join(dir, item)
-            if os.path.isdir(fn):
-                if os.path.exists(os.path.join(fn, "__init__.py")):
-                    for c in get_classes(type, module + "." + item):
-                        yield c
-            if item.endswith(".py") and item != "__init__.py" and '#' not in item:
-                mod = item[:-3]
-                for c in get_classes(type, module + "." + item[:-3]):
-                    yield c
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

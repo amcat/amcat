@@ -23,7 +23,7 @@ from amcat.scripts.script import Script
 import argparse
 import sys
 from amcat.tools import amcatlogging, classtools
-import types
+import types, chardet
 
 import logging; log = logging.getLogger(__name__)
 #logging.basicConfig(format='[%(asctime)s] [%(name)s] %(message)s', level=logging.DEBUG)
@@ -59,7 +59,9 @@ def run_cli(cls=None, handle_output=None, get_script_depth=2):
     if cls.input_type in (str, unicode):
         input = input.read()
     if cls.input_type == unicode:
-        input = input.decode('latin-1')
+        encoding = chardet.detect(input)["encoding"]
+        log.info("Using encoding {encoding}".format(**locals()))
+        input = input.decode(encoding)
 
     out = instance.run(input)
 

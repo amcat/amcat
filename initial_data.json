@@ -365,7 +365,7 @@
       "label" : "Article Upload",	
       "description" : "Superclass for Article Upload plugins",
       "class_name" : "UploadScript",
-      "module" : "amcat.scripts.article_upload.upload.UploadScript"
+      "module" : "amcat.scripts.article_upload.upload"
     }
   },
   {"pk" : 1,

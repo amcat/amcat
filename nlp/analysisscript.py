@@ -26,7 +26,6 @@ from amcat.scripts.script import Script
 Token = namedtuple("Token", ["sentence_id", "position", "word", "lemma", "pos", "major", "minor"])
 Triple = namedtuple("Triple", ['sentence_id', "child", "parent", "relation"])
 
-
 class AnalysisScript(Script):
     def __init__(self, analysis, tokens=True, triples=False):
         self.analysis = analysis

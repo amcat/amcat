@@ -1,3 +1,4 @@
+#!/usr/bin/python
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -21,58 +22,43 @@
 Daemon that checks if there are any Articles on the queue
 and indexes them with Solr.
 """
-import time, sys, logging, argparse
+
+# todo this could be generalized to run an arbitrary analysis
+
+import logging
 log = logging.getLogger(__name__)
 
-from django.db import transaction
-
-from amcat.contrib.daemon import Daemon
-#from amcat.tools.amcatsolr import index_articles_from_db
-#from amcat.models.article_solr import SolrArticle
-
+from amcat.scripts.daemons.daemonscript import DaemonScript
 from amcat.tools.multithread import distribute_tasks
+from amcat.nlp.solr import Solr
+from amcat.tools.amcatsolr import index_articles, delete_articles
+from amcat.models.analysis import Analysis
+from amcat.models.article_preprocessing import ArticleAnalysis
 
-class SolrDeamon(Daemon):
-    
-    def run(self):
-        """
-            Main daemon function.
-            First it checks for any articles in the queue, 
-            if found it calls the solr indexer and removes the items from the queue
-            Else it continues sleeping
-        """
-        log.info("SOLRDaemon started")
-        while True:
-            try:
-                result = self.run_action()
-                if not result:
-                    log.info('No results found, sleeping for 1 minute')
-                    time.sleep(60)
-                    
-            except:
-                log.error('while loop exception, sleeping for 1 minute', exc_info=True)
-                time.sleep(60)
+BATCH = 10000
 
+class SolrDeamon(DaemonScript):
+    """
+    The SolrDaemon checks whether there are articles that need to be updated
+    and updates them
+    """
+
+    def __init__(self, *args, **kargs):
+        super(SolrDeamon, self).__init__(*args, **kargs)
+        self.analysis = Analysis.objects.get(plugin__module=Solr.__module__,
+                                             plugin__class_name=Solr.__name__)
     def run_action(self):
-        return index_articles_from_db(nthreads=1)
+        # add articles
+        q = ArticleAnalysis.objects.filter(analysis=self.analysis, done=False, delete=False)
+        q = q.select_related("article")
+        aas = list(q[:BATCH])
+        log.info("aas: %r" % aas)
+        index_articles([aa.article for aa in aas])
+        log.info("Setting done=True on %i articles" % len(aas))
+        ArticleAnalysis.objects.filter(pk__in=(aa.id for aa in aas)).update(done=True)
 
-    def test(self):
-        from amcat.tools import amcatlogging
-        amcatlogging.setup()
-        self.run_action()
-                
-    
 if __name__ == "__main__":
     from amcat.tools import amcatlogging
-    amcatlogging.setFileHandler("solrdaemon.log")
-    amcatlogging.info_module()
-    amcatlogging.debug_module('amcat.tools.amcatsolr')
-    daemon = SolrDeamon('/tmp/solr-daemon.pid')
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['test', 'start', 'stop', 'restart'],
-                   help='Control the SOLR Daemon')
-    args = parser.parse_args()
-    # get action corresponding to start/stop/restart and execute it
-    action = getattr(SolrDeamon, args.command)
-    action(daemon)
-    
+    amcatlogging.debug_module("amcat.tools.amcatsolr")
+    from amcat.scripts.tools.cli import run_cli
+    run_cli()

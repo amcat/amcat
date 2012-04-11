@@ -70,6 +70,7 @@ class TestToolkit(amcattest.PolicyTestCase):
             ("1/2/1972", datetime.datetime(1972, 1, 2,0,0,0), True, True),
             ("31. Januar 2009", datetime.datetime(2009, 1, 31, 0, 0, 0), False, True),
             ("December 31, 2009 Thursday", datetime.datetime(2009, 12, 31, 0, 0, 0), False, False),
+            (u'30 ao\xfbt 2002', datetime.datetime(2002, 8, 30, 0, 0, 0), False, False),
             ):
             if inspect.isclass(date) and issubclass(date, Exception):
                 self.assertRaises(date, toolkit.readDate, s, lax=False, american=american)

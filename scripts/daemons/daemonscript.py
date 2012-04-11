@@ -60,7 +60,8 @@ class DaemonScript(Script):
             self.d = Daemon(self.run_daemon, pidfile)
             # run the start/stop/restart method
             getattr(self.d, action)()
-        
+
+
     def run_daemon(self):
         """
         Main daemon function. Tries to call run_action indefinitely, with a minute
