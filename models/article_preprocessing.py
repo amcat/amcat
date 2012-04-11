@@ -40,6 +40,7 @@ from amcat.models.project import Project
 
 from django.db.models.signals import post_save, post_delete
 from django.db import connection
+from django.db.models import Q
 
 import logging; log = logging.getLogger(__name__)
 
@@ -57,25 +58,15 @@ class ArticlePreprocessing(AmcatModel):
 
     @classmethod
     def narticles_in_queue(cls, project):
-        # construct subqueries using django querysets
-        direct = Article.objects.filter(project=project).only("id")
-        direct = str(direct.query)
-        indirect = ArticleSetArticle.objects.filter(articleset__project=project).only("article")
-        indirect = "SELECT " + str(indirect.query).split(",",1)[1] # drop articlesets_articles.id
-
-        table = cls._meta.db_table
-        idcol = "article_id"
-        sql = """SELECT COUNT(DISTINCT {idcol}) FROM {table}
-                 WHERE {idcol} IN ({direct})
-                 OR {idcol} IN ({indirect})""".format(**locals())
-
-        log.info("Determining articles in queue for project {project.id} using sql {sql}"
-                 .format(**locals()))
-        
-        cursor = connection.cursor()
-        cursor.execute(sql)
-        result = cursor.fetchall()
-        return result[0][0]
+        # subqueries for direct and indirect (via set) articles
+        direct = Article.objects.filter(project=project).values("id")
+        indirect = (ArticleSetArticle.objects.filter(articleset__project=project)
+                    .values("article"))
+        q = ArticlePreprocessing.objects.filter(Q(article_id__in=direct)
+                                                | Q(article_id__in=indirect))
+        # add count(distinct) manually - maybe possible through aggregate?
+        q = q.extra(select=dict(n="count(distinct article_id)")).values_list("n")
+        return q[0][0]
 
 
         
