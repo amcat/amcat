@@ -61,7 +61,24 @@ class Scraper(AmcatModel):
         scraper_options.update(options)
         return scraper_class(**scraper_options)
 
-
+    def n_scraped_articles(self, from_date=None, to_date=None):
+        """
+        Get the number of scraped articles per day for the given period.
+        """
+        if self.articleset is None:
+            raise Exception("Cannot count articles if scraper has no article set")
+        # select and filter articles
+        q = self.articleset.articles.all()
+        if to_date: q = q.filter(date__lte=to_date)
+        if from_date: q = q.filter(date__gte=from_date)
+        # aggregate count group by date, return as dict
+        q = q.extra(select=dict(d="cast(date as date)")).values_list("d")
+        q = q.annotate(models.Count("id"))
+        print(q.query)
+        q = list(q)
+        print(q)
+        return dict(q)
+    
 def get_scrapers(**options):
     """Return all daily scrapers, instantiated with the given
     options plus information from the database"""
@@ -81,8 +98,31 @@ class TestScrapers(amcattest.PolicyTestCase):
         """Can we get a scraper from the db?"""
 
         s =Scraper.objects.create(module='amcat.models.scraper',
-                                  class_name='TestScraperModel')
-        self.assertEqual(s.get_scraper_class(), TestScraperModel)
+                                  class_name='TestScrapers')
+        self.assertEqual(s.get_scraper_class(), TestScrapers)
 
 
+
+    def test_recent_articles(self):
+        s = amcattest.create_test_set()
+        sc =Scraper.objects.create(module='amcat.models.scraper',
+                                  class_name='TestScraperModel', articleset=s)
+        for date in ['2010-01-01'] * 3 + ['2010-01-03'] * 5 + ['2009-01-01'] * 6:
+            s.add(amcattest.create_test_article(date=date))
+            
+        from amcat.tools.toolkit import writeDate
+        normalize = lambda nn : dict((writeDate(k), v) for (k,v,) in nn.items())
+        print(sc.n_scraped_articles())
+        return
+        self.assertEqual(normalize(sc.n_scraped_articles()),
+                         {'2010-01-03': 5, '2010-01-01': 3, '2009-01-01': 6})
+        self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
+                         {'2010-01-03': 5, '2010-01-01': 3})
+        s.add(amcattest.create_test_article(date='2010-01-01 13:45'))
+        print(sc.n_scraped_articles(from_date='2010-01-01'))
+        self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
+                         {'2010-01-03': 5, '2010-01-01': 4})
+        
+              
+        
 
