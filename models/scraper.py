@@ -74,9 +74,6 @@ class Scraper(AmcatModel):
         # aggregate count group by date, return as dict
         q = q.extra(select=dict(d="cast(date as date)")).values_list("d")
         q = q.annotate(models.Count("id"))
-        print(q.query)
-        q = list(q)
-        print(q)
         return dict(q)
     
 def get_scrapers(**options):
@@ -112,14 +109,11 @@ class TestScrapers(amcattest.PolicyTestCase):
             
         from amcat.tools.toolkit import writeDate
         normalize = lambda nn : dict((writeDate(k), v) for (k,v,) in nn.items())
-        print(sc.n_scraped_articles())
-        return
         self.assertEqual(normalize(sc.n_scraped_articles()),
                          {'2010-01-03': 5, '2010-01-01': 3, '2009-01-01': 6})
         self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
                          {'2010-01-03': 5, '2010-01-01': 3})
         s.add(amcattest.create_test_article(date='2010-01-01 13:45'))
-        print(sc.n_scraped_articles(from_date='2010-01-01'))
         self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
                          {'2010-01-03': 5, '2010-01-01': 4})
         
