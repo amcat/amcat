@@ -75,7 +75,7 @@ class Scraper(AmcatModel):
         q = q.extra(select=dict(d="cast(date as date)")).values_list("d")
         q = q.annotate(models.Count("id"))
         return dict(q)
-    
+
 def get_scrapers(**options):
     """Return all daily scrapers, instantiated with the given
     options plus information from the database"""
@@ -101,12 +101,13 @@ class TestScrapers(amcattest.PolicyTestCase):
 
 
     def test_recent_articles(self):
+        """DOES NOT WORK WITH SQLITE"""
         s = amcattest.create_test_set()
         sc =Scraper.objects.create(module='amcat.models.scraper',
                                   class_name='TestScraperModel', articleset=s)
         for date in ['2010-01-01'] * 3 + ['2010-01-03'] * 5 + ['2009-01-01'] * 6:
             s.add(amcattest.create_test_article(date=date))
-            
+
         from amcat.tools.toolkit import writeDate
         normalize = lambda nn : dict((writeDate(k), v) for (k,v,) in nn.items())
         self.assertEqual(normalize(sc.n_scraped_articles()),
@@ -116,7 +117,3 @@ class TestScrapers(amcattest.PolicyTestCase):
         s.add(amcattest.create_test_article(date='2010-01-01 13:45'))
         self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
                          {'2010-01-03': 5, '2010-01-01': 4})
-        
-              
-        
-

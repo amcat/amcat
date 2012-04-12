@@ -199,7 +199,8 @@ def table2html(table, colnames=None, printRowNames = True, border=True):
     result += "\n</tbody></table>"
     return result
     
-def table2htmlDjango(table, writecolnames=True, writerownames=False):
+def table2htmlDjango(table, writecolnames=True, writerownames=False, safe=False):
+    safe = "|safe" if safe else ""
     if table.rowNamesRequired == True:
         writerownames = True
     t = Template("""<table class="display">
@@ -220,7 +221,7 @@ def table2htmlDjango(table, writecolnames=True, writerownames=False):
                         <td>{{row.row}}</td>
                     {% endif %}
                     {% for col in row %}
-                        <td>{{col|default_if_none:"-" }}</td>
+                        <td>{{col"""+safe+"""|default_if_none:"-" }}</td>
                     {% endfor %}
                 </tr>
             {% endfor %}
