@@ -104,7 +104,7 @@ def scrape_logged(controller, scrapers):
              counts: a mapping of number of articles scraper per scraper
              log: a string representation of the log messages from the scrapers
     """
-    counts = {s : 0 for s in scrapers}
+    counts = dict((s, 0) for s in scrapers)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for a in controller.scrape(MultiScraper(scrapers)):
