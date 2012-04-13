@@ -62,8 +62,8 @@ class ArticlePreprocessing(AmcatModel):
         direct = Article.objects.filter(project=project).values("id")
         indirect = (ArticleSetArticle.objects.filter(articleset__project=project)
                     .values("article"))
-        q = ArticlePreprocessing.objects.filter(Q(article_id__in=direct)
-                                                | Q(article_id__in=indirect))
+        q = ArticlePreprocessing.objects.filter(Q(article__in=direct)
+                                                | Q(article__in=indirect))
         # add count(distinct) manually - maybe possible through aggregate?
         q = q.extra(select=dict(n="count(distinct article_id)")).values_list("n")
         return q[0][0]
@@ -111,29 +111,29 @@ class ProjectAnalysis(AmcatModel):
         return q.count()
 
 # Signal handlers to make sure the article preprocessing queue is filled
-def _add_to_queue(*aids):
+def add_to_queue(*aids):
     for aid in aids:
         ArticlePreprocessing.objects.create(article_id = aid)
 
 @receiver([post_save, post_delete], Article)
 def handle_article(sender, instance, **kargs):
-    _add_to_queue(instance.id)
+    add_to_queue(instance.id)
 
 @receiver([post_save, post_delete], ArticleSetArticle)
 def handle_articlesetarticle(sender, instance, **kargs):
-    _add_to_queue(instance.article_id)
+    add_to_queue(instance.article_id)
 
 @receiver([post_save], Project)
 def handle_project(sender, instance, **kargs):
-    _add_to_queue(*instance.get_all_articles())
+    add_to_queue(*instance.get_all_articles())
 
 @receiver([post_save, post_delete], ProjectAnalysis)
 def handle_projectanalysis(sender, instance, **kargs):
-    _add_to_queue(*instance.project.get_all_articles())
+    add_to_queue(*instance.project.get_all_articles())
 
 @receiver([post_save], ArticleSet)
 def handle_articleset(sender, instance, **kargs):
-    _add_to_queue(*(a.id for a in instance.articles.all().only("id")))
+    add_to_queue(*(a.id for a in instance.articles.all().only("id")))
 
 
 ###########################################################################

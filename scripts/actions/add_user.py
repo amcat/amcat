@@ -30,7 +30,6 @@ from django import forms
 from amcat.tools import dbtoolkit
 from amcat.tools.djangotoolkit import get_or_create
 from amcat.scripts.script import Script
-from amcat.scripts.tools import cli
 from amcat.models.user import User, Affiliation, create_user
 from amcat.models.authorisation import Role
 from amcat.forms.fields import UserField
@@ -75,4 +74,5 @@ class AddUser(Script):
         return u
 
 if __name__ == '__main__':
+    from amcat.scripts.tools import cli
     cli.run_cli(AddUser)
