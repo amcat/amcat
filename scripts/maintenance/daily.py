@@ -83,8 +83,8 @@ class DailyScript(Script):
     def run(self, _input):
         date = self.options['date']
 
-        amcatlogging.debug_module("amcat.scraping.scraper")
-        amcatlogging.debug_module("amcat.scraping.controller")
+        #amcatlogging.debug_module("amcat.scraping.scraper")
+        #amcatlogging.debug_module("amcat.scraping.controller")
 
         scrapers = list(get_scrapers(date=date))
         log.info("Starting scraping with {} scrapers: {}".format(

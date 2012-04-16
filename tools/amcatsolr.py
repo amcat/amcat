@@ -24,6 +24,6 @@ def start_test_solr():
     
 
 from amcat.tools import amcatlogging
-amcatlogging.setup()
-start_test_solr()
+#amcatlogging.setup()
+#start_test_solr()
 

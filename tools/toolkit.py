@@ -837,10 +837,12 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
         return s
 
 def retry(function, ntries=3, logger=None, *args, **kargs):
-    """Try calling the function with args and kargs. If an exception
+    """
+    Try calling the function with args and kargs. If an exception
     occurs, log it, and retry for up to ntries-1 times. Will return
     the first time the function returns without exception. Will re-raise
-    the exception of the function when out of retries"""
+    the exception of the function when out of retries
+    """
     if not logger:
         from amcat.tools import classtools
         logger = logging.getLogger(classtools.get_calling_module())

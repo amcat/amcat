@@ -24,12 +24,12 @@ Module for controlling scrapers
 import logging; log = logging.getLogger(__name__)
 from cStringIO import StringIO
 
-from amcat.tools.toolkit import to_list
+from amcat.tools.toolkit import to_list, retry
 from amcat.tools.multithread import distribute_tasks, QueueProcessorThread, add_to_queue_action
 from amcat.tools import amcatlogging
 
 from amcat.scraping.scraper import MultiScraper
-
+from django.db import transaction
 
 class Controller(object):
     """
@@ -58,6 +58,7 @@ class Controller(object):
 
         return article
 
+
 class SimpleController(Controller):
     """Simple implementation of Controller"""
     @to_list
@@ -65,7 +66,26 @@ class SimpleController(Controller):
         for unit in scraper.get_units():
             for article in scraper.scrape_unit(unit):
                 yield self.save(article)
+    
+class RobustController(Controller):
+    """More robust implementation of Controller with sensible transaction management and retries"""
 
+    def scrape(self, scraper):
+        result = []
+        units = retry(scraper.get_units)
+        for unit in scraper.get_units():
+            try:
+                result += retry(self._scrape_unit, scraper=scraper, unit=unit)
+            except Exception as e:
+                log.error("%s: Scraping unit %r failed after 3 retries, giving up" % (self, e))
+        return result
+
+    @transaction.commit_on_success
+    def _scrape_unit(self, scraper, unit):
+        articles = list(scraper.scrape_unit(unit))
+        for article in articles:
+            self.save(article)
+        return articles
 
 class ThreadedController(Controller):
     """Threaded implementation of Controller
@@ -169,6 +189,30 @@ class TestController(amcattest.PolicyTestCase):
         while not q.empty():
             c.save(q.get())
         self.assertEqual(p.articles.count(), ts.n)
+
+class _ErrorArticle(object):
+    def save(self):
+        list(Article.objects.raw("This is not valid SQL"))
+        
+class _ErrorScraper(Scraper):
+    medium_name = 'xxx'
+    def _get_units(self):
+        return [1,2]
+    def _scrape_unit(self, unit):
+        if unit == 1:
+            yield _ErrorArticle()
+        else:
+            yield Article(headline=str(unit), date=date.today())
+        
+class TestRobustController(amcattest.PolicyTestCase):
+    def test_rollback(self):
+        c = RobustController()
+        p = amcattest.create_test_project()
+        s = _ErrorScraper(project=p.id)
+        list(c.scrape(s))
+        self.assertEqual(p.articles.count(), 1)
+        
+        
 
 def production_test_multithreaded_saving():
     """
