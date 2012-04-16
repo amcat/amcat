@@ -29,7 +29,7 @@ import logging; log = logging.getLogger(__name__)
 from amcat.scripts.script import Script
 from amcat.scripts.tools import cli
 
-from amcat.scraping.controller import ThreadedController, scrape_logged
+from amcat.scraping.controller import ThreadedController, scrape_logged, RobustController
 from amcat.scraping.scraper import DateForm
 from amcat.models.scraper import get_scrapers
 from amcat.models.project import Project
@@ -57,7 +57,6 @@ for tag in ["h3", "p", "pre"]:
 EMAIL = "amcat-scraping@googlegroups.com"
 
 def send_email(count, messages):
-
     counts = [(s.__class__.__name__, n) for (s,n) in count.items()]
     n = sum(count.values())
     counts.append(("Total", n))
@@ -76,6 +75,7 @@ def send_email(count, messages):
 
 class DailyForm(DateForm):
     project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
+    noemail = forms.BooleanField(initial=False)
 
 class DailyScript(Script):
     options_form = DailyForm
@@ -90,17 +90,14 @@ class DailyScript(Script):
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
 
-        count, messages =  scrape_logged(ThreadedController(), scrapers)
+        count, messages =  scrape_logged(RobustController(), scrapers)
 
         log.info("Sending email...")
 
-        send_email(count, messages)
+        if not self.options['noemail']:
+            send_email(count, messages)
 
         log.info("Done")
 
 if __name__ == '__main__':
-
-    #scrapers = list(get_scrapers(date="2012-01-01", project=3))
-    #create_email({s : 101 for s in scrapers}, "bla bla bla")
-
-    cli.run_cli(DailyScript)
+    cli.run_cli()

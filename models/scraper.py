@@ -55,7 +55,7 @@ class Scraper(AmcatModel):
             'username' : self.username,
             'password' : self.password,
             'project' : self.articleset.project.id,
-            'articleset' : self.articleset.name
+            'articleset' : self.articleset.id
         }
 
         scraper_options.update(options)
@@ -76,11 +76,20 @@ class Scraper(AmcatModel):
         q = q.annotate(models.Count("id"))
         return dict(q)
 
-def get_scrapers(**options):
-    """Return all daily scrapers, instantiated with the given
-    options plus information from the database"""
+def get_scrapers(date=None, days_back=7, **options):
+    """
+    Return all daily scrapers as needed for the days_back days prior
+    to the given date for which no articles are recorded. The scrapers
+    are instantiated with the date, the given options, and information
+    from the database
+    """
+    if date is None: date = datetime.date.today()
+    dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
     for s in Scraper.objects.filter(run_daily=True):
-        yield s.get_scraper(**options)
+        scraped = s.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
+        for day in dates:
+            if day not in scraped:
+                yield s.get_scraper(date = day, **options)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -97,8 +106,6 @@ class TestScrapers(amcattest.PolicyTestCase):
         s =Scraper.objects.create(module='amcat.models.scraper',
                                   class_name='TestScrapers')
         self.assertEqual(s.get_scraper_class(), TestScrapers)
-
-
 
     def test_recent_articles(self):
         """DOES NOT WORK WITH SQLITE"""
@@ -117,3 +124,11 @@ class TestScrapers(amcattest.PolicyTestCase):
         s.add(amcattest.create_test_article(date='2010-01-01 13:45'))
         self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
                          {'2010-01-03': 5, '2010-01-01': 4})
+
+    def test_get_scrapers(self):
+        s = amcattest.create_test_set()
+        Scraper.objects.all().delete()
+        s =Scraper.objects.create(module='amcat.models.scraper',
+                                  class_name='TestScrapers',
+                                  articleset=s, run_daily=True)
+        
