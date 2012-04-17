@@ -75,7 +75,7 @@ def send_email(count, messages):
 
 class DailyForm(DateForm):
     project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
-    noemail = forms.BooleanField(initial=False)
+    noemail = forms.BooleanField(initial=False,required=False)
 
 class DailyScript(Script):
     options_form = DailyForm
@@ -83,8 +83,8 @@ class DailyScript(Script):
     def run(self, _input):
         date = self.options['date']
 
-        #amcatlogging.debug_module("amcat.scraping.scraper")
-        #amcatlogging.debug_module("amcat.scraping.controller")
+        amcatlogging.info_module("amcat.scraping.scraper")
+        amcatlogging.info_module("amcat.scraping.controller")
 
         scrapers = list(get_scrapers(date=date))
         log.info("Starting scraping with {} scrapers: {}".format(

@@ -47,7 +47,7 @@ class Controller(object):
         raise NotImplementedError()
 
     def save(self, article):
-        log.info("Saving article %s" % article)
+        log.debug("Saving article %s" % article)
         article.save()
 
         articleset = article.scraper.articleset if hasattr(article, 'scraper') else self.articleset
@@ -78,6 +78,7 @@ class RobustController(Controller):
                 result += retry(self._scrape_unit, scraper=scraper, unit=unit)
             except Exception as e:
                 log.error("%s: Scraping unit %r failed after 3 retries, giving up" % (self, e))
+        log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
         return result
 
     @transaction.commit_on_success

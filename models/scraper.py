@@ -19,6 +19,7 @@
 
 """ORM Module representing scrapers"""
 
+import datetime
 from django.db import models
 from amcat.tools.model import AmcatModel
 
@@ -125,10 +126,9 @@ class TestScrapers(amcattest.PolicyTestCase):
         self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),
                          {'2010-01-03': 5, '2010-01-01': 4})
 
-    def test_get_scrapers(self):
-        s = amcattest.create_test_set()
-        Scraper.objects.all().delete()
-        s =Scraper.objects.create(module='amcat.models.scraper',
-                                  class_name='TestScrapers',
-                                  articleset=s, run_daily=True)
-        
+
+if __name__ == '__main__':
+    date = datetime.date.today() - datetime.timedelta(days=1)
+    scrapers = get_scrapers(date)
+    for scraper in scrapers:
+        print scraper.__class__.__name__, scraper.options["date"]

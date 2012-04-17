@@ -54,7 +54,7 @@ class ScraperForm(forms.Form):
     def clean_articleset_name(self):
         name = self.cleaned_data['articleset_name']
         if not name: return
-        if self.cleaned_data['articleset']: 
+        if self.cleaned_data['articleset']:
             raise forms.ValidationError("Cannot specify both articleset and articleset_name")
 
         project = self.cleaned_data['project']
@@ -68,10 +68,10 @@ class ScraperForm(forms.Form):
         if project:
             f.fields['project'].initial = project.id
             f.fields['project'].widget = HiddenInput()
-            
+
             f.fields['articleset'].queryset = ArticleSet.objects.filter(project=project)
         return f
-    
+
 class Scraper(Script):
     output_type = Article
     options_form = ScraperForm
@@ -119,7 +119,7 @@ class Scraper(Script):
         and medium filled in automatically.
         @return: a sequence of Article objects ready to .save()
         """
-        log.info("Scraping unit %s" % unit)
+        log.debug("Scraping unit %s" % unit)
         for article in self._scrape_unit(unit):
             article = self._postprocess_article(article)
             log.debug(".. yields article %s" % article)
@@ -157,7 +157,7 @@ class Scraper(Script):
 
 
 
-    
+
 class DateForm(ScraperForm):
     """
     Form for scrapers that operate on a date
@@ -171,6 +171,8 @@ class DatedScraper(Scraper):
         article = super(DatedScraper, self)._postprocess_article(article)
         _set_default(article, "date", self.options['date'])
         return article
+    def __unicode__(self):
+        return "[%s for %s]" % (self.__class__.__name__, self.options['date'])
 
 class DBScraperForm(DateForm):
     """
@@ -227,12 +229,14 @@ class MultiScraper(object):
 
     def get_units(self):
         for scraper in self.scrapers:
+            log.info("Starting scraping for {scraper}".format(**locals()))
             try:
                 units = retry(scraper.get_units)
                 for u in units:
                     yield (scraper, u)
             except:
-                log.exception("%s.get_units failed after retrying, giving up" % scraper.__class__.__name__)
+                log.error("%s.get_units failed after retrying, giving up"
+                          % scraper.__class__.__name__)
 
     def scrape_unit(self, unit):
         """Call the craper for the given unit. Will yield article objects
