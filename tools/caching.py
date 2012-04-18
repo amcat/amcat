@@ -55,7 +55,7 @@ def cached(func, cache_attr=CACHE_PREFIX):
             #log.debug("Querying cache %r.%s" % (self, cache_attr))
             return cache[func.__name__]
         except KeyError:
-            log.info("Not found, setting cache for %r.%s" % (self, cache_attr))
+            log.debug("Not found, setting cache for %r.%s" % (self, cache_attr))
             return _set_cache_value(cache, func.__name__, func(self))
     return inner
 

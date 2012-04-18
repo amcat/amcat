@@ -21,7 +21,7 @@
 Preprocess using Alpino
 See http://www.let.rug.nl/vannoord/alp/Alpino/ 
 """
-import os
+import os, subprocess
 from os.path import exists
 
 import logging; log = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class Alpino(AnalysisScript):
         return out.decode("utf-8")
 
     def _tokenize(self, input):
-        cmd = TOKENIZE.format(**self.__dict__)
+        cmd = TOKENIZE.format(**self.__dict__)        
         return execute(cmd, input, outonly=True)
 
     def _get_input(self, sentences):
@@ -212,3 +212,10 @@ class TestAlpino(amcattest.PolicyTestCase):
                 Triple(s.id, 0, 1, "su"),
                 Triple(s.id, 2, 1, "obj1"),
                 Triple(s.id, 3, 1, "--"),})
+
+if __name__ == '__main__':
+    from amcat.tools import amcatlogging
+    amcatlogging.setup()
+    a = Alpino(None)
+    print a._tokenize("-1|dit is een test\n")
+    

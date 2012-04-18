@@ -49,6 +49,8 @@ import htmlentitydefs, string
 try: import mx.DateTime
 except: pass
 
+log = logging.getLogger(__name__)
+
 ###########################################################################
 ##                               Decorators                              ##
 ###########################################################################
@@ -1180,7 +1182,7 @@ def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
     yield outr.out, errr.out
 
 
-def execute(cmd, inputbytes=None, **kargs):
+def execute(cmd, inputbytes=None, outonly=False):
     """Execute a process, feed it inputbytes, and return (output, error)
 
     Convenience method to call executepipe and write input to the
@@ -1188,16 +1190,19 @@ def execute(cmd, inputbytes=None, **kargs):
 
     @param cmd: the process to run
     @param inputbytes: (optional) input to send to the process' input pipe
-    @param kargs: optional listener and listenout to send to executepipe
+    @param outOnly: if True, any error output will result in an exception, and
+                    only the stdout output will be returned
     """
-    #print "Starting execute %r" % cmd
-    gen = executepipe(cmd, **kargs)
-    #print "Getting input stream"
-    pipe = gen.next()
-    if inputbytes:
-        #print "Writing %i bytes" % len(inputbytes)
-        pipe.write(inputbytes)
-    return gen.next()
+    log.debug("Calling {cmd} with input {inputbytes!r}".format(**locals()))
+    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = p.communicate(inputbytes)
+    if outonly:
+        if err.strip(): 
+            raise Exception("Error from {cmd}:{err}".format(**locals()))
+        return out
+    else:
+        return out, err
 
 def ps2pdf(ps):
     """Call ps2pdf on the given ps bytes, returning pdf bytes"""
