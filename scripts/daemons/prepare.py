@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/python
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -19,37 +19,41 @@
 ###########################################################################
 
 """
-Daemon that checks if there are any Articles on the articles_preprocessing_queue
-and adjusts the articles_analysis table as necessary
+Daemon that checks if preprocessors need to be prepared first and does the
+preparation (eg sentence splitting)
 """
-from django.db import transaction
+from amcat.models import ArticleAnalysis
 
 from amcat.scripts.daemons.daemonscript import DaemonScript
 
-from amcat.models.article_preprocessing import ArticlePreprocessing
-from amcat.nlp.preprocessing import set_preprocessing_actions
+import logging;
+from amcat.models.analysis import Analysis
 
-import logging; log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 BATCH = 1000
 
-class PreprocessingDaemon(DaemonScript):
+class PrepareDaemon(DaemonScript):
 
-    @transaction.commit_on_success
+    def prepare(self):
+        self.analyses = dict(get_analyses())
+
     def run_action(self):
-        aids = set()
-        preprocess_ids = list()
+        for a, s in self.analyses.items():
+            log.info("Checking for articles to prepare for analysis: {a}".format(**locals()))
+            articles = ArticleAnalysis.objects.filter(analysis=a, prepared=False)[:100]
+            s.prepare_articles(articles)
 
-        for ap in ArticlePreprocessing.objects.all()[:BATCH]:
-            aids.add(ap.article_id)
-            preprocess_ids.append(ap.id)
 
-        if not aids: return False
 
-        ArticlePreprocessing.objects.filter(pk__in=preprocess_ids).delete()
-        log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
-        set_preprocessing_actions(aids)
+def get_analyses():
+    for a in Analysis.objects.filter(plugin__active=True):
+        s = a.get_script()
+        if s.needs_preparation:
+            yield a, s
 
-if __name__ == '__main__':
+
+
+if __name__ == "__main__":
     from amcat.scripts.tools.cli import run_cli
     run_cli()

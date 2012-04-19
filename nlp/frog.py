@@ -30,7 +30,7 @@ from amcat.nlp.analysisscript import AnalysisScript, Token, Triple
 class Frog(AnalysisScript):
 
     def __init__(self, analysis, host='localhost', port=12345, triples=False):
-        super(Frog, self).__init__(analysis, triples=triples)
+        super(Frog, self).__init__(analysis, tokens=True, triples=triples)
         self.host = host
         self.port = port
 
@@ -59,7 +59,7 @@ class Frog(AnalysisScript):
         if memo is None: memo = self.preprocess_sentence(sentence)
         for line in memo:
             position, word, lemma, pos = [line[i] for i in (0,1,2,4)]
-            yield Token(sentence.id, int(position)-1, word, lemma, *read_pos(pos))
+            yield Token(sentence, int(position)-1, word, lemma, *read_pos(pos))
 
     def get_triples(self, sentence, memo=None):
         if memo is None: memo = self.preprocess_sentence(sentence)
@@ -67,7 +67,7 @@ class Frog(AnalysisScript):
             position, parent = [int(line[i]) for i in (0, -2)]
             if parent != 0:
                 rel = line[-1]
-                yield Triple(sentence.id, position-1, parent-1, rel)
+                yield Triple(sentence, position-1, parent-1, rel)
             
             
     def _do_process(self, sentence):

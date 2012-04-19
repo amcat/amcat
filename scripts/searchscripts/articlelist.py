@@ -30,10 +30,6 @@ from django import forms
 import logging
 log = logging.getLogger(__name__)
 
-# class ArticleListSpecificForm(forms.Form):
-    # start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput)
-    # length = forms.IntegerField(initial=30, min_value=1, max_value=10000, widget=forms.HiddenInput)
-    
 class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.ArticleColumnsForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
     length = forms.IntegerField(initial=100, min_value=1, max_value=9999999,
@@ -42,17 +38,17 @@ class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.Art
     sortColumn = forms.CharField(required=False)
     sortOrder = forms.ChoiceField(
                     choices=(
-                        ('asc', 'Ascending'), 
+                        ('asc', 'Ascending'),
                         ('desc', 'Descending'),
                      ),
                     initial = 'asc', required=False)
-    
+
     def clean_start(self):
         data = self.cleaned_data['start']
         if data == None:
             data = 0
         return data
-        
+
     def clean_length(self):
         data = self.cleaned_data['length']
         if data == None:
@@ -60,26 +56,25 @@ class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.Art
         if data == -1:
             data = 999999 # unlimited (well, sort of ;)
         return data
-        
+
     def clean_columns(self):
         data = self.cleaned_data['columns']
         if self.cleaned_data['query'] == '' and ('keywordInContext' in data or 'hits' in data):
-            self._errors["columns"] = self.error_class(['Keyword in Context and Hits columns require a query'])
+            self._errors["columns"] = self.error_class(
+                ['Keyword in Context and Hits columns require a query'])
         return data
-        
+
     # def clean_sortColumn(self):
         # if self.cleaned_data['sortColumn'] in ('id', 'date', 'medium_id'):
             # return self.cleaned_data['sortColumn']
         # return None
-        
+
 
 class ArticleListScript(script.Script):
     """
     Main script for conducting a selection query in amcat, either on the database or on Solr.
     """
 
-
-    
     input_type = None
     options_form = ArticleListForm
     output_type = types.ArticleIterator
@@ -89,20 +84,21 @@ class ArticleListScript(script.Script):
         """ returns an iterable of articles, when Solr is used, possibly including highlighting """
         start = self.options['start']
         length = self.options['length']
-        
+
         if self.options['useSolr'] == False: # make database query
             qs = database.getQuerySet(**self.options)
             if self.options['sortColumn']:
-                qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '') + self.options['sortColumn'])
+                qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '')
+                                 + self.options['sortColumn'])
             qs = qs[start:start+length].select_related('medium__name', 'medium')
             return qs
         else:
-            
+
             if self.options['highlight']:
                 return solrlib.highlightArticles(self.options)
             else:
                 return solrlib.getArticles(self.options)
-        
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli()

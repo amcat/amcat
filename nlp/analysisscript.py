@@ -21,13 +21,18 @@
 Abstract analysis scripts for preprocessing
 """
 from collections import namedtuple
+
+from django.db import transaction
+from amcat.models import ArticleAnalysis
+
 from amcat.scripts.script import Script
+from amcat.nlp.sbd import SBD
 
 Token = namedtuple("Token", ["sentence_id", "position", "word", "lemma", "pos", "major", "minor"])
 Triple = namedtuple("Triple", ['sentence_id', "child", "parent", "relation"])
 
 class AnalysisScript(Script):
-    def __init__(self, analysis, tokens=True, triples=False):
+    def __init__(self, analysis, tokens=False, triples=False):
         self.analysis = analysis
         self.tokens = tokens
         self.triples = triples
@@ -37,13 +42,13 @@ class AnalysisScript(Script):
         Optional preprocessing of the sentence. The result (which can be an
         arbitrary object) is passed to the get_triples and get_tokens methods.
         """
-        
+
     def get_triples(self, sentence, memo=None):
         """
-        @return: a sequence of amcat.nlp.analysisscript.Triple objects 
+        @return: a sequence of amcat.nlp.analysisscript.Triple objects
         """
         raise NotImplementedError()
-    
+
     def get_tokens(self, sentence, memo=None):
         """
         @return: a sequence of amcat.nlp.analysisscript.Token objects
@@ -56,13 +61,27 @@ class AnalysisScript(Script):
         triples = self.get_triples(sentence, memo) if self.triples else None
         return tokens, triples
 
+    @property
+    def needs_preparation(self):
+        return (self.tokens or self.triples)
+    
+    @transaction.commit_on_success
+    def prepare_articles(self, article_analyses):
+        if not self.needs_preparation: return
+        sbd = SBD()
+        for aa in article_analyses:
+            if aa.article.sentences.count() > 1: continue
+            for sentence in sbd.get_sentences(aa.article):
+                sentence.save()
+        ArticleAnalysis.objects.filter(pk__in=article_analyses).update(prepared=True)
+
     def run(self, _input=None):
         raise NotImplementedError
-                    
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestAnalysisScript(amcattest.PolicyTestCase):

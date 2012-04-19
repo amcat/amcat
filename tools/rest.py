@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#! /usr/bin/python
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -19,37 +19,38 @@
 ###########################################################################
 
 """
-Daemon that checks if there are any Articles on the articles_preprocessing_queue
-and adjusts the articles_analysis table as necessary
+Useful methods to interact with the REST api
 """
-from django.db import transaction
 
-from amcat.scripts.daemons.daemonscript import DaemonScript
+import requests, json
 
-from amcat.models.article_preprocessing import ArticlePreprocessing
-from amcat.nlp.preprocessing import set_preprocessing_actions
+class Rest(object):
+    def __init__(self, host="http://localhost:8000", username=None, password=None, root="api/v3"):
+        self.host = host
+        self.root = root
+        if username is None:
+            import amcat.settings
+            db = amcat.settings.DATABASES['default']
+            self.username = db['USER']
+            self.password = db['PASSWORD']
+        else:
+            self.username = username
+            self.password = password
 
-import logging; log = logging.getLogger(__name__)
+    def get(self, resource, format='json', filters=None):
+        params = dict(format=format)
+        if filters: params.update(filters)
+        uri = '{self.host}/{self.root}/{resource}/'.format(**locals())
+        r = requests.get(uri, params=params, auth=(self.username, self.password))
+        if format == 'json':
+            return json.loads(r.text)
+        else:
+            return r.text
 
-BATCH = 1000
-
-class PreprocessingDaemon(DaemonScript):
-
-    @transaction.commit_on_success
-    def run_action(self):
-        aids = set()
-        preprocess_ids = list()
-
-        for ap in ArticlePreprocessing.objects.all()[:BATCH]:
-            aids.add(ap.article_id)
-            preprocess_ids.append(ap.id)
-
-        if not aids: return False
-
-        ArticlePreprocessing.objects.filter(pk__in=preprocess_ids).delete()
-        log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
-        set_preprocessing_actions(aids)
+    def get_objects(self, *args, **kargs):
+        result = self.get(*args, **kargs)
+        return result['objects']
 
 if __name__ == '__main__':
-    from amcat.scripts.tools.cli import run_cli
-    run_cli()
+    r = Rest()
+    print r.get_objects("sentence")

@@ -37,7 +37,7 @@ ALPINO_OPTIONS = "end_hook=dependencies -parse"
 class Alpino(AnalysisScript):
     def __init__(self, analysis, alpino_home=ALPINO_HOME, alpino_options=ALPINO_OPTIONS):
         super(Alpino, self).__init__(analysis, triples=True)
-        if not exists(alpino_home): alpino_home = os.environ['ALPINO_HOME']
+        if not exists(alpino_home): alpino_home = os.environ.get('ALPINO_HOME')
         self.alpino_home = alpino_home
         self.alpino_options = alpino_options
 

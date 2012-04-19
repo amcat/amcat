@@ -80,6 +80,7 @@ class ArticleAnalysis(AmcatModel):
 
     article = models.ForeignKey(Article)
     analysis = models.ForeignKey(Analysis)
+    prepared = models.BooleanField(default=False)
     started = models.BooleanField(default=False)
     done = models.BooleanField(default=False)
     delete = models.BooleanField(default=False)
@@ -105,10 +106,11 @@ class ProjectAnalysis(AmcatModel):
 
     def narticles(self, **filter):
         # TODO: this is not very efficient for large projects!
-        aids = self.project.get_all_articles()
+        aids = set(self.project.get_all_articles())
         q = ArticleAnalysis.objects.filter(article__in=aids, analysis=self.analysis)
         if filter: q = q.filter(**filter)
         return q.count()
+
 
 # Signal handlers to make sure the article preprocessing queue is filled
 def add_to_queue(*aids):

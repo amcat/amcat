@@ -64,9 +64,10 @@ class DaemonScript(Script):
 
     def run_daemon(self):
         """
-        Main daemon function. Tries to call run_action indefinitely, with a minute
+        Main daemon function. Tries to call run_action indefinitely, with 
         sleep in between failures or False exit values.
         """
+        self.prepare()
         log.info("{} started".format(self.__class__.__name__))
         while True:
             try:
@@ -82,8 +83,14 @@ class DaemonScript(Script):
                     log.exception('Exception on deleting pid: %s' % e)
                 break
             except:
-                log.exception('while loop exception, sleeping for 1 minute')
-                time.sleep(60)
+                log.exception('while loop exception, sleeping for 10 seconds')
+                time.sleep(10)
+
+    def prepare(self):
+        """
+        Hook to allow a subclass to run actions prior to running. This will be called in the forked process
+        before the main loop is run
+        """
 
     def run_action(self):
         """
@@ -97,8 +104,7 @@ class DaemonScript(Script):
         Function to be called for action 'test'.
         Default sets up stderr logging and calls run_action once
         """
-        #from amcat.tools import amcatlogging
-        #amcatlogging.setup() 
+        self.prepare()
         self.run_action()
                 
     def _get_filename(self, suffix="log"):
