@@ -48,6 +48,7 @@ class PrepareDaemon(DaemonScript):
 
 def get_analyses():
     for a in Analysis.objects.filter(plugin__active=True):
+        print(a)
         s = a.get_script()
         if s.needs_preparation:
             yield a, s

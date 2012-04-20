@@ -24,7 +24,6 @@ Object-layer module containing classes modelling sentences
 from __future__ import print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
-from amcat.models.analysis import Triple
 
 from django.db import models
 
@@ -48,6 +47,7 @@ class Sentence(AmcatModel):
         app_label = 'amcat'
 
     def get_triples(self, analysis):
+        from amcat.models.analysis import Triple
         return Triple.objects.filter(parent__sentence=self, analysis=analysis)
 
 

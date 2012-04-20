@@ -78,6 +78,7 @@ class AnalysisScript(Script):
     def run(self, _input=None):
         raise NotImplementedError
 
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

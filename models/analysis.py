@@ -18,9 +18,8 @@
 ###########################################################################
 
 from amcat.tools.model import AmcatModel
-from amcat.models.language import Language
-from amcat.models.word import Word
-from amcat.models.plugin import Plugin
+from amcat.models import Language, Word, Sentence, Plugin
+
 
 from django.db import models
 
@@ -41,7 +40,7 @@ class Analysis(AmcatModel):
         return self.plugin.label if self.plugin else "No plugin available"
 
 class Relation(AmcatModel):
-    id = models.IntegerField(db_column='relation_id', primary_key=True)
+    id = models.AutoField(db_column='relation_id', primary_key=True)
     label = models.CharField(max_length=100)
 
     class Meta():
@@ -51,7 +50,7 @@ class Relation(AmcatModel):
 class Pos(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='pos_id')
     major = models.CharField(max_length=100)
-    minor = models.CharField(max_length=500)
+    minor = models.CharField(max_length=500, null=True)
     pos =  models.CharField(max_length=1, null=True)
 
     class Meta():
@@ -67,6 +66,7 @@ class Token(AmcatModel):
     word = models.ForeignKey(Word)
     position = models.IntegerField()
     analysis = models.ForeignKey(Analysis)
+    pos = models.ForeignKey(Pos, related_name="+")
 
     class Meta():
         db_table = 'parses_tokens'
@@ -76,6 +76,7 @@ class Token(AmcatModel):
 
     def __unicode__(self):
         return unicode(self.word)
+
 
 
 class Triple(AmcatModel):
@@ -89,8 +90,7 @@ class Triple(AmcatModel):
     class Meta():
         db_table = 'parses_triples'
         app_label = 'amcat'
-        unique_together = ("analysis", "parent")
-
+        unique_together = ("analysis", "child")
 
 
 ###########################################################################
@@ -105,9 +105,10 @@ class TestTriples(amcattest.PolicyTestCase):
         s = amcattest.create_test_sentence()
         w1, w2, w3 = [amcattest.create_test_word(word=x) for x in "abc"]
         a = Analysis.objects.create(language=w1.lemma.language)
-        t1 = Token.objects.create(sentence=s, position=3, word=w3, analysis=a)
-        t2 = Token.objects.create(sentence=s, position=1, word=w2, analysis=a)
-        t3 = Token.objects.create(sentence=s, position=2, word=w1, analysis=a)
+        pos = Pos.objects.create(major="x", minor="y", pos="p")
+        t1 = Token.objects.create(sentence=s, position=3, word=w3, analysis=a, pos=pos)
+        t2 = Token.objects.create(sentence=s, position=1, word=w2, analysis=a, pos=pos)
+        t3 = Token.objects.create(sentence=s, position=2, word=w1, analysis=a, pos=pos)
 
         self.assertEqual(list(s.tokens.all()), [t2,t3,t1])
 
@@ -121,9 +122,10 @@ class TestTriples(amcattest.PolicyTestCase):
         self.assertEqual(type(f), Frog)
         self.assertFalse(f.triples)
 
-        a.plugin = Plugin.objects.create(label='test',module='amcat.nlp.frog', class_name='Frog',
-                                         arguments=dict(triples=True))
-
-        f =a.get_script()
-        self.assertTrue(f.triples)
-
+    def test_create_token(self):
+        a = amcattest.create_test_analysis()
+        token = amcattest.create_analysis_token()
+        t = Token.create(a, token)
+        self.assertEqual(t.sentence.id, token.sentence_id)
+        self.assertEqual(t.word.word, token.word)
+        self.assertEqual(t.word.lemma.pos, token.pos)

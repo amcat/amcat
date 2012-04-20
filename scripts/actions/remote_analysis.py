@@ -22,9 +22,12 @@
 Script run a preprocessing analysis against a remote (REST) database
 """
 
-import logging;
-from amcat.models import Analysis
+import logging
+import json
+
+from amcat.models import Analysis, Sentence
 from amcat.scripts.script import Script
+from amcat.scripts.actions.add_tokens import AddTokens
 from amcat.tools.rest import Rest
 from amcat.tools import classtools
 
@@ -46,38 +49,56 @@ class RemoteAnalysis(Script):
     def __init__(self, options=None, **kargs):
         super(RemoteAnalysis, self).__init__(options, **kargs)
         self.rest = Rest(host=self.options['host'])
+        self.analysis_id = self.options['analysis_id']
 
     def run(self, _input=None):
-        script = self.get_analysis_script()
-        articles = self.get_articles(script.analysis['id'])
+        self.script = self.get_analysis_script()
+        articles = self.get_articles()
         log.info("Retrieved {n} articles to analyse".format(n=len(articles)))
         for article in articles:
-            self.analyse_article(article)
+            self.analyse_article(article["id"], article["article"])
 
-    def get_articles(self, analysis_id):
-        return [a["article"] for a in
-                self.rest.get_objects("articleanalysis", analysis = analysis_id,
-                    done = False, prepared = True, delete=False, )]
+    def get_articles(self):
+        return self.rest.get_objects("articleanalysis", analysis = self.analysis_id,
+                                     done = False, prepared = True, delete=False)
 
     def get_analysis_script(self):
-        analysis = self.rest.get_object("analysis", self.options['analysis_id'])
+        analysis = self.rest.get_object("analysis", self.analysis_id)
         plugin = analysis["plugin"]
-        script = classtools.import_attribute(plugin["module"], plugin["class_name"])(analysis)
-        return script
+        print(plugin)
+        return classtools.import_attribute(plugin["module"], plugin["class_name"])(analysis)
 
-    def analyse_article(self, article):
+    def analyse_article(self, article_analysis, article):
         log.info("Analysing article {article}".format(**locals()))
-        for sid, sentence in self.get_sentences(article):
-            print(sid, sentence)
+        article_tokens = []
+        article_triples = []
+        for sentence in self.get_sentences(article):
+            log.debug("Using {self.script.__class__.__name__} to analyse "
+                      "{sentence.id} : {sentence.sentence}".format(**locals()))
+            tokens, triples = self.script.process_sentence(sentence)
+            article_tokens += list(tokens)
+            article_triples += list(triples)
+            break
+        log.info("Storing {ntok} tokens and {ntrip} triples for article {article}, "
+                 "analysis {self.analysis_id}"
+                 .format(ntok=len(article_tokens), ntrip=len(article_triples), **locals()))
+
+        self.rest.call_action(AddTokens, articleanalysis=article_analysis,
+                              tokens=json.dumps(article_tokens),
+                              triples=json.dumps(article_triples))
+
 
     def get_sentences(self, article):
-        return [(s["id"], s["sentence"])
+        return [Sentence(id=s["id"], sentence=s["sentence"])
                 for s in self.rest.get_objects("sentence", article=article)]
 
+
+    
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     from amcat.tools import amcatlogging
     amcatlogging.debug_module("amcat.tools.rest")
+    amcatlogging.debug_module()
 
 
     cli.run_cli()

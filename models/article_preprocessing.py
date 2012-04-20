@@ -35,12 +35,16 @@ from amcat.tools import dbtoolkit
 from amcat.tools.djangotoolkit import receiver
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle, ArticleSet
-from amcat.models.analysis import Analysis
+from amcat.models.analysis import Analysis, Token, Triple, Pos, Relation
 from amcat.models.project import Project
+from amcat.models.word import Word
+from amcat.models.sentence import Sentence
+from amcat.tools.djangotoolkit import get_or_create
 
 from django.db.models.signals import post_save, post_delete
 from django.db import connection
 from django.db.models import Q
+from django.db import transaction
 
 import logging; log = logging.getLogger(__name__)
 
@@ -69,7 +73,7 @@ class ArticlePreprocessing(AmcatModel):
         return q[0][0]
 
 
-        
+
 
 class ArticleAnalysis(AmcatModel):
     """
@@ -89,6 +93,33 @@ class ArticleAnalysis(AmcatModel):
         db_table = 'articles_analyses'
         app_label = 'amcat'
         unique_together = ('article', 'analysis')
+
+
+    @transaction.commit_on_success
+    def store_analysis(self, tokens, triples=None):
+        """
+        Store the given tokens and triples for this articleanalysis, setting
+        it to done=True if stored succesfully.
+        """
+        if self.done: raise Exception("Cannot store analyses when already done")
+        tokens = dict((t.position, self._create_token(t)) for t in tokens)
+        if triples:
+            for triple in triples:
+                rel = get_or_create(Relation, label=triple.relation)
+                print(">>>>>>>>>", rel)
+                Triple.objects.create(analysis=self.analysis, relation=rel,
+                                      parent=tokens[triple.parent],
+                                      child=tokens[triple.child])
+        self.done = True
+        self.save()
+
+    def _create_token(self, token):
+        """Create a Token from a amcat.nlp.analysisscript.Token object and an analysis"""
+        w = Word.get_or_create(self.analysis.language, token.lemma, token.pos, token.word)
+        p = get_or_create(Pos, major=token.major, minor=token.minor, pos=token.pos)
+        s = Sentence.objects.get(pk=token.sentence_id)
+        return Token.objects.create(sentence=s, position=token.position,
+                                    analysis=self.analysis, word=w, pos=p)
 
 class ProjectAnalysis(AmcatModel):
     """
@@ -159,7 +190,7 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
         self.assertEqual(ArticlePreprocessing.narticles_in_queue(p), 10)
         map(s.add, arts)
         self.assertEqual(ArticlePreprocessing.narticles_in_queue(p), 20)
-        
+
     def test_article_trigger(self):
         """Is a created or update article in the queue?"""
         self._flush_queue()
@@ -233,6 +264,32 @@ class TestArticlePreprocessing(amcattest.PolicyTestCase):
     def _all_articles(cls):
         """List all articles on the queue"""
         return set([sa.article_id for sa in ArticlePreprocessing.objects.all()])
+
+    def test_store_tokens(self):
+        s = amcattest.create_test_sentence()
+        a = amcattest.create_test_analysis()
+        aa = ArticleAnalysis.objects.create(article=s.article, analysis=a)
+        t1 = amcattest.create_analysis_token(sentence_id=s.id)
+        aa.store_analysis(tokens=[t1])
+        aa = ArticleAnalysis.objects.get(pk=aa.id)
+        self.assertEqual(aa.done,  True)
+        token, = list(Token.objects.filter(sentence=s, analysis=a))
+        self.assertEqual(token.word.word, t1.word)
+        self.assertRaises(aa.store_analysis, tokens=[t1])
+
+    def test_store_triples(self):
+        from amcat.nlp import analysisscript
+        s = amcattest.create_test_sentence()
+        a = amcattest.create_test_analysis()
+        aa = ArticleAnalysis.objects.create(article=s.article, analysis=a)
+        t1 = amcattest.create_analysis_token(sentence_id=s.id, position=1)
+        t2 = amcattest.create_analysis_token(sentence_id=s.id, word="x")
+        tr = analysisscript.Triple(s.id, parent=t1.position, child=t2.position, relation='su')
+        aa.store_analysis(tokens=[t1, t2], triples=[tr])
+        aa = ArticleAnalysis.objects.get(pk=aa.id)
+        triple, = list(Triple.objects.filter(analysis=a, parent__sentence=s))
+        self.assertEqual(triple.parent.word.word, t1.word)
+        self.assertEqual(triple.child.word.lemma.lemma, t2.lemma)
 
 if __name__ == '__main__':
 

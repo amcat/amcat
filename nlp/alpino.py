@@ -36,7 +36,7 @@ ALPINO_OPTIONS = "end_hook=dependencies -parse"
 
 class Alpino(AnalysisScript):
     def __init__(self, analysis, alpino_home=ALPINO_HOME, alpino_options=ALPINO_OPTIONS):
-        super(Alpino, self).__init__(analysis, triples=True)
+        super(Alpino, self).__init__(analysis, triples=True, tokens=True)
         if not exists(alpino_home): alpino_home = os.environ.get('ALPINO_HOME')
         self.alpino_home = alpino_home
         self.alpino_options = alpino_options
@@ -51,6 +51,11 @@ class Alpino(AnalysisScript):
             raise Exception("Error on parsing %r: %s" % (tokens, err))
         return out.decode("utf-8")
 
+    def _check_alpino(self):
+        if self.alpino_home is None: raise Exception("ALPINO_HOME not specified")
+        if not exists(self.alpino_home):
+            raise Exception("Cannot find {self.alpino_home".format(**locals()))
+    
     def _tokenize(self, input):
         cmd = TOKENIZE.format(**self.__dict__)        
         return execute(cmd, input, outonly=True)
@@ -74,6 +79,7 @@ class Alpino(AnalysisScript):
     
     @to_list
     def preprocess_sentences(self, sentences):
+        self._check_alpino()
         input = self._get_input(sentences)
         tokens = self._tokenize(input)
         rawparse = self._parse(tokens)

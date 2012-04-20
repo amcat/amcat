@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from amcat.tools.model import AmcatModel
+from amcat.tools.djangotoolkit import get_or_create
 from django.db import models
 
 class Lemma(AmcatModel):
@@ -47,3 +48,24 @@ class Word(AmcatModel):
         db_table = 'words_words'
         app_label = 'amcat'
 
+    @classmethod
+    def get_or_create(cls, language, lemma, pos, word):
+        l = get_or_create(Lemma, language=language, lemma=lemma, pos=pos)
+        return get_or_create(cls, word=word, lemma=l)
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestWord(amcattest.PolicyTestCase):
+    def test_get_create(self):
+        from amcat.models import Language
+        l = Language.objects.get(pk=1)
+        w = Word.get_or_create(l, "gaan", "V", "ga")
+        self.assertEqual(Lemma.objects.get(pk=w.lemma.id).lemma, "gaan")
+        self.assertEqual(Word.objects.get(pk=w.id).word, "ga")
+        w2 = Word.get_or_create(l, "gaan", "V", "gaat")
+        self.assertEqual(w.lemma, w2.lemma)

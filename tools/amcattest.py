@@ -196,6 +196,14 @@ def create_test_analysis(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Analysis.objects.create(**kargs)
 
+def create_analysis_token(**kargs):
+    if 'sentence_id' not in kargs: kargs['sentence_id'] = create_test_sentence().id
+    for key, default in dict(position=0, word='test_word', lemma='test_lemma',
+                             pos='T', major='test_major', minor='test_minor').items():
+        if key not in kargs: kargs[key] = default
+    from amcat.nlp.analysisscript import Token
+    return Token(**kargs)
+            
 class PolicyTestCase(TestCase):
     """
     TestCase subclass that can be used to easily check whether a module is

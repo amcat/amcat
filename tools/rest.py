@@ -26,9 +26,11 @@ import requests, json
 import logging; log = logging.getLogger(__name__)
 
 class Rest(object):
-    def __init__(self, host="localhost:8000", schema='http', username=None, password=None, root="api/v3"):
+    def __init__(self, host="localhost:8000", schema='http', username=None,
+                 password=None, root="api/v3", action_root="api/action"):
         self.host = host
         self.root = root
+        self.action_root = action_root
         self.schema = schema
         if username is None:
             import amcat.settings
@@ -45,8 +47,8 @@ class Rest(object):
         uri = '{self.schema}://{self.host}/{self.root}/{resource}/'.format(**locals())
         log.debug("Querying REST {uri} with params {params}".format(**locals()))
         r = requests.get(uri, params=params, auth=(self.username, self.password))
-        if r.status_code != 200:
-            raise Exception("Remote server returned status {r.status_code}\n{r.text}".format(**locals()))
+        _check_status(r)
+
         if format == 'json':
             return json.loads(r.text)
         else:
@@ -59,8 +61,26 @@ class Rest(object):
     def get_object(self, resource, id, **kargs):
         result = self.get_objects(resource, id=id, **kargs)
         if not result: raise Exception("Object {resource} id={id} not found!".format(**locals()))
-        if len(result) > 1: raise Exception("Query {resource} id={id} returned {n} objects".format(n=len(result), **locals()))
+        if len(result) > 1:
+            raise Exception("Query {resource} id={id} returned {n} objects"
+                            .format(n=len(result), **locals()))
         return result[0]
+
+    def call_action(self, action, **kargs):
+        if isinstance(action, type): action = action.__name__
+        uri = '{self.schema}://{self.host}/{self.action_root}/{action}'.format(**locals())
+        log.debug("Posting action {uri} with data {kargs}".format(**locals()))
+        
+        r = requests.post(uri, data=kargs, auth=(self.username, self.password))
+        _check_status(r)
+        return r.text
+    
+def _check_status(response):
+    """Check whether the response is 2xx (http success), Exception otherwise"""
+    if response.status_code // 100 != 2:
+        content = response.raw.read()
+        raise Exception("Remote server returned status {response.status_code}\n{content}"
+                        .format(**locals()))
 
 if __name__ == '__main__':
     r = Rest()
