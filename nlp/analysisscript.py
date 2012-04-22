@@ -20,16 +20,10 @@
 """
 Abstract analysis scripts for preprocessing
 """
-from collections import namedtuple
 
-from django.db import transaction
-from amcat.models import ArticleAnalysis
-
+from itertools import chain
 from amcat.scripts.script import Script
-from amcat.nlp.sbd import SBD
 
-Token = namedtuple("Token", ["sentence_id", "position", "word", "lemma", "pos", "major", "minor"])
-Triple = namedtuple("Triple", ['sentence_id', "child", "parent", "relation"])
 
 class AnalysisScript(Script):
     def __init__(self, analysis, tokens=False, triples=False):
@@ -37,43 +31,43 @@ class AnalysisScript(Script):
         self.tokens = tokens
         self.triples = triples
 
-    def preprocess_sentence(self, sentence):
+    def preprocess_sentences(self, sentences):
         """
         Optional preprocessing of the sentence. The result (which can be an
         arbitrary object) is passed to the get_triples and get_tokens methods.
+        @param sentences: a sequence of id : sentence pairs
         """
 
-    def get_triples(self, sentence, memo=None):
+    def get_triples(self, id, sentence, memo=None):
         """
-        @return: a sequence of amcat.nlp.analysisscript.Triple objects
+        @param id: the (analysis_sentence) id of the sentence
+        @param sentence: the sentence string
+        @return: a sequence of TripleValues objects
         """
         raise NotImplementedError()
 
-    def get_tokens(self, sentence, memo=None):
+    def get_tokens(self, id, sentence, memo=None):
         """
-        @return: a sequence of amcat.nlp.analysisscript.Token objects
+        @param id: the (analysis_sentence) id of the sentence
+        @param sentence: the sentence string
+        @return: a sequence of TokenValues objects
         """
         raise NotImplementedError()
 
-    def process_sentence(self, sentence):
-        memo = self.preprocess_sentence(sentence)
-        tokens = self.get_tokens(sentence, memo) if self.tokens else None
-        triples = self.get_triples(sentence, memo) if self.triples else None
+    def process_sentences(self, sentences):
+        """
+        Process the given sentences with this script
+        @param sentences:  a sequence of id : sentence pairs
+        @return: a sequence of TokenValues objects
+        """
+        sentences = list(sentences)
+        memo = self.preprocess_sentences(sentences)
+        tokens = list(chain.from_iterable(self.get_tokens(id, s, memo) for (id, s) in sentences)
+                  if  self.tokens else None)
+        triples = list(chain.from_iterable(self.get_triples(id, s, memo) for (id, s) in sentences)
+                   if  self.triples else None)
         return tokens, triples
 
-    @property
-    def needs_preparation(self):
-        return (self.tokens or self.triples)
-    
-    @transaction.commit_on_success
-    def prepare_articles(self, article_analyses):
-        if not self.needs_preparation: return
-        sbd = SBD()
-        for aa in article_analyses:
-            if aa.article.sentences.count() > 1: continue
-            for sentence in sbd.get_sentences(aa.article):
-                sentence.save()
-        ArticleAnalysis.objects.filter(pk__in=article_analyses).update(prepared=True)
 
     def run(self, _input=None):
         raise NotImplementedError
@@ -87,10 +81,16 @@ from amcat.tools import amcattest
 
 class TestAnalysisScript(amcattest.PolicyTestCase):
     def test_process(self):
+        from amcat.models.token import TokenValues
         class X(AnalysisScript):
-            def get_tokens(self, sentence, memo=None):
-                for i, x in enumerate(sentence.sentence.split()):
-                    yield Token(sentence.id, i+1, x, None, None, None, None)
-        s = amcattest.create_test_sentence(sentence="dit is een test")
-        tokens, triples = list(X(analysis=None).process_sentence(s))
-        self.assertEqual(list(tokens)[0], (Token(s.id, 1, "dit", None, None, None, None)))
+            def __init__(self):
+                super(X, self).__init__(analysis=None, tokens=True, triples=False)
+
+            def get_tokens(self, analysis_sentence, memo=None):
+                for i, x in enumerate(analysis_sentence.sentence.sentence.split()):
+                    yield TokenValues(analysis_sentence, i+1, x, None, None, None, None)
+        a = amcattest.create_test_analysis_sentence(sentence=amcattest.create_test_sentence(sentence="dit is een test"))
+        tokens, triples = list(X().process_sentence(a))
+        print(tokens)
+        self.assertIsNone(triples)
+        self.assertEqual(list(tokens)[0], (TokenValues(a, 1, "dit", None, None, None, None)))

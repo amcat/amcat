@@ -25,7 +25,6 @@ Script run a preprocessing analysis against a remote (REST) database
 import logging
 import json
 
-from amcat.models import Analysis, Sentence
 from amcat.scripts.script import Script
 from amcat.scripts.actions.add_tokens import AddTokens
 from amcat.tools.rest import Rest
@@ -56,11 +55,11 @@ class RemoteAnalysis(Script):
         articles = self.get_articles()
         log.info("Retrieved {n} articles to analyse".format(n=len(articles)))
         for article in articles:
-            self.analyse_article(article["id"], article["article"])
+            self.analyse_article(article["id"])
 
     def get_articles(self):
-        return self.rest.get_objects("articleanalysis", analysis = self.analysis_id,
-                                     done = False, prepared = True, delete=False)
+        return self.rest.get_objects("analysisarticle", analysis = self.analysis_id,
+                                     done = False, delete=False)
 
     def get_analysis_script(self):
         analysis = self.rest.get_object("analysis", self.analysis_id)
@@ -68,29 +67,30 @@ class RemoteAnalysis(Script):
         print(plugin)
         return classtools.import_attribute(plugin["module"], plugin["class_name"])(analysis)
 
-    def analyse_article(self, article_analysis, article):
-        log.info("Analysing article {article}".format(**locals()))
-        article_tokens = []
-        article_triples = []
-        for sentence in self.get_sentences(article):
-            log.debug("Using {self.script.__class__.__name__} to analyse "
-                      "{sentence.id} : {sentence.sentence}".format(**locals()))
-            tokens, triples = self.script.process_sentence(sentence)
-            article_tokens += list(tokens)
-            article_triples += list(triples)
-            break
-        log.info("Storing {ntok} tokens and {ntrip} triples for article {article}, "
-                 "analysis {self.analysis_id}"
-                 .format(ntok=len(article_tokens), ntrip=len(article_triples), **locals()))
+    def analyse_article(self, analysis_article_id):
+        sentences = self.get_sentences(analysis_article_id)
+        log.info("Analysing {n} sentences from article {analysis_article_id}"
+                  .format(n=len(sentences), **locals()))
+        print(sentences)
+        tokens, triples = self.script.process_sentences(sentences)
+        log.info("Storing {ntok} tokens and {ntrip} triples for article_analysis"
+                 "{analysis_article_id}".format(ntok=len(tokens),
+                 ntrip=len(triples), **locals()))
+        print("Tokens:")
+        for token in tokens:
+            print("  ", token.analysis_sentence, token.position, token.word)
+        print("Triples:")
+        for triple in triples:
+            print(triple)
+        if not tokens: raise Exception()
+        self.rest.call_action(AddTokens, analysisarticle=analysis_article_id,
+                              tokens=json.dumps(tokens),
+                              triples=json.dumps(triples))
 
-        self.rest.call_action(AddTokens, articleanalysis=article_analysis,
-                              tokens=json.dumps(article_tokens),
-                              triples=json.dumps(article_triples))
 
-
-    def get_sentences(self, article):
-        return [Sentence(id=s["id"], sentence=s["sentence"])
-                for s in self.rest.get_objects("sentence", article=article)]
+    def get_sentences(self, analysis_article_id):
+        return [(int(s["id"]), s["sentence"]["sentence"]) for s in
+                self.rest.get_objects("analysissentence", analysis_article=analysis_article_id)]
 
 
     

@@ -24,8 +24,9 @@ Van den Bosch, A., Busser, G.J., Daelemans, W., and Canisius, S., CLIN 2007.
 """
 
 import telnetlib
+from amcat.models.token import TokenValues, TripleValues
 
-from amcat.nlp.analysisscript import AnalysisScript, Token, Triple
+from amcat.nlp.analysisscript import AnalysisScript
 
 class Frog(AnalysisScript):
 
@@ -48,26 +49,26 @@ class Frog(AnalysisScript):
         except AttributeError:
             pass
 
-    def preprocess_sentence(self, sentence):
+    def preprocess_sentence(self, analysis_sentence):
         try:
-            return list(self._do_process(sentence.sentence.encode("utf-8")))
+            return list(self._do_process(analysis_sentence.sentence.sentence.encode("utf-8")))
         except:
             self._reset_connection()
             raise 
             
-    def get_tokens(self, sentence, memo=None):
-        if memo is None: memo = self.preprocess_sentence(sentence)
+    def get_tokens(self, analysis_sentence, memo=None):
+        if memo is None: memo = self.preprocess_sentence(analysis_sentence)
         for line in memo:
             position, word, lemma, pos = [line[i] for i in (0,1,2,4)]
-            yield Token(sentence, int(position)-1, word, lemma, *read_pos(pos))
+            yield TokenValues(analysis_sentence, int(position)-1, word, lemma, *read_pos(pos))
 
-    def get_triples(self, sentence, memo=None):
-        if memo is None: memo = self.preprocess_sentence(sentence)
+    def get_triples(self, analysis_sentence, memo=None):
+        if memo is None: memo = self.preprocess_sentence(analysis_sentence)
         for line in memo:
             position, parent = [int(line[i]) for i in (0, -2)]
             if parent != 0:
                 rel = line[-1]
-                yield Triple(sentence, position-1, parent-1, rel)
+                yield TripleValues(analysis_sentence, position-1, parent-1, rel)
             
             
     def _do_process(self, sentence):
@@ -119,8 +120,9 @@ from amcat.tools import amcattest
 
 class TestFrog(amcattest.PolicyTestCase):
     def test_process_sentence(self):
-        from amcat.models.sentence import Sentence
-        s = Sentence(sentence="de groenste huizen")
+        s = amcattest.create_test_analysis_sentence(
+            sentence=amcattest.create_test_sentence(sentence="de groenste huizen"))
+
         f = Frog(None)
         tokens, triples = f.process_sentence(s)
         tokens = list(tokens)
@@ -140,14 +142,14 @@ class TestFrog(amcattest.PolicyTestCase):
 
 
     def test_triples(self):
-        from amcat.models.sentence import Sentence
-        s = Sentence(sentence="hij gaf hem een boek")
-        f = Frog(None, triples=True, port=12346)
+        s = amcattest.create_test_analysis_sentence(
+            sentence=amcattest.create_test_sentence(sentence="hij gaf hem een boek"))
+        f = FrogTriples(None)
         triples = set(f.get_triples(s))
-        self.assertEqual(triples, {Triple(s.id, 0, 1, 'su'),
-                                   Triple(s.id, 2, 1, 'obj2'),
-                                   Triple(s.id, 3, 4, 'det'),
-                                   Triple(s.id, 4, 1, 'obj1'),
+        self.assertEqual(triples, {TripleValues(s, 0, 1, 'su'),
+                                   TripleValues(s, 2, 1, 'obj2'),
+                                   TripleValues(s, 3, 4, 'det'),
+                                   TripleValues(s, 4, 1, 'obj1'),
                                    })
                                    
         

@@ -21,7 +21,7 @@
 Simple regex-based sentence boundary detection
 """
 
-import re,os,  collections
+import re, collections
 
 
 abbrevs = ["ir","mr","dr","dhr","ing","drs","mrs","sen","sens","gov","st",

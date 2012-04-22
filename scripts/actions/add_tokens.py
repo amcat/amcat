@@ -27,30 +27,29 @@ import logging; log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.forms.fields import JSONField
 
-from amcat.models import Article, Analysis, Language, ArticleAnalysis, Token, Triple
+from amcat.models.token import Token, Triple, TokenValues, TripleValues
+from amcat.models.analysis import AnalysisArticle
 
-from amcat.nlp import analysisscript
 
 import json
 
 class AddTokensForm(forms.Form):
-    articleanalysis = forms.ModelChoiceField(queryset=ArticleAnalysis.objects.all())
+    analysisarticle = forms.ModelChoiceField(queryset=AnalysisArticle.objects.all())
     tokens = forms.CharField()
     triples = forms.CharField(required=False)
 
     def clean_tokens(self):
         tokens = self.cleaned_data["tokens"]
         try:
-            return [analysisscript.Token(*fields) for fields in json.loads(tokens)]
+            return [TokenValues(*fields) for fields in json.loads(tokens)]
         except ValueError as e:
             raise forms.ValidationError(e)
 
     def clean_triples(self):
         triples = self.cleaned_data["triples"]
         if not triples: return
-        return [analysisscript.Triple(*fields) for fields in json.loads(triples)]
+        return [TripleValues(*fields) for fields in json.loads(triples)]
     
 class AddTokens(Script):
     """Add a project to the database."""
@@ -59,8 +58,11 @@ class AddTokens(Script):
     output_type = None
 
     def run(self, _input=None):
-        aa, tokens, triples = (self.options[x] for x in ['articleanalysis', 'tokens', 'triples'])
+        aa, tokens, triples = (self.options[x] for x in ['analysisarticle', 'tokens', 'triples'])
+        print("STORING TOKENS: \n%s" % "\n  ".join(str(t) for t in tokens))
+        print("STORING TRIPLES: \n%s" % "\n  ".join(str(t) for t in triples))
         aa.store_analysis(tokens, triples)
+        print("DONE")
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
@@ -76,30 +78,25 @@ from amcat.tools import amcattest
 class TestAddTokens(amcattest.PolicyTestCase):
     
     def test_store_tokens(self):
-        s = amcattest.create_test_sentence()
-        a = amcattest.create_test_analysis()
-        aa = ArticleAnalysis.objects.create(article=s.article, analysis=a)
-        t1 = amcattest.create_analysis_token(sentence_id=s.id)
-        AddTokens(articleanalysis=aa.id, tokens=json.dumps([t1])).run()
-        aa = ArticleAnalysis.objects.get(pk=aa.id)
+        aa = amcattest.create_test_analysis_article()
+        t1 = amcattest.create_tokenvalue(analysis_article=aa)
+        AddTokens(analysisarticle=aa.id, tokens=json.dumps([t1])).run()
+        aa = AnalysisArticle.objects.get(pk=aa.id)
         self.assertEqual(aa.done,  True)
-        token, = list(Token.objects.filter(sentence=s, analysis=a))
+        token, = list(Token.objects.filter(sentence__analysis_article=aa))
         self.assertEqual(token.word.word, t1.word)
         self.assertRaises(aa.store_analysis, tokens=[t1])
         with self.assertRaises(Exception):
-            AddTokens(articleanalysis=aa.id, tokens=json.dumps(tokens)).run()
+            AddTokens(analysisarticle=aa.id, tokens=json.dumps(tokens)).run()
 
     def test_store_triples(self):
         from amcat.nlp import analysisscript
-        s = amcattest.create_test_sentence()
-        a = amcattest.create_test_analysis()
-        aa = ArticleAnalysis.objects.create(article=s.article, analysis=a)
-        t1 = amcattest.create_analysis_token(sentence_id=s.id, position=1)
-        t2 = amcattest.create_analysis_token(sentence_id=s.id, word="x")
-        tr = analysisscript.Triple(s.id, parent=t1.position, child=t2.position, relation='su')
-        AddTokens(articleanalysis=aa.id, tokens=json.dumps([t1, t2]),
-                  triples=json.dumps([tr])).run()
-        aa = ArticleAnalysis.objects.get(pk=aa.id)
-        triple, = list(Triple.objects.filter(analysis=a, parent__sentence=s))
+        aa = amcattest.create_test_analysis_article()
+        t1 = amcattest.create_tokenvalue(analysis_article=aa)
+        t2 = amcattest.create_tokenvalue(analysis_sentence=t1.analysis_sentence, word="x")
+        tr = TripleValues(t1.analysis_sentence, parent=t1.position, child=t2.position, relation='su')
+        AddTokens(analysisarticle=aa.id, tokens=json.dumps([t1, t2]), triples=json.dumps([tr])).run()
+        aa = AnalysisArticle.objects.get(pk=aa.id)
+        triple, = list(Triple.objects.filter(parent__sentence__analysis_article=aa))
         self.assertEqual(triple.parent.word.word, t1.word)
         self.assertEqual(triple.child.word.lemma.lemma, t2.lemma)

@@ -30,7 +30,7 @@ from django import forms
 
 from amcat.models.project import Project
 from amcat.models.article import Article
-from amcat.models.article_preprocessing import add_to_queue
+from amcat.models.analysis import add_to_queue
 
 from amcat.scripts.script import Script
 

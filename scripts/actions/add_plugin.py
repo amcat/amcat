@@ -139,7 +139,6 @@ class AddPlugin(Script):
 
 
     def run(self, _input=None):
-        print(">>>>>>>>>", self.options)
         language = self.options.pop('analysis_language')
         p = Plugin.objects.create(**self.options)
         if language:

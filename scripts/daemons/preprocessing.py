@@ -26,7 +26,7 @@ from django.db import transaction
 
 from amcat.scripts.daemons.daemonscript import DaemonScript
 
-from amcat.models.article_preprocessing import ArticlePreprocessing
+from amcat.models.analysis import AnalysisQueue
 from amcat.nlp.preprocessing import set_preprocessing_actions
 
 import logging; log = logging.getLogger(__name__)
@@ -40,13 +40,13 @@ class PreprocessingDaemon(DaemonScript):
         aids = set()
         preprocess_ids = list()
 
-        for ap in ArticlePreprocessing.objects.all()[:BATCH]:
+        for ap in AnalysisQueue.objects.all()[:BATCH]:
             aids.add(ap.article_id)
             preprocess_ids.append(ap.id)
 
         if not aids: return False
 
-        ArticlePreprocessing.objects.filter(pk__in=preprocess_ids).delete()
+        AnalysisQueue.objects.filter(pk__in=preprocess_ids).delete()
         log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
         set_preprocessing_actions(aids)
 

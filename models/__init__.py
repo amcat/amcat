@@ -31,7 +31,7 @@ from amcat.models.plugin import *
 
 from amcat.models.word import *
 from amcat.models.analysis import *
-from amcat.models.article_preprocessing import *
+from amcat.models.token import *
 
 
 from amcat.models.coding.codingschema import *

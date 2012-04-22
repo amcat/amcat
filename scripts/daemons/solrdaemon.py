@@ -29,8 +29,7 @@ import logging
 log = logging.getLogger(__name__)
 
 from amcat.scripts.daemons.daemonscript import DaemonScript
-from amcat.models.analysis import Analysis
-from amcat.models.article_preprocessing import ArticleAnalysis
+from amcat.models.analysis import Analysis, AnalysisArticle
 
 BATCH = 10000
 
@@ -47,19 +46,19 @@ class SolrDeamon(DaemonScript):
 
     def run_action(self):
         log.debug("Running analysis for %s : %s" % (self.script, self.script.analysis))
-        articles = ArticleAnalysis.objects.filter(analysis=self.script.analysis)
+        articles = AnalysisArticle.objects.filter(analysis=self.script.analysis)
         # add articles
         to_add = list(articles.filter(done=False, delete=False)[:BATCH])
         if to_add:
             self.script.add_articles([a.article_id for a in to_add])
             log.info("Setting done=True on %i articles" % len(to_add))
-            ArticleAnalysis.objects.filter(pk__in=(a.id for a in to_add)).update(done=True)
+            AnalysisArticle.objects.filter(pk__in=(a.id for a in to_add)).update(done=True)
         # remove articles
         to_delete = list(articles.filter(delete=True)[:BATCH])
         if to_delete:
             self.script.delete_articles([a.article_id for a in to_delete])
             log.info("Removing %i articles from analysis" % len(to_delete))
-            ArticleAnalysis.objects.filter(pk__in=(a.id for a in to_delete)).delete()
+            AnalysisArticle.objects.filter(pk__in=(a.id for a in to_delete)).delete()
         
         
         

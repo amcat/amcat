@@ -21,18 +21,26 @@
 Preprocess using Alpino
 See http://www.let.rug.nl/vannoord/alp/Alpino/ 
 """
-import os, subprocess
+import collections
+import os
 from os.path import exists
 
-import logging; log = logging.getLogger(__name__)
+from amcat.models.token import TripleValues, TokenValues
 
-from amcat.nlp.analysisscript import AnalysisScript, Token, Triple
-from amcat.tools.toolkit import execute, wrapped, to_list
+import logging
+log = logging.getLogger(__name__)
+
+from amcat.nlp.analysisscript import AnalysisScript
+from amcat.tools.toolkit import execute, wrapped, to_dict
 
 CMD = "ALPINO_HOME={alpino_home} {alpino_home}/bin/Alpino {alpino_options}"
 TOKENIZE = "{alpino_home}/Tokenization/tok" 
 ALPINO_HOME="/home/amcat/resources/Alpino"
 ALPINO_OPTIONS = "end_hook=dependencies -parse"
+
+class AlpinoConfigurationError(Exception): pass
+class AlpinoError(EnvironmentError): pass
+
 
 class Alpino(AnalysisScript):
     def __init__(self, analysis, alpino_home=ALPINO_HOME, alpino_options=ALPINO_OPTIONS):
@@ -42,50 +50,51 @@ class Alpino(AnalysisScript):
         self.alpino_options = alpino_options
 
     def _parse(self, tokens):
+        self._check_alpino()
         cmd = CMD.format(**self.__dict__)
         log.debug("Parsing %s" % tokens)
         out, err = execute(cmd, tokens)
         log.debug(out)
         # it seems that alpino reports errors by starting a line with an exclamation mark
         if "\n! " in err:
-            raise Exception("Error on parsing %r: %s" % (tokens, err))
+            raise AlpinoError("Error on parsing %r: %s" % (tokens, err))
         return out.decode("utf-8")
 
     def _check_alpino(self):
-        if self.alpino_home is None: raise Exception("ALPINO_HOME not specified")
+        if self.alpino_home is None: raise AlpinoConfigurationError("ALPINO_HOME not specified")
         if not exists(self.alpino_home):
-            raise Exception("Cannot find {self.alpino_home".format(**locals()))
+            raise AlpinoConfigurationError("Cannot find {self.alpino_home".format(**locals()))
     
     def _tokenize(self, input):
+        self._check_alpino()
         cmd = TOKENIZE.format(**self.__dict__)        
         return execute(cmd, input, outonly=True)
 
-    def _get_input(self, sentences):
-        input = "\n".join("{0.id}|{0.sentence}".format(s) for s in sentences)
+    def _get_input(self, analysis_sentences):
+        input = "\n".join("{0}|{1}".format(id, sent) for (id, sent) in analysis_sentences)
         if input[-1] != "\n": input += "\n"
         return input.encode("utf-8")
 
     @wrapped(set)
-    def get_tokens(self, sentence, memo=None):
-        if memo is None: memo = self.preprocess_sentences([sentence])
-        for sid, parent, child, rel in memo:
+    def get_tokens(self, id, sentence, memo=None):
+        for parent, child, rel in memo.get(id, []):
             yield parent
             yield child
 
-    def get_triples(self, sentence, memo=None):
-        if memo is None: memo = self.preprocess_sentences([sentence])
-        for sid, parent, child, rel in memo:
-            yield Triple(sid, child.position, parent.position, rel) 
+    def get_triples(self, id, sentence, memo=None):
+        for parent, child, rel in memo.get(id, []):
+            yield TripleValues(id, child.position, parent.position, rel)
     
-    @to_list
     def preprocess_sentences(self, sentences):
-        self._check_alpino()
+        memo = {} # sid : [(parent, child, rel), ...]
         input = self._get_input(sentences)
         tokens = self._tokenize(input)
         rawparse = self._parse(tokens)
         for line in rawparse.split("\n"):
             if not line.strip(): continue
-            yield interpret_line(line)
+            sid, parent, child, rel = interpret_line(line)
+            memo.setdefault(sid, []).append((parent, child, rel))
+        return memo
             
 POSMAP = {"pronoun" : 'O',
           "verb" : 'V',
@@ -124,7 +133,7 @@ POSMAP = {"pronoun" : 'O',
           '--' : '?',
           }
 
-def interpret_token(sid, lemma, word, begin, end, dummypos, dummypos2, pos):
+def interpret_token(sid, lemma, word, begin, _end, dummypos, dummypos2, pos):
     if "(" in pos:
         major, minor = pos.split("(", 1)
         minor = minor[:-1]
@@ -137,7 +146,7 @@ def interpret_token(sid, lemma, word, begin, end, dummypos, dummypos2, pos):
     cat = POSMAP.get(m2)
     if not cat:
         raise Exception("Unknown POS: %r (%s/%s/%s/%s)" % (m2, major, begin, word, pos))
-    return Token(sid, int(begin), word, lemma, cat, major, minor)
+    return TokenValues(sid, int(begin), word, lemma, cat, major, minor)
 
 
 def interpret_line(line):
@@ -161,14 +170,12 @@ from amcat.tools import amcattest
 class TestAlpino(amcattest.PolicyTestCase):
     def test_tokenize(self):
         a = Alpino(None)
-        
-        s1 = amcattest.create_test_sentence(sentence="daarom, toch?")
-        s2 = amcattest.create_test_sentence(sentence="pas d'r op, a.u.b.")
-        input = a._get_input([s1, s2])
-        self.assertEqual(input, "{s1.id}|daarom, toch?\n{s2.id}|pas d'r op, a.u.b.\n".format(**locals()))
+
+        input = a._get_input(enumerate(["daarom, toch?", "pas d'r op, a.u.b."]))
+        self.assertEqual(input, "0|daarom, toch?\n1|pas d'r op, a.u.b.\n".format(**locals()))
         
         tokens = a._tokenize(input)
-        self.assertEqual(tokens, "{s1.id}|daarom , toch ?\n{s2.id}|pas d'r op , a.u.b.\n".format(**locals()))
+        self.assertEqual(tokens, "0|daarom , toch ?\n1|pas d'r op , a.u.b.\n".format(**locals()))
         
 
     def test_parse_function(self):
@@ -182,7 +189,7 @@ class TestAlpino(amcattest.PolicyTestCase):
     def test_errors(self):
         a = Alpino(None)
         tokens = "1|ik woon in Syri\00"
-        self.assertRaises(Exception, a._parse, tokens)
+        self.assertRaises(AlpinoError, a._parse, tokens)
         
 
     def test_interpret(self):
@@ -191,8 +198,8 @@ class TestAlpino(amcattest.PolicyTestCase):
         token_str1 = u"huis_DIM|huisje|1|2|noun|noun|noun(het,count,sg)"
         token_str2 = u"het|het|0|1|det|det(nwh)|determiner(het,nwh,nmod,pro,nparg,wkpro)"
 
-        token1 = Token(sentno, 1, "huisje", "huis_DIM", "N", "noun", "het,count,sg")
-        token2 = Token(sentno, 0, "het", "het", "D" ,"determiner", "het,nwh,nmod,pro,nparg,wkpro")
+        token1 = TokenValues(sentno, 1, "huisje", "huis_DIM", "N", "noun", "het,count,sg")
+        token2 = TokenValues(sentno, 0, "het", "het", "D" ,"determiner", "het,nwh,nmod,pro,nparg,wkpro")
         
         
         self.assertEqual(interpret_token(sentno, *token_str1.split("|")), token1)
@@ -208,16 +215,14 @@ class TestAlpino(amcattest.PolicyTestCase):
         self.assertEqual(rel, "det")
 
     def test_parse(self):
-        a = Alpino(None)
-        s = amcattest.create_test_sentence(sentence="ik zie hem!")
-        tokens, triples = a.process_sentence(s)
-        self.assertEqual(len(tokens), 4)
-        self.assertIn(Token(s.id, 3, "!", "!", ".", "punct", "uitroep"), tokens)
+        tokens, triples = Alpino(None).process_sentences(enumerate(["ik zie hem!"]))
+        self.assertEqual(len(tokens), 4, "Exptected 4 tokens, got %r" % tokens)
+        self.assertIn(TokenValues(0, 3, "!", "!", ".", "punct", "uitroep"), tokens)
         
         self.assertEqual(set(triples), {
-                Triple(s.id, 0, 1, "su"),
-                Triple(s.id, 2, 1, "obj1"),
-                Triple(s.id, 3, 1, "--"),})
+                TripleValues(0, 0, 1, "su"),
+                TripleValues(0, 2, 1, "obj1"),
+                TripleValues(0, 3, 1, "--"),})
 
 if __name__ == '__main__':
     from amcat.tools import amcatlogging

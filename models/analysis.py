@@ -17,80 +17,180 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.tools.model import AmcatModel
-from amcat.models import Language, Word, Sentence, Plugin
+"""
+Model module for the Preprocessing queue
 
+Articles on the preprocessing queue need to be checked to see if preprocessing
+needs to be done.
+
+See http://code.google.com/p/amcat/wiki/Preprocessing
+"""
+
+from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
+
+from amcat.tools.model import AmcatModel
+from amcat.tools import dbtoolkit
+from amcat.tools.djangotoolkit import receiver
+from amcat.models.article import Article
+from amcat.models.articleset import ArticleSetArticle, ArticleSet
+from amcat.models.token import Token, Triple, Pos, Relation
+from amcat.models.language import Language
+from amcat.models.plugin import Plugin
+from amcat.models.project import Project
+from amcat.models.word import Word
+from amcat.models.sentence import Sentence
+from amcat.tools.djangotoolkit import get_or_create
+
+from django.db.models.signals import post_save, post_delete
+from django.db import connection
+from django.db.models import Q
+from django.db import transaction
+
+import logging; log = logging.getLogger(__name__)
+
+
+
 
 class Analysis(AmcatModel):
     """Object representing an NLP 'preprocessing' analysis"""
     id = models.AutoField(db_column='analysis_id', primary_key=True)
     language = models.ForeignKey(Language)
+    sentences = models.BooleanField(default=True)
     plugin = models.ForeignKey(Plugin, null=True)
 
     def get_script(self, **options):
         return self.plugin.get_instance(analysis=self, **options)
 
     class Meta():
-        db_table = 'parses_analyses'
+        db_table = 'analyses'
         app_label = 'amcat'
 
     def __unicode__(self):
         return self.plugin.label if self.plugin else "No plugin available"
 
-class Relation(AmcatModel):
-    id = models.AutoField(db_column='relation_id', primary_key=True)
-    label = models.CharField(max_length=100)
+class AnalysisQueue(AmcatModel):
+    """
+    An article on the Analysis Queue needs to be checked for preprocessing
+    """
+
+    id = models.AutoField(primary_key=True)
+    article = models.ForeignKey(Article)
 
     class Meta():
-        db_table = 'parses_relations'
+        db_table = 'analysis_queue'
         app_label = 'amcat'
 
-class Pos(AmcatModel):
-    id = models.AutoField(primary_key=True, db_column='pos_id')
-    major = models.CharField(max_length=100)
-    minor = models.CharField(max_length=500, null=True)
-    pos =  models.CharField(max_length=1, null=True)
+    @classmethod
+    def narticles_in_queue(cls, project):
+        # subqueries for direct and indirect (via set) articles
+        direct = Article.objects.filter(project=project).values("id")
+        indirect = (ArticleSetArticle.objects.filter(articleset__project=project)
+                    .values("article"))
+        q = AnalysisQueue.objects.filter(Q(article__in=direct)
+                                                | Q(article__in=indirect))
+        # add count(distinct) manually - maybe possible through aggregate?
+        q = q.extra(select=dict(n="count(distinct article_id)")).values_list("n")
+        return q[0][0]
 
-    class Meta():
-        db_table = 'parses_pos'
-        app_label = 'amcat'
 
-class Token(AmcatModel):
-    __label__ = 'word'
+class AnalysisArticle(AmcatModel):
+    """
+    The Article Analysis table keeps track of which articles are / need to be preprocessed
+    """
 
-    id = models.AutoField(primary_key=True, db_column='token_id')
+    id = models.AutoField(primary_key=True, db_column="article_analysis_id")
 
-    sentence = models.ForeignKey("amcat.Sentence", related_name="tokens")
-    word = models.ForeignKey(Word)
-    position = models.IntegerField()
+    article = models.ForeignKey(Article)
     analysis = models.ForeignKey(Analysis)
-    pos = models.ForeignKey(Pos, related_name="+")
+    done = models.BooleanField(default=False)
+    delete = models.BooleanField(default=False)
 
     class Meta():
-        db_table = 'parses_tokens'
+        db_table = 'analysis_articles'
         app_label = 'amcat'
-        unique_together = ("sentence", "analysis", "position")
-        ordering = ['sentence', 'position']
-
-    def __unicode__(self):
-        return unicode(self.word)
+        unique_together = ('article', 'analysis')
 
 
+    @transaction.commit_on_success
+    def store_analysis(self, tokens, triples=None):
+        """
+        Store the given tokens and triples for this articleanalysis, setting
+        it to done=True if stored succesfully.
+        """
+        if self.done: raise Exception("Cannot store analyses when already done")
+        # Store tokens as {(sentence, position) : token} dict to retrieve when creating triples
+        tokens = dict(((t.analysis_sentence, t.position), t.create()) for t in tokens)
+        if triples:
+            for triple in triples:
+                rel = get_or_create(Relation, label=triple.relation)
+                Triple.objects.create(relation=rel,
+                                      parent=tokens[triple.analysis_sentence, triple.parent],
+                                      child=tokens[triple.analysis_sentence, triple.child])
+        self.done = True
+        self.save()
 
-class Triple(AmcatModel):
-    id = models.AutoField(primary_key=True, db_column='triple_id')
 
-    parent = models.ForeignKey(Token, related_name="+")
-    child = models.ForeignKey(Token, related_name="+")
-    relation = models.ForeignKey(Relation)
+class AnalysisProject(AmcatModel):
+    """
+    Explicit many-to-many projects - analyses. Hopefully this can be removed
+    when prefetch_related hits the main branch.
+    """
+    id = models.AutoField(primary_key=True)
+    project = models.ForeignKey(Project)
     analysis = models.ForeignKey(Analysis)
 
     class Meta():
-        db_table = 'parses_triples'
         app_label = 'amcat'
-        unique_together = ("analysis", "child")
+        db_table = "analysis_projects"
+        unique_together = ('project', 'analysis')
+
+    def narticles(self, **filter):
+        # TODO: this is not very efficient for large projects!
+        aids = set(self.project.get_all_articles())
+        q = AnalysisArticle.objects.filter(article__in=aids, analysis=self.analysis)
+        if filter: q = q.filter(**filter)
+        return q.count()
+
+class AnalysisSentence(AmcatModel):
+    """
+    Explicity many-to-many sentence - analysisarticle
+    """
+    id = models.AutoField(primary_key=True)
+    analysis_article = models.ForeignKey(AnalysisArticle, related_name="sentences")
+    sentence = models.ForeignKey(Sentence, related_name="analyses")
+    
+    class Meta():
+        app_label = 'amcat'
+        db_table = "analysis_sentences"
+        unique_together = ('analysis_article', 'sentence')
+
+    
+# Signal handlers to make sure the article analysis queue is filled
+def add_to_queue(*aids):
+    for aid in aids:
+        AnalysisQueue.objects.create(article_id = aid)
+
+@receiver([post_save, post_delete], Article)
+def handle_article(sender, instance, **kargs):
+    add_to_queue(instance.id)
+
+@receiver([post_save, post_delete], ArticleSetArticle)
+def handle_articlesetarticle(sender, instance, **kargs):
+    add_to_queue(instance.article_id)
+
+@receiver([post_save], Project)
+def handle_project(sender, instance, **kargs11):
+    add_to_queue(*instance.get_all_articles())
+
+@receiver([post_save, post_delete], AnalysisProject)
+def handle_projectanalysis(sender, instance, **kargs):
+    add_to_queue(*instance.project.get_all_articles())
+
+@receiver([post_save], ArticleSet)
+def handle_articleset(sender, instance, **kargs):
+    add_to_queue(*(a.id for a in instance.articles.all().only("id")))
 
 
 ###########################################################################
@@ -99,33 +199,123 @@ class Triple(AmcatModel):
 
 from amcat.tools import amcattest
 
-class TestTriples(amcattest.PolicyTestCase):
-    def test_get_tokens_order(self):
+class TestAnalysis(amcattest.PolicyTestCase):
 
-        s = amcattest.create_test_sentence()
-        w1, w2, w3 = [amcattest.create_test_word(word=x) for x in "abc"]
-        a = Analysis.objects.create(language=w1.lemma.language)
-        pos = Pos.objects.create(major="x", minor="y", pos="p")
-        t1 = Token.objects.create(sentence=s, position=3, word=w3, analysis=a, pos=pos)
-        t2 = Token.objects.create(sentence=s, position=1, word=w2, analysis=a, pos=pos)
-        t3 = Token.objects.create(sentence=s, position=2, word=w1, analysis=a, pos=pos)
+    def test_narticles_in_queue(self):
+        # articles added to a project are on the queue
+        p = amcattest.create_test_project()
+        self.assertEqual(AnalysisQueue.narticles_in_queue(p), 0)
+        [amcattest.create_test_article(project=p) for _i in range(10)]
+        self.assertEqual(AnalysisQueue.narticles_in_queue(p), 10)
 
-        self.assertEqual(list(s.tokens.all()), [t2,t3,t1])
+        # articles added to a set in the project are on the queue
+        arts = [amcattest.create_test_article() for _i in range(10)]
+        s = amcattest.create_test_set(project=p)
+        self.assertEqual(AnalysisQueue.narticles_in_queue(p), 10)
+        map(s.add, arts)
+        self.assertEqual(AnalysisQueue.narticles_in_queue(p), 20)
 
-    def test_get_analysis(self):
-        from amcat.nlp.frog import Frog
-        l = Language.objects.create()
-        p = Plugin.objects.create(label='test', module='amcat.nlp.frog', class_name='Frog')
-        a = Analysis.objects.create(language=l, plugin=p)
-        self.assertEqual(a.plugin.get_class(), Frog)
-        f =a.get_script()
-        self.assertEqual(type(f), Frog)
-        self.assertFalse(f.triples)
+    def test_article_trigger(self):
+        """Is a created or update article in the queue?"""
+        self._flush_queue()
+        a = amcattest.create_test_article()
+        self.assertIn(a.id,  self._all_articles())
 
-    def test_create_token(self):
-        a = amcattest.create_test_analysis()
-        token = amcattest.create_analysis_token()
-        t = Token.create(a, token)
-        self.assertEqual(t.sentence.id, token.sentence_id)
-        self.assertEqual(t.word.word, token.word)
-        self.assertEqual(t.word.lemma.pos, token.pos)
+        self._flush_queue()
+        self.assertNotIn(a.id,  self._all_articles())
+        a.headline = "bla bla"
+        a.save()
+        self.assertIn(a.id,  self._all_articles())
+
+
+    def test_articleset_triggers(self):
+        """Is a article added/removed from a set in the queue?"""
+
+        a = amcattest.create_test_article()
+        aset = amcattest.create_test_set()
+        self._flush_queue()
+        self.assertNotIn(a.id,  self._all_articles())
+
+        aset.add(a)
+        self.assertIn(a.id,  self._all_articles())
+
+        self._flush_queue()
+        aset.remove(a)
+        self.assertIn(a.id, self._all_articles())
+
+        self._flush_queue()
+        aid = a.id
+        a.delete()
+        self.assertIn(aid, self._all_articles())
+
+
+        b = amcattest.create_test_article()
+        aset.add(b)
+        self._flush_queue()
+        aset.project = amcattest.create_test_project()
+        aset.save()
+        self.assertIn(b.id, self._all_articles())
+
+    def test_project_triggers(self):
+        """Check trigger on project (de)activation and analyses being added/removed from project?"""
+
+        a,b = [amcattest.create_test_article() for _i in range(2)]
+        s = amcattest.create_test_set(project=a.project)
+        self.assertNotEqual(a.project, b.project)
+        s.add(b)
+
+        self._flush_queue()
+        a.project.active=True
+        a.project.save()
+        self.assertIn(a.id, self._all_articles())
+        self.assertIn(b.id, self._all_articles())
+
+        self._flush_queue()
+        n = amcattest.create_test_analysis()
+        AnalysisProject.objects.create(project=a.project, analysis=n)
+        self.assertIn(a.id, self._all_articles())
+        self.assertIn(b.id, self._all_articles())
+
+
+
+
+    @classmethod
+    def _flush_queue(cls):
+        """Flush the articles queue"""
+        for sa in list(AnalysisQueue.objects.all()): sa.delete()
+
+    @classmethod
+    def _all_articles(cls):
+        """List all articles on the queue"""
+        return set([sa.article_id for sa in AnalysisQueue.objects.all()])
+
+    def test_store_tokens(self):
+        t1 = amcattest.create_tokenvalue()
+        t1.analysis_sentence.analysis_article.store_analysis(tokens=[t1])
+        aa = AnalysisArticle.objects.get(pk=t1.analysis_sentence.analysis_article.id)
+        self.assertEqual(aa.done,  True)
+        token, = list(Token.objects.filter(sentence__analysis_article=aa))
+        self.assertEqual(token.word.word, t1.word)
+        self.assertRaises(aa.store_analysis, tokens=[t1])
+
+    def test_store_triples(self):
+        from amcat.models.token import TripleValues
+        aa = amcattest.create_test_analysis_article()
+        t1 = amcattest.create_tokenvalue(analysis_article=aa)
+        t2 = amcattest.create_tokenvalue(analysis_sentence=t1.analysis_sentence, word="x")
+        tr = TripleValues(t1.analysis_sentence.id, parent=t1.position, child=t2.position, relation='su')
+        aa.store_analysis(tokens=[t1, t2], triples=[tr])
+        aa = AnalysisArticle.objects.get(pk=aa.id)
+        triple, = list(Triple.objects.filter(parent__sentence__analysis_article=aa))
+        self.assertEqual(triple.parent.word.word, t1.word)
+        self.assertEqual(triple.child.word.lemma.lemma, t2.lemma)
+
+
+
+if __name__ == '__main__':
+
+    t = TestAnalysisQueue()
+    t._flush_queue()
+
+    a = amcattest.create_test_article()
+    print(a.id, t._all_articles())

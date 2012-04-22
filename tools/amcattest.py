@@ -95,10 +95,14 @@ def create_test_schema(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return CodingSchema.objects.create(project=p, **kargs)
 
+def get_test_language(**kargs):
+    from amcat.models.language import Language
+    from amcat.tools import djangotoolkit
+    return djangotoolkit.get_or_create(Language, label='en')
+
 def create_test_medium(**kargs):
     from amcat.models.medium import Medium
-    from amcat.models.language import Language
-    if "language" not in kargs: kargs["language"] = Language.objects.get(pk=1)
+    if "language" not in kargs: kargs["language"] = get_test_language()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Medium.objects.create(**kargs)
     
@@ -109,6 +113,8 @@ def create_test_article(**kargs):
     if "date" not in kargs: kargs["date"] = "2000-01-01"
     if "medium" not in kargs: kargs["medium"] = create_test_medium()
     if "id" not in kargs: kargs["id"] = _get_next_id()
+    if 'headline' not in kargs: kargs['headline'] = 'test headline'
+
     return Article.objects.create(**kargs)
 
 def create_test_sentence(**kargs):
@@ -192,17 +198,31 @@ def create_test_word(lemma=None, word=None, language=None, pos="N"):
 def create_test_analysis(**kargs):
     from amcat.models.analysis import Analysis
     from amcat.models.language import Language
-    if 'language' not in kargs: kargs['language'] = Language.objects.get(pk=1)
+    if 'language' not in kargs: kargs['language'] = get_test_language()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Analysis.objects.create(**kargs)
 
-def create_analysis_token(**kargs):
-    if 'sentence_id' not in kargs: kargs['sentence_id'] = create_test_sentence().id
-    for key, default in dict(position=0, word='test_word', lemma='test_lemma',
+def create_test_analysis_article(**kargs):
+    from amcat.models.analysis import AnalysisArticle
+    if 'article' not in kargs: kargs['article'] = create_test_article()
+    if 'analysis' not in kargs: kargs['analysis'] = create_test_analysis()
+    return AnalysisArticle.objects.create(**kargs)
+
+def create_test_analysis_sentence(analysis_article=None, **kargs):
+    from amcat.models.analysis import AnalysisSentence
+    if not analysis_article:
+        analysis_article = create_test_analysis_article()
+    if 'sentence' not in kargs: kargs['sentence'] = create_test_sentence()
+    return AnalysisSentence.objects.create(analysis_article=analysis_article, **kargs)
+
+def create_tokenvalue(analysis_article=None, **kargs):
+    if 'analysis_sentence' not in kargs:
+        kargs['analysis_sentence'] = create_test_analysis_sentence(analysis_article).id
+    for key, default in dict(position=_get_next_id(), word='test_word', lemma='test_lemma',
                              pos='T', major='test_major', minor='test_minor').items():
         if key not in kargs: kargs[key] = default
-    from amcat.nlp.analysisscript import Token
-    return Token(**kargs)
+    from amcat.models.token import TokenValues
+    return TokenValues(**kargs)
             
 class PolicyTestCase(TestCase):
     """
