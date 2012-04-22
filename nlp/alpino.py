@@ -31,7 +31,7 @@ import logging
 log = logging.getLogger(__name__)
 
 from amcat.nlp.analysisscript import AnalysisScript
-from amcat.tools.toolkit import execute, wrapped, to_dict
+from amcat.tools.toolkit import execute, wrapped
 
 CMD = "ALPINO_HOME={alpino_home} {alpino_home}/bin/Alpino {alpino_options}"
 TOKENIZE = "{alpino_home}/Tokenization/tok" 
