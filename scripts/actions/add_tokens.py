@@ -25,6 +25,7 @@ Script to add tokens (and triples) from a json representation
 import logging; log = logging.getLogger(__name__)
 
 from django import forms
+from django.db import transaction
 
 from amcat.scripts.script import Script
 
@@ -57,6 +58,7 @@ class AddTokens(Script):
     options_form = AddTokensForm
     output_type = None
 
+    @transaction.commit_on_success
     def run(self, _input=None):
         aa, tokens, triples = (self.options[x] for x in ['analysisarticle', 'tokens', 'triples'])
         print("STORING TOKENS: \n%s" % "\n  ".join(str(t) for t in tokens))
@@ -87,10 +89,9 @@ class TestAddTokens(amcattest.PolicyTestCase):
         self.assertEqual(token.word.word, t1.word)
         self.assertRaises(aa.store_analysis, tokens=[t1])
         with self.assertRaises(Exception):
-            AddTokens(analysisarticle=aa.id, tokens=json.dumps(tokens)).run()
+            AddTokens(analysisarticle=aa.id, tokens=json.dumps([t1])).run()
 
     def test_store_triples(self):
-        from amcat.nlp import analysisscript
         aa = amcattest.create_test_analysis_article()
         t1 = amcattest.create_tokenvalue(analysis_article=aa)
         t2 = amcattest.create_tokenvalue(analysis_sentence=t1.analysis_sentence, word="x")

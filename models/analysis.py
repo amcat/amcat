@@ -25,28 +25,23 @@ needs to be done.
 
 See http://code.google.com/p/amcat/wiki/Preprocessing
 """
-
 from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
 
 from amcat.tools.model import AmcatModel
-from amcat.tools import dbtoolkit
 from amcat.tools.djangotoolkit import receiver
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle, ArticleSet
-from amcat.models.token import Token, Triple, Pos, Relation
+from amcat.models.token import Token, Triple, Relation
 from amcat.models.language import Language
 from amcat.models.plugin import Plugin
 from amcat.models.project import Project
-from amcat.models.word import Word
 from amcat.models.sentence import Sentence
 from amcat.tools.djangotoolkit import get_or_create
 
 from django.db.models.signals import post_save, post_delete
-from django.db import connection
 from django.db.models import Q
-from django.db import transaction
 
 import logging; log = logging.getLogger(__name__)
 
@@ -113,7 +108,6 @@ class AnalysisArticle(AmcatModel):
         unique_together = ('article', 'analysis')
 
 
-    @transaction.commit_on_success
     def store_analysis(self, tokens, triples=None):
         """
         Store the given tokens and triples for this articleanalysis, setting
@@ -310,12 +304,3 @@ class TestAnalysis(amcattest.PolicyTestCase):
         self.assertEqual(triple.parent.word.word, t1.word)
         self.assertEqual(triple.child.word.lemma.lemma, t2.lemma)
 
-
-
-if __name__ == '__main__':
-
-    t = TestAnalysisQueue()
-    t._flush_queue()
-
-    a = amcattest.create_test_article()
-    print(a.id, t._all_articles())
