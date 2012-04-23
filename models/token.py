@@ -76,12 +76,13 @@ class Triple(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='triple_id')
 
     parent = models.ForeignKey(Token, related_name="+")
-    child = models.ForeignKey(Token, related_name="+", unique=True)
+    child = models.ForeignKey(Token, related_name="+")
     relation = models.ForeignKey(Relation)
 
     class Meta():
         db_table = 'tokens_triples'
         app_label = 'amcat'
+        unique_together = ('parent', 'child')
 
 
 ###########################################################################
