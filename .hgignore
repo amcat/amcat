@@ -1,6 +1,7 @@
 # use glob syntax.
 syntax: glob
 
+.idea*
 *.cache
 *.lock
 *.html.py

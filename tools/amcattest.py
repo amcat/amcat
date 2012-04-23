@@ -33,6 +33,7 @@ import os.path, os, inspect
 from contextlib import contextmanager
 from django.test import TestCase
 from unittest import TestLoader
+import logging; log = logging.getLogger(__name__)
 
 
 LICENSE = """###########################################################################
@@ -58,7 +59,7 @@ LICENSE = """###################################################################
 from . import toolkit
 
 # use unique ids for different model objects to avoid false negatives
-ID = 99999
+ID = 1000000000
 def _get_next_id():
     global ID
     ID += 1
@@ -122,7 +123,7 @@ def create_test_sentence(**kargs):
     from amcat.models.sentence import Sentence
     if "article" not in kargs: kargs["article"] = create_test_article()
     if "sentence" not in kargs: 
-        kargs["sentence"] = "Test sentence number %i." % len(Sentence.objects.all())
+        kargs["sentence"] = "Test sentence %i." % _get_next_id()
     if "parnr" not in kargs: kargs["parnr"] = 1
     if "sentnr" not in kargs: kargs["sentnr"] = 1
     if "id" not in kargs: kargs["id"] = _get_next_id()
@@ -212,7 +213,7 @@ def create_test_analysis_sentence(analysis_article=None, **kargs):
     from amcat.models.analysis import AnalysisSentence
     if not analysis_article:
         analysis_article = create_test_analysis_article()
-    if 'sentence' not in kargs: kargs['sentence'] = create_test_sentence()
+    if 'sentence' not in kargs: kargs['sentence'] = create_test_sentence(article=analysis_article.article)
     return AnalysisSentence.objects.create(analysis_article=analysis_article, **kargs)
 
 def create_tokenvalue(analysis_article=None, **kargs):
