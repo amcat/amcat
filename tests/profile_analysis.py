@@ -20,7 +20,7 @@ def profile_store_triples():
             s = amcattest.create_test_analysis_sentence(aa)
             log.info("Created test sentence %i" % s.id)
 
-            tokens += [amcattest.create_tokenvalue(analysis_sentence=s, word=w, lemma=w) for w in "123456789"*3]
+            tokens += [amcattest.create_tokenvalue(analysis_sentence=s.id, word=w, lemma=w) for w in "123456789"*3]
         log.info("Storing %i tokens" % len(tokens))
         with djangotoolkit.list_queries() as queries:
             aa.store_analysis(tokens=tokens)
