@@ -196,6 +196,7 @@ class ObjectTable(Table):
         elif type(col) in (str, unicode):
             col = AttributeColumn(col, label, **kargs)
         self.columns.append(col)
+        return col
     def getValue(self, row, column):
         """Get the column-value for the given row object"""
         return column.getCell(row)

@@ -31,7 +31,7 @@ from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToMan
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 
-from amcat.tools.table.table3 import ObjectTable
+from amcat.tools.table.table3 import ObjectTable, SortedTable
 
 def get_related(appmodel):
     """Get a sequence of model classes related to the given model class"""
@@ -57,8 +57,8 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
     (foreign key) relations. If stoplist is given, don't consider edges
     from these nodes.
     
-    @type modelname: str
-    @param modelname: the name of the model to start from
+    @type modelnames: str
+    @param modelnames: the name of the model to start from
     @type stoplist: sequence of str
     @param stoplist: models whose children we don't care about
     @return: sequence of model classes
@@ -121,8 +121,9 @@ def query_list_to_table(queries, maxqlen=80, output=False, normalise_numbers=Tru
     t =  ObjectTable(rows = time.items())
     t.addColumn(lambda (k, v) : len(v), "N")
     t.addColumn(lambda (k, v) : k[:maxqlen], "Query")
-    t.addColumn(lambda (k, v):  "%1.4f" % sum(v), "Cum.")
+    cum = t.addColumn(lambda (k, v):  "%1.4f" % sum(v), "Cum.")
     t.addColumn(lambda (k, v):  "%1.4f" % (sum(v) / len(v)), "Avg.")
+    t = SortedTable(t, sort=cum)
     if output:
         if "stream" not in outputoptions and output is not True:
             if output in (print, "print"):

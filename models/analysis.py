@@ -114,14 +114,15 @@ class AnalysisArticle(AmcatModel):
         it to done=True if stored succesfully.
         """
         if self.done: raise Exception("Cannot store analyses when already done")
+        from amcat.nlp.wordcreator import create_tokens
         # Store tokens as {(sentence, position) : token} dict to retrieve when creating triples
-        tokens = dict(((t.analysis_sentence, t.position), t.create()) for t in tokens)
+        tokens = dict(((t.sentence_id, t.position), t) for t in create_tokens(tokens))
         if triples:
             for triple in triples:
                 rel = get_or_create(Relation, label=triple.relation)
                 Triple.objects.create(relation=rel,
-                                      parent=tokens[triple.analysis_sentence, triple.parent],
-                                      child=tokens[triple.analysis_sentence, triple.child])
+                                      parent=tokens[triple.analysis_sentence_id, triple.parent],
+                                      child=tokens[triple.analysis_sentence_id, triple.child])
         self.done = True
         self.save()
 
@@ -284,9 +285,10 @@ class TestAnalysis(amcattest.PolicyTestCase):
         return set([sa.article_id for sa in AnalysisQueue.objects.all()])
 
     def test_store_tokens(self):
-        t1 = amcattest.create_tokenvalue()
-        t1.analysis_sentence.analysis_article.store_analysis(tokens=[t1])
-        aa = AnalysisArticle.objects.get(pk=t1.analysis_sentence.analysis_article.id)
+        s = amcattest.create_test_analysis_sentence()
+        t1 = amcattest.create_tokenvalue(analysis_sentence=s)
+        s.analysis_article.store_analysis(tokens=[t1])
+        aa = AnalysisArticle.objects.get(pk=s.analysis_article.id)
         self.assertEqual(aa.done,  True)
         token, = list(Token.objects.filter(sentence__analysis_article=aa))
         self.assertEqual(token.word.word, t1.word)
@@ -297,7 +299,7 @@ class TestAnalysis(amcattest.PolicyTestCase):
         aa = amcattest.create_test_analysis_article()
         t1 = amcattest.create_tokenvalue(analysis_article=aa)
         t2 = amcattest.create_tokenvalue(analysis_sentence=t1.analysis_sentence, word="x")
-        tr = TripleValues(t1.analysis_sentence.id, parent=t1.position, child=t2.position, relation='su')
+        tr = TripleValues(t1.analysis_sentence, parent=t1.position, child=t2.position, relation='su')
         aa.store_analysis(tokens=[t1, t2], triples=[tr])
         aa = AnalysisArticle.objects.get(pk=aa.id)
         triple, = list(Triple.objects.filter(parent__sentence__analysis_article=aa))

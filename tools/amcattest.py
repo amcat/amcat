@@ -125,7 +125,7 @@ def create_test_sentence(**kargs):
     if "sentence" not in kargs: 
         kargs["sentence"] = "Test sentence %i." % _get_next_id()
     if "parnr" not in kargs: kargs["parnr"] = 1
-    if "sentnr" not in kargs: kargs["sentnr"] = 1
+    if "sentnr" not in kargs: kargs["sentnr"] = _get_next_id()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Sentence.objects.create(**kargs)
 
@@ -186,19 +186,16 @@ def create_test_codebook(**kargs):
     c = Codebook.objects.create(**kargs)
     return get_codebook(c.id)
 
-def create_test_word(lemma=None, word=None, language=None, pos="N"):
+def create_test_word(lemma=None, word=None, pos="N"):
     """Create a test word"""
     from amcat.models.word import Word, Lemma
-    from amcat.models.language import Language
-    if language is None: language = Language.objects.get(pk=1)
     if not lemma: lemma = "testlemma_%i" % Lemma.objects.count()
     if not word: word = "testword_%i" % Word.objects.count()
-    l = Lemma.objects.create(pos=pos, lemma=lemma, language=language)
+    l = Lemma.objects.create(pos=pos, lemma=lemma)
     return Word.objects.create(id=_get_next_id(), lemma=l, word=word)
 
 def create_test_analysis(**kargs):
     from amcat.models.analysis import Analysis
-    from amcat.models.language import Language
     if 'language' not in kargs: kargs['language'] = get_test_language()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Analysis.objects.create(**kargs)

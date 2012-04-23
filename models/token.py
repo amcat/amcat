@@ -18,22 +18,12 @@
 ###########################################################################
 
 from amcat.tools.model import AmcatModel
-from amcat.tools.djangotoolkit import get_or_create
-from amcat.models import Word, Sentence
+from amcat.models import Word
 from django.db import models
 from collections import namedtuple
 
 TripleValues = namedtuple("TripleValues", ["analysis_sentence", "child", "parent", "relation"])
-
-class TokenValues(namedtuple("TokenValues", ["analysis_sentence", "position", "word", "lemma", "pos", "major", "minor"])):
-    def create(self):
-        from amcat.models.analysis import AnalysisSentence
-        s = (AnalysisSentence.objects.get(pk=self.analysis_sentence) if isinstance(self.analysis_sentence, int)
-             else self.analysis_sentence)
-        w = Word.get_or_create(s.analysis_article.analysis.language, self.lemma, self.pos, self.word)
-        p = get_or_create(Pos, major=self.major, minor=self.minor, pos=self.pos)
-        return Token.objects.create(sentence=s, position=self.position, word=w, pos=p)
-
+TokenValues = namedtuple("TokenValues", ["analysis_sentence", "position", "word", "lemma", "pos", "major", "minor"])
 
 class Pos(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='pos_id')
@@ -93,31 +83,21 @@ from amcat.tools import amcattest
 
 class TestTokens(amcattest.PolicyTestCase):
     def test_get_tokens_order(self):
-
-        s = amcattest.create_test_sentence()
+        s = amcattest.create_test_analysis_sentence()
         w1, w2, w3 = [amcattest.create_test_word(word=x) for x in "abc"]
-        a = Analysis.objects.create(language=w1.lemma.language)
         pos = Pos.objects.create(major="x", minor="y", pos="p")
-        t1 = Token.objects.create(sentence=s, position=3, word=w3, analysis=a, pos=pos)
-        t2 = Token.objects.create(sentence=s, position=1, word=w2, analysis=a, pos=pos)
-        t3 = Token.objects.create(sentence=s, position=2, word=w1, analysis=a, pos=pos)
+        t1 = Token.objects.create(sentence=s, position=3, word=w3, pos=pos)
+        t2 = Token.objects.create(sentence=s, position=1, word=w2, pos=pos)
+        t3 = Token.objects.create(sentence=s, position=2, word=w1, pos=pos)
 
         self.assertEqual(list(s.tokens.all()), [t2,t3,t1])
 
     def test_get_analysis(self):
         from amcat.nlp.frog import Frog
-        l = Language.objects.create()
+        from amcat.models import Analysis, Plugin
         p = Plugin.objects.create(label='test', module='amcat.nlp.frog', class_name='Frog')
-        a = Analysis.objects.create(language=l, plugin=p)
+        a = Analysis.objects.create(language=amcattest.get_test_language(), plugin=p)
         self.assertEqual(a.plugin.get_class(), Frog)
         f =a.get_script()
         self.assertEqual(type(f), Frog)
         self.assertFalse(f.triples)
-
-    def test_create_token(self):
-        a = amcattest.create_test_analysis()
-        token = amcattest.create_analysis_token()
-        t = Token.create(a, token)
-        self.assertEqual(t.sentence.id, token.sentence_id)
-        self.assertEqual(t.word.word, token.word)
-        self.assertEqual(t.word.lemma.pos, token.pos)
