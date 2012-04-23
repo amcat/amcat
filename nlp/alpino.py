@@ -53,12 +53,12 @@ class Alpino(AnalysisScript):
         self._check_alpino()
         cmd = CMD.format(**self.__dict__)
         log.debug("Parsing %s" % tokens)
-        out, err = execute(cmd, tokens)
+        out, err = execute(cmd, tokens.encode("latin-1"))
         log.debug(out)
         # it seems that alpino reports errors by starting a line with an exclamation mark
         if "\n! " in err:
             raise AlpinoError("Error on parsing %r: %s" % (tokens, err))
-        return out.decode("utf-8")
+        return out.decode("latin-1")
 
     def _check_alpino(self):
         if self.alpino_home is None: raise AlpinoConfigurationError("ALPINO_HOME not specified")
@@ -68,12 +68,12 @@ class Alpino(AnalysisScript):
     def _tokenize(self, input):
         self._check_alpino()
         cmd = TOKENIZE.format(**self.__dict__)        
-        return execute(cmd, input, outonly=True)
+        return execute(cmd, input.encode("utf-8"), outonly=True).decode("utf-8")
 
     def _get_input(self, analysis_sentences):
-        input = "\n".join("{0}|{1}".format(id, sent) for (id, sent) in analysis_sentences)
+        input = u"\n".join(u"{0}|{1}".format(id, sent) for (id, sent) in analysis_sentences)
         if input[-1] != "\n": input += "\n"
-        return input.encode("utf-8")
+        return input
 
     @wrapped(set)
     def get_tokens(self, id, sentence, memo=None):
@@ -179,12 +179,15 @@ class TestAlpino(amcattest.PolicyTestCase):
         
 
     def test_parse_function(self):
-        tokens = u"1|in Syri\xeb".encode('utf-8')
+        tokens = u"1|een dezer Syri\xebrs"
         a = Alpino(None)
         out = a._parse(tokens)
-        token1 = u"in|in|0|1|prep|prep|preposition(in,[])"
-        token2 = u"Syri\xeb|Syri\xeb|1|2|name|name(LOC)|proper_name(both,LOC)"
-        self.assertEqual(out, u"{token1}|hd/obj1|{token2}|1\n".format(**locals()))
+
+        syriers = u"Syri\xebr|Syri\xebrs|2|3|noun|noun|noun(de,count,pl)"
+        dezer = "deze|dezer|1|2|det|det|determiner(der)"
+        een = u"\xe9\xe9n|een|0|1|pron|pron(strpro,nwh)|pronoun(nwh,thi,sg,both,both,indef,strpro)"
+        expected = u"{syriers}|hd/det|{dezer}|1\n{een}|hd/mod|{syriers}|1\n".format(**locals())
+        self.assertEqual(out, expected)
 
     def test_errors(self):
         a = Alpino(None)
@@ -215,14 +218,17 @@ class TestAlpino(amcattest.PolicyTestCase):
         self.assertEqual(rel, "det")
 
     def test_parse(self):
-        tokens, triples = Alpino(None).process_sentences(enumerate(["ik zie hem!"]))
+        tokens, triples = Alpino(None).process_sentences(enumerate([u"ik zie h\xe9m!"]))
         self.assertEqual(len(tokens), 4, "Exptected 4 tokens, got %r" % tokens)
         self.assertIn(TokenValues(0, 3, "!", "!", ".", "punct", "uitroep"), tokens)
-        
+        self.assertIn(TokenValues(0, 2, u"h\xe9m", u"hem", "O", "pronoun", "nwh,thi,sg,de,dat_acc,def"), tokens)
+
         self.assertEqual(set(triples), {
                 TripleValues(0, 0, 1, "su"),
                 TripleValues(0, 2, 1, "obj1"),
                 TripleValues(0, 3, 1, "--"),})
+    def test_unicode(self):
+        tokens, triples = Alpino(None).process_sentences(enumerate(["dit is een van de leukste huizen"]))
 
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
