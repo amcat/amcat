@@ -27,11 +27,14 @@ import logging; log = logging.getLogger(__name__)
 
 class Rest(object):
     def __init__(self, host="localhost:8000", schema='http', username=None,
-                 password=None, root="api/v3", action_root="api/action"):
+                 password=None, root="api/v3", action_root="api/action", verify=False):
+        if "://" in host:
+            schema, host = host.split("://")
         self.host = host
         self.root = root
         self.action_root = action_root
         self.schema = schema
+        self.verify = verify
         if username is None:
             import amcat.settings
             db = amcat.settings.DATABASES['default']
@@ -40,13 +43,15 @@ class Rest(object):
         else:
             self.username = username
             self.password = password
-
+    @property
+    def _request_args(self):
+        return dict(auth=(self.username, self.password), verify=self.verify)
     def get(self, resource, format='json', **filters):
         params = dict(format=format)
         if filters: params.update(filters)
         uri = '{self.schema}://{self.host}/{self.root}/{resource}/'.format(**locals())
         log.debug("Querying REST {uri} with params {params}".format(**locals()))
-        r = requests.get(uri, params=params, auth=(self.username, self.password))
+        r = requests.get(uri, params=params, **self._request_args)
         _check_status(r)
 
         if format == 'json':
@@ -71,7 +76,7 @@ class Rest(object):
         uri = '{self.schema}://{self.host}/{self.action_root}/{action}'.format(**locals())
         log.debug("Posting action {uri} with data {kargs}".format(**locals()))
         
-        r = requests.post(uri, data=kargs, auth=(self.username, self.password))
+        r = requests.post(uri, data=kargs, **self._request_args)
         _check_status(r)
         return r.text
     

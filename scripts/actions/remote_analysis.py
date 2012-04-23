@@ -59,7 +59,7 @@ class RemoteAnalysis(Script):
 
     def get_articles(self):
         return self.rest.get_objects("analysisarticle", analysis = self.analysis_id,
-                                     done = False, delete=False)
+                                     done = False, delete=False, limit=1)
 
     def get_analysis_script(self):
         analysis = self.rest.get_object("analysis", self.analysis_id)
