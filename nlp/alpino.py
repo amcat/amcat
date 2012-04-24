@@ -69,6 +69,7 @@ class Alpino(AnalysisScript):
 
     def _sanitize(self, input):
         input = toolkit.stripAccents(input, latin1=True)
+        input = input.replace("|", "-") # | is field separator and we don't care anyway
         input = input.encode('latin-1', 'ignore').decode('latin-1')
         return input
 
@@ -78,7 +79,8 @@ class Alpino(AnalysisScript):
         return execute(cmd, input.encode("utf-8"), outonly=True).decode("utf-8")
 
     def _get_input(self, analysis_sentences):
-        input = u"\n".join(u"{0}|{1}".format(id, sent) for (id, sent) in analysis_sentences)
+        input = u"\n".join(u"{0}|{1}".format(id, self._sanitize(sent))
+                           for (id, sent) in analysis_sentences)
         if input[-1] != "\n": input += "\n"
         return input
 
@@ -95,7 +97,6 @@ class Alpino(AnalysisScript):
     def preprocess_sentences(self, sentences):
         memo = {} # sid : [(parent, child, rel), ...]
         input = self._get_input(sentences)
-        input = self._sanitize(input)
         tokens = self._tokenize(input)
         rawparse = self._parse(tokens)
         for line in rawparse.split("\n"):
@@ -247,6 +248,11 @@ class TestAlpino(amcattest.PolicyTestCase):
         self.assertEqual(token_attr(tokens, 1), u"'")
         self.assertEqual(token_attr(tokens, 7), u"te")
 
+    def test_escape(self):
+        tokens, triples = Alpino(None).process_sentences(
+            enumerate([u"REPORTAGE | KLEIS JAGER | SEVRAN"]))
+        self.assertEqual(len(tokens), 5) # KLEIS JAGER is one name
+        
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.setup()
