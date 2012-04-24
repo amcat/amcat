@@ -68,8 +68,8 @@ class Alpino(AnalysisScript):
             raise AlpinoConfigurationError("Cannot find {self.alpino_home".format(**locals()))
 
     def _sanitize(self, input):
-        input = toolkit.stripAccents(input)
-        input = input.encode('latin-1', 'replace').decode('latin-1')
+        input = toolkit.stripAccents(input, latin1=True)
+        input = input.encode('latin-1', 'ignore').decode('latin-1')
         return input
 
     def _tokenize(self, input):
@@ -237,10 +237,15 @@ class TestAlpino(amcattest.PolicyTestCase):
                 TripleValues(0, 3, 1, "--"),})
 
     def test_unicode(self):
+        def token_attr(tokens, position, attr="lemma"):
+            return getattr([t for t in tokens if t.position==position][0], attr)
+        tokens, triples = Alpino(None).process_sentences(enumerate([u"ik zie h\xe9m!"]))
+        self.assertEqual(token_attr(tokens, 2, "word"), u"h\xe9m")
+        self.assertEqual(token_attr(tokens, 2, "lemma"), u"hem")
         Alpino(None).process_sentences(enumerate(["dit is een van de leukste huizen"]))
         tokens, triples = Alpino(None).process_sentences(enumerate([u"het \u2018huis\u2019 kost \u20ac 100 \u2011 te duur?"]))
-        for t in tokens:
-            print t.position, t.word, t.lemma
+        self.assertEqual(token_attr(tokens, 1), u"'")
+        self.assertEqual(token_attr(tokens, 7), u"te")
 
 if __name__ == '__main__':
     from amcat.tools import amcatlogging

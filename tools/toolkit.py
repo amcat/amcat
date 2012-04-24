@@ -719,7 +719,7 @@ def stripAccents(s, usemap = ACCENTS_MAP, latin1=False):
             if latin1 and val.encode('latin-1', 'replace').decode('latin-1') == val:
                 continue
 
-        s = s.replace(trg, key)
+            s = s.replace(trg, key)
     return s
 
 def unescapeHtml(text):
