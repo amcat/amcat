@@ -38,6 +38,7 @@ from django import forms
 class RemoteAnalysisForm(forms.Form):
     analysis_id = forms.IntegerField()
     host = forms.CharField()
+    narticles = forms.IntegerField(required=False, initial=10)
 
 class RemoteAnalysis(Script):
     """Add a project to the database."""
@@ -49,6 +50,7 @@ class RemoteAnalysis(Script):
         super(RemoteAnalysis, self).__init__(options, **kargs)
         self.rest = Rest(host=self.options['host'])
         self.analysis_id = self.options['analysis_id']
+        self.narticles = self.options['narticles']
 
     def run(self, _input=None):
         self.script = self.get_analysis_script()
@@ -59,7 +61,7 @@ class RemoteAnalysis(Script):
 
     def get_articles(self):
         return self.rest.get_objects("analysisarticle", analysis = self.analysis_id,
-                                     done = False, delete=False, limit=10)
+                                     done = False, delete=False, limit=self.narticles)
 
     def get_analysis_script(self):
         analysis = self.rest.get_object("analysis", self.analysis_id)
@@ -82,14 +84,16 @@ class RemoteAnalysis(Script):
 
     def get_sentences(self, analysis_article_id):
         return [(int(s["id"]), s["sentence"]["sentence"]) for s in
-                self.rest.get_objects("analysissentence", analysis_article=analysis_article_id)]
+                self.rest.get_objects("analysissentence",
+                                      analysis_article=analysis_article_id,
+                                      limit=9999)]
 
 
     
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     from amcat.tools import amcatlogging
-    amcatlogging.debug_module("amcat.tools.rest")
+    #amcatlogging.debug_module("amcat.tools.rest")
     amcatlogging.debug_module()
 
 
