@@ -28,6 +28,8 @@ from os.path import exists
 from amcat.models.token import TripleValues, TokenValues
 
 import logging
+from amcat.tools import toolkit
+
 log = logging.getLogger(__name__)
 
 from amcat.nlp.analysisscript import AnalysisScript
@@ -64,7 +66,12 @@ class Alpino(AnalysisScript):
         if self.alpino_home is None: raise AlpinoConfigurationError("ALPINO_HOME not specified")
         if not exists(self.alpino_home):
             raise AlpinoConfigurationError("Cannot find {self.alpino_home".format(**locals()))
-    
+
+    def _sanitize(self, input):
+        input = toolkit.stripAccents(input)
+        input = input.encode('latin-1', 'replace').decode('latin-1')
+        return input
+
     def _tokenize(self, input):
         self._check_alpino()
         cmd = TOKENIZE.format(**self.__dict__)        
@@ -88,6 +95,7 @@ class Alpino(AnalysisScript):
     def preprocess_sentences(self, sentences):
         memo = {} # sid : [(parent, child, rel), ...]
         input = self._get_input(sentences)
+        input = self._sanitize(input)
         tokens = self._tokenize(input)
         rawparse = self._parse(tokens)
         for line in rawparse.split("\n"):
@@ -227,8 +235,12 @@ class TestAlpino(amcattest.PolicyTestCase):
                 TripleValues(0, 0, 1, "su"),
                 TripleValues(0, 2, 1, "obj1"),
                 TripleValues(0, 3, 1, "--"),})
+
     def test_unicode(self):
-        tokens, triples = Alpino(None).process_sentences(enumerate(["dit is een van de leukste huizen"]))
+        Alpino(None).process_sentences(enumerate(["dit is een van de leukste huizen"]))
+        tokens, triples = Alpino(None).process_sentences(enumerate([u"het \u2018huis\u2019 kost \u20ac 100 \u2011 te duur?"]))
+        for t in tokens:
+            print t.position, t.word, t.lemma
 
 if __name__ == '__main__':
     from amcat.tools import amcatlogging

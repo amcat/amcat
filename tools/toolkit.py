@@ -702,7 +702,7 @@ The values (accented) are strings where each character is an accented
 version of the corresponding key (unaccented). The key can be of length>1
 if appropriate (e.g. german sz, ellipsis)"""
 
-def stripAccents(s, usemap = ACCENTS_MAP):
+def stripAccents(s, usemap = ACCENTS_MAP, latin1=False):
     """Replace accented characters in s by their unaccepted equivalents
 
     @param s: the string to strip accents from. If it is not a unicode object
@@ -716,7 +716,10 @@ def stripAccents(s, usemap = ACCENTS_MAP):
     if type(s) != unicode: s = unicode(s, "latin-1")
     for key, val in usemap.items():
         for trg in val:
-            s = s.replace(trg, key)
+            if latin1 and val.encode('latin-1', 'replace').decode('latin-1') == val:
+                continue
+
+        s = s.replace(trg, key)
     return s
 
 def unescapeHtml(text):
