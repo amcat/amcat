@@ -27,7 +27,7 @@ See http://code.google.com/p/amcat/wiki/Preprocessing
 """
 from __future__ import unicode_literals, print_function, absolute_import
 
-from django.db import models
+from django.db import models, transaction
 
 from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import receiver
@@ -107,22 +107,15 @@ class AnalysisArticle(AmcatModel):
         app_label = 'amcat'
         unique_together = ('article', 'analysis')
 
-
+    @transaction.commit_on_success
     def store_analysis(self, tokens, triples=None):
         """
         Store the given tokens and triples for this articleanalysis, setting
         it to done=True if stored succesfully.
         """
         if self.done: raise Exception("Cannot store analyses when already done")
-        from amcat.nlp.wordcreator import create_tokens
-        # Store tokens as {(sentence, position) : token} dict to retrieve when creating triples
-        tokens = dict(((t.sentence_id, t.position), t) for t in create_tokens(tokens))
-        if triples:
-            for triple in triples:
-                rel = get_or_create(Relation, label=triple.relation)
-                Triple.objects.create(relation=rel,
-                                      parent=tokens[triple.analysis_sentence_id, triple.parent],
-                                      child=tokens[triple.analysis_sentence_id, triple.child])
+        from amcat.nlp.wordcreator import create_triples
+        create_triples(tokens, triples)
         self.done = True
         self.save()
 

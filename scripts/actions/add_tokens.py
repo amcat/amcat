@@ -58,14 +58,10 @@ class AddTokens(Script):
     options_form = AddTokensForm
     output_type = None
 
-    @transaction.commit_on_success
     def run(self, _input=None):
         aa, tokens, triples = (self.options[x] for x in ['analysisarticle', 'tokens', 'triples'])
-        print("STORING TOKENS: \n%s" % "\n  ".join(str(t) for t in tokens))
-        print("STORING TRIPLES: \n%s" % "\n  ".join(str(t) for t in triples))
         aa.store_analysis(tokens, triples)
-        print("DONE")
-        
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli()

@@ -59,29 +59,21 @@ class RemoteAnalysis(Script):
 
     def get_articles(self):
         return self.rest.get_objects("analysisarticle", analysis = self.analysis_id,
-                                     done = False, delete=False, limit=1)
+                                     done = False, delete=False, limit=5)
 
     def get_analysis_script(self):
         analysis = self.rest.get_object("analysis", self.analysis_id)
         plugin = analysis["plugin"]
-        print(plugin)
         return classtools.import_attribute(plugin["module"], plugin["class_name"])(analysis)
 
     def analyse_article(self, analysis_article_id):
         sentences = self.get_sentences(analysis_article_id)
         log.info("Analysing {n} sentences from article {analysis_article_id}"
                   .format(n=len(sentences), **locals()))
-        print(sentences)
         tokens, triples = self.script.process_sentences(sentences)
         log.info("Storing {ntok} tokens and {ntrip} triples for article_analysis"
                  "{analysis_article_id}".format(ntok=len(tokens),
                  ntrip=len(triples), **locals()))
-        print("Tokens:")
-        for token in tokens:
-            print("  ", token.analysis_sentence, token.position, token.word)
-        print("Triples:")
-        for triple in triples:
-            print(triple)
         if not tokens: raise Exception()
         self.rest.call_action(AddTokens, analysisarticle=analysis_article_id,
                               tokens=json.dumps(tokens),

@@ -21,8 +21,8 @@
 Toolkit for creating Words, Lemmata, POS, and Relations more efficiently
 """
 import collections
-from amcat.models import Lemma, Pos, AnalysisSentence
-from amcat.models.token import Token
+from amcat.models import Lemma, Pos, AnalysisSentence, Relation
+from amcat.models.token import Token, Triple
 from amcat.models.word import Word
 from amcat.tools import toolkit
 
@@ -74,7 +74,12 @@ def create_pos(tokenvalues):
     """Create a dict of {major, minor, pos_char : Pos} from the given tokenvalues"""
     return dict(((p.major, p.minor, p.pos), p) for p in create_objects(Pos, tokenvalues, ["major","minor","pos"]))
 
-@toolkit.wrapped(list)
+_RelationValues = collections.namedtuple("RelationValues", ["label"])
+def create_relations(triplevalues):
+    """Create a dict of {rel : Relation} from the given triplevalues"""
+    relationvalues = [_RelationValues(r.relation) for r in triplevalues]
+    return dict((rel.label, rel) for rel in create_objects(Relation, relationvalues, ["label"]))
+
 def create_tokens(tokenvalues):
     """Create a list of new Token objects from a language and tokenvalues sequence"""
     words = create_words(tokenvalues)
@@ -85,6 +90,16 @@ def create_tokens(tokenvalues):
         word = words[v.lemma, v.pos, v.word]
         pos = poss[v.major, v.minor, v.pos]
         yield Token.objects.create(sentence=sentences[v.analysis_sentence], position=v.position, word=word, pos=pos)
+
+def create_triples(tokenvalues, triplevalues=None):
+    """Create the requested tokens and (optionally) triples"""
+    tokens = dict(((t.sentence_id, t.position), t) for t in create_tokens(tokenvalues))
+    if triplevalues:
+        rels = create_relations(triplevalues)
+        for triple in triplevalues:
+            Triple.objects.create(relation=rels[triple.relation],
+                parent=tokens[triple.analysis_sentence, triple.parent],
+                child=tokens[triple.analysis_sentence, triple.child])
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -138,3 +153,15 @@ class TestWordCreator(amcattest.PolicyTestCase):
         tokens = [TokenValues(s.id, 2, word="w", lemma="l", pos="p", major="major", minor="minor")]
         token, = create_tokens(tokens)
         self.assertEqual(token.word.lemma.lemma, "l")
+
+    def test_create_triples(self):
+        from amcat.models.token import TripleValues, TokenValues
+        s = amcattest.create_test_analysis_sentence()
+        tokens = [TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="major", minor="minor"),
+                  TokenValues(s.id, 1, word="b", lemma="l", pos="p", major="major", minor="minor")]
+        t = TripleValues(s.id, 0, 1, "su")
+        create_triples(tokens, [t])
+        tr, = Triple.objects.filter(parent__sentence=s)
+        self.assertEqual(tr.relation.label, t.relation)
+        self.assertEqual(tr.child.word.word, "a")
+
