@@ -316,7 +316,7 @@
     "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Interval",
-      "serialiserclassname" : "FromFieldSerialiser"
+      "serialiserclassname" : "IntervalSerialiser"
     }
   },
   {  "pk" : 0,

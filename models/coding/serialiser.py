@@ -40,6 +40,7 @@ class BaseSerialiser(object):
         self.field = field
         self.deserialised_type = deserialised_type
         self.serialised_type = serialised_type
+
     def deserialise(self, value):
         """Convert the given serialised value to a domain object
 
@@ -49,6 +50,7 @@ class BaseSerialiser(object):
         """
         if value is None: return None
         return self.deserialised_type(value)
+
     def serialise(self, value):
         """Convert the given domain object to a serialised value
 
@@ -58,6 +60,7 @@ class BaseSerialiser(object):
         """
         if value is None: return None
         return self.serialised_type(value)
+
     @property
     def possible_values(self):
         """Get the possible values
@@ -103,7 +106,11 @@ class QualitySerialiser(BaseSerialiser):
     def value_label(self, value, language=None):
         if value == 0: return "0"
         return "%+1.1f" % (value / 10.)
-    
+
+class IntervalSerialiser(BaseSerialiser):
+    """Stub for interval serialiser"""
+    def __init__(self, field):
+        super(IntervalSerialiser, self).__init__(field, int, int)
 
 _memo = {}
 def CodebookSerialiser(field):

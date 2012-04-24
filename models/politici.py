@@ -1,7 +1,8 @@
 import ont, dbtoolkit, toolkit
 import cachable
-import collections, re
-db = dbtoolkit.amcatDB()                            
+import collections
+
+db = dbtoolkit.amcatDB()
 
 STOPLIST = set("van der den Veen MA Van de".split()) | set([""])
 
