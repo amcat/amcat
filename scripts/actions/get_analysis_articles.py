@@ -36,7 +36,7 @@ class GetAnalysisArticles(Script):
     output_type = None
     class options_form(forms.Form):
         analysis = forms.ModelChoiceField(queryset=Analysis.objects.all())
-        narticles = forms.IntegerField(required=False, initial=10)        
+        narticles = forms.IntegerField(required=False, initial=10)
 
     def run(self, _input=None):
         analysis, n = (self.options[x] for x in ['analysis', 'narticles'])
@@ -47,19 +47,22 @@ class GetAnalysisArticles(Script):
 @transaction.commit_on_success
 def get_articles(analysis, n):
     """Get n articles to do for this analysis, setting them started=True"""
-    # use custom postgres sql to make use of update .. returning
-    if not isinstance(analysis, int): analysis = analysis.id
-    sql = """update analysis_articles set started=true
-             where article_analysis_id in (
-                 select article_analysis_id from analysis_articles
-                 where started=false and done=false and delete=false
-                       and analysis_id = {analysis} limit {n}
-             ) returning article_analysis_id, article_id""".format(**locals())
-    return list(AnalysisArticle.objects.raw(sql))
-        
+
+    # in django 1.4 this can be done using select_for_update()...
+    result = (AnalysisArticle.objects
+              .filter(analysis=analysis, started=False, done=False, delete=False)
+              .only("id", 'article')[:10])
+    sql = str(result.query) +" FOR UPDATE"
+    result = list(AnalysisArticle.objects.raw(sql))
+
+    if result:
+        AnalysisArticle.objects.filter(id__in=[a.id for a in result]).update(started=True)
+
+    return result
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
-    cli.run_cli()
+    print cli.run_cli()
 
 
 ###########################################################################
@@ -69,8 +72,9 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 
 class TestGetAnalysisArticles(amcattest.PolicyTestCase):
-    
+
     def test_get_articles(self):
+        """Will fail on sqlite!"""
         analysis = amcattest.create_test_analysis()
         arts = [amcattest.create_test_analysis_article(analysis=analysis) for x in range(10)]
         x = list(get_articles(analysis, 7))
