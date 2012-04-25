@@ -71,14 +71,17 @@ class Rest(object):
                             .format(n=len(result), **locals()))
         return result[0]
 
-    def call_action(self, action, **kargs):
+    def call_action(self, action, decode_json=True, **kargs):
         if isinstance(action, type): action = action.__name__
         uri = '{self.schema}://{self.host}/{self.action_root}/{action}'.format(**locals())
         log.debug("Posting action {uri} with data {kargs}".format(**locals()))
         
         r = requests.post(uri, data=kargs, **self._request_args)
         _check_status(r)
-        return r.text
+        result = r.text
+        if decode_json:
+            result = json.loads(r.text)
+        return result
     
 def _check_status(response):
     """Check whether the response is 2xx (http success), Exception otherwise"""

@@ -27,6 +27,7 @@ import json
 
 from amcat.scripts.script import Script
 from amcat.scripts.actions.add_tokens import AddTokens
+from amcat.scripts.actions.get_analysis_articles import GetAnalysisArticles
 from amcat.tools.rest import Rest
 from amcat.tools import classtools
 
@@ -56,12 +57,12 @@ class RemoteAnalysis(Script):
         self.script = self.get_analysis_script()
         articles = self.get_articles()
         log.info("Retrieved {n} articles to analyse".format(n=len(articles)))
+        print(articles)
         for article in articles:
             self.analyse_article(article["id"])
 
     def get_articles(self):
-        return self.rest.get_objects("analysisarticle", analysis = self.analysis_id,
-                                     done = False, delete=False, limit=self.narticles)
+        return self.rest.call_action(GetAnalysisArticles, analysis=self.analysis_id, narticles=self.narticles)
 
     def get_analysis_script(self):
         analysis = self.rest.get_object("analysis", self.analysis_id)

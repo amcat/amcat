@@ -99,6 +99,7 @@ class AnalysisArticle(AmcatModel):
 
     article = models.ForeignKey(Article)
     analysis = models.ForeignKey(Analysis)
+    started= models.BooleanField(default=False)
     done = models.BooleanField(default=False)
     delete = models.BooleanField(default=False)
 
