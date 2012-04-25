@@ -76,6 +76,31 @@ class RemoteAnalysis(object):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.setup()
-    import sys
-    ra = RemoteAnalysis(int(sys.argv[1]), sys.argv[2])
-    ra.run(1)
+    amcatlogging.info_module("amcat.tools.rest")
+
+    
+    import argparse
+
+
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('host', action='store', help="Remote host to get articles from"
+                        " (e.g. localhost:8000 or https://amcat.vu.nl)")
+    parser.add_argument('analysis', action='store', help="Analysis ID to parse")
+    parser.add_argument("narticles",action='store', help="Number of articles to parse")
+    parser.add_argument("--wait",action='store_true', help="Wait 0-5 seconds before starting")
+    
+    
+    args = parser.parse_args()
+
+    if args.wait:
+        import random, time
+        t = random.random() * 5
+        log.info("Sleeping for %1.2f seconds" % t)
+        time.sleep(t)
+    
+    log.info("Will analyse {args.narticles} articles from {args.host} "
+             "using analysis {args.analysis}".format(**locals()))
+
+    ra = RemoteAnalysis(args.analysis, args.host)
+    ra.run(args.narticles)

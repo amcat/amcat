@@ -31,7 +31,10 @@ functions create_test_* create test objects for use in unit tests
 from __future__ import unicode_literals, print_function, absolute_import
 import os.path, os, inspect
 from contextlib import contextmanager
-from django.test import TestCase
+try:
+    from django.test import TestCase
+except ImportError:
+    from unittest import TestCase
 from unittest import TestLoader
 import logging; log = logging.getLogger(__name__)
 

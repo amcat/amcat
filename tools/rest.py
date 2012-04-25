@@ -78,16 +78,25 @@ class Rest(object):
         
         r = requests.post(uri, data=kargs, **self._request_args)
         _check_status(r)
-        result = r.text
         if decode_json:
-            result = json.loads(r.text)
-        return result
+            try:
+                return json.loads(r.content)
+            except:
+                log.error("Error on loading {r.content!r}".format(**locals()))
+        return r.content
     
 def _check_status(response):
     """Check whether the response is 2xx (http success), Exception otherwise"""
     if response.status_code // 100 != 2:
-        content = response.raw.read()
-        raise Exception("Remote server returned status {response.status_code}\n{content}"
+        log.error("Remote Server returned status {response.status_code}".format(**locals()))
+        try:
+            content = json.loads(rcontent)
+            log.error("Server error:{}: {}\n-------\nRemote traceback:\n{}\n-------".
+                      format(content["error-class"], content["error-message"].strip(),
+                             content["error-traceback"].strip()))
+        except:
+            log.exception("Error on decoding content:\n{r.content}".format(**locals()))
+        raise Exception("Remote server returned status {response.status_code}"
                         .format(**locals()))
 
 if __name__ == '__main__':

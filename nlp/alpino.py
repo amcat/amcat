@@ -25,7 +25,10 @@ import collections
 import os
 from os.path import exists
 
-from amcat.models.token import TripleValues, TokenValues
+#from amcat.models.token import TripleValues, TokenValues
+from collections import namedtuple
+TripleValues = namedtuple("TripleValues", ["analysis_sentence", "child", "parent", "relation"])
+TokenValues = namedtuple("TokenValues", ["analysis_sentence", "position", "word", "lemma", "pos", "major", "minor"])
 
 import logging
 from amcat.tools import toolkit
@@ -168,7 +171,6 @@ def interpret_line(line):
     func, rel = data[7].split("/")
     return sid, parent, child, rel.strip()
 
-        
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -257,5 +259,6 @@ if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.setup()
     a = Alpino(None)
-    print a._tokenize("-1|dit is een test\n")
+    print a.process_sentences(list(enumerate(["dit is een test"])))
+    
     
