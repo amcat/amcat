@@ -51,7 +51,7 @@ def get_articles(analysis, n):
     # in django 1.4 this can be done using select_for_update()...
     result = (AnalysisArticle.objects
               .filter(analysis=analysis, started=False, done=False, delete=False)
-              .only("id", 'article')[:10])
+              .only("id", 'article')[:n])
     sql = str(result.query) +" FOR UPDATE"
     result = list(AnalysisArticle.objects.raw(sql))
 
