@@ -19,46 +19,32 @@
 ###########################################################################
 
 """
-Script run a preprocessing analysis against a remote (REST) database
+Run a preprocessing analysis against a remote (REST) database
 """
 
 import logging
 import json
 
-from amcat.scripts.script import Script
 from amcat.tools.rest import Rest
 from amcat.tools import classtools
 
 log = logging.getLogger(__name__)
 
-from django import forms
+class RemoteAnalysis(object):
 
-class RemoteAnalysisForm(forms.Form):
-    analysis_id = forms.IntegerField()
-    host = forms.CharField()
-    narticles = forms.IntegerField(required=False, initial=10)
-
-class RemoteAnalysis(Script):
-    """Add a project to the database."""
-
-    options_form = RemoteAnalysisForm
-    output_type = None
-
-    def __init__(self, options=None, **kargs):
-        super(RemoteAnalysis, self).__init__(options, **kargs)
-        self.rest = Rest(host=self.options['host'])
-        self.analysis_id = self.options['analysis_id']
-        self.narticles = self.options['narticles']
-
-    def run(self, _input=None):
+    def __init__(self, analysis_id, host):
+        self.rest = Rest(host=host)
+        self.analysis_id = analysis_id
         self.script = self.get_analysis_script()
-        articles = self.get_articles()
+
+    def run(self, n):
+        articles = self.get_articles(n)
         log.info("Retrieved {n} articles to analyse".format(n=len(articles)))
         for article in articles:
             self.analyse_article(article["id"])
 
-    def get_articles(self):
-        return self.rest.call_action("GetAnalysisArticles", analysis=self.analysis_id, narticles=self.narticles)
+    def get_articles(self, n):
+        return self.rest.call_action("GetAnalysisArticles", analysis=self.analysis_id, narticles=n)
 
     def get_analysis_script(self):
         analysis = self.rest.get_object("analysis", self.analysis_id)
@@ -88,10 +74,8 @@ class RemoteAnalysis(Script):
 
     
 if __name__ == '__main__':
-    from amcat.scripts.tools import cli
     from amcat.tools import amcatlogging
-    #amcatlogging.debug_module("amcat.tools.rest")
-    amcatlogging.debug_module()
-
-
-    cli.run_cli()
+    amcatlogging.setup()
+    import sys
+    ra = RemoteAnalysis(int(sys.argv[1]), sys.argv[2])
+    ra.run(1)

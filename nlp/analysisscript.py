@@ -22,10 +22,8 @@ Abstract analysis scripts for preprocessing
 """
 
 from itertools import chain
-from amcat.scripts.script import Script
 
-
-class AnalysisScript(Script):
+class AnalysisScript(object):
     def __init__(self, analysis, tokens=False, triples=False):
         self.analysis = analysis
         self.tokens = tokens
