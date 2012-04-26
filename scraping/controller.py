@@ -51,11 +51,12 @@ class Controller(object):
         article.save()
 
         articleset = article.scraper.articleset if hasattr(article, 'scraper') else self.articleset
-
+        log.debug("Adding article %r to articleset %r" % (article.id, articleset))
         if articleset:
             articleset.add(article)
             articleset.save()
-
+            
+        log.debug("Done")
         return article
 
 
@@ -72,9 +73,11 @@ class RobustController(Controller):
 
     def scrape(self, scraper):
         result = []
-        units = retry(scraper.get_units)
-        for unit in scraper.get_units():
+        units = list(retry(scraper.get_units))
+        log.debug("Scraping {n} units".format(n=len(units))) 
+        for unit in units:
             try:
+                log.debug("Scraping unit {unit!r}".format(**locals()))
                 result += retry(self._scrape_unit, scraper=scraper, unit=unit)
             except Exception as e:
                 log.error("%s: Scraping unit %r failed after 3 retries, giving up" % (self, e))

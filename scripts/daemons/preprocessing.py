@@ -31,7 +31,7 @@ from amcat.nlp.preprocessing import set_preprocessing_actions
 
 import logging; log = logging.getLogger(__name__)
 
-BATCH = 1000
+BATCH = 10000
 
 class PreprocessingDaemon(DaemonScript):
 
@@ -46,6 +46,7 @@ class PreprocessingDaemon(DaemonScript):
 
         if not aids: return False
 
+        log.info("Deleting {n} queue objects".format(n=len(preprocess_ids)))
         AnalysisQueue.objects.filter(pk__in=preprocess_ids).delete()
         log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
         set_preprocessing_actions(aids)

@@ -179,7 +179,7 @@ def handle_projectanalysis(sender, instance, **kargs):
 
 @receiver([post_save], ArticleSet)
 def handle_articleset(sender, instance, **kargs):
-    add_to_queue(*(a.id for a in instance.articles.all().only("id")))
+    pass#add_to_queue(*(a.id for a in instance.articles.all().only("id")))
 
 
 ###########################################################################

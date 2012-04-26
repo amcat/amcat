@@ -85,6 +85,8 @@ class Scraper(Script):
         self.medium = get_or_create_medium(self.medium_name)
         self.project = self.options['project']
         self.articleset = self.options['articleset']
+        log.debug("Articleset: {self.articleset}, options: {self.options}"
+                  .format(**locals()))
 
     def run(self, input):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"
@@ -153,6 +155,7 @@ class Scraper(Script):
             article = article.create_article()
         _set_default(article, "project", self.project)
         _set_default(article, "medium", self.medium)
+        article.scraper = self
         return article
 
 
