@@ -41,7 +41,10 @@ class RemoteAnalysis(object):
         articles = self.get_articles(n)
         log.info("Retrieved {n} articles to analyse".format(n=len(articles)))
         for article in articles:
-            self.analyse_article(article["id"])
+            try:
+                self.analyse_article(article["id"])
+            except:
+                log.exception("Error on analysing article %r" % article["id"])
 
     def get_articles(self, n):
         return self.rest.call_action("GetAnalysisArticles", analysis=self.analysis_id, narticles=n)
