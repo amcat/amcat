@@ -31,8 +31,6 @@ from amcat.models.scraper import Scraper
 from amcat.scraping.scraper import DBScraperForm
 from amcat.scraping.controller import RobustController
 
-PROJECT_ROLE_READER=11
-
 class RunScraperForm(forms.Form):
     scraper = forms.ModelChoiceField(queryset=Scraper.objects.all())
     date = forms.CharField()
