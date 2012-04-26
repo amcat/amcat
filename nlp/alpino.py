@@ -21,7 +21,6 @@
 Preprocess using Alpino
 See http://www.let.rug.nl/vannoord/alp/Alpino/ 
 """
-import collections
 import os
 from os.path import exists
 
