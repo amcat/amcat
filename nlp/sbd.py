@@ -53,7 +53,7 @@ class SBD(object):
 
     def get_sentences(self, article):
         pars = [article.headline]
-        if article.byline: text += [article.byline]
+        if article.byline: pars += [article.byline]
         pars += re.split(r"\n\s*\n[\s\n]*", article.text.strip())
         for parnr, par in enumerate(pars):
             for sentnr, sent in enumerate(self.split(par)):
