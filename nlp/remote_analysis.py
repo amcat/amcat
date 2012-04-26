@@ -96,5 +96,4 @@ if __name__ == '__main__':
 
     ra = RemoteAnalysis(args.analysis, args.host)
 
-    print ra.get_articles(args.narticles)
-    #ra.run(args.narticles)
+    ra.run(args.narticles)
