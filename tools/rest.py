@@ -95,7 +95,7 @@ def _check_status(response):
                       format(content["error-class"], content["error-message"].strip(),
                              content["error-traceback"].strip()))
         except:
-            log.exception("Error on decoding content:\n{r.content}".format(**locals()))
+            log.exception("Error on decoding content:\n{response.content}".format(**locals()))
         raise Exception("Remote server returned status {response.status_code}"
                         .format(**locals()))
 

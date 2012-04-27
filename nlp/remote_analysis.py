@@ -40,8 +40,9 @@ class RemoteAnalysis(object):
     def run(self, n):
         articles = self.get_articles(n)
         log.info("Retrieved {n} articles to analyse".format(n=len(articles)))
-        for article in articles:
+        for i, article in enumerate(articles):
             try:
+                log.debug("Analysing article %i/%i" % (i, len(articles)))
                 self.analyse_article(article["id"])
             except:
                 log.exception("Error on analysing article %r" % article["id"])
@@ -78,6 +79,7 @@ if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.setup()
     amcatlogging.info_module("amcat.tools.rest")
+    amcatlogging.debug_module()
 
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
@@ -86,6 +88,7 @@ if __name__ == '__main__':
     parser.add_argument('analysis', action='store', help="Analysis ID to parse")
     parser.add_argument("narticles",action='store', help="Number of articles to parse")
     parser.add_argument("--wait",action='store_true', help="Wait 0-5 seconds before starting")
+    parser.add_argument("--logfile",action='store', help="Logfile to store messages")
     args = parser.parse_args()
 
     if args.wait:
@@ -93,6 +96,10 @@ if __name__ == '__main__':
         t = random.random() * 5
         log.info("Sleeping for %1.2f seconds" % t)
         time.sleep(t)
+
+    if args.logfile:
+        amcatlogging.setFileHandler(args.logfile)
+        log.info("Logging to %s" % args.logfile)
 
     log.info("Will analyse {args.narticles} articles from {args.host} "
              "using analysis {args.analysis}".format(**locals()))
