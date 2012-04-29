@@ -767,7 +767,7 @@ def clean(string, level=0, lower=False, droptags=False, escapehtml=False, keepta
     @return: the cleaned string
     """
     if not string: return string
-    if droptags: string = re.sub("<[^>]{,30}>", "", string)
+    if droptags: string = re.sub(r"<[^>]{0,30}>", "", string)
     if normalizeWhitespace:
         string = re.sub("[ \\n]+" if keeptabs else "\s+", " ", string)
     if level == 3: string = re.sub(r"\W", "", string)

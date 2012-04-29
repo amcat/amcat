@@ -370,6 +370,7 @@ def createFilters(form):
         setsQuery = ('sets:%d' % s.id for s in form['articlesets'])
         result.append(' OR '.join(setsQuery))
     else:
+        log.warn("PROJECTS: %s/%r" % (type(form['projects']), form['projects']))
         projectQuery = ('projectid:%d' % p.id for p in form['projects'])
         result.append(' OR '.join(projectQuery))
 

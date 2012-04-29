@@ -56,7 +56,7 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
     Finds all models reachable from the given model in the graph of
     (foreign key) relations. If stoplist is given, don't consider edges
     from these nodes.
-    
+
     @type modelnames: str
     @param modelnames: the name of the model to start from
     @type stoplist: sequence of str
@@ -70,7 +70,7 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
         new = related - models
         if not new: return models
         models |= new
-        
+
 
 def get_or_create(model_class, **attributes):
     """Retrieve the instance of model_class identified by the given attributes,
@@ -81,7 +81,7 @@ def get_or_create(model_class, **attributes):
         return model_class.objects.create(**attributes)
 
 
-@contextmanager   
+@contextmanager
 def list_queries(dest=None, output=False, printtime=False, outputopts={}):
     """Context manager to print django queries
 
@@ -104,8 +104,8 @@ def list_queries(dest=None, output=False, printtime=False, outputopts={}):
         if output:
             print("Total time: %1.4f" % (time.time() - t))
             query_list_to_table(dest, output=output, **outputopts)
-            
-       
+
+
 def query_list_to_table(queries, maxqlen=80, output=False, normalise_numbers=True, **outputoptions):
     """Convert a django query list (list of dict with keys time and sql) into a table3
     If output is non-False, output the table with the given options
@@ -134,6 +134,14 @@ def query_list_to_table(queries, maxqlen=80, output=False, normalise_numbers=Tru
         t.output(**outputoptions)
     return t
 
+def get_ids(objects):
+    """Convert the given object(s) to integers by asking for their .pk.
+    Safe to call on integer objects"""
+    for obj in objects:
+        if not isinstance(obj, int):
+            obj = obj.pk
+        yield obj
+
 from django.dispatch import Signal
 from types import NoneType
 
@@ -161,34 +169,34 @@ def receiver(signal, sender=None, **kwargs):
                 sig.connect(func, sen, **kwargs)
         return func
     return _decorator
-       
-        
-class JsonField(models.Field): 
-    __metaclass__ = models.SubfieldBase 
-    serialize_to_string = True 
-    def get_internal_type(self): 
-        return "TextField" 
-    def value_to_string(self, obj): 
-        return self.get_prep_value(self._get_val_from_obj(obj)) 
-    def get_prep_value(self, value): 
-        if value: 
-            stream = StringIO.StringIO() 
-            simplejson.dump(value, stream, cls=DjangoJSONEncoder) 
-            value = stream.getvalue() 
-            stream.close() 
-            return value 
-        return None 
-    def to_python(self, value): 
-        if isinstance(value, (str, unicode)): 
-            value = StringIO.StringIO(value) 
-            return simplejson.load(value) 
-        return value 
 
-    
+
+class JsonField(models.Field):
+    __metaclass__ = models.SubfieldBase
+    serialize_to_string = True
+    def get_internal_type(self):
+        return "TextField"
+    def value_to_string(self, obj):
+        return self.get_prep_value(self._get_val_from_obj(obj))
+    def get_prep_value(self, value):
+        if value:
+            stream = StringIO.StringIO()
+            simplejson.dump(value, stream, cls=DjangoJSONEncoder)
+            value = stream.getvalue()
+            stream.close()
+            return value
+        return None
+    def to_python(self, value):
+        if isinstance(value, (str, unicode)):
+            value = StringIO.StringIO(value)
+            return simplejson.load(value)
+        return value
+
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestDjangoToolkit(amcattest.PolicyTestCase):
@@ -197,16 +205,16 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
                )
     def test_related_models(self):
         """Test get_related_models function. Note: depends on the actual amcat.models"""
-        
+
         for start, stoplist, result in [
             (('Project',), (), ['Affiliation', 'Language', 'Project', 'Role', 'User']),
             (('Sentence',), ('Project',), ['Article', 'Language', 'Medium', 'Project', 'Sentence']),
             ]:
-            
+
             related = get_related_models(start, stoplist)
             related_names = set(r.__name__ for r in related)
             self.assertEqual(related_names, set(result))
-            
+
     def test_queries(self):
         """Test the list_queries context manager"""
         with list_queries() as l:
@@ -215,12 +223,12 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         self.assertIn(len(l), [4, 5]) # get affil., create user, select user x2, (pg) get idval
 
     def test_get_or_create(self):
-	"""Test the get or create operation"""
-	from amcat.models.medium import Medium
-	name = "dsafdsafdsafDSA_amcat_test_medium"
-	Medium.objects.filter(name=name).delete()
-	self.assertRaises(Medium.DoesNotExist, Medium.objects.get, name=name)
-	m = get_or_create(Medium, name=name)
-	self.assertEqual(m.name, name)
-	m2 = get_or_create(Medium, name=name)
-	self.assertEqual(m, m2)
+        """Test the get or create operation"""
+        from amcat.models.medium import Medium
+        name = "dsafdsafdsafDSA_amcat_test_medium"
+        Medium.objects.filter(name=name).delete()
+        self.assertRaises(Medium.DoesNotExist, Medium.objects.get, name=name)
+        m = get_or_create(Medium, name=name)
+        self.assertEqual(m.name, name)
+        m2 = get_or_create(Medium, name=name)
+        self.assertEqual(m, m2)
