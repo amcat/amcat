@@ -32,12 +32,14 @@ from amcat.models import Project, ArticleSet, Article, ArticleSetArticle
 from amcat.models.analysis import add_to_queue
 from amcat.scripts.script import Script
 from amcat.tools.amcatsolr import Solr
+from amcat.tools.toolkit import splitlist
 
 
 class SolrCleanForm(forms.Form):
     projects = forms.ModelMultipleChoiceField(queryset=Project.objects.all(), required=False)
     sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all(), required=False)
     include_project_sets = forms.BooleanField(initial=False, required=False)
+    batch = forms.IntegerField(required=False)
 
     def clean(self):
         data = super(SolrCleanForm, self).clean()
@@ -62,9 +64,13 @@ class SolrClean(Script):
             q = ArticleSetArticle.objects.filter(articleset__in=sets)
             articles |= set(aid for (aid,) in q.values_list("article_id"))
 
-        log.info("Cleaning {n} articles".format(n=len(articles)))
-
-        Solr().add_articles(articles)
+        if self.options["batch"]:
+            for i, articles in enumerate(splitlist(articles, self.options["batch"])):
+                log.info("Batch {i}: Cleaning {n} articles".format(n=len(articles), **locals()))
+                Solr().add_articles(articles)
+        else:
+            log.info("Cleaning {n} articles".format(n=len(articles)))
+            Solr().add_articles(articles)
         
         log.info("Done!")
 
