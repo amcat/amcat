@@ -19,7 +19,7 @@
 
 """
 Preprocess using Alpino
-See http://www.let.rug.nl/vannoord/alp/Alpino/ 
+See http://www.let.rug.nl/vannoord/alp/Alpino/
 """
 import os
 from os.path import exists
@@ -38,7 +38,7 @@ from amcat.nlp.analysisscript import AnalysisScript
 from amcat.tools.toolkit import execute, wrapped
 
 CMD = "ALPINO_HOME={alpino_home} {alpino_home}/bin/Alpino {alpino_options}"
-TOKENIZE = "{alpino_home}/Tokenization/tok" 
+TOKENIZE = "{alpino_home}/Tokenization/tok"
 ALPINO_HOME="/home/amcat/resources/Alpino"
 ALPINO_OPTIONS = "end_hook=dependencies -parse"
 
@@ -77,7 +77,7 @@ class Alpino(AnalysisScript):
 
     def _tokenize(self, input):
         self._check_alpino()
-        cmd = TOKENIZE.format(**self.__dict__)        
+        cmd = TOKENIZE.format(**self.__dict__)
         return execute(cmd, input.encode("utf-8"), outonly=True).decode("utf-8")
 
     def _get_input(self, analysis_sentences):
@@ -95,7 +95,7 @@ class Alpino(AnalysisScript):
     def get_triples(self, id, sentence, memo=None):
         for parent, child, rel in memo.get(id, []):
             yield TripleValues(id, child.position, parent.position, rel)
-    
+
     def preprocess_sentences(self, sentences):
         memo = {} # sid : [(parent, child, rel), ...]
         input = self._get_input(sentences)
@@ -106,7 +106,7 @@ class Alpino(AnalysisScript):
             sid, parent, child, rel = interpret_line(line)
             memo.setdefault(sid, []).append((parent, child, rel))
         return memo
-            
+
 POSMAP = {"pronoun" : 'O',
           "verb" : 'V',
           "noun" : 'N',
@@ -174,7 +174,7 @@ def interpret_line(line):
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestAlpino(amcattest.PolicyTestCase):
@@ -183,10 +183,10 @@ class TestAlpino(amcattest.PolicyTestCase):
 
         input = a._get_input(enumerate(["daarom, toch?", "pas d'r op, a.u.b."]))
         self.assertEqual(input, "0|daarom, toch?\n1|pas d'r op, a.u.b.\n".format(**locals()))
-        
+
         tokens = a._tokenize(input)
         self.assertEqual(tokens, "0|daarom , toch ?\n1|pas d'r op , a.u.b.\n".format(**locals()))
-        
+
 
     def test_parse_function(self):
         tokens = u"1|een dezer Syri\xebrs"
@@ -203,7 +203,7 @@ class TestAlpino(amcattest.PolicyTestCase):
         a = Alpino(None)
         tokens = "1|ik woon in Syri\00"
         self.assertRaises(AlpinoError, a._parse, tokens)
-        
+
 
     def test_interpret(self):
 
@@ -213,8 +213,8 @@ class TestAlpino(amcattest.PolicyTestCase):
 
         token1 = TokenValues(sentno, 1, "huisje", "huis_DIM", "N", "noun", "het,count,sg")
         token2 = TokenValues(sentno, 0, "het", "het", "D" ,"determiner", "het,nwh,nmod,pro,nparg,wkpro")
-        
-        
+
+
         self.assertEqual(interpret_token(sentno, *token_str1.split("|")), token1)
         self.assertEqual(interpret_token(sentno, *token_str2.split("|")), token2)
 
@@ -253,11 +253,9 @@ class TestAlpino(amcattest.PolicyTestCase):
         tokens, triples = Alpino(None).process_sentences(
             enumerate([u"REPORTAGE | KLEIS JAGER | SEVRAN"]))
         self.assertEqual(len(tokens), 5) # KLEIS JAGER is one name
-        
+
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.setup()
     a = Alpino(None)
     print a.process_sentences(list(enumerate(["dit is een test"])))
-    
-    

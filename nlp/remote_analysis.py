@@ -75,11 +75,12 @@ class RemoteAnalysis(object):
                                       analysis_article=analysis_article_id,
                                       limit=9999)]
 
+
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.setup()
     amcatlogging.info_module("amcat.tools.rest")
-    amcatlogging.debug_module()
+    #amcatlogging.debug_module()
 
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
@@ -87,6 +88,9 @@ if __name__ == '__main__':
                         " (e.g. localhost:8000 or https://amcat.vu.nl)")
     parser.add_argument('analysis', action='store', help="Analysis ID to parse")
     parser.add_argument("narticles",action='store', help="Number of articles to parse")
+
+    parser.add_argument("--test",action='store_true',
+                        help="Test analysing the articleid stored in narticles")
     parser.add_argument("--wait",action='store_true', help="Wait 0-5 seconds before starting")
     parser.add_argument("--logfile",action='store', help="Logfile to store messages")
     args = parser.parse_args()
@@ -106,4 +110,16 @@ if __name__ == '__main__':
 
     ra = RemoteAnalysis(args.analysis, args.host)
 
-    ra.run(args.narticles)
+    if args.test:
+        log.info("Will test analyse article {args.narticles}".format(**locals()))
+        sents = ra.get_sentences(args.narticles)
+        for sent in sents:
+            print(sent)
+            i = ra.script._get_input([sent])
+            print(`i`)
+            ra.script._tokenize(i)
+        i = ra.script._get_input(sents)
+        ra.script._tokenize(i)
+    else:
+        ra.run(args.narticles)
+
