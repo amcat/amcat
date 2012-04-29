@@ -55,8 +55,11 @@ class Solr(object):
 
     def query_all(self, query, batch=1000, filters=[], **kargs):
         """Make repeated calls to solr to get all articles"""
-        response = self._connect().query(query, fq=filters, **kargs)
+        response = self._connect().query(query, fq=filters, rows=batch, **kargs)
         while response.results:
+            log.debug("Iterating over all results, n={response.numFound}, "
+                      "start={response.start}, |response.results|={n}"
+                  .format(n=len(response.results), **locals()))
             for row in response.results:
                 if 'score' in row:
                     row['score']  = int(row['score'])

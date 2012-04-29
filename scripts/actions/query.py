@@ -42,7 +42,7 @@ class Query(Script):
     def run(self, _input=None):
         filters = filters_from_form(self.options)
         query = self.options['query']
-        t = Table(rows = Solr().query_all(query, filter=filters, fields=["id"]),
+        t = Table(rows = Solr().query_all(query, filters=filters, fields=["id"]),
                   columns = ["id", "score"],
                   cellfunc = dict.get)
         return t
