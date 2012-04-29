@@ -53,6 +53,16 @@ class Solr(object):
 
     #### QUERYING ####
 
+    def query_all(self, query, batch=1000, filters=[], **kargs):
+        """Make repeated calls to solr to get all articles"""
+        response = self._connect().query(query, fq=filters, **kargs)
+        while response.results:
+            for row in response.results:
+                if 'score' in row:
+                    row['score']  = int(row['score'])
+                yield row
+            response = response.next_batch()
+
     def query(self, query, filters=[], **kargs):
         return self._connect().query(query, fq=filters, **kargs)
 
@@ -78,24 +88,14 @@ class Solr(object):
         conn.delete_many(article_ids)
         conn.commit()
 
-
-class GMT1(datetime.tzinfo):
-    """very basic timezone object, needed for solrpy library.."""
-    def utcoffset(self, dt):
-        return datetime.timedelta(hours=1)
-    def tzname(self, dt):
-        return "GMT +1"
-    def dst(self, dt):
-        return datetime.timedelta(0)
-
-def _clean(text):
-    """Clean the text for indexing to avoid illegal character exception"""
-    #See also:      http://mail-archives.apache.org/mod_mbox/lucene-solr-user/200901.mbox
-    #                     /%3C2c138bed0901040803x4cc07a29i3e022e7f375fc5f@mail.gmail.com%3E
-    if text: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
-
 def _get_article_dicts(article_ids):
     """Yield dicts suitable for uploading to Solr from article IDs"""
+    class GMT1(datetime.tzinfo):
+        def utcoffset(self, dt): return datetime.timedelta(hours=1)
+        def tzname(self, dt): return "GMT +1"
+        def dst(self, dt): return datetime.timedelta(0)
+    def _clean(text):
+        if text: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
     sets = multidict((aa.article_id, aa.articleset_id)
                      for aa in ArticleSetArticle.objects.filter(article__in=article_ids))
     for a in Article.objects.filter(pk__in=article_ids):
@@ -109,29 +109,31 @@ def _get_article_dicts(article_ids):
                    date=a.date.replace(tzinfo=GMT1()),
                    sets=sets.get(a.id))
 
-
-def query_args_from_form(form):
-    """ takes a form as input and ceate filter queries for start/end date, mediumid and set """
+def filters_from_form(form):
+    """takes a form as input and ceate filter queries for start/end date, mediumid and set """
     startDateTime = (form['startDate'].strftime('%Y-%m-%dT00:00:00.000Z')
                      if 'startDate' in form else '*')
     endDateTime = form['endDate'].strftime('%Y-%m-%dT00:00:00.000Z') if 'endDate' in form else '*'
     filters = []
     if startDateTime != '*' or endDateTime != '*': # if at least one of the 2 is a date
         filters.append('date:[%s TO %s]' % (startDateTime, endDateTime))
-    if 'mediums' in form:
+    if form.get('mediums'):
         mediumidQuery = ('mediumid:%d' % m.id for m in form['mediums'])
         filters.append(' OR '.join(mediumidQuery))
-    if 'articleids' in form:
+    if form.get('articleids'):
         articleidQuery = ('id:%d' % a for a in form['articleids'])
         filters.append(' OR '.join(articleidQuery))
-    if 'articlesets' in form and form['articlesets']:
+    if form.get('articlesets'):
         setsQuery = ('sets:%d' % s.id for s in form['articlesets'])
         filters.append(' OR '.join(setsQuery))
     else:
         projectQuery = ('projectid:%d' % p.id for p in form['projects'])
         filters.append(' OR '.join(projectQuery))
+    return filters
 
-    return dict(filters=filters, start=form['start'], rows=form['length'])
+def query_args_from_form(form):
+    """ takes a form as input and return a dict of filter, start, and rows arguments for query"""
+    return dict(filters=filters_from_form(form), start=form['start'], rows=form['length'])
 
 
 
@@ -146,66 +148,103 @@ import os.path
 import subprocess
 from contextlib import contextmanager
 
+class TestSolr(Solr):
+    def __init__(self, port=1234, temp_home=None, solr_home=None, **kargs):
+        super(TestSolr, self).__init__(port=port, host='localhost')
+        self.temp_home = tempfile.mkdtemp() if temp_home is None else temp_home
+        if solr_home is None:
+            import amcat
+            amcat_home = os.path.dirname(amcat.__file__)
+            self.solr_home = os.path.abspath(os.path.join(amcat_home, "../amcatsolr"))
+        else:
+            self.solr_home = solr_home
+        if not os.path.exists(os.path.join(self.solr_home, "solr/solr.xml")):
+            raise Exception("Solr.xml not found at {self.solr_home}".format(**locals()))
+        self.solr_process = None
 
-@contextmanager
-def _test_solr(port=1234, temp_home=None, solr_home=None, **kargs):
-    """Create ad hoc instance of solr for testing"""
-    ps = subprocess.check_output('ps aux | grep "java -Djetty.port=1234"', shell=True)
-    if '-Dsolr.data' in ps:
-        raise Exception("Test solr already running!")
-    
-    if temp_home is None: temp_home = tempfile.mkdtemp()
-    if solr_home is None:
-        import amcat
-        amcat_home = os.path.dirname(amcat.__file__)
-        solr_home = os.path.abspath(os.path.join(amcat_home, "../amcatsolr"))
-    if not os.path.exists(os.path.join(solr_home, "solr/solr.xml")):
-        raise Exception("Solr.xml not found at {solr_home}".format(**locals()))
+    def _check_test_solr(self):
+        cmd = 'ps aux | grep "java -Djetty.port={self.port}"'.format(**locals())
+        ps = subprocess.check_output(cmd, shell=True)
+        if '-Dsolr.data' in ps:
+            raise Exception("Test solr already running on port {self.port}!".format(**locals()))
 
-    # Start test solr instance
-    args = {'-Djetty.port':str(port),'-Dsolr.data.dir':temp_home}
-    cmd = ["java"] + ["=".join(kv) for kv in args.items()] + ["-jar","start.jar"]
-    log.debug("Calling solr with cmd={cmd}, cwd={solr_home}".format(**locals()))
-    solr_process = subprocess.Popen(cmd, cwd=solr_home, stderr=subprocess.PIPE)
-    try:
+    def start(self):
+        self._check_test_solr()
+        args = {'-Djetty.port':str(self.port),'-Dsolr.data.dir':self.temp_home}
+        cmd = ["java"] + ["=".join(kv) for kv in args.items()] + ["-jar","start.jar"]
+        log.debug("Calling solr with cmd={cmd}, cwd={self.solr_home}".format(**locals()))
+        self.solr_process = subprocess.Popen(cmd, cwd=self.solr_home, stderr=subprocess.PIPE)
         wait_for = u'Registered new searcher'
         log.debug("Waiting for line {wait_for!r}".format(**locals()))
         while True:
-            line =  solr_process.stderr.readline()
+            line = self.solr_process.stderr.readline()
             if wait_for in line: break
-        log.info("Solr test instance running at port {port}, pid={solr_process.pid}"
+        log.info("Solr test instance running at port {self.port}, pid={self.solr_process.pid}"
                  .format(**locals()))
-        yield Solr(port=port)
-    finally:
-        log.debug("Terminating solr process at pid {solr_process.pid}".format(**locals()))
-        solr_process.terminate()
-        solr_process.wait()
-        log.info("Terminated solr process")
+
+    def stop(self):
+        if self.solr_process:
+            self.solr_process.terminate()
+            self.solr_process.wait()
+            log.info("Terminated solr process")
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
 
 class TestAmcatSolr(amcattest.PolicyTestCase):
     def test_query(self):
-        with _test_solr() as solr:
-            a1 = amcattest.create_test_article(text='dit is een test')
+        with TestSolr() as solr:
+            a1 = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla')
             a2 = amcattest.create_test_article(text='en alweer een test')
+            # can we add articles, and are the right articles returned?
             solr.add_articles([a1, a2])
             self.assertEqual(set(solr.query_ids("test")), set([a1.id, a2.id]))
             self.assertEqual(set(solr.query_ids("alweer")), set([a2.id]))
+            # can we delete an article, and are the scores correct?
             solr.delete_articles([a2])
-            self.assertEqual(set(solr.query_ids("test")), set([a1.id]))
-            self.assertEqual(set(solr.query_ids("alweer")), set([]))
-                
-
-
+            self.assertEqual(set(solr.query("alweer")), set([]))
+            self.assertEqual(solr.query("test", fields=["id", "mediumid"]).results,
+                             [dict(score=1.0, id=a1.id, mediumid=a1.medium_id)])
+            self.assertEqual(solr.query("een", fields=["id"]).results,
+                             [dict(score=2.0, id=a1.id)])
+            self.assertEqual(solr.query("bla", fields=["id", "sets"]).results,
+                             [dict(score=3.0, id=a1.id)])
+            # does update via 'add' work, and is set membership done correctly?
+            s1 = amcattest.create_test_set()
+            s1.add(a1)
+            a1.headline="bla"
+            a1.save()
+            solr.add_articles([Article.objects.get(pk=a1.id)])
+            self.assertEqual(solr.query("bla", fields=["id", "sets"]).results,
+                             [dict(score=2.0, id=a1.id, sets=[s1.id])])
+            # test query_all
+            arts = [amcattest.create_test_article(text='en alweer een test')
+                    for i in range(195)]
+            solr.add_articles(arts)
+            # normal query returns 10 results
+            self.assertEqual(len(solr.query("test").results), 10)
+            self.assertEqual(len(solr.query("test", rows=100).results), 100)
+            self.assertEqual(len(list(solr.query_all("test"))), 196) # a1 + 195 new
 
     def test_query_args_from_form(self):
-        queries = [Query("alweer"), Query('test', 'TEST')]
-        args = dict(sortColumn='', useSolr=True, queries=[],
-                    query='test\r\nalweer',
-                    start=0, length=100,
-                    articleids=[], articlesets=[], mediums=[], projects=[],
+        m = amcattest.create_test_medium()
+        s1 = amcattest.create_test_set()
+        s2 = amcattest.create_test_set()
+
+        form = dict(sortColumn='', useSolr=True,
+                    start=100, length=100,
+                    articleids=[], articlesets=[s1,s2], mediums=[m], projects=[],
                     columns= [u'article_id', u'date', u'medium_id', u'medium_name', u'headline'],
                     highlight=False, columnInterval='month', datetype='all', sortOrder='')
-
+        args = query_args_from_form(form)
+        self.assertEqual(args, dict(start=100, rows=100, filters=[
+                    u'mediumid:{m.id}'.format(**locals()),
+                    u'sets:{s1.id} OR sets:{s2.id}'.format(**locals())]))
 
     def test_clean(self):
         """Test whether cleaning works correctly"""
