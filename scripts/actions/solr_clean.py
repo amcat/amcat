@@ -65,6 +65,9 @@ class SolrClean(Script):
             articles |= set(aid for (aid,) in q.values_list("article_id"))
 
         if self.options["batch"]:
+            log.info("Cleaning {n} articles in {m} batch(es) of {b}"
+                     .format(n=len(articles), b=self.options["batch"],
+                             m=1 + len(articles) // self.options["batch"]))
             for i, articles in enumerate(splitlist(articles, self.options["batch"])):
                 log.info("Batch {i}: Cleaning {n} articles".format(n=len(articles), **locals()))
                 Solr().add_articles(articles)
