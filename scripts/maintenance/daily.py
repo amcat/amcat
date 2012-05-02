@@ -23,18 +23,20 @@ Script to be run daily for data input (scraping, preprocessing etc.
 
 from datetime import date, timedelta
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+from scraping.controller import SimpleController
+
+log = logging.getLogger(__name__)
 
 from django import forms
 
 from amcat.scripts.script import Script
 from amcat.scripts.tools import cli
-import amcat.scripts.forms
 
-from amcat.scraping.controller import ThreadedController, scrape_logged
+from amcat.scraping.controller import scrape_logged
 from amcat.models.scraper import get_scrapers
 
-from amcat.tools import amcatlogging, toolkit, sendmail
+from amcat.tools import toolkit, sendmail
 
 from amcat.tools.table.table3 import ListTable
 from amcat.tools.table.tableoutput import table2html
@@ -94,7 +96,7 @@ class DailyScript(Script):
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
 
-        count, messages =  scrape_logged(ThreadedController(), scrapers)
+        count, messages =  scrape_logged(SimpleController(), scrapers)
 
         log.info("Sending email...")
         
