@@ -24,7 +24,7 @@ Script to be run daily for data input (scraping, preprocessing etc.
 from datetime import date, timedelta
 
 import logging;
-from scraping.controller import SimpleController
+from amcat.scraping.controller import SimpleController
 
 log = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ for tag in ["h3", "p", "pre"]:
 EMAIL = "amcat-scraping@googlegroups.com"
 
 def send_email(count, messages):
-
+    
     counts = [(s.__class__.__name__, n) for (s,n) in count.items()]
     n = sum(count.values())
     counts.append(("Total", n))
@@ -93,11 +93,12 @@ class DailyScript(Script):
         #amcatlogging.debug_module("amcat.scraping.controller")
         
         scrapers = list(get_scrapers(date=date))
+
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
-
+        
         count, messages =  scrape_logged(SimpleController(), scrapers)
-
+        
         log.info("Sending email...")
         
         send_email(count, messages)
