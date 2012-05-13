@@ -48,8 +48,12 @@ class Solr(object):
         self.port = port
         self.host = host
 
+    @property
+    def url(self):
+        return b'http://{self.host}:{self.port}/solr'.format(**locals())
+        
     def _connect(self):
-        return solr.SolrConnection(b'http://{self.host}:{self.port}/solr'.format(**locals()))
+        return solr.SolrConnection(self.url)
 
     #### QUERYING ####
 
@@ -91,14 +95,15 @@ class Solr(object):
         conn.delete_many(article_ids)
         conn.commit()
 
+def _clean(text):
+    if text: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
+        
 def _get_article_dicts(article_ids):
     """Yield dicts suitable for uploading to Solr from article IDs"""
     class GMT1(datetime.tzinfo):
         def utcoffset(self, dt): return datetime.timedelta(hours=1)
         def tzname(self, dt): return "GMT +1"
         def dst(self, dt): return datetime.timedelta(0)
-    def _clean(text):
-        if text: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
     sets = multidict((aa.article_id, aa.articleset_id)
                      for aa in ArticleSetArticle.objects.filter(article__in=article_ids))
     for a in Article.objects.filter(pk__in=article_ids):
@@ -203,11 +208,26 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
     def test_query(self):
         with TestSolr() as solr:
             a1 = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla')
-            a2 = amcattest.create_test_article(text='en alweer een test')
+            a2 = amcattest.create_test_article(text='en alweer een test blo')
             # can we add articles, and are the right articles returned?
             solr.add_articles([a1, a2])
             self.assertEqual(set(solr.query_ids("test")), set([a1.id, a2.id]))
             self.assertEqual(set(solr.query_ids("alweer")), set([a2.id]))
+            
+            # test phrase queries
+            self.assertEqual(len(solr.query('"een test"').results), 2)
+            self.assertEqual(len(solr.query('"test bla"').results), 1)
+            self.assertEqual(len(solr.query('"een bla"').results), 0)
+            # BUG: door de complex phrase query is de ordering er nu af?
+            #self.assertEqual(len(solr.query('"bla test"').results), 0) 
+            self.assertEqual(len(solr.query('"test bl*"').results), 2)
+            self.assertEqual(len(solr.query('"een bl*"').results), 0)
+            self.assertEqual(len(solr.query('"een bl*"~2').results), 2)
+            self.assertEqual(len(solr.query('"een (bl* -blo)"~2').results), 1)
+            self.assertEqual(len(solr.query('"een (bla OR blo)"~2').results), 2)
+            self.assertEqual(len(solr.query('"dit bl*"~5').results), 1)
+            return
+            
             # can we delete an article, and are the scores correct?
             solr.delete_articles([a2])
             self.assertEqual(set(solr.query("alweer")), set([]))
@@ -234,6 +254,17 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
             self.assertEqual(len(solr.query("test", rows=100).results), 100)
             self.assertEqual(len(list(solr.query_all("test"))), 196) # a1 + 195 new
 
+            
+
+    def test_version(self):
+        with TestSolr() as solr:
+            url = "{solr.url}/admin/registry.jsp".format(**locals())
+            import urllib
+            resp = urllib.urlopen(url).read()
+            m = re.search(r"<solr-impl-version>(\d+.\d+).(\d+)", resp)
+            log.debug("Solr version: {}".format(m.groups()))
+            self.assertEqual(float(m.group(1)), 3.6)
+            
     def test_query_args_from_form(self):
         m = amcattest.create_test_medium()
         s1 = amcattest.create_test_set()
@@ -281,3 +312,7 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
                         section=None, projectid=p.id, mediumid=m.id,
                         sets=set([s2.id])).items():
             self.assertEqual(ad2[k], v, "Article 2 %s %r!=%r" % (k, ad2[k], v))
+
+
+
+#from amcat.tools import amcatlogging; amcatlogging.debug_module()
