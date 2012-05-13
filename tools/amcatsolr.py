@@ -226,7 +226,6 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
             self.assertEqual(len(solr.query('"een (bl* -blo)"~2').results), 1)
             self.assertEqual(len(solr.query('"een (bla OR blo)"~2').results), 2)
             self.assertEqual(len(solr.query('"dit bl*"~5').results), 1)
-            return
             
             # can we delete an article, and are the scores correct?
             solr.delete_articles([a2])
