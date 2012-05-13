@@ -78,6 +78,21 @@ class Solr(object):
         for row in self.query(query, filters, fields="id", score=False, **kargs):
             yield row["id"]
 
+    def query_highlight(self, query, **kargs):
+        options = dict(
+            highlight=True,
+            fields="id,score,body,headline",
+            hl_fl="body,headline",
+            hl_usePhraseHighlighter='true',
+            hl_highlightMultiTerm='true',
+            hl_snippets=3,
+            hl_mergeContiguous='true',
+            )
+        options.update(kargs)
+        resp = self.query(query, **options)
+        print(resp.results)
+        print(resp.highlighting)
+            
     #### ADDING / REMOVING ARICLES ####
 
     def add_articles(self, articles):
@@ -95,6 +110,32 @@ class Solr(object):
         conn.delete_many(article_ids)
         conn.commit()
 
+def parseSolrHighlightingToArticles(solrResponse):
+    scoresDict = dict((x['id'], int(x['score'])) for x in solrResponse.results)
+    articleids = map(int, solrResponse.highlighting.keys())
+    articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
+    for articleid, highlights in solrResponse.highlighting.iteritems():
+        articleid = int(articleid)
+        if articleid not in articlesDict: continue
+        a = articlesDict[articleid]
+        a.highlightedHeadline = highlights.get('headline')
+        a.highlightedText = highlights.get('body')
+        a.hits = scoresDict[articleid]
+        yield a
+
+
+def _highlight_get_context(snippet):
+    """
+    returns a dict which splits the snippet in the part before the first hit,
+    the hit itself and after the hit.
+    Hits after the first hit are surrounded by [[brackets]]
+    """
+    split = re.split('</?em>', snippet, 2)
+    if not split or len(split) < 2:
+        return None
+    return {'before':split[0], 'hit':split[1],
+            'after':split[2].replace('<em>', '[[').replace('</em>', ']]')}
+        
 def _clean(text):
     if text: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
         
@@ -187,6 +228,7 @@ class TestSolr(Solr):
         while True:
             line = self.solr_process.stderr.readline()
             if wait_for in line: break
+            if "SEVERE:" in line: raise Exception(line)
         log.info("Solr test instance running at port {self.port}, pid={self.solr_process.pid}"
                  .format(**locals()))
 
@@ -313,5 +355,12 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
             self.assertEqual(ad2[k], v, "Article 2 %s %r!=%r" % (k, ad2[k], v))
 
 
+    def test_highlight(self):
+        with TestSolr() as solr:
+            blabla  = "bla bla bla bla bla bla \n" *5
+            text = blabla + "bla een piet is een piet piet bla bla bla ble" + blabla
+            a = amcattest.create_test_article(text=text, headline='bla piet')
+            solr.add_articles([a])
+            solr.query_highlight("piet")
 
 #from amcat.tools import amcatlogging; amcatlogging.debug_module()
