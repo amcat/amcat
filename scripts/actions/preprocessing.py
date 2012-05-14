@@ -30,7 +30,7 @@ from amcat.nlp.preprocessing import set_preprocessing_actions
 
 import logging; log = logging.getLogger(__name__)
 
-class PreprocessingDaemon(Script):
+class PreprocessingAction(Script):
 
     class options_form(forms.Form):
         sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
@@ -46,3 +46,34 @@ class PreprocessingDaemon(Script):
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
     run_cli()
+
+
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestPreprocessingAction(amcattest.PolicyTestCase):
+    def test_run(self):
+        from amcat.models import AnalysisArticle, AnalysisProject
+        
+        a1, a2 = [amcattest.create_test_article() for _x in range(2)]
+        s = amcattest.create_test_set()
+        s.add(a1, a2)
+
+        # running action should do nothing - no preprocessing is activated
+        PreprocessingAction(sets=[s.id]).run()
+        self.assertEqual(len(AnalysisArticle.objects.filter(article__in=[a1, a2])), 0)
+
+        n = amcattest.create_test_analysis()
+        AnalysisProject.objects.create(project=s.project, analysis=n)
+        self.assertEqual(len(AnalysisArticle.objects.filter(article__in=[a1, a2])), 0)
+        PreprocessingAction(sets=[s.id]).run()
+        aas = set((aa.analysis, aa.article) for aa in
+                  AnalysisArticle.objects.filter(article__in=[a1, a2]))
+        self.assertEqual(aas, set([(n, a1), (n, a2)]))
+        
+        
