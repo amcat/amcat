@@ -12,15 +12,16 @@ class Node(object):
         return "[Node %s]" % self.id
 
 class Edge(object):
-    def __init__(self, subj, obj, label=None, weight=1, sign=None, color=None):
+    def __init__(self, subj, obj, label=None, weight=1, sign=None, color=None, fontcolor=None, **attrs):
         self.subj = subj
         self.obj = obj
-        self.attrs = {}
+        self.attrs = attrs
         self.style = {}
         self.weight = weight
         self.label = label
         self.sign = sign
         self.color = color
+        self.fontcolor = fontcolor
     def __str__(self):
         return "[Edge %s-%s]" % (self.subj.id, self.obj.id)
 
@@ -129,6 +130,7 @@ class DotTheme(object):
         self.base = base
         self.green = green
         self.arrows = arrows
+        self.edgesize = edgesize
     def getEdgeDot(self, edge, graph, subgraph):
         style = self.getEdgeStyle(edge)
         attrs = dict(edge.attrs)
@@ -136,7 +138,11 @@ class DotTheme(object):
             hsb = edge.color
         else:
             hsb = self.getEdgeColor(edge, graph)
-        if hsb: attrs['color'] = "%1.4f,%1.4f,%1.4f" % hsb
+        if hsb:
+            if isinstance(hsb, tuple): hsb = "%1.4f,%1.4f,%1.4f" % hsb
+            attrs['color'] = hsb
+        if edge.fontcolor is not None:
+            attrs['fontcolor'] = edge.fontcolor
         w = self.getEdgeWidth(edge, graph)
         if w: style['setlinewidth'] = "%1.3f" % w
         l = self.getEdgeLabel(edge, graph)
@@ -180,8 +186,8 @@ class DotTheme(object):
         s = self.getNodeShape(node, graph)
         if s: attrs['shape'] = s
         attrs['label'] = node.id if (node.label is None) else node.label
+        attrs['label'] = attrs['label'].replace('"', '\\"')
         a = dotattrs(attrs, style)
-        print attrs
         return '%s [%s];' % (self.getNodeID(node, graph, subgraph), a)
     def getNodeID(self, node, graph, subgraph=None):
         if subgraph:
@@ -217,7 +223,7 @@ class DotTheme(object):
         if self.edgesize: a["fontsize"] = self.edgesize
         return a
     def getNodeDefaultAttrs(self, graph):
-        a = dict(fontname=self.nodefont,shape=self.shape)
+        a = dict(fontname=self.nodefont,shape=self.shape,fontsize=self.fontsize)
         return a
         
 class BWDotTheme(DotTheme):
