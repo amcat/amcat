@@ -23,6 +23,12 @@ class TestSequenceFunctions(unittest.TestCase):
         m = re.search(pattern, nt, re.M)
         self.assertTrue(m, "Graph did not match pattern {pattern!r}:\n{nt}".format(**locals()))
 
+    def test_query(self):
+        result = self.soh.query("SELECT ?x ?z WHERE {?x ?y ?z}")
+        self.assertEqual(list(result), [['_:b0', 'Hello World']])
+    
+class Stop:
+        
     def test_add_triples_rdf(self):
         """Can we add rdf triples from an rdflib graph"""
         g = rdflib.Graph()
@@ -47,6 +53,7 @@ class TestSequenceFunctions(unittest.TestCase):
         g = self.soh.get_triples()
         self.assertEqual(len(g), 2)
         self.assertGraphContains(g, r'^_:\w+ <http://example.org/#istalking> "True" .')
+
 
 
 if __name__ == '__main__':

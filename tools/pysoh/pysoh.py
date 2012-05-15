@@ -1,8 +1,12 @@
 import requests
 import logging
 import rdflib
+import json
+import csv
 
 log = logging.getLogger(__name__)
+
+# TODO: query and update use http form instead of REST, what am I doing wrong?
 
 class SOHServer(object):
     def __init__(self, url):
@@ -32,6 +36,15 @@ class SOHServer(object):
         url = "{self.url}/update".format(**locals())
         r = requests.post(url, data=dict(update=sparql))
         if r.status_code != 200:
-            print r.status_code
             raise Exception(r.text)
+
+    def query(self, sparql, format="csv", parse=True):
+        url = "{self.url}/query?default".format(**locals())
+        r = requests.post(url, data=dict(query=sparql, output=format))
+        if r.status_code != 200:
+            raise Exception(r.text)
+        if parse:
+            return csv.reader(r.text.strip().split("\n")[1:])
+        else:
+            return r.text
         
