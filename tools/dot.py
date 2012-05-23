@@ -118,7 +118,7 @@ class Graph(object):
 class DotTheme(object):
     def __init__(self, edgelabels=True, shape="ellipse", isolated=False,
                  edgefont="Helvetica", nodefont="Helvetica",header="", scale=1, base=0, green=False,
-                 arrows=True, edgesize=None):
+                 arrows=True, edgesize=None, fontsize=12):
         self.edgelabels = edgelabels
         self.shape = shape
         self.isolated=  isolated
@@ -131,6 +131,7 @@ class DotTheme(object):
         self.green = green
         self.arrows = arrows
         self.edgesize = edgesize
+        self.fontsize = fontsize
     def getEdgeDot(self, edge, graph, subgraph):
         style = self.getEdgeStyle(edge)
         attrs = dict(edge.attrs)
