@@ -1,19 +1,27 @@
 import unittest
 import re
 import rdflib
+import os
 
 from fuseki import Fuseki
+from pysoh import SOHServer
 
 TEST_PORT = 9876
 
 FIXTURE = '''@prefix : <http://example.org/#> .
              []   :says  "Hello World"'''
 
-class TestSequenceFunctions(unittest.TestCase):
+class TestSOH(unittest.TestCase):
 
     def setUp(self):
-        self.soh = Fuseki(port=TEST_PORT)
-        self.soh.add_triples(FIXTURE)
+        soh_port = os.environ.get('SOH_TEST_SERVER')
+        if soh_port:
+            self.soh = SOHServer(soh_port)
+        else:
+            self.soh = Fuseki(port=TEST_PORT)
+        self.soh.prefixes[""] = "http://example.org/#"
+        self.soh.add_triples(FIXTURE, clear=True)
+
 
     def tearDown(self):
         del self.soh
@@ -24,11 +32,9 @@ class TestSequenceFunctions(unittest.TestCase):
         self.assertTrue(m, "Graph did not match pattern {pattern!r}:\n{nt}".format(**locals()))
 
     def test_query(self):
-        result = self.soh.query("SELECT ?x ?z WHERE {?x ?y ?z}")
+        result = self.soh.do_query("SELECT ?x ?z WHERE {?x ?y ?z}")
         self.assertEqual(list(result), [['_:b0', 'Hello World']])
-    
-class Stop:
-        
+
     def test_add_triples_rdf(self):
         """Can we add rdf triples from an rdflib graph"""
         g = rdflib.Graph()
@@ -45,11 +51,18 @@ class Stop:
         self.assertEqual(len(g), 1)
         self.assertGraphContains(g, r'^_:\w+ <http://example.org/#says> "Hello World" .')
 
-    def test_update(self):
+    def test_do_update(self):
         """Can we update triples?"""
-        self.soh.update('''PREFIX : <http://example.org/#>
+        self.soh.do_update('''PREFIX : <http://example.org/#>
                            INSERT { ?x :istalking "True" }
                            WHERE  { ?x :says ?y}''')
+        g = self.soh.get_triples()
+        self.assertEqual(len(g), 2)
+        self.assertGraphContains(g, r'^_:\w+ <http://example.org/#istalking> "True" .')
+
+    def test_update(self):
+        """Can we update triples with the higher level update command?"""
+        self.soh.update("?x :says ?y", "?x :istalking 'True'")
         g = self.soh.get_triples()
         self.assertEqual(len(g), 2)
         self.assertGraphContains(g, r'^_:\w+ <http://example.org/#istalking> "True" .')

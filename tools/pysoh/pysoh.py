@@ -9,8 +9,9 @@ log = logging.getLogger(__name__)
 # TODO: query and update use http form instead of REST, what am I doing wrong?
 
 class SOHServer(object):
-    def __init__(self, url):
+    def __init__(self, url, prefixes=None):
         self.url = url
+        self.prefixes = {} if prefixes is None else prefixes
 
     def get_triples(self, format="text/turtle", parse=True):
         url = "{self.url}/data?default".format(**locals())
@@ -32,13 +33,13 @@ class SOHServer(object):
         if r.status_code != 204:
             raise Exception(r.text)
 
-    def update(self, sparql):
+    def do_update(self, sparql):
         url = "{self.url}/update".format(**locals())
         r = requests.post(url, data=dict(update=sparql))
         if r.status_code != 200:
             raise Exception(r.text)
 
-    def query(self, sparql, format="csv", parse=True):
+    def do_query(self, sparql, format="csv", parse=True):
         url = "{self.url}/query?default".format(**locals())
         r = requests.post(url, data=dict(query=sparql, output=format))
         if r.status_code != 200:
@@ -47,4 +48,31 @@ class SOHServer(object):
             return csv.reader(r.text.strip().split("\n")[1:])
         else:
             return r.text
-        
+
+    def _prefix_string(self, prefixes=None):
+        if prefixes is None: prefixes = self.prefixes
+        if isinstance(prefixes, dict):
+            prefixes = "\n".join("PREFIX {k}: <{v}>".format(**locals())
+                                 for (k,v) in prefixes.iteritems())
+        return prefixes
+
+    def update(self, where, insert="", delete="", prefixes=None):
+        prefixes = self._prefix_string(prefixes)
+        sparql = """{prefixes}
+                    DELETE {{ {delete} }}
+                    INSERT {{ {insert} }}
+                    WHERE {{ {where} }}
+                 """.format(**locals())
+        self.do_update(sparql)
+
+    def query(self, select, where, orderby=None, prefixes=None):
+        prefixes=self._prefix_string(prefixes)
+        if isinstance(select, (list, tuple)): select = " ".join(select)
+        sparql = """{prefixes}
+                    SELECT {select}
+                    WHERE {{ {where} }}
+                 """.format(**locals())
+        if orderby:
+            if isinstance(orderby, (list, tuple)): orderby = " ".join(orderby)
+            sparql += "ORDER BY {orderby}".format(**locals())
+        return self.do_query(sparql, format="csv", parse=True)

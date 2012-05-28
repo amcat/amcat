@@ -31,7 +31,6 @@ from amcat.scripts.script import Script
 from amcat.models import Analysis, AnalysisArticle
 
 class GetAnalysisArticles(Script):
-    """Add a project to the database."""
 
     output_type = None
     class options_form(forms.Form):
