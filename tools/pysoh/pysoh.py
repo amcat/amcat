@@ -1,7 +1,6 @@
 import requests
 import logging
 import rdflib
-import json
 import csv
 
 log = logging.getLogger(__name__)
@@ -12,10 +11,11 @@ class SOHServer(object):
     def __init__(self, url, prefixes=None):
         self.url = url
         self.prefixes = {} if prefixes is None else prefixes
+        self.session = requests.session()
 
     def get_triples(self, format="text/turtle", parse=True):
         url = "{self.url}/data?default".format(**locals())
-        r = requests.get(url, headers=dict(Accept=format))
+        r = self.session.get(url, headers=dict(Accept=format), prefetch=True)
         if r.status_code != 200:
             raise Exception(r.text)
         result = r.text
@@ -29,19 +29,20 @@ class SOHServer(object):
         url = "{self.url}/data?default".format(**locals())
         if isinstance(rdf, rdflib.Graph):
             rdf = rdf.serialize(format="turtle")
-        r = requests.request(method, url, headers={'Content-Type' : format}, data=rdf)
+        r = self.session.request(method, url, headers={'Content-Type' : format}, data=rdf, prefetch=True)
         if r.status_code != 204:
             raise Exception(r.text)
 
     def do_update(self, sparql):
         url = "{self.url}/update".format(**locals())
-        r = requests.post(url, data=dict(update=sparql))
+        #log.debug("Updating {url}:\n{sparql}".format(**locals()))
+        r = self.session.post(url, data=dict(update=sparql), prefetch=True)
         if r.status_code != 200:
             raise Exception(r.text)
 
     def do_query(self, sparql, format="csv", parse=True):
         url = "{self.url}/query?default".format(**locals())
-        r = requests.post(url, data=dict(query=sparql, output=format))
+        r = self.session.post(url, data=dict(query=sparql, output=format), prefetch=True)
         if r.status_code != 200:
             raise Exception(r.text)
         if parse:

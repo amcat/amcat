@@ -22,16 +22,21 @@ Extract semantic roles from syntax by transforming trees with SPARQL statements
 """
 
 import logging
+from collections import namedtuple
 
-from rdflib import Graph, Namespace, Literal, RDFS, RDF
+from rdflib import Graph, Namespace, Literal
 
-from amcat.models import Triple, Token
+from amcat.models import Triple as TripleModel, Token
 from amcat.tools import dot
 
 log = logging.getLogger(__name__)
 
 AMCAT = "http://amcat.vu.nl/amcat3/"
 NS_AMCAT = Namespace(AMCAT)
+
+VIS_IGNORE_PROPERTIES = "position", "label"
+
+Triple = namedtuple("Triple", ["subject", "predicate","object"])
 
 def _id(obj):
     return obj if isinstance(obj, int) else obj.id
@@ -63,10 +68,10 @@ class TreeTransformer(object):
         Get the raw RDF subject, predicate, object triples representing the given analysed sentence
         """
         tokenset = set()
-        for t in (Triple.objects.filter(child__sentence = analysis_sentence_id)
+        for t in (TripleModel.objects.filter(child__sentence = analysis_sentence_id)
                   .select_related("child", "child__word", "parent", "parent__word", "relation")):
             for pred in _rel_uri(t.relation), NS_AMCAT["rel"]:
-                yield (_token_uri(t.child), pred, _token_uri(t.parent))
+                yield _token_uri(t.child), pred, _token_uri(t.parent)
             tokenset |= set([t.child_id, t.parent_id])
 
         for t in Token.objects.filter(pk__in = tokenset).select_related("word", "word__lemma"):
@@ -101,7 +106,7 @@ class TreeTransformer(object):
                 if ignore_rel and pred == "rel": continue
                 if pred == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": continue
                 parent = nodes.setdefault(o, Node())
-                triples.append((child, pred, parent))
+                triples.append(Triple(child, pred, parent))
         # make sure every node has a position and label
         for i, n in enumerate(nodes.values()):
             set_attribute_if_missing(n, "position", -i)
@@ -121,32 +126,39 @@ class TreeTransformer(object):
 def set_attribute_if_missing(obj, attr, value):
     if not hasattr(obj, attr):
         setattr(obj, attr, value)
-    
-def visualise_triples(triples, triple_args_function=None):
+
+def iterate_nodes(triples):
+    seen = set()
+    for triple in triples:
+        for node in (triple.subject, triple.object):
+            if node in seen: continue
+            yield node
+            seen.add(node)
+
+def visualise_triples(triples, triple_args_function=None,
+                      ignore_properties=VIS_IGNORE_PROPERTIES):
     """
-    Visualise a triples representation of triples such as retrieved from
+    Visualise a triples representation of Triples such as retrieved from
     TreeTransformer.get_triples
-    @param triple_args_function: a function of triple to dict that gives
+    @param triple_args_function: a function of Triple to dict that gives
                                  optional arguments for a triple
     """
     g = dot.Graph()
     nodes = {} # Node -> dot.Node
     # create nodes
-    for s,p,o in triples:
-        for n in (s, o):
-            if n in nodes: continue
-            label = "%s: %s" % (n.position, n.label)
-            for k,v in n.__dict__.iteritems():
-                if k not in ("position","label"):
-                    label += "\\n%s: %s" % (k, v)
-            node = dot.Node(id="node_%s"%n.position, label=label)
-            g.addNode(node)
-            nodes[n] = node
+    for n in iterate_nodes(triples):
+        label = "%s: %s" % (n.position, n.label)
+        for k,v in n.__dict__.iteritems():
+            if k not in ignore_properties:
+                label += "\\n%s: %s" % (k, v)
+        node = dot.Node(id="node_%s"%n.position, label=label)
+        g.addNode(node)
+        nodes[n] = node
     # create edges
-    for s, p, o in triples:
-        kargs = triple_args_function(s, p, o) if  triple_args_function else {}
-        if 'label' not in kargs: kargs['label'] = p
-        g.addEdge(nodes[s], nodes[o], **kargs)
+    for triple in triples:
+        kargs = triple_args_function(triple) if  triple_args_function else {}
+        if 'label' not in kargs: kargs['label'] = triple.predicate
+        g.addEdge(nodes[triple.subject], nodes[triple.object], **kargs)
     # some theme options
     g.theme.graphattrs["rankdir"] = "BT"
     g.theme.shape = "rect"
@@ -173,8 +185,9 @@ class TestGrammar(amcattest.PolicyTestCase):
         rel = Relation.objects.create(label="su")
         Triple.objects.create(parent=t1, child=t2, relation=rel)
 
-        from amcat.tools.pysoh import Fuseki, SOHServer
+        #from amcat.tools.pysoh import Fuseki, SOHServer
         #soh = Fuseki(port=19876)
+        from amcat.tools.pysoh import SOHServer
         soh = SOHServer(url="http://localhost:3030/x")
 
         tt = TreeTransformer(soh)
