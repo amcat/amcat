@@ -71,6 +71,7 @@ class Alpino(AnalysisScript):
 
     def _sanitize(self, input):
         input = toolkit.stripAccents(input, latin1=True)
+        input = input.replace("\n", " ")# alpino will stop parsing on line break
         input = input.replace("|", "-") # | is field separator and we don't care anyway
         input = input.encode('latin-1', 'ignore').decode('latin-1')
         return input
@@ -238,6 +239,10 @@ class TestAlpino(amcattest.PolicyTestCase):
                 TripleValues(0, 2, 1, "obj1"),
                 TripleValues(0, 3, 1, "--"),})
 
+    def test_linebreak(self):
+        tokens, triples = Alpino(None).process_sentences(enumerate([u"ik ga\nnaar huis"]))
+        self.assertEqual(len(tokens), 4, "Exptected 4 tokens, got %r" % tokens)
+        
     def test_unicode(self):
         def token_attr(tokens, position, attr="lemma"):
             return getattr([t for t in tokens if t.position==position][0], attr)

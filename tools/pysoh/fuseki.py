@@ -7,15 +7,17 @@ from pysoh import SOHServer
 
 log = logging.getLogger(__name__)
 
+FUSEKI_HOME="/home/amcat/resources/fuseki"
+
 class Fuseki(SOHServer):
     def __init__(self, fuseki_home=None, port=3030, dataset="/data"):
         if fuseki_home is None:
-            fuseki_home = os.environ['FUSEKI_HOME']
+            fuseki_home = os.environ.get('FUSEKI_HOME', FUSEKI_HOME)
 
         cmd = ["/bin/bash", "fuseki-server", "--port", str(port), "--mem", "--update", dataset]
         log.debug("Starting Fuseki server from {fuseki_home} with {cmd}".format(**locals()))
         self.fuseki_process = subprocess.Popen(cmd, cwd=fuseki_home,
-                                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         out = []
         while True:
             line = self.fuseki_process.stdout.readline()
@@ -32,7 +34,7 @@ class Fuseki(SOHServer):
         log.info("Fuseki running at {url}".format(**locals()))
 
         super(Fuseki, self).__init__(url=url)
-        
+
     def __del__(self):
         try:
             self.fuseki_process.terminate()

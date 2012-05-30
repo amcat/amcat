@@ -21,6 +21,7 @@
 """
 Script that updates the preprocessing status of a given article set
 """
+import random
 from django.db import transaction
 from django import forms
 
@@ -30,17 +31,24 @@ from amcat.nlp.preprocessing import set_preprocessing_actions
 
 import logging; log = logging.getLogger(__name__)
 
-class PreprocessingAction(Script):
+def drawSample(aids, nsample):
+    random.shuffle(aids)
+    return aids[:nsample]
 
+class PreprocessingAction(Script):
     class options_form(forms.Form):
         sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
+        nsample = forms.IntegerField(required=False)
     
     @transaction.commit_on_success
     def run(self, _input=None):
         for article_set in self.options["sets"]:
             aids = [aid for (aid,) in article_set.articles.values_list("id")]
+            if self.options["nsample"]:
+                aids = drawSample(aids, self.options["nsample"])
             log.info("Updating preprocessing status for {n} articles in set {article_set}"
                      .format(n=len(aids), **locals()))
+            print("ASSIGNING %s ARTICLES FROM ARTICLESET %s (%s)" % (len(aids), article_set.id, article_set))
             set_preprocessing_actions(aids)
 
 if __name__ == '__main__':

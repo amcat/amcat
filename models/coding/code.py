@@ -87,7 +87,7 @@ class Code(AmcatModel):
         if type(language) != int: language = language.id
         return language in self._labelcache
             
-    def get_label(self, *languages):
+    def get_label(self, *languages, **kargs):
         """
         @param lan: language to get label for
         @type lan: Language object or int
@@ -99,11 +99,12 @@ class Code(AmcatModel):
                 return self._get_label(language=lan)
             except Label.DoesNotExist:
                 pass
-        #fallback
-        try:
-            return self.labels.all().order_by('language__id')[0].label
-        except IndexError:
-            pass
+        fallback = kargs.get("fallback", True)
+        if fallback:
+            try:
+                return self.labels.all().order_by('language__id')[0].label
+            except IndexError:
+                pass
 
     def add_label(self, language, label):
         """Add the label in the given language"""
