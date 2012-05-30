@@ -27,7 +27,7 @@ import logging; log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.models.user import User, current_user
+from amcat.models.user import User
 from amcat.models.project import Project
 from amcat.models.authorisation import Role, ProjectRole
 
@@ -43,7 +43,6 @@ class AddProjectForm(forms.ModelForm):
     @classmethod
     def get_empty(cls, user=None, **_options):
         obj = cls()
-        if user is None: user = current_user()
         obj.fields['owner'].initial = user.id
         return obj
 
@@ -87,7 +86,6 @@ class TestAddProject(amcattest.PolicyTestCase):
         self.assertEqual(p.owner, u)
 
     def test_get_form(self):
-        from amcat.models.user import current_user
         u = amcattest.create_test_user()
         f = AddProject.get_empty_form()
         self.assertEqual(f.fields['owner'].initial, current_user().id)

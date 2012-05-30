@@ -40,8 +40,7 @@ class AddUserForm(forms.ModelForm):
 
     class Meta:
         model = User
-        fields = ('username', 'fullname', 'email', 'affiliation',
-                  'language', 'role')
+        fields = ('username', 'first_name', 'last_name', 'email')
 
 class AddUser(Script):
     """Add a user to the database. A new DB user will be created,

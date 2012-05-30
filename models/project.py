@@ -20,6 +20,7 @@
 """ORM Module representing projects"""
 
 from __future__ import unicode_literals, print_function, absolute_import
+from django.contrib.auth.models import User
 
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codebook import Codebook
@@ -27,7 +28,6 @@ from amcat.models.coding.codingschema import CodingSchema
 
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle
-from amcat.models.user import current_user
 
 from django.db import models
 from django.db.models import Q
@@ -51,9 +51,9 @@ class Project(AmcatModel):
     description = models.CharField(max_length=200, null=True)
 
     insert_date = models.DateTimeField(db_column='insertdate', auto_now_add=True)
-    owner = models.ForeignKey("amcat.User", db_column='owner_id')
+    owner = models.ForeignKey(User, db_column='owner_id')
 
-    insert_user = models.ForeignKey("amcat.User", db_column='insertuser_id',
+    insert_user = models.ForeignKey(User, db_column='insertuser_id',
                                     related_name='inserted_project',
                                     editable=False)
 
@@ -102,8 +102,6 @@ class Project(AmcatModel):
         app_label = 'amcat'
 
     def save(self, *args, **kargs):
-        if self.insert_user_id is None:
-            self.insert_user = current_user()
         super(Project, self).save(*args, **kargs)
 
 ###########################################################################

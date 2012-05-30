@@ -26,6 +26,7 @@ check(db, privilege/str/int) checks whether user has privilege
 getPrivilege(db, str or int) returns Privilege object
 
 """
+from django.contrib.auth.models import User
 
 from django.db import models
 from amcat.tools.model import AmcatModel
@@ -64,7 +65,7 @@ def check(user, privilege, project=None):
 
         try:
             role = (Role.objects.get(projectrole__user=user, projectrole__project=project)
-                    if privilege.role.projectlevel else user.role)
+                    if privilege.role.projectlevel else user.get_profile().role)
         except Role.DoesNotExist:
             # User has no role on this project!
             raise AccessDenied(user, privilege, project)
@@ -73,8 +74,17 @@ def check(user, privilege, project=None):
         if role.id < nrole.id:
             raise AccessDenied(user, privilege, project)
 
+class RoleManager(models.Manager):
+    """
+    Implements a natural key for Role-objects. This is needed for MySQL, which does not
+    support 'forced' values of AutoFields.
+    """
+    def get_by_natural_key(self, label, projectlevel):
+        return self.get(label=label, projectlevel=projectlevel)
 
 class Role(AmcatModel):
+    objects = RoleManager()
+
     id = models.AutoField(primary_key=True, db_column='role_id')
     label = models.CharField(max_length=50)
     projectlevel = models.BooleanField()
@@ -82,10 +92,11 @@ class Role(AmcatModel):
     class Meta():
         db_table = 'roles'
         app_label = 'amcat'
+        unique_together = ("label", "projectlevel")
 
 class ProjectRole(AmcatModel):
     project = models.ForeignKey("amcat.Project", db_index=True)
-    user = models.ForeignKey("amcat.User", db_index=True)
+    user = models.ForeignKey(User, db_index=True)
     role = models.ForeignKey(Role)
 
     def __unicode__(self):

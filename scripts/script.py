@@ -30,7 +30,6 @@ from django import forms
 from django.http import QueryDict
 from django.utils.datastructures import MergeDict
 from amcat.forms import validate
-from amcat.models.user import current_user
 from amcat.models.plugin import Plugin, PluginType
 
 
