@@ -56,11 +56,11 @@ class Article(AmcatModel):
     date = models.DateTimeField(db_index=True)
     section = models.CharField(blank=True, null=True, max_length=500)
     pagenr = models.IntegerField(blank=True, null=True)
-    headline = models.TextField(db_index=True)
+    headline = models.TextField()
     byline = models.TextField(blank=True, null=True)
     length = models.IntegerField()
     metastring = models.TextField(null=True)
-    url = models.URLField(null=True, blank=True, db_index=True, max_length=1000)
+    url = models.URLField(null=True, blank=True, db_index=True, max_length=750)
     externalid = models.IntegerField(blank=True, null=True)
     author = models.TextField(blank=True, null=True, max_length=100)
 

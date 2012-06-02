@@ -252,6 +252,13 @@
     }
   },
   {
+	 "pk":0,
+	 "model" : "amcat.affiliation",
+	 "fields":{
+		"name" : "?" 
+	 }
+  },
+  {
     "pk" : 1, 
     "model": "amcat.codingschemafieldtype",
     "fields" : {

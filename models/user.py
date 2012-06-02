@@ -58,11 +58,9 @@ class UserProfile(AmcatModel):
     """
     user = models.OneToOneField(User)
 
-    affiliation = models.ForeignKey(Affiliation, default=Affiliation.objects.get(id=1))
-    language = models.ForeignKey(Language, default=Language.objects.get(id=1))
-    role = models.ForeignKey(Role, default=Role.objects.get(
-        label="reader", projectlevel=False
-    ))
+    affiliation = models.ForeignKey(Affiliation, default=0)
+    language = models.ForeignKey(Language, default=1)
+    role = models.ForeignKey(Role, default=0)
 
     class Meta():
         db_table = 'auth_user_profile'
