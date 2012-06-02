@@ -101,6 +101,8 @@ class TreeTransformer(object):
             child = nodes.setdefault(s, Node())
             pred = str(p).replace(AMCAT, "")
             if isinstance(o, Literal):
+                if hasattr(child, pred):
+                    o = getattr(child, pred) + "; " + o
                 setattr(child, pred, str(o))
             else:
                 if ignore_rel and pred == "rel": continue
