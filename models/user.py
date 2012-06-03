@@ -24,8 +24,10 @@ from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from amcat.models.language import Language
 from amcat.models.authorisation import Role
+from amcat.models import authorisation as auth
 
 import logging;
+
 log = logging.getLogger(__name__)
 
 import string, random
@@ -61,6 +63,21 @@ class UserProfile(AmcatModel):
     affiliation = models.ForeignKey(Affiliation, default=0)
     language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
+
+
+    def haspriv(self, privilege, onproject=None):
+        """
+        @type privilege: Privilege object, id, or str
+        @param privilege: The requested privilege
+        @param onproject: The project the privilege is requested on,
+          or None (ignored) for global privileges
+
+        @return: True or False
+        """
+        try: auth.check(self.user, privilege, onproject)
+        except auth.AccessDenied:
+            return False
+        return True
 
     class Meta():
         db_table = 'auth_user_profile'
