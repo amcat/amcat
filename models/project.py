@@ -32,6 +32,7 @@ from amcat.models.articleset import ArticleSetArticle
 from django.db import models
 from django.db.models import Q
 
+
 ROLEID_PROJECT_READER = 11
 
 class Project(AmcatModel):
@@ -80,7 +81,7 @@ class Project(AmcatModel):
         return Codebook.objects.filter(Q(projects_set=self)|Q(project=self))
     
     def can_read(self, user):
-        return (self in user.projects or user.haspriv('view_all_projects'))
+        return self in user.get_profile().projects or user.haspriv('view_all_projects')
 
     @property
     def users(self):
@@ -102,6 +103,15 @@ class Project(AmcatModel):
         app_label = 'amcat'
 
     def save(self, *args, **kargs):
+        if self.insert_user_id is None:
+            # Import at top causes a circular import, unfortunately
+            from amcatnavigator.utils.auth import get_request
+
+            # No insert user is set, try to retrieve it
+            req = get_request()
+            if req is not None:
+                self.insert_user_id = req.user.id
+
         super(Project, self).save(*args, **kargs)
 
 ###########################################################################

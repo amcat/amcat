@@ -25,6 +25,7 @@ from django.db.models.signals import post_save
 from amcat.models.language import Language
 from amcat.models.authorisation import Role
 from amcat.models import authorisation as auth
+from amcat.models.project import Project
 
 import logging;
 
@@ -64,6 +65,9 @@ class UserProfile(AmcatModel):
     language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
 
+    @property
+    def projects(self):
+        return Project.objects.filter(projectrole__user=self.user)
 
     def haspriv(self, privilege, onproject=None):
         """
