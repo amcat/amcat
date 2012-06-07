@@ -214,7 +214,7 @@ class TestSolr(Solr):
     def _check_test_solr(self):
         cmd = 'ps aux | grep "java -Djetty.port={self.port}"'.format(**locals())
         ps = subprocess.check_output(cmd, shell=True)
-        if '-Dsolr.data' in ps:
+        if '-Dsolr.data' in ps: # don't check string occurring in ps line
             raise Exception("Test solr already running on port {self.port}!".format(**locals()))
 
     def start(self):
@@ -357,8 +357,8 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
 
     def test_highlight(self):
         with TestSolr() as solr:
-            blabla  = "bla bla bla bla bla bla \n" *5
-            text = blabla + "bla een piet is een piet piet bla bla bla ble" + blabla
+            blabla  = "bla bla bla bla bla bla \n" *50
+            text = blabla + "bla een piet is een piet piet bla bla bla ble" + blablao
             a = amcattest.create_test_article(text=text, headline='bla piet')
             solr.add_articles([a])
             solr.query_highlight("piet")

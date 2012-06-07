@@ -87,7 +87,7 @@ class UserProfile(AmcatModel):
         db_table = 'auth_user_profile'
         app_label = "amcat"
 
-def create_user(username, first_name, last_name, email, affiliation, language, role=None,
+def create_user(username, first_name, last_name, email, affiliation, language, role,
                 password=None):
         """
         Create a user with the given attributes, creating both the db user and
