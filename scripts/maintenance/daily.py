@@ -31,7 +31,6 @@ log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.scripts.tools import cli
 
 from amcat.scraping.controller import scrape_logged
 from amcat.models.scraper import get_scrapers
@@ -67,7 +66,7 @@ def send_email(count, messages):
     counts_ascii = t.output(useunicode=False, box=False)
     counts_html = table2html(t, printRowNames=False)
     succesful = len([1 for (s,n2) in count.items() if n2>0])
-    total = len(counts.items())
+    total = len(count.items())
 
     datestr = toolkit.writeDate(date.today())
 
@@ -89,14 +88,10 @@ class DailyScript(Script):
     def run(self, _input):
         date = self.options['date']
 
-        #amcatlogging.debug_module("amcat.scraping.scraper")
-        #amcatlogging.debug_module("amcat.scraping.controller")
-        
         scrapers = list(get_scrapers(date=date))
 
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
-        
         count, messages =  scrape_logged(SimpleController(), scrapers)
         
         log.info("Sending email...")
@@ -109,5 +104,8 @@ if __name__ == '__main__':
 
     #scrapers = list(get_scrapers(date="2012-01-01", project=3))
     #create_email({s : 101 for s in scrapers}, "bla bla bla")
-            
+    from amcat.tools import amcatlogging
+    from amcat.scripts.tools import cli
+    amcatlogging.info_module("amcat.scraping.scraper")
+    amcatlogging.debug_module("amcat.scraping.controller")        
     cli.run_cli(DailyScript)
