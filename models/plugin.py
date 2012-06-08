@@ -64,7 +64,7 @@ class Plugin(AmcatModel):
 
     @classmethod
     def can_create(cls, user):
-        return user.haspriv('add_plugins')
+        return user.get_profile().haspriv('add_plugins')
 
 
 class PluginType(AmcatModel):

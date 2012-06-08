@@ -108,10 +108,10 @@ class ProjectRole(AmcatModel):
         app_label = 'amcat'
 
     def can_update(self, user):
-        return user.haspriv('manage_project_users', self.project)
+        return user.get_profile().haspriv('manage_project_users', self.project)
 
     def can_delete(self, user):
-        return user.haspriv('manage_project_users', self.project)
+        return user.get_profile().haspriv('manage_project_users', self.project)
 
 class Privilege(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='privilege_id')
