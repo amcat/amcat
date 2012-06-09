@@ -1202,7 +1202,7 @@ def execute(cmd, inputbytes=None, outonly=False):
     out, err = p.communicate(inputbytes)
     if outonly:
         if err.strip(): 
-            raise Exception("Error from {cmd}:{err}".format(**locals()))
+            raise Exception("Error from {cmd}:{err!r}".format(**locals()))
         return out
     else:
         return out, err
