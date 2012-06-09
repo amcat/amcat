@@ -252,7 +252,7 @@
     }
   },
   {
-	 "pk":0,
+	 "pk":1,
 	 "model" : "amcat.affiliation",
 	 "fields":{
 		"name" : "?" 

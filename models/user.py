@@ -61,7 +61,7 @@ class UserProfile(AmcatModel):
     """
     user = models.OneToOneField(User)
 
-    affiliation = models.ForeignKey(Affiliation, default=0)
+    affiliation = models.ForeignKey(Affiliation, default=1)
     language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
 

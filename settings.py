@@ -31,9 +31,10 @@ except ImportError:
 DEBUG = True
 
 INSTALLED_APPS = (
+    'amcat',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    'amcat', )
+    )
 AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 
 # Databases / Caches are defined in ~/.amcatrc3. Example file:
