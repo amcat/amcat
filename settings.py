@@ -37,6 +37,9 @@ INSTALLED_APPS = (
     )
 AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+NOSE_ARGS = ['--with-progressive']
+
 # Databases / Caches are defined in ~/.amcatrc3. Example file:
 #
 # [db-default]

@@ -79,7 +79,7 @@ class RemoteAnalysis(object):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.setup()
-    amcatlogging.info_module("amcat.tools.rest")
+    amcatlogging.debug_module("amcat.tools.rest")
     #amcatlogging.debug_module()
 
     import argparse
