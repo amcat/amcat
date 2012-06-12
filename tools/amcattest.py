@@ -261,11 +261,11 @@ class PolicyTestCase(TestCase):
         clear_codebook_cache()
 
         # Make sure that current_user() exists
-        try:
-            from amcat.models.user import current_user, current_username, User
-            current_user()
-        except User.DoesNotExist:
-            create_test_user(username = current_username())
+        #try:
+        #    from amcat.models.user import current_user, current_username, User
+        #    current_user()
+        #except User.DoesNotExist:
+        #    create_test_user(username = current_username())
         
         super(PolicyTestCase, self).setUp()
     

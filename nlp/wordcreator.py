@@ -26,6 +26,7 @@ from amcat.models.token import Token, Triple
 from amcat.models.word import Word
 from amcat.tools import toolkit
 
+
 def create_objects(cls, values, key_attrs):
     """
     Create and/or retrieve multiple instances of cls (Model) objects from a sequence of objects
@@ -38,6 +39,7 @@ def create_objects(cls, values, key_attrs):
     def key(obj):
         """create a tuple (obj.a, obj.b) to use as dict key (assuming key_attrs='a','b')"""
         return tuple(getattr(obj, attr) for attr in key_attrs)
+    
     # first create a cache containing the objects with any of the possible key values
     query = cls.objects.all()
     for attr in key_attrs:
@@ -72,7 +74,8 @@ def create_words(tokenvalues):
 
 def create_pos(tokenvalues):
     """Create a dict of {major, minor, pos_char : Pos} from the given tokenvalues"""
-    return dict(((p.major, p.minor, p.pos), p) for p in create_objects(Pos, tokenvalues, ["major","minor","pos"]))
+    return dict(((p.major, p.minor, p.pos), p) for p in
+                create_objects(Pos, tokenvalues, ["major","minor","pos"]))
 
 _RelationValues = collections.namedtuple("RelationValues", ["label"])
 def create_relations(triplevalues):
@@ -82,6 +85,7 @@ def create_relations(triplevalues):
 
 def create_tokens(tokenvalues):
     """Create a list of new Token objects from a language and tokenvalues sequence"""
+    tokenvalues = [truncate_tokenvalue(tv) for tv in tokenvalues]
     words = create_words(tokenvalues)
     poss = create_pos(tokenvalues)
     sentences = dict((s.id, s) for s in
@@ -95,12 +99,40 @@ def create_triples(tokenvalues, triplevalues=None):
     """Create the requested tokens and (optionally) triples"""
     tokens = dict(((t.sentence_id, t.position), t) for t in create_tokens(tokenvalues))
     if triplevalues:
+        triplevalues = [truncate_triplevalue(tv) for tv in triplevalues]
         rels = create_relations(triplevalues)
         for triple in triplevalues:
             Triple.objects.create(relation=rels[triple.relation],
                 parent=tokens[triple.analysis_sentence, triple.parent],
                 child=tokens[triple.analysis_sentence, triple.child])
 
+TOKEN_MAXLENGTHS = dict(
+    major = 100,
+    minor = 500,
+    word = 500,
+    lemma = 500)
+
+def truncate_tokenvalue(tv):
+    if len(tv.pos) != 1: raise Exception("POS must be a single character")
+    update = {}
+    for attr, maxlength in TOKEN_MAXLENGTHS.items():
+        val = getattr(tv, attr) 
+        if len(val) > maxlength:
+            update[attr] = val[:maxlength]
+    if update:
+        return tv._replace(**update)
+    else:
+        return tv
+
+TRIPLE_MAXLENGTH_REL = 100
+    
+def truncate_triplevalue(tv):
+    if len(tv.relation) > TRIPLE_MAXLENGTH_REL:
+        return tv._replace(relation=tv.relation[:TRIPLE_MAXLENGTH_REL])
+    else:
+        return tv
+
+            
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -165,3 +197,30 @@ class TestWordCreator(amcattest.PolicyTestCase):
         self.assertEqual(tr.relation.label, t.relation)
         self.assertEqual(tr.child.word.word, "a")
 
+    def test_long_strings(self):
+        """Test whether overly long lemmata, words, and pos are truncated"""
+        from amcat.models.token import TokenValues, TripleValues
+
+        s = amcattest.create_test_analysis_sentence()   
+        longpos = TokenValues(s.id, 0, word="a", lemma="l", pos="pp", major="m", minor="m")
+        
+        self.assertRaises(Exception, list, create_tokens([longpos]))
+
+        tokens = [TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="major", minor="minor"),
+                  TokenValues(s.id, 1, word="a"*9999, lemma="l"*9999, pos="p",
+                              major="m"*9999, minor="m"*9999)]
+        triple = TripleValues(s.id, 0, 1, "x"*9999)
+        create_triples(tokens, [triple])
+        
+        # django validation for length
+        t, = Triple.objects.filter(parent__sentence=s)
+
+        t.full_clean()
+        t.relation.full_clean()
+        for token in (t.parent, t.child):
+            token.full_clean()
+            token.word.full_clean()
+            token.word.lemma.full_clean()
+            token.pos.full_clean()
+            
+           
