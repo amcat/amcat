@@ -117,7 +117,7 @@ def truncate_tokenvalue(tv):
     update = {}
     for attr, maxlength in TOKEN_MAXLENGTHS.items():
         val = getattr(tv, attr) 
-        if len(val) > maxlength:
+        if val is not None and len(val) > maxlength:
             update[attr] = val[:maxlength]
     if update:
         return tv._replace(**update)
@@ -206,11 +206,12 @@ class TestWordCreator(amcattest.PolicyTestCase):
         
         self.assertRaises(Exception, list, create_tokens([longpos]))
 
-        tokens = [TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="major", minor="minor"),
-                  TokenValues(s.id, 1, word="a"*9999, lemma="l"*9999, pos="p",
-                              major="m"*9999, minor="m"*9999)]
+        nonepos = TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="m", minor="m")
+
+        longvals = TokenValues(s.id, 1, word="a"*9999, lemma="l"*9999, pos="p",
+                               major="m"*9999, minor="m"*9999)
         triple = TripleValues(s.id, 0, 1, "x"*9999)
-        create_triples(tokens, [triple])
+        create_triples([nonepos, longvals], [triple])
         
         # django validation for length
         t, = Triple.objects.filter(parent__sentence=s)
