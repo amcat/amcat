@@ -30,8 +30,8 @@ class HTTPOpener(object):
     """Auxilliary class to help cookie-based opening and processing
     of web pages for scraping"""
     def __init__(self):
-        c = urllib2.HTTPCookieProcessor()
-        self.opener = urllib2.build_opener(c)
+        self.cookiejar = urllib2.HTTPCookieProcessor()
+        self.opener = urllib2.build_opener(self.cookiejar)
         self.opener.addheaders = HEADERS.items()
         
     def getdoc(self, url, encoding=None):
@@ -47,7 +47,7 @@ class HTTPOpener(object):
         log.info('Retrieving "%s"' % urllib.unquote(url))
         response = self.opener.open(url)
         try:
-            html_string = get_unicode(response, encoding)
+            html_string = get_unicode(self.response, encoding)
         except: # decoding failed, use lxml default
             return html.parse(response).getroot()
         else: # decoding succeeded, use fromstring
