@@ -222,7 +222,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
     def test_table_codings(self):
         """Is the codings table correct?"""
         ca = CodedArticle(self.an1)
-        t = get_table_sentence_codings_article(ca, ca.codingjob.coder.language)
+        t = get_table_sentence_codings_article(ca, ca.codingjob.coder.userprofile.language)
         self.assertIsNotNone(t)
         aslist = [tuple(r) for r in t]
         self.assertEqual(len(aslist), 2)
@@ -279,7 +279,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
             CodingValue.objects.create(coding=sa, field=self.intfield, intval=i)
         
         with list_queries() as l:
-            t = get_table_sentence_codings_article(ca, ca.codingjob.coder.language)
+            t = get_table_sentence_codings_article(ca, ca.codingjob.coder.userprofile.language)
             t.output() # force getting all values
 	#query_list_to_table(l, output=print, maxqlen=190)
         self.assertTrue(len(l) < 30, "Retrieving table used %i queries" % len(l))

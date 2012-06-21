@@ -63,13 +63,13 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
     @param stoplist: models whose children we don't care about
     @return: sequence of model classes
     """
-    models = set([models.get_model(applabel, modelname) for modelname in modelnames])
+    _models = set([models.get_model(applabel, modelname) for modelname in modelnames])
     stops = set([models.get_model(applabel, stop) for stop in stoplist])
     while True:
-        related = set(get_all_related(models - stops)) # seed from non-stop models
-        new = related - models
-        if not new: return models
-        models |= new
+        related = set(get_all_related(_models - stops)) # seed from non-stop models
+        new = related - _models
+        if not new: return _models
+        _models |= new
 
 
 def get_or_create(model_class, **attributes):

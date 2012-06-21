@@ -41,7 +41,6 @@ CMD = "ALPINO_HOME={alpino_home} {alpino_home}/bin/Alpino {alpino_options}"
 TOKENIZE = "{alpino_home}/Tokenization/tok"
 ALPINO_HOME="/home/amcat/resources/Alpino"
 ALPINO_OPTIONS = "end_hook=dependencies -parse"
-
 class AlpinoConfigurationError(Exception): pass
 class AlpinoError(EnvironmentError): pass
 

@@ -151,8 +151,12 @@ from datetime import date
 
 class _TestScraper(Scraper):
     medium_name = 'xxx'
-    def __init__(self, projectid, n=10):
-        super(_TestScraper, self).__init__(projectid=projectid)
+    def __init__(self, project=None,articleset=None, n=10):
+        if project is None:
+            project = amcattest.create_test_project()
+        if articleset is None:
+            articleset = amcattest.create_test_set()
+        super(_TestScraper, self).__init__(articleset=articleset.id,project=project.id)
         self.n = n
 
     def _get_units(self):
@@ -164,8 +168,10 @@ class TestController(amcattest.PolicyTestCase):
     def test_scraper(self):
         """Does the simple controller and saving work?"""
         p = amcattest.create_test_project()
+        s = amcattest.create_test_set()
         c = SimpleController()
-        ts = _TestScraper(projectid=p.id)
+        ts = _TestScraper(project=p,articleset=s)
+        
         articles = c.scrape(ts)
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(set(articles), set(p.articles.all()))
@@ -175,7 +181,7 @@ class TestController(amcattest.PolicyTestCase):
         p = amcattest.create_test_project()
         s = amcattest.create_test_set()
         c = SimpleController(s)
-        ts = _TestScraper(projectid=p.id)
+        ts = _TestScraper(project=p)
         c.scrape(ts)
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(s.articles.count(), ts.n)
@@ -186,7 +192,7 @@ class TestController(amcattest.PolicyTestCase):
         from Queue import Queue
         q = Queue()
         c = ThreadedController()
-        ts = _TestScraper(projectid=p.id)
+        ts = _TestScraper(project=p)
         # Multithreaded saving does not work in unit test, so save in-thread
         # See below for a 'production test'
         c._scrape_to_queue(ts, q)
