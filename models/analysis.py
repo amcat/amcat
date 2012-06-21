@@ -154,7 +154,9 @@ class AnalysisSentence(AmcatModel):
         app_label = 'amcat'
         db_table = "analysis_sentences"
         unique_together = ('analysis_article', 'sentence')
-
+    
+    def __int__(self):
+        return self.id
     
 # Signal handlers to make sure the article analysis queue is filled
 def add_to_queue(*aids):

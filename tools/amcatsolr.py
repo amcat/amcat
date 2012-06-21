@@ -358,7 +358,7 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
     def test_highlight(self):
         with TestSolr() as solr:
             blabla  = "bla bla bla bla bla bla \n" *50
-            text = blabla + "bla een piet is een piet piet bla bla bla ble" + blablao
+            text = blabla + "bla een piet is een piet piet bla bla bla ble" + blabla
             a = amcattest.create_test_article(text=text, headline='bla piet')
             solr.add_articles([a])
             solr.query_highlight("piet")
