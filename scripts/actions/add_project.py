@@ -27,7 +27,7 @@ import logging; log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.models.user import User
+from amcat.models.user import User, current_user
 from amcat.models.project import Project
 from amcat.models.authorisation import Role, ProjectRole
 
@@ -43,7 +43,10 @@ class AddProjectForm(forms.ModelForm):
     @classmethod
     def get_empty(cls, user=None, **_options):
         obj = cls()
-        obj.fields['owner'].initial = user.id
+        try:
+            obj.fields['owner'].initial = user.id
+        except AttributeError: #no user
+            pass
         return obj
 
     class Meta:
@@ -59,7 +62,6 @@ class AddProject(Script):
 
     def run(self, _input=None):
         p = Project.objects.create(**self.options)
-
         # Add user to project (as admin)
         pr = ProjectRole(project=p, user=self.options['owner'])
         pr.role = Role.objects.get(projectlevel=True, label='admin')
@@ -81,7 +83,7 @@ from amcat.tools import amcattest
 class TestAddProject(amcattest.PolicyTestCase):
     def test_add(self):
         u = amcattest.create_test_user()
-        p = AddProject(owner=u.id, name='test', description='test').run()
+        p = AddProject(owner=u.id, name='test', description='test',insert_user=u.id).run()
         self.assertEqual(p.insert_user, current_user())
         self.assertEqual(p.owner, u)
 
