@@ -149,9 +149,12 @@ def create_test_set(articles=0, **kargs):
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     s = ArticleSet.objects.create(**kargs)
-    if articles:
+    if type(articles) == int: 
         for _x in range(int(articles)):
             s.add(create_test_article())
+    elif articles:
+        for article in articles:
+            s.add(article)
     return s
             
 
