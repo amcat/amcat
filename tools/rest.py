@@ -24,6 +24,7 @@ Useful methods to interact with the REST api
 
 import requests, json
 import logging; log = logging.getLogger(__name__)
+import time
 
 class Rest(object):
     def __init__(self, host="localhost:8000", schema='http', username=None,
@@ -47,6 +48,7 @@ class Rest(object):
     def _request_args(self):
         return dict(auth=(self.username, self.password), verify=self.verify)
     def get(self, resource, format='json', **filters):
+        t = time.time()
         params = dict(format=format)
         if filters: params.update(filters)
         uri = '{self.schema}://{self.host}/{self.root}/{resource}/'.format(**locals())
@@ -55,9 +57,13 @@ class Rest(object):
         _check_status(r)
 
         if format == 'json':
-            return json.loads(r.text)
+            result = json.loads(r.text)
         else:
-            return r.text
+            result = r.text
+
+        log.debug("Retrieved %i bytes in %1.3fs" % (len(r.text), time.time() - t))
+            
+        return result
 
     def get_objects(self, *args, **kargs):
         result = self.get(*args, **kargs)

@@ -175,6 +175,10 @@ def visualise_triples(triples, triple_args_function=None,
 ###########################################################################
 
 from amcat.tools import amcattest
+from amcat.tools.pysoh.test import get_test_soh
+
+def get_test_transformer():
+    return TreeTransformer(get_test_soh())
 
 class TestGrammar(amcattest.PolicyTestCase):
     def test_load(self):
@@ -187,12 +191,7 @@ class TestGrammar(amcattest.PolicyTestCase):
         rel = Relation.objects.create(label="su")
         Triple.objects.create(parent=t1, child=t2, relation=rel)
 
-        #from amcat.tools.pysoh import Fuseki, SOHServer
-        #soh = Fuseki(port=19876)
-        from amcat.tools.pysoh import SOHServer
-        soh = SOHServer(url="http://localhost:3030/x")
-
-        tt = TreeTransformer(soh)
+        tt = get_test_transformer()
         tt.load_sentence(s.id)
 
         triples = list(tt.get_triples())
@@ -211,13 +210,13 @@ class TestGrammar(amcattest.PolicyTestCase):
     def test_visualise(self):
         su = Node(position=1, label='piet', lemma='piet')
         obj = Node(position=2, label='slaapt', lemma='slaap')
-        g = visualise_triples([(su, "su", obj)])
+        g = visualise_triples([Triple(su, "su", obj)])
         self.assertEqual(len(g.edges), 1)
         edge = g.edges.values()[0][0]
         self.assertEqual(edge.subj.label, "1: piet\\nlemma: piet")
         self.assertEqual(edge.label, "su")
-        taf = lambda s,p,o: dict(color=dict(su='red', obj1='blue')[p])
+        taf = lambda triple: dict(color=dict(su='red', obj1='blue')[triple.predicate])
 
-        g = visualise_triples([(su, "su", obj), (obj, "obj1", su)], taf)
+        g = visualise_triples([Triple(su, "su", obj), Triple(obj, "obj1", su)], taf)
         e1, e2 = g.edges.values()[0][0], g.edges.values()[1][0]
         self.assertEqual(set([e1.color, e2.color]), set(["red", "blue"]))

@@ -225,6 +225,15 @@ def create_test_analysis_sentence(analysis_article=None, **kargs):
     if 'sentence' not in kargs: kargs['sentence'] = create_test_sentence(article=analysis_article.article)
     return AnalysisSentence.objects.create(analysis_article=analysis_article, **kargs)
 
+
+def create_test_token(**kargs):
+    from amcat.models import Pos, Token
+    if "sentence" not in kargs: kargs['sentence'] = create_test_analysis_sentence()
+    if "word" not in kargs: kargs["word"] = create_test_word()
+    if "pos" not in kargs: kargs["pos"] = Pos.objects.create(major="x", minor="y", pos="p")
+    if "position" not in kargs: kargs["position"] = get_next_id()
+    return Token.objects.create(**kargs)
+
 def create_tokenvalue(analysis_article=None, **kargs):
     if 'analysis_sentence' not in kargs:
         kargs['analysis_sentence'] = create_test_analysis_sentence(analysis_article).id

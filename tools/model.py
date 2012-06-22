@@ -92,3 +92,5 @@ class AmcatModel(models.Model):
             return unicode(getattr(self, self.__label__))
         except AttributeError:
             return unicode(self.id)
+
+    

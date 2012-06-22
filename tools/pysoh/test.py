@@ -11,14 +11,18 @@ TEST_PORT = 9876
 FIXTURE = '''@prefix : <http://example.org/#> .
              []   :says  "Hello World"'''
 
+def get_test_soh():
+    soh_port = os.environ.get('SOH_TEST_SERVER')
+    if soh_port:
+        return SOHServer(soh_port)
+    else:
+        return Fuseki(port=TEST_PORT)
+    
+
 class TestSOH(unittest.TestCase):
 
     def setUp(self):
-        soh_port = os.environ.get('SOH_TEST_SERVER')
-        if soh_port:
-            self.soh = SOHServer(soh_port)
-        else:
-            self.soh = Fuseki(port=TEST_PORT)
+        self.soh = get_test_soh()
         self.soh.prefixes[""] = "http://example.org/#"
         self.soh.add_triples(FIXTURE, clear=True)
 

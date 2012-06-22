@@ -84,13 +84,9 @@ from amcat.tools import amcattest
 class TestTokens(amcattest.PolicyTestCase):
     def test_get_tokens_order(self):
         s = amcattest.create_test_analysis_sentence()
-        w1, w2, w3 = [amcattest.create_test_word(word=x) for x in "abc"]
-        pos = Pos.objects.create(major="x", minor="y", pos="p")
-        t1 = Token.objects.create(sentence=s, position=3, word=w3, pos=pos)
-        t2 = Token.objects.create(sentence=s, position=1, word=w2, pos=pos)
-        t3 = Token.objects.create(sentence=s, position=2, word=w1, pos=pos)
+        t1,t2,t3 = [amcattest.create_test_token(sentence=s, position=i) for i in [2,1,3]]
 
-        self.assertEqual(list(s.tokens.all()), [t2,t3,t1])
+        self.assertEqual(list(s.tokens.all()), [t2,t1,t3])
 
     def test_get_analysis(self):
         from amcat.nlp.frog import Frog
