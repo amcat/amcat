@@ -154,7 +154,25 @@ class AnalysisSentence(AmcatModel):
         app_label = 'amcat'
         db_table = "analysis_sentences"
         unique_together = ('analysis_article', 'sentence')
-    
+    def _get_tokens(self, get_words=False):
+        tokens = Token.objects.filter(sentence=self).select_related("word", "word__lemma")
+        self._tokendict = dict((t.position, t) for t in tokens)
+        return self._tokendict
+        
+    @property
+    def tokendict(self):
+        try:
+            return self._tokendict
+        except AttributeError:
+            return self._get_tokens()
+
+    def get_token(self, position):
+        return self.tokendict[position]
+        
+    @property
+    def triples(self):
+        return list(Triple.objects.filter(parent__sentence=self).select_related("parent", "child", "relation"))
+        
     def __int__(self):
         return self.id
     
