@@ -27,7 +27,7 @@ import logging; log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.models.user import User, current_user
+from amcat.models.user import User
 from amcat.models.project import Project
 from amcat.models.authorisation import Role, ProjectRole
 
