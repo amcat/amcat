@@ -165,6 +165,7 @@ class TestCode(amcattest.PolicyTestCase):
 
         # does .label return something sensible on objects without labels?
         o2 = Code.objects.create()
+        self.assertIsInstance(o2.label, unicode)
         self.assertRegexpMatches(o2.label, r'^<Code: \d+>$')
         self.assertIsNone(o2.get_label(l2))
 
