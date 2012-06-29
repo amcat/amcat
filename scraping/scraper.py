@@ -234,9 +234,12 @@ class MultiScraper(object):
         for scraper in self.scrapers:
             log.info("Starting scraping for {scraper}".format(**locals()))
             try:
-                units = retry(scraper.get_units)
+                #units = retry(scraper.get_units)
+                units = scraper.get_units()
+                log.info("units geget")
                 for u in units:
                     yield (scraper, u)
+                log.info("Get units for {scraper} done".format(**locals()))
             except:
                 log.error("%s.get_units failed after retrying, giving up"
                           % scraper.__class__.__name__)
