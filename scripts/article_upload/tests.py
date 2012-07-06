@@ -64,22 +64,6 @@ class TestLexisNexis(unittest.TestCase):
             l = Language.objects.get(id=1)
             Medium(name=source, abbrev=source[0:5], circulation=1, language=l).save()
 
-    def _create_project(self):
-        aff = Affiliation(name="dummy")
-        aff.save()
-
-        user = User(username="dummy", fullname="dummy", email="dummy@dummy.com",
-                    affiliation=aff, language=Language.objects.get(id=1),
-                    role=Role.objects.get(id=1))
-
-        user.save()
-
-        dp = Project(name="dummy", description="dummy", owner=user,
-                     insert_user=user, guest_role=Role.objects.get(id=1))
-
-        dp.save()
-
-        return dp
 
     def test_meta(self):
 
@@ -108,7 +92,7 @@ class TestLexisNexis(unittest.TestCase):
                                                  u'publication-type': u'Zeitung'})
 
         # Setup environment
-        dp = self._create_project()
+        dp = amcattest.create_test_project()
 
         # Test remaining articles
         for art in articles[1:]:
@@ -128,12 +112,13 @@ class TestMediargus(unittest.TestCase):
         self.test_text = open(self.test_file).read().decode('latin-1')
 
     def test_split(self):
-        articles = mediargus.Mediargus().split_text(self.test_text)
+        articles = mediargus.Mediargus(project=amcattest.create_test_project().id).split_text(self.test_text)
         self.assertEqual(len(articles), 100)
         for article in articles:
             self.assertEqual(len(article), 2)
 
     def test_parse(self):
-        articles = mediargus.Mediargus().split_text(self.test_text)
-        a = mediargus.Mediargus().parse_document(articles[99])
+        m = mediargus.Mediargus(project=amcattest.create_test_project().id)
+        articles = m.split_text(self.test_text)
+        a = m.parse_document(articles[99])
         self.assertEqual(a.headline, 'Maatschappijkritiek en actualiteit als inspiratie')
