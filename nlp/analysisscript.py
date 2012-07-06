@@ -58,6 +58,8 @@ class AnalysisScript(object):
         @param sentences:  a sequence of id : sentence pairs
         @return: a sequence of TokenValues objects
         """
+        import pdb
+        pdb.set_trace()
         sentences = list(sentences)
         memo = self.preprocess_sentences(sentences)
         tokens = list(chain.from_iterable(self.get_tokens(id, s, memo) for (id, s) in sentences)
