@@ -207,7 +207,7 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         """Test get_related_models function. Note: depends on the actual amcat.models"""
 
         for start, stoplist, result in [
-            (('Project',), (), ['Project', 'Role', 'User']),
+            (('Project',), (), ['Affiliation', 'Language', 'Project', 'Role', 'User']),
             (('Sentence',), ('Project',), ['Article', 'Language', 'Medium', 'Project', 'Sentence']),
             ]:
 
@@ -219,9 +219,7 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         """Test the list_queries context manager"""
         with list_queries() as l:
             amcattest.create_test_user()
-            #query_list_to_table(l, output=print)
-        for q in l:
-            print( q )
+        #query_list_to_table(l, output=print)
         self.assertIn(len(l), [4, 5]) # get affil., create user, select user x2, (pg) get idval
 
     def test_get_or_create(self):
