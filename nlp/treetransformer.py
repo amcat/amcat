@@ -21,7 +21,7 @@
 Extract semantic roles from syntax by transforming trees with SPARQL statements
 """
 
-import logging
+import logging, csv
 from collections import namedtuple
 
 from rdflib import Graph, Namespace, Literal
@@ -35,13 +35,15 @@ AMCAT = "http://amcat.vu.nl/amcat3/"
 NS_AMCAT = Namespace(AMCAT)
 
 VIS_IGNORE_PROPERTIES = "position", "label"
+GOLD_ROLES = "su", "obj", "quote", "eqv", "om"
 
 Triple = namedtuple("Triple", ["subject", "predicate","object"])
 
 def _id(obj):
     return obj if isinstance(obj, int) else obj.id
 def _token_uri(token):
-    return NS_AMCAT["t_{token.position}_{token}".format(i=_id(token), **locals())]
+    tokenstr = unicode(token).encode("ascii", "ignore")
+    return NS_AMCAT["t_{token.position}_{tokenstr}".format(i=_id(token), **locals())]
 def _rel_uri(rel):
     return NS_AMCAT["rel_{rel}".format(**locals())]
 
@@ -53,16 +55,56 @@ class Node(object):
         self.__dict__.update(kargs)
     __repr__ = __unicode__
 
+class LexicalRule(object):
+    def __init__(self, lexclass, lemmata):
+        self.lexclass = lexclass
+        self.lemmata = lemmata
+    def apply(self, transformer):
+        lemmata = ",".join('"{}"'.format(l) for l in self.lemmata)
+        where = '?x :lemma ?l . FILTER (?l IN ({}))'.format(lemmata)
+        transformer.update(where, '?x :lexclass "{self.lexclass}"'.format(**locals()))
+               
+class GrammarRule(object):
+    def __init__(self, where, insert, delete, name=None, show=True):
+        self.where = where
+        self.insert = insert
+        self.delete = delete
+        self.name = name
+        self.show = show
+    def apply(self, transformer):
+        transformer.update(self.where, self.insert, self.delete)
+        
+def _load_lexicon(lexiconfile):
+    for row in csv.DictReader(open(lexiconfile)):
+        yield LexicalRule(row["class"], set(s.strip() for s in row["lemmata"].split(",")))
+    
+def _load_rules(rulefile):
+    for row in csv.DictReader(open(rulefile)):
+        if not row["active"].strip(): continue
+        yield GrammarRule(row["where"], row["insert"], row["delete"], row["name"], bool(row["show"].strip()))
+        if row["show"].strip().lower() == "stop": break
+    
 class TreeTransformer(object):
 
-    def __init__(self, soh):
+    def __init__(self, soh, lexiconfile, rulefile):
         """
         @param soh: a amcat.tools.pysoh.SOHServer to use for transformations
         """
         self.soh = soh
         self.soh.prefixes[""] = AMCAT
         self.tokens = {} # position -> url
+        self.lexicon = list(_load_lexicon(lexiconfile))
+        self.rules = list(_load_rules(rulefile))
 
+    def apply_lexical(self):
+        for rule in self.lexicon:
+            rule.apply(self)
+        
+    def apply_rules(self):
+        for rule in self.rules:
+            rule.apply(self)
+
+            
     def _create_rdf_triples(self, analysis_sentence_id):
         """
         Get the raw RDF subject, predicate, object triples representing the given analysed sentence
@@ -94,7 +136,21 @@ class TreeTransformer(object):
         self.soh.add_triples(g, clear=True)
         log.info("Loaded sentence {analysis_sentence_id} into SOH {self.soh}".format(**locals()))
 
-    def get_triples(self, ignore_rel=True):
+    def get_roles(self):
+        """Retrieve the childposition-role-parentposition triples"""
+        for triple in self.get_triples():
+            if triple.predicate not in GOLD_ROLES: continue
+            yield Triple(int(triple.subject.position), triple.predicate, int(triple.object.position))
+        read_node = lambda n : int(n) if n.strip() else None
+        for s, p, o in self.query(select=["?spos", "?p", "?opos"],
+                                  where="""?s ?p [:position ?opos] OPTIONAL {?s :position ?spos}
+                                           FILTER (?p IN (:su, :obj, :quote, :om))"""):
+            if s: s = int(s)
+            if o: o = int(o)
+            p = p.replace(AMCAT, "")
+            yield (s, p, o)
+        
+    def get_triples(self, ignore_rel=True, limit_predicate=None):
         """Retrieve the Node-predicate_string-Node triples for the loaded sentence"""
         nodes, triples = {}, []
         for s,p,o in self.soh.get_triples(parse=True):
@@ -103,7 +159,7 @@ class TreeTransformer(object):
             if isinstance(o, Literal):
                 if hasattr(child, pred):
                     o = getattr(child, pred) + "; " + o
-                setattr(child, pred, str(o))
+                setattr(child, pred, unicode(o))
             else:
                 if ignore_rel and pred == "rel": continue
                 if pred == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": continue

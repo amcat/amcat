@@ -74,7 +74,6 @@ def get_predicates(sentence):
     return predicates
 
 def get_statements(sentence, roles):
-        
     predicates = get_predicates(sentence)
     # relations per predicate: {predicate : {rel : {nodes}}}
     rels_per_predicate = collections.defaultdict(lambda : collections.defaultdict(set))
@@ -87,6 +86,9 @@ def get_statements(sentence, roles):
         elif role == "om": # means_predicate -> goal_predicate
             means = predicates.get(subject, frozenset([subject]))
             rels_per_predicate[pred][role].add(means)
+        elif role == "eqv": # subject -> object with no predicate
+            yield Statement([subject], [], [object], type={"Equivalent"})
+            
 
     # normal statement: if a su and obj point to the same predicate, it is a statement
     for pred, rels in rels_per_predicate.items():
@@ -107,9 +109,44 @@ def get_statements(sentence, roles):
                                 source=(means_rels["quote"] | means_rels["su"]),
                                 condition=means_predicate,
                                 type={"Causal"})
-            
-                
-    
+
+def fill_out(sentence, nodes, roles):
+    """
+    'Fill out' the nodes, adding any node that is a descendant of the given nodes
+    and does not play part in a role
+    """
+    role_nodes = set()
+    for child, role, parent in roles:
+        role_nodes |= {child, parent}
+        
+    eligible_triples = [(t.child, t.parent) for t in sentence.triples
+                        if t.child.position not in role_nodes]
+
+    nodes = set(nodes)
+    changed = True
+    while changed:
+        changed = False
+        for c, p in eligible_triples:
+            if p in nodes and c not in nodes:
+                nodes.add(c)
+                changed=True
+                break
+    return nodes
+
+def get_path(node, parents, seen=[]):
+    if node not in parents: return [node]
+    parent = parents[node]
+    if parent in seen: return [node]
+    return [node] + get_path(parent, parents, seen + [node])
+
+
+def get_predicate_structure(sentence, predicate):
+    leaves = set(predicate)
+    parents = {t.child : t.parent for t in sentence.triples if t.child in leaves and t.parent in leaves}
+    for child, parent in parents.iteritems():
+        leaves -= {parent}
+    for leaf in leaves:
+        yield get_path(leaf, parents)
     
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -120,6 +157,32 @@ from amcat.tools import amcattest
 
 class TestStatementExtraction(amcattest.PolicyTestCase):
 
+    def test_fill_out_and_predicate(self):
+        from amcat.models import Triple, Relation
+        s = amcattest.create_test_analysis_sentence()
+        de, liberale,premier, moest, piet, een, klap, geven = [
+            amcattest.create_test_token(sentence=s, position=i) for i in range(1,9)]
+        for child, parent, rel in [(premier, geven, "su"),
+                                   (premier, moest, "su"),
+                                   (geven, moest, "vc"),
+                                   (de, premier, "det"),
+                                   (liberale, premier, "mod"),
+                                   (piet, geven, "obj2"),
+                                   (klap, geven, "obj1"),
+                                   (een, klap, "det")]:
+            rel = Relation.objects.create(label=rel)
+            Triple.objects.create(parent=parent, child=child, relation=rel)
+        roles =  ((premier.position, "su", geven.position),
+                  (piet.position, "obj", geven.position))
+
+        self.assertEqual(fill_out(s, [premier], roles), {de, liberale, premier})
+        predicate = fill_out(s, [moest, geven], roles)
+        self.assertEqual(predicate, {moest, een, klap, geven})
+
+        predicate_paths = list(get_predicate_structure(s, predicate))
+        self.assertEqual(predicate_paths, [[een, klap, geven, moest]])
+        
+        
     def test_predicates(self):
         from amcat.models import Triple, Relation
         s = amcattest.create_test_analysis_sentence()
