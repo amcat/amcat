@@ -31,7 +31,10 @@ from amcat.models.medium import Medium
 
 from django.db import models
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+from amcat.tools.caching import RowCacheManager
+
+log = logging.getLogger(__name__)
 
 import re
 
@@ -73,6 +76,8 @@ class Article(AmcatModel):
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
 
+    objects = RowCacheManager()
+
     class Meta():
         db_table = 'articles'
         app_label = 'amcat'
@@ -112,7 +117,7 @@ class Article(AmcatModel):
             return True
 
         # Check users role on project
-        if user.projectrole_set.filter(project__set__article=self, role__id__gt=read_meta.id):
+        if user.projectrole_set.filter(project__articles__article=self, role__id__gt=read_meta.id):
             return True
 
         return False
