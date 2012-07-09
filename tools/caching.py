@@ -174,13 +174,6 @@ def clear_cache(model):
 def _get_cache_key(model, id):
     return ('%s:%s' % (model._meta.db_table, id)).replace(' ', '')
 
-def _register_manager(sender, **kwargs):
-    manager = RowCacheManager()
-    manager.contribute_to_class(sender, 'objects')
-    sender._default_manager = manager
-
-signals.class_prepared.connect(_register_manager)
-
 class RowCacheManager(models.Manager):
     """
     Manager for caching single-row queries. To make invalidation easy,
