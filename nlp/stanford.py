@@ -25,12 +25,10 @@ See http://nlp.stanford.edu/software/lex-parser.shtml
 from amcat.models.token import TripleValues, TokenValues
 
 import re
-import os
-from os.path import exists
 import logging
 log = logging.getLogger(__name__)
 
-from amcat.nlp.analysisscript import AnalysisScript
+from amcat.nlp.analysisscript import AnalysisScript, Parser, ParserError
 from amcat.tools.toolkit import execute
 
 CMD = ("java -cp {parser_home}/stanford-parser-2012-05-22-models.jar:{parser_home}/stanford-parser.jar "
@@ -38,31 +36,6 @@ CMD = ("java -cp {parser_home}/stanford-parser-2012-05-22-models.jar:{parser_hom
        "-sentences newline -retainTMPSubcategories -outputFormat wordsAndTags,typedDependencies "
        "-outputFormatOptions stem,basicDependencies "
        "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz -")
-
-
-class ParserConfigurationError(Exception): pass
-class ParserError(EnvironmentError): pass
-
-class Parser(AnalysisScript):
-    ENVIRON_HOME_KEY = None
-    DEFAULT_HOME = None
-    
-    def __init__(self, analysis, parser_home=None):
-        super(Parser, self).__init__(analysis, triples=True, tokens=True)
-        if parser_home is not None:
-            self.parser_home = parser_home
-        else:
-            try:
-               self.parser_home = os.environ[self.ENVIRON_HOME_KEY]
-            except KeyError:
-                self.parser_home = self.DEFAULT_HOME
-
-    def _check_home(self):
-        if self.parser_home is None:
-            raise ParserConfigurationError("{} not specified".format(self.ENVIRON_HOME_KEY))
-        if not exists(self.parser_home):
-            raise ParserConfigurationError("Cannot find {self.ENVIRON_HOME_KEY}: {self.parser_home}"
-                                           .format(**locals()))
 
 def clean(sent):
     return re.sub("\s+", " ", sent).strip()

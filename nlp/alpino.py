@@ -21,6 +21,8 @@
 Preprocess using Alpino
 See http://www.let.rug.nl/vannoord/alp/Alpino/
 """
+#TODO: should use Parser superclass and remove HOME code
+
 import os
 from os.path import exists
 
