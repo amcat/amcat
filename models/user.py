@@ -28,6 +28,7 @@ from amcat.models import authorisation as auth
 from amcat.models.project import Project
 
 import logging;
+from amcat.tools.caching import RowCacheManager
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +65,8 @@ class UserProfile(AmcatModel):
     affiliation = models.ForeignKey(Affiliation, default=1)
     language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
+
+    objects = RowCacheManager()
 
     @property
     def projects(self):

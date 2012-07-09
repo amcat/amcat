@@ -44,9 +44,9 @@ def get_related(appmodel):
             if isinstance(field, ManyToManyField) and getattr(field, 'creates_table', False):
                 yield field.related.parent_model
 
-def get_all_related(models):
+def get_all_related(modelclasses):
     """Get all related model classes from the given model classes"""
-    for m in models:
+    for m in modelclasses:
         for m2 in get_related(m):
             yield m2
 
@@ -67,7 +67,7 @@ def get_related_models(modelnames, stoplist=set(), applabel='amcat'):
     stops = set([models.get_model(applabel, stop) for stop in stoplist])
     while True:
         related = set(get_all_related(_models - stops)) # seed from non-stop models
-        new = related - _models
+        new = related - _models 
         if not new: return _models
         _models |= new
 

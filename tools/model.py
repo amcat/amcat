@@ -16,9 +16,11 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.core import cache
 
 from django.db import models
 from django.core.exceptions import ValidationError
+from amcat.tools.caching import _get_cache_key
 
 __all__ = ['AmcatModel']
 
@@ -55,6 +57,9 @@ class AmcatModel(models.Model):
             elif not self.can_update(rq.user):
                 raise ValidationError("You're not allowed to update %s" % self)
 
+        # Invalidate cache
+        cache.delete(_get_cache_key(self, self.id))
+
         super(AmcatModel, self).save(**kwargs)
 
     def delete(self, **kwargs):
@@ -63,6 +68,9 @@ class AmcatModel(models.Model):
         if rq is not None:
             if not self.can_delete(rq.user):
                 raise ValidationError("You're not allowed to delete %s" % self)
+
+        # Invalidate cache
+        cache.delete(_get_cache_key(self, self.id))
 
         super(AmcatModel, self).delete(**kwargs)
 
