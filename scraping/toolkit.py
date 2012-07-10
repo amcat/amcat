@@ -136,3 +136,8 @@ def get_scraper_model(scraper_class):
 
     @return amcat.models.scraping.Scraper object"""
     return Scraper.objects.get(class_name=scraper_class.__name__)
+
+
+def check_article_duplicates(article,overwrite=False):
+    """checks if given article has a duplicate within its articleset"""
+    
