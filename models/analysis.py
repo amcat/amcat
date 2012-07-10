@@ -78,6 +78,23 @@ class AnalysisQueue(AmcatModel):
         app_label = 'amcat'
 
     @classmethod
+    def articles_in_queue(cls, project):
+        """
+        Determines wether there are articles in queue.
+
+        @param project: project to scan
+        @type project: int, Project
+        """
+        return AnalysisQueue.objects.filter(
+            # Check direct members of project
+            article__project=project
+        ).exists() | AnalysisQueue.objects.filter(
+            # Check indirect members
+            article__articlesets__project=project
+        ).exists()
+
+
+    @classmethod
     def narticles_in_queue(cls, project):
         # subqueries for direct and indirect (via set) articles
         direct = Article.objects.filter(project=project).values("id")
