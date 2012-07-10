@@ -53,9 +53,9 @@ def guess_module(filename):
     module = [os.path.splitext(filename)[0]]
     while True:
         tail, head = os.path.split(dirname)
+        module.insert(0, head)
         if dirname in path:
             return ".".join(module)
-        module.insert(0, head)
         if tail == dirname: raise ValueError("Cannot find module for %s" % filename)
         dirname = tail
 
