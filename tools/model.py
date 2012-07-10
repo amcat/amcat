@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.core import cache
+from django.core.cache  import cache
 
 from django.db import models
 from django.core.exceptions import ValidationError
