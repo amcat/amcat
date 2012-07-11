@@ -101,6 +101,7 @@ class Project(AmcatModel):
     class Meta():
         db_table = 'projects'
         app_label = 'amcat'
+        ordering = ('name',)
 
     def save(self, *args, **kargs):
         if self.insert_user_id is None:

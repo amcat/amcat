@@ -31,6 +31,7 @@ from amcat.tools import amcatlogging
 class DeduplicateForm(forms.Form):
     """Form for DeduplicateScript"""
     articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+    date = forms.DateField()
 
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
@@ -40,24 +41,24 @@ class DeduplicateScript(Script):
         Takes an articleset as input and removes all duplicated articles from that set
         """
         asid = self.options['articleset'] # articleset id
-        articles = Article.objects.filter( articlesetarticle__articleset = asid ) # articles in the articleset
-        urlDict, urls = {}, set()
+        articles = Article.objects.filter( articlesetarticle__articleset = asid, date__gte=self.options['date'] ) # articles in the articleset
+        
+        txtDict, texts = {}, set()
         for article in articles:
-            url = article.url
-            if url:
-                url = str(url)
-                if not url in urls:
-                    urlDict[url] = []
-                urlDict[url].append(article.id)
-                urls.add(url)
+            text = article.text
+            if text:
+                if not text in texts:
+                    txtDict[text] = []
+                txtDict[text].append(article.id)
+                texts.add(text)
 
         removable_ids = []
-        for ids in urlDict.itervalues():
+        for ids in txtDict.itervalues():
             if len(ids) > 1:
                 removable_ids.extend(ids[1:])
         articles.filter(id__in = removable_ids).update(project = 2) #trash project
         ArticleSetArticle.objects.filter(article__in = removable_ids).delete() #delete from article set
-        log.info("Moved %s duplicated articles to trash project" % len(removable_ids))
+        log.info("Moved %s duplicated articles to (trash) project 2" % len(removable_ids))
 
 
 if __name__ == '__main__':
