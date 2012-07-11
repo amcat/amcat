@@ -39,7 +39,7 @@ class AccessDenied(EnvironmentError):
     def __init__(self, user, privilege, project=None):
         projectstr = " on %s" % project if project else ""
         msg = "Access denied for privilege %s%s to %s\nRequired role %s, has role %s" % (
-            privilege, projectstr, user, privilege.role, user.role)
+            privilege, projectstr, user, privilege.role, user.get_profile().role)
         EnvironmentError.__init__(self, msg)
 
 def check(user, privilege, project=None):
