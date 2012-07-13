@@ -104,6 +104,8 @@ def get_table_sentence_codings_article(codedarticle, language):
 
     The cells contain domain (deserialized) objects
     """
+    #import pdb
+    #pdb.set_trace()
     result = ObjectTable(rows = list(codedarticle.sentence_codings))
     result.addColumn('id')
     result.addColumn(lambda x:x.sentence_id, 'sentence')
@@ -221,13 +223,15 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         
     def test_table_codings(self):
         """Is the codings table correct?"""
+        #import pdb
+        #pdb.set_trace()
         ca = CodedArticle(self.an1)
         t = get_table_sentence_codings_article(ca, ca.codingjob.coder.userprofile.language)
         self.assertIsNotNone(t)
-        aslist = [tuple(r) for r in t]
-        self.assertEqual(len(aslist), 2)
-        self.assertEqual(aslist[0][2:], ('bla', 1, unicode(self.code)))
-        self.assertEqual(aslist[1][2:], ('blx', None, None))
+        aslist1 = [a for _, a in t.getRows()[0].get_values()]
+        aslist2 = [a for _, a in t.getRows()[0].get_values()]
+        self.assertEqual(aslist1, ('bla', 1, unicode(self.code)))
+        self.assertEqual(aslist2, ('blx', None, None))
         
     def test_table_articles_per_set(self):
         """Is the articles per job table correct?"""
