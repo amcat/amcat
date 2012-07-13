@@ -86,7 +86,7 @@ class CodingSchemaField(AmcatModel):
     
     label = models.TextField()
     required = models.BooleanField(default=True)
-    default = models.CharField(db_column='deflt', max_length=50, null=True)
+    default = models.CharField(db_column='deflt', max_length=50, null=True, blank=True)
     fieldtype = models.ForeignKey(CodingSchemaFieldType)
     
     codebook = models.ForeignKey(Codebook, null=True) # for codebook fields
