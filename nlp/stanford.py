@@ -42,7 +42,7 @@ def clean(sent):
         
 class Stanford(Parser):
     ENVIRON_HOME_KEY = "STANFORD_HOME"
-    DEFAULT_HOME = "/home/amcat/resources/stanford"
+    DEFAULT_HOME = "/home/amcat/resources/Stanford"
 
     def _parse(self, input):
         self._check_home()
@@ -72,7 +72,7 @@ def create_tokens(sid, words, tokens):
         lemma, pos = s.rsplit("/", 1)
         poscat = POSMAP[pos]
         
-        yield TokenValues(sid, position, words[position], lemma, pos, None, None)
+        yield TokenValues(sid, position, words[position], lemma, poscat, pos, None)
 
 def create_triples(sid, triples):
     for parent, rel, child in triples:
@@ -197,8 +197,11 @@ class TestStanford(amcattest.PolicyTestCase):
     def test_parse(self):
         a = Stanford(None)
         
-        tokens, triples = a.process_sentences([(99, "I want\n coffee.")])
-        self.assertEqual(len(tokens), 4) # include period
+        tokens, triples = a.process_sentences([(99, "He wants\n coffee.")])
+	he, wants, coffee, punc = tokens
+	self.assertEqual(wants.pos, 'V')
+	self.assertEqual(wants.lemma, 'want')
+	self.assertEqual(wants.word, 'wants')
         self.assertEqual(len(triples), 2)
         self.assertIn(TripleValues(99, 2, 1, "dobj"), triples)
 
