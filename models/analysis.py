@@ -196,10 +196,11 @@ class AnalysisSentence(AmcatModel):
     
 # Signal handlers to make sure the article analysis queue is filled
 def add_to_queue(*aids):
-    for aid in aids:
-        AnalysisQueue.objects.create(article_id = aid)
+    AnalysisQueue.objects.bulk_create(
+        [AnalysisQueue(article_id=aid) for aid in aids]
+    )
 
-"""@receiver([post_save, post_delete], Article)
+@receiver([post_save, post_delete], Article)
 def handle_article(sender, instance, **kargs):
     add_to_queue(instance.id)
 
@@ -217,7 +218,7 @@ def handle_projectanalysis(sender, instance, **kargs):
 
 @receiver([post_save], ArticleSet)
 def handle_articleset(sender, instance, **kargs):
-    pass#add_to_queue(*(a.id for a in instance.articles.all().only("id")))"""
+    pass#add_to_queue(*(a.id for a in instance.articles.all().only("id")))
 
 
 ###########################################################################

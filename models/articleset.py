@@ -43,6 +43,15 @@ def get_or_create_articleset(name, project):
     """
     return get_or_create(ArticleSet, name=name, project=project) if name else None
 
+def _articles_to_ids(articles):
+    """
+    Convert given articles to article ids.
+
+    @param articles: articles to convert
+    @type articles: iterable with each type(object) in (int, Article)
+    """
+    for art in articles:
+        yield art if type(art) is int else art.id
 
 class ArticleSet(AmcatModel):
     """
@@ -77,12 +86,11 @@ class ArticleSet(AmcatModel):
         pass
         
     def add(self, *articles):
-        for article in articles:
-            if type(article) == int:
-                ArticleSetArticle.objects.create(articleset=self, article_id=article)
-            else:
-                ArticleSetArticle.objects.create(articleset=self, article=article)
-
+        ArticleSetArticle.objects.bulk_create(
+            [ArticleSetArticle(articleset=self, article_id=artid)\
+             for artid in _articles_to_ids(articles)]
+        )
+        
     def remove(self, *articles):
         ArticleSetArticle.objects.filter(articleset=self, article__in=articles).delete()
     
