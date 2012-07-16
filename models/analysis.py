@@ -171,6 +171,7 @@ class AnalysisSentence(AmcatModel):
         app_label = 'amcat'
         db_table = "analysis_sentences"
         unique_together = ('analysis_article', 'sentence')
+
     def _get_tokens(self, get_words=False):
         tokens = Token.objects.filter(sentence=self).select_related("word", "word__lemma")
         self._tokendict = dict((t.position, t) for t in tokens)
@@ -198,7 +199,7 @@ def add_to_queue(*aids):
     for aid in aids:
         AnalysisQueue.objects.create(article_id = aid)
 
-@receiver([post_save, post_delete], Article)
+"""@receiver([post_save, post_delete], Article)
 def handle_article(sender, instance, **kargs):
     add_to_queue(instance.id)
 
@@ -216,7 +217,7 @@ def handle_projectanalysis(sender, instance, **kargs):
 
 @receiver([post_save], ArticleSet)
 def handle_articleset(sender, instance, **kargs):
-    pass#add_to_queue(*(a.id for a in instance.articles.all().only("id")))
+    pass#add_to_queue(*(a.id for a in instance.articles.all().only("id")))"""
 
 
 ###########################################################################
