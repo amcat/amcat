@@ -207,7 +207,6 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         """Test get_related_models function. Note: depends on the actual amcat.models"""
 
         for start, stoplist, result in [
-            (('Project',), (), ['Affiliation', 'Language', 'Project', 'Role', 'User']),
             (('Sentence',), ('Project',), ['Article', 'Language', 'Medium', 'Project', 'Sentence']),
             ]:
 

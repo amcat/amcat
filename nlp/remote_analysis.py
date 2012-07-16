@@ -25,38 +25,40 @@ Run a preprocessing analysis against a remote (REST) database
 import logging
 import json
 
-from amcat.tools.rest import Rest
+from amcat.tools.api import API
 from amcat.tools import classtools
 
 log = logging.getLogger(__name__)
 
 class RemoteAnalysis(object):
 
-    def __init__(self, analysis_id, host):
-        self.rest = Rest(host=host)
+    def __init__(self, analysis_id, api):
+	self.api = api
         self.analysis_id = analysis_id
         self.script = self.get_analysis_script()
 
     def run(self, n):
-        articles = self.get_articles(n)
+        articles = list(self.get_articles(n))
         log.info("Retrieved {n} articles to analyse".format(n=len(articles)))
         for i, article in enumerate(articles):
+	    aid = article["id"]
             try:
                 log.debug("Analysing article %i/%i" % (i, len(articles)))
-                self.analyse_article(article["id"])
+                self.analyse_article(aid)
             except:
-                log.exception("Error on analysing article %r" % article["id"])
+                log.exception("Error on analysing article %r" % aid)
 
     def get_articles(self, n):
-        return self.rest.call_action("GetAnalysisArticles", analysis=self.analysis_id, narticles=n)
+        return self.api.call_action("GetAnalysisArticles",
+				    analysis=self.analysis_id, narticles=n)
 
     def get_analysis_script(self):
-        analysis = self.rest.get_object("analysis", self.analysis_id)
-        plugin = analysis["plugin"]
-        return classtools.import_attribute(plugin["module"], plugin["class_name"])(analysis)
+        analysis = self.api.get_object("analysis", self.analysis_id)
+        plugin = self.api.get_object("plugin", analysis.plugin)
+        return classtools.import_attribute(plugin.module, plugin.class_name)(analysis)
 
     def analyse_article(self, analysis_article_id):
-        sentences = self.get_sentences(analysis_article_id)
+        sentences = list(self.get_sentences(analysis_article_id))
         log.info("Analysing {n} sentences from article {analysis_article_id}"
                   .format(n=len(sentences), **locals()))
         tokens, triples = self.script.process_sentences(sentences)
@@ -64,16 +66,19 @@ class RemoteAnalysis(object):
                  "{analysis_article_id}".format(ntok=len(tokens),
                  ntrip=len(triples), **locals()))
         if not tokens: raise Exception()
-        self.rest.call_action("AddTokens", analysisarticle=analysis_article_id,
+        self.api.call_action("AddTokens", analysisarticle=analysis_article_id,
                               tokens=json.dumps(tokens),
                               triples=json.dumps(triples))
 
 
     def get_sentences(self, analysis_article_id):
-        return [(int(s["id"]), s["sentence"]["sentence"]) for s in
-                self.rest.get_objects("analysissentence",
-                                      analysis_article=analysis_article_id,
-                                      limit=9999)]
+
+	for s in self.api.get_objects("analysissentence",
+				       analysis_article=analysis_article_id,
+				       limit=9999):
+	    sent = self.api.get_object("sentence", s.sentence)
+	    yield (s.id, sent.sentence)
+	#return [(int(s["id"]), s["sentence"]["sentence"]) for s in
 
 
 if __name__ == '__main__':
@@ -84,13 +89,11 @@ if __name__ == '__main__':
 
     import argparse
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('host', action='store', help="Remote host to get articles from"
+    parser.add_argument('host', action='store', help="Host to get articles from"
                         " (e.g. localhost:8000 or https://amcat.vu.nl)")
     parser.add_argument('analysis', action='store', help="Analysis ID to parse")
     parser.add_argument("narticles",action='store', help="Number of articles to parse")
 
-    parser.add_argument("--test",action='store_true',
-                        help="Test analysing the articleid stored in narticles")
     parser.add_argument("--wait",action='store_true', help="Wait 0-5 seconds before starting")
     parser.add_argument("--logfile",action='store', help="Logfile to store messages")
     args = parser.parse_args()
@@ -105,21 +108,14 @@ if __name__ == '__main__':
         amcatlogging.setFileHandler(args.logfile)
         log.info("Logging to %s" % args.logfile)
 
-    log.info("Will analyse {args.narticles} articles from {args.host} "
+
+    api = API(args.host)
+    
+	
+    log.info("Will analyse {args.narticles} articles using API {api} "
              "using analysis {args.analysis}".format(**locals()))
 
-    ra = RemoteAnalysis(args.analysis, args.host)
+    ra = RemoteAnalysis(args.analysis, api)
 
-    if args.test:
-        log.info("Will test analyse article {args.narticles}".format(**locals()))
-        sents = ra.get_sentences(args.narticles)
-        for sent in sents:
-            print(sent)
-            i = ra.script._get_input([sent])
-            print(`i`)
-            ra.script._tokenize(i)
-        i = ra.script._get_input(sents)
-        ra.script._tokenize(i)
-    else:
-        ra.run(args.narticles)
+    ra.run(args.narticles)
 

@@ -23,7 +23,7 @@ Rules for extraction statements from semantic roles
 
 import collections, csv
 
-PREDICATE_RELATIONS = "vc",
+PREDICATE_RELATIONS = "vc", "xcomp"
 
 class Statement(object):
     def __init__(self, subject, predicate, object, source=None, type=None, condition=None):

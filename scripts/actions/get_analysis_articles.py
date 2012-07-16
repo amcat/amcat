@@ -46,13 +46,10 @@ class GetAnalysisArticles(Script):
 @transaction.commit_on_success
 def get_articles(analysis, n):
     """Get n articles to do for this analysis, setting them started=True"""
-
-    # in django 1.4 this can be done using select_for_update()...
-    result = (AnalysisArticle.objects
+    result = (AnalysisArticle.objects.select_for_update()
               .filter(analysis=analysis, started=False, done=False, delete=False)
               .only("id", 'article')[:n])
-    sql = str(result.query) +" FOR UPDATE"
-    result = list(AnalysisArticle.objects.raw(sql))
+    result = list(result)
 
     if result:
         AnalysisArticle.objects.filter(id__in=[a.id for a in result]).update(started=True)
@@ -73,7 +70,7 @@ from amcat.tools import amcattest
 class TestGetAnalysisArticles(amcattest.PolicyTestCase):
 
     def test_get_articles(self):
-        """Will fail on sqlite!"""
+        """Does getting articles work?"""
         analysis = amcattest.create_test_analysis()
         arts = [amcattest.create_test_analysis_article(analysis=analysis) for x in range(10)]
         x = list(get_articles(analysis, 7))
