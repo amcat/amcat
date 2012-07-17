@@ -79,7 +79,7 @@ class AnalysisArticleSetQueue(AmcatModel):
         """
         Add whole project (i.e. all articlesets) to queue. 
         """
-        AnalysisArticleSetQueue.bulk_create(
+        AnalysisArticleSetQueue.objects.bulk_create(
             AnalysisArticleSetQueue(articleset=artset)\
              for artset in project.articlesets.all()
         )
