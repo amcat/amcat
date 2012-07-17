@@ -33,22 +33,22 @@ from amcat.tools import classtools
 log = logging.getLogger(__name__)
 
 class API(object):
-    
+
     def __init__(self, base_uri, username=None, password=None, requests=requests):
-	"""
-	@param requests: module to use for http requests, useful for unit testing
-	"""
+        """
+        @param requests: module to use for http requests, useful for unit testing
+        """
         self.base_uri = base_uri
-	if username is None:
+        if username is None:
             import amcat.settings
             db = amcat.settings.DATABASES['default']
             self.username = db['USER']
             self.password = db['PASSWORD']
-	else:
-	    self.username = username
-	    self.password = password
+        else:
+            self.username = username
+            self.password = password
         self.requests = requests
-        
+
     def get_object(self, klass, pk):
 	objects = list(self.get_objects(klass, pk=pk))
 	if len(objects) != 1:
@@ -68,8 +68,8 @@ class API(object):
             r = self.requests.get(uri, params=filters, auth=(self.username, self.password))
             _check_status(r)
             o = json.loads(r.text)
-            if o['total'] == 0: return 
-            
+            if o['total'] == 0: return
+
             if return_type is None:
                 return_type = namedtuple(klass, o['results'][0].keys())
             for row in o['results']:
@@ -79,16 +79,16 @@ class API(object):
 
     def call_action(self, action, **kargs):
         if isinstance(action, type): action = action.__name__
-        
+
         uri = '{self.base_uri}/api/action/{action}'.format(**locals())
         log.debug("Posting action {uri} with data {kargs}".format(**locals()))
-        
+
         r = self.requests.post(uri, data=kargs, auth=(self.username, self.password))
         _check_status(r)
         return json.loads(r.text)
-        
 
-                    
+
+
 def _check_status(response):
     """Check whether the response is 2xx (http success), Exception otherwise"""
     if response.status_code // 100 != 2:
@@ -103,7 +103,7 @@ def _check_status(response):
         raise Exception("Remote server returned status {response.status_code}"
                         .format(**locals()))
 
-        
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -123,8 +123,8 @@ class TestAPI(amcattest.PolicyTestCase):
         from amcat.models import Article
         d = DirectAPI()
         a = amcattest.create_test_article()
-        
 
 
-        
-        
+
+
+
