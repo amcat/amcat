@@ -19,37 +19,38 @@
 ###########################################################################
 
 """
-Daemon that checks if there are any Articles on the articles_preprocessing_queue
-and adjusts the articles_analysis table as necessary
+Daemon that checks if there are any Articles on the analysis_articlesets_queue
+and adjusts the analysis_queue table as necessary
 """
 from django.db import transaction
 
 from amcat.scripts.daemons.daemonscript import DaemonScript
 
-from amcat.models.analysis import AnalysisQueue
+from amcat.models.analysis import AnalysisQueue, AnalysisArticleSetQueue, add_to_queue
 from amcat.nlp.preprocessing import set_preprocessing_actions
 
 import logging; log = logging.getLogger(__name__)
 
-BATCH = 10000
+BATCH = 5
 
-class PreprocessingDaemon(DaemonScript):
+class PreprocessingArticleSetsDaemon(DaemonScript):
 
     @transaction.commit_on_success
     def run_action(self):
-        aids = set()
-        preprocess_ids = list()
+        # Retrieve top sets
+        asets = [a.articleset for a in AnalysisArticleSetQueue.objects.all()[:BATCH]]
+        log.info("Adding {} sets to queue".format(len(asets)))
 
-        for ap in AnalysisQueue.objects.all()[:BATCH]:
-            aids.add(ap.article_id)
-            preprocess_ids.append(ap.id)
+        # Add articles in articlesets to article queue
+        for aset in asets:
+            add_to_queue(*(a.id for a in aset.articles.all().only("id")))
 
-        if not aids: return False
+        # Clean up articleset queue
+        AnalysisArticleSetQueue.objects.filter(
+            articleset__id__in=[a.id for a in asets]
+        ).delete()
 
-        log.info("Deleting {n} queue objects".format(n=len(preprocess_ids)))
-        AnalysisQueue.objects.filter(pk__in=preprocess_ids).delete()
-        log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
-        set_preprocessing_actions(aids)
+        return asets
 
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
