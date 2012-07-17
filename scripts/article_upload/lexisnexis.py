@@ -39,20 +39,20 @@ import StringIO
 import logging; log = logging.getLogger(__name__)
 
 # Regular expressions used for parsing document
-RES = {
+class RES:
     # Match at least 20 whitespace characters, followed by # of # DOCUMENTS.
-    "DOCUMENT_COUNT" : re.compile(" {20} +\d* of \d* DOCUMENTS"),
+    DOCUMENT_COUNT = re.compile(" {20} +\d* of \d* DOCUMENTS")
 
     # Header meta information group match
-    "HEADER_META" : re.compile("([\w -]*):(.*)", re.UNICODE),
+    HEADER_META = re.compile("([\w -]*):(.*)", re.UNICODE)
 
     # Body meta information. This is the same as HEADER_META, but does not include
     # lower_case characters.
-    "BODY_META" : re.compile("([^0-9a-z: ]*):(.*[^;])$", re.UNICODE),
+    BODY_META = re.compile("([^0-9a-z: ]*):(.*[^;])$", re.UNICODE)
 
     # Copyright notice
-    "COPYRIGHT" : re.compile("^Copyright \d{4}.*")
-}
+    COPYRIGHT = re.compile("^Copyright \d{4}.*")
+
 
 WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "L\xc4NGE", "UPDATE", "SPRACHE",
                         "PUBLICATION-TYPE", "CODE-REVUE", "AUTEUR", "RUBRIQUE",
@@ -101,7 +101,7 @@ class LexisNexis(UploadScript):
 
         # Add lines to header, until document count encountered
         for i, line in enumerate(splitted):
-            if RES["DOCUMENT_COUNT"].match(line):
+            if RES.DOCUMENT_COUNT.match(line):
                 break
 
             header.append(line)
@@ -133,7 +133,7 @@ class LexisNexis(UploadScript):
 
         i = 0
         while i < len(header):
-            mo = RES["HEADER_META"].match(header[i])
+            mo = RES.HEADER_META.match(header[i])
             if mo:
                 # key:value present. This means we arrived at a new
                 # meta value.
@@ -141,7 +141,7 @@ class LexisNexis(UploadScript):
                 meta[cur].append(val)
 
                 i += 1
-                while i < len(header) and not RES["HEADER_META"].match(header[i]):
+                while i < len(header) and not RES.HEADER_META.match(header[i]):
                     meta[cur].append(header[i])
                     i += 1
 
@@ -164,7 +164,7 @@ class LexisNexis(UploadScript):
         """
         art = StringIO.StringIO()
         for line in body.split("\n")[1:]:
-            if RES["DOCUMENT_COUNT"].match(line):
+            if RES.DOCUMENT_COUNT.match(line):
                 yield art.getvalue()
 
                 art = StringIO.StringIO()
@@ -185,7 +185,7 @@ class LexisNexis(UploadScript):
         for i in (0, -1):
             while not art[i].strip():
                 del art[i]
-
+                
         return "\n".join(art).replace("\r", "")
 
     def _is_date(self, string):
@@ -196,7 +196,20 @@ class LexisNexis(UploadScript):
 
         return True
 
-
+    def line_is_meta(self, lines, i):
+        """
+        If lines[i] is a meta line (LENGTH: 123), return a (key, value) tuple.
+        If not, return None
+        """
+        # if the next line has content, this line is not a meta line
+        if len(lines) > (i+1) and lines[i+1].strip():
+            return 
+        mo = RES.BODY_META.match(lines[i])
+        if mo:
+            key, val = mo.groups()
+            key = key.lower()
+            key = BODY_KEYS_MAP.get(key, key)
+            return key, val.strip()
 
     def parse_article(self, art):
         """
@@ -224,15 +237,13 @@ class LexisNexis(UploadScript):
             line = art[i]
 
             # Determine if this line contains meta-data
-            mo = RES["BODY_META"].match(line)
-            if mo:
-                key, val = mo.groups()
-                key = key.lower()
-                key = BODY_KEYS_MAP.get(key, key)
-                meta[key] = val.strip()
+            meta_kv = self.line_is_meta(art, i)
+            if meta_kv:
+                key, val = meta_kv
+                meta[key] = val
             elif line.strip():
                 # Unidentified text found!
-                if art[i+1].strip():
+                if len(art) > (i+1) and art[i+1].strip():
                     # Multiple line text found. Enter 'greedy' mode (only
                     # stop when meta-data found)
                     ut = []
@@ -240,7 +251,7 @@ class LexisNexis(UploadScript):
                     # Before traversing downwards, traverse upwards, to include
                     # all uit text until a BODY_META is found.
                     j = i - 1;
-                    while (j >= 0 and not RES["BODY_META"].match(art[j])
+                    while (j >= 0 and not RES.BODY_META.match(art[j])
                            and not art[j].startswith(' ')):
                         if art[j].strip() in uit:
                             del uit[uit.index(art[j])]
@@ -249,7 +260,7 @@ class LexisNexis(UploadScript):
                         j -= 1
 
                     # Now traverse downwards
-                    while i < len(art) and not RES["BODY_META"].match(art[i]):
+                    while i < len(art) and not self.line_is_meta(art, i):
                         ut.append(art[i])
                         i += 1
 
@@ -309,7 +320,7 @@ class LexisNexis(UploadScript):
         # as it is probably the headline
         if headline is None:
             for ui in uit[0:-1]:
-                if not RES["COPYRIGHT"].match(ui):
+                if not RES.COPYRIGHT.match(ui):
                     headline = ui
                     break
 
