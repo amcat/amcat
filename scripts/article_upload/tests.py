@@ -34,7 +34,10 @@ class TestLexisNexis(unittest.TestCase):
     def test_split_body(self):
         splitted = self.split()
 
-        self.assertEquals(len(list(self.parser.split_body(splitted[1]))), 5)
+        n_found = len(list(self.parser.split_body(splitted[1])))
+        n_sol = len(self.test_body_sols)
+        
+        self.assertEquals(n_found, n_sol)
 
     def test_parse_header(self):
         splitted = self.split()
@@ -46,13 +49,13 @@ class TestLexisNexis(unittest.TestCase):
     def test_parse_article(self):
         splitted = self.split()
         arts = self.parser.split_body(splitted[1])
-
+        
         # Json doesn't do dates
         arts = [list(self.parser.parse_article(a)) for a in arts]
         for art in arts: art[3] = str(art[3])
 
         # Tests..
-        self.assertEquals(len(arts), 5)
+        self.assertEquals(len(arts), len(self.test_body_sols))
 
         for i, art in enumerate(self.test_body_sols):
             self.assertEquals(art, arts[i])
@@ -63,7 +66,6 @@ class TestLexisNexis(unittest.TestCase):
         except Medium.DoesNotExist:
             l = Language.objects.get(id=1)
             Medium(name=source, abbrev=source[0:5], circulation=1, language=l).save()
-
 
     def test_meta(self):
 

@@ -6,12 +6,12 @@
     "2011-08-31 00:00:00", 
     "B\u00f6rsen-Zeitung", 
     {
-      "L\u00c4NGE": "306 W\u00f6rter", 
-      "UPDATE": "2. September 2011", 
-      "SPRACHE": "GERMAN; DEUTSCH", 
-      "AUTOR": "MF Tokio", 
-      "PUBLICATION-TYPE": "Zeitung", 
-      "RUBRIK": "S. 7 Ausg. 167"
+      "length": "306 W\u00f6rter", 
+      "update": "2. September 2011", 
+      "language": "GERMAN; DEUTSCH", 
+      "author": "MF Tokio", 
+      "publication-type": "Zeitung", 
+      "section": "S. 7 Ausg. 167"
     }
   ], 
   [
@@ -21,12 +21,12 @@
     "2011-08-30 00:00:00", 
     "B\u00f6rsen-Zeitung", 
     {
-      "L\u00c4NGE": "818 W\u00f6rter", 
-      "UPDATE": "1. September 2011", 
-      "SPRACHE": "GERMAN; DEUTSCH", 
-      "AUTOR": "STO Frankfurt", 
-      "PUBLICATION-TYPE": "Zeitung", 
-      "RUBRIK": "S. 5 Ausg. 166"
+      "length": "818 W\u00f6rter", 
+      "update": "1. September 2011", 
+      "language": "GERMAN; DEUTSCH", 
+      "author": "STO Frankfurt", 
+      "publication-type": "Zeitung", 
+      "section": "S. 5 Ausg. 166"
     }
   ], 
   [
@@ -36,13 +36,13 @@
     "2003-03-17 00:00:00", 
     "Le Figaro", 
     {
-      "LANGUE": "FRENCH; FRAN\u00c7AIS", 
-      "DATE-CHARGEMENT": "04 novembre 2003", 
-      "RUBRIQUE": "CULTURE", 
-      "LONGUEUR": "543 mots", 
-      "AUTEUR": "Sophie LATIL", 
-      "TYPE-PUBLICATION": "Quotidien", 
-      "CODE-REVUE": "FIGARO"
+      "language": "FRENCH; FRAN\u00c7AIS", 
+      "date-chargement": "04 novembre 2003", 
+      "section": "CULTURE", 
+      "length": "543 mots", 
+      "author": "Sophie LATIL", 
+      "type-publication": "Quotidien", 
+      "code-revue": "FIGARO"
     }
   ], 
   [
@@ -52,13 +52,28 @@
     "2002-08-30 00:00:00", 
     "Le Monde", 
     {
-      "LANGUE": "FRENCH; FRAN\u00c7AIS", 
-      "DATE-CHARGEMENT": "24 octobre 2003", 
-      "RUBRIQUE": "Culture", 
-      "LONGUEUR": "545 mots", 
-      "AUTEUR": "ROUARD DANIELLE", 
-      "TYPE-PUBLICATION": "Journal", 
-      "CODE-REVUE": "MONDE"
+      "language": "FRENCH; FRAN\u00c7AIS", 
+      "date-chargement": "24 octobre 2003", 
+      "section": "Culture", 
+      "length": "545 mots", 
+      "author": "ROUARD DANIELLE", 
+      "type-publication": "Journal", 
+      "code-revue": "MONDE"
     }
+  ], 
+  [
+    "Highlights of the AAP world wire at 20:00 Jan 20", 
+    null, 
+    "A leading Thai human rights lawyer says there are grounds for optimism a\nroyal pardon for Australian writer Harry Nicolaides will be granted once the\n30-day appeal process to the jail sentence is over. (NICOLAIDES LAWYER sent at\n20:17, 495 words.)\n\nMID: Calm reigns in Gaza ahead of UN chief's visit\n\u00a0\u00a0 GAZA CITY, Jan 20 AFP - Israel and Hamas observed their Gaza truce for a\nthird day on Tuesday ahead of a planned visit by UN chief Ban Ki-moon to the\nwar-battered enclave where Israeli troops remain deployed. (MIDEAST Wrap sent\nat 20:05, 612 words.)\nPAC: Fiji's military leader to miss regional summit\n\u00a0\u00a0 pls use as a PNG Fiji wrap, & add in line/s from Aust foreign minister (PNG\nFiji Aust) - mn (PNG FIJI Wrap sent at 19:57, 481 words.)\nMID: As ceasefire holds, Gazans take stock of losses\n\u00a0\u00a0 GAZA CITY, Gaza Strip, Jan 20 AP - Gaza's only cement packing factory is now\na giant scrap heap, its towering silo tilting precariously. The owner's villa\nwas pounded by Israeli tank shells until it resembled Swiss cheese. (MIDEAST\nDAMAGE sent at 19:04, 894 words.)\nCAM: Guantanamo suspects defiant as uncertainty shrouds hearings\n\u00a0\u00a0 GUANTANAMO BAY US NAVAL BASE, Cuba, Jan 20 AFP - Five suspects accused of\nplotting the September 11 attacks were defiant at pretrial hearings as the US\nwar on terror camp and its special military tribunals faced an uncertain\nfuture. (GUANTANAMO Wrap sent at 18:01, 731 words.)\nCIS: Russia, Ukraine sign gas deal, end standoff\n\u00a0\u00a0 MOSCOW, Jan 20 AP - Russia and Ukraine pledged to restore natural gas\nsupplies to Europe after signing deals to end a bitter dispute that led to a\nchilling two-week cutoff of shipments. (UKRAINE GAS Wrap sent at 16:55, 822\nwords.). Second Wrap to come.\nPAC: Scared hiker survived on Weetbix for a week\n\u00a0\u00a0 AUCKLAND, Jan 20 AAP - A helicopter has rescued a lone Adelaide hiker who\nsurvived nine days in a hut in rugged New Zealand bush country on just muesli\nbars and Weetbix. (NZ HIKER sent at 15:28, 317 words.)\nMID: Calm reigns in Gaza ahead of visit by UN chief\n\u00a0\u00a0 GAZA CITY, Jan 20 AFP - Tension eased in Gaza early on Tuesday as a fragile\nceasefire entered its third day, with residents struggling to absorb the\ndevastation caused by Israel's deadly 22-day assault. (MIDEAST Update sent at\n14:42, 708 words.)", 
+    "2009-01-20 08:27:00", 
+    "AAP Newsfeed", 
+    {
+      "language": "ENGLISH", 
+      "section": "INTERNATIONAL NEWS", 
+      "publication-type": "Newswire", 
+      "length": "376  words", 
+      "load-date": "January 21, 2009", 
+      "dateline": "BANGKOK Jan 20"
+      }     
   ]
 ]
