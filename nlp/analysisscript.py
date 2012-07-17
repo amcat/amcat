@@ -37,6 +37,7 @@ class AnalysisScript(object):
         arbitrary object) is passed to the get_triples and get_tokens methods.
         @param sentences: a sequence of id : sentence pairs
         """
+        pass
 
     def get_triples(self, id, sentence, memo=None):
         """

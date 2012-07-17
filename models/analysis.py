@@ -56,7 +56,10 @@ class Analysis(AmcatModel):
     plugin = models.ForeignKey(Plugin, null=True)
 
     def get_script(self, **options):
-        return self.plugin.get_instance(analysis=self, **options)
+        try:
+            return self.plugin.get_instance(analysis=self, **options)
+        except TypeError:
+            return self.plugin.get_instance(**options)
 
     class Meta():
         db_table = 'analyses'
