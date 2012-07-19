@@ -44,12 +44,14 @@ class PreprocessingArticlesDaemon(DaemonScript):
             aids.add(ap.article_id)
             preprocess_ids.append(ap.id)
 
-        if not aids: return False
+        if aids: 
+            # Articles were processed
+            log.info("Deleting {n} queue objects".format(n=len(preprocess_ids)))
+            AnalysisQueue.objects.filter(pk__in=preprocess_ids).delete()
+            log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
+            set_preprocessing_actions(aids)
 
-        log.info("Deleting {n} queue objects".format(n=len(preprocess_ids)))
-        AnalysisQueue.objects.filter(pk__in=preprocess_ids).delete()
-        log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
-        set_preprocessing_actions(aids)
+            return True
 
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
