@@ -49,20 +49,11 @@ class SolrAnalysis(script.Script):
     def run(self, _input):
         assert(all(isinstance(a, AnalysisArticle) for a in _input))
 
-        articles = set(_input)
-        deleting = {a for a in articles if a.delete}
-        adding = articles - deleting
+        aas = (aa.items() for aa in _input.values("delete", "article__id").items())
 
-        Solr().delete_articles([a.article for a in deleting])
-        Solr().add_articles([a.article for a in adding])
+        Solr().delete_articles(a['article__id'] for a in aas if a['delete'])
+        Solr().add_articles(a['article__id'] for a in aas if not a['delete'])
 
-        log.info("Solr: added {} and deleted {} articles".format(
-            len(adding), len(deleting))
-        )
-
-        print("Solr: added {} and delete {} articles".format(
-            len(adding), len(deleting))
-        )
 
 if __name__ == "__main__":
     from amcat.tools import amcatlogging

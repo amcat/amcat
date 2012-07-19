@@ -52,12 +52,12 @@ class AnalysisDaemon(DaemonScript):
         """
         arts = AnalysisArticle.objects.filter(
             analysis__plugin__active=True, started=False
-        ).select_related("analysis__plugin")[:BATCH]
+        ).only("id")[:BATCH]
 
         # We can't use update() on sliced queries. Workaround:
         arts = AnalysisArticle.objects.filter(
             id__in=[a.id for a in arts]
-        )
+        ).only("id").select_related("analysis__plugin")
 
         # Indicate that we started analysing
         arts.update(started=True)
@@ -69,7 +69,7 @@ class AnalysisDaemon(DaemonScript):
         # Indicate that we're done analysing
         arts.update(done=True)
 
-        return arts
+        return bool(arts)
 
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
