@@ -86,6 +86,26 @@ class UserProfile(AmcatModel):
             return False
         return True
 
+    def can_read(self, user):
+        profile = user.get_profile()
+
+        return (self == profile) or\
+               (profile.affiliation == self.affiliation and\
+                profile.haspriv("view_users_same_affiliation")) or\
+               (profile.haspriv("view_all_users"))
+
+    def can_update(self, user):
+        profile = user.get_profile()
+
+        return (self == profile) or\
+               (profile.affiliation == self.affiliation and\
+                profile.haspriv("manage_users_same_affiliation")) or\
+               (profile.haspriv("manage_users"))
+
+    def can_delete(self, user):
+        return False
+        
+
     class Meta():
         db_table = 'auth_user_profile'
         app_label = "amcat"

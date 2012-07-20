@@ -50,11 +50,11 @@ class API(object):
         self.requests = requests
 
     def get_object(self, klass, pk):
-	objects = list(self.get_objects(klass, pk=pk))
-	if len(objects) != 1:
-	    raise Exception("get_object(%r, %r) returned %i results"
-			    % (klass, pk, len(objects)))
-	return objects[0]
+        objects = list(self.get_objects(klass, pk=pk))
+        if len(objects) != 1:
+            raise Exception("get_object(%r, %r) returned %i results"
+                    % (klass, pk, len(objects)))
+        return objects[0]
 
     def get_objects(self, klass, batch_size = 1000, **filters):
         if isinstance(klass, type):
@@ -65,7 +65,9 @@ class API(object):
         for page in itertools.count(1):
             uri = ("{self.base_uri}/api/v4/{klass}?format=json&limit={batch_size}&page={page}"
                    .format(**locals()))
+
             r = self.requests.get(uri, params=filters, auth=(self.username, self.password))
+
             _check_status(r)
             o = json.loads(r.text)
             if o['total'] == 0: return
@@ -123,8 +125,5 @@ class TestAPI(amcattest.PolicyTestCase):
         from amcat.models import Article
         d = DirectAPI()
         a = amcattest.create_test_article()
-
-
-
 
 
