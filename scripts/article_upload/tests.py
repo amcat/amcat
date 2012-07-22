@@ -18,6 +18,8 @@ class TestLexisNexis(unittest.TestCase):
         dir = os.path.join(os.path.dirname(__file__), 'test_files', 'lexisnexis')
 
         self.test_text = open(os.path.join(dir, 'test.txt')).read().decode('utf-8')
+        self.test_text2 = open(os.path.join(dir, 'test2.txt')).read().decode('utf-8')
+
         self.test_body_sols = json.load(open(os.path.join(dir, 'test_body_sols.json')))
         self.test_header_sols = json.load(open(os.path.join(dir, 'test_header_sols.json')))
 
@@ -37,7 +39,7 @@ class TestLexisNexis(unittest.TestCase):
         n_found = len(list(self.parser.split_body(splitted[1])))
         n_sol = len(self.test_body_sols)
         
-        self.assertEquals(n_found, n_sol)
+        self.assertEquals(n_found, n_sol + 1) # +1 for 'defigured' article
 
     def test_parse_header(self):
         splitted = self.split()
@@ -48,11 +50,17 @@ class TestLexisNexis(unittest.TestCase):
 
     def test_parse_article(self):
         splitted = self.split()
-        arts = self.parser.split_body(splitted[1])
+        texts = self.parser.split_body(splitted[1])
         
         # Json doesn't do dates
-        arts = [list(self.parser.parse_article(a)) for a in arts]
-        for art in arts: art[3] = str(art[3])
+        arts = []
+        
+        for a in texts:
+            art = self.parser.parse_article(a)
+            if art is not None:
+                art = list(art)
+                art[3] = str(art[3])
+                arts.append(art)
 
         # Tests..
         self.assertEquals(len(arts), len(self.test_body_sols))
@@ -98,13 +106,22 @@ class TestLexisNexis(unittest.TestCase):
 
         # Test remaining articles
         for art in articles[1:]:
+            if art is None: continue
             self._create_medium(art[4])
 
             p = self.parser.body_to_article(*art)
             p.project = dp
             p.full_clean()
 
+    def test_parse_no_header(self):
+        header, body =  self.parser.split_header(self.test_text2)
+        header = header.replace(u'\ufeff', '').strip()
+        self.assertFalse(bool(header))
 
+        n_found = len(list(self.parser.split_body(body)))
+        self.assertEqual(n_found, 1)
+        
+        
 
 
 class TestMediargus(unittest.TestCase):
