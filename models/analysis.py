@@ -80,9 +80,9 @@ class AnalysisArticleSetQueue(AmcatModel):
         Add whole project (i.e. all articlesets) to queue. 
         """
         AnalysisArticleSetQueue.objects.bulk_create(
-            AnalysisArticleSetQueue(articleset=artset)\
-             for artset in project.articlesets.all()
-        )
+            [AnalysisArticleSetQueue(articleset=artset)
+            for artset in project.articlesets.all()]
+            )
 
     class Meta():
         db_table = 'analysis_articleset_queue'
