@@ -51,6 +51,10 @@ def run_cli(cls=None, handle_output=None, get_script_depth=2):
     parser = argument_parser_from_script(cls)
     args = parser.parse_args()
     options = args.__dict__
+
+    if options.pop("verbose", None):
+        amcatlogging.debug_module(cls.__module__)
+    
     instance = cls(options)
 
     input = None
@@ -62,7 +66,7 @@ def run_cli(cls=None, handle_output=None, get_script_depth=2):
         encoding = chardet.detect(input)["encoding"]
         log.info("Using encoding {encoding}".format(**locals()))
         input = input.decode(encoding)
-
+        
     out = instance.run(input)
 
     if handle_output:
@@ -85,6 +89,7 @@ def argument_parser_from_script(script_class):
         form = script_class.options_form()
         for name, field in form.fields.items():
            add_argument_from_field(parser, name, field)
+    parser.add_argument('--verbose', help='Print debug output', action='store_true')
     #parser.add_argument('--output', help='set output type', default='print')
     return parser
 
@@ -106,7 +111,10 @@ def add_argument_from_field(parser, name, field):
     helpfields = [x for x in [field.label, field.help_text] if x]
     if field.initial is not None: helpfields.append("Default: {field.initial}".format(**locals()))
     if isinstance(field, forms.ChoiceField):
-        helpfields.append("Possible values are %s" % "; ".join("%s (%s)" % (kv) for kv in field.choices))
+        if len(field.choices) > 10:
+            helpfields.append("(>10 possible values)")
+        else:
+            helpfields.append("Possible values are %s" % "; ".join("%s (%s)" % (kv) for kv in field.choices))
     help = ". ".join(helpfields)
 
     # set type OR action_const as extra arguments depending on type
