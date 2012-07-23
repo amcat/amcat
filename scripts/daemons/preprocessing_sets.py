@@ -43,14 +43,15 @@ class PreprocessingArticleSetsDaemon(DaemonScript):
 
         # Add articles in articlesets to article queue
         for aset in asets:
-            add_to_queue(*(a.id for a in aset.articles.all().only("id")))
+            art_ids = aset.articles.all().values("id") 
+            add_to_queue(*(a['id'] for a in art_ids))
 
         # Clean up articleset queue
         AnalysisArticleSetQueue.objects.filter(
-            articleset__id__in=[a.id for a in asets]
+            articleset__id__in=tuple(a.id for a in asets)
         ).delete()
 
-        return asets
+        return bool(asets)
 
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
