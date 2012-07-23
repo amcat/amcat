@@ -47,12 +47,10 @@ class SolrAnalysis(script.Script):
     options_form = None
 
     def run(self, _input):
-        assert(all(isinstance(a, AnalysisArticle) for a in _input))
+        aas = _input.values("delete", "article__id")
 
-        aas = (aa.items() for aa in _input.values("delete", "article__id").items())
-
-        Solr().delete_articles(a['article__id'] for a in aas if a['delete'])
-        Solr().add_articles(a['article__id'] for a in aas if not a['delete'])
+        Solr().delete_articles([a['article__id'] for a in aas if a['delete']])
+        Solr().add_articles([a['article__id'] for a in aas if not a['delete']])
 
 
 if __name__ == "__main__":
