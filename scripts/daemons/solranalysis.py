@@ -47,7 +47,9 @@ class SolrAnalysis(script.Script):
     options_form = None
 
     def run(self, _input):
-        aas = _input.values("delete", "article__id")
+        aas = AnalysisArticle.objects.filter(
+            id__in=[a.id for a in _input]
+        ).values("delete", "article__id")
 
         Solr().delete_articles([a['article__id'] for a in aas if a['delete']])
         Solr().add_articles([a['article__id'] for a in aas if not a['delete']])
