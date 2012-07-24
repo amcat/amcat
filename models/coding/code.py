@@ -132,7 +132,6 @@ class Label(AmcatModel):
     code = models.ForeignKey(Code, db_index=True, related_name="labels")
     language = models.ForeignKey(Language, db_index=True, related_name="+")
 
-
     class Meta():
         db_table = 'codes_labels'
         app_label = 'amcat'
