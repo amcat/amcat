@@ -136,6 +136,7 @@ class Label(AmcatModel):
         db_table = 'codes_labels'
         app_label = 'amcat'
         unique_together = ('code','language')
+        ordering = ("language__id",)
 
 
 ###########################################################################
