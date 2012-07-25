@@ -282,7 +282,7 @@ class CodebookCode(AmcatModel):
 
     codebook = models.ForeignKey(Codebook, db_index=True)
 
-    _code = models.ForeignKey(Code, db_index=True, related_name="+", db_column="code_id")
+    _code = models.ForeignKey(Code, db_index=True, related_name="codebook_codes", db_column="code_id")
     _parent = models.ForeignKey(Code, db_index=True, related_name="+",
                                 null=True, db_column="parent_id")
     hide = models.BooleanField(default=False)
