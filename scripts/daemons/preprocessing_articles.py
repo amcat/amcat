@@ -31,9 +31,26 @@ from amcat.nlp.preprocessing import set_preprocessing_actions
 
 import logging; log = logging.getLogger(__name__)
 
+import multiprocessing
+import time
+
 BATCH = 10000
+PROCESSES = multiprocessing.cpu_count()
+
+def _set_preprocessing_actions(queue):
+    while True:
+        set_preprocessing_actions(queue.get())
 
 class PreprocessingArticlesDaemon(DaemonScript):
+    def prepare(self):
+        self.manager = multiprocessing.Manager()
+        self.queue = self.manager.Queue(PROCESSES)
+        self.pool = multiprocessing.Pool(processes=PROCESSES)
+
+        for i in range(PROCESSES):
+            self.pool.apply_async(_set_preprocessing_actions, (self.queue,))
+
+        log.info("Starting %i workers" % PROCESSES)
 
     @transaction.commit_on_success
     def run_action(self):
@@ -49,7 +66,7 @@ class PreprocessingArticlesDaemon(DaemonScript):
             log.info("Deleting {n} queue objects".format(n=len(preprocess_ids)))
             AnalysisQueue.objects.filter(pk__in=preprocess_ids).delete()
             log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
-            set_preprocessing_actions(aids)
+            self.queue.put(aids)
 
             return True
 
