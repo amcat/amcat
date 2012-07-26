@@ -30,6 +30,87 @@ import logging; log = logging.getLogger(__name__)
 from amcat.tools.idlabel import Identity
 from amcat.models.coding.coding import Coding
 
+import collections
+
+def _cache_codings(coded_articles, articles=None):
+    """
+    Cache codings for given coded_articles    
+    """
+    if not coded_articles: return
+
+    codingjob = coded_articles.values()[0].codingjob
+    todo = set(articles or codingjob.articleset.articles.all())
+
+    codings = Coding.objects.filter(
+        codingjob=codingjob, sentence__isnull=True,
+        article__in=articles
+    )
+
+    # Set cache for found codings
+    for coding in codings:
+        ca = coded_articles.get(coding.article_id)
+        ca._set_coding_cache(coding)
+
+        todo.remove(coding.article_id)
+
+    # Set cache to empty (None) for codings not found
+    for article in todo:
+        coded_articles.get(article.id)._set_coding_cache(None)
+
+def _cache_sentences(coded_articles, articles=None):
+    """
+    Cache sentences for given coded_articles
+    """
+    if not coded_articles: return
+
+    codingjob = coded_articles.values()[0].codingjob
+    todo = collections.defaultdict(list)
+
+    codings = Coding.objects.filter(
+        article__in=articles or codingjob.articleset.articles.all(),
+        sentence__isnull=False,
+        codingjob=codingjob
+    ).order_by('sentence__parnr', 'sentence__sentnr')
+
+    # Group by codingjob
+    for coding in codings:
+        todo[coding.article_id].append(coding)
+
+    # Set cache. Empty caches are automatically set due to the use of
+    # defaultdict
+    for article_id, coded_article in coded_articles.items():
+        coded_article._set_sentence_codings_cache(todo[article_id])
+
+def bulk_create_codedarticles(codingjob, cache_sentences=True, cache_coding=True, articles=None):
+    """
+    Create CodedArticles in batch and cache certain properties.
+
+    @param codingjob: codingjob to create codedarticles for
+    @type codingjob: amcat.models.CodingJob
+
+    @param cache_sentences: cache CodedArticle().sentence_codings
+    @type cache_sentences: boolean
+
+    @param cache_coding: cache CodedArticle().coding
+    @type cache_coding: boolean
+
+    @type articles: iterable or None
+    @param articles: which articles to use. If left None, all articles
+                     of the given codingjob are used.
+    """
+    articles = codingjob.articleset.articles.all() if articles is None else articles
+    coded_articles = dict([(art.id, CodedArticle(codingjob, art)) for art in articles])
+
+    # Cache codings with one query
+    if cache_coding is True:
+        _cache_codings(coded_articles, articles)
+
+    # Cache sentence codings
+    if cache_sentences:
+        _cache_sentences(coded_articles, articles)
+
+    return coded_articles.values()
+
 class CodedArticle(Identity):
     """Convenience class to represent an article in a codingjob
     and expose the article and sentence codings
@@ -44,13 +125,33 @@ class CodedArticle(Identity):
         else:
             self.codingjob = codingjob_or_coding
             self.article = article
+
         super(CodedArticle, self).__init__(self.codingjob.id, self.article.id)
+
+    def _set_coding_cache(self, coding):
+        self._coding = coding
+
+    def _set_sentence_codings_cache(self, sentence_codings):
+        self._sentence_codings = sentence_codings
 
     @property
     def coding(self):
         """Get the  article coding for this coded article"""
-        result = self.codingjob.codings.filter(article=self.article, sentence__isnull=True)
-        if result: return result[0]
+        # Try to return cache
+        try:
+            return self._coding
+        except AttributeError:
+            pass
+
+        # Fetch coding and fill cache
+        try:
+            self._coding = self.codingjob.codings.get(
+                article=self.article, sentence__isnull=True
+            )
+        except Coding.DoesNotExist:
+            self._coding = None
+
+        return self._coding
 
     def get_or_create_coding(self):
         """Get or create the article coding for this coded article"""
@@ -67,9 +168,16 @@ class CodedArticle(Identity):
     @property
     def sentence_codings(self):
         """Get the sentence codings for this coded article"""
-        q = self.codingjob.codings.filter(article=self.article, sentence__isnull=False)
-        return q.order_by('sentence__parnr', 'sentence__sentnr')
+        try:
+            return self._sentence_codings
+        except AttributeError:
+            pass
 
+        self._sentence_codings = self.codingjob.codings.filter(
+            article=self.article, sentence__isnull=False
+        ).order_by('sentence__parnr', 'sentence__sentnr')
+
+        return self._sentence_codings
     
     
 
