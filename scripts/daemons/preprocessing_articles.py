@@ -39,7 +39,8 @@ PROCESSES = multiprocessing.cpu_count()
 
 def _set_preprocessing_actions(queue):
     while True:
-        set_preprocessing_actions(queue.get())
+        with transaction.commit_on_success():
+            set_preprocessing_actions(queue.get())
 
 class PreprocessingArticlesDaemon(DaemonScript):
     def prepare(self):
