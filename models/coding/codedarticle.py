@@ -54,8 +54,8 @@ def _cache_codings(coded_articles, articles=None):
         todo.remove(coding.article_id)
 
     # Set cache to empty (None) for codings not found
-    for article in todo:
-        coded_articles.get(article.id)._set_coding_cache(None)
+    for article_id in todo:
+        coded_articles.get(article_id)._set_coding_cache(None)
 
 def _cache_sentences(coded_articles, articles=None):
     """
