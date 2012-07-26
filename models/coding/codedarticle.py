@@ -39,9 +39,9 @@ def _cache_codings(coded_articles, articles=None):
     if not coded_articles: return
 
     codingjob = coded_articles.values()[0].codingjob
-    todo = set(articles or codingjob.articleset.articles.all())
+    todo = [a.id for a in articles or codingjob.articleset.articles.all()]
 
-    codings = Coding.objects.filter(
+    codings = Coding.objects.select_related("status").filter(
         codingjob=codingjob, sentence__isnull=True,
         article__in=articles
     )
@@ -81,7 +81,10 @@ def _cache_sentences(coded_articles, articles=None):
     for article_id, coded_article in coded_articles.items():
         coded_article._set_sentence_codings_cache(todo[article_id])
 
-def bulk_create_codedarticles(codingjob, cache_sentences=True, cache_coding=True, articles=None):
+def bulk_create_codedarticles(
+        codingjob, cache_sentences=True, cache_coding=True,
+        articles=None, select_related_codings=tuple()
+    ):
     """
     Create CodedArticles in batch and cache certain properties.
 
