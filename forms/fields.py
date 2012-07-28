@@ -18,8 +18,8 @@
 ###########################################################################
 
 """
-Replacement for Django Forms.forms module. This module contains all standard
-forms and more.
+Replacement for Django Forms.forms fields module. This module contains all
+standard forms and more.
 """
 import csv
 
