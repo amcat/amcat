@@ -86,10 +86,13 @@ class CodingSchemaField(AmcatModel):
     
     label = models.TextField()
     required = models.BooleanField(default=True)
-    default = models.CharField(db_column='deflt', max_length=50, null=True, blank=True)
     fieldtype = models.ForeignKey(CodingSchemaFieldType)
     
     codebook = models.ForeignKey(Codebook, null=True) # for codebook fields
+
+    # Default needs to the last field specified, in order to allow checks on
+    # `fieldtype` when validating `default` in forms.
+    default = models.CharField(db_column='deflt', max_length=50, null=True, blank=True)
 
     class Meta():
         db_table = 'codingschemas_fields'
