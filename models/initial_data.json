@@ -295,14 +295,14 @@
     "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Boolean",
-      "serialiserclassname" : "TextSerialiser"
+      "serialiserclassname" : "BooleanSerialiser"
     }
   },
   {  "pk" : 9, 
     "model": "amcat.codingschemafieldtype",
     "fields" : {
       "name" : "Quality",
-      "serialiserclassname" : "TextSerialiser"
+      "serialiserclassname" : "QualitySerialiser"
     }
   },
   {  "pk" : 10, 
