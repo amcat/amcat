@@ -22,11 +22,11 @@ This module provides form base classes, to provide extra functionality on top
 of the default behaviour of Django Forms.
 """
 
-from django import forms
+from django.forms import *
 from django.forms.widgets import HiddenInput
 from django.forms.util import ErrorList
 
-class HideFieldsForm(forms.ModelForm):
+class HideFieldsForm(ModelForm):
     """
     This form takes an extra parameter upon initilisation `hide`, which
     indicates which fields need to be hidden. This allows developers to
@@ -35,10 +35,10 @@ class HideFieldsForm(forms.ModelForm):
     """
     def __init__(self, data=None, files=None, auto_id='id_%s', prefix=None,
             initial=None, error_class=ErrorList, label_suffix=':',
-            empty_permitted=False, instance=None, hidden=tuple()):
+            empty_permitted=False, instance=None, hidden=None):
         """
         @param hidden: fields to be hidden
-        @type hidden: iterable
+        @type hidden: iterable or string (for single field)
         """
         # *sigh*..
         super(HideFieldsForm, self).__init__(
@@ -47,6 +47,12 @@ class HideFieldsForm(forms.ModelForm):
             label_suffix=label_suffix, empty_permitted=empty_permitted
         )
 
-        for field_name in fields:
-            self.fields[field_name].widget = HiddenInput()
+        if isinstance(hidden, str):
+            # Make sure hidden is a iterable
+            hidden = (hidden,)
+        elif hidden is None:
+            return
+
+        for field_name in hidden:
+            del self.fields[field_name]
 

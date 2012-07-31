@@ -99,6 +99,7 @@ class Code(AmcatModel):
                 return self._get_label(language=lan)
             except Label.DoesNotExist:
                 pass
+
         fallback = kargs.get("fallback", True)
         if fallback:
             try:
