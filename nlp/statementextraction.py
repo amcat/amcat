@@ -23,7 +23,7 @@ Rules for extraction statements from semantic roles
 
 import collections, csv
 
-PREDICATE_RELATIONS = "vc", "xcomp"
+PREDICATE_RELATIONS = "vc", "xcomp", "ccomp"
 
 class Statement(object):
     def __init__(self, subject, predicate, object, source=None, type=None, condition=None):
@@ -56,25 +56,33 @@ class Statement(object):
         return result
     __repr__ = __str__
 
-def get_predicates(sentence):
+def get_predicates(sentence, roles):
     """
     Determine the predicates given a set of co-membership relations
-    Input: A analysed_sentence
+    Input: A analysed_sentence and the found roles
     Output: a dict of node : predicate, where predicate is a set of nodes (shared between predicates
             such that if a and b are in the same predicate, predicates[a] is predicates[b] and
             {a,b} - predicate[b] is the empty set.
     """
+    om_roles = {(su, obj) for (su, pred, obj) in roles if pred == "om"}
+    
     predicates = {} # node -> set(nodes) # set of sets
     for t in sentence.triples:
-        if t.relation.label in PREDICATE_RELATIONS:
+        if (t.relation.label in PREDICATE_RELATIONS and t.child.word.lemma.pos == 'V' and t.parent.word.lemma.pos == 'V'
+	    and (t.parent.position, t.child.position) not in om_roles and (t.child.position, t.parent.position) not in om_roles):
             combined = frozenset(predicates.get(t.child, set([sentence.get_token(t.child.position)]))
                                  | predicates.get(t.parent, set([sentence.get_token(t.parent.position)])))
             for node in t.child, t.parent:
                 predicates[node] = combined
+		
+    #for t in sentence.tokens.all():
+    #  if t.word.lemma.pos == 'V' and t not in predicates:
+    #    predicates[t] = frozenset([t])
+    
     return predicates
 
-def get_statements(sentence, roles):
-    predicates = get_predicates(sentence)
+def get_statements(sentence, roles, statements_without_object=False):
+    predicates = get_predicates(sentence, roles)
     # relations per predicate: {predicate : {rel : {nodes}}}
     rels_per_predicate = collections.defaultdict(lambda : collections.defaultdict(set))
     for subject, role, object in roles:
@@ -91,25 +99,37 @@ def get_statements(sentence, roles):
             
 
     # normal statement: if a su and obj point to the same predicate, it is a statement
+    print "----------"
+    for pred, rels in rels_per_predicate.items():
+	print pred, rels
+    print "---------"
+    
     for pred, rels in rels_per_predicate.items():
         if "obj" in rels and "su" in rels:
             s = Statement(rels["su"], pred, rels["obj"], rels["quote"])
             if rels["su"] == frozenset([None]): s.add_type("Reality")
             yield s
-        elif "obj" in rels and "om" in rels:
+        elif statements_without_object and "su" in rels:
+            yield Statement(rels["su"], pred, [], rels["quote"])
+
+        if "obj" in rels and "om" in rels:
             for means_predicate in rels["om"]:
                 means_rels = rels_per_predicate[means_predicate]
-
                 # S says that X does Y in order to increase Z
                 # so, X wants to increase Z (according to S)
                 yield Statement(means_rels["su"], pred, rels["obj"],
                                 source=means_rels["quote"], type={"Affective"})
                 # and, X thinks that doing Y will increate Z
-                yield Statement(means_rels["obj"], pred, rels["obj"],
+		if "obj" in means_rels:
+		    yield Statement(means_rels["obj"], pred, rels["obj"],
                                 source=(means_rels["quote"] | means_rels["su"]),
                                 condition=means_predicate,
                                 type={"Causal"})
 
+	if "eqv" in rels:
+	    raise Exception(rels)
+
+	    
 def fill_out(sentence, nodes, roles):
     """
     'Fill out' the nodes, adding any node that is a descendant of the given nodes

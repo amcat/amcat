@@ -35,21 +35,25 @@ from amcat.tools.djangotoolkit import get_or_create
 import re
 import collections
 import StringIO
+from itertools import takewhile, count
+from string import strip
 
 import logging; log = logging.getLogger(__name__)
 
 # Regular expressions used for parsing document
 class RES:
     # Match at least 20 whitespace characters, followed by # of # DOCUMENTS.
-    DOCUMENT_COUNT = re.compile(" {20} +\d* of \d* DOCUMENTS")
+    DOCUMENT_COUNT = re.compile(" {20} +\d* of \d* DOCUMENT")
 
     # Header meta information group match
     HEADER_META = re.compile("([\w -]*):(.*)", re.UNICODE)
 
     # Body meta information. This is the same as HEADER_META, but does not include
     # lower_case characters.
-    BODY_META = re.compile("([^0-9a-z: ]*):(.*[^;])$", re.UNICODE)
+    BODY_META = re.compile("([^0-9a-z: ]+):(.*[^;])$", re.UNICODE)
 
+    # End of body: a line like 'UPDATE: 2. September 2011' or 'PUBLICATION_TYPE: ...'
+    BODY_END = re.compile(r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:", re.UNICODE)
     # Copyright notice
     COPYRIGHT = re.compile("^Copyright \d{4}.*")
 
@@ -151,7 +155,7 @@ class LexisNexis(UploadScript):
             i += 1
 
         # Clean values and create 'real' dict
-        return dict([(key.strip(), "\n".join(vals).strip()) for key, vals in meta.items()])
+        return {key.strip() : "\n".join(vals).strip() for key, vals in meta.items()}
 
     def split_body(self, body):
         """
@@ -196,139 +200,150 @@ class LexisNexis(UploadScript):
 
         return True
 
-    def line_is_meta(self, lines, i):
-        """
-        If lines[i] is a meta line (LENGTH: 123), return a (key, value) tuple.
-        If not, return None
-        """
-        # if the next line has content, this line is not a meta line
-        if len(lines) > (i+1) and lines[i+1].strip():
-            return 
-        mo = RES.BODY_META.match(lines[i])
-        if mo:
-            key, val = mo.groups()
-            key = key.lower()
-            key = BODY_KEYS_MAP.get(key, key)
-            return key, val.strip()
-
+        
     def parse_article(self, art):
         """
-        The most 'interesting' method :-). Parses a piece of text containing
-        an article.
+        A lexis nexis article consists of five parts:
+        1) a header
+        2) the headline and possibly a byline
+        3) a block of meta fields
+        4) the body
+        5) a block of meta fields
 
-        @param art: article to parse
-        @type art: unicode / str
-
-        @return headline, byline, text, date, source, meta
+        The header consists of 'centered' lines, ie starting with a whitespace character
+        The headline (and byline) are left justified non-marked lines before the first meta field
+        The meta fields are of the form FIELDNAME: value and can contain various field names
+        The body starts after either two blank lines, or if a line is not of the meta field form.
+        The body ends with a 'load date', which is of form FIELDNAME: DATE ending with a four digit year
         """
-        # Store unidentified text pieces here to identify (guess)
-        # them later. Indented texts usually contain the magazine
-        # name and date, non-indented chunks the headline and text.
-        #
-        # Copyright notice might be in one of both, but will be
-        # ignored.
-        uit = []
-        uit_indented = []
-        meta = {}
-        byline = None
 
-        i = 0; art = self._strip_article(art).split("\n")
-        while i < len(art):
-            line = art[i]
+        header, headline, meta, body = [], [], [], []
 
-            # Determine if this line contains meta-data
-            meta_kv = self.line_is_meta(art, i)
-            if meta_kv:
-                key, val = meta_kv
-                meta[key] = val
-            elif line.strip():
-                # Unidentified text found!
-                if len(art) > (i+1) and art[i+1].strip():
-                    # Multiple line text found. Enter 'greedy' mode (only
-                    # stop when meta-data found)
-                    ut = []
+        
+        @toolkit.to_list
+        def _get_header(lines):
+            """Consume and return all lines that are indented (ie the list is changed in place)"""
+            while lines and ((not lines[0].strip()) or lines[0].startswith(" ")):
+                line = lines.pop(0)
+                if line:
+                    if line.strip().startswith('Copyright '):
+                        # skip lines until a blank line is found
+                        while lines and line.strip():
+                            line = lines.pop(0)
+                    else:
+                        yield line
 
-                    # Before traversing downwards, traverse upwards, to include
-                    # all uit text until a BODY_META is found.
-                    j = i - 1;
-                    while (j >= 0 and not RES.BODY_META.match(art[j])
-                           and not art[j].startswith(' ')):
-                        if art[j].strip() in uit:
-                            del uit[uit.index(art[j])]
-
-                        ut.insert(0, art[j])
-                        j -= 1
-
-                    # Now traverse downwards
-                    while i < len(art) and not self.line_is_meta(art, i):
-                        ut.append(art[i])
-                        i += 1
-
-                    i -= 1
-                    uit.append("\n".join(ut).strip())
-
-                elif line.startswith(' '):
-                    uit_indented.append(line.strip())
+        def _get_headline(lines):
+            """Return headline and byline, consuming the lines"""
+            headline, byline = [], []
+            target = headline
+            
+            while lines:
+                line = lines[0].strip()
+                if RES.BODY_META.match(line):
+                    return None, None
+                if not line:
+                    break
+                if line.endswith(";"):
+                    target.append(line[:-1])
+                    target = byline
                 else:
-                    uit.append(line.strip())
+                    target.append(line)
+                del lines[0]
+            return (re.sub("\s+", " ", " ".join(x)) if x else None
+                    for x in (headline, byline))
 
-            i += 1
-
-        # Get date and source
-        ui = uit_indented
-        if self._is_date(ui[0]):
-            date = toolkit.readDate(ui[0])
-            source = ui[1]
-        elif self._is_date(ui[1]):
-            date = toolkit.readDate(ui[1])
-            source = ui[0]
-        else:
-            raise ParseError("Couldn't find date in '{0}' or '{1}'".format(*ui[:3]))
-
-
-        # Get text and headline
-        uit.sort(key=len)
-        headline = None
-
-        for text in uit[:-1]:
-            splitted = text.split('\n')
-
-            # Text with headline and byline end its (first) line with ';'
-            for i, line in enumerate(splitted):
-                if splitted[i].endswith(';'):
-                    headline = " ".join(splitted[:i+1])[:-1]
-                    byline = "\n".join(splitted[1:])
+        @toolkit.wrapped(dict)
+        def _get_meta(lines):
+            """
+            Return meta key-value pairs. Stop if body start criterion is found
+            (eg two blank lines or non-meta line)
+            """
+            while lines:
+                line = lines[0].strip()
+                next_line = lines[1].strip() if len(lines) >= 2 else None
+                meta_match = RES.BODY_META.match(line)
+                
+                if ((not bool(line) and not bool(next_line))
+                    or (line and not meta_match)):
+                    # either two blank lines or a non-meta line
+                    # indicate start of body, so end of meta
                     break
+                del lines[0]
+                if meta_match:
+                    key, val = meta_match.groups()
+                    key = key.lower()
+                    key = BODY_KEYS_MAP.get(key, key)
 
-        # Headline not found? Assign first uit text withouth
-        # an '\n'
+                    # multi-line meta: add following non-blank lines
+                    while lines and lines[0].strip():
+                        val += " " + lines.pop(0)
+                    val = re.sub("\s+", " ", val)
+                    
+                    yield key, val.strip()
+                    
+
+        @toolkit.to_list
+        def _get_body(lines):
+            """Consume and return all lines until a date line is found"""
+            
+            while lines:
+                line = lines[0].strip()
+                if RES.BODY_END.match(line) or RES.COPYRIGHT.match(line):
+                    break # end of body                
+                yield lines.pop(0)
+            
+        lines = self._strip_article(art).split("\n")
+        header = _get_header(lines)
+        if not lines:
+            # Something is wrong with this article, skip it
+            return
+        
+        headline, byline = _get_headline(lines)
+        meta = _get_meta(lines)
+        body = _get_body(lines)
+        meta.update(_get_meta(lines))
+        
+        date = None
+        for i, line in enumerate(header):
+            if self._is_date(line):
+                date = line
+                source = header[0 if i > 0 else 1]
+        if date is None: # try looking for only month - year notation by preprending a 1
+            for i, line in enumerate(header):
+                line = "1 {line}".format(**locals())
+                if self._is_date(line):
+                    date = line
+                    source = header[0 if i > 0 else 1]
+        if date is None: # try looking for season names
+            #TODO: Hack, reimplement more general!
+            for i, line in enumerate(header):
+                if line.strip() == "Winter 2008/2009":
+                    date = "2009-01-01"
+                    source = header[0 if i > 0 else 1]
+        if date is None:
+            raise ParseError("Couldn't find date in header: {header!r}".format(**locals()))
+
+        date = toolkit.readDate(date)
+        source = source.strip()
+        
+        text = "\n".join(body).strip()
+
+        if 'graphic' in meta and (not text):
+            text = meta.pop('graphic')
+
         if headline is None:
-            for t in uit[:-1]:
-                if "\n" not in t:
-                    headline = t
-                    break
+            if 'title' in meta:
+                headline = meta.pop('title')
+            else:
+                headline = "No headline found!"
 
-        # Headline still not found? Get first not-well known body key
-        #if headline is None:
-        #    for key in meta.keys():
-        #        if key not in WELL_KNOWN_BODY_KEYS:
-        #            headline = u"%s: %s" % (key, meta[key])
-        #            del meta[key]
+        if 'byline' in meta:
+            if byline:
+                headline += "; %s" % byline
+            byline = meta.pop('byline')
 
-        # Least-reliable method, choose the smallest element in
-        # uit which does matches the copyright regular expression,
-        # as it is probably the headline
-        if headline is None:
-            for ui in uit[0:-1]:
-                if not RES.COPYRIGHT.match(ui):
-                    headline = ui
-                    break
-
-        if headline is None:
-            headline = "No headline found!"
-
-        # Get text, the biggest element in uit
-        text = uit[-1]
+            
         return headline.strip(), byline, text, date, source, meta
 
     def body_to_article(self, headline, byline, text, date, source, meta):
@@ -360,6 +375,8 @@ class LexisNexis(UploadScript):
         @return Article-object
 
         """
+        log.debug("Creating article object for {headline!r}".format(**locals()))
+        
         art = Article(headline=headline, byline=byline, text=text, date=date)
 
 
@@ -370,7 +387,10 @@ class LexisNexis(UploadScript):
         meta = meta.copy()
         art.author = meta.pop('author', None)
         art.section = meta.pop('section', None)
-        art.length = int(meta.pop('length').split()[0])
+        if 'length' in meta:
+            art.length = int(meta.pop('length').split()[0])
+        else:
+            art.length = art.text.count(" ")
         art.metastring = str(meta)
 
         art.project = self.options['project']
@@ -385,13 +405,17 @@ class LexisNexis(UploadScript):
 
     def parse_document(self, text):
         fields = self.parse_article(text)
+        if fields is None:
+            return None
+        
         try:
             return self.body_to_article(*fields)
         except:
             log.error("Error on processing fields: {fields}".format(**locals()))
             raise
 
-    
+from amcat.tools import amcatlogging; amcatlogging.debug_module()
+        
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli(handle_output=False)

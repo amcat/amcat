@@ -80,9 +80,9 @@ class AnalysisArticleSetQueue(AmcatModel):
         Add whole project (i.e. all articlesets) to queue. 
         """
         AnalysisArticleSetQueue.objects.bulk_create(
-            AnalysisArticleSetQueue(articleset=artset)\
-             for artset in project.articlesets.all()
-        )
+            [AnalysisArticleSetQueue(articleset=artset)
+            for artset in project.articlesets.all()]
+            )
 
     class Meta():
         db_table = 'analysis_articleset_queue'
@@ -148,19 +148,27 @@ class AnalysisArticle(AmcatModel):
         app_label = 'amcat'
         unique_together = ('article', 'analysis')
 
-    @transaction.commit_on_success
-    def store_analysis(self, tokens, triples=None):
+    def do_store_analysis(self, tokens, triples=None):
         """
         Store the given tokens and triples for this articleanalysis, setting
         it to done=True if stored succesfully.
         """
         if self.done: raise Exception("Cannot store analyses when already done")
         from amcat.nlp.wordcreator import create_triples
-        create_triples(tokens, triples)
+        result = create_triples(tokens, triples)
         self.done = True
         self.save()
+	return result
 
-
+	
+    @transaction.commit_on_success
+    def store_analysis(self, tokens, triples=None):
+        """
+	Store the given tokens and triples using do_store_analysis, wrapping it
+	inside a transaction
+        """
+	do_store_analysis(self, tokens, triples)
+	
 class AnalysisProject(AmcatModel):
     """
     Explicit many-to-many projects - analyses. Hopefully this can be removed
