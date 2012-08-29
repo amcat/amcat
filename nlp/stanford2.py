@@ -8,7 +8,7 @@ from amcat.tools.toolkit import stripAccents
 from amcat.models.token import TokenValues, TripleValues, CoreferenceSet
 
 log = logging.getLogger(__name__)
-        
+
 STANFORD_ANALYSIS_ID = 2
 
 def get_text(article):
@@ -16,14 +16,22 @@ def get_text(article):
     text = text.replace("\r\n", "\n")
     text = text.replace("\r", "")
     text = stripAccents(text)
-    
+
     #text = ". ALINEASCHEIDING. ".join(re.sub("\s+", " ", par) for par in re.split(r"\n\n+", text))
-    text = re.sub("\s+", " ", text)    
+
+    pars = re.split(r"\n\n+", text)
+    for i, par in enumerate(pars):
+        if par and par[-1] not in ".:?!":
+            pars[i] = par + "."
+    text = " ".join(pars)
+        
+    
+    text = re.sub("\s+", " ", text)
     text = text.encode('ascii', 'ignore')
 
     if len(text) > 10000:
 	text = text[:(text.find(".", 10000)+1)]
-    
+
     return text
 
 def get_tokenvalues(words, analysis_sentence):
@@ -33,7 +41,7 @@ def get_tokenvalues(words, analysis_sentence):
 	poscat = POSMAP[pos]
 	ner = info['NamedEntityTag']
 	ner = NERMAP[ner] if ner != 'O' else None
-	
+
 	yield TokenValues(analysis_sentence.id, i, word, info['Lemma'], poscat, pos, None, ner)
 
 def get_triplevalues(tuples, analysis_sentence):
@@ -46,7 +54,7 @@ def get_triplevalues(tuples, analysis_sentence):
 	if (child, parent) in seen: continue
 	seen.add((child, parent))
 	yield TripleValues(analysis_sentence.id, child-1, parent-1, relation)
-		
+
 @transaction.commit_on_success
 def do_parse(nlp, article):
     text = get_text(article)
@@ -55,7 +63,7 @@ def do_parse(nlp, article):
     # create analysis article
     aa = AnalysisArticle.objects.create(article=article, analysis_id=STANFORD_ANALYSIS_ID)
 
-    
+
     sentences = {} # for coref, asent.id -> stanford sent no
     tokenvalues, triplevalues = [], []
     for sent_no, sent in enumerate(sents, start=1):
@@ -63,7 +71,7 @@ def do_parse(nlp, article):
         sentence = Sentence.objects.create(article=article, parnr=2, sentnr=sent_no, sentence=sent["text"])
         asent = AnalysisSentence.objects.create(analysis_article=aa, sentence=sentence)
 	sentences[asent.id] = sent_no
-	
+
 	tokenvalues += list(get_tokenvalues(sent["words"], asent))
 	triplevalues += list(get_triplevalues(sent["tuples"], asent))
 
@@ -89,7 +97,7 @@ def store_coreference(coref, token_map, analysis_article):
 	    s = CoreferenceSet(analysis_article = analysis_article)
 	    s.save()
 	    s.tokens.add(*tokenset)
-		
+
 
 POSMAP = {
    '$' :'.',
@@ -160,13 +168,14 @@ NERMAP = {
     }
 
 
+
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.setup()
     amcatlogging.info_module("amcat.contrib.corenlp")
 
-    from amcat.models import ArticleSet
-    
+    #from amcat.models import ArticleSet
+
     nlp = StanfordCoreNLP(corenlp_path="/home/amcat/resources/stanford-corenlp", models_version="2012-07-06")
 
     import sys
@@ -175,10 +184,12 @@ if __name__ == '__main__':
 	delete_existing = True
 	amcatlogging.debug_module("amcat.contrib.corenlp")
     else:
-	s = ArticleSet.objects.get(pk=22947)
-	aids = [aid for (aid,) in s.articles.values_list("id")]
-	delete_existing = False
+        aids = [int(aid) for aid in sys.stdin]
+	#s = ArticleSet.objects.get(pk=22947)
+	#aids = [aid for (aid,) in s.articles.values_list("id")]
+	delete_existing = True
 
+    log.info("Parsing %i articles, delete_existing=%s" % (len(aids), delete_existing))
     for aid in aids:
 	try:
 	    log.info("Parsing article %i" % aid)
@@ -196,5 +207,5 @@ if __name__ == '__main__':
 	except Exception, e:
 	    log.exception("Error on parsing %i; restarting server" % aid)
 	    nlp = StanfordCoreNLP(corenlp_path="/home/amcat/resources/stanford-corenlp", models_version="2012-07-06")
-	    
-	    
+
+

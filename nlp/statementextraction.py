@@ -23,10 +23,11 @@ Rules for extraction statements from semantic roles
 
 import collections, csv
 
-PREDICATE_RELATIONS = "vc", "xcomp", "ccomp"
+PREDICATE_RELATIONS = "vc", "xcomp", "ccomp", "prepc_to", "prepc_by", "prepc_from"
 
 class Statement(object):
-    def __init__(self, subject, predicate, object, source=None, type=None, condition=None):
+    def __init__(self, sentence, subject, predicate, object, source=None, type=None, condition=None):
+        self.sentence = sentence
         self.subject = frozenset(subject)
         self.predicate = frozenset(predicate)
         self.object = frozenset(object)
@@ -64,7 +65,7 @@ def get_predicates(sentence, roles):
             such that if a and b are in the same predicate, predicates[a] is predicates[b] and
             {a,b} - predicate[b] is the empty set.
     """
-    om_roles = {(su, obj) for (su, pred, obj) in roles if pred == "om"}
+    om_roles = {(su, obj) for (su, pred, obj) in roles if pred == "om"} # om 'breaks' predicates
     
     predicates = {} # node -> set(nodes) # set of sets
     for t in sentence.triples:
@@ -95,39 +96,42 @@ def get_statements(sentence, roles, statements_without_object=False):
             means = predicates.get(subject, frozenset([subject]))
             rels_per_predicate[pred][role].add(means)
         elif role == "eqv": # subject -> object with no predicate
-            yield Statement([subject], [], [object], type={"Equivalent"})
+            yield Statement(sentence, [subject], [], [object], type={"Equivalent"})
+	    for subject2, role, object2 in roles:
+		subject2 = sentence.tokendict[subject2] if subject2 is not None else None
+		object2 = sentence.tokendict[object2]
+		if role == "eqv" :
+		    #print ">>>>>>>>", subject, object, subject2, object2
+		    if subject2 == object:
+			yield Statement(sentence, [subject], [], [object2], type={"Equivalent"})
+		    if subject == object2:
+			yield Statement(sentence, [subject2], [], [object], type={"Equivalent"})
             
 
     # normal statement: if a su and obj point to the same predicate, it is a statement
-    print "----------"
-    for pred, rels in rels_per_predicate.items():
-	print pred, rels
-    print "---------"
     
     for pred, rels in rels_per_predicate.items():
         if "obj" in rels and "su" in rels:
-            s = Statement(rels["su"], pred, rels["obj"], rels["quote"])
+            s = Statement(sentence, rels["su"], pred, rels["obj"], rels["quote"])
             if rels["su"] == frozenset([None]): s.add_type("Reality")
             yield s
-        elif statements_without_object and "su" in rels:
-            yield Statement(rels["su"], pred, [], rels["quote"])
+        elif statements_without_object and ("su" in rels or "obj" in rels):
+            yield Statement(sentence, rels["su"], pred, rels["obj"], rels["quote"])
 
         if "obj" in rels and "om" in rels:
             for means_predicate in rels["om"]:
                 means_rels = rels_per_predicate[means_predicate]
                 # S says that X does Y in order to increase Z
                 # so, X wants to increase Z (according to S)
-                yield Statement(means_rels["su"], pred, rels["obj"],
+                yield Statement(sentence, means_rels["su"], pred, rels["obj"],
                                 source=means_rels["quote"], type={"Affective"})
                 # and, X thinks that doing Y will increate Z
 		if "obj" in means_rels:
-		    yield Statement(means_rels["obj"], pred, rels["obj"],
+		    yield Statement(sentence, means_rels["obj"], pred, rels["obj"],
                                 source=(means_rels["quote"] | means_rels["su"]),
                                 condition=means_predicate,
                                 type={"Causal"})
 
-	if "eqv" in rels:
-	    raise Exception(rels)
 
 	    
 def fill_out(sentence, nodes, roles):

@@ -21,7 +21,7 @@
 Extract semantic roles from syntax by transforming trees with SPARQL statements
 """
 
-import logging, csv
+import logging, csv, re
 from collections import namedtuple
 
 from rdflib import Graph, Namespace, Literal
@@ -43,7 +43,9 @@ def _id(obj):
     return obj if isinstance(obj, int) else obj.id
 def _token_uri(token):
     tokenstr = unicode(token).encode("ascii", "ignore")
-    return NS_AMCAT["t_{token.position}_{tokenstr}".format(i=_id(token), **locals())]
+    tokenstr = re.sub("\W", "", tokenstr)
+    uri = NS_AMCAT["t_{token.position}_{tokenstr}".format(i=_id(token), **locals())]
+    return uri
 def _rel_uri(rel):
     return NS_AMCAT["rel_{rel}".format(**locals())]
 

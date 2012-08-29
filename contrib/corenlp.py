@@ -96,7 +96,7 @@ def parse_tuples(lines):
     for line in lines:
 	if not line.strip():
 	    return
-	m = re.match(r"(\w+)\(.+-([0-9']+), .+-([0-9']+)\)", line)
+	m = re.match(r"([\w!?|@\\/\+\.\']+)\(.+-([0-9']+), .+-([0-9']+)\)", line)
 	if not m:
 	    raise Exception("Cannot interpret 'tuples' line: {line!r}".format(**locals()))
 	yield m.groups()

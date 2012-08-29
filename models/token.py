@@ -79,7 +79,7 @@ class Triple(AmcatModel):
 class CoreferenceSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='coreference_set_id')
     analysis_article = models.ForeignKey("amcat.AnalysisArticle", related_name='coreferencesets')
-    tokens = models.ManyToManyField(Token)
+    tokens = models.ManyToManyField(Token, related_name='coreferencesets')
 
     class Meta():
         db_table = 'coreferencesets'

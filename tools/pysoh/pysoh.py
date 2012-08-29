@@ -29,6 +29,7 @@ class SOHServer(object):
         url = "{self.url}/data?default".format(**locals())
         if isinstance(rdf, rdflib.Graph):
             rdf = rdf.serialize(format="turtle")
+            #print rdf
         r = self.session.request(method, url, headers={'Content-Type' : format}, data=rdf, prefetch=True)
         if r.status_code != 204:
             raise Exception(r.text)
