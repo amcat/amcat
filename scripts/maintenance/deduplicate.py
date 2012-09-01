@@ -30,18 +30,18 @@ import logging; log = logging.getLogger(__name__)
 from amcat.tools import amcatlogging
 
 
-class DeduplicateForm(forms.form):
+class DeduplicateForm(forms.Form):
     date = forms.DateField()
 
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
 
-    def run(self):
+    def run(self,_input):
         """
         Takes an articleset/date as input and removes all duplicated articles from that set/date
         """
-        for articleset in Scraper.objects.raw("SELECT articleset FROM scrapers WHERE run_daily='t'"):
-            
+        for scraper in Scraper.objects.raw("SELECT * FROM scrapers WHERE run_daily='t'"):
+            articleset=scraper.articleset
             date = self.options['date']
             articles = Article.objects.filter(articlesetarticle__articleset=articleset,date__gte=date)
             
