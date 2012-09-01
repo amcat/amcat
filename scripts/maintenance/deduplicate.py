@@ -24,63 +24,65 @@ from amcat.scripts.script import Script
 from amcat.scripts.tools import cli
 
 from amcat.models.article import Article
+from amcat.models.scraper import Scraper
 from amcat.models.articleset import ArticleSet, ArticleSetArticle
 import logging; log = logging.getLogger(__name__)
 from amcat.tools import amcatlogging
 
-TRASH_PROJECT_ID=2
 
-class DeduplicateForm(forms.Form):
-    """Form for DeduplicateScript"""
-    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-    date = forms.DateField(required=False)
+class DeduplicateForm(forms.form):
+    date = forms.DateField()
 
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
+
+    def run(self):
+        """
+        Takes an articleset/date as input and removes all duplicated articles from that set/date
+        """
+        for articleset in Scraper.objects.raw("SELECT articleset FROM scrapers WHERE run_daily='t'"):
+            
+            date = self.options['date']
+            articles = Article.objects.filter(articlesetarticle__articleset=articleset,date__gte=date)
+            
+            txtDict, texts = {}, set()
+            for article in articles:
+                text = article.text
+                if text:
+                    if not text in texts:
+                        txtDict[text] = []
+                    txtDict[text].append(article.id)
+                    texts.add(text)
+
+            removable_ids = []
+            for ids in txtDict.itervalues():
+                if len(ids) > 1:
+                    removable_ids.extend(ids[1:])
+            articles.filter(id__in = removable_ids).update(project = 2) #trash project
+            ArticleSetArticle.objects.filter(article__in = removable_ids).delete() #delete from article set
+            log.info("Moved %s duplicated articles to (trash) project 2" % len(removable_ids))
     
-    def run(self, _input):
-        """
-        Takes an articleset as input and removes all duplicated articles from that set
-        """
-        asid = self.options['articleset'] # articleset id
-        articles = Article.objects.filter( articlesetarticle__articleset = asid)
-        if self.options['date']:
-            articles = articles.filter(date__gte=self.options['date'])
-
-        log.info("Retrieving all medium / date combinations")
-        medium_dates = articles.values_list("medium_id", "date").distinct()
-
-        n = len(medium_dates)
-        log.info("Checking {n} medium/date combinations".format(**locals()))
-
-        duplicates = set()
         
-        for i, (medium, date) in enumerate(medium_dates):
-            art_list = articles.filter(medium_id=medium, date=date).values_list("id", "length", "headline")
-            log.info(" {i}/{n} Checking {nart} articles in medium: {medium}, date: {date}"
-                     .format(nart=len(art_list), **locals()))
-
-            seen_keys = {}
-            ndup = 0
-            for aid, length, headline in art_list:
-                key = (length, headline)
-                if key in seen_keys:
-                    log.debug("    Duplicate: {aid} = {}".format(seen_keys[key], **locals()))
-                    duplicates.add(aid)
-                    ndup += 1
-                else:
-                    seen_keys[key] = aid
-
-            if ndup:
-                log.info("  Found {ndup} duplicates, |duplicates| now {}".format(len(duplicates), **locals()))
-        log.info("Moving {n} duplicates to trash".format(n=len(duplicates)))
-              
-        articles.filter(id__in = duplicates).update(project = TRASH_PROJECT_ID) 
-        ArticleSetArticle.objects.filter(article__in = duplicates).delete() 
-
-
+    def run_scrapers(self):
+        """
+        Runs on all daily scraper articlesets
+        """
+        
+        
+        
 if __name__ == '__main__':
-    cli.run_cli()
+    from sys import argv
+    from getopt import getopt
+    opts,args = getopt(argv,"s")
+    for opt,arg in opts:
+        if opt == '-s':
+            dedu = DeduplicateScript()
+            dedu.run_scrapers()
+    
+
+    amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
+    from amcat.scripts.tools import cli
+    cli.run_cli(DeduplicateScript)
 
 ###########################################################################  
 #                          U N I T   T E S T S                            #  
