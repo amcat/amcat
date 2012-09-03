@@ -50,8 +50,8 @@ class CodingJob(AmcatModel):
 
     name = models.CharField(max_length=100)
 
-    unitschema = models.ForeignKey(CodingSchema, related_name='+')
-    articleschema = models.ForeignKey(CodingSchema, related_name='+')
+    unitschema = models.ForeignKey(CodingSchema, related_name='codingjobs_unit')
+    articleschema = models.ForeignKey(CodingSchema, related_name='codingjobs_article')
 
     insertdate = models.DateTimeField(auto_now_add=True)
     insertuser = models.ForeignKey(User, related_name="+")

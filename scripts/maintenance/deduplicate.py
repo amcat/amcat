@@ -24,25 +24,26 @@ from amcat.scripts.script import Script
 from amcat.scripts.tools import cli
 
 from amcat.models.article import Article
+from amcat.models.scraper import Scraper
 from amcat.models.articleset import ArticleSet, ArticleSetArticle
 import logging; log = logging.getLogger(__name__)
 from amcat.tools import amcatlogging
-from sys import argv
 
-from datetime import date
 
-year,month,day = map(int,argv[-1].split("-"))
-DATE = date(year,month,day)
+class DeduplicateForm(forms.Form):
+    date = forms.DateField()
 
-class DeduplicateScript():
+class DeduplicateScript(Script):
+    options_form = DeduplicateForm
 
-    def run(self):
+    def run(self,_input):
         """
-        Takes an articleset as input and removes all duplicated articles from that set
+        Takes an articleset/date as input and removes all duplicated articles from that set/date
         """
-        asets = argv[1:-1]
-        for asid in asets:
-            articles = Article.objects.filter( articlesetarticle__articleset = asid, date__gte=DATE) # articles in the articleset
+        for scraper in Scraper.objects.raw("SELECT * FROM scrapers WHERE run_daily='t'"):
+            articleset=scraper.articleset
+            date = self.options['date']
+            articles = Article.objects.filter(articlesetarticle__articleset=articleset,date__gte=date)
             
             txtDict, texts = {}, set()
             for article in articles:
@@ -59,12 +60,29 @@ class DeduplicateScript():
                     removable_ids.extend(ids[1:])
             articles.filter(id__in = removable_ids).update(project = 2) #trash project
             ArticleSetArticle.objects.filter(article__in = removable_ids).delete() #delete from article set
-            print("Moved %s duplicated articles to (trash) project 2" % len(removable_ids))
-
-
+            log.info("Moved %s duplicated articles to (trash) project 2" % len(removable_ids))
+    
+        
+    def run_scrapers(self):
+        """
+        Runs on all daily scraper articlesets
+        """
+        
+        
+        
 if __name__ == '__main__':
-    d = DeduplicateScript()
-    d.run()
+    from sys import argv
+    from getopt import getopt
+    opts,args = getopt(argv,"s")
+    for opt,arg in opts:
+        if opt == '-s':
+            dedu = DeduplicateScript()
+            dedu.run_scrapers()
+    
+
+    amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
+    from amcat.scripts.tools import cli
+    cli.run_cli(DeduplicateScript)
 
 ###########################################################################  
 #                          U N I T   T E S T S                            #  

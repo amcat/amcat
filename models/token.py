@@ -23,7 +23,7 @@ from django.db import models
 from collections import namedtuple
 
 TripleValues = namedtuple("TripleValues", ["analysis_sentence", "child", "parent", "relation"])
-TokenValues = namedtuple("TokenValues", ["analysis_sentence", "position", "word", "lemma", "pos", "major", "minor"])
+TokenValues = namedtuple("TokenValues", ["analysis_sentence", "position", "word", "lemma", "pos", "major", "minor", "namedentity"])
 
 class Pos(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='pos_id')
@@ -44,6 +44,7 @@ class Token(AmcatModel):
     word = models.ForeignKey(Word)
     position = models.IntegerField()
     pos = models.ForeignKey(Pos, related_name="+")
+    namedentity = models.CharField(max_length=1, null=True, blank=True)
 
     class Meta():
         db_table = 'tokens'
@@ -53,7 +54,7 @@ class Token(AmcatModel):
         
     def __unicode__(self):
         return unicode(self.word)
-    
+
 class Relation(AmcatModel):
     id = models.AutoField(db_column='relation_id', primary_key=True)
     label = models.CharField(max_length=100)
@@ -74,6 +75,15 @@ class Triple(AmcatModel):
         app_label = 'amcat'
         unique_together = ('parent', 'child')
 
+
+class CoreferenceSet(AmcatModel):
+    id = models.AutoField(primary_key=True, db_column='coreference_set_id')
+    analysis_article = models.ForeignKey("amcat.AnalysisArticle", related_name='coreferencesets')
+    tokens = models.ManyToManyField(Token, related_name='coreferencesets')
+
+    class Meta():
+        db_table = 'coreferencesets'
+        app_label = 'amcat'
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

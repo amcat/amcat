@@ -31,8 +31,17 @@ Use reset and set_cache to manually clear and set the cache
 from __future__ import unicode_literals, print_function, absolute_import
 
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+from django.db import models
+
+log = logging.getLogger(__name__)
 from functools import wraps, partial
+
+from django.conf import settings
+from django.core.cache import cache
+from django.db.models import signals
+
+SIMPLE_CACHE_SECONDS = getattr(settings, 'SIMPLE_CACHE_SECONDS', 2592000)
 
 
 ###########################################################################
@@ -159,8 +168,39 @@ def clear_cache(model):
     key = CACHE_PREFIX + model.__name__
     setattr(_object_cache, key , {})
 
-    
-    
+###########################################################################
+#                  D J A N G O  M O D E L  C A C H I N G                  #
+###########################################################################
+def _get_cache_key(model, id):
+    return ('%s:%s' % (model._meta.db_table, id)).replace(' ', '')
+
+class RowCacheManager(models.Manager):
+    """
+    Manager for caching single-row queries. To make invalidation easy,
+    we use an extra layer of indirection. The query arguments are used as a
+    cache key, whose stored value is the unique cache key pointing to the
+    object. When a model using RowCacheManager is saved, this unique cache
+    should be invalidated. Doing two memcached queries is still much faster
+    than fetching from the database.
+    """
+    def get(self, *args, **kwargs):
+        pointer_key = _get_cache_key(self.model, repr(kwargs))
+        instance_key = cache.get(pointer_key)
+
+        if instance_key is not None: 
+            instance = cache.get(instance_key)
+            if instance is not None:
+                return instance
+
+        # One of the cache queries missed, so we have to get the object from the database:
+        instance = super(RowCacheManager, self).get(*args, **kwargs)
+        if not instance_key:
+            instance_key = _get_cache_key(instance, instance.pk)
+            cache.set(pointer_key, instance_key, SIMPLE_CACHE_SECONDS)
+
+        cache.set(instance_key, instance, SIMPLE_CACHE_SECONDS)
+        return instance
+
     
 ###########################################################################
 #                          U N I T   T E S T S                            #

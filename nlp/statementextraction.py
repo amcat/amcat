@@ -23,10 +23,11 @@ Rules for extraction statements from semantic roles
 
 import collections, csv
 
-PREDICATE_RELATIONS = "vc",
+PREDICATE_RELATIONS = "vc", "xcomp", "ccomp", "prepc_to", "prepc_by", "prepc_from"
 
 class Statement(object):
-    def __init__(self, subject, predicate, object, source=None, type=None, condition=None):
+    def __init__(self, sentence, subject, predicate, object, source=None, type=None, condition=None):
+        self.sentence = sentence
         self.subject = frozenset(subject)
         self.predicate = frozenset(predicate)
         self.object = frozenset(object)
@@ -56,26 +57,33 @@ class Statement(object):
         return result
     __repr__ = __str__
 
-def get_predicates(sentence):
+def get_predicates(sentence, roles):
     """
     Determine the predicates given a set of co-membership relations
-    Input: A analysed_sentence
+    Input: A analysed_sentence and the found roles
     Output: a dict of node : predicate, where predicate is a set of nodes (shared between predicates
             such that if a and b are in the same predicate, predicates[a] is predicates[b] and
             {a,b} - predicate[b] is the empty set.
     """
+    om_roles = {(su, obj) for (su, pred, obj) in roles if pred == "om"} # om 'breaks' predicates
+    
     predicates = {} # node -> set(nodes) # set of sets
     for t in sentence.triples:
-        if t.relation.label in PREDICATE_RELATIONS:
+        if (t.relation.label in PREDICATE_RELATIONS and t.child.word.lemma.pos == 'V' and t.parent.word.lemma.pos == 'V'
+	    and (t.parent.position, t.child.position) not in om_roles and (t.child.position, t.parent.position) not in om_roles):
             combined = frozenset(predicates.get(t.child, set([sentence.get_token(t.child.position)]))
                                  | predicates.get(t.parent, set([sentence.get_token(t.parent.position)])))
             for node in t.child, t.parent:
                 predicates[node] = combined
+		
+    #for t in sentence.tokens.all():
+    #  if t.word.lemma.pos == 'V' and t not in predicates:
+    #    predicates[t] = frozenset([t])
+    
     return predicates
 
-def get_statements(sentence, roles):
-        
-    predicates = get_predicates(sentence)
+def get_statements(sentence, roles, statements_without_object=False):
+    predicates = get_predicates(sentence, roles)
     # relations per predicate: {predicate : {rel : {nodes}}}
     rels_per_predicate = collections.defaultdict(lambda : collections.defaultdict(set))
     for subject, role, object in roles:
@@ -87,29 +95,82 @@ def get_statements(sentence, roles):
         elif role == "om": # means_predicate -> goal_predicate
             means = predicates.get(subject, frozenset([subject]))
             rels_per_predicate[pred][role].add(means)
+        elif role == "eqv": # subject -> object with no predicate
+            yield Statement(sentence, [subject], [], [object], type={"Equivalent"})
+	    for subject2, role, object2 in roles:
+		subject2 = sentence.tokendict[subject2] if subject2 is not None else None
+		object2 = sentence.tokendict[object2]
+		if role == "eqv" :
+		    #print ">>>>>>>>", subject, object, subject2, object2
+		    if subject2 == object:
+			yield Statement(sentence, [subject], [], [object2], type={"Equivalent"})
+		    if subject == object2:
+			yield Statement(sentence, [subject2], [], [object], type={"Equivalent"})
+            
 
     # normal statement: if a su and obj point to the same predicate, it is a statement
+    
     for pred, rels in rels_per_predicate.items():
         if "obj" in rels and "su" in rels:
-            s = Statement(rels["su"], pred, rels["obj"], rels["quote"])
+            s = Statement(sentence, rels["su"], pred, rels["obj"], rels["quote"])
             if rels["su"] == frozenset([None]): s.add_type("Reality")
             yield s
-        elif "obj" in rels and "om" in rels:
+        elif statements_without_object and ("su" in rels or "obj" in rels):
+            yield Statement(sentence, rels["su"], pred, rels["obj"], rels["quote"])
+
+        if "obj" in rels and "om" in rels:
             for means_predicate in rels["om"]:
                 means_rels = rels_per_predicate[means_predicate]
-
                 # S says that X does Y in order to increase Z
                 # so, X wants to increase Z (according to S)
-                yield Statement(means_rels["su"], pred, rels["obj"],
+                yield Statement(sentence, means_rels["su"], pred, rels["obj"],
                                 source=means_rels["quote"], type={"Affective"})
                 # and, X thinks that doing Y will increate Z
-                yield Statement(means_rels["obj"], pred, rels["obj"],
+		if "obj" in means_rels:
+		    yield Statement(sentence, means_rels["obj"], pred, rels["obj"],
                                 source=(means_rels["quote"] | means_rels["su"]),
                                 condition=means_predicate,
                                 type={"Causal"})
-            
-                
-    
+
+
+	    
+def fill_out(sentence, nodes, roles):
+    """
+    'Fill out' the nodes, adding any node that is a descendant of the given nodes
+    and does not play part in a role
+    """
+    role_nodes = set()
+    for child, role, parent in roles:
+        role_nodes |= {child, parent}
+        
+    eligible_triples = [(t.child, t.parent) for t in sentence.triples
+                        if t.child.position not in role_nodes]
+
+    nodes = set(nodes)
+    changed = True
+    while changed:
+        changed = False
+        for c, p in eligible_triples:
+            if p in nodes and c not in nodes:
+                nodes.add(c)
+                changed=True
+                break
+    return nodes
+
+def get_path(node, parents, seen=[]):
+    if node not in parents: return [node]
+    parent = parents[node]
+    if parent in seen: return [node]
+    return [node] + get_path(parent, parents, seen + [node])
+
+
+def get_predicate_structure(sentence, predicate):
+    leaves = set(predicate)
+    parents = {t.child : t.parent for t in sentence.triples if t.child in leaves and t.parent in leaves}
+    for child, parent in parents.iteritems():
+        leaves -= {parent}
+    for leaf in leaves:
+        yield get_path(leaf, parents)
     
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -120,6 +181,32 @@ from amcat.tools import amcattest
 
 class TestStatementExtraction(amcattest.PolicyTestCase):
 
+    def test_fill_out_and_predicate(self):
+        from amcat.models import Triple, Relation
+        s = amcattest.create_test_analysis_sentence()
+        de, liberale,premier, moest, piet, een, klap, geven = [
+            amcattest.create_test_token(sentence=s, position=i) for i in range(1,9)]
+        for child, parent, rel in [(premier, geven, "su"),
+                                   (premier, moest, "su"),
+                                   (geven, moest, "vc"),
+                                   (de, premier, "det"),
+                                   (liberale, premier, "mod"),
+                                   (piet, geven, "obj2"),
+                                   (klap, geven, "obj1"),
+                                   (een, klap, "det")]:
+            rel = Relation.objects.create(label=rel)
+            Triple.objects.create(parent=parent, child=child, relation=rel)
+        roles =  ((premier.position, "su", geven.position),
+                  (piet.position, "obj", geven.position))
+
+        self.assertEqual(fill_out(s, [premier], roles), {de, liberale, premier})
+        predicate = fill_out(s, [moest, geven], roles)
+        self.assertEqual(predicate, {moest, een, klap, geven})
+
+        predicate_paths = list(get_predicate_structure(s, predicate))
+        self.assertEqual(predicate_paths, [[een, klap, geven, moest]])
+        
+        
     def test_predicates(self):
         from amcat.models import Triple, Relation
         s = amcattest.create_test_analysis_sentence()

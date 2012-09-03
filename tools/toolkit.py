@@ -45,7 +45,7 @@ this organisation!
 from __future__ import unicode_literals, print_function, absolute_import
 import warnings, os, random, gzip, types, datetime, itertools, re, collections
 import threading, subprocess, sys, colorsys, base64, time, inspect, logging
-import htmlentitydefs, string
+import htmlentitydefs, string, csv
 try: import mx.DateTime
 except: pass
 
@@ -544,6 +544,20 @@ def zipp(*iterables):
         raise ValueError("Unequal iterable length")
     return zip(*seqs)
 
+
+
+def csvreader(stream=None, typename=None):
+    if stream is None: stream = sys.stdin
+    if typename is None: typename = re.sub(r"\W", "", stream.name)
+    r = csv.reader(stream)
+    header = r.next()
+    return_type = collections.namedtuple(typename, header, rename=True)
+    for row in r:
+        if len(row) < len(header):
+            row += [None] * (len(header) - len(row))
+        elif len(row) > len(header):
+            raise Exception("Row has %i cells, %i expected: %r" % (len(row), len(header), row))
+        yield return_type(*row)
 
 ###########################################################################
 ##                      Mapping functions                                ##

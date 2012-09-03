@@ -181,7 +181,7 @@ class TestController(amcattest.PolicyTestCase):
         p = amcattest.create_test_project()
         s = amcattest.create_test_set()
         c = SimpleController(s)
-        ts = _TestScraper(project=p)
+        ts = _TestScraper(project=p,articleset=s)
         c.scrape(ts)
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(s.articles.count(), ts.n)

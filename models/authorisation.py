@@ -33,11 +33,13 @@ from amcat.tools.model import AmcatModel
 
 ADMIN_ROLE = 3
 
+from amcat.tools.caching import RowCacheManager
+
 class AccessDenied(EnvironmentError):
     def __init__(self, user, privilege, project=None):
         projectstr = " on %s" % project if project else ""
         msg = "Access denied for privilege %s%s to %s\nRequired role %s, has role %s" % (
-            privilege, projectstr, user, privilege.role, user.role)
+            privilege, projectstr, user, privilege.role, user.get_profile().role)
         EnvironmentError.__init__(self, msg)
 
 def check(user, privilege, project=None):
@@ -74,20 +76,12 @@ def check(user, privilege, project=None):
         if role.id < nrole.id:
             raise AccessDenied(user, privilege, project)
 
-class RoleManager(models.Manager):
-    """
-    Implements a natural key for Role-objects. This is needed for MySQL, which does not
-    support 'forced' values of AutoFields.
-    """
-    def get_by_natural_key(self, label, projectlevel):
-        return self.get(label=label, projectlevel=projectlevel)
-
 class Role(AmcatModel):
-    objects = RoleManager()
-
     id = models.AutoField(primary_key=True, db_column='role_id')
     label = models.CharField(max_length=50)
     projectlevel = models.BooleanField()
+
+    objects = RowCacheManager()
 
     class Meta():
         db_table = 'roles'
@@ -98,6 +92,8 @@ class ProjectRole(AmcatModel):
     project = models.ForeignKey("amcat.Project", db_index=True)
     user = models.ForeignKey(User, db_index=True)
     role = models.ForeignKey(Role)
+
+    objects = RowCacheManager()
 
     def __unicode__(self):
         return u"%s, %s" % (self.project, self.role)
@@ -118,6 +114,8 @@ class Privilege(AmcatModel):
 
     label = models.CharField(max_length=50)
     role = models.ForeignKey(Role)
+
+    objects = RowCacheManager()
 
     class Meta():
         db_table = 'privileges'

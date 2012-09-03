@@ -22,6 +22,8 @@ Abstract analysis scripts for preprocessing
 """
 
 from itertools import chain
+import os
+from os.path import exists
 
 class AnalysisScript(object):
     def __init__(self, analysis, tokens=False, triples=False):
@@ -35,6 +37,7 @@ class AnalysisScript(object):
         arbitrary object) is passed to the get_triples and get_tokens methods.
         @param sentences: a sequence of id : sentence pairs
         """
+        pass
 
     def get_triples(self, id, sentence, memo=None):
         """
@@ -69,6 +72,33 @@ class AnalysisScript(object):
 
     def run(self, _input=None):
         raise NotImplementedError
+
+
+class ParserConfigurationError(Exception): pass
+class ParserError(EnvironmentError): pass
+
+class Parser(AnalysisScript):
+    """Analysisscript subclass for parsers bound to a specific ('home') folder"""
+    
+    ENVIRON_HOME_KEY = None
+    DEFAULT_HOME = None
+    
+    def __init__(self, analysis, parser_home=None):
+        super(Parser, self).__init__(analysis, triples=True, tokens=True)
+        if parser_home is not None:
+            self.parser_home = parser_home
+        else:
+            try:
+               self.parser_home = os.environ[self.ENVIRON_HOME_KEY]
+            except KeyError:
+                self.parser_home = self.DEFAULT_HOME
+
+    def _check_home(self):
+        if self.parser_home is None:
+            raise ParserConfigurationError("{} not specified".format(self.ENVIRON_HOME_KEY))
+        if not exists(self.parser_home):
+            raise ParserConfigurationError("Cannot find {self.ENVIRON_HOME_KEY}: {self.parser_home}"
+                                           .format(**locals()))
 
     
 ###########################################################################

@@ -27,7 +27,7 @@ from functools import partial
 
 from amcat.models.coding.codingjob import CodingJob
 from amcat.models.coding.coding import Coding, CodingStatus, STATUS_COMPLETE
-from amcat.models.coding.codedarticle import CodedArticle
+from amcat.models.coding.codedarticle import CodedArticle, bulk_create_codedarticles
 from amcat.models.coding.code import Code
 from amcat.models.coding.codingschemafield import CodingSchemaField
 from amcat.models.coding.codingschemafield import CodingSchemaFieldType
@@ -62,20 +62,29 @@ def get_article_coding(job, article):
     assert len(result) <= 1
     if result: return result[0]
 
-def get_coded_articles(jobs):
+def get_coded_articles(jobs, cache_sentences=False, cache_coding=False, select_related=None):
     """Return a sequence of CodedArticle objects"""
     try: iter(jobs)
     except TypeError: jobs = [jobs]
     for job in jobs:
-        for article in job.articleset.articles.all():
-            yield CodedArticle(job, article)
+        # Determine if articles need custom caching
+        articles = select_related if select_related is None else (
+            job.articleset.articles.all().select_related(*select_related)
+        )
+
+        for ca in bulk_create_codedarticles(job, cache_sentences, cache_coding, articles):
+            yield ca
 
 def get_table_articles_per_job(jobs):
     """Return a table of all articles in a cjset with status
 
     Columns: article, articlemeta, status, comments
     """
-    result = ObjectTable(rows = list(get_coded_articles(jobs)))
+    result = ObjectTable(
+        rows=list(get_coded_articles(
+            jobs, cache_coding=True, select_related=("medium",)
+        ))
+    )
     result.addColumn(lambda a: a.article.id, "articleid")
     result.addColumn(lambda a: a.article.headline, "headline")
     result.addColumn(lambda a: a.article.date, "date")
@@ -104,6 +113,8 @@ def get_table_sentence_codings_article(codedarticle, language):
 
     The cells contain domain (deserialized) objects
     """
+    #import pdb
+    #pdb.set_trace()
     result = ObjectTable(rows = list(codedarticle.sentence_codings))
     result.addColumn('id')
     result.addColumn(lambda x:x.sentence_id, 'sentence')
@@ -221,13 +232,15 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         
     def test_table_codings(self):
         """Is the codings table correct?"""
+        #import pdb
+        #pdb.set_trace()
         ca = CodedArticle(self.an1)
         t = get_table_sentence_codings_article(ca, ca.codingjob.coder.userprofile.language)
         self.assertIsNotNone(t)
-        aslist = [tuple(r) for r in t]
-        self.assertEqual(len(aslist), 2)
-        self.assertEqual(aslist[0][2:], ('bla', 1, unicode(self.code)))
-        self.assertEqual(aslist[1][2:], ('blx', None, None))
+        aslist1 = [a for _, a in t.getRows()[0].get_values()]
+        aslist2 = [a for _, a in t.getRows()[0].get_values()]
+        self.assertEqual(aslist1, ('bla', 1, unicode(self.code)))
+        self.assertEqual(aslist2, ('blx', None, None))
         
     def test_table_articles_per_set(self):
         """Is the articles per job table correct?"""

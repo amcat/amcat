@@ -4,8 +4,10 @@
 Script from http://www.jejik.com/articles/2007/02/a_simple_unix_linux_daemon_in_python/
 Public domain
 [WvA] changed run method to a flexible 'target' parameter
+[Martijn] also kill children spawned by multiprocessing
 """
  
+import subprocess
 import sys, os, time, atexit
 from signal import SIGTERM
  
@@ -90,6 +92,20 @@ class Daemon:
         self.daemonize()
         self.target()
 
+    def _kill(self, pid):
+        # Try killing the daemon process       
+        try:
+            while 1:
+                os.kill(pid, SIGTERM)
+                time.sleep(0.1)
+        except OSError, err:
+            err = str(err)
+            if err.find("No such process") > 0:
+                return
+            else:
+                print str(err)
+                sys.exit(1)
+
     def stop(self):
         """
         Stop the daemon
@@ -107,19 +123,26 @@ class Daemon:
             sys.stderr.write(message % self.pidfile)
             return # not an error in a restart
 
-        # Try killing the daemon process       
-        try:
-            while 1:
-                os.kill(pid, SIGTERM)
-                time.sleep(0.1)
-        except OSError, err:
-            err = str(err)
-            if err.find("No such process") > 0:
-                if os.path.exists(self.pidfile):
-                    os.remove(self.pidfile)
-            else:
-                print str(err)
-                sys.exit(1)
+        # Kill process and its children
+        ps = subprocess.Popen(
+            "ps -o pid --ppid %d --noheaders" % pid,
+            shell=True, stdout=subprocess.PIPE
+        )
+
+        ps_out = ps.stdout.read()
+        ps_ret = ps.wait()
+
+        if ps_ret != 0 and ps_out.strip():
+            message = "Could not find children! Command `ps` returned %s\n"
+            sys.stderr.write(message % ps_ret)
+
+        children = [int(p) for p in ps_out.split("\n")[:-1]]
+
+        for p in [pid] + children:
+            self._kill(p)
+
+        self.delpid()
+
 
     def restart(self):
         """

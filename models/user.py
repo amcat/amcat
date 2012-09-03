@@ -28,6 +28,7 @@ from amcat.models import authorisation as auth
 from amcat.models.project import Project
 
 import logging;
+from amcat.tools.caching import RowCacheManager
 
 log = logging.getLogger(__name__)
 
@@ -65,6 +66,8 @@ class UserProfile(AmcatModel):
     language = models.ForeignKey(Language, default=1)
     role = models.ForeignKey(Role, default=0)
 
+    objects = RowCacheManager()
+
     @property
     def projects(self):
         return Project.objects.filter(projectrole__user=self.user)
@@ -82,6 +85,26 @@ class UserProfile(AmcatModel):
         except auth.AccessDenied:
             return False
         return True
+
+    def can_read(self, user):
+        profile = user.get_profile()
+
+        return (self == profile) or\
+               (profile.affiliation == self.affiliation and\
+                profile.haspriv("view_users_same_affiliation")) or\
+               (profile.haspriv("view_all_users"))
+
+    def can_update(self, user):
+        profile = user.get_profile()
+
+        return (self == profile) or\
+               (profile.affiliation == self.affiliation and\
+                profile.haspriv("manage_users_same_affiliation")) or\
+               (profile.haspriv("manage_users"))
+
+    def can_delete(self, user):
+        return False
+        
 
     class Meta():
         db_table = 'auth_user_profile'

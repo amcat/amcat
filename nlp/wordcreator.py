@@ -93,18 +93,27 @@ def create_tokens(tokenvalues):
     for v in tokenvalues:
         word = words[v.lemma, v.pos, v.word]
         pos = poss[v.major, v.minor, v.pos]
-        yield Token.objects.create(sentence=sentences[v.analysis_sentence], position=v.position, word=word, pos=pos)
+        yield v, Token.objects.create(sentence=sentences[v.analysis_sentence], position=v.position, word=word, pos=pos,
+				      namedentity=v.namedentity)
 
 def create_triples(tokenvalues, triplevalues=None):
-    """Create the requested tokens and (optionally) triples"""
-    tokens = dict(((t.sentence_id, t.position), t) for t in create_tokens(tokenvalues))
+    """Create the requested tokens and (optionally) triples
+
+    @return: a pair or tokens, triples mappings of the values to the newly created objects"""
+    tokens = dict(create_tokens(tokenvalues))
+    triples = {}
+    
+    tokenmap = {(t.sentence_id, t.position) : t for t in tokens.values()}
+    
     if triplevalues:
         triplevalues = [truncate_triplevalue(tv) for tv in triplevalues]
         rels = create_relations(triplevalues)
         for triple in triplevalues:
-            Triple.objects.create(relation=rels[triple.relation],
-                parent=tokens[triple.analysis_sentence, triple.parent],
-                child=tokens[triple.analysis_sentence, triple.child])
+            triples[triple] = Triple.objects.create(relation=rels[triple.relation],
+						    parent=tokenmap[triple.analysis_sentence, triple.parent],
+						    child=tokenmap[triple.analysis_sentence, triple.child])
+	    
+    return tokens, triples
 
 TOKEN_MAXLENGTHS = dict(
     major = 100,
@@ -144,9 +153,9 @@ class TestWordCreator(amcattest.PolicyTestCase):
         from amcat.models.token import TokenValues
         lang = amcattest.get_test_language()
         l1 = Lemma.objects.create(lemma="a", pos="b")
-        tokens = [TokenValues(None, None, None, lemma=l, pos="b", major=None, minor=None)
+        tokens = [TokenValues(None, None, None, lemma=l, pos="b", major=None, minor=None, namedentity=None)
                   for l in "a"*10]
-        tokens += [TokenValues(None, None, None, lemma=l, pos="c", major=None, minor=None)
+        tokens += [TokenValues(None, None, None, lemma=l, pos="c", major=None, minor=None, namedentity=None)
                   for l in "ab"*5]
         with self.checkMaxQueries(3): # 1 to cache, 2 to create with different poss
             lemmata = create_lemmata(tokens)
@@ -166,7 +175,7 @@ class TestWordCreator(amcattest.PolicyTestCase):
         w1 = Word.objects.create(lemma=l1, word="b")
         for lemma in "ab":
             for word in "bbcc":
-                tokens.append(TokenValues(None, None, word=word, lemma=lemma, pos="b", major=None, minor=None))
+                tokens.append(TokenValues(None, None, word=word, lemma=lemma, pos="b", major=None, minor=None, namedentity=None))
         with self.checkMaxQueries(8): # 2 to cache lemmata+words, 1 to create lemmata, 5 to create words
             words = create_words(tokens)
 
@@ -182,34 +191,39 @@ class TestWordCreator(amcattest.PolicyTestCase):
     def test_create_tokens(self):
         from amcat.models.token import TokenValues
         s = amcattest.create_test_analysis_sentence()
-        tokens = [TokenValues(s.id, 2, word="w", lemma="l", pos="p", major="major", minor="minor")]
-        token, = create_tokens(tokens)
+        tokens = [TokenValues(s.id, 2, word="w", lemma="l", pos="p", major="major", minor="minor", namedentity=None)]
+        token, = dict(create_tokens(tokens)).values()
         self.assertEqual(token.word.lemma.lemma, "l")
 
     def test_create_triples(self):
         from amcat.models.token import TripleValues, TokenValues
         s = amcattest.create_test_analysis_sentence()
-        tokens = [TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="major", minor="minor"),
-                  TokenValues(s.id, 1, word="b", lemma="l", pos="p", major="major", minor="minor")]
+        tokens = [TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="major", minor="minor", namedentity=None),
+                  TokenValues(s.id, 1, word="b", lemma="l", pos="p", major="major", minor="minor", namedentity=None)]
         t = TripleValues(s.id, 0, 1, "su")
-        create_triples(tokens, [t])
+        result_tokens, result_triples = create_triples(tokens, [t])
         tr, = Triple.objects.filter(parent__sentence=s)
         self.assertEqual(tr.relation.label, t.relation)
         self.assertEqual(tr.child.word.word, "a")
+
+	for tokenvalue, token in result_tokens.items():
+	    self.assertEqual(tokenvalue.position, token.position)
+	    self.assertEqual(tokenvalue.lemma, token.word.lemma.lemma)
+	
 
     def test_long_strings(self):
         """Test whether overly long lemmata, words, and pos are truncated"""
         from amcat.models.token import TokenValues, TripleValues
 
         s = amcattest.create_test_analysis_sentence()   
-        longpos = TokenValues(s.id, 0, word="a", lemma="l", pos="pp", major="m", minor="m")
+        longpos = TokenValues(s.id, 0, word="a", lemma="l", pos="pp", major="m", minor="m", namedentity=None)
         
         self.assertRaises(Exception, list, create_tokens([longpos]))
 
-        nonepos = TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="m", minor="m")
+        nonepos = TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="m", minor="m", namedentity=None)
 
         longvals = TokenValues(s.id, 1, word="a"*9999, lemma="l"*9999, pos="p",
-                               major="m"*9999, minor="m"*9999)
+                               major="m"*9999, minor="m"*9999, namedentity=None)
         triple = TripleValues(s.id, 0, 1, "x"*9999)
         create_triples([nonepos, longvals], [triple])
         

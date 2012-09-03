@@ -56,7 +56,10 @@ class Analysis(AmcatModel):
     plugin = models.ForeignKey(Plugin, null=True)
 
     def get_script(self, **options):
-        return self.plugin.get_instance(analysis=self, **options)
+        try:
+            return self.plugin.get_instance(analysis=self, **options)
+        except TypeError:
+            return self.plugin.get_instance(**options)
 
     class Meta():
         db_table = 'analyses'
@@ -64,6 +67,26 @@ class Analysis(AmcatModel):
 
     def __unicode__(self):
         return self.plugin.label if self.plugin else "No plugin available"
+
+class AnalysisArticleSetQueue(AmcatModel):
+    """
+    An articleset needed to be checked for preprocessing.
+    """ 
+    articleset = models.ForeignKey(ArticleSet)
+
+    @classmethod
+    def add_project(cls, project):
+        """
+        Add whole project (i.e. all articlesets) to queue. 
+        """
+        AnalysisArticleSetQueue.objects.bulk_create(
+            [AnalysisArticleSetQueue(articleset=artset)
+            for artset in project.articlesets.all()]
+            )
+
+    class Meta():
+        db_table = 'analysis_articleset_queue'
+        app_label = 'amcat'
 
 class AnalysisQueue(AmcatModel):
     """
@@ -76,6 +99,23 @@ class AnalysisQueue(AmcatModel):
     class Meta():
         db_table = 'analysis_queue'
         app_label = 'amcat'
+
+    @classmethod
+    def articles_in_queue(cls, project):
+        """
+        Determines wether there are articles in queue.
+
+        @param project: project to scan
+        @type project: int, Project
+        """
+        return AnalysisQueue.objects.filter(
+            # Check direct members of project
+            article__project=project
+        ).exists() | AnalysisQueue.objects.filter(
+            # Check indirect members
+            article__articlesets__project=project
+        ).exists()
+
 
     @classmethod
     def narticles_in_queue(cls, project):
@@ -108,19 +148,27 @@ class AnalysisArticle(AmcatModel):
         app_label = 'amcat'
         unique_together = ('article', 'analysis')
 
-    @transaction.commit_on_success
-    def store_analysis(self, tokens, triples=None):
+    def do_store_analysis(self, tokens, triples=None):
         """
         Store the given tokens and triples for this articleanalysis, setting
         it to done=True if stored succesfully.
         """
         if self.done: raise Exception("Cannot store analyses when already done")
         from amcat.nlp.wordcreator import create_triples
-        create_triples(tokens, triples)
+        result = create_triples(tokens, triples)
         self.done = True
         self.save()
+	return result
 
-
+	
+    @transaction.commit_on_success
+    def store_analysis(self, tokens, triples=None):
+        """
+	Store the given tokens and triples using do_store_analysis, wrapping it
+	inside a transaction
+        """
+	do_store_analysis(self, tokens, triples)
+	
 class AnalysisProject(AmcatModel):
     """
     Explicit many-to-many projects - analyses. Hopefully this can be removed
@@ -154,6 +202,7 @@ class AnalysisSentence(AmcatModel):
         app_label = 'amcat'
         db_table = "analysis_sentences"
         unique_together = ('analysis_article', 'sentence')
+
     def _get_tokens(self, get_words=False):
         tokens = Token.objects.filter(sentence=self).select_related("word", "word__lemma")
         self._tokendict = dict((t.position, t) for t in tokens)
@@ -178,8 +227,9 @@ class AnalysisSentence(AmcatModel):
     
 # Signal handlers to make sure the article analysis queue is filled
 def add_to_queue(*aids):
-    for aid in aids:
-        AnalysisQueue.objects.create(article_id = aid)
+    AnalysisQueue.objects.bulk_create(
+        [AnalysisQueue(article_id=aid) for aid in aids]
+    )
 
 @receiver([post_save, post_delete], Article)
 def handle_article(sender, instance, **kargs):
@@ -191,15 +241,15 @@ def handle_articlesetarticle(sender, instance, **kargs):
 
 @receiver([post_save], Project)
 def handle_project(sender, instance, **kargs11):
-    add_to_queue(*instance.get_all_articles())
+    AnalysisArticleSetQueue.add_project(instance)
 
 @receiver([post_save, post_delete], AnalysisProject)
 def handle_projectanalysis(sender, instance, **kargs):
-    add_to_queue(*instance.project.get_all_articles())
+    AnalysisArticleSetQueue.add_project(instance.project)
 
 @receiver([post_save], ArticleSet)
 def handle_articleset(sender, instance, **kargs):
-    pass#add_to_queue(*(a.id for a in instance.articles.all().only("id")))
+    AnalysisArticleSetQueue(articleset=instance).save()
 
 
 ###########################################################################

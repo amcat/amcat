@@ -19,38 +19,44 @@
 ###########################################################################
 
 """
-Daemon that checks if there are any Articles on the articles_preprocessing_queue
-and adjusts the articles_analysis table as necessary
+Solr plugin
 """
-from django.db import transaction
 
-from amcat.scripts.daemons.daemonscript import DaemonScript
+# todo this could be generalized to run an arbitrary analysis
 
-from amcat.models.analysis import AnalysisQueue
-from amcat.nlp.preprocessing import set_preprocessing_actions
+import logging
+log = logging.getLogger(__name__)
+
+from amcat.models.analysis import Analysis, AnalysisArticle
+from amcat.scripts import script
+from amcat.tools.amcatsolr import Solr
+
+from collections import defaultdict
 
 import logging; log = logging.getLogger(__name__)
 
-BATCH = 10000
+class SolrAnalysis(script.Script):
+    """
+    This script takes an iterable holding AnalysisArticle's. It adds
+    and removes the articles from solr as needed.
 
-class PreprocessingDaemon(DaemonScript):
+    Refer to script.deamons.preprocessing for more information.
+    """
+    input_type = AnalysisArticle
+    output_type = None
+    options_form = None
 
-    @transaction.commit_on_success
-    def run_action(self):
-        aids = set()
-        preprocess_ids = list()
+    def run(self, _input):
+        aas = AnalysisArticle.objects.filter(
+            id__in=[a.id for a in _input]
+        ).values("delete", "article__id")
 
-        for ap in AnalysisQueue.objects.all()[:BATCH]:
-            aids.add(ap.article_id)
-            preprocess_ids.append(ap.id)
+        Solr().delete_articles([a['article__id'] for a in aas if a['delete']])
+        Solr().add_articles([a['article__id'] for a in aas if not a['delete']])
 
-        if not aids: return False
 
-        log.info("Deleting {n} queue objects".format(n=len(preprocess_ids)))
-        AnalysisQueue.objects.filter(pk__in=preprocess_ids).delete()
-        log.info("Will set preprocessing on {n} articles".format(n=len(aids)))
-        set_preprocessing_actions(aids)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
+    from amcat.tools import amcatlogging
+    amcatlogging.debug_module()
     from amcat.scripts.tools.cli import run_cli
     run_cli()

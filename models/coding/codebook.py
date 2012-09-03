@@ -162,7 +162,7 @@ class Codebook(AmcatModel):
             code_ids -= set([None])
         return code_ids
 
-    def get_codes(self, include_hidden=False):
+    def get_codes(self, include_hidden=False, return_type=list):
         """Returns a set of codes that are in this hierarchy
         All codes that would be in the hierarchy for a certain date are included
         (ie date restrictions are not taken into account)
@@ -170,13 +170,13 @@ class Codebook(AmcatModel):
                                (e.g. not by its bases)
         """
         ids = self.get_code_ids(include_hidden=include_hidden)
-        codes = list(get_codes(ids))
+        codes = return_type(get_codes(ids))
         return codes
 
     @property
     def codes(self):
         """Property for the codes included and not hidden in this codebook and its parents"""
-        return set(self.get_codes())
+        return self.get_codes(return_type=set)
 
     @invalidates
     def add_code(self, code, parent=None, **kargs):
@@ -282,7 +282,7 @@ class CodebookCode(AmcatModel):
 
     codebook = models.ForeignKey(Codebook, db_index=True)
 
-    _code = models.ForeignKey(Code, db_index=True, related_name="+", db_column="code_id")
+    _code = models.ForeignKey(Code, db_index=True, related_name="codebook_codes", db_column="code_id")
     _parent = models.ForeignKey(Code, db_index=True, related_name="+",
                                 null=True, db_column="parent_id")
     hide = models.BooleanField(default=False)
