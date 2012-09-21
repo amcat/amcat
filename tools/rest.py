@@ -27,15 +27,14 @@ import logging; log = logging.getLogger(__name__)
 import time
 
 class Rest(object):
-    def __init__(self, host="localhost:8000", schema='http', username=None,
-                 password=None, root="api/v3", action_root="api/action", verify=False):
-        if "://" in host:
-            schema, host = host.split("://")
+    def __init__(self, host="http://localhost:8000", username=None,
+                 password=None, root="api/v4", action_root="api/action", verify=False,
+                 client=requests):
         self.host = host
         self.root = root
         self.action_root = action_root
-        self.schema = schema
         self.verify = verify
+        self.client=client
         if username is None:
             import amcat.settings
             db = amcat.settings.DATABASES['default']
@@ -51,9 +50,9 @@ class Rest(object):
         t = time.time()
         params = dict(format=format)
         if filters: params.update(filters)
-        uri = '{self.schema}://{self.host}/{self.root}/{resource}/'.format(**locals())
+        uri = '{self.host}/{self.root}/{resource}'.format(**locals())
         log.debug("Querying REST {uri} with params {params}".format(**locals()))
-        r = requests.get(uri, params=params, **self._request_args)
+        r = self.client.get(uri, params=params, **self._request_args)
         _check_status(r)
 
         if format == 'json':
@@ -67,7 +66,7 @@ class Rest(object):
 
     def get_objects(self, *args, **kargs):
         result = self.get(*args, **kargs)
-        return result['objects']
+        return result['results']
 
     def get_object(self, resource, id, **kargs):
         result = self.get_objects(resource, id=id, **kargs)
@@ -79,10 +78,10 @@ class Rest(object):
 
     def call_action(self, action, decode_json=True, **kargs):
         if isinstance(action, type): action = action.__name__
-        uri = '{self.schema}://{self.host}/{self.action_root}/{action}'.format(**locals())
+        uri = '{self.host}/{self.action_root}/{action}'.format(**locals())
         log.debug("Posting action {uri} with data {kargs}".format(**locals()))
         
-        r = requests.post(uri, data=kargs, **self._request_args)
+        r = self.client.post(uri, data=kargs, **self._request_args)
         _check_status(r)
         if decode_json:
             try:
