@@ -96,7 +96,7 @@ def _check_status(response):
     if response.status_code // 100 != 2:
         log.error("Remote Server returned status {response.status_code}".format(**locals()))
         try:
-            content = json.loads(r.content)
+            content = json.loads(response.content)
             log.error("Server error:{}: {}\n-------\nRemote traceback:\n{}\n-------".
                       format(content["error-class"], content["error-message"].strip(),
                              content["error-traceback"].strip()))
