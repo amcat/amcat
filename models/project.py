@@ -23,9 +23,10 @@ from __future__ import unicode_literals, print_function, absolute_import
 from django.contrib.auth.models import User
 
 from amcat.tools.model import AmcatModel
+from amcat.tools.toolkit import wrapped
+
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingschema import CodingSchema
-
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle
 
@@ -89,7 +90,14 @@ class Project(AmcatModel):
         """Get a list of all users with some role in this project"""
         return (r.user for r in self.projectrole_set.all())
 
-    def get_all_articles(self):
+    def all_articles(self):
+        """
+        Get a set of articles either owned by this project
+        or contained in a set owned by this project
+        """
+        return Article.objects.filter(Q(articlesets__project=self)|Q(project=self))
+            
+    def get_all_article_ids(self):
         """
         Get a sequence of article ids either owned by this project
         or contained in a set owned by this project
@@ -133,11 +141,16 @@ class TestProject(amcattest.PolicyTestCase):
         """Does getting all articles work?"""
         p1, p2 = [amcattest.create_test_project() for _x in [1,2]]
         a1, a2 = [amcattest.create_test_article(project=p) for p in [p1, p2]]
-        self.assertEqual(set(p1.get_all_articles()), set([a1.id]))
+        self.assertEqual(set(p1.get_all_article_ids()), set([a1.id]))
+        self.assertEqual(set(p1.all_articles()), set([a1]))
         
         s = amcattest.create_test_set(project=p1)
-        self.assertEqual(set(p1.get_all_articles()), set([a1.id]))
+        self.assertEqual(set(p1.get_all_article_ids()), set([a1.id]))
+        self.assertEqual(set(p1.all_articles()), set([a1]))
         s.add(a2)
-        self.assertEqual(set(p1.get_all_articles()), set([a1.id, a2.id]))
+        self.assertEqual(set(p1.get_all_article_ids()), set([a1.id, a2.id]))
+        self.assertEqual(set(p1.all_articles()), set([a1, a2]))
         
         
+
+

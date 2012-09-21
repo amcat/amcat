@@ -185,7 +185,7 @@ class AnalysisProject(AmcatModel):
 
     def narticles(self, **filter):
         # TODO: this is not very efficient for large projects!
-        aids = set(self.project.get_all_articles())
+        aids = set(self.project.get_all_article_ids())
         q = AnalysisArticle.objects.filter(article__in=aids, analysis=self.analysis)
         if filter: q = q.filter(**filter)
         return q.count()
