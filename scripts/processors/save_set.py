@@ -37,6 +37,37 @@ class SaveAsSetForm(forms.Form):
     setproject = forms.ModelChoiceField(queryset=Project.objects.all(), required=False) # TODO: change to projects of user
     existingset = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False) #TODO: change to articlesets inside project
 
+    def __init__(self, *args, **kwargs):
+        super(SaveAsSetForm, self).__init__(*args, **kwargs)
+
+        # Due to the design of (web)scripts, it is not possible to access
+        # POST data below. A workaround is used below (navigator stores
+        # a request object in the threads local storage) to access it, but
+        # should be removed as soon as possible. 
+        try:
+            from amcatnavigator.utils.auth import get_request
+            request = get_request()
+        except ImportError:
+            log.debug("AmCAT Navigator not installed! Wil not set default project / filter on existing sets.")
+            return
+
+        if request is None:
+            log.debug("AmCAT Navigator not running! Wil not set default project / filter on existing sets.")
+            return
+
+        # Try to find out if we're on the Article Selection page
+        project_id = request.REQUEST.get("project")
+
+        if project_id is None:
+            log.debug("Not on Article Selection page. Can't filter on existing set / default project.")
+            return
+
+        project = Project.objects.get(id=project_id)
+
+        self.fields['setproject'].widget = forms.HiddenInput()
+        self.fields['setproject'].initial = project
+        self.fields['existingset'].queryset = ArticleSet.objects.filter(project=project)
+
     
     def clean(self):
         cleanedData = self.cleaned_data
