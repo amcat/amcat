@@ -76,7 +76,7 @@ class Codebook(AmcatModel):
     def codebookcodes(self):
         """Return a list of codebookcodes with code and parent prefetched.
         This functions mainly to provide caching for the codebook codes"""
-        return list(self.codebookcode_set.select_related("_code", "_parent"))
+        return self.codebookcode_set.select_related("_code", "_parent")
 
     def get_codebookcodes(self, code):
         """Return a sequence of codebookcode objects for this code in the codebook
@@ -112,9 +112,8 @@ class Codebook(AmcatModel):
             if co.validfrom and date < co.validfrom: continue
             if co.validto and date >= co.validto: continue
 
-            if co.hide:
-                if not include_hidden:
-                    del result[co._code_id]
+            if co.hide and not include_hidden:
+                del result[co._code_id]
             else:
                 result[co._code_id] = co._parent_id
         return result
@@ -319,12 +318,9 @@ class CodebookCode(AmcatModel):
 
     def validate(self):
         """Validate whether this relation obeys validity constraints:
-        1) a relation can't specify a parent and hide at the same time
-        2) a relation cannot have a validfrom later than the validto
-        3) a child can't occur twice unless the periods are non-overlapping
+        1) a relation cannot have a validfrom later than the validto
+        2) a child can't occur twice unless the periods are non-overlapping
         """
-        if self.parent and self.hide:
-            raise ValueError("A codebook code can either hide or provide a parent, not both!")
         if self.validto and self.validfrom and self.validto < self.validfrom:
             raise ValueError("A codebook code validfrom ({}) is later than its validto ({})"
                              .format(self.validfrom, self.validto))
