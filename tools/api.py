@@ -110,20 +110,5 @@ def _check_status(response):
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
-from amcat.tools import amcattest
-
-
-import json
-
-from django.test import TestCase
-from django.test.client import Client
-from django.contrib.auth.models import User
-
-
-class TestAPI(amcattest.PolicyTestCase):
-    def test_get_objects_local(self):
-        from amcat.models import Article
-        d = DirectAPI()
-        a = amcattest.create_test_article()
-
+# see amcatnavigator.api.tests.test_api_module
 
