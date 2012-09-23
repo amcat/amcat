@@ -167,7 +167,7 @@ class AnalysisArticle(AmcatModel):
 	Store the given tokens and triples using do_store_analysis, wrapping it
 	inside a transaction
         """
-	do_store_analysis(self, tokens, triples)
+	self.do_store_analysis(tokens, triples)
 	
 class AnalysisProject(AmcatModel):
     """

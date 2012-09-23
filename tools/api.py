@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 
 class API(object):
 
-    def __init__(self, base_uri, username=None, password=None, requests=requests):
+    def __init__(self, base_uri, username=None, password=None, client=requests):
         """
         @param requests: module to use for http requests, useful for unit testing
         """
@@ -47,7 +47,7 @@ class API(object):
         else:
             self.username = username
             self.password = password
-        self.requests = requests
+        self.client = client
 
     def get_object(self, klass, pk):
         objects = list(self.get_objects(klass, pk=pk))
@@ -66,7 +66,7 @@ class API(object):
             uri = ("{self.base_uri}/api/v4/{klass}?format=json&limit={batch_size}&page={page}"
                    .format(**locals()))
 
-            r = self.requests.get(uri, params=filters, auth=(self.username, self.password))
+            r = self.client.get(uri, params=filters, auth=(self.username, self.password))
 
             _check_status(r)
             o = json.loads(r.text)
@@ -85,7 +85,7 @@ class API(object):
         uri = '{self.base_uri}/api/action/{action}'.format(**locals())
         log.debug("Posting action {uri} with data {kargs}".format(**locals()))
 
-        r = self.requests.post(uri, data=kargs, auth=(self.username, self.password))
+        r = self.client.post(uri, data=kargs, auth=(self.username, self.password))
         _check_status(r)
         return json.loads(r.text)
 

@@ -29,7 +29,7 @@ from os.path import exists
 #from amcat.models.token import TripleValues, TokenValues
 from collections import namedtuple
 TripleValues = namedtuple("TripleValues", ["analysis_sentence", "child", "parent", "relation"])
-TokenValues = namedtuple("TokenValues", ["analysis_sentence", "position", "word", "lemma", "pos", "major", "minor"])
+TokenValues = namedtuple("TokenValues", ["analysis_sentence", "position", "word", "lemma", "pos", "major", "minor", "namedentity"])
 
 import logging
 from amcat.tools import toolkit
@@ -159,7 +159,7 @@ def interpret_token(sid, lemma, word, begin, _end, dummypos, dummypos2, pos):
     cat = POSMAP.get(m2)
     if not cat:
         raise Exception("Unknown POS: %r (%s/%s/%s/%s)" % (m2, major, begin, word, pos))
-    return TokenValues(sid, int(begin), word, lemma, cat, major, minor)
+    return TokenValues(sid, int(begin), word, lemma, cat, major, minor, None)
 
 
 def interpret_line(line):
@@ -213,8 +213,8 @@ class TestAlpino(amcattest.PolicyTestCase):
         token_str1 = u"huis_DIM|huisje|1|2|noun|noun|noun(het,count,sg)"
         token_str2 = u"het|het|0|1|det|det(nwh)|determiner(het,nwh,nmod,pro,nparg,wkpro)"
 
-        token1 = TokenValues(sentno, 1, "huisje", "huis_DIM", "N", "noun", "het,count,sg")
-        token2 = TokenValues(sentno, 0, "het", "het", "D" ,"determiner", "het,nwh,nmod,pro,nparg,wkpro")
+        token1 = TokenValues(sentno, 1, "huisje", "huis_DIM", "N", "noun", "het,count,sg", None)
+        token2 = TokenValues(sentno, 0, "het", "het", "D" ,"determiner", "het,nwh,nmod,pro,nparg,wkpro", None)
 
 
         self.assertEqual(interpret_token(sentno, *token_str1.split("|")), token1)
@@ -232,8 +232,8 @@ class TestAlpino(amcattest.PolicyTestCase):
     def test_parse(self):
         tokens, triples = Alpino(None).process_sentences(enumerate([u"ik zie h\xe9m!"]))
         self.assertEqual(len(tokens), 4, "Exptected 4 tokens, got %r" % tokens)
-        self.assertIn(TokenValues(0, 3, "!", "!", ".", "punct", "uitroep"), tokens)
-        self.assertIn(TokenValues(0, 2, u"h\xe9m", u"hem", "O", "pronoun", "nwh,thi,sg,de,dat_acc,def"), tokens)
+        self.assertIn(TokenValues(0, 3, "!", "!", ".", "punct", "uitroep", None), tokens)
+        self.assertIn(TokenValues(0, 2, u"h\xe9m", u"hem", "O", "pronoun", "nwh,thi,sg,de,dat_acc,def", None), tokens)
 
         self.assertEqual(set(triples), {
                 TripleValues(0, 0, 1, "su"),
