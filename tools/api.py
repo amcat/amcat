@@ -67,10 +67,12 @@ class API(object):
             uri = ("{self.base_uri}/api/v4/{klass}?format=json&limit={batch_size}&page={page}"
                    .format(**locals()))
 
+            
             r = self.client.get(uri, params=filters, auth=(self.username, self.password))
 
             _check_status(r)
-            o = json.loads(r.text)
+            
+            o = json.loads(_get_content(r))
             if o['total'] == 0: return
 
             if return_type is None:
@@ -88,9 +90,15 @@ class API(object):
 
         r = self.client.post(uri, data=kargs, auth=(self.username, self.password))
         _check_status(r)
-        return json.loads(r.text)
+        return json.loads(_get_content(r))
 
-
+def _get_content(response):
+    result = response.text
+    if not result:
+        result = response.content
+        if result:
+            result = result.decode(response.encoding or "utf-8")
+    return result
 
 def _check_status(response):
     """Check whether the response is 2xx (http success), Exception otherwise"""
