@@ -23,6 +23,8 @@ Auxilliary module for http/html based scraping
 import urllib, urllib2
 from lxml import html
 import logging; log = logging.getLogger(__name__)
+import cookielib
+
 
 HEADERS ={'User-agent': 'Mozilla/5.0 (X11; Linux i686; rv:6.0.2) Gecko/20100101 Firefox/6.0.2'}
 
@@ -30,8 +32,12 @@ class HTTPOpener(object):
     """Auxilliary class to help cookie-based opening and processing
     of web pages for scraping"""
     def __init__(self):
-        self.cookiejar = urllib2.HTTPCookieProcessor()
-        self.opener = urllib2.build_opener(self.cookiejar)
+        cj = cookielib.MozillaCookieJar('mfp.cookies')
+        self.cookiejar = urllib2.HTTPCookieProcessor(cj)
+        self.opener = urllib2.build_opener(
+            self.cookiejar,
+            urllib2.HTTPRedirectHandler()
+            )
         self.opener.addheaders = HEADERS.items()
         
     def getdoc(self, url, encoding=None):
