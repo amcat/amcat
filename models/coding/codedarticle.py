@@ -39,7 +39,7 @@ def _cache_codings(coded_articles, articles=None):
     if not coded_articles: return
 
     codingjob = coded_articles.values()[0].codingjob
-    todo = [a.id for a in articles or codingjob.articleset.articles.all()]
+    todo = {a.id for a in articles or codingjob.articleset.articles.all()}
 
     codings = Coding.objects.select_related("status").filter(
         codingjob=codingjob, sentence__isnull=True,
@@ -51,7 +51,7 @@ def _cache_codings(coded_articles, articles=None):
         ca = coded_articles.get(coding.article_id)
         ca._set_coding_cache(coding)
 
-        todo.remove(coding.article_id)
+        todo -= {coding.article_id}
 
     # Set cache to empty (None) for codings not found
     for article_id in todo:
