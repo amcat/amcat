@@ -50,9 +50,6 @@ class PhpBBScraper(HTTPScraper):
         for cat_title, cat_doc in self.get_categories(index):
             for page in self.get_pages(cat_doc):
                 for fbg in page.cssselect('.forumbg'):
-                    if 'announcement' in fbg.get('class'):
-                        continue
-
                     for a in fbg.cssselect('.topics > li a.topictitle'):
                         url = urljoin(self.index_url, a.get('href'))
                         yield HTMLDocument(headline=a.text, url=url, category=cat_title)
