@@ -22,7 +22,7 @@ A Scraper for the most common internet forum.
 """
 
 from amcat.scraping.document import HTMLDocument
-from amcat.scraping.scraper import HTTPScraper
+from amcat.scraping.scraper import HTTPScraper,DatedScraper
 from urlparse import urljoin, urlunsplit, parse_qs, urlsplit
 from urllib import urlencode
 
@@ -123,3 +123,11 @@ class PhpBBScraper(HTTPScraper):
                 yield ca
 
                 fipo = False
+
+
+
+class DatedPhpBBScraper(PhpBBScraper, DatedScraper):
+    def _scrape_unit(self, thread):
+        for ca in super(DatedPhpBBScraper,self)._scrape_unit(thread):
+            if ca.props.date.date() == self.options['date']:        
+                yield ca
