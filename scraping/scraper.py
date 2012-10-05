@@ -27,6 +27,7 @@ from django import forms
 from django.forms.widgets import HiddenInput
 from django.core.exceptions import ObjectDoesNotExist
 
+from httplib2 import iri2uri
 
 from amcat.scripts.script import Script
 from amcat.models.articleset import ArticleSet
@@ -205,8 +206,19 @@ class HTTPScraper(Scraper):
         # be inherited from besides eg DBScraper in a "diamon-shaped" multi-inheritance
         self.opener = HTTPOpener()
     def getdoc(self, url, encoding=None):
-        """Legacy/convenience function"""
-        return self.opener.getdoc(url, encoding)
+        try:
+            return self.opener.getdoc(url, encoding)
+        except UnicodeEncodeError:
+            uri = iri2url(url)
+            return self.opener.getdoc(uri, encoding)
+
+    def open(self, url,  encoding=None):
+        try:
+            return self.opener.opener.open(url, encoding)
+        except UnicodeEncodeError:
+            uri = iri2uri(url)
+            return self.opener.opener.open(uri, encoding)
+            
 
 
 
