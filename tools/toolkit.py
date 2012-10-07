@@ -559,6 +559,25 @@ def csvreader(stream=None, typename=None):
             raise Exception("Row has %i cells, %i expected: %r" % (len(row), len(header), row))
         yield return_type(*row)
 
+def set_closure(seed, function):
+    """
+    Return the closure of the 'seed' set under the provided function.
+
+    The function is applied iteratively to each element of the set
+    until all new elements returned by the function are member of the set.
+    See http://en.wikipedia.org/wiki/Closure_(mathematics)
+    and NOT http://en.wikipedia.org/wiki/Closure_(computer_science)
+    """
+    new = set()
+    result = set(seed)
+    while True:
+        for e in result:
+            new |= set(function(e))
+        if new.issubset(result):
+            return result
+        result = new | result
+
+        
 ###########################################################################
 ##                      Mapping functions                                ##
 ###########################################################################

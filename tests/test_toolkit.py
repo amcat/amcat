@@ -271,6 +271,13 @@ class TestToolkit(amcattest.PolicyTestCase):
         self.assertRaises(amcatlogging.SilentException, toolkit.retry, f)
 
 
+    def test_set_closure(self):
+        for (seed, function, expected) in [
+            [[1], lambda x : [x+3] if x < 10 else [], {1, 4, 7, 10}],
+            [{1, 8}, lambda x : [x+3] if x < 10 else [], {1, 4, 7, 8, 10, 11}],
+            ]:
+            result = toolkit.set_closure(seed, function)
+            self.assertEqual(result, expected)
 
 if __name__ == '__main__':
     amcattest.main()
