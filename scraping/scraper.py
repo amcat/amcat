@@ -209,7 +209,7 @@ class HTTPScraper(Scraper):
         try:
             return self.opener.getdoc(url, encoding)
         except UnicodeEncodeError:
-            uri = iri2url(url)
+            uri = iri2uri(url)
             return self.opener.getdoc(uri, encoding)
 
     def open(self, url,  encoding=None):
