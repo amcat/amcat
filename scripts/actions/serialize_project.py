@@ -29,10 +29,12 @@ from cStringIO import StringIO
 
 from django import forms
 
-from amcat.models import Project, Article
+from amcat.models import Project, Article, Codebook
 from amcat.scripts.script import Script
 
 from amcat.tools import amcatrdf
+from amcat.tools.toolkit import set_closure
+
 
 log = logging.getLogger(__name__)
 
@@ -56,8 +58,8 @@ class SerializeProject(Script):
             outfile = StringIO()
         self.zipfile = ZipFile(outfile, 'w')
 
-        from amcat.tools import amcatlogging
-        amcatlogging.debug_module("django.db.backends")
+        #from amcat.tools import amcatlogging
+        #amcatlogging.debug_module("django.db.backends")
         
         #self.serialize_project_meta()
         #self.serialize_articles()
@@ -79,10 +81,10 @@ class SerializeProject(Script):
                                    filename="CodingSchemas/%i.rdf.xml" % schema.id)
             
     def serialize_codebooks(self):
+        codebooks = set_closure(self.project.get_codebooks(), lambda c: c.bases)
+        print codebooks
         for codebook in self.project.get_codebooks():
             codes = codebook.get_codes()
-            for c in codes:
-                print c.id
             #self.serialize_objects([codebook], filename="CodeBooks/%i.rdf.xml" % codebook.id)
             break
             
@@ -102,7 +104,6 @@ class SerializeProject(Script):
         bytes = amcatrdf.serialize(triples)
         print bytes
         self.zipfile.writestr(filename, bytes)
-    
     
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
