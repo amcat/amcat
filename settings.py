@@ -55,25 +55,14 @@ AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 # backend=django.core.cache.backends.memcached.MemcachedCache
 # location=127.0.0.1:11211
 
-def sections(identifier):
-    c = configparser.ConfigParser()
-    c.readfp(file(os.path.expanduser('~/.amcatrc3')))
+DATABASES = dict(default=dict(
+        ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
+        NAME = 'amcat',
+        USER =  os.environ.get("DJANGO_DB_USER", ''),           
+        PASSWORD = os.environ.get("DJANGO_DB_PASSWORD", ''),           
+        HOST = os.environ.get("DJANGO_DB_HOST", ''),
+        PORT = ''
+    ))
 
-    for sect in c.sections():
-        db = sect.split('-')
-        if db[0] == identifier and len(db) is 2:
-            yield db[1], c.items(sect)
-
-def filldict(vals, dic):
-    for id, opts in vals:
-        dic[id] = {}
-        for k,v in opts:
-            dic[id][k.upper()] = v
-    return dic
-
-DATABASES = filldict(sections('db'), dict())
-if os.environ.get("DJANGO_DB_ENGINE"):
-    DATABASES["default"]["ENGINE"] = os.environ.get("DJANGO_DB_ENGINE")
-CACHES = filldict(sections('caching'), dict())
 
 SECRET_KEY = random_alphanum(30)
