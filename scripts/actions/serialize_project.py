@@ -29,7 +29,7 @@ from cStringIO import StringIO
 
 from django import forms
 
-from amcat.models import Project, Article, Codebook
+from amcat.models import Project, Article, Codebook, CodebookCode
 from amcat.scripts.script import Script
 
 from amcat.tools import amcatrdf
@@ -82,11 +82,27 @@ class SerializeProject(Script):
             
     def serialize_codebooks(self):
         codebooks = set_closure(self.project.get_codebooks(), lambda c: c.bases)
-        print codebooks
-        for codebook in self.project.get_codebooks():
-            codes = codebook.get_codes()
-            #self.serialize_objects([codebook], filename="CodeBooks/%i.rdf.xml" % codebook.id)
-            break
+        codebook_codes = CodebookCode.objects.filter(codebook__in=codebooks)
+        codes = set(cc._code for cc in codebook_codes)
+
+        hide = amcatrdf.NS_AMCAT["code_constant_hide"]
+        root = amcatrdf.NS_AMCAT["code_constant_root"]
+        
+        triples = []
+        for cc in codebook_codes:
+            codebook_uri = amcatrdf.get_uri(cc.codebook)
+            code_uri = amcatrdf.get_uri(cc._code)
+            if cc.hide:
+                target = hide
+            elif cc._parent is None:
+                target = root
+            else:
+                target = amcatrdf.get_uri(cc._parent)
+            triples.append([code_uri, codebook_uri, target])
+        
+        for triple in triples:
+            print triple
+
             
             
     def serialize_articles(self):
