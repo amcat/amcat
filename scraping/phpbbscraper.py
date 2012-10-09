@@ -106,7 +106,7 @@ class PhpBBScraper(HTTPScraper):
                 ca.props.date = toolkit.readDate(post.cssselect('.author')[0].text_content()[-22:])
                 ca.props.text = post.cssselect('.content')
                 
-                title = post.cssselect('.postbody h3 a')[0].text
+                title = unicode(post.cssselect('.postbody h3 a')[0].text)
                 if fipo:
                     optitle = title
                 if title:
@@ -115,13 +115,13 @@ class PhpBBScraper(HTTPScraper):
                     ca.props.headline = 'Re: {}'.format( optitle )
 
                 try:
-                    ca.props.author = post.cssselect('.author strong')[0].text_content()
+                    ca.props.author = unicode(post.cssselect('.author strong')[0].text_content())
                 except:
                     try:
-                        ca.props.author = post.cssselect('.author a')[0].text_content()
+                        ca.props.author = unicode(post.cssselect('.author a')[0].text_content())
                     except:
                         # Least reliable method
-                        ca.props.author = post.cssselect('.author')[0].text_content().split()[0]
+                        ca.props.author = unicode(post.cssselect('.author')[0].text_content().split()[0])
 
                 yield ca
 

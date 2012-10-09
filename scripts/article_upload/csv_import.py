@@ -81,3 +81,6 @@ class CSV(UploadScript):
 
         return Article(**kargs)
 
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    cli.run_cli(CSV)
