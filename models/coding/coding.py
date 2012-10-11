@@ -84,6 +84,9 @@ class Coding(AmcatModel):
                 self.values.order_by('field__fieldnr')
                 .select_related("field__fieldtype", "value__strval", "value__intval"))]
 
+    def get_value(self, field):
+        return dict(self.get_values())[field]
+    
     @invalidates
     def update_values(self, values):
         """Update the current values

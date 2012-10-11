@@ -25,7 +25,7 @@ Serialize a project to zipped RDF (e.g. for storage at DANS)
 
 from django import forms
 
-from amcat.models import CodingJob
+from amcat.models import Coding, CodingJob, CodingSchemaField
 from amcat.scripts.script import Script
 from amcat.tools.table.table3 import Table
 
@@ -36,13 +36,21 @@ class SerializeProject(Script):
     output_type = Table
     
     class options_form(forms.Form):
-        jobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
-        
+        job = forms.ModelChoiceField(queryset=CodingJob.objects.all(), required=True)
+        unit_codings = forms.BooleanField(initial=False, required=False)
         
     def run(self, _input):
-        print self.options['jobs']
+        job, unit_codings = self.options["job"], self.options["unit_codings"]
+        schema = job.unitschema if unit_codings else job.articleschema
+        fields = CodingSchemaField.objects.filter(codingschema=schema)
+
+        codings = Coding.objects.filter(codingjob=job, sentence__isnull=(not unit_codings))
+
+        return Table(columns=fields, rows=codings, cellfunc=Coding.get_value)
         
 
+            
+        
         
 
 if __name__ == '__main__':
