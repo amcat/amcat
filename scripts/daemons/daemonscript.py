@@ -26,8 +26,7 @@ import time, logging, tempfile, os.path
 log = logging.getLogger(__name__)
 
 from django import forms
-from django.db import DatabaseError
-from django.db import connection
+from django import db
 
 from amcat.contrib.daemon import Daemon
 from amcat.scripts.script import Script
@@ -84,16 +83,19 @@ class DaemonScript(Script):
                 except Exception as e:
                     log.exception('Exception on deleting pid: %s' % e)
                 break
-            except DatabaseError:
+            except db.DatabaseError:
                 log.exception('Database error received. Attempting to reset connection..')
 
-                connection.connection.close()
-                connection.connection = None
+                db.connection.connection.close()
+                db.connection.connection = None
 
                 time.sleep(30)
             except:
                 log.exception('While loop exception, sleeping for 10 seconds')
                 time.sleep(10)
+
+            # Reset db-queries to prevent memory-leaking
+            db.reset_queries()
 
     def prepare(self):
         """
