@@ -241,7 +241,7 @@ def create_tokenvalue(analysis_article=None, **kargs):
     if 'analysis_sentence' not in kargs:
         kargs['analysis_sentence'] = create_test_analysis_sentence(analysis_article).id
     for key, default in dict(position=_get_next_id(), word='test_word', lemma='test_lemma',
-                             pos='T', major='test_major', minor='test_minor').items():
+                             pos='T', major='test_major', minor='test_minor', namedentity=None).items():
         if key not in kargs: kargs[key] = default
     from amcat.models.token import TokenValues
     return TokenValues(**kargs)
