@@ -103,6 +103,28 @@ def create_test_schema(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return CodingSchema.objects.create(project=p, **kargs)
 
+def create_test_schema_with_fields():
+    """Set up a simple coding schema with fields to use for testing
+    Returns codebook, schema, textfield, numberfield, codefield
+    """
+    from amcat.models import CodingSchemaFieldType, CodingSchemaField
+    
+    codebook = create_test_codebook()
+    schema = create_test_schema()
+
+    fields = []
+    for i, (label, type_id) in enumerate([
+            ("text", 1),
+            ("number", 2),
+            ("code", 5)]):
+        cb = codebook if label == "code" else None
+        fieldtype = CodingSchemaFieldType.objects.get(pk=type_id)
+        f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=i, label=label,
+                                             fieldtype=fieldtype, codebook=cb)
+        fields.append(f)
+    
+    return (schema, codebook) + tuple(fields)
+
 def get_test_language(**kargs):
     from amcat.models.language import Language
     from amcat.tools import djangotoolkit

@@ -41,18 +41,10 @@ class SerializeProject(Script):
         
     def run(self, _input):
         job, unit_codings = self.options["job"], self.options["unit_codings"]
-        schema = job.unitschema if unit_codings else job.articleschema
-        fields = CodingSchemaField.objects.filter(codingschema=schema)
-
-        codings = Coding.objects.filter(codingjob=job, sentence__isnull=(not unit_codings))
-
-        return Table(columns=fields, rows=codings, cellfunc=Coding.get_value)
-        
-
-            
-        
-        
+        return job.values_table(unit_codings)
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli()
+
+    

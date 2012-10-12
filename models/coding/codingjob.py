@@ -24,10 +24,16 @@ Coding Jobs are sets of articles assigned to users for manual coding.
 Each coding job has codingschemas for articles and/or sentences.
 """
 
+from functools import partial
+
 from amcat.tools.model import AmcatModel
 from amcat.tools.caching import set_cache
+from amcat.tools.table import table3 
+
 
 from amcat.models.coding.codingschema import CodingSchema
+from amcat.models.coding.codingschemafield import CodingSchemaField
+from amcat.models.coding.coding import Coding
 from amcat.models.user import User
 from amcat.models.project import Project
 from amcat.models.articleset import ArticleSet
@@ -81,7 +87,23 @@ class CodingJob(AmcatModel):
             yield coding
 
 
+    def values_table(self, unit_codings=False):
+        schema = self.unitschema if unit_codings else self.articleschema
+        fields = CodingSchemaField.objects.filter(codingschema=schema)
+
+        codings = Coding.objects.filter(codingjob=self, sentence__isnull=(not unit_codings))
+
+        def get_value(field, coding):
+            return coding.get_value(field)
+        def get_attribute(field, coding):
+            return getattr(coding, field)
         
+        t = table3.ObjectTable(rows=codings)
+        for field in "codingjob_id", "article_id", "sentence_id", "comments", "status_id":
+            t.addColumn(partial(get_attribute, field), field)
+        for field in fields:
+            t.addColumn(partial(get_value, field), field.label)
+        return t
     
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -101,6 +123,15 @@ class TestCodingJob(amcattest.PolicyTestCase):
         j.articleset.add(amcattest.create_test_article())
         self.assertEqual(1+3, len(j.articleset.articles.all()))
         
+    def test_values_table(self):
+        """Does getting a table of values work?"""
         
+        schema, codebook,  strfield, intfield, codefield = amcattest.create_test_schema_with_fields()
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema)
+        
+        c = amcattest.create_test_coding(codingjob=job)
+        c.update_values({strfield:"bla", intfield:1})
+        
+        self.assertEqual(set(job.values_table().to_list()), {('bla', 1, None)})
         
         
