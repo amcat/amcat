@@ -41,8 +41,12 @@ class SerializeProject(Script):
         
     def run(self, _input):
         job, unit_codings = self.options["job"], self.options["unit_codings"]
-        return job.values_table(unit_codings)
-
+        t = job.values_table(unit_codings)
+	t.addColumn(lambda c : c.article_id, "Article")
+	if unit_codings:
+	    t.addColumn(lambda c : c.sentence_id, "Sentence")
+	return t
+    
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli()
