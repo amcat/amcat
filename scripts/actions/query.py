@@ -19,9 +19,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""
-Script to clean the index for a project
-"""
 
 import logging; log = logging.getLogger(__name__)
 from functools import partial
@@ -34,6 +31,10 @@ from amcat.tools.table.table3 import Table
 from amcat.models import ArticleSet
 
 class Query(Script):
+    """
+    Perform a keyword query on an articleset.
+    """
+
     class options_form(forms.Form):
         articlesets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
         query = forms.CharField()
