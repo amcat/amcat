@@ -173,7 +173,7 @@ class ObjectTable(Table):
         if columns:
             for column in columns:
                 self.addColumn(column)
-    def addColumn(self, col, label=None, **kargs):
+    def addColumn(self, col, label=None, index=None, **kargs):
         """Add column to Table3 object
         
         @type col: ObjectColumn, string, or (lambda-)function
@@ -195,7 +195,10 @@ class ObjectTable(Table):
             col = ObjectColumn(label, col, **kargs)
         elif type(col) in (str, unicode):
             col = AttributeColumn(col, label, **kargs)
-        self.columns.append(col)
+	if index is not None:
+	    self.columns.insert(index, col)
+	else:
+	    self.columns.append(col)
         return col
     def getValue(self, row, column):
         """Get the column-value for the given row object"""
