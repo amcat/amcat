@@ -99,18 +99,20 @@ def create_test_project(**kargs):
 def create_test_schema(**kargs):
     """Create a test schema to be used in unit testing"""
     from amcat.models.coding.codingschema import CodingSchema
-    p = create_test_project()
+    if "project" not in kargs: kargs["project"] = create_test_project()
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    return CodingSchema.objects.create(project=p, **kargs)
+    if 'name' not in kargs: kargs['name'] = "testschema_%i" % CodingSchema.objects.count()
+    return CodingSchema.objects.create(**kargs)
 
-def create_test_schema_with_fields():
+def create_test_schema_with_fields(codebook=None, **kargs):
     """Set up a simple coding schema with fields to use for testing
     Returns codebook, schema, textfield, numberfield, codefield
     """
     from amcat.models import CodingSchemaFieldType, CodingSchemaField
     
-    codebook = create_test_codebook()
-    schema = create_test_schema()
+    if codebook is None:
+        codebook = create_test_codebook()
+    schema = create_test_schema(**kargs)
 
     fields = []
     for i, (label, type_id) in enumerate([
@@ -203,7 +205,7 @@ def create_test_coding(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Coding.objects.create(**kargs)
 
-def create_test_code(label=None, language=None, **kargs):
+def create_test_code(label=None, language=None, codebook=None, parent=None, **kargs):
     """Create a test code with a label"""
     from amcat.models.coding.code import Code
     from amcat.models.language import Language
@@ -212,6 +214,8 @@ def create_test_code(label=None, language=None, **kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     o = Code.objects.create(**kargs)
     o.add_label(language, label)
+    if codebook is not None:
+        codebook.add_code(o, parent=parent)
     return o
 
 def create_test_codebook(**kargs):
