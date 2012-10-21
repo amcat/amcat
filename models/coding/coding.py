@@ -84,10 +84,10 @@ class Coding(AmcatModel):
                 .select_related("field__fieldtype", "value__strval", "value__intval"))]
 
     def get_value(self, field):
-	"""Return the Value object correspoding to this field"""
-	for v in self.values.all():
-	    if v.field_id == field.id:
-		return v.serialised_value
+        """Return the Value object correspoding to this field"""
+        for v in self.values.all():
+            if v.field_id == field.id:
+                return v.serialised_value
     
     @invalidates
     def update_values(self, values):
