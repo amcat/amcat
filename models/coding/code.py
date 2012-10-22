@@ -173,7 +173,7 @@ class TestCode(amcattest.PolicyTestCase):
         # does .label and .get_label return a unicode object under all circumstances
         self.assertIsInstance(o.label, unicode)
         self.assertIsInstance(o.get_label(l2), unicode)
-        self.assertIsInstance(o2.label, unicode)
+        self.assertIsInstance(o.label, unicode)
 
     def test_cache(self):
         """Are label lookups cached?"""
