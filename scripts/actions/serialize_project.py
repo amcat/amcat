@@ -31,7 +31,7 @@ from cStringIO import StringIO
 
 from django import forms
 
-from amcat.models import Project, Article, Codebook
+from amcat.models import Project, Article, Codebook, CodingSchemaField
 from amcat.scripts.script import Script
 
 from amcat.tools import amcatrdf
@@ -40,11 +40,6 @@ from amcat.tools.toolkit import set_closure
 
 log = logging.getLogger(__name__)
 
-_MODEL2DIRNAME = {"Code" : "Codebook",
-                  "Coding" : "CodingJob",
-                  "ArticleSet" : "Article",
-                  "CodingSchemaField" : "CodingSchema"}
-_MODEL2FILENAME = {"CodingSchemaField" : "CodingSchema"}
 
 class SerializeProject(Script):
     """Serialize a project to zipped RDF"""
@@ -55,10 +50,6 @@ class SerializeProject(Script):
         project = forms.ModelChoiceField(queryset=Project.objects.all())
         outputfile = forms.CharField(required=False)
 
-    def get_filename(self, model, id):
-        dir = _MODEL2DIRNAME.get(model, model)
-        fn = _MODEL2FILENAME.get(model, model)
-        return "{dir}s/{fn}_{id}.rdf.xml".format(**locals())
         
     def run(self, _input):
         project = self.options['project']
@@ -66,34 +57,51 @@ class SerializeProject(Script):
         
         if not outfile:
             outfile = StringIO()
-        self.zipfile = ZipFile(outfile, 'w')
 
-        triples_by_file = collections.defaultdict(list)
-        
-        for triple in amcatrdf.get_triples_project(project):
-            m = re.match(r"http://amcat.vu.nl/amcat3/(\w+)/\w+_(\d+)", triple[0])
-            model, id = m.group(1), int(m.group(2))
-            if model == "Project":
-                fn = "project.rdf.xml"
-            else:
-                fn = self.get_filename(model, id)
-            triples_by_file[fn].append(triple)
-            
-        for fn, triples in triples_by_file.iteritems():
-            self.serialize_triples(triples, fn)
-            
+        serialize_project_to_zipfile(project, outfile)
+
         try:
             return outfile.getvalue()
         except AttributeError:
             return outfile
+
+# Mappings to determine folder and filename for triples about models
+_MODEL2DIRNAME = {"Code" : "Codebook",
+                  "Coding" : "CodingJob",
+                  "ArticleSet" : "Article",
+                  "CodingSchemaField" : "CodingSchema"}
+_MODEL2FILENAME = {"CodingSchemaField" : "CodingSchema"}
+
+RE_DECONSTRUCT_URI = r"http://amcat.vu.nl/amcat3/(\w+)/\w+_(\d+)"
+
+def _get_filename(subject, predicate, object):
+    """Return the filename to which the triple with this subject should be serialized"""
+    model, id = re.match(RE_DECONSTRUCT_URI, subject).groups()
+    if model == "Project":
+        return "project.rdf.xml"
+    dir = _MODEL2DIRNAME.get(model, model)
+    if model == "CodingSchemaField": # place schema fields with schema
+        #HACK There must be a nicer way to do this...
+        i = CodingSchemaField.objects.get(pk=id)
+        model, id = "CodingSchema",  i.codingschema_id
+    if model == "Code" : # place hierarchy with codebook, not with codes
+        m = re.match(RE_DECONSTRUCT_URI, predicate)
+        if m:
+            model, id = m.groups()
+        
+    fn = '{model}_{id}'.format(**locals())
+    return "{dir}s/{fn}.rdf.xml".format(**locals())          
       
-    def serialize_triples(self, triples, filename):
+def serialize_project_to_zipfile(project, outfile):
+    triples_by_file = collections.defaultdict(list)
+    for triple in amcatrdf.get_triples_project(project):
+        fn = _get_filename(*triple)
+        triples_by_file[fn].append(triple)
+
+    zipfile = ZipFile(outfile, 'w')
+    for fn, triples in triples_by_file.iteritems():
         bytes = amcatrdf.serialize(triples)
-        self.zipfile.writestr(filename, bytes)
-
-
-
-    
+        zipfile.writestr(fn, bytes)
     
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

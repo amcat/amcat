@@ -31,8 +31,6 @@ log = logging.getLogger(__name__)
 
 AMCAT = "http://amcat.vu.nl/amcat3/"
 NS_AMCAT = Namespace(AMCAT)
-AMCAT_CODEBOOK = AMCAT + "Codebook/"
-NS_AMCAT_CODEBOOK = Namespace(AMCAT_CODEBOOK)
 DC = "http://purl.org/dc/elements/1.1/"
 NS_DC = Namespace(DC)
 XMLS = "http://www.w3.org/2001/XMLSchema#"
@@ -42,7 +40,7 @@ NS_RDFS = Namespace(RDFS)
 RDF = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 NS_RDF = Namespace(RDF)
 
-NAMESPACES = dict(amcat=AMCAT, dc=DC, xmls=XMLS, rdfs=RDFS, rdf=RDF, amcatcodebook=NS_AMCAT_CODEBOOK)
+NAMESPACES = dict(amcat=AMCAT, dc=DC, xmls=XMLS, rdfs=RDFS, rdf=RDF)
 
 PREDICATES = {
     ("id") : NS_DC["identifier"],
@@ -142,6 +140,11 @@ def serialize(triples, **options):
     graph = Graph()
     for name, ns in NAMESPACES.items():
         graph.bind(name, ns)
+    # Bind 'subspaces' to allow use in attributes
+    graph.bind('amcatcodingschemafield', AMCAT + 'CodingSchemaField/')
+    graph.bind('amcatcodebook', AMCAT + 'Codebook/')
+
+
     for triple in triples:
         graph.add(triple)
     return graph.serialize(**options)
@@ -308,9 +311,14 @@ class TestAmcatRDF(amcattest.PolicyTestCase):
         self.schema, _dummy, self.strfield, self.intfield, self.codefield = (
             amcattest.create_test_schema_with_fields(project=self.project, codebook=self.sub_codebook))
 
-        self.article_hl = u'\u03a4\u1f74 \u03b3\u03bb\u1ff6\u03c3\u03c3\u03b1',
+        self.article_hl = u'The great wall of China (\u9577\u57ce)'
+        self.article_text = u"""This is some text with greek characters\n
+                               \u03bc\u1fc6\u03bd\u03b9\u03bd \u1f04\u03b5\u03b9\u03b4\u03b5,
+                               \u03b8\u03b5\u03ac,
+                               \u03a0\u03b7\u03bb\u03b7\u03ca\u03ac\u03b4\u03b5\u03c9
+                               \u1f08\u03c7\u03b9\u03bb\u1fc6\u03bf\u03c2"""
         self.article = amcattest.create_test_article(headline=self.article_hl, project=self.project,
-                                                     date="2012-01-01")
+                                                     text=self.article_text, date="2012-01-01")
         self.article = Article.objects.get(pk=self.article.id) # to get date redeserialized
         
         self.articleset = amcattest.create_test_set(project=self.project)
@@ -459,7 +467,7 @@ class TestAmcatRDF(amcattest.PolicyTestCase):
             (u(a), NS_DC["title"], Literal(self.article_hl)),
             (u(a), NS_DC["publisher"], u(a.medium)),
             (u(a), NS_AMCAT["project"], u(self.project)),
-            (u(a), NS_AMCAT["text"], Literal(a.text)),
+            (u(a), NS_AMCAT["text"], Literal(self.article_text)),
             }
 
     def _expected_triples_articleset(self):
@@ -533,6 +541,9 @@ class TestAmcatRDF(amcattest.PolicyTestCase):
 
         open("/tmp/test_project.rdf.xml", "w").write( serialize(triples, format="xml"))
         open("/tmp/test_project.rdf.nt", "w").write( serialize(triples, format="nt"))
+        open("/tmp/test_project.rdf.n3", "w").write( serialize(triples, format="n3"))
+        from amcat.scripts.actions.serialize_project import serialize_project_to_zipfile
+        serialize_project_to_zipfile(self.project, open("/tmp/test_project.zip", "w"))
         
 
     def test_project_duplicates(self):
