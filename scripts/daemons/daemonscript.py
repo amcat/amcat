@@ -86,7 +86,12 @@ class DaemonScript(Script):
             except db.DatabaseError:
                 log.exception('Database error received. Attempting to reset connection..')
 
-                db.connection.connection.close()
+                try:
+                    db.connection.connection.close()
+                except:
+                    # Connection already closed. Ignore exception.
+                    pass
+
                 db.connection.connection = None
 
                 time.sleep(30)
