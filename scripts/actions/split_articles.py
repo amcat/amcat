@@ -1,4 +1,6 @@
-###########################################################################
+#!/usr/bin/python
+
+##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -17,52 +19,40 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-# Django settings for amcatnavigator project.
-import os
 
-from amcat.tools.toolkit import random_alphanum
+import logging; log = logging.getLogger(__name__)
 
-# Python 2.x vs 3.x
-try:
-    import ConfigParser as configparser
-except ImportError:
-    import configparser
+from django import forms
+from django.db import transaction
 
-DEBUG = True
+from amcat.scripts.script import Script
+from amcat.models import ArticleSet, Article
 
-INSTALLED_APPS = (
-    'amcat',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    )
-AUTH_PROFILE_MODULE = 'amcat.UserProfile'
+from amcat.nlp import sbd
 
-#TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
-#NOSE_ARGS = ['--with-progressive','--pdb']
+class SplitArticles(Script):
+    """
+    Perform a keyword query on an articleset.
+    """
 
+    class options_form(forms.Form):
+        articlesets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
 
-# Databases / Caches are defined in ~/.amcatrc3. Example file:
-#
-# [db-default]
-# name=amcat
-# engine=django.db.backends.postgresql_psycopg2
-# user=apache
-# password=secret
-# host=localhost
-# port=5432
-#
-# [caching-default]
-# backend=django.core.cache.backends.memcached.MemcachedCache
-# location=127.0.0.1:11211
+    @transaction.commit_on_success    
+    def run(self, _input=None):
+        sets = self.options['articlesets']
+	to_split = list(Article.objects.filter(articlesets__in=sets, sentences=None) )
+	n = len(to_split)
+	log.info("Will split {n} articles".format(**locals()))
 
-DATABASES = dict(default=dict(
-        ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
-        NAME = 'amcat',
-        USER =  os.environ.get("DJANGO_DB_USER", ''),           
-        PASSWORD = os.environ.get("DJANGO_DB_PASSWORD", ''),           
-        HOST = os.environ.get("DJANGO_DB_HOST", ''),
-        PORT = ''
-    ))
-
-
-SECRET_KEY = random_alphanum(30)
+	for i, article in enumerate(to_split):
+	    if not i % 100:
+		log.info("Splitting article {i}/{n}".format(**locals()))
+	    sbd.create_sentences(article)
+	log.info("Done!")
+	    
+    
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    cli.run_cli()
+        

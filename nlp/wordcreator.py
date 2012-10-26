@@ -39,7 +39,7 @@ def create_objects(cls, values, key_attrs):
     def key(obj):
         """create a tuple (obj.a, obj.b) to use as dict key (assuming key_attrs='a','b')"""
         return tuple(getattr(obj, attr) for attr in key_attrs)
-    
+
     # first create a cache containing the objects with any of the possible key values
     query = cls.objects.all()
     for attr in key_attrs:
@@ -94,7 +94,7 @@ def create_tokens(tokenvalues):
         word = words[v.lemma, v.pos, v.word]
         pos = poss[v.major, v.minor, v.pos]
         yield v, Token.objects.create(sentence=sentences[v.analysis_sentence], position=v.position, word=word, pos=pos,
-				      namedentity=v.namedentity)
+                                      namedentity=v.namedentity)
 
 def create_triples(tokenvalues, triplevalues=None):
     """Create the requested tokens and (optionally) triples
@@ -102,17 +102,17 @@ def create_triples(tokenvalues, triplevalues=None):
     @return: a pair or tokens, triples mappings of the values to the newly created objects"""
     tokens = dict(create_tokens(tokenvalues))
     triples = {}
-    
+
     tokenmap = {(t.sentence_id, t.position) : t for t in tokens.values()}
-    
+
     if triplevalues:
         triplevalues = [truncate_triplevalue(tv) for tv in triplevalues]
         rels = create_relations(triplevalues)
         for triple in triplevalues:
             triples[triple] = Triple.objects.create(relation=rels[triple.relation],
-						    parent=tokenmap[triple.analysis_sentence, triple.parent],
-						    child=tokenmap[triple.analysis_sentence, triple.child])
-	    
+                                                    parent=tokenmap[triple.analysis_sentence, triple.parent],
+                                                    child=tokenmap[triple.analysis_sentence, triple.child])
+
     return tokens, triples
 
 TOKEN_MAXLENGTHS = dict(
@@ -125,7 +125,7 @@ def truncate_tokenvalue(tv):
     if len(tv.pos) != 1: raise Exception("POS must be a single character")
     update = {}
     for attr, maxlength in TOKEN_MAXLENGTHS.items():
-        val = getattr(tv, attr) 
+        val = getattr(tv, attr)
         if val is not None and len(val) > maxlength:
             update[attr] = val[:maxlength]
     if update:
@@ -134,14 +134,14 @@ def truncate_tokenvalue(tv):
         return tv
 
 TRIPLE_MAXLENGTH_REL = 100
-    
+
 def truncate_triplevalue(tv):
     if len(tv.relation) > TRIPLE_MAXLENGTH_REL:
         return tv._replace(relation=tv.relation[:TRIPLE_MAXLENGTH_REL])
     else:
         return tv
 
-            
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -206,18 +206,18 @@ class TestWordCreator(amcattest.PolicyTestCase):
         self.assertEqual(tr.relation.label, t.relation)
         self.assertEqual(tr.child.word.word, "a")
 
-	for tokenvalue, token in result_tokens.items():
-	    self.assertEqual(tokenvalue.position, token.position)
-	    self.assertEqual(tokenvalue.lemma, token.word.lemma.lemma)
-	
+        for tokenvalue, token in result_tokens.items():
+            self.assertEqual(tokenvalue.position, token.position)
+            self.assertEqual(tokenvalue.lemma, token.word.lemma.lemma)
+
 
     def test_long_strings(self):
         """Test whether overly long lemmata, words, and pos are truncated"""
         from amcat.models.token import TokenValues, TripleValues
 
-        s = amcattest.create_test_analysis_sentence()   
+        s = amcattest.create_test_analysis_sentence()
         longpos = TokenValues(s.id, 0, word="a", lemma="l", pos="pp", major="m", minor="m", namedentity=None)
-        
+
         self.assertRaises(Exception, list, create_tokens([longpos]))
 
         nonepos = TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="m", minor="m", namedentity=None)
@@ -226,7 +226,7 @@ class TestWordCreator(amcattest.PolicyTestCase):
                                major="m"*9999, minor="m"*9999, namedentity=None)
         triple = TripleValues(s.id, 0, 1, "x"*9999)
         create_triples([nonepos, longvals], [triple])
-        
+
         # django validation for length
         t, = Triple.objects.filter(parent__sentence=s)
 
@@ -237,5 +237,5 @@ class TestWordCreator(amcattest.PolicyTestCase):
             token.word.full_clean()
             token.word.lemma.full_clean()
             token.pos.full_clean()
-            
-           
+
+

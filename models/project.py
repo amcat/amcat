@@ -95,7 +95,7 @@ class Project(AmcatModel):
         Get a set of articles either owned by this project
         or contained in a set owned by this project
         """
-        return Article.objects.filter(Q(articlesets__project=self)|Q(project=self))
+        return Article.objects.filter(Q(articlesets__project=self)|Q(project=self)).distinct()
             
     def get_all_article_ids(self):
         """

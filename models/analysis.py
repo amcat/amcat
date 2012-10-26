@@ -350,7 +350,7 @@ class TestAnalysis(amcattest.PolicyTestCase):
 
     def test_store_tokens(self):
         s = amcattest.create_test_analysis_sentence()
-        t1 = amcattest.create_tokenvalue(analysis_sentence=s)
+        t1 = amcattest.create_tokenvalue(analysis_sentence=s.id)
         s.analysis_article.store_analysis(tokens=[t1])
         aa = AnalysisArticle.objects.get(pk=s.analysis_article.id)
         self.assertEqual(aa.done,  True)

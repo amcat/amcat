@@ -23,13 +23,15 @@
 Serialize a project to zipped RDF (e.g. for storage at DANS)
 """
 
+import collections, re
+
 from zipfile import ZipFile
 import logging
 from cStringIO import StringIO
 
 from django import forms
 
-from amcat.models import Project, Article, Codebook
+from amcat.models import Project, Article, Codebook, CodingSchemaField
 from amcat.scripts.script import Script
 
 from amcat.tools import amcatrdf
@@ -38,8 +40,6 @@ from amcat.tools.toolkit import set_closure
 
 log = logging.getLogger(__name__)
 
-class AddUserForm(forms.Form):
-    project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
 
 class SerializeProject(Script):
     """Serialize a project to zipped RDF"""
@@ -50,60 +50,58 @@ class SerializeProject(Script):
         project = forms.ModelChoiceField(queryset=Project.objects.all())
         outputfile = forms.CharField(required=False)
 
+        
     def run(self, _input):
-        self.project = self.options['project']
-
+        project = self.options['project']
         outfile = self.options['outputfile']
+        
         if not outfile:
             outfile = StringIO()
-        self.zipfile = ZipFile(outfile, 'w')
 
-        #from amcat.tools import amcatlogging
-        #amcatlogging.debug_module("django.db.backends")
-        
-        #self.serialize_project_meta()
-        #self.serialize_articles()
-        #self.serialize_coding_schemas()
-        self.serialize_codebooks()
-        
+        serialize_project_to_zipfile(project, outfile)
+
         try:
             return outfile.getvalue()
         except AttributeError:
             return outfile
 
-    def serialize_project_meta(self):
-        self.serialize_objects(self.project, "project.rdf.xml")
+# Mappings to determine folder and filename for triples about models
+_MODEL2DIRNAME = {"Code" : "Codebook",
+                  "Coding" : "CodingJob",
+                  "ArticleSet" : "Article",
+                  "CodingSchemaField" : "CodingSchema"}
+_MODEL2FILENAME = {"CodingSchemaField" : "CodingSchema"}
 
+RE_DECONSTRUCT_URI = r"http://amcat.vu.nl/amcat3/(\w+)/\w+_(\d+)"
+
+def _get_filename(subject, predicate, object):
+    """Return the filename to which the triple with this subject should be serialized"""
+    model, id = re.match(RE_DECONSTRUCT_URI, subject).groups()
+    if model == "Project":
+        return "project.rdf.xml"
+    dir = _MODEL2DIRNAME.get(model, model)
+    if model == "CodingSchemaField": # place schema fields with schema
+        #HACK There must be a nicer way to do this...
+        i = CodingSchemaField.objects.get(pk=id)
+        model, id = "CodingSchema",  i.codingschema_id
+    if model == "Code" : # place hierarchy with codebook, not with codes
+        m = re.match(RE_DECONSTRUCT_URI, predicate)
+        if m:
+            model, id = m.groups()
         
-    def serialize_coding_schemas(self):
-        for schema in self.project.get_codingschemas().prefetch_related("project", "fields"):
-            self.serialize_objects([schema] + list(schema.fields.all()),
-                                   filename="CodingSchemas/%i.rdf.xml" % schema.id)
-            
-    def serialize_codebooks(self):
-        codebooks = set_closure(self.project.get_codebooks(), lambda c: c.bases)
-        print codebooks
-        for codebook in self.project.get_codebooks():
-            codes = codebook.get_codes()
-            #self.serialize_objects([codebook], filename="CodeBooks/%i.rdf.xml" % codebook.id)
-            break
-            
-            
-    def serialize_articles(self):
-        direct =  Article.objects.filter(project=self.project)
-        indirect = Article.objects.filter(articlesets__project=self.project)
-        direct, indirect = [set(manager.prefetch_related("project", "medium"))
-                            for manager in (direct, indirect)]
-        for article in direct | indirect:
-            self.serialize_objects(article, filename="Documents/%i.rdf.xml" % article.id)
-        
-    def serialize_objects(self, objects, filename):
-        triples = set()
-        for object in objects:
-            triples |= set(amcatrdf.get_triples(object))
+    fn = '{model}_{id}'.format(**locals())
+    return "{dir}s/{fn}.rdf.xml".format(**locals())          
+      
+def serialize_project_to_zipfile(project, outfile):
+    triples_by_file = collections.defaultdict(list)
+    for triple in amcatrdf.get_triples_project(project):
+        fn = _get_filename(*triple)
+        triples_by_file[fn].append(triple)
+
+    zipfile = ZipFile(outfile, 'w')
+    for fn, triples in triples_by_file.iteritems():
         bytes = amcatrdf.serialize(triples)
-        print bytes
-        self.zipfile.writestr(filename, bytes)
+        zipfile.writestr(fn, bytes)
     
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

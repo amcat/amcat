@@ -19,37 +19,41 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-
-import logging; log = logging.getLogger(__name__)
-from functools import partial
-
 from django import forms
 
+from amcat.models import Coding, CodingJob, CodingSchemaField
 from amcat.scripts.script import Script
-from amcat.tools.amcatsolr import Solr, filters_from_form
 from amcat.tools.table.table3 import Table
-from amcat.models import ArticleSet
 
-class Query(Script):
+import logging
+log = logging.getLogger(__name__)
+
+class GetCodingJobResults(Script):
     """
-    Perform a keyword query on an articleset.
+    Extract the coded values for a coding job. This yields a Table with codings in the rows
+    and in the columns the metadata followed by the coded fields. Values for metadata and
+    codings are all primitives, e.g. code_id rather than code or unicode(code).
     """
 
-    class options_form(forms.Form):
-        articlesets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
-        query = forms.CharField()
     output_type = Table
     
-    def run(self, _input=None):
-        filters = filters_from_form(self.options)
-        query = self.options['query']
-        t = Table(rows = Solr().query_all(query, filters=filters, fields=["id"]),
-                  columns = ["id", "score"],
-                  cellfunc = dict.get)
-        return t
+    class options_form(forms.Form):
+        job = forms.ModelChoiceField(queryset=CodingJob.objects.all(), required=True)
+        unit_codings = forms.BooleanField(initial=False, required=False)
+        
+    def run(self, _input):
+        job, unit_codings = self.options["job"], self.options["unit_codings"]
+        t = job.values_table(unit_codings)
+	t.addColumn(lambda c : c.status_id, "Status", index=0)
+	if unit_codings:
+	    t.addColumn(lambda c : c.sentence_id, "Sentence", index=0)
+	t.addColumn(lambda c : c.article_id, "Article", index=0)
+	t.addColumn(lambda c : c.codingjob_id, "Codingjob", index=0)
+	
+	return t
     
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
-    result = cli.run_cli()
-    print result.output()
-        
+    cli.run_cli()
+
+    

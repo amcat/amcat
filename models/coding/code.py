@@ -109,6 +109,8 @@ class Code(AmcatModel):
 
     def add_label(self, language, label):
         """Add the label in the given language"""
+	if isinstance(language, int):
+	    language = Language.objects.get(pk=language)
         Label.objects.create(language=language, label=label, code=self)
         self._cache_label(language, label)
 
@@ -173,7 +175,7 @@ class TestCode(amcattest.PolicyTestCase):
         # does .label and .get_label return a unicode object under all circumstances
         self.assertIsInstance(o.label, unicode)
         self.assertIsInstance(o.get_label(l2), unicode)
-        self.assertIsInstance(o2.label, unicode)
+        self.assertIsInstance(o.label, unicode)
 
     def test_cache(self):
         """Are label lookups cached?"""

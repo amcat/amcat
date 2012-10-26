@@ -30,7 +30,6 @@ from django.db import models
 
 from amcat.tools.caching import cached, invalidates
 from amcat.tools.model import AmcatModel
-from amcat.models.coding.codingjob import CodingJob
 from amcat.models.coding.codingschemafield import CodingSchemaField
 from amcat.models.article import Article
 from amcat.models.sentence import Sentence
@@ -58,7 +57,7 @@ class Coding(AmcatModel):
 
     id = models.AutoField(primary_key=True, db_column='coding_id')
     
-    codingjob = models.ForeignKey(CodingJob, related_name="codings")
+    codingjob = models.ForeignKey("amcat.CodingJob", related_name="codings")
     article = models.ForeignKey(Article)
     sentence = models.ForeignKey(Sentence, null=True)
 
@@ -84,6 +83,12 @@ class Coding(AmcatModel):
                 self.values.order_by('field__fieldnr')
                 .select_related("field__fieldtype", "value__strval", "value__intval"))]
 
+    def get_value(self, field):
+        """Return the Value object correspoding to this field"""
+        for v in self.values.all():
+            if v.field_id == field.id:
+                return v.serialised_value
+    
     @invalidates
     def update_values(self, values):
         """Update the current values
@@ -192,32 +197,21 @@ def _valuestr(coding):
                     sorted(coding.get_values(), key=lambda fv:fv[0].label))
         
 
+
 class TestCoding(amcattest.PolicyTestCase):
 
     def setUp(self):
         """Set up a simple coding schema with fields to use for testing"""
         super(TestCoding, self).setUp()
-        from amcat.models.coding.codingschemafield import CodingSchemaFieldType
-        strfieldtype = CodingSchemaFieldType.objects.get(pk=1)
-        intfieldtype = CodingSchemaFieldType.objects.get(pk=2)
-        codefieldtype = CodingSchemaFieldType.objects.get(pk=5)
 
+        self.schema, self.codebook,  self.strfield, self.intfield, self.codefield = (
+            amcattest.create_test_schema_with_fields())
 
-        self.codebook = amcattest.create_test_codebook()
         self.c = amcattest.create_test_code(label="CODED")
         self.c2 = amcattest.create_test_code(label="CODE2")
         self.codebook.add_code(self.c)
         self.codebook.add_code(self.c2)
-
-        self.schema = amcattest.create_test_schema()
-        create = CodingSchemaField.objects.create
-        self.strfield = create(codingschema=self.schema, fieldnr=1, label="text",
-                               fieldtype=strfieldtype)
-        self.intfield = create(codingschema=self.schema, fieldnr=2, label="number",
-                               fieldtype=intfieldtype)
-        self.codefield = create(codingschema=self.schema, fieldnr=3, label="code",
-                                fieldtype=codefieldtype, codebook=self.codebook)
-
+        
         self.job = amcattest.create_test_job(unitschema=self.schema, articleschema=self.schema)
         
     def test_create(self):

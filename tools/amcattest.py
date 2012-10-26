@@ -99,9 +99,33 @@ def create_test_project(**kargs):
 def create_test_schema(**kargs):
     """Create a test schema to be used in unit testing"""
     from amcat.models.coding.codingschema import CodingSchema
-    p = create_test_project()
+    if "project" not in kargs: kargs["project"] = create_test_project()
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    return CodingSchema.objects.create(project=p, **kargs)
+    if 'name' not in kargs: kargs['name'] = "testschema_%i" % CodingSchema.objects.count()
+    return CodingSchema.objects.create(**kargs)
+
+def create_test_schema_with_fields(codebook=None, **kargs):
+    """Set up a simple coding schema with fields to use for testing
+    Returns codebook, schema, textfield, numberfield, codefield
+    """
+    from amcat.models import CodingSchemaFieldType, CodingSchemaField
+    
+    if codebook is None:
+        codebook = create_test_codebook()
+    schema = create_test_schema(**kargs)
+
+    fields = []
+    for i, (label, type_id) in enumerate([
+            ("text", 1),
+            ("number", 2),
+            ("code", 5)]):
+        cb = codebook if label == "code" else None
+        fieldtype = CodingSchemaFieldType.objects.get(pk=type_id)
+        f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=i, label=label,
+                                             fieldtype=fieldtype, codebook=cb)
+        fields.append(f)
+    
+    return (schema, codebook) + tuple(fields)
 
 def get_test_language(**kargs):
     from amcat.models.language import Language
@@ -181,7 +205,7 @@ def create_test_coding(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Coding.objects.create(**kargs)
 
-def create_test_code(label=None, language=None, **kargs):
+def create_test_code(label=None, language=None, codebook=None, parent=None, **kargs):
     """Create a test code with a label"""
     from amcat.models.coding.code import Code
     from amcat.models.language import Language
@@ -190,6 +214,8 @@ def create_test_code(label=None, language=None, **kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     o = Code.objects.create(**kargs)
     o.add_label(language, label)
+    if codebook is not None:
+        codebook.add_code(o, parent=parent)
     return o
 
 def create_test_codebook(**kargs):
@@ -241,7 +267,7 @@ def create_tokenvalue(analysis_article=None, **kargs):
     if 'analysis_sentence' not in kargs:
         kargs['analysis_sentence'] = create_test_analysis_sentence(analysis_article).id
     for key, default in dict(position=_get_next_id(), word='test_word', lemma='test_lemma',
-                             pos='T', major='test_major', minor='test_minor').items():
+                             pos='T', major='test_major', minor='test_minor', namedentity=None).items():
         if key not in kargs: kargs[key] = default
     from amcat.models.token import TokenValues
     return TokenValues(**kargs)

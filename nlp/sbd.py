@@ -22,7 +22,7 @@ Simple regex-based sentence boundary detection
 """
 
 import re, collections
-
+from amcat.tools import toolkit
 
 abbrevs = ["ir","mr","dr","dhr","ing","drs","mrs","sen","sens","gov","st",
            "jr","rev","vs","gen","adm","sr","lt","sept"]
@@ -30,50 +30,77 @@ months = ["Jan", "Feb", "Mar", "Apr", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", 
 
 from amcat.models.sentence import Sentence
 
-class SBD(object):
-
-    def __init__(self):
-        self._split_regex = None
-
-    @property
-    def split_regex(self):
-        if self._split_regex is None:
-            lenmap = collections.defaultdict(list)
-            for a in abbrevs+months:
-                lenmap[len(a)].append(a)
-                lenmap[len(a)].append(a.title())
-            expr = r"(?<!\b[A-Za-z])"
-            for x in lenmap.values():
-                expr += r"(?<!\b(?:%s))" % "|".join(x)
+def get_split_regex():
+    global _split_regex
+    try:
+	return _split_regex
+    except NameError:
+	lenmap = collections.defaultdict(list)
+	for a in abbrevs+months:
+	    lenmap[len(a)].append(a)
+	    lenmap[len(a)].append(a.title())
+	expr = r"(?<!\b[A-Za-z])"
+	for x in lenmap.values():
+	    expr += r"(?<!\b(?:%s))" % "|".join(x)
             #expr += r"(?<Nov(?=. \d))"
-            expr += r"[\.?!](?!\.\.)(?<!\.\.)(?!\w|,)(?!\s[a-z])|\n\n"
-            expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
-            self._split_regex = re.compile(expr)
-        return self._split_regex
+	expr += r"[\.?!](?!\.\.)(?<!\.\.)(?!\w|,)(?!\s[a-z])|\n\n"
+	expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
+	_split_regex = re.compile(expr)
+	return _split_regex
 
-    def get_sentences(self, article):
-        pars = [article.headline]
-        if article.byline: pars += [article.byline]
-        pars += re.split(r"\n\s*\n[\s\n]*", article.text.strip())
-        for parnr, par in enumerate(pars):
-            for sentnr, sent in enumerate(self.split(par)):
-                yield Sentence(sentence=sent, parnr=parnr+1, sentnr=sentnr+1, article=article)
+@toolkit.to_list # consume the generator to make sure sentences are created
+def create_sentences(article):
+    """
+    Split the given article object into sentences and save the sentences models
+    to the database. Returns a list of the resulting Sentence objects.
+    """
+    pars = [article.headline]
+    if article.byline: pars += [article.byline]
+    pars += re.split(r"\n\s*\n[\s\n]*", article.text.strip())
+    for parnr, par in enumerate(pars):
+	for sentnr, sent in enumerate(split(par)):
+	    yield Sentence.objects.create(parnr=parnr+1, sentnr=sentnr+1,
+					  article=article, sentence=sent)
 
-    def split(self, text):
-        text = re.sub("\n\n+", "\n\n", text)
-        text = text.replace(".'", "'.")
+def split(text):
+    """
+    Split the text into sentences and yield the sentence strings
+    """
+    text = re.sub("\n\n+", "\n\n", text)
+    text = text.replace(".'", "'.")
 
-        for sent in self.split_regex.split(text):
-            sent = sent.strip()
-            if sent:
-                sent = re.sub('\s+', ' ', sent)
-                yield sent
+    return (re.sub('\s+', ' ', sent.strip())
+	    for sent in get_split_regex().split(text)
+	    if sent.strip())
 
 
-if __name__ == '__main__':
-    from amcat.models.article import Article
-    import sys
-    a = Article(headline="dit is de kop", text=sys.stdin.read())
-    for s in SBD().get_sentences(a):
-        print s.parnr, s.sentnr, s.sentence
-        
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestSBD(amcattest.PolicyTestCase):
+    def test_split(self):
+        """Does splitting a text work correctly?"""
+	for text, sentences in [
+	    ("Wat een zin! En nu s.v.p. nog een zin.",
+	     ["Wat een zin", "En nu s.v.p. nog een zin"]),
+	    ]:
+	    result = list(split(text))
+	    self.assertEqual(result, sentences)
+
+    def test_create_sentences(self):
+	hl = "This is the headline"
+	text="A sentence.\n\nAnother sentence. And yet a third"
+	a = amcattest.create_test_article(headline=hl, text=text)
+	create_sentences(a)
+	sents = Sentence.objects.filter(article=a.id)
+	sents = set((s.parnr, s.sentnr, s.sentence) for s in sents)
+	self.assertEqual(sents, {(1,1,hl),
+				 (2,1,"A sentence"),
+				 (3,1,"Another sentence"),
+				 (3,2,"And yet a third")})
+
+					  
+	

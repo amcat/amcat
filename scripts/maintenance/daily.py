@@ -101,9 +101,6 @@ class DailyScript(Script):
         log.info("Done")
         
 if __name__ == '__main__':
-
-    scrapers = list(get_scrapers(date=date(2012,6,9), project=3))
-    send_mail({s : 101 for s in scrapers}, "bla bla bla")
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
     amcatlogging.info_module("amcat.scraping.scraper")

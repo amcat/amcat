@@ -75,6 +75,7 @@ class ArticleListToTable(script.Script):
             'externalid': table.table3.ObjectColumn('External ID', lambda a:a.externalid),
             'additionalMetadata': table.table3.ObjectColumn('Additional Metadata', lambda a:a.metastring),
             'headline': table.table3.ObjectColumn('Headline', lambda a:a.headline),
+            'author': table.table3.ObjectColumn('Author', lambda a:a.author),
             'text': table.table3.ObjectColumn('Article Text', textLambda),
             'interval':table.table3.ObjectColumn(
                 'Interval', lambda a:dateToInterval(a.date, self.options['columnInterval'])),
