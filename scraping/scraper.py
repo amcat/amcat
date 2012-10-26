@@ -160,7 +160,12 @@ class Scraper(Script):
         return article
 
 
-
+class AuthForm(ScraperForm):
+    """
+    Form for scrapers that require a login
+    """
+    username = forms.CharField()
+    password = forms.CharField()
 
 class DateForm(ScraperForm):
     """
@@ -178,12 +183,10 @@ class DatedScraper(Scraper):
     def __unicode__(self):
         return "[%s for %s]" % (self.__class__.__name__, self.options['date'])
 
-class DBScraperForm(DateForm):
+class DBScraperForm(DateForm,AuthForm):
     """
     Form for dated scrapers that need credentials
     """
-    username = forms.CharField()
-    password = forms.CharField()
 
 class DBScraper(DatedScraper):
     """Base class for (dated) scrapers that require a login"""
@@ -218,10 +221,87 @@ class HTTPScraper(Scraper):
         except UnicodeEncodeError:
             uri = iri2uri(url)
             return self.opener.opener.open(uri, encoding)
+     
+from urlparse import urljoin
+import urllib2
+
+class Crawler(HTTPScraper):
+    options_form = ScraperForm
+    allow_url_patterns = []
+    ignore_url_patterns = []
+    article_pattern = ""
+    initial_urls = []
+    urls = []
+    max_depth = 100
+    leftovers = set()
+    def __init__(self, *args, **kwargs):
+        super(Crawler, self).__init__(*args, **kwargs)
+
+    def _get_units(self):
+        for url in self.initial_urls:
+            for _url in self.crawl_page(url):
+                yield _url
+        while self.leftovers:
+            _leftovers = self.leftovers.copy()
+            for url in _leftovers:
+                for _url in self.crawl_page(url):
+                    yield _url
+                self.leftovers.pop(url)
+            
+                
+    def crawl_page(self,url,depth=0):
+        self.urls.append(url)
+        try:
+            doc = self.getdoc(url)
+        except urllib2.HTTPError:
+            return
+        if self.article_pattern.search(url):
+            yield url
+        links = [a.get('href') for a in doc.cssselect("a")]
+        del doc
+        for link in links:
+            href = urljoin(url,link).split("#")[0]
+            
+            if self.accepted_url(href):
+                if depth < self.max_depth:
+                    print(str(depth)+" crawling "+href)
+                    for url in self.crawl_page(href,depth=depth+1):
+                        yield url
+                else:
+                    before = len(self.leftovers)
+                    self.leftovers.add(href)
+                    after = len(self.leftovers)
+                    new = after-before
+                    if new == 1:
+                        print("added to leftovers: "+href)
+                    
+                
+    def accepted_url(self,url):
+        if url in self.urls:
+            return False
+        conditions = [
+            any([p.search(url) for p in self.allow_url_patterns]),
+            not any([p.search(url) for p in self.ignore_url_patterns]),
+            url[0:4] == 'http',
+            len(url) < 1000
+            ]
+        if all(conditions):
+            return True
+        else:
+            return False
             
 
+class AuthCrawler(Crawler):
+    """Base class for crawlers that require a login"""
+    options_form = AuthForm
 
+    def _login(self, username, password):
+        """Login to the resource to crawl, if needed. Will be called 
+        at the start of get_units()"""
+        pass
 
+    def _initialize(self):
+        self._login(self.options['username'],self.options['password'])
 
 
 def _set_default(obj, attr, val):

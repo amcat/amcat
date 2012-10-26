@@ -122,20 +122,19 @@ class PhpBBScraper(HTTPScraper):
                     except:
                         # Least reliable method
                         ca.props.author = post.cssselect('.author')[0].text_content().split()[0]
-
                 yield ca
 
                 fipo = False
 
 
-
 class DatedPhpBBScraper(PhpBBScraper, DatedScraper):
-    def _scrape_unit(self, thread):
-        for ca in super(DatedPhpBBScraper,self)._scrape_unit(thread):
-            if ca.props.date.date() == self.options['date']:        
-                yield ca
     def _get_units(self):
         for unit in super(DatedPhpBBScraper, self)._get_units():
             if unit['date'].date() == self.options['date']:
                 yield unit
+    def _scrape_unit(self, thread):
+        for ca in super(DatedPhpBBScraper,self)._scrape_unit(thread):
+            if ca.props.date.date() == self.options['date']:        
+                yield ca
+    
             
