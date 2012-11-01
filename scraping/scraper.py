@@ -167,6 +167,13 @@ class AuthForm(ScraperForm):
     username = forms.CharField()
     password = forms.CharField()
 
+class ArchiveForm(ScraperForm):
+    """
+    Form for scrapers that scrape multiple dates
+    """
+    first_date = forms.DateField()
+    last_date = forms.DateField()
+    
 class DateForm(ScraperForm):
     """
     Form for scrapers that operate on a date
@@ -247,6 +254,18 @@ class Crawler(HTTPScraper):
                 for _url in self.crawl_page(url):
                     yield _url
                 self.leftovers.pop(url)
+
+        print("""Total articles: {}\n
+Total errors: {}\n 
+{}
+Failure percentage: {}%\n 
+Try to have your failure percentage below 10% before putting crawler to production.
+""".format(
+                self.total,
+                self.errors,
+                ["{}: {}\n".format(error.key,error.value) for error in self.errorsdict],
+                (self.errors/self.total)*100)
+              )
             
                 
     def crawl_page(self,url,depth=0):
@@ -273,8 +292,7 @@ class Crawler(HTTPScraper):
                     after = len(self.leftovers)
                     new = after-before
                     if new == 1:
-                        print("added to leftovers: "+href)
-                    
+                        print("added to leftovers: "+href)       
                 
     def accepted_url(self,url):
         if url in self.urls:
@@ -290,6 +308,22 @@ class Crawler(HTTPScraper):
         else:
             return False
             
+    total = 0
+    errors = 0
+    errorsdict = {}
+
+    def scrape_unit(self,unit):
+        self.total += 1
+        try:
+            for article in super(Crawler,self).scrape_unit(unit):
+                yield article
+        except Exception as e:
+            self.errors += 1
+            try:
+                self.errorsdict[type(e)] += 1
+            except KeyError:
+                self.errorsdict[type(e)] = 1
+            print "\n\n\n_scrape_unit ERROR: {}\n\n\n".format(e)
 
 class AuthCrawler(Crawler):
     """Base class for crawlers that require a login"""
