@@ -186,9 +186,11 @@ class TestPlugin(amcattest.PolicyTestCase):
     def test_can_create(self):
         """Are only admins allowed to create new plugins??"""
         from amcat.models.authorisation import Role
-        u = amcattest.create_test_user()
-        u.role = Role.objects.get(label="reader", projectlevel=False)
+        role1 = Role.objects.get(label="reader", projectlevel=False)
+        u = amcattest.create_test_user(role=role1) #default test role is admin
         self.assertFalse(Plugin.can_create(u))
-        u.role = Role.objects.get(label="admin", projectlevel=False)
+        prof = u.get_profile()
+        prof.role =  Role.objects.get(label="admin", projectlevel=False)
+        prof.save()
         u.save()
         self.assertTrue(Plugin.can_create(u))
