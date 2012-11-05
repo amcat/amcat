@@ -46,8 +46,6 @@ from django.db.models import Q
 import logging; log = logging.getLogger(__name__)
 
 
-
-
 class Analysis(AmcatModel):
     """Object representing an NLP 'preprocessing' analysis"""
     id = models.AutoField(db_column='analysis_id', primary_key=True)
@@ -67,68 +65,6 @@ class Analysis(AmcatModel):
 
     def __unicode__(self):
         return self.plugin.label if self.plugin else "No plugin available"
-
-class AnalysisArticleSetQueue(AmcatModel):
-    """
-    An articleset needed to be checked for preprocessing.
-    """ 
-    articleset = models.ForeignKey(ArticleSet)
-
-    @classmethod
-    def add_project(cls, project):
-        """
-        Add whole project (i.e. all articlesets) to queue. 
-        """
-        AnalysisArticleSetQueue.objects.bulk_create(
-            [AnalysisArticleSetQueue(articleset=artset)
-            for artset in project.articlesets.all()]
-            )
-
-    class Meta():
-        db_table = 'analysis_articleset_queue'
-        app_label = 'amcat'
-
-class AnalysisQueue(AmcatModel):
-    """
-    An article on the Analysis Queue needs to be checked for preprocessing
-    """
-
-    id = models.AutoField(primary_key=True)
-    article = models.ForeignKey(Article)
-
-    class Meta():
-        db_table = 'analysis_queue'
-        app_label = 'amcat'
-
-    @classmethod
-    def articles_in_queue(cls, project):
-        """
-        Determines wether there are articles in queue.
-
-        @param project: project to scan
-        @type project: int, Project
-        """
-        return AnalysisQueue.objects.filter(
-            # Check direct members of project
-            article__project=project
-        ).exists() | AnalysisQueue.objects.filter(
-            # Check indirect members
-            article__articlesets__project=project
-        ).exists()
-
-
-    @classmethod
-    def narticles_in_queue(cls, project):
-        # subqueries for direct and indirect (via set) articles
-        direct = Article.objects.filter(project=project).values("id")
-        indirect = (ArticleSetArticle.objects.filter(articleset__project=project)
-                    .values("article"))
-        q = AnalysisQueue.objects.filter(Q(article__in=direct)
-                                                | Q(article__in=indirect))
-        # add count(distinct) manually - maybe possible through aggregate?
-        q = q.extra(select=dict(n="count(distinct article_id)")).values_list("n")
-        return q[0][0]
-
 
 class AnalysisArticle(AmcatModel):
     """
@@ -158,17 +94,17 @@ class AnalysisArticle(AmcatModel):
         result = create_triples(tokens, triples)
         self.done = True
         self.save()
-	return result
+        return result
 
-	
+        
     @transaction.commit_on_success
     def store_analysis(self, tokens, triples=None):
         """
-	Store the given tokens and triples using do_store_analysis, wrapping it
-	inside a transaction
+        Store the given tokens and triples using do_store_analysis, wrapping it
+        inside a transaction
         """
-	self.do_store_analysis(tokens, triples)
-	
+        self.do_store_analysis(tokens, triples)
+        
 class AnalysisProject(AmcatModel):
     """
     Explicit many-to-many projects - analyses. Hopefully this can be removed
@@ -224,33 +160,6 @@ class AnalysisSentence(AmcatModel):
         
     def __int__(self):
         return self.id
-    
-# Signal handlers to make sure the article analysis queue is filled
-def add_to_queue(*aids):
-    AnalysisQueue.objects.bulk_create(
-        [AnalysisQueue(article_id=aid) for aid in aids]
-    )
-
-@receiver([post_save, post_delete], Article)
-def handle_article(sender, instance, **kargs):
-    add_to_queue(instance.id)
-
-@receiver([post_save, post_delete], ArticleSetArticle)
-def handle_articlesetarticle(sender, instance, **kargs):
-    add_to_queue(instance.article_id)
-
-@receiver([post_save], Project)
-def handle_project(sender, instance, **kargs11):
-    AnalysisArticleSetQueue.add_project(instance)
-
-@receiver([post_save, post_delete], AnalysisProject)
-def handle_projectanalysis(sender, instance, **kargs):
-    AnalysisArticleSetQueue.add_project(instance.project)
-
-@receiver([post_save], ArticleSet)
-def handle_articleset(sender, instance, **kargs):
-    AnalysisArticleSetQueue(articleset=instance).save()
-
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -260,93 +169,6 @@ from amcat.tools import amcattest
 
 class TestAnalysis(amcattest.PolicyTestCase):
 
-    def test_narticles_in_queue(self):
-        # articles added to a project are on the queue
-        p = amcattest.create_test_project()
-        self.assertEqual(AnalysisQueue.narticles_in_queue(p), 0)
-        [amcattest.create_test_article(project=p) for _i in range(10)]
-        self.assertEqual(AnalysisQueue.narticles_in_queue(p), 10)
-
-        # articles added to a set in the project are on the queue
-        arts = [amcattest.create_test_article() for _i in range(10)]
-        s = amcattest.create_test_set(project=p)
-        self.assertEqual(AnalysisQueue.narticles_in_queue(p), 10)
-        map(s.add, arts)
-        self.assertEqual(AnalysisQueue.narticles_in_queue(p), 20)
-
-    def test_article_trigger(self):
-        """Is a created or update article in the queue?"""
-        self._flush_queue()
-        a = amcattest.create_test_article()
-        self.assertIn(a.id,  self._all_articles())
-
-        self._flush_queue()
-        self.assertNotIn(a.id,  self._all_articles())
-        a.headline = "bla bla"
-        a.save()
-        self.assertIn(a.id,  self._all_articles())
-
-
-    def test_articleset_triggers(self):
-        """Is a article added/removed from a set in the queue?"""
-
-        a = amcattest.create_test_article()
-        aset = amcattest.create_test_set()
-        self._flush_queue()
-        self.assertNotIn(a.id,  self._all_articles())
-
-        aset.add(a)
-        self.assertIn(a.id,  self._all_articles())
-
-        self._flush_queue()
-        aset.remove(a)
-        self.assertIn(a.id, self._all_articles())
-
-        self._flush_queue()
-        aid = a.id
-        a.delete()
-        self.assertIn(aid, self._all_articles())
-
-
-        b = amcattest.create_test_article()
-        aset.add(b)
-        self._flush_queue()
-        aset.project = amcattest.create_test_project()
-        aset.save()
-        self.assertIn(b.id, self._all_articles())
-
-    def test_project_triggers(self):
-        """Check trigger on project (de)activation and analyses being added/removed from project?"""
-
-        a,b = [amcattest.create_test_article() for _i in range(2)]
-        s = amcattest.create_test_set(project=a.project)
-        self.assertNotEqual(a.project, b.project)
-        s.add(b)
-
-        self._flush_queue()
-        a.project.active=True
-        a.project.save()
-        self.assertIn(a.id, self._all_articles())
-        self.assertIn(b.id, self._all_articles())
-
-        self._flush_queue()
-        n = amcattest.create_test_analysis()
-        AnalysisProject.objects.create(project=a.project, analysis=n)
-        self.assertIn(a.id, self._all_articles())
-        self.assertIn(b.id, self._all_articles())
-
-
-
-
-    @classmethod
-    def _flush_queue(cls):
-        """Flush the articles queue"""
-        for sa in list(AnalysisQueue.objects.all()): sa.delete()
-
-    @classmethod
-    def _all_articles(cls):
-        """List all articles on the queue"""
-        return set([sa.article_id for sa in AnalysisQueue.objects.all()])
 
     def test_store_tokens(self):
         s = amcattest.create_test_analysis_sentence()
