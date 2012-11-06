@@ -24,11 +24,15 @@ import logging
 import re
 import datetime
 
+import tempfile
+import os.path
+import subprocess
+
 import solr
 
 from amcat.tools.toolkit import multidict
 from amcat.tools.djangotoolkit import get_ids
-from amcat.models import Article, ArticleSetArticle
+from amcat.models import Article
 
 log = logging.getLogger(__name__)
 
@@ -90,25 +94,25 @@ class Solr(object):
             )
         options.update(kargs)
         resp = self.query(query, **options)
-        print(resp.results)
-        print(resp.highlighting)
             
     #### ADDING / REMOVING ARICLES ####
 
     def add_articles(self, articles):
         """Add the given articles to the solr index"""
         dicts = list(_get_article_dicts(list(get_ids(articles))))
-        log.debug("Adding %i articles to solr" % len(dicts))
-        conn = self._connect()
-        conn.add_many(dicts)
-        conn.commit()
+        if dicts:
+            log.info("Adding %i articles to solr" % len(dicts))
+            conn = self._connect()
+            conn.add_many(dicts)
+            conn.commit()
 
     def delete_articles(self, articles):
         article_ids = list(get_ids(articles))
-        log.debug("Removing {n} articles from solr".format(n=len(article_ids)))
-        conn = self._connect()
-        conn.delete_many(article_ids)
-        conn.commit()
+        if article_ids:
+            log.info("Removing {n} articles from solr".format(n=len(article_ids)))
+            conn = self._connect()
+            conn.delete_many(article_ids)
+            conn.commit()
 
 def parseSolrHighlightingToArticles(solrResponse):
     scoresDict = dict((x['id'], int(x['score'])) for x in solrResponse.results)
@@ -145,6 +149,8 @@ def _get_article_dicts(article_ids):
         def utcoffset(self, dt): return datetime.timedelta(hours=1)
         def tzname(self, dt): return "GMT +1"
         def dst(self, dt): return datetime.timedelta(0)
+    from amcat.models.articleset import ArticleSetArticle
+
     sets = multidict((aa.article_id, aa.articleset_id)
                      for aa in ArticleSetArticle.objects.filter(article__in=article_ids))
     for a in Article.objects.filter(pk__in=article_ids):
@@ -184,20 +190,25 @@ def query_args_from_form(form):
     """ takes a form as input and return a dict of filter, start, and rows arguments for query"""
     return dict(filters=filters_from_form(form), start=form['start'], rows=form['length'])
 
-
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-import tempfile
-import os.path
-import subprocess
-from contextlib import contextmanager
+class TestDummySolr(object):
+    """
+    A SOLR instance that doesn't do anything
+    """
+    def query(self, *args, **kargs):
+        return []
+    def query_ids(self, *args, **kargs):
+        return []
+    def add_articles(self, *args, **kargs):
+        pass
+    def delete_articles(self, *args, **kargs):
+        pass
 
 class TestSolr(Solr):
+    """
+    Create a temporary SOLR instance to use for testing purposes
+    """
+
+    
     def __init__(self, port=1234, temp_home=None, solr_home=None, **kargs):
         super(TestSolr, self).__init__(port=port, host='localhost')
         self.temp_home = tempfile.mkdtemp() if temp_home is None else temp_home
@@ -244,6 +255,14 @@ class TestSolr(Solr):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stop()
+        
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
 
 
 class TestAmcatSolr(amcattest.PolicyTestCase):
