@@ -27,7 +27,7 @@ from amcat.models import Sentence
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle
 from amcat.models.analysis import AnalysisProject, AnalysisArticle, AnalysisSentence, Analysis
-from amcat.nlp.sbd import SBD
+from amcat.nlp import sbd 
 from amcat.tools.toolkit import multidict
 
 import logging; log = logging.getLogger(__name__)
@@ -109,8 +109,7 @@ def _get_articles_preprocessing_actions(articleids):
 
 def split_article(article):
     """Split the given article and return the sentence objects"""
-    sbd = SBD()
-    sentences = list(sbd.get_sentences(article))
+    sentences = sbd.create_sentences(article)
     for sentence in sentences:
         sentence.save()
     return sentences
