@@ -31,6 +31,9 @@ from amcat.tools.amcatsolr import Solr
 
 from django.db import models
 
+import logging
+log = logging.getLogger(__name__)
+
 def get_or_create_articleset(name, project):
     """
     Finds an articleset based on its name. If it does not exists, it creates
@@ -83,8 +86,10 @@ class ArticleSet(AmcatModel):
 
     def __init__(self, *args, **kargs):
         super(ArticleSet, self).__init__(*args, **kargs)
-        # default value for indexed from project
-        if self.indexed is None:
+        # default value for indexed from project.
+        # Check for project_id to prevent error on bare instantiation, e.g. for a form
+        # TODO should we override create/save instead?
+        if self.indexed is None and self.project_id is not None:
             self.indexed = self.project.index_default
         
     def add(self, *articles):
@@ -107,27 +112,32 @@ class ArticleSet(AmcatModel):
         Make sure that the SOLR index for this set is up to date
         @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
         """
+        if solr is None: solr = Solr()
         solr_ids = self._get_article_ids_solr(solr)
         if self.indexed:
             db_ids = set(id for (id,) in self.articles.all().values_list("id"))
         else:
             db_ids = set()
-        
-
+        log.debug("Refreshing index, |solr_ids|={nsolr}, |db_ids|={ndb}"
+                  .format(nsolr=len(solr_ids), ndb=len(db_ids)))
         solr.add_articles(db_ids - solr_ids)
         solr.delete_articles(solr_ids - db_ids)
 
         self.index_dirty = False
         self.save()
         
-    def _get_article_ids_solr(self, solr=None):
+    def _get_article_ids_solr(self, solr):
         """
         Which article ids are in this set according to solr?
         @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
         """
-        if solr is None: solr = Solr()
         return set(solr.query_ids("sets: {self.id}".format(**locals())))
-        
+
+    @property
+    def index_state(self):
+        return (("Indexing in progress" if self.index_dirty else "Fully indexed")
+                if self.indexed else "Not indexed")
+
         
 class ArticleSetArticle(AmcatModel):
     """

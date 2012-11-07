@@ -39,11 +39,14 @@ class IndexDaemon(DaemonScript):
         except IndexError:
             log.debug("No dirty sets found, skipping")
             return
-        
+
+        log.debug("Refreshing index for set: {aset.id} : {aset}".format(**locals()))
         aset.refresh_index()
         return aset
 
 if __name__ == '__main__':
-    from amcat.tools import amcatlogging; amcatlogging.debug_module()
+    from amcat.tools import amcatlogging
+    amcatlogging.debug_module()
+    amcatlogging.debug_module("amcat.models.articleset")
     from amcat.scripts.tools.cli import run_cli
     run_cli()
