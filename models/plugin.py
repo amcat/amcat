@@ -114,15 +114,11 @@ class PluginType(AmcatModel):
 
 from amcat.tools import amcattest
 
-_X = 0
 class _TestPlug(object):
     """Silly plugin class for testing"""
     @classmethod
     def create(cls, type=None, label=None):
-        if label is None:
-            global _X
-            _X += 1
-            label = "plugin_%i" % _X
+        label = "plugin {}".format(Plugin.objects.count() + 1)
         return Plugin.objects.create(label=label, module=cls.__module__,
                                      class_name=cls.__name__, type=type)
 
@@ -140,7 +136,7 @@ class _TestPlug3(_TestPlug):
 
 
 class TestPlugin(amcattest.PolicyTestCase):
-
+    
     def test_get_classes(self):
         spr = PluginType.objects.get(label="NLP Preprocessing")
         from amcat.nlp.frog import Frog
