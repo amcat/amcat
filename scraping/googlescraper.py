@@ -22,7 +22,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 from urllib import quote_plus, unquote_plus
 from urllib2 import HTTPError
 
-INDEX_URL = "https://www.google.com/search?num=100&q={}&start={}"
+INDEX_URL = "https://www.google.nl/search?num=100&hl=nl&safe=off&site=&source=hp&q={q}&oq={q}&gs_l=hp.3...1076.22599.0.26117.63.46.17.0.0.0.127.3464.40j6.46.0...0.0...1c.1.MstGCgM_e98"
 
 from amcat.scraping.document import HTMLDocument
 from amcat.scraping.scraper import HTTPScraper
@@ -36,14 +36,12 @@ class GoogleScraper(HTTPScraper):
         self.query = quote_plus(self.query)
 
     def _get_units(self):
-        """checks for http errors before yielding, and therefore yields the document along with the url
-        for a double request would be a waste of time"""
 
 
 
         self.query = quote_plus(self.query)
         start = 0
-        index_url = INDEX_URL.format(self.query,start)
+        index_url = INDEX_URL.format(q=self.query)
         index = self.getdoc(index_url) 
         while index.cssselect("#rso li.g"):
             for unit in index.cssselect('#rso li.g'):
@@ -56,9 +54,8 @@ class GoogleScraper(HTTPScraper):
                         print(e)
                         continue
                     else:
-                        yield doc
-            start += 100
-            index_url = INDEX_URL.format(self.query,start)
-            index = self.getdoc(index_url)
+                        if self.query in doc.text_content():
+                            yield doc
+            index = self.getdoc(urljoin("https://www.google.nl",index.cssselect("#nav a")[-1].get('href')))
 
 
