@@ -234,96 +234,40 @@ import urllib2
 
 class Crawler(HTTPScraper):
     options_form = ScraperForm
-    allow_url_patterns = []
-    ignore_url_patterns = []
-    article_pattern = ""
-    initial_urls = []
-    urls = []
-    max_depth = 100
-    leftovers = set()
-    def __init__(self, *args, **kwargs):
-        super(Crawler, self).__init__(*args, **kwargs)
+    initial_url = ""
+    queue = set([])
+    completed_urls = []
+    include_patterns = []
+    deny_patterns = []
 
     def _get_units(self):
-        for url in self.initial_urls:
-            for _url in self.crawl_page(url):
-                yield _url
-        while self.leftovers:
-            _leftovers = self.leftovers.copy()
-            for url in _leftovers:
-                for _url in self.crawl_page(url):
-                    yield _url
-                self.leftovers.pop(url)
+        self.crawl_page(self.initial_url)
+        while self.queue:
+            self.crawl_page(self.queue[0])
 
-        print("""Total articles: {}\n
-Total errors: {}\n 
-{}
-Failure percentage: {}%\n 
-Try to have your failure percentage below 10% before putting crawler to production.
-""".format(
-                self.total,
-                self.errors,
-                ["{}: {}\n".format(error.key,error.value) for error in self.errorsdict],
-                (self.errors/self.total)*100)
-              )
-            
-                
-    def crawl_page(self,url,depth=0):
-        self.urls.append(url)
-        try:
-            doc = self.getdoc(url)
-        except urllib2.HTTPError:
-            return
-        if self.article_pattern.search(url):
+    def crawl_page(self,url):
+        print("Crawling {}".format(url))
+        self.queue.discard(url);self.completed_urls.append(url)
+        if self.article_url(url):
             yield url
-        links = [a.get('href') for a in doc.cssselect("a")]
-        del doc
-        for link in links:
-            href = urljoin(url,link).split("#")[0]
-            
-            if self.accepted_url(href):
-                if depth < self.max_depth:
-                    print(str(depth)+" crawling "+href)
-                    for url in self.crawl_page(href,depth=depth+1):
-                        yield url
-                else:
-                    before = len(self.leftovers)
-                    self.leftovers.add(href)
-                    after = len(self.leftovers)
-                    new = after-before
-                    if new == 1:
-                        print("added to leftovers: "+href)       
-                
-    def accepted_url(self,url):
-        if url in self.urls:
-            return False
+        doc = self.getdoc(url)
+        urls = [urljoin(url,a.get('href')) for a in doc.cssselect("a")]
+        for url in urls:
+            if self.correct_url(url):
+                self.queue.add(url)
+
+    def correct_url(self,url):
         conditions = [
-            any([p.search(url) for p in self.allow_url_patterns]),
-            not any([p.search(url) for p in self.ignore_url_patterns]),
-            url[0:4] == 'http',
-            len(url) < 1000
+            url not in self.completed_urls,
+            all([pattern.search(url) for pattern in self.urlinclude]),
+            not any([pattern.search(url) for pattern in self.urldeny]),
+            url[0:4] == "http"
             ]
         if all(conditions):
             return True
         else:
             return False
-            
-    total = 0
-    errors = 0
-    errorsdict = {}
 
-    def scrape_unit(self,unit):
-        self.total += 1
-        try:
-            for article in super(Crawler,self).scrape_unit(unit):
-                yield article
-        except Exception as e:
-            self.errors += 1
-            try:
-                self.errorsdict[type(e)] += 1
-            except KeyError:
-                self.errorsdict[type(e)] = 1
-            print "\n\n\n_scrape_unit ERROR: {}\n\n\n".format(e)
 
 class AuthCrawler(Crawler):
     """Base class for crawlers that require a login"""
