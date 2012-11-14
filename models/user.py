@@ -104,6 +104,14 @@ class UserProfile(AmcatModel):
 
     def can_delete(self, user):
         return False
+
+    def save(self, force_permissions=False, **kwargs):
+        if not force_permissions:
+            return super(UserProfile, self).save(**kwargs)
+
+        # TODO / CHALLANGE: find the solution that doesn't skip a superclass
+        return super(AmcatModel, self).save(**kwargs)
+
         
 
     class Meta():
@@ -137,7 +145,7 @@ def create_user(username, first_name, last_name, email, affiliation, language, r
         prof.role = role
         prof.affiliation = affiliation
         prof.language = language
-        prof.save()
+        prof.save(force_permissions=True)
 
         return u
 
