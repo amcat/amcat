@@ -161,6 +161,8 @@ class CodedArticle(Identity):
         a = self.coding
         if a is None:
             a = Coding.objects.create(codingjob=self.codingjob, article=self.article)
+            # PH 20121024:
+            self._coding = a
         return a
 
     def create_sentence_coding(self, sentence):

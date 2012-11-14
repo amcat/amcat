@@ -52,3 +52,8 @@ DATABASES = dict(default=dict(
 
 
 SECRET_KEY = random_alphanum(30)
+
+PASSWORD_HASHERS = (
+    'django.contrib.auth.hashers.SHA1PasswordHasher',
+    
+)

@@ -59,13 +59,17 @@ class Code(AmcatModel):
     @property
     def label(self):
         """Get the (cached) label with the lowest language id, or a repr-like string"""
+        repr_like_string = '<{0.__class__.__name__}: {0.id}>'.format(self)
         if self._labelcache:
             key = sorted(self._labelcache)[0]
-            return self.get_label(key)
+            l = self.get_label(key)
+            if l == None:
+               return repr_like_string
+            return l
         try:
             return self.labels.all().order_by('language__id')[0].label
         except IndexError:
-            return '<{0.__class__.__name__}: {0.id}>'.format(self)
+            return repr_like_string
         
     def _get_label(self, language):
         """Get the label (string) for the given language object, or raise label.DoesNotExist"""
@@ -175,7 +179,7 @@ class TestCode(amcattest.PolicyTestCase):
         # does .label and .get_label return a unicode object under all circumstances
         self.assertIsInstance(o.label, unicode)
         self.assertIsInstance(o.get_label(l2), unicode)
-        self.assertIsInstance(o.label, unicode)
+        self.assertIsInstance(o2.label, unicode)
 
     def test_cache(self):
         """Are label lookups cached?"""

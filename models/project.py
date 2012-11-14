@@ -62,7 +62,7 @@ class Project(AmcatModel):
     guest_role = models.ForeignKey("amcat.Role", default=ROLEID_PROJECT_READER, null=True)
 
     active = models.BooleanField(default=True)
-    index_default = models.BooleanField(default=False)
+    index_default = models.BooleanField(default=True)
 
     # Coding fields
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
@@ -83,7 +83,6 @@ class Project(AmcatModel):
         return Codebook.objects.filter(Q(projects_set=self)|Q(project=self))
     
     def can_read(self, user):
-        print([self, user.username, user.get_profile().projects, user.get_profile().haspriv('view_all_projects')])
         return self in user.get_profile().projects or user.get_profile().haspriv('view_all_projects')
 
     @property

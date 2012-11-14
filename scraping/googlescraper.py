@@ -53,11 +53,10 @@ class GoogleScraper(HTTPScraper):
                     except HTTPError as e:
                         print(e)
                         continue
-                    yield doc
-            try:
-                index = self.getdoc(urljoin("https://www.google.nl",index.cssselect("#nav a")[-1].get('href')))
-            except HTTPError as e:
-                print(e)
-                print(dir(e))
+
+                    else:
+                        if self.query in doc.text_content():
+                            yield doc
+            index = self.getdoc(urljoin("https://www.google.nl",index.cssselect("#nav a")[-1].get('href')))
 
 
