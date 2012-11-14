@@ -33,20 +33,20 @@ from amcat.models.sentence import Sentence
 def get_split_regex():
     global _split_regex
     try:
-	return _split_regex
+        return _split_regex
     except NameError:
-	lenmap = collections.defaultdict(list)
-	for a in abbrevs+months:
-	    lenmap[len(a)].append(a)
-	    lenmap[len(a)].append(a.title())
-	expr = r"(?<!\b[A-Za-z])"
-	for x in lenmap.values():
-	    expr += r"(?<!\b(?:%s))" % "|".join(x)
+        lenmap = collections.defaultdict(list)
+        for a in abbrevs+months:
+            lenmap[len(a)].append(a)
+            lenmap[len(a)].append(a.title())
+        expr = r"(?<!\b[A-Za-z])"
+        for x in lenmap.values():
+            expr += r"(?<!\b(?:%s))" % "|".join(x)
             #expr += r"(?<Nov(?=. \d))"
-	expr += r"[\.?!](?!\.\.)(?<!\.\.)(?!\w|,)(?!\s[a-z])|\n\n"
-	expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
-	_split_regex = re.compile(expr)
-	return _split_regex
+        expr += r"[\.?!](?!\.\.)(?<!\.\.)(?!\w|,)(?!\s[a-z])|\n\n"
+        expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
+        _split_regex = re.compile(expr)
+        return _split_regex
 
 @toolkit.to_list # consume the generator to make sure sentences are created
 def create_sentences(article):
@@ -58,9 +58,9 @@ def create_sentences(article):
     if article.byline: pars += [article.byline]
     pars += re.split(r"\n\s*\n[\s\n]*", article.text.strip())
     for parnr, par in enumerate(pars):
-	for sentnr, sent in enumerate(split(par)):
-	    yield Sentence.objects.create(parnr=parnr+1, sentnr=sentnr+1,
-					  article=article, sentence=sent)
+        for sentnr, sent in enumerate(split(par)):
+            yield Sentence.objects.create(parnr=parnr+1, sentnr=sentnr+1,
+                                          article=article, sentence=sent)
 
 def split(text):
     """
@@ -70,8 +70,8 @@ def split(text):
     text = text.replace(".'", "'.")
 
     return (re.sub('\s+', ' ', sent.strip())
-	    for sent in get_split_regex().split(text)
-	    if sent.strip())
+            for sent in get_split_regex().split(text)
+            if sent.strip())
 
 
 ###########################################################################
@@ -83,24 +83,24 @@ from amcat.tools import amcattest
 class TestSBD(amcattest.PolicyTestCase):
     def test_split(self):
         """Does splitting a text work correctly?"""
-	for text, sentences in [
-	    ("Wat een zin! En nu s.v.p. nog een zin.",
-	     ["Wat een zin", "En nu s.v.p. nog een zin"]),
-	    ]:
-	    result = list(split(text))
-	    self.assertEqual(result, sentences)
+        for text, sentences in [
+            ("Wat een zin! En nu s.v.p. nog een zin.",
+             ["Wat een zin", "En nu s.v.p. nog een zin"]),
+            ]:
+            result = list(split(text))
+            self.assertEqual(result, sentences)
 
     def test_create_sentences(self):
-	hl = "This is the headline"
-	text="A sentence.\n\nAnother sentence. And yet a third"
-	a = amcattest.create_test_article(headline=hl, text=text)
-	create_sentences(a)
-	sents = Sentence.objects.filter(article=a.id)
-	sents = set((s.parnr, s.sentnr, s.sentence) for s in sents)
-	self.assertEqual(sents, {(1,1,hl),
-				 (2,1,"A sentence"),
-				 (3,1,"Another sentence"),
-				 (3,2,"And yet a third")})
+        hl = "This is the headline"
+        text="A sentence.\n\nAnother sentence. And yet a third"
+        a = amcattest.create_test_article(headline=hl, text=text)
+        create_sentences(a)
+        sents = Sentence.objects.filter(article=a.id)
+        sents = set((s.parnr, s.sentnr, s.sentence) for s in sents)
+        self.assertEqual(sents, {(1,1,hl),
+                                 (2,1,"A sentence"),
+                                 (3,1,"Another sentence"),
+                                 (3,2,"And yet a third")})
 
-					  
-	
+                                          
+        

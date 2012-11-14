@@ -25,10 +25,14 @@ coding jobs.
 
 from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import get_or_create
-
 from amcat.models.article import Article
 
+from amcat.tools.amcatsolr import Solr
+
 from django.db import models
+
+import logging
+log = logging.getLogger(__name__)
 
 def get_or_create_articleset(name, project):
     """
@@ -70,7 +74,9 @@ class ArticleSet(AmcatModel):
     batch = models.BooleanField(default=False)
     
     provenance = models.TextField(null=True)
-    
+
+    indexed = models.BooleanField(default=None, null=False)
+    index_dirty = models.BooleanField(default=True)
 
     class Meta():
         app_label = 'amcat'
@@ -78,26 +84,68 @@ class ArticleSet(AmcatModel):
         unique_together = ('name', 'project')
         ordering = ['name']
 
-    def setType(self):
-        """
-        This function should return to which kind of object a set belongs to,
-        in order to group a list of sets into subgroups"""
-        #TODO: why is this here? And why is it called 'set', not 'get'?
-        pass
+    def __init__(self, *args, **kargs):
+        super(ArticleSet, self).__init__(*args, **kargs)
+        # default value for indexed from project.
+        # Check for project_id to prevent error on bare instantiation, e.g. for a form
+        # TODO should we override create/save instead?
+        if self.indexed is None and self.project_id is not None:
+            self.indexed = self.project.index_default
         
     def add(self, *articles):
+        """Add the given articles to this article set"""
         ArticleSetArticle.objects.bulk_create(
             [ArticleSetArticle(articleset=self, article_id=artid)\
              for artid in _articles_to_ids(articles)]
         )
+        self.index_dirty = True
+        self.save()
         
     def remove(self, *articles):
+        """Remove the given articles from this set"""
         ArticleSetArticle.objects.filter(articleset=self, article__in=articles).delete()
-    
+        self.index_dirty = True
+        self.save()
+
+    def refresh_index(self, solr=None):
+        """
+        Make sure that the SOLR index for this set is up to date
+        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
+        """
+        if solr is None: solr = Solr()
+        solr_ids = self._get_article_ids_solr(solr)
+        if self.indexed:
+            db_ids = set(id for (id,) in self.articles.all().values_list("id"))
+        else:
+            db_ids = set()
+        log.debug("Refreshing index, |solr_ids|={nsolr}, |db_ids|={ndb}"
+                  .format(nsolr=len(solr_ids), ndb=len(db_ids)))
+        solr.add_articles(db_ids - solr_ids)
+        solr.delete_articles(solr_ids - db_ids)
+
+        self.index_dirty = False
+        self.save()
+        
+    def _get_article_ids_solr(self, solr):
+        """
+        Which article ids are in this set according to solr?
+        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
+        """
+        return set(solr.query_ids("sets: {self.id}".format(**locals())))
+
+    @property
+    def index_state(self):
+        return (("Indexing in progress" if self.index_dirty else "Fully indexed")
+                if self.indexed else "Not indexed")
+
+        
 class ArticleSetArticle(AmcatModel):
     """
     ManyToMany table for article sets. An explicit model allows more prefeting in
     django queries and doesn't cost anything
+
+    WVA: I believe this is no longer needed with the new prefetch_related, so
+         we might be able to refactor this class away?
     """
     id = models.AutoField(primary_key=True, db_column='id')
     articleset = models.ForeignKey(ArticleSet)
@@ -113,6 +161,7 @@ class ArticleSetArticle(AmcatModel):
 ###########################################################################
         
 from amcat.tools import amcattest
+from amcat.tools.amcatsolr import TestSolr, TestDummySolr
 
 class TestArticleSet(amcattest.PolicyTestCase):
     def test_create(self):
@@ -122,5 +171,41 @@ class TestArticleSet(amcattest.PolicyTestCase):
         for _x in range(i):
             s.add(amcattest.create_test_article())
         self.assertEqual(i, len(s.articles.all()))
-
+    
         
+    def test_dirty(self):
+        """Is the dirty flag set correctly?"""
+        p = amcattest.create_test_project(index_default=True)
+        s = amcattest.create_test_set(project=p)
+        self.assertEqual(s.indexed, True)
+        self.assertEqual(s.index_dirty, True)
+        s.index_dirty=False
+        s.save()
+        s.add(amcattest.create_test_article())
+        self.assertEqual(s.index_dirty, True)
+        s.refresh_index(TestDummySolr())
+        self.assertEqual(s.index_dirty, False)
+
+    def test_refresh_index(self):
+        """Are added/removed articles added/removed from the index?"""
+        from amcat.tools import amcatlogging
+        amcatlogging.info_module("amcat.tools.amcatsolr")
+        with TestSolr() as solr:
+            s = amcattest.create_test_set(indexed=True)
+            a = amcattest.create_test_article()
+            
+            s.add(a)
+            self.assertEqual(set(), s._get_article_ids_solr(solr))
+            s.refresh_index(solr)
+            self.assertEqual({a.id}, s._get_article_ids_solr(solr))
+
+            s.remove(a)
+            self.assertEqual({a.id}, s._get_article_ids_solr(solr))
+            s.refresh_index(solr)
+            self.assertEqual(set(), s._get_article_ids_solr(solr))
+
+            # test that if not set.indexed, it is not added to solr
+            s = amcattest.create_test_set(indexed=False)
+            s.add(a)
+            s.refresh_index(solr)
+            self.assertEqual(set(), s._get_article_ids_solr(solr))

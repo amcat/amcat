@@ -19,40 +19,34 @@
 ###########################################################################
 
 """
-Daemon that checks if there are any Articles on the analysis_articlesets_queue
-and adjusts the analysis_queue table as necessary
+Daemon that checks if there are any dirty article sets that need to be
+queried and adds them to Solr
 """
+
 from django.db import transaction
 
 from amcat.scripts.daemons.daemonscript import DaemonScript
 
-from amcat.models.analysis import AnalysisQueue, AnalysisArticleSetQueue, add_to_queue
-from amcat.nlp.preprocessing import set_preprocessing_actions
+from amcat.models import ArticleSet
+from amcat.tools import amcatsolr
 
 import logging; log = logging.getLogger(__name__)
 
-BATCH = 5
-
-class PreprocessingArticleSetsDaemon(DaemonScript):
-
-    @transaction.commit_on_success
+class IndexDaemon(DaemonScript):
     def run_action(self):
-        # Retrieve top sets
-        asets = [a.articleset for a in AnalysisArticleSetQueue.objects.all()[:BATCH]]
-        log.info("Adding {} sets to queue".format(len(asets)))
+        try:
+            aset = ArticleSet.objects.filter(indexed=True, index_dirty=True)[0]
+        except IndexError:
+            log.debug("No dirty sets found, skipping")
+            return
 
-        # Add articles in articlesets to article queue
-        for aset in asets:
-            art_ids = aset.articles.all().values("id") 
-            add_to_queue(*(a['id'] for a in art_ids))
-
-        # Clean up articleset queue
-        AnalysisArticleSetQueue.objects.filter(
-            articleset__id__in=tuple(a.id for a in asets)
-        ).delete()
-
-        return bool(asets)
+        log.debug("Refreshing index for set: {aset.id} : {aset}".format(**locals()))
+        aset.refresh_index()
+        return aset
 
 if __name__ == '__main__':
+    from amcat.tools import amcatlogging
+    amcatlogging.debug_module()
+    amcatlogging.debug_module("amcat.models.articleset")
     from amcat.scripts.tools.cli import run_cli
     run_cli()

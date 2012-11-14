@@ -114,15 +114,11 @@ class PluginType(AmcatModel):
 
 from amcat.tools import amcattest
 
-_X = 0
 class _TestPlug(object):
     """Silly plugin class for testing"""
     @classmethod
     def create(cls, type=None, label=None):
-        if label is None:
-            global _X
-            _X += 1
-            label = "plugin_%i" % _X
+        label = "plugin {}".format(Plugin.objects.count() + 1)
         return Plugin.objects.create(label=label, module=cls.__module__,
                                      class_name=cls.__name__, type=type)
 
@@ -140,7 +136,7 @@ class _TestPlug3(_TestPlug):
 
 
 class TestPlugin(amcattest.PolicyTestCase):
-
+    
     def test_get_classes(self):
         spr = PluginType.objects.get(label="NLP Preprocessing")
         from amcat.nlp.frog import Frog
@@ -186,9 +182,11 @@ class TestPlugin(amcattest.PolicyTestCase):
     def test_can_create(self):
         """Are only admins allowed to create new plugins??"""
         from amcat.models.authorisation import Role
-        u = amcattest.create_test_user()
-        u.role = Role.objects.get(label="reader", projectlevel=False)
+        role1 = Role.objects.get(label="reader", projectlevel=False)
+        u = amcattest.create_test_user(role=role1) #default test role is admin
         self.assertFalse(Plugin.can_create(u))
-        u.role = Role.objects.get(label="admin", projectlevel=False)
+        prof = u.get_profile()
+        prof.role =  Role.objects.get(label="admin", projectlevel=False)
+        prof.save()
         u.save()
         self.assertTrue(Plugin.can_create(u))

@@ -278,18 +278,15 @@ class Crawler(HTTPScraper):
             'c = url[0:4] == "http"',
             "c = any([pattern.search(url) for pattern in self.include_patterns])",
             "c = not any([pattern.search(url) for pattern in self.deny_patterns])",
-            "c = url not in self.completed_urls",            
+            "c = url not in self.completed_urls",
             ]
         for con in conditions:
             exec con
             if not c:
                 return False
-
             # check condition one by one for speed
 
         return True
-
-
 
 class AuthCrawler(Crawler):
     """Base class for crawlers that require a login"""

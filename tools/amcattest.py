@@ -284,7 +284,7 @@ class PolicyTestCase(TestCase):
     """
     
     PYLINT_IGNORE = ("C0321", "C0103", "C0302",
-                     "W0232", "W0404", "W0511", "W0142", "W0141", "W0106",
+                     "W0232", "W0404", "W0511", "W0142", "W0141", "W0106","W0622"
                      "R0903", "R0904", "R0913", "R0201", 'R0902',
                      "E1101", # 'X has no member Y' easily mislead by django magic members
                      "E1103", # pylint sucks at inheritance
