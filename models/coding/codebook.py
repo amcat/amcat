@@ -531,7 +531,6 @@ class TestCodebook(amcattest.PolicyTestCase):
                 yield co.code, co.parent
 
 
-
         a, b, c, d, e = [amcattest.create_test_code(label=l) for l in "abcde"]
 
         A = amcattest.create_test_codebook(name="A")
