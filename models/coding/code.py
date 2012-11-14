@@ -61,7 +61,10 @@ class Code(AmcatModel):
         """Get the (cached) label with the lowest language id, or a repr-like string"""
         if self._labelcache:
             key = sorted(self._labelcache)[0]
-            return self.get_label(key)
+            l = self.get_label(key)
+            if l == None:
+               return '<{0.__class__.__name__}: {0.id}>'.format(self)
+            return l
         try:
             return self.labels.all().order_by('language__id')[0].label
         except IndexError:
@@ -171,11 +174,11 @@ class TestCode(amcattest.PolicyTestCase):
         self.assertIsInstance(o2.label, unicode)
         self.assertRegexpMatches(o2.label, r'^<Code: \d+>$')
         self.assertIsNone(o2.get_label(l2))
+        self.assertIsInstance(o2.label, unicode)
 
         # does .label and .get_label return a unicode object under all circumstances
         self.assertIsInstance(o.label, unicode)
         self.assertIsInstance(o.get_label(l2), unicode)
-        self.assertIsInstance(o.label, unicode)
 
     def test_cache(self):
         """Are label lookups cached?"""
