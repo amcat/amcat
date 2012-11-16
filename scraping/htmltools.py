@@ -51,7 +51,7 @@ class HTTPOpener(object):
         @param url: url to fetch
         """
         log.info('Retrieving "%s"' % urllib.unquote(url))
-        response = self.opener.open(url)
+        response = self.opener.open(url, encoding)
         try:
             html_string = get_unicode(self.response, encoding)
         except: # decoding failed, use lxml default

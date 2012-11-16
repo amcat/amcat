@@ -42,6 +42,7 @@ from amcat.scraping.document import Document
 from amcat.tools.toolkit import retry
 
 import logging; log = logging.getLogger(__name__)
+import traceback
 
 class ScraperForm(forms.Form):
     """Form for scrapers"""
@@ -318,26 +319,24 @@ class MultiScraper(object):
     def __init__(self, scrapers):
         """@param scrapers: instantiated Scraper objects ('Ready to start scraping') """
         self.scrapers = scrapers
+        self.errors = {}
 
     def get_units(self):
         for scraper in self.scrapers:
             log.info("Starting scraping for {scraper}".format(**locals()))
-            try:
-                units = retry(scraper.get_units)
-                for u in units:
-                    yield (scraper, u)
-            except:
-                log.error("%s.get_units failed after retrying, giving up"
-                          % scraper.__class__.__name__)
+            for u in scraper.get_units():
+                yield (scraper, u)
+
 
     def scrape_unit(self, unit):
-        """Call the craper for the given unit. Will yield article objects
+        """Call the scraper for the given unit. Will yield article objects
         with a .scraper custom attribute indicating the 'concrete' scraper"""
 
         (scraper, unit) = unit
         for a in scraper.scrape_unit(unit):
             a.scraper = scraper
             yield a
+            
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

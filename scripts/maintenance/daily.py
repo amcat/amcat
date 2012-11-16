@@ -24,7 +24,7 @@ Script to be run daily for data input (scraping, preprocessing etc.
 from datetime import date, timedelta
 
 import logging;
-from amcat.scraping.controller import SimpleController
+from amcat.scraping.controller import RobustController
 
 log = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ class DailyScript(Script):
 
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
-        count, messages =  scrape_logged(SimpleController(), scrapers)
+        count, messages =  scrape_logged(RobustController(), scrapers)
         
         log.info("Sending email...")
         

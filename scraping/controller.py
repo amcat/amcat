@@ -31,6 +31,9 @@ from amcat.tools import amcatlogging
 from amcat.scraping.scraper import MultiScraper
 from django.db import transaction
 
+import traceback
+from pprint import pformat
+
 class Controller(object):
     """
     Controller class
@@ -72,23 +75,51 @@ class RobustController(Controller):
     """More robust implementation of Controller with sensible transaction management and retries"""
 
     def scrape(self, scraper):
+        errors = {}
         result = []
-        units = list(retry(scraper.get_units))
-        log.debug("Scraping {n} units".format(n=len(units))) 
-        for unit in units:
+        units = scraper.get_units()
+        toscrape = []
+        log.debug("running get_units")
+        while True:
+            try:
+                nxt = units.next()
+                toscrape.append(nxt)
+            except StopIteration:
+                break
+            except:
+                errors[traceback.format_exc()] = " "
+
+        log.debug("Scraping {n} units".format(n=len(toscrape))) 
+        for unit in toscrape:
             try:
                 log.debug("Scraping unit {unit!r}".format(**locals()))
-                result += retry(self._scrape_unit, scraper=scraper, unit=unit)
-            except Exception as e:
-                log.error("%s: Scraping unit %r failed after 3 retries, giving up" % (self, e))
+                result += self._scrape_unit(scraper,unit)
+            except:
+                log.error("{}".format(traceback.format_exc()))
+                errors[traceback.format_exc()] = pformat(unit)
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
+        
+
+        from amcat.tools import sendmail
+        mailtext = pformat(errors)
+        log.debug("sending error mail to toon.alfrink@gmail.com")
+        sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
+
+
         return result
+
+
+
 
     @transaction.commit_on_success
     def _scrape_unit(self, scraper, unit):
         articles = list(scraper.scrape_unit(unit))
         for article in articles:
-            self.save(article)
+            try:
+                self.save(article)
+            except:
+                log.error("{}".format(traceback.format_exc()))
+                errors[traceback.format_exc()] = pformat(unit)
         return articles
 
 class ThreadedController(Controller):

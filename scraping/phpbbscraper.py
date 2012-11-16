@@ -107,6 +107,9 @@ class PhpBBScraper(HTTPScraper):
                 ca.props.text = post.cssselect('.content')
                 
                 title = unicode(post.cssselect('.postbody h3 a')[0].text)
+                print(fipo)
+                print(title)
+                print(optitle)
                 if fipo:
                     optitle = title
                 if title:
