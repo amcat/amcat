@@ -318,15 +318,31 @@ class MultiScraper(object):
 
     def __init__(self, scrapers):
         """@param scrapers: instantiated Scraper objects ('Ready to start scraping') """
+        log.info("initializing multiscraper with {} scrapers".format(len(scrapers)))
         self.scrapers = scrapers
         self.errors = {}
 
     def get_units(self):
+        log.info("Scraping {} scrapers".format(len(self.scrapers)))
         for scraper in self.scrapers:
             log.info("Starting scraping for {scraper}".format(**locals()))
-            for u in scraper.get_units():
-                yield (scraper, u)
-
+            try:
+                units = scraper.get_units()
+            except Exception as e:
+                yield ((scraper,None),e)
+                continue
+            
+            while True:
+                try:
+                    u = units.next()
+                except StopIteration:
+                    break
+                except Exception as e:
+                    yield ((scraper,None),e)
+                else:
+                    yield ((scraper,u),None)
+    
+            
 
     def scrape_unit(self, unit):
         """Call the scraper for the given unit. Will yield article objects
