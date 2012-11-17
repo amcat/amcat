@@ -102,3 +102,16 @@ class AmcatModel(models.Model):
             return unicode(self.id)
 
     
+
+from django_extensions.db.fields import UUIDField
+
+class PostgresNativeUUIDField(UUIDField):
+    """
+    Improvement to django_extensions.db.fields.UUIDField to use postgres
+    internal UUID field type rather than char for storage.
+    
+    """
+    def db_type(self, connection=None):
+        if connection and connection.vendor in ("postgresql",):
+            return "UUID"
+        return super(UUIDField, self).db_type(connection)
