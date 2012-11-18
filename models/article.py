@@ -24,7 +24,7 @@ articles database table.
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from amcat.tools.model import AmcatModel
+from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
@@ -66,7 +66,8 @@ class Article(AmcatModel):
     url = models.URLField(null=True, blank=True, db_index=True, max_length=750)
     externalid = models.IntegerField(blank=True, null=True)
     author = models.TextField(blank=True, null=True, max_length=100)
-
+    uuid = PostgresNativeUUIDField(db_index=True)
+    
     #sets = models.ManyToManyField("amcat.Set", db_table="sets_articles")
 
     text = models.TextField()
