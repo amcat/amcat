@@ -33,7 +33,8 @@ from amcat.scripts.script import Script
 from amcat.tools import amcatlogging
 
 ACTIONS = [('start', 'Start the Daemon'), ('stop', 'Stop the Daemon'),
-           ('restart', 'Restart the Daemon'), ('test', 'Test the Daemon')]
+           ('restart', 'Restart the Daemon'), ('test', 'Test the Daemon')
+           , ('inprocess', 'Run the Daemon in process (e.g. not as a daemon)')]
 
 class StopDeamon(Exception):
     """Signals that the daemon should stop running"""
@@ -52,8 +53,8 @@ class DaemonScript(Script):
         """
         self.input = input
         action = self.options['action']
-        if action == 'test':
-            self.test()
+        if action in ('test', 'inprocess'):
+            getattr(self, action)()
         else:
             # set up daemon
             self._setup_logging()
@@ -107,7 +108,6 @@ class DaemonScript(Script):
         Hook to allow a subclass to run actions prior to running. This will be called in the forked process
         before the main loop is run
         """
-
     def run_action(self):
         """
         Do the actual work.
@@ -122,6 +122,12 @@ class DaemonScript(Script):
         """
         self.prepare()
         self.run_action()
+        
+    def inprocess(self):
+        """
+        Function for the action 'inprocess'. Run the daemon function in process (eg not as a daemon)
+        """
+        self.run_daemon()
                 
     def _get_filename(self, suffix="log"):
         """
