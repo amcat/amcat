@@ -66,7 +66,7 @@ class Article(AmcatModel):
     url = models.URLField(null=True, blank=True, db_index=True, max_length=750)
     externalid = models.IntegerField(blank=True, null=True)
     author = models.TextField(blank=True, null=True, max_length=100)
-    uuid = PostgresNativeUUIDField(db_index=True)
+    uuid = PostgresNativeUUIDField(db_index=True, unique=True)
     
     #sets = models.ManyToManyField("amcat.Set", db_table="sets_articles")
 
