@@ -942,8 +942,8 @@ class _DateFormat(object):
         return y, m, d
 
 _DATEFORMATS = (
-    _DateFormat("(\d{4})[-/](\d{1,2})[-/](\d{1,2})", 1,2,3),
-    _DateFormat("(\d{1,2})[-/](\d{1,2})[-/](\d{4})", 3,2,1,swapamerican=True),
+    _DateFormat("(\d{4})[-/\.](\d{1,2})[-/\.](\d{1,2})", 1,2,3),
+    _DateFormat("(\d{1,2})[-/\.](\d{1,2})[-/\.](\d{4})", 3,2,1,swapamerican=True),
     _DateFormat("(\w+),?\s+(\d{1,2})\s*,?\s+(\d{4})",3,1,2,True),
     _DateFormat("(\w+)\s+(\d{1,2})\s*,?\s+(\d{4})",  3,1,2,True),
     _DateFormat("(\d{1,2})(?:\w\w?|\.)?\s+(\w*)\s+(\d{4})",3,2,1,True),
