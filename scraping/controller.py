@@ -88,7 +88,7 @@ class RobustController(Controller):
                 errors[traceback.format_exc()] = " "
             elif unit:
                 try:
-                    result.append(self._scrape_unit(scraper,unit))
+                    yield self._scrape_unit(scraper,unit)
                 except:
                     log.debug("{}".format(traceback.format_exc()))
                     errors[traceback.format_exc()] = pformat(unit)
@@ -103,7 +103,6 @@ class RobustController(Controller):
             sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
 
 
-        return result
 
 
 

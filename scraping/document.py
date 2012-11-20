@@ -171,11 +171,11 @@ class IndexDocument(HTMLDocument):
 
     def getprops(self):
         committed = [(child.article.id is not None) for child in self.children]
-        if not all(committed):
-            raise(ValueError("Please yield the index-page *after* all children."))
+        #if not all(committed):
+            #raise(ValueError("Please yield the index-page *after* all children."))
 
-        if not all([hasattr(child, 'coords') for child in self.children]):
-            raise(ValueError("Make sure all index-children have an attribute 'coords'."))
+        #if not all([hasattr(child, 'coords') for child in self.children]):
+            #raise(ValueError("Make sure all index-children have an attribute 'coords'."))
 
         # Children seem to be valid.
         if self.page is None:
