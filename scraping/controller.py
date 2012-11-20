@@ -75,35 +75,39 @@ class RobustController(Controller):
     """More robust implementation of Controller with sensible transaction management and retries"""
 
     def scrape(self, scraper):
-        log.debug("RobustController starting scraping for scraper {}".format(scraper))
         errors = {}
         result = []
         units = scraper.get_units()
-        
-
-        for (unit, exception) in units:
-            log.info("recieved unit {}, error: {}".format(unit,exception))
-            if exception:                    
-                log.debug("{}".format(traceback.format_exc()))
+        toscrape = []
+        log.debug("running get_units")
+        while True:
+            try:
+                nxt = units.next()
+                toscrape.append(nxt)
+            except StopIteration:
+                break
+            except:
                 errors[traceback.format_exc()] = " "
-            elif unit:
-                try:
-                    yield self._scrape_unit(scraper,unit)
-                except:
-                    log.debug("{}".format(traceback.format_exc()))
-                    errors[traceback.format_exc()] = pformat(unit)
-                
+
+        log.debug("Scraping {n} units".format(n=len(toscrape))) 
+        for unit in toscrape:
+            try:
+                log.debug("Scraping unit {unit!r}".format(**locals()))
+                result += self._scrape_unit(scraper,unit)
+            except:
+                log.error("{}".format(traceback.format_exc()))
+                errors[traceback.format_exc()] = pformat(unit)
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
         
 
         from amcat.tools import sendmail
+        mailtext = pformat(errors)
         if errors:
-            mailtext = pformat(errors)
             log.debug("sending error mail to toon.alfrink@gmail.com")
             sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
 
 
-
+        return result
 
 
 
@@ -115,7 +119,6 @@ class RobustController(Controller):
             try:
                 self.save(article)
             except:
-                articles.remove(article)
                 log.error("{}".format(traceback.format_exc()))
                 errors[traceback.format_exc()] = pformat(unit)
         return articles
