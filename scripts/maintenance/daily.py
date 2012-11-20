@@ -57,25 +57,45 @@ for tag in ["h3", "p", "pre"]:
 
 EMAIL = "amcat-scraping@googlegroups.com"
 
-def send_email(count, messages):
-    
-    counts = [(s.__class__.__name__, n) for (s,n) in count.items()]
+def send_email(count, messages, date):
+    days = []; firstdate = date - timedelta(days=7)
+    while date >= firstdate:
+        days.append(date)
+        date -= timedelta(days=1)
+
+
+    tabledata = []
+
+    for (s,n) in count.items():
+        for r in tabledata:
+            if s.__class__.__name__ == r[0]:
+                for i in range(len(days)):
+                    if s.options['date'] == days[i]:
+                        r[i+1] = n
+            else:
+                row = [s.__class__.__name__]
+                for i in range(len(days)):
+                    if s.options['date'] == days[i]:
+                        row[i+1] = n
+                tabledata.append(row)
+                        
+
     n = sum(count.values())
-    counts.append(("Total", n))
-    t = ListTable(counts, colnames=["Scraper", "#Articles"])
-    counts_ascii = t.output(useunicode=False, box=False)
-    counts_html = table2html(t, printRowNames=False)
+    tabledata.append(("Total", n))
+    t = ListTable(tabledata, colnames=["Scraper"]+days)
+    tabledata_ascii = t.output(useunicode=False, box=False)
+    tabledata_html = table2html(t, printRowNames=False)
     succesful = len([1 for (s,n2) in count.items() if n2>0])
     total = len(count.items())
 
     datestr = toolkit.writeDate(date.today())
 
-    mail_ascii = MAIL_ASCII.format(table=counts_ascii, **locals())
-    mail_html = MAIL_HTML.format(table=counts_html, **locals())
+    mail_ascii = MAIL_ASCII.format(table=tabledata_ascii, **locals())
+    mail_html = MAIL_HTML.format(table=tabledata_html, **locals())
 
     subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
     
-    sendmail.sendmail("vanatteveldt@gmail.com", EMAIL, subject, mail_html, mail_ascii)
+    sendmail.sendmail("toon.alfrink@gmail.com", "toon.alfrink@gmail.com", subject, mail_html, mail_ascii)
 
     
 
@@ -96,7 +116,7 @@ class DailyScript(Script):
         
         log.info("Sending email...")
         
-        send_email(count, messages)
+        send_email(count, messages, date)
 
         log.info("Done")
         

@@ -102,8 +102,9 @@ class RobustController(Controller):
 
         from amcat.tools import sendmail
         mailtext = pformat(errors)
-        log.debug("sending error mail to toon.alfrink@gmail.com")
-        sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
+        if errors:
+            log.debug("sending error mail to toon.alfrink@gmail.com")
+            sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
 
 
         return result
@@ -164,7 +165,8 @@ def scrape_logged(controller, scrapers):
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for a in controller.scrape(MultiScraper(scrapers)):
             scraper = getattr(a, "scraper", None)
-            counts[scraper] += 1
+            if scraper:
+                counts[scraper] += 1
 
     return counts, log_stream.getvalue()
 
