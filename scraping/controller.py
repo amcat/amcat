@@ -162,7 +162,8 @@ def scrape_logged(controller, scrapers):
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for a in controller.scrape(MultiScraper(scrapers)):
             scraper = getattr(a, "scraper", None)
-            counts[scraper] += 1
+            if scraper:
+                counts[scraper] += 1
 
     return counts, log_stream.getvalue()
 
