@@ -133,6 +133,7 @@ class Scraper(Script):
         for article in self._scrape_unit(unit):
             article = self._postprocess_article(article)
             log.debug(".. yields article %s" % article)
+            article.scraper = self
             yield article
 
 
