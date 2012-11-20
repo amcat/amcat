@@ -58,7 +58,7 @@ class Controller(object):
         if articleset:
             articleset.add(article)
             articleset.save()
-            
+           
         log.debug("Done")
         return article
 
@@ -70,44 +70,40 @@ class SimpleController(Controller):
         for unit in scraper.get_units():
             for article in scraper.scrape_unit(unit):
                 yield self.save(article)
-    
+   
 class RobustController(Controller):
     """More robust implementation of Controller with sensible transaction management and retries"""
 
     def scrape(self, scraper):
-        errors = {}
+        log.debug("RobustController starting scraping for scraper {}".format(scraper))
+        self.errors = {}
         result = []
         units = scraper.get_units()
-        toscrape = []
-        log.debug("running get_units")
-        while True:
-            try:
-                nxt = units.next()
-                toscrape.append(nxt)
-            except StopIteration:
-                break
-            except:
-                errors[traceback.format_exc()] = " "
+       
 
-        log.debug("Scraping {n} units".format(n=len(toscrape))) 
-        for unit in toscrape:
-            try:
-                log.debug("Scraping unit {unit!r}".format(**locals()))
-                result += self._scrape_unit(scraper,unit)
-            except:
-                log.error("{}".format(traceback.format_exc()))
-                errors[traceback.format_exc()] = pformat(unit)
+        for (unit, exception) in units:
+            log.info("recieved unit {}, error: {}".format(unit,exception))
+            if exception:                    
+                log.debug("{}".format(traceback.format_exc()))
+                self.errors[traceback.format_exc()] = " "
+            elif unit:
+                try:
+                    yield self._scrape_unit(scraper,unit)
+                except:
+                    log.debug("{}".format(traceback.format_exc()))
+                    self.errors[traceback.format_exc()] = pformat(unit)
+               
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
-        
+       
 
         from amcat.tools import sendmail
-        mailtext = pformat(errors)
-        if errors:
+        if self.errors:
+            mailtext = pformat(self.errors)
             log.debug("sending error mail to toon.alfrink@gmail.com")
             sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
 
 
-        return result
+
 
 
 
@@ -119,8 +115,9 @@ class RobustController(Controller):
             try:
                 self.save(article)
             except:
+                articles.remove(article)
                 log.error("{}".format(traceback.format_exc()))
-                errors[traceback.format_exc()] = pformat(unit)
+                self.errors[traceback.format_exc()] = pformat(unit)
         return articles
 
 class ThreadedController(Controller):
@@ -204,7 +201,7 @@ class TestController(amcattest.PolicyTestCase):
         s = amcattest.create_test_set()
         c = SimpleController()
         ts = _TestScraper(project=p,articleset=s)
-        
+       
         articles = c.scrape(ts)
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(set(articles), set(p.articles.all()))
@@ -236,7 +233,7 @@ class TestController(amcattest.PolicyTestCase):
 class _ErrorArticle(object):
     def save(self):
         list(Article.objects.raw("This is not valid SQL"))
-        
+       
 class _ErrorScraper(Scraper):
     medium_name = 'xxx'
     def _get_units(self):
@@ -246,7 +243,7 @@ class _ErrorScraper(Scraper):
             yield _ErrorArticle()
         else:
             yield Article(headline=str(unit), date=date.today())
-        
+       
 class TestRobustController(amcattest.PolicyTestCase):
     def test_rollback(self):
         c = RobustController()
@@ -254,8 +251,8 @@ class TestRobustController(amcattest.PolicyTestCase):
         s = _ErrorScraper(project=p.id)
         list(c.scrape(s))
         self.assertEqual(p.articles.count(), 1)
-        
-        
+       
+       
 
 def production_test_multithreaded_saving():
     """

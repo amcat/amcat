@@ -37,7 +37,7 @@ from amcat.models.scraper import get_scrapers
 
 from amcat.tools import toolkit, sendmail
 
-from amcat.tools.table.table3 import ListTable
+from amcat.tools.table import table3
 from amcat.tools.table.tableoutput import table2html
 
 MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
@@ -58,33 +58,20 @@ for tag in ["h3", "p", "pre"]:
 EMAIL = "amcat-scraping@googlegroups.com"
 
 def send_email(count, messages, date):
-    days = []; firstdate = date - timedelta(days=7)
-    while date >= firstdate:
-        days.append(date)
-        date -= timedelta(days=1)
+    
+    t = table3.DictTable()
+
+    for (scraper, n) in count:
+        t.addValue(scraper, scraper.options['date'], n)
+
+    t.rows = sorted(t.rows)
+    t.columns = reversed(sorted(t.columns))
 
 
-    tabledata = []
-
-    for (s,n) in count.items():
-        for r in tabledata:
-            if s.__class__.__name__ == r[0]:
-                for i in range(len(days)):
-                    if s.options['date'] == days[i]:
-                        r[i+1] = n
-            else:
-                row = [s.__class__.__name__]
-                for i in range(len(days)):
-                    if s.options['date'] == days[i]:
-                        row[i+1] = n
-                tabledata.append(row)
-                        
 
     n = sum(count.values())
-    tabledata.append(("Total", n))
-    t = ListTable(tabledata, colnames=["Scraper"]+days)
-    tabledata_ascii = t.output(useunicode=False, box=False)
-    tabledata_html = table2html(t, printRowNames=False)
+    tabledata_ascii = t.output(useunicode=False, box=False, rownames=True)
+    tabledata_html = table2html(t)
     succesful = len([1 for (s,n2) in count.items() if n2>0])
     total = len(count.items())
 
@@ -95,7 +82,7 @@ def send_email(count, messages, date):
 
     subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
     
-    sendmail.sendmail("toon.alfrink@gmail.com", "toon.alfrink@gmail.com", subject, mail_html, mail_ascii)
+    sendmail.sendmail("toon.alfrink@gmail.com", EMAIL, subject, mail_html, mail_ascii)
 
     
 
