@@ -107,11 +107,11 @@ class PhpBBScraper(HTTPScraper):
                 ca.props.text = post.cssselect('.content')
                 
                 title = unicode(post.cssselect('.postbody h3 a')[0].text)
-                print(fipo)
-                print(title)
-                print(optitle)
-                if fipo:
+                
+                if fipo and title:
                     optitle = title
+                elif fipo:
+                    raise Exception("No op title found")
                 if title:
                     ca.props.headline = title
                 else:

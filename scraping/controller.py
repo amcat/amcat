@@ -78,26 +78,20 @@ class RobustController(Controller):
         log.debug("RobustController starting scraping for scraper {}".format(scraper))
         errors = {}
         result = []
-        log.debug("Running get_units of scraper {}".format(scraper))
         units = scraper.get_units()
         
 
-        while True:
-            try:
-                (unit,exception) = units.next()
-                log.info("recieved unit {}, error: {}".format(unit,exception))
-                if exception:                    
+        for (unit, exception) in units:
+            log.info("recieved unit {}, error: {}".format(unit,exception))
+            if exception:                    
+                log.debug("{}".format(traceback.format_exc()))
+                errors[traceback.format_exc()] = " "
+            elif unit:
+                try:
+                    result.append(self._scrape_unit(scraper,unit))
+                except:
                     log.debug("{}".format(traceback.format_exc()))
-                    errors[traceback.format_exc()] = " "
-                elif unit:
-                    try:
-                        result.append(self._scrape_unit(scraper,unit))
-                    except:
-                        log.debug("{}".format(traceback.format_exc()))
-                        errors[traceback.format_exc()] = pformat(unit)
-
-            except StopIteration:
-                break
+                    errors[traceback.format_exc()] = pformat(unit)
                 
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
         
@@ -114,6 +108,7 @@ class RobustController(Controller):
 
 
 
+
     @transaction.commit_on_success
     def _scrape_unit(self, scraper, unit):
         articles = list(scraper.scrape_unit(unit))
@@ -121,6 +116,7 @@ class RobustController(Controller):
             try:
                 self.save(article)
             except:
+                articles.remove(article)
                 log.error("{}".format(traceback.format_exc()))
                 errors[traceback.format_exc()] = pformat(unit)
         return articles
