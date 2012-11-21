@@ -28,58 +28,54 @@ from amcat.models.scraper import Scraper
 from amcat.models.articleset import ArticleSet, ArticleSetArticle
 import logging; log = logging.getLogger(__name__)
 from amcat.tools import amcatlogging
+from django.db.models import Min
+from datetime import date,timedelta
 
-
-class DeduplicateForm(forms.Form):
-    date = forms.DateField()
+class DeduplicateAsetForm(forms.Form):
+    articleset = forms.CharField()
 
 class DeduplicateScript(Script):
-    options_form = DeduplicateForm
+    options_form = DeduplicateAsetForm
 
     def run(self,_input):
         """
-        deduplicates all scraper articlesets
+        Takes an articleset as input and removes all duplicated articles from that set
         """
-        for scraper in Scraper.objects.raw("SELECT * FROM scrapers"):
-            articleset=scraper.articleset
-            date = self.options['date']
-            articles = Article.objects.filter(articlesetarticle__articleset=articleset,date__gte=date)
-            
-            txtDict, texts = {}, set()
+        
+        
+        articleset=self.options['articleset']
+        allarticles = Article.objects.filter(articlesetarticle__articleset=articleset)
+        dates = set([d['date'].date() for d in Article.objects.filter(articlesetarticle__articleset=articleset).order_by('date').values('date').distinct()])
+        print("dates: {}".format(len(dates)))
+        for _date in dates:
+            articles = allarticles.filter(date__year=_date.year,
+                                          date__month=_date.month,
+                                          date__day=_date.day)
+            log.info("Selected {} articles for date {}".format(len(articles),_date))
+            artDict, knownarticles = {}, set()
             for article in articles:
                 text = article.text
-                if text:
-                    if not text in texts:
-                        txtDict[text] = []
-                    txtDict[text].append(article.id)
-                    texts.add(text)
+                headline = article.headline
+                artdate = article.date
+
+                distinct = headline+str(artdate)+text
+                if distinct:
+                    if not distinct in knownarticles:
+                        artDict[distinct] = []
+                    artDict[distinct].append(article.id)
+                    knownarticles.add(distinct)
 
             removable_ids = []
-            for ids in txtDict.itervalues():
+            for ids in artDict.itervalues():
                 if len(ids) > 1:
                     removable_ids.extend(ids[1:])
             articles.filter(id__in = removable_ids).update(project = 2) #trash project
             ArticleSetArticle.objects.filter(article__in = removable_ids).delete() #delete from article set
-            log.info("Moved %s duplicated articles to (trash) project 2" % len(removable_ids))
-    
-        
-    def run_scrapers(self):
-        """
-        Runs on all daily scraper articlesets
-        """
-        
+            log.info("Moved {} duplicated articles to (trash) project 2 for date {}".format(len(removable_ids),_date))
+            _date += timedelta(days=1)
         
         
 if __name__ == '__main__':
-    from sys import argv
-    from getopt import getopt
-    opts,args = getopt(argv,"s")
-    for opt,arg in opts:
-        if opt == '-s':
-            dedu = DeduplicateScript()
-            dedu.run_scrapers()
-    
-
     amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     from amcat.scripts.tools import cli
     cli.run_cli(DeduplicateScript)
