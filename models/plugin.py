@@ -17,7 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""ORM Module representing scrapers"""
+"""ORM Module representing plugins"""
 
 from django.db import models
 from amcat.tools.model import AmcatModel

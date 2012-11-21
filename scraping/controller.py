@@ -88,7 +88,8 @@ class RobustController(Controller):
                 self.errors[traceback.format_exc()] = " "
             elif unit:
                 try:
-                    yield self._scrape_unit(scraper,unit)
+                    for unit in self._scrape_unit(scraper,unit):
+                        yield unit
                 except:
                     log.debug("{}".format(traceback.format_exc()))
                     self.errors[traceback.format_exc()] = pformat(unit)
@@ -103,11 +104,6 @@ class RobustController(Controller):
             sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
 
 
-
-
-
-
-
     @transaction.commit_on_success
     def _scrape_unit(self, scraper, unit):
         articles = list(scraper.scrape_unit(unit))
@@ -115,9 +111,11 @@ class RobustController(Controller):
             try:
                 self.save(article)
             except:
-                articles.remove(article)
                 log.error("{}".format(traceback.format_exc()))
                 self.errors[traceback.format_exc()] = pformat(unit)
+            else:
+                article.scraper = unit[0]
+                print("controller _scrape_unit: {}".format(article.scraper))
         return articles
 
 class ThreadedController(Controller):
@@ -158,13 +156,14 @@ def scrape_logged(controller, scrapers):
              log: a string representation of the log messages from the scrapers
     """
     counts = dict((s, 0) for s in scrapers)
+    print(counts)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for a in controller.scrape(MultiScraper(scrapers)):
             scraper = getattr(a, "scraper", None)
-            if scraper:
-                counts[scraper] += 1
-
+            
+            counts[scraper] += 1
+                
     return counts, log_stream.getvalue()
 
 
