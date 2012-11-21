@@ -358,6 +358,7 @@ class MultiScraper(object):
         (scraper, unit) = unit
         for a in scraper.scrape_unit(unit):
             a.scraper = scraper
+
             yield a
             
 
