@@ -146,7 +146,8 @@ class SelectionForm(forms.Form):
         
         self.fields['articlesets'].queryset = ArticleSet.objects.order_by('-pk').filter(project__in=projectids)
         self.fields['mediums'].queryset = Medium.objects.all().order_by('pk')
-    
+
+        
     def clean(self):
         cleanedData = self.cleaned_data
         if cleanedData.get('datetype') in ('after', 'all') and 'endDate' in cleanedData:
@@ -177,6 +178,13 @@ class SelectionForm(forms.Form):
                     query = query.split('#')[1]
                     if len(query) == 0:
                         self._errors["query"] = self.error_class(['Invalid query (after the #)'])
+                elif '\t' in query:
+                    label = query.split('\t')[0]
+                    if len(label) == 0 or len(label) > 20:
+                        self._errors["query"] = self.error_class(['Invalid query label (before the tab)'])
+                    query = query.split('\t')[1]
+                    if len(query) == 0:
+                        self._errors["query"] = self.error_class(['Invalid query (after the tab)'])
                 else: 
                     label = None
                 if '[' in query:

@@ -45,9 +45,13 @@ class AddProjectForm(forms.ModelForm):
     def get_empty(cls, user=None, **_options):
         obj = cls()
         try:
-            obj.fields['owner'].initial = user.id
+            for field in ("owner", "insert_user"):
+                obj.fields[field].initial = user.id
+                obj.fields[field].queryset = User.objects.filter(id=user.id)
+                obj.fields[field].widget = forms.HiddenInput()
         except AttributeError: #no user
             pass
+
         return obj
 
     class Meta:

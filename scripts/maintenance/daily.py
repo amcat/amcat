@@ -37,7 +37,7 @@ from amcat.models.scraper import get_scrapers
 
 from amcat.tools import toolkit, sendmail
 
-from amcat.tools.table.table3 import ListTable
+from amcat.tools.table import table3
 from amcat.tools.table.tableoutput import table2html
 
 MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
@@ -57,25 +57,36 @@ for tag in ["h3", "p", "pre"]:
 
 EMAIL = "amcat-scraping@googlegroups.com"
 
-def send_email(count, messages):
+def send_email(count, messages, date):
     
-    counts = [(s.__class__.__name__, n) for (s,n) in count.items()]
+    t = table3.DictTable()
+    
+    print(count.items())
+    for (scraper, n) in count.items():
+        t.addValue(scraper.__class__.__name__, scraper.options['date'], n)
+
+    t.rows = sorted(t.rows)
+    t.columns = reversed(sorted(t.columns))
+
+    print(t)
+
     n = sum(count.values())
-    counts.append(("Total", n))
-    t = ListTable(counts, colnames=["Scraper", "#Articles"])
-    counts_ascii = t.output(useunicode=False, box=False)
-    counts_html = table2html(t, printRowNames=False)
+    tabledata_ascii = t.output(useunicode=False, box=False, rownames=True)
+    tabledata_html = table2html(t)
     succesful = len([1 for (s,n2) in count.items() if n2>0])
     total = len(count.items())
 
     datestr = toolkit.writeDate(date.today())
 
-    mail_ascii = MAIL_ASCII.format(table=counts_ascii, **locals())
-    mail_html = MAIL_HTML.format(table=counts_html, **locals())
+    mail_ascii = MAIL_ASCII.format(table=tabledata_ascii, **locals())
+    mail_html = MAIL_HTML.format(table=tabledata_html, **locals())
+    
+    print(tabledata_html)
+
 
     subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
     
-    sendmail.sendmail("vanatteveldt@gmail.com", EMAIL, subject, mail_html, mail_ascii)
+    sendmail.sendmail("toon.alfrink@gmail.com", "toon.alfrink@gmail.com", subject, mail_html, mail_ascii)
 
     
 
@@ -96,7 +107,7 @@ class DailyScript(Script):
         
         log.info("Sending email...")
         
-        send_email(count, messages)
+        send_email(count, messages, date)
 
         log.info("Done")
         

@@ -58,7 +58,7 @@ class Controller(object):
         if articleset:
             articleset.add(article)
             articleset.save()
-            
+           
         log.debug("Done")
         return article
 
@@ -70,42 +70,38 @@ class SimpleController(Controller):
         for unit in scraper.get_units():
             for article in scraper.scrape_unit(unit):
                 yield self.save(article)
-    
+   
 class RobustController(Controller):
     """More robust implementation of Controller with sensible transaction management and retries"""
 
     def scrape(self, scraper):
         log.debug("RobustController starting scraping for scraper {}".format(scraper))
-        errors = {}
+        self.errors = {}
         result = []
         units = scraper.get_units()
-        
+       
 
         for (unit, exception) in units:
             log.info("recieved unit {}, error: {}".format(unit,exception))
             if exception:                    
                 log.debug("{}".format(traceback.format_exc()))
-                errors[traceback.format_exc()] = " "
+                self.errors[traceback.format_exc()] = " "
             elif unit:
                 try:
-                    yield self._scrape_unit(scraper,unit)
+                    for unit in self._scrape_unit(scraper,unit):
+                        yield unit
                 except:
                     log.debug("{}".format(traceback.format_exc()))
-                    errors[traceback.format_exc()] = pformat(unit)
-                
+                    self.errors[traceback.format_exc()] = pformat(unit)
+               
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
-        
+       
 
         from amcat.tools import sendmail
-        if errors:
-            mailtext = pformat(errors)
+        if self.errors:
+            mailtext = pformat(self.errors)
             log.debug("sending error mail to toon.alfrink@gmail.com")
             sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
-
-
-
-
-
 
 
     @transaction.commit_on_success
@@ -115,9 +111,11 @@ class RobustController(Controller):
             try:
                 self.save(article)
             except:
-                articles.remove(article)
                 log.error("{}".format(traceback.format_exc()))
-                errors[traceback.format_exc()] = pformat(unit)
+                self.errors[traceback.format_exc()] = pformat(unit)
+            else:
+                article.scraper = unit[0]
+                print("controller _scrape_unit: {}".format(article.scraper))
         return articles
 
 class ThreadedController(Controller):
@@ -158,13 +156,14 @@ def scrape_logged(controller, scrapers):
              log: a string representation of the log messages from the scrapers
     """
     counts = dict((s, 0) for s in scrapers)
+    print(counts)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for a in controller.scrape(MultiScraper(scrapers)):
             scraper = getattr(a, "scraper", None)
-            if scraper:
-                counts[scraper] += 1
-
+            
+            counts[scraper] += 1
+                
     return counts, log_stream.getvalue()
 
 
@@ -201,7 +200,7 @@ class TestController(amcattest.PolicyTestCase):
         s = amcattest.create_test_set()
         c = SimpleController()
         ts = _TestScraper(project=p,articleset=s)
-        
+       
         articles = c.scrape(ts)
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(set(articles), set(p.articles.all()))
@@ -233,7 +232,7 @@ class TestController(amcattest.PolicyTestCase):
 class _ErrorArticle(object):
     def save(self):
         list(Article.objects.raw("This is not valid SQL"))
-        
+       
 class _ErrorScraper(Scraper):
     medium_name = 'xxx'
     def _get_units(self):
@@ -243,7 +242,7 @@ class _ErrorScraper(Scraper):
             yield _ErrorArticle()
         else:
             yield Article(headline=str(unit), date=date.today())
-        
+       
 class TestRobustController(amcattest.PolicyTestCase):
     def test_rollback(self):
         c = RobustController()
@@ -251,8 +250,8 @@ class TestRobustController(amcattest.PolicyTestCase):
         s = _ErrorScraper(project=p.id)
         list(c.scrape(s))
         self.assertEqual(p.articles.count(), 1)
-        
-        
+       
+       
 
 def production_test_multithreaded_saving():
     """
