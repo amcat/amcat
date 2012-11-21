@@ -121,10 +121,12 @@ class ArticleSet(AmcatModel):
             db_ids = set()
         log.debug("Refreshing index, |solr_ids|={nsolr}, |db_ids|={ndb}"
                   .format(nsolr=len(solr_ids), ndb=len(db_ids)))
-        for batch in splitlist(db_ids - solr_ids):
+        for i, batch in enumerate(splitlist(db_ids - solr_ids, itemsperbatch=1000)):
             solr.add_articles(batch)
-        for batch in splitlist(solr_ids - db_ids):
+            log.debug("Added batch {i}".format(**locals()))
+        for i, batch in enumerate(splitlist(solr_ids - db_ids)):
             solr.delete_articles(solr_ids - db_ids)
+            log.debug("Removed batch {i}".format(**locals()))
 
         self.index_dirty = False
         self.save()
