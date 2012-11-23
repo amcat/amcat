@@ -74,12 +74,13 @@ class SimpleController(Controller):
 class RobustController(Controller):
     """More robust implementation of Controller with sensible transaction management and retries"""
 
+    @to_list
     def scrape(self, scraper):
         log.debug("RobustController starting scraping for scraper {}".format(scraper))
         self.errors = {}
         result = []
         units = scraper.get_units()
-       
+
         for (unit, exception) in units:
             log.info("recieved unit {}, error: {}".format(unit,exception))
             if exception:                    

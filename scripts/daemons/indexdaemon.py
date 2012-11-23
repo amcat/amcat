@@ -30,18 +30,21 @@ from amcat.scripts.daemons.daemonscript import DaemonScript
 from amcat.models import ArticleSet
 from amcat.tools import amcatsolr
 
-import logging; log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
 
 class IndexDaemon(DaemonScript):
     def run_action(self):
         try:
-            aset = ArticleSet.objects.filter(indexed=True, index_dirty=True)[0]
+            with transaction.commit_on_success():
+                aset = ArticleSet.objects.filter(indexed=True, index_dirty=True)[0]
         except IndexError:
             log.debug("No dirty sets found, skipping")
             return
 
         log.debug("Refreshing index for set: {aset.id} : {aset}".format(**locals()))
-        aset.refresh_index()
+        with transaction.commit_on_success():
+            aset.refresh_index()
         return aset
 
 if __name__ == '__main__':

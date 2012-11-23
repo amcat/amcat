@@ -216,10 +216,11 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
 
     def test_queries(self):
         """Test the list_queries context manager"""
+        u = amcattest.create_test_user()
         with list_queries() as l:
-            amcattest.create_test_user()
+            amcattest.create_test_project(owner=u)
         #query_list_to_table(l, output=print)
-        self.assertIn(len(l), [4, 5]) # get affil., create user, select user x2, (pg) get idval
+        self.assertEquals(len(l), 1) 
 
     def test_get_or_create(self):
         """Test the get or create operation"""

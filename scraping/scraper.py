@@ -98,9 +98,9 @@ class Scraper(Script):
     def run(self, input):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"
                  .format(**locals()))
-        from amcat.scraping.controller import SimpleController
+        from amcat.scraping.controller import RobustController
         with transaction.commit_on_success():
-            SimpleController(self.articleset).scrape(self)
+            RobustController(self.articleset).scrape(self)
 
     def get_units(self):
         """
@@ -110,7 +110,22 @@ class Scraper(Script):
         @return: a sequence of arbitrary objects to be passed to scrape_unit
         """
         self._initialize()
-        return self._get_units()
+        try:
+            units = self._get_units()
+        except Exception as e:
+            yield (None,e)
+            
+        while True:
+            try:
+                u = units.next()
+            except StopIteration:
+                break
+            except Exception as e:
+                yield (None,e)
+            else:
+                yield (u,None)
+
+
 
     def _get_units(self):
         """

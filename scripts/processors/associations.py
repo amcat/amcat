@@ -43,7 +43,7 @@ class AssociationsScript(script.Script):
 
 
     def run(self, articleTable):
-        queries = (c.label.replace('Hit Count for: ', '') for c in articleTable.getColumns()[1:]) # first column is interval
+        queries = (c.label.replace('Hit Count for: ', '') for c in articleTable.getColumns())
         
         # start dummy code
         resultTable = table.table3.DictTable(0)

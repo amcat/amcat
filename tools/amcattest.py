@@ -92,9 +92,10 @@ def create_test_user(**kargs):
 def create_test_project(**kargs):
     """Create a project to be used in unit testing"""
     from amcat.models.project import Project
-    u = create_test_user()
+    if "owner" not in kargs: kargs["owner"] = create_test_user()
+    if "insert_user" not in kargs: kargs["insert_user"] = kargs["owner"]
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    return Project.objects.create(owner=u, insert_user=u, **kargs)
+    return Project.objects.create(**kargs)
     
 def create_test_schema(**kargs):
     """Create a test schema to be used in unit testing"""
@@ -284,7 +285,7 @@ class PolicyTestCase(TestCase):
     """
     
     PYLINT_IGNORE = ("C0321", "C0103", "C0302",
-                     "W0232", "W0404", "W0511", "W0142", "W0141", "W0106","W0622"
+                     "W0232", "W0404", "W0511", "W0142", "W0141", "W0106",
                      "R0903", "R0904", "R0913", "R0201", 'R0902',
                      "E1101", # 'X has no member Y' easily mislead by django magic members
                      "E1103", # pylint sucks at inheritance
