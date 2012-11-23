@@ -61,14 +61,12 @@ def send_email(count, messages, date):
     
     t = table3.DictTable()
     
-    print(count.items())
     for (scraper, n) in count.items():
         t.addValue(scraper.__class__.__name__, scraper.options['date'], n)
 
     t.rows = sorted(t.rows)
     t.columns = reversed(sorted(t.columns))
 
-    print(t)
 
     n = sum(count.values())
     tabledata_ascii = t.output(useunicode=False, box=False, rownames=True)
@@ -81,12 +79,10 @@ def send_email(count, messages, date):
     mail_ascii = MAIL_ASCII.format(table=tabledata_ascii, **locals())
     mail_html = MAIL_HTML.format(table=tabledata_html, **locals())
     
-    print(tabledata_html)
-
 
     subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
     
-    sendmail.sendmail("toon.alfrink@gmail.com", "toon.alfrink@gmail.com", subject, mail_html, mail_ascii)
+    sendmail.sendmail("toon.alfrink@gmail.com", EMAIL, subject, mail_html, mail_ascii)
 
     
 

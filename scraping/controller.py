@@ -80,7 +80,6 @@ class RobustController(Controller):
         result = []
         units = scraper.get_units()
        
-
         for (unit, exception) in units:
             log.info("recieved unit {}, error: {}".format(unit,exception))
             if exception:                    
@@ -115,7 +114,6 @@ class RobustController(Controller):
                 self.errors[traceback.format_exc()] = pformat(unit)
             else:
                 article.scraper = unit[0]
-                print("controller _scrape_unit: {}".format(article.scraper))
         return articles
 
 class ThreadedController(Controller):
@@ -156,7 +154,6 @@ def scrape_logged(controller, scrapers):
              log: a string representation of the log messages from the scrapers
     """
     counts = dict((s, 0) for s in scrapers)
-    print(counts)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for a in controller.scrape(MultiScraper(scrapers)):
