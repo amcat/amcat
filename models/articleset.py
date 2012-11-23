@@ -23,6 +23,7 @@ either created manually or as a result of importing articles or assigning
 coding jobs.
 """
 
+from amcat.tools.toolkit import splitlist
 from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import get_or_create
 from amcat.models.article import Article
@@ -120,8 +121,12 @@ class ArticleSet(AmcatModel):
             db_ids = set()
         log.debug("Refreshing index, |solr_ids|={nsolr}, |db_ids|={ndb}"
                   .format(nsolr=len(solr_ids), ndb=len(db_ids)))
-        solr.add_articles(db_ids - solr_ids)
-        solr.delete_articles(solr_ids - db_ids)
+        for i, batch in enumerate(splitlist(db_ids - solr_ids, itemsperbatch=1000)):
+            solr.add_articles(batch)
+            log.debug("Added batch {i}".format(**locals()))
+        for i, batch in enumerate(splitlist(solr_ids - db_ids)):
+            solr.delete_articles(solr_ids - db_ids)
+            log.debug("Removed batch {i}".format(**locals()))
 
         self.index_dirty = False
         self.save()
