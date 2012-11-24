@@ -94,13 +94,21 @@ class ArticleSet(AmcatModel):
             self.indexed = self.project.index_default
         
     def add(self, *articles):
-        """Add the given articles to this article set"""
+        """Add the given articles to this article set. Shortcut to add_articles"""
+        self.add_articles(articles)
+
+    def add_articles(self, articles, set_dirty=True):
+        """
+        Add the given articles to this article set.
+        @param set_dirty: Set the index_dirty state of this set? (default=True)
+        """
         ArticleSetArticle.objects.bulk_create(
             [ArticleSetArticle(articleset=self, article_id=artid)\
              for artid in _articles_to_ids(articles)]
         )
-        self.index_dirty = True
-        self.save()
+        if set_dirty:
+            self.index_dirty = True
+            self.save()
         
     def remove(self, *articles):
         """Remove the given articles from this set"""
