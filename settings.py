@@ -41,36 +41,6 @@ AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 #NOSE_ARGS = ['--with-progressive','--pdb']
 
 
-# Databases / Caches are defined in ~/.amcatrc3. Example file:
-#
-# [db-default]
-# name=amcat
-# engine=django.db.backends.postgresql_psycopg2
-# user=apache
-# password=secret
-# host=localhost
-# port=5432
-#
-# [caching-default]
-# backend=django.core.cache.backends.memcached.MemcachedCache
-# location=127.0.0.1:11211
-
-def sections(identifier):
-    c = configparser.ConfigParser()
-    c.readfp(file(os.path.expanduser('~/.amcatrc3')))
-
-    for sect in c.sections():
-        db = sect.split('-')
-        if db[0] == identifier and len(db) is 2:
-            yield db[1], c.items(sect)
-
-def filldict(vals, dic):
-    for id, opts in vals:
-        dic[id] = {}
-        for k,v in opts:
-            dic[id][k.upper()] = v
-    return dic
-
 DATABASES = dict(default=dict(
         ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
         NAME = os.environ.get("DJANGO_DB_NAME", 'amcat'),
@@ -81,7 +51,6 @@ DATABASES = dict(default=dict(
     ))
 
 
-CACHES = filldict(sections('caching'), dict())
 
 SECRET_KEY = random_alphanum(30)
 
