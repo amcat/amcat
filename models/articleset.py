@@ -28,8 +28,6 @@ from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import get_or_create
 from amcat.models.article import Article
 
-from amcat.tools.amcatsolr import Solr
-
 from django.db import models
 
 import logging
@@ -94,14 +92,15 @@ class ArticleSet(AmcatModel):
             self.indexed = self.project.index_default
         
     def add(self, *articles):
-        """Add the given articles to this article set. Shortcut to add_articles"""
-        self.add_articles(articles)
+        """Add the given articles to this article set"""
+        return self.add_articles(article)
 
     def add_articles(self, articles, set_dirty=True):
         """
-        Add the given articles to this article set.
+        Add the given articles to this article set
         @param set_dirty: Set the index_dirty state of this set? (default=True)
         """
+        
         ArticleSetArticle.objects.bulk_create(
             [ArticleSetArticle(articleset=self, article_id=artid)\
              for artid in _articles_to_ids(articles)]
@@ -121,6 +120,10 @@ class ArticleSet(AmcatModel):
         Make sure that the SOLR index for this set is up to date
         @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
         """
+        # lazy load to prevent import cycle
+        from amcat.tools.amcatsolr import Solr
+
+
         if solr is None: solr = Solr()
         solr_ids = self._get_article_ids_solr(solr)
         if self.indexed:
@@ -174,7 +177,6 @@ class ArticleSetArticle(AmcatModel):
 ###########################################################################
         
 from amcat.tools import amcattest
-from amcat.tools.amcatsolr import TestSolr, TestDummySolr
 
 class TestArticleSet(amcattest.PolicyTestCase):
     def test_create(self):
@@ -188,6 +190,8 @@ class TestArticleSet(amcattest.PolicyTestCase):
         
     def test_dirty(self):
         """Is the dirty flag set correctly?"""
+        from amcat.tools.amcatsolr import TestSolr, TestDummySolr
+
         p = amcattest.create_test_project(index_default=True)
         s = amcattest.create_test_set(project=p)
         self.assertEqual(s.indexed, True)
@@ -202,6 +206,8 @@ class TestArticleSet(amcattest.PolicyTestCase):
     def test_refresh_index(self):
         """Are added/removed articles added/removed from the index?"""
         from amcat.tools import amcatlogging
+        from amcat.tools.amcatsolr import TestSolr, TestDummySolr
+
         amcatlogging.info_module("amcat.tools.amcatsolr")
         with TestSolr() as solr:
             s = amcattest.create_test_set(indexed=True)
