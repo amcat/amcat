@@ -45,7 +45,7 @@ class DeduplicateScript(Script):
         
         articleset=self.options['articleset']
         allarticles = Article.objects.filter(articlesetarticle__articleset=articleset)
-        dates = set([d['date'].date() for d in Article.objects.filter(articlesetarticle__articleset=articleset).order_by('date').values('date').distinct()])
+        dates = sorted(set([d['date'].date() for d in Article.objects.filter(articlesetarticle__articleset=articleset).order_by('date').values('date').distinct()]))
         print("dates: {}".format(len(dates)))
         for _date in dates:
             articles = allarticles.filter(date__year=_date.year,

@@ -71,51 +71,66 @@ class SimpleController(Controller):
             for article in scraper.scrape_unit(unit):
                 yield self.save(article)
    
+
+
 class RobustController(Controller):
-    """More robust implementation of Controller with sensible transaction management and retries"""
+    """More robust implementation of Controller with sensible transaction management"""
 
     @to_list
     def scrape(self, scraper):
-        log.debug("RobustController starting scraping for scraper {}".format(scraper))
-        self.errors = {}
+        log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
-        units = scraper.get_units()
 
-        for (unit, exception) in units:
-            log.info("recieved unit {}, error: {}".format(unit,exception))
-            if exception:                    
-                log.debug("{}".format(traceback.format_exc()))
-                self.errors[traceback.format_exc()] = " "
-            elif unit:
-                try:
-                    for unit in self._scrape_unit(scraper,unit):
-                        yield unit
-                except:
-                    log.debug("{}".format(traceback.format_exc()))
-                    self.errors[traceback.format_exc()] = pformat(unit)
-               
+        data = {'scraper':scraper}
+        for unit in self.get_units(scraper):
+            data['unit'] = unit
+            log.debug("received unit", extra = data)
+            for scraped in self.scrape_unit(scraper, unit):
+                result.append(scraped)
+
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
-       
+        
+        return result
 
-        from amcat.tools import sendmail
-        if self.errors:
-            mailtext = pformat(self.errors)
-            log.debug("sending error mail to toon.alfrink@gmail.com")
-            sendmail.sendmail("toon.alfrink@gmail.com","toon.alfrink@gmail.com", "RobustController Scraping Error(s)", mailtext, mailtext)
 
+    def get_units(self, scraper):
+        units = scraper.get_units()
+        i = 0
+        while True:
+            try:
+                unit = units.next()
+            except StopIteration:
+                if i == 0:
+                    data = {'scraper':scraper}
+                    log.error("Scraper returned 0 units", data)
+                break
+            except:
+                traceback.print_exc()
+                data = {'scraper':scraper,'iteration':i}
+                log.warning("Exception occurred in get_units", extra = data)
+            else:
+                yield unit
+            i += 1
 
     @transaction.commit_on_success
-    def _scrape_unit(self, scraper, unit):
-        articles = list(scraper.scrape_unit(unit))
-        for article in articles:
+    def scrape_unit(self, scraper, unit):
+        scraped_units = scraper.scrape_unit(unit)
+        i = 0
+        while True:
             try:
-                self.save(article)
+                scraped = scraped_units.next()
+                scraped = self.save(scraped)
+            except StopIteration:
+                break
             except:
-                log.error("{}".format(traceback.format_exc()))
-                self.errors[traceback.format_exc()] = pformat(unit)
+                traceback.print_exc()
+                data = {'scraper':scraper,'unit':unit,'iteration':i}
+                log.warning("Exception occurred in scrape_unit", extra = data)
             else:
-                article.scraper = unit[0]
-        return articles
+                yield scraped
+            i += 1
+
+
 
 class ThreadedController(Controller):
     """Threaded implementation of Controller
@@ -148,19 +163,20 @@ class ThreadedController(Controller):
 
 
 def scrape_logged(controller, scrapers):
-    """Use the controller and MultiScraper to scrape the given scrapers.
+    """Use the controller to scrape the given scrapers.
 
     @return: a tuple (counts, log)
              counts: a mapping of number of articles scraper per scraper
              log: a string representation of the log messages from the scrapers
     """
+
     counts = dict((s, 0) for s in scrapers)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
-        for a in controller.scrape(MultiScraper(scrapers)):
-            scraper = getattr(a, "scraper", None)
+        for s in scrapers:
             
-            counts[scraper] += 1
+            for a in controller.scrape(s):
+                counts[s] += 1
                 
     return counts, log_stream.getvalue()
 

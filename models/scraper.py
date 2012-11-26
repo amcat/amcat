@@ -77,7 +77,8 @@ class Scraper(AmcatModel):
         q = q.annotate(models.Count("id"))
         return dict(q)
 
-def get_scrapers(date=None, days_back=7, **options):
+
+def get_scrapers(date=None, days_back=7, use_expected_articles = False, **options):
     """
     Return all daily scrapers as needed for the days_back days prior
     to the given date for which no articles are recorded. The scrapers
@@ -88,9 +89,19 @@ def get_scrapers(date=None, days_back=7, **options):
     dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
     for s in Scraper.objects.filter(run_daily=True):
         scraped = s.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
-        for day in dates:
-            if day not in scraped:
-                yield s.get_scraper(date = day, **options)
+        if use_expected_articles:
+            from amcat.scripts.maintenance.expected_articles import expected_articles
+            for day in dates:
+                for s_day, n in scraped.items():
+                    if s_day == day:
+                        if n < expected_articles[s][day.weekday()][0]:
+                            yield s.get_scraper(date = day, **options)
+
+
+        else:
+            for day in dates:
+                if day not in scraped:
+                    yield s.get_scraper(date = day, **options)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
