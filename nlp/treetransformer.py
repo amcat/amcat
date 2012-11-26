@@ -83,7 +83,10 @@ def _load_lexicon(lexiconfile):
 def _load_rules(rulefile):
     for row in csv.DictReader(open(rulefile)):
         if not row["active"].strip(): continue
-        yield GrammarRule(row["where"], row["insert"], row["delete"], row["name"], bool(row["show"].strip()))
+        fields = row["where"], row["insert"], row["delete"], row["name"]
+        fields = [f.decode("utf-8").replace(u"\u201c", u'"').replace(u"\u201d", u'"') for f in fields]
+        fields += [bool(row["show"].strip())]
+        yield GrammarRule(*fields)
         if row["show"].strip().lower() == "stop": break
     
 class TreeTransformer(object):

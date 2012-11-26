@@ -256,6 +256,8 @@ HEADER_SMALL = "node [fontsize=10,height=.1]; graph [ranksep=.25]; edge [fontsiz
 
 def dot2img(dot, format="jpg", layout="dot"):
     cmd = 'dot -T%s -K%s' % (format, layout)
+    if type(dot) == unicode:
+        dot = dot.encode("utf-8")
     img = toolkit.execute(cmd, dot, outonly=True)
     return img
 
