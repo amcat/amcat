@@ -95,12 +95,13 @@ class Scraper(Script):
             return set
         return
         
-    def run(self, input):
-        log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium}"
+    def run(self,input):
+        log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium} using RobustController"
                  .format(**locals()))
         from amcat.scraping.controller import RobustController
         with transaction.commit_on_success():
             RobustController(self.articleset).scrape(self)
+
 
     def get_units(self):
         """
@@ -110,22 +111,9 @@ class Scraper(Script):
         @return: a sequence of arbitrary objects to be passed to scrape_unit
         """
         self._initialize()
-        try:
-            units = self._get_units()
-        except Exception as e:
-            yield (None,e)
+        for unit in self._get_units():
+            yield unit
             
-        while True:
-            try:
-                u = units.next()
-            except StopIteration:
-                break
-            except Exception as e:
-                yield (None,e)
-            else:
-                yield (u,None)
-
-
 
     def _get_units(self):
         """
@@ -144,10 +132,10 @@ class Scraper(Script):
         and medium filled in automatically.
         @return: a sequence of Article objects ready to .save()
         """
-        log.debug("Scraping unit %s" % unit)
+        log.debug(unicode("Scraping unit {}".format(unit),'utf-8'))
         for article in self._scrape_unit(unit):
             article = self._postprocess_article(article)
-            log.debug(".. yields article %s" % article)
+            log.debug(unicode(".. yields article {}".format(article),'utf-8'))
             article.scraper = self
             yield article
 
@@ -351,18 +339,11 @@ class MultiScraper(object):
             try:
                 units = scraper.get_units()
             except Exception as e:
-                yield ((scraper,None),e)
+                yield (None,e)
                 continue
             
-            while True:
-                try:
-                    u = units.next()
-                except StopIteration:
-                    break
-                except Exception as e:
-                    yield ((scraper,None),e)
-                else:
-                    yield ((scraper,u),None)
+            for (unit, exception) in units:
+                yield ((scraper,unit),exception)
     
             
 
@@ -373,7 +354,7 @@ class MultiScraper(object):
         (scraper, unit) = unit
         for a in scraper.scrape_unit(unit):
             a.scraper = scraper
-
+            
             yield a
             
 

@@ -31,6 +31,7 @@ log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
+from amcat.scripts.maintenance.deduplicate import DeduplicateScript
 
 from amcat.scraping.controller import scrape_logged
 from amcat.models.scraper import get_scrapers
@@ -95,18 +96,28 @@ class DailyScript(Script):
     def run(self, _input):
         date = self.options['date']
 
-        scrapers = list(get_scrapers(date=date))
+
+        scrapers = list(get_scrapers(date=date, use_expected_articles = True))
 
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
         count, messages =  scrape_logged(RobustController(), scrapers)
         
+        log.info("deduplicating...")
+        
+        d_script = DeduplicateScript()
+        d_script.options['date'] = date
+        d_script.run(None)
+
         log.info("Sending email...")
         
         send_email(count, messages, date)
 
         log.info("Done")
+
         
+        
+
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli

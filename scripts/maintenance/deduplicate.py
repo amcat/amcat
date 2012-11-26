@@ -61,25 +61,10 @@ class DeduplicateScript(Script):
             articles.filter(id__in = removable_ids).update(project = 2) #trash project
             ArticleSetArticle.objects.filter(article__in = removable_ids).delete() #delete from article set
             log.info("Moved %s duplicated articles to (trash) project 2" % len(removable_ids))
-    
-        
-    def run_scrapers(self):
-        """
-        Runs on all daily scraper articlesets
-        """
         
         
         
 if __name__ == '__main__':
-    from sys import argv
-    from getopt import getopt
-    opts,args = getopt(argv,"s")
-    for opt,arg in opts:
-        if opt == '-s':
-            dedu = DeduplicateScript()
-            dedu.run_scrapers()
-    
-
     amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     from amcat.scripts.tools import cli
     cli.run_cli(DeduplicateScript)
