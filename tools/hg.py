@@ -68,22 +68,21 @@ class Repository(object):
         return self._run_hg("branch")
 
     def current_tag(self):
+        return list(self.list_tags())[-1]
+
+    def list_tags(self):
+        """
+        Lists tags according to .hgtags
+
+        @yield: (checksum, tag)
+        """
         try:
             tags = open(os.path.join(self.repo, ".hgtags"))
         except IOError:
-            return None
-
-        tag = tags.readline().strip()
-        if not tag:
-            try:
-                return tag.split(" ", 1)[1]
-            except IndexError:
-                pass
-
-    
-    def list_tags(self):
-        for line in self._run_hg('tags').split('\n'):
-            yield line.split(' ')[0]
+            pass
+        else:
+            for tag in tags:
+                yield tag.split(" ", 1)
 
     def _run_hg(self, cmd):
         cmd = ['hg', cmd, '-R', self.repo]
