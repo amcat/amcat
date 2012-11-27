@@ -68,7 +68,10 @@ class Repository(object):
         return self._run_hg("branch")
 
     def current_tag(self):
-        return list(self.list_tags())[-1]
+        try:
+            return list(self.list_tags())[-1]
+        except IndexError:
+            return None
 
     def list_tags(self):
         """
