@@ -93,7 +93,7 @@ class ArticleSet(AmcatModel):
         
     def add(self, *articles):
         """Add the given articles to this article set"""
-        return self.add_articles(article)
+        return self.add_articles(articles)
 
     def add_articles(self, articles, set_dirty=True):
         """
