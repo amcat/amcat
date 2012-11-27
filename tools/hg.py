@@ -85,7 +85,7 @@ class Repository(object):
             pass
         else:
             for tag in tags:
-                yield tag.split(" ", 1)
+                yield tag.strip().split(" ", 1)
 
     def _run_hg(self, cmd):
         cmd = ['hg', cmd, '-R', self.repo]
