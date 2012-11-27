@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
