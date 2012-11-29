@@ -60,7 +60,7 @@ class SOHServer(object):
 
     def update(self, where, insert="", delete="", prefixes=None):
         prefixes = self._prefix_string(prefixes)
-        sparql = """{prefixes}
+        sparql = u"""{prefixes}
                     DELETE {{ {delete} }}
                     INSERT {{ {insert} }}
                     WHERE {{ {where} }}

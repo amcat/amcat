@@ -73,7 +73,7 @@ def get_predicates(sentence, roles):
 	    and (t.parent.position, t.child.position) not in om_roles and (t.child.position, t.parent.position) not in om_roles):
             combined = frozenset(predicates.get(t.child, set([sentence.get_token(t.child.position)]))
                                  | predicates.get(t.parent, set([sentence.get_token(t.parent.position)])))
-            for node in t.child, t.parent:
+            for node in combined:
                 predicates[node] = combined
 		
     #for t in sentence.tokens.all():
@@ -85,6 +85,9 @@ def get_predicates(sentence, roles):
 def get_statements(sentence, roles, statements_without_object=False):
     predicates = get_predicates(sentence, roles)
     # relations per predicate: {predicate : {rel : {nodes}}}
+    #for pred in set(predicates.values()):
+    #    print ",".join(map(str, pred))
+    #print "-----"
     rels_per_predicate = collections.defaultdict(lambda : collections.defaultdict(set))
     for subject, role, object in roles:
         subject = sentence.tokendict[subject] if subject is not None else None
@@ -96,7 +99,13 @@ def get_statements(sentence, roles, statements_without_object=False):
             means = predicates.get(subject, frozenset([subject]))
             rels_per_predicate[pred][role].add(means)
         elif role == "eqv": # subject -> object with no predicate
-            yield Statement(sentence, [subject], [], [object], type={"Equivalent"})
+            source = []
+	    for subject2, role, object2 in roles:
+                if role == "quote" and object2 in (subject.position, object.position):
+                    source += [sentence.tokendict[subject2]]
+
+            yield Statement(sentence, [subject], [], [object], source=source, type={"Equivalent"})
+            continue
 	    for subject2, role, object2 in roles:
 		subject2 = sentence.tokendict[subject2] if subject2 is not None else None
 		object2 = sentence.tokendict[object2]
@@ -107,6 +116,10 @@ def get_statements(sentence, roles, statements_without_object=False):
 		    if subject == object2:
 			yield Statement(sentence, [subject2], [], [object], type={"Equivalent"})
             
+    #for pred, rels in rels_per_predicate.items():
+    #    print ",".join(map(str, pred))
+    #    for rel, nodes in rels.items():
+    #        print "  ", rel, ": ", ",".join(map(str, nodes))
 
     # normal statement: if a su and obj point to the same predicate, it is a statement
     

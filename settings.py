@@ -59,6 +59,7 @@ def sections(identifier):
     c = configparser.ConfigParser()
     c.readfp(file(os.path.expanduser('~/.amcatrc3')))
 
+
     for sect in c.sections():
         db = sect.split('-')
         if db[0] == identifier and len(db) is 2:

@@ -83,12 +83,15 @@ def _load_lexicon(lexiconfile):
 def _load_rules(rulefile):
     for row in csv.DictReader(open(rulefile)):
         if not row["active"].strip(): continue
-        yield GrammarRule(row["where"], row["insert"], row["delete"], row["name"], bool(row["show"].strip()))
+        fields = row["where"], row["insert"], row["delete"], row["name"]
+        fields = [f.decode("utf-8").replace(u"\u201c", u'"').replace(u"\u201d", u'"') for f in fields]
+        fields += [bool(row["show"].strip())]
+        yield GrammarRule(*fields)
         if row["show"].strip().lower() == "stop": break
     
 class TreeTransformer(object):
 
-    def __init__(self, soh, lexiconfile, rulefile):
+    def __init__(self, soh, lexiconfile, rulefile, gold_roles=GOLD_ROLES):
         """
         @param soh: a amcat.tools.pysoh.SOHServer to use for transformations
         """
@@ -97,6 +100,7 @@ class TreeTransformer(object):
         self.tokens = {} # position -> url
         self.lexicon = list(_load_lexicon(lexiconfile))
         self.rules = list(_load_rules(rulefile))
+        self.gold_roles = gold_roles 
 
     def apply_lexical(self):
         for rule in self.lexicon:
@@ -141,7 +145,7 @@ class TreeTransformer(object):
     def get_roles(self):
         """Retrieve the childposition-role-parentposition triples"""
         for triple in self.get_triples():
-            if triple.predicate not in GOLD_ROLES: continue
+            if triple.predicate not in self.gold_roles: continue
             yield Triple(int(triple.subject.position), triple.predicate, int(triple.object.position))
         read_node = lambda n : int(n) if n.strip() else None
         for s, p, o in self.query(select=["?spos", "?p", "?opos"],
@@ -150,7 +154,8 @@ class TreeTransformer(object):
             if s: s = int(s)
             if o: o = int(o)
             p = p.replace(AMCAT, "")
-            yield (s, p, o)
+            if p in self.gold_roles:
+                yield (s, p, o)
         
     def get_triples(self, ignore_rel=True, limit_predicate=None):
         """Retrieve the Node-predicate_string-Node triples for the loaded sentence"""
