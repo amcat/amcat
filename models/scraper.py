@@ -92,10 +92,10 @@ def get_scrapers(date=None, days_back=7, use_expected_articles = False, **option
         if use_expected_articles:
             from amcat.scripts.maintenance.expected_articles import expected_articles
             for day in dates:
-                for s_day, n in scraped.items():
-                    if s_day == day:
-                        if n < expected_articles[s][day.weekday()][0]:
-                            yield s.get_scraper(date = day, **options)
+                if day not in scraped.keys():
+                    scraped[day] = 0
+                if scraped[day] <= expected_articles[s][day.weekday()][0]:
+                    yield s.get_scraper(date = day, **options)
 
 
         else:

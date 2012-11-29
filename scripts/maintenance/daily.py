@@ -98,6 +98,7 @@ class DailyScript(Script):
 
 
         scrapers = list(get_scrapers(date=date, use_expected_articles = True))
+        
 
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))

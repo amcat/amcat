@@ -117,15 +117,17 @@ class RobustController(Controller):
         scraped_units = scraper.scrape_unit(unit)
         i = 0
         while True:
+            logdata = {'scraper':scraper,'unit':unit,'iteration':i}
             try:
                 scraped = scraped_units.next()
                 scraped = self.save(scraped)
             except StopIteration:
+                if i == 0:
+                    log.warning("scraping unit returned no articles", extra = logdata)
                 break
             except:
                 traceback.print_exc()
-                data = {'scraper':scraper,'unit':unit,'iteration':i}
-                log.warning("Exception occurred in scrape_unit", extra = data)
+                log.warning("Exception occurred in scrape_unit", extra = logdata)
             else:
                 yield scraped
             i += 1
@@ -170,11 +172,13 @@ def scrape_logged(controller, scrapers):
              log: a string representation of the log messages from the scrapers
     """
 
+    from sentry.client.handlers import SentryHandler
+    amcatlogging.install_handler(SentryHandler())
+
     counts = dict((s, 0) for s in scrapers)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for s in scrapers:
-            
             for a in controller.scrape(s):
                 counts[s] += 1
                 
