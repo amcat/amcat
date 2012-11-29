@@ -102,7 +102,7 @@ class DailyScript(Script):
 
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
-        count, messages =  scrape_logged(RobustController(), scrapers)
+        count, messages =  scrape_logged(RobustController(), scrapers, deduplicate=True)
         
         log.info("deduplicating...")
         
@@ -122,6 +122,7 @@ class DailyScript(Script):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
+    amcatlogging.setSentryHandler()
     amcatlogging.info_module("amcat.scraping.scraper")
     amcatlogging.debug_module("amcat.scraping.controller")        
     cli.run_cli(DailyScript)

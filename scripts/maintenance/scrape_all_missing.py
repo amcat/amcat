@@ -7,9 +7,6 @@ print("done")
 from django.db import connection,transaction
 cursor = connection.cursor()
 
-import logging;log = logging.getLogger(__name__)
-
-
 from datetime import date,timedelta
 def days(start,end):
     if start>end:
@@ -25,7 +22,7 @@ class OmniScraper(Script):
 
     def run(self,input):    
         for scraper, rangelist in ranges.items():
-            start = date(2012,01,01);end=date.today() - timedelta(days=1)
+            start = date(2012,01,01);end=date.today() - timedelta(days=6)
             for day in days(start,end):
 
                 print("getting amount of articles of scraper {} day {}".format(scraper,day))
@@ -53,9 +50,9 @@ class OmniScraper(Script):
             )
         
         cursor.execute(query)
-
         n_articles = cursor.fetchone()[0]
         return n_articles
+
 
 
 

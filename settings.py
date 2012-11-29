@@ -71,16 +71,9 @@ def filldict(vals, dic):
             dic[id][k.upper()] = v
     return dic
 
-DATABASES = dict(default=dict(
-        ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
-        NAME = os.environ.get("DJANGO_DB_NAME", 'amcat'),
-        USER =  os.environ.get("DJANGO_DB_USER", ''),           
-        PASSWORD = os.environ.get("DJANGO_DB_PASSWORD", ''),           
-        HOST = os.environ.get("DJANGO_DB_HOST", ''),
-        PORT = ''
-    ))
-
-
+DATABASES = filldict(sections('db'), dict())
+if os.environ.get("DJANGO_DB_ENGINE"):
+    DATABASES["default"]["ENGINE"] = os.environ.get("DJANGO_DB_ENGINE")
 CACHES = filldict(sections('caching'), dict())
 
 SECRET_KEY = random_alphanum(30)

@@ -164,7 +164,7 @@ class ThreadedController(Controller):
         return result
 
 
-def scrape_logged(controller, scrapers):
+def scrape_logged(controller, scrapers, deduplicate = False):
     """Use the controller to scrape the given scrapers.
 
     @return: a tuple (counts, log)
@@ -174,6 +174,9 @@ def scrape_logged(controller, scrapers):
 
     from sentry.client.handlers import SentryHandler
     amcatlogging.install_handler(SentryHandler())
+
+    if deduplicate:
+        pass #to do
 
     counts = dict((s, 0) for s in scrapers)
     log_stream = StringIO()
