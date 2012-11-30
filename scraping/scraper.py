@@ -61,8 +61,8 @@ class ScraperForm(forms.Form):
         return name
     
     @classmethod
-    def get_empty(cls, project=None, **_options):
-        f = cls()
+    def get_empty(cls, project=None, post=None, **_options):
+        f = cls(post) if post is not None else cls()
         if project:
             f.fields['project'].initial = project.id
             f.fields['project'].widget = HiddenInput()
