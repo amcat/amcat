@@ -37,7 +37,34 @@ def iterable(func):
         return tuple(func(*args, **kwargs))
     return _iterable
 
+import re
+import inspect
 
+def safeloops(self, func): 
+    """This decorator makes sure only the most inner loop has a skipped iteration when an exception occurs"""
+    print("safeloops")
+    lines = inspect.getsourcelines(func)[0]
+    _import = "from amcat.tools.toolkit import log_error"
+    add = "with log_error():\n"
+    new = []
+    tabsize = 0
+    for c in lines[1]:
+        if c == " ":
+            tabsize += 1
+        else:
+            break
+
+    count = 0
+    for line in lines:
+        new.append(" " * tabsize * count + line)
+        m = re.match(r"^(\s+)for\s[()\w,]+\sin\s[^ :\n]+:\n$",line)
+        if m:
+            count += 1
+            new.append(m.group(1) + " " * tabsize * count + _import)
+            new.append(m.group(1) + " " * tabsize * count + add)
+
+    exec "".join(new)
+    return eval(func.func_name)
 
 
 ########################

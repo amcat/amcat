@@ -135,6 +135,12 @@ def to_list(func):
     return wrapped(list)(func)
 
 
+def log_error():
+    try:
+        yield
+    except Exception as e:
+        log.error(e)
+
 ###########################################################################
 ##                      Statistical Functions                            ##
 ###########################################################################

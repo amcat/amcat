@@ -92,7 +92,6 @@ class RobustController(Controller):
         
         return result
 
-
     def get_units(self, scraper):
         units = scraper.get_units()
         i = 0
