@@ -42,7 +42,7 @@ class DeduplicateScript(Script):
         """
         deduplicates all scraper articlesets
         """
-        log.info("Deduplicating for articleset {articleset} at {date}".format(
+        log.info("Deduplicating for articleset '{}' at {}".format(
                 self.options['articleset'],
                 self.options['date']))
 
@@ -55,7 +55,7 @@ class DeduplicateScript(Script):
 
         idDict = {}
         for article in articles:
-            identifier = "{}{}".format(article.text,article.date)
+            identifier = article.text + str(article.date)
             if identifier:
                 if not identifier in idDict.keys():
                     idDict[identifier] = []
@@ -69,7 +69,7 @@ class DeduplicateScript(Script):
         articles.filter(id__in = removable_ids).update(project = 2) #trash project
         ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
 
-        log.info("Moved {} duplicated articles to trash".format(len(removable_ids)))
+        log.info("Moved {} duplications to trash".format(len(removable_ids)))
 
 
 class DeduplicatePeriodForm(forms.Form):
@@ -82,10 +82,9 @@ class DeduplicatePeriod(DeduplicateScript):
 
     def run(self, _input):
         date = self.options['first_date']
-
         while date <= self.options['last_date']:
             self.options['date'] = date
-            super(DeduplicatePeroid, self).run(_input)
+            super(DeduplicatePeriod, self).run(_input)
             date += timedelta(days = 1)
 
 class DeduplicateArticlesetForm(forms.Form):
@@ -102,12 +101,11 @@ class DeduplicateArticleset(DeduplicatePeriod):
 
 
 def deduplicate_scrapers(date):
-    d = DeduplicatePeriod()
-    d.options['last_date'] = date
-    d.options['first_date'] = date - timedelta(days = 7)
     scrapers = Scraper.objects.filter(run_daily='t')
     for s in scrapers:
-        d.options['articleset'] = s.articleset_id
+        d = DeduplicatePeriod(first_date = date - timedelta(days=7),
+                          last_date = date,
+                          articleset = s.articleset_id)
         d.run(None)
 
 
@@ -116,6 +114,7 @@ if __name__ == '__main__':
     amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     from amcat.scripts.tools import cli
     cli.run_cli(DeduplicateScript)
+    
 
 ###########################################################################  
 #                          U N I T   T E S T S                            #  

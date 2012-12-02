@@ -1,9 +1,9 @@
 
 from amcat.models.scraper import Scraper
-from django.db import connection, transaction
+from amcat.models.article import Article
+from django.db.models import Count
 from datetime import date,timedelta
 
-cursor = connection.cursor()
 scrapers = Scraper.objects.all()
 
 def scraper_ranges(scraper):
@@ -18,12 +18,10 @@ def scraper_ranges(scraper):
         ]
 
     articleset_id = scraper.articleset_id
-    cursor.execute("select date(date) as day, count(date(date)) as amount from articles where article_id in (select article_id from articlesets_articles where articleset_id = {articleset_id}) group by date(date)".format(articleset_id=articleset_id))
-    
-    rows = cursor.fetchall()
-
+    rows = Article.objects.filter(articlesetarticle__articleset = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id'))
+                         
     for i,rows in enumerate(sort_weekdays(rows)):
-        numbers = [row[1] for row in rows]
+        numbers = [row['created_count'] for row in rows]
         third_q = third_quartile(numbers)
         returns[i] = (third_q/1.5,third_q*2)
         
@@ -43,7 +41,7 @@ def sort_weekdays(rows):
         ]
 
     for row in rows:
-        day = row[0].weekday()
+        day = row['date'].weekday()
         days[day].append(row)
 
     for rows in days:
@@ -72,7 +70,7 @@ expected_articles = generate_ranges()
 
 if __name__ == '__main__':
     from pprint import pprint
-    pprint(EXPECTED_N_ARTICLES)
+    pprint(expected_articles)
         
 
     

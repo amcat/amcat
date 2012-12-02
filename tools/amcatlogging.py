@@ -153,7 +153,7 @@ def setStreamHandler(*args, **kargs):
 
 def setSentryHandler(*args, **kargs):
     root = logging.getLogger()
-    from sentry.client.handlers import SentryHandler
+    from raven.handlers.logging import SentryHandler
     h = SentryHandler(*args, **kargs)
     root.addHandler(h)
 

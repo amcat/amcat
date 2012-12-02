@@ -135,8 +135,7 @@ class Scraper(Script):
         @return: a sequence of Article objects ready to .save()
         """
         log.debug(unicode("Scraping unit {}".format(unit),'utf-8'))
-        _scrape_unit = safeloops(self._scrape_unit)
-        for article in _scrape_unit(unit):
+        for article in self._scrape_unit(unit):
             article = self._postprocess_article(article)
             log.debug(unicode(".. yields article {}".format(article),'utf-8'))
             article.scraper = self
