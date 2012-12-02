@@ -16,7 +16,6 @@ except ImportError:
     sys.exit(1)
 
 if __name__ == "__main__":
-    from amcat.tools import defaultuser
     from amcat.tools import amcatlogging, loaddata
     amcatlogging.setup()
     loaddata.set_postsync()
