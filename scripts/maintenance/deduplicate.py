@@ -33,7 +33,7 @@ from datetime import timedelta
 
 class DeduplicateForm(forms.Form):
     date = forms.DateField()
-    articleset = forms.ForeignKeyField()
+    articleset = forms.ModelChoiceField(ArticleSet.objects.all())
 
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
@@ -75,7 +75,7 @@ class DeduplicateScript(Script):
 class DeduplicatePeriodForm(forms.Form):
     first_date = forms.DateField()
     last_date = forms.DateField()
-    articleset = forms.ForeignKeyField()
+    articleset = forms.ModelChoiceField(ArticleSet.objects.all())
 
 class DeduplicatePeriod(DeduplicateScript):
     options_form = DeduplicatePeriodForm
@@ -89,7 +89,7 @@ class DeduplicatePeriod(DeduplicateScript):
             date += timedelta(days = 1)
 
 class DeduplicateArticlesetForm(forms.Form):
-    articleset = forms.ForeignKeyField()
+    articleset = forms.ModelChoiceField(ArticleSet.objects.all())
 
 class DeduplicateArticleset(DeduplicatePeriod):
     options_form = DeduplicateArticlesetForm
@@ -102,13 +102,15 @@ class DeduplicateArticleset(DeduplicatePeriod):
 
 
 def deduplicate_scrapers(date):
-    d = DeduplicatePeriod()
-    d.options['last_date'] = date
-    d.options['first_date'] = date - timedelta(days = 7)
+    options = {
+        'last_date':date,
+        'first_date':date - timedelta(days = 7)
+        }
+
     scrapers = Scraper.objects.filter(run_daily='t')
     for s in scrapers:
-        d.options['articleset'] = s.articleset_id
-        d.run(None)
+        options['articleset'] = s.articleset_id
+        DeduplicatePeriod(**options).run(None)
 
 
         

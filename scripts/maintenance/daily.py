@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.scripts.maintenance.deduplicate import DeduplicateScript
+from amcat.scripts.maintenance.deduplicate import deduplicate_scrapers
 
 from amcat.scraping.controller import scrape_logged
 from amcat.models.scraper import get_scrapers
@@ -106,9 +106,7 @@ class DailyScript(Script):
         
         log.info("deduplicating...")
         
-        d_script = DeduplicateScript()
-        d_script.options['date'] = date
-        d_script.run(None)
+        deduplicate_scrapers(date)
 
         log.info("Sending email...")
         
@@ -122,7 +120,7 @@ class DailyScript(Script):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
-    amcatlogging.setSentryHandler()
+    #amcatlogging.setSentryHandler()
     amcatlogging.info_module("amcat.scraping.scraper")
     amcatlogging.debug_module("amcat.scraping.controller")        
     cli.run_cli(DailyScript)

@@ -40,13 +40,27 @@ def iterable(func):
 import re
 import inspect
 
-def safeloops(self, func): 
+def safeloops(func): 
     """This decorator makes sure only the most inner loop has a skipped iteration when an exception occurs"""
-    print("safeloops")
+    if "instancemethod" in str(type(func)):
+        func = func.__func__
+
+
     lines = inspect.getsourcelines(func)[0]
-    _import = "from amcat.tools.toolkit import log_error"
+    _import = "from amcat.tools.toolkit import log_error\n"
     add = "with log_error():\n"
     new = []
+
+    killtabs = 0
+    for c in lines[0]:
+        if c == " ":
+            killtabs += 1
+        else:
+            break
+
+    lines = [line[killtabs:] for line in lines]
+    
+
     tabsize = 0
     for c in lines[1]:
         if c == " ":
@@ -54,17 +68,29 @@ def safeloops(self, func):
         else:
             break
 
-    count = 0
+    extra_tab_count = 0
+    for_loop_tabs = 0
     for line in lines:
-        new.append(" " * tabsize * count + line)
+        tabs = len(re.search(r"^(\s*)",line).group(1)) / tabsize
+        
+        if tabs < for_loop_tabs:
+            extra_tab_count -= 1
+            
+        new.append(" " * tabsize * extra_tab_count + line)
         m = re.match(r"^(\s+)for\s[()\w,]+\sin\s[^ :\n]+:\n$",line)
+        
         if m:
-            count += 1
-            new.append(m.group(1) + " " * tabsize * count + _import)
-            new.append(m.group(1) + " " * tabsize * count + add)
+            extra_tab_count += 1
+            new.append(m.group(1) + " " * tabsize * extra_tab_count + _import)
+            new.append(m.group(1) + " " * tabsize * extra_tab_count + add)
+            for_loop_tabs = tabs
 
-    exec "".join(new)
-    return eval(func.func_name)
+    code = compile("".join(new),'<string>','exec')
+
+    func.__code__ = code
+
+    return func
+    
 
 
 ########################
