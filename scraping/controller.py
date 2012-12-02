@@ -224,6 +224,7 @@ class TestController(amcattest.PolicyTestCase):
         articles = c.scrape(ts)
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(set(articles), set(p.articles.all()))
+        self.assertEqual(s, ts.articleset)
 
     def test_set(self):
         """Are scraped articles added to the set?"""
