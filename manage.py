@@ -16,7 +16,8 @@ except ImportError:
     sys.exit(1)
 
 if __name__ == "__main__":
-    from amcat.tools import amcatlogging, loaddata
+    from amcat.tools import amcatlogging, initialize
     amcatlogging.setup()
-    loaddata.set_postsync()
+    amcatlogging.debug_module("amcat.tools.initialize")
+    initialize.set_signals()
     execute_manager(settings)
