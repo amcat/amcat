@@ -33,8 +33,8 @@ from datetime import timedelta
 
 class DeduplicateForm(forms.Form):
     date = forms.DateField()
-    articleset = forms.ForeignKeyField()
-
+    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+    
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
 
@@ -75,7 +75,7 @@ class DeduplicateScript(Script):
 class DeduplicatePeriodForm(forms.Form):
     first_date = forms.DateField()
     last_date = forms.DateField()
-    articleset = forms.ForeignKeyField()
+    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
 
 class DeduplicatePeriod(DeduplicateScript):
     options_form = DeduplicatePeriodForm
@@ -89,7 +89,7 @@ class DeduplicatePeriod(DeduplicateScript):
             date += timedelta(days = 1)
 
 class DeduplicateArticlesetForm(forms.Form):
-    articleset = forms.ForeignKeyField()
+    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
 
 class DeduplicateArticleset(DeduplicatePeriod):
     options_form = DeduplicateArticlesetForm

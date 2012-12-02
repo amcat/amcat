@@ -1,6 +1,3 @@
-print("getting expected amounts of articles per scraper per day...")
-from n_articles_day import EXPECTED_N_ARTICLES as ranges
-print("done")
 
 #ranges: {<scraper>:[(1,3),(2,4)... for each day in the week starting monday
 
@@ -20,6 +17,11 @@ def days(start,end):
 from amcat.scripts.script import Script
 class OmniScraper(Script):
 
+    def get_normal_ranges(self):
+        print("getting expected amounts of articles per scraper per day...")
+        from n_articles_day import EXPECTED_N_ARTICLES as ranges
+        print("done")
+    
     def run(self,input):    
         for scraper, rangelist in ranges.items():
             start = date(2012,01,01);end=date.today() - timedelta(days=6)
