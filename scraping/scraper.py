@@ -94,7 +94,7 @@ class Scraper(Script):
         if self.options['articleset_name']:
             aset = ArticleSet.objects.create(project=self.project, name=self.options['articleset_name'])
             self.options['articleset'] = aset
-            return set
+            return aset
         return
         
     def run(self,input):
@@ -102,7 +102,7 @@ class Scraper(Script):
                  .format(**locals()))
         from amcat.scraping.controller import RobustController
         with transaction.commit_on_success():
-            RobustController(self.articleset).scrape(self)
+            return RobustController(self.articleset).scrape(self)
 
 
     def get_units(self):

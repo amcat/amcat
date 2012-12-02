@@ -103,9 +103,9 @@ class RobustController(Controller):
                     data = {'scraper':scraper}
                     log.error("Scraper returned 0 units", data)
                 break
-            except:
+            except Exception as e:
                 traceback.print_exc()
-                data = {'scraper':scraper,'iteration':i}
+                data = {'scraper':scraper,'iteration':i,'exception':e}
                 log.warning("Exception occurred in get_units", extra = data)
             else:
                 yield unit
@@ -124,7 +124,7 @@ class RobustController(Controller):
                 if i == 0:
                     log.warning("scraping unit returned no articles", extra = logdata)
                 break
-            except:
+            except Exception:
                 traceback.print_exc()
                 log.warning("Exception occurred in scrape_unit", extra = logdata)
             else:
@@ -224,6 +224,7 @@ class TestController(amcattest.PolicyTestCase):
         articles = c.scrape(ts)
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(set(articles), set(p.articles.all()))
+        self.assertEqual(s, ts.articleset)
 
     def test_set(self):
         """Are scraped articles added to the set?"""

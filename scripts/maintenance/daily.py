@@ -96,9 +96,7 @@ class DailyScript(Script):
     def run(self, _input):
         date = self.options['date']
 
-
         scrapers = list(get_scrapers(date=date, use_expected_articles = True))
-        
 
         log.info("Starting scraping with {} scrapers: {}".format(
                 len(scrapers), [s.__class__.__name__ for s in scrapers]))
@@ -120,7 +118,8 @@ class DailyScript(Script):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
-    #amcatlogging.setSentryHandler()
+    amcatlogging.setSentryHandler()
+    amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     amcatlogging.info_module("amcat.scraping.scraper")
     amcatlogging.debug_module("amcat.scraping.controller")        
     cli.run_cli(DailyScript)

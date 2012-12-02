@@ -33,8 +33,8 @@ from datetime import timedelta
 
 class DeduplicateForm(forms.Form):
     date = forms.DateField()
-    articleset = forms.ModelChoiceField(ArticleSet.objects.all())
-
+    articleset = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
+    
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
 
@@ -42,7 +42,7 @@ class DeduplicateScript(Script):
         """
         deduplicates all scraper articlesets
         """
-        log.info("Deduplicating for articleset {articleset} at {date}".format(
+        log.info("Deduplicating for articleset '{}' at {}".format(
                 self.options['articleset'],
                 self.options['date']))
 
@@ -55,7 +55,7 @@ class DeduplicateScript(Script):
 
         idDict = {}
         for article in articles:
-            identifier = "{}{}".format(article.text,article.date)
+            identifier = article.text + str(article.date)
             if identifier:
                 if not identifier in idDict.keys():
                     idDict[identifier] = []
@@ -69,27 +69,27 @@ class DeduplicateScript(Script):
         articles.filter(id__in = removable_ids).update(project = 2) #trash project
         ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
 
-        log.info("Moved {} duplicated articles to trash".format(len(removable_ids)))
+        log.info("Moved {} duplications to trash".format(len(removable_ids)))
 
 
 class DeduplicatePeriodForm(forms.Form):
     first_date = forms.DateField()
     last_date = forms.DateField()
-    articleset = forms.ModelChoiceField(ArticleSet.objects.all())
+    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+
 
 class DeduplicatePeriod(DeduplicateScript):
     options_form = DeduplicatePeriodForm
 
     def run(self, _input):
         date = self.options['first_date']
-
         while date <= self.options['last_date']:
             self.options['date'] = date
-            super(DeduplicatePeroid, self).run(_input)
+            super(DeduplicatePeriod, self).run(_input)
             date += timedelta(days = 1)
 
 class DeduplicateArticlesetForm(forms.Form):
-    articleset = forms.ModelChoiceField(ArticleSet.objects.all())
+    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
 
 class DeduplicateArticleset(DeduplicatePeriod):
     options_form = DeduplicateArticlesetForm
@@ -112,12 +112,12 @@ def deduplicate_scrapers(date):
         options['articleset'] = s.articleset_id
         DeduplicatePeriod(**options).run(None)
 
-
         
 if __name__ == '__main__':
     amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     from amcat.scripts.tools import cli
     cli.run_cli(DeduplicateScript)
+    
 
 ###########################################################################  
 #                          U N I T   T E S T S                            #  

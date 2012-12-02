@@ -49,6 +49,7 @@ class UploadScript(Scraper):
         assert(isinstance(input, unicode))
         self.input_text = input
         super(UploadScript, self).run(input)
+        return self.articleset
 
 
     def _get_units(self):
