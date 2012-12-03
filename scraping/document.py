@@ -116,10 +116,9 @@ class HTMLDocument(Document):
             return val.strip()
 
         if t in (html.HtmlElement, etree._Element):
-            try:
                 return html2text(html.tostring(val)).strip() #encoding=str
             except (parser.HTMLParseError, TypeError) as e:
-                print('Warning: html2text failed!')
+                log.error('html2text failed')
                 return 'Converting from HTML failed!'
 
         if t in (list, tuple, types.GeneratorType):
@@ -155,47 +154,6 @@ class HTMLDocument(Document):
 
     def __str__(self):
         return "HTMLDocument(url=%s)" % getattr(self.props, "url", None)
-
-class IndexDocument(HTMLDocument):
-    """
-    Represents an index-page of a newspaper.
-    """
-    def __init__(self, page=None, **kargs):
-        self.children = []
-        self.page = page
-
-        super(IndexDocument, self).__init__(**kargs)
-
-    def addchild(self, child):
-        self.children.append(child)
-
-    def getprops(self):
-        committed = [(child.article.id is not None) for child in self.children]
-        #if not all(committed):
-            #raise(ValueError("Please yield the index-page *after* all children."))
-
-        #if not all([hasattr(child, 'coords') for child in self.children]):
-            #raise(ValueError("Make sure all index-children have an attribute 'coords'."))
-
-        # Children seem to be valid.
-        if self.page is None:
-            raise(ValueError("self.page of IndexDocument cannot be None when committing."))
-
-        headline = '[INDEX] page %s' % self.page
-        text = ['[IMAGEMAP-1]',]
-
-        for child in self.children:
-            for coord in child.coords:
-                coord = ", ".join(map(str, coord))
-                text.append("[%s -> %s]" % (coord, child.article.id))
-
-        return dict(headline=headline, text="\n".join(text),
-                    page=self.page, **self.props.__dict__)
-
-
-    def __str__(self):
-        return "IndexDocument(url=%s)" % getattr(self.props, "url", None)
-
 
 
 ###########################################################################

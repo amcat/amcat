@@ -32,15 +32,61 @@ from amcat.tools import amcatlogging
 from datetime import timedelta
 
 class DeduplicateForm(forms.Form):
-    date = forms.DateField()
+    first_date = forms.DateField(required = False)
+    last_date = forms.DateField(required = False)    
     articleset = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
     
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
 
-    def run(self,_input):
+    def run(self, _input):
+        mode = self.handle_input()
+
+        if mode == "date range":
+            self.options['date'] = self.options['first_date']
+            self.run_range()
+
+        elif mode == "single date":
+            self.options['date'] = self.options['first_date']
+            self._run(_input)
+
+        elif mode == "whole set":
+            articles = Article.objects.filter(articlesetarticle__articleset = self.options['articleset'])
+            self.options['first_date'] = articles.aggregate(Min('date'))[1].date()
+            self.options['last_date'] = articles.aggregate(Max('date'))[1].date()
+            self.run_range()
+
+
+    def run_range(self):
+        while self.options['date'] <= self.options['last_date']:
+            self._run(_input)
+            self.options['date'] += timedelta(days = 1)
+
+    def handle_input(self):
+        keys = self.options.keys()
+        if "first_date" in keys:
+            if "last_date" not in keys:
+                raise ValueError("provide both first_date and last_date or neither.")
+
+            elif self.options["first_date"] > self.options["last_date"]:
+                raise ValueError("first_date must be <= last_date")
+
+            elif self.options["first_date"] == self.options["last_date"]:
+                return "single date"
+
+            else:
+                return "date range"
+
+        elif "last_date" in keys:
+            raise ValueError("provide both first_date and last_date or neither.")
+
+        else:
+            return "whole set"
+            
+
+    def _run(self, _input):
         """
-        deduplicates all scraper articlesets
+        deduplicates given articleset for given date
         """
         log.info("Deduplicating for articleset '{}' at {}".format(
                 self.options['articleset'],
@@ -72,34 +118,6 @@ class DeduplicateScript(Script):
         log.info("Moved {} duplications to trash".format(len(removable_ids)))
 
 
-class DeduplicatePeriodForm(forms.Form):
-    first_date = forms.DateField()
-    last_date = forms.DateField()
-    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-
-
-class DeduplicatePeriod(DeduplicateScript):
-    options_form = DeduplicatePeriodForm
-
-    def run(self, _input):
-        date = self.options['first_date']
-        while date <= self.options['last_date']:
-            self.options['date'] = date
-            super(DeduplicatePeriod, self).run(_input)
-            date += timedelta(days = 1)
-
-class DeduplicateArticlesetForm(forms.Form):
-    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-
-class DeduplicateArticleset(DeduplicatePeriod):
-    options_form = DeduplicateArticlesetForm
-    
-    def run(self, _input):
-        articles = Article.objects.filter(articlesetarticle__articleset = self.options['articleset'])
-        self.options['first_date'] = articles.aggregate(Min('date'))[1].date()
-        self.options['last_date'] = articles.aggregate(Max('date'))[1].date()
-        super(DeduplicateArticleset, self).run(_input)
-
 
 def deduplicate_scrapers(date):
     options = {
@@ -110,7 +128,7 @@ def deduplicate_scrapers(date):
     scrapers = Scraper.objects.filter(run_daily='t')
     for s in scrapers:
         options['articleset'] = s.articleset_id
-        DeduplicatePeriod(**options).run(None)
+        DeduplicateScript(**options).run(None)
 
         
 if __name__ == '__main__':
@@ -129,9 +147,9 @@ class TestDeduplicateScript(amcattest.PolicyTestCase):
     def test_deduplicate(self):
         """One article should be deleted from artset and added to project 2"""
         p = amcattest.create_test_project()
-        art1 = amcattest.create_test_article( url='blaat1', project=p)
-        art2 = amcattest.create_test_article( url='blaat2', project=p)
-        art3 = amcattest.create_test_article( url='blaat1', project=p)
+        art1 = amcattest.create_test_article( text='blaat1', project=p)
+        art2 = amcattest.create_test_article( text='blaat2', project=p)
+        art3 = amcattest.create_test_article( text='blaat1', project=p)
         artset = amcattest.create_test_set(articles=[art1, art2, art3])
         d = DeduplicateScript(articleset = artset.id)
         d.run( None )
