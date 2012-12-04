@@ -51,10 +51,11 @@ class DeduplicateScript(Script):
 
         elif mode == "whole set":
             articles = Article.objects.filter(articlesetarticle__articleset = self.options['articleset'])
-            self.options['date'] = articles.aggregate(Min('date'))['date__min'].date()
-            self.options['last_date'] = articles.aggregate(Max('date'))['date__max'].date()
+            if articles:
+                self.options['date'] = articles.aggregate(Min('date'))['date__min'].date()
+                self.options['last_date'] = articles.aggregate(Max('date'))['date__max'].date()
             
-            self.run_range(_input)
+                self.run_range(_input)
 
 
     def run_range(self, _input):
@@ -93,7 +94,7 @@ class DeduplicateScript(Script):
 
         articles = Article.objects.filter(
             articlesetarticle__articleset = self.options['articleset'],
-            date = self.options['date']
+            date__contains = self.options['date']
             )
 
         log.info("Selected {} articles".format(len(articles)))
