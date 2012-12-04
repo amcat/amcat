@@ -151,6 +151,13 @@ def setStreamHandler(*args, **kargs):
     root.addHandler(h)
     return h
 
+def setSentryHandler(*args, **kargs):
+    root = logging.getLogger()
+    from raven.handlers.logging import SentryHandler
+    h = SentryHandler(*args, **kargs)
+    root.addHandler(h)
+
+
 def setFileHandler(filename, directory=None, filesize=50):
     """add a RotatingFileHanlder to the root logger with module level filters"""
     root = logging.getLogger()

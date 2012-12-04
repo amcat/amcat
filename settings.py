@@ -40,7 +40,6 @@ AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 #TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 #NOSE_ARGS = ['--with-progressive','--pdb']
 
-
 DATABASES = dict(default=dict(
         ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
         NAME = os.environ.get("DJANGO_DB_NAME", 'amcat'),
@@ -49,8 +48,6 @@ DATABASES = dict(default=dict(
         HOST = os.environ.get("DJANGO_DB_HOST", ''),
         PORT = ''
     ))
-
-
 
 SECRET_KEY = random_alphanum(30)
 

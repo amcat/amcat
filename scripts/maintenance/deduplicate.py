@@ -19,6 +19,7 @@
 
 
 from django import forms
+from django.db.models import Min, Max
 
 from amcat.scripts.script import Script
 from amcat.scripts.tools import cli
@@ -28,61 +29,113 @@ from amcat.models.scraper import Scraper
 from amcat.models.articleset import ArticleSet, ArticleSetArticle
 import logging; log = logging.getLogger(__name__)
 from amcat.tools import amcatlogging
-
+from datetime import timedelta
 
 class DeduplicateForm(forms.Form):
-    date = forms.DateField()
-
+    first_date = forms.DateField(required = False)
+    last_date = forms.DateField(required = False)    
+    articleset = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
+    
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
 
-    def run(self,_input):
-        """
-        deduplicates all scraper articlesets
-        """
-        for scraper in Scraper.objects.raw("SELECT * FROM scrapers"):
-            articleset=scraper.articleset
-            date = self.options['date']
-            articles = Article.objects.filter(articlesetarticle__articleset=articleset,date__gte=date)
-            
-            txtDict, texts = {}, set()
-            for article in articles:
-                text = article.text
-                if text:
-                    if not text in texts:
-                        txtDict[text] = []
-                    txtDict[text].append(article.id)
-                    texts.add(text)
+    def run(self, _input):
+        mode = self.handle_input()
+        if mode == "date range":
+            self.options['date'] = self.options['first_date']
+            self.run_range()
 
-            removable_ids = []
-            for ids in txtDict.itervalues():
-                if len(ids) > 1:
-                    removable_ids.extend(ids[1:])
-            articles.filter(id__in = removable_ids).update(project = 2) #trash project
-            ArticleSetArticle.objects.filter(article__in = removable_ids).delete() #delete from article set
-            log.info("Moved %s duplicated articles to (trash) project 2" % len(removable_ids))
-    
-        
-    def run_scrapers(self):
+        elif mode == "single date":
+            self.options['date'] = self.options['first_date']
+            self._run(_input)
+
+        elif mode == "whole set":
+            articles = Article.objects.filter(articlesetarticle__articleset = self.options['articleset'])
+            if articles:
+                self.options['date'] = articles.aggregate(Min('date'))['date__min'].date()
+                self.options['last_date'] = articles.aggregate(Max('date'))['date__max'].date()
+            
+                self.run_range(_input)
+
+
+    def run_range(self, _input):
+        while self.options['date'] <= self.options['last_date']:
+            self._run(_input)
+            self.options['date'] += timedelta(days = 1)
+
+    def handle_input(self):
+        if self.options["first_date"]:
+            if not self.options["last_date"]:
+                raise ValueError("provide both first_date and last_date or neither.")
+
+            elif self.options["first_date"] > self.options["last_date"]:
+                raise ValueError("first_date must be <= last_date")
+
+            elif self.options["first_date"] == self.options["last_date"]:
+                return "single date"
+
+            else:
+                return "date range"
+
+        elif self.options["last_date"]:
+            raise ValueError("provide both first_date and last_date or neither.")
+
+        else:
+            return "whole set"
+            
+
+    def _run(self, _input):
         """
-        Runs on all daily scraper articlesets
+        deduplicates given articleset for given date
         """
-        
-        
+        log.info("Deduplicating for articleset '{}' at {}".format(
+                self.options['articleset'],
+                self.options['date']))
+
+        articles = Article.objects.filter(
+            articlesetarticle__articleset = self.options['articleset'],
+            date__contains = self.options['date']
+            )
+
+        log.info("Selected {} articles".format(len(articles)))
+
+        idDict = {}
+        for article in articles:
+            identifier = article.text + str(article.date)
+            if identifier:
+                if not identifier in idDict.keys():
+                    idDict[identifier] = []
+                idDict[identifier].append(article.id)
+
+        removable_ids = []
+        for ids in idDict.values():
+            if len(ids) > 1:
+                removable_ids.extend(sorted(ids)[1:])
+
+        articles.filter(id__in = removable_ids).update(project = 2) #trash project
+        ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
+
+        log.info("Moved {} duplications to trash".format(len(removable_ids)))
+
+
+
+def deduplicate_scrapers(date):
+    options = {
+        'last_date':date,
+        'first_date':date - timedelta(days = 7)
+        }
+
+    scrapers = Scraper.objects.filter(run_daily='t')
+    for s in scrapers:
+        options['articleset'] = s.articleset_id
+        DeduplicateScript(**options).run(None)
+
         
 if __name__ == '__main__':
-    from sys import argv
-    from getopt import getopt
-    opts,args = getopt(argv,"s")
-    for opt,arg in opts:
-        if opt == '-s':
-            dedu = DeduplicateScript()
-            dedu.run_scrapers()
-    
-
     amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     from amcat.scripts.tools import cli
     cli.run_cli(DeduplicateScript)
+    
 
 ###########################################################################  
 #                          U N I T   T E S T S                            #  
@@ -94,9 +147,9 @@ class TestDeduplicateScript(amcattest.PolicyTestCase):
     def test_deduplicate(self):
         """One article should be deleted from artset and added to project 2"""
         p = amcattest.create_test_project()
-        art1 = amcattest.create_test_article( url='blaat1', project=p)
-        art2 = amcattest.create_test_article( url='blaat2', project=p)
-        art3 = amcattest.create_test_article( url='blaat1', project=p)
+        art1 = amcattest.create_test_article( text='blaat1', project=p)
+        art2 = amcattest.create_test_article( text='blaat2', project=p)
+        art3 = amcattest.create_test_article( text='blaat1', project=p)
         artset = amcattest.create_test_set(articles=[art1, art2, art3])
         d = DeduplicateScript(articleset = artset.id)
         d.run( None )
