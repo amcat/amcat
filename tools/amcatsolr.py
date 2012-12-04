@@ -75,7 +75,14 @@ class Solr(object):
             response = response.next_batch()
 
     def query(self, query, filters=[], **kargs):
-        return self._connect().query(query, fq=filters, **kargs)
+        qres = self._connect().query(query, fq=filters, **kargs)
+
+        # Return articles with UTC as timezone (timezone agnostic)
+        if len(qres.results) and "date" in qres.results[0]:
+            for art in qres.results:
+                art['date'] = art['date'].replace(tzinfo=None)
+
+        return qres
 
     def query_ids(self, query, filters=[], **kargs):
         """Return a sequence of article ids for the given query"""
@@ -145,9 +152,9 @@ def _clean(text):
         
 def _get_article_dicts(article_ids):
     """Yield dicts suitable for uploading to Solr from article IDs"""
-    class GMT1(datetime.tzinfo):
-        def utcoffset(self, dt): return datetime.timedelta(hours=1)
-        def tzname(self, dt): return "GMT +1"
+    class GMT0(datetime.tzinfo):
+        def utcoffset(self, dt): return datetime.timedelta(hours=0)
+        def tzname(self, dt): return "GMT"
         def dst(self, dt): return datetime.timedelta(0)
     from amcat.models.articleset import ArticleSetArticle
 
@@ -161,7 +168,7 @@ def _get_article_dicts(article_ids):
                    section=_clean(a.section),
                    projectid=a.project_id,
                    mediumid=a.medium_id,
-                   date=a.date.replace(tzinfo=GMT1()),
+                   date=a.date.replace(tzinfo=GMT0()),
                    sets=sets.get(a.id))
 
 def filters_from_form(form):
