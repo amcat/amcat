@@ -116,6 +116,7 @@ class HTMLDocument(Document):
             return val.strip()
 
         if t in (html.HtmlElement, etree._Element):
+            try:
                 return html2text(html.tostring(val)).strip() #encoding=str
             except (parser.HTMLParseError, TypeError) as e:
                 log.error('html2text failed')
