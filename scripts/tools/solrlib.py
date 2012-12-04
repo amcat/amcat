@@ -214,22 +214,6 @@ def getStats(statsObj, form):
 
     statsObj.lastDate = solrResponse.results[0]['date']
 
-    # kargs = dict(
-                # fields="id",
-                # facet='true',
-                # facet_field='mediumid',
-                # facet_mincount=1,
-                # score=False,
-                # rows=0)
-    # solrResponse = doQuery(query, form, kargs)
-
-    # mediums = []
-    # for mediumid, count in solrResponse.facet_counts['facet_fields']['mediumid'].items():
-        # m = medium.Medium.objects.get(pk=mediumid)
-        # mediums.append(m)
-    # statsObj.mediums = sorted(mediums, key=lambda x:x.id)
-
-
 def articleids(form):
     """get only the articleids for a query"""
     query = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
@@ -245,42 +229,6 @@ def articleidsDict(form):
         solrResponse = doQuery(query.query, form, kargs)
         result[query.label] = [x['id'] for x in solrResponse.results]
     return result
-
-"""
-def aggregate(queries, xAxis, yAxis, filters=[]):
-    "" "aggregate using the Solr aggregation function (facet search)
-
-    not fully working!!
-    "" "
-    #http://localhost:8983/solr/select?indent=on&q=projectid:291&fl=name
-    #     &facet=true&facet.field=projectid&facet.field=mediumid
-    #     &facet.query=projectid:291%20AND%20mediumid:7
-
-    #http://localhost:8983/solr/select?indent=on&q=test
-    #     &fq=projectid:291&fl=name&facet=true&&facet.field=mediumid
-    #facet total by medium: http://localhost:8983/solr/select?indent=on&q=test&fq=projectid:291
-                                 &fl=id&rows=0&facet=true&facet.field=mediumid
-    table = DictTable(0)
-    if xAxis == 'medium' and yAxis == 'searchTerm':
-        for query in queries:
-            print query
-            response = createSolrConnection().query(query, fields="id", facet='true',
-            facet_field='mediumid', facet_mincount=1, fq=filters, score=False, rows=0)
-            for mediumid, count in response.facet_counts['facet_fields']['mediumid'].items():
-                print mediumid, count
-                m = medium.Medium.objects.get(pk=mediumid)
-                table.addValue(m, query, count)
-    elif xAxis == 'date' and yAxis == 'medium':
-        pass
-    elif xAxis == 'date' and yAxis == 'searchTerm':
-        pass
-    else:
-        raise Exception('%s %s combination not possible' % (xAxis, yAxis))
-    return table
-"""
-
-
-
 
 mediumCache = {}
 def mediumidToObj(mediumid):
@@ -347,7 +295,6 @@ def basicAggregate(form):
                 increaseCounter(table, x, y, a, counterLambda)
     else:
         raise Exception('%s %s combination not possible' % (xAxis, yAxis))
-    log.debug('created table')
     return table
 
 
