@@ -40,6 +40,8 @@ AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 #TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
 #NOSE_ARGS = ['--with-progressive','--pdb']
 
+TIME_ZONE = 'Europe/Amsterdam'
+
 DATABASES = dict(default=dict(
         ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
         NAME = os.environ.get("DJANGO_DB_NAME", 'amcat'),
