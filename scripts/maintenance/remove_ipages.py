@@ -6,9 +6,6 @@ from amcat.models.articleset import ArticleSetArticle
 from amcat.models.scraper import Scraper
 from amcat.models.project import Project
 
-trashbin = Project.objects.get(pk=2)
-
-scrapers = Scraper.objects.all()
 
 
 
@@ -37,6 +34,10 @@ def days():
 
 
 def run():
+    
+    trashbin = Project.objects.get(pk=2)
+
+    scrapers = Scraper.objects.all()
     for scraper in scrapers:
         print(scraper)
         for day in days():
