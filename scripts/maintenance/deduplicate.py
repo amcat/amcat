@@ -41,7 +41,6 @@ class DeduplicateScript(Script):
 
     def run(self, _input):
         mode = self.handle_input()
-
         if mode == "date range":
             self.options['date'] = self.options['first_date']
             self.run_range()
@@ -52,20 +51,20 @@ class DeduplicateScript(Script):
 
         elif mode == "whole set":
             articles = Article.objects.filter(articlesetarticle__articleset = self.options['articleset'])
-            self.options['first_date'] = articles.aggregate(Min('date'))[1].date()
-            self.options['last_date'] = articles.aggregate(Max('date'))[1].date()
-            self.run_range()
+            self.options['date'] = articles.aggregate(Min('date'))['date__min'].date()
+            self.options['last_date'] = articles.aggregate(Max('date'))['date__max'].date()
+            
+            self.run_range(_input)
 
 
-    def run_range(self):
+    def run_range(self, _input):
         while self.options['date'] <= self.options['last_date']:
             self._run(_input)
             self.options['date'] += timedelta(days = 1)
 
     def handle_input(self):
-        keys = self.options.keys()
-        if "first_date" in keys:
-            if "last_date" not in keys:
+        if self.options["first_date"]:
+            if not self.options["last_date"]:
                 raise ValueError("provide both first_date and last_date or neither.")
 
             elif self.options["first_date"] > self.options["last_date"]:
@@ -77,7 +76,7 @@ class DeduplicateScript(Script):
             else:
                 return "date range"
 
-        elif "last_date" in keys:
+        elif self.options["last_date"]:
             raise ValueError("provide both first_date and last_date or neither.")
 
         else:
