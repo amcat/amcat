@@ -18,7 +18,7 @@ def getQuerySet(projects=None, articlesets=None, mediums=None, startDate=None, e
     if startDate:
         queryset = queryset.filter(date__gte=startDate)
     if endDate:
-        queryset = queryset.filter(date__lte=endDate)
+        queryset = queryset.filter(date__lt=endDate)
     if articleids:
         queryset = queryset.filter(id__in=articleids)
     return queryset
