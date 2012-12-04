@@ -19,9 +19,11 @@
 
 """
 Base module for article upload scripts
-
-TODO: merge this with scraper base
 """
+import datetime
+import logging
+log = logging.getLogger(__name__)
+from django.db import transaction
 
 from amcat.scripts import script
 from amcat.scripts.types import ArticleIterator
@@ -48,7 +50,21 @@ class UploadScript(Scraper):
     def run(self, input):
         assert(isinstance(input, unicode))
         self.input_text = input
-        super(UploadScript, self).run(input)
+        
+        log.info("Importing {self.__class__.__name__} into {self.project}"
+                 .format(**locals()))
+        from amcat.scraping.controller import SimpleController
+        with transaction.commit_on_success():
+            arts = SimpleController(self.articleset).scrape(self)
+
+            # set provenance information
+            n = len(arts)
+            prov = "" if self.articleset.provenance is None else (self.articleset.provenance + "\n\n")
+            timestamp = datetime.datetime.now()
+            prov += "[{timestamp}] Uploaded {n} articles using {self.__class__.__name__}".format(**locals())
+            self.articleset.provenance = prov
+            self.articleset.save()
+        
         return self.articleset
 
 

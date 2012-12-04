@@ -38,6 +38,6 @@ class ArticleListToString(script.Script):
 
 
     def run(self, articleList):
-        return '\n'.join(('%s: %s' % (a.id, a.headline) for a in articleList))
+        return '\n'.join(('%s: %s' % (a.id, a.headline) for a in articleList.articles.all()))
         
         
