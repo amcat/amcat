@@ -266,6 +266,19 @@ from amcat.tools import amcattest
 
 
 class TestAmcatSolr(amcattest.PolicyTestCase):
+    def test_article_date(self):
+        """
+        Tests whether article dates stay the same with a roundtrip
+        amcat --> solr --> amcat.
+        """
+        with TestSolr() as solr:
+            db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla')
+            db_a = Article.objects.get(id=db_a.id)
+
+            solr.add_articles([db_a])
+            solr_a = solr.query("test", fields=["date"]).results[0]
+            self.assertEqual(db_a.date, solr_a['date'])
+
     def test_query(self):
         with TestSolr() as solr:
             a1 = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla')
