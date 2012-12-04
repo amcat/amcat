@@ -75,7 +75,14 @@ class Solr(object):
             response = response.next_batch()
 
     def query(self, query, filters=[], **kargs):
-        return self._connect().query(query, fq=filters, **kargs)
+        qres = self._connect().query(query, fq=filters, **kargs)
+
+        # Return articles with UTC as timezone (timezone agnostic)
+        if len(qres.results) and "date" in qres.results[0]:
+            for art in qres.results:
+                art['date'] = art['date'].replace(tzinfo=None)
+
+        return qres
 
     def query_ids(self, query, filters=[], **kargs):
         """Return a sequence of article ids for the given query"""
@@ -145,9 +152,9 @@ def _clean(text):
         
 def _get_article_dicts(article_ids):
     """Yield dicts suitable for uploading to Solr from article IDs"""
-    class GMT1(datetime.tzinfo):
-        def utcoffset(self, dt): return datetime.timedelta(hours=1)
-        def tzname(self, dt): return "GMT +1"
+    class GMT0(datetime.tzinfo):
+        def utcoffset(self, dt): return datetime.timedelta(hours=0)
+        def tzname(self, dt): return "GMT"
         def dst(self, dt): return datetime.timedelta(0)
     from amcat.models.articleset import ArticleSetArticle
 
@@ -161,7 +168,7 @@ def _get_article_dicts(article_ids):
                    section=_clean(a.section),
                    projectid=a.project_id,
                    mediumid=a.medium_id,
-                   date=a.date.replace(tzinfo=GMT1()),
+                   date=a.date.replace(tzinfo=GMT0()),
                    sets=sets.get(a.id))
 
 def filters_from_form(form):
@@ -266,6 +273,29 @@ from amcat.tools import amcattest
 
 
 class TestAmcatSolr(amcattest.PolicyTestCase):
+    def test_article_date(self):
+        """
+        Tests whether article dates stay the same with a roundtrip
+        amcat --> solr --> amcat.
+        """
+        with TestSolr() as solr:
+            db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla', date='2010-01-01')
+            db_a = Article.objects.get(id=db_a.id)
+
+            solr.add_articles([db_a])
+            solr_a = solr.query("test", fields=["date"]).results[0]
+            self.assertEqual(db_a.date, solr_a['date'])
+
+            # test date representation in solr
+            import re, urllib
+            url = "http://{solr.host}:{solr.port}/solr/select/?q=id%3A{db_a.id}".format(**locals())
+            xml = urllib.urlopen(url).read()
+            m = re.search('<date name="date">([^>]+)</date>', xml)
+            if not m:
+                self.fail("Date not found in Solr XML")
+            solr_date = m.group(1)
+            self.assertEqual(solr_date, db_a.date.strftime("%Y-%m-%dT%H:%M:%SZ"))
+
     def test_query(self):
         with TestSolr() as solr:
             a1 = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla')

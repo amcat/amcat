@@ -118,7 +118,7 @@ class DailyScript(Script):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
-    amcatlogging.setSentryHandler()
+    #amcatlogging.setSentryHandler()
     amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     amcatlogging.info_module("amcat.scraping.scraper")
     amcatlogging.debug_module("amcat.scraping.controller")        
