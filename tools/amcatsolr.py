@@ -272,12 +272,22 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
         amcat --> solr --> amcat.
         """
         with TestSolr() as solr:
-            db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla')
+            db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla', date='2010-01-01')
             db_a = Article.objects.get(id=db_a.id)
 
             solr.add_articles([db_a])
             solr_a = solr.query("test", fields=["date"]).results[0]
             self.assertEqual(db_a.date, solr_a['date'])
+
+            # test date representation in solr
+            import re, urllib
+            url = "http://{solr.host}:{solr.port}/solr/select/?q=id%3A{db_a.id}".format(**locals())
+            xml = urllib.urlopen(url).read()
+            m = re.search('<date name="date">([^>]+)</date>', xml)
+            if not m:
+                self.fail("Date not found in Solr XML")
+            solr_date = m.group(1)
+            self.assertEqual(solr_date, db_a.date.strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     def test_query(self):
         with TestSolr() as solr:
