@@ -90,7 +90,8 @@ def get_scrapers(date=None, days_back=7, use_expected_articles = False, **option
     for s in Scraper.objects.filter(run_daily=True):
         scraped = s.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
         if use_expected_articles:
-            from amcat.scripts.maintenance.expected_articles import expected_articles
+            from amcat.scripts.maintenance.expected_articles import get_expected_articles
+            expected_articles = get_expected_articles()
             for day in dates:
                 if day not in scraped.keys():
                     scraped[day] = 0

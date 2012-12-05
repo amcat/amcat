@@ -98,8 +98,10 @@ class DailyScript(Script):
 
         scrapers = list(get_scrapers(date=date, use_expected_articles = True))
 
-        log.info("Starting scraping with {} scrapers: {}".format(
-                len(scrapers), [s.__class__.__name__ for s in scrapers]))
+        log.info("Starting scraping with {n} scrapers: {classnames}".format(
+                n = len(scrapers),
+                classnames = [s.__class__.__name__ for s in scrapers]))
+
         count, messages =  scrape_logged(RobustController(), scrapers, deduplicate=True)
         
         log.info("deduplicating...")

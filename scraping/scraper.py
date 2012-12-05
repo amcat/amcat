@@ -136,9 +136,10 @@ class Scraper(Script):
         @return: a sequence of Article objects ready to .save()
         """
         log.debug(u"Scraping unit {}".format(unit))
+
         for article in self._scrape_unit(unit):
             article = self._postprocess_article(article)
-            log.debug(unicode(".. yields article {}".format(article),'utf-8'))
+            log.debug(unicode(".. yields article {article}".format(**locals()),'utf-8'))
             article.scraper = self
             yield article
 
@@ -243,76 +244,6 @@ class HTTPScraper(Scraper):
             uri = iri2uri(url)
             return self.opener.opener.open(uri, encoding)
      
-from urlparse import urljoin
-import urllib2
-from urllib import quote
-
-class Crawler(HTTPScraper):
-    options_form = ScraperForm
-    initial_url = ""
-    queue = set([])
-    completed_urls = []
-    include_patterns = []
-    deny_patterns = []
-
-    def _get_units(self):
-        for unit in self.crawl_page(self.initial_url):
-            yield unit
-        while self.queue:
-            for unit in self.crawl_page(self.queue.pop()):
-                yield unit
-
-    def crawl_page(self,url):
-        print("Queue: {}, Done: {}; Crawling {}".format(
-                len(self.queue),
-                len(self.completed_urls),
-                repr(url))
-              )
-        self.completed_urls.append(url)
-        try:
-            doc = self.getdoc(url)
-        except (urllib2.HTTPError,urllib2.URLError) as e:
-            print("\n\n{}\n\n".format(e))
-            return
-        if not doc:
-            return
-        if self.article_url(url):
-            yield [url,doc]
-        urls = [urljoin(url,a.get('href')) for a in doc.cssselect("a")]
-        for url in urls:
-            try:
-                url = quote(url, safe="%/:=&?~#+!$,;'@()*[]")
-            except KeyError:
-                break
-            if self.correct_url(url):
-                self.queue.add(url)
-
-    def correct_url(self,url):
-        conditions = [
-            'c = url[0:4] == "http"',
-            "c = any([pattern.search(url) for pattern in self.include_patterns])",
-            "c = not any([pattern.search(url) for pattern in self.deny_patterns])",
-            "c = url not in self.completed_urls",
-            ]
-        for con in conditions:
-            exec con
-            if not c:
-                return False
-            # check condition one by one for speed
-
-        return True
-
-class AuthCrawler(Crawler):
-    """Base class for crawlers that require a login"""
-    options_form = AuthForm
-
-    def _login(self, username, password):
-        """Login to the resource to crawl, if needed. Will be called 
-        at the start of get_units()"""
-        pass
-
-    def _initialize(self):
-        self._login(self.options['username'],self.options['password'])
 
 
 def _set_default(obj, attr, val):
@@ -321,45 +252,7 @@ def _set_default(obj, attr, val):
     except ObjectDoesNotExist:
         pass # django throws DNE on x.y if y is not set and not nullable
     setattr(obj, attr, val)
-
-
-class MultiScraper(object):
-    """
-    Class that encapsulated multiple scrapers behind a single scraper interface
-    Does not formally inherit from Scraper because it is not a runnable script
-    """
-
-    def __init__(self, scrapers):
-        """@param scrapers: instantiated Scraper objects ('Ready to start scraping') """
-        log.info("initializing multiscraper with {} scrapers".format(len(scrapers)))
-        self.scrapers = scrapers
-        self.errors = {}
-
-    def get_units(self):
-        log.info("Scraping {} scrapers".format(len(self.scrapers)))
-        for scraper in self.scrapers:
-            log.info("Starting scraping for {scraper}".format(**locals()))
-            try:
-                units = scraper.get_units()
-            except Exception as e:
-                yield (None,e)
-                continue
-            
-            for (unit, exception) in units:
-                yield ((scraper,unit),exception)
-    
-            
-
-    def scrape_unit(self, unit):
-        """Call the scraper for the given unit. Will yield article objects
-        with a .scraper custom attribute indicating the 'concrete' scraper"""
-
-        (scraper, unit) = unit
-        for a in scraper.scrape_unit(unit):
-            a.scraper = scraper
-            
-            yield a
-            
+   
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
