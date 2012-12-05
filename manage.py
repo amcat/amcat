@@ -18,6 +18,6 @@ except ImportError:
 if __name__ == "__main__":
     from amcat.tools import amcatlogging, initialize
     amcatlogging.setup()
-    amcatlogging.debug_module("amcat.tools.initialize")
+    #amcatlogging.debug_module("amcat.tools.initialize")
     initialize.set_signals()
     execute_manager(settings)

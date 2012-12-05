@@ -63,8 +63,8 @@ class ScraperForm(forms.Form):
         return name
     
     @classmethod
-    def get_empty(cls, project=None, post=None, **_options):
-        f = cls(post) if post is not None else cls()
+    def get_empty(cls, project=None, post=None, files=None, **_options):
+        f = cls(post, files) if post is not None else cls()
         if project:
             f.fields['project'].initial = project.id
             f.fields['project'].widget = HiddenInput()
@@ -135,7 +135,7 @@ class Scraper(Script):
         and medium filled in automatically.
         @return: a sequence of Article objects ready to .save()
         """
-        log.debug(unicode("Scraping unit {}".format(unit),'utf-8'))
+        log.debug(u"Scraping unit {}".format(unit))
         for article in self._scrape_unit(unit):
             article = self._postprocess_article(article)
             log.debug(unicode(".. yields article {}".format(article),'utf-8'))

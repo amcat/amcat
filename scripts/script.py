@@ -69,7 +69,7 @@ class Script(object):
         validate(self.bound_form)
 
 
-    def _bind_form(self, options=None, **kargs):
+    def _bind_form(self, options=None,  **kargs):
         """
         Create a bound form from the options and key-word arguments. Will raise
         a ValueError if no bound instance of the form for this script could be
@@ -89,7 +89,9 @@ class Script(object):
             raise ValueError("Invalid options form type: {0}".format(self.options_form))
         if not isinstance(options, (dict, QueryDict, MergeDict)):
             options = kargs
-        return self.options_form(options)
+        # specify options as file as well, django will pick it from the right place
+        # (why does django distinguish between POST and FILES as both are dicts...?)
+        return self.options_form(options, options)
 
     @classmethod
     def get_empty_form(cls, **options):

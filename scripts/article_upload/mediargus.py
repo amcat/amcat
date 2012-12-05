@@ -41,7 +41,8 @@ from amcat.tools.toolkit import readDate
 
 class Mediargus(UploadScript):
 
-    def split_text(self, text):
+    def split_file(self, file):
+        text = self.decode(file.read())
         text = text.replace('\r\n','\n')
         text = text.replace('\r','\n')
 
@@ -78,3 +79,27 @@ if __name__ == '__main__':
     a = cli.run_cli(Mediargus, handle_output=False)
 
 
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestMediargus(amcattest.PolicyTestCase):
+
+    def setUp(self):
+        self.test_file = os.path.join(os.path.dirname(__file__), 'test_files', 'mediargus.txt')
+        self.test_text = open(self.test_file).read().decode('latin-1')
+
+    def test_split(self):
+        articles = mediargus.Mediargus(project=amcattest.create_test_project().id).split_text(self.test_text)
+        self.assertEqual(len(articles), 100)
+        for article in articles:
+            self.assertEqual(len(article), 2)
+
+    def test_parse(self):
+        m = mediargus.Mediargus(project=amcattest.create_test_project().id)
+        articles = m.split_text(self.test_text)
+        a = m.parse_document(articles[99])
+        self.assertEqual(a.headline, 'Maatschappijkritiek en actualiteit als inspiratie')

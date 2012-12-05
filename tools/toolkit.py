@@ -969,7 +969,7 @@ def _monthnr(monthname):
                 return i+1
 
 
-def readDate(string, lax=False, rejectPre1970=False, american=False):
+def read_date(string, lax=False, rejectPre1970=False, american=False):
     """Try to read a date(time) string with unknown format
 
     Attempt a number of date formats to read str
@@ -1042,7 +1042,7 @@ def readDate(string, lax=False, rejectPre1970=False, american=False):
         #warn("Exception on reading datetime %s:\n%s\n%s" % (string, e, trace))
         if lax: return None
         else: raise
-
+readDate = read_date
 
 def writeDate(datetime, lenient=False):
     """Convenience method for writeDateTime(time=False)"""

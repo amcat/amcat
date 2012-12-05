@@ -20,6 +20,9 @@
 from django import forms
 from amcat.scripts import scriptmanager
 from amcat.scripts.script import Script
+from django.core.files import File
+
+
 import argparse
 import sys
 from amcat.tools import amcatlogging, classtools
@@ -115,6 +118,9 @@ def add_argument_from_field(parser, name, field):
             helpfields.append("(>10 possible values)")
         else:
             helpfields.append("Possible values are %s" % "; ".join("%s (%s)" % (kv) for kv in field.choices))
+    elif type(field) in _FIELD_HELP_MAP:
+        helpfields.insert(0, _FIELD_HELP_MAP[type(field)])
+        
     help = ". ".join(helpfields)
 
     # set type OR action_const as extra arguments depending on type
@@ -130,11 +136,19 @@ def add_argument_from_field(parser, name, field):
 
     parser.add_argument(*argname, help = help, default=field.initial, metavar=name, **args)
 
-
+def django_file(fn):
+    return File(open(fn))
+    
 _FIELD_MAP = {
     forms.IntegerField : int,
     forms.BooleanField : bool,
+    forms.FileField : django_file,
     }
+_FIELD_HELP_MAP = {
+    forms.IntegerField : "(number)",
+    forms.FileField : "(filename)",
+    }
+
 def argument_type_from_field(field):
     """Get the proper python type to parse a command line option"""
     for (ftype, type) in _FIELD_MAP.iteritems():

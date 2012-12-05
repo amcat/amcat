@@ -75,9 +75,9 @@ class CSVForm(UploadScript.options_form):
 class CSV(UploadScript):
     options_form = CSVForm
 
-    def split_text(self, text):
+    def split_file(self, file):
 
-        return csv.DictReader(StringIO(text.encode('utf-8')))
+        return csv.DictReader(file)
 
     @property
     def _medium(self):
