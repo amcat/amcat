@@ -35,6 +35,7 @@ class DeduplicateForm(forms.Form):
     first_date = forms.DateField(required = False)
     last_date = forms.DateField(required = False)    
     articleset = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
+    recycle_bin_project = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
     
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
@@ -88,16 +89,14 @@ class DeduplicateScript(Script):
         """
         deduplicates given articleset for given date
         """
-        log.info("Deduplicating for articleset '{}' at {}".format(
-                self.options['articleset'],
-                self.options['date']))
+        log.info("Deduplicating for articleset '{articleset}' at {date}".format(**self.options)
 
         articles = Article.objects.filter(
             articlesetarticle__articleset = self.options['articleset'],
             date__contains = self.options['date']
             )
 
-        log.info("Selected {} articles".format(len(articles)))
+        log.info("Selected {n} articles".format(n = len(articles)))
 
         idDict = {}
         for article in articles:
@@ -115,14 +114,15 @@ class DeduplicateScript(Script):
         articles.filter(id__in = removable_ids).update(project = 2) #trash project
         ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
 
-        log.info("Moved {} duplications to trash".format(len(removable_ids)))
+        log.info("Moved {n} duplications to trash".format(n = len(removable_ids)))
 
 
 
 def deduplicate_scrapers(date):
     options = {
-        'last_date':date,
-        'first_date':date - timedelta(days = 7)
+        'last_date' : date,
+        'first_date' : date - timedelta(days = 7),
+        'recycle_bin_project' : 1
         }
 
     scrapers = Scraper.objects.filter(run_daily='t')

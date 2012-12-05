@@ -50,8 +50,8 @@ class OmniScraper(Script):
 
     def get_normal_ranges(self):
         log.debug("importing normal ranges...")
-        from expected_articles import expected_articles as ranges
-        return ranges
+        from expected_articles import get_expected_articles
+        return get_expected_articles()
 
     def run(self,input):    
         ranges = self.get_normal_ranges()
@@ -61,10 +61,10 @@ class OmniScraper(Script):
             log.info("running checks and retries for {day}".format(**locals()))
             for scraper, rangelist in ranges.items():
 
-                log.debug("getting amount of articles of scraper {} day {}".format(scraper,day))
+                log.debug("getting amount of articles of scraper {scraper} day {day}".format(**locals())
                 n_articles = self.get_n_articles(scraper,day)
                 (lower,upper) = rangelist[day.weekday()]
-                log.debug("n_articles: {}, lower: {}, upper: {}".format(n_articles,lower,upper))
+                log.debug("n_articles: {n_articles}, lower: {lower}, upper: {upper}".format(n_articles,lower,upper))
                 if n_articles < lower:
                     s_instance = scraper.get_scraper(date=day)
 
@@ -87,7 +87,8 @@ class OmniScraper(Script):
         options = {
             'first_date' : day,
             'last_date' : day,
-            'articleset' : articleset_id
+            'articleset' : articleset_id,
+            'recycle_bin_project' : 1
             }
         DeduplicateScript(**options).run(None)
         

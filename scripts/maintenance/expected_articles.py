@@ -1,21 +1,30 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 
 from amcat.models.scraper import Scraper
 from amcat.models.article import Article
 from django.db.models import Count
 from datetime import date,timedelta
 
-scrapers = Scraper.objects.all()
 
 def scraper_ranges(scraper):
-    returns = [
-        (0,0),
-        (0,0),
-        (0,0),
-        (0,0),
-        (0,0),
-        (0,0),
-        (0,0)
-        ]
+    returns = [(0,0)] * 7
 
     articleset_id = scraper.articleset_id
     rows = Article.objects.filter(articlesetarticle__articleset = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id'))
@@ -30,15 +39,7 @@ def scraper_ranges(scraper):
 
 
 def sort_weekdays(rows):
-    days = [
-        [], #Monday
-        [],
-        [],
-        [],
-        [],
-        [],
-        []  #Sunday
-        ]
+    days = [[]] * 7
 
     for row in rows:
         day = row['date'].weekday()
@@ -58,19 +59,17 @@ def third_quartile(numbers):
         pointer = int(L*(3.0/4.0))
         return numbers[pointer]
 
-def generate_ranges():
+def get_expected_articles():
     d_ranges = {}
-    for scraper in scrapers:
+    for scraper in Scraper.objects.all():
         d_ranges[scraper] = scraper_ranges(scraper)
     return d_ranges
 
 
-expected_articles = generate_ranges()
-
 
 if __name__ == '__main__':
     from pprint import pprint
-    pprint(expected_articles)
+    pprint(get_expected_articles())
         
 
     
