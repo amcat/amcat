@@ -61,7 +61,7 @@ class OmniScraper(Script):
             log.info("running checks and retries for {day}".format(**locals()))
             for scraper, rangelist in ranges.items():
 
-                log.debug("getting amount of articles of scraper {scraper} day {day}".format(**locals())
+                log.debug("getting amount of articles of scraper {scraper} day {day}".format(**locals()))
                 n_articles = self.get_n_articles(scraper,day)
                 (lower,upper) = rangelist[day.weekday()]
                 log.debug("n_articles: {n_articles}, lower: {lower}, upper: {upper}".format(n_articles,lower,upper))

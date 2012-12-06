@@ -89,11 +89,10 @@ class DeduplicateScript(Script):
         """
         deduplicates given articleset for given date
         """
-        log.info("Deduplicating for articleset '{articleset}' at {date}".format(**self.options)
+        log.info("Deduplicating for articleset '{articleset}' at {date}".format(**self.options))
 
-        articles = Article.objects.filter(
-            articlesetarticle__articleset = self.options['articleset'],
-            date__contains = self.options['date']
+        articles = Article.objects.filter( articlesetarticle__articleset = self.options['articleset'],
+                                           date__contains = self.options['date']
             )
 
         log.info("Selected {n} articles".format(n = len(articles)))
