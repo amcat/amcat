@@ -33,7 +33,7 @@ from amcat.models.coding.codebook import Codebook, get_codebook
 
 from amcat.models.coding.codingschema import CodingSchema, RequiredValueError
 
-from . import serialiser
+from amcat.models.coding import serialiser
 
 from django.db import models
 

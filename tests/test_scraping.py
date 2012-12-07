@@ -84,7 +84,7 @@ class TestScraping(amcattest.PolicyTestCase):
     def setUp(self):
         Scraper.objects.all().delete()
         self.ds = Scraper.objects.create(module='amcat.tests.test_scraping',
-                                         class_name='TestDatedScraper', run_daily=True
+                                         class_name='TestDatedScraper', run_daily=True,
                                          articleset='TestArticleSet')
         self.dbs =Scraper.objects.create(module='amcat.tests.test_scraping',
                                          class_name='TestDBScraper', run_daily=True,
