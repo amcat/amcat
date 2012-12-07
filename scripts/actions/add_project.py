@@ -56,7 +56,7 @@ class AddProjectForm(forms.ModelForm):
 
     class Meta:
         model = Project
-        fields = ['name','description','active']
+        fields = ['name','description','active','index_default']
 
 
 class AddProject(Script):
