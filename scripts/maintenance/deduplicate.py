@@ -44,7 +44,7 @@ class DeduplicateScript(Script):
         mode = self.handle_input()
         if mode == "date range":
             self.options['date'] = self.options['first_date']
-            self.run_range()
+            self.run_range(_input)
 
         elif mode == "single date":
             self.options['date'] = self.options['first_date']

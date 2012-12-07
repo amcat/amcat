@@ -39,14 +39,12 @@ def scraper_ranges(scraper):
 
 
 def sort_weekdays(rows):
-    days = [[]] * 7
-
+    days = [[] for L in range(7)] #[[]] * 7 provides 7 of the same list, so don't edit
     for row in rows:
-        day = row['date'].weekday()
-        days[day].append(row)
-
-    for rows in days:
-        yield rows
+        wkday = row['date'].weekday()
+        days[wkday].append(row)
+        
+    return days
         
 def third_quartile(numbers):
     numbers = sorted(numbers)
