@@ -28,7 +28,7 @@ try:
 except ImportError:
     import configparser
 
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', "Y") in  ("1","Y", "ON")
 
 INSTALLED_APPS = (
     'amcat',
