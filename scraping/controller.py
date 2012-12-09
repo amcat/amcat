@@ -28,7 +28,6 @@ from amcat.tools.toolkit import to_list, retry
 from amcat.tools.multithread import distribute_tasks, QueueProcessorThread, add_to_queue_action
 from amcat.tools import amcatlogging
 
-from amcat.scraping.scraper import MultiScraper
 from django.db import transaction
 
 import traceback

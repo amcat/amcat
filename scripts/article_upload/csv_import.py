@@ -33,7 +33,7 @@ from django import forms
 from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.models.article import Article
-from amcat.models.medium import Medium
+from amcat.models.medium import Medium, get_or_create_medium
 
 from amcat.tools.toolkit import readDate
 
@@ -42,8 +42,18 @@ REQUIRED = [True] * 2 + [False] * (len(FIELDS) - 2)
 PARSERS = dict(date=readDate, pagenr=int, externalid=int)
 
 class CSVForm(UploadScript.options_form):
-    medium = forms.ModelChoiceField(queryset=Medium.objects.all())
+    medium = forms.ModelChoiceField(queryset=Medium.objects.all(), required=False)
+    medium_name = forms.CharField(
+        max_length=Article._meta.get_field_by_name('medium')[0].max_length,
+        required = False)
 
+    def clean_medium_name(self):
+        name = self.cleaned_data['medium_name']
+        if not bool(name) ^ bool(self.cleaned_data['medium']):
+            raise forms.ValidationError("Please specify either medium or medium_name")
+        return name
+    
+    
     def __init__(self, *args, **kargs):
         super(CSVForm, self).__init__(*args, **kargs)
         for fieldname, required in zip(FIELDS, REQUIRED):
@@ -65,12 +75,22 @@ class CSVForm(UploadScript.options_form):
 class CSV(UploadScript):
     options_form = CSVForm
 
-    def split_text(self, text):
+    def split_file(self, file):
 
-        return csv.DictReader(StringIO(text.encode('utf-8')))
+        return csv.DictReader(file)
 
+    @property
+    def _medium(self):
+        if self.options['medium']:
+            return self.options['medium']
+        if self.options['medium_name']:
+            med = get_or_create_medium(self.options['medium_name'])
+            self.options['medium'] = med
+            return med
+        raise ValueError("No medium specified!")
+    
     def parse_document(self, row):
-        kargs = dict(medium = self.options["medium"])
+        kargs = dict(medium = self._medium)
         for fieldname in FIELDS:
             csvfield = self.options[fieldname]
             if not csvfield: continue
