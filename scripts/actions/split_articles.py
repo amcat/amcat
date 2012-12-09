@@ -34,23 +34,24 @@ class SplitArticles(Script):
     """
     Perform a keyword query on an articleset.
     """
-
     class options_form(forms.Form):
         articlesets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
 
     @transaction.commit_on_success    
     def run(self, _input=None):
         sets = self.options['articlesets']
-	to_split = list(Article.objects.filter(articlesets__in=sets, sentences=None) )
-	n = len(to_split)
-	log.info("Will split {n} articles".format(**locals()))
+        to_split = list(Article.objects.filter(articlesets__in=sets, sentences=None))
+        n = len(to_split)
 
-	for i, article in enumerate(to_split):
-	    if not i % 100:
-		log.info("Splitting article {i}/{n}".format(**locals()))
-	    sbd.create_sentences(article)
-	log.info("Done!")
-	    
+        log.info("Will split {n} articles".format(**locals()))
+        for i, article in enumerate(to_split):
+            if not i % 100:
+                log.info("Splitting article {i}/{n}".format(**locals()))
+
+            sbd.create_sentences(article)
+
+        log.info("Splitted {n} articles!".format(**locals()))
+        
     
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
