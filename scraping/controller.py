@@ -85,10 +85,10 @@ class RobustController(Controller):
         for unit in scraper.get_units():
             log.debug("{scraper} received unit {unit}".format(**locals()))
             try:
-                for article in self.scrape_unit():
-                    result += articles
-            except Exception:
-                log.exception("exception within scrape_unit")
+                for article in self.scrape_unit(scraper, unit):
+                    result.append(article)
+            except Exception as e:
+                log.exception("exception within get_units")
 
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
 
@@ -99,7 +99,17 @@ class RobustController(Controller):
 
     @transaction.commit_on_success
     def scrape_unit(self, scraper, unit):
-        for unit in scraper.scrape_unit(unit):
+        try:
+            scrapedunits = list(scraper.scrape_unit(unit))
+        except Exception as e:
+            log.exception("exception within scrape_unit")
+            return
+
+        if len(scrapedunits) == 0:
+            log.warning("scrape_unit returned 0 units")
+        
+        for unit in scrapedunits:
+            log.info("saving unit {unit}".format(**locals()))
             unit.save()
             yield unit
         
