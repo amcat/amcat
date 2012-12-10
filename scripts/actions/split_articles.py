@@ -48,7 +48,7 @@ class SplitArticles(Script):
             if not i % 100:
                 log.info("Splitting article {i}/{n}".format(**locals()))
 
-            sbd.create_sentences(article)
+            sbd.get_or_create_sentences(article)
 
         log.info("Splitted {n} articles!".format(**locals()))
         
