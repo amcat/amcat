@@ -46,10 +46,10 @@ MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
 <p>The following scrapers were run:</p>
 {table}
 
-<h3>Log Details</h3>
-<pre>
-{messages}
-</pre>"""
+<p>For log details, ssh to amcat-dev.labs.vu.nl, then open /home/amcat/log/daily_{date.year:04d}-{date.month:02d}-{date.day:02d}.txt</p>
+
+<p>For a complete overview of last weeks results, navigate to <a href="http://www.amcat-dev.labs.vu.nl/navigator/scrapers">http://www.amcat-dev.labs.vu.nl/navigator/scrapers</a></p>
+"""
 
 
 MAIL_ASCII = MAIL_HTML
@@ -58,37 +58,63 @@ for tag in ["h3", "p", "pre"]:
 
 EMAIL = "amcat-scraping@googlegroups.com"
 
+from django.core.mail import send_mail
+
 def send_email(count, messages, date):
     
-    t = table3.DictTable()
-    
+    scrapers = set([i[0] for i in count.items()])
+    data = {scraper : {} for scraper in scrapers}
+
     for (scraper, n) in count.items():
-        t.addValue(scraper.__class__.__name__, scraper.options['date'], n)
+        data[scraper][scraper.options['date']] = n
 
-    t.rows = sorted(t.rows)
-    t.columns = reversed(sorted(t.columns))
 
+
+    days = [date - timedelta(days = n) for n in range(7)]
+
+    for (scraper, results) in data.items():
+        for day in days:
+            if day not in results.keys():
+                results[day] = "&nbsp;"
+
+    #first row
+    table = "<table><tr>"
+    for day in days:
+        table += "<td>{day}</td>".format(**locals())
+    table += "</tr>"
+
+    #each row
+    for (scraper, results) in data.items():
+        #first cell of row
+        table += "<tr><td>{scraper.__class__.__name__}</td>".format(**locals())
+        for (day, n) in results.items():
+            table += "<td>{n}</td>".format(**locals())
+        table += "</tr>"
+    table += "</table>"
+
+
+    print(table)
 
     n = sum(count.values())
-    tabledata_ascii = t.output(useunicode=False, box=False, rownames=True)
-    tabledata_html = table2html(t)
     succesful = len([1 for (s,n2) in count.items() if n2>0])
     total = len(count.items())
 
     datestr = toolkit.writeDate(date.today())
 
-    mail_ascii = MAIL_ASCII.format(table=tabledata_ascii, **locals())
-    mail_html = MAIL_HTML.format(table=tabledata_html, **locals())
-    
-
     subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
     
-    sendmail.sendmail("toon.alfrink@gmail.com", EMAIL, subject, mail_html, mail_ascii)
+    html = MAIL_HTML.format(**locals())
 
-    
+
+    send_mail(subject, html, "toon.alfrink@gmail.com", ["toon.alfrink@gmail.com"])
+
+
+from amcat.models.project import Project    
 
 class DailyForm(forms.Form):
     date = forms.DateField()
+    deduplicate = forms.BooleanField()
+    trash_project = forms.ModelChoiceField(Project.objects.all(), required = False)
 
 class DailyScript(Script):
     options_form = DailyForm
@@ -102,12 +128,15 @@ class DailyScript(Script):
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
 
-        count, messages =  scrape_logged(RobustController(), scrapers, deduplicate=True)
-        
-        log.info("deduplicating...")
-        
-        deduplicate_scrapers(date)
+        if self.options['deduplicate'] and self.options['trash_project'] == None:
+            raise ValueError("insert trash project number when deduplicating, most often this is 1")
 
+        count, messages =  scrape_logged(
+            RobustController(), 
+            scrapers, 
+            deduplicate = self.options['deduplicate'],
+            trash_project_id = self.options['trash_project'].id)
+       
         log.info("Sending email...")
         
         send_email(count, messages, date)
@@ -120,8 +149,8 @@ class DailyScript(Script):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
-    #amcatlogging.setSentryHandler()
     amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     amcatlogging.info_module("amcat.scraping.scraper")
     amcatlogging.debug_module("amcat.scraping.controller")        
+    amcatlogging.set_sentry_handler()
     cli.run_cli(DailyScript)
