@@ -59,7 +59,7 @@ LICENSE = """###################################################################
 ###########################################################################
 """
 
-from . import toolkit
+from amcat.tools import toolkit
 
 # use unique ids for different model objects to avoid false negatives
 ID = 1000000000

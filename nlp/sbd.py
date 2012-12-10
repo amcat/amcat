@@ -48,6 +48,19 @@ def get_split_regex():
         _split_regex = re.compile(expr)
         return _split_regex
 
+@toolkit.to_list
+def get_or_create_sentences(article):
+    """
+    Split the given article object into sentences and save the sentences models
+    to the database. Returns a list of the resulting Sentence objects.
+
+    This function (as opposed to create_sentences) does not error when an article
+    is already split.
+    """
+    sents = Sentence.objects.filter(article=article)
+    return sents if sents.exists() else create_sentences(article)
+
+
 @toolkit.to_list # consume the generator to make sure sentences are created
 def create_sentences(article):
     """
