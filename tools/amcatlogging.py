@@ -151,12 +151,11 @@ def setStreamHandler(*args, **kargs):
     root.addHandler(h)
     return h
 
-def setSentryHandler(*args, **kargs):
-    root = logging.getLogger()
-    from raven.handlers.logging import SentryHandler
-    h = SentryHandler(*args, **kargs)
-    root.addHandler(h)
-
+def set_sentry_handler(*args, **kargs):
+    """Add a Sentry Handler to the *amcat* logger. Do not add to the root logger because this causes a recursion error"""
+    from sentry.client.handlers import SentryHandler
+    logger = logging.getLogger("amcat")
+    logger.addHandler(SentryHandler())
 
 def setFileHandler(filename, directory=None, filesize=50):
     """add a RotatingFileHanlder to the root logger with module level filters"""
