@@ -62,7 +62,7 @@ class Coding(AmcatModel):
     sentence = models.ForeignKey(Sentence, null=True)
 
     comments = models.TextField(blank=True, null=True)
-    status = models.ForeignKey(CodingStatus, default=0)
+    status = models.ForeignKey(CodingStatus, default=STATUS_NOTSTARTED)
     
     class Meta():
         db_table = 'codings'
