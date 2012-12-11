@@ -51,9 +51,9 @@ def create_admin():
         sup = su.get_profile()
         sup.role = Role.objects.get(label="superadmin", projectlevel=False)
         sup.save()
-        print("#"*70)
-        print("# A default superuser `amcat` with password `amcat` has been created. #")
-        print("#"*70)
+
+        log.info("\n{line}\n#   A default superuser `amcat` with password `amcat` has been created.   #\n{line}"
+                 .format(line="#"*75))
 
 def register_plugins():
     log.info("Registering plugins...")
