@@ -91,7 +91,7 @@ class Script(object):
             options = kargs
         # specify options as file as well, django will pick it from the right place
         # (why does django distinguish between POST and FILES as both are dicts...?)
-        return self.options_form(options, options)
+        return self.options_form(options)
 
     @classmethod
     def get_empty_form(cls, **options):

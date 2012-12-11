@@ -44,26 +44,19 @@ def days(start,end):
         yield end
         end -= timedelta(days=1)
 
-
+from amcat.models.scraper import Scraper
 
 class OmniScraper(Script):
 
-    def get_normal_ranges(self):
-        log.debug("importing normal ranges...")
-        from expected_articles import get_expected_articles
-        return get_expected_articles()
-
     def run(self,input):    
-        ranges = self.get_normal_ranges()
-        
         start = date(2012,01,01);end=date.today() - timedelta(days=1)
         for day in reversed(sorted(days(start,end))):
             log.info("running checks and retries for {day}".format(**locals()))
-            for scraper, rangelist in ranges.items():
+            for scraper in Scraper.objects.all():
 
                 log.debug("getting amount of articles of scraper {scraper} day {day}".format(**locals()))
                 n_articles = self.get_n_articles(scraper,day)
-                (lower,upper) = rangelist[day.weekday()]
+                (lower,upper) = scraper.statistics[day.weekday()]
                 log.debug("n_articles: {n_articles}, lower: {lower}, upper: {upper}".format(n_articles,lower,upper))
                 if n_articles < lower:
                     s_instance = scraper.get_scraper(date=day)

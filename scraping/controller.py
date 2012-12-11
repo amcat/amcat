@@ -28,6 +28,8 @@ from amcat.tools.toolkit import to_list, retry
 from amcat.tools.multithread import distribute_tasks, QueueProcessorThread, add_to_queue_action
 from amcat.tools import amcatlogging
 
+from amcat.scripts.maintenance.deduplicate import DeduplicateScript
+
 from django.db import transaction
 
 import traceback
@@ -80,56 +82,37 @@ class RobustController(Controller):
         log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
 
-        data = {'scraper':scraper}
-        for unit in self.get_units(scraper):
-            data['unit'] = unit
-            log.debug("received unit", extra = data)
-            for scraped in self.scrape_unit(scraper, unit):
-                result.append(scraped)
+        for unit in scraper.get_units():
+            log.debug("{scraper} received unit {unit}".format(**locals()))
+            try:
+                for article in self.scrape_unit(scraper, unit):
+                    result.append(article)
+            except Exception as e:
+                log.exception("exception within get_units")
 
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
+
+        if not result:
+            raise Exception()
         
         return result
 
-    def get_units(self, scraper):
-        units = scraper.get_units()
-        i = 0
-        while True:
-            try:
-                unit = units.next()
-            except StopIteration:
-                if i == 0:
-                    data = {'scraper':scraper}
-                    log.error("Scraper returned 0 units", data)
-                break
-            except Exception as e:
-                traceback.print_exc()
-                data = {'scraper':scraper,'iteration':i,'exception':e}
-                log.warning("Exception occurred in get_units", extra = data)
-            else:
-                yield unit
-            i += 1
-
     @transaction.commit_on_success
     def scrape_unit(self, scraper, unit):
-        scraped_units = scraper.scrape_unit(unit)
-        i = 0
-        while True:
-            logdata = {'scraper':scraper,'unit':unit,'iteration':i}
-            try:
-                scraped = scraped_units.next()
-                scraped = self.save(scraped)
-            except StopIteration:
-                if i == 0:
-                    log.warning("scraping unit returned no articles", extra = logdata)
-                break
-            except Exception:
-                traceback.print_exc()
-                log.warning("Exception occurred in scrape_unit", extra = logdata)
-            else:
-                yield scraped
-            i += 1
+        try:
+            scrapedunits = list(scraper.scrape_unit(unit))
+        except Exception as e:
+            log.exception("exception within scrape_unit")
+            return
 
+        if len(scrapedunits) == 0:
+            log.warning("scrape_unit returned 0 units")
+        
+        for unit in scrapedunits:
+            log.info("saving unit {unit}".format(**locals()))
+            unit.save()
+            yield unit
+        
 
 
 class ThreadedController(Controller):
@@ -162,7 +145,7 @@ class ThreadedController(Controller):
         return result
 
 
-def scrape_logged(controller, scrapers, deduplicate = False):
+def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = None):
     """Use the controller to scrape the given scrapers.
 
     @return: a tuple (counts, log)
@@ -173,15 +156,20 @@ def scrape_logged(controller, scrapers, deduplicate = False):
     from sentry.client.handlers import SentryHandler
     amcatlogging.install_handler(SentryHandler())
 
-    if deduplicate:
-        pass #to do
-
     counts = dict((s, 0) for s in scrapers)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for s in scrapers:
             for a in controller.scrape(s):
                 counts[s] += 1
+            if deduplicate == True:
+                options = {
+                    'first_date' : s.options['date'],
+                    'last_date' : s.options['date'],
+                    'articleset' : s.articleset.id,
+                    'recycle_bin_project' : trash_project_id
+                    }
+                DeduplicateScript(**options).run(None)
                 
     return counts, log_stream.getvalue()
 
