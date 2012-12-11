@@ -30,11 +30,11 @@ except ImportError:
 
 DEBUG = os.environ.get('DJANGO_DEBUG', "Y") in  ("1","Y", "ON")
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'amcat',
     'django.contrib.auth',
     'django.contrib.contenttypes',
-    )
+    ]
 AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 
 #TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'

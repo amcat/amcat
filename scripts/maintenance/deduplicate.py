@@ -110,7 +110,7 @@ class DeduplicateScript(Script):
             if len(ids) > 1:
                 removable_ids.extend(sorted(ids)[1:])
 
-        articles.filter(id__in = removable_ids).update(project = 2) #trash project
+        articles.filter(id__in = removable_ids).update(project = self.options['recycle_bin_project'])
         ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
 
         log.info("Moved {n} duplications to trash".format(n = len(removable_ids)))

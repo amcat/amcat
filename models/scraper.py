@@ -22,6 +22,8 @@
 import datetime
 from django.db import models
 from amcat.tools.model import AmcatModel
+from amcat.tools.djangotoolkit import JsonField
+import json
 
 class Scraper(AmcatModel):
     __label__ = 'label'
@@ -40,6 +42,7 @@ class Scraper(AmcatModel):
     # Storage options
     articleset = models.ForeignKey("amcat.ArticleSet", null=True)
 
+    statistics = JsonField(null=True)
 
     class Meta():
         app_label = 'amcat'
@@ -89,20 +92,13 @@ def get_scrapers(date=None, days_back=7, use_expected_articles = False, **option
     dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
     for s in Scraper.objects.filter(run_daily=True):
         scraped = s.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
-        if use_expected_articles:
-            from amcat.scripts.maintenance.expected_articles import get_expected_articles
-            expected_articles = get_expected_articles()
-            for day in dates:
-                if day not in scraped.keys():
-                    scraped[day] = 0
-                if scraped[day] <= expected_articles[s][day.weekday()][0]:
-                    yield s.get_scraper(date = day, **options)
-
-
-        else:
-            for day in dates:
-                if day not in scraped:
-                    yield s.get_scraper(date = day, **options)
+        for day in dates:
+            if day not in scraped.keys():
+                scraped[day] = 0
+            if s.statistics == None:
+                yield s.get_scraper(date = day, **options)
+            elif scraped[day] <= s.statistics[day.weekday()][0]:
+                yield s.get_scraper(date = day, **options)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
