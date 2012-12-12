@@ -54,12 +54,13 @@ class CopyArticleSetScript(Script):
         source_host = forms.CharField()
         source_db = forms.CharField(initial='amcat')
         source_set_id = forms.IntegerField()
-        destination_project = forms.ModelChoiceField(queryset=Project.objects.all())
+        destination_project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
+        destination_set_id = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False)
 
     def run(self, _input=None):
-        self.source_set_id, self.source_host, self.source_db, self.dest_project = [
+        self.source_set_id, self.source_host, self.source_db, self.dest_project, self.dest_set = [
             self.options.get(x) for x in ("source_set_id", "source_host", "source_db",
-                                          "destination_project")]
+                                          "destination_project", "destination_set_id")]
 
         self.dest_host = settings.DATABASES['default']['HOST']
         self.dest_db = settings.DATABASES['default']['NAME']
@@ -67,10 +68,14 @@ class CopyArticleSetScript(Script):
         if self.dest_host == self.source_host:
             raise Exception("Destination and source host are the same: {self.dest_host}"
                             .format(**locals()))
-        
+
+        if self.dest_project is None:
+            if self.dest_set is None:
+                raise Exception("Please specify either destination project or article set id")
+            self.dest_project = self.dest_set.project
+
         log.info("Moving articles from source {self.source_host!r}:{self.source_db} set {self.source_set_id} "
                  "to destination {self.dest_host!r}:{self.dest_db!r} "
-                 "project {self.dest_project.id}:{self.dest_project.name!r}"
                  .format(**locals()))
 
         self._assign_uuids()
@@ -83,17 +88,21 @@ class CopyArticleSetScript(Script):
         
         self._check_media(media)
         
-        name, provenance = self._get_index_details()
-        provenance = "Imported from {self.source_host} set {self.source_set_id}\n{provenance}".format(**locals())
-        log.info("Creating destination article set {name!r} with provenance {provenance!r}".format(**locals()))
 
         self._copy_articles(aids)
 
+
+        # only needed if dest_set is None, but let's keep it out of the transaction as it involves a source db call
+        name, provenance = self._get_index_details()
+
         with transaction.commit_on_success():
-            self.dest_set = ArticleSet.objects.create(project=self.dest_project, name=name, provenance=provenance)
-            log.info("Created destination article set {self.dest_set.id}:{self.dest_set.name!r} "
-                     "in project {self.dest_project.id}:{self.dest_project.name!r}"
-                     .format(**locals()))
+            if self.dest_set is None:
+                provenance = "Imported from {self.source_host} set {self.source_set_id}\n{provenance}".format(**locals())
+                log.info("Creating destination article set {name!r} with provenance {provenance!r}".format(**locals()))
+                self.dest_set = ArticleSet.objects.create(project=self.dest_project, name=name, provenance=provenance)
+                log.info("Created destination article set {self.dest_set.id}:{self.dest_set.name!r} "
+                         "in project {self.dest_project.id}:{self.dest_project.name!r}"
+                         .format(**locals()))
 
             self._add_to_set(uuids.keys())
 
