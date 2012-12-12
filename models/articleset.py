@@ -170,6 +170,7 @@ class ArticleSetArticle(AmcatModel):
     class Meta():
         app_label = 'amcat'
         db_table="articlesets_articles"
+        unique_together = ('article', 'articleset')
     
     
 ###########################################################################
