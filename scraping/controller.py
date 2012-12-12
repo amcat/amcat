@@ -160,8 +160,12 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for s in scrapers:
-            for a in controller.scrape(s):
-                counts[s] += 1
+            try:
+                for a in controller.scrape(s):
+                    counts[s] += 1
+            except Exception:
+                log.exception("scraper failed")
+
             if deduplicate == True:
                 options = {
                     'first_date' : s.options['date'],
