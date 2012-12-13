@@ -82,20 +82,26 @@ class RobustController(Controller):
         log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
 
-        for unit in scraper.get_units():
+
+        for unit in self.get_units(scraper):
             log.debug("{scraper} received unit {unit}".format(**locals()))
-            try:
-                for article in self.scrape_unit(scraper, unit):
-                    result.append(article)
-            except Exception as e:
-                log.exception("exception within get_units")
+            for article in self.scrape_unit(scraper, unit):
+                result.append(article)
 
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
 
         if not result:
-            raise Exception()
+            raise Exception("returned 0 units")
         
         return result
+
+
+    def get_units(self, scraper):
+        try:
+            for unit in scraper.get_units():
+                yield unit
+        except Exception:
+            log.exception("exception within get_units")
 
     @transaction.commit_on_success
     def scrape_unit(self, scraper, unit):
@@ -109,8 +115,7 @@ class RobustController(Controller):
             log.warning("scrape_unit returned 0 units")
         
         for unit in scrapedunits:
-            log.info("saving unit {unit}".format(**locals()))
-            unit.save()
+            self.save(unit)
             yield unit
         
 
@@ -160,8 +165,12 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for s in scrapers:
-            for a in controller.scrape(s):
-                counts[s] += 1
+            try:
+                for a in controller.scrape(s):
+                    counts[s] += 1
+            except Exception:
+                log.exception("scraping failed")
+
             if deduplicate == True:
                 options = {
                     'first_date' : s.options['date'],
