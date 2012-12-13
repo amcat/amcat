@@ -100,7 +100,7 @@ class DeduplicateScript(Script):
 
         idDict = {}
         for article in articles:
-            identifier = article.text + str(article.date)
+            identifier = (article.medium_id, article.text, str(article.date))
             if identifier:
                 if not identifier in idDict.keys():
                     idDict[identifier] = []

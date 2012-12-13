@@ -100,10 +100,16 @@ class ArticleSet(AmcatModel):
         Add the given articles to this article set
         @param set_dirty: Set the index_dirty state of this set? (default=True)
         """
+
+        existing = set(aid for (aid,) in self.articles.values_list("id"))
+        to_add = set(_articles_to_ids(articles)) - existing
+
+        if not to_add:
+            return
         
         ArticleSetArticle.objects.bulk_create(
-            [ArticleSetArticle(articleset=self, article_id=artid)\
-             for artid in _articles_to_ids(articles)]
+            [ArticleSetArticle(articleset=self, article_id=artid)
+             for artid in to_add]
         )
         if set_dirty:
             self.index_dirty = True
@@ -170,6 +176,7 @@ class ArticleSetArticle(AmcatModel):
     class Meta():
         app_label = 'amcat'
         db_table="articlesets_articles"
+        unique_together = ('article', 'articleset')
     
     
 ###########################################################################
@@ -186,7 +193,17 @@ class TestArticleSet(amcattest.PolicyTestCase):
         for _x in range(i):
             s.add(amcattest.create_test_article())
         self.assertEqual(i, len(s.articles.all()))
-    
+        
+    def test_add(self):
+        """Can we create a set with some articles and retrieve the articles?"""       
+        s = amcattest.create_test_set()
+        arts = [amcattest.create_test_article() for _x in range(10)]
+        s.add_articles(arts[:5])
+        self.assertEqual(5, len(s.articles.all()))
+        s.add_articles(arts)
+        self.assertEqual(len(arts), len(s.articles.all()))
+        
+
         
     def test_dirty(self):
         """Is the dirty flag set correctly?"""

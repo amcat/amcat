@@ -81,7 +81,7 @@ class Scraper(AmcatModel):
         return dict(q)
 
 
-def get_scrapers(date=None, days_back=7, use_expected_articles = False, **options):
+def get_scrapers(date=None, days_back=7, **options):
     """
     Return all daily scrapers as needed for the days_back days prior
     to the given date for which no articles are recorded. The scrapers

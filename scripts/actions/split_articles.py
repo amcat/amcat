@@ -26,7 +26,7 @@ from django import forms
 from django.db import transaction
 
 from amcat.scripts.script import Script
-from amcat.models import ArticleSet, Article
+from amcat.models import ArticleSet, Article, Sentence
 
 from amcat.nlp import sbd
 
@@ -40,15 +40,16 @@ class SplitArticles(Script):
     @transaction.commit_on_success    
     def run(self, _input=None):
         sets = self.options['articlesets']
-        to_split = list(Article.objects.filter(articlesets__in=sets, sentences=None))
+        log.info("Listing articles from sets {sets}".format(**locals()))
+        to_split = list(Article.objects.filter(articlesets__in=sets).only("id"))
         n = len(to_split)
 
-        log.info("Will split {n} articles".format(**locals()))
+        log.info("Will check and split {n} articles".format(**locals()))
         for i, article in enumerate(to_split):
             if not i % 100:
-                log.info("Splitting article {i}/{n}".format(**locals()))
-
-            sbd.get_or_create_sentences(article)
+                log.info("Processing article {i}/{n}".format(**locals()))
+            if not Sentence.objects.filter(article=article).exists():
+                sbd.get_or_create_sentences(article)
 
         log.info("Splitted {n} articles!".format(**locals()))
         

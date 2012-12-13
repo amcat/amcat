@@ -48,52 +48,37 @@ MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
 
 <p>For log details, ssh to amcat-dev.labs.vu.nl, then open /home/amcat/log/daily_{date.year:04d}-{date.month:02d}-{date.day:02d}.txt</p>
 
-<p>For a complete overview of last weeks results, navigate to <a href="http://www.amcat-dev.labs.vu.nl/navigator/scrapers">http://www.amcat-dev.labs.vu.nl/navigator/scrapers</a></p>
+<p>For a complete overview of last weeks results, navigate to http://www.amcat-dev.labs.vu.nl/navigator/scrapers</p>
 """
 
 
 MAIL_ASCII = MAIL_HTML
 for tag in ["h3", "p", "pre"]:
     MAIL_ASCII = MAIL_ASCII.replace("<%s>"%tag, "").replace("</%s>"%tag, "")
+    MAIL_ASCII = unicode(MAIL_ASCII)
 
 EMAIL = "amcat-scraping@googlegroups.com"
 
 from django.core.mail import send_mail
 
-def send_email(count, messages, date):
+def make_table(count):
+    from amcat.tools.table.table3 import DictTable
     
-    scrapers = set([i[0] for i in count.items()])
-    data = {scraper : {} for scraper in scrapers}
+    table = DictTable()
 
     for (scraper, n) in count.items():
-        data[scraper][scraper.options['date']] = n
+        table.addValue(
+            row = scraper.__class__.__name__,
+            col = scraper.options['date'],
+            value = n
+            )
+
+    return table
 
 
-
-    days = [date - timedelta(days = n) for n in range(7)]
-
-    for (scraper, results) in data.items():
-        for day in days:
-            if day not in results.keys():
-                results[day] = "&nbsp;"
-
-    #first row
-    table = "<table><tr>"
-    for day in days:
-        table += "<td>{day}</td>".format(**locals())
-    table += "</tr>"
-
-    #each row
-    for (scraper, results) in data.items():
-        #first cell of row
-        table += "<tr><td>{scraper.__class__.__name__}</td>".format(**locals())
-        for (day, n) in results.items():
-            table += "<td>{n}</td>".format(**locals())
-        table += "</tr>"
-    table += "</table>"
-
-
-    print(table)
+def send_email(count, messages, date):
+    
+    table = make_table(count).output(rownames = True)
 
     n = sum(count.values())
     succesful = len([1 for (s,n2) in count.items() if n2>0])
@@ -103,10 +88,9 @@ def send_email(count, messages, date):
 
     subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
     
-    html = MAIL_HTML.format(**locals())
+    content = MAIL_ASCII.format(**locals())
 
-
-    send_mail(subject, html, "toon.alfrink@gmail.com", ["toon.alfrink@gmail.com"])
+    send_mail(subject, content, "toon.alfrink@gmail.com", [EMAIL])
 
 
 from amcat.models.project import Project    
@@ -122,7 +106,7 @@ class DailyScript(Script):
     def run(self, _input):
         date = self.options['date']
 
-        scrapers = list(get_scrapers(date=date, use_expected_articles = True))
+        scrapers = list(get_scrapers(date=date))
 
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),

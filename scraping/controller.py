@@ -169,7 +169,7 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
                 for a in controller.scrape(s):
                     counts[s] += 1
             except Exception:
-                log.exception("scraping failed")
+                log.exception("scraper failed")
 
             if deduplicate == True:
                 options = {
