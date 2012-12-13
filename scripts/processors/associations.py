@@ -26,7 +26,7 @@ from amcat.scripts import script
 import amcat.scripts.forms
 from amcat.tools import table
 from django import forms
-
+import collections
 
 import logging
 log = logging.getLogger(__name__)
@@ -43,14 +43,29 @@ class AssociationsScript(script.Script):
 
 
     def run(self, articleTable):
-        queries = (c.label.replace('Hit Count for: ', '') for c in articleTable.getColumns())
-        
-        # start dummy code
-        resultTable = table.table3.DictTable(0)
-        resultTable.rowNamesRequired = True # make sure row names are printed
-        for query in queries:
-            resultTable.columns.add(query)
-            resultTable.rows.add(query)
+        queries = list(articleTable.getColumns())
+        probs = collections.defaultdict(list) # query : [p_query_art1, p_query_art2, ...] 
+
+        for row in articleTable.getRows():
+            for q in queries:
+                h = articleTable.getValue(row, q)
+                p = 1 - (.5 ** h)
+                probs[q].append(p)
+
+        resultTable = table.table3.ListTable(colnames=["From", "To", "Association"])
+
+        for q in queries:
+            probs1 = probs[q]
+            qname = q.label.replace('Hit Count for: ', '')
+            for q2 in queries:
+                if q == q2: continue
+                probs2 = probs[q]
+                q2name = q2.label.replace('Hit Count for: ', '')
+                assoc = sum(p1 * p2 for (p1, p2) in zip(probs1, probs2)) / sum(probs1)
+                assoc = "%1.3f" % assoc
+                resultTable.addRow(qname, q2name, assoc)
+                                                      
+
         return resultTable
 
         
