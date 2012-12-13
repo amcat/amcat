@@ -112,7 +112,7 @@ class DailyScript(Script):
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
 
-        if self.options['deduplicate'] and self.options['trash_project'] == None:
+        if self.options['deduplicate'] == True and self.options['trash_project'] == None:
             raise ValueError("insert trash project number when deduplicating, most often this is 1")
 
         count, messages =  scrape_logged(
