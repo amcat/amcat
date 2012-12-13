@@ -27,6 +27,7 @@ from amcat.scripts.tools import cli
 from amcat.models.article import Article
 from amcat.models.scraper import Scraper
 from amcat.models.articleset import ArticleSet, ArticleSetArticle
+from amcat.models.project import Project
 import logging; log = logging.getLogger(__name__)
 from amcat.tools import amcatlogging
 from datetime import timedelta
@@ -35,7 +36,7 @@ class DeduplicateForm(forms.Form):
     first_date = forms.DateField(required = False)
     last_date = forms.DateField(required = False)    
     articleset = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
-    recycle_bin_project = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
+    recycle_bin_project = forms.ModelChoiceField(queryset = Project.objects.all())
     
 class DeduplicateScript(Script):
     options_form = DeduplicateForm

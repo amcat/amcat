@@ -66,7 +66,6 @@ def generate_expected_articles():
             ranges = scraper_ranges(scraper)
         except ValueError:
             continue
-
         _json = json.dumps(ranges)
         scraper.statistics = _json
         scraper.save()
