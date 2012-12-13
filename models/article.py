@@ -145,6 +145,14 @@ class TestArticle(amcattest.PolicyTestCase):
         a = amcattest.create_test_article()
         self.assertIsNotNone(a)
 
+    def test_unicode_word_len(self):
+        """Does the word counter eat unicode??"""
+        u = u'Kim says: \u07c4\u07d0\u07f0\u07cb\u07f9'
+        self.assertEqual(word_len(u), 3)
+
+        b = b'Kim did not say: \xe3\xe3k'
+        self.assertEqual(word_len(b), 5)
+        
     def test_unicode(self):
         """Test unicode headlines"""
         for offset in range(1, 10000, 1000):
