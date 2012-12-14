@@ -94,7 +94,7 @@ class CSV(UploadScript):
         for fieldname in FIELDS:
             csvfield = self.options[fieldname]
             if not csvfield: continue
-            val = row[csvfield].decode('utf-8')
+            val = self.decode(row[csvfield])
             if fieldname in PARSERS:
                 val = PARSERS[fieldname](val)
                 
