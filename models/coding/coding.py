@@ -120,6 +120,7 @@ class Coding(AmcatModel):
         """Set the status of this coding, deserialising status as needed"""
         if type(status) == int: status = CodingStatus.objects.get(pk=status)
         self.status = status
+        self.save()
 
     @invalidates
     def set_value(self, field, value):

@@ -57,3 +57,15 @@ PASSWORD_HASHERS = (
     'django.contrib.auth.hashers.SHA1PasswordHasher',
     
 )
+
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_HOST = os.environ.get("DJANGO_EMAIL_HOST", '')
+    EMAIL_PORT = os.environ.get("DJANGO_EMAIL_PORT", 587)
+    EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_USER", '')
+    EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_PASSWORD", '')
+    EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_TLS", 'Y') in ("1","Y", "ON")
+
