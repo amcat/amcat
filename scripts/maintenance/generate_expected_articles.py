@@ -21,6 +21,7 @@ from amcat.models.scraper import Scraper
 from amcat.models.article import Article
 from django.db.models import Count
 from datetime import date, timedelta
+import logging; log = logging.getLogger(__name__)
 import json
 
 def scraper_ranges(scraper):
@@ -68,11 +69,14 @@ def generate_expected_articles():
             continue
         _json = json.dumps(ranges)
         scraper.statistics = _json
+        log.info("{scraper.__class__.__name__}: {scraper.statistics}")
         scraper.save()
 
 
 
 if __name__ == '__main__':
+    from amcat.tools import amcatlogging
+    amcatlogging.info_module("amcat.scripts.maintenance.generate_expected_articles")
     generate_expected_articles()
         
 
