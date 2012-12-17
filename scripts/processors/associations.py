@@ -59,10 +59,13 @@ class AssociationsScript(script.Script):
             qname = q.label.replace('Hit Count for: ', '')
             for q2 in queries:
                 if q == q2: continue
-                probs2 = probs[q]
+                probs2 = probs[q2]
                 q2name = q2.label.replace('Hit Count for: ', '')
-                assoc = sum(p1 * p2 for (p1, p2) in zip(probs1, probs2)) / sum(probs1)
-                assoc = "%1.3f" % assoc
+                if sum(probs1) > 0:
+                    assoc = sum(p1 * p2 for (p1, p2) in zip(probs1, probs2)) / sum(probs1)
+                    assoc = "%1.3f" % assoc
+                else:
+                    assoc = ""
                 resultTable.addRow(qname, q2name, assoc)
                                                       
 
