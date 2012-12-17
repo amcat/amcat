@@ -33,6 +33,6 @@ def sendmail(sender, recipient, subject, html, plain):
     
 if __name__ == '__main__':
     # actual test in __name__ to prevent getting an email everytime the tests run
-    sendmail("wouter@vanatteveldt.com", "vanatteveldt@gmail.com", "Test mailtje",
+    sendmail("amcat.vu@gmail.com", "vanatteveldt@gmail.com", "Test mailtje 2345",
              "bla <b>nla!</b>", "bla bla")
         
