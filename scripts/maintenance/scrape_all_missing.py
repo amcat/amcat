@@ -56,14 +56,21 @@ class OmniScraper(Script):
 
                 log.debug("getting amount of articles of scraper {scraper} day {day}".format(**locals()))
                 n_articles = self.get_n_articles(scraper,day)
-                (lower,upper) = scraper.statistics[day.weekday()]
-                log.debug("n_articles: {n_articles}, lower: {lower}, upper: {upper}".format(n_articles,lower,upper))
+                if scraper.statistics:
+                    (lower,upper) = scraper.statistics[day.weekday()]
+                else:
+                    (lower,upper) = (0,0)
+
+                log.debug("n_articles: {n_articles}, lower: {lower}, upper: {upper}".format(**locals()))
                 if n_articles < lower:
                     s_instance = scraper.get_scraper(date=day)
-
+                    
                     log.info("running scraper {s_instance} for date {day}".format(**locals()))
-                    s_instance.run(None)
-
+                    try:
+                        s_instance.run(None)
+                    except Exception:
+                        log.info("scraper failed, onto the next...")
+                    
                     log.info("deduplicating articleset {scraper.articleset_id} for date {day}".format(**locals()))
                     self.deduplicate(scraper.articleset_id, day)
                            

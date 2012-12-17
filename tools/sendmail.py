@@ -28,7 +28,8 @@ from django.core.mail import EmailMultiAlternatives
 
 def sendmail(sender, recipient, subject, html, plain):
     msg = EmailMultiAlternatives(subject, plain, sender, [recipient])
-    msg.attach_alternative(html, "text/html")
+    if html:
+        msg.attach_alternative(html, "text/html")
     msg.send()
     
 if __name__ == '__main__':

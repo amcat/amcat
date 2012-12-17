@@ -60,7 +60,7 @@ for tag in ["h3", "p", "pre"]:
 
 EMAIL = "amcat-scraping@googlegroups.com"
 
-from django.core.mail import send_mail
+from amcat.tools.sendmail import sendmail
 
 def make_table(count):
     from amcat.tools.table.table3 import DictTable
@@ -91,7 +91,7 @@ def send_email(count, messages, date):
     
     content = MAIL_ASCII.format(**locals())
 
-    send_mail(subject, content, "toon.alfrink@gmail.com", [EMAIL])
+    sendmail("toon.alfrink@gmail.com", EMAIL, subject, None, content)
 
 
 from amcat.models.project import Project    
