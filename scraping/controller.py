@@ -53,24 +53,26 @@ class Controller(object):
     def save(self, article):
         log.debug("Saving article %s" % article)
         article.save()
-
-        articleset = article.scraper.articleset if hasattr(article, 'scraper') else self.articleset
-        log.debug("Adding article %r to articleset %r" % (article.id, articleset))
-        if articleset:
-            articleset.add(article)
-            articleset.save()
-           
         log.debug("Done")
         return article
+
+    def add_to_articleset(self, articles, scraper):
+        articleset = scraper.articleset
+        log.info("Adding articles to articleset %r" % articleset)
+        articleset.add_articles(articles)
 
 
 class SimpleController(Controller):
     """Simple implementation of Controller"""
     @to_list
     def scrape(self, scraper):
+        result = []
         for unit in scraper.get_units():
             for article in scraper.scrape_unit(unit):
-                yield self.save(article)
+                result.append(self.save(article))
+
+        self.add_to_articleset(result, scraper)
+        
    
 
 
@@ -92,6 +94,8 @@ class RobustController(Controller):
 
         if not result:
             raise Exception("returned 0 units")
+ 
+        self.add_to_articleset(result, scraper)
         
         return result
 

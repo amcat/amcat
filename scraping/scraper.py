@@ -113,7 +113,6 @@ class Scraper(Script):
         @return: a sequence of arbitrary objects to be passed to scrape_unit
         """
         self._initialize()        
-        #self._get_units = safeloops(self._get_units)
         for unit in self._get_units():
             yield unit
             
@@ -140,7 +139,6 @@ class Scraper(Script):
         for article in self._scrape_unit(unit):
             article = self._postprocess_article(article)
             log.debug(unicode(".. yields article {article}".format(**locals()),'utf-8'))
-            article.scraper = self
             yield article
 
 
