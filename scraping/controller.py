@@ -64,7 +64,6 @@ class Controller(object):
 
 class SimpleController(Controller):
     """Simple implementation of Controller"""
-    @to_list
     def scrape(self, scraper):
         result = []
         for unit in scraper.get_units():
@@ -72,7 +71,7 @@ class SimpleController(Controller):
                 result.append(self.save(article))
 
         self.add_to_articleset(result, scraper)
-        
+        return result
    
 
 
@@ -101,12 +100,21 @@ class RobustController(Controller):
 
 
     def get_units(self, scraper):
+        # WvA: Why do we ignore exceptions from get_units? Since the call will now do
+        # absolutely nothing, shouldn't the caller decide whether to catch the exception
+        # or not? Errors should never pass silently / Unless explicitly silenced?
         try:
             for unit in scraper.get_units():
                 yield unit
         except Exception:
             log.exception("exception within get_units")
 
+    # WvA: Are you sure that you want to commit after every unit? What does that mean for
+    #      managing the scrapers? In the current implementation, an exception
+    #      in the scrape_unit call will be caught, logged, and ignored, but an exception in
+    #      the save() call will be pass on (and hence 'crash' the scraper).
+    #      Please think about how the 'robust' controller should handle various exception cases
+    #      and add some documentation about this and please update the unit test below!
     @transaction.commit_on_success
     def scrape_unit(self, scraper, unit):
         try:
@@ -267,8 +275,8 @@ class _ErrorScraper(Scraper):
 class TestRobustController(amcattest.PolicyTestCase):
     def test_rollback(self):
         c = RobustController()
-        p = amcattest.create_test_project()
-        s = _ErrorScraper(project=p.id)
+        s = amcattest.create_test_set()
+        s = _ErrorScraper(project=s.project_id, articleset=s.id)
         list(c.scrape(s))
         self.assertEqual(p.articles.count(), 1)
        
