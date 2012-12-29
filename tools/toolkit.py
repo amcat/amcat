@@ -123,8 +123,18 @@ def wrapped(wrapper_function, *wrapper_args, **wrapper_kargs):
     """
     def inner(func):
         def innermost(*args, **kargs):
-            result = func(*args, **kargs)
-            return wrapper_function(result, *wrapper_args, **wrapper_kargs)
+            try:
+                result = func(*args, **kargs)
+            except Exception:
+                log.exception("Error on calling wrapped {func.__name__}(args={args!r}, kargs={kargs!r})"
+                              .format(**locals()))
+                raise
+            try:
+                return wrapper_function(result, *wrapper_args, **wrapper_kargs)
+            except Exception:
+                log.exception("Error on calling wrapper function {wrapper_function.__name__}"
+                              "({result!r}, *{wrapper_args}, **{wrapper_kargs!r})".format(**locals()))
+                raise
         return innermost
     return inner
 
