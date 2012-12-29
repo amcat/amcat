@@ -110,7 +110,7 @@ class TestUploadText(amcattest.PolicyTestCase):
 
             dn, fn = os.path.split(f.name)
             fn, ext = os.path.splitext(fn)
-
+            print File(open(f.name))
             a, = Text(dict(date='2010-01-01', headline='simple test',
                            file=File(open(f.name)), encoding=0, **base)).run()
             a = Article.objects.get(pk=a.id)
