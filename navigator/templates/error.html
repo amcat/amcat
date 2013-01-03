@@ -1,0 +1,28 @@
+{% extends "navigator/base.html" %}
+{% block title %} {{ title }} {% endblock %}
+{% block content %}
+<p></p>
+  <div class='alert alert-error'>
+  <h1>{{ header }}</h1> {{ subheader }}</div>
+  <p>{{ description }}<p>
+
+<p>If you think this is a bug, please report it
+  on <a href="http://code.google.com/p/amcat/issues/entry?{{issue_query}}">issue
+    tracker</a> (gmail / google account required).</p>
+
+<p>If you have questions about AmCAT, consider mailing to
+  our <a href="http://groups.google.com/group/amcat-user">user mailing
+  list</a>. This list will be used for announcements from us on new
+  versions or downtime, and you can also use this list for asking user
+  questions. We are working on creating user documentation for AmCAT3. The
+  current (very early) draft of this documentation is
+  available <a href="http://amcat.vu.nl/plain/manual.pdf">here</a> </p>
+
+{% if sentry_id %}
+    <p>Your error has been logged as error <strong>{{sentry_id}}</strong>, please
+      provide this number if you request support. If you have
+      permission, you can 
+      <a href="{% url sentry-search %}?q={{sentry_id}}"> view the log entry </a> directly
+</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,71 @@
+{% load menu %}
+{% load misc %}
+<!DOCTYPE html>
+<html>
+ <head>
+  <title>AmCAT Navigator 3 - {% block title %}Beta{% endblock %}</title>
+  
+  <link rel="shortcut icon" href="{{ MEDIA_URL }}img/amcat/favicon.png">
+  
+  <!--  CSS -->
+  <link href="{{ MEDIA_URL }}css/bootstrap.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/bootstrap-responsive.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/base.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/datatables.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/forms.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/tabs.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/jquery.expand.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/jquery-ui.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/jquery.multiselect.css" rel="stylesheet" type="text/css"  />
+  <link href="{{ MEDIA_URL }}css/jquery.multiselect.filter.css" rel="stylesheet" type="text/css"  />
+  {% block css %}{% endblock %}
+  
+  <!--  Javascript -->
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.7.2.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-ui-1.8.22.custom.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.dataTables.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.dataTables.plugins.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/amcat.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/amcat.datatables.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.multiselect.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.multiselect.filter.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/bootstrap.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/bootstrap.scrollspy.js"></script>
+  {% block javascript %}{% endblock %}
+ </head>
+ <body>
+  <div id="header">
+   <div>
+    <div id="logo-wrapper">
+     <div id="logo-headline">AmCAT Navigator 3</div>
+     <div id="logo-byline">{{ 1|AMCAT_VERSION }}</div>
+    </div>
+    <div id="menu-tabs">
+     <span id="menu-tabs-title">{% block tabtitle %}{% endblock %}</span>
+      {% block tabs %}
+       {% for title, view, arg in menu %}
+       <span class="tab {% if selected == title %}selected{% endif %}">
+         <a href="{% if context %}{{ view|tab_url:context.id }}
+                  {% else %}{% if arg %}{{ view|tab_url:arg}}
+                            {% else %}{{ view|tab_url}}
+			    {% endif %}
+                  {% endif %}">
+           {{ title|title }}
+	 </a>
+       </span>
+       {% endfor %}
+      {% endblock %}
+    </div>
+   </div>
+  </div>
+   <div id="content-menu">
+    {{ request|render_menu }}
+   </div>
+    <div id="message-wrap">
+     {% block message %}{% endblock %}
+    </div>
+   <div id="content">
+    {% block content %}<h1>Sorry, this feature is not yet implemented.</h1>{% endblock %}
+   </div>
+ </body>
+</html>

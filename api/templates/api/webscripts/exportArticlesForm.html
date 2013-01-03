@@ -1,0 +1,37 @@
+
+<table class="exportForm">
+    <tr>
+        <td>{{ form.columns.label_tag }}</td><td><div id="column_field_container2"></div></td>
+    </tr>
+    <tr>
+        <td>{{ form.length.label_tag }}</td><td>{{form.length}} articles</td>
+    </tr>
+    <tr>
+        <td>Restrict text length</td><td>{{form.limitTextLength}} Limit article text to 32.000 characters (required for Excel)</td>
+    </tr>
+    <tr>
+        <td>Output</td>
+        <td>
+            {{form.output}}
+        </td>
+    </td>
+</table>
+<div style="height:120px"></div>
+
+<script type="text/javascript">
+    $('.exportForm select[name=columns]').multiselect({
+       selectedList: 6,
+       noneSelectedText:'Please select columns',
+       header:false,
+       height:200,
+       minWidth:350
+    }); 
+    
+    /* hack that will move the columns form element to this form and back when the dialog closes. This solves the problem of having two elements with the same id that will both be submitted. And on the plus side all the selected items will remain selected */
+    $("#dialog-message").bind( "dialogopen", function(event, ui) {
+        $('#column_field_container').children().appendTo('#column_field_container2');
+    });
+    $("#dialog-message").bind( "dialogclose", function(event, ui) {
+        $('#column_field_container2').children().appendTo('#column_field_container');
+    });
+</script>

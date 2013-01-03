@@ -1,0 +1,34 @@
+{% extends "navigator/base.html" %}
+{% block content %}
+
+<style>#content{ width:80%; }</style>
+
+<h1>Welcome to AmCAT Navigator 3 Beta!</h1>
+
+<p>Please let us know if you have any suggestions or found a bug.</p>
+
+<div id="frontpage_buttons" class="buttons">
+ <div class="button">
+  <img class="icon" src="{{ MEDIA_URL }}img/navigator/application.png" />
+  <span class="text"><a href="{% url projects %}">Projects</a></span>
+ </div>
+
+ <div class="button">
+  <img class="icon" src="{{ MEDIA_URL }}img/navigator/documents.png" />
+  <span class="text"><a href="{% url codingjobs %}">Coding</a></span>
+ </div>
+</div>
+</div>
+
+
+
+<script type="text/javascript">
+ /* Convert each button to a clickable button */
+ $.each($('.buttons .button'), function(i, el){
+  var href = $('a', el)[0].href;
+  $(el).click((function(){
+    window.location=this;
+   }).bind(href));
+ });
+</script>
+{% endblock %}

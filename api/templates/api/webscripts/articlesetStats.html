@@ -1,0 +1,12 @@
+<div class="article-set-stats">
+{% if stats.articleCount > 0 %}
+    Found <strong>{{ stats.articleCount }}</strong> articles between {{ stats.firstDate|date:"d-m-Y" }} and {{ stats.lastDate|date:"d-m-Y" }}
+    {% comment %}br />
+    in mediums:
+    {% for m in stats.mediums %}
+    {{m.id}} - {{m.name}}{% if not forloop.last %}, {% endif %}
+    {% endfor %}{% endcomment %}
+{% else %}
+    No articles found
+{% endif %}
+</div> 

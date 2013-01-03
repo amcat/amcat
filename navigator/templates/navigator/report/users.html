@@ -1,0 +1,34 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}Users{% endblock %}
+{% block tabtitle %}Users: {% endblock %}
+{% block tabs %}
+<span class="tab"><a href="{% url users active='active' affiliation_id=affiliation.id %}">
+   Active {{affiliation.name}} users
+ </a></span>
+
+<span class="tab"><a href="{% url users active='all' affiliation_id=affiliation.id %}">
+   All {{affiliation.name}} users
+ </a></span>
+
+<span class="tab"><a href="{% url users active='all' affiliation_id='all' %}">
+   All users
+ </a></span>
+{% endblock %}
+
+{% block content %}
+<div>
+ <table>
+  <tr>
+   <td>Actions:</td>
+   <td><a href="{% url user-add %}">Add user</a></td>
+  </tr>
+  
+ </table>
+</div>
+
+<div id="user-table-container" style="width:100%">
+{{ users|safe }} 
+</div>
+
+{% endblock %}

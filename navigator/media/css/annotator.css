@@ -1,0 +1,384 @@
+/*
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+*/
+
+body{
+    background-image:none; /* overwrite value from base.css */
+}
+
+#content{
+    /* overwrite values from base.css */
+    margin-left:5px;
+    width:100%;
+    float:none;
+    position:inline;
+    margin-right:0px;
+}
+
+html {
+    overflow-y: scroll;
+}
+
+#warning{
+    color:red;
+    position:absolute;
+    top:15px;
+    left:550px;
+}
+
+.annotator-content{
+    width:99%;
+    padding:10px 5px;
+}
+
+
+.dataTables_wrapper{
+    border: 1px solid gray;
+}
+
+.articlelist-part{
+
+
+    width:69%;
+    background:white;
+    margin-bottom:20px;
+}
+
+.coding-part{
+
+
+    width:69%;
+    background:white;
+    
+    max-width:69%;
+   
+}
+
+.article-part{
+    /* float:right; */
+    width:29%;
+    background:white;
+    position:absolute;
+    right:10px;
+    /* top:90px; */
+    height:90%;
+}
+
+.highlight{
+    background-color:yellow;
+}
+
+.sentences{
+    overflow-y:auto;
+    height:100%;
+}
+
+
+h2{
+    font-size:15px;
+    margin: 5px;
+}
+
+.coding-table{
+    font-size:11px;
+    text-align:left;
+}
+
+.coding-table input{
+    font-size:11px;
+}
+
+.sentence{
+    margin-top:10px;
+    display:block;
+}
+
+.annotator-sentencenr{
+    color:gray;
+}
+
+.articlelist-part h2{
+    float:left;
+    width:50%;
+}
+
+.article-list-toolbar{
+    float:right;
+    width:350px;
+    text-align:right;
+}
+
+.coding-part h2{
+    float:left;
+    width:70px;
+}
+
+.unit-codings-toolbar{
+    float:right;
+    width:800px;
+    text-align:right;
+}
+
+.selected-sentence{
+    background-color:blue;
+    color:white;
+}
+
+#codingjob-list-table{
+    width:800px;
+}
+#codingjob-list-table td{
+    padding:5px 2px 5px;
+}
+
+#welcome{
+    margin-bottom:50px;
+}
+
+#article-irrelevant-input{
+    margin-left:40px;
+}
+
+.links{
+    text-align:center;
+}
+
+#coding-type-radios{
+    margin-right:80px !important;
+}
+
+#article-comment-input{
+    width:60%;
+}
+
+#article-comment-form{
+    clear:both;
+    padding-top:10px;
+    margin-bottom:20px;
+}
+
+
+#article-coding{
+    margin-bottom:30px;
+    clear:both;
+}
+
+#unitcoding-table-part{
+    margin-bottom:30px;
+    clear:both;
+    margin-top:5px;
+}
+
+.ui-autocomplete {
+    max-height: 250px;
+    overflow-y: auto;
+    /* prevent horizontal scrollbar */
+    overflow-x: hidden;
+    font-size:11px;
+    max-width:300px;
+}
+
+/* .ui-autocomplete li a{
+    margin:1px;
+} */
+
+#unitcoding-table  input{
+    width:100%;
+}
+
+#unitcoding-table{
+    width:100% !important;
+}
+
+#save-button2{
+    margin-bottom:400px;
+}
+
+
+.articlelist-part tbody tr.even:hover, #codingjob-list-table tbody tr.even:hover{
+	background-color: #ECFFB3;
+}
+
+.articlelist-part tbody tr.odd:hover, #codingjob-list-table tbody tr.odd:hover{
+	background-color: #E6FF99;
+}
+
+#autocomplete-details  ul{
+    margin:5px;
+}
+
+#autocomplete-details h2{
+    font-size:18px;
+}
+
+#autocomplete-details h2 .objid{
+    color:gray;
+}
+
+#autocomplete-details h3{
+    clear:both;
+    font-size:13px;
+    margin:10px 5px 0px;
+    padding-top:15px;
+}
+
+#autocomplete-details{
+    width:300px;
+    position:absolute;
+    
+    display:none; 
+    background:white;
+    border:1px solid black;
+    
+    max-height: 250px;
+    overflow-y: auto;
+    /* prevent horizontal scrollbar */
+    overflow-x: hidden;
+}
+
+#unitcoding-table-part h3{
+    width: 200px;
+    margin-bottom:5px;
+    float:left;
+    margin:0px;
+}
+
+.unitcoding-table-toolbar{
+    float:right;
+    width:350px;
+    text-align:right;
+    padding:3px;
+}
+
+#unitcoding-table.display tr.row_selected td {
+	background-color: #9FAFD1;
+}
+
+
+.icon-next-article{
+    background-image: url('../img/misc/arrow_down.png') !important;
+}
+
+.icon-previous-article{
+    background-image: url('../img/misc/arrow_up.png') !important;
+}
+
+.icon-edit-article{
+    background-image: url('../img/misc/book_edit.png') !important;
+}
+
+.icon-new-article{
+    background-image: url('../img/misc/book_add.png') !important;
+}
+
+.icon-delete-coding{
+    background-image: url('../img/misc/table_row_delete.png') !important;
+}
+
+.icon-save{
+    background-image: url('../img/misc/disk.png') !important;
+}
+
+.icon-save-continue{
+    background-image: url('../img/misc/page_save.png') !important;
+}
+.icon-irrelevant-continue{
+    background-image: url('../img/misc/page_go.png') !important;
+}
+.icon-add-row{
+    background-image: url('../img/misc/add.png') !important;
+}
+.icon-copy-coding{
+    background-image: url('../img/misc/table_row_insert.png') !important;
+}
+.icon-copy-switch-coding{
+    background-image: url('../img/misc/table_refresh.png') !important;
+}
+
+
+button:focus{
+    border:1px solid blue;
+}
+
+#article-table-container{
+    clear:both;
+    /* max-height:150px;
+    overflow:scroll; */
+   /*  width:95%; */
+}
+#article-table-container td{
+    max-width:200px;
+}
+
+.widthlimit{
+    overflow:hidden;
+    white-space:nowrap;
+}
+
+
+.sentence-text-row td{
+    font-size:12px;
+    padding:5px !important;
+    background:white;
+    
+}
+
+.area-widget-input{
+    width:40px;
+}
+
+.new-paragraph{
+    margin-top:10px;
+}
+
+#unitcoding-table thead th{
+    cursor:auto;
+}
+
+.video-container{
+    margin-top:5px;
+}
+
+
+
+/* make sentences table look like a datatable, with colors etc. */
+#unitcoding-table tbody tr:nth-child(odd){
+    background-color: #E2E4FF;
+}
+
+#unitcoding-table tbody tr:nth-child(even){
+    background-color: white;
+}
+
+#unitcoding-table{
+    border: 1px solid gray;
+}
+
+#unitcoding-table thead tr {
+   /*  background-color: #F0F0F0; */
+}
+
+#unitcoding-table-top{
+    top:0px;
+    left:0px;
+    background-color:white;
+    z-index:2500;
+    height:35px;
+}

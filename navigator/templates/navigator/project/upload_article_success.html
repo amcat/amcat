@@ -1,0 +1,21 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+
+<h1>Uploaded articles to <i>{{context.name}}</i></h1>
+<p>Successfully added {{ articles|length }} articles to set <i>{{ set.name }}</i>.</p>
+<div>
+ <table>
+  <tr>
+   <td>Actions:</td>
+   <td><a href="{% url project context.id %}">Go to project</a></td>
+  </tr>
+  <tr>
+   <td></td>
+   <td><a href="{% url upload-articles context.id %}">Upload more articles</a></td>
+  </tr>
+ </table>
+</div>
+
+{% endblock content %}
+

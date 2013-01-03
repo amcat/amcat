@@ -1,0 +1,15 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+<div>
+ <br/>
+ <h1 class="noline">Actions</h1>
+ <p>
+  <a href="{% url upload-articles context.id %}" class="btn"><i class="icon-upload"></i> Upload articles</a>
+ </p>
+ {{ table }}
+</div>
+{% endblock %}

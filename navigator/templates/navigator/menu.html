@@ -1,0 +1,9 @@
+{% for label,url,selected in menu %}
+ {% if url %}
+  <div class="content-menu-item{% if selected %}-selected{% endif %}">
+   <div><a href="{{ url }}">{{ label }}</a></div>
+  </div>
+ {% else %}
+  <div class="content-menu-header"><div>{{ label }}</div></div>
+ {% endif %} 
+{% endfor %}

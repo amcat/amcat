@@ -1,0 +1,214 @@
+{% extends "annotator/base.html" %}
+
+{% block css %}
+{% endblock %}
+{% block javascript %}    
+{% endblock %}
+
+{% block content %}
+  
+  <div id="messages">
+   <noscript>
+    <div>
+     <h2>Your browser does not seem to have JavaScript enabled. Please enable it.</h2>
+    </div>
+   </noscript>
+  </div>
+
+  
+ <!--[if lt IE 9]>
+<div class="error">Internet Explorer versions 6, 7 and 8 are not officially supported. Please use Internet Explorer 9, Firefox or Google Chrome.</div>
+<![endif]-->
+
+  <div class="annotator-content">
+    
+    <div class="article-part">
+       <div class="sentence-options">
+            <!-- <button class="add-sentence-button" title="Add a new sentence to this article">Add</button> -->
+            <button class="select-all-sentences-button" title="Select all sentences">Select</button>
+            <!-- <button class="split-sentences-button" title="Create a new article based on a selection of sentences">Split</button> -->
+       </div>
+       <div class="video-container"></div>
+       <div class="sentences">
+           <h2>Article Text</h2>
+           <p>No article selected yet</p>
+       </div>
+    </div>
+    
+    <div class="articlelist-part">
+        <div class="links">
+            <a href="{% url annotator-overview %}">&laquo; Back to Overview</a> | 
+            {% comment %}<a href="{% url annotator-codingjob-ontology codingjob.id %}" target="_blank">View Ontologies</a> |
+            {% endcomment %}
+            <a href="javascript:;" id="help-button">Help</a>
+        </div>
+        <h2>Articles in codingjob {{codingjob.id}} - {{codingjob.name}}</h2>
+        <div class="article-list-toolbar">
+            <button id="next-article-button" title="Go to the next article in the list">Next</button>
+            <button id="previous-article-button" title="Go to the previous article in the list">Previous</button>
+           <!--  <button id="edit-article-button" title="Edit the selected article">Edit</button>
+            <button id="new-article-button" title="Add a new article to this codingjob">New</button> -->
+        </div>
+        <div id="article-table-container">
+        
+        </div>
+        <script type="text/javascript">
+        $(document).ready(function(){
+            var jqueryElement = $('#article-table-container');
+            var url = "{% url annotator-codingjob-articles codingjob.id %}";
+            var columns = [
+                //[null,'codingjob'], 
+                //[null,'coder'], 
+                [null,'Article ID', {"sWidth":"70px"}], 
+                [null,'Headline', {"sWidth":"150px", "fnRender":annotator.articletable.trimTableColumnString}], 
+                [null,'Date', {"sWidth":"70px"}], 
+                [null,'Medium'], 
+                [null,'Page Number', {"sWidth":"80px"}], 
+                [null,'Article Length', {"sWidth":"80px"}], 
+                [null,'Coding Status', {"sWidth":"80px"}], 
+                [null,'Comments', {"sWidth":"150px", "fnRender":annotator.articletable.trimTableColumnString}]
+            ];
+            var additionalServerData = {};
+            var additionalDataTableOptions = {'rowlink':annotator.articletable.clickArticleRow, "aaSorting": [[ 4, "asc" ]], 'sScrollY':'150'}
+            var oncreate = function(datatable){
+                annotator.articletable.articleTable = datatable; // set variable
+                annotator.articletable.onCreateArticleTable();
+            } 
+            amcat.createTable(jqueryElement, url, columns, additionalServerData, additionalDataTableOptions, oncreate);
+        });
+        </script>
+    </div>
+    
+    <div class="coding-part" style="display:none">
+         <!-- <h2 id="coding-title"></h2> -->
+         <div class="unit-codings-toolbar">
+                {% comment %}<span id="coding-type-radios">
+                    <input type="radio" id="article-coding-radio" name="radio" />
+                    <label for="article-coding-radio" title="Show only the Article Codings">Article Codings</label>
+                    <input type="radio" id="sentence-coding-radio" name="radio" />
+                    <label for="sentence-coding-radio" title="Show only the Sentence Codings">Sentence Codings</label>
+                    <input type="radio" id="both-coding-radio" name="radio" checked="checked" />
+                    <label for="both-coding-radio" title="Show both the Article and Sentence Codings">Both</label>
+                </span>{% endcomment %}
+            <button id="irrelevant-button" title="Mark this article as irrelevant and continue to the next article">Irrelevant &amp; continue</button>
+            <button id="save-continue-button" title="Mark this article as finished and continue to the next article">Finish &amp; continue</button>
+            <button id="save-button" title="Save the codings for this article">Save</button>
+         </div>
+         
+        
+        <div id="article-comment-form">
+            <label>Comments:</label> {{codingStatusCommentForm.comment}}
+            <label>Article Status:</label>  {{codingStatusCommentForm.status}}
+        </div>
+        
+         <div id="article-coding">
+            <h3>Article Codings</h3>
+            <form id="article-coding-form">
+            
+            </form>
+         </div>
+         
+         <div id="unitcoding-table-part">
+            <div id="unitcoding-table-top">
+                <h3>Sentence Codings</h3>
+                <div class="unitcoding-table-toolbar">
+                    <button id="copy-coding-button" title="Copy the current row">Copy</button>
+                    <button id="copy-switch-coding-button" title="Copy the current row and switch Subject &amp; Object">Copy &amp; Switch</button>
+                    <button id="delete-coding-button" title="Delete the current row">Delete</button>
+                </div>
+            </div>
+            <div>
+                <table cellpadding="0" cellspacing="0" border="0" class="display" id="unitcoding-table"></table>
+            </div>
+            <div class="unitcoding-table-toolbar">
+                <button id="copy-coding-button2">Copy</button>
+                <button id="copy-switch-coding-button2">Copy &amp; Switch</button>
+                <button id="delete-coding-button2">Delete</button>
+            </div>
+         </div>
+         
+         <button id="save-continue-button2">Finish and continue</button>
+         <button id="save-button2">Save</button>
+    </div>
+    
+  </div>
+  
+  
+<div id="autocomplete-details" class="ui-corner-all">
+</div>
+
+<div id="article-dialog-form" style="display:none">
+	<div id="article-edit-form"></div>
+	<div id="article-edit-status"></div>
+</div>
+
+<div id="new-sentence-dialog-form" title="Add new Sentence" style="display:none">
+	<div id="new-sentence-nr-placeholder">
+    </div>
+    <input type="text" id="new-sentence-text" />
+	<div id="new-sentence-status"></div>
+</div>
+
+<div id="message-dialog" title="Message" style="display:none">
+	<div id="message-dialog-msg"></div>
+</div>
+  
+<div id="dialog-confirm-delete-row" title="Delete this row" style="display:none">
+	<p>Are you sure you would like to delete this row?</p>
+    <p id="confirm-delete-row-content"></p>
+</div>
+
+<div id="dialog-save" title="Saving" style="display:none">
+    <div id="dialog-save-msg"></div>
+</div>
+
+<div id="dialog-help" title="Help" style="display:none">
+    <h4>Keyboard shortcuts</h4>
+    <table>
+    <tr><th>Key</th><th>Explanation</th></tr>
+    <tr><td>CTRL + S</td><td>Save</td></tr>
+   <!--  <tr><td>CTRL + A</td><td>Select article text</td></tr> -->
+    <tr><td>ESCAPE</td><td>Close a dialog</td></tr>
+    <tr><td>CTRL + arrow down</td><td>Add new row in sentence codings table</td></tr>
+    <tr><td>CTRL + SHIFT + arrow down</td><td>Add new row in sentence codings table, for next sentence</td></tr>
+    <tr><td>SHIFT + arrow down</td><td>Copy row in sentence codings table</td></tr>
+    <tr><td>ALT + arrow down</td><td>Copy &amp; Switch row in sentence codings table (only for NET codings)</td></tr>
+    </table>
+    <h4>Supported Browsers</h4>
+    <p>AmCAT Annotator is tested with the latest versions of Mozilla Firefox, Google Chrome and Internet Explorer.<br />
+    Internet Explorer 6, 7, 8 are not recommended.</p>
+</div>
+
+
+ 
+<script type="text/javascript"> 
+    $(document).ready(function(){
+        annotator.initPage();
+    });
+
+    
+    annotator.codingjobid = {{codingjob.id}};
+
+    annotator.articlecodings.containsArticleSchema = {% if codingjob.articleschema != None %}true{% else %}false{% endif%};
+    annotator.unitcodings.containsUnitSchema = {% if codingjob.unitschema != None %}true{% else %}false{% endif%};
+    annotator.unitcodings.isNETcoding = {% if codingjob.unitschema and codingjob.unitschema.isnet %}true{% else %}false{%endif%}
+</script>
+
+<!--
+<script type="text/javascript">
+     if(location.href.indexOf('/dev/') == -1){ // not enable it for the /dev/ sites
+  var _gaq = _gaq || [];
+  _gaq.push(['_setAccount', 'UA-59284-5']);
+  _gaq.push(['_trackPageview']);
+
+  (function() {
+    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+  })(); 
+}
+</script>-->
+ </body>
+</html>
+
+{% endblock %}

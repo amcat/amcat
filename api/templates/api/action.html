@@ -1,0 +1,21 @@
+<html>
+{%if error %}
+<h1>Error on running action {{action}}:</h1>
+<pre>
+{{error}}
+</pre>
+<hr/>
+{%endif%}
+{%if result %}
+<pre>
+{{result}}
+</pre>
+<hr/>
+{%endif%}
+<form action="" method="POST">
+<table>
+{{form.as_table}}
+<tr><td> </td><td><input type='submit'></td></tr>
+</table>
+</form>
+</html>

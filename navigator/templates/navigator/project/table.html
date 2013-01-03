@@ -1,0 +1,17 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+<div>
+ <br/>
+ {{ table|safe }}
+</div>
+
+ {% if overview %}
+<h1 class="noline">Actions</h1>
+<a href="{% url project-add %}" class="btn"><i class="icon icon-plus"></i> Add project</a>
+ {% endif %}
+
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+
+<style>
+.form-actions{
+    margin-bottom:0px;
+}
+
+.helptext{
+    font-size:0.7em;
+    color:grey;
+
+}
+</style>
+
+{% if user %}
+<div class="alert alert-success">
+    <p style="margin-bottom:0px">An email with instructions has been send.</p>
+</div>
+<form method="POST" class="well form-inline">
+    <a href="{% url accounts-login %}" class="btn btn-primary">Proceed</a>
+ </form>
+</p>
+{% else %}
+<p>
+ <form method="POST" class="well form-inline">
+     <legend>Registration form</legend>
+     <table>
+         {{ form.as_table }}
+    </table>
+     <div class="form-actions">
+      <input type="submit" value="Register" class="btn btn-primary" />
+      <a href="{% url accounts-login %}" class="btn">Cancel</a>
+     </div>
+ </form>
+ </p>
+{% endif %}
+{% endblock %}

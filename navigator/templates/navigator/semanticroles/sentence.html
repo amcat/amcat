@@ -1,0 +1,42 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}Semantic Rules{% endblock %}
+
+{% block content %}
+
+    <h1>{{ analysis_sentence.sentence }}</h1>
+    <table>
+        <tr><th style="text-align: left">Sentence ID</th><td> {{ analysis_sentence.sentence.id }} </td></tr>
+        <tr><th style="text-align: left">Analysis Sentence ID</th><td> {{ analysis_sentence.id }} </td></tr>
+        <tr><th style="text-align: left">Lexicon File</th><td> {{ lexfn }} </td></tr>
+        <tr><th style="text-align: left">Grammar File</th><td> {{ grammarfn }} </td></tr>
+        <tr><th style="text-align: left">Gold File</th><td> {{ goldfn }} </td></tr>
+    </table>
+
+    {% for link, title, graph in graphs %}
+        <p><a name="{{link}}">
+            {% for link, title, graph in graphs %}
+                <a href="#{{ link }}">{{ link }}</a> -
+            {% endfor %}
+                <a href="#kernzinnen">kernzinnen</a>
+        </a></p>
+        <h1>{{title}}</h1>
+        <h2>{{ analysis_sentence.sentence }}</h2>
+        {{ graph|safe }}
+    {% endfor  %}
+
+        <p><a name="kernzinnen">
+            {% for link, title, graph in graphs %}
+                <a href="#{{ link }}">{{ link }}</a> -
+            {% endfor %}
+            <a href="#kernzinnen">kernzinnen</a>
+        </a></p><h1>Kernzinnen</h1>
+        <h2>{{ analysis_sentence.sentence }}</h2>
+
+        {{ nuketable|safe }}
+    <pre style="height:100em">
+
+
+</pre>
+
+{% endblock %}

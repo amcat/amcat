@@ -1,0 +1,16 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+<h1> Please select a script to use for uploading articles</h1>
+ {{ table }}
+
+{% if can_create_plugin %}
+  <a href="{% url manage-plugins id=plugin_type %}"> 
+    Register a new upload script
+  </a>
+{% endif %}
+
+{% endblock %}

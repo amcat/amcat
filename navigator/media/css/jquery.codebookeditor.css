@@ -1,0 +1,54 @@
+.codebook .root{
+    font-size:1.2em;
+    margin:5px;
+}
+
+.codebook .code{
+    font-family:serif;
+}
+
+.codebook .options{
+    padding-left:5px;
+}
+
+.codebook .options > .icon{
+    margin-right:2px;
+    cursor:pointer;
+}
+
+.codebook .options > .icon:hover{
+    background-color:#f2f2f2;
+
+}
+
+.codebook .code.moving{
+    background-color:#f2f2f2;
+    display:inline;
+}
+.codebook .moving_destination:hover{
+    background-color:#f2f2f2;
+    cursor:pointer;
+}
+
+.codebook .code.hide{
+    /* Override other css settings */
+    visibility:inherit;
+    display:block;
+    text-decoration: line-through;
+}
+
+.codebook code.inherited{
+    font-style:italic;
+    color:grey;
+    padding-left:0px;
+    margin-left:0px;
+}
+
+
+.codebook li.collapsable{
+    list-style:none;
+}
+
+.codebook li.collapsable img{
+    padding-right:5px;
+}

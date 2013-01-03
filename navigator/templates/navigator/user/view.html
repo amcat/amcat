@@ -1,0 +1,29 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}User Details{% endblock %}
+
+{% block content %}
+
+{% if request.first_run %}
+
+<h1>Welcome to AmCAT3. Since this is the first time you run AmCAT3, please update
+  your personal information in the form below.</h1>  
+
+{% endif %}
+
+<h1>User Details for User {{user.id}}: {{user.first_name}} {{user.last_name}}</h1>
+{% if user == request.user %}
+<p>Actions: <a href="{% url user-change-password %}">Change password</a></p>
+{% endif %}
+<h2>Edit details</h2>
+<form action="{% url user-edit user.id %}" method="POST">
+ <table>
+  {{ form.as_table }}
+ </table>
+ <input type="submit" value="Update User Details"></input>
+</form>
+
+<h2>Projects of User</h2>
+{{ projects|safe }}
+
+{% endblock %}

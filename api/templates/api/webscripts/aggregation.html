@@ -1,0 +1,57 @@
+<h2>Aggregated data {% if title %} - {{title}}{% endif %}</h2>
+
+<button onclick="amcat.selection.aggregation.toggleTableGraph()" id="toggle-table-graph-button">Show Graph</button>
+
+
+<div class="output-table-wrapper">
+    <table id="output-table" class="display"></table>
+</div>
+
+<div id="output-chart" style="height:400px; width:800px;"></div>
+
+<script type="text/javascript">
+    amcat.selection.aggregation.tableData = {{dataJson|safe}};
+    amcat.selection.aggregation.tableColumns = {{columnsJson|safe}};
+    amcat.selection.aggregation.outputType = "{{ownForm.outputType.data}}";
+    amcat.selection.aggregation.dateType = "{{ownForm.dateInterval.data}}";
+    amcat.selection.aggregation.aggregationType = "{{aggregationType}}";
+    amcat.selection.aggregation.xAxis = "{{ownForm.xAxis.data}}";
+    amcat.selection.aggregation.yAxis = "{{ownForm.yAxis.data}}";
+    amcat.selection.aggregation.datesDict = {{datesDict|safe}};
+    amcat.selection.aggregation.smallGraph = {{graphOnly}};
+    
+    amcat.selection.aggregation.createdTable = false;
+    amcat.selection.aggregation.createdGraph = false;
+    
+    $(document).ready(function(){
+        
+        if(amcat.selection.aggregation.smallGraph == true){
+            console.log('graph only');
+            $('#toggle-table-graph-button').hide();
+            $('#output-chart').css('height', '200px').css('width', '400px');
+        }
+        
+        $('.action-buttons button').button();
+        $('#toggle-table-graph-button').button();
+        
+        if(amcat.selection.aggregation.outputType == 'table'){
+            amcat.selection.aggregation.createTable();
+        } else {
+            amcat.selection.aggregation.createGraph();
+        }
+        
+        $("#output-table tbody").delegate("td", "click", function() {
+            var td = $(this);
+            var x = td.parent().find('td:first').text();
+            var columnIndex = $(this).parent().children().index(this) + 1;
+            if(columnIndex == 1) return; // this is the left header
+            var y = $('#output-table thead th:nth-child(' + columnIndex + ')').text();
+            var count = td.text();
+            console.log(x, y);
+            amcat.selection.aggregation.click(x, y, count);
+        });
+        
+        $("#output-table tr td:gt(0)").css('cursor', 'pointer');
+        
+    });
+</script>

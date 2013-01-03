@@ -1,0 +1,31 @@
+Hi {{first_name}} {{last_name}},
+
+Thanks for your interest in using AmCAT. We've created a new account for you on our server:
+
+Username: {{username}}
+Password: {{password}}
+
+Please change your password as soon as possible.
+
+*Caution: AmCAT3 is currently in alpha-testing stage.* Please make
+sure that you do not rely solely on AmCAT for storing your data or for
+meeting critical deadlines. Please report any bugs or other issues on
+our issue tracker: http://code.google.com/p/amcat/issues/entry
+
+We are working on creating user documentation for AmCAT3. The current
+(very early) draft of this documentation is available at
+http://amcat.vu.nl/plain/manual.pdf . This will be updated as we work
+on the documentation. Consider subscribing to our user mailing list
+(http://groups.google.com/group/amcat-user). This list will be used
+for announcements from us on new versions or downtime, and you can
+also use this list for asking user questions.
+
+AmCAT is open source and all contributions are welcome! The full
+source code can be downloaded from our our google projects page
+(http://code.google.com/p/amcat/). This page also contains a developer
+wiki with installation instructions. Feel free to ask any development
+related questions on our developer mailing list
+(http://groups.google.com/group/amcat-dev).
+
+Good luck and kind regards,
+The AmCAT team

@@ -1,0 +1,32 @@
+{% extends "navigator/project/base.html" %}
+
+{% block css %}
+    <link href="{{ MEDIA_URL }}css/selection.css" rel="stylesheet" type="text/css" media="screen" />
+    <link href="{{ MEDIA_URL }}css/jquery.jqplot.min.css" rel="stylesheet" type="text/css" media="screen" />
+{% endblock %}
+{% block javascript %}    
+    <!--[if lt IE 9]><script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/excanvas.min.js"></script><![endif]-->
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/jquery.jqplot.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.dateAxisRenderer.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.highlighter.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.enhancedLegendRenderer.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.barRenderer.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.categoryAxisRenderer.min.js"></script>
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/jqplot/plugins/jqplot.pointLabels.min.js"></script>
+  
+  <script src="{{ MEDIA_URL }}js/selection.js" type="text/javascript"></script>
+{% endblock %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+<div>
+ <br/>
+ {% include "navigator/project/view_selection.html" %}
+</div>
+
+{% endblock %}

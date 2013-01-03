@@ -1,0 +1,9 @@
+{% for field in form %}
+    <p>
+        {% if not field.is_hidden %}
+            {{ field.label_tag }}
+        {% endif %}
+        {{ field }}
+        <input type="hidden" name="{{field.html_name}}-hidden" />
+    </p>
+{% endfor %}

@@ -1,0 +1,59 @@
+<style type="text/css">
+ table tr td:first-child{ font-weight:bold; }
+</style>
+
+<table>
+ <tr>
+  <td>articleID:</td>
+  <td>{{article.id}}</td>
+ </tr>
+ <tr>
+  <td>UUID:</td>
+  <td>{{article.uuid}}</td>
+ </tr>
+ <tr>
+  <td>Date:</td>
+  <td>{{article.date|date:"d-m-Y H:i"}}</td>
+ </tr> 
+ <tr>
+  <td>Project:</td>
+  <td><a href="{% url project article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
+ </tr>
+ {% if article.section %}
+ <tr>
+  <td>Section:</td>
+  <td>{{article.section}}</td>
+ </tr>
+ {% endif %}
+ <tr>
+  <td>Medium:</td>
+  <td>{{article.medium_id}} - {{article.medium}}</td>
+ </tr>
+ {% if article.pagenr %}
+ <tr>
+  <td>Page:</td>
+  <td>{{article.pagenr}}</td>
+ </tr>
+ {% endif %}
+ <tr>
+  <td>Length:</td>
+  <td>{{article.length}} words</td>
+ </tr>
+ <tr>
+ {% if article.url %}
+  <td>URL:</td>
+  <td>{{article.url|urlizetrunc:20}}</td>
+ </tr>
+ {% endif %}
+ <tr><td colspan="2"></td></tr>
+ <tr>
+  <td>In articlesets:</td>
+  <td>
+  {% for aset in article.articlesets.all.distinct %}
+    <a href="{% url articleset article.project.id aset.id %}">{{aset.id}} - {{aset}}</a><br/>
+  {% empty %}
+    This article does not occur in any set
+  {% endfor %}
+  </td>
+  </tr>
+</table>

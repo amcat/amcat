@@ -1,0 +1,31 @@
+<div id="dialog-syntax-help" style="display:none" title="Query Syntax Help">
+    If there is no boolean operator between two terms, the OR operator is used. Therefore, the query <span class="code">"a b"</span> is parsed as <span class="code">"a OR b"</span>.
+    
+   <h3>Search Identifier</h3>
+    <p><span class="code">identifier#query</span> = separate the identifier from the query with the # character, such as <span class="code">pvda#pvda OR "wouter bos" OR "partij van de arbeid"</span></p>
+    <p>The query identifier can be used in further queries, marked with [brackets]. Example: <span class="code">partijen#[pvda] OR [cda]</span> (where pvda and cda have been previously defined)
+    
+    <h3>Wildcards</h3>
+    <p>? = Single character wildcard, like <span class="code">te?t</span> will find both test and text<br>
+    * = Multiple character wildcard, like <span class="code">mosl*</span> will find moslim, moslims, etc.</p>
+    <p><strong>Note: </strong> You can not start a term with a wildcard</p>
+    
+    <h3>Proximity Search</h3>
+    <p><span class="code">"word1 word2"~10</span> = Search with word distance 10 between word1 and word2</p>
+    <p><span class="code">"(word1 OR word2 OR word*) word3"~5</span> = Search with word distance 5 between word1 OR word2 OR word*, and word3</p>
+    
+    <h3>Fuzzy Search</h3>
+    <p><span class="code">koe~</span> or <span class="code">koe~0.9</span> = fuzzy search where the value should be between 0 (low similarity) and 1 (high similarity)</p>
+    
+    <h3>NOT</h3>
+    <p><span class="code">word1 NOT (word2 word3)</span> = Search for documents containing word1 and not word2 and not word3</p>
+    
+    <h3>Headline only</h3>
+    <p>Use <span class="code">headline:keyword</span> to only search the headline for "keyword"</p>
+    
+    <div style="margin-top:30px">
+        <a href="http://lucene.apache.org/java/3_4_0/queryparsersyntax.html" target="_blank">
+            More Info about the Lucene Query Syntax
+        </a>
+    </div>
+</div>

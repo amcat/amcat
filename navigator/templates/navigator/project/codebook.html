@@ -1,0 +1,15 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block css %}<link href="{{ MEDIA_URL }}css/jquery.codebookeditor.css" rel="stylesheet" type="text/css" />{% endblock %}
+
+{% block content %}
+
+<h1>Codebook editor</h1>
+<div name="{{ codebook.id }}" class="codebook">Loading..</div>
+
+<script src="{{ MEDIA_URL }}js/jquery.djangofields.js"></script>
+<script src="{{ MEDIA_URL }}js/jquery.codebookeditor.js"></script>
+<script>$(".codebook").codebookeditor("{% url api %}v4/");</script>
+{% endblock %}

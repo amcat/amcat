@@ -1,0 +1,25 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+
+<style>
+.form-actions{
+    margin-bottom:0px;
+}
+</style>
+
+{% if request.POST %}
+ <div class="alert alert-error">Your passwords did not match.</div>
+{% endif %}
+
+<p>
+ <form method="POST" class="well form-inline">
+     <legend>Confirm your new password</legend>
+     <input placeholder="New password" type="password" name="new_password1" id="id_new_password1">
+     <input placeholder="Confirm new password" type="password" name="new_password2" id="id_new_password2">
+     <div class="form-actions">
+      <input type="submit" value="Confirm new password" class="btn btn-primary" />
+      <a href="{% url accounts-login %}" class="btn">Cancel</a>
+     </div>
+ </form>
+ </p>
+{% endblock %}

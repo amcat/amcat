@@ -1,0 +1,17 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}{{ selected|title }}{% endblock %}
+
+{% block content %}
+<br/>
+<div>
+ <table>
+  <tr>
+   <td>Actions:</td>
+   <td><a href="{% url user-add %}">Add user</a></td>
+  </tr>
+ </table>
+
+ {{ table|safe }}
+</div>
+{% endblock %}

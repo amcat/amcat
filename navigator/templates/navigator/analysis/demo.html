@@ -1,0 +1,44 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}NLP Analyses{% endblock %}
+
+{% block tabtitle %}Analyses{% endblock %}
+
+{% block content %}
+
+{% if analysis.plugin %}
+
+		  <h1> Demo for analysis {{ analysis }} </h1>
+
+		  <form action="{% url analysis-demo analysis.id %}" method="POST">
+			<table>
+			 {{ form.as_table }}
+			</table>
+			<input type="submit" value="Parse sentence"></input>
+		  </form>
+
+		  {% if tokens %} 
+		  <hr />
+
+		  <h2>Tokens:</h2>
+
+		  {{ tokens_table }}
+
+		  <h2>Triples:</h2>
+
+		  {{ triples_table }}
+
+		  <h2>Graph:</h2>
+
+		  {{ triples_graph|safe }}
+
+		  {% endif %}
+
+{% else %}
+ <h1>No plugin available!</h1>
+ <p>No plugin could be found on this analysis.</>
+{% endif %}
+
+
+
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}NLP Analyses{% endblock %}
+
+{% block tabtitle %} {{ sentence.analysis_article.analysis }} Analysis
+of sentence {{ sentence.sentence.id }} {% endblock %}
+
+{% block content %}
+
+
+<h1>Original sentence: {{ sentence.sentence }} </h1>
+
+{{ tokens }}
+{{ triples }}
+
+
+{{ triples_graph|safe }}
+
+
+
+{% endblock %}

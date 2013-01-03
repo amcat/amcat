@@ -1,0 +1,106 @@
+ 
+<form method="POST" target="formpost" action="url_overwritten_by_js" id="selectionform">
+    {% csrf_token %}
+    <input type="hidden" name="output" value="json-html" />
+    {{ form.projects.as_hidden }}
+  <table border=0 class="form-table">
+    <tr>
+        <td style="width:70px">
+            <label>Article Set: </label>
+        </td>
+        <td style="width:400px; min-width:380px;">
+            {{ form.articlesets }}
+        </td>
+         <td rowspan="6" style="vertical-align:top">
+    
+        <!-- <button id="save-query-button">Save Form</button>
+        <button id="load-query-button">Load Stored Form</button> -->
+        <div id="tabs">
+                <ul>
+                    <li><a href="#query-form">Keyword Search</a></li>
+                    <li><a href="#articleid-form">Article IDs</a></li>
+                </ul>
+                <div id="query-form">
+                    <label>Keyword Search string(s)</label> <a id="help-link" href="#">Search Syntax Help</a><br />
+                    {{ form.query }}
+                    <div><input name="include-all" type="checkbox"></input> Include amount of all articles</div>
+                    <div><input name="include-non-matching" type="checkbox"></input> Include amount of non-matching articles</div>
+                </div>
+                <div id="articleid-form">
+                    <label>Article IDs</label> <br />
+                    {{ form.articleids }}
+                </div>
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <label>Date: </label>
+        </td>
+        <td>
+            {{ form.datetype }}
+            <span id="date-start" style="display:none">Start: {{ form.startDate }} </span>
+            <span id="date-end" style="display:none"> End: {{ form.endDate }}</span> 
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <label>Medium:</label>
+        </td>
+        <td>
+            {{ form.mediums }}
+        </td>
+    </tr>
+    <tr>
+        <td style="padding-top:30px">
+            <label>Output:</label>
+        </td>
+        <td style="padding-top:30px; min-height:50px">
+            <div id="webscripts">
+                {% for out in outputs %}
+                    <input type="radio" name="webscriptToRun" id="{{out.id}}" value="{{out.id}}" checked="checked" />
+                    <label for="{{out.id}}">{{out.name}}</label>
+                {% endfor %}
+            </div>
+        </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td class="output-options-td">
+         {% for out in outputs %}
+             <div id="options-{{out.id}}" class="output-options">
+                {{out.formAsHtml}}
+            </div>
+        {% endfor %}
+        <div id="options-radio-additional" class="output-options">
+            
+        </div>
+        </td>
+    </tr>
+    <tr>
+        <td></td>
+        <td style="vertical-align:bottom">
+            <input type="submit" value="Submit" id="form-submit" />
+        </td>
+    </tr>
+  </table>
+    <script type="text/javascript">
+     $(document).ready(function(){
+        amcat.selection.apiUrl = "{% url api %}";
+     });
+     </script>
+    <span id="query-time"></span>
+  <!-- <div id="form-errors"></div> -->
+  </form>
+   
+   <div id="select-message" class="message"></div>
+   <div id="select-result"></div>
+   
+   <iframe name="formpost" style="display:none"></iframe>
+   
+   <div id="dialog-message" style="display:none">
+    <div id="dialog-message-content"></div>
+    <div id="dialog-message-status"></div>
+   </div>
+   
+   {% include "navigator/selection/querysyntax.html" %}

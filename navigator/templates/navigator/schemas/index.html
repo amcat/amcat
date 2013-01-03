@@ -1,0 +1,16 @@
+{% extends "navigator/base.html" %}
+
+{% block content %}
+
+<h1>Annotationschema editor</h1>
+<p>Click on a schema below to start editing.</p>
+
+
+
+<h2>Schemes in your projects</h2>
+<p>{{ own_schemas|safe }}</p>
+
+<h2>Schemes in all projects</h2>
+<p>{{ all_schemas|safe }}</p>
+
+{% endblock %}

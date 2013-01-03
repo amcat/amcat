@@ -1,0 +1,129 @@
+<div class="table-container" id="articletable-container">
+    <table class="display">
+       <thead>
+            {% for header in table.getColumns %}
+                <th>{{header}}</th>
+            {% endfor %}
+        </thead>
+        <tbody>
+            {% for row in table %}
+                <tr>
+                    {% for col in row %}
+                        <td>{{col}}</td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+       </tbody>
+    </table>
+</div>
+
+<script type="text/javascript">
+    function getColumn(i){
+        var columnText = $('#articletable-container table:first th:nth-child(' + (i+1) + ')').text();
+        console.log(columnText);
+        var colDict = {
+            'Article ID':'id',
+            'Date':'date',
+            'Medium ID':'medium__id',
+            'Medium Name':'medium__name',
+            'Headline':'headline'
+        }
+        if(columnText in colDict){
+            return colDict[columnText];
+        }
+        console.log('not in coldict', columnText, i);
+        alert('Cannot sort on this column');
+        return null;
+    }
+    
+    var thPosition = 0;
+
+    $(document).ready(function(){
+        $('#articletable-container table:first').dataTable( {
+            "bScrollInfinite": true,
+            "bLengthChange": false,
+            "iDisplayLength":{{table.getRows|length}},
+            "sScrollY": "400",
+            "bScrollCollapse": true,
+            "bFilter": false,
+            "bSort": true,
+            "bInfo": false,
+            "bProcessing": true,
+            "bServerSide": true,
+            "iDeferLoading": 99999,
+            "sAjaxSource": "{% url api.webscripts.handler.index 'ShowArticleList' %}",
+            "fnServerData": doServerRequest,
+            //"fnDrawCallback": onTableRedraw,
+            "fnRowCallback": function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {
+                onbeforeRowDraw($(nRow));
+                return nRow;
+            }
+        } );
+        
+        $('#articletable-container table:first th').each(function(i, item){
+            if($(item).text() == 'Context before'){
+                thPosition = i+1;
+                return false;
+            }
+        });
+        
+    });
+    
+    function onbeforeRowDraw(row){
+        if(thPosition > 0){
+            $('td:nth-child(' + thPosition + ')', row).each(function(i, item){
+                $(item).css('text-align', 'right');
+            });
+        }
+        
+        row.css('cursor', 'pointer').click(function(){
+            var articleid = $(this).find('td:first').text();
+            console.log('click', articleid)
+            if(articleid && isNaN(articleid) == false){
+                window.open('article/' + articleid)
+                //$('#hidden-link').attr('href', 'navigator/article/' + articleid).click();
+            }
+        });
+    }
+    
+    function doServerRequest(sSource, aoData, fnCallback){
+        var values = amcat.selection.getFormDict();
+        $.each(aoData, function(i, obj){
+            values[obj.name] = obj.value;
+        });
+        values['output'] = 'datatables';
+        values['outputTypeAl'] = 'table';
+        values['start'] = values['iDisplayStart'];
+        values['length'] = values['iDisplayLength'];
+        var sortColumn = getColumn(values['iSortCol_0']);
+        values['sortColumn'] = sortColumn; 
+        values['sortOrder'] = values['sSortDir_0'];
+        
+        if(!('columns' in values)){
+            values['columns'] = ['article_id', 'date', 'medium_id', 'medium_name', 'headline'];
+        }
+        
+        console.log(values);
+        var data = $.param(values, true);
+        
+        $.ajax( {
+            dataType: 'json',
+            type: "POST",
+            url: sSource,
+            data: data,
+            success: function(data, textStatus, jqXHR){
+                console.log(data);
+                
+                fnCallback(data, textStatus, jqXHR);
+            },
+            error:function(jqXHR, textStatus, errorThrown){
+                console.error(textStatus, errorThrown);
+                throw new Exception('Error loading additional data');
+            }            
+        } );
+    }
+    
+    
+</script>
+
+{#<a href="" id="hidden-link" style="display:none" target="_blank">test</a>#}

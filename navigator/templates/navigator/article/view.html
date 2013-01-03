@@ -1,0 +1,18 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+
+<div style="float:left; width:65%">
+ <h1>Article {{article.id}}</h1>
+ <h2>{{article.headline}}</h2>
+ <article>
+  {% if article.byline %}<h2>{{article.byline}}</h2>{% endif %}
+  {{ article.text|urlizetrunc:30|linebreaks }}
+ </article>
+</div>
+<div style="float:right; margin-left:20px; max-width:300px">
+ <h1>Article details</h1>
+ {% include "navigator/article/details.html" %}
+</div>
+
+{% endblock %}

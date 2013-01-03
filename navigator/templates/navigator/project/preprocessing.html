@@ -1,0 +1,31 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+<h1>Preprocessing activated for this project</h1>
+<div>
+ {{ table }}
+</div>
+
+{% if in_queue %}
+<p>
+ <span class="label label-info">Note</span> 
+ Articles are being checked whether they need preprocessing, so the numbers
+ above might not be complete.</p>
+{% endif %}
+
+<h2>Activate preprocessing:</h2>
+
+<form action="" method="POST">
+ <table>
+  {{ form.as_table }}
+ </table>
+ <input type="submit" value="Activate"></input>
+</form>
+
+
+
+
+{% endblock %}

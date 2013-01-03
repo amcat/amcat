@@ -1,0 +1,62 @@
+<h2>Articles</h2>
+
+<ul class="articlelist">
+{% for a in articlelist %}
+   <li>
+     <h3 class="article-headline">
+        {% if a.totalHits %} <span class="hit-count">{{a.totalHits}} hits - </span>{% endif %}
+        <a href="{% url navigator.views.article.view a.id %}" target="_blank">
+             {% if a.highlightedHeadline %}
+                {{ a.highlightedHeadline|first|safe|default:"[No headline]"}}
+               {% else %}
+                {{ a.headline|default:"[No headline]"}}
+             {% endif %}
+        </a>
+     </h3>
+     <div class="article-meta">
+        {{ a.date|date:"d-m-Y" }} | 
+{#        articleid: {{a.id}} |   #}
+        {{a.length}} words | 
+        {{a.medium.id}} - {{a.medium.name}}
+        {% if a.section %} | {{a.section}} {% endif %}
+        {% if a.author %} | Author: {{a.author}} {% endif %}
+     </div>
+     <div class="article-snippet">
+        {% if a.highlightedText %}
+            ... {% for t in a.highlightedText %}
+                    {{ t|safe}} ...
+                {% endfor %}
+        {% else %}
+            {{ a.text|truncatewords:40 }}
+        {% endif %}
+     </div>
+   </li>
+{% empty %}
+   <li>Error: No articles found</li>
+{% endfor %}
+</ul>
+
+{% if articlelist %}
+<span class="more-articlelist-results">Show More Results</span>
+{% endif %}
+
+<script type="text/javascript">
+
+    $(document).ready(function(){
+        var resultCount = $('.article-headline').length;
+        $('.more-articlelist-results').click(function(){
+            var values = amcat.selection.getFormDict();
+            var el = $(this);
+            values['columns'] = ['article_id'];
+            values['outputTypeAl'] = 'list';
+            values['output'] = 'html';
+            values['start'] = resultCount;
+            console.log('results start from', values['start']);
+            var data = $.param(values, true);
+            amcat.selection.callWebscript('ShowArticleList', data, function(data, textStatus, jqXHR){
+                el.before(data);
+                el.remove();
+             });
+        });
+    });
+</script>

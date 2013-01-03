@@ -1,0 +1,30 @@
+{% extends "navigator/base.html" %}
+
+{% block content %}
+
+<h1>Add user</h1>
+<form action="{% url user-add-submit %}" method="POST">
+ <table>
+  {{ add_form.as_table }}
+ </table>
+ <input name="submit" type="submit"></input>
+</form>
+<br/>
+<h1>Add multiple users</h1>
+<p>Upload a CSV file containing the columns <b>username</b>, <b>email</b>, <b>first_name</b> and <b>last_name</b>. You can download an example file <a href="{{ MEDIA_URL }}misc/csv-example.csv">here</a>. Passwords are automatically generated and send to the given e-mailaddresses.</p>
+
+<p>You can select an affiliation and language below.</p>
+<form enctype="multipart/form-data" action="{% url user-add-submit %}" method="POST">
+ <table>
+ {{ add_multiple_form.as_table }}
+ <tr>
+  <td colspan="2">
+   <input name="submit-multiple" type="submit" />
+  </td>
+ </tr>
+ </table>
+</form>
+
+<p>Creating multiple users can take a while. Please be patient.</p>
+
+{% endblock %}

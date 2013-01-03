@@ -1,0 +1,16 @@
+<tr>
+    <td>
+        <input type="text" name="unit" value="" />
+        <input type="hidden" name="unit-hidden" value="" />
+     </td>
+    {% for field in form %}
+        <td>
+            {{ field }}
+            <input type="hidden" name="{{field.html_name}}-hidden" />
+        </td>
+    {% endfor %}
+    <td>
+        <button class="add-row-button" title="Add a new row">Add</button>
+        <input type="hidden" name="codingid" value="" />
+    </td>
+</tr>

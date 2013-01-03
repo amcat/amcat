@@ -1,0 +1,29 @@
+.toggler a, .toggler a:visited {
+  background-image:url('/media/img/navigator/closed-arrow.png');
+  background-repeat:no-repeat;
+
+  color:black;
+}
+
+.toggler a.open, .toggler a.open:visited {
+  background-repeat:no-repeat;
+  background-image:url('/media/img/navigator/open-arrow.png'); 
+
+  color:black;
+}
+
+.toggler a{
+  padding-left:20px;
+  text-decoration:none;
+}
+
+.collapse{
+  padding-left:20px;
+}
+
+.toggler .help{
+   color:grey;
+   font-size:0.7em;
+   font-weight:normal;
+   margin-left:20px;
+}

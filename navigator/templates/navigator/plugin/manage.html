@@ -1,0 +1,30 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}Plugins - {{ plugin_type.label }}{% endblock %}
+
+{% block tabtitle %}Analyses{% endblock %}
+
+{% block content %}
+
+<h1> Manage {{ plugin_type.label }} analyses </h1>
+
+
+{% if canmanage %}
+<div>
+ <table>
+  <tr>
+   <td>Actions:</td>
+<td>
+  <a href="{% url add-plugin id=plugin_type.id %}"> 
+    Register a new plugin
+  </a>
+   </td>
+  </tr>
+ </table>
+</div>
+
+{% endif %}
+
+{{ plugins }}
+
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}Media{% endblock %}
+
+{% block tabtitle %}Media{% endblock %}
+
+{% block content %}
+
+{% if canadd %}
+<div>
+ <table>
+  <tr>
+   <td>Actions:</td>
+   <td><a href="{%url medium-add %}"> Add a new medium </a></td>
+  </tr>
+ </table>
+</div>
+
+{% endif %}
+
+{{ media|safe }}
+
+{% endblock %}

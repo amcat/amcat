@@ -1,0 +1,55 @@
+{% extends "navigator/base.html" %}
+{% load url from future %}
+{% block content %}
+
+<h1>Django REST API</h1>
+<p>Navigator provides and API for developers. You can access it by checking the
+urls below (see: <b>Available resources</b>). There are no usage restrictions.</p>
+
+<h1>Formats</h1>
+<p>You can get results in different formats, most noticeably json, xml and yaml.
+To request a specific format, append</p>
+
+<code>?format={json,xml,yaml}</code>
+
+<p>to your url. You can also request a format by providing the `Accept` HTTP-header.</p>
+
+<h1>Filtering</h1>
+<p>You can filter results, by providing filter options comparable to Django's
+internal Q-objects. A typical request looks like:</p>
+
+<code>?fieldname__filter=value</code>
+
+<p>Some simple examples are:</p>
+<ol>
+    <li><a href="v4/project?active=true">project?active=true</a></li>
+    <li><a href="v4/project?active=true&owner=2">project?active=true&owner=2</a></li>
+    <li><a href="v4/project?owner__id__gte=5">project?owner__id__gte=5</a></li>
+</ol>
+
+<p>But you can even do:</p>
+<ol>
+    <li><a href="v4/project?articlesets__articles__id=47059338">project?articlesets__articles__id=47059338</a></li>
+</ol>
+
+<p>Which returns all projects which contain articlesets which contain the
+article with id 47059338. A complete overview of all filters is available on <a
+    href="https://docs.djangoproject.com/en/dev/ref/models/querysets/#field-lookups">docs.djangoproject.com</a>. Some filters may not function due to the inabilty to transfer some datatypes over GET arguments.</p>
+
+<h1>Order by</h1>
+<p>Some results may seem random, concerning the order in which they appear. To
+prevent such behaviour, include order_by in your url. <a href="v4/project?order_by=id">Example</a>.</p>
+
+<h1>Available resources</h1>
+<p>
+<ul>
+{% for resource, name in resources %}
+<li><a href="{% url name %}">{{resource.verbose_name}}</a>
+{% if resource.readonly %}
+(read only)
+{% endif %}</li>
+ {% endfor %}
+</ul>
+</p>
+
+{% endblock %}

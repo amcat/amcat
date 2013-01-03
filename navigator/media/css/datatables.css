@@ -1,0 +1,522 @@
+/*
+ *  Based on Demo DataTables.net stylesheet
+ *  Copyright 2009 Allan Jardine. All Rights Reserved.
+ */
+
+.dataTables_wrapper {
+	
+	padding-bottom:30px;
+
+	/*background-color:#f2f2f2;*/
+	font-size:0.9em;
+
+	position: relative;
+	min-height: 50px;
+    min-width:500px;
+	clear: both;
+	_height: 302px;
+	zoom: 1; /* Feeling sorry for IE */
+}
+
+.dataTables_processing {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 250px;
+	height: 30px;
+	margin-left: -125px;
+	margin-top: -15px;
+	padding: 14px 0 2px 0;
+	border: 1px solid #ddd;
+	text-align: center;
+	color: #999;
+	font-size: 14px;
+	background-color: white;
+    background: white url('/media/img/misc/ajax-loading.gif') no-repeat 40px center;
+}
+
+.table-loading{
+    background: white url('/media/img/misc/ajax-loading.gif') no-repeat left center;
+    padding-left: 20px;
+}
+
+.dataTables_length {
+	/*width: 40%;*/
+	float: left;
+	margin-top:6px;
+}
+
+.dataTables_filter {
+	width: 50%;
+	float: right;
+	text-align: right;
+    margin:2px;
+    margin-right:-1px;
+}
+
+.dataTables_filter > input{
+	border:1px solid grey;
+}
+
+.dataTables_info {
+	color:grey;
+	padding-top:5px;
+	min-width: 50px;
+	float: left;
+}
+
+.dataTables_paginate {
+	margin-top:5px;
+	width: 44px;
+	* width: 50px;
+	float: right;
+	text-align: right;
+}
+
+/* Pagination nested */
+.paginate_disabled_previous, .paginate_enabled_previous, .paginate_disabled_next, .paginate_enabled_next {
+	height: 19px;
+	width: 19px;
+	margin-left: 3px;
+	float: left;
+}
+
+.paginate_disabled_previous {
+	background-image: url('/media/img/dataTables/back_disabled.jpg');
+}
+
+.paginate_enabled_previous {
+	background-image: url('/media/img/dataTables/back_enabled.jpg');
+}
+
+.paginate_disabled_next {
+	background-image: url('/media/img/dataTables/forward_disabled.jpg');
+}
+
+.paginate_enabled_next {
+	background-image: url('/media/img/dataTables/forward_enabled.jpg');
+}
+
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * DataTables display
+ */
+
+.dataTables_scrollBody, .dataTables_scrollHead{
+   /*width:100%;*/
+}
+
+table.display {   
+	margin: 0 auto;
+	clear: both;
+    /*width:100%;*/
+
+    border-collapse:collapse;
+	
+	/* Note Firefox 3.5 and before have a bug with border-collapse
+	 * ( https://bugzilla.mozilla.org/show%5Fbug.cgi?id=155955 ) 
+	 * border-spacing: 0; is one possible option. Conditional-css.com is
+	 * useful for this kind of thing
+	 *
+	 * Further note IE 6/7 has problems when calculating widths with border width.
+	 * It subtracts one px relative to the other browsers from the first column, and
+	 * adds one to the end...
+	 *
+	 * If you want that effect I'd suggest setting a border-top/left on th/td's and 
+	 * then filling in the gaps with other borders.
+	 */
+}
+
+table.display .filterMatches{
+	font-weight:bold;
+}
+
+table.display thead, table.display tfoot {
+	background-color:#60a3ff;
+	color:white;
+}
+
+table.display thead th, table.display tfoot th {
+	padding: 3px 12px 3px 7px;
+
+	/*border-bottom: 1px solid black;*/
+	font-weight: bold;
+	cursor: pointer;
+	* cursor: hand;
+    text-align:left;
+
+    padding-right:20px;
+}
+
+table.display tfoot th{
+	cursor:default;
+	* cursor: default;
+}
+
+table.display tfoot th {
+	padding: 3px 18px 3px 10px;
+	/*border-top: 1px solid black;*/
+	font-weight: bold;
+}
+
+table.display tr.heading2 td {
+	/*border-bottom: 1px solid #aaa;*/
+}
+
+table.display td {
+	padding: 1px 5px;
+	white-space: nowrap;
+}
+
+table.display td.center {
+	text-align: center;
+}
+
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * DataTables sorting
+ */
+
+.sorting_asc {
+	background: url('/media/img/dataTables/sort_asc.png') no-repeat center right;
+}
+
+.sorting_desc {
+	background: url('/media/img/dataTables/sort_desc.png') no-repeat center right;
+}
+
+.sorting {
+	background: url('/media/img/dataTables/sort_both.png') no-repeat center right;
+}
+
+.sorting_asc_disabled {
+	background: url('/media/img/dataTables/sort_asc_disabled.png') no-repeat center right;
+}
+
+.sorting_desc_disabled {
+	background: url('/media/img/dataTables/sort_desc_disabled.png') no-repeat center right;
+}
+
+
+
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * DataTables row classes
+ */
+table.display tr.odd.gradeA {
+	background-color: #ddffdd;
+}
+
+table.display tr.even.gradeA {
+	background-color: #eeffee;
+}
+
+table.display tr.odd.gradeC {
+	background-color: #ddddff;
+}
+
+table.display tr.even.gradeC {
+	background-color: #eeeeff;
+}
+
+table.display tr.odd.gradeX {
+	background-color: #ffdddd;
+}
+
+table.display tr.even.gradeX {
+	background-color: #ffeeee;
+}
+
+table.display tr.odd.gradeU {
+	background-color: #ddd;
+}
+
+table.display tr.even.gradeU {
+	background-color: #eee;
+}
+
+
+tr.odd {
+	background-color: #e9e9e9;
+}
+
+tr.even {
+	
+}
+
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Misc
+ */
+.dataTables_scroll {
+	clear: both;
+}
+
+.dataTables_scrollBody {
+	*margin-top: -1px;
+}
+
+/*.top, .bottom {
+	padding: 15px;
+	background-color: #F5F5F5;
+	border: 1px solid #CCCCCC;
+}*/
+
+.top .dataTables_info {
+	float: none;
+}
+
+.clear {
+	clear: both;
+}
+
+.dataTables_empty {
+	text-align: center;
+}
+
+tfoot input {
+	margin: 0.5em 0;
+	color: #444;
+}
+
+tfoot input.search_init {
+	color: #999;
+}
+
+td.group {
+	background-color: #d1cfd0;
+	border-bottom: 2px solid #A19B9E;
+	border-top: 2px solid #A19B9E;
+}
+
+td.details {
+	background-color: #d1cfd0;
+	border: 2px solid #A19B9E;
+}
+
+
+.example_alt_pagination div.dataTables_info {
+	width: 40%;
+}
+
+.paging_full_numbers {
+	width: 400px;
+	height: 22px;
+	line-height: 22px;
+}
+
+span.paginate_button,
+ 	.paging_full_numbers span.paginate_active {
+	border: 1px solid #aaa;
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	padding: 2px 5px;
+	margin: 0 3px;
+	cursor: pointer;
+	*cursor: hand;
+}
+
+span.paginate_button {
+	background-color: #ddd;
+}
+
+span.paginate_button:hover {
+	background-color: #ccc;
+}
+
+span.paginate_active {
+	background-color: #99B3FF;
+}
+
+table.display tr.even.row_selected td {
+	background-color: #B0BED9;
+}
+
+table.display tr.odd.row_selected td {
+	background-color: #9FAFD1;
+}
+
+
+/*
+ * Sorting classes for columns
+ */
+/* For the standard odd/even */
+tr.odd td.sorting_1 {
+	background-color: #e0e0e0;
+}
+
+tr.odd td.sorting_2 {
+	background-color: #DADCFF;
+}
+
+tr.odd td.sorting_3 {
+	background-color: #E0E2FF;
+}
+
+tr.even td.sorting_1 {
+	background-color: #efefef;
+}
+
+tr.even td.sorting_2 {
+	background-color: #F2F3FF;
+}
+
+tr.even td.sorting_3 {
+	background-color: #F9F9FF;
+}
+
+/* For the Conditional-CSS grading rows */
+/*
+ 	Colour calculations (based off the main row colours)
+  Level 1:
+		dd > c4
+		ee > d5
+	Level 2:
+	  dd > d1
+	  ee > e2
+ */
+/*tr.odd.gradeA td.sorting_1 {
+	background-color: #c4ffc4;
+}
+
+tr.odd.gradeA td.sorting_2 {
+	background-color: #d1ffd1;
+}
+
+tr.odd.gradeA td.sorting_3 {
+	background-color: #d1ffd1;
+}
+
+tr.even.gradeA td.sorting_1 {
+	background-color: #d5ffd5;
+}
+
+tr.even.gradeA td.sorting_2 {
+	background-color: #e2ffe2;
+}
+
+tr.even.gradeA td.sorting_3 {
+	background-color: #e2ffe2;
+}
+
+tr.odd.gradeC td.sorting_1 {
+	background-color: #c4c4ff;
+}
+
+tr.odd.gradeC td.sorting_2 {
+	background-color: #d1d1ff;
+}
+
+tr.odd.gradeC td.sorting_3 {
+	background-color: #d1d1ff;
+}
+
+tr.even.gradeC td.sorting_1 {
+	background-color: #d5d5ff;
+}
+
+tr.even.gradeC td.sorting_2 {
+	background-color: #e2e2ff;
+}
+
+tr.even.gradeC td.sorting_3 {
+	background-color: #e2e2ff;
+}
+
+tr.odd.gradeX td.sorting_1 {
+	background-color: #ffc4c4;
+}
+
+tr.odd.gradeX td.sorting_2 {
+	background-color: #ffd1d1;
+}
+
+tr.odd.gradeX td.sorting_3 {
+	background-color: #ffd1d1;
+}
+
+tr.even.gradeX td.sorting_1 {
+	background-color: #ffd5d5;
+}
+
+tr.even.gradeX td.sorting_2 {
+	background-color: #ffe2e2;
+}
+
+tr.even.gradeX td.sorting_3 {
+	background-color: #ffe2e2;
+}
+
+tr.odd.gradeU td.sorting_1 {
+	background-color: #c4c4c4;
+}
+
+tr.odd.gradeU td.sorting_2 {
+	background-color: #d1d1d1;
+}
+
+tr.odd.gradeU td.sorting_3 {
+	background-color: #d1d1d1;
+}
+
+tr.even.gradeU td.sorting_1 {
+	background-color: #d5d5d5;
+}
+
+tr.even.gradeU td.sorting_2 {
+	background-color: #e2e2e2;
+}
+
+tr.even.gradeU td.sorting_3 {
+	background-color: #e2e2e2;
+}*/
+
+
+
+/*
+ * KeyTable
+ */
+table.KeyTable td {
+	border: 3px solid transparent;
+}
+
+table.KeyTable td.focus {
+	border: 3px solid #3366FF;
+}
+
+table.display tr.gradeA {
+	background-color: #eeffee;
+}
+
+table.display tr.gradeC {
+	background-color: #ddddff;
+}
+
+table.display tr.gradeX {
+	background-color: #ffdddd;
+}
+
+table.display tr.gradeU {
+	background-color: #ddd;
+}
+
+div.box {
+	height: 100px;
+	padding: 10px;
+	overflow: auto;
+	border: 1px solid #8080FF;
+	background-color: #E5E5FF;
+}
+
+table.display tbody tr:hover, table.display tbody tr td.highlighted {
+	background-color: #bbd8ff;
+}
+
+table.display tr:hover td.sorting_1,
+table.display tr:hover td.sorting_2,
+table.display tr:hover td.sorting_3 {
+	background-color: #bbd8ff;
+}

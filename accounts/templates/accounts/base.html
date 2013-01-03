@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+ <head>
+  <title>AmCAT {% block page %}{% endblock %}</title>
+  <link type="text/css" rel="stylesheet" href="{{ MEDIA_URL }}css/bootstrap.css" />
+  <link type="text/css" rel="stylesheet" href="{{ MEDIA_URL }}css/accounts.css" />
+  <script type="text/javascript" src="{{ MEDIA_URL }}js/bootstrap.js"></script>
+ </head>
+ <body>
+  <div id="container">
+   <div id="logo"></div>
+   {% block content %}
+   {% endblock content %}
+  </div>
+ </body>
+</html>

@@ -1,0 +1,17 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}Plugins - Overview{% endblock %}
+
+{% block tabtitle %}Plugins: {% endblock %}
+
+{% block content %}
+
+<h2>Please use the tabs to manage one of the plugin types currently used:</h2>
+
+<ul>
+{% for type in types %}
+  <li> <a href="{% url manage-plugins id=type.id %}">{{ type.label }}</a>: {{ type.description }}
+{% endfor %}
+</ul>
+
+{% endblock %}

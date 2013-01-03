@@ -1,0 +1,383 @@
+/*
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+*/
+
+
+body{
+   margin:0px;
+   background-image:url('/media/img/navigator/body.png');
+   background-repeat:repeat-y;
+   font-family: Arial,helvetica,sans-serif;
+   font-size:12px;
+}
+
+h1, h2, h3{
+   border-bottom:1px dotted #e2e2e2;
+}
+
+h1.noline, h2.noline, h3.noline{
+   border-bottom:none;
+}
+
+/* 
+I disabled these rules, since they are global and interfered with jqueryui
+a{
+   text-decoration:none;
+   border-bottom:1px dotted #0117f4;
+}
+*/
+
+h1{
+   font-size:1.3em;
+   /*color:#2d86ff;*/
+   clear:both;
+}
+
+h2{
+   font-size:1.2em;
+   /* color:#60a3ff; */
+}
+
+h3{
+   font-size:1.0em;
+}
+
+
+article{
+   text-align:justify;
+}
+
+.buttons{
+   width:750px; /* 3 buttons of each 250px */
+
+   margin:auto;
+
+   display:table;
+   border-spacing:20px;
+
+   margin-top:-20px;
+}
+
+#frontpage_buttons{
+   margin-top:5%;
+}
+
+.buttons a, .buttons a:visited{
+  text-decoration:none;
+  color:black;
+}
+
+
+.buttons .button{
+  width:250px;
+  height:125px;
+
+  background-color:#dadada;
+
+  display:table-cell;
+  vertical-align:middle;
+  text-align:center;
+
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+
+  font-size:1.5em;
+  font-weight:bold;
+}
+
+#menu-tabs .tab.selected{
+    background-color:#60A3FF;
+    color:white;
+}
+
+.buttons .button *{
+  display:block;
+  text-align:center;
+  margin:auto;
+}
+
+#menu-tabs .tab.selected{
+  background-color:#60A3FF;
+  color:white;
+}
+
+.buttons .button:hover, #menu-tabs .tab:hover{
+  background-color:#60A3FF;
+
+  -webkit-transition: background 600ms ease-in-out;
+  -moz-transition: background 600ms ease-in-out;
+  -o-transition: background 600ms ease-in-out;
+  transition: background 600ms ease-in-out;
+
+  cursor:pointer;
+  color:white;
+}
+
+
+#header{
+   background-color:#f2f2f2;
+   border-bottom:1px solid #e2e2e2;
+   
+   height:50px;
+   width:100%;
+}
+
+#logo-wrapper{
+   background-image:url('/media/img/amcat/amcat-logo.png');
+   background-repeat:no-repeat;
+   background-position:0px 10px;
+   
+   margin-left:10px;
+   padding-left:40px;
+   padding-top:10px;
+   
+   height:30px; /* For the background-image */
+   
+   position:absolute;
+}
+
+#logo-headline{
+   font-size:15px;
+   font-weight:bold;
+}
+
+#logo-byline{
+   color:grey;
+   font-size:13px;
+   
+   text-align:right;
+   margin-top:-3px;
+   margin-right:10px;
+}
+
+#menu-tabs{
+   position:absolute;
+   margin-left:200px; /* Width of menu */
+   margin-top:34px; /* Height of menu minus height of tab + 3px */
+}
+
+#menu-tabs-title {
+   font-size:12px;
+   font-weight:bold;
+}
+
+#menu-tabs > .tab{
+   height:20px;
+   padding:3px;
+
+   background-color:#DADADA;
+   border-color:grey;
+
+   -webkit-border-top-left-radius: 3px;
+   -webkit-border-top-right-radius: 3px;
+   -moz-border-radius-topleft: 3px;
+   -moz-border-radius-topright: 3px;
+   border-top-left-radius: 3px;
+   border-top-right-radius: 3px;
+}
+
+#menu-tabs > .tab a{
+   text-decoration:none;
+   color:inherit;   
+   padding:3px;
+}
+
+#content-menu{
+   float:left;
+   width:200px;
+}
+
+#content-menu a{
+   border-bottom:none;
+}
+
+.content-menu-header{
+   background-image:url('/media/img/navigator/menu-header.png');
+   border-bottom:1px solid #e2e2e2;
+   
+   font-weight:bold;
+   font-size:0.9em;
+   
+   padding:3px;
+   padding-left:10px;
+   padding-top:5px;
+}
+
+.content-menu-item a{
+    width:100%;
+    display:block;
+}
+
+
+.content-menu-item, .content-menu-item-selected{
+   -webkit-transition: all 0.1s ease;
+   -moz-transition: all 0.1s ease;
+   -o-transition: all 0.1s ease;
+   transition: all 0.1s ease;
+   
+   border-bottom:1px solid #e2e2e2;
+   
+   font-size:0.9em;
+}
+
+.content-menu-item-selected{
+   background-color:#60a3ff;
+   color:white;
+   font-weight:bold;
+}
+
+.content-menu-item-selected > div, .content-menu-item a{
+   padding:2px;
+   padding-left:15px;
+   padding-bottom:5px;
+}
+
+.content-menu-item-selected > div{
+   background-image:url('/media/img/navigator/menu-item-selected-arrow.png');
+   background-position:7px 0px;
+   width:194px;  
+}
+
+
+.content-menu-item a{
+   color:black;
+   text-decoration:none;
+   
+   -webkit-transition: all 0.1s ease;
+   -moz-transition: all 0.1s ease;
+   -o-transition: all 0.1s ease;
+   transition: all 0.1s ease;
+}
+
+.content-menu-item:hover{
+   background-color:#60a3ff;
+   color:white;
+}
+
+.content-menu-item:hover a{
+   color:white;
+}
+
+
+.content-menu-item-selected a{
+    color:white;
+    text-decoration:none;
+    width:100%;
+    display:block;
+}
+
+
+#content{
+   float:left;
+   margin-right:20px;
+   margin-left:220px; /* 200 + 20 */
+   padding-bottom:20px;
+   position:absolute;
+}
+
+#content > p {
+   width:600px;
+   text-align:justify;
+}
+
+#message-wrap{
+   position:relative;
+   width:100%;
+}
+
+#message{
+   margin-left:200px; /* 20 -1 */
+   padding-top:2px;
+   padding-bottom:2px;
+   font-size:0.9em;
+   font-weight:bold;
+
+   text-align:center;
+
+   border-bottom:1px solid #e2e2e2;
+
+   
+}
+
+#message.success{
+   background-color:#26c601;
+   color:white;
+}
+
+
+
+.error {
+	border: 2px solid #ff0000; 
+	background: #FFE6E6;
+	margin:1px;
+	padding:5px;
+	font-size:13px;
+	font-weight:bold;
+	color:#ff0000;
+}
+
+.message{
+	border: 2px solid #205CA7;
+    color:#004499;
+	margin:1px;
+	padding:5px;
+	font-size:13px;
+	font-weight:bold;
+}
+
+.success{
+    border: 2px solid #216631;
+    color:#216631;
+    background:#EDFAF0;
+	margin:1px;
+	padding:5px;
+	font-size:13px;
+	font-weight:bold;
+}
+
+.loading{
+    border: 2px solid #205CA7;
+    color:#004499;
+	margin:1px;
+	padding:5px;
+	font-size:13px;
+	font-weight:bold;
+    padding-left:25px;
+    background:white url('/media/img/misc/ajax-loading.gif') no-repeat 5px 5px;
+}
+
+table.key_value tr :first-child{
+  font-weight:bold;
+  padding-right:5px;
+}
+
+.action-links{
+    margin:30px 0px;
+    font-size:13px;
+}
+
+.green{
+    color:green;
+}
+
+.dragging{
+    font-weight:bold;
+}

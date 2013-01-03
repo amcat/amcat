@@ -1,0 +1,16 @@
+{% extends "navigator/project/base.html" %}
+{% load menu %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+<h1>Project {{context.id}} : {{ context.name }}</h1>
+{% if edited %}
+<br/>
+<div class="alert alert-success">Project details saved successfully.</div>
+{% endif %}
+<div>
+ {% include "navigator/project/view_details.html" %}
+</div>
+{% endblock %}

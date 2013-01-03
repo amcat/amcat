@@ -1,0 +1,18 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+
+{% if success %}
+<p class="green">{{ title|title }} succesfully added to <a href="{% url project context.id %}">project</a>.</p>
+{% endif %}
+
+<h1>Create new {{ title }}</h1>
+<form action="" method="POST">
+ <table>
+  {{ form.as_table }}
+ </table>
+ <input name="submit" type="submit" value="Save {{ title|title }} Details"></input>
+</form>
+
+
+{% endblock %}

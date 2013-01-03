@@ -1,0 +1,21 @@
+<h2>ClusterMap</h2>
+
+<p>Total number of Articles: {{articleCount}}</p>
+
+<img src="data:image/png;base64,{{imgBase64}}" usemap="#map1" />
+
+{{mapHtml|safe}}
+
+<p id="cluster-table">
+    {{tableHtml|safe}}
+</p>
+
+<script type="text/javascript">
+    $(document).ready(function(){
+        $('map[name=map1] area').click(function(){
+            window.open('article/' + $(this).attr('href'));
+        });
+        
+        $('#cluster-table table').dataTable()
+    });
+</script>

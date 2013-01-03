@@ -1,0 +1,20 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+
+<h1>Import codebooks</h1>
+<form action="" method="POST">
+ {% for field in codebook_form %}{{ field }}{% endfor %}
+<input name="submit-codebooks" type="submit" value="Import"></input>
+</form>
+
+<br/>
+
+<h1>Import schemas</h1>
+<form action="" method="POST">
+ {% for field in codingschema_form %}{{ field }}{% endfor %}
+<input name="submit-schemas" type="submit" value="Import"></input>
+</form>
+
+
+{% endblock %}

@@ -1,0 +1,15 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+
+<h1>Edit role of user {{projectrole.user.id}} - {{projectrole.user.username}} on Project {{projectrole.context.id}} - {{projectrole.context.name}}</h1>
+
+<form action="" method="POST">
+ <table>
+  {{ form.as_table }}
+ </table>
+ <input type="submit" value="Update role"></input>
+</form>
+
+
+{% endblock %}

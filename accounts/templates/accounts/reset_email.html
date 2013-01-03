@@ -1,0 +1,8 @@
+Hi {{user.first_name}},
+You're receiving this e-mail because you requested a password reset for your user account on AmCAT. Please go to the following page and choose a new password:
+{% block reset_link %}{{ protocol }}://{{ domain }}{% url accounts-recover-confirm uidb36=uid token=token %}{% endblock %}
+Your username, in case you've forgotten: {{ user.username }}
+
+Kind regards,
+The AmCAT team
+

@@ -1,0 +1,18 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+
+<form action="" method="POST">
+    <legend>Edit project details of project "{{ project.name }}" below.</legend>
+   <table>
+    {{ form.as_table }}
+   </table>
+ 
+   <div class="form-actions">
+    <input class="btn btn-primary" type="submit" value="Save"></input>
+    <a href="{% url project project.id %}" class="btn">Cancel</a>
+   </div>
+</form>
+
+
+{% endblock %}

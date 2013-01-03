@@ -1,0 +1,35 @@
+  <table class="key_value">
+   <tr>
+    <td>ID:</td>
+    <td>{{context.id}}</td>
+   </tr>
+   <tr>
+    <td>Name:</td>
+    <td>{{context.name}}</td>
+   </tr>
+   <tr>
+    <td>Description:</td>
+    <td>{{context.description}}</td>
+   </tr>
+   <tr>
+    <td>Index by default:</td>
+    <td>{% if context.index_default %}Yes{% else %}No{% endif %}</td>
+   </tr>
+   <tr><td></td><td></td></tr>
+   <tr>
+    <td>Created by:</td>
+    <td>{{context.insert_user.fullname}} ({{context.insert_user.username}})</td>
+   </tr>
+   <tr>
+    <td>Created on:</td>
+    <td>{{context.insert_date}}</td>
+   </tr>
+   <tr>
+    <td>Guest role:</td>
+    <td>{{context.guest_role}}</td>
+   </tr>
+  </table>
+  <a class="btn" href="{% url project-edit context.id %}">
+      <i class="icon-edit"></i>
+      Edit details
+  </a> 

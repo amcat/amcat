@@ -1,0 +1,14 @@
+<script>
+$(document).ready(function(){
+    amcat.datatables.create_rest_table($("#{{ id }}-wrapper"), "{{ url|safe }}", {
+        "setup_callback" : function(tbl){ 
+            {% if rowlink %}
+                tbl.fnSetRowlink("{{ rowlink }}");
+            {% endif %}
+            console.log("{{ rowlink }}"); 
+        },
+        "name" : "{{ id }}",
+        "datatables_options" : {{ options|safe }}
+    })
+ });
+</script>

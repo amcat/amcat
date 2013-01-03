@@ -1,0 +1,29 @@
+{% extends "accounts/base.html" %}
+{% block content %}
+
+<div class="alert alert-info">
+     <p style="margin:0px;">To recover your username and/or password enter either your password or username and click the button next to the input area. </p>
+</div>
+
+<p>
+ <form method="POST" class="well form-inline">
+     {% csrf_token %}
+     <legend>Credentials recovery</legend>
+     <input type="text" class="input" name="email" id="id_email" placeholder="Email" /> 
+     <input class="btn btn-primary" type="submit" value="Recover" />
+     {% if form.email.errors %}
+         {% for error in form.email.errors %}
+           <p class="alert-error">{{error}}</p>
+         {% endfor %}
+     {% endif %}
+
+
+     <div style="margin-bottom:0px;" class="form-actions">
+      <a href="{% url accounts-login %}" class="btn">
+      {% if form.email.errors %}Back to Login Form
+      {% else %}Cancel{% endif %}
+      </a>
+     </div>
+ </form>
+ </p>
+{% endblock %}

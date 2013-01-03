@@ -1,0 +1,79 @@
+"order","active","show","name","insert","delete","where","remarks","meer remarks"
+1,1,,"highestv","?x :prop ""highestv""",,"?x :pos ""V"" 
+FILTER NOT EXISTS {?x :rel_xcomp ?y. ?y :pos ""V"" }",,
+1,1,,"lowestv","?x :prop ""lowestv""",,"?x :pos ""V"" 
+FILTER NOT EXISTS {?y :rel_xcomp ?x; :pos ""V"" }",,
+1,1,,"passive verb","?v :prop ""passiveverb""",,"?x :rel_nsubjpass ?v",,
+2,1,,"Preprocess israeli possessive ","?israeli :rel_poss ?offensive","?israeli :rel_amod ?offensive","?israeli :rel_amod ?offensive.
+?israeli :lemma ""israeli""",,
+100,1,1,"simple active subject","?john :su ?hits",,"?john :rel_nsubj ?hits.
+?hits :prop ""highestv"".","john hits mary, eg 8049674",
+100,1,,"passive subject","?john :su ?hit",,"?john :rel_pobj ?by.
+?by :lemma ""by"";
+    :rel_prep ?hit.
+?hit :prop ""passiveverb""","mary was hit by john, eg 8049668",
+101,1,,"passive subject 3","?john :su ?hit",,"?john :rel_agent ?hit.","mary was hit by john, eg 14245532",
+110,1,,"passive subject 2","?rockets :su ?shoot",,"?rockets :rel_nsubj ?shoot.
+?shoot :rel_xcomp ?develop.
+FILTER NOT EXISTS {?rockets :su ?x}","develop rockets to shoot, eg 14156083; allow sunbject to non-highest v if it is not subject of another v",
+151,1,,"indirect object","?home :obj ?shoot",,"?home :rel_prep_at ?shoot.
+FILTER NOT EXISTS {?x :obj ?shoot}","shoot rockets at homes, 14156083",
+151,1,,"indirect object","?john :obj ?serve",,"?john :rel_pobj ?as.
+?as :lexclass ""objprep"";
+  :rel_prep ?serve.
+?serve :prop ""lowestv"".
+FILTER NOT EXISTS {?serve :prop ""passiveverb""}
+","john serves as policeman",
+152,1,,"passive object","?mary :obj ?hits",,"?mary :rel_nsubjpass ?hits.
+?hits :prop ""lowestv"".
+FILTER NOT EXISTS {?x :obj ?hits}","mary was hit, e.g. 14245532?",
+154,1,,"direct object","?mary :obj ?hits",,"?mary :rel_dobj ?hits.
+?hits :prop ""lowestv"".
+FILTER NOT EXISTS {?x :obj ?hits}","john hits mary, eg 8049674",
+200,1,,"is responsble for","?hamas :su ?responsible.
+?terror :obj ?responsible.",,"?responsible :lexclass ""responsible"";
+  ^:rel_nsubj ?hamas;
+  ^:rel_cop ?is;
+  ^:rel_prep ?for.
+?terror :rel_pobj ?for.","hamas is responsible for terror, 8049664",
+300,1,,"To-reason","?shoot :om ?kill",,"?kill :rel_ccomp|:rel_xcomp ?shoot.
+?to :lemma ""to"";
+      :rel_aux ?kill.","shoot to kill, 8049677",
+400,1,,"Su-conjunction","?hamas :su ?tries",,"?hamas :su ?fires.
+?tries :rel_conj ?fires;
+    :pos ""V""","Hamas fires and tries to …",
+401,1,,"To-conjunction","?shoot :om ?attack",,"?shoot :om ?kill.
+?attack :rel_conj+ ?kill.","shoot to kill and attack, 8049677",
+1000,1,,"equivalence","?john :eqv ?cool","?john :su ?is.
+?cool :obj ?is.","?john :su ?is.
+?cool :obj ?is.
+?is :lexclass ""copula""","john is cool, 8049670",
+1000,1,,"copula","?john :eqv ?cool",,"?john :rel_nsubj ?cool.
+[] :rel_cop ?cool.
+FILTER NOT EXISTS {?x :obj ?cool}","john is cool, 14155407",
+1001,1,,"which is","?hamas :su ?responsible","?which :su ?responsible","?which :lexclass ""which"";
+    :su ?responsible.
+?responsible :rel_rcmod ?hamas.","hamas, which is responsible",
+1100,1,,"describe as","?john :quote ?describe.
+?mary :eqv ?beautiful.","?john :su ?describe.
+?mary :obj ?describe.
+","?john :su ?describe.
+?describe :lexclass ""describe"".
+?mary :obj ?describe.
+?beautiful :rel_prep_as ?describe.","john describes mary as beautiful, 14156549",
+1101,1,,"soimple quote","?john :quote ?says","?john :su ?says","?john :su ?says.
+?says :lexclass ""say""","john says ... 14156083",
+1200,1,,"helped to develop","?john :su ?develop",,"?john :su ?help.
+?develop :rel_dep ?help.
+?help :lexclass ""help"".
+?develop :pos ""V""",,
+1200,1,,"call for","?halt :obj ?call",,"?halt :rel_prep_for ?call.
+?call :lexclass ""appeal""","call for halt 14155731",
+1100,1,,"possessive action","?israel :su ?offensive",,"?offensive :lexclass ""offensive"".
+?israel :rel_poss ?offensive.","israel's offensive 14155574",
+1101,1,,"possessive equality","?israel :eqv ?atrocity",,"?atrocity :rel_poss ?israel.
+FILTER NOT EXISTS {?atrocity :su ?israel}","israel's atrocity 14156308",
+1102,1,,"possessive predicate","?israel :su ?fight.
+?hamas :obj ?fight",,"?israel :rel_poss ?fight.
+?hamas :rel_prep_with|:rel_prep_of|:rel_prep_on ?fight.
+FILTER NOT EXISTS {?x :su|:obj ?fight}","israel's fight with hamas 14176500",

@@ -1,0 +1,62 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block javascript %}
+ <script src="{{MEDIA_URL}}js/jquery.djangofields.js"></script>
+ <script src="{{MEDIA_URL}}js/jquery.schemaeditor.js"></script>
+ <script src="{{MEDIA_URL}}js/jquery.tablednd.0.7.min.js"></script>
+ <script>$(function(){ jQuery.fn.schemaeditor("{% url api %}v4/", {{schema.id}}, {{context.id}}).main(); });</script>
+ {% endblock %}
+
+{% block content %}
+<br/>
+<h1 class="noline"><i>{{schema.name}}</i> details</h1>
+<form action="" method="POST">
+<table>
+ {{ schema_form }}
+</table>
+<div class="form-actions">
+ <input class="btn btn-primary" type="submit" name="codingschema-submit" value="Save" />
+ <a href="{% url project-schema context.id schema.id %}" class="btn" value="Cancel">Cancel</a>
+</div>
+</form>
+<h1 class="noline">Schemafields</h1>
+<p>
+<div name="add-field" class="btn disabled"><i class="icon-plus"></i> Add field</div>
+<!--<div name="undo" class="btn disabled"><i class="icon-step-backward"></i> Undo</div>
+<div name="redo" class="btn disabled"><i class="icon-step-forward"></i> Redo</div>-->
+<a href="" class="btn btn-warning"><i class="icon-white icon-refresh"></i> Reset</a>
+</p>
+<p name="field_errors"></p>
+<p>
+<table name="schema" class="table table-striped table-bordered">
+ <thead>
+  <tr>
+   <th name="fieldnr">#</th>
+   <th null="{{ fields_null.label|lower }}" editable="true" name="label">Label</th>
+   <th null="{{ fields_null.required|lower }}" editable="true" name="required">Required</th>
+   <th null="{{ fields_null.fieldtype|lower }}" editable="true" name="fieldtype">Fieldtype</th>
+   <th null="{{ fields_null.codebook|lower }}" editable="true" name="codebook">Codebook</th>
+   <th null="{{ fields_null.default|lower }}" editable="true" name="default">Default</th>
+   <th name="delete"></th>
+  </tr>
+ </thead>
+ <tbody>
+  <tr name="loading"><td colspan="7">
+   <div class="progress active">
+    <div class="bar"></div>
+   </div>
+  </td></tr>
+ </tbody>
+</table>
+
+<p><span class="label label-info">Usage</span> You can <b>order</b> fields by draggin them to the desired place. To <b>edit</b> a field, double click on a cell you wish to edit. When your done editing, click outside the table or press <code>enter</code>.</p>
+
+</p>
+
+<div class="form-actions">
+<div name="save" class="btn btn-primary disabled">Save</div>
+<a href="{% url project-schema context.id schema.id %}" class="btn">Cancel</a>
+</div>
+{% endblock %}

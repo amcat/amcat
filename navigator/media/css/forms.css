@@ -1,0 +1,13 @@
+form > table th{
+    text-align:left;
+    vertical-align:top;
+}
+
+form > table span.helptext{
+    font-size:0.8em;
+    color:grey;
+}
+
+form > input[type=submit]{
+    
+}

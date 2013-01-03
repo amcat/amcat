@@ -1,0 +1,32 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+<h1>Article Set {{context.id}} : {{ context.name }}</h1>
+
+  <table class="key_value">
+   <tr>
+    <td>ID:</td>
+    <td>{{object.id}}</td>
+   </tr>
+   <tr>
+    <td>Name:</td>
+    <td>{{object.name}}</td>
+   </tr>
+   <tr>
+    <td>Provenance:</td>
+    <td>{{object.provenance|linebreaks}}</td>
+   </tr>
+   <tr>
+    <td>Indexed:</td>
+    <td>{{object.index_state}}</td>
+   </tr>
+  </table>
+<a href="{% url articleset context.id object.id %}?indexed={% if object.indexed %}0{% else %}1{% endif %}"
+   class="btn">{% if object.indexed %}Disable{% else %}Enable{% endif %} Indexing</a>
+<hr />
+<h1>Articles:</h1>
+ {{ table }}
+{% endblock %}

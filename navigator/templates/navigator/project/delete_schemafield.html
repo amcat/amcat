@@ -1,0 +1,17 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+<h1>Delete schemafield?</h1>
+<p>Are you sure you want to delete schemafield <b>{{ schemafield.label }}</b> from schema <b>{{schema.name}}</b>?</p>
+<p>
+<form action="" method="POST">
+ <input value="Yes" name="yes" type="submit" />
+ <input value="No" name="no" type="submit" />
+</form>
+    
+</p>
+
+{% endblock %}
