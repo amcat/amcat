@@ -106,7 +106,7 @@ def list_queries(dest=None, output=False, printtime=False, outputopts={}):
             query_list_to_table(dest, output=output, **outputopts)
 
 
-def query_list_to_table(queries, maxqlen=80, output=False, normalise_numbers=True, **outputoptions):
+def query_list_to_table(queries, maxqlen=120, output=False, normalise_numbers=True, **outputoptions):
     """Convert a django query list (list of dict with keys time and sql) into a table3
     If output is non-False, output the table with the given options
     Specify print, "print", or a stream for output to be printed immediately

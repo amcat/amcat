@@ -221,12 +221,11 @@ def create_test_code(label=None, language=None, codebook=None, parent=None, **ka
 
 def create_test_codebook(**kargs):
     """Create a test codebook"""
-    from amcat.models.coding.codebook import Codebook, get_codebook
+    from amcat.models.coding.codebook import Codebook
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "name" not in kargs: kargs["name"] = "testcodebook_%i" % Codebook.objects.count()
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    c = Codebook.objects.create(**kargs)
-    return get_codebook(c.id)
+    return Codebook.objects.create(**kargs)
 
 def create_test_word(lemma=None, word=None, pos="N"):
     """Create a test word"""
@@ -293,20 +292,6 @@ class PolicyTestCase(TestCase):
     PYLINT_IGNORE_EXTRA = () 
     TARGET_MODULE = None
 
-    def setUp(self):
-        # codebooks have a global id:object cache, which is messed up by clearing the database
-        # between test cases. So, reset it before every test to be sure.
-        from amcat.models.coding.codebook import clear_codebook_cache
-        clear_codebook_cache()
-
-        # Make sure that current_user() exists
-        #try:
-        #    from amcat.models.user import current_user, current_username, User
-        #    current_user()
-        #except User.DoesNotExist:
-        #    create_test_user(username = current_username())
-        
-        super(PolicyTestCase, self).setUp()
     
     def _getmodule(self):
         """

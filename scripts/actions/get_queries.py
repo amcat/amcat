@@ -28,7 +28,7 @@ import logging; log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.models.coding.codebook import Codebook, get_codebook
+from amcat.models.coding.codebook import Codebook
 from amcat.tools.table.table3 import Table, ObjectTable
 
 LABEL_LANGUAGE = 2,1,
@@ -41,7 +41,7 @@ class GetQueries(Script):
     output_type = Table
     
     def run(self, _input=None):
-        c = get_codebook(self.options["codebook"].id)
+        c = self.options["codebook"]
         for lang in LABEL_LANGUAGE + QUERY_LANGUAGE:
             c.cache_labels(lang)
         t = ObjectTable(rows=c.get_codes())

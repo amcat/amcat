@@ -31,8 +31,7 @@ Deserialised Value: a domain object, possibly a django Model instance
 
 import logging; log = logging.getLogger(__name__)
 
-from amcat.models.coding.code import Code, get_code
-from amcat.models.coding.codebook import get_codebook
+from amcat.models.coding.code import Code
 
 class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
@@ -129,7 +128,6 @@ class _CodebookSerialiser(BaseSerialiser):
     """int - amcat.models.coding.Code serialiser"""
     def __init__(self, field):
         super(_CodebookSerialiser, self).__init__(field, Code, int)
-        self.codebook = get_codebook(field.codebook_id)
         
     def deserialise(self, value):
         try:
@@ -144,7 +142,7 @@ class _CodebookSerialiser(BaseSerialiser):
     
     @property
     def possible_values(self):
-        return self.codebook.codes
+        return self.field.codebook.codes
     
     def value_label(self, value, language=None):
         self.codebook.cache_labels(language)
@@ -202,7 +200,7 @@ class TestSerialiser(amcattest.PolicyTestCase):
         """Test the boolean serialiser"""
         b = QualitySerialiser(None)
         self.assertEqual(set(b.value_label(l) for l in b.possible_values),
-                         set('-1.0', '-0.5', '0' , '+0.5', '+1.0'))
+                         {'-1.0', '-0.5', '0' , '+0.5', '+1.0'})
         for x in b.possible_values:
             self.assertEqual(b.deserialise(b.serialise(x)), x)
 

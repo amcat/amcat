@@ -32,15 +32,8 @@ from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.models.language import Language
-from amcat.tools.caching import get_object, get_objects
 
 PARTYMEMBER_FUNCTIONID = 0
-
-def get_code(code_id):
-    return get_object(Code, code_id)
-
-def get_codes(code_id):
-    return get_objects(Code, code_id)
 
 class Code(AmcatModel):
     """Model class for table codes"""
