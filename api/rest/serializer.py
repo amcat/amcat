@@ -24,7 +24,7 @@ activated by settings.REST_FRAMEWORK['DEFAULT_PAGINATION_SERIALIZER_CLASS']
 import collections
 
 from rest_framework import pagination, serializers
-from rest_framework.fields import ManyPrimaryKeyRelatedField
+from rest_framework.relations import ManyPrimaryKeyRelatedField
 
 from api.rest.fields import DatatablesEchoField
 
