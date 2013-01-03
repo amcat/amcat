@@ -69,9 +69,6 @@ class ArticleSet(AmcatModel):
     project = models.ForeignKey("amcat.Project", related_name='articlesets')
     articles = models.ManyToManyField(Article, through="amcat.ArticleSetArticle", related_name="articlesets")
 
-    codingjobset = models.BooleanField(default=False)
-    batch = models.BooleanField(default=False)
-    
     provenance = models.TextField(null=True)
 
     indexed = models.BooleanField(default=None, null=False)
