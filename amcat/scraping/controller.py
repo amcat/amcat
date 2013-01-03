@@ -53,68 +53,48 @@ class Controller(object):
     def save(self, article):
         log.debug("Saving article %s" % article)
         article.save()
+
+        articleset = article.scraper.articleset if hasattr(article, 'scraper') else self.articleset
+        log.debug("Adding article %r to articleset %r" % (article.id, articleset))
+        if articleset:
+            articleset.add(article)
+            articleset.save()
+           
         log.debug("Done")
         return article
-
-    def add_to_articleset(self, articles, scraper):
-        articleset = scraper.articleset
-        log.info("Adding articles to articleset %r" % articleset)
-        articleset.add_articles(articles)
 
 
 class SimpleController(Controller):
     """Simple implementation of Controller"""
     def scrape(self, scraper):
-        result = []
         for unit in scraper.get_units():
             for article in scraper.scrape_unit(unit):
-                result.append(self.save(article))
-
-        self.add_to_articleset(result, scraper)
-        return result
+                yield self.save(article)
    
 
 
 class RobustController(Controller):
     """More robust implementation of Controller with sensible transaction management"""
 
-    @to_list
     def scrape(self, scraper):
         log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
 
-
-        for unit in self.get_units(scraper):
+        for unit in scraper.get_units():
             log.debug("{scraper} received unit {unit}".format(**locals()))
-            for article in self.scrape_unit(scraper, unit):
-                result.append(article)
+            try:
+                for article in self.scrape_unit(scraper, unit):
+                    result.append(article)
+            except Exception as e:
+                log.exception("exception within get_units")
 
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
 
         if not result:
-            raise Exception("returned 0 units")
- 
-        self.add_to_articleset(result, scraper)
+            raise Exception()
         
         return result
 
-
-    def get_units(self, scraper):
-        # WvA: Why do we ignore exceptions from get_units? Since the call will now do
-        # absolutely nothing, shouldn't the caller decide whether to catch the exception
-        # or not? Errors should never pass silently / Unless explicitly silenced?
-        try:
-            for unit in scraper.get_units():
-                yield unit
-        except Exception:
-            log.exception("exception within get_units")
-
-    # WvA: Are you sure that you want to commit after every unit? What does that mean for
-    #      managing the scrapers? In the current implementation, an exception
-    #      in the scrape_unit call will be caught, logged, and ignored, but an exception in
-    #      the save() call will be pass on (and hence 'crash' the scraper).
-    #      Please think about how the 'robust' controller should handle various exception cases
-    #      and add some documentation about this and please update the unit test below!
     @transaction.commit_on_success
     def scrape_unit(self, scraper, unit):
         try:
@@ -127,6 +107,7 @@ class RobustController(Controller):
             log.warning("scrape_unit returned 0 units")
         
         for unit in scrapedunits:
+            log.info("saving unit {unit}".format(**locals()))
             self.save(unit)
             yield unit
         
@@ -180,9 +161,8 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
             try:
                 for a in controller.scrape(s):
                     counts[s] += 1
-            except Exception:
+            except Exception as e:
                 log.exception("scraper failed")
-
             if deduplicate == True:
                 options = {
                     'first_date' : s.options['date'],
@@ -276,7 +256,7 @@ class TestRobustController(amcattest.PolicyTestCase):
     def test_rollback(self):
         c = RobustController()
         s = amcattest.create_test_set()
-        s = _ErrorScraper(project=s.project_id, articleset=s.id)
+        s = _ErrorScraper(project=s.project.id, articleset = s.id)
         list(c.scrape(s))
         self.assertEqual(p.articles.count(), 1)
        
