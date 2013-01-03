@@ -42,7 +42,8 @@ _AMCAT_DEFAULT_OPTS = {
     "fnRowCallback" : function(nRow){
         amcat.datatables.truncate_row(nRow);
     },
-    "bDeferRender": true
+    "bDeferRender": true,
+    "bFilter" : false
 };
 
 
