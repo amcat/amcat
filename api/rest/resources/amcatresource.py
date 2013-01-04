@@ -47,11 +47,15 @@ class AmCATResource(generics.ListAPIView):
 
     model = None
     extra_filters = []
+    ignore_filters = ['auth_token__id']
 
     @classmethod
     def _get_filter_fields_for_model(cls):
         for fieldname in cls.model._meta.get_all_field_names():
-            yield get_related_fieldname(cls.model, fieldname)
+            fieldname = get_related_fieldname(cls.model, fieldname)
+            if fieldname in cls.ignore_filters:
+                continue
+            yield fieldname
     
     @classmethod
     def get_filter_fields(cls):
