@@ -38,13 +38,6 @@ else:
     DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
-if os.environ.get('DJANGO_LOGGING', None) is not None:
-    DJANGO_LOGGING = (os.environ['DJANGO_DEBUG'] in ("1","Y", "ON"))
-else:
-    import sys
-    DJANGO_LOGGING = sys.argv[0] == 'manage.py'
-
-    
 LOCAL_DEVELOPMENT = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                          or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
@@ -286,46 +279,46 @@ else:
         # level = logging.DEBUG,
         # format = '%(asctime)s %(levelname)s %(message)s',
     # )
-    if DJANGO_LOGGING:
-        LOGGING = {
-            'version': 1,
-            'disable_existing_loggers': True,
-            'formatters': {
-                'standard': {
-                    'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
-                },
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'formatters': {
+            'standard': {
+                'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
             },
-            'handlers': {
-                'default': {
+        },
+        'handlers': {
+            'default': {
+                'level':'DEBUG',
+                'class':'logging.StreamHandler',
+                # 'class':'logging.handlers.RotatingFileHandler',
+                # 'filename': 'logs/mylog.log',
+                # 'maxBytes': 1024*1024*5, # 5 MB
+                # 'backupCount': 5,
+                'formatter':'standard',
+            },
+            'request_handler': {
                     'level':'DEBUG',
                     'class':'logging.StreamHandler',
                     # 'class':'logging.handlers.RotatingFileHandler',
-                    # 'filename': 'logs/mylog.log',
+                    # 'filename': 'logs/django_request.log',
                     # 'maxBytes': 1024*1024*5, # 5 MB
                     # 'backupCount': 5,
                     'formatter':'standard',
-                },
-                'request_handler': {
-                        'level':'DEBUG',
-                        'class':'logging.StreamHandler',
-                        # 'class':'logging.handlers.RotatingFileHandler',
-                        # 'filename': 'logs/django_request.log',
-                        # 'maxBytes': 1024*1024*5, # 5 MB
-                        # 'backupCount': 5,
-                        'formatter':'standard',
-                },
             },
-            'loggers': {
-                '': {
-                    'handlers': ['default'],
-                    'level': 'DEBUG',
-                    'propagate': True
-                },
-                'django.request': { # Stop SQL debug from logging to main logger
-                    'handlers': ['request_handler'],
-                    'level': 'DEBUG',
-                    'propagate': False
-                },
-            }
+        },
+        'loggers': {
+            '': {
+                'handlers': ['default'],
+                'level': 'DEBUG',
+                'propagate': True
+            },
+            'django.request': { # Stop SQL debug from logging to main logger
+                'handlers': ['request_handler'],
+                'level': 'DEBUG',
+                'propagate': False
+            },
         }
+    }
+
 

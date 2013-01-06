@@ -35,7 +35,7 @@ try:
     from django.test import TestCase
 except ImportError:
     from unittest import TestCase
-from unittest import TestLoader
+import unittest 
 import logging; log = logging.getLogger(__name__)
 
 
@@ -384,18 +384,22 @@ class TestAmcatTest(PolicyTestCase):
 
 
 
-
-class TestDiscoverer(TestLoader):
-    def __init__(self, *args, **kargs):
-        super(TestDiscoverer, self).__init__(*args, **kargs)
-        self.test_classes = set()
-    def suiteClass(self, tests):
-        for test in tests:
-            if test:
-                print(test)
-                self.test_classes.add(test.__class__)
+def get_tests_from_suite(suite):
+    for e in suite:
+        if isinstance(e, unittest.TestSuite):
+            for test in get_tests_from_suite(e):
+                yield test
+        elif str(type(e)) == "<class 'unittest.loader.ModuleImportFailure'>":
+            try:
+                getattr(e, e._testMethodName)()
+            except:
+                log.exception("Exception on importing test class")
+        elif isinstance(e, unittest.TestCase):
+            yield e
+        else:
+            raise ValueError("Cannot parse type {e!r}".format(**locals()))
 
 def get_test_classes(module="amcat"):
-    d = TestDiscoverer()
-    d.discover("~/amcat", pattern="*.py")
-    return d.test_classes
+    tests = unittest.defaultTestLoader.discover(start_dir=module, pattern="*.py")
+    for test in get_tests_from_suite(tests):
+        yield test.__class__
