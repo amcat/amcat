@@ -222,7 +222,7 @@ class TestSolr(Solr):
         if solr_home is None:
             import amcat
             amcat_home = os.path.dirname(amcat.__file__)
-            self.solr_home = os.path.abspath(os.path.join(amcat_home, "../amcatsolr"))
+            self.solr_home = os.path.abspath(os.path.join(amcat_home, "../../amcatsolr"))
         else:
             self.solr_home = solr_home
         if not os.path.exists(os.path.join(self.solr_home, "solr/solr.xml")):

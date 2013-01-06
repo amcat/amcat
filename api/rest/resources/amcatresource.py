@@ -27,7 +27,7 @@ from django.conf.urls import patterns, url
 from django.db.models.fields.related import RelatedObject, RelatedField
 
 
-from rest_framework import generics, serializers, fields
+from rest_framework import generics, serializers, fields, relations
 
 import api.rest.resources
 
@@ -47,11 +47,15 @@ class AmCATResource(generics.ListAPIView):
 
     model = None
     extra_filters = []
+    ignore_filters = ['auth_token__id']
 
     @classmethod
     def _get_filter_fields_for_model(cls):
         for fieldname in cls.model._meta.get_all_field_names():
-            yield get_related_fieldname(cls.model, fieldname)
+            fieldname = get_related_fieldname(cls.model, fieldname)
+            if fieldname in cls.ignore_filters:
+                continue
+            yield fieldname
     
     @classmethod
     def get_filter_fields(cls):
@@ -113,7 +117,7 @@ class AmCATResource(generics.ListAPIView):
         """Get a list of field names from the serializer"""
         # We are a class method and rest_framework likes instance methods, so lots of ()'s
         return [name for (name, field) in cls().get_serializer_class()().get_fields().iteritems()
-                if not isinstance(field, fields.ManyPrimaryKeyRelatedField)]
+                if not isinstance(field, relations.ManyPrimaryKeyRelatedField)]
     
     def metadata(self, request):
         """This is used by the OPTIONS request; add models, fields, and label for datatables"""
