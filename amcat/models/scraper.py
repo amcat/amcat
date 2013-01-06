@@ -114,10 +114,13 @@ class TestScrapers(amcattest.PolicyTestCase):
 
         s =Scraper.objects.create(module='amcat.models.scraper',
                                   class_name='TestScrapers')
-        self.assertEqual(s.get_scraper_class(), TestScrapers)
+        self.assertEqual(s.get_scraper_class().__name__, 'TestScrapers')
 
     def test_recent_articles(self):
-        """DOES NOT WORK WITH SQLITE"""
+        # DOES NOT WORK WITH SQLITE
+        import settings
+        if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
+            return
         s = amcattest.create_test_set()
         sc =Scraper.objects.create(module='amcat.models.scraper',
                                   class_name='TestScraperModel', articleset=s)

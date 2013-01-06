@@ -47,7 +47,6 @@ APPNAME = 'navigator'
 APPNAME_VERBOSE = 'AmCAT Navigator'
 
 ROOT = path.abspath(path.join(path.dirname(path.abspath(__file__)), '..'))
-
 _repo = hg.Repository(ROOT)
 _tag = _repo.current_tag()
 AMCAT_VERSION = (_tag[1] if _tag else None) or _repo.active_branch()

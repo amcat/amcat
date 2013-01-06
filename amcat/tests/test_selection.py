@@ -51,15 +51,15 @@ class TestArticleList(amcattest.PolicyTestCase):
         # baseline: can we select articles in a project
         p = amcattest.create_test_project()
         arts = {amcattest.create_test_article(project=p) for i in range(10)}
-        
+        amcattest.create_test_set(project=p).add_articles(arts)
         self.assertEqual(self.list(projects=[p.id]), arts)
 
         # add second project with articles from first project in set
         p2 = amcattest.create_test_project()
         s = amcattest.create_test_set(project=p2)
         s.add(*arts)
-        # selecting on only project should give {}, but on set should give articles
-        self.assertEqual(self.list(projects=[p2.id]), set())
+        # selecting on only project OR on project and set should give the articles
+        self.assertEqual(self.list(projects=[p2.id]), arts)
         self.assertEqual(self.list(projects=[p2.id], articlesets=[s.id]), arts)
 
     def test_aggregation(self):
@@ -68,7 +68,7 @@ class TestArticleList(amcattest.PolicyTestCase):
         m1, m2 = [amcattest.create_test_medium() for x in [1,2]]
         arts1 = {amcattest.create_test_article(project=p, medium=m1) for i in range(5)}
         arts2 = {amcattest.create_test_article(project=p, medium=m2) for i in range(15)}
-
+        amcattest.create_test_set(project=p).add_articles(arts1|arts2)
         # can we select on mediumid
         self.assertEqual(self.list(projects=[p.id]), arts1|arts2)
         self.assertEqual(self.list(projects=[p.id], mediums=[m1.id]), arts1)

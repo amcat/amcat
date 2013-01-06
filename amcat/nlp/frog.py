@@ -119,7 +119,7 @@ def read_pos(pos):
 from amcat.tools import amcattest
 
 class TestFrog(amcattest.PolicyTestCase):
-    def test_process_sentence(self):
+    def todo_test_process_sentence(self):
         s = amcattest.create_test_analysis_sentence(
             sentence=amcattest.create_test_sentence(sentence="de groenste huizen"))
 
@@ -141,7 +141,7 @@ class TestFrog(amcattest.PolicyTestCase):
             self.assertEqual(n, minor)
 
 
-    def test_triples(self):
+    def todo_test_triples(self):
         s = amcattest.create_test_analysis_sentence(
             sentence=amcattest.create_test_sentence(sentence="hij gaf hem een boek"))
         f = FrogTriples(None)

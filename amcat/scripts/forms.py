@@ -135,8 +135,8 @@ class SelectionForm(forms.Form):
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     # queries will be added by clean(), that contains a list of SearchQuery objects
     
-    def __init__(self, data=None, **kwargs):
-        super(SelectionForm, self).__init__(data, **kwargs)
+    def __init__(self, data=None, *args, **kwargs):
+        super(SelectionForm, self).__init__(data, *args, **kwargs)
         if data is None: return
 
         projectids = data.getlist('projects') if hasattr(data, 'getlist') else data.get('projects')

@@ -241,7 +241,7 @@ class TestAmCATResource(ApiTestCase):
         parses = [u'application/json', u'application/x-www-form-urlencoded', u'multipart/form-data',
                   u'application/xml']
         label = u'{name}'
-        renders = {u'application/json', u'text/html', u'text/csv'}
+        renders = {u'application/json', u'text/html'}#, u'text/csv'}
         description = u''
         
         

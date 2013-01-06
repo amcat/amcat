@@ -51,7 +51,12 @@ import logging; logger = logging.getLogger(__name__)
 name_sort = lambda x: x[0].name.lower()
 
 ALLOWED_EXTENSIONS = ('txt', 'csv', 'dat')
-ADMIN_ID = Role.objects.get(label="admin", projectlevel=False).id
+_ADMIN_ID = None
+def get_admin_id():
+    global _ADMIN_ID
+    if _ADMIN_ID is None:
+        _ADMIN_ID = Role.objects.get(label="admin", projectlevel=False).id
+    return _ADMIN_ID
 
 @cache_function(60)
 def gen_user_choices(project=None):
@@ -83,8 +88,7 @@ def gen_coding_choices(user, model):
         Q(project__projectrole__user=user)|
         # User has access to project through guestrole
         Q(project__guest_role__id__gte=user.get_profile().role.id)
-    ) if not user.get_profile().role.id >= ADMIN_ID\
-        else model.objects.all()
+    ) if not user.get_profile().role.id >= get_admin_id() else model.objects.all()
 
     objects.select_related("project__name").only("name")
     objects = toolkit.multidict(((cb.project, cb) for cb in objects), ltype=list)

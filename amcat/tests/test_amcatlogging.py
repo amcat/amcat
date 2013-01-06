@@ -55,13 +55,13 @@ class TestLogging(amcattest.PolicyTestCase):
             except:
                 logging.exception("Exception")
         self.assertIn('integer division or modulo by zero', amcatlogging.format_records(s))
-        self.assertIn('test/test_amcatlogging.py", line 54, in testException',
+        self.assertIn('tests/test_amcatlogging.py", line 54, in testException',
                       amcatlogging.format_records(s))
         with amcatlogging.collect() as s:
             with amcatlogging.logExceptions():
                 raise Exception("!")
         self.assertEqual(len(s), 1)
-        self.assertIn('test/test_amcatlogging.py", line 62, in testException',
+        self.assertIn('tests/test_amcatlogging.py", line 62, in testException',
                       amcatlogging.format_records(s))
         
     def testModuleLevel(self):

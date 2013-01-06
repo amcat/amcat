@@ -91,6 +91,8 @@ class Code(AmcatModel):
         @param fallback: If True, return another label if language not found
         @return: string or None
         """
+        if set(languages) == {None}:
+            languages = []
         for lan in languages:
             try:
                 return self._get_label(language=lan)

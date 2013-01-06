@@ -131,8 +131,8 @@ class _CodebookSerialiser(BaseSerialiser):
         
     def deserialise(self, value):
         try:
-            return get_code(value)
-        except ValueError:
+            return self.field.codebook.get_code(value)
+        except Code.DoesNotExist:
             # code was removed from codebook
             return Code.objects.get(pk=value)
             
@@ -145,7 +145,7 @@ class _CodebookSerialiser(BaseSerialiser):
         return self.field.codebook.codes
     
     def value_label(self, value, language=None):
-        self.codebook.cache_labels(language)
+        #self.field.codebook.cache_labels(language)
         return value.get_label(language)
 
 ###########################################################################

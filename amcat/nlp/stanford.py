@@ -194,7 +194,7 @@ POSMAP = {
 from amcat.tools import amcattest
 
 class TestStanford(amcattest.PolicyTestCase):
-    def test_parse(self):
+    def todo_test_parse(self):
         a = Stanford(None)
         
         tokens, triples = a.process_sentences([(99, "He wants\n coffee.")])
@@ -206,7 +206,7 @@ class TestStanford(amcattest.PolicyTestCase):
         self.assertIn(TripleValues(99, 2, 1, "dobj"), triples)
 
 
-    def test_unicode(self):
+    def todo_test_unicode(self):
         a = Stanford(None)
         tokens, triples = a.process_sentences([(1, u"I am \u548c\u725b and I like caf\xe9s")])
         self.assertEqual(len(tokens), 7)

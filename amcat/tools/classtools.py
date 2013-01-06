@@ -182,7 +182,7 @@ class TestClassTools(amcattest.PolicyTestCase):
         print(TestClassTools.__module__)
         
         t = import_attribute("amcat.tools.classtools", "TestClassTools")
-        self.assertEqual(t, TestClassTools)
+        self.assertEqual(t.__name__, 'TestClassTools')
         t = import_attribute("amcat.tools.classtools.TestClassTools")
         self.assertRaises(ImportError, import_attribute, "__wva_does_not_exist")
         self.assertRaises(ImportError, import_attribute,
