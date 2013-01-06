@@ -392,9 +392,10 @@ class TestDiscoverer(TestLoader):
     def suiteClass(self, tests):
         for test in tests:
             if test:
+                print(test)
                 self.test_classes.add(test.__class__)
 
 def get_test_classes(module="amcat"):
     d = TestDiscoverer()
-    d.discover(module, pattern="*.py")
+    d.discover("~/amcat", pattern="*.py")
     return d.test_classes

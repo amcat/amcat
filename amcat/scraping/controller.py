@@ -63,11 +63,13 @@ class Controller(object):
         log.debug("Done")
         return article
 
-
 class SimpleController(Controller):
     """Simple implementation of Controller"""
+    
+    @to_list
     def scrape(self, scraper):
-        for unit in scraper.get_units():
+        units = scraper.get_units()
+        for unit in units:
             for article in scraper.scrape_unit(unit):
                 yield self.save(article)
    
@@ -256,9 +258,9 @@ class TestRobustController(amcattest.PolicyTestCase):
     def test_rollback(self):
         c = RobustController()
         s = amcattest.create_test_set()
-        s = _ErrorScraper(project=s.project.id, articleset = s.id)
-        list(c.scrape(s))
-        self.assertEqual(p.articles.count(), 1)
+        sc = _ErrorScraper(project=s.project.id, articleset = s.id)
+        list(c.scrape(sc))
+        self.assertEqual(s.articles.count(), 1)
        
        
 

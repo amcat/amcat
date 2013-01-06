@@ -88,11 +88,11 @@ class UploadScript(Scraper):
             return self._input_text
 
     def get_provenance(self, file, articles):
-         n = len(articles)
-         filename = file.name
-         timestamp = unicode(datetime.datetime.now())[:16]
-         return ("[{timestamp}] Uploaded {n} articles from file {filename!r} "
-                 "using {self.__class__.__name__}".format(**locals()))
+        n = len(articles)
+        filename = file.name
+        timestamp = unicode(datetime.datetime.now())[:16]
+        return ("[{timestamp}] Uploaded {n} articles from file {filename!r} "
+                "using {self.__class__.__name__}".format(**locals()))
         
     def run(self, _dummy=None):
         file = self.options['file']
@@ -100,7 +100,7 @@ class UploadScript(Scraper):
                  .format(**locals()))
         from amcat.scraping.controller import SimpleController
         with transaction.commit_on_success():
-            arts = SimpleController(self.articleset).scrape(self)
+            arts = list(SimpleController(self.articleset).scrape(self))
 
             old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
             new_provenance = self.get_provenance(file, arts)
