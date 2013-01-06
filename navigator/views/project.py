@@ -32,13 +32,9 @@ import json
 import collections
 import itertools
 
-from amcat.models.articleset import ArticleSet
-from amcat.models.plugin import Plugin
-
 from api.rest.resources import  ProjectResource, CodebookResource, ArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
 from api.rest.resources import ProjectRoleResource
-
 
 #from api.rest import AnalysisResource
 #from api.rest import CodebookBaseResource, CodebookCodeResource
@@ -53,20 +49,14 @@ from django.core.exceptions import PermissionDenied
 
 from api.rest.datatable import Datatable
 
-
+from django.forms.models import modelform_factory
 from django.forms import Form, FileField, ChoiceField
 from django.http import HttpResponse
 from django.db import transaction
 
-from amcat.models.project import Project
-from amcat.models.user import User
-from amcat.models.language import Language
-from amcat.models.authorisation import Role, ProjectRole
-from amcat.models.coding.code import Code, Label
-from amcat.models.coding.codingjob import CodingJob
-from amcat.models.coding.codebook import Codebook, CodebookCode
-from amcat.models.coding.codingschema import CodingSchema
-from amcat.models.coding.codingschemafield import CodingSchemaField
+from amcat.models import Project, Language, Role, ProjectRole, Code, Label
+from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
+from amcat.models import CodingSchemaField, ArticleSet, Plugin
 
 from amcat.scripts.actions.add_project import AddProject
 from amcat.scripts.article_upload.upload import UploadScript
@@ -203,6 +193,19 @@ def articlesets(request, project):
     return table_view(request, project, articlesets, 'article sets',
             template='navigator/project/articlesets.html')
 
+@check(ArticleSet, args='id', action='update')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def edit_articleset(request, project, aset):
+    form = modelform_factory(ArticleSet, fields=("name", "provenance"))
+    form = form(instance=aset, data=request.POST or None)
+    
+    if form.is_valid():
+        form.save()
+
+    return render(request, 'navigator/project/edit_articleset.html', {
+        "context" : project, "menu" : PROJECT_MENU, "selected" : "overview",
+        "form" : form, "articleset" : aset, edited : fi.is_valid() and not fi.errors
+    })
 
 @check(ArticleSet, args='id')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
