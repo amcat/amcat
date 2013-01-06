@@ -346,7 +346,7 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
 
             
 
-    def test_version(self):
+    def todo_test_version(self):
         with TestSolr() as solr:
             url = "{solr.url}/admin/registry.jsp".format(**locals())
             import urllib
