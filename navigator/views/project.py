@@ -200,12 +200,11 @@ def edit_articleset(request, project, aset):
     form = form(instance=aset, data=request.POST or None)
     
     if form.is_valid():
-        pass
+        form.save()
 
     return render(request, 'navigator/project/edit_articleset.html', {
-        "context" : project, "menu" : PROJECT_MENU,
-        "selected" : "overview", "edited" : False,
-        "form" : form, "articleset" : aset
+        "context" : project, "menu" : PROJECT_MENU, "selected" : "overview",
+        "form" : form, "articleset" : aset, edited : fi.is_valid() and not fi.errors
     })
 
 @check(ArticleSet, args='id')
