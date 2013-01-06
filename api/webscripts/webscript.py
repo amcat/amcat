@@ -81,7 +81,7 @@ class WebScript(object):
 
 
     def getActions(self):
-        for ws in amcatnavigator.api.webscripts.actionScripts:
+        for ws in api.webscripts.actionScripts:
             if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.formData.get('query')):
                 yield ws.__name__, ws.name
 
