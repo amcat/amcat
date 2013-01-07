@@ -1,4 +1,3 @@
-from amcat.tools import dbtoolkit
 #from amcat.models.coding import codingjob
 from amcat.tools.table import table3
 from amcat.tools import toolkit, idlabel
@@ -146,13 +145,3 @@ def table2sav(t, filename=None):
         raise Exception("PSPP Exited without errors, but file was not saved.\n\nOut=%r\n\nErr=%r"% (out, err))
     return filename
 
-if __name__ == '__main__':
-    db = dbtoolkit.amcatDB()
-    cj = codingjob.CodingJob(db, 4534)
-    t = table3.ObjectTable(rows=codingjob.getCodedSentencesFromCodingjobs([cj]),
-                           columns=map(SPSSFieldColumn, cj.unitSchema.fields))
-    
-    print table2sav(t)
-    
-
-    
