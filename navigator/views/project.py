@@ -31,6 +31,7 @@ scope. The general structure is:
 import json
 import collections
 import itertools
+import datetime
 
 from api.rest.resources import  ProjectResource, CodebookResource, ArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
@@ -66,6 +67,8 @@ from navigator.utils.action import ActionHandler
 
 from api.webscripts import mainScripts
 from amcat.scripts.forms import SelectionForm
+
+from amcat.models.project import LITTER_PROJECT_ID
 
 import logging; log = logging.getLogger(__name__)
 
@@ -192,6 +195,21 @@ def articlesets(request, project):
 
     return table_view(request, project, articlesets, 'article sets',
             template='navigator/project/articlesets.html')
+
+@check(ArticleSet, args='id', action='delete')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def delete_articleset(request, project, aset):
+    aset.project = Project.objects.get(id=LITTER_PROJECT_ID)
+    aset.indexed = False
+    aset.provenance = json.dumps({
+        "provenance" : aset.provenance,
+        "project" : project.id,
+        "deleted_on" : datetime.datetime.now().isoformat()
+    })
+
+    aset.save()
+
+    return redirect(reverse("project-articlesets", args=[project.id]))
 
 @check(ArticleSet, args='id', action='update')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')

@@ -35,6 +35,7 @@ from django.db.models import Q
 
 
 ROLEID_PROJECT_READER = 11
+LITTER_PROJECT_ID = 1
 
 class Project(AmcatModel):
     """Model for table projects.

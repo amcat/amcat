@@ -55,6 +55,32 @@ $(function(){
    
 });
 
+/* For <a> with a class 'confirm', display confirmation dialog */
+$(function(){
+    $("a.confirm").click(function(event){
+        event.preventDefault();
+        
+        var dialog = $('' +
+            '<div class="modal hide fade">' +
+                '<div class="modal-header">' +
+                        '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
+                        '<h3 class="noline">Irreversible action</h3>' +
+                '</div>' +
+                '<div class="modal-body">' +
+                '<p>' + $(event.currentTarget).attr("data-confirm")  + '</p>' +
+                '</div>' +
+                '<div class="modal-footer">' +
+                    '<a href="#" class="btn cancel-button">Cancel</a>' +
+                    '<a href="' +  $(event.currentTarget).attr("href") + '" class="btn btn-danger">Proceed</a>' +
+                '</div>' +
+            '</div>').modal("show");
+
+        $(".cancel-button", dialog).click((function(){
+            this.modal("hide");
+        }).bind(dialog))
+    });
+});
+
 
 amcat.multiselectCheckIfMatches = function(event, matches){
     // used in the multiselects. Shows error message when no match is found in the filtering

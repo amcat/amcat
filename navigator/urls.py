@@ -46,6 +46,8 @@ urlpatterns = patterns(
         'navigator.views.project.articleset', name="articleset"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/edit/(?P<id>[0-9]+)$',
         'navigator.views.project.edit_articleset', name="articleset-edit"),
+    url(r'^project/(?P<projectid>[0-9]+)/articleset/delete/(?P<id>[0-9]+)$',
+        'navigator.views.project.delete_articleset', name="articleset-delete"),
 
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),

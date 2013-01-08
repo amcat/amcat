@@ -32,6 +32,8 @@
 
      <a href="{% url articleset context.id object.id %}?indexed={% if object.indexed %}0{% else %}1{% endif %}"
          class="btn">{% if object.indexed %}Disable{% else %}Enable{% endif %} Indexing</a>
+
+     <a class="btn btn-danger confirm" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible." href="{% url articleset-delete context.id object.id %}"><i class="icon-white icon-trash"></i> Delete</a>
  </div>
 <hr />
 <h1>Articles:</h1>
