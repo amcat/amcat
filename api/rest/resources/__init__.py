@@ -29,6 +29,7 @@ from amcat.tools import classtools
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.project import ProjectResource
 from api.rest.resources.user import UserResource
+from api.rest.resources.codebook import CodebookHierarchyResource
 
 
 MODELS = ['Article', 'ArticleSet', 
