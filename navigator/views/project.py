@@ -61,6 +61,8 @@ from amcat.models import CodingSchemaField, ArticleSet, Plugin
 
 from amcat.scripts.actions.add_project import AddProject
 from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.maintenance.deduplicate import DeduplicateScript
+
 from navigator import forms
 from navigator.utils.auth import check, check_perm
 from navigator.utils.action import ActionHandler
@@ -210,6 +212,13 @@ def delete_articleset(request, project, aset):
     aset.save()
 
     return redirect(reverse("project-articlesets", args=[project.id]))
+
+@check(ArticleSet, args='id', action='delete')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def deduplicate_articleset(request, project, aset):
+    DeduplicateScript(articleset=aset.id, recycle_bin_project=LITTER_PROJECT_ID).run(None)
+
+    return redirect(reverse("articleset", args=[project.id, aset.id]))
 
 @check(ArticleSet, args='id', action='update')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
