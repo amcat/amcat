@@ -173,7 +173,7 @@ class TestPlugin(amcattest.PolicyTestCase):
 
         self.assertEqual([x.__class__ for x in b.get_plugins()], [_TestPlug3])
         self.assertRaises(TypeError, list, a.get_plugins) # argument a missing
-        self.assertEqual([x.__class__ for x in a.get_plugins(a=1)], [_TestPlug1, _TestPlug2])
+        self.assertEqual({x.__class__ for x in a.get_plugins(a=1)}, {_TestPlug1, _TestPlug2})
 
         s.active = False
         s.save()
