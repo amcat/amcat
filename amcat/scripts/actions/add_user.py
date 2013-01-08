@@ -27,7 +27,7 @@ import logging; log = logging.getLogger(__name__)
 
 from django import forms
 
-from amcat.tools import dbtoolkit
+#from amcat.tools import dbtoolkit
 from amcat.tools.djangotoolkit import get_or_create
 from amcat.scripts.script import Script
 from amcat.models.user import User, Affiliation, create_user
