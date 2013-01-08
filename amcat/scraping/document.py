@@ -18,6 +18,7 @@
 ###########################################################################
 """Document objects returned by various scraping-functions."""
 
+from amcat.tools.toolkit import deprecated
 from amcat.scraping.toolkit import dictionary
 from html2text import html2text
 from amcat.models.article import Article
@@ -49,9 +50,12 @@ class Document(object):
     """Object representing an document. No properties are
     forced upon constructing. This is the base for all other
     objects.
-
-    __getattr__ and __setattr__ will raise errors when not
-    initialized."""
+    
+    To set a property, use:
+        
+        doc.props.headline = 'headline of article'
+        
+    """
     def __init__(self, parent=None, **kargs):
         """@param parent: """
         self.props = Properties()
@@ -61,10 +65,23 @@ class Document(object):
         for k,v in kargs.items():
             setattr(self.props, k, v)
 
+    @deprecated
     def getprops(self):
+        """DEPRECATED: use get_props()"""
+        return self.get_props()
+
+    @deprecated
+    def updateprops(self, dic):
+        """DEPRECATED: use update_props()"""
+        return self.update_props(dic)
+
+    def get_props(self):
+        """
+        Get dictionary containing all properties
+        """
         return self.props.__dict__
 
-    def updateprops(self, dic):
+    def update_props(self, dic):
         """Update properties.
 
         @type dic: dictionary
@@ -102,14 +119,19 @@ class Document(object):
         return art
 
 class HTMLDocument(Document):
-    """Document object for HTML documents. This means that all properties are converted to
+    """
+    Document object for HTML documents. This means that all properties are converted to
     MarkDown compatible text in `getprops`. Moreover, lxml.html objects (or even lists of
-    lxml.html objects) are converted to text before returning."""
+    lxml.html objects) are converted to text before returning.
+    """
     def __init__(self, doc=None, *args, **kargs):
         self.doc = doc # lxml object
         super(HTMLDocument, self).__init__(*args, **kargs)
 
     def _convert(self, val):
+        """
+        Try to convert HTML to markdown.
+        """
         t = type(val)
 
         if t is str:
@@ -117,13 +139,13 @@ class HTMLDocument(Document):
 
         if t in (html.HtmlElement, etree._Element):
             try:
-                return html2text(html.tostring(val)).strip() #encoding=str
+                return html2text(html.tostring(val)).strip() 
             except (parser.HTMLParseError, TypeError) as e:
                 log.error('html2text failed')
                 return 'Converting from HTML failed!'
 
         if t in (list, tuple, types.GeneratorType):
-            """Check if all objects in list are HtmlElement and then proceed"""
+            # Check if all objects in list are HtmlElement and then proceed
             val = tuple(val)
 
             if all([type(e) in (html.HtmlElement, etree._Element) for e in val]):
@@ -138,23 +160,27 @@ class HTMLDocument(Document):
         return d
 
     @dictionary
-    def getprops(self):
-        """Return properties converted (where applicable) to MarkDown"""
+    def get_props(self):
+        """
+        Return properties converted (where applicable) to MarkDown
+        """
         for k,v in super(HTMLDocument, self).getprops().items():
             yield (k, self._convert(v))
 
     def prepare(self, processor, force=False):
-        log.info("Preparing %s using processor %s, getdoc=%s" % (getattr(self.props, "url", None),
-                                                                 processor, getattr(processor, "getdoc", None)))
+        log.info("Preparing {} using processor {}, getdoc={}".format(
+            self.get_props().get("url"), processor, getattr(processor, "getdoc", None)
+        )) 
+
         if (self.doc is None or force):
             try:
                 self.doc = processor.getdoc(self.props.url)
             except AttributeError:
-
-                pass # no need to prepare if opener or url not known
+                # no need to prepare if opener or url not known
+                pass 
 
     def __str__(self):
-        return "HTMLDocument(url=%s)" % getattr(self.props, "url", None)
+        return "HTMLDocument(url={})".format(getattr(self.props, "url", None))
 
 
 ###########################################################################
@@ -164,23 +190,19 @@ class HTMLDocument(Document):
 from amcat.tools import amcattest
 
 class TestDocument(amcattest.PolicyTestCase):
-    def todo_test_set_get(self):
+    def test_set_get(self):
         doc = Document()
 
-        doc.foo = 'bar'
+        doc.props.foo = 'bar'
 
-        print(doc.getprops())
-        self.assertEqual(doc.foo, 'bar')
-        self.assertEqual(doc.getprops()['foo'], 'bar')
+        self.assertEqual(doc.props.foo, 'bar')
+        self.assertEqual(doc.get_props()['foo'], 'bar')
 
     def test_del(self):
         doc = Document()
 
-        doc.foo = 'bar'; del doc.foo
-        self.assertRaises(AttributeError, lambda: doc.foo)
-
-        def delete(): del doc.foo
-        self.assertRaises(AttributeError, delete)
+        doc.props.foo = 'bar'; del doc.props.foo
+        self.assertRaises(AttributeError, lambda: doc.props.foo)
 
     def test_updateprops(self):
         doc = Document()
@@ -188,25 +210,26 @@ class TestDocument(amcattest.PolicyTestCase):
         dic = dict(a='b', b='c')
         doc.updateprops(dic)
 
-        self.assertEqual(dic, doc.getprops())
-        self.assertNotEqual({}, doc.getprops())
+        self.assertEqual(dic, doc.get_props())
+        self.assertNotEqual({}, doc.get_props())
 
 
     def test_return_types(self):
         doc = Document()
 
-        self.assertEqual(dict, type(doc.getprops()))
+        self.assertEqual(dict, type(doc.get_props()))
 
-    def todo_test_copy(self):
+    def test_copy(self):
         doc = Document()
 
-        doc.foo = ['bar', 'list']
-        doc.spam = 'ham'
+        doc.props.foo = ['bar', 'list']
+        doc.props.spam = 'ham'
 
-        self.assertEqual(doc.spam, 'ham')
+        self.assertEqual(doc.props.spam, 'ham')
+
         doc_b = doc.copy()
-        self.assertFalse(doc_b.getprops() is doc.getprops())
-        self.assertEqual(doc_b.spam, 'ham')
-        self.assertTrue(doc_b.foo == doc.foo)
-        self.assertFalse(doc_b.foo is doc.foo)
+        self.assertFalse(doc_b.get_props() is doc.getprops())
+        self.assertEqual(doc_b.props.spam, 'ham')
+        self.assertTrue(doc_b.props.foo == doc.props.foo)
+        self.assertFalse(doc_b.props.foo is doc.props.foo)
 
