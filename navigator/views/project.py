@@ -204,7 +204,7 @@ def edit_articleset(request, project, aset):
 
     return render(request, 'navigator/project/edit_articleset.html', {
         "context" : project, "menu" : PROJECT_MENU, "selected" : "overview",
-        "form" : form, "articleset" : aset, edited : fi.is_valid() and not fi.errors
+        "form" : form, "articleset" : aset
     })
 
 @check(ArticleSet, args='id')
