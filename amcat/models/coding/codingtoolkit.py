@@ -248,7 +248,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
         t = get_table_articles_per_job([self.jobs[i] for i in [0, 1]])
         #from amcat.tools.table import tableoutput; print; print(tableoutput.table2unicode(t))
         #self.assertEqual([row.codingjob for row in t], [self.jobs[i] for i in [0] * 6])
-        self.assertEqual([(row.status and row.status.id) for row in t], [0, 2]+[None]*4)
+        self.assertEqual(sorted((row.status and row.status.id) for row in t), sorted([0, 2]+[None]*4))
         
 
     def todo_test_get_coded_articles(self):
