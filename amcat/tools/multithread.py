@@ -169,8 +169,9 @@ class TestMultithread(amcattest.PolicyTestCase):
             if choice([True, False]):
                 raise amcatlogging.SilentException()
             l.add(x)
-        tasks = set(range(1000))
-        distribute_tasks(tasks, action, retry_exceptions=True)
+        tasks = set(range(100))
+        with amcatlogging.disable_logging():
+            distribute_tasks(tasks, action, retry_exceptions=True)
         self.assertEqual(l, tasks)
 
     def test_finite_retries(self):
@@ -183,9 +184,10 @@ class TestMultithread(amcattest.PolicyTestCase):
                 raise amcatlogging.SilentException()
         n = 100
         tasks = set(range(n))
-        problems = distribute_tasks(tasks, action)
-        seen = set()
-        problems_oneretry = distribute_tasks(tasks, action, retry_exceptions=1)
+        with amcatlogging.disable_logging():
+            problems = distribute_tasks(tasks, action)
+            seen = set()
+            problems_oneretry = distribute_tasks(tasks, action, retry_exceptions=1)
 
         self.assertEqual(len(problems), n/2)
         self.assertTrue(len(problems_oneretry), n/4)

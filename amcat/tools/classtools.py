@@ -178,9 +178,6 @@ class TestClassTools(amcattest.PolicyTestCase):
                           "/__wva_does_not_exist/amcat/tools/toolkit.py")
 
     def test_import_attribute(self):
-        print(TestClassTools)
-        print(TestClassTools.__module__)
-        
         t = import_attribute("amcat.tools.classtools", "TestClassTools")
         self.assertEqual(t.__name__, 'TestClassTools')
         t = import_attribute("amcat.tools.classtools.TestClassTools")
