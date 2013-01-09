@@ -28,14 +28,14 @@ class TestSOH(unittest.TestCase):
     #TODO: Do something useful if fuseki is not installed
     
     def setUp(self):
-        try:
-            self.soh = get_test_soh()
-        except OSError:
-            log.exception("Cannot find fuseki")
-            return
-        self.soh.prefixes[""] = "http://example.org/#"
-        self.soh.add_triples(FIXTURE, clear=True)
-
+        #try:
+        #    self.soh = get_test_soh()
+        #except OSError:
+        #    log.exception("Cannot find fuseki")
+        #    return
+        #self.soh.prefixes[""] = "http://example.org/#"
+        #self.soh.add_triples(FIXTURE, clear=True)
+        pass
 
     def tearDown(self):
         try:
