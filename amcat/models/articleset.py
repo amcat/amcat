@@ -222,7 +222,6 @@ class TestArticleSet(amcattest.PolicyTestCase):
         from amcat.tools import amcatlogging
         from amcat.tools.amcatsolr import TestSolr, TestDummySolr
 
-        amcatlogging.info_module("amcat.tools.amcatsolr")
         with TestSolr() as solr:
             s = amcattest.create_test_set(indexed=True)
             a = amcattest.create_test_article()

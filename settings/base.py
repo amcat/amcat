@@ -38,6 +38,9 @@ else:
     DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
+DEBUG_LEVEL = os.environ.get('DJANGO_DEBUG_LEVEL', 'INFO' if DEBUG else 'WARNING')
+
+                 
 LOCAL_DEVELOPMENT = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                          or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
@@ -97,6 +100,7 @@ ACCOUNTS_URL = "/accounts/"
 # trailing slash.
 # Examples: "http://foo.com/media/", "/media/".
 ADMIN_MEDIA_PREFIX = '/media/admin/'
+
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
@@ -236,7 +240,7 @@ if not DEBUG:
         },
         'handlers': {
             'default': {
-                'level':'INFO',
+                'level':DEBUG_LEVEL,
                 'class':'logging.handlers.RotatingFileHandler',
                 'filename': '/tmp/django_mainlog.log',
                 'maxBytes': 1024*1024*5, # 5 MB
@@ -244,7 +248,7 @@ if not DEBUG:
                 'formatter':'standard',
             },
             'request_handler': {
-                'level':'INFO',
+                'level':DEBUG_LEVEL,
                 'class':'logging.handlers.RotatingFileHandler',
                 'filename': '/tmp/django_requests.log',
                 'maxBytes': 1024*1024*5, # 5 MB
@@ -255,18 +259,17 @@ if not DEBUG:
         'loggers': {
             '': {
                 'handlers': ['default'],
-                'level': 'INFO',
+                'level': DEBUG_LEVEL,
                 'propagate': True
             },
             'django.request': { # Stop SQL debug from logging to main logger
                 'handlers': ['request_handler'],
-                'level': 'INFO',
+                'level': DEBUG_LEVEL,
                 'propagate': False
             },
         }
     }
 else:
-
     EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
     # logger = logging.getLogger()
     # hdlr = logging.StreamHandler()
@@ -283,12 +286,12 @@ else:
         'disable_existing_loggers': False,
         'formatters': {
             'standard': {
-                'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+                'format': '%(asctime)s [%(levelname)s %(name)s:%(lineno)s] %(message)s'
             },
         },
         'handlers': {
             'default': {
-                'level':'DEBUG',
+                'level': DEBUG_LEVEL,
                 'class':'logging.StreamHandler',
                 # 'class':'logging.handlers.RotatingFileHandler',
                 # 'filename': 'logs/mylog.log',
@@ -297,7 +300,7 @@ else:
                 'formatter':'standard',
             },
             'request_handler': {
-                    'level':'DEBUG',
+                    'level': DEBUG_LEVEL,
                     'class':'logging.StreamHandler',
                     # 'class':'logging.handlers.RotatingFileHandler',
                     # 'filename': 'logs/django_request.log',
@@ -309,15 +312,16 @@ else:
         'loggers': {
             '': {
                 'handlers': ['default'],
-                'level': 'DEBUG',
+                'level': DEBUG_LEVEL,
                 'propagate': True
             },
             'django.request': { # Stop SQL debug from logging to main logger
                 'handlers': ['request_handler'],
-                'level': 'DEBUG',
+                'level': DEBUG_LEVEL,
                 'propagate': False
             },
         }
     }
+
 
 
