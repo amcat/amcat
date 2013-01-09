@@ -129,7 +129,6 @@ class TestUploadText(amcattest.PolicyTestCase):
             # test autodect date and headline from filename
             a, = Text(dict(file=File(open(f.name)), encoding=0, **base)).run()
             a = Article.objects.get(pk=a.id)
-            print a.section
             self.assertEqual(a.headline, fn.replace("1999-12-31_",""))
             self.assertEqual(a.date.isoformat()[:10], '1999-12-31')
             self.assertEqual(a.text, text)

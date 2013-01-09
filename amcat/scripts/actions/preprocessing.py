@@ -48,7 +48,6 @@ class PreprocessingAction(Script):
                 aids = drawSample(aids, self.options["nsample"])
             log.info("Updating preprocessing status for {n} articles in set {article_set}"
                      .format(n=len(aids), **locals()))
-            print("ASSIGNING %s ARTICLES FROM ARTICLESET %s (%s)" % (len(aids), article_set.id, article_set))
             set_preprocessing_actions(aids)
 
 if __name__ == '__main__':

@@ -259,7 +259,8 @@ class TestRobustController(amcattest.PolicyTestCase):
         c = RobustController()
         s = amcattest.create_test_set()
         sc = _ErrorScraper(project=s.project.id, articleset = s.id)
-        list(c.scrape(sc))
+        with amcatlogging.disable_logging():
+            list(c.scrape(sc))
         self.assertEqual(s.articles.count(), 1)
        
        

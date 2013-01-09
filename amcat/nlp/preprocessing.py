@@ -158,7 +158,7 @@ def set_preprocessing_actions(articleids):
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
-from amcat.tools import amcattest
+from amcat.tools import amcattest, amcatlogging
 
 class TestPreprocessing(amcattest.PolicyTestCase):
 
@@ -402,7 +402,8 @@ class TestPreprocessing(amcattest.PolicyTestCase):
         create_sentences(aa)
         sents = list(a.sentences.all())
         self.assertEqual(len(sents), 3)
-        self.assertRaises(Exception, split_article, a)
+        with amcatlogging.disable_logging():
+            self.assertRaises(Exception, split_article, a)
         # does a second analysis on the same article use the same sentences?
         aa2 = amcattest.create_test_analysis_article(article=a)
         create_sentences(aa2)
