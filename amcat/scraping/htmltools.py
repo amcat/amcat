@@ -44,6 +44,13 @@ def create_cookie(name, domain, **kwargs):
 
     return cookielib.Cookie(name=name, domain=domain, **kws)
 
+def create_cc_cookies(domain):
+    """
+    Generic cc cookies used to hide the infamous cookiebar.
+    """
+    for name in ["cc_advertising", "cc_analytics", "cc_social"]:
+        yield create_cookie(name, domain=domain, value="always")
+    yield create_cookie("cae_browser", domain=domain, value="desktop")
 
 class HTTPOpener(object):
     """Auxilliary class to help cookie-based opening and processing
