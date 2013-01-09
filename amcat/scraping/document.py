@@ -164,7 +164,7 @@ class HTMLDocument(Document):
         """
         Return properties converted (where applicable) to MarkDown
         """
-        for k,v in super(HTMLDocument, self).getprops().items():
+        for k,v in super(HTMLDocument, self).get_props().items():
             yield (k, self._convert(v))
 
     def prepare(self, processor, force=False):
