@@ -38,12 +38,6 @@ except ImportError:
 import unittest 
 import logging; log = logging.getLogger(__name__)
 
-from django.test.simple import DjangoTestSuiteRunner
-class AmcatDjangoTestSuiteRunner(DjangoTestSuiteRunner):
-    def teardown_test_environment(self, *args, **kargs):
-        super(AmcatDjangoTestSuiteRunner, self).teardown_test_environment(*args, **kargs)
-        from  amcat.tools.amcatsolr import _finalize
-        _finalize()
 
 LICENSE = """###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
