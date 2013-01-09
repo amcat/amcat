@@ -273,30 +273,38 @@ from amcat.tools import amcattest
 
 
 class TestAmcatSolr(amcattest.PolicyTestCase):
-    def test_article_date(self):
+    def clear_solr(self, solr):
+        ids = set(solr.query_ids("*:*", rows=99999))
+        solr.delete_articles(ids)
+    
+    def do_test_article_date(self, solr):
         """
         Tests whether article dates stay the same with a roundtrip
         amcat --> solr --> amcat.
+
+        Call from test_query class to avoid creating another testsolr instance
         """
-        with TestSolr() as solr:
-            db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla', date='2010-01-01')
-            db_a = Article.objects.get(id=db_a.id)
+        db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla', date='2010-01-01')
+        db_a = Article.objects.get(id=db_a.id)
 
-            solr.add_articles([db_a])
-            solr_a = solr.query("test", fields=["date"]).results[0]
-            self.assertEqual(db_a.date, solr_a['date'])
+        solr.add_articles([db_a])
+        solr_a = solr.query("test", fields=["date"]).results[0]
+        self.assertEqual(db_a.date, solr_a['date'])
 
-            # test date representation in solr
-            import re, urllib
-            url = "http://{solr.host}:{solr.port}/solr/select/?q=id%3A{db_a.id}".format(**locals())
-            xml = urllib.urlopen(url).read()
-            m = re.search('<date name="date">([^>]+)</date>', xml)
-            if not m:
-                self.fail("Date not found in Solr XML")
-            solr_date = m.group(1)
-            self.assertEqual(solr_date, db_a.date.strftime("%Y-%m-%dT%H:%M:%SZ"))
+        # test date representation in solr
+        import re, urllib
+        url = "http://{solr.host}:{solr.port}/solr/select/?q=id%3A{db_a.id}".format(**locals())
+        xml = urllib.urlopen(url).read()
+        m = re.search('<date name="date">([^>]+)</date>', xml)
+        if not m:
+            self.fail("Date not found in Solr XML")
+        solr_date = m.group(1)
+        self.assertEqual(solr_date, db_a.date.strftime("%Y-%m-%dT%H:%M:%SZ"))
 
     def test_query(self):
+        if amcattest.skip_slow_tests():
+            return
+        
         with TestSolr() as solr:
             a1 = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla')
             a2 = amcattest.create_test_article(text='en alweer een test blo')
@@ -344,8 +352,12 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
             self.assertEqual(len(solr.query("test", rows=100).results), 100)
             self.assertEqual(len(list(solr.query_all("test"))), 196) # a1 + 195 new
 
-            
+            self.clear_solr(solr)
+            self.do_test_article_date(solr)
+            self.clear_solr(solr)
+            self.do_test_highlight(solr)
 
+            
     def todo_test_version(self):
         with TestSolr() as solr:
             url = "{solr.url}/admin/registry.jsp".format(**locals())
@@ -404,12 +416,11 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
             self.assertEqual(ad2[k], v, "Article 2 %s %r!=%r" % (k, ad2[k], v))
 
 
-    def test_highlight(self):
-        with TestSolr() as solr:
-            blabla  = "bla bla bla bla bla bla \n" *50
-            text = blabla + "bla een piet is een piet piet bla bla bla ble" + blabla
-            a = amcattest.create_test_article(text=text, headline='bla piet')
-            solr.add_articles([a])
-            solr.query_highlight("piet")
+    def do_test_highlight(self, solr):
+        blabla  = "bla bla bla bla bla bla \n" *50
+        text = blabla + "bla een piet is een piet piet bla bla bla ble" + blabla
+        a = amcattest.create_test_article(text=text, headline='bla piet')
+        solr.add_articles([a])
+        solr.query_highlight("piet")
 
 #from amcat.tools import amcatlogging; amcatlogging.debug_module()

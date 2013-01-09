@@ -219,6 +219,9 @@ class TestArticleSet(amcattest.PolicyTestCase):
 
     def test_refresh_index(self):
         """Are added/removed articles added/removed from the index?"""
+        if amcattest.skip_slow_tests():
+            return
+        
         from amcat.tools import amcatlogging
         from amcat.tools.amcatsolr import TestSolr, TestDummySolr
 
