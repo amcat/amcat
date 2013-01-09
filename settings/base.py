@@ -101,6 +101,7 @@ ACCOUNTS_URL = "/accounts/"
 # Examples: "http://foo.com/media/", "/media/".
 ADMIN_MEDIA_PREFIX = '/media/admin/'
 
+TEST_RUNNER = 'amcat.tools.amcattest.AmcatDjangoTestSuiteRunner'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (

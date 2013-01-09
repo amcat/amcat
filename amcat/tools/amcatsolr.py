@@ -28,6 +28,8 @@ import tempfile
 import os.path
 import subprocess
 
+from contextlib import contextmanager
+
 import solr
 
 from amcat.tools.toolkit import multidict
@@ -51,23 +53,39 @@ class Solr(object):
     def __init__(self, port=8983, host="localhost"):
         self.port = port
         self.host = host
+        self.connection = solr.SolrConnection(self.url)
 
     @property
     def url(self):
         return b'http://{self.host}:{self.port}/solr'.format(**locals())
-        
+
     def _connect(self):
+        return self.connection
         return solr.SolrConnection(self.url)
+    
+    @contextmanager
+    def connect(self):
+        log.debug("Connecting to Solr")
+        c =  self._connect()
+        try:
+            yield c
+            log.debug("Committing")
+            c.commit()
+        finally:
+            log.debug("Closing Solr connection")
+            c.close()
+            self.connection = solr.SolrConnection(self.url)
 
     #### QUERYING ####
 
     def query_all(self, query, batch=1000, filters=[], **kargs):
         """Make repeated calls to solr to get all articles"""
-        response = self._connect().query(query, fq=filters, rows=batch, **kargs)
+        conn = self._connect()
+        response = conn.query(query, fq=filters, rows=batch, **kargs)
         while response.results:
             log.debug("Iterating over all results, n={response.numFound}, "
                       "start={response.start}, |response.results|={n}"
-                  .format(n=len(response.results), **locals()))
+                      .format(n=len(response.results), **locals()))
             for row in response.results:
                 if 'score' in row:
                     row['score']  = int(row['score'])
@@ -75,9 +93,11 @@ class Solr(object):
             response = response.next_batch()
 
     def query(self, query, filters=[], **kargs):
-        qres = self._connect().query(query, fq=filters, **kargs)
+        conn = self._connect()
+        
+        qres = conn.query(query, fq=filters, **kargs)
 
-        # Return articles with UTC as timezone (timezone agnostic)
+            # Return articles with UTC as timezone (timezone agnostic)
         if len(qres.results) and "date" in qres.results[0]:
             for art in qres.results:
                 art['date'] = art['date'].replace(tzinfo=None)
@@ -109,17 +129,15 @@ class Solr(object):
         dicts = list(_get_article_dicts(list(get_ids(articles))))
         if dicts:
             log.info("Adding %i articles to solr" % len(dicts))
-            conn = self._connect()
-            conn.add_many(dicts)
-            conn.commit()
+            with self.connect() as conn:
+                conn.add_many(dicts)
 
     def delete_articles(self, articles):
         article_ids = list(get_ids(articles))
         if article_ids:
             log.info("Removing {n} articles from solr".format(n=len(article_ids)))
-            conn = self._connect()
-            conn.delete_many(article_ids)
-            conn.commit()
+            with self.connect() as conn:
+                conn.delete_many(article_ids)
 
 def parseSolrHighlightingToArticles(solrResponse):
     scoresDict = dict((x['id'], int(x['score'])) for x in solrResponse.results)
@@ -210,14 +228,14 @@ class TestDummySolr(object):
     def delete_articles(self, *args, **kargs):
         pass
 
-class TestSolr(Solr):
+class _TestSolr(Solr):
     """
     Create a temporary SOLR instance to use for testing purposes
     """
 
     
-    def __init__(self, port=1234, temp_home=None, solr_home=None, **kargs):
-        super(TestSolr, self).__init__(port=port, host='localhost')
+    def __init__(self, port=1234, temp_home=None, solr_home=None, start=True, **kargs):
+        super(_TestSolr, self).__init__(port=port, host='localhost')
         self.temp_home = tempfile.mkdtemp() if temp_home is None else temp_home
         if solr_home is None:
             import amcat
@@ -228,6 +246,8 @@ class TestSolr(Solr):
         if not os.path.exists(os.path.join(self.solr_home, "solr/solr.xml")):
             raise Exception("Solr.xml not found at {self.solr_home}".format(**locals()))
         self.solr_process = None
+        if start:
+            self.start()
 
     def _check_test_solr(self):
         cmd = 'ps aux | grep "java -Djetty.port={self.port}"'.format(**locals())
@@ -251,19 +271,51 @@ class TestSolr(Solr):
                  .format(**locals()))
 
     def stop(self):
+        try:
+            p = self.solr_process
+        except AttributeError:
+            return
+        
         if self.solr_process:
             self.solr_process.terminate()
             self.solr_process.wait()
             log.info("Terminated solr process")
+            self.solr_process = None
 
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __del__(self):
         self.stop()
-        
 
+def get_singleton_instance(create=True):
+    import amcat.tools.amcatsolr
+    cls = amcat.tools.amcatsolr._TestSolr
+    try:
+        return cls._instance
+    except AttributeError:
+        if not create:
+            raise
+        cls._instance = cls()
+        return cls._instance
+
+from contextlib import contextmanager
+@contextmanager
+def TestSolr():
+    t = get_singleton_instance()
+    try:
+        yield t
+    finally:
+        log.info("Clearing test Solr")
+        ids = set(t.query_ids("*:*"))
+        t.delete_articles(ids)
+                  
+
+def _finalize():
+    try:
+        t = get_singleton_instance(create=False)
+    except AttributeError:
+        pass
+    else:
+        t.stop()
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -279,11 +331,14 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
         amcat --> solr --> amcat.
         """
         with TestSolr() as solr:
-            db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla', date='2010-01-01')
+            db_a = amcattest.create_test_article(text='een dit is een test bla',
+                                                 headline='bla bla', date='2010-01-01')
             db_a = Article.objects.get(id=db_a.id)
 
             solr.add_articles([db_a])
+
             solr_a = solr.query("test", fields=["date"]).results[0]
+            
             self.assertEqual(db_a.date, solr_a['date'])
 
             # test date representation in solr
@@ -319,6 +374,7 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
             self.assertEqual(len(solr.query('"dit bl*"~5').results), 1)
             
             # can we delete an article, and are the scores correct?
+            solr.add_articles([a1, a2])
             solr.delete_articles([a2])
             self.assertEqual(set(solr.query("alweer")), set([]))
             self.assertEqual(solr.query("test", fields=["id", "mediumid"]).results,
