@@ -93,7 +93,7 @@ class RobustController(Controller):
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
 
         if not result:
-            raise Exception()
+            raise Exception("No results returned by _get_units()")
         
         return result
 

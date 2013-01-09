@@ -24,20 +24,38 @@ import urllib, urllib2
 from lxml import html
 import logging; log = logging.getLogger(__name__)
 import cookielib
+import copy
 
 
 HEADERS ={'User-agent': 'Mozilla/5.0 (X11; Linux i686; rv:6.0.2) Gecko/20100101 Firefox/6.0.2'}
+
+COOKIE_ARGS = {
+    "value" : None, "version" : 0, "port" : None, "port_specified" : False,
+    "domain_specified" : True, "domain_initial_dot" : True, "path_specified" : True,
+    "path" : '/', "secure" : False, "expires" : None, "discard" : True,
+    "comment" : None, "comment_url" : None, "rest" : dict(HttpOnly=None),
+    "rfc2109" : False
+}
+
+def create_cookie(name, domain, **kwargs):
+    """Create cookie object with sane defaults"""
+    kws = copy.copy(COOKIE_ARGS)
+    kws.update(**kwargs)
+
+    return cookielib.Cookie(name=name, domain=domain, **kws)
+
 
 class HTTPOpener(object):
     """Auxilliary class to help cookie-based opening and processing
     of web pages for scraping"""
     def __init__(self):
-        cj = cookielib.MozillaCookieJar('mfp.cookies')
-        self.cookiejar = urllib2.HTTPCookieProcessor(cj)
+        self.cookiejar = cookielib.CookieJar()
+
         self.opener = urllib2.build_opener(
-            self.cookiejar,
+            urllib2.HTTPCookieProcessor(self.cookiejar),
             urllib2.HTTPRedirectHandler()
-            )
+        )
+
         self.opener.addheaders = HEADERS.items()
         
     def getdoc(self, url, encoding=None):
