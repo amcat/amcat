@@ -70,7 +70,7 @@ def _get_next_id():
 
 def skip_slow_tests():
     """Should we skip the slow tests, e.g. Solr, Alpino etc"""
-    return os.environ['DJANGO_SKIP_SLOW_TESTS'] in ("1","Y", "ON")
+    return os.environ.get('DJANGO_SKIP_SLOW_TESTS') in ("1","Y", "ON")
 
 def create_test_user(**kargs):
     """Create a user to be used in unit testing"""
