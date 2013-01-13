@@ -29,7 +29,7 @@ urlpatterns = patterns('',
     (r'^webscript/(?P<webscriptName>\w+)/run$', 'api.webscripts.handler.index'),
     (r'^webscript/(?P<webscriptName>\w+)/form$', 'api.webscripts.handler.getWebscriptForm'),
     (r'^v4/', include('api.rest.urls')),
-    url(r'^restframework', include('djangorestframework.urls', namespace='djangorestframework')),
+    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
 
 )
 
