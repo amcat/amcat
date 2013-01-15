@@ -66,8 +66,8 @@ class ArticleSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='articleset_id')
 
     name = models.CharField(max_length=200)
-    project = models.ForeignKey("amcat.Project", related_name='articlesets')
-    articles = models.ManyToManyField(Article, through="amcat.ArticleSetArticle", related_name="articlesets")
+    project = models.ForeignKey("amcat.Project", related_name='articlesets_set')
+    articles = models.ManyToManyField(Article, through="amcat.ArticleSetArticle", related_name="articlesets_set")
 
     provenance = models.TextField(null=True)
 

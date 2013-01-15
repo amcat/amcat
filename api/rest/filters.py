@@ -193,7 +193,7 @@ class TestFilters(ApiTestCase):
 
         # Filter on 1-to-many field
         #aset = amcattest.create_test_set(project=p)
-        #self.assertEqual(self._get_ids(ProjectResource, articlesets__id=aset.id), {p.id})
+        #self.assertEqual(self._get_ids(ProjectResource, articlesets_set__id=aset.id), {p.id})
         
         # Filter on more n-on-m field: project roles
         u = amcattest.create_test_user()

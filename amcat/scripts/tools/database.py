@@ -7,9 +7,9 @@ from amcat.models import article
 def getQuerySet(projects=None, articlesets=None, mediums=None, startDate=None, endDate=None, articleids=None, **kargs):
     queryset = article.Article.objects
     if articlesets:
-        queryset = queryset.filter(articlesets__in=articlesets)
+        queryset = queryset.filter(articlesets_set__in=articlesets)
     elif projects: 
-        queryset = queryset.filter(articlesets__project__in=projects)
+        queryset = queryset.filter(articlesets_set__project__in=projects)
     else:
         raise ValueError("Either projects or article sets needs to be specified")
 
