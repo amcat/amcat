@@ -69,10 +69,10 @@ class TestSerializer(ApiTestCase):
         self.assertEqual(a.headline, a2.headline)
         self.assertEqual(a.id, a2.id)
 
-    def todo_test_echo(self):
+    def test_echo(self):
         from api.rest.resources import ProjectResource
 
-        res = self.get(ProjectResource, datatable_options='{"sEcho":5}')
+        res = self.get(ProjectResource, datatables_options='{"sEcho":5}')
         self.assertEqual(res['echo'], 5)
     
     def test_get(self):
