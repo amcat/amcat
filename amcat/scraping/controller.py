@@ -54,12 +54,15 @@ class Controller(object):
         log.debug("Saving article %s" % article)
         article.save()
 
+        #keeping this around for a while until the new method proves effective
+        old_articleset_code = """
         articleset = article.scraper.articleset if hasattr(article, 'scraper') else self.articleset
         log.debug("Adding article %r to articleset %r" % (article.id, articleset))
         if articleset:
             articleset.add(article)
             articleset.save()
-           
+        """
+
         log.debug("Done")
         return article
 
@@ -68,10 +71,13 @@ class SimpleController(Controller):
     
     @to_list
     def scrape(self, scraper):
+        result = []
         units = scraper.get_units()
         for unit in units:
             for article in scraper.scrape_unit(unit):
-                yield self.save(article)
+                result.append(self.save(article))
+
+        scraper.articleset.add_articles(result)
    
 
 
@@ -94,10 +100,15 @@ class RobustController(Controller):
 
         if not result:
             raise Exception("No results returned by _get_units()")
-        
+
+        try:
+            scraper.articleset.add_articles(result)
+        except Exception as e:
+            log.exception("failed adding to articleset")
+            raise e
+            
         return result
 
-    @transaction.commit_on_success
     def scrape_unit(self, scraper, unit):
         try:
             scrapedunits = list(scraper.scrape_unit(unit))
