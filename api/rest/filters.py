@@ -145,12 +145,26 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
 from amcat.tools import amcattest
 from api.rest.apitestcase import ApiTestCase
 
-class TestFilters(ApiTestCase):
-
-    
-    def _get_ids(self, resource, **filters):
+class TestFilters(ApiTestCase):    
+    def _get_ids(self, resource, rtype=set, **filters):
         result = self.get(resource, **filters)
-        return {row['id'] for row in result['results']}
+        return rtype(row['id'] for row in result['results'])
+
+    def test_uniqueness(self):
+        from amcat.models import ArticleSet
+        from api.rest.resources import ArticleResource
+
+        a1 = amcattest.create_test_article()
+        as1 = ArticleSet.objects.create(name="foo", project=a1.project)
+        as2 = ArticleSet.objects.create(name="bar", project=a1.project)
+
+        as1.add(a1)
+        as2.add(a1)
+
+        arts =  self._get_ids(ArticleResource, list, articlesets_set__id=[as1.id, as2.id])
+
+        self.assertEquals(1, len(arts))
+
 
     def test_order_by(self):
         from api.rest.resources import ProjectResource
