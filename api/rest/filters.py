@@ -174,7 +174,7 @@ class TestFilters(ApiTestCase):
         res = self.get(ProjectResource, order_by=["active", "-name"])
         self.assertEqual([p["name"] for p in res['results']], ["c", "b", "a"])
         
-    def todo_test_filter(self):
+    def test_filter(self):
         from amcat.models import Role
         from api.rest.resources import ProjectResource
         r = Role.objects.get(label='admin', projectlevel=True)
@@ -182,7 +182,7 @@ class TestFilters(ApiTestCase):
         p = amcattest.create_test_project(name="test")
         p2 = amcattest.create_test_project(name="not a test", guest_role=r)
         p3 = amcattest.create_test_project(name="anothertest")
-        
+
         # no filter
         self.assertEqual(self._get_ids(ProjectResource), {p.id, p2.id, p3.id})
         
@@ -192,7 +192,7 @@ class TestFilters(ApiTestCase):
         self.assertEqual(self._get_ids(ProjectResource, pk=p.id), {p.id})
 
         # Filter on directly related fields
-        self.assertEqual(self._get_ids(ProjectResource, guest_role=r.id), {p2.id})
+        self.assertEqual(self._get_ids(ProjectResource, guest_role__id=r.id), {p2.id})
 
         # Filter on 1-to-many field
         #aset = amcattest.create_test_set(project=p)
@@ -207,7 +207,7 @@ class TestFilters(ApiTestCase):
         self.assertEqual(self._get_ids(ProjectResource, projectrole__user__id=u.id), {p3.id})
 
         # Filter on multiple values of same key. Expect them to be OR'ed.
-        self.assertEqual(self._get_ids(ProjectResource, id=[p1.id, p2.id]), {p2.id, p1.id})
+        self.assertEqual(self._get_ids(ProjectResource, id=[p.id, p2.id]), {p2.id, p.id})
 
     def _assertEqualIDs(self, resource, ids, **filters):
         self.assertEqual(self._get_ids(resource, **filters), ids)
@@ -219,6 +219,9 @@ class TestFilters(ApiTestCase):
         self.assertEqual(res['echo'], "3")
 
     def todo_test_datatables_search(self):
+        """
+        Not yet implemented.
+        """
         from api.rest.resources import ProjectResource
 
         p = amcattest.create_test_project(name="test")
