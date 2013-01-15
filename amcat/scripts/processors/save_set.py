@@ -45,7 +45,7 @@ class SaveAsSetForm(forms.Form):
         # a request object in the threads local storage) to access it, but
         # should be removed as soon as possible. 
         try:
-            from amcatnavigator.utils.auth import get_request
+            from navigator.utils.auth import get_request
             request = get_request()
         except ImportError:
             log.debug("AmCAT Navigator not installed! Wil not set default project / filter on existing sets.")
@@ -92,8 +92,17 @@ class SaveAsSetScript(script.Script):
         if self.options['existingset']:
             s = self.options['existingset']
         else:
-            s = ArticleSet(name=self.options['setname'], project=self.options['setproject'])
-            s.save()
+            name = self.options['setname']
+            project = self.options['setproject']
+
+            try:
+                ArticleSet.objects.get(name=name, project=project)
+            except ArticleSet.DoesNotExist:
+                s = ArticleSet(name=self.options['setname'], project=self.options['setproject'])
+                s.save()
+            else:
+                raise ValueError("Set with this name already exists!")
+
         s.add(*articleids)
         return s
     
