@@ -124,7 +124,10 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                 self._qs = self._filter(self._qs)
                 self._qs = self._order_by(self._qs)
 
-                return self._qs
+                # Only return non-duplicates
+                self._qs = self._qs.distinct()
+
+                return self.qs
 
             class Meta:
                 model = view.model
