@@ -38,7 +38,7 @@ else:
     DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
-DEBUG_LEVEL = os.environ.get('DJANGO_DEBUG_LEVEL', 'INFO' if DEBUG else 'WARNING')
+LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO' if DEBUG else 'WARNING')
 
                  
 LOCAL_DEVELOPMENT = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
@@ -239,7 +239,7 @@ if not DEBUG:
         },
         'handlers': {
             'default': {
-                'level':DEBUG_LEVEL,
+                'level':LOG_LEVEL,
                 'class':'logging.handlers.RotatingFileHandler',
                 'filename': '/tmp/django_mainlog.log',
                 'maxBytes': 1024*1024*5, # 5 MB
@@ -247,7 +247,7 @@ if not DEBUG:
                 'formatter':'standard',
             },
             'request_handler': {
-                'level':DEBUG_LEVEL,
+                'level':LOG_LEVEL,
                 'class':'logging.handlers.RotatingFileHandler',
                 'filename': '/tmp/django_requests.log',
                 'maxBytes': 1024*1024*5, # 5 MB
@@ -258,12 +258,12 @@ if not DEBUG:
         'loggers': {
             '': {
                 'handlers': ['default'],
-                'level': DEBUG_LEVEL,
+                'level': LOG_LEVEL,
                 'propagate': True
             },
             'django.request': { # Stop SQL debug from logging to main logger
                 'handlers': ['request_handler'],
-                'level': DEBUG_LEVEL,
+                'level': LOG_LEVEL,
                 'propagate': False
             },
         }
@@ -290,7 +290,7 @@ else:
         },
         'handlers': {
             'default': {
-                'level': DEBUG_LEVEL,
+                'level': LOG_LEVEL,
                 'class':'logging.StreamHandler',
                 # 'class':'logging.handlers.RotatingFileHandler',
                 # 'filename': 'logs/mylog.log',
@@ -299,7 +299,7 @@ else:
                 'formatter':'standard',
             },
             'request_handler': {
-                    'level': DEBUG_LEVEL,
+                    'level': LOG_LEVEL,
                     'class':'logging.StreamHandler',
                     # 'class':'logging.handlers.RotatingFileHandler',
                     # 'filename': 'logs/django_request.log',
@@ -311,12 +311,12 @@ else:
         'loggers': {
             '': {
                 'handlers': ['default'],
-                'level': DEBUG_LEVEL,
+                'level': LOG_LEVEL,
                 'propagate': True
             },
             'django.request': { # Stop SQL debug from logging to main logger
                 'handlers': ['request_handler'],
-                'level': DEBUG_LEVEL,
+                'level': LOG_LEVEL,
                 'propagate': False
             },
         }

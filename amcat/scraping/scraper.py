@@ -101,8 +101,7 @@ class Scraper(Script):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium} using RobustController"
                  .format(**locals()))
         from amcat.scraping.controller import RobustController
-        with transaction.commit_on_success():
-            return RobustController(self.articleset).scrape(self)
+        return RobustController(self.articleset).scrape(self)
 
 
     def get_units(self):

@@ -101,6 +101,7 @@ class RobustController(Controller):
         if not result:
             raise Exception("No results returned by _get_units()")
 
+        log.info("adding articles to set {scraper.articleset.id}".format(**locals()))
         try:
             scraper.articleset.add_articles(result)
         except Exception as e:
@@ -177,12 +178,14 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
             except Exception as e:
                 log.exception("scraper failed")
             if deduplicate == True:
+                
                 options = {
-                    'first_date' : s.options['date'],
-                    'last_date' : s.options['date'],
                     'articleset' : s.articleset.id,
                     'recycle_bin_project' : trash_project_id
                     }
+                if 'date' in s.options.keys():
+                    options['first_date'] = s.options['date']
+                    options['last_date'] = s.options['date']
                 DeduplicateScript(**options).run(None)
                 
     return counts, log_stream.getvalue()

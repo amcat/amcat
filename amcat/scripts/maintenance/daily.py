@@ -31,7 +31,6 @@ log = logging.getLogger(__name__)
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.scripts.maintenance.deduplicate import deduplicate_scrapers
 
 from amcat.scraping.controller import scrape_logged
 from amcat.models.scraper import get_scrapers
@@ -135,7 +134,7 @@ if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
     amcatlogging.debug_module("amcat.scripts.maintenance.deduplicate")
-    amcatlogging.debug_module("amcat.scraping.scraper")
-    amcatlogging.debug_module("amcat.scraping.controller")        
+    amcatlogging.info_module("amcat.scraping.scraper")
+    amcatlogging.info_module("amcat.scraping.controller")        
     amcatlogging.set_sentry_handler()
     cli.run_cli(DailyScript)
