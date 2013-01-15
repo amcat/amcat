@@ -92,7 +92,7 @@ class UserProfile(AmcatModel):
         return (self == profile) or\
                (profile.affiliation == self.affiliation and\
                 profile.haspriv("view_users_same_affiliation")) or\
-               (profile.haspriv("view_all_users"))
+               (profile.haspriv("view_users"))
 
     def can_update(self, user):
         profile = user.get_profile()
