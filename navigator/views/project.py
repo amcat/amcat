@@ -66,6 +66,7 @@ from amcat.scripts.maintenance.deduplicate import DeduplicateScript
 from navigator import forms
 from navigator.utils.auth import check, check_perm
 from navigator.utils.action import ActionHandler
+from navigator.utils.misc import session_pop
 
 from api.webscripts import mainScripts
 from amcat.scripts.forms import SelectionForm
@@ -175,11 +176,7 @@ def view(request, project):
     """
     View a single project
     """
-    edited = False
-
-    if "project-edited" in request.session:
-        edited = request.session.get("project-edited")
-        del request.session["project-edited"]
+    edited = session_pop(request.session, "project-edited", False)
 
     return render(request, 'navigator/project/view.html', {
         "context" : project, "menu" : PROJECT_MENU,
@@ -192,11 +189,19 @@ def articlesets(request, project):
     """
     Project articlesets page
     """
-    articlesets = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
+    owned_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
                   .filter(project=project).hide("project", "id")
 
-    return table_view(request, project, articlesets, 'article sets',
-            template='navigator/project/articlesets.html')
+    imported_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
+                  .filter(projects_set=project).hide("project", "id")
+
+    return render(request, 'navigator/project/articlesets.html', {
+        "context" : project, "menu" : PROJECT_MENU,
+        "owned_articlesets" : owned_as, "selected" : "article sets",
+        "imported_articlesets" : imported_as,
+        "deleted" : session_pop(request.session, "deleted_articleset"),
+        "unlinked" : session_pop(request.session, "unlinked_articleset"),
+    })
 
 @check(ArticleSet, args='id', action='delete')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
@@ -211,7 +216,16 @@ def delete_articleset(request, project, aset):
 
     aset.save()
 
+    request.session['deleted_articleset'] = True
     return redirect(reverse("project-articlesets", args=[project.id]))
+
+@check(ArticleSet, args='id')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid', action='update')
+def unlink_articleset(request, project, aset):
+    project.articlesets.remove(aset)
+    request.session['unlinked_articleset'] = True
+    return redirect(reverse("project-articlesets", args=[project.id]))
+
 
 @check(ArticleSet, args='id', action='delete')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
@@ -233,6 +247,27 @@ def edit_articleset(request, project, aset):
         "context" : project, "menu" : PROJECT_MENU, "selected" : "overview",
         "form" : form, "articleset" : aset
     })
+
+@check(Project, args_map={'projectid' : 'id'}, args='projectid', action="update")
+def show_importable_articlesets(request, project):
+    rowlink = reverse("articleset-import", args=[project.id, 0])
+    rowlink = rowlink.replace("/0", "/{id}")
+
+    table = Datatable(ArticleSetResource, rowlink=rowlink).filter(
+        project=Project.objects.all().exclude(id=project.id)
+    )
+
+    return render(request, 'navigator/project/importable_articlesets.html', {
+        "context" : project, "menu" : PROJECT_MENU, "selected" : "article sets",
+        "table" : table
+    })
+
+@check(ArticleSet, args='id')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid', action="update")
+def import_articleset(request, project, aset):
+    project.articlesets.add(aset)
+    return redirect(reverse("articleset", args=[project.id, aset.id]))
+
 
 @check(ArticleSet, args='id')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
@@ -328,20 +363,13 @@ def schemas(request, project):
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
 def schema(request, schema, project):
-    # Is this schema new?
-    is_new = request.session.get("schema_%s_is_new" % schema.id, False)
-    if is_new: del request.session["schema_%s_is_new" % schema.id]
-
-    # is this schema edited?
-    is_edited = request.session.get("schema_%s_edited" % schema.id, False)
-    if is_edited: del request.session["schema_%s_edited" % schema.id]
-
     fields = (Datatable(CodingSchemaFieldResource)
               .filter(codingschema=schema).hide('id', 'codingschema'))
 
     return table_view(request, project, fields, 'codingschemas',
             template="navigator/project/schema.html", schema=schema,
-            is_new=is_new, is_edited=is_edited)
+            is_new=session_pop(request.session, "schema_{}_is_new".format(schema.id), False),
+            is_edited=session_pop(request.session, "schema_{}_edited".format(schema.id), False))
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 def new_schema(request, project):

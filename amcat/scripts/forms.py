@@ -139,13 +139,19 @@ class SelectionForm(forms.Form):
         super(SelectionForm, self).__init__(data, *args, **kwargs)
         if data is None: return
 
-        projectids = data.getlist('projects') if hasattr(data, 'getlist') else data.get('projects')
-        if type(projectids) != list:
-            return
-        projectids = map(int, projectids)
-        
-        self.fields['articlesets'].queryset = ArticleSet.objects.order_by('-pk').filter(project__in=projectids)
         self.fields['mediums'].queryset = Medium.objects.all().order_by('pk')
+
+        if hasattr(data, "getlist"):
+            projectids = data.getlist("projects")
+        else:
+            projectids = data.get("projects")
+
+        if isinstance(projectids, (list, tuple)):
+            project = Project.objects.get(id=projectids[0])
+        else:
+            return
+
+        self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
 
         
     def clean(self):

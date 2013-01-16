@@ -9,10 +9,20 @@
  <h1 class="noline">Actions</h1>
  <p>
   <a href="{% url upload-articles context.id %}" class="btn"><i class="icon-upload"></i> Upload articles</a>
-  <a href="" class="btn">Import articleset</a>
+  <a href="{% url articleset-importable context.id %}" class="btn">Import articleset</a>
  </p>
  <hr/>
- <h1 class="nonline">Articlesets:</h1>
- {{ table }}
+ {% if deleted %}
+    <div class="alert alert-success">Successfully deleted an articleset. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+ {% endif %}
+ <h1 class="nonline">Owned articlesets:</h1>
+ {{ owned_articlesets }}
+
+ <hr/>
+ {% if unlinked %}
+    <div class="alert alert-success">Successfully unlinked an articleset. You can link it again by clicking on "Import articleset", if you need to.</div>
+ {% endif %}
+ <h1 class="nonline">Imported articlesets:</h1>
+ {{ imported_articlesets }}
 </div>
 {% endblock %}

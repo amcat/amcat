@@ -28,7 +28,7 @@ from amcat.tools.toolkit import wrapped
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.article import Article
-from amcat.models.articleset import ArticleSetArticle
+from amcat.models.articleset import ArticleSetArticle, ArticleSet
 
 from django.db import models
 from django.db.models import Q
@@ -94,6 +94,13 @@ class Project(AmcatModel):
         """Get a list of all users with some role in this project"""
         return (r.user for r in self.projectrole_set.all())
 
+    def all_articlesets(self):
+        """
+        Get a set of articlesets either owned by this project or
+        contained in a set owned by this project
+        """
+        return ArticleSet.objects.filter(Q(project=self)|Q(projects_set=self)).distinct()
+
     def all_articles(self):
         """
         Get a set of articles either owned by this project
@@ -144,6 +151,8 @@ class TestProject(amcattest.PolicyTestCase):
         
     def test_all_articles(self):
         """Does getting all articles work?"""
+        from django.db.models.query import QuerySet
+
         p1, p2 = [amcattest.create_test_project() for _x in [1,2]]
         a1, a2 = [amcattest.create_test_article(project=p) for p in [p1, p2]]
         self.assertEqual(set(p1.get_all_article_ids()), set([a1.id]))
@@ -155,7 +164,19 @@ class TestProject(amcattest.PolicyTestCase):
         s.add(a2)
         self.assertEqual(set(p1.get_all_article_ids()), set([a1.id, a2.id]))
         self.assertEqual(set(p1.all_articles()), set([a1, a2]))
-        
-        
+        self.assertTrue(isinstance(p1.all_articles(), QuerySet))
+
+    def test_all_articlesets(self):
+        """Does getting all articlesets work?"""
+        from django.db.models.query import QuerySet
+
+        p1, p2 = [amcattest.create_test_project() for _x in [1,2]]
+        a1 = amcattest.create_test_set(5, project=p1)
+        a2 = amcattest.create_test_set(5, project=p2)
+
+        self.assertEqual(set([a1]), set(p1.all_articlesets()))
+        p1.articlesets.add(a2)
+        self.assertEqual({a1, a2}, set(p1.all_articlesets()))
+        self.assertTrue(isinstance(p1.all_articlesets(), QuerySet))
 
 
