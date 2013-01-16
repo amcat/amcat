@@ -24,7 +24,8 @@ from amcat.scripts.searchscripts.articlelist import ArticleListScript
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 import amcat.scripts.forms
 
-from amcat.models.articleset import ArticleSet
+from amcat.models import ArticleSet
+from amcat.models import Project
 
 import logging
 log = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ class ShowArticleList(WebScript):
             formData['highlight'] = True
         
         if "articlesets" not in formData:
-            artsets = [str(artset.id) for artset in ArticleSet.objects.filter(project__id=formData['projects'])]
+            artsets = [str(aset.id) for aset in Project.objects.get(id=formData['projects']).all_articlesets()]
             formData.setlist("articlesets", artsets)
 
         articles = set(ArticleListScript(formData).run())
