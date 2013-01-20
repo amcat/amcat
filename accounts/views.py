@@ -4,12 +4,12 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
 from django.contrib.auth import signals
 from django.contrib.auth.views import password_reset, password_reset_confirm
-from django.core.exceptions import MultipleObjectsReturned
 
+from accounts.forms import UserPasswordResetForm
 from navigator.forms import AddUserForm
 from navigator.utils.auth import create_user
 
-from amcat.models.user import User, Affiliation
+from amcat.models.user import Affiliation
 from amcat.models.authorisation import Role
 
 def _login(request, error, username):
@@ -24,8 +24,8 @@ def _redirect_login(request):
     """
     Redirect a successful login
     """
-    next = request.REQUEST.get("next")
-    if next is not None:
+    next1 = request.REQUEST.get("next")
+    if next1 is not None:
         return redirect(next)
 
     # Redirect to frontpage
@@ -89,10 +89,16 @@ def register(request):
     return render(request, "accounts/register.html", locals())
 
 def recover(request):
+    """
+    Reset password based on email address or username.
+
+    Send email to user.
+    """
     return password_reset(request,
             template_name="accounts/recover.html",
             email_template_name="accounts/reset_email.html",
             subject_template_name="accounts/reset_subject.txt",
+            password_reset_form=UserPasswordResetForm,
             post_reset_redirect=reverse(recover_requested)
     )
 
