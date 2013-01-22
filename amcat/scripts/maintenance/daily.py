@@ -115,6 +115,8 @@ class DailyScript(Script):
         if self.options['deduplicate'] == True and self.options['trash_project'] == None:
             raise ValueError("insert trash project number when deduplicating, most often this is 1")
 
+
+
         count, messages =  scrape_logged(
             RobustController(), 
             scrapers, 
@@ -133,8 +135,7 @@ class DailyScript(Script):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
-    amcatlogging.debug_module("amcat.scripts.maintenance.deduplicate")
-    amcatlogging.info_module("amcat.scraping.scraper")
-    amcatlogging.info_module("amcat.scraping.controller")        
+    amcatlogging.debug_module("amcat.scraping.controller","amcat.scraping.scraper")
+    amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
     amcatlogging.set_sentry_handler()
     cli.run_cli(DailyScript)

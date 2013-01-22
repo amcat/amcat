@@ -30,10 +30,8 @@ from amcat.tools import amcatlogging
 
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
 
-from django.db import transaction
+from django.db import transaction, DatabaseError, IntegrityError
 
-import traceback
-from pprint import pformat
 
 class Controller(object):
     """
@@ -52,7 +50,14 @@ class Controller(object):
 
     def save(self, article):
         log.debug("Saving article %s" % article)
-        article.save()
+        try:
+            save = transaction.savepoint()
+            article.save()
+            transaction.savepoint_commit(save)
+        except (IntegrityError, DatabaseError):
+            log.exception("saving article {article} failed".format(**locals()))
+            transaction.savepoint_rollback(save)
+            return
 
         #keeping this around for a while until the new method proves effective
         old_articleset_code = """
@@ -107,7 +112,7 @@ class RobustController(Controller):
         except Exception as e:
             log.exception("failed adding to articleset")
             raise e
-            
+
         return result
 
     def scrape_unit(self, scraper, unit):

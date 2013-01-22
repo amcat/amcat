@@ -107,6 +107,7 @@ class ModuleLevelFilter(logging.Filter):
     Filter to ignore errors based on message level and module level
     """
     def filter(self, record):
+        
         if record.exc_info and issubclass(record.exc_info[0], SilentException): return False
         #print record, record.name
         if record.levelno < logging.ERROR and record.name in QUIET_MODULES: return False
