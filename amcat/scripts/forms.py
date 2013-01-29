@@ -23,6 +23,8 @@ from amcat.models.project import Project
 from amcat.models.articleset import ArticleSet
 from amcat.models.medium import Medium
 
+import datetime
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -121,6 +123,14 @@ class SearchQuery(object):
         self.query = query
         self.label = label or query
             
+
+DATETYPES = {
+    "all" : "All Dates",
+    "on" : "On",
+    "before" : "Before",
+    "after" : "After",
+    "between" : "Between",
+}
             
 class SelectionForm(forms.Form):
     # TODO: change to projects of user
@@ -129,10 +139,10 @@ class SelectionForm(forms.Form):
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.none(), required=False)
     query = forms.CharField(widget=forms.Textarea, required=False)
     articleids = forms.CharField(widget=forms.Textarea, required=False)
-    datetype = forms.ChoiceField(choices=(('all', 'All Dates'), ('before', 'Before'), ('after', 'After'),
-                                          ('between', 'Between')), initial='all')
+    datetype = forms.ChoiceField(choices=DATETYPES.items(), initial='all')
     startDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
+    onDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     # queries will be added by clean(), that contains a list of SearchQuery objects
     
     def __init__(self, data=None, *args, **kwargs):
@@ -160,6 +170,11 @@ class SelectionForm(forms.Form):
             del cleanedData['endDate']
         if cleanedData.get('datetype') in ('before', 'all') and 'startDate' in cleanedData:
             del cleanedData['startDate']
+        if cleanedData.get('datetype') == 'on':
+            cleanedData['datetype'] = 'between'
+            cleanedData['startDate'] = cleanedData['onDate'] 
+            cleanedData['endDate'] = cleanedData['onDate'] + datetime.timedelta(1)
+
         missingDateMsg = "Missing date"
         if 'endDate' in cleanedData and cleanedData['endDate'] == None: # if datetype in (before, between)
             self._errors["endDate"] = self.error_class([missingDateMsg])
