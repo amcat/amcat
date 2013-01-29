@@ -320,7 +320,7 @@ def selection(request, project):
 
     ctx = locals()
     ctx.update({
-        'form' : SelectionForm(formData),
+        'form' : SelectionForm(formData, initial={"datetype" : "all" }),
         'outputs' : outputs,
         'project' : project,
         'context' : project,

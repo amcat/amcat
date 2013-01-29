@@ -92,14 +92,21 @@ $(document).ready(function(){
           console.log(val);
           if(val == 'all'){
             $('#date-start, #date-end').hide();
+            $('#date-on').hide();
+          } else if(val == 'on'){
+            $('#date-start, #date-end').hide();
+            $('#date-on').show();
           } else if(val == 'before'){
             $('#date-start').hide();
+            $('#date-on').hide();
             $('#date-end').show();
           }else if(val == 'after'){
             $('#date-start').show();
             $('#date-end').hide();
+            $('#date-on').hide();
           }else if(val == 'between'){
             $('#date-start, #date-end').show();
+            $('#date-on').hide();
           }
        },
     });
@@ -157,6 +164,15 @@ $(document).ready(function(){
         showOn:'focus',
     });
     $("#date-end > input").datepicker({
+        changeMonth: true,
+        changeYear: true,
+        autoSize:true,
+        dateFormat: 'dd-mm-yy',
+        firstDay:1,
+        maxDate:'+1y',
+        showOn:'focus',
+    });
+    $("#date-on > input").datepicker({
         changeMonth: true,
         changeYear: true,
         autoSize:true,
