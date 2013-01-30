@@ -74,6 +74,9 @@ FILTER NOT EXISTS {?jan :su ?volgens}","Volgens piet gaat het nergens over
 regel 523334 teeven snelle aanpak
 748195 volgens hem worden ..
 670752 rel_tag",
+29,1,1,,zoals samsom beweerde,?samsom :quote ?razernij,,"?beweerde :lexclass ""zeg""; :rel_body ?zoals.
+?zoals :lexclass ""zoals""; :rel_mod ?razernij.
+?samsom :rel_su ?beweerde.","16248512 razernij, zoals samsom beweerde",
 40,1,,,pc obj,?x :obj ?y,,?x :rel_obj1 [:rel_pc ?y],,
 50,1,0,,Hier-reality,"?x :su ?y.
 ?z :obj ?y",,"?x :lexclass ""reality"";  :rel_mod ?y.
