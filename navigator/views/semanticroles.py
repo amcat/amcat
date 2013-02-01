@@ -20,7 +20,7 @@ log = logging.getLogger(__name__)
 from amcat.models import AnalysisSentence
 
 
-_csvdir = os.path.normpath(os.path.join(os.path.dirname(__file__), "../../media/misc"))
+_csvdir = os.path.normpath(os.path.join(os.path.dirname(__file__), "../../navigator/media/misc"))
 LEXICONFILE = os.path.join(_csvdir, "lexicon{ruleset}.csv")
 GRAMMARFILE = os.path.join(_csvdir, "rules{ruleset}.csv")
 GOLDFILE = os.path.join(_csvdir, "gold_quotes.csv")
