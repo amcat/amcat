@@ -8,7 +8,7 @@
  {{ table }}
 
 {% if can_create_plugin %}
-  <a href="{% url manage-plugins id=plugin_type %}"> 
+  <a href="{% url manage-plugins id=plugin_type.id %}"> 
     Register a new upload script
   </a>
 {% endif %}

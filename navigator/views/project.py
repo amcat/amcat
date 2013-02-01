@@ -38,9 +38,9 @@ from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJ
 from api.rest.resources import ProjectRoleResource
 
 #from api.rest import AnalysisResource
-#from api.rest import CodebookBaseResource, CodebookCodeResource
-#from api.rest.resources import CodingSchemaFieldResource
-#from api.rest.resources import PluginResource, ScraperResource
+from api.rest.resources import CodebookBaseResource, CodebookCodeResource
+from api.rest.resources import CodingSchemaFieldResource
+from api.rest.resources import PluginResource, ScraperResource
 
 from settings.menu import PROJECT_MENU, PROJECT_OVERVIEW_MENU
 
@@ -102,7 +102,7 @@ from navigator.views.article import view as article
 
 @check(Project)
 def upload_article(request, project):
-    plugin_type = UploadScript.get_plugin_type().id
+    plugin_type = UploadScript.get_plugin_type()
     scripts = (Datatable(PluginResource, rowlink="./upload-articles/{id}").filter(active=True)
                .filter(type=plugin_type)
                .hide('id', 'module', 'class_name', 'type'))
