@@ -22,8 +22,6 @@ from __future__ import unicode_literals, print_function, absolute_import
 from amcat.scraping.document import Document, HTMLDocument
 from amcat.scraping.scraper import HTTPScraper, DBScraper
 from urllib import urlencode
-#from urlparse import urljoin
-#from amcat.tools.toolkit import readDate
 from amcat.scraping import toolkit
 import time
 import json
@@ -75,20 +73,17 @@ class GoogleReaderScraper(HTTPScraper, DBScraper):
         index = self.getdoc(INDEX_URL) 
         
         feed_url = self.get_feed_url(index)
-        print(feed_url)
         if feed_url == None:
             raise ValueError("failed to obtain feed url, try adjusting self.feedname")
         timestamp = time.time()
         
         url = API_URL.format(continuation = "", **locals())
-        print(url)
         while url != None:
             _json = self.open(url).read()
             data = json.loads(_json)
             continuation = data['continuation']
             for item in data['items']:
                 _date = datetime.fromtimestamp(item['updated']).date()
-                print(_date)
                 if _date == self.options['date']:
                     yield item
                 elif _date < self.options['date']:
