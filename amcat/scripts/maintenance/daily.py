@@ -67,11 +67,14 @@ def make_table(count):
     table = DictTable()
 
     for (scraper, n) in count.items():
-        table.addValue(
-            row = scraper.__class__.__name__,
-            col = scraper.options['date'],
-            value = n
-            )
+        try:
+            table.addValue(
+                row = scraper.__class__.__name__,
+                col = scraper.options['date'],
+                value = n
+                )
+        except KeyError:
+            pass
 
     return table
 
@@ -97,7 +100,7 @@ from amcat.models.project import Project
 
 class DailyForm(forms.Form):
     date = forms.DateField()
-    deduplicate = forms.BooleanField()
+    deduplicate = forms.BooleanField(required = False)
     trash_project = forms.ModelChoiceField(Project.objects.all(), required = False)
 
 class DailyScript(Script):

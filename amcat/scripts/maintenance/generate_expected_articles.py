@@ -69,7 +69,7 @@ def generate_expected_articles():
             continue
         _json = json.dumps(ranges)
         scraper.statistics = _json
-        log.info("{scraper.__class__.__name__}: {scraper.statistics}")
+        log.info("{scraper.__class__.__name__}: {scraper.statistics}".format(**locals()))
         scraper.save()
 
 

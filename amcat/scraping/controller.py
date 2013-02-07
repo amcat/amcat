@@ -53,20 +53,11 @@ class Controller(object):
         try:
             save = transaction.savepoint()
             article.save()
-            transaction.savepoint_commit(save)
+            transaction.commit()
         except (IntegrityError, DatabaseError):
             log.exception("saving article {article} failed".format(**locals()))
             transaction.savepoint_rollback(save)
             return
-
-        #keeping this around for a while until the new method proves effective
-        old_articleset_code = """
-        articleset = article.scraper.articleset if hasattr(article, 'scraper') else self.articleset
-        log.debug("Adding article %r to articleset %r" % (article.id, articleset))
-        if articleset:
-            articleset.add(article)
-            articleset.save()
-        """
 
         log.debug("Done")
         return article
@@ -182,8 +173,9 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
                     counts[s] += 1
             except Exception as e:
                 log.exception("scraper failed")
-            if deduplicate == True:
-                
+
+
+            if deduplicate == True:                
                 options = {
                     'articleset' : s.articleset.id,
                     'recycle_bin_project' : trash_project_id
@@ -191,6 +183,12 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
                 if 'date' in s.options.keys():
                     options['first_date'] = s.options['date']
                     options['last_date'] = s.options['date']
+
+                try:
+                    transaction.commit()
+                except (IntegrityError, DatabaseError):
+                    transaction.rollback()
+
                 DeduplicateScript(**options).run(None)
                 
     return counts, log_stream.getvalue()
