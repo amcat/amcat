@@ -25,6 +25,8 @@ from amcat.scripts.processors.save_set import SaveAsSetScript, SaveAsSetForm
 
 
 import logging
+import json
+
 log = logging.getLogger(__name__)
 
 class SaveAsSetWebScriptForm(SaveAsSetForm):
@@ -44,6 +46,8 @@ class SaveAsSet(WebScript):
     def run(self):
         articleids = ArticleidsScript(self.formData).run()
         result = SaveAsSetScript(self.formData).run(articleids)
+        result.provenance = json.dumps(dict(self.formData))
+        result.save()
 
         return self.outputResponse(result, object)
         

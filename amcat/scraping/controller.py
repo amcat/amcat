@@ -74,6 +74,8 @@ class SimpleController(Controller):
                 result.append(self.save(article))
 
         scraper.articleset.add_articles(result)
+        
+        return result
    
 
 

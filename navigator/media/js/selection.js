@@ -92,14 +92,21 @@ $(document).ready(function(){
           console.log(val);
           if(val == 'all'){
             $('#date-start, #date-end').hide();
+            $('#date-on').hide();
+          } else if(val == 'on'){
+            $('#date-start, #date-end').hide();
+            $('#date-on').show();
           } else if(val == 'before'){
             $('#date-start').hide();
+            $('#date-on').hide();
             $('#date-end').show();
           }else if(val == 'after'){
             $('#date-start').show();
             $('#date-end').hide();
+            $('#date-on').hide();
           }else if(val == 'between'){
             $('#date-start, #date-end').show();
+            $('#date-on').hide();
           }
        },
     });
@@ -157,6 +164,15 @@ $(document).ready(function(){
         showOn:'focus',
     });
     $("#date-end > input").datepicker({
+        changeMonth: true,
+        changeYear: true,
+        autoSize:true,
+        dateFormat: 'dd-mm-yy',
+        firstDay:1,
+        maxDate:'+1y',
+        showOn:'focus',
+    });
+    $("#date-on > input").datepicker({
         changeMonth: true,
         changeYear: true,
         autoSize:true,
@@ -576,9 +592,41 @@ amcat.selection.aggregation.click = function(x, y, count){
             endDate = amcat.selection.aggregation.datesDict[x][1];
         }
 
+        if(formValues['datetype'][0] == 'between' || formValues['datetype'][0] == 'after'){
+            var queriedStartDate = amcat.selection.aggregation.reverseDateOrder(formValues['startDate'][0]);
+
+            if(queriedStartDate >= startDate){
+                startDate = queriedStartDate;
+            }
+        }
+
+        if(formValues['datetype'][0] == 'between' || formValues['datetype'][0] == 'before'){
+            var queriedEndDate = amcat.selection.aggregation.reverseDateOrder(formValues['endDate'][0]);
+
+            if(queriedEndDate <= endDate){
+                endDate = queriedEndDate;
+            }
+        }
+
+        if (formValues['datetype'][0] == 'on'){
+            startDate = new Date(amcat.selection.aggregation.reverseDateOrder(formValues['onDate'][0]));
+            endDate = new Date(0);
+
+            endDate.setUTCSeconds((startDate / 1000) + (24*60*60));
+
+            startDate = startDate.getFullYear() + "-" + (startDate.getMonth() + 1) + "-" + startDate.getUTCDate();
+            endDate = endDate.getFullYear() + "-" + (endDate.getMonth() + 1) + "-" + (endDate.getUTCDate() );
+            
+        }
+
+
+        startDate = amcat.selection.aggregation.reverseDateOrder(startDate);
+        endDate = amcat.selection.aggregation.reverseDateOrder(endDate);
+
         addedFormValues['datetype'] = 'between';
-        addedFormValues['startDate'] = amcat.selection.aggregation.reverseDateOrder(startDate); // change 2008-10-01 to 01-10-2008
-        addedFormValues['endDate'] = amcat.selection.aggregation.reverseDateOrder(endDate);
+        addedFormValues['startDate'] = startDate; // change 2008-10-01 to 01-10-2008
+        addedFormValues['endDate'] = endDate; 
+
         title += ' between ' + addedFormValues['startDate'] + ' and ' + addedFormValues['endDate']
     }
     

@@ -48,8 +48,14 @@ urlpatterns = patterns(
         'navigator.views.project.edit_articleset', name="articleset-edit"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/delete/(?P<id>[0-9]+)$',
         'navigator.views.project.delete_articleset', name="articleset-delete"),
+    url(r'^project/(?P<projectid>[0-9]+)/articleset/unlink/(?P<id>[0-9]+)$',
+        'navigator.views.project.unlink_articleset', name="articleset-unlink"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/deduplicate/(?P<id>[0-9]+)$',
         'navigator.views.project.deduplicate_articleset', name="articleset-deduplicate"),
+    url(r'^project/(?P<projectid>[0-9]+)/articleset/importable$',
+        'navigator.views.project.show_importable_articlesets', name="articleset-importable"),
+    url(r'^project/(?P<projectid>[0-9]+)/articleset/name-import/(?P<id>[0-9]+)$$',
+        'navigator.views.project.import_articleset', name="articleset-import"),
 
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),

@@ -31,7 +31,7 @@ from amcat.scripts import scriptmanager
 from amcat.scripts.searchscripts.aggregation import AggregationScript, AggregationForm
 import amcat.scripts.forms
 
-TITLE_COLUMN_NAME = '[title]'
+TITLE_COLUMN_NAME = '0'
 
 
 def get_key(obj):

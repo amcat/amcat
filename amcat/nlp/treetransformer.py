@@ -140,7 +140,7 @@ class TreeTransformer(object):
         for triple in self._create_rdf_triples(analysis_sentence_id):
             g.add(triple)
         self.soh.add_triples(g, clear=True)
-        log.info("Loaded sentence {analysis_sentence_id} into SOH {self.soh}".format(**locals()))
+        log.debug("Loaded sentence {analysis_sentence_id} into SOH {self.soh}".format(**locals()))
 
     def get_roles(self):
         """Retrieve the childposition-role-parentposition triples"""

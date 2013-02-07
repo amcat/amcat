@@ -108,6 +108,7 @@ class Document(object):
         # else in Article.metastring.
         _metastring = dict()
         for prop, value in self.getprops().items():
+            value = self._convert(value)
             if prop in _ARTICLE_PROPS:
                 setattr(art, prop, value)
             else:
@@ -117,16 +118,6 @@ class Document(object):
         self.article = art
 
         return art
-
-class HTMLDocument(Document):
-    """
-    Document object for HTML documents. This means that all properties are converted to
-    MarkDown compatible text in `getprops`. Moreover, lxml.html objects (or even lists of
-    lxml.html objects) are converted to text before returning.
-    """
-    def __init__(self, doc=None, *args, **kargs):
-        self.doc = doc # lxml object
-        super(HTMLDocument, self).__init__(*args, **kargs)
 
     def _convert(self, val):
         """
@@ -139,6 +130,8 @@ class HTMLDocument(Document):
 
         if t in (html.HtmlElement, etree._Element):
             try:
+                for js in val.cssselect("script"):
+                    js.drop_tree()
                 return html2text(html.tostring(val)).strip() 
             except (parser.HTMLParseError, TypeError) as e:
                 log.error('html2text failed')
@@ -154,18 +147,24 @@ class HTMLDocument(Document):
         # Unknown type
         return val
 
+
+
+
+
+class HTMLDocument(Document):
+    """
+    Document object for HTML documents. This means that all properties are converted to
+    MarkDown compatible text in `getprops`. Moreover, lxml.html objects (or even lists of
+    lxml.html objects) are converted to text before returning.
+    """
+    def __init__(self, doc=None, *args, **kargs):
+        self.doc = doc # lxml object
+        super(HTMLDocument, self).__init__(*args, **kargs)
+
     def copy(self, parent=None):
         d = super(HTMLDocument, self).copy(cls=HTMLDocument, parent=parent)
         d.doc = self.doc
         return d
-
-    @dictionary
-    def get_props(self):
-        """
-        Return properties converted (where applicable) to MarkDown
-        """
-        for k,v in super(HTMLDocument, self).get_props().items():
-            yield (k, self._convert(v))
 
     def prepare(self, processor, force=False):
         log.info("Preparing {} using processor {}, getdoc={}".format(

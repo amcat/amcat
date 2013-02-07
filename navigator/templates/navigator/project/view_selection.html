@@ -38,9 +38,16 @@
             <label>Date: </label>
         </td>
         <td>
-            {{ form.datetype }}
+            <select name="datetype" id="id_datetype">
+                <option selected="selected" value="all">All Dates</option>
+                <option value="on">On</option>
+                <option value="after">After</option>
+                <option value="between">Between</option>
+                <option value="before">Before</option>
+            </select>
             <span id="date-start" style="display:none">Start: {{ form.startDate }} </span>
             <span id="date-end" style="display:none"> End: {{ form.endDate }}</span> 
+            <span id="date-on" style="display:none">{{ form.onDate }}</span> 
         </td>
     </tr>
     <tr>

@@ -269,7 +269,7 @@ if not DEBUG:
         }
     }
 else:
-    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     # logger = logging.getLogger()
     # hdlr = logging.StreamHandler()
     # formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')

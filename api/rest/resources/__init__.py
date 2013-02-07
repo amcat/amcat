@@ -35,8 +35,10 @@ from api.rest.resources.codebook import CodebookHierarchyResource
 MODELS = ['Article', 'ArticleSet', 
           'Role', 'ProjectRole',
           'Medium', 'Language',
-          'CodingJob', 'CodingSchema', 'Codebook', 
-          'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission'
+          'CodingJob', 'CodingSchema', 'Codebook', 'CodingSchemaField',
+          'CodebookCode', 'CodebookBase', 'Analysis',
+          'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
+          'Plugin', 'Scraper', 'PluginType'
           ]
 # Automatically generate resources for these models
 for modelname in MODELS:

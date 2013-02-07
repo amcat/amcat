@@ -38,6 +38,7 @@ urlpatterns = patterns(
     (r'^accounts/', include('accounts.urls')),
     (r'^navigator/', include('navigator.urls')),
     (r'^api/', include('api.urls')),
+    (r'^annotator/', include('annotator.urls')),
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework'))
     )
 

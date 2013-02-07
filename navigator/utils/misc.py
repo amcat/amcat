@@ -26,6 +26,19 @@ from hashlib import sha1
 def gen_random(n=8):
     return ''.join(random.choice(string.ascii_uppercase) for x in range(n))
 
+def session_pop(session, key, default=None):
+    """
+    Pops a key from a session object, but does not raise a KeyError when
+    the key is not found.
+
+    @type session: django.backends.base.SessionBase
+    @type key: basestr
+    """
+    try:
+        return session.pop(key)
+    except KeyError:
+        return default
+
 def cache_function(length):
     """
     Caches a function, using the function itself as the key, and the return

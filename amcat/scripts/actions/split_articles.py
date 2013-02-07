@@ -41,7 +41,7 @@ class SplitArticles(Script):
     def run(self, _input=None):
         sets = self.options['articlesets']
         log.info("Listing articles from sets {sets}".format(**locals()))
-        to_split = list(Article.objects.filter(articlesets__in=sets).only("id"))
+        to_split = list(Article.objects.filter(articlesets_set__in=sets).only("id"))
         n = len(to_split)
 
         log.info("Will check and split {n} articles".format(**locals()))
