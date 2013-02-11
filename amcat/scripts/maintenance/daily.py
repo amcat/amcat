@@ -107,6 +107,12 @@ class DailyScript(Script):
     options_form = DailyForm
 
     def run(self, _input):
+        """c_logger = logging.getLogger("amcat.scraping.controller")
+        s_logger = logging.getLogger("amcat.scraping.scraper")
+        print(c_logger.getEffectiveLevel())
+        print(s_logger.getEffectiveLevel())
+        c_logger.info("test controller")
+        s_logger.info("test scraper")"""
         date = self.options['date']
 
         scrapers = list(get_scrapers(date=date))
@@ -120,11 +126,16 @@ class DailyScript(Script):
 
 
 
+        kwargs = {}
+        if self.options['deduplicate']:
+            kwargs['deduplicate'] == True
+            if self.options['trash_project']:
+                kwargs['trash_project'] = self.options['trash_project'].id
+
         count, messages =  scrape_logged(
             RobustController(), 
             scrapers, 
-            deduplicate = self.options['deduplicate'],
-            trash_project_id = self.options['trash_project'].id)
+            **kwargs)
        
         log.info("Sending email...")
         
@@ -138,7 +149,6 @@ class DailyScript(Script):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
-    amcatlogging.debug_module("amcat.scraping.controller","amcat.scraping.scraper")
-    amcatlogging.info_module("amcat.scripts.maintenance.deduplicate")
+    amcatlogging.info_module("amcat.scraping")
     amcatlogging.set_sentry_handler()
     cli.run_cli(DailyScript)
