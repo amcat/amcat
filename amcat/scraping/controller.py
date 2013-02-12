@@ -53,7 +53,6 @@ class Controller(object):
         try:
             save = transaction.savepoint()
             article.save()
-            transaction.commit()
         except (IntegrityError, DatabaseError):
             log.exception("saving article {article} failed".format(**locals()))
             transaction.savepoint_rollback(save)
