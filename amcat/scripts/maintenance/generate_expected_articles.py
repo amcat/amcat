@@ -25,7 +25,7 @@ import logging; log = logging.getLogger(__name__)
 import json
 
 def scraper_ranges(scraper):
-    returns = [(0,0)] * 7
+    returns = [(0,0) for x in range(7)]
 
     articleset_id = scraper.articleset_id
     rows = Article.objects.filter(articlesetarticle__articleset = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id')).filter(date__gte = date.today() - timedelta(days=70)) 
@@ -36,8 +36,8 @@ def scraper_ranges(scraper):
     
     for i,rows in enumerate(sort_weekdays(rows)):
         numbers = [row['created_count'] for row in rows]
-        third_q = third_quartile(numbers)
-        returns[i] = (third_q/1.5, third_q*2)
+        med = median(numbers)
+        returns[i] = (med/1.5, med*2)
         
     return returns
 
@@ -50,7 +50,7 @@ def sort_weekdays(rows):
         
     return days
         
-def third_quartile(numbers):
+def median(numbers):
     numbers = sorted(numbers)
     L = len(numbers)
     if L == 0:
@@ -58,7 +58,7 @@ def third_quartile(numbers):
     elif L == 1:
         return numbers[0]
     else:
-        pointer = int(L*(3.0/4.0))
+        pointer = int(L*(2.0/4.0))
         return numbers[pointer]
 
 def generate_expected_articles():
@@ -69,7 +69,7 @@ def generate_expected_articles():
             continue
         _json = json.dumps(ranges)
         scraper.statistics = _json
-        log.info("{scraper.__class__.__name__}: {scraper.statistics}".format(**locals()))
+        log.info("{scraper}: {scraper.statistics}".format(**locals()))
         scraper.save()
 
 
