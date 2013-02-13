@@ -27,4 +27,4 @@ def getQuerySet(projects=None, articlesets=None, mediums=None, startDate=None, e
     if articleids:
         queryset = queryset.filter(id__in=articleids)
 
-    return queryset
+    return queryset.distinct()
