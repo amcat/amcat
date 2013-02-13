@@ -303,7 +303,7 @@ def createFilters(form):
     """ takes a form as input and ceate filter queries for start/end date, mediumid and set """
     startDateTime = (form['startDate'].strftime('%Y-%m-%dT00:00:00.000Z')
                      if 'startDate' in form else '*')
-    endDateTime = form['endDate'].strftime('%Y-%m-%dT00:00:00.000Z') if 'endDate' in form else '*'
+    endDateTime = form['endDate'].strftime('%Y-%m-%dT23:59:59.999Z-1DAY') if 'endDate' in form else '*'
     result = []
     if startDateTime != '*' or endDateTime != '*': # if at least one of the 2 is a date
         result.append('date:[%s TO %s]' % (startDateTime, endDateTime))
