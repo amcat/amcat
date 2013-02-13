@@ -39,6 +39,10 @@ def index(request, webscriptName):
         return showErrorMsg('Invalid form', 'json', fields=e.getErrorDict())
     except Exception, e:
         log.exception('Webscript exception: %s' % webscriptName)
+
+        if e.reason == 'null':
+            e.reason = 'This query could not be parsed.'
+
         return showErrorMsg('error running webscript: %s' % e, 'json')
         
     
