@@ -73,6 +73,8 @@ from amcat.scripts.forms import SelectionForm
 
 from amcat.models.project import LITTER_PROJECT_ID
 
+PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
+
 import logging; log = logging.getLogger(__name__)
 
 def table_view(request, context, table, selected=None, overview=False,
@@ -237,8 +239,11 @@ def deduplicate_articleset(request, project, aset):
 @check(ArticleSet, args='id', action='update')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def edit_articleset(request, project, aset):
-    form = modelform_factory(ArticleSet, fields=("name", "provenance"))
+    form = modelform_factory(ArticleSet, fields=("project", "name", "provenance"))
     form = form(instance=aset, data=request.POST or None)
+        
+    form.fields['project'].queryset = (
+        request.user.projectrole_set.filter(role__id__gte=PROJECT_READ_WRITE))
     
     if form.is_valid():
         form.save()
