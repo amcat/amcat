@@ -84,9 +84,9 @@ class RobustController(Controller):
     def scrape(self, scraper):
         log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
-
         for unit in scraper.get_units():
             log.debug("{scraper} received unit {unit}".format(**locals()))
+            
             try:
                 for article in self.scrape_unit(scraper, unit):
                     result.append(article)
@@ -161,7 +161,7 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
              counts: a mapping of number of articles scraper per scraper
              log: a string representation of the log messages from the scrapers
     """
-
+    result = {s : [] for s in scrapers}
     from sentry.client.handlers import SentryHandler
     amcatlogging.install_handler(SentryHandler())
 
@@ -172,6 +172,8 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
             try:
                 for a in controller.scrape(s):
                     counts[s] += 1
+                    result[s].append(a)
+
             except Exception as e:
                 log.exception("scraper failed")
 
@@ -192,7 +194,7 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
 
                 DeduplicateScript(**options).run(None)
                 
-    return counts, log_stream.getvalue()
+    return counts, log_stream.getvalue(), result
 
 
 

@@ -34,6 +34,8 @@ from amcat.scripts.script import Script
 
 from amcat.scraping.controller import scrape_logged
 from amcat.models.scraper import get_scrapers
+from amcat.models.project import Project    
+from amcat.models.articleset import ArticleSet
 
 from amcat.tools import toolkit, sendmail
 
@@ -47,7 +49,7 @@ MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
 
 <p>For log details, ssh to amcat-dev.labs.vu.nl, then open /home/amcat/log/daily_{date.year:04d}-{date.month:02d}-{date.day:02d}.txt</p>
 
-<p>For a complete overview of last weeks results, navigate to http://www.amcat-production.labs.vu.nl/navigator/scrapers</p>
+<p>For a complete overview of last week's results, navigate to http://www.amcat-production.labs.vu.nl/navigator/scrapers</p>
 
 """
 
@@ -96,8 +98,6 @@ def send_email(count, messages, date):
     sendmail("toon.alfrink@gmail.com", EMAIL, subject, None, content)
 
 
-from amcat.models.project import Project    
-
 class DailyForm(forms.Form):
     date = forms.DateField()
     deduplicate = forms.BooleanField(required = False)
@@ -132,11 +132,21 @@ class DailyScript(Script):
             if self.options['trash_project']:
                 kwargs['trash_project'] = self.options['trash_project'].id
 
-        count, messages =  scrape_logged(
+
+        count, messages, result =  scrape_logged(
             RobustController(), 
             scrapers, 
             **kwargs)
-       
+
+
+        general_index_articleset = ArticleSet.objects.get(pk = 2)
+        #CAUTION: destination articleset is hardcoded
+
+        for (scraper, articles) in result.items():
+            if scraper.module().split(".")[-2].lower().strip() == "newspapers":
+                log.info("Adding result to general index set ({general_index_articleset})".format(**locals()))
+                general_index_articleset.add_articles(articles)
+
         log.info("Sending email...")
         
         send_email(count, messages, date)
