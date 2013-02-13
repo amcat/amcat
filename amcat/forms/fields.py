@@ -29,6 +29,8 @@ from django.forms import fields
 from django.db import models
 from django.core.exceptions import ValidationError 
 
+import logging; log = logging.getLogger()
+
 __all__ = ['JSONField', 'UserField', 'CSVField']
 
 class JSONField(models.TextField):
@@ -68,11 +70,12 @@ class UserField(forms.SlugField):
 class CSVField(forms.FileField):
     default_error_messages = {
         'notcsv' : 'The uploaded file is corrupt or not valid.',
-        'columnerr' : ' The value at row %s, column %s is not valid. Validator reported: %s',
-        'no_such_column' : 'Column "%s" is required, but not found in "%s"'
+        'columnerr' : ' The value (%s) at row %s, column %s is not valid. Validator reported: %s',
+        'no_such_column' : 'Column "%s" is required, but not found in "%s"',
+        'delimiter' : 'Delimiter must be a one-character ASCII value.'
     }
 
-    def __init__(self, columns=None, *args, **kwargs):
+    def __init__(self, columns=None, delimiter=",", *args, **kwargs):
         """
         A FileField for CSVFiles.
 
@@ -86,17 +89,28 @@ class CSVField(forms.FileField):
         })
         """
         self._columns = columns or dict()
+        self.delimiter = delimiter
 
         super(CSVField, self).__init__(*args, **kwargs)
+
+    def set_delimiter(self, delimiter):
+        self.delimiter = delimiter
 
     def _to_python(self, data):
         data = super(CSVField, self).to_python(data)
 
+        try:
+            str(self.delimiter)
+            assert(len(self.delimiter) == 1)
+        except TypeError:
+            raise ValidationError(self.error_messages['delimiter'])
+
         # Check if csv file is valid
         try:
-            cfile = csv.reader(data)
+            cfile = csv.reader(data, delimiter=str(self.delimiter))
             columns = [c.lower() for c in cfile.next()]
-        except:
+        except Exception as e:
+            log.exception(e)
             raise ValidationError(self.error_messages['notcsv'])
 
         # Check for column existence
@@ -113,7 +127,7 @@ class CSVField(forms.FileField):
                     try:
                         val = field.clean(val)
                     except ValidationError as e:
-                        raise ValidationError(self.error_messages['columnerr'] % (rownr, colnr, e.messages[0]))
+                        raise ValidationError(self.error_messages['columnerr'] % (val, rownr+1, columns[colnr], e.messages[0]))
 
                 _row.append(val)
 

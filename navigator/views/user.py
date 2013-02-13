@@ -24,10 +24,17 @@ from api.rest.resources import UserResource, ProjectResource
 
 from amcat.models.user import User, Affiliation
 from amcat.models.language import Language
+    
 from navigator.utils.auth import check, create_user, check_perm
+from navigator.utils.misc import session_pop
 
 from navigator import forms
 from settings.menu import USER_MENU
+
+import smtplib, itertools
+
+from django import db
+from django import http
 
 def _table_view(request, table, selected=None, menu=USER_MENU):
     return render(request, "navigator/user/table.html", locals())
@@ -81,43 +88,69 @@ def add(request):
     add_form = forms.AddUserForm(request)
     add_multiple_form = forms.AddMultipleUsersForm(request)
 
+    message = session_pop(request.session, "users_added")
     return render(request, "navigator/user/add.html", locals())
+
+@db.transaction.commit_on_success
+def _add_multiple_users(request):
+    amf = forms.AddMultipleUsersForm(request, data=request.REQUEST, files=request.FILES)
+
+    if amf.is_valid():
+        props = dict(
+            affiliation=amf.cleaned_data['affiliation'],
+            language=amf.cleaned_data['language'],
+            role=amf.cleaned_data['role']
+        )
+
+        for user in amf.cleaned_data['csv']:
+            create_user(**dict(itertools.chain(props.items(), user.items())))
+
+        request.session['users_added'] = ("Succesfully added {} user(s)"
+                                            .format(len(amf.cleaned_data['csv'])))
+
+        # Users created
+        return redirect(reverse(add))
+
+    return amf, forms.AddUserForm(request)
+
+@db.transaction.commit_on_success
+def _add_one_user(request):
+    af = forms.AddUserForm(request, data=request.REQUEST)
+
+    if af.is_valid():
+        create_user(**af.clean())
+        request.session['users_added'] = "Succesfully added user"
+        return redirect(reverse(add))
+
+    return forms.AddMultipleUsersForm(request), af
+
 
 @check(User, action='create', args=None)
 def add_submit(request):
-    req = request.REQUEST
+    # Determine whether to create one or multiple users
+    func = _add_one_user
+    if request.REQUEST.get('submit-multiple'):
+        func = _add_multiple_users
 
-    if req.get('submit-multiple'):
-        amf = forms.AddMultipleUsersForm(request, data=req, files=request.FILES)
-        if amf.is_valid():
-            for user in amf.cleaned_data['csv']:
-                create_user(
-                    affiliation=amf.cleaned_data['affiliation'],
-                    language=amf.cleaned_data['language'],
-                    role=amf.cleaned_data['role'],
-                    **user
-                )
-
-            return redirect(reverse('navigator.views.report.users'))
-        
-        af = forms.AddUserForm(request)
+    # Try to add them
+    try:
+        resp = func(request)
+    except smtplib.SMTPException as e:
+        log.exception()
+        message = ("Could not send e-mail. If this this error "
+                    + "continues to exist, contact your system administrator")
+    except db.utils.DatabaseError as e:
+        # Duplicate users?
+        message = "A database error occured. Try again?"
     else:
-        af = forms.AddUserForm(request, data=request.REQUEST)
+        if isinstance(resp, http.HttpResponseRedirect):
+            return resp
 
-        if af.is_valid():
-            data = af.clean()
-
-            u = create_user(
-                data['username'], data['first_name'], data['last_name'],
-                data['email'], data['affiliation'], data['language'],
-                data['role']
-            )
-
-            return redirect(reverse(add))
-
-        amf = forms.AddMultipleUsersForm(request)
-
+        # Validation failed.
+        amf, af = resp
+        
     return render(request, "navigator/user/add.html", {
+        'error' : locals().get('message'),
         'add_multiple_form' : amf,
-        'add_form' : af
+        'add_form' : af,
     })

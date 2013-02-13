@@ -1,6 +1,13 @@
 {% extends "navigator/base.html" %}
 
 {% block content %}
+{% if error %}
+<br/><div class="alert alert-error">{{ error }}</div>
+{% endif %}
+
+{% if message %}
+<br/><div class="alert alert-success">{{ message }}</div>
+{% endif %}
 
 <h1>Add user</h1>
 <form action="{% url user-add-submit %}" method="POST">

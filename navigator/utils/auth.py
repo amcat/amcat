@@ -53,6 +53,8 @@ def create_user(username, first_name, last_name, email, affiliation, language, r
     """
     This function creates an user with the given properties. Moreover: it
     generates a passwords and emails it to the new user.
+
+    Raises: smtplib.SMTPException, django.db.utils.DatabaseError
     """
     password = toolkit.random_alphanum(7)
     log.info("Creating new user: {username}".format(**locals()))

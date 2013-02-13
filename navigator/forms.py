@@ -163,14 +163,21 @@ class AddMultipleUsersForm(AddUserForm):
         'username' : fields.UserField(),
         'email' : forms.EmailField(),
         'last_name' : forms.CharField(),
-        'first_name' : forms.CharField()
+        'first_name' : forms.CharField(),
     })
+
+    delimiter = forms.CharField(initial=',',
+                    help_text="This field indicates how this CSV is splitted.")
 
     def __init__(self, request, *args, **kwargs):
         super(AddMultipleUsersForm, self).__init__(request, *args, **kwargs)
 
         for field in ("username", "email", "last_name", "first_name"):
             del self.fields[field]
+            
+    def full_clean(self, *args, **kwargs):
+        self.fields['csv'].set_delimiter(self.data.get('delimiter', ','))
+        return super(AddMultipleUsersForm, self).full_clean(*args, **kwargs)
 
 class ProjectForm(forms.ModelForm):
     guest_role = forms.ModelChoiceField(queryset=Role.objects.filter(projectlevel=True),
