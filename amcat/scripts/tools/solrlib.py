@@ -38,6 +38,7 @@ def doQuery(query, form, kargs, additionalFilters=None):
     if additionalFilters:
         filters += additionalFilters
     startTime = time.time()
+
     solrResponse = solr.SolrConnection('http://localhost:8983/solr').query(query,
                     fq=filters,
                     **kargs)
@@ -316,10 +317,8 @@ def createFilters(form):
     if 'articlesets' in form and form['articlesets']:
         setsQuery = ('sets:%d' % s.id for s in form['articlesets'])
         result.append(' OR '.join(setsQuery))
-    else:
-        log.warn("PROJECTS: %s/%r" % (type(form['projects']), form['projects']))
-        projectQuery = ('projectid:%d' % p.id for p in form['projects'])
-        result.append(' OR '.join(projectQuery))
-
+    if 'articlesets' not in form or not form['articlesets'] and 'projects' in form:
+        setsQuery = ('sets:%d' % s.id for s in form['projects'][0].all_articlesets())
+        result.append(' OR '.join(setsQuery))
 
     return result

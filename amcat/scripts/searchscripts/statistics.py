@@ -39,6 +39,7 @@ class ArticleSetStatisticsScript(script.Script):
 
     def run(self, input=None):
         s = types.ArticleSetStatistics()
+
         if self.options['useSolr'] == False: # make database query
             qs = database.getQuerySet(**self.options)
             s.articleCount = qs.count()
