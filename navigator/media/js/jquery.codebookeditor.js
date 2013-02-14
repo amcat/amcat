@@ -123,11 +123,12 @@ Array.prototype.remove=function(s){
                 /*
                  * Preload all languages for label manager
                  */
-                self.languages = objects;
+                self.languages = objects.results;
             }
 
             self._codebook_name_initialized = function(codebook){
-                self.codebook = codebook[0];
+                console.log(codebook);
+                self.codebook = codebook.results[0];
                 self.root.label = "Codebook: <i>" + self._escape(self.codebook.name) + "</i>";
                 self.update_label(self.root);
             }
@@ -597,6 +598,8 @@ Array.prototype.remove=function(s){
                  * code. This function serves as a callback. It builds and inserts
                  * the editing interface.
                  */
+                labels = labels.results;
+
                 // Create table
                 var table = self._create_label_table(labels);
                 $("#labels .modal-body").contents().remove();
@@ -895,7 +898,7 @@ Array.prototype.remove=function(s){
                 }));
 
                 // Create new labels table
-                self.labels_loaded([{"language" : 1, "label" : "?"}]);
+                self.labels_loaded({results : [{"language" : 1, "label" : "?"}]});
             }
 
             self.btn_edit_name_clicked = function(event){

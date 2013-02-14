@@ -604,9 +604,9 @@ def _save_moves(request, codebook, moves):
     move_codes_ids = set(itertools.chain(*[tuple(m.values()) for m in moves]))
     move_codes = { c.id : c for c in Code.objects.filter(id__in=move_codes_ids)}
     move_codebook_codes = { 
-        c._code.id : c for c in CodebookCode.objects.filter(
-            codebook=codebook, _code__in=move_codes
-        ).select_related("_code__id")
+        c.code.id : c for c in CodebookCode.objects.filter(
+            codebook=codebook, code__in=move_codes
+        ).select_related("code__id")
     }
 
     # Account for bad user input
@@ -620,7 +620,7 @@ def _get_codebook_code(ccodes, code, codebook):
     available, create a new one and add it to the dict.
     """
     if code.id not in ccodes:
-        ccodes[code.id] = CodebookCode.objects.create(_code=code, codebook=codebook)
+        ccodes[code.id] = CodebookCode.objects.create(code=code, codebook=codebook)
 
     return ccodes.get(code.id)
 
@@ -639,9 +639,9 @@ def save_changesets(request, codebook, project):
     )) }
 
     codebook_codes = { 
-        c._code.id : c for c in CodebookCode.objects.filter(
-            codebook=codebook, _code__in=codes
-        ).select_related("_code__id")
+        c.code.id : c for c in CodebookCode.objects.filter(
+            codebook=codebook, code__in=codes
+        ).select_related("code__id")
     }
 
     # Save all moves
@@ -657,7 +657,7 @@ def save_changesets(request, codebook, project):
         if not (code.can_read(request.user) and ccode.can_update(request.user)):
             raise PermissionDenied()
 
-        ccode._parent = new_parent
+        ccode.parent = new_parent
 
     # Save all hides
     for hide in hides:
@@ -694,8 +694,8 @@ def save_labels(request, codebook, project):
         parent = json.loads(request.POST["parent"])
 
         CodebookCode.objects.create(
-            _parent=None if parent is None else Code.objects.get(id=parent),
-            _code=code, codebook=codebook
+            parent=None if parent is None else Code.objects.get(id=parent),
+            code=code, codebook=codebook
         )
 
     else:
