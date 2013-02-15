@@ -40,7 +40,7 @@ def index(request, webscriptName):
     except Exception, e:
         log.exception('Webscript exception: %s' % webscriptName)
 
-        if e.reason == 'null':
+        if hasattr(e, 'reason') and e.reason == 'null':
             e.reason = 'This query could not be parsed.'
 
         return showErrorMsg('error running webscript: %s' % e, 'json')
