@@ -523,7 +523,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.main = function(){
         // Get fields of this schema
         self.api_get("codingschemafield", self.fields_initialised, {
-            "codingschema" : self.SCHEMA_ID,
+            "codingschema__id" : self.SCHEMA_ID,
             "order_by" : "fieldnr"
         });
 
@@ -535,8 +535,8 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         });
 
         // Get owned and imported codebooks
-        self.api_get("codebook", self.codebooks_initialised, {"project" : self.PROJECT_ID});
-        self.api_get("codebook", self.codebooks_initialised, {"projects_set" : self.PROJECT_ID});
+        self.api_get("codebook", self.codebooks_initialised, {"project__id" : self.PROJECT_ID});
+        self.api_get("codebook", self.codebooks_initialised, {"projects_set__id" : self.PROJECT_ID});
         self.api_get("codebook", self.codebooks_initialised, {"codingschemafield__codingschema__id" : self.SCHEMA_ID});
 
         // Initialising 'done'
