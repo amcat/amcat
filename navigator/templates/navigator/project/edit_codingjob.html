@@ -1,0 +1,25 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+
+<form action="" method="POST">
+    <legend>Edit codingjob details of codingjob "{{ codingjob.name }}" below.</legend>
+   <table>
+    {{ form.as_table }}
+   </table>
+
+ 
+   <div class="form-actions">
+    <input class="btn btn-primary" type="submit" value="Save"></input>
+    <a href="{% url project-codingjobs project.id %}" class="btn">Cancel</a>
+   </div>
+
+</form>
+
+<legend>Articles included:</legend> 
+<div>
+{{ articles|safe }}
+</div>
+
+
+{% endblock %}

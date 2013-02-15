@@ -193,10 +193,11 @@ def articlesets(request, project):
     Project articlesets page
     """
     owned_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
-                  .filter(project=project).hide("project", "id")
+                  .filter(project=project, codingjob_set__id='null')\
+                  .hide("project")
 
     imported_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
-                  .filter(projects_set=project).hide("project", "id")
+                  .filter(projects_set=project).hide("project")
 
     return render(request, 'navigator/project/articlesets.html', {
         "context" : project, "menu" : PROJECT_MENU,
@@ -855,6 +856,10 @@ def view_codingjob(request, codingjob, project):
     View and edit a codingjob
     """
     form = forms.CodingJobForm(data=(request.POST or None), instance=codingjob)
+    articles = Datatable(ArticleResource)\
+                    .filter(articlesets_set=codingjob.articleset)\
+                    .hide("section", "pagenr", "byline", "metastring", "url")\
+                    .hide("project", "medium", "text", "uuid")
 
     if form.is_valid() and form.save():
         return redirect(reverse(codingjobs, args=[project.id]))
@@ -862,7 +867,7 @@ def view_codingjob(request, codingjob, project):
     ctx = locals()
     ctx.update(dict(menu=PROJECT_MENU, context=project))
 
-    return render(request, 'navigator/project/edit.html', ctx)
+    return render(request, 'navigator/project/edit_codingjob.html', ctx)
 
 @check_perm("manage_codingjobs", True)
 @check(Project)

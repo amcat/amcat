@@ -33,6 +33,8 @@ from django_filters.filters import NumberFilter
 from django.db import models
 filterset.FILTER_FOR_DBFIELD_DEFAULTS[models.AutoField] = dict(filter_class=NumberFilter)
 
+from django.forms import ValidationError
+
 ORDER_BY_FIELD = "order_by"
 
 class AmCATFilterBackend(filters.DjangoFilterBackend):
@@ -87,6 +89,12 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                 # Filter all given fields OR'ed.
                 q = models.Q()
                 for value in data:
+                    # To filter on model properties which are None, provide
+                    # null as argument.
+                    if value == "null" and name.endswith("__id"):
+                        q = q | models.Q(**{ name[0:-4] : None })
+                        continue
+
                     try:
                         value = self.form.fields[name].clean(value)
                     except ValidationError:

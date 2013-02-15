@@ -63,7 +63,7 @@ class CodingJob(AmcatModel):
     insertuser = models.ForeignKey(User, related_name="+")
 
     coder = models.ForeignKey(User)
-    articleset = models.ForeignKey(ArticleSet, related_name="+")
+    articleset = models.ForeignKey(ArticleSet, related_name="codingjob_set")
     
     class Meta():
         db_table = 'codingjobs'
