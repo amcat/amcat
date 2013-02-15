@@ -38,7 +38,7 @@ _DPROP = "mDataProp_";
 _AMCAT_DEFAULT_OPTS = {
     "bScrollInfinite": true,
     "bScrollCollapse": true,
-    "sScrollY": "200px",
+    "sScrollY": "175px",
     "fnRowCallback" : function(nRow){
         amcat.datatables.truncate_row(nRow);
     },
