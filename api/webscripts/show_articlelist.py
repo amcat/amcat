@@ -52,7 +52,7 @@ class ShowArticleList(WebScript):
             artsets = [str(aset.id) for aset in Project.objects.get(id=formData['projects']).all_articlesets()]
             formData.setlist("articlesets", artsets)
 
-        articles = set(ArticleListScript(formData).run())
+        articles = list(ArticleListScript(formData).run())
 
         if self.options['outputTypeAl'] == 'table':
             table = ArticleListToTable(self.formData).run(articles)

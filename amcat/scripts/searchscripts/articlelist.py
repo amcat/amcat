@@ -85,6 +85,9 @@ class ArticleListScript(script.Script):
         start = self.options['start']
         length = self.options['length']
 
+        if not self.options['sortColumn']:
+            self.options['sortColumn'] = 'id'
+
         if self.options['useSolr'] == False: # make database query
             qs = database.getQuerySet(**self.options)
             if self.options['sortColumn']:
