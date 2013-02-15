@@ -60,6 +60,7 @@ from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
 
 from amcat.scripts.actions.add_project import AddProject
+from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
 
@@ -878,6 +879,9 @@ def add_codingjob(request, project):
         cj.insertuser = request.user
         cj.project = project
         cj.save()
+
+        # Split sentences
+        SplitArticles(articlesets=[cj.articleset.id]).run()
 
         form = forms.CodingJobForm(project=project, edit=False, data=None)
         form.saved = True
