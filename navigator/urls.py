@@ -126,6 +126,8 @@ urlpatterns = patterns(
     url(r'^project/(?P<id>[0-9-]+)/add_codingjob$', 'navigator.views.project.add_codingjob', name='codingjob-add'),
     url(r'^project/(?P<project>[0-9-]+)/codingjob/(?P<codingjob>[0-9]+)$', 'navigator.views.project.view_codingjob', name='codingjob'),
     url(r'^project/(?P<id>[0-9-]+)/import$', 'navigator.views.project.import_codebooks', name='codebook-import'),
+    url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-unit$', 'navigator.views.project.codingjob_unit_export', name='project-codingjob-unit-export'),
+    url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-article$', 'navigator.views.project.codingjob_article_export', name='project-codingjob-article-export'),
 
     # Preprocessing
     url(r'^analysis/(?P<id>[0-9-]+)$', 'navigator.views.analysis.demo', name='analysis-demo'),

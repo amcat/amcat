@@ -91,11 +91,11 @@ class CodingJob(AmcatModel):
         and the fields in the columns; cells contain serialised values. 
         """
         schema_id = self.unitschema_id if unit_codings else self.articleschema_id
-	fields = CodingSchemaField.objects.filter(codingschema=schema_id)
+        fields = CodingSchemaField.objects.filter(codingschema=schema_id)
         columns = [table3.ObjectColumn(field.label, partial(Coding.get_value, field=field))
                    for field in fields]
-	codings = Coding.objects.filter(codingjob=self, sentence__isnull=(not unit_codings))
-	codings = codings.prefetch_related("values", "values__field")
+        codings = Coding.objects.filter(codingjob=self, sentence__isnull=(not unit_codings))
+        codings = codings.prefetch_related("values", "values__field")
         codings = list(codings)
         return table3.ObjectTable(rows=codings, columns=columns)
     

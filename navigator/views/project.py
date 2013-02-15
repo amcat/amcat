@@ -71,6 +71,8 @@ from navigator.utils.misc import session_pop
 
 from api.webscripts import mainScripts
 from amcat.scripts.forms import SelectionForm
+from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
+from amcat.scripts.output.csv_output import TableToSemicolonCSV
 
 from amcat.models.project import LITTER_PROJECT_ID
 
@@ -346,6 +348,23 @@ def codingjobs(request, project):
 
     return table_view(request, project, cdjobs, 'codingjobs',
            template="navigator/project/codingjobs.html")
+
+def _codingjob_export(results, codingjob, filename):
+    results = TableToSemicolonCSV().run(results)
+    filename = filename.format(codingjob=codingjob, now=datetime.datetime.now())
+    return HttpResponse(results, status=201, mimetype="text/csv")
+
+@check(CodingJob, args_map={'codingjob' : 'id'}, args='codingjob')
+@check(Project, args_map={'project' : 'id'}, args='project')
+def codingjob_unit_export(request, project, codingjob):
+    results = GetCodingJobResults(job=codingjob.id, unit_codings=True).run()
+    return _codingjob_export(results, codingjob, "{codingjob}, units, {now}.csv")
+
+@check(CodingJob, args_map={'codingjob' : 'id'}, args='codingjob')
+@check(Project, args_map={'project' : 'id'}, args='project')
+def codingjob_article_export(request, project, codingjob):
+    results = GetCodingJobResults(job=codingjob.id, unit_codings=False).run()
+    return _codingjob_export(results, codingjob, "{codingjob}, articles, {now}.csv")
 
 @check(Project)
 def schemas(request, project):
