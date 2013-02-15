@@ -36,7 +36,7 @@ MODELS = ['Article', 'ArticleSet',
           'Role', 'ProjectRole',
           'Medium', 'Language',
           'CodingJob', 'CodingSchema', 'Codebook', 'CodingSchemaField',
-          'CodebookCode', 'CodebookBase', 'Analysis', 'Label',
+          'CodebookCode', 'CodebookBase', 'Analysis', 'Label', 'CodingSchemaFieldType',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
           'Plugin', 'Scraper', 'PluginType'
           ]
