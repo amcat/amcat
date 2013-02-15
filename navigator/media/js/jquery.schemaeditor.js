@@ -376,7 +376,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.fields_initialised = function(fields){
         self.fields = [];
         
-        $.each(fields, function(i, field){
+        $.each(fields.results, function(i, field){
             field.fieldnr = i+1;
             self.fields.push(field);
         });
@@ -385,7 +385,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     }
 
     self.fieldtypes_initialised = function(fieldtypes){
-        self.model_choices['fieldtype'] = fieldtypes;
+        self.model_choices['fieldtype'] = fieldtypes.results;
         self.increase_progress();
     }
 
@@ -396,7 +396,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     self.codebooks_initialised = function(codebooks){
         var mc = self.model_choices;
-        mc['codebook'] = mc['codebook'].concat(codebooks);
+        mc['codebook'] = mc['codebook'].concat(codebooks.results);
 
         self.increase_progress();
     }
