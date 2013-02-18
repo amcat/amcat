@@ -61,8 +61,8 @@ class AssignCodingJobForm(forms.Form):
             project = Project.objects.get(id=kwargs['data'].get('projects'))
 
         self.fields['coder'].choices = gen_user_choices(project)
-        self.fields['unitschema'].queryset = project.get_codingschemas().filter(isarticleschema=False)
-        self.fields['articleschema'].queryset = project.get_codingschemas().filter(isarticleschema=True)
+        self.fields['unitschema'].queryset = project.get_codingschemas().filter(isarticleschema=False).distinct()
+        self.fields['articleschema'].queryset = project.get_codingschemas().filter(isarticleschema=True).distinct()
 
         req = auth.get_request()
         if req is not None:
