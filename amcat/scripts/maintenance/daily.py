@@ -128,7 +128,7 @@ class DailyScript(Script):
 
         kwargs = {}
         if self.options['deduplicate']:
-            kwargs['deduplicate'] == True
+            kwargs['deduplicate'] = True
             if self.options['trash_project']:
                 kwargs['trash_project'] = self.options['trash_project'].id
 
