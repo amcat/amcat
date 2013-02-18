@@ -108,7 +108,7 @@ class AssignCodingJob(WebScript):
         project = Project.objects.get(id=self.formData.get('projects'))
 
         # Create articleset
-        a = ArticleSet.objects.create(project=project, name=self.formData['setname'], codingjobset=True)
+        a = ArticleSet.objects.create(project=project, name=self.formData['setname'])
         a.add(*articles)
 
         # Split all articles 
