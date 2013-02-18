@@ -35,7 +35,7 @@ from navigator.utils.action import ActionHandler
 from navigator.utils.auth import check
 from api.rest import Datatable
 
-#from api.rest.analysis import AnalysisResource, PluginResource
+from api.rest.resources import AnalysisResource, PluginResource
 
 def get_menu():
     return tuple((pt.label, "manage-plugins", pt.id) for pt in PluginType.objects.all())
