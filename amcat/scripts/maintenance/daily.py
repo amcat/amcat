@@ -130,7 +130,7 @@ class DailyScript(Script):
         if self.options['deduplicate']:
             kwargs['deduplicate'] = True
             if self.options['trash_project']:
-                kwargs['trash_project'] = self.options['trash_project'].id
+                kwargs['trash_project_id'] = self.options['trash_project'].id
 
 
         count, messages, result =  scrape_logged(
