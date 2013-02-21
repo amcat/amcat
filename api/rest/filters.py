@@ -47,6 +47,14 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
             # This overrides the default FilterSet value
             order_by_field = ORDER_BY_FIELD
 
+            def __len__(self):
+                # Our baseclass tries to execute __len__, which does not
+                # use count()..
+                try:
+                    return self.qs.count()
+                except AttributeError:
+                    return super(AutoFilterSet, self).__len__()
+
             def get_order_by_fields(self):
                 """
                 Get order_by fields based on current request.
