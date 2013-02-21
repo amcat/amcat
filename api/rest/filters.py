@@ -22,8 +22,8 @@ AmCAT-specific adaptations to rest_framework filters
 (using django_filters)
 activated by settings.REST_FRAMEWORK['FILTER_BACKEND']
 """
-import logging
-log = logging.getLogger(__name__) 
+from api.rest.count import simplify_count, approximate_count
+
 from rest_framework import filters
 from django_filters import filterset
 from django_filters.filters import Filter
@@ -34,6 +34,8 @@ from django.db import models
 filterset.FILTER_FOR_DBFIELD_DEFAULTS[models.AutoField] = dict(filter_class=NumberFilter)
 
 from django.forms import ValidationError
+
+import logging; log = logging.getLogger(__name__) 
 
 ORDER_BY_FIELD = "order_by"
 
@@ -48,9 +50,19 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
             order_by_field = ORDER_BY_FIELD
 
             def __len__(self):
-                # Our baseclass tries to execute __len__, which does not
-                # use count()..
                 try:
+                    return simplify_count(self.qs)
+                except ValueError, e:
+                    log.debug("Could not simplify count for {qs.query}: {e}".format(qs=self.qs, e=e))
+
+                try:
+                    return approximate_count(self.qs)
+                except ValueError, e:
+                    log.debug("Error on approximating {qs.query}: {e}".format(qs=self.qs, e=e))
+
+                try:
+                    # Our baseclass tries to execute __len__, which does not
+                    # use count()..
                     return self.qs.count()
                 except AttributeError:
                     return super(AutoFilterSet, self).__len__()
