@@ -49,6 +49,7 @@ from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 
 from api.rest.datatable import Datatable
+from api.rest.count import count
 
 from django.forms.models import modelform_factory
 from django.forms import Form, FileField, ChoiceField
@@ -254,7 +255,7 @@ def edit_articleset(request, project, aset):
 
     return render(request, 'navigator/project/edit_articleset.html', {
         "context" : project, "menu" : PROJECT_MENU, "selected" : "overview",
-        "form" : form, "articleset" : aset
+        "form" : form, "articleset" : aset, 
     })
 
 @check(Project, args_map={'projectid' : 'id'}, args='projectid', action="update")
@@ -304,7 +305,7 @@ def articleset(request, project, aset):
             pass
     
     return table_view(request, project, articles, form=form, object=aset, cls=cls,
-                      template="navigator/project/articleset.html")
+                      template="navigator/project/articleset.html", articlecount=count(aset.articles.all()))
 
 
 
