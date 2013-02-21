@@ -38,12 +38,13 @@ _DPROP = "mDataProp_";
 _AMCAT_DEFAULT_OPTS = {
     "bScrollInfinite": true,
     "bScrollCollapse": true,
-    "sScrollY": "175px",
+    "sScrollY": "300px",
     "fnRowCallback" : function(nRow){
         amcat.datatables.truncate_row(nRow);
     },
     "bDeferRender": true,
-    "bFilter" : false
+    "bFilter" : false,
+    "iDisplayLength" : 20
 };
 
 
@@ -311,6 +312,7 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
             // Determine url by adding the correct filtering paramters
             url = this.metadata.models[fieldname];
             url += "?id=" + needed_labels.join("&id=");
+            url += "&page_size=" + needed_labels.length;
 
             $.ajax({
                 dataType : "json",
