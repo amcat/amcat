@@ -67,6 +67,14 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                     if (ofield[1:] if desc else ofield) in self._meta.fields:
                         yield ofield
 
+            def get_ordered_fields(self):
+                """
+                Same as get_order_by_fields, but it does not includes the direction
+                of ordering.
+                """
+                for f in self.get_order_by_fields():
+                    yield f[1:] if f.startswith(("-", "?")) else f
+
             def _order_by(self, qs):
                 """
                 Order results according to allowed values in Meta class, and
@@ -141,8 +149,18 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                 self._qs = self._order_by(self._qs)
 
                 # Only return non-duplicates
-                self._qs = self._qs.distinct()
-
+                ordered = tuple(self.get_ordered_fields())
+                if not ordered or ordered[0] == self._qs.model._meta.pk.name:
+                    # Postgres (and other databases) only allow distinct when
+                    # no ordering is specified, or if the first order-column
+                    # is the same as the one you're 'distincting' on.
+                    self._qs = self._qs.distinct("pk")
+                else:
+                    # Use naive way of defining distinct. The database has to
+                    # iterate over all rows (well, not in theory, but postgres
+                    # does..)
+                    self._qs = self._qs.distinct()
+                    
                 return self.qs
 
             class Meta:
