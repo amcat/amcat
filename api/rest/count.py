@@ -102,3 +102,22 @@ def approximate_count(qs):
         raise ValueError("Approximation not reliable")
 
     raise ValueError("Where clause(s) applied. Cannot return approx count")
+
+def count(qs):
+    """
+    Selected the most efficient technique for counting this queryset
+    """
+    if not isinstance(qs, QuerySet):
+        return len(qs)
+
+    try:
+        return simplify_count(qs)
+    except ValueError, e:
+        log.debug("Could not simplify count for {qs.query}: {e}".format(qs=qs, e=e))
+
+    try:
+        return approximate_count(qs)
+    except ValueError, e:
+        log.debug("Error on approximating {qs.query}: {e}".format(qs=qs, e=e))
+
+    return qs.count()
