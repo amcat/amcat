@@ -115,7 +115,7 @@ class DailyScript(Script):
         s_logger.info("test scraper")"""
         date = self.options['date']
 
-        scrapers = list(get_scrapers(date=date))
+        scrapers = list(get_scrapers(date = date, ignore_errors = True))
 
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),

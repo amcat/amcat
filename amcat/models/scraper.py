@@ -24,6 +24,7 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import JsonField
 import json
+import logging; log = logging.getLogger(__name__)
 
 class Scraper(AmcatModel):
     __label__ = 'label'
@@ -81,7 +82,7 @@ class Scraper(AmcatModel):
         return dict(q)
 
 
-def get_scrapers(date=None, days_back=7, **options):
+def get_scrapers(date=None, days_back=7, ignore_errors=False, **options):
     """
     Return all daily scrapers as needed for the days_back days prior
     to the given date for which no articles are recorded. The scrapers
@@ -95,10 +96,17 @@ def get_scrapers(date=None, days_back=7, **options):
         for day in dates:
             if day not in scraped.keys():
                 scraped[day] = 0
-            if s.statistics == None:
-                yield s.get_scraper(date = day, **options)
-            elif scraped[day] <= s.statistics[day.weekday()][0]:
-                yield s.get_scraper(date = day, **options)
+            if s.statistics == None or scraped[day] <= s.statistics[day.weekday()][0]:
+                if ignore_errors:
+                    try:
+                        s_instance = s.get_scraper(date = day, **options)
+                    except Exception:
+                        log.exception("get_scraper for {s.__class__.__name__} failed".format(**locals()))
+                else:
+                    s_instance = s.get_scraper(date = day, **options)
+
+                yield s_instance
+        
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
