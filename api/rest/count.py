@@ -25,6 +25,7 @@ query results.
 from django.db.models.query import QuerySet
 from django.db import connection, DatabaseError
 from django.db.models.sql.where import WhereNode
+from django.db import connections
 
 from amcat.models import Article, ArticleSet, ArticleSetArticle
 
@@ -87,6 +88,9 @@ def approximate_count(qs):
     clauses are applied to the query, return that value.
     """
     SQL = "SELECT reltuples FROM pg_class WHERE relname=%s"
+
+    if connections.databases['default']["ENGINE"] != 'django.db.backends.postgresql_psycopg2':
+        raise ValueError("Cannot peform approximate count on this database (!postgresql)")
 
     if not len(qs.query.where.children):
         # This query does not use any WHERE-clauses
