@@ -101,7 +101,7 @@ def get_scrapers(date=None, days_back=7, ignore_errors=False, **options):
                     try:
                         s_instance = s.get_scraper(date = day, **options)
                     except Exception:
-                        log.exception("get_scraper for {s.__class__.__name__} failed".format(**locals()))
+                        log.exception("get_scraper for {s.label} failed".format(**locals()))
                 else:
                     s_instance = s.get_scraper(date = day, **options)
 
