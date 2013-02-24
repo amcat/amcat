@@ -58,6 +58,8 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                 """
                 Get order_by fields based on current request.
                 """
+                if not self.data: return
+
                 for ofield in self.data.getlist(ORDER_BY_FIELD):
                     # We use '-' and '?' for ordering descending or randomly
                     # respectively
