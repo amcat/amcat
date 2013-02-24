@@ -23,6 +23,7 @@ AmCAT-specific adaptations to rest_framework filters
 activated by settings.REST_FRAMEWORK['FILTER_BACKEND']
 """
 from api.rest import count
+from amcat.tools.djangotoolkit import db_supports_distinct_on
 
 from rest_framework import filters
 from django_filters import filterset
@@ -30,7 +31,6 @@ from django_filters.filters import Filter
 
 from django_filters.filters import NumberFilter
 from django.db import models
-from django.db import connections
 
 # Monkey patch filterset for autofield - no idea why it's not in that list
 filterset.FILTER_FOR_DBFIELD_DEFAULTS[models.AutoField] = dict(filter_class=NumberFilter)
@@ -40,11 +40,6 @@ from django.forms import ValidationError
 import logging; log = logging.getLogger(__name__) 
 
 ORDER_BY_FIELD = "order_by"
-
-DISTINCT_ON_DATABASES = (
-    'django.db.backends.postgresql_psycopg2', 'django.db.backends.mysql',
-    'django.db.backends.oracle'
-)
 
 class AmCATFilterBackend(filters.DjangoFilterBackend):
     def get_filter_class(self, view):
@@ -155,7 +150,7 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                 # Only return non-duplicates
                 ordered = tuple(self.get_ordered_fields())
                 if (not ordered or ordered[0] == self._qs.model._meta.pk.name)\
-                    and connections.databases['default']["ENGINE"] in DISTINCT_ON_DATABASES:
+                    and db_supports_distinct_on():
                     # Postgres (and other databases) only allow distinct when
                     # no ordering is specified, or if the first order-column
                     # is the same as the one you're 'distincting' on.

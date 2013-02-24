@@ -30,8 +30,23 @@ import logging; LOG = logging.getLogger(__name__)
 from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
+from django.db import connections
 
 from amcat.tools.table.table3 import ObjectTable, SortedTable
+
+DISTINCT_ON_DATABASES = (
+    'django.db.backends.postgresql_psycopg2', 'django.db.backends.mysql',
+    'django.db.backends.oracle'
+)
+
+def db_supports_distinct_on(db='default'):
+    """
+    Return a boolean indicating whether this database supports DISTINCT ON.
+    
+    @param db: database to consider
+    @type db: str
+    """
+    return connections.databases[db]["ENGINE"] in DISTINCT_ON_DATABASES
 
 def get_related(appmodel):
     """Get a sequence of model classes related to the given model class"""
@@ -232,3 +247,6 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         self.assertEqual(m.name, name)
         m2 = get_or_create(Medium, name=name)
         self.assertEqual(m, m2)
+
+    def test_db_supports_distinct_on(self):
+        self.assertTrue(db_supports_distinct_on() in (True, False))
