@@ -22,6 +22,7 @@ from rest_framework.urlpatterns import format_suffix_patterns
 
 from api.rest import resources
 
-urlpatterns = patterns('', *tuple(r.get_url_pattern()
-                                  for r in resources.all_resources()))
-urlpatterns = format_suffix_patterns(urlpatterns)
+urlpatterns = format_suffix_patterns(patterns('',
+    url(r'^$', resources.api_root),
+    *tuple(r.get_url_pattern() for r in resources.all_resources())
+))

@@ -30,7 +30,13 @@ from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.project import ProjectResource
 from api.rest.resources.user import UserResource
 from api.rest.resources.codebook import CodebookHierarchyResource
+from api.rest.resources.article import ArticleMetaResource
 
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+from rest_framework.reverse import reverse
+
+from collections import OrderedDict
 
 MODELS = ['Article', 'ArticleSet', 
           'Role', 'ProjectRole',
@@ -40,6 +46,7 @@ MODELS = ['Article', 'ArticleSet',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
           'Plugin', 'Scraper', 'PluginType'
           ]
+
 # Automatically generate resources for these models
 for modelname in MODELS:
     if "." in modelname:
@@ -63,4 +70,15 @@ def get_resource_for_model(model):
             return resource
     raise ValueError("No resource registered for model {model}".format(**locals()))
 
+def get_all_resource_views(request):
+    for r in all_resources():
+        yield (r.get_model_name(), reverse(r.get_view_name(), request=request))
 
+@api_view(['GET'])
+def api_root(request, format=None):
+    """
+    Overview of API resources
+    """
+    return Response(OrderedDict(sorted(
+        get_all_resource_views(request), key=lambda r:r[0])
+    ))
