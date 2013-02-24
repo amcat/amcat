@@ -71,7 +71,7 @@ class AggregationScript(script.Script):
         """ returns a table containing the aggregations"""
         
         if self.options['useSolr'] == False: # make database query
-            queryset = database.getQuerySet(**self.options)
+            queryset = database.getQuerySet(**self.options).distinct()
             xAxis = self.options['xAxis']
             yAxis = self.options['yAxis']
             if xAxis == 'date':

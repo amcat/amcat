@@ -43,7 +43,7 @@ class ArticleSetStatisticsScript(script.Script):
         if self.options['useSolr'] == False: # make database query
             qs = database.getQuerySet(**self.options)
             s.articleCount = qs.count()
-            result = qs.aggregate(firstDate=Min('date'), lastDate=Max('date'))
+            result = qs.distinct().aggregate(firstDate=Min('date'), lastDate=Max('date'))
             s.firstDate = result['firstDate']
             s.lastDate = result['lastDate']
         else:
