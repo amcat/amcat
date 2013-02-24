@@ -267,7 +267,7 @@ def show_importable_articlesets(request, project):
         project=Project.objects.all().exclude(id=project.id)
     )
 
-    return render(request, 'navigator/project/importable_articlesets.html', {
+    return render(request, 'navigator/project/table.html', {
         "context" : project, "menu" : PROJECT_MENU, "selected" : "article sets",
         "table" : table
     })
