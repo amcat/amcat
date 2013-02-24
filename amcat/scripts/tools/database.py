@@ -4,6 +4,7 @@ A number of functions that help the Amcat3 selection page to retrieve selections
 
 from amcat.models import article
 from django.db.models import Q
+from amcat.tools.djangotoolkit import db_supports_distinct_on
 
 def getQuerySet(projects=None, articlesets=None, mediums=None, startDate=None, endDate=None, articleids=None, **kargs):
     queryset = article.Article.objects
@@ -27,4 +28,8 @@ def getQuerySet(projects=None, articlesets=None, mediums=None, startDate=None, e
     if articleids:
         queryset = queryset.filter(id__in=articleids)
 
+    if db_supports_distinct_on():
+        return queryset.distinct("pk")
+
     return queryset.distinct()
+

@@ -20,26 +20,24 @@
 import collections
 
 from django.shortcuts import render
-from amcat.models.coding import codingtoolkit
-from amcat.models.coding.coding import Coding
-from amcat.models.coding.codingjob import CodingJob
-from amcat.models.coding.codedarticle import CodedArticle
-from amcat.models.coding.codebook import Function
-from amcat.models.coding.codingschemafield import CodingSchemaField
-from amcat.models.article import Article
-from amcat.models.sentence import Sentence
-from django.http import HttpResponse
-from amcat.scripts.output.datatables import TableToDatatable
-from amcat.scripts.output.json import DictToJson, TableToJson
-from django.utils import simplejson
-from django.template.loader import render_to_string
-from itertools import chain
-from amcat.models.coding.code import Code
-from amcat.forms import InvalidFormException
-from django.db.models import Q
 
+from amcat.models.coding import codingtoolkit
+from amcat.models import Code, Coding, CodingJob, CodedArticle
+from amcat.models import Function, CodingSchemaField
+from amcat.models import Article, Sentence
 
 from django import forms
+from django.db.models import Q
+from django.http import HttpResponse
+from django.utils import simplejson
+from django.template.loader import render_to_string
+
+from amcat.scripts.output.datatables import TableToDatatable
+from amcat.scripts.output.json import DictToJson, TableToJson
+from amcat.forms import InvalidFormException
+from amcat.tools.djangotoolkit import db_supports_distinct_on
+
+from itertools import chain
 
 import logging; log = logging.getLogger(__name__)
 
@@ -203,7 +201,9 @@ def _get_label(code, language):
     return code.labels.all()[0]
 
 def _build_ontology(field, language):
-    codes = Code.objects.distinct().prefetch_related(
+    distinct = ("pk",) if db_supports_distinct_on() else ()
+
+    codes = Code.objects.distinct(*distinct).prefetch_related(
         "labels", "labels__language", "codebook_codes",
         "codebook_codes__function"
     ).filter(
