@@ -23,7 +23,7 @@ AmCAT-specific adaptations to rest_framework filters
 activated by settings.REST_FRAMEWORK['FILTER_BACKEND']
 """
 from api.rest import count
-from amcat.tools.djangotoolkit import db_supports_distinct_on
+from amcat.tools.djangotoolkit import can_distinct_on_pk
 
 from rest_framework import filters
 from django_filters import filterset
@@ -126,7 +126,7 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                     q = q | models.Q(**{ name : value })
 
                 return qs.filter(q)
-            
+
             @property
             def qs(self):
                 """
@@ -150,9 +150,7 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                 self._qs = self._order_by(self._qs)
 
                 # Only return non-duplicates
-                ordered = tuple(self.get_ordered_fields())
-                if (not ordered or ordered[0] == self._qs.model._meta.pk.name)\
-                    and db_supports_distinct_on():
+                if can_distinct_on_pk(self._qs):
                     # Postgres (and other databases) only allow distinct when
                     # no ordering is specified, or if the first order-column
                     # is the same as the one you're 'distincting' on.

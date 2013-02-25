@@ -39,6 +39,29 @@ DISTINCT_ON_DATABASES = (
     'django.db.backends.oracle'
 )
 
+def can_distinct_on_pk(qs):
+    """
+    Find out whether we can filter on primary key, without producting
+    errors when submitting query to database.
+
+    @type qs: django.db.QuerySet
+    @param qs: queryset to introspect
+
+    @return boolean
+    """
+    query = qs.__dict__['query']
+    ordering = query.order_by
+
+    if not query.order_by:
+        # Check for default ordering
+        if query.default_ordering:
+            ordering = qs.model._meta.ordering
+
+    names = (qs.model._meta.pk.name, "-{}".format(qs.model._meta.pk.name))
+
+    return ((not len(ordering) or ordering[0] in names)
+                and db_supports_distinct_on())
+
 def db_supports_distinct_on(db='default'):
     """
     Return a boolean indicating whether this database supports DISTINCT ON.
@@ -250,3 +273,41 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
 
     def test_db_supports_distinct_on(self):
         self.assertTrue(db_supports_distinct_on() in (True, False))
+
+    def _test_can_distint_on_pk(self):
+        from django.db import models
+        from django.db import connections
+
+        connections.databases['default']["ENGINE"] = DISTINCT_ON_DATABASES[0]
+
+        class T1(models.Model):
+            name = models.TextField()
+            class Meta: ordering = ("id",)
+
+        class T2(models.Model):
+            name = models.TextField()
+            class Meta: ordering = ("name",)
+
+        qs = T1.objects.all()
+
+        self.assertTrue(can_distinct_on_pk(qs))
+        self.assertFalse(can_distinct_on_pk(qs.order_by("name")))
+        self.assertTrue(can_distinct_on_pk(qs.order_by("-id")))
+        self.assertFalse(can_distinct_on_pk(T2.objects.all()))
+        self.assertTrue(can_distinct_on_pk(T2.objects.all().order_by("id")))
+
+        # Unknown database does not support distinct on
+        connections.databases['default']["ENGINE"] = "???"
+        self.assertFalse(can_distinct_on_pk(qs))
+
+    def test_can_distinct_on_pk(self):
+        from django.db import connections
+        pv = connections.databases['default']["ENGINE"]
+        
+        try:
+            self._test_can_distint_on_pk()
+        except:
+            raise
+        finally:
+            connections.databases['default']["ENGINE"] = pv
+
