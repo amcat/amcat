@@ -18,11 +18,12 @@
 ###########################################################################
 
 from django.conf.urls import patterns, url, include
+from django.shortcuts import redirect
 
 import api.rest
 
 urlpatterns = patterns('',
-    url(r'^$', 'api.views.index', name="api"),
+    url(r'^$', lambda r : redirect("v4/"), name="api"),
 
     url(r'^action/(?P<action>\w+)$', 'api.action.handler'),
 
