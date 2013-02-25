@@ -33,7 +33,7 @@ import collections
 import itertools
 import datetime
 
-from api.rest.resources import  ProjectResource, CodebookResource, ArticleResource
+from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
 from api.rest.resources import ProjectRoleResource
 
@@ -283,7 +283,7 @@ def import_articleset(request, project, aset):
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def articleset(request, project, aset):
     cls = "Article Set"
-    articles = (Datatable(ArticleResource, rowlink='../article/{id}')
+    articles = (Datatable(ArticleMetaResource, rowlink='../article/{id}')
                 .filter(articlesets_set__id=aset.id)
                 .hide('metastring', 'url', 'externalid',
                       'byline', 'pagenr', 'project', 'section', 'text'))
@@ -876,7 +876,7 @@ def view_codingjob(request, codingjob, project):
     View and edit a codingjob
     """
     form = forms.CodingJobForm(data=(request.POST or None), instance=codingjob)
-    articles = Datatable(ArticleResource)\
+    articles = Datatable(ArticleMetaResource)\
                     .filter(articlesets_set=codingjob.articleset)\
                     .hide("section", "pagenr", "byline", "metastring", "url")\
                     .hide("project", "medium", "text", "uuid")
