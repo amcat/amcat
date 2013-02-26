@@ -66,7 +66,7 @@ class ScrapingCheck(Script):
             table.addValue(
                 row = r['scraper'],
                 col = "expected range",
-                value = r['expected']
+                value = "{0:.2f}-{1:.2f}".format(r['expected'][0], r['expected'][1])
                 )
             table.addValue(
                 row = r['scraper'],
@@ -88,7 +88,7 @@ class ScrapingCheck(Script):
         succesful = sum([r['success'] for r in result])
         total = len(result)
 
-        datestr = toolkit.writeDate(date.today())
+        datestr = toolkit.writeDate(self.options['date'])
 
         subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
     
@@ -104,7 +104,7 @@ class ScrapingCheck(Script):
         result = []
         for scraper in Scraper.objects.all():
             if scraper.statistics:
-                n_expected = scraper.statistics[self.options['date'].weekday]
+                n_expected = scraper.statistics[self.options['date'].weekday()]
             else:
                 n_expected = "unknown"
             n_scraped = Article.objects.filter(
