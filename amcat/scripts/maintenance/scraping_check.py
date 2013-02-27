@@ -63,10 +63,14 @@ class ScrapingCheck(Script):
         table = DictTable()
 
         for r in result:
+            if r['expected'] == "unknown":
+                exvalue = "unknown"
+            else:
+                exvalue = "{0:.2f}-{1:.2f}".format(r['expected'][0], r['expected'][1])
             table.addValue(
                 row = r['scraper'],
                 col = "expected range",
-                value = "{0:.2f}-{1:.2f}".format(r['expected'][0], r['expected'][1])
+                value = exvalue
                 )
             table.addValue(
                 row = r['scraper'],
@@ -123,15 +127,21 @@ class ScrapingCheck(Script):
                 else:
                     success = True
 
+            scraper_result = {
+                'scraper':scraper,
+                'count':n_scraped,
+                'expected':n_expected,
+                'success':success
+                }
+                
+            log.info("""
+scraper: {scraper}
+\tcount: {count}
+\texpected: {expected}
+\tsuccess?: {success}
+""".format(**scraper_result))
                     
-            result.append(
-                {
-                    'scraper':scraper,
-                    'count':n_scraped,
-                    'expected':n_expected,
-                    'success':success
-                    }
-                )
+            result.append(scraper_result)
 
         return result
 
