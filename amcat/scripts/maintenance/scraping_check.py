@@ -39,7 +39,7 @@ MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
 
 <p>For log details, ssh to amcat-dev.labs.vu.nl, then open /home/amcat/log/daily_{_date.year:04d}-{_date.month:02d}-{_date.day:02d}.txt</p>
 
-<p>For a complete overview of last week's results, navigate to http://www.amcat-production.labs.vu.nl/navigator/scrapers</p>
+<p>For a complete overview of last week's results, navigate to http://amcat-production.labs.vu.nl/navigator/scrapers</p>
 """
 
 MAIL_ASCII = MAIL_HTML
