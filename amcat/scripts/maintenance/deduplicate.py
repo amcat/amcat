@@ -148,9 +148,9 @@ class TestDeduplicateScript(amcattest.PolicyTestCase):
         """One article should be deleted from artset and added to project 2"""
         p = amcattest.create_test_project()
         recycle = amcattest.create_test_project()
-        art1 = amcattest.create_test_article( text='blaat1', project=p)
-        art2 = amcattest.create_test_article( text='blaat2', project=p, medium=art1.medium)
-        art3 = amcattest.create_test_article( text='blaat1', project=p, medium=art1.medium)
+        art1 = amcattest.create_test_article( headline='blaat1', project=p)
+        art2 = amcattest.create_test_article( headline='blaat2', project=p, medium=art1.medium)
+        art3 = amcattest.create_test_article( headline='blaat1', project=p, medium=art1.medium)
         artset = amcattest.create_test_set(articles=[art1, art2, art3])
         d = DeduplicateScript(articleset = artset.id, recycle_bin_project=recycle.id)
         d.run( None )
