@@ -108,7 +108,7 @@ class TestScraping(amcattest.PolicyTestCase):
         ds = self.ds.get_scraper(date = date.today(), project=self.project.id)
         dbs = self.dbs.get_scraper(date = date.today(), project=self.project.id)
         
-        counts, log = scrape_logged(SimpleController(), [ds, dbs])
+        counts, log, articles = scrape_logged(SimpleController(), [ds, dbs])
         counts = {c.__class__.__name__ : n for (c,n) in counts.items()}
         self.assertEqual(counts, dict(TestDatedScraper=4, TestDBScraper=5))
 
