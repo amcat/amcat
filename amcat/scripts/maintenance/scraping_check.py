@@ -31,7 +31,6 @@ import os
 from django import forms
 from datetime import date
 
-SEND_TO = os.environ.get("SEND_TO").split(",")
 MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
 
 <p>The following scrapers were run:</p>
@@ -39,7 +38,7 @@ MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
 
 <p>For log details, ssh to amcat-dev.labs.vu.nl, then open /home/amcat/log/daily_{_date.year:04d}-{_date.month:02d}-{_date.day:02d}.txt</p>
 
-<p>For a complete overview of last week's results, navigate to http://www.amcat-production.labs.vu.nl/navigator/scrapers</p>
+<p>For a complete overview of last week's results, navigate to http://amcat-production.labs.vu.nl/navigator/scrapers</p>
 """
 
 MAIL_ASCII = MAIL_HTML
@@ -48,6 +47,7 @@ for tag in ['h3','p']:
     
 class ScrapingCheckForm(forms.Form):
     date = forms.DateField()
+    mail_to = forms.CharField()
 
 class ScrapingCheck(Script):
     options_form = ScrapingCheckForm
@@ -98,7 +98,7 @@ class ScrapingCheck(Script):
     
         _date = self.options['date']
         content = MAIL_ASCII.format(**locals())
-        for addr in SEND_TO:
+        for addr in self.options['mail_to'].split(","):
             sendmail.sendmail("toon.alfrink@gmail.com",
                      addr, subject, None, content)
 
