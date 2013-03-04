@@ -31,6 +31,7 @@ from amcat.models.project import Project
 import logging; log = logging.getLogger(__name__)
 from amcat.tools import amcatlogging
 from datetime import timedelta
+from datetime import date as m_date
 
 class DeduplicateForm(forms.Form):
     first_date = forms.DateField(required = False)
@@ -98,24 +99,76 @@ class DeduplicateScript(Script):
 
         log.info("Selected {n} articles".format(n = len(articles)))
 
-        idDict = {}
+        arDict = {}
         for article in articles:
             identifier = (article.medium_id, article.headline, str(article.date))
             if identifier:
-                if not identifier in idDict.keys():
-                    idDict[identifier] = []
-                idDict[identifier].append(article.id)
+                if not identifier in arDict.keys():
+                    arDict[identifier] = []
+                arDict[identifier].append(article)
 
         removable_ids = []
-        for ids in idDict.values():
-            if len(ids) > 1:
-                removable_ids.extend(sorted(ids)[1:])
-
-        articles.filter(id__in = removable_ids).update(project = self.options['recycle_bin_project'])
+        for articles in arDict.values():
+            keep = self.compare(articles)
+            removable_ids = [a.pk for a in articles if a.pk != keep.pk]
+        
+        for a in articles:
+            if a.id in removable_ids:
+                a.project = self.options['recycle_bin_project']
+                a.save()
         ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
 
         log.info("Moved {n} duplications to trash".format(n = len(removable_ids)))
 
+    def compare(self, articles):
+        """
+        Determines which article of the given articles gets to stay. 
+        Sometimes a later article has a better quality (extra metadata) because of scraper fixes/improvements.
+        If not, it is better to keep the old article because of possible codings attached to it
+        """
+        #determine the highest amount of fields in the articles
+        n_fields = 0
+        for article in articles:
+            l = 0
+            for field in [getattr(article, f) for f in article._meta.get_all_field_names() if f != 'metastring' and hasattr(article, f)]:
+
+
+                if field != None:
+                    l += 1
+            if article.metastring:
+                l += len(eval(article.metastring))
+            if l > n_fields:
+                n_fields = l
+                    
+        #filter out the articles with less fields
+        articles_2 = []
+        for article in articles:
+            le = 0
+            for field in [getattr(article, f) for f in article._meta.get_all_field_names() if f != 'metastring' and hasattr(article, f)]:
+                if field != None:
+                    le += 1
+            if article.metastring:
+                le += len(eval(article.metastring))
+
+            if le == n_fields:
+                articles_2.append(article)
+                
+        #if still multiple articles, pick article with longest text    
+        l_text = -1
+        for article in articles_2:
+            if len(article.text) > l_text:
+                l_text = len(article.text)
+
+        articles_3 = []
+        for article in articles_2:
+            if len(article.text) == l_text:
+                articles_3.append(article)
+
+        #if still multiple, pick out oldest version
+        article_ids = sorted([article.pk for article in articles_3])
+        for article in articles_3:
+            if article.id == article_ids[0]:
+                return article
 
 
 def deduplicate_scrapers(date):
@@ -148,11 +201,63 @@ class TestDeduplicateScript(amcattest.PolicyTestCase):
         """One article should be deleted from artset and added to project 2"""
         p = amcattest.create_test_project()
         recycle = amcattest.create_test_project()
-        art1 = amcattest.create_test_article( headline='blaat1', project=p)
-        art2 = amcattest.create_test_article( headline='blaat2', project=p, medium=art1.medium)
-        art3 = amcattest.create_test_article( headline='blaat1', project=p, medium=art1.medium)
-        artset = amcattest.create_test_set(articles=[art1, art2, art3])
+
+
+        art1 = amcattest.create_test_article( 
+            headline='blaat1', 
+            project=p,
+            text="""
+bla bla bla
+[bla](http://www.bla.com) bla bla bla
+""",
+            date = m_date(2012,01,01),
+            section = "kaas",
+            metastring = {'moet_door':True,'delete?':False,'mist':'niets'}
+            )
+
+
+        art2 = amcattest.create_test_article( 
+            headline='blaat1', 
+            project=p, 
+            medium=art1.medium,
+            text = """
+bla bla bla
+bla bla bla bla
+""",
+            date = m_date(2012,01,01),
+            section = "kaas",
+            metastring = {'moet_door':False,'delete?':True,'mist':'link'}
+            )
+
+
+        art3 = amcattest.create_test_article( 
+            headline='blaat1', 
+            project=p, 
+            medium=art1.medium,
+            text="""
+bla bla bla
+[bla](http://www.bla.com) bla bla bla
+""",
+            date = m_date(2012,01,01),
+            metastring = {'mist':'3 fields'}
+            )
+        
+        art4 = amcattest.create_test_article( 
+            headline='blaat1', 
+            project=p, 
+            medium=art1.medium,
+            text = """
+bla bla bla
+[bla](http://www.bla.com) bla bla bla
+""",
+            date = m_date(2012,01,01),
+            section = "kaas",
+            metastring = {'moet_door':False,'delete?':True,'mist':'gewoon later gemaakt'}
+            )
+
+        artset = amcattest.create_test_set(articles=[art1, art2, art3, art4])
         d = DeduplicateScript(articleset = artset.id, recycle_bin_project=recycle.id)
         d.run( None )
-        self.assertEqual(len(artset.articles.all()), 2)
-        self.assertEqual(len(Article.objects.filter(project = recycle)), 1)
+        self.assertEqual(len(artset.articles.all()), 1)
+        self.assertEqual(len(Article.objects.filter(project = recycle)), 3)
+        self.assertEqual(art1.pk, artset.articles.all()[0].pk)
