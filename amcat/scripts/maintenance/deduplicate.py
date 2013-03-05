@@ -53,11 +53,10 @@ class DeduplicateScript(Script):
 
         elif mode == "whole set":
             articles = Article.objects.filter(articlesetarticle__articleset = self.options['articleset'])
-            if articles:
-                self.options['date'] = articles.aggregate(Min('date'))['date__min'].date()
-                self.options['last_date'] = articles.aggregate(Max('date'))['date__max'].date()
-            
-                self.run_range(_input)
+            self.options['date'] = articles.aggregate(Min('date'))['date__min'].date()
+            self.options['last_date'] = articles.aggregate(Max('date'))['date__max'].date()
+            log.info("first date: {mi}; last date: {ma}".format(mi = self.options['date'], ma = self.options['last_date']))
+            self.run_range(_input)
 
 
     def run_range(self, _input):
@@ -100,7 +99,11 @@ class DeduplicateScript(Script):
 
         arDict = {}
         for article in articles:
-            identifier = (article.medium_id, article.headline, str(article.date))
+            if article.headline:
+                identifier = (article.headline, str(article.date.date()))
+            else:
+                identifier = (article.text, str(article.date))
+                
             if identifier:
                 if not identifier in arDict.keys():
                     arDict[identifier] = []
@@ -109,11 +112,11 @@ class DeduplicateScript(Script):
         removable_ids = []
         for articles in arDict.values():
             keep = self.compare(articles)
-            removable_ids = [a.pk for a in articles if a.pk != keep.pk]
-        
+            removable_ids.extend([a.pk for a in articles if a.pk != keep.pk])
+            
         ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
-
         log.info("Removed {n} duplications from articleset".format(n = len(removable_ids)))
+
 
     def compare(self, articles):
         """
