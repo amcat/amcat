@@ -37,7 +37,6 @@ class DeduplicateForm(forms.Form):
     first_date = forms.DateField(required = False)
     last_date = forms.DateField(required = False)    
     articleset = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
-    recycle_bin_project = forms.ModelChoiceField(queryset = Project.objects.all())
     
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
@@ -112,13 +111,9 @@ class DeduplicateScript(Script):
             keep = self.compare(articles)
             removable_ids = [a.pk for a in articles if a.pk != keep.pk]
         
-        for a in articles:
-            if a.id in removable_ids:
-                a.project = self.options['recycle_bin_project']
-                a.save()
         ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
 
-        log.info("Moved {n} duplications to trash".format(n = len(removable_ids)))
+        log.info("Removed {n} duplications from articleset".format(n = len(removable_ids)))
 
     def compare(self, articles):
         """
@@ -126,6 +121,8 @@ class DeduplicateScript(Script):
         Sometimes a later article has a better quality (extra metadata) because of scraper fixes/improvements.
         If not, it is better to keep the old article because of possible codings attached to it
         """
+
+
         #determine the highest amount of fields in the articles
         n_fields = 0
         for article in articles:
@@ -175,7 +172,6 @@ def deduplicate_scrapers(date):
     options = {
         'last_date' : date,
         'first_date' : date - timedelta(days = 7),
-        'recycle_bin_project' : 1
         }
 
     scrapers = Scraper.objects.filter(run_daily='t')
@@ -200,8 +196,6 @@ class TestDeduplicateScript(amcattest.PolicyTestCase):
     def test_deduplicate(self):
         """One article should be deleted from artset and added to project 2"""
         p = amcattest.create_test_project()
-        recycle = amcattest.create_test_project()
-
 
         art1 = amcattest.create_test_article( 
             headline='blaat1', 
@@ -252,12 +246,12 @@ bla bla bla
 """,
             date = m_date(2012,01,01),
             section = "kaas",
-            metastring = {'moet_door':False,'delete?':True,'mist':'gewoon later gemaakt'}
+            metastring = {'moet_door':False,'delete?':True,'mist':'later gemaakt'}
             )
 
         artset = amcattest.create_test_set(articles=[art1, art2, art3, art4])
-        d = DeduplicateScript(articleset = artset.id, recycle_bin_project=recycle.id)
+        d = DeduplicateScript(articleset = artset.id)
         d.run( None )
         self.assertEqual(len(artset.articles.all()), 1)
-        self.assertEqual(len(Article.objects.filter(project = recycle)), 3)
+        self.assertEqual(len(Article.objects.filter(project = p)), 4)
         self.assertEqual(art1.pk, artset.articles.all()[0].pk)
