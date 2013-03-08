@@ -31,7 +31,7 @@ from amcat.scripts import scriptmanager
 from amcat.scripts.searchscripts.aggregation import AggregationScript, AggregationForm
 import amcat.scripts.forms
 
-TITLE_COLUMN_NAME = '0'
+TITLE_COLUMN_NAME = 'x'
 
 
 def get_key(obj):
@@ -61,8 +61,8 @@ class ShowAggregation(WebScript):
             datesDictJson = dictToJsonCls().run(datesDict)
             
             columns = sorted(aggrTable.getColumns(), key=lambda x:x.id if hasattr(x,'id') else x)
-            dataTablesHeaderDict = [{'mDataProp':TITLE_COLUMN_NAME,'sTitle':'', 'sType':'objid', 'sWidth':'100px'}] + \
-                                    [{'mDataProp':get_key(col),'sTitle':col, 'sWidth':'70px'} for col in columns]
+            dataTablesHeaderDict = [{'mDataProp':TITLE_COLUMN_NAME,'sTitle':TITLE_COLUMN_NAME, 'sType':'objid', 'sWidth':'100px'}] + \
+                                    [{'mDataProp':get_key(col),'mData':get_key(col),'sTitle':col, 'sWidth':'70px'} for col in columns]
             columnsJson = dictToJsonCls().run(dataTablesHeaderDict)
             
             dataJson = []

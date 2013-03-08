@@ -112,7 +112,7 @@ class AggregationScript(script.Script):
             table3.rowNamesRequired = True # make sure row names are printed
             for row in data:
                 x = row['x']
-                y = row.get('y', '[total]')
+                y = row.get('y', 'total')
                 count = row['count']
                 table3.addValue(xDict.get(x, x), yDict.get(y, y), count)
             return table3
