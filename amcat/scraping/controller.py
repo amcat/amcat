@@ -119,8 +119,9 @@ class RobustController(Controller):
         
         for unit in scrapedunits:
             log.info("saving unit {unit}".format(**locals()))
-            self.save(unit)
-            yield unit
+            unit = self.save(unit)
+            if unit:
+                yield unit
         
 
 
