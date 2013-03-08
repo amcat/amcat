@@ -138,8 +138,8 @@ TEMPLATE_DIRS = (
 )
 
 INSTALLED_APPS = [
-    'sentry',
-    'sentry.client',
+    #'sentry',
+    #'sentry.client',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
