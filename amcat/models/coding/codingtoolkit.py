@@ -162,7 +162,7 @@ class CodingSchemaForm(forms.Form):
 class CodingStatusCommentForm(forms.Form):
     """Form that represents the coding status and comment"""
 
-    comment = forms.CharField(label='Comment', required=False)
+    comment = forms.CharField(label='Comment', required=False, widget=forms.Textarea(attrs={'rows':4, 'cols':40}))
     status = forms.ModelChoiceField(queryset=CodingStatus.objects.all(), empty_label=None)
     
         

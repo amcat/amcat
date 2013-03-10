@@ -60,7 +60,7 @@
 
 	var settings = {
 		'highlightClass' : 'highlight',
-		'partial' : false,
+		'partial' : true,
 		'lenient' : false,
 	};
 
