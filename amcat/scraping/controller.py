@@ -85,7 +85,7 @@ class RobustController(Controller):
         log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
         for unit in scraper.get_units():
-            log.debug("{scraper} received unit {unit}".format(**locals()))
+            log.debug("{scraper} received unit {unit}".format(**locals()).decode('utf-8'))
             
             try:
                 for article in self.scrape_unit(scraper, unit):
