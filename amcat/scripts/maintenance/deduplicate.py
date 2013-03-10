@@ -28,10 +28,12 @@ from amcat.models.article import Article
 from amcat.models.scraper import Scraper
 from amcat.models.articleset import ArticleSet, ArticleSetArticle
 from amcat.models.project import Project
-import logging; log = logging.getLogger(__name__)
 from amcat.tools import amcatlogging
+
+import logging; log = logging.getLogger(__name__)
 from datetime import timedelta
 from datetime import date as m_date
+import re
 
 class DeduplicateForm(forms.Form):
     first_date = forms.DateField(required = False)
@@ -125,10 +127,20 @@ class DeduplicateScript(Script):
         If not, it is better to keep the old article because of possible codings attached to it
         """
 
+        #check which articles have been through html2text
+        has_html2text = []
+        for article in articles:
+            p = re.compile("\[.+\]\(.+\)")
+            matches = p.search(article.text)
+            if matches:
+                has_html2text.append(article)
+        #if any, let those go first
+        if has_html2text:
+            articles_2 = has_html2text
 
         #determine the highest amount of fields in the articles
         n_fields = 0
-        for article in articles:
+        for article in articles_2:
             l = 0
             for field in [getattr(article, f) for f in article._meta.get_all_field_names() if f != 'metastring' and hasattr(article, f)]:
 
@@ -140,9 +152,10 @@ class DeduplicateScript(Script):
             if l > n_fields:
                 n_fields = l
                     
+
         #filter out the articles with less fields
-        articles_2 = []
-        for article in articles:
+        articles_3 = []
+        for article in articles_2:
             le = 0
             for field in [getattr(article, f) for f in article._meta.get_all_field_names() if f != 'metastring' and hasattr(article, f)]:
                 if field != None:
@@ -151,22 +164,23 @@ class DeduplicateScript(Script):
                 le += len(eval(article.metastring))
 
             if le == n_fields:
-                articles_2.append(article)
-                
+                articles_3.append(article)
+
         #if still multiple articles, pick article with longest text    
         l_text = -1
-        for article in articles_2:
+        for article in articles_3:
             if len(article.text) > l_text:
                 l_text = len(article.text)
 
-        articles_3 = []
-        for article in articles_2:
+        articles_4 = []
+        for article in articles_3:
             if len(article.text) == l_text:
-                articles_3.append(article)
+                articles_4.append(article)
+
 
         #if still multiple, pick out oldest version
-        article_ids = sorted([article.pk for article in articles_3])
-        for article in articles_3:
+        article_ids = sorted([article.pk for article in articles_4])
+        for article in articles_4:
             if article.id == article_ids[0]:
                 return article
 
@@ -220,10 +234,37 @@ bla bla bla
             text = """
 bla bla bla
 bla bla bla bla
+
+
+var c=0;
+var t;
+var timer_is_on=0;
+
+function timedCount()
+{
+document.getElementById('txt').value=c;
+c=c+1;
+t=setTimeout(function(){timedCount()},1000);
+}
+
+function doTimer()
+{
+if (!timer_is_on)
+  {
+  timer_is_on=1;
+  timedCount();
+  }
+}
+
+function stopCount()
+{
+clearTimeout(t);
+timer_is_on=0;
+}
 """,
             date = m_date(2012,01,01),
             section = "kaas",
-            metastring = {'moet_door':False,'delete?':True,'mist':'link'}
+            metastring = {'moet_door':False,'delete?':True,'mist':'link, heeft wel meer tekst'}
             )
 
 
