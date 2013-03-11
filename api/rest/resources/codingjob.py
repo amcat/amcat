@@ -38,23 +38,22 @@ class CodingJobSerializer(AmCATModelSerializer):
     the values per codingjob, we ask the database to aggregate for us
     in one query.
     """
-    n_codings = serializers.SerializerMethodField('get_n_jobs')
+    n_articles = serializers.SerializerMethodField('get_n_articles')
     n_codings_done = serializers.SerializerMethodField('get_n_done_jobs')
-
-    def _get_annotated(self, **filters):
-        return dict(self.context['view'].object_list.qs.distinct().filter(**filters)
-                    .annotate(Count("codings")).values_list("id", "codings__count"))
-
-    @cached
-    def _get_n_jobs(self):
-        return self._get_annotated()
 
     @cached
     def _get_n_done_jobs(self):
-        return self._get_annotated(codings__status__in=STATUS_DONE)
+        return dict(self.context['view'].object_list.qs.distinct().filter(
+                    codings__status__in=STATUS_DONE).annotate(Count("codings"))
+                    .values_list("id", "codings__count"))
 
-    def get_n_jobs(self, obj):
-        return self._get_n_jobs().get(obj.id, 0)
+    @cached
+    def _get_n_articles(self):
+        return dict(self.context['view'].object_list.qs.distinct()
+                .annotate(n=Count("articleset__articles")).values_list("id", "n"))
+
+    def get_n_articles(self, obj):
+        return self._get_n_articles().get(obj.id, 0)
 
     def get_n_done_jobs(self, obj):
         return self._get_n_done_jobs().get(obj.id, 0)
@@ -98,15 +97,15 @@ class TestCodingJobResource(ApiTestCase):
         # Test empty codingjob
         res = self.get(CodingJobResource)['results'][0]
         self.assertTrue("n_codings_done" in res)
-        self.assertTrue("n_codings" in res)
-        self.assertTrue(res["n_codings"] == 0)
-        self.assertTrue(res["n_codings_done"] == 0)
+        self.assertTrue("n_articles" in res)
+        self.assertEquals(1, res["n_articles"])
+        self.assertEquals(0, res["n_codings_done"])
 
         # Add two codings
         cj.codings.add(amcattest.create_test_coding(), amcattest.create_test_coding())
         res = self.get(CodingJobResource)['results'][0]
-        self.assertTrue(res["n_codings"] == 2)
-        self.assertTrue(res["n_codings_done"] == 0)
+        self.assertEquals(1, res["n_articles"])
+        self.assertEquals(0, res["n_codings_done"])
 
         # Set one coding to done
         cd= cj.codings.all()[0]
@@ -114,13 +113,11 @@ class TestCodingJobResource(ApiTestCase):
         cd.save()
 
         res = self.get(CodingJobResource)['results'][0]
-        self.assertTrue(res["n_codings"] == 2)
-        self.assertTrue(res["n_codings_done"] == 1)
+        self.assertEquals(1, res["n_codings_done"])
 
         cd.status = CodingStatus.objects.get(id=coding.STATUS_IRRELEVANT)
         cd.save()
 
         res = self.get(CodingJobResource)['results'][0]
-        self.assertTrue(res["n_codings"] == 2)
-        self.assertTrue(res["n_codings_done"] == 1)
+        self.assertEquals(1, res["n_codings_done"])
 
