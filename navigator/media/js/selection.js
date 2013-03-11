@@ -729,7 +729,7 @@ amcat.selection.aggregation.createGraph = function(){
         return;
     }
     
-    var TITLE_LABEL = '[title]';
+    var TITLE_LABEL = 'x';
     var series = [];
     var graphData = [];
     $.each(amcat.selection.aggregation.tableColumns, function(i, col){
