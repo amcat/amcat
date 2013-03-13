@@ -76,6 +76,7 @@ from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
 from amcat.scripts.output.csv_output import TableToSemicolonCSV
 
 from amcat.models.project import LITTER_PROJECT_ID
+from amcat.models.user import User
 
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
