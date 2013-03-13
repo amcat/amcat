@@ -88,7 +88,7 @@ def articleCodings(request, codingjobid, articleid):
     codings = codingtoolkit.get_article_coding(codingjob, article)
 
     if codings:
-        values = codings.get_values()
+        values = ((f, f.serialiser.value_label(v)) for (f,v) in codings.get_values())
         values = dict(('field_%s' % field.id, value) for field, value in values)
     else:
         values = {}
