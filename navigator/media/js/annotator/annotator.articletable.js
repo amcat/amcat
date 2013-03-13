@@ -71,6 +71,7 @@ annotator.articletable.goToPreviousRow = function(){
     });
 }
 
+MAX_LABELS_HIGHLIGHT = 30;
 
 annotator.articletable.highlight = function(){
     console.log("Highlighting all labels in article..");
@@ -80,6 +81,11 @@ annotator.articletable.highlight = function(){
         $.each(ont, function(code_id, code){
             labels.push(code.label);
         });
+
+        if (labels.length > MAX_LABELS_HIGHLIGHT){
+            console.log("Highlighting this much labels (" + labels.length + ") causes performance to degrade");
+            return;
+        }
 
         $("div.sentences").easymark("highlight", labels.join(" ")); 
     });
