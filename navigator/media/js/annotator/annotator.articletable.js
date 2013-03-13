@@ -93,6 +93,8 @@ var redraw = function(){
     ut.css("display", _prev);
 }
 
+_DECREASE_BY = 3;
+
 /*
  * Helper function of fit_table(), which decreases the headers.
  *
