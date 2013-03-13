@@ -76,9 +76,12 @@ annotator.articletable.highlight = function(){
     console.log("Highlighting all labels in article..");
     $.each(annotator.fields.ontologies, function(ont_id, ont){
         // For each ontology
+        var labels = [];
         $.each(ont, function(code_id, code){
-            $("div.sentences").easymark("highlight", code.label);
+            labels.push(code.label);
         });
+
+        $("div.sentences").easymark("highlight", labels.join(" ")); 
     });
 };
 
