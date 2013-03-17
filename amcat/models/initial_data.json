@@ -397,6 +397,15 @@
       "label": "CSV",
       "plugin_type": 2
     }
+  },
+  {
+    "pk": 4,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.nlp.stanford.StanfordParser",
+      "label": "Stanford",
+      "plugin_type": 1
+    }
   }
 
 

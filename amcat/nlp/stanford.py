@@ -22,81 +22,29 @@ Preprocess using the Stanford dependency parser
 See http://nlp.stanford.edu/software/lex-parser.shtml
 """
 
-from amcat.models.token import TripleValues, TokenValues
-
-import re
-import logging
+import logging, re
 log = logging.getLogger(__name__)
 
-from amcat.nlp.analysisscript import AnalysisScript, Parser, ParserError
-from amcat.tools.toolkit import execute
+from amcat.nlp.analysisscript import VUNLPParser
 
-CMD = ("java -cp {parser_home}/stanford-parser-2012-05-22-models.jar:{parser_home}/stanford-parser.jar "
-       "-mx600m edu.stanford.nlp.parser.lexparser.LexicalizedParser "
-       "-sentences newline -retainTMPSubcategories -outputFormat wordsAndTags,typedDependencies "
+CMD = ("Stanford edu.stanford.nlp.parser.lexparser.LexicalizedParser "
+       "-sentences newline "
+       "-retainTMPSubcategories "
+       "-outputFormat words,wordsAndTags,typedDependencies "
        "-outputFormatOptions stem,basicDependencies "
-       "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz -")
+       "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz")
 
-def clean(sent):
-    return re.sub("\s+", " ", sent).strip()
+class StanfordParser(VUNLPParser):
+    parse_command = CMD
+
+    def store_parse(self, parse):
+        for i, words, tokens, triples in interpret_parse(parse):
+            print i, words, tokens, triples
         
-class Stanford(Parser):
-    ENVIRON_HOME_KEY = "STANFORD_HOME"
-    DEFAULT_HOME = "/home/amcat/resources/Stanford"
 
-    def _parse(self, input):
-        self._check_home()
-        cmd = CMD.format(**self.__dict__)
-        log.debug("Parsing %r" % input)
-        out, err = execute(cmd, input.encode("utf-8"))
-        if "*******" in err:
-            raise ParserError("Exception from Stanford parser: %r" % err)
-        log.debug("OUT: %r\nERR:%r\n" % (out, err))
-        return out.decode("utf-8"), err.decode("utf-8")
-
-    def get_tokens(self, id, sentence, memo=None):
-        return memo[id][0]
-
-    def get_triples(self, id, sentence, memo=None):
-        return memo[id][1]
-
-    def preprocess_sentences(self, sentences):
-        input = "\n".join(clean(sent) for (sid, sent) in sentences)
-        sids = [sid for (sid, sent) in sentences]
-        out, err = self._parse(input)
-        memo = dict(interpret_parse(sids, out, err))        
-        return memo
-
-def create_tokens(sid, words, tokens):
-    for position, s in enumerate(tokens):
-        lemma, pos = s.rsplit("/", 1)
-        poscat = POSMAP[pos]
-        
-        yield TokenValues(sid, position, words[position], lemma, poscat, pos, None)
-
-def create_triples(sid, triples):
-    for parent, rel, child in triples:
-        yield TripleValues(sid, child-1, parent-1, rel)
-        
-def interpret_parse(sids, out, err):
-    words = dict(interpret_err(err))
-    tokens_triples = dict(interpret_out(out))
-    for i, sid in enumerate(sids):
-        tokens, triples = tokens_triples[i]
-        tokens = list(create_tokens(sid, words[i], tokens))
-        triples = list(create_triples(sid, triples))
-        yield sid, (tokens, triples)
-    
-def interpret_err(err):
-    for line in err.split("\n"):
-        m = re.match(r"Parsing \[sent. (\d+) len. \d+\]: (.*)", line.strip())
-        if m:
-            i, sent = m.groups()
-            yield int(i)-1, sent.split(" ") # to get 0-based offset
-            
-def interpret_out(out):
+def interpret_parse(out):
     # output of correctly parsed sentences is of form
-    # tokens / empty / triple / ... / triple / empty
+    # words / empty / tokens / empty / triple / ... / triple / empty
     # output of error is of form
     # Sentence skipped: / SENTENCE_SKIPPED (no empty line)  <- does this actually happen anymore?
     lines = out.split("\n")
@@ -105,21 +53,25 @@ def interpret_out(out):
         line = lines.pop(0)
         if line.strip() <> s: raise ParserError("Expected %r, got %r" % (s, line))
     while lines:
-        tokens = lines.pop(0)
-        if not tokens: continue # skip leading empty lines
+        line = lines.pop(0)
+        if not line: continue # skip leading empty lines
         i += 1
-        if tokens.startswith("Sentence skipped:"):
+        if line.startswith("Sentence skipped:"):
             expect("SENTENCE_SKIPPED_OR_UNPARSABLE")
             log.warn("Sentence #%i was skipped or unparsable" % i)
             log.debug("Lines now %r" % lines)
             continue
-        tokens = tokens.split(" ")
 
-        log.debug("Read tokens %r, reading triples..." % tokens)
-        log.debug("Lines now %r" % lines)
-        
-        triples = []
+        words = line.split()
         expect("")
+        
+        tokens = lines.pop(0).split(" ")
+        expect("")
+        
+        log.debug("Read words %r, tokens %r, reading triples..." % (words, tokens))
+        log.debug("Lines now %r" % lines)
+
+        triples = []
         while True:
             triple = lines.pop(0)
             log.debug("Read triple %r..." % triple)
@@ -131,8 +83,8 @@ def interpret_out(out):
             triple = (int(p1), rel, int(p2))
             if not (rel == 'root' and int(p1) == 0):
                 triples.append(triple)
-        log.debug("Done! i=%i, tokens=%s, triples=%s" % (i, tokens, triples))
-        yield i, (tokens, triples)
+        log.debug("Done! i=%i, words=%r, tokens=%r, triples=%r" % (i, words, tokens, triples))
+        yield i, words, tokens, triples
     
 
 POSMAP = {
