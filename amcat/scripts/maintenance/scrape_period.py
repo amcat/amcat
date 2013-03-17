@@ -79,7 +79,6 @@ class PeriodScraper(Script):
 
 
     def run(self, _input):
-        failed = open('failed.txt', 'a+')
         date = self.options['first_date']
         if self.options['last_date']:
             last_date = self.options['last_date']
@@ -91,7 +90,7 @@ class PeriodScraper(Script):
             try:
                 scraper.run(_input)
             except Exception:
-                failed.write("{scraper}: {date}".format(**locals()))
+                log.exception("scraper failed")
             else:
                 if self.options['deduplicate']:
                     dedu_options = {
