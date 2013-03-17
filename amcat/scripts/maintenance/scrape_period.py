@@ -28,6 +28,7 @@ from amcat.models.scraper import Scraper
 from django import forms
 from datetime import date, timedelta
 
+import logging;log = logging.getLogger(__name__)
 
 class PeriodScraperForm(ScraperForm):
     first_date = forms.DateField()
@@ -54,7 +55,12 @@ class PeriodScraper(Script):
             }
 
         if self.options['scraper_id']:
-            return Scraper.objects.get(pk = self.options['scraper_id'].id).get_scraper(**scraper_options)
+    
+            scraper_model = Scraper.objects.get(pk = self.options['scraper_id'].id)
+            if scraper_model.username:
+                scraper_options['username'] = scraper_model.username
+                scraper_options['password'] = scraper_model.password
+            return scraper_model.get_scraper(**scraper_options)
 
         elif self.options['scraper_module'] and self.options['scraper_classname']:
 
@@ -78,7 +84,6 @@ class PeriodScraper(Script):
 
         while date <= last_date:
             scraper = self.get_scraper(date)
-            print(scraper)
             scraper.run(_input)
             date += timedelta(days = 1)
 
