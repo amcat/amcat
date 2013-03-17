@@ -137,7 +137,8 @@ class DeduplicateScript(Script):
         #if any, let those go first
         if has_html2text:
             articles_2 = has_html2text
-
+        else:
+            articles_2 = articles
         #determine the highest amount of fields in the articles
         n_fields = 0
         for article in articles_2:
