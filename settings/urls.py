@@ -43,7 +43,7 @@ urlpatterns = patterns(
     )
 
 # Sentry
-if settings.DEBUG == False:
+if settings.DEBUG == False and not settings.DISABLE_SENTRY:
     urlpatterns += patterns('', (r'^sentry/', include('sentry.web.urls')))
 
 # Static files

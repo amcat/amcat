@@ -39,6 +39,7 @@ else:
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO' if DEBUG else 'WARNING')
+DISABLE_SENTRY = os.environ.get("DJANGO_DISABLE_SENTRY", None) in ("1","Y", "ON")
 
                  
 LOCAL_DEVELOPMENT = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
@@ -138,8 +139,6 @@ TEMPLATE_DIRS = (
 )
 
 INSTALLED_APPS = [
-    'sentry',
-    'sentry.client',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -213,21 +212,24 @@ if not DEBUG:
     EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_PASSWORD", '')
     EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_TLS", 'Y') in ("1","Y", "ON")
 
-
-    from sentry.client.handlers import SentryHandler
-
     logger = logging.getLogger()
-    # ensure we havent already registered the handler
-    if SentryHandler not in map(lambda x: x.__class__, logger.handlers):
-        logger.addHandler(SentryHandler())
 
-        # Add StreamHandler to sentry's default so you can catch missed exceptions
-        logger = logging.getLogger('sentry.errors')
-        logger.propagate = False
-        logger.addHandler(logging.StreamHandler())
+    if not DISABLE_SENTRY:
+        from sentry.client.handlers import SentryHandler
 
+        INSTALLED_APPS.append('sentry')
+        INSTALLED_APPS.append('sentry.client')
 
-    MIDDLEWARE_CLASSES.insert(0, 'sentry.client.middleware.SentryResponseErrorIdMiddleware')
+        # ensure we havent already registered the handler
+        if SentryHandler not in map(lambda x: x.__class__, logger.handlers):
+            logger.addHandler(SentryHandler())
+
+            # Add StreamHandler to sentry's default so you can catch missed exceptions
+            logger = logging.getLogger('sentry.errors')
+            logger.propagate = False
+            logger.addHandler(logging.StreamHandler())
+
+        MIDDLEWARE_CLASSES.insert(0, 'sentry.client.middleware.SentryResponseErrorIdMiddleware')
 
     LOGGING = {
         'version': 1,

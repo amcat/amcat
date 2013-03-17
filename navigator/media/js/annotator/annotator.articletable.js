@@ -71,14 +71,23 @@ annotator.articletable.goToPreviousRow = function(){
     });
 }
 
+MAX_LABELS_HIGHLIGHT = 30;
 
 annotator.articletable.highlight = function(){
     console.log("Highlighting all labels in article..");
     $.each(annotator.fields.ontologies, function(ont_id, ont){
         // For each ontology
+        var labels = [];
         $.each(ont, function(code_id, code){
-            $("div.sentences").easymark("highlight", code.label);
+            labels.push(code.label);
         });
+
+        if (labels.length > MAX_LABELS_HIGHLIGHT){
+            console.log("Highlighting this much labels (" + labels.length + ") causes performance to degrade");
+            return;
+        }
+
+        $("div.sentences").easymark("highlight", labels.join(" ")); 
     });
 };
 
@@ -89,6 +98,8 @@ var redraw = function(){
     ut.css("display", "none");
     ut.css("display", _prev);
 }
+
+_DECREASE_BY = 3;
 
 /*
  * Helper function of fit_table(), which decreases the headers.
