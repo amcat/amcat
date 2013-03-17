@@ -110,9 +110,12 @@ from navigator.views.article import view as article
 @check(Project)
 def upload_article(request, project):
     plugin_type = UploadScript.get_plugin_type()
-    scripts = (Datatable(PluginResource, rowlink="./upload-articles/{id}").filter(active=True)
-               .filter(type=plugin_type)
-               .hide('id', 'module', 'class_name', 'type'))
+    #scripts = (Datatable(PluginResource, rowlink="./upload-articles/{id}")
+    #           .filter(plugin_type=plugin_type)
+    #           .hide('id', 'class_name', 'plugin_type'))
+    
+    scripts = (Datatable(PluginResource, rowlink="./upload-articles/{id}")
+               .filter(plugin_type=plugin_type).hide('id', 'plugin_type'))
 
     can_create_plugin = Plugin.can_create(request.user)
 

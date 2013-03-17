@@ -55,21 +55,6 @@ def create_admin():
         log.info("\n{line}\n#   A default superuser `amcat` with password `amcat` has been created.   #\n{line}"
                  .format(line="#"*75))
 
-def register_plugins():
-    log.info("Registering plugins...")
-    for pt in PluginType.objects.all():
-        if pt.package == "amcat.nlp":
-            continue # skip analyses - they need language and can't currently be done automatically
-        log.debug("Checking plugins of type {pt}".format(**locals()))
-        for cls in pt.get_classes():
-            log.debug("Checking plugin {cls}".format(**locals()))
-            try:
-                Plugin.objects.get(module=cls.__module__, class_name=cls.__name__, type=pt)
-            except Plugin.DoesNotExist:
-                log.debug("Creating plugin")
-                plugin_module = amcat.tools.classtools.import_attribute(cls.__module__)
-                Plugin.objects.create(module=cls.__module__, class_name=cls.__name__, type=pt,
-                                      label=cls.__name__, description=plugin_module.__doc__.strip())
     
         
 def initialize(sender, **kwargs):
@@ -79,7 +64,6 @@ def initialize(sender, **kwargs):
     datafile = os.path.join(os.path.dirname(amcat.models.__file__), "initial_data.json")
     Command().run_from_argv(["manage", "loaddata", datafile])
     create_admin()
-    register_plugins()
 
 def set_signals():
     """

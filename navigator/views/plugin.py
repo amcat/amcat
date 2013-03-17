@@ -29,13 +29,12 @@ from django.core.urlresolvers import reverse
 from django import forms
 
 from amcat.models.plugin import Plugin, PluginType
-from amcat.scripts.actions.add_plugin import AddPlugin
 from amcat.tools import classtools
 from navigator.utils.action import ActionHandler
 from navigator.utils.auth import check
 from api.rest import Datatable
 
-from api.rest.resources import AnalysisResource, PluginResource
+from api.rest.resources import PluginResource
 
 def get_menu():
     return tuple((pt.label, "manage-plugins", pt.id) for pt in PluginType.objects.all())
@@ -50,30 +49,6 @@ def manage(request, plugin_type):
     menu = get_menu()
     selected = plugin_type.label
     canmanage = Plugin.can_create(request.user)
-    if plugin_type.label == 'NLP Preprocessing':
-        resource = AnalysisResource
-        rowlink = "../analysis/{id}"
-    else:
-        resource = PluginResource
-        rowlink = None
-    plugins = (Datatable(resource, rowlink=rowlink)
-               .filter(type=plugin_type).hide('id', 'type'))
+    plugins = (Datatable(PluginResource)
+               .filter(plugin_type=plugin_type).hide('id', 'plugin_type'))
     return render(request, 'navigator/plugin/manage.html', locals())
-
-@check(PluginType)
-def add(request, plugin_type):
-    if request.POST:
-        form = AddPlugin.options_form(request.POST)
-        if form.is_valid():
-            added_plugin = AddPlugin(form).run()
-            return redirect(reverse(manage, args=[plugin_type.id]), permanent=False)
-    else:
-        form = AddPlugin.get_empty_form(type=plugin_type)
-
-    scripts = plugin_type.get_classes()
-    c = forms.ChoiceField(choices=[(0, "---")] +
-                          [("%s.%s" % (c.__module__, c.__name__), c.__name__)
-                           for c in scripts],
-                          initial=0)
-    form.fields.insert(0, "Known plug-in", c)
-    return render(request, "navigator/plugin/add.html", locals())

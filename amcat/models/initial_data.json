@@ -357,40 +357,48 @@
       "description" : "general taxonomic more-specific-than relation"
     }
   },
-  {  "pk" : 1,
-    "model": "amcat.plugin",
-    "fields" : {
-      "label" : "Analysis Script",
-      "description" : "Superclass for NLP Analysis plugins",
-      "class_name" : "AnalysisScript",
-      "module" : "amcat.nlp.analysisscript"
-    }
-  },
-  {"pk" : 2,
-    "model": "amcat.plugin",
-    "fields" : {
-      "label" : "Article Upload",	
-      "description" : "Superclass for Article Upload plugins",
-      "class_name" : "UploadScript",
-      "module" : "amcat.scripts.article_upload.upload"
-    }
-  },
   {"pk" : 1,
     "model": "amcat.plugintype",
     "fields" : {
-      "label" : "NLP Preprocessing",	
-      "description" : "Plugin for NLP Preprocessing analyses",
-      "superclass" : 1,
-      "package" : "amcat.nlp"
+      "class_name" : "amcat.nlp.analysisscript.AnalysisScript",
+      "label" : "NLP Preprocessing"
     }
   },
   {"pk" : 2,
     "model": "amcat.plugintype",
     "fields" : {
-      "label" : "Article Upload",	
-      "description" : "Plugin for uploading new articles",
-      "superclass" : 2,
-      "package" : "amcat.scripts"
+	"class_name" : "amcat.scripts.article_upload.upload.UploadScript",
+      "label" : "Article Uploading"
+    }
+  },
+  {
+    "pk": 1,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.scripts.article_upload.text.Text",
+      "label": "Plain Text",
+      "plugin_type": 2
+    }
+  },
+  {
+    "pk": 2,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.scripts.article_upload.lexisnexis.LexisNexis",
+      "label": "LexisNexis",
+      "plugin_type": 2
+    }
+  },
+  {
+    "pk": 3,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.scripts.article_upload.csv_import.CSV",
+      "label": "CSV",
+      "plugin_type": 2
     }
   }
+
+
+
 ]

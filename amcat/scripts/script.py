@@ -121,12 +121,10 @@ class Script(object):
     @classmethod
     def get_plugin(cls):
         """
-        Get the Plugin object corresponding to this class, if any
+        Get the Plugin object corresponding to this class
         """
-        try:
-            return Plugin.objects.get(class_name=cls.__name__, module=cls.__module__)
-        except Plugin.DoesNotExist:
-            return None
+        qualified_name = ".".join([cls.__module__, cls.__name__])
+        return Plugin.objects.get(class_name=qualified_name)
 
     @classmethod
     def get_plugin_type(cls):
@@ -135,16 +133,13 @@ class Script(object):
         If the corresponding plugin has a Type, return it.
         If not, check whether it 'is' a type, e.g. there is a type defined by this plugin
         """
-        p = cls.get_plugin()
-        if not p:
-            return None
-        if p.type:
-            return p.type
-        else:
-            try:
-                return PluginType.objects.get(superclass=p)
-            except PluginType.DoesNotExist:
-                return None
+        try:
+            return cls.get_plugin().plugin_type
+        except Plugin.DoesNotExist:
+            # maybe we are the 'plugintype' instead of a plugin?
+            qualified_name = ".".join([cls.__module__, cls.__name__])
+            return PluginType.objects.get(class_name=qualified_name)
+
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

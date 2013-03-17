@@ -9,22 +9,6 @@
 <h1> Manage {{ plugin_type.label }} analyses </h1>
 
 
-{% if canmanage %}
-<div>
- <table>
-  <tr>
-   <td>Actions:</td>
-<td>
-  <a href="{% url add-plugin id=plugin_type.id %}"> 
-    Register a new plugin
-  </a>
-   </td>
-  </tr>
- </table>
-</div>
-
-{% endif %}
-
 {{ plugins }}
 
 {% endblock %}
