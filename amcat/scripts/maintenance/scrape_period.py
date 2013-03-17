@@ -24,6 +24,8 @@ Script to run a scraper at given date range
 from amcat.scripts.script import Script
 from amcat.scraping.scraper import ScraperForm
 from amcat.models.scraper import Scraper
+from amcat.scripts.maintenance.deduplicate import DeduplicateScript
+
 
 from django import forms
 from datetime import date, timedelta
@@ -39,6 +41,7 @@ class PeriodScraperForm(ScraperForm):
     scraper_username = forms.CharField(required = False)
     scraper_password = forms.CharField(required = False)
 
+    deduplicate = forms.BooleanField(required = False)
 
 
 class PeriodScraper(Script):
@@ -70,6 +73,7 @@ class PeriodScraper(Script):
 
 
     def run(self, _input):
+        failed = open('failed.txt', 'a+')
         date = self.options['first_date']
         if self.options['last_date']:
             last_date = self.options['last_date']
@@ -78,8 +82,19 @@ class PeriodScraper(Script):
 
         while date <= last_date:
             scraper = self.get_scraper(date)
-            print(scraper)
-            scraper.run(_input)
+            try:
+                scraper.run(_input)
+            except Exception:
+                failed.write("{scraper}: {date}".format(**locals()))
+            else:
+                if self.options['deduplicate']:
+                    dedu_options = {
+                        'first_date' : date,
+                        'last_date' : date,
+                        'articleset' : scraper.articleset.id
+                        }
+                    DeduplicateScript(**dedu_options).run(None)
+                    
             date += timedelta(days = 1)
 
 
