@@ -184,43 +184,43 @@ class StanfordCoreNLP(object):
 
     def _wait_for_corenlp_init(self):
 	"""Give some progress feedback while waiting for server to initialize"""
-	for module in ["Pos tagger", "NER-all", "NER-muc", "ConLL", "PCFG"]:
-	    log.debug("Loading {module}".format(**locals()))
-	    self._corenlp_process.expect("done.", timeout=600)
-	log.debug(" ..  Finished loading modules...")
+        for module in ["Pos tagger", "NER-all", "NER-muc", "ConLL", "PCFG"]:
+            log.debug("Loading {module}".format(**locals()))
+            self._corenlp_process.expect("done.", timeout=600)
+        log.debug(" ..  Finished loading modules...")
         self._corenlp_process.expect("Entering interactive shell.")
         log.info("NLP tools loaded.")
 
 
     def _get_results(self):
-	"""
-	Get the raw results from the corenlp process
-	"""
-	copy = open("/tmp/parse_log", "w")
-	buff = StringIO()
-	while True: 
+        """
+        Get the raw results from the corenlp process
+        """
+        copy = open("/tmp/parse_log", "w")
+        buff = StringIO()
+        while True: 
             try:
-		incoming = self._corenlp_process.read_nonblocking (2000, 1)
+                incoming = self._corenlp_process.read_nonblocking (2000, 1)
             except pexpect.TIMEOUT:
-		log.debug("Waiting for CoreNLP process; buffer: {!r} ".format(buff.getvalue()))
-		continue
-	    # original broke out of loop on EOF, but EOF is unexpected so rather raise exception
-		
-	    for ch in incoming:
-		copy.write(ch)
-		if ch == "\n": # return a found line
-		    yield buff.getvalue()
-		    buff.seek(0)
-		    buff.truncate()
-		elif ch not in "\r\x07":
-		    buff.write(ch)
-		    if ch == ">" and buff.getvalue().startswith("NLP>"):
-			return
+                log.debug("Waiting for CoreNLP process; buffer: {!r} ".format(buff.getvalue()))
+                continue
+            # original broke out of loop on EOF, but EOF is unexpected so rather raise exception
+                
+            for ch in incoming:
+                copy.write(ch)
+                if ch == "\n": # return a found line
+                    yield buff.getvalue()
+                    buff.seek(0)
+                    buff.truncate()
+                elif ch not in "\r\x07":
+                    buff.write(ch)
+                    if ch == ">" and buff.getvalue().startswith("NLP>"):
+                        return
 
     def _parse(self, text):
         """
-	Call the server and parse the results.
-	@return: (sentences, coref)
+        Call the server and parse the results.
+        @return: (sentences, coref)
         """
         # clean up anything leftover, ie wait until server says nothing in 0.3 seconds
         while True:
@@ -239,9 +239,9 @@ class StanfordCoreNLP(object):
         @return: (sentences, coref)
         """
         log.debug("Request: {text}".format(**locals()))
-        results = self._parse(text)	
-	log.debug("Result: {results}".format(**locals()))
-	return results
+        results = self._parse(text)        
+        log.debug("Result: {results}".format(**locals()))
+        return results
 
 def serve(host="localhost", port=8080, **kargs):
     server = SimpleJSONRPCServer.SimpleJSONRPCServer((host, port))
@@ -267,17 +267,17 @@ def parse_text(text, **kargs):
 
 class CoreNLPStarter(object):
     def __init__(self, hostname, port, **corenlp_options):
-	self.corenlp_options = corenlp_options
+        self.corenlp_options = corenlp_options
     def _read_text(self):
-	if os.isatty(0):
-	    log.info("Reading text from stdin, press EOF (^D) when ready")
-	return sys.stdin.read()
-	
+        if os.isatty(0):
+            log.info("Reading text from stdin, press EOF (^D) when ready")
+        return sys.stdin.read()
+        
     def parse(self):
-	text = self._read_text()
-	nlp = StanfordCoreNLP(**self.corenlp_options)
+        text = self._read_text()
+        nlp = StanfordCoreNLP(**self.corenlp_options)
         sentences, coref = nlp.parse(text)
-	
+        
         print "Parsed {} sentences".format(len(sentences))
         for i, sentence in enumerate(sentences):
             print " #{i}: {sentence[text]!r}".format(**locals())
@@ -300,7 +300,7 @@ if __name__ == '__main__':
     parser.add_argument('--corenlp_path', '-c', dest="corenlp_path", help='Path to CoreNLP jar files')
     parser.add_argument('--corenlp_version', '-V', help='Version (ie 2012-01-01) of the corenlp jar')
     parser.add_argument( '--models_version', '-m',
-			help='Version (ie 2012-01-01) of the models jar, if different from corenlp_version')
+                        help='Version (ie 2012-01-01) of the models jar, if different from corenlp_version')
 
     parser.add_argument('--verbose', '-v', help='Print debug messages', action='store_true')
     args = parser.parse_args()

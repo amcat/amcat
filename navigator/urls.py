@@ -128,9 +128,6 @@ urlpatterns = patterns(
     url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-unit$', 'navigator.views.project.codingjob_unit_export', name='project-codingjob-unit-export'),
     url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-article$', 'navigator.views.project.codingjob_article_export', name='project-codingjob-article-export'),
 
-    # Preprocessing
-    url(r'^analysis/(?P<id>[0-9-]+)$', 'navigator.views.analysis.demo', name='analysis-demo'),
-    url(r'^analysissentence/(?P<id>[0-9]+)$', 'navigator.views.analysis.sentence', name='analysis-sentence'),
     
     # Scrapers
     url(r'^scrapers$', 'navigator.views.scrapers.index', name='scrapers'),
