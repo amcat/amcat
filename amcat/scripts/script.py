@@ -62,6 +62,9 @@ class Script(object):
     def run(self, input=None):
         """Run is invoked with the input, which should be of type input_type,
         and should return a result of type output_type or raise an exception"""
+        return self._run(**self.options)
+
+    def _run(self, **options):
         pass
 
     def _validate_form(self):

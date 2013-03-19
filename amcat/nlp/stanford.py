@@ -27,12 +27,7 @@ log = logging.getLogger(__name__)
 
 from amcat.nlp.analysisscript import VUNLPParser
 
-CMD = ("Stanford edu.stanford.nlp.parser.lexparser.LexicalizedParser "
-       "-sentences newline "
-       "-retainTMPSubcategories "
-       "-outputFormat words,wordsAndTags,typedDependencies "
-       "-outputFormatOptions stem,basicDependencies "
-       "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz")
+CMD = "Stanford-CoreNLP"
 
 class StanfordParser(VUNLPParser):
     parse_command = CMD
@@ -41,51 +36,6 @@ class StanfordParser(VUNLPParser):
         for i, words, tokens, triples in interpret_parse(parse):
             print i, words, tokens, triples
         
-
-def interpret_parse(out):
-    # output of correctly parsed sentences is of form
-    # words / empty / tokens / empty / triple / ... / triple / empty
-    # output of error is of form
-    # Sentence skipped: / SENTENCE_SKIPPED (no empty line)  <- does this actually happen anymore?
-    lines = out.split("\n")
-    i = -1 # start with index -1 + 1 = 0
-    def expect(s):
-        line = lines.pop(0)
-        if line.strip() <> s: raise ParserError("Expected %r, got %r" % (s, line))
-    while lines:
-        line = lines.pop(0)
-        if not line: continue # skip leading empty lines
-        i += 1
-        if line.startswith("Sentence skipped:"):
-            expect("SENTENCE_SKIPPED_OR_UNPARSABLE")
-            log.warn("Sentence #%i was skipped or unparsable" % i)
-            log.debug("Lines now %r" % lines)
-            continue
-
-        words = line.split()
-        expect("")
-        
-        tokens = lines.pop(0).split(" ")
-        expect("")
-        
-        log.debug("Read words %r, tokens %r, reading triples..." % (words, tokens))
-        log.debug("Lines now %r" % lines)
-
-        triples = []
-        while True:
-            triple = lines.pop(0)
-            log.debug("Read triple %r..." % triple)
-            log.debug("Lines now %r" % lines)
-            if not triple: break
-            m = re.match(r"([\w&]+)\(.+-(\d+), .+-(\d+)\)", triple)
-            if not m: raise Exception("Cannot interpret triple %s" % triple)
-            rel, p1, p2 = m.groups()
-            triple = (int(p1), rel, int(p2))
-            if not (rel == 'root' and int(p1) == 0):
-                triples.append(triple)
-        log.debug("Done! i=%i, words=%r, tokens=%r, triples=%r" % (i, words, tokens, triples))
-        yield i, words, tokens, triples
-    
 
 POSMAP = {
    '$' :'.',

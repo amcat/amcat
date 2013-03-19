@@ -63,19 +63,23 @@ class AnalysisScript(Script):
 class VUNLPParser(AnalysisScript):
     """Analysisscript subclass for parsers bound to a specific ('home') folder"""
 
+    def __init__(self):
+        self.client = Client()
+    
     def submit_article(self, article):
         plugin = self.get_plugin()
         # Upload text to vunlp server
         sentences = sbd.get_or_create_sentences(article)
         text = "\n".join(s.sentence for s in sentences)
-        handle = Client().upload(self.parse_command, text)
+        handle = self.client.upload(self.parse_command, text)
+        log.info("Submitted article {article.id}, handle {handle}".format(**locals()))
         # Create AnalysedArticle object
         return AnalysedArticle.objects.create(article=article, plugin=plugin,
                                               done=False, error=False, info=handle)
 
     def retrieve_article(self, analysed_article):
-        status = "ready"
-        #status = Client().check(analysed_article.info)
+        status = Client().check(analysed_article.info)
+        return status
         if status == "ready":
             try:
                 #parse = Client().download(analysed_article.info)
