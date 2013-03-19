@@ -57,9 +57,7 @@ class Document(object):
         
     """
     def __init__(self, parent=None, **kargs):
-        """@param parent: """
         self.props = Properties()
-        self.parent = parent
         self.article = None
 
         for k,v in kargs.items():
@@ -109,6 +107,8 @@ class Document(object):
         _metastring = dict()
         for prop, value in self.getprops().items():
             value = self._convert(value)
+            if prop == 'parent':
+                value = value.article
             if prop in _ARTICLE_PROPS:
                 setattr(art, prop, value)
             else:
@@ -116,7 +116,6 @@ class Document(object):
 
         art.metastring = str(_metastring)
         self.article = art
-
         return art
 
     def _convert(self, val):

@@ -25,7 +25,7 @@ import logging; log = logging.getLogger(__name__)
 import json
 
 def scraper_ranges(scraper):
-    returns = [(0,0) for x in range(7)]
+    ranges = [(0,0) for x in range(7)]
 
     articleset_id = scraper.articleset_id
     rows = Article.objects.filter(articlesetarticle__articleset = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id')).filter(date__gte = date.today() - timedelta(days=70)) 
@@ -34,11 +34,16 @@ def scraper_ranges(scraper):
     if rows.count() < 21:
         raise ValueError("not enough data on the scraper")
     
-    for i,rows in enumerate(sort_weekdays(rows)):
+    for wkday,rows in enumerate(sort_weekdays(rows)):
         numbers = [row['created_count'] for row in rows]
         med = median(numbers)
-        returns[i] = (med/1.5, med*2)
+        ranges[wkday] = (med/1.5, med*2)
         
+    #if a scraper often doesn't return articles at all, the lower range is set to 0
+    for r in ranges:
+        if r[0] < 1:
+            r[0] = 0
+
     return returns
 
 
