@@ -53,7 +53,6 @@ def exec_without_seqscan(func):
             with transaction.commit_on_success():
                 cursor = connection.cursor()
                 cursor.execute("set enable_seqscan=false;")
-                log.info("blaat")
                 return func(self)
         except DatabaseError as e:
             log.exception("Could not disable sequential scan!")
