@@ -37,7 +37,6 @@ from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.coding.codingschemafield import CodingSchemaField, CodingSchemaFieldType
 from amcat.models.coding.codingjob import CodingJob
 from amcat.models.coding.serialiser import BooleanSerialiser, CodebookSerialiser
-from amcat.models.analysis import Analysis, AnalysisProject
 
 from navigator.utils.auth import get_request
 from navigator.utils.misc import cache_function
@@ -139,15 +138,6 @@ class UserForm(forms.ModelForm):
 
     class Meta:
         model = User
-
-class TogglePreprocessingForm(forms.Form):
-    analysis = forms.ModelChoiceField(queryset=Analysis.objects.filter(plugin__active=True))
-    def __init__(self, request=None, project=None, **kargs):
-        super(TogglePreprocessingForm, self).__init__(request, **kargs)
-        if project:
-            in_project = [pa.analysis_id for pa in AnalysisProject.objects.filter(project=project)]
-            self.fields['analysis'].queryset = (self.fields['analysis'].queryset
-                                                .exclude(pk__in=in_project))
 
 
 class AddUserForm(UserForm):

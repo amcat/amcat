@@ -29,9 +29,7 @@ import logging; log = logging.getLogger(__name__)
 import simplejson
 import traceback
 
-from amcat.scripts.actions.add_tokens import AddTokens
 from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
-from amcat.scripts.actions.get_analysis_articles import GetAnalysisArticles
 from amcat.scripts.actions.query import Query
 from amcat.scripts.actions.get_queries import GetQueries
 from amcat.scripts.script import Script

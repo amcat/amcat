@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -19,58 +20,35 @@
 ###########################################################################
 
 """
-This deamon checks if there are any Articles in analysis_articles. If there
-are, it runs the plugins associated with them.
+Script to get queries for a codebook
 """
-
-from django.db import transaction
-
-from amcat.scripts.daemons.daemonscript import DaemonScript
-from amcat.models.analysis import AnalysisArticle
-
-from collections import defaultdict
-
-BATCH = 1000
 
 import logging; log = logging.getLogger(__name__)
 
-class AnalysisDaemon(DaemonScript):
-    def _to_plugin_dict(self, analysis_arts):
-        res = defaultdict(set)
+from django import forms
+from django.db import transaction
 
-        for aa in analysis_arts:
-            res[aa.analysis.plugin].add(aa)
+from amcat.scripts.script import Script
+from amcat.models import ArticleSet, Plugin
 
-        return res
+PLUGINTYPE_PARSER=1
 
-    @transaction.commit_on_success
-    def run_action(self):
-        """
-        Analyse all articles.
+class AssignParsing(Script):
+    class options_form(forms.Form):
+        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+        plugin = forms.ModelChoiceField(queryset=Plugin.objects.filter(plugin_type__id=PLUGINTYPE_PARSER))
+                                        
+    def _run(self, articleset, plugin):
+        to_parse = list(articleset.articles.exclude(analysedarticle__plugin_id=plugin).only("id"))
+        log.info("Assigning {n} articles from set {articleset.id} to be parsed by plugin {plugin.id}"
+                  .format(n=len(to_parse), **locals()))
+        parser = plugin.get_class()()
+        for article in to_parse:
+            with transaction.commit_on_success():
+                parser.submit_article(article)
         
-        TODO: If analysis.sentences is True, also analyse all sentences.
-        """
-        arts = AnalysisArticle.objects.filter(
-            analysis__plugin__active=True, started=False
-        ).only("id")[:BATCH]
-
-        # We can't use update() on sliced queries. Workaround:
-        arts = AnalysisArticle.objects.filter(
-            id__in=[a.id for a in arts]
-        ).only("id").select_related("analysis__plugin")
-
-        # Indicate that we started analysing
-        arts.update(started=True)
-
-        for plugin, aarts in self._to_plugin_dict(arts).items():
-            script = plugin.get_instance()
-            script.run(aarts)
-
-        # Indicate that we're done analysing
-        arts.update(done=True)
-
-        return bool(arts)
-
 if __name__ == '__main__':
-    from amcat.scripts.tools.cli import run_cli
-    run_cli()
+    from amcat.scripts.tools import cli
+    result = cli.run_cli()
+    #print result.output()
+

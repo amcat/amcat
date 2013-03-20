@@ -1,4 +1,5 @@
 #!/usr/bin/python
+
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -19,44 +20,36 @@
 ###########################################################################
 
 """
-Solr plugin
+Script to get queries for a codebook
 """
-
-# todo this could be generalized to run an arbitrary analysis
-
-import logging
-log = logging.getLogger(__name__)
-
-from amcat.models.analysis import Analysis, AnalysisArticle
-from amcat.scripts import script
-from amcat.tools.amcatsolr import Solr
-
-from collections import defaultdict
 
 import logging; log = logging.getLogger(__name__)
 
-class SolrAnalysis(script.Script):
-    """
-    This script takes an iterable holding AnalysisArticle's. It adds
-    and removes the articles from solr as needed.
+from django import forms
+from django.db import transaction
 
-    Refer to script.deamons.preprocessing for more information.
-    """
-    input_type = AnalysisArticle
-    output_type = None
-    options_form = None
+from amcat.models import AnalysedArticle
+from amcat.scripts.script import Script
 
-    def run(self, _input):
-        aas = AnalysisArticle.objects.filter(
-            id__in=[a.id for a in _input]
-        ).values("delete", "article__id")
+PLUGINTYPE_PARSER=1
 
-        Solr().delete_articles([a['article__id'] for a in aas if a['delete']])
-        Solr().add_articles([a['article__id'] for a in aas if not a['delete']])
+class CheckParsing(Script):
+    class options_form(forms.Form):
+        pass
+                                        
+    def _run(self):
+        while True:
+            to_check = list(AnalysedArticle.objects.filter(done=False, error=False).select_related("plugin")[:10])
+            if not to_check: break
+            
+            for aa in to_check:
+                parser = aa.plugin.get_class()()
+                print(aa.info, parser.retrieve_article(aa))
+            break
 
+        
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    result = cli.run_cli()
+    #print result.output()
 
-if __name__ == "__main__":
-    from amcat.tools import amcatlogging
-    amcatlogging.debug_module()
-    from amcat.scripts.tools.cli import run_cli
-    run_cli()

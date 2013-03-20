@@ -79,7 +79,6 @@ urlpatterns = patterns(
     # Plugins
     url(r'^plugins$', 'navigator.views.plugin.index', name='plugins'),
     url(r'^plugins/(?P<id>[0-9]+)$', 'navigator.views.plugin.manage', name='manage-plugins'),
-    url(r'^plugins/(?P<id>[0-9]+)/add$', 'navigator.views.plugin.add', name='add-plugin'),
     
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
@@ -129,9 +128,6 @@ urlpatterns = patterns(
     url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-unit$', 'navigator.views.project.codingjob_unit_export', name='project-codingjob-unit-export'),
     url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-article$', 'navigator.views.project.codingjob_article_export', name='project-codingjob-article-export'),
 
-    # Preprocessing
-    url(r'^analysis/(?P<id>[0-9-]+)$', 'navigator.views.analysis.demo', name='analysis-demo'),
-    url(r'^analysissentence/(?P<id>[0-9]+)$', 'navigator.views.analysis.sentence', name='analysis-sentence'),
     
     # Scrapers
     url(r'^scrapers$', 'navigator.views.scrapers.index', name='scrapers'),

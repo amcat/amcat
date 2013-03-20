@@ -28,7 +28,7 @@ See http://code.google.com/p/amcat/wiki/Preprocessing
 from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models, transaction
-
+ 
 from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import receiver
 from amcat.models.article import Article
@@ -45,99 +45,45 @@ from django.db.models import Q
 
 import logging; log = logging.getLogger(__name__)
 
-
-class Analysis(AmcatModel):
-    """Object representing an NLP 'preprocessing' analysis"""
-    id = models.AutoField(db_column='analysis_id', primary_key=True)
-    language = models.ForeignKey(Language)
-    sentences = models.BooleanField(default=True)
-    plugin = models.ForeignKey(Plugin, null=True)
-
-    def get_script(self, **options):
-        try:
-            return self.plugin.get_instance(analysis=self, **options)
-        except TypeError:
-            return self.plugin.get_instance(**options)
-
-    class Meta():
-        db_table = 'analyses'
-        app_label = 'amcat'
-
-    def __unicode__(self):
-        return self.plugin.label if self.plugin else "No plugin available"
-
-class AnalysisArticle(AmcatModel):
+class AnalysedArticle(AmcatModel):
     """
-    The Article Analysis table keeps track of which articles are / need to be preprocessed
+    The analysed article table keeps track of which articles are (being) preprocessed.
+
+    The analysed article can be in one of three states:
+    done  -> the article is successfully preprocessed. The info field is meaningless.
+    error -> something went wrong preprocessing the article. The info field contains
+                  the log / error message, if available.
+    ~done & ~error -> the article is being preprocessed. The info field is optionally used
+                      by the preprocessing plugin.
+    (done & error makes no sense, but two booleans is still nicer than some sort of enumeration)
     """
 
     id = models.AutoField(primary_key=True, db_column="article_analysis_id")
 
     article = models.ForeignKey(Article)
-    analysis = models.ForeignKey(Analysis)
-    started= models.BooleanField(default=False)
+    plugin = models.ForeignKey("amcat.Plugin")
+    
     done = models.BooleanField(default=False)
-    delete = models.BooleanField(default=False)
+    error = models.BooleanField(default=False)
+    info = models.TextField(null=True)
 
     class Meta():
-        db_table = 'analysis_articles'
+        db_table = 'analysed_articles'
         app_label = 'amcat'
-        unique_together = ('article', 'analysis')
-
-    def do_store_analysis(self, tokens, triples=None):
-        """
-        Store the given tokens and triples for this articleanalysis, setting
-        it to done=True if stored succesfully.
-        """
-        if self.done: raise Exception("Cannot store analyses when already done")
-        from amcat.nlp.wordcreator import create_triples
-        result = create_triples(tokens, triples)
-        self.done = True
-        self.save()
-        return result
-
+        unique_together = ('article', 'plugin')
         
-    @transaction.commit_on_success
-    def store_analysis(self, tokens, triples=None):
-        """
-        Store the given tokens and triples using do_store_analysis, wrapping it
-        inside a transaction
-        """
-        self.do_store_analysis(tokens, triples)
-        
-class AnalysisProject(AmcatModel):
-    """
-    Explicit many-to-many projects - analyses. Hopefully this can be removed
-    when prefetch_related hits the main branch.
-    """
-    id = models.AutoField(primary_key=True)
-    project = models.ForeignKey(Project)
-    analysis = models.ForeignKey(Analysis)
-
-    class Meta():
-        app_label = 'amcat'
-        db_table = "analysis_projects"
-        unique_together = ('project', 'analysis')
-
-    def narticles(self, **filter):
-        # TODO: this is not very efficient for large projects!
-        aids = set(self.project.get_all_article_ids())
-        q = AnalysisArticle.objects.filter(article__in=aids, analysis=self.analysis)
-        if filter: q = q.filter(**filter)
-        return q.count()
-
 class AnalysisSentence(AmcatModel):
     """
     Explicity many-to-many sentence - analysisarticle
     """
     id = models.AutoField(primary_key=True)
-    analysis_article = models.ForeignKey(AnalysisArticle, related_name="sentences")
+    analysed_article = models.ForeignKey(AnalysedArticle, related_name="sentences")
     sentence = models.ForeignKey(Sentence, related_name="analyses")
     
     class Meta():
         app_label = 'amcat'
         db_table = "analysis_sentences"
-        unique_together = ('analysis_article', 'sentence')
+        unique_together = ('analysed_article', 'sentence')
 
     def _get_tokens(self, get_words=False):
         tokens = Token.objects.filter(sentence=self).select_related("word", "word__lemma")
