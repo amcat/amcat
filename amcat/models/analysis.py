@@ -71,6 +71,7 @@ class AnalysedArticle(AmcatModel):
         db_table = 'analysed_articles'
         app_label = 'amcat'
         unique_together = ('article', 'plugin')
+
         
 class AnalysisSentence(AmcatModel):
     """
@@ -106,35 +107,3 @@ class AnalysisSentence(AmcatModel):
         
     def __int__(self):
         return self.id
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-class TestAnalysis(amcattest.PolicyTestCase):
-
-
-    def test_store_tokens(self):
-        s = amcattest.create_test_analysis_sentence()
-        t1 = amcattest.create_tokenvalue(analysis_sentence=s.id)
-        s.analysis_article.store_analysis(tokens=[t1])
-        aa = AnalysisArticle.objects.get(pk=s.analysis_article.id)
-        self.assertEqual(aa.done,  True)
-        token, = list(Token.objects.filter(sentence__analysis_article=aa))
-        self.assertEqual(token.word.word, t1.word)
-        self.assertRaises(aa.store_analysis, tokens=[t1])
-
-    def test_store_triples(self):
-        from amcat.models.token import TripleValues
-        aa = amcattest.create_test_analysis_article()
-        t1 = amcattest.create_tokenvalue(analysis_article=aa)
-        t2 = amcattest.create_tokenvalue(analysis_sentence=t1.analysis_sentence, word="x")
-        tr = TripleValues(t1.analysis_sentence, parent=t1.position, child=t2.position, relation='su')
-        aa.store_analysis(tokens=[t1, t2], triples=[tr])
-        aa = AnalysisArticle.objects.get(pk=aa.id)
-        triple, = list(Triple.objects.filter(parent__sentence__analysis_article=aa))
-        self.assertEqual(triple.parent.word.word, t1.word)
-        self.assertEqual(triple.child.word.lemma.lemma, t2.lemma)
-

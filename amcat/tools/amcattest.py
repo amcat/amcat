@@ -239,24 +239,27 @@ def create_test_word(lemma=None, word=None, pos="N"):
     l = Lemma.objects.create(pos=pos, lemma=lemma)
     return Word.objects.create(id=_get_next_id(), lemma=l, word=word)
 
-def create_test_analysis(**kargs):
-    from amcat.models.analysis import Analysis
-    if 'language' not in kargs: kargs['language'] = get_test_language()
+def create_test_plugin(**kargs):
+    from amcat.models import Plugin, PluginType
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    return Analysis.objects.create(**kargs)
+    if "class_name" not in kargs: kargs["class_name"] = "amcat.tools.amcattest.PolicyTestCase"
+    if "plugin_type" not in kargs: kargs["plugin_type"] = PluginType.objects.get(pk=1)
+    return Plugin.objects.create(**kargs)
 
-def create_test_analysis_article(**kargs):
-    from amcat.models.analysis import AnalysisArticle
+def create_test_analysed_article(**kargs):
+    if "id" not in kargs: kargs["id"] = _get_next_id()
+    from amcat.models.analysis import AnalysedArticle
     if 'article' not in kargs: kargs['article'] = create_test_article()
-    if 'analysis' not in kargs: kargs['analysis'] = create_test_analysis()
-    return AnalysisArticle.objects.create(**kargs)
+    if 'plugin' not in kargs: kargs['plugin'] = create_test_plugin()
+    return AnalysedArticle.objects.create(**kargs)
 
-def create_test_analysis_sentence(analysis_article=None, **kargs):
+def create_test_analysis_sentence(analysed_article=None, **kargs):
+    if "id" not in kargs: kargs["id"] = _get_next_id()
     from amcat.models.analysis import AnalysisSentence
-    if not analysis_article:
-        analysis_article = create_test_analysis_article()
-    if 'sentence' not in kargs: kargs['sentence'] = create_test_sentence(article=analysis_article.article)
-    return AnalysisSentence.objects.create(analysis_article=analysis_article, **kargs)
+    if not analysed_article:
+        analysed_article = create_test_analysed_article()
+    if 'sentence' not in kargs: kargs['sentence'] = create_test_sentence(article=analysed_article.article)
+    return AnalysisSentence.objects.create(analysed_article=analysed_article, **kargs)
 
 
 def create_test_token(**kargs):
