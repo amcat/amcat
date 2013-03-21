@@ -21,7 +21,7 @@
 Toolkit for creating Words, Lemmata, POS, and Relations more efficiently
 """
 import collections
-from amcat.models import Lemma, Pos, AnalysisSentence, Relation
+from amcat.models import Lemma, Pos, AnalysisSentence, Relation, CoreferenceSet
 from amcat.models.token import Token, Triple
 from amcat.models.word import Word
 from amcat.tools import toolkit
@@ -96,7 +96,15 @@ def create_tokens(tokenvalues):
         yield v, Token.objects.create(sentence=sentences[v.analysis_sentence], position=v.position, word=word, pos=pos,
                                       namedentity=v.namedentity)
 
-def create_triples(tokenvalues, triplevalues=None):
+def create_corefsets(analysed_article, tokenmap, coreferencesets):
+    if coreferencesets:
+        for corefset in coreferencesets:
+            corefset = list(corefset)
+            coref = CoreferenceSet.objects.create(analysed_article=analysed_article)
+            coref.tokens.add(*(tokenmap[t] for t in corefset))
+            yield coref
+        
+def store_analysis(analysed_article, tokenvalues, triplevalues=None, coreferencesets=None):
     """Create the requested tokens and (optionally) triples
 
     @return: a pair or tokens, triples mappings of the values to the newly created objects"""
@@ -113,7 +121,9 @@ def create_triples(tokenvalues, triplevalues=None):
                                                     parent=tokenmap[triple.analysis_sentence, triple.parent],
                                                     child=tokenmap[triple.analysis_sentence, triple.child])
 
-    return tokens, triples
+    corefsets = list(create_corefsets(analysed_article, tokenmap, coreferencesets))
+    
+    return tokens, triples, corefsets
 
 TOKEN_MAXLENGTHS = dict(
     major = 100,
@@ -201,7 +211,7 @@ class TestWordCreator(amcattest.PolicyTestCase):
         tokens = [TokenValues(s.id, 0, word="a", lemma="l", pos="p", major="major", minor="minor", namedentity=None),
                   TokenValues(s.id, 1, word="b", lemma="l", pos="p", major="major", minor="minor", namedentity=None)]
         t = TripleValues(s.id, 0, 1, "su")
-        result_tokens, result_triples = create_triples(tokens, [t])
+        result_tokens, result_triples, corefsets = store_analysis(s.analysed_article, tokens, [t])
         tr, = Triple.objects.filter(parent__sentence=s)
         self.assertEqual(tr.relation.label, t.relation)
         self.assertEqual(tr.child.word.word, "a")
@@ -225,7 +235,7 @@ class TestWordCreator(amcattest.PolicyTestCase):
         longvals = TokenValues(s.id, 1, word="a"*9999, lemma="l"*9999, pos="p",
                                major="m"*9999, minor="m"*9999, namedentity=None)
         triple = TripleValues(s.id, 0, 1, "x"*9999)
-        create_triples([nonepos, longvals], [triple])
+        store_analysis(s.analysed_article, [nonepos, longvals], [triple])
 
         # django validation for length
         t, = Triple.objects.filter(parent__sentence=s)
@@ -238,4 +248,18 @@ class TestWordCreator(amcattest.PolicyTestCase):
             token.word.lemma.full_clean()
             token.pos.full_clean()
 
+    def test_store_stanford(self):
+        # get tokenvalues etc from stanford test case
+        aa = amcattest.create_test_analysed_article()
+        as1, as2 = [amcattest.create_test_analysis_sentence(analysed_article=aa) for _i in range(2)]
+        
+        from amcat.nlp import stanford
+        tokens, triples, corefsets = stanford.interpret_xml([as1.id, as2.id], stanford.TestStanford._get_test_xml())
+        store_analysis(aa, tokens, triples, corefsets)
+        
+        self.assertEqual({str(t.word.lemma) for t in as1.tokens.all()}, {"Mary", "meet", "John"})
+        self.assertEqual({(str(t.parent.word), str(t.child.word), str(t.relation)) for t in as2.triples},
+                         {('likes', 'She', 'nsubj'), ('likes', 'him', 'dobj')})
 
+        self.assertEqual({frozenset(str(t.word.lemma) for t in c.tokens.all()) for c in aa.coreferencesets.all()},
+                         {frozenset(["Mary", "she"]), frozenset(["John", "he"])})

@@ -56,7 +56,7 @@ class Document(object):
         doc.props.headline = 'headline of article'
         
     """
-    def __init__(self, parent=None, **kargs):
+    def __init__(self, **kargs):
         self.props = Properties()
         self.article = None
 
@@ -86,12 +86,11 @@ class Document(object):
         @param dic: dictionary to use to update the properties"""
         self.props.__dict__.update(dic)
 
-    def copy(self, cls=None, parent=None):
+    def copy(self, cls=None):
         """Returns a copy of itself, with all the properties deep-copied."""
-        parent = parent or self.parent
         cls = cls or Document
 
-        return cls(parent=parent, **copy.deepcopy(self.getprops()))
+        return cls(**copy.deepcopy(self.getprops()))
 
     def prepare(self, processor, force=False):
         """This method prepares the document for processing. See HTMLDocument for
@@ -160,8 +159,8 @@ class HTMLDocument(Document):
         self.doc = doc # lxml object
         super(HTMLDocument, self).__init__(*args, **kargs)
 
-    def copy(self, parent=None):
-        d = super(HTMLDocument, self).copy(cls=HTMLDocument, parent=parent)
+    def copy(self):
+        d = super(HTMLDocument, self).copy(cls=HTMLDocument)
         d.doc = self.doc
         return d
 
