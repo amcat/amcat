@@ -44,9 +44,29 @@ class Controller(object):
     def __init__(self, articleset=None):
         self.articleset = articleset
 
-    def scrape(self, scraper):
+    def scrape(self, scrapers, deduplicate=False):
         """Run the given scraper using the control logic of this controller"""
-        raise NotImplementedError()
+        used_sets = set()
+        for scraper in scrapers:
+            try:
+                articles = self._scrape(scraper)
+            except Exception:
+                log.exception("failed scraping {scraper}".format(**locals()))
+            scraper.articleset.add_articles(articles, set_dirty=False)
+            used_sets.add(scraper.articleset.id)
+
+            if deduplicate == True:                
+                options = {
+                    'articleset' : scraper.articleset.id,
+                    'recycle_bin_project' : trash_project_id
+                    }
+                if 'date' in scraper.options.keys():
+                    options['first_date'] = scraper.options['date']
+                    options['last_date'] = scraper.options['date']
+
+                DeduplicateScript(**options).run(None)
+
+        ArticleSet.objects.filter(pk__in=used_sets).update(index_dirty=True)
 
     def save(self, article):
         log.debug("Saving article %s" % article)
@@ -65,15 +85,12 @@ class SimpleController(Controller):
     """Simple implementation of Controller"""
     
     @to_list
-    def scrape(self, scraper):
+    def _scrape(self, scraper):
         result = []
         units = scraper.get_units()
         for unit in units:
             for article in scraper.scrape_unit(unit):
                 result.append(self.save(article))
-
-        scraper.articleset.add_articles(result)
-        
         return result
    
 
@@ -81,7 +98,7 @@ class SimpleController(Controller):
 class RobustController(Controller):
     """More robust implementation of Controller with sensible transaction management"""
 
-    def scrape(self, scraper):
+    def _scrape(self, scraper):
         log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
         for unit in scraper.get_units():
@@ -97,18 +114,12 @@ class RobustController(Controller):
             raise Exception("No results returned by _get_units()")
 
         log.info("adding articles to set {scraper.articleset.id}".format(**locals()))
-        try:
-            scraper.articleset.add_articles(result)
-        except Exception as e:
-            log.exception("failed adding to articleset")
-            raise e
-
         return result
 
     def scrape_unit(self, scraper, unit):
         try:
             scrapedunits = list(scraper.scrape_unit(unit))
-        except Exception as e:
+        except Exception:
             log.exception("exception within scrape_unit")
             return
 
@@ -116,7 +127,10 @@ class RobustController(Controller):
             log.warning("scrape_unit returned 0 units")
         
         for unit in scrapedunits:
-            log.info("saving unit {unit}".format(**locals()))
+            try: #can go wrong, will go wrong
+                log.info("saving unit {unit}".format(**locals()))
+            except Exception:
+                log.exception("log.info failed")
             unit = self.save(unit)
             if unit:
                 yield unit
@@ -167,31 +181,9 @@ def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = 
     counts = dict((s, 0) for s in scrapers)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
-        for s in scrapers:
-            try:
-                for a in controller.scrape(s):
-                    counts[s] += 1
-                    result[s].append(a)
-
-            except Exception as e:
-                log.exception("scraper failed")
-
-
-            if deduplicate == True:                
-                options = {
-                    'articleset' : s.articleset.id,
-                    'recycle_bin_project' : trash_project_id
-                    }
-                if 'date' in s.options.keys():
-                    options['first_date'] = s.options['date']
-                    options['last_date'] = s.options['date']
-
-                try:
-                    transaction.commit()
-                except (IntegrityError, DatabaseError):
-                    transaction.rollback()
-
-                DeduplicateScript(**options).run(None)
+        for a in controller.scrape(scrapers, deduplicate=deduplicate):
+            counts[s] += 1
+            result[s].append(a)
                 
     return counts, log_stream.getvalue(), result
 
