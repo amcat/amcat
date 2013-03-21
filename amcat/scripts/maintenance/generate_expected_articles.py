@@ -28,7 +28,7 @@ def scraper_ranges(scraper):
     ranges = [(0,0) for x in range(7)]
 
     articleset_id = scraper.articleset_id
-    rows = Article.objects.filter(articlesetarticle__articleset = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id')).filter(date__gte = date.today() - timedelta(days=70)) 
+    rows = Article.objects.filter(articlesetarticle__articleset = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id')).filter(date__gte = date.today() - timedelta(days=210)) 
     # returns a day and a count for each row
     
     if rows.count() < 21:
@@ -39,13 +39,12 @@ def scraper_ranges(scraper):
         med = median(numbers)
         ranges[wkday] = (med/1.5, med*2)
         
-    #if a scraper often doesn't return articles at all, the lower range is set to 0
+    #if a scraper isn't always guaranteed to return anything, the lower range is set to 0
     for r in ranges:
         if r[0] < 1:
-            r[0] = 0
+            r = (0, r[1])
 
-    return returns
-
+    return ranges
 
 def sort_weekdays(rows):
     days = [[] for L in range(7)] #[[]] * 7 provides 7 of the same list, so don't edit
