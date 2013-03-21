@@ -70,19 +70,14 @@ class DeduplicateScript(Script):
         if self.options["first_date"]:
             if not self.options["last_date"]:
                 raise ValueError("provide both first_date and last_date or neither.")
-
             elif self.options["first_date"] > self.options["last_date"]:
                 raise ValueError("first_date must be <= last_date")
-
             elif self.options["first_date"] == self.options["last_date"]:
                 return "single date"
-
             else:
                 return "date range"
-
         elif self.options["last_date"]:
             raise ValueError("provide both first_date and last_date or neither.")
-
         else:
             return "whole set"
             
@@ -102,9 +97,9 @@ class DeduplicateScript(Script):
         arDict = {}
         for article in articles:
             if article.headline:
-                identifier = (article.headline, str(article.date.date()))
+                identifier = (article.headline, str(article.date.date()), article.medium)
             else:
-                identifier = (article.text, str(article.date))
+                identifier = (article.text, str(article.date), article.medium)
                 
             if identifier:
                 if not identifier in arDict.keys():

@@ -84,21 +84,17 @@ class PeriodScraper(Script):
             last_date = self.options['last_date']
         else:
             last_date = date.today()
+        if self.options['deduplicate']:
+            dedu = True
+        else:
+            dedu = False
 
         while date <= last_date:
             scraper = self.get_scraper(date)
             try:
-                scraper.run(_input)
+                scraper.run(_input, deduplicate = dedu)
             except Exception:
                 log.exception("scraper failed")
-            else:
-                if self.options['deduplicate']:
-                    dedu_options = {
-                        'first_date' : date,
-                        'last_date' : date,
-                        'articleset' : scraper.articleset.id
-                        }
-                    DeduplicateScript(**dedu_options).run(None)
                     
             date += timedelta(days = 1)
 

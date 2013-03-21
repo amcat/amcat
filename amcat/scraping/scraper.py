@@ -97,11 +97,11 @@ class Scraper(Script):
             return aset
         return
         
-    def run(self,input):
+    def run(self,input,deduplicate=False):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium} using RobustController"
                  .format(**locals()))
         from amcat.scraping.controller import RobustController
-        return RobustController(self.articleset).scrape(self)
+        return RobustController(self.articleset).scrape([self],deduplicate)
 
 
     def get_units(self):
