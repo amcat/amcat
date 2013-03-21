@@ -44,7 +44,8 @@ class StanfordParser(VUNLPParser):
         root = ElementTree.fromstring(data)
         analysis_sentences = [AnalysisSentence.objects.create(analysis_article, sentence)
                               for sentence in sbd.get_or_create_sentences(analysis_article.article)]
-        interpret_xml(analysis_sentences, root)
+        result = interpret_xml(analysis_sentences, root)
+        wordcreator.store_analysis(analysed_article, *result)
 
         
 def interpret_xml(analysis_sentence_ids, root):

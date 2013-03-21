@@ -54,11 +54,24 @@ class AnalysisScript(Script):
         Check, retrieve, interpret and store the preprocessing results. If successful, the
         various tokens/triples should be created as needed, and analysed_article.done should be
         set to True. If unsuccesful, the method should set .error=True and put an informative error
-        message in the .info field. 
+        message in the .info field.
+        Note, the method will not raise an exception if one occurred. Check .done and .error if you
+        want to check whether retrieving was succesfull.
         @param analysed_article: an amcat.AnalysedArticle model instance. If the submit_article
                                  returned a string, this will be available as analysed_article.info
         """
-        raise NotImplementedError()
+        try:
+            success = self._do_retrieve_article(analysed_article)
+        except Exception, e:
+            log.exception("Error on retrieving/storing parse for ananalysed_article {analysed_article.id}".format(**locals()))
+            analysed_article.error = True
+            analysed_article.info = traceback.format_exc()
+            analysed_article.save()
+            return 
+
+        if success:
+            analysed_article.done = True
+            analysed_article.save()            
 
 class VUNLPParser(AnalysisScript):
     """Analysisscript subclass for parsers bound to a specific ('home') folder"""
@@ -79,22 +92,13 @@ class VUNLPParser(AnalysisScript):
 
     def retrieve_article(self, analysed_article):
         status = Client().check(analysed_article.info)
-        return status
+        log.info("Article  {analysed_article.id} has parse status {status}".format(**locals()))
+        return False
         if status == "ready":
-            try:
-                #parse = Client().download(analysed_article.info)
-                parse = u'This is the headline\n\nthis/DT be/VBZ the/DT headline/NN\n\nnsubj(headline-4, this-1)\ncop(headline-4, be-2)\ndet(headline-4, the-3)\nroot(ROOT-0, headline-4)\n\nThis is the first sentence of the body\n\nthis/DT be/VBZ the/DT first/JJ sentence/NN of/IN the/DT body/NN\n\nnsubj(sentence-5, this-1)\ncop(sentence-5, be-2)\ndet(sentence-5, the-3)\namod(sentence-5, first-4)\nroot(ROOT-0, sentence-5)\nprep(sentence-5, of-6)\ndet(body-8, the-7)\npobj(of-6, body-8)\n\n'
-                self.store_parse(parse)
-            except Exception, e:
-                log.exception("Error on retrieving/storing parse for ananalysed_article {analysed_article.id}".format(**locals()))
-                analysed_article.error = True
-                analysed_article.info = traceback.format_exc()
-                analysed_article.save()
-            else:
-                analysed_article.done = True
-                analysed_article.save()
-        else:
-            log.info("Article  {analysed_article.id} has parse status {status}".format(**locals()))
+            parse = Client().download(analysed_article.info)
+            self.store_parse(analysed_article, parse)
+            return True
+
             
 
 ###########################################################################
