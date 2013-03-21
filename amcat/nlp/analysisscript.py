@@ -90,14 +90,17 @@ class VUNLPParser(AnalysisScript):
         return AnalysedArticle.objects.create(article=article, plugin=plugin,
                                               done=False, error=False, info=handle)
 
-    def retrieve_article(self, analysed_article):
+    def _do_retrieve_article(self, analysed_article):
         status = Client().check(analysed_article.info)
         log.info("Article  {analysed_article.id} has parse status {status}".format(**locals()))
-        return False
         if status == "ready":
             parse = Client().download(analysed_article.info)
             self.store_parse(analysed_article, parse)
+            log.info("Stored article  {analysed_article.id}".format(**locals()))
             return True
+        elif status == "unknown":
+            raise Exception("Parse for article {analysed_article.id} could not be retrieved: status {status}"
+                            .format(**locals()))
 
             
 

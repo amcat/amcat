@@ -29,18 +29,15 @@ from xml.etree import ElementTree
 from amcat.models.token import TokenValues, TripleValues
 
 from amcat.nlp.analysisscript import VUNLPParser
-
+from amcat.nlp import sbd
 CMD = "Stanford-CoreNLP"
 
 class StanfordParser(VUNLPParser):
     parse_command = CMD
 
-    def store_parse(self, parse):
-        for i, words, tokens, triples in interpret_parse(parse):
-            print i, words, tokens, triples
         
 
-    def interpret_parse(self, analysis_article, data):
+    def store_parse(self, analysis_article, data):
         root = ElementTree.fromstring(data)
         analysis_sentences = [AnalysisSentence.objects.create(analysis_article, sentence)
                               for sentence in sbd.get_or_create_sentences(analysis_article.article)]

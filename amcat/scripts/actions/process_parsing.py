@@ -40,6 +40,7 @@ class CheckParsing(Script):
     def _run(self):
         while True:
             to_check = list(AnalysedArticle.objects.filter(done=False, error=False).select_related("plugin")[:10])
+            to_check = [AnalysedArticle.objects.get(pk=2252)]
             if not to_check: break
             
             for aa in to_check:
