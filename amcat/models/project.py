@@ -75,14 +75,14 @@ class Project(AmcatModel):
         Return all codingschemas connected to this project. This returns codingschemas
         owned by it and linked to it.
         """
-        return CodingSchema.objects.filter(Q(projects_set=self)|Q(project=self))
+        return CodingSchema.objects.filter(Q(projects_set=self)|Q(project=self)).distinct()
 
     def get_codebooks(self):
         """
         Return all codebooks connected to this project. This returns codebooks 
         owned by it and linked to it.
         """
-        return Codebook.objects.filter(Q(projects_set=self)|Q(project=self))
+        return Codebook.objects.filter(Q(projects_set=self)|Q(project=self)).distinct()
     
     def can_read(self, user):
         return (self in user.get_profile().projects
@@ -180,3 +180,18 @@ class TestProject(amcattest.PolicyTestCase):
         self.assertTrue(isinstance(p1.all_articlesets(), QuerySet))
 
 
+    def test_get_schemas(self):
+        """Does get_schemas give the right results in the face of multiply imported schemas??"""
+        p = amcattest.create_test_project()
+        p2 = amcattest.create_test_project()
+        p3 = amcattest.create_test_project()
+        from django import forms
+        cs = amcattest.create_test_schema(project=p)
+        p.codingschemas.add(cs)
+        p2.codingschemas.add(cs)
+        class TestForm(forms.Form):
+            c = forms.ModelChoiceField(queryset=p.get_codingschemas())
+        
+        self.assertEqual(len(p.get_codingschemas().filter(pk=cs.id)), 1)
+        self.assertEqual(len(p2.get_codingschemas().filter(pk=cs.id)), 1)
+        self.assertEqual(len(p3.get_codingschemas().filter(pk=cs.id)), 0)
