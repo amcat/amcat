@@ -18,7 +18,7 @@
 ###########################################################################
 
 from django.conf.urls.defaults import include, patterns, url
-from django.views.generic.simple import redirect_to
+from django.views.generic import RedirectView
 from django.contrib import admin
 from django.conf import settings
 
@@ -29,11 +29,11 @@ import logging; log = logging.getLogger(__name__)
 
 from navigator.utils.error_handlers import handler404, handler500, handler403
 
-admin.autodiscover()
+admin.autodiscover() 
 
 urlpatterns = patterns(
     '',
-    ('^$', redirect_to, {'url': 'navigator'}),
+    ('^$', RedirectView.as_view(url='navigator')),
     (r'^admin/', include(admin.site.urls)),
     (r'^accounts/', include('accounts.urls')),
     (r'^navigator/', include('navigator.urls')),
