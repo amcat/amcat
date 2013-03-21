@@ -197,9 +197,13 @@ FIXTURE_DIRS = ('../amcat', './fixtures')
 
 REST_FRAMEWORK = {
     'PAGINATE_BY': 10,
+    'PAGINATE_BY_PARAM': 'page_size', 
     'DEFAULT_PAGINATION_SERIALIZER_CLASS' : 'api.rest.serializer.AmCATPaginationSerializer',
     'DEFAULT_MODEL_SERIALIZER_CLASS' : 'api.rest.serializer.AmCATModelSerializer',
     'FILTER_BACKEND' : 'api.rest.filters.AmCATFilterBackend',
+    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.BrowsableAPIRenderer',
+                                 'rest_framework.renderers.JSONRenderer',
+                                 'api.rest.csvrenderer.CSVRenderer', ),
     
 }
 

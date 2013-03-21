@@ -7,11 +7,11 @@ from rest_framework import serializers
 class ArticleMetaSerializer(AmCATModelSerializer):
     class Meta:
         model = Article
-        exclude = ("text",)
+        fields = ("id", "date", "project", "medium")
 
 class ArticleMetaResource(AmCATResource):
     model = Article
-    #serializer_class = ArticleMetaSerializer
+    serializer_class = ArticleMetaSerializer
 
     @classmethod
     def get_model_name(cls):
