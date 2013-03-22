@@ -42,7 +42,9 @@ class RTFWien(UploadScript):
 
     @classmethod
     def split_rtf(self, text):
-        """Split the rtf into fragments"""
+        """Split the rtf into fragments."""
+        # It's not clear why I decided to split the rtf and convert fragments into xml rather than split the whole xml
+        # tree, but it seems to work...
         for t in  text.split("\n\page "):
             # convert fragment to standalone rtf
             if not t.startswith("{\\rtf1"):
@@ -52,8 +54,12 @@ class RTFWien(UploadScript):
                     t = t.strip()[:-1]
                 t = t + " }"
             yield t
-            
-    def parse_document(self, text):
+
+    def _get_units(self):
+        rtf = self.options['file'].read()
+        return self.split_rtf(rtf)
+
+    def _scrape_unit(self, text):
         xml = self.get_xml(text)
         try:
             return self.get_article(xml)
@@ -70,7 +76,11 @@ class RTFWien(UploadScript):
         with NamedTemporaryFile() as f:
             f.write(text)
             f.flush()
-            xml = subprocess.check_output(["rtf2xml", f.name])
+            try:
+                xml = subprocess.check_output(["rtf2xml", f.name])
+            except Exception, e:
+                raise Exception("Error on calling rtf2xml, is rtf2xml installed?\n(use 'sudo pip install rtf2xml' to install)\n {e}".format(**locals()))
+                
             xml = xml.replace(' xmlns="http://rtf2xml.sourceforge.net/"', '')
             return etree.fromstring(xml)
 
@@ -80,7 +90,7 @@ class RTFWien(UploadScript):
         section = self.get_section(xml)
         url = self.get_url(xml)
         medium = get_or_create(Medium, name=medium)
-        return Article(headline=headline, text=body, date=date, pagenr=page, section=section, url=url, medium=medium)
+        yield Article(headline=headline, text=body, date=date, pagenr=page, section=section, url=url, medium=medium)
 
     def get_headline_body(self, xml):
         # headline has size 12
@@ -153,8 +163,6 @@ class TestRTFWien(amcattest.PolicyTestCase):
         self.test2 = os.path.join(self.test_dir, 'test2.rtf')
         self.test1_text = open(self.test1).read().decode("utf-8")
         self.test2_text = open(self.test2).read().decode("utf-8")
-        return
-        self.script = RTFWien(project=amcattest.create_test_project().id)
     
     def test_split(self):
         for (txt, n) in [
@@ -169,16 +177,17 @@ class TestRTFWien(amcattest.PolicyTestCase):
             xml = RTFWien.get_xml(fragment)
             return
 
-    def todo_test_get_article(self):
-        fragments = self.script.split_text(self.test1_text)
-        for i, headline, medium, page in [
-            (0, "KOPF DES TAGES", "Der Standard", 40),
-            ]:
-            
-            fragment = fragments[i]
-            xml = self.script.get_xml(fragment)
-            a = self.script.get_article(xml)
-            self.assertEqual(a.headline, headline)
-            self.assertEqual(a.medium.name, medium)
-            self.assertEqual(a.pagenr, page)
+    def test_scrape(self):
+        from django.core.files import File
+        s =  amcattest.create_test_set()
+        script = RTFWien(dict(project=amcattest.create_test_project().id,
+                              file=File(open(self.test1)),
+                              articleset=s.id))
+        script.run()
+
+        self.assertEqual(len(list(s.articles.all())), 25)
+
+        a = s.articles.get(headline="KOPF DES TAGES")
+        self.assertEqual(a.medium.name, "Der Standard")
+        self.assertEqual(a.pagenr, 40)
             
