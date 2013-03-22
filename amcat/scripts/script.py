@@ -142,34 +142,3 @@ class Script(object):
             # maybe we are the 'plugintype' instead of a plugin?
             qualified_name = ".".join([cls.__module__, cls.__name__])
             return PluginType.objects.get(class_name=qualified_name)
-
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-class _TestPlugin(Script):
-    "test plugin"
-
-class _TestPlugin2(Script):
-    "another test plugin"
-
-class TestScript(amcattest.PolicyTestCase):
-    def test_get_plugin(self):
-        c = _TestPlugin
-        self.assertEqual(c.get_plugin(), None)
-        p = Plugin.objects.create(class_name=c.__name__, module=c.__module__)
-        self.assertEqual(c.get_plugin(), p)
-
-    def test_get_plugin_type(self):
-        c = _TestPlugin
-        Plugin.objects.create(class_name=c.__name__, module=c.__module__)
-        self.assertEqual(c.get_plugin_type(), None)
-        t = PluginType.objects.create(superclass=c.get_plugin())
-        
-        self.assertEqual(c.get_plugin_type(), t)
-        d = _TestPlugin2
-        Plugin.objects.create(class_name=d.__name__, module=d.__module__, type=t)
-        self.assertEqual(d.get_plugin_type(), t)

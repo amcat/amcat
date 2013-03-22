@@ -27,6 +27,7 @@ from cStringIO import StringIO
 from amcat.tools.toolkit import to_list, retry
 from amcat.tools.multithread import distribute_tasks, QueueProcessorThread, add_to_queue_action
 from amcat.tools import amcatlogging
+from amcat.models import ArticleSet
 
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
 
@@ -46,13 +47,19 @@ class Controller(object):
 
     def scrape(self, scrapers, deduplicate=False):
         """Run the given scraper using the control logic of this controller"""
-        used_sets = set()
+        used_sets, all_articles= set(), set()
+        try:
+            scrapers = iter(scrapers)
+        except TypeError:
+            scrapers = [scrapers]
+            
         for scraper in scrapers:
             try:
                 articles = self._scrape(scraper)
             except Exception:
                 log.exception("failed scraping {scraper}".format(**locals()))
             scraper.articleset.add_articles(articles, set_dirty=False)
+            all_articles |= set(articles)
             used_sets.add(scraper.articleset.id)
 
             if deduplicate == True:                
@@ -67,6 +74,7 @@ class Controller(object):
                 DeduplicateScript(**options).run(None)
 
         ArticleSet.objects.filter(pk__in=used_sets).update(index_dirty=True)
+        return articles
 
     def save(self, article):
         log.debug("Saving article %s" % article)

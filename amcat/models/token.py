@@ -97,13 +97,3 @@ class TestTokens(amcattest.PolicyTestCase):
         t1,t2,t3 = [amcattest.create_test_token(sentence=s, position=i) for i in [2,1,3]]
 
         self.assertEqual(list(s.tokens.all()), [t2,t1,t3])
-
-    def test_get_analysis(self):
-        from amcat.nlp.frog import Frog
-        from amcat.models import Analysis, Plugin
-        p = Plugin.objects.create(label='test', module='amcat.nlp.frog', class_name='Frog')
-        a = Analysis.objects.create(language=amcattest.get_test_language(), plugin=p)
-        self.assertEqual(a.plugin.get_class(), Frog)
-        f =a.get_script()
-        self.assertEqual(type(f), Frog)
-        self.assertFalse(f.triples)
