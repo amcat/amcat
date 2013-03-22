@@ -30,7 +30,7 @@ external service.
 import traceback, logging
 log = logging.getLogger(__name__)
 
-from vunlpclient.client import Client
+from amcat.nlp.vunlpclient import Client
 from amcat.nlp import sbd
 from amcat.models import AnalysedArticle
 
