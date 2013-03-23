@@ -110,9 +110,9 @@ class Client():
     # TODO: Should the parser not return a 404 if a file is not found?
     r = requests.get(REQUEST_RETRIEVE.format(url=self.url, filename=handle))
     r.raise_for_status()
-    if r.text == "notfound\n":
-      raise Exception('Could not retrieve {handle}'.format(**locals()))
-    return r.text
+    #if r.result == "notfound\n":
+    #  raise Exception('Could not retrieve {handle}'.format(**locals()))
+    return r.content
 
 if __name__ == '__main__':
   logging.basicConfig(level=logging.DEBUG, format='[%(asctime)-15s %(name)s:%(lineno)d %(levelname)s] %(message)s')

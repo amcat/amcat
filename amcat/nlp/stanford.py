@@ -27,9 +27,10 @@ log = logging.getLogger(__name__)
 
 from xml.etree import ElementTree
 from amcat.models.token import TokenValues, TripleValues
+from amcat.models import AnalysisSentence
 
 from amcat.nlp.analysisscript import VUNLPParser
-from amcat.nlp import sbd
+from amcat.nlp import sbd, wordcreator
 CMD = "Stanford-CoreNLP"
 
 class StanfordParser(VUNLPParser):
@@ -37,10 +38,10 @@ class StanfordParser(VUNLPParser):
 
         
 
-    def store_parse(self, analysis_article, data):
+    def store_parse(self, analysed_article, data):
         root = ElementTree.fromstring(data)
-        analysis_sentences = [AnalysisSentence.objects.create(analysis_article, sentence)
-                              for sentence in sbd.get_or_create_sentences(analysis_article.article)]
+        analysis_sentences = [AnalysisSentence.objects.create(analysed_article=analysed_article, sentence=sentence).id
+                              for sentence in sbd.get_or_create_sentences(analysed_article.article)]
         result = interpret_xml(analysis_sentences, root)
         wordcreator.store_analysis(analysed_article, *result)
 
@@ -80,7 +81,7 @@ def get_token(analysis_sentence_id, token):
     pos_major = token.find("POS").text
     pos = POSMAP[pos_major]
     ner = token.find("NER").text
-    if ner == "O": ner = None
+    ner = NERMAP[ner] if ner != 'O' else None
     return TokenValues(analysis_sentence_id, int(token.get("id")) - 1,
                        token.find("word").text, token.find("lemma").text,
                        pos, pos_major, None, ner)
@@ -182,4 +183,18 @@ POSMAP = {
    'WP' :'O',
    'WP$' :'O',
    'WRB' :'B',
+    }
+NERMAP = {
+    'LOCATION' : 'L',
+    'ORGANIZATION' : 'O',
+    'PERSON' : 'P',
+    'DATE' : 'D',
+    'DURATION' : 'D',
+    'TIME' : 'D',
+    'NUMBER' : '#',
+    'ORDINAL' : '#',
+    'MISC' : '?',
+    'MONEY' : '#',
+    'SET' : '#',
+    'PERCENT' : '#',
     }

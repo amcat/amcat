@@ -33,6 +33,7 @@ log = logging.getLogger(__name__)
 from amcat.nlp.vunlpclient import Client
 from amcat.nlp import sbd
 from amcat.models import AnalysedArticle
+from django.db import transaction
 
 from amcat.scripts.script import Script
 
@@ -61,17 +62,17 @@ class AnalysisScript(Script):
                                  returned a string, this will be available as analysed_article.info
         """
         try:
-            success = self._do_retrieve_article(analysed_article)
+            with transaction.commit_on_success():
+                success = self._do_retrieve_article(analysed_article)
+                if success:
+                    analysed_article.done = True
+                    analysed_article.save()            
         except Exception, e:
             log.exception("Error on retrieving/storing parse for ananalysed_article {analysed_article.id}".format(**locals()))
-            analysed_article.error = True
-            analysed_article.info = traceback.format_exc()
-            analysed_article.save()
-            return 
-
-        if success:
-            analysed_article.done = True
-            analysed_article.save()            
+            with transaction.commit_on_success():
+                analysed_article.error = True
+                analysed_article.info = traceback.format_exc()
+                analysed_article.save()
 
 class VUNLPParser(AnalysisScript):
     """Analysisscript subclass for parsers bound to a specific ('home') folder"""
@@ -95,6 +96,7 @@ class VUNLPParser(AnalysisScript):
         log.info("Article  {analysed_article.id} has parse status {status}".format(**locals()))
         if status == "ready":
             parse = Client().download(analysed_article.info)
+            open("/tmp/aa_%i.xml" % analysed_article.id, "w").write(parse)
             self.store_parse(analysed_article, parse)
             log.info("Stored article  {analysed_article.id}".format(**locals()))
             return True

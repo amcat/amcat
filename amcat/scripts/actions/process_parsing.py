@@ -40,13 +40,12 @@ class CheckParsing(Script):
     def _run(self):
         while True:
             to_check = list(AnalysedArticle.objects.filter(done=False, error=False).select_related("plugin")[:10])
-            to_check = [AnalysedArticle.objects.get(pk=2252)]
+            #to_check = [AnalysedArticle.objects.get(pk=2)]
             if not to_check: break
             
             for aa in to_check:
                 parser = aa.plugin.get_class()()
                 print(aa.info, parser.retrieve_article(aa))
-            break
 
         
 if __name__ == '__main__':

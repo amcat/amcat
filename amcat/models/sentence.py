@@ -46,6 +46,7 @@ class Sentence(AmcatModel):
         db_table = 'sentences'
         app_label = 'amcat'
         unique_together = ('article', 'parnr', 'sentnr')
+        ordering = ['article', 'parnr', 'sentnr']
 
     def get_triples(self, analysis):
         from amcat.models.analysis import Triple
