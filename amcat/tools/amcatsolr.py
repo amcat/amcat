@@ -86,7 +86,7 @@ class Solr(object):
 
     def query_ids(self, query, filters=[], **kargs):
         """Return a sequence of article ids for the given query"""
-        for row in self.query(query, filters, fields="id", score=False, **kargs):
+        for row in self.query_all(query, filters, fields="id", score=False, **kargs):
             yield row["id"]
 
     def query_highlight(self, query, **kargs):

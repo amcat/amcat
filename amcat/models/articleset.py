@@ -244,3 +244,20 @@ class TestArticleSet(amcattest.PolicyTestCase):
             s.add(a)
             s.refresh_index(solr)
             self.assertEqual(set(), s._get_article_ids_solr(solr))
+
+            # test that remove from index works for larger sets
+            s = amcattest.create_test_set(indexed=True)
+            arts = [amcattest.create_test_article() for i in range(20)]
+            s.add(*arts)
+            
+            s.refresh_index(solr)
+            solr_ids = s._get_article_ids_solr(solr)
+            self.assertEqual(set(solr_ids), {a.id for a in arts})
+
+            s.remove(arts[0])
+            s.remove(arts[-1])
+            s.refresh_index(solr)
+            solr_ids = s._get_article_ids_solr(solr)
+            self.assertEqual(set(solr_ids), {a.id for a in arts[1:-1]})
+
+            
