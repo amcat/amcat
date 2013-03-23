@@ -45,11 +45,14 @@ class RTFWien(UploadScript):
         """Split the rtf into fragments."""
         # It's not clear why I decided to split the rtf and convert fragments into xml rather than split the whole xml
         # tree, but it seems to work...
-        for t in  text.split("\n\page "):
+        text = re.sub(r"\\page\s+\\page", "\page", text)
+        for t in  re.split(r"\n\\page | \\page\s*\n", text):
             # convert fragment to standalone rtf
             if not t.startswith("{\\rtf1"):
                 t = "{\\rtf1" + t
-            if not t.strip().endswith("}"):
+            else:
+            #if t.count("}") < t.count("{"):
+            #if not t.strip().endswith("}"):
                 if t.strip().endswith("\\"):
                     t = t.strip()[:-1]
                 t = t + " }"
@@ -60,9 +63,12 @@ class RTFWien(UploadScript):
         return self.split_rtf(rtf)
 
     def _scrape_unit(self, text):
-        xml = self.get_xml(text)
         try:
-            return self.get_article(xml)
+            xml = self.get_xml(text)
+        except:
+            xml = self.get_xml(text + "}" ) #why the ^@$% did I decide to do splitting in the rtf?
+        try:
+            return list(self.get_article(xml))
         except:
             f, fn = mkstemp(suffix=".rtf")
             os.write(f, text)
@@ -79,17 +85,22 @@ class RTFWien(UploadScript):
             try:
                 xml = subprocess.check_output(["rtf2xml", f.name])
             except Exception, e:
-                raise Exception("Error on calling rtf2xml, is rtf2xml installed?\n(use 'sudo pip install rtf2xml' to install)\n {e}".format(**locals()))
+                f, fn = mkstemp(suffix=".rtf")
+                os.write(f, text)
+                raise Exception("Error on calling rtf2xml, is rtf2xml installed? RTF saved to {fn}\n(use 'sudo pip install rtf2xml' to install)\n {e}".format(**locals()))
+            
                 
             xml = xml.replace(' xmlns="http://rtf2xml.sourceforge.net/"', '')
             return etree.fromstring(xml)
 
     def get_article(self, xml):
+        print "----"
         headline, body = self.get_headline_body(xml)
         medium, date, page = self.get_mediumdate(xml)
         section = self.get_section(xml)
         url = self.get_url(xml)
         medium = get_or_create(Medium, name=medium)
+        print "????"
         yield Article(headline=headline, text=body, date=date, pagenr=page, section=section, url=url, medium=medium)
 
     def get_headline_body(self, xml):
@@ -97,7 +108,11 @@ class RTFWien(UploadScript):
         hl = xml.xpath("//paragraph-definition[@style-number='s0001']//inline[@font-size='12.00']")
         hls = [h.text.strip() for h in hl if h.text.strip()]
         if len(hls) != 1:
-            raise Exception("Cannot parse headlines %r" % hls)
+            # try 'presse dialect': headline is bold
+            hl = xml.xpath("//paragraph-definition[@style-number='s0004']//inline[@bold='true']")
+            hls = [h.text.strip() for h in hl if h.text.strip()]
+            if len(hls) != 1:
+                raise Exception("Cannot parse headlines %r" % hls)
         headline = hls[0]
 
         # body are the paragraphs (inlines) following the headline
@@ -114,7 +129,11 @@ class RTFWien(UploadScript):
     
     def get_mediumdate(self, xml):
         # look for a table with a <row><cell>Quelle:</cell><cell>"Der standard" vom DATE  Seite: PAGE</cell>
-        for line in xml.xpath("//table//inline[text()='Quelle:']/ancestor::cell/following-sibling::cell//inline"):
+        lines = xml.xpath("//table//inline[text()='Quelle:']/ancestor::cell/following-sibling::cell//inline")
+        if not lines:
+            lines = xml.xpath("//paragraph-definition[@style-number='s0004']//inline[@italics='true']")
+        
+        for line in lines:
             line = line.text
             m = re.match('"([\w ]+)" vom ([\d\.]+)\s+Seite: (\d+)', line)
             if m:
@@ -130,7 +149,7 @@ class RTFWien(UploadScript):
             line = line.text.strip()
             if line:
                 return line
-        raise Exception("Cannot find/interpret Ressort")
+        return None# no section 
         
     def get_url(self, xml):
         # find url under 'dauerhafte adresse'
@@ -139,7 +158,7 @@ class RTFWien(UploadScript):
             line = line.text.strip()
             if line.startswith("http"):
                 return line
-        raise Exception("Cannot get url")
+        return None # no url
     
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
@@ -161,13 +180,16 @@ class TestRTFWien(amcattest.PolicyTestCase):
         self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'rtfwien')
         self.test1 = os.path.join(self.test_dir, 'test1.rtf')
         self.test2 = os.path.join(self.test_dir, 'test2.rtf')
+        self.test3 = os.path.join(self.test_dir, 'test3.rtf')
         self.test1_text = open(self.test1).read().decode("utf-8")
         self.test2_text = open(self.test2).read().decode("utf-8")
+        self.test3_text = open(self.test3).read().decode("utf-8")
     
     def test_split(self):
         for (txt, n) in [
             (self.test1_text, 25),
-            (self.test2_text, 407)]:
+            (self.test2_text, 407),
+            (self.test3_text, 2)]:
             articles = list(RTFWien.split_rtf(txt))
             self.assertEqual(len(articles), n)
             
@@ -191,3 +213,17 @@ class TestRTFWien(amcattest.PolicyTestCase):
         self.assertEqual(a.medium.name, "Der Standard")
         self.assertEqual(a.pagenr, 40)
             
+
+    def test_scrape_presse(self):
+        from django.core.files import File
+        s =  amcattest.create_test_set()
+        script = RTFWien(dict(project=amcattest.create_test_project().id,
+                              file=File(open(self.test3)),
+                              articleset=s.id))
+        script.run()
+        a,b = list(s.articles.all())
+        self.assertEqual(a.headline, "Fleischhacker am Montag")
+        self.assertEqual(a.medium.name, "Die Presse")
+        self.assertEqual(toolkit.printDate(a.date), "2013-03-18")
+        
+        
