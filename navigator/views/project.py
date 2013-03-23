@@ -251,8 +251,8 @@ def edit_articleset(request, project, aset):
     form = modelform_factory(ArticleSet, fields=("project", "name", "provenance"))
     form = form(instance=aset, data=request.POST or None)
         
-    form.fields['project'].queryset = (
-        request.user.projectrole_set.filter(role__id__gte=PROJECT_READ_WRITE))
+    form.fields['project'].queryset = Project.objects.filter(projectrole__user=request.user,
+                                                             projectrole__role_id__gte=PROJECT_READ_WRITE)
     
     if form.is_valid():
         form.save()
