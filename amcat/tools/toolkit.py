@@ -917,7 +917,7 @@ def retry(function, ntries=3, logger=None, *args, **kargs):
 
 MONTHNAMES = (('jan', 'janv', 'ener', 'gennaio'),
               ('feb', 'fevr', 'feve', 'f\xe9vrier'),
-              ('mar', 'mrt', 'maa', 'mar', 'mai'),
+              ('mar', 'mrt', 'maa', 'mar', 'm\xe4rz', 'maerz'),
               ('apr', 'avri', 'abri'),
               ('may', 'mai', 'mei', 'mayo', 'maggio', 'm\xe4rz'),
               ('jun', 'juin','giugno'),

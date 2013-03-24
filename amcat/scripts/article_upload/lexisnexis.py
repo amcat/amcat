@@ -53,7 +53,7 @@ class RES:
     BODY_META = re.compile("([^0-9a-z: ]+):(.*[^;])$", re.UNICODE)
 
     # End of body: a line like 'UPDATE: 2. September 2011' or 'PUBLICATION_TYPE: ...'
-    BODY_END = re.compile(r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:", re.UNICODE)
+    BODY_END = re.compile(r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:", re.UNICODE)
     # Copyright notice
     COPYRIGHT = re.compile("^Copyright \d{4}.*")
 
@@ -212,11 +212,22 @@ def parse_article(art):
 
     header, headline, meta, body = [], [], [], []
 
-
+    header_headline = []
+    
+    def _in_header(lines):
+        # hack for 'leadall' headline in header
+        if lines and lines[0].startswith("LEADALL: "):
+            header_headline.append(lines.pop(0)[len("LEADALL: "):])
+        if not lines: return False
+        if not lines[0].strip(): return True # blank line
+        if lines[0].startswith(" "): return True # indented line
+        if len(lines[0]) >= 79 and len(lines)>1 and lines[1].startswith(" "): return True
+        
+    
     @toolkit.to_list
     def _get_header(lines):
         """Consume and return all lines that are indented (ie the list is changed in place)"""
-        while lines and ((not lines[0].strip()) or lines[0].startswith(" ")):
+        while _in_header(lines):
             line = lines.pop(0)
             if line:
                 if line.strip().startswith('Copyright '):
@@ -292,9 +303,15 @@ def parse_article(art):
         # Something is wrong with this article, skip it
         return
 
-    headline, byline = _get_headline(lines)
+    
+    if header_headline:
+        headline, byline = header_headline[0], None
+    else:
+        headline, byline = _get_headline(lines)
     meta = _get_meta(lines)
     body = _get_body(lines)
+
+    
     meta.update(_get_meta(lines))
 
     date = None

@@ -750,3 +750,30 @@ LANGUAGE: ENGLISH
 DOCUMENT-TYPE: Newscast
 
 PUBLICATION-TYPE: Transcript
+
+
+
+                             1 of 1979 DOCUMENTS
+
+                            Deutsche Presse-Agentur
+
+LEADALL: Two more officials of Iraq's 55 most wanted in coalition hands
+
+                            April 20, 2003, Sunday
+                          23:22 Central European Time
+
+
+Saddam Hussein's son-in-law on Sunday surrendered to an opposition group while
+the U.S. Central Command said coalition forces captured Iraq's minister of
+higher education and scientific research, further thinning the United States'
+deck of cards depicting the 55 most wanted Iraqis.
+
+bla bla bla bla...
+
+SECTION: Politics
+
+LENGTH: 1076 words
+
+LOAD-DATE: May 8, 2003
+
+LANGUAGE: ENGLISH
