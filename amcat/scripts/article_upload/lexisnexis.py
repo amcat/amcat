@@ -24,7 +24,7 @@ This module contains a (semi-machine readable) lexisnexis parser.
 
 from __future__ import unicode_literals
 
-from amcat.scripts.article_upload.upload import UploadScript, ParseError
+from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ParseError
 
 from amcat.tools import toolkit
 
@@ -403,7 +403,14 @@ class LexisNexis(UploadScript):
     """
 
     name = 'Lexis Nexis'
-       
+
+    class options_form(UploadForm):
+        
+        def clean_articleset_name(self):
+            
+            if self.files['file'] and not (self.cleaned_data['articleset_name'] or self.cleaned_data['articleset']):
+                return self.files['file'].name
+            return UploadForm.clean_articleset_name(self)
     
     def _prepare_file(self, file):
         """
