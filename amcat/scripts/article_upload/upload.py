@@ -52,7 +52,7 @@ class UploadForm(ScraperForm):
         if self.files['file'] and not (self.cleaned_data['articleset_name'] or self.cleaned_data['articleset']):
             fn = os.path.basename(self.files['file'].name)
             return fn
-        return UploadForm.clean_articleset_name(self)
+        return super(UploadForm, self).clean_articleset_name()
     
 class UploadScript(Scraper):
     """Base class for Upload Scripts, which are scraper scripts driven by the
