@@ -32,7 +32,7 @@ from amcat.models.article import Article
 from amcat.models.medium import Medium
 from amcat.tools.djangotoolkit import get_or_create
 
-import re
+import re, os.path
 import collections
 import StringIO
 from itertools import takewhile, count
@@ -390,7 +390,7 @@ def body_to_article(headline, byline, text, date, source, meta):
 
 def get_query(header):
     header = {k.lower().strip() : v for k,v in header.iteritems()}
-    for key in ["zoektermen", "query"]:
+    for key in ["zoektermen", "query", "terms"]:
         if key in header:
             return header[key]
 
@@ -404,14 +404,6 @@ class LexisNexis(UploadScript):
 
     name = 'Lexis Nexis'
 
-    class options_form(UploadForm):
-        
-        def clean_articleset_name(self):
-            
-            if self.files['file'] and not (self.cleaned_data['articleset_name'] or self.cleaned_data['articleset']):
-                return self.files['file'].name
-            return UploadForm.clean_articleset_name(self)
-    
     def _prepare_file(self, file):
         """
         Split the file into header and body and annotate the file object with _ln_header and _ln_body

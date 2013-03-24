@@ -92,7 +92,14 @@ class Scraper(Script):
         if self.options['articleset']:
             return self.options['articleset']
         if self.options['articleset_name']:
-            aset = ArticleSet.objects.create(project=self.project, name=self.options['articleset_name'])
+            i = 1
+            name = self.options['articleset_name']
+            while ArticleSet.objects.filter(project=self.project, name=name).exists():
+                i += 1
+                name = "{n} ({i})".format(n=self.options['articleset_name'], **locals())
+            aset = ArticleSet.objects.create(project=self.project, name=name)
+
+                    
             self.options['articleset'] = aset
             return aset
         return

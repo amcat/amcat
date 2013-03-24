@@ -20,6 +20,8 @@
 """
 Base module for article upload scripts
 """
+
+import os.path
 import datetime
 import logging
 log = logging.getLogger(__name__)
@@ -45,6 +47,13 @@ class UploadForm(ScraperForm):
                                  help_text="Try to change this value when character issues arise.", )
     file = forms.FileField()
 
+    def clean_articleset_name(self):
+        """If article set name not specified, use file base name instead"""
+        if self.files['file'] and not (self.cleaned_data['articleset_name'] or self.cleaned_data['articleset']):
+            fn = os.path.basename(self.files['file'].name)
+            return fn
+        return UploadForm.clean_articleset_name(self)
+    
 class UploadScript(Scraper):
     """Base class for Upload Scripts, which are scraper scripts driven by the
     the script input.
