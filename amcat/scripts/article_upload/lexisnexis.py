@@ -49,11 +49,11 @@ class RES:
     HEADER_META = re.compile("([\w -]*):(.*)", re.UNICODE)
 
     # Body meta information. This is the same as HEADER_META, but does not include
-    # lower_case characters.
-    BODY_META = re.compile("([^0-9a-z: ]+):(.*[^;])$", re.UNICODE)
+    # lower_case characters 
+    BODY_META = re.compile("([^0-9a-z: ]+):(.*)$", re.UNICODE)
 
     # End of body: a line like 'UPDATE: 2. September 2011' or 'PUBLICATION_TYPE: ...'
-    BODY_END = re.compile(r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:|^RUBRIK:", re.UNICODE)
+    BODY_END = re.compile(r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:[^:]*$|^LANGUE:[^:]*$|^RUBRIK:", re.UNICODE)
     # Copyright notice
     COPYRIGHT = re.compile("^Copyright \d{4}.*")
 
@@ -76,7 +76,8 @@ BODY_KEYS_MAP = {
     "length" : "length",
     "language" : "language",
     "section" : "section",
-    "author" : "author"
+    "author" : "author",
+    "titre" : "title",
 }
 
 
@@ -214,15 +215,35 @@ def parse_article(art):
 
     header_headline = []
 
-    def next_is_indented(lines, next=1, skipblank = True):
-        if len(lines) <= next: return False
-        if not lines[next].strip():
+    def next_is_indented(lines, skipblank = True):
+        if len(lines) <= 1: return False
+        if not lines[1].strip():
             if not skipblank: return False
-            return next_is_indented(lines, next+1)
-        return lines[next].startswith(" ")
-    
+            return next_is_indented(lines[1:])
+        return lines[1].startswith(" ")
+
+    def followed_by_date_block(lines):
+        # this text is followed by a date block
+        # possibly, there is another line in the first block
+        # (blank line)
+        #          indented date line
+        #          optional second indented date line
+        # (blank line)
+        if len(lines) < 5: return False
+        if ((not lines[1].strip()) and
+            lines[2].startswith(" ") and
+            (not lines[3].strip())):
+            return True
+        if ((not lines[1].strip()) and
+            lines[2].startswith(" ") and
+            lines[2].startswith(" ") and
+            (not lines[4].strip())):
+            return True
+        if not lines[1].strip(): return False
+        if lines[1].startswith(" "): return False
+        return followed_by_date_block(lines[1:])
+        
     def _in_header(lines):
-        # 'hack' for headlines in header
         if not lines: return False
         if not lines[0].strip(): return True # blank line
 
@@ -233,12 +254,11 @@ def parse_article(art):
             return True
 
         # non-indented TITLE or normal line followed by indented line
-        if lines[0].startswith("LEADALL: "):
-            header_headline.append(lines.pop(0)[len("LEADALL: "):])
-        elif lines[0].startswith("TITLE: "):
-            header_headline.append(lines.pop(0)[len("TITLE: "):])
-        elif (not lines[0].startswith(" ")) and next_is_indented(lines):
+        if (not lines[0].startswith(" ")) and next_is_indented(lines):
             header_headline.append(lines.pop(0))
+        else:
+            while (not lines[0].startswith(" ")) and followed_by_date_block(lines):
+                header_headline.append(lines.pop(0))            
 
         # check again after possible removal of header_headline
         if not lines: return False
@@ -251,13 +271,11 @@ def parse_article(art):
         """Consume and return all lines that are indented (ie the list is changed in place)"""
         while _in_header(lines):
             line = lines.pop(0)
+            line = line.strip()
             if line:
-                if line.strip().startswith('Copyright '):
-                    # skip lines until a blank line is found
-                    while lines and line.strip():
-                        line = lines.pop(0)
-                else:
-                    yield line
+                if re.match('Copyright \d{4}', line):
+                    line = line[len('Copyright xxxx'):]
+                yield line
 
     def _get_headline(lines):
         """Return headline and byline, consuming the lines"""
@@ -289,7 +307,6 @@ def parse_article(art):
             line = lines[0].strip()
             next_line = lines[1].strip() if len(lines) >= 2 else None
             meta_match = RES.BODY_META.match(line)
-
             if ((not bool(line) and not bool(next_line))
                 or (line and not meta_match)):
                 # either two blank lines or a non-meta line
@@ -327,7 +344,13 @@ def parse_article(art):
 
 
     if header_headline:
-        headline, byline = header_headline[0], None
+        headline = re.sub("\s+", " ", " ".join(header_headline)).strip()
+        if ";" in headline:
+            headline, byline = [x.strip() for x in headline.split(";",1)]
+        else:
+            byline = None
+        if re.match("[A-Z]+:", headline):
+            headline = headline.split(":", 1)[1]
     else:
         headline, byline = _get_headline(lines)
     meta = _get_meta(lines)
@@ -360,12 +383,13 @@ def parse_article(art):
             date = meta.pop("load-date")
             source = header[0]
         else:
-            raise ParseError("Couldn't find date in header: {header!r}\n{art!r}".format(start=**locals()))
+            raise ParseError("Couldn't find date in header: {header!r}\n{art!r}".format(**locals()))
+    
     date = toolkit.readDate(date)
     if dateline is not None and len(header) > dateline+1:
         # next line might contain time
         timeline = header[dateline+1]
-        m = re.search(r"\s\d?\d:\d\d\s(PM\b)?", timeline)
+        m = re.search(r"\b\d?\d:\d\d\s(PM\b)?", timeline)
         if m and date.time().isoformat() == '00:00:00':
             date = toolkit.readDate(" ".join([date.isoformat()[:10], m.group(0)]))
 
@@ -378,7 +402,9 @@ def parse_article(art):
 
     if headline is None:
         if 'title' in meta:
-            headline = meta.pop('title')
+            headline = re.sub("\s+", " ", meta.pop('title')).strip()
+            if ";" in headline and not byline:
+                headline, byline = [x.strip() for x in headline.split(";",1)]
         else:
             headline = "No headline found!"
 
@@ -483,6 +509,7 @@ class LexisNexis(UploadScript):
     
     def parse_document(self, text):
         fields = parse_article(text)
+
         if fields is None:
             return
         
@@ -652,3 +679,4 @@ class TestLexisNexis(amcattest.PolicyTestCase):
         arts = ln.run()
         # no query so provenance is the 'standard' message
         self.assertTrue(ln.articleset.provenance.endswith("test2.txt' using LexisNexis"))
+
