@@ -160,5 +160,5 @@ if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
     amcatlogging.info_module("amcat.scraping")
-    amcatlogging.set_sentry_handler()
+    #amcatlogging.set_sentry_handler()
     cli.run_cli(DailyScript)
