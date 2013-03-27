@@ -998,9 +998,9 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
 
         time = None
         if ':' in datestr:
-            m = re.match("(.*?)(\d+:[\d:]+)", datestr)
+            m = re.match(r"(.*?)(\d+:[\d:]+)(\s+PM\b)?", datestr)
             if m:
-                datestr, timestr = m.groups()
+                datestr, timestr, pm = m.groups()
                 try: time = tuple(map(int, timestr.split(":")))
                 except ValueError: time = []
                 if len(time) == 3: pass
@@ -1009,6 +1009,7 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
                 else: raise ValueError("Could not parse time part "
                                        +"('%s') of datetime string '%s'"
                                        % (timestr, string))
+                if pm: time = (time[0] + 12, ) + time[1:]
         for df in _DATEFORMATS:
             date = df.readDate(datestr, american=american)
             if date: break

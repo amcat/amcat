@@ -53,7 +53,7 @@ class RES:
     BODY_META = re.compile("([^0-9a-z: ]+):(.*[^;])$", re.UNICODE)
 
     # End of body: a line like 'UPDATE: 2. September 2011' or 'PUBLICATION_TYPE: ...'
-    BODY_END = re.compile(r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:", re.UNICODE)
+    BODY_END = re.compile(r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:|^RUBRIK:", re.UNICODE)
     # Copyright notice
     COPYRIGHT = re.compile("^Copyright \d{4}.*")
 
@@ -213,15 +213,37 @@ def parse_article(art):
     header, headline, meta, body = [], [], [], []
 
     header_headline = []
+
+    def next_is_indented(lines, next=1, skipblank = True):
+        if len(lines) <= next: return False
+        if not lines[next].strip():
+            if not skipblank: return False
+            return next_is_indented(lines, next+1)
+        return lines[next].startswith(" ")
     
     def _in_header(lines):
-        # hack for 'leadall' headline in header
-        if lines and lines[0].startswith("LEADALL: "):
+        # 'hack' for headlines in header
+        if not lines: return False
+        if not lines[0].strip(): return True # blank line
+
+        # indented line spanning page width: header
+        if (not lines[0].startswith(" ")
+            and next_is_indented(lines, skipblank=False)
+            and len(lines[0].strip()) > 75):
+            return True
+
+        # non-indented TITLE or normal line followed by indented line
+        if lines[0].startswith("LEADALL: "):
             header_headline.append(lines.pop(0)[len("LEADALL: "):])
+        elif lines[0].startswith("TITLE: "):
+            header_headline.append(lines.pop(0)[len("TITLE: "):])
+        elif (not lines[0].startswith(" ")) and next_is_indented(lines):
+            header_headline.append(lines.pop(0))
+
+        # check again after possible removal of header_headline
         if not lines: return False
         if not lines[0].strip(): return True # blank line
         if lines[0].startswith(" "): return True # indented line
-        if len(lines[0]) >= 79 and len(lines)>1 and lines[1].startswith(" "): return True
         
     
     @toolkit.to_list
@@ -303,7 +325,7 @@ def parse_article(art):
         # Something is wrong with this article, skip it
         return
 
-    
+
     if header_headline:
         headline, byline = header_headline[0], None
     else:
@@ -314,10 +336,11 @@ def parse_article(art):
     
     meta.update(_get_meta(lines))
 
-    date = None
+    date, dateline = None, None
     for i, line in enumerate(header):
         if _is_date(line):
             date = line
+            dateline = i
             source = header[0 if i > 0 else 1]
     if date is None: # try looking for only month - year notation by preprending a 1
         for i, line in enumerate(header):
@@ -332,9 +355,20 @@ def parse_article(art):
                 date = "2009-01-01"
                 source = header[0 if i > 0 else 1]
     if date is None:
-        raise ParseError("Couldn't find date in header: {header!r}".format(**locals()))
 
+        if [x.strip() for x in header] == ["India Today"]:
+            date = meta.pop("load-date")
+            source = header[0]
+        else:
+            raise ParseError("Couldn't find date in header: {header!r}\n{art!r}".format(start=**locals()))
     date = toolkit.readDate(date)
+    if dateline is not None and len(header) > dateline+1:
+        # next line might contain time
+        timeline = header[dateline+1]
+        m = re.search(r"\s\d?\d:\d\d\s(PM\b)?", timeline)
+        if m and date.time().isoformat() == '00:00:00':
+            date = toolkit.readDate(" ".join([date.isoformat()[:10], m.group(0)]))
+
     source = source.strip()
 
     text = "\n".join(body).strip()

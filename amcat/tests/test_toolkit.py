@@ -57,6 +57,7 @@ class TestToolkit(amcattest.PolicyTestCase):
             ("1980-3-22" , datetime.datetime(1980, 3, 22,0,0,0), False, True),
             ("1980-3-22T01:00:05" , datetime.datetime(1980, 3, 22,1,0,5), False, True),
             ("1980-3-22 01:00" , datetime.datetime(1980, 3, 22,1,0,0), False, True),
+            ("1980-3-22 01:00 PM" , datetime.datetime(1980, 3, 22,13,0,0), False, True),
             ("1980-3-22 01:00:00:00" , datetime.datetime(1980, 3, 22,0,0,0), False, True), #time->0
             ("1980-13-22 01:00:00:00" , None, False, True), # illegal date --> None
             ("1980-13-22 01:00:00" , ValueError, False, False), # illegal date --> Error
