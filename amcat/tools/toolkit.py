@@ -1009,7 +1009,7 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
                 else: raise ValueError("Could not parse time part "
                                        +"('%s') of datetime string '%s'"
                                        % (timestr, string))
-                if pm: time = (time[0] + 12, ) + time[1:]
+                if pm and time[0] != 12: time = (time[0] + 12, ) + time[1:]
         for df in _DATEFORMATS:
             date = df.readDate(datestr, american=american)
             if date: break
