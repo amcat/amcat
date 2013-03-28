@@ -125,7 +125,6 @@ class UploadScript(Scraper):
     def _scrape_unit(self, file):
         documents = self.split_file(file)
         for i, document in enumerate(documents):
-            print "####", i
             result =  self.parse_document(document)
             if isinstance(result, Article):
                 result = [result]

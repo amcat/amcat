@@ -57,6 +57,11 @@ class RES:
     # Copyright notice
     COPYRIGHT = re.compile("^Copyright \d{4}.*")
 
+MONTHS = dict(spring=3,
+              summer=6,
+              fall=9,
+              winter=12,
+              )
 
 WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "L\xc4NGE", "UPDATE", "SPRACHE",
                         "PUBLICATION-TYPE", "CODE-REVUE", "AUTEUR", "RUBRIQUE",
@@ -78,6 +83,7 @@ BODY_KEYS_MAP = {
     "section" : "section",
     "author" : "author",
     "titre" : "title",
+    "name" : "byline"
 }
 
 
@@ -222,6 +228,7 @@ def parse_article(art):
             return next_is_indented(lines[1:])
         return lines[1].startswith(" ")
 
+    
     def followed_by_date_block(lines):
         # this text is followed by a date block
         # possibly, there is another line in the first block
@@ -306,6 +313,7 @@ def parse_article(art):
         while lines:
             line = lines[0].strip()
             next_line = lines[1].strip() if len(lines) >= 2 else None
+
             meta_match = RES.BODY_META.match(line)
             if ((not bool(line) and not bool(next_line))
                 or (line and not meta_match)):
@@ -377,9 +385,25 @@ def parse_article(art):
             if line.strip() == "Winter 2008/2009":
                 date = "2009-01-01"
                 source = header[0 if i > 0 else 1]
-    if date is None:
 
-        if [x.strip() for x in header] == ["India Today"]:
+    def find_re_in(pattern, lines):
+        for line in lines:
+            m = re.search(pattern, line)
+            if m: return m
+            
+    if date is None:
+        yearmatch = find_re_in("(.*)(\d{4})$", header)
+        if yearmatch:
+            month, year = yearmatch.groups()
+            month = MONTHS.get(month.replace(",","").strip().lower(), 1)
+            date = "{year}-{month:02}-01".format(**locals())
+            source = header[0]
+            # this is probably a journal, let's see if we can find an issue
+            issuematch = find_re_in("[-\d]+[^\d]+\d+", header)
+            if issuematch:
+                meta['issue'] = issuematch.group(0)
+            
+        elif [x.strip() for x in header] in (["India Today"], ["Business Today"]):
             date = meta.pop("load-date")
             source = header[0]
         else:
@@ -393,6 +417,9 @@ def parse_article(art):
         if m and date.time().isoformat() == '00:00:00':
             date = toolkit.readDate(" ".join([date.isoformat()[:10], m.group(0)]))
 
+    m = re.match("copyright\s\xa9?\s?(\d{4})?(.*)", source, re.I)
+    if m:
+        source = m.group(2)
     source = source.strip()
 
     text = "\n".join(body).strip()
