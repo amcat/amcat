@@ -58,6 +58,8 @@ class AnalysisScript(Script):
         message in the .info field.
         Note, the method will not raise an exception if one occurred. Check .done and .error if you
         want to check whether retrieving was succesfull.
+        Note also that this method does transaction handling itself, committing or rolling back the
+        transaction as needed. 
         @param analysed_article: an amcat.AnalysedArticle model instance. If the submit_article
                                  returned a string, this will be available as analysed_article.info
         """
