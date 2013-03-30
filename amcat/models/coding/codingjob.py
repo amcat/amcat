@@ -92,12 +92,18 @@ class CodingJob(AmcatModel):
         """
         schema_id = self.unitschema_id if unit_codings else self.articleschema_id
         fields = CodingSchemaField.objects.filter(codingschema=schema_id)
-        columns = [table3.ObjectColumn(field.label, partial(Coding.get_value, field=field))
-                   for field in fields]
+        columns = [SchemaFieldColumn(field) for field in fields]
         codings = Coding.objects.filter(codingjob=self, sentence__isnull=(not unit_codings))
         codings = codings.prefetch_related("values", "values__field")
         codings = list(codings)
         return table3.ObjectTable(rows=codings, columns=columns)
+    
+class SchemaFieldColumn(table3.ObjectColumn):
+    def __init__(self, field):
+        super(SchemaFieldColumn, self).__init__(field.label)
+        self.field = field
+    def getCell(self, coding):
+        return coding.get_value(field=self.field)
     
 ###########################################################################
 #                          U N I T   T E S T S                            #

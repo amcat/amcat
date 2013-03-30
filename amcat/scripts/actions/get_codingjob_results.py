@@ -105,14 +105,14 @@ def deserialize_codes(table):
         if codes[label.code_id]: continue
         codes[label.code_id] = label.label
     # deserialize columns
-    for i, col in enumerate(table.getColumns()):
+    for i, col in list(enumerate(table.getColumns())):
         if col in columns:
-            table.columns[i] = DeserializedFieldColumn(col, codes)
+            table.columns.insert(i, DeserializedFieldColumn(col, codes))
 
 
 class DeserializedFieldColumn(ObjectColumn):
     def __init__(self, fieldcolumn, labels):
-        super(DeserializedFieldColumn, self).__init__(label=fieldcolumn.label)
+        super(DeserializedFieldColumn, self).__init__(label=fieldcolumn.label + "_label")
         self.fieldcolumn = fieldcolumn
         self.labels = labels
     def getCell(self, row):
