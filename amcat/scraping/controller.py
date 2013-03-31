@@ -66,7 +66,6 @@ class Controller(object):
             if deduplicate == True:                
                 options = {
                     'articleset' : scraper.articleset.id,
-                    'recycle_bin_project' : trash_project_id
                     }
                 if 'date' in scraper.options.keys():
                     options['first_date'] = scraper.options['date']
@@ -176,7 +175,7 @@ class ThreadedController(Controller):
         return result
 
 
-def scrape_logged(controller, scrapers, deduplicate = False, trash_project_id = None):
+def scrape_logged(controller, scrapers, deduplicate = False):
     """Use the controller to scrape the given scrapers.
 
     @return: a tuple (counts, log)
