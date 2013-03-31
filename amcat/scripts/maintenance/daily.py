@@ -101,7 +101,6 @@ def send_email(count, messages, date):
 class DailyForm(forms.Form):
     date = forms.DateField()
     deduplicate = forms.BooleanField(required = False)
-    trash_project = forms.ModelChoiceField(Project.objects.all(), required = False)
 
 class DailyScript(Script):
     options_form = DailyForm
@@ -121,17 +120,11 @@ class DailyScript(Script):
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
 
-        if self.options['deduplicate'] == True and self.options['trash_project'] == None:
-            raise ValueError("insert trash project number when deduplicating, most often this is 1")
-
 
 
         kwargs = {}
         if self.options['deduplicate']:
             kwargs['deduplicate'] = True
-            if self.options['trash_project']:
-                kwargs['trash_project_id'] = self.options['trash_project'].id
-
 
         count, messages, result =  scrape_logged(
             RobustController(), 
