@@ -29,7 +29,7 @@ from django import forms
 from django.db import transaction
 
 from amcat.scripts.script import Script
-from amcat.models import ArticleSet, Plugin
+from amcat.models import ArticleSet, Plugin, AnalysedArticle
 
 PLUGINTYPE_PARSER=1
 
@@ -37,15 +37,20 @@ class AssignParsing(Script):
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
         plugin = forms.ModelChoiceField(queryset=Plugin.objects.filter(plugin_type__id=PLUGINTYPE_PARSER))
+        resubmit_error = forms.BooleanField(initial=False, required=False)
                                         
-    def _run(self, articleset, plugin):
-        to_parse = list(articleset.articles.exclude(analysedarticle__plugin_id=plugin).only("id"))
-        log.info("Assigning {n} articles from set {articleset.id} to be parsed by plugin {plugin.id}"
-                  .format(n=len(to_parse), **locals()))
-        parser = plugin.get_class()()
-        for article in to_parse:
-            with transaction.commit_on_success():
-                parser.submit_article(article)
+    def _run(self, articleset, plugin, resubmit_error):
+        if resubmit_error:
+            to_parse = list(AnalysedArticle.objects.filter(plugin=plugin, error=True, article__articlesets_set=articleset))
+        else:
+            to_parse = list(articleset.articles.exclude(analysedarticle__plugin_id=plugin).only("id"))
+        log.info("(Re-)Assigning {n} articles from set {articleset.id} to be parsed by plugin {plugin.id}"
+                 .format(n=len(to_parse), **locals()))
+        if to_parse:
+            parser = plugin.get_class()()
+            for article in to_parse:
+                with transaction.commit_on_success():
+                    parser.submit_article(article)
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
