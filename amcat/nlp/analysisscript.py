@@ -41,12 +41,11 @@ class AnalysisScript(Script):
 
     def submit_article(self, article):
         """
-        Submit this article to the preprocessing service. If the article cannot be
-        submitted, an exception should be raised.
-        If this method returns without an exception, a analysed_article will be
-        created with the return value as 'info' attribute.  
-        @param article: an amcat.Article model instance.
-        @return: an optional string to be placed in the info attribute
+        Submit this article to the preprocessing service. 
+        @param article: an amcat.Article or AnalysedArticle model instance. If it is an Article,
+                        this method will create (and return) an AnalysedArticle object.
+        @return: an AnalysedArticle model instance used or created, with .error=False, .done=False,
+                 and optionally .info set to something useful for retrieving the article (e.g. the handle)
         """
         raise NotImplementedError()
 
@@ -60,8 +59,7 @@ class AnalysisScript(Script):
         want to check whether retrieving was succesfull.
         Note also that this method does transaction handling itself, committing or rolling back the
         transaction as needed. 
-        @param analysed_article: an amcat.AnalysedArticle model instance. If the submit_article
-                                 returned a string, this will be available as analysed_article.info
+        @param analysed_article: an amcat.AnalysedArticle model instance as created by submit_article
         """
         try:
             with transaction.commit_on_success():
@@ -84,14 +82,38 @@ class VUNLPParser(AnalysisScript):
     
     def submit_article(self, article):
         plugin = self.get_plugin()
-        # Upload text to vunlp server
-        sentences = sbd.get_or_create_sentences(article)
-        text = "\n".join(s.sentence for s in sentences)
-        handle = self.client.upload(self.parse_command, text)
+        handle = self.client.upload(self.parse_command, self._get_text_to_submit(article))
         log.info("Submitted article {article.id}, handle {handle}".format(**locals()))
-        # Create AnalysedArticle object
-        return AnalysedArticle.objects.create(article=article, plugin=plugin,
-                                              done=False, error=False, info=handle)
+        if isinstance(article, AnalysedArticle):
+            # (re)set done, error, info
+            article.done = False
+            article.error = False
+            article.info = handle
+            article.save()
+        else:
+            # Create AnalysedArticle object
+            article = AnalysedArticle.objects.create(article=article, plugin=plugin,
+                                                     done=False, error=False, info=handle)
+        return article
+
+
+    def _get_sentences(self, article):
+        """
+        Return the sentences in the article, creating them if needed.
+        @param article: an amcat.Article or AnalysedArticle model instance.
+        @return: a sequence of Sentence model instances
+        """
+        if isinstance(article, AnalysedArticle):
+            article = article.article
+        return sbd.get_or_create_sentences(article)
+    
+    def _get_text_to_submit(self, article):
+        """
+        Return the text to be submitted to the VUNLP web service
+        @param article: an amcat.Article or AnalysedArticle model instance. 
+        """
+        return "\n".join(s.sentence for s in self._get_sentences(article))
+        
 
     def _do_retrieve_article(self, analysed_article):
         status = Client().check(analysed_article.info)
