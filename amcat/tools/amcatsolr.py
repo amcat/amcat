@@ -27,6 +27,7 @@ import datetime
 import tempfile
 import os.path
 import subprocess
+import itertools
 
 import solr
 
@@ -84,11 +85,19 @@ class Solr(object):
 
         return qres
 
-    def query_ids(self, query, filters=[], **kargs):
-        """Return a sequence of article ids for the given query"""
-        for row in self.query_all(query, filters, fields="id", score=False, **kargs):
-            yield row["id"]
 
+    def query_ids(self, query, batch_size=1000000, **kargs):
+        ids = set()
+        c = self._connect()
+        for start in itertools.count(step=batch_size):
+            result = c.raw_query(q=query, rows=batch_size, fl="id", wt="csv", start=start)
+            _ids = {int(x) for x in result.split("\n")[1:] if x}
+            ids |= _ids
+            if len(_ids) < batch_size:
+                break
+        return ids
+
+    
     def query_highlight(self, query, **kargs):
         options = dict(
             highlight=True,

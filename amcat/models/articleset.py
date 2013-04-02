@@ -125,10 +125,10 @@ class ArticleSet(AmcatModel):
         """
         # lazy load to prevent import cycle
         from amcat.tools.amcatsolr import Solr
-
-
         if solr is None: solr = Solr()
-        solr_ids = self._get_article_ids_solr(solr)
+        log.debug("Getting SOLR ids")
+        solr_ids = solr.query_ids("sets:{self.id}".format(**locals()))
+        log.debug("Getting DB ids")
         if self.indexed:
             db_ids = set(id for (id,) in self.articles.all().values_list("id"))
         else:
@@ -145,13 +145,6 @@ class ArticleSet(AmcatModel):
         self.index_dirty = False
         self.save()
         
-    def _get_article_ids_solr(self, solr):
-        """
-        Which article ids are in this set according to solr?
-        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
-        """
-        return set(solr.query_ids("sets: {self.id}".format(**locals())))
-
     @property
     def index_state(self):
         return (("Indexing in progress" if self.index_dirty else "Fully indexed")
