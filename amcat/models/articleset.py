@@ -118,6 +118,20 @@ class ArticleSet(AmcatModel):
         self.index_dirty = True
         self.save()
 
+    def _get_article_ids(self):
+        """
+        Get the ids of articles in this set. This is an optimized form of
+        'return [a.id for a in self.articles.all()]'
+        @return: a set of article ids (integers)
+        """
+        from django.db import connection
+        sql = str(ArticleSet.articles.through.objects.filter(articleset=self).values("article_id").query)
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        result = {aid for (aid,) in cursor.fetchall()}
+        cursor.close() # no idea if it's needed, but Martijn told me to do it
+        return result
+        
     def refresh_index(self, solr=None):
         """
         Make sure that the SOLR index for this set is up to date
