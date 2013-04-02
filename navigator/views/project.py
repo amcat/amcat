@@ -349,7 +349,8 @@ def codingjobs(request, project):
     """
     Coding-jobs tab
     """
-    cdjobs = Datatable(CodingJobResource, rowlink='./codingjob/{id}').filter(project=project).hide('project')
+    cdjobs = (Datatable(CodingJobResource, rowlink='./codingjob/{id}')
+                .filter(project=project).hide('project').order_by("-insertdate"))
 
     return table_view(request, project, cdjobs, 'codingjobs',
            template="navigator/project/codingjobs.html")

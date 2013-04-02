@@ -29,7 +29,19 @@ import logging; log=logging.getLogger(__name__)
 
 import json, types, collections, re
 
+from amcat.tools.caching import cached
+
 FIELDS_EMPTY = (None, [])
+
+def order_by(field):
+    """
+    Convert a field with sorting markup (+, -) to a list, which can be
+    used in aaSorting (datatables)
+    """
+    return (
+        (field[1:] if field.startswith(("+", "-")) else field),
+        ("desc" if field.startswith("-") else "asc")
+    )
 
 class Datatable(object):
     """
@@ -38,7 +50,7 @@ class Datatable(object):
 
     http://www.datatables.net/usage/options
     """
-    def __init__(self, resource, rowlink=None, options=None, hidden=None, url=None):
+    def __init__(self, resource, rowlink=None, options=None, hidden=None, url=None, ordering=None):
         """
         @param resource: handler to base datatable on
         @type resource: AmCATResource
@@ -47,7 +59,8 @@ class Datatable(object):
         @type hidden: set
         """
         self.resource = resource() if callable(resource) else resource
-        self.options = options or {}
+        self.ordering = ordering or tuple()
+        self.options = options or dict()
         self.rowlink = rowlink or getattr(self.resource, "get_rowlink", lambda  : None)()
 
         self.hidden = set(hidden) if isinstance(hidden, collections.Iterable) else set()
@@ -104,6 +117,7 @@ class Datatable(object):
             yield field
 
     @property
+    @cached
     def fields(self):
         return list(self.get_fields())
 
@@ -113,16 +127,18 @@ class Datatable(object):
             'options' : self.options,
             'hidden' : self.hidden,
             'url' : self.url,
+            'ordering' : self.ordering
         }
 
         kws.update(kwargs)
         return self.__class__(self.resource, **kws)
 
     def _get_js(self):
+        aoColumns = (dict(mDataProp=n) for n in self.fields)
+
         options = copy.copy(self.options)
-        options['aoColumns'] = options.get(
-            'aoColumns', [dict(mDataProp=n) for n in self.fields]
-        )
+        options['aaSorting'] = [order_by(f) for f in self.ordering]
+        options['aoColumns'] = options.get('aoColumns', list(aoColumns)) 
 
         return get_template('api/datatables.js.html').render(Context({
             'id' : self.name,
@@ -157,6 +173,24 @@ class Datatable(object):
 
         """
         return self._copy(hidden=self.hidden | set(columns))
+
+    def order_by(self, *fields):
+        """
+        Order this table by given columns. This will overwrite previous
+        order_by() calls.
+        """
+        # Check fields for validity
+        for field in fields:
+            # Check for illegal ordering
+            if field.startswith("?"):
+                raise ValueError("Random ordering not yet supported ({})".format(field))
+
+            # Check for existance of field
+            field = field[1:] if field.startswith(("+", "-")) else field
+            if field not in self.fields:
+                raise ValueError("Cannot order by field '{}', column does not exist on this table".format(field))
+
+        return self._copy(ordering=tuple(fields))
 
     def filter(self, **filters):
         """
@@ -220,7 +254,6 @@ class TestDatatable(amcattest.PolicyTestCase):
             model = Project
             serializer_class = TestSerializer
 
-
         d = Datatable(TestResource)
         self.assertEqual(('name', 'description', 'id'), tuple(d.fields))
 
@@ -273,4 +306,22 @@ class TestDatatable(amcattest.PolicyTestCase):
         self.assertTrue(len(d.get_name()) >= 1)
         self.assertFalse(re.match(r'[^0-9A-Za-z_:.-]', d.get_name()))
         self.assertTrue(re.match(r'^[A-Za-z]', d.get_name()))
+
+    def test_order_by_func(self):
+        self.assertEquals(("field", "desc"), order_by("-field"))
+        self.assertEquals(("f", "asc"), order_by("+f"))
+
+    def test_order_by(self):
+        from api.rest.resources import ProjectResource
+
+        d = Datatable(ProjectResource).order_by("name")
+        self.assertTrue("name" in unicode(d))
+        self.assertTrue('["name", "asc"]' in unicode(d))
+        self.assertTrue('["name", "desc"]' in unicode(d.order_by("-name")))
+
+        with self.assertRaises(ValueError):
+            d.order_by("bla")
+
+        with self.assertRaises(ValueError):
+            d.order_by("?name")
 
