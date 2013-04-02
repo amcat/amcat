@@ -61,6 +61,10 @@ _AMCAT_DEFAULT_OPTS = {
  *
  * @param name: name which is unique for this table.
  * @param opts: datatables options.
+ *
+ * NOTE: aaSorting accepts (only) column-names now. For example:
+ *
+ *  "aaSorting" : [["name", "desc"], ["id", "asc"]]
  */
 amcat.datatables.create_rest_table = function(cont, rest_url, optional_args){
     var state = $.extend({
@@ -584,6 +588,14 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
     $(this.cont).append(tbl);
     this.table = $(this.cont.children[this.cont.children.length - 1]);
     this.table.attr("id", this.name);
+
+    // Find out which columns to sort based on given aaSorting
+    $.each(this.datatables_options.aaSorting, (function(i, order){
+        $.each(this.datatables_options.aoColumns, function(columnr, column){
+            // Replace human-readable name with columnr
+            if(order[0] === column.mDataProp){ order[0] = columnr; }
+        });
+    }).bind(this));
 
     // Call datatables
     console.log("Calling dataTable with options: ", this.datatables_options);
