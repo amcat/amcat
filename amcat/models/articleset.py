@@ -118,6 +118,28 @@ class ArticleSet(AmcatModel):
         self.index_dirty = True
         self.save()
 
+    def _get_article_ids(self):
+        """
+        Get the ids of articles in this set. This is an optimized form of
+        'return [a.id for a in self.articles.all()]'
+        @return: a set of article ids (integers)
+        """
+        from django.db import connection
+        sql = str(ArticleSet.articles.through.objects.filter(articleset=self).values("article_id").query)
+        cursor = connection.cursor()
+        cursor.execute(sql)
+        result = {aid for (aid,) in cursor.fetchall()}
+        cursor.close() # no idea if it's needed, but Martijn told me to do it
+        return result
+
+    def _get_article_ids_solr(self, solr):
+        """
+        Get a list of article ids in this set according to solr. 
+        @param solr: The amcatsolr.Solr object to use
+        """
+        return solr.query_ids("sets:{self.id}".format(**locals()))
+    
+    
     def refresh_index(self, solr=None):
         """
         Make sure that the SOLR index for this set is up to date
@@ -125,10 +147,10 @@ class ArticleSet(AmcatModel):
         """
         # lazy load to prevent import cycle
         from amcat.tools.amcatsolr import Solr
-
-
         if solr is None: solr = Solr()
+        log.debug("Getting SOLR ids")
         solr_ids = self._get_article_ids_solr(solr)
+        log.debug("Getting DB ids")
         if self.indexed:
             db_ids = set(id for (id,) in self.articles.all().values_list("id"))
         else:
@@ -145,13 +167,6 @@ class ArticleSet(AmcatModel):
         self.index_dirty = False
         self.save()
         
-    def _get_article_ids_solr(self, solr):
-        """
-        Which article ids are in this set according to solr?
-        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
-        """
-        return set(solr.query_ids("sets: {self.id}".format(**locals())))
-
     @property
     def index_state(self):
         return (("Indexing in progress" if self.index_dirty else "Fully indexed")
