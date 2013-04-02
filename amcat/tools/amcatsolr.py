@@ -213,7 +213,7 @@ class TestDummySolr(object):
     def query(self, *args, **kargs):
         return []
     def query_ids(self, *args, **kargs):
-        return []
+        return set()
     def add_articles(self, *args, **kargs):
         pass
     def delete_articles(self, *args, **kargs):

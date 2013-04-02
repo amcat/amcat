@@ -131,7 +131,15 @@ class ArticleSet(AmcatModel):
         result = {aid for (aid,) in cursor.fetchall()}
         cursor.close() # no idea if it's needed, but Martijn told me to do it
         return result
-        
+
+    def _get_article_ids_solr(self, solr):
+        """
+        Get a list of article ids in this set according to solr. 
+        @param solr: The amcatsolr.Solr object to use
+        """
+        return solr.query_ids("sets:{self.id}".format(**locals()))
+    
+    
     def refresh_index(self, solr=None):
         """
         Make sure that the SOLR index for this set is up to date
@@ -141,7 +149,7 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcatsolr import Solr
         if solr is None: solr = Solr()
         log.debug("Getting SOLR ids")
-        solr_ids = solr.query_ids("sets:{self.id}".format(**locals()))
+        solr_ids = self._get_article_ids_solr(solr)
         log.debug("Getting DB ids")
         if self.indexed:
             db_ids = set(id for (id,) in self.articles.all().values_list("id"))
