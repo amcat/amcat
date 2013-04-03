@@ -66,7 +66,8 @@ class AnalysisScript(Script):
                 success = self._do_retrieve_article(analysed_article)
                 if success:
                     analysed_article.done = True
-                    analysed_article.save()            
+                    analysed_article.save()
+                return success
         except Exception, e:
             log.exception("Error on retrieving/storing parse for ananalysed_article {analysed_article.id}".format(**locals()))
             with transaction.commit_on_success():
@@ -116,11 +117,10 @@ class VUNLPParser(AnalysisScript):
         
 
     def _do_retrieve_article(self, analysed_article):
-        status = Client().check(analysed_article.info)
+        status = "ready"#Client().check(analysed_article.info)
         log.info("Article  {analysed_article.id} has parse status {status}".format(**locals()))
         if status == "ready":
-            parse = Client().download(analysed_article.info)
-            open("/tmp/aa_%i.xml" % analysed_article.id, "w").write(parse)
+            parse = open("/home/wva/0170_1.txt").read()#Client().download(analysed_article.info)
             self.store_parse(analysed_article, parse)
             log.info("Stored article  {analysed_article.id}".format(**locals()))
             return True
