@@ -120,6 +120,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         // Request json and do not paginate response
         filters['paginate'] = 'false';
         filters['format'] = 'json';
+        filters['page_size'] = '9999';
 
         // Calculate url 
         return self.API_URL + resource + "?" +

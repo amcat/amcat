@@ -201,10 +201,10 @@ def articlesets(request, project):
     """
     owned_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
                   .filter(project=project, codingjob_set__id='null')\
-                  .hide("project")
+                  .hide("project", "index_dirty", "indexed")
 
     imported_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
-                  .filter(projects_set=project).hide("project")
+                  .filter(projects_set=project).hide("project", "index_dirty", "indexed")
 
     return render(request, 'navigator/project/articlesets.html', {
         "context" : project, "menu" : PROJECT_MENU,
@@ -269,7 +269,7 @@ def show_importable_articlesets(request, project):
 
     table = Datatable(ArticleSetResource, rowlink=rowlink).filter(
         project=Project.objects.all().exclude(id=project.id)
-    )
+    ).hide("indexed", "index_dirty")
 
     return render(request, 'navigator/project/table.html', {
         "context" : project, "menu" : PROJECT_MENU, "selected" : "article sets",

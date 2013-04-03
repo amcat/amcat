@@ -29,8 +29,9 @@ from amcat.tools import classtools
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.project import ProjectResource
 from api.rest.resources.user import UserResource
-from api.rest.resources.codebook import CodebookHierarchyResource
+from api.rest.resources.codebook import CodebookHierarchyResource, CodebookResource
 from api.rest.resources.article import ArticleMetaResource
+from api.rest.resources.articleset import ArticleSetResource
 from api.rest.resources.codingjob import CodingJobResource
 
 from rest_framework.response import Response
@@ -39,10 +40,10 @@ from rest_framework.reverse import reverse
 
 from collections import OrderedDict
 
-MODELS = ['Article', 'ArticleSet', 
+MODELS = ['Article', 
           'Role', 'ProjectRole',
           'Medium', 'Language',
-          'CodingSchema', 'Codebook', 'CodingSchemaField',
+          'CodingSchema', 'CodingSchemaField',
           'CodebookCode', 'CodebookBase', 'Label', 'CodingSchemaFieldType',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
           'Plugin', 'Scraper', 'PluginType'

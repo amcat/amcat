@@ -17,11 +17,22 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import Project
-
+from amcat.models import ArticleSet
 from api.rest.resources.amcatresource import AmCATResource
+from api.rest.serializer import AmCATModelSerializer
 
+from rest_framework import serializers
 
-class ProjectResource(AmCATResource):
-    model = Project
-    extra_filters = ['projectrole__user__id']
+class ArticleSetSerializer(AmCATModelSerializer):
+    index_status = serializers.SerializerMethodField('get_status')
+
+    def get_status(self, aset):
+        return aset.index_state
+
+    class Meta:
+        model = ArticleSet
+
+class ArticleSetResource(AmCATResource):
+    model = ArticleSet
+    serializer_class = ArticleSetSerializer
+
