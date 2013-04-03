@@ -201,7 +201,7 @@ def articlesets(request, project):
     """
     owned_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
                   .filter(project=project, codingjob_set__id='null')\
-                  .hide("project")
+                  .hide("project", "index_dirty", "indexed")
 
     imported_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
                   .filter(projects_set=project).hide("project")
