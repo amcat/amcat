@@ -83,6 +83,7 @@ class Scraper(Script):
     def __init__(self, *args, **kargs):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = get_or_create_medium(self.medium_name)
+        self.comment_medium = get_or_create_medium(self.medium_name + " - Comments")
         self.project = self.options['project']
         log.debug("Articleset: {self.articleset}, options: {self.options}"
                   .format(**locals()))
@@ -171,10 +172,18 @@ class Scraper(Script):
         Finalize an article. This should convert the output of _scrape_unit to the required
         output for scrape_unit, e.g. convert to Article, add project and/or medium
         """
+        comment = False
         if isinstance(article, Document):
+            if hasattr(article, 'is_comment') and article.is_comment:
+                comment = True
             article = article.create_article()
+
+        if comment:
+            _set_default(article, "medium", self.comment_medium)
+        else:
+            _set_default(article, "medium", self.medium)
+
         _set_default(article, "project", self.project)
-        _set_default(article, "medium", self.medium)
         article.scraper = self
         return article
 
