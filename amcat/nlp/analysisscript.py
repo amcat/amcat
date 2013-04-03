@@ -70,10 +70,26 @@ class AnalysisScript(Script):
                 return success
         except Exception, e:
             log.exception("Error on retrieving/storing parse for ananalysed_article {analysed_article.id}".format(**locals()))
-            with transaction.commit_on_success():
-                analysed_article.error = True
-                analysed_article.info = traceback.format_exc()
-                analysed_article.save()
+            self._set_error(analysed_article, traceback.format_exc())
+
+    def _set_error(self, analysed_article, error_msg):
+        with transaction.commit_on_success():
+            analysed_article.error = True
+            analysed_article.info = error_msg
+            analysed_article.save()
+                
+    def check_article(self, analysed_article):
+        """
+        Checks whether this article is ready to be retrieved. The method may raise an exception if the article
+        is in an unexpected state, ie not either ready or in the queue.
+        @return: boolean
+        """
+        try:
+            return self._do_check_article(analysed_article)
+        except Exception, e:
+            log.exception("Error on checking ananalysed_article {analysed_article.id}".format(**locals()))
+            self._set_error(analysed_article, traceback.format_exc())
+            raise
 
 class VUNLPParser(AnalysisScript):
     """Analysisscript subclass for parsers bound to a specific ('home') folder"""
@@ -117,18 +133,22 @@ class VUNLPParser(AnalysisScript):
         
 
     def _do_retrieve_article(self, analysed_article):
-        status = "ready"#Client().check(analysed_article.info)
-        log.info("Article  {analysed_article.id} has parse status {status}".format(**locals()))
-        if status == "ready":
-            parse = open("/home/wva/0170_1.txt").read()#Client().download(analysed_article.info)
+        if self.check_article(analysed_article):
+            parse = Client().download(analysed_article.info)
+            open("/tmp/aa_%i.xml" % analysed_article.id, "w").write(parse)
             self.store_parse(analysed_article, parse)
             log.info("Stored article  {analysed_article.id}".format(**locals()))
             return True
-        elif status == "unknown":
-            raise Exception("Parse for article {analysed_article.id} could not be retrieved: status {status}"
-                            .format(**locals()))
-
             
+    def _do_check_article(self, analysed_article):
+        status = Client().check(analysed_article.info)
+        log.info("Article  {analysed_article.id} has parse status {status}".format(**locals()))
+
+        if status == "unknown":
+            raise Exception("Article {analysed_article.id} has status 'unknown'"
+                            .format(**locals()))
+        
+        return (status == "ready")
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

@@ -27,7 +27,7 @@ log = logging.getLogger(__name__)
 
 from xml.etree import ElementTree
 from amcat.models.token import TokenValues, TripleValues
-from amcat.models import AnalysisSentence
+from amcat.models import AnalysisSentence, Token
 
 from amcat.nlp.analysisscript import VUNLPParser
 from amcat.nlp import sbd, wordcreator
@@ -39,10 +39,23 @@ class StanfordParser(VUNLPParser):
         
 
     def store_parse(self, analysed_article, data):
+        if data.startswith("CoreNLP failed"):
+            raise Exception(data)
+        
         root = ElementTree.fromstring(data)
-        analysis_sentences = [AnalysisSentence.objects.create(analysed_article=analysed_article, sentence=sentence).id
-                              for sentence in sbd.get_or_create_sentences(analysed_article.article)]
+        # if the analysis sentences already exist, check there are no tokens and line the analysis_sentence up.
+        # otherwise, create new ones
+        sentences = list(sbd.get_or_create_sentences(analysed_article.article))
+        if AnalysisSentence.objects.filter(analysed_article=analysed_article).exists():
+            if Token.objects.filter(sentence__analysed_article=analysed_article).exists():
+                raise Exception("Article already has tokens!")
+            analysis_sentences = [AnalysisSentence.objects.get(analysed_article=analysed_article, sentence=sentence).id
+                                  for sentence in sentences]
+        else:
+            analysis_sentences = [AnalysisSentence.objects.create(analysed_article=analysed_article, sentence=sentence).id
+                                  for sentence in sentences]
         result = interpret_xml(analysis_sentences, root)
+        import pickle; pickle.dump(result[1], open("/tmp/triples", "w"))
         wordcreator.store_analysis(analysed_article, *result)
 
         
@@ -54,7 +67,8 @@ def interpret_xml(analysis_sentence_ids, root):
         all_tokens.append(tokens)
         all_triples.append(triples)
     corefsets = interpret_coreferences(analysis_sentence_ids, root)
-    return itertools.chain(*all_tokens), itertools.chain(*all_triples), corefsets
+    triples = list(itertools.chain(*all_triples))
+    return itertools.chain(*all_tokens), triples, corefsets
 
 def interpret_sentence(analysis_sentence_id, sentence_xml):
     tokens = [get_token(analysis_sentence_id, t) for t in sentence_xml.iter("token")]
@@ -63,8 +77,11 @@ def interpret_sentence(analysis_sentence_id, sentence_xml):
     return tokens, triples
 
 def interpret_coreferences(analysis_sentence_ids, root):
-    return (interpret_coreference(analysis_sentence_ids, corefset_xml)
-            for corefset_xml in root.find("./document/coreference").findall("coreference"))
+    coref = root.find("./document/coreference")
+    if coref:
+        return (interpret_coreference(analysis_sentence_ids, corefset_xml)
+                for corefset_xml in root.find("./document/coreference").findall("coreference"))
+
 
 def interpret_coreference(analysis_sentence_ids, coref):
     for mention in coref.iter("mention"):
@@ -86,7 +103,6 @@ def get_token(analysis_sentence_id, token):
                        token.find("word").text, token.find("lemma").text,
                        pos, pos_major, None, ner)
 
-    
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -198,3 +214,13 @@ NERMAP = {
     'SET' : '#',
     'PERCENT' : '#',
     }
+
+
+
+if __name__ == '__main__':
+    from django.db import transaction
+    from amcat.models import AnalysedArticle
+    aa = AnalysedArticle.objects.get(pk=1215)
+    parse = open("/tmp/aa_1215.xml").read()
+    with transaction.commit_on_success():
+        StanfordParser().store_parse(aa, parse)
