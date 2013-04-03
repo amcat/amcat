@@ -73,7 +73,7 @@ class Triple(AmcatModel):
     class Meta():
         db_table = 'tokens_triples'
         app_label = 'amcat'
-        unique_together = ('parent', 'child')
+        unique_together = ('parent', 'child', 'relation')
 
 
 class CoreferenceSet(AmcatModel):
