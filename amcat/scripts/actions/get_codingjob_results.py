@@ -40,9 +40,22 @@ class GetCodingJobResults(Script):
     output_type = Table
     
     class options_form(forms.Form):
-        job = forms.ModelChoiceField(queryset=CodingJob.objects.all(), required=True)
-        unit_codings = forms.BooleanField(initial=False, required=False)
-        deserialize_codes = forms.BooleanField(initial=False, required=False)
+        # MOCK FORM, moet nog dynamisch gemaakt worden!!!!
+        
+        job = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
+        export_format = forms.ChoiceField(choices = ((1, 'csv'), (2, 'excel')))
+        include_duplicates = forms.BooleanField()
+
+        field1_medium_include = forms.BooleanField()
+        field2_date_include = forms.BooleanField()
+        field2_date_exportyear = forms.BooleanField()
+        field2_date_exportmonth = forms.BooleanField()
+        field2_date_exportweek = forms.BooleanField()
+        field3_comments_include = forms.BooleanField()
+        field4_topic_include = forms.BooleanField()
+        field4_topic_exportlabel = forms.BooleanField()
+        field4_topic_exportid = forms.BooleanField()
+        field4_topic_exportparents = forms.IntegerField()
         
     def run(self, _input=None):
         job, unit_codings, deserialize = (self.options["job"], self.options["unit_codings"],
@@ -120,6 +133,10 @@ class DeserializedFieldColumn(ObjectColumn):
         return self.labels.get(value, value)
 
 if __name__ == '__main__':
-    from amcat.scripts.tools import cli
-    t = cli.run_cli(handle_output=False)
-    print t.to_csv()
+    # print het mock form
+    print "<html><table>"
+    print GetCodingJobResults.options_form()
+    
+    #from amcat.scripts.tools import cli
+    #t = cli.run_cli(handle_output=False)
+    #print t.to_csv()
