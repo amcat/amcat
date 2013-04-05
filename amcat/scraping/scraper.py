@@ -83,7 +83,8 @@ class Scraper(Script):
     def __init__(self, *args, **kargs):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = get_or_create_medium(self.medium_name)
-        self.comment_medium = get_or_create_medium(self.medium_name + " - Comments")
+        if self.medium:
+            self.comment_medium = get_or_create_medium(self.medium_name + " - Comments")
         self.project = self.options['project']
         log.debug("Articleset: {self.articleset}, options: {self.options}"
                   .format(**locals()))
