@@ -127,6 +127,8 @@ urlpatterns = patterns(
     url(r'^project/(?P<id>[0-9-]+)/import$', 'navigator.views.project.import_codebooks', name='codebook-import'),
     url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-unit$', 'navigator.views.project.codingjob_unit_export', name='project-codingjob-unit-export'),
     url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-article$', 'navigator.views.project.codingjob_article_export', name='project-codingjob-article-export'),
+    url(r'^project/(?P<project>[0-9]+)/codingjob/export-select$', 'navigator.views.project.codingjob_export_select', name='project-codingjobs-export-select'),
+    url(r'^project/(?P<project>[0-9]+)/codingjob/export-options$', 'navigator.views.project.codingjob_export_options', name='project-codingjobs-export-options'),
 
     
     # Scrapers

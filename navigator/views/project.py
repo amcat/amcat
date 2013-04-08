@@ -375,6 +375,14 @@ def codingjob_article_export(request, project, codingjob):
     results = GetCodingJobResults(job=codingjob.id, unit_codings=False, deserialize_codes=True).run()
     return _codingjob_export(results, codingjob, "{codingjob}, articles, {now}.csv")
 
+@check(Project, args_map={'project' : 'id'}, args='project')
+def codingjob_export_select(request, project):
+    return render(request, 'navigator/project/export_select.html', locals())
+
+@check(Project, args_map={'project' : 'id'}, args='project')
+def codingjob_export_options(request, project):
+    pass
+
 @check(Project)
 def schemas(request, project):
     """
