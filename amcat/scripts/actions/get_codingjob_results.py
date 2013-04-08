@@ -72,11 +72,12 @@ class CodingJobResultsForm(CodingjobListForm):
         @param project: Restrict list of codingjobs to this project
         @type project: models.Project
         """
+        codingjobs = kwargs.pop("codingjobs", None)
         super(CodingJobResultsForm, self).__init__(data, **kwargs)
 
         # Get all codingjobs and their fields
         unit_codings = self.fields["unit_codings"].clean(self.data.get("unit_codings"))
-        codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs"))
+        codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
 
         qfilter = "codingschema__codingjobs_{}__in"
         qfilter = qfilter.format("unit" if unit_codings else "article")

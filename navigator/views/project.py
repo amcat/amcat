@@ -390,7 +390,16 @@ def codingjob_export_select(request, project):
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 def codingjob_export_options(request, project):
-    pass
+    form = CodingJobResultsForm(
+        request.POST or None, project=project, codingjobs=request.GET.getlist("codingjobs"),
+        initial={"codingjobs" : request.GET.getlist("codingjobs")}
+    )
+
+    if form.is_valid():
+        # Voer script uit??
+        pass
+
+    return render(request, 'navigator/project/export_options.html', locals())
 
 @check(Project)
 def schemas(request, project):
