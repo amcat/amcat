@@ -22,7 +22,7 @@
 from django import forms
 from django.utils.datastructures import MultiValueDict
 
-from amcat.models import Coding, CodingJob, CodingSchemaField, Label
+from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchemaFieldType
 from amcat.scripts.script import Script
 from amcat.tools.table.table3 import Table, ObjectColumn
 
@@ -84,7 +84,7 @@ class CodingJobResultsForm(CodingjobListForm):
         # Get fields based on given codingjobs and unit_codings setting
         schemafields = (CodingSchemaField.objects.distinct("id").filter(**{
             qfilter : codingjobs
-        })).order_by("id").select_related("codingschema", "fieldtype"))
+        })).order_by("id").select_related("codingschema", "fieldtype")
 
         # Insert dynamic fields
         self.fields.update(self.get_form_fields(schemafields))
@@ -138,6 +138,6 @@ GET_FIELDS_MAP = {
 }
 
 
-class CodingJobResults(Script):
+class GetCodingJobResults(Script):
     pass
 
