@@ -68,7 +68,6 @@ class CodingJobResultsForm(CodingjobListForm):
 
     def __init__(self, data=None, **kwargs):
         """
-        
 
         @param project: Restrict list of codingjobs to this project
         @type project: models.Project

@@ -153,6 +153,7 @@ INSTALLED_APPS = [
     'api',
     'debug_toolbar',
     'amcat',
+    'django_extensions',
 ]
                     
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"

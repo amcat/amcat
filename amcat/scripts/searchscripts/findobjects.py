@@ -66,7 +66,7 @@ class ViewModelForm(amcat.scripts.forms.GeneralColumnsForm):
         if data == None:
             data = 100
         if data == -1:
-            data = 999999 # unlimited (well, sort of ;)
+            data = 99999999 # unlimited (well, sort of ;)
         return data
         
     def clean_model(self):

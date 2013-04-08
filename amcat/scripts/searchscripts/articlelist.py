@@ -54,7 +54,7 @@ class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.Art
         if data == None:
             data = 100
         if data == -1:
-            data = 999999 # unlimited (well, sort of ;)
+            data = 99999999 # unlimited (well, sort of ;)
         return data
 
     def clean_columns(self):

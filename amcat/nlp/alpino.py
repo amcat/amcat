@@ -34,8 +34,8 @@ class AlpinoParser(VUNLPParser):
     parse_command = CMD
 
     def store_parse(self, analysed_article, data):
-        analysis_sentences = [AnalysisSentence.objects.create(analysed_article=analysed_article, sentence=sentence).id
-                              for sentence in sbd.get_or_create_sentences(analysed_article.article)]
+        analysis_sentences = {sentence.id : AnalysisSentence.objects.create(analysed_article=analysed_article, sentence=sentence).id
+                              for sentence in sbd.get_or_create_sentences(analysed_article.article)}
         result = interpret_output(analysis_sentences, data)
         wordcreator.store_analysis(analysed_article, *result)
 
@@ -53,10 +53,11 @@ class AlpinoParser(VUNLPParser):
         return input
 
 def interpret_output(sentences, data):
-    tokens, triples = [], []
+    tokens, triples = set(), []
     for line in data.split("\n"):
-        parent, child, triple = interpret_line(line)
-        tokens += [parent, child]
+        if not line.strip(): continue
+        parent, child, triple = interpret_line(sentences, line)
+        tokens |= {parent, child}
         triples += [triple]
     return tokens, triples    
     
@@ -76,11 +77,11 @@ def interpret_token(sid, lemma, word, begin, _end, dummypos, dummypos2, pos):
     return TokenValues(sid, int(begin), word, lemma, cat, major, minor, None)
 
 
-def interpret_line(line):
+def interpret_line(sentences, line):
     data = line.split("|")
     if len(data) != 16:
         raise ValueError("Cannot interpret line %r, has %i parts (needed 16)" % (line, len(data)))
-    sid = int(data[-1])
+    sid = sentences[int(data[-1])]
     parent = interpret_token(sid, *data[:7])
     child = interpret_token(sid, *data[8:15])
     func, rel = data[7].split("/")

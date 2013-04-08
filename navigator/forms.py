@@ -442,7 +442,7 @@ class CodingSchemaFieldForm(forms.ModelForm):
             return False
 
     def clean_codebook(self):
-        db_type = CodingSchemaFieldType.objects.get(name__iexact="db ontology")
+        db_type = CodingSchemaFieldType.objects.get(name__iexact="Codebook")
 
         if 'fieldtype' not in self.cleaned_data:
             raise ValidationError("Fieldtype must be set in order to check this field")

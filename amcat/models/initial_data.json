@@ -262,7 +262,7 @@
     "pk" : 1, 
     "model": "amcat.codingschemafieldtype",
     "fields" : {
-      "name" : "normal",
+      "name" : "Text",
       "serialiserclassname" : "TextSerialiser"
     }
   },
@@ -270,7 +270,7 @@
     "pk" : 2, 
     "model": "amcat.codingschemafieldtype",
     "fields" : {
-      "name" : "integer",
+      "name" : "Number",
       "serialiserclassname" : "IntSerialiser"
     }
   },
@@ -278,23 +278,15 @@
     "pk" : 5, 
     "model": "amcat.codingschemafieldtype",
     "fields" : {
-      "name" : "DB ontology",
+      "name" : "Codebook",
       "serialiserclassname" : "CodebookSerialiser"
-    }
-  },
-{
-    "pk" : 6, 
-    "model": "amcat.codingschemafieldtype",
-    "fields" : {
-      "name" : "Decimal",
-      "serialiserclassname" : "TextSerialiser"
     }
   },
   {
     "pk" : 7, 
     "model": "amcat.codingschemafieldtype",
     "fields" : {
-      "name" : "Boolean",
+      "name" : "Yes/No",
       "serialiserclassname" : "BooleanSerialiser"
     }
   },
@@ -303,27 +295,6 @@
     "fields" : {
       "name" : "Quality",
       "serialiserclassname" : "QualitySerialiser"
-    }
-  },
-  {  "pk" : 10, 
-    "model": "amcat.codingschemafieldtype",
-    "fields" : {
-      "name" : "Area",
-      "serialiserclassname" : "TextSerialiser"
-    }
-  },
-  {  "pk" : 11, 
-    "model": "amcat.codingschemafieldtype",
-    "fields" : {
-      "name" : "Arrowreference",
-      "serialiserclassname" : "TextSerialiser"
-    }
-  },
-  {  "pk" : 12, 
-    "model": "amcat.codingschemafieldtype",
-    "fields" : {
-      "name" : "Interval",
-      "serialiserclassname" : "IntervalSerialiser"
     }
   },
   {  "pk" : 0,

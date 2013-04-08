@@ -35,18 +35,31 @@ PLUGINTYPE_PARSER=1
 
 class CheckParsing(Script):
     class options_form(forms.Form):
-        pass
-                                        
-    def _run(self):
-        while True:
-            to_check = list(AnalysedArticle.objects.filter(done=False, error=False).select_related("plugin")[:10])
-            #to_check = [AnalysedArticle.objects.get(pk=2)]
-            if not to_check: break
-            
-            for aa in to_check:
-                parser = aa.plugin.get_class()()
-                print(aa.info, parser.retrieve_article(aa))
+        analysed_articles = forms.ModelMultipleChoiceField(queryset=AnalysedArticle.objects.all(), required=False)
+        check_only = forms.BooleanField(initial=False, required=False)
 
+        
+    def _run(self, analysed_articles=None, check_only=False):
+        if not analysed_articles:
+            analysed_articles = AnalysedArticle.objects.filter(done=False, error=False).select_related("plugin")
+        self.process(analysed_articles)
+                
+    def process(self, articles):
+        import csv, sys
+        w = csv.writer(sys.stdout)
+        w.writerow(["aaid", "aid", "plugin_id", "ready", "message"])
+        for aa in articles:
+            parser = aa.plugin.get_class()()
+            try:
+                msg = None
+                if self.options["check_only"]:
+                    result = parser.check_article(aa)
+                else:
+                    result = parser.retrieve_article(aa)
+            except Exception, e:
+                result = "Error"
+                msg = repr(e)
+            w.writerow([aa.id, aa.article_id, aa.plugin_id, result, msg])
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
