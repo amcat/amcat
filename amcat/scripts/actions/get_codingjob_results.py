@@ -133,6 +133,11 @@ def get_ontology_fields(schemafield):
         initial=True, label=FIELD_LABEL.format(s=schemafield, action="Export labels of")
     ))
 
+    # Export parents
+    yield ("{}_parents".format(code_name), forms.IntegerField(
+        initial=0, label=FIELD_LABEL.format(s=schemafield, action="Export # parents")
+    ))
+
 # Getting the fields from the database forces errors when starting
 GET_FIELDS_MAP = {
     CodingSchemaFieldType.objects.get(name="DB ontology").name : get_ontology_fields
