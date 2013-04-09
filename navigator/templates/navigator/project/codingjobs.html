@@ -9,6 +9,7 @@
  <h1 class="noline">Actions</h1>
  <p>
   <a href="{% url codingjob-add context.id %}" class="btn"><i class="icon-certificate"></i> New codingjob</a>
+  <a href="{% url project-codingjobs-export-select context.id %}" class="btn">Export codingjobs</a>
   </p>
  {{ table|safe }}
 </div>

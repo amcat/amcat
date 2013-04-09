@@ -28,6 +28,7 @@ from amcat.scripts.article_upload.upload import UploadScript
 from amcat.models.article import Article
 from amcat.models.medium import Medium
 from amcat.tools.djangotoolkit import get_or_create
+from amcat.tools import toolkit
 
 from cStringIO import StringIO
 import subprocess
@@ -40,125 +41,108 @@ from amcat.tools.toolkit import readDate
 
 class RTFWien(UploadScript):
 
-    @classmethod
-    def split_rtf(self, text):
-        """Split the rtf into fragments."""
-        # It's not clear why I decided to split the rtf and convert fragments into xml rather than split the whole xml
-        # tree, but it seems to work...
-        text = re.sub(r"\\page\s+\\page", "\page", text)
-        for t in  re.split(r"\n\\page | \\page\s*\n", text):
-            # convert fragment to standalone rtf
-            if not t.startswith("{\\rtf1"):
-                t = "{\\rtf1" + t
-            else:
-            #if t.count("}") < t.count("{"):
-            #if not t.strip().endswith("}"):
-                if t.strip().endswith("\\"):
-                    t = t.strip()[:-1]
-                t = t + " }"
-            yield t
-
+    
     def _get_units(self):
-        rtf = self.options['file'].read()
-        return self.split_rtf(rtf)
+        xml = get_xml(self.options['file'].read())
+        return split_xml(xml)
+    
 
-    def _scrape_unit(self, text):
+    def _scrape_unit(self, element):
+        yield get_article(element)
+
+def get_article(e):
+    headline = get_headline(e)
+    body = get_body(e)
+    medium, date, page = get_meta(e)
+    section = get_section(e)
+    medium = get_or_create(Medium, name=medium)
+    
+    return Article(headline=headline, text=body, date=date, pagenr=page, section=section, medium=medium)
+
+    
+def siblings_until_stop(elem, stop):
+    for sibling in elem.xpath("following-sibling::*"):
+        if sibling == stop:
+            break
+        yield sibling
+        
+
+def split_xml(xml):
+    breaks = xml.xpath("//page-break")
+
+    # elements are para - table - *para*
+
+    # yield until first break; between two breaks; after last break
+    yield breaks[0].xpath("preceding-sibling::*")[2]
+    for brk, nxt in zip(breaks[:-1], breaks[1:]):
+        yield tuple(siblings_until_stop(brk, nxt))[2]
+    yield breaks[-1].xpath("following-sibling::*")[2]
+    
+        
+
+def get_headline(e):
+    hl = e.xpath("descendant-or-self::paragraph-definition[@style-number='s0004']//inline[@bold='true']")
+    for x in hl:
+        if x.text.strip():
+            return x.text.strip()
+
+def get_body(e):
+    pars = e.xpath("descendant-or-self::paragraph-definition[@style-number='s0004']/para[inline/@bold='true']"
+                   "/following-sibling::*")
+    text = []
+    for par in pars:
+        lines = par.xpath("./inline")
+        if lines:
+            text.append("\n".join((l.text or '') for l in lines))
+            text.append("\n")
+        else:
+            text.append("\n\n")
+    return "".join(text).strip()
+
+
+def get_date(e):
+    for par in e.xpath("descendant-or-self::paragraph-definition[@style-number='s0003']//inline[@bold='true']"):
+        if par.text.strip():
+            return toolkit.readDate(par.text)
+            
+def get_section(e):
+    for par in e.xpath("descendant-or-self::paragraph-definition[@style-number='s0004']//inline[@italics='true']"):
+        m = re.search("Ressort:(.*)", par.text)
+        if m:
+            return m.group(1).strip()
+
+            
+            
+def get_meta(e):
+    for par in e.xpath("descendant-or-self::paragraph-definition[@style-number='s0004']//inline[@italics='true']"):
+        m = re.match(r"(.*?) vom (\d\d\.\d\d\.\d\d\d\d)( \d\d[.:]\d\d\b)?(.*)", par.text)
+        medium, date, time, pagestr= m.groups()
+        if time:
+            date = date + time.replace(".", ":")
+        date = toolkit.readDate(date)
+        m = re.search("Seite:? (\d+)", pagestr)
+        if m:
+            page = int(m.group(1))
+        else:
+            page = None
+        return medium, date, page
+            
+def get_xml(text):
+    with NamedTemporaryFile() as f:
+        f.write(text)
+        f.flush()
         try:
-            xml = self.get_xml(text)
-        except:
-            xml = self.get_xml(text + "}" ) #why the ^@$% did I decide to do splitting in the rtf?
-        try:
-            return list(self.get_article(xml))
-        except:
+            xml = subprocess.check_output(["rtf2xml", f.name])
+        except Exception, e:
             f, fn = mkstemp(suffix=".rtf")
             os.write(f, text)
-            f, fn2 = mkstemp(suffix=".xml")
-            os.write(f, etree.tostring(xml, pretty_print=True))
-            print >>sys.stderr, "Error on parsing, rtf wrtten to %s, xml written to %s" % (fn, fn2)
-            raise
+            raise Exception("Error on calling rtf2xml, is rtf2xml installed? RTF saved to {fn}\n(use 'sudo pip install rtf2xml' to install)\n {e}".format(**locals()))
+    return parse_xml(xml)
 
-    @classmethod
-    def get_xml(self, text):
-        with NamedTemporaryFile() as f:
-            f.write(text)
-            f.flush()
-            try:
-                xml = subprocess.check_output(["rtf2xml", f.name])
-            except Exception, e:
-                f, fn = mkstemp(suffix=".rtf")
-                os.write(f, text)
-                raise Exception("Error on calling rtf2xml, is rtf2xml installed? RTF saved to {fn}\n(use 'sudo pip install rtf2xml' to install)\n {e}".format(**locals()))
-            
-                
-            xml = xml.replace(' xmlns="http://rtf2xml.sourceforge.net/"', '')
-            return etree.fromstring(xml)
-
-    def get_article(self, xml):
-        print "----"
-        headline, body = self.get_headline_body(xml)
-        medium, date, page = self.get_mediumdate(xml)
-        section = self.get_section(xml)
-        url = self.get_url(xml)
-        medium = get_or_create(Medium, name=medium)
-        print "????"
-        yield Article(headline=headline, text=body, date=date, pagenr=page, section=section, url=url, medium=medium)
-
-    def get_headline_body(self, xml):
-        # headline has size 12
-        hl = xml.xpath("//paragraph-definition[@style-number='s0001']//inline[@font-size='12.00']")
-        hls = [h.text.strip() for h in hl if h.text.strip()]
-        if len(hls) != 1:
-            # try 'presse dialect': headline is bold
-            hl = xml.xpath("//paragraph-definition[@style-number='s0004']//inline[@bold='true']")
-            hls = [h.text.strip() for h in hl if h.text.strip()]
-            if len(hls) != 1:
-                raise Exception("Cannot parse headlines %r" % hls)
-        headline = hls[0]
-
-        # body are the paragraphs (inlines) following the headline
-        body = [[]]
-        for p in hl[0].xpath("following-sibling::*"):
-            line = p.text.replace("\u2028", "")
-            if not line.strip(): continue
-            m = re.match(" {3,}[A-Z]", line) # indentation to start new paragraph
-            if m and body[-1]: body.append([])
-            body[-1].append(line)
-        body = "\n\n".join(re.sub("\s+", " ", " ".join(lines)).strip()
-                           for lines in body)
-        return headline, body
-    
-    def get_mediumdate(self, xml):
-        # look for a table with a <row><cell>Quelle:</cell><cell>"Der standard" vom DATE  Seite: PAGE</cell>
-        lines = xml.xpath("//table//inline[text()='Quelle:']/ancestor::cell/following-sibling::cell//inline")
-        if not lines:
-            lines = xml.xpath("//paragraph-definition[@style-number='s0004']//inline[@italics='true']")
-        
-        for line in lines:
-            line = line.text
-            m = re.match('"([\w ]+)" vom ([\d\.]+)\s+Seite: (\d+)', line)
-            if m:
-                source, date, page = m.groups()
-                date = readDate(date)
-                page = int(page)
-                return source, date, page
-        raise Exception("Cannot find/interpret Quelle")
-
-    def get_section(self, xml):
-        # look for a table with a <row><cell>Ressort:</cell><cell>RESSORT</cell>
-        for line in xml.xpath("//table//inline[text()='Ressort:']/ancestor::cell/following-sibling::cell//inline"):
-            line = line.text.strip()
-            if line:
-                return line
-        return None# no section 
-        
-    def get_url(self, xml):
-        # find url under 'dauerhafte adresse'
-        for line in xml.xpath("//paragraph-definition[@style-number='s0003']"
-                              "//inline[text()='Dauerhafte Adresse des Dokuments:']/following-sibling::*"):
-            line = line.text.strip()
-            if line.startswith("http"):
-                return line
-        return None # no url
+def parse_xml(xml_bytes):
+    xml_bytes = xml_bytes.replace(' xmlns="http://rtf2xml.sourceforge.net/"', '')
+    xml_bytes = xml_bytes.replace(' encoding="us-ascii"?>', ' encoding="utf-8"?>')
+    return etree.fromstring(xml_bytes)
     
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
@@ -172,58 +156,42 @@ if __name__ == '__main__':
 ###########################################################################
 
 from amcat.tools import amcattest
-import os.path
+import os.path, datetime
     
 class TestRTFWien(amcattest.PolicyTestCase):
 
     def setUp(self):
         self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'rtfwien')
-        self.test1 = os.path.join(self.test_dir, 'test1.rtf')
-        self.test2 = os.path.join(self.test_dir, 'test2.rtf')
-        self.test3 = os.path.join(self.test_dir, 'test3.rtf')
-        self.test1_text = open(self.test1).read().decode("utf-8")
-        self.test2_text = open(self.test2).read().decode("utf-8")
-        self.test3_text = open(self.test3).read().decode("utf-8")
-    
-    def test_split(self):
-        for (txt, n) in [
-            (self.test1_text, 25),
-            (self.test2_text, 407),
-            (self.test3_text, 2)]:
-            articles = list(RTFWien.split_rtf(txt))
-            self.assertEqual(len(articles), n)
-            
-    def test_get_xml(self):
-        fragments = RTFWien.split_rtf(self.test1_text)
-        for fragment in fragments:
-            xml = RTFWien.get_xml(fragment)
-            return
+        self.test_prof_xml = os.path.join(self.test_dir, 'rtf_prof.xml')
 
-    def test_scrape(self):
-        from django.core.files import File
-        s =  amcattest.create_test_set()
-        script = RTFWien(dict(project=amcattest.create_test_project().id,
-                              file=File(open(self.test1)),
-                              articleset=s.id))
-        script.run()
-
-        self.assertEqual(len(list(s.articles.all())), 25)
-
-        a = s.articles.get(headline="KOPF DES TAGES")
-        self.assertEqual(a.medium.name, "Der Standard")
-        self.assertEqual(a.pagenr, 40)
-            
-
-    def test_scrape_presse(self):
-        from django.core.files import File
-        s =  amcattest.create_test_set()
-        script = RTFWien(dict(project=amcattest.create_test_project().id,
-                              file=File(open(self.test3)),
-                              articleset=s.id))
-        script.run()
-        a,b = list(s.articles.all())
-        self.assertEqual(a.headline, "Fleischhacker am Montag")
-        self.assertEqual(a.medium.name, "Die Presse")
-        self.assertEqual(toolkit.printDate(a.date), "2013-03-18")
+    def _get_prof_docs(self):
+        xml = parse_xml(open(self.test_prof_xml).read())
+        return list(split_xml(xml))
         
+        
+
+    def test_get_headline(self):
+        chunks = self._get_prof_docs()
+        self.assertEqual(get_headline(chunks[0]), "Zeit im Bild 1 (19:30) - Streit um Mandate bei der FPK")
+        self.assertEqual(get_headline(chunks[23]), 'EPROFIL Seite 83')
+        self.assertEqual(get_headline(chunks[-1]), 'OREICHP Sonntag Seite 8')
+
+    def test_get_body(self):
+        chunks = self._get_prof_docs()
+        b = get_body(chunks[23])
+        self.assertTrue(b.startswith('Per cocer sardelle'))
+        self.assertTrue(b.endswith('rz 2013 profil 12 83'))
+        
+    def test_prof_articles(self):
+        chunks = self._get_prof_docs()
+        # do we get the right number of chunks?
+        self.assertEqual(len(chunks), 43)
+        arts = map(get_article, chunks)
+        
+        # is the first article ok?
+        a = arts[0]
+        self.assertEqual(a.headline, "Zeit im Bild 1 (19:30) - Streit um Mandate bei der FPK")
+        self.assertEqual(str(a.medium), "Zeit im Bild 1")
+        self.assertEqual(a.date, datetime.datetime(2013, 3, 17, 19, 30))
+
         

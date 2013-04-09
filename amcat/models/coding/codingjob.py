@@ -35,7 +35,6 @@ from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.coding.codingschemafield import CodingSchemaField
 from amcat.models.coding.coding import Coding
 from amcat.models.user import User
-from amcat.models.project import Project
 from amcat.models.articleset import ArticleSet
 
 
@@ -52,7 +51,7 @@ class CodingJob(AmcatModel):
     __label__ = 'name'
 
     id = models.AutoField(primary_key=True, db_column='codingjob_id')
-    project = models.ForeignKey(Project)
+    project = models.ForeignKey("amcat.Project")
 
     name = models.CharField(max_length=100)
 
@@ -114,6 +113,7 @@ from amcat.tools import amcattest
 class TestCodingJob(amcattest.PolicyTestCase):
     def test_create(self):
         """Can we create a coding job with articles?"""
+        from amcat.models.project import Project
         p = amcattest.create_test_project()
         j = amcattest.create_test_job(project=p)
         self.assertIsNotNone(j)

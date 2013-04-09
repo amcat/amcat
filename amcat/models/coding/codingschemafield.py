@@ -54,7 +54,7 @@ class CodingSchemaFieldType(AmcatModel):
     __label__ = 'name'
     
     id = models.IntegerField(primary_key=True, db_column="fieldtype_id")
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, unique=True)
     serialiserclassname = models.CharField(max_length=50, db_column="serialiserclass")
 
     @property

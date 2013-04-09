@@ -20,8 +20,9 @@
 ###########################################################################
 
 from django import forms
+from django.utils.datastructures import MultiValueDict
 
-from amcat.models import Coding, CodingJob, CodingSchemaField, Label
+from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchemaFieldType
 from amcat.scripts.script import Script
 from amcat.tools.table.table3 import Table, ObjectColumn
 
@@ -29,97 +30,121 @@ import logging
 log = logging.getLogger(__name__)
 
 import functools
+import itertools
+
+class CodingjobListForm(forms.Form):
+    codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
+
+    def __init__(self, data=None, **kwargs):
+        """
+        Offers a form with a list of codingjobs. Raises a KeyError if keyword-
+        argument project is not given.
+        
+        @param project: Restrict list of codingjobs to this project
+        @type project: models.Project"""
+        self.project = kwargs.pop("project")
+
+        super(CodingjobListForm, self).__init__(data, **kwargs)
+        self.fields["codingjobs"].queryset = self.project.codingjob_set.all()
+        self.data = self.data or MultiValueDict()
+
+FIELD_LABEL = "{action} {s.label} (from {s.codingschema})"
+
+class CodingJobResultsForm(CodingjobListForm):
+    """
+    This is a dynamically rendered form, which consists of a static part (general
+    options for exporting results) and a dynamic part. The dynamic part consists of
+    field options being generated for each of the fields in the union of all fields
+    in all codingjobs, depending on their type.
+    """
+    unit_codings = forms.BooleanField(initial=False, required=False)
+    include_duplicates = forms.BooleanField(initial=False, required=False)
+
+    export_format = forms.ChoiceField(choices=({
+        0 : "csv",
+        1 : "xml"
+        # etc?
+    }).items())
+
+    def __init__(self, data=None, **kwargs):
+        """
+
+        @param project: Restrict list of codingjobs to this project
+        @type project: models.Project
+        """
+        codingjobs = kwargs.pop("codingjobs", None)
+        super(CodingJobResultsForm, self).__init__(data, **kwargs)
+
+        # Get all codingjobs and their fields
+        unit_codings = self.fields["unit_codings"].clean(self.data.get("unit_codings"))
+        codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
+
+        qfilter = "codingschema__codingjobs_{}__in"
+        qfilter = qfilter.format("unit" if unit_codings else "article")
+
+        # Get fields based on given codingjobs and unit_codings setting
+        schemafields = (CodingSchemaField.objects.distinct("id").filter(**{
+            qfilter : codingjobs
+        })).order_by("id").select_related("codingschema", "fieldtype")
+
+        # Insert dynamic fields
+        self.fields.update(self.get_form_fields(schemafields))
+
+    def get_form_fields(self, schemafields):
+        """Returns a dict with all the fields needed to export this codingjob"""
+        return dict(itertools.chain(*(self._get_form_fields(f) for f in schemafields)))
+
+    def _get_form_fields(self, schemafield):
+        """
+        To prevent name collisions, this method also requires all schemafields, to check
+        whether the current schemafield has a label which collides with a label of an
+        other schemafield.
+        """
+        include_field = forms.BooleanField(
+            label=FIELD_LABEL.format(action="Include", s=schemafield), initial=True
+        )
+
+        # Show 'include this field' checkbox (for every field)
+        code_name = "schemafield_{s.id}".format(s=schemafield)
+        yield ("{}_included".format(code_name), include_field)
+
+        # Include field-specific form fields
+        for code_name, field in get_fields(schemafield):
+            yield (code_name, field)
+
+def get_fields(schemafield):
+    """
+    Returns all additional form fields (if any) by looking up the function which
+    generates them and executing it.
+    """
+    return GET_FIELDS_MAP.get(schemafield.fieldtype.name, lambda s : ())(schemafield)
+
+def get_ontology_fields(schemafield):
+    """Returns fields export_id and export_label for ontology field"""
+    code_name = "schemafield_{s.id}".format(s=schemafield)
+
+    # Export ids field
+    yield ("{}_ids".format(code_name), forms.BooleanField(
+        initial=True, label=FIELD_LABEL.format(s=schemafield, action="Export ids of")
+    ))
+
+    # Export labels field
+    yield ("{}_labels".format(code_name), forms.BooleanField(
+        initial=True, label=FIELD_LABEL.format(s=schemafield, action="Export labels of")
+    ))
+
+    # Export parents
+    yield ("{}_parents".format(code_name), forms.IntegerField(
+        initial=0, label=FIELD_LABEL.format(s=schemafield, action="Export # parents")
+    ))
+
+# Getting the fields from the database forces errors when starting
+# Why the *&^% would you want that?
+#GET_FIELDS_MAP = {
+#    CodingSchemaFieldType.objects.get(name="DB ontology").name : get_ontology_fields
+#}
+
 
 class GetCodingJobResults(Script):
-    """
-    Extract the coded values for a coding job. This yields a Table with codings in the rows
-    and in the columns the metadata followed by the coded fields. Values for metadata and
-    codings are all primitives, e.g. code_id rather than code or unicode(code).
-    """
+    pass
 
-    output_type = Table
-    
-    class options_form(forms.Form):
-        job = forms.ModelChoiceField(queryset=CodingJob.objects.all(), required=True)
-        unit_codings = forms.BooleanField(initial=False, required=False)
-        deserialize_codes = forms.BooleanField(initial=False, required=False)
-        
-    def run(self, _input=None):
-        job, unit_codings, deserialize = (self.options["job"], self.options["unit_codings"],
-                                          self.options["deserialize_codes"])
-        t = job.values_table(unit_codings)
-        t.addColumn(lambda c : c.status_id, "Status", index=0)
-        if unit_codings:
-            t.addColumn(lambda c : c.sentence_id, "Sentence", index=0)
-        t.addColumn(lambda c : c.article_id, "Article", index=0)
-        t.addColumn(lambda c : c.codingjob_id, "Codingjob", index=0)
-
-        if deserialize:
-            deserialize_codes(t)
-
-        deserialize_quality(job, unit_codings, t)
-
-        return t
-
-    def get_output_name(self):
-        return "codingjob_{job.id}_{unit}codings".format(
-            job=self.options["job"],
-            unit="unit" if self.options["unit_codings"] else "article"
-            )
-
-def quality_cellfunc(field, coding):
-    serialiser = field.fieldtype.serialiserclass(field)
-    return serialiser.value_label(coding.get_value(field))
-
-def deserialize_quality(job, unit_coding, table):
-    schema = job.unitschema if unit_coding else job.articleschema
-    fields = { f.label : f for f in schema.fields.all() }
-
-    for col in [c for c in table.getColumns() if c.label in fields]:
-        if fields[col.label].fieldtype.name != "Quality":
-            continue
-
-        # This field is of type QualitySerialiser
-        col.cellfunc = functools.partial(
-            quality_cellfunc, fields[col.label]
-        )
-        
-def deserialize_codes(table):
-    # identify code columns
-    codes = {} # id : Code
-    columns = set()
-    for col in table.getColumns():
-        try:
-            f = col.field
-        except AttributeError:
-            continue
-        if f.fieldtype.name == "DB ontology":
-            columns.add(col)
-
-    # gather code ids
-    for col in columns:
-        for row in table.getRows():
-            codes[col.getCell(row)] = None
-    # get labels
-    for label in Label.objects.filter(code_id__in=codes.keys()).order_by("language"):
-        if codes[label.code_id]: continue
-        codes[label.code_id] = label.label
-    # deserialize columns
-    for i, col in list(enumerate(table.getColumns())):
-        if col in columns:
-            table.columns.insert(i, DeserializedFieldColumn(col, codes))
-
-
-class DeserializedFieldColumn(ObjectColumn):
-    def __init__(self, fieldcolumn, labels):
-        super(DeserializedFieldColumn, self).__init__(label=fieldcolumn.label + "_label")
-        self.fieldcolumn = fieldcolumn
-        self.labels = labels
-    def getCell(self, row):
-        value = self.fieldcolumn.getCell(row)
-        return self.labels.get(value, value)
-
-if __name__ == '__main__':
-    from amcat.scripts.tools import cli
-    t = cli.run_cli(handle_output=False)
-    print t.to_csv()

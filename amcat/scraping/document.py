@@ -59,6 +59,7 @@ class Document(object):
     def __init__(self, **kargs):
         self.props = Properties()
         self.article = None
+        self.is_comment = False
 
         for k,v in kargs.items():
             setattr(self.props, k, v)
@@ -178,6 +179,8 @@ class HTMLDocument(Document):
 
     def __str__(self):
         return "HTMLDocument(url={})".format(getattr(self.props, "url", None))
+
+
 
 
 ###########################################################################

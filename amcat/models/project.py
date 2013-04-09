@@ -27,6 +27,7 @@ from amcat.tools.toolkit import wrapped
 
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingschema import CodingSchema
+from amcat.models.coding.codingjob import CodingJob
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle, ArticleSet
 
