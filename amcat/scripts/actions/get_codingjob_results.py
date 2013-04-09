@@ -139,9 +139,10 @@ def get_ontology_fields(schemafield):
     ))
 
 # Getting the fields from the database forces errors when starting
-GET_FIELDS_MAP = {
-    CodingSchemaFieldType.objects.get(name="DB ontology").name : get_ontology_fields
-}
+# Why the *&^% would you want that?
+#GET_FIELDS_MAP = {
+#    CodingSchemaFieldType.objects.get(name="DB ontology").name : get_ontology_fields
+#}
 
 
 class GetCodingJobResults(Script):
