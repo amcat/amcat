@@ -71,9 +71,13 @@ def split_xml(xml):
     breaks = xml.xpath("//page-break")
 
     # elements are para - table - *para*
+
+    # yield until first break; between two breaks; after last break
     yield breaks[0].xpath("preceding-sibling::*")[2]
     for brk, nxt in zip(breaks[:-1], breaks[1:]):
         yield tuple(siblings_until_stop(brk, nxt))[2]
+    yield breaks[-1].xpath("following-sibling::*")[2]
+    
         
 
 def get_headline(e):
@@ -170,6 +174,7 @@ class TestRTFWien(amcattest.PolicyTestCase):
         chunks = self._get_prof_docs()
         self.assertEqual(get_headline(chunks[0]), "Zeit im Bild 1 (19:30) - Streit um Mandate bei der FPK")
         self.assertEqual(get_headline(chunks[23]), 'EPROFIL Seite 83')
+        self.assertEqual(get_headline(chunks[-1]), 'OREICHP Sonntag Seite 8')
 
     def test_get_body(self):
         chunks = self._get_prof_docs()
@@ -180,7 +185,7 @@ class TestRTFWien(amcattest.PolicyTestCase):
     def test_prof_articles(self):
         chunks = self._get_prof_docs()
         # do we get the right number of chunks?
-        self.assertEqual(len(chunks), 42)
+        self.assertEqual(len(chunks), 43)
         arts = map(get_article, chunks)
         
         # is the first article ok?
