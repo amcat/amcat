@@ -104,19 +104,31 @@ def get_date(e):
     for par in e.xpath("descendant-or-self::paragraph-definition[@style-number='s0003']//inline[@bold='true']"):
         if par.text.strip():
             return toolkit.readDate(par.text)
-            
+
+def parse_ressort(text):
+    m = re.search("Ressort:(.*)", text)
+    if m:
+        return m.group(1).strip()
+    else:
+        raise ValueError("Cannot parse ressort string {text!r}".format(**locals()))
+        
 def get_section(e):
     for par in e.xpath("descendant-or-self::paragraph-definition[@style-number='s0004']//inline[@italics='true']"):
-        m = re.search("Ressort:(.*)", par.text)
-        if m:
-            return m.group(1).strip()
+        try:
+            return parse_ressort(par.text)
+        except ValueError:
+            pass # try the next one!
+
 
 
 def parse_meta(text):
-     m = re.match(r"(.*?) vom (\d\d\.\d\d\.\d\d\d\d)( \d\d[.:]\d\d\b)?(.*)", text)
+     m = re.match(r"(.*?)\s*(Nr. \d+)? vom (\d\d\.\d\d\.\d\d\d\d)( \d\d[.:]\d\d\b)?(.*)", text)
      if not m:
          raise ValueError("Cannot parse meta string {text!r}".format(**locals()))
-     medium, date, time, pagestr= m.groups()
+     medium, nr, date, time, pagestr= m.groups()
+     if medium.startswith('"') and medium.endswith('"'):
+         medium = medium[1:-1]
+     
      if time:
          date = date + time.replace(".", ":")
      date = toolkit.readDate(date)
@@ -125,6 +137,7 @@ def parse_meta(text):
          page = int(m.group(1))
      else:
          page = None
+
      return medium, date, page
             
 def get_meta(e):
