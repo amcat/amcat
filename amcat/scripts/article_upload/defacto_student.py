@@ -19,7 +19,9 @@
 ###########################################################################
 
 """
-Plugin for uploading RTF files from Wien (need better name)
+Plugin for uploading De Facto files (student edition) in HTML format
+To use this plugin, choose to  'print' the articles and save the source
+of the popup window as HTML. 
 """
 
 
@@ -55,10 +57,13 @@ def get_html(html_bytes):
     parser = etree.HTMLParser()
     return etree.parse(StringIO(html_bytes), parser)
         
-def split_html(html):
-    
+def split_html(html):   
     return html.xpath("//div[@class='eintrag']")
+
+def get_meta(div):
+    print div.find("pre").text
     
+
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
     run_cli(handle_output=False)
@@ -76,10 +81,11 @@ import os.path, datetime
 class TestDeFactoStudent(amcattest.PolicyTestCase):
 
     def setUp(self):
-        self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'rtfwien')
+        self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'defacto')
         self.test1 = os.path.join(self.test_dir, 'DeFacto-Campus - Ausdruck1.htm')
         self.test1_html = get_html(open(self.test1).read())
 
     def test_split(self):
         elems = split_html(self.test1_html)
-        print elems
+        for e in elems:
+            print get_meta(e)

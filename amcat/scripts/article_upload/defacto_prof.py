@@ -39,7 +39,7 @@ import os
 import sys
 from amcat.tools.toolkit import readDate
 
-class RTFWien(UploadScript):
+class DeFactoProfessional(UploadScript):
 
     
     def _get_units(self):
@@ -111,21 +111,28 @@ def get_section(e):
         if m:
             return m.group(1).strip()
 
-            
+
+def parse_meta(text):
+     m = re.match(r"(.*?) vom (\d\d\.\d\d\.\d\d\d\d)( \d\d[.:]\d\d\b)?(.*)", text)
+     if not m:
+         raise ValueError("Cannot parse meta string {text!r}".format(**locals()))
+     medium, date, time, pagestr= m.groups()
+     if time:
+         date = date + time.replace(".", ":")
+     date = toolkit.readDate(date)
+     m = re.search("Seite:? (\d+)", pagestr)
+     if m:
+         page = int(m.group(1))
+     else:
+         page = None
+     return medium, date, page
             
 def get_meta(e):
     for par in e.xpath("descendant-or-self::paragraph-definition[@style-number='s0004']//inline[@italics='true']"):
-        m = re.match(r"(.*?) vom (\d\d\.\d\d\.\d\d\d\d)( \d\d[.:]\d\d\b)?(.*)", par.text)
-        medium, date, time, pagestr= m.groups()
-        if time:
-            date = date + time.replace(".", ":")
-        date = toolkit.readDate(date)
-        m = re.search("Seite:? (\d+)", pagestr)
-        if m:
-            page = int(m.group(1))
-        else:
-            page = None
-        return medium, date, page
+        try:
+            return parse_meta(par.text)
+        except ValueError:
+            pass # try the next one!
             
 def get_xml(text):
     with NamedTemporaryFile() as f:
@@ -158,10 +165,10 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 import os.path, datetime
     
-class TestRTFWien(amcattest.PolicyTestCase):
+class TestDeFactoProfessional(amcattest.PolicyTestCase):
 
     def setUp(self):
-        self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'rtfwien')
+        self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'defacto')
         self.test_prof_xml = os.path.join(self.test_dir, 'rtf_prof.xml')
 
     def _get_prof_docs(self):
