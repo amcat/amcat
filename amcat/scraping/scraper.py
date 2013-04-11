@@ -83,8 +83,6 @@ class Scraper(Script):
     def __init__(self, *args, **kargs):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = get_or_create_medium(self.medium_name)
-        if self.medium:
-            self.comment_medium = get_or_create_medium(self.medium_name + " - Comments")
         self.project = self.options['project']
         log.debug("Articleset: {self.articleset}, options: {self.options}"
                   .format(**locals()))
@@ -176,6 +174,8 @@ class Scraper(Script):
         comment = False
         if isinstance(article, Document):
             if hasattr(article, 'is_comment') and article.is_comment:
+                if not hasattr(self, 'comment_medium'):
+                    self.comment_medium = get_or_create_medium(self.medium_name + " - Comments")
                 comment = True
             article = article.create_article()
 
