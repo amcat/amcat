@@ -1,7 +1,6 @@
 from amcat.models.article import Article
-from amcat.scripts.script import Script
 
-def fix_wrong_headlines(self):
+def fix_wrong_headlines():
     for article in Article.object.filter(
         articlesetarticle__articleset = 66,
         headline__startswith = "#"):
@@ -12,3 +11,7 @@ def fix_wrong_headlines(self):
             article.headline = article.headline[1:]
 
         print(article.headline)
+
+
+if __name__ == "__main__":
+    fix_wrong_headlines()
