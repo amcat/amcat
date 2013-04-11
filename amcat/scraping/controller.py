@@ -190,7 +190,7 @@ def scrape_logged(controller, scrapers, deduplicate = False):
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
         for a in controller.scrape(scrapers, deduplicate=deduplicate):
-            counts[s] += 1
+            counts[a.scraper] += 1
             result[s].append(a)
                 
     return counts, log_stream.getvalue(), result
