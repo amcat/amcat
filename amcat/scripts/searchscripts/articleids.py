@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
     
 class ArticleidsForm(amcat.scripts.forms.SelectionForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
-    length = forms.IntegerField(initial=50, min_value=1, max_value=9999999, widget=forms.HiddenInput, required=False)
+    length = forms.IntegerField(initial=50, min_value=1, max_value=99999999, widget=forms.HiddenInput, required=False)
     
     def clean_start(self):
         data = self.cleaned_data['start']
