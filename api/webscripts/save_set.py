@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 
 class SaveAsSetWebScriptForm(SaveAsSetForm):
     output = forms.CharField(widget=forms.HiddenInput(), initial='json-html')
-    length = forms.IntegerField(widget=forms.HiddenInput(), initial=99999999)
+    length = forms.IntegerField(widget=forms.HiddenInput(), max_value=99999999, initial=99999999)
     start = forms.IntegerField(widget=forms.HiddenInput(), initial=0)
 
     
