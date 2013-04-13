@@ -33,11 +33,12 @@ from amcat.tools import amcatlogging
 import logging; log = logging.getLogger(__name__)
 from datetime import timedelta
 from datetime import date as m_date
-import re, collections, csv, sys
+import re, collections
 
 class DeduplicateForm(forms.Form):
     slow = forms.BooleanField(required = False, initial=False)   
     test = forms.BooleanField(required = False, initial=False)   
+    printout = forms.BooleanField(required = False, initial=False)   
     first_date = forms.DateField(required = False)
     last_date = forms.DateField(required = False)    
     articleset = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
@@ -87,52 +88,50 @@ class DeduplicateScript(Script):
         """
         deduplicates given articleset for given date
         """
+        from django.db import connection
+        connection.queries = []
+        
         articleset = self.options['articleset']
         log.info("Deduplicating for articleset '{articleset}' at {date}".format(**locals()))
 
         articles = articleset.articles.filter(date__gte = date, date__lt = date + timedelta(days=1))
         articles = articles.only("date", "medium", "headline")
+        articles = list(articles)
 
-        from django.db import connection
-        print connection.queries
-        
-        connection.queries = []
+        # get text hash for articles with missing or nonsensical headlines
+        no_headline = [a.id for a in articles if (not a.headline) or (a.headline in ('missing', 'no headline', 'Kort nieuws'))]
+        texts = dict(Article.objects.filter(pk__in=no_headline).extra(select={'texthash':'md5(text)'}).values_list('id', 'texthash'))
         
         log.info("Selected {n} articles".format(n = len(articles)))
 
         arDict = collections.defaultdict(list)
         for article in articles:
-            if article.headline and article.headline.lower() not in ('missing', 'no headline'):
-                identifier = (article.headline, str(article.date.date()), article.medium_id)
-            else:
-                identifier = (article.text, str(article.date.date()), article.medium_id)
+            identifier = (texts.get(article.id, article.headline), str(article.date.date()), article.medium_id)
                 
             arDict[identifier].append(article)
                 
-        qs = sorted(q['sql'] for q in connection.queries)
-        print "\n".join(qs), "\n------------------\n"
-        connection.queries = []
-        
         removable_ids = []
         for arts in arDict.values():
             arts = sorted(arts, key=self.score)
             removable_ids.extend(a.id for a in arts[:-1]) # keep the last one, it has highest score
 
-
-        qs = sorted(q['sql'] for q in connection.queries)
-        print "\n".join(qs), "\n------------------\n"
-        connection.queries = []
-            
-        if self.options['test']:
-            w = csv.writer(sys.stdout)
-            w.writerow(["aid", "date", "medium", 'headline', 'delete?'])
-            for a in sorted(articles, key=lambda a : (a.date, a.medium_id, a.headline, a.id)):
-                w.writerow([a.id, a.date, a.medium_id, a.headline.encode('ascii','replace'), a.id in removable_ids])
-        else:
+        if self.options['printout']:
+            self.printout(articles, removable_ids)
+        
+        if not self.options['test']:
             ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
-
         
         log.info("Removed {n} duplications from articleset".format(n = len(removable_ids)))
+
+    def printout(self, articles, removable_ids):
+        """Print the given articles to a csv file to facilitate checking"""
+        import csv, sys
+        w = csv.writer(sys.stdout)
+        if not getattr(self, 'csv_header_printed', False):
+            w.writerow(["aid", "date", "medium", 'headline', 'len(text)', 'text[:100]', 'delete?'])
+            self.csv_header_printed = True
+        for a in sorted(articles, key=lambda a : (a.date, a.medium_id, a.headline, a.id)):
+            w.writerow([a.id, a.date, a.medium_id, a.headline.encode('ascii','replace'), len(a.text), `a.text[:100]`, a.id in removable_ids])
 
 
     def score(self, article):
