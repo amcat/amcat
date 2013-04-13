@@ -144,7 +144,7 @@ class DeduplicateScript(Script):
                 if field != None:
                     l += 1
             if article.metastring:
-                l += len(eval(article.metastring))
+                l += article.metastring.count(":")
             if l > n_fields:
                 n_fields = l
                     
@@ -157,7 +157,7 @@ class DeduplicateScript(Script):
                 if field != None:
                     le += 1
             if article.metastring:
-                le += len(eval(article.metastring))
+                le += article.metastring.count(":")
 
             if le == n_fields:
                 articles_3.append(article)
@@ -172,7 +172,6 @@ class DeduplicateScript(Script):
         for article in articles_3:
             if len(article.text) == l_text:
                 articles_4.append(article)
-
 
         #if still multiple, pick out oldest version
         article_ids = sorted([article.pk for article in articles_4])

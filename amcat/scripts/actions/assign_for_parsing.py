@@ -46,11 +46,14 @@ class AssignParsing(Script):
             to_parse = list(articleset.articles.exclude(analysedarticle__plugin_id=plugin).only("id"))
         log.info("(Re-)Assigning {n} articles from set {articleset.id} to be parsed by plugin {plugin.id}"
                  .format(n=len(to_parse), **locals()))
+        n = 0
         if to_parse:
             parser = plugin.get_class()()
             for article in to_parse:
                 with transaction.commit_on_success():
                     parser.submit_article(article)
+                    n += 1
+        return n
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
