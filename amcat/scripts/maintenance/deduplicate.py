@@ -46,7 +46,7 @@ class DeduplicateForm(forms.Form):
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
 
-    def run(self, _input):
+    def run(self, _input=None):
         mode = self.handle_input()
         if mode == "date range":
             self.options['date'] = self.options['first_date']

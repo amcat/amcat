@@ -172,6 +172,10 @@ class ArticleSet(AmcatModel):
         return (("Indexing in progress" if self.index_dirty else "Fully indexed")
                 if self.indexed else "Not indexed")
 
+    def deduplicate(self):
+        from amcat.scripts.maintenance import deduplicate
+        #TODO: the deduplicate code should go in here!
+        deduplicate.DeduplicateScript(articleset=self.id).run()
         
 class ArticleSetArticle(AmcatModel):
     """
