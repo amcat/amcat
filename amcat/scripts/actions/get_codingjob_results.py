@@ -32,6 +32,8 @@ log = logging.getLogger(__name__)
 import functools
 import itertools
 
+FIELD_LABEL = "{label} {schemafield.label} (from {schemafield.codingschema})"
+            
 class CodingjobListForm(forms.Form):
     codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
 
@@ -47,8 +49,6 @@ class CodingjobListForm(forms.Form):
         super(CodingjobListForm, self).__init__(data, **kwargs)
         self.fields["codingjobs"].queryset = self.project.codingjob_set.all()
         self.data = self.data or MultiValueDict()
-
-FIELD_LABEL = "{action} {s.label} (from {s.codingschema})"
 
 class CodingJobResultsForm(CodingjobListForm):
     """
@@ -101,7 +101,7 @@ class CodingJobResultsForm(CodingjobListForm):
         other schemafield.
         """
         include_field = forms.BooleanField(
-            label=FIELD_LABEL.format(action="Include", s=schemafield), initial=True
+            label=FIELD_LABEL.format(label="Include", **locals()), initial=True
         )
 
         # Show 'include this field' checkbox (for every field)
@@ -109,42 +109,18 @@ class CodingJobResultsForm(CodingjobListForm):
         yield ("{}_included".format(code_name), include_field)
 
         # Include field-specific form fields
-        for code_name, field in get_fields(schemafield):
-            yield (code_name, field)
+        for id, field in schemafield.serialiser.get_export_fields():
+            field.label = FIELD_LABEL.format(label="Export "+field.label, **locals())
+            id = "schemafield_{schemafield.id}_{id}".format(**locals())
+            yield id, field
 
-def get_fields(schemafield):
-    """
-    Returns all additional form fields (if any) by looking up the function which
-    generates them and executing it.
-    """
-    return GET_FIELDS_MAP.get(schemafield.fieldtype.name, lambda s : ())(schemafield)
 
-def get_ontology_fields(schemafield):
-    """Returns fields export_id and export_label for ontology field"""
-    code_name = "schemafield_{s.id}".format(s=schemafield)
 
-    # Export ids field
-    yield ("{}_ids".format(code_name), forms.BooleanField(
-        initial=True, label=FIELD_LABEL.format(s=schemafield, action="Export ids of")
-    ))
-
-    # Export labels field
-    yield ("{}_labels".format(code_name), forms.BooleanField(
-        initial=True, label=FIELD_LABEL.format(s=schemafield, action="Export labels of")
-    ))
-
-    # Export parents
-    yield ("{}_parents".format(code_name), forms.IntegerField(
-        initial=0, label=FIELD_LABEL.format(s=schemafield, action="Export # parents")
-    ))
-
-# Getting the fields from the database forces errors when starting
-# Why the *&^% would you want that?
-GET_FIELDS_MAP = {
-#    CodingSchemaFieldType.objects.get(name="Codebook").name : get_ontology_fields
-}
 
 
 class GetCodingJobResults(Script):
-    pass
+    options_form = CodingJobResultsForm
+
+    def run(self):
+        print self.options
 

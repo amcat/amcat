@@ -64,7 +64,7 @@ from amcat.scripts.actions.add_project import AddProject
 from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
-from amcat.scripts.actions.get_codingjob_results import CodingJobResultsForm, CodingjobListForm
+from amcat.scripts.actions.get_codingjob_results import CodingjobListForm
 
 from navigator import forms
 from navigator.utils.auth import check, check_perm
@@ -390,14 +390,15 @@ def codingjob_export_select(request, project):
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 def codingjob_export_options(request, project):
-    form = CodingJobResultsForm(
+    form = GetCodingJobResults.options_form(
         request.POST or None, project=project, codingjobs=request.GET.getlist("codingjobs"),
         initial={"codingjobs" : request.GET.getlist("codingjobs")}
     )
 
     if form.is_valid():
         # Voer script uit??
-        pass
+        result = GetCodingJobResults(form).run()
+        print(result)
 
     return render(request, 'navigator/project/export_options.html', locals())
 

@@ -32,6 +32,7 @@ Deserialised Value: a domain object, possibly a django Model instance
 import logging; log = logging.getLogger(__name__)
 
 from amcat.models.coding.code import Code
+from django import forms
 
 class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
@@ -75,6 +76,12 @@ class BaseSerialiser(object):
         @param language: an optional preferred language, which may be ignored
         """
         return unicode(value)
+
+    def get_export_fields(self):
+        """Return a sequence of (id, django form fields) pairs with export options for this field
+        The id and field label need only be locally unique, they will be prepended with the field name
+        """
+        return []
     
 class TextSerialiser(BaseSerialiser):
     """Simple str - str serialiser"""
@@ -124,6 +131,7 @@ def CodebookSerialiser(field):
         _memo[codebookid] = _CodebookSerialiser(field)
         return  _memo[codebookid]
         
+    
 class _CodebookSerialiser(BaseSerialiser):
     """int - amcat.models.coding.Code serialiser"""
     def __init__(self, field):
@@ -148,6 +156,11 @@ class _CodebookSerialiser(BaseSerialiser):
         #self.field.codebook.cache_labels(language)
         return value.get_label(language)
 
+    def get_export_fields(self):
+        yield "ids", forms.BooleanField(initial=True, label="ids")
+        yield "labels", forms.BooleanField(initial=True, label="labels")
+        yield "parents", forms.IntegerField(initial=0, label="# parents")
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
