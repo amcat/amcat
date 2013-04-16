@@ -82,6 +82,15 @@ class BaseSerialiser(object):
         The id and field label need only be locally unique, they will be prepended with the field name
         """
         return []
+
+    def get_export_columns(self, **options):
+        """
+        Return (label, function) pair for each column that a coding job export should include.
+        The function will be called with the serialised coded value as the only argument.
+        The label need only be locally unique, it will be prepended with the field name.
+        @param **options: the form values of the fields specified by get_export_fields
+        """
+        yield "_val", lambda x:x
     
 class TextSerialiser(BaseSerialiser):
     """Simple str - str serialiser"""
@@ -161,6 +170,12 @@ class _CodebookSerialiser(BaseSerialiser):
         yield "labels", forms.BooleanField(initial=True, label="labels")
         yield "parents", forms.IntegerField(initial=0, label="# parents")
     
+    def get_export_columns(self, ids, labels, parents, **options):
+        if ids:
+            yield "_id", lambda x:x
+        if labels:
+            yield "_lbl", lambda x:self.value_label(self.deserialise(x))
+        
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

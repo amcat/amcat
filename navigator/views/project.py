@@ -398,7 +398,7 @@ def codingjob_export_options(request, project):
     if form.is_valid():
         # Voer script uit??
         result = GetCodingJobResults(form).run()
-        print(result)
+        results = result.output()
 
     return render(request, 'navigator/project/export_options.html', locals())
 

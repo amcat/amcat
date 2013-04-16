@@ -24,7 +24,7 @@ from django.utils.datastructures import MultiValueDict
 
 from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchemaFieldType
 from amcat.scripts.script import Script
-from amcat.tools.table.table3 import Table, ObjectColumn
+from amcat.tools.table import table3
 
 import logging
 log = logging.getLogger(__name__)
@@ -79,15 +79,8 @@ class CodingJobResultsForm(CodingjobListForm):
         unit_codings = self.fields["unit_codings"].clean(self.data.get("unit_codings"))
         codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
 
-        qfilter = "codingschema__codingjobs_{}__in"
-        qfilter = qfilter.format("unit" if unit_codings else "article")
-
-        # Get fields based on given codingjobs and unit_codings setting
-        schemafields = (CodingSchemaField.objects.distinct("id").filter(**{
-            qfilter : codingjobs
-        })).order_by("id").select_related("codingschema", "fieldtype")
-
-        # Insert dynamic fields
+        # Insert dynamic fields based on schemafields
+        schemafields = _get_schemafields(codingjobs, unit_codings)
         self.fields.update(self.get_form_fields(schemafields))
 
     def get_form_fields(self, schemafields):
@@ -101,9 +94,10 @@ class CodingJobResultsForm(CodingjobListForm):
         other schemafield.
         """
         include_field = forms.BooleanField(
-            label=FIELD_LABEL.format(label="Include", **locals()), initial=True
+            label=FIELD_LABEL.format(label="Include", **locals()), initial=True, required=False,
         )
 
+        
         # Show 'include this field' checkbox (for every field)
         code_name = "schemafield_{s.id}".format(s=schemafield)
         yield ("{}_included".format(code_name), include_field)
@@ -114,13 +108,45 @@ class CodingJobResultsForm(CodingjobListForm):
             id = "schemafield_{schemafield.id}_{id}".format(**locals())
             yield id, field
 
+def _get_schemafields(codingjobs, unit_codings, **kargs):
+    # Get fields based on given codingjobs and unit_codings setting
+    qfilter = "codingschema__codingjobs_{}__in".format("unit" if unit_codings else "article")
 
+    # Get fields based on given codingjobs and unit_codings setting
+    return (CodingSchemaField.objects.distinct("id").filter(**{
+                qfilter : codingjobs
+                })).order_by("id").select_related("codingschema", "fieldtype")
+    
 
-
+class CodingColumn(table3.ObjectColumn):
+    def __init__(self, field, label, function):
+        self.function = function
+        self.field = field
+        label = self.field.label + label
+        super(CodingColumn, self).__init__(label)
+    def getCell(self, coding):
+        value = coding.get_value(field=self.field)
+        return self.function(value)
 
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
-    def run(self):
-        print self.options
+    def _run(self, codingjobs, **kargs):
+        schemafields = _get_schemafields(**self.options)
 
+        codings = list(Coding.objects.filter(codingjob__in=codingjobs, sentence__isnull=True))
+        
+        t = table3.ObjectTable(rows=codings)
+        
+        for schemafield in schemafields:
+            prefix = "schemafield_{schemafield.id}".format(**locals())
+            if self.options[prefix+"_included"]:
+                
+                options = {k[len(prefix)+1:] :v for (k,v) in self.options.iteritems() if k.startswith(prefix)}
+                for label, function in schemafield.serialiser.get_export_columns(**options):
+                    t.addColumn(CodingColumn(schemafield, label, function))
+
+                #print schemafield
+
+        #print t.output(rownames=True)
+        return t
