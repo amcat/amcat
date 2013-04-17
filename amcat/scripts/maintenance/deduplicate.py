@@ -47,6 +47,10 @@ class DeduplicateScript(Script):
     options_form = DeduplicateForm
 
     def run(self, _input=None):
+        articles = self.options['articleset'].articles.all()
+        if not articles.exists():
+            log.info("Set {aset.id} is empty, no dedpulication needed!".format(aset=self.options['articleset']))
+            return
         mode = self.handle_input()
         if mode == "date range":
             self.options['date'] = self.options['first_date']
@@ -56,7 +60,6 @@ class DeduplicateScript(Script):
             self._run_date(self.options['first_date'])
 
         elif mode == "whole set":
-            articles = self.options['articleset'].articles.all()
             start = articles.aggregate(Min('date'))['date__min'].date()
             end = articles.aggregate(Max('date'))['date__max'].date()
             log.info("first date: {start}; last date: {end}".format(**locals()))
