@@ -33,6 +33,7 @@ import logging; log = logging.getLogger(__name__)
 
 from amcat.models.coding.code import Code
 from django import forms
+import functools
 
 class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
@@ -166,15 +167,27 @@ class _CodebookSerialiser(BaseSerialiser):
         return value.get_label(language)
 
     def get_export_fields(self):
-        yield "ids", forms.BooleanField(initial=True, label="ids")
-        yield "labels", forms.BooleanField(initial=True, label="labels")
+        yield "ids", forms.BooleanField(initial=True, label="ids", required=False)
+        yield "labels", forms.BooleanField(initial=True, label="labels", required=False)
         yield "parents", forms.IntegerField(initial=0, label="# parents")
-    
+
+    def _get_ancestor(self, value, i, label=False):
+        ancestors = list(self.field.codebook.get_ancestor_ids(value))
+        ancestor_id = ancestors[max(0, len(ancestors) - i - 1)]
+        return self.value_label(self.deserialise(ancestor_id)) if label else ancestor_id
+                             
+        
     def get_export_columns(self, ids, labels, parents, **options):
         if ids:
             yield "_id", lambda x:x
         if labels:
             yield "_lbl", lambda x:self.value_label(self.deserialise(x))
+        for i in range(parents):
+            if ids:
+                yield "_parent_{i}_id".format(**locals()), functools.partial(self._get_ancestor, i=i)
+            if labels:
+                yield "_parent_{i}_label".format(**locals()), functools.partial(self._get_ancestor, i=i, label=True)
+            
         
 ###########################################################################
 #                          U N I T   T E S T S                            #

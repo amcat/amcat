@@ -256,6 +256,26 @@ class Codebook(AmcatModel):
                                                 .format(**locals()))
             b._check_not_a_base(base)
 
+
+    def get_ancestor_ids(self, code_id):
+        """
+        Return a sequence of ancestor ids for this code, from the code itself up to a root of the codeobok
+        @parem code: a Code object in this codebook
+        """
+        hierarchy = self._get_hierarchy_ids()
+        def _get_parent(code):
+            for child, parent in hierarchy.iteritems():
+                if child == code:
+                    return parent
+            raise ValueError("Code {code!r} not in hierarchy!")
+
+        while True:
+            yield code_id
+            parent = _get_parent(code_id)
+            if parent is None:
+                return
+            code_id = parent
+            
 class CodebookBase(AmcatModel):
     """Many-to-many field (codebook : codebook) with ordering"""
     id = models.AutoField(primary_key=True, db_column='codebook_base_id')
@@ -327,6 +347,7 @@ class CodebookCode(AmcatModel):
         if (self.parent != None) and self.hide:
             raise ValueError("Parent code {!r} of code {!r} hidden.".format(self.parent, self.code))
 
+        
     def __unicode__(self):
         return "{0.code}:{0.parent} ({0.codebook}, {0.validfrom}-{0.validto})".format(self)
 
@@ -549,7 +570,22 @@ class TestCodebook(amcattest.PolicyTestCase):
         self.assertEqual(set(A.get_children(c)), set([d]))
         self.assertEqual(set(A.get_children(d)), set())
 
-
+    def test_get_ancestors(self):
+        a, b, c, d, e, f = [amcattest.create_test_code(label=l) for l in "abcdef"]
+        A = amcattest.create_test_codebook(name="A")
+        A.add_code(a)
+        A.add_code(b)
+        A.add_code(c, b)
+        A.add_code(e, a)
+        A.add_code(d, c)
+        A.add_code(f, a)
+        self.assertEqual(list(A.get_ancestor_ids(f.id)), [f.id, a.id])
+        self.assertEqual(list(A.get_ancestor_ids(a.id)), [a.id])
+        B = amcattest.create_test_codebook(name="B")
+        B.add_code(f, b)
+        B.add_base(A)
+        self.assertEqual(list(B.get_ancestor_ids(f.id)), [f.id, b.id])
+        
     def todo_test_cache_labels(self):
         """Does caching labels work?"""
         from amcat.models.language import Language
