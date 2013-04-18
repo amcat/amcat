@@ -140,7 +140,7 @@ class ArticleSet(AmcatModel):
         return solr.query_ids("sets:{self.id}".format(**locals()))
     
     
-    def refresh_index(self, solr=None):
+    def refresh_index(self, solr=None, full_refresh=False):
         """
         Make sure that the SOLR index for this set is up to date
         @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
@@ -151,18 +151,21 @@ class ArticleSet(AmcatModel):
         log.debug("Getting SOLR ids")
         solr_ids = self._get_article_ids_solr(solr)
         log.debug("Getting DB ids")
-        if self.indexed:
-            db_ids = set(id for (id,) in self.articles.all().values_list("id"))
-        else:
-            db_ids = set()
-        log.debug("Refreshing index, |solr_ids|={nsolr}, |db_ids|={ndb}"
-                  .format(nsolr=len(solr_ids), ndb=len(db_ids)))
-        for i, batch in enumerate(splitlist(db_ids - solr_ids, itemsperbatch=1000)):
+        db_ids = set(id for (id,) in self.articles.all().values_list("id")) if self.indexed else set()
+        to_remove = solr_ids - db_ids
+        to_add = db_ids if full_refresh else  db_ids - solr_ids
+
+        log.warn("Refreshing index, full_refresh={full_refresh}, |solr_ids|={nsolr}, |db_ids|={ndb}, "
+                 "|to_add|={nta}, |to_remove|={ntr}"
+                  .format(nsolr=len(solr_ids), ndb=len(db_ids), nta=len(to_add), ntr=len(to_remove),**locals()))
+        
+            
+        for i, batch in enumerate(splitlist(to_remove)):
+            solr.delete_articles(batch)
+            log.debug("Removed batch {i}".format(**locals()))
+        for i, batch in enumerate(splitlist(to_add, itemsperbatch=1000)):
             solr.add_articles(batch)
             log.debug("Added batch {i}".format(**locals()))
-        for i, batch in enumerate(splitlist(solr_ids - db_ids)):
-            solr.delete_articles(solr_ids - db_ids)
-            log.debug("Removed batch {i}".format(**locals()))
 
         self.index_dirty = False
         self.save()
@@ -266,7 +269,7 @@ class TestArticleSet(amcattest.PolicyTestCase):
 
             # test that remove from index works for larger sets
             s = amcattest.create_test_set(indexed=True)
-            arts = [amcattest.create_test_article() for i in range(20)]
+            arts = [amcattest.create_test_article(medium=a.medium) for i in range(20)]
             s.add(*arts)
             
             s.refresh_index(solr)
@@ -279,4 +282,14 @@ class TestArticleSet(amcattest.PolicyTestCase):
             solr_ids = s._get_article_ids_solr(solr)
             self.assertEqual(set(solr_ids), {a.id for a in arts[1:-1]})
 
+            
+
+            # test that changing an article's properties can be reindexed 
+            arts[1].medium = amcattest.create_test_medium()
+            arts[1].save()
+
+            query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium_id, **locals())
+            self.assertEqual(set(solr.query_ids(query)), set()) # before refresh
+            s.refresh_index(solr, full_refresh=True)
+            self.assertEqual(set(solr.query_ids(query)), {arts[1].id}) # after refresh
             
