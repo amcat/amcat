@@ -169,7 +169,7 @@ class _CodebookSerialiser(BaseSerialiser):
     def get_export_fields(self):
         yield "ids", forms.BooleanField(initial=True, label="ids", required=False)
         yield "labels", forms.BooleanField(initial=True, label="labels", required=False)
-        yield "parents", forms.IntegerField(initial=0, label="# parents")
+        yield "parents", forms.IntegerField(initial=0, required=False, label="# parents")
 
     def _get_ancestor(self, value, i, label=False):
         ancestors = list(self.field.codebook.get_ancestor_ids(value))
@@ -178,15 +178,16 @@ class _CodebookSerialiser(BaseSerialiser):
                              
         
     def get_export_columns(self, ids, labels, parents, **options):
+        if parents:
+            for i in range(parents):
+                if ids:
+                    yield "_parent_{i}_id".format(**locals()), functools.partial(self._get_ancestor, i=i)
+                if labels:
+                    yield "_parent_{i}_label".format(**locals()), functools.partial(self._get_ancestor, i=i, label=True)
         if ids:
             yield "_id", lambda x:x
         if labels:
             yield "_lbl", lambda x:self.value_label(self.deserialise(x))
-        for i in range(parents):
-            if ids:
-                yield "_parent_{i}_id".format(**locals()), functools.partial(self._get_ancestor, i=i)
-            if labels:
-                yield "_parent_{i}_label".format(**locals()), functools.partial(self._get_ancestor, i=i, label=True)
             
         
 ###########################################################################

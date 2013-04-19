@@ -85,6 +85,9 @@ class Script(object):
         @return:        A bound form of type self.options_form
         """
         if isinstance(options, self.options_form):
+            validate(options)
+            if not options.is_valid:
+                validate(self.bound_form)
             if not options.is_bound:
                 raise ValueError("Please provide a bound options form")
             return options

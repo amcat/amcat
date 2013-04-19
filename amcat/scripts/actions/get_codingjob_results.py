@@ -1,6 +1,5 @@
 #!/usr/bin/python
-
-##########################################################################
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -37,7 +36,7 @@ FIELD_LABEL = "{label} {schemafield.label} (from {schemafield.codingschema})"
 class CodingjobListForm(forms.Form):
     codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
 
-    def __init__(self, data=None, **kwargs):
+    def __init__(self, data=None, files=None, **kwargs):
         """
         Offers a form with a list of codingjobs. Raises a KeyError if keyword-
         argument project is not given.
@@ -46,7 +45,7 @@ class CodingjobListForm(forms.Form):
         @type project: models.Project"""
         self.project = kwargs.pop("project")
 
-        super(CodingjobListForm, self).__init__(data, **kwargs)
+        super(CodingjobListForm, self).__init__(data, files, **kwargs)
         self.fields["codingjobs"].queryset = self.project.codingjob_set.all()
         self.data = self.data or MultiValueDict()
 
@@ -66,14 +65,14 @@ class CodingJobResultsForm(CodingjobListForm):
         # etc?
     }).items())
 
-    def __init__(self, data=None, **kwargs):
+    def __init__(self, data=None,  files=None, **kwargs):
         """
 
         @param project: Restrict list of codingjobs to this project
         @type project: models.Project
         """
         codingjobs = kwargs.pop("codingjobs", None)
-        super(CodingJobResultsForm, self).__init__(data, **kwargs)
+        super(CodingJobResultsForm, self).__init__(data, files, **kwargs)
 
         # Get all codingjobs and their fields
         unit_codings = self.fields["unit_codings"].clean(self.data.get("unit_codings"))
@@ -113,9 +112,10 @@ def _get_schemafields(codingjobs, unit_codings, **kargs):
     qfilter = "codingschema__codingjobs_{}__in".format("unit" if unit_codings else "article")
 
     # Get fields based on given codingjobs and unit_codings setting
-    return (CodingSchemaField.objects.distinct("id").filter(**{
-                qfilter : codingjobs
-                })).order_by("id").select_related("codingschema", "fieldtype")
+    return (CodingSchemaField.objects
+            .filter(**{qfilter : codingjobs})
+            .order_by("id").distinct()
+            .select_related("codingschema", "fieldtype"))
     
 
 class CodingColumn(table3.ObjectColumn):
@@ -150,3 +150,49 @@ class GetCodingJobResults(Script):
 
         #print t.output(rownames=True)
         return t
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+
+
+class TestGetCodingJobResults(amcattest.PolicyTestCase):
+
+    def _get_results(self, jobs, options):
+        """
+        @param options: {field :{options}} -> include that field with those options
+        """
+        from django.utils.datastructures import MultiValueDict
+        from amcat.forms import validate
+        jobs = list(jobs)
+
+        
+        data = dict(codingjobs=[job.id for job in jobs],
+                    export_format=[0],
+                    )
+        for field, opts in options.items():
+            data["schemafield_{field.id}_included".format(**locals())] = [True]
+            for k, v in opts.items():
+                data["schemafield_{field.id}_{k}".format(**locals())] = [v]
+            
+        f = CodingJobResultsForm(data=MultiValueDict(data), project=jobs[0].project)
+        validate(f)
+        
+        return list(GetCodingJobResults(f).run().to_list())
+    
+    def test_results(self):
+        codebook, codes = amcattest.create_test_codebook_with_codes()
+        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema)
+        
+        c = amcattest.create_test_coding(codingjob=job)
+        c.update_values({strf:"bla", intf:1, codef:codes["A1b"]})
+
+        self.assertEqual(self._get_results([job], {strf : {}, intf : {}, codef : dict(ids=True)}),
+                         [('bla', 1, codes["A1b"].id)])
+
+        self.assertEqual(self._get_results([job], {strf : {}, intf : {}, codef : dict(labels=True, parents=2)}),
+                         [('bla', 1, "A", "A1", "A1b")])
