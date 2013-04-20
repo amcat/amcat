@@ -382,17 +382,21 @@ def codingjob_export_select(request, project):
 
     if form.is_valid():
         url = reverse(codingjob_export_options, args=[project.id])
-        return redirect("{}?{}".format(url, "&".join(
-            ["codingjobs={}".format(c.id) for c in form.cleaned_data["codingjobs"]]
-        )))
+        codingjobs_url = "&".join("codingjobs={}".format(c.id) for c in form.cleaned_data["codingjobs"])
+
+        return redirect("{url}?export_level={level}&{codingjobs_url}"
+                        .format(level=form.cleaned_data["export_level"], **locals()))
+
 
     return render(request, 'navigator/project/export_select.html', locals())
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 def codingjob_export_options(request, project):
+    jobs = request.GET.getlist("codingjobs")
+    level = int(request.GET["export_level"])
     form = GetCodingJobResults.options_form(
-        request.POST or None, project=project, codingjobs=request.GET.getlist("codingjobs"),
-        initial={"codingjobs" : request.GET.getlist("codingjobs")}
+        request.POST or None, project=project, codingjobs=jobs, export_level=level,
+        initial=dict(codingjobs=request.GET.getlist("codingjobs"), export_level=level)
     )
 
     if form.is_valid():

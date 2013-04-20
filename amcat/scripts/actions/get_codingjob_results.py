@@ -20,6 +20,7 @@
 
 from django import forms
 from django.utils.datastructures import MultiValueDict
+from django.db.models import Q
 
 from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchemaFieldType
 from amcat.scripts.script import Script
@@ -28,14 +29,22 @@ from amcat.tools.table import table3
 import logging
 log = logging.getLogger(__name__)
 
-import functools
+import collections
 import itertools
 
 FIELD_LABEL = "{label} {schemafield.label} (from {schemafield.codingschema})"
-            
+
+CODING_LEVEL_ARTICLE, CODING_LEVEL_SENTENCE, CODING_LEVEL_BOTH = range(3)
+CODING_LEVELS = [(CODING_LEVEL_ARTICLE, "Article Codings"),
+                 (CODING_LEVEL_SENTENCE, "Sentence Codings"),
+                 (CODING_LEVEL_BOTH, "Article and Sentence Codings"),
+                 ]
+
 class CodingjobListForm(forms.Form):
     codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
 
+    export_level = forms.ChoiceField(label="Level of codings to export", choices=CODING_LEVELS, initial=CODING_LEVEL_ARTICLE)
+    
     def __init__(self, data=None, files=None, **kwargs):
         """
         Offers a form with a list of codingjobs. Raises a KeyError if keyword-
@@ -56,7 +65,6 @@ class CodingJobResultsForm(CodingjobListForm):
     field options being generated for each of the fields in the union of all fields
     in all codingjobs, depending on their type.
     """
-    unit_codings = forms.BooleanField(initial=False, required=False)
     include_duplicates = forms.BooleanField(initial=False, required=False)
 
     export_format = forms.ChoiceField(choices=({
@@ -64,6 +72,7 @@ class CodingJobResultsForm(CodingjobListForm):
         1 : "xml"
         # etc?
     }).items())
+    
 
     def __init__(self, data=None,  files=None, **kwargs):
         """
@@ -72,15 +81,19 @@ class CodingJobResultsForm(CodingjobListForm):
         @type project: models.Project
         """
         codingjobs = kwargs.pop("codingjobs", None)
+        export_level = kwargs.pop("export_level", None)
         super(CodingJobResultsForm, self).__init__(data, files, **kwargs)
 
+        # Hide fields from step (1)
+        self.fields["codingjobs"].widget = forms.MultipleHiddenInput()
+        self.fields["export_level"].widget = forms.HiddenInput()
+        
         # Get all codingjobs and their fields
-        unit_codings = self.fields["unit_codings"].clean(self.data.get("unit_codings"))
-        if not codingjobs:
+        if not codingjobs: # is this necessary?
             codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
-
+            
         # Insert dynamic fields based on schemafields
-        self.schemafields = _get_schemafields(codingjobs, unit_codings)
+        self.schemafields = _get_schemafields(codingjobs, export_level)
         self.fields.update(self.get_form_fields(self.schemafields))
 
     def get_form_fields(self, schemafields):
@@ -108,16 +121,74 @@ class CodingJobResultsForm(CodingjobListForm):
             id = "schemafield_{schemafield.id}_{id}".format(**locals())
             yield id, field
 
-def _get_schemafields(codingjobs, unit_codings, **kargs):
-    # Get fields based on given codingjobs and unit_codings setting
-    qfilter = "codingschema__codingjobs_{}__in".format("unit" if unit_codings else "article")
+def _get_schemafields(codingjobs, level):
+    unitfilter = Q(codingschema__codingjobs_unit__in=codingjobs)
+    articlefilter = Q(codingschema__codingjobs_article__in=codingjobs)
 
     # Get fields based on given codingjobs and unit_codings setting
-    return (CodingSchemaField.objects
-            .filter(**{qfilter : codingjobs})
-            .order_by("id").distinct()
+    fields = CodingSchemaField.objects.all()
+    if level == CODING_LEVEL_ARTICLE:
+        fields = fields.filter(articlefilter)
+    elif level == CODING_LEVEL_SENTENCE:
+        fields = fields.filter(unitfilter)
+    elif level == CODING_LEVEL_BOTH:
+        fields = fields.filter(articlefilter | unitfilter)
+    else:
+        raise ValueError("Coding level {level!r} not recognized".format(**locals()))
+
+    # Get fields based on given codingjobs and unit_codings setting
+    return (fields.order_by("id").distinct()
             .select_related("codingschema", "fieldtype"))
     
+
+CodingRow = collections.namedtuple('CodingRow', ['job', 'article', 'sentence', 'article_coding', 'sentence_coding'])
+
+def _get_rows(jobs, include_sentences=False, include_multiple=True, include_uncoded_articles=False):
+    """
+    @param sentences: include sentence level codings (if False, row.sentence and .sentence_coding are always None)
+    @param include_multiple: include multiple codedarticles per article
+    @param include_uncoded_article: include articles without corresponding codings
+    """
+
+    seen_articles = set() # articles that have been seen in a codingjob already
+
+    for job in jobs:
+        # get all codings in dicts for later lookup
+        articles = set()
+        article_codings = {} # {article : coding} 
+        sentence_codings = collections.defaultdict(list) # {sentence : [codings]}
+        coded_sentences = collections.defaultdict(set) # {article : {sentences}}
+        for c in job.codings.all():
+            articles.add(c.article)
+            if c.sentence is None:
+                article_codings[c.article] = c
+            else:
+                sentence_codings[c.sentence].append(c)
+                coded_sentences[c.article].add(c.sentence)
+        # output the rows for this job
+        for a in articles:
+            if a in seen_articles and not include_multiple:
+                continue
+            article_coding = article_codings.get(a)
+            
+            sentences = coded_sentences[a]
+            if include_sentences and sentences:
+                for s in sentences:
+                    seen_articles.add(a)
+                    for sentence_coding in sentence_codings[s]:
+                        yield CodingRow(job, a, s, article_coding, sentence_coding)
+            elif article_coding:
+                seen_articles.add(a)
+
+                yield CodingRow(job, a, None, article_coding, None)
+                
+    if include_uncoded_articles:
+        for job in jobs:
+            for article in job.articleset.articles.all():
+                if article not in seen_articles:
+                    yield CodingRow(job, a, None, None, None)
+                    seen_articles.add(a)
+
 
 class CodingColumn(table3.ObjectColumn):
     def __init__(self, field, label, function):
@@ -125,20 +196,26 @@ class CodingColumn(table3.ObjectColumn):
         self.field = field
         label = self.field.label + label
         super(CodingColumn, self).__init__(label)
-    def getCell(self, coding):
+    def getCell(self, row):
+
+        coding = row.article_coding if self.field.codingschema.isarticleschema else row.sentence_coding
         value = coding.get_value(field=self.field)
         return self.function(value)
-
+    
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
-    def _run(self, codingjobs, **kargs):
+    def _run(self, codingjobs, export_level, **kargs):
+        export_level = int(export_level) # why is this necessary??
         codingjobs = list(CodingJob.objects.filter(pk__in=codingjobs).prefetch_related("codings__values"))
+
+        rows = _get_rows(codingjobs,
+                         include_sentences=(export_level != CODING_LEVEL_ARTICLE),
+                         include_multiple=True,
+                         include_uncoded_articles=False,
+                         )
         
-        # avoid using codings.filter since that will trigger new sql instead of using prefetched values
-        codings = list(itertools.chain.from_iterable((c for c in job.codings.all() if c.sentence is None)
-                                                     for job in codingjobs ))
-        t = table3.ObjectTable(rows=codings)
+        t = table3.ObjectTable(rows=rows)
         
         for schemafield in self.bound_form.schemafields:
             prefix = "schemafield_{schemafield.id}".format(**locals())
