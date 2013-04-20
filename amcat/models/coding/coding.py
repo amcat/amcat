@@ -28,7 +28,6 @@ import logging; log = logging.getLogger(__name__)
 
 from django.db import models
 
-from amcat.tools.caching import cached, invalidates
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codingschemafield import CodingSchemaField
 from amcat.models.article import Article
@@ -76,7 +75,6 @@ class Coding(AmcatModel):
         else:
             return self.codingjob.unitschema
 
-    @cached
     def get_values(self):
         """Return a sequence of field, (deserialized) value pairs"""
         return [(v.field, v.value) for v in (
@@ -87,9 +85,8 @@ class Coding(AmcatModel):
         """Return the Value object correspoding to this field"""
         for v in self.values.all():
             if v.field_id == field.id:
-                return v.serialised_value
+                return v.get_serialised_value(field=field)
     
-    @invalidates
     def update_values(self, values):
         """Update the current values
 
@@ -122,7 +119,6 @@ class Coding(AmcatModel):
         self.status = status
         self.save()
 
-    @invalidates
     def set_value(self, field, value):
         """Create a new coding value on this coding
 
@@ -160,8 +156,15 @@ class CodingValue(AmcatModel):
     
     @property
     def serialised_value(self):
-        """Get the 'serialised' (raw) value for this codingvalue"""
-        stype = self.field.serialiser.deserialised_type
+        return self.get_serialised_value()
+    
+    def get_serialised_value(self, field=None):
+        """Get the 'serialised' (raw) value for this codingvalue
+        @param field: for optimization, specify the field if it is known
+        """
+        if field is None:
+            field = next(f for f in self.coding.schema.fields.all() if f.id == self.field_id)
+        stype = field.serialiser.deserialised_type
         if stype == str: return self.strval
         return self.intval
 

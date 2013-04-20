@@ -32,6 +32,7 @@ Deserialised Value: a domain object, possibly a django Model instance
 import logging; log = logging.getLogger(__name__)
 
 from amcat.models.coding.code import Code
+from amcat.models.coding.codebook import Codebook
 from django import forms
 import functools
 
@@ -146,10 +147,19 @@ class _CodebookSerialiser(BaseSerialiser):
     """int - amcat.models.coding.Code serialiser"""
     def __init__(self, field):
         super(_CodebookSerialiser, self).__init__(field, Code, int)
+
+    @property
+    def codebook(self):
+        try:
+            return self._codebook
+        except AttributeError:
+            self._codebook = list(Codebook.objects.filter(pk = self.field.codebook_id)
+                                  .prefetch_related("codebookcode_set"))[0]
+            return self._codebook
         
     def deserialise(self, value):
         try:
-            return self.field.codebook.get_code(value)
+            return self.codebook.get_code(value)
         except Code.DoesNotExist:
             # code was removed from codebook
             return Code.objects.get(pk=value)

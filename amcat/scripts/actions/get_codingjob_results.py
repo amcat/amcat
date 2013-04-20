@@ -76,11 +76,12 @@ class CodingJobResultsForm(CodingjobListForm):
 
         # Get all codingjobs and their fields
         unit_codings = self.fields["unit_codings"].clean(self.data.get("unit_codings"))
-        codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
+        if not codingjobs:
+            codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
 
         # Insert dynamic fields based on schemafields
-        schemafields = _get_schemafields(codingjobs, unit_codings)
-        self.fields.update(self.get_form_fields(schemafields))
+        self.schemafields = _get_schemafields(codingjobs, unit_codings)
+        self.fields.update(self.get_form_fields(self.schemafields))
 
     def get_form_fields(self, schemafields):
         """Returns a dict with all the fields needed to export this codingjob"""
@@ -132,13 +133,14 @@ class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
     def _run(self, codingjobs, **kargs):
-        schemafields = _get_schemafields(**self.options)
-
-        codings = list(Coding.objects.filter(codingjob__in=codingjobs, sentence__isnull=True))
+        codingjobs = list(CodingJob.objects.filter(pk__in=codingjobs).prefetch_related("codings__values"))
         
+        # avoid using codings.filter since that will trigger new sql instead of using prefetched values
+        codings = list(itertools.chain.from_iterable((c for c in job.codings.all() if c.sentence is None)
+                                                     for job in codingjobs ))
         t = table3.ObjectTable(rows=codings)
         
-        for schemafield in schemafields:
+        for schemafield in self.bound_form.schemafields:
             prefix = "schemafield_{schemafield.id}".format(**locals())
             if self.options[prefix+"_included"]:
                 
@@ -180,19 +182,54 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
             
         f = CodingJobResultsForm(data=MultiValueDict(data), project=jobs[0].project)
         validate(f)
-        
-        return list(GetCodingJobResults(f).run().to_list())
+        result = GetCodingJobResults(f).run()
+        #print(result.output())
+        return list(result.to_list())
     
     def test_results(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
-        job = amcattest.create_test_job(unitschema=schema, articleschema=schema)
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
+        articles = list(job.articleset.articles.all())
         
-        c = amcattest.create_test_coding(codingjob=job)
+        c = amcattest.create_test_coding(codingjob=job, article=articles[0])
         c.update_values({strf:"bla", intf:1, codef:codes["A1b"]})
 
         self.assertEqual(self._get_results([job], {strf : {}, intf : {}, codef : dict(ids=True)}),
                          [('bla', 1, codes["A1b"].id)])
+        
+        c = amcattest.create_test_coding(codingjob=job, article=articles[1])
+        c.update_values({strf:"blx", intf:1, codef:codes["B1"]})
+        self.assertEqual(set(self._get_results([job], {strf : {}, intf : {}, codef : dict(labels=True, parents=2)})),
+                         {('bla', 1, "A", "A1", "A1b"), ('blx', 1, "B", "B1", "B1")})
 
-        self.assertEqual(self._get_results([job], {strf : {}, intf : {}, codef : dict(labels=True, parents=2)}),
-                         [('bla', 1, "A", "A1", "A1b")])
+        
+    def test_nqueries(self):
+        from amcat.tools import amcatlogging
+        amcatlogging.setup()
+
+        codebook, codes = amcattest.create_test_codebook_with_codes()
+        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
+        articles = list(job.articleset.articles.all())
+        
+        amcattest.create_test_coding(codingjob=job, article=articles[0]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
+        amcattest.create_test_coding(codingjob=job, article=articles[1]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
+        amcattest.create_test_coding(codingjob=job, article=articles[2]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
+        amcattest.create_test_coding(codingjob=job, article=articles[3]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
+        amcattest.create_test_coding(codingjob=job, article=articles[4]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})                        
+
+        codingjobs = list(CodingJob.objects.filter(pk__in=[job.id]).prefetch_related("codings__values"))
+        c = codingjobs[0].codings.all()[0]
+        amcatlogging.debug_module('django.db.backends')
+        with self.checkMaxQueries(6):
+            list(self._get_results([job], {strf : {}, intf : {}}))
+
+
+        with self.checkMaxQueries(6, output="print"):
+            list(self._get_results([job], {strf : {}, intf : {}, codef : dict(ids=True)}))
+
+
+        with self.checkMaxQueries(6, output="print"):
+            list(self._get_results([job], {strf : {}, intf : {}, codef : dict(labels=True)}))
+
