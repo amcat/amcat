@@ -388,6 +388,11 @@ def codingjob_export_select(request, project):
 
     return render(request, 'navigator/project/export_select.html', locals())
 
+EXPORT_MIMETYPE = {
+    "xlsx" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "csv" : "text/csv"
+}
+
 @check(Project, args_map={'project' : 'id'}, args='project')
 def codingjob_export_options(request, project):
     form = GetCodingJobResults.options_form(
@@ -396,9 +401,11 @@ def codingjob_export_options(request, project):
     )
 
     if form.is_valid():
-        # Voer script uit??
-        result = GetCodingJobResults(form).run()
-        results = result.output()
+        results = GetCodingJobResults(form).run()
+
+        eformat = form.cleaned_data["export_format"]
+        if eformat in EXPORT_MIMETYPE.keys():
+            return HttpResponse(results, mimetype=EXPORT_MIMETYPE.get(eformat))
 
     return render(request, 'navigator/project/export_options.html', locals())
 

@@ -25,6 +25,9 @@ from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSche
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
 
+from amcat.scripts.output.xlsx import table_to_xlsx
+from amcat.scripts.output.csv_output import table_to_csv
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -59,12 +62,10 @@ class CodingJobResultsForm(CodingjobListForm):
     unit_codings = forms.BooleanField(initial=False, required=False)
     include_duplicates = forms.BooleanField(initial=False, required=False)
 
-    export_format = forms.ChoiceField(choices=({
-        0 : "csv",
-        1 : "xml"
-        # etc?
-    }).items())
-
+    export_format = forms.ChoiceField(tuple((c,c) for c in (
+        "csv", "xlsx", "ascii"
+    )))
+    
     def __init__(self, data=None,  files=None, **kwargs):
         """
 
@@ -125,21 +126,26 @@ class CodingColumn(table3.ObjectColumn):
         self.field = field
         label = self.field.label + label
         super(CodingColumn, self).__init__(label)
+
     def getCell(self, coding):
         value = coding.get_value(field=self.field)
         return self.function(value)
 
+TYPE_OUTPUT = {
+    "ascii" : lambda t : t.output(),
+    "csv" : table_to_csv,
+    "xlsx" : table_to_xlsx
+}
+
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
-    def _run(self, codingjobs, **kargs):
-        codingjobs = list(CodingJob.objects.filter(pk__in=codingjobs).prefetch_related("codings__values"))
-        
+    def get_table(self, codingjobs):
         # avoid using codings.filter since that will trigger new sql instead of using prefetched values
         codings = list(itertools.chain.from_iterable((c for c in job.codings.all() if c.sentence is None)
                                                      for job in codingjobs ))
+
         t = table3.ObjectTable(rows=codings)
-        
         for schemafield in self.bound_form.schemafields:
             prefix = "schemafield_{schemafield.id}".format(**locals())
             if self.options[prefix+"_included"]:
@@ -148,18 +154,16 @@ class GetCodingJobResults(Script):
                 for label, function in schemafield.serialiser.get_export_columns(**options):
                     t.addColumn(CodingColumn(schemafield, label, function))
 
-                #print schemafield
-
-        #print t.output(rownames=True)
         return t
+
+    def _run(self, codingjobs, export_format, **kargs):
+        return TYPE_OUTPUT.get(export_format)(self.get_table(codingjobs))
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
 from amcat.tools import amcattest
-
-
 
 class TestGetCodingJobResults(amcattest.PolicyTestCase):
 

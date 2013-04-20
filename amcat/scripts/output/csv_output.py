@@ -24,13 +24,25 @@ import amcat.scripts.forms
 from amcat.models.medium import Medium
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 import csv
-from cStringIO import StringIO
+
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
+
+def table_to_csv(table_obj, delimiter=","):
+    """Convert a table3 object to a csv file (string)"""
+    buff = StringIO()
+
+    tableoutput.table2csv(table_obj, csvwriter=csv.writer(
+        buff, dialect='excel', delimiter=delimiter),
+        writecolnames=True, writerownames=False, tabseparated=False
+    )
+
+    return buff.getvalue()
 
 def tableToCsv(tableObj, delimiter):
-    buffer = StringIO()
-    tableoutput.table2csv(tableObj, csvwriter=csv.writer(buffer, dialect='excel', delimiter=delimiter), 
-                                writecolnames=True, writerownames=False, tabseparated=False)
-    return buffer.getvalue()
+    return table_to_csv(tableObj, delimiter)
     
 class TableToCommaCSV(script.Script):
     input_type = table3.Table
@@ -50,17 +62,6 @@ class TableToSemicolonCSV(script.Script):
     def run(self, tableObj):
         return tableToCsv(tableObj, ';')
         
-       
-# class DictToCSV(script.Script):
-    # input_type = dict
-    # options_form = None
-    # output_type = script.CsvStream
-
-
-    # def run(self, dictObj):
-        # return simplejson.dumps(dictObj, default=encode_json)
-       
-       
 class ArticleListToSemicolonCSV(script.Script):
     input_type = types.ArticleIterator
     options_form = amcat.scripts.forms.ArticleColumnsForm
@@ -71,13 +72,10 @@ class ArticleListToSemicolonCSV(script.Script):
         tableObj = ArticleListToTable(self.options).run(articleList)
         return TableToCommaCSV().run(tableObj)
         
-        
-       
 class ArticleListToCommaCSV(script.Script):
     input_type = types.ArticleIterator
     options_form = amcat.scripts.forms.ArticleColumnsForm
     output_type = types.CsvSemicolonData
-
 
     def run(self, articleList):
         tableObj = ArticleListToTable(self.options).run(articleList)

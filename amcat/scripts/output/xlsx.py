@@ -26,14 +26,13 @@ from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 import zipfile
 import io
 
+def table_to_xlsx(table):
+    return TableToXlsx().run(table)
 
 class TableToXlsx(script.Script):
-
-    
     input_type = table3.Table
     options_form = None
     output_type = types.ExcelData
-
 
     def run(self, tableObj):
 
@@ -41,7 +40,6 @@ class TableToXlsx(script.Script):
         from openpyxl.workbook import Workbook
         from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 
-        
         wb = Workbook(optimized_write = True)
         ws = wb.create_sheet()
         
@@ -61,16 +59,12 @@ class TableToXlsx(script.Script):
         buffer.flush()
         return buffer.getvalue()
        
-       
-       
 class ArticleListToXlsx(script.Script):
     input_type = types.ArticleIterator
     options_form = amcat.scripts.forms.ArticleColumnsForm
     output_type = types.ExcelData
 
-
     def run(self, articleList):
         tableObj = ArticleListToTable(self.options).run(articleList)
         return TableToXlsx().run(tableObj)
-        
         
