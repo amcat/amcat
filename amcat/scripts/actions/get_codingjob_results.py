@@ -91,7 +91,8 @@ class CodingJobResultsForm(CodingjobListForm):
         # Get all codingjobs and their fields
         if not codingjobs: # is this necessary?
             codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
-            
+        if not export_level:
+            export_level = int(self.fields["export_level"].clean(self.data['export_level']))
         # Insert dynamic fields based on schemafields
         self.schemafields = _get_schemafields(codingjobs, export_level)
         self.fields.update(self.get_form_fields(self.schemafields))
@@ -199,6 +200,8 @@ class CodingColumn(table3.ObjectColumn):
 
     def getCell(self, row):
         coding = row.article_coding if self.field.codingschema.isarticleschema else row.sentence_coding
+        if coding is None:
+            return None
         value = coding.get_value(field=self.field)
         return self.function(value)
 
@@ -253,7 +256,8 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
         
         data = dict(codingjobs=[job.id for job in jobs],
-                    export_format=[0],
+                    export_format=['csv'],
+                    export_level=['0'],
                     )
         for field, opts in options.items():
             data["schemafield_{field.id}_included".format(**locals())] = [True]
@@ -264,8 +268,22 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
         validate(f)
         result = GetCodingJobResults(f).run()
         #print(result.output())
-        return list(result.to_list())
-    
+        import csv
+        from cStringIO import StringIO
+        return list(csv.reader(StringIO(result)))
+
+    def test_get_rows(self):
+        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields()
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
+        articles = list(job.articleset.articles.all())
+        c = amcattest.create_test_coding(codingjob=job, article=articles[0])
+        rows = set(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=False))
+        self.assertEqual(rows, {(job, articles[0], None, c, None)})
+        rows = list(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=True))
+        print rows
+        
+        self.assertEqual(rows, {(job, articles[0], None, c, None)} | {(job, a, None, None, None) for a in articles[1:]})
+
     def test_results(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
