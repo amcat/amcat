@@ -154,54 +154,57 @@ CodingRow = collections.namedtuple('CodingRow', ['job', 'article', 'sentence', '
 
 def _get_rows(jobs, include_sentences=False, include_multiple=True, include_uncoded_articles=False):
     """
+    @param jobs: output rows for these jobs. Make sure this is a QuerySet object with .prefetch_related("codings__values")
     @param sentences: include sentence level codings (if False, row.sentence and .sentence_coding are always None)
     @param include_multiple: include multiple codedarticles per article
-    @param include_uncoded_article: include articles without corresponding codings
+    @param include_uncoded_articles: include articles without corresponding codings
     """
-    job_articles = { a.id : a for a in Article.objects.filter(coding__codingjob__in=jobs)}
+    art_filter = Q(coding__codingjob__in=jobs)
+    if include_uncoded_articles:
+        art_filter |= Q(articlesets_set__codingjob_set__in=jobs)
+
+    job_articles = { a.id : a for a in Article.objects.filter(art_filter)}
     article_sentences = { s.id : s for s in Sentence.objects.filter(article__id__in=job_articles.keys())}
+        
+    # Articles that have been seen in a codingjob already
+    seen_articles = set() 
 
-    seen_articles = set() # articles that have been seen in a codingjob already
-
+    articles = set()
     for job in jobs:
-        # get all codings in dicts for later lookup
-        articles = set()
+        # Get all codings in dicts for later lookup
+        articles.clear()
+
         article_codings = {} # {article : coding} 
         sentence_codings = collections.defaultdict(list) # {sentence : [codings]}
         coded_sentences = collections.defaultdict(set) # {article : {sentences}}
 
         for c in job.codings.all():
-            articles.add(job_articles.get(c.article_id, c.article))
+            articles.add(job_articles[c.article_id])
             if c.sentence_id is None:
-                article_codings[job_articles.get(c.article_id, c.article)] = c
+                article_codings[job_articles[c.article_id]] = c
             else:
-                sentence_codings[article_sentences.get(c.sentence_id, c.sentence)].append(c)
-                coded_sentences[job_articles.get(c.article_id, c.article)].add(article_sentences.get(c.sentence_id, c.sentence))
+                sentence_codings[article_sentences[c.sentence_id]].append(c)
+                coded_sentences[job_articles[c.article_id]].add(article_sentences[c.sentence_id])
 
         # output the rows for this job
         for a in articles:
             if a in seen_articles and not include_multiple:
                 continue
+
             article_coding = article_codings.get(a)
-            
             sentences = coded_sentences[a]
             if include_sentences and sentences:
                 for s in sentences:
-                    seen_articles.add(a)
                     for sentence_coding in sentence_codings[s]:
                         yield CodingRow(job, a, s, article_coding, sentence_coding)
             elif article_coding:
-                seen_articles.add(a)
-
                 yield CodingRow(job, a, None, article_coding, None)
+
+            seen_articles.add(a)
                 
     if include_uncoded_articles:
-        for job in jobs:
-            for article in job.articleset.articles.all():
-                if article not in seen_articles:
-                    yield CodingRow(job, article, None, None, None)
-                    seen_articles.add(article)
-
+        for article in set(job_articles.values()) - seen_articles:
+            yield CodingRow(job, a, None, None, None)
 
 class CodingColumn(table3.ObjectColumn):
     def __init__(self, field, label, function):
@@ -221,24 +224,24 @@ class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
     def get_table(self, codingjobs, export_level, **kargs):
-        codingjobs = list(CodingJob.objects.filter(pk__in=codingjobs).prefetch_related("codings__values"))
-        rows = _get_rows(codingjobs,
-                         include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
-                         include_multiple=True,
-                         include_uncoded_articles=False,
-                         )
+        codingjobs = CodingJob.objects.prefetch_related("codings__values").filter(pk__in=codingjobs)
 
-        t = table3.ObjectTable(rows=rows)
+        # Get all row of table
+        table = table3.ObjectTable(rows=_get_rows(
+            codingjobs, include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
+            include_multiple=True, include_uncoded_articles=False
+        ))
 
+        # Build columns based on form schemafields
         for schemafield in self.bound_form.schemafields:
             prefix = "schemafield_{schemafield.id}".format(**locals())
             if self.options[prefix+"_included"]:
-                
                 options = {k[len(prefix)+1:] :v for (k,v) in self.options.iteritems() if k.startswith(prefix)}
+                
                 for label, function in schemafield.serialiser.get_export_columns(**options):
-                    t.addColumn(CodingColumn(schemafield, label, function))
+                    table.addColumn(CodingColumn(schemafield, label, function))
 
-        return t
+        return table
 
     def _run(self, export_format, **kargs):
         table = self.get_table(**kargs)
@@ -345,7 +348,7 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
         codebook, codes = amcattest.create_test_codebook_with_codes()
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
-        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=7)
         articles = list(job.articleset.articles.all())
         
         amcattest.create_test_coding(codingjob=job, article=articles[0]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
@@ -359,16 +362,16 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
         amcatlogging.debug_module('django.db.backends')
 
         script = self._get_results_script([job], {strf : {}, intf : {}})
-        with self.checkMaxQueries(6, output="print"):
+        with self.checkMaxQueries(5, output="print"):
             list(csv.reader(StringIO(script.run())))
 
 
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(ids=True)})
-        with self.checkMaxQueries(6, output="print"):
+        with self.checkMaxQueries(5, output="print"):
             list(csv.reader(StringIO(script.run())))
 
 
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(labels=True)})
-        with self.checkMaxQueries(6, output="print"):
+        with self.checkMaxQueries(5, output="print"):
             list(csv.reader(StringIO(script.run())))
 
