@@ -60,20 +60,26 @@ def get_or_create_sentences(article):
     sents = Sentence.objects.filter(article=article)
     return sents if sents.exists() else create_sentences(article)
 
-
-@toolkit.to_list # consume the generator to make sure sentences are created
-def create_sentences(article):
-    """
-    Split the given article object into sentences and save the sentences models
-    to the database. Returns a list of the resulting Sentence objects.
-    """
+def _create_sentences(article):
     pars = [article.headline]
     if article.byline: pars += [article.byline]
     pars += re.split(r"\n\s*\n[\s\n]*", article.text.strip())
     for parnr, par in enumerate(pars):
         for sentnr, sent in enumerate(split(par)):
-            yield Sentence.objects.create(parnr=parnr+1, sentnr=sentnr+1,
-                                          article=article, sentence=sent)
+            yield Sentence(parnr=parnr+1, sentnr=sentnr+1,
+                            article=article, sentence=sent)
+
+def create_sentences(article):
+    """
+    Split the given article object into sentences and save the sentences models
+    to the database. Returns a list of the resulting Sentence objects.
+
+    If you can, cache properties headline, byline and text.
+    """
+    sents = tuple(_create_sentences(article))
+    Sentence.objects.bulk_create(sents)
+    return sents
+
 
 def split(text):
     """

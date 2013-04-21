@@ -64,7 +64,7 @@ from amcat.scripts.actions.add_project import AddProject
 from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
-from amcat.scripts.actions.get_codingjob_results import CodingjobListForm
+from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
 
 from navigator import forms
 from navigator.utils.auth import check, check_perm
@@ -390,11 +390,6 @@ def codingjob_export_select(request, project):
 
     return render(request, 'navigator/project/export_select.html', locals())
 
-EXPORT_MIMETYPE = {
-    "xlsx" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "csv" : "text/csv"
-}
-
 @check(Project, args_map={'project' : 'id'}, args='project')
 def codingjob_export_options(request, project):
     jobs = request.GET.getlist("codingjobs")
@@ -408,8 +403,10 @@ def codingjob_export_options(request, project):
         results = GetCodingJobResults(form).run()
 
         eformat = form.cleaned_data["export_format"]
-        if eformat in EXPORT_MIMETYPE.keys():
-            return HttpResponse(results, mimetype=EXPORT_MIMETYPE.get(eformat))
+        mimetype = {f.label : f.mimetype for f in EXPORT_FORMATS}[eformat]
+        
+        if mimetype is not None:
+            return HttpResponse(results, mimetype=mimetype)
 
     return render(request, 'navigator/project/export_options.html', locals())
 

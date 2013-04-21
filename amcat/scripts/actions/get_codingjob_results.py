@@ -22,7 +22,8 @@ from django import forms
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
 
-from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchemaFieldType
+from amcat.models import Coding, CodingJob, CodingSchemaField, Label
+from amcat.models import Article, CodingSchemaFieldType, Sentence
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
 
@@ -32,9 +33,12 @@ from amcat.scripts.output.csv_output import table_to_csv
 import logging
 log = logging.getLogger(__name__)
 
+import csv
 import collections
 import itertools
 import json
+
+from cStringIO import StringIO
 
 FIELD_LABEL = "{label} {schemafield.label} (from {schemafield.codingschema})"
 
@@ -44,9 +48,15 @@ CODING_LEVELS = [(CODING_LEVEL_ARTICLE, "Article Codings"),
                  (CODING_LEVEL_BOTH, "Article and Sentence Codings"),
                  ]
 
+ExportFormat = collections.namedtuple('ExportFormat', ["label", "function", "mimetype"])
+EXPORT_FORMATS = (ExportFormat(label="ascii", function=lambda t:t.output(), mimetype=None),
+           ExportFormat(label="csv", function=table_to_csv, mimetype="text/csv"),
+           ExportFormat(label="xlsx", function=table_to_xlsx, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+           ExportFormat(label="json", function=lambda t:json.dumps(list(t.to_list())), mimetype="application/json"),
+           )    
+
 class CodingjobListForm(forms.Form):
     codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
-
     export_level = forms.ChoiceField(label="Level of codings to export", choices=CODING_LEVELS, initial=CODING_LEVEL_ARTICLE)
     
     def __init__(self, data=None, files=None, **kwargs):
@@ -70,10 +80,7 @@ class CodingJobResultsForm(CodingjobListForm):
     in all codingjobs, depending on their type.
     """
     include_duplicates = forms.BooleanField(initial=False, required=False)
-
-    export_format = forms.ChoiceField(tuple((c,c) for c in (
-        "csv", "xlsx", "ascii", "json"
-    )))
+    export_format = forms.ChoiceField(tuple((c.label, c.label) for c in EXPORT_FORMATS))
 
     def __init__(self, data=None,  files=None, **kwargs):
         """
@@ -151,6 +158,8 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
     @param include_multiple: include multiple codedarticles per article
     @param include_uncoded_article: include articles without corresponding codings
     """
+    job_articles = { a.id : a for a in Article.objects.filter(coding__codingjob__in=jobs)}
+    article_sentences = { s.id : s for s in Sentence.objects.filter(article__id__in=job_articles.keys())}
 
     seen_articles = set() # articles that have been seen in a codingjob already
 
@@ -160,13 +169,15 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
         article_codings = {} # {article : coding} 
         sentence_codings = collections.defaultdict(list) # {sentence : [codings]}
         coded_sentences = collections.defaultdict(set) # {article : {sentences}}
+
         for c in job.codings.all():
-            articles.add(c.article)
-            if c.sentence is None:
-                article_codings[c.article] = c
+            articles.add(job_articles.get(c.article_id, c.article))
+            if c.sentence_id is None:
+                article_codings[job_articles.get(c.article_id, c.article)] = c
             else:
-                sentence_codings[c.sentence].append(c)
-                coded_sentences[c.article].add(c.sentence)
+                sentence_codings[article_sentences.get(c.sentence_id, c.sentence)].append(c)
+                coded_sentences[job_articles.get(c.article_id, c.article)].add(article_sentences.get(c.sentence_id, c.sentence))
+
         # output the rows for this job
         for a in articles:
             if a in seen_articles and not include_multiple:
@@ -206,21 +217,13 @@ class CodingColumn(table3.ObjectColumn):
         value = coding.get_value(field=self.field)
         return self.function(value)
 
-TYPE_OUTPUT = {
-    "ascii" : lambda t : t.output(),
-    "csv" : table_to_csv,
-    "xlsx" : table_to_xlsx,
-    "json" : lambda t : json.dumps(list(t.to_list()))
-}
-
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
     def get_table(self, codingjobs, export_level, **kargs):
-        export_level = int(export_level) # why is this necessary??
         codingjobs = list(CodingJob.objects.filter(pk__in=codingjobs).prefetch_related("codings__values"))
         rows = _get_rows(codingjobs,
-                         include_sentences=(export_level != CODING_LEVEL_ARTICLE),
+                         include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
                          include_multiple=True,
                          include_uncoded_articles=False,
                          )
@@ -238,7 +241,9 @@ class GetCodingJobResults(Script):
         return t
 
     def _run(self, export_format, **kargs):
-        return TYPE_OUTPUT.get(export_format)(self.get_table(**kargs))
+        table = self.get_table(**kargs)
+        format_dict = {f.label : f.function for f in EXPORT_FORMATS}
+        return format_dict[export_format](table)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -248,7 +253,7 @@ from amcat.tools import amcattest
 
 class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
-    def _get_results(self, jobs, options, export_level=0):
+    def _get_results_script(self, jobs, options, export_level=0):
         """
         @param options: {field :{options}} -> include that field with those options
         """
@@ -268,14 +273,11 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
             
         f = CodingJobResultsForm(data=MultiValueDict(data), project=jobs[0].project)
         validate(f)
-        result = GetCodingJobResults(f).run()
-        #print(result.output())
-        return [tuple(x) for x in json.loads(result)]
-        
-        import csv
-        from cStringIO import StringIO
-        result = result.strip().split("\n")[1:]
-        return list(tuple(x) for x in csv.reader(result))
+        return GetCodingJobResults(f)
+
+    def _get_results(self, *args, **kargs):
+        script = self._get_results_script(*args, **kargs)
+        return [tuple(x) for x in json.loads(script.run())]
 
     def test_get_rows(self):
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields()
@@ -332,8 +334,8 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
         sc = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s)
         sc.update_values({sstrf:"z", sintf:-1, scodef:codes["A"]})
                 
-        print(self._get_results([job], {strf : {}, sstrf : {}, sintf : {}}, export_level=2))
-        self.assertEqual(set(self._gte_results
+        self.assertEqual(set(self._get_results([job], {strf : {}, sstrf : {}, sintf : {}}, export_level=2)),
+                         {('bla', 'z', -1), ('blx', None, None)})
         
         
         
@@ -352,17 +354,21 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
         amcattest.create_test_coding(codingjob=job, article=articles[3]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
         amcattest.create_test_coding(codingjob=job, article=articles[4]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})                        
 
-        codingjobs = list(CodingJob.objects.filter(pk__in=[job.id]).prefetch_related("codings__values"))
+        codingjobs = list(CodingJob.objects.filter(pk__in=[job.id]))
         c = codingjobs[0].codings.all()[0]
         amcatlogging.debug_module('django.db.backends')
-        with self.checkMaxQueries(6):
-            list(self._get_results([job], {strf : {}, intf : {}}))
 
-
+        script = self._get_results_script([job], {strf : {}, intf : {}})
         with self.checkMaxQueries(6, output="print"):
-            list(self._get_results([job], {strf : {}, intf : {}, codef : dict(ids=True)}))
+            list(csv.reader(StringIO(script.run())))
 
 
+        script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(ids=True)})
         with self.checkMaxQueries(6, output="print"):
-            list(self._get_results([job], {strf : {}, intf : {}, codef : dict(labels=True)}))
+            list(csv.reader(StringIO(script.run())))
+
+
+        script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(labels=True)})
+        with self.checkMaxQueries(6, output="print"):
+            list(csv.reader(StringIO(script.run())))
 
