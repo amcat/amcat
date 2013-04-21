@@ -43,9 +43,12 @@ CODING_LEVELS = [(CODING_LEVEL_ARTICLE, "Article Codings"),
                  (CODING_LEVEL_BOTH, "Article and Sentence Codings"),
                  ]
 
+FORMAT_CHOICES = ("ascii", "csv", "xlsx")
+FORMAT_FUNCS = (lambda t : t.output(), table_to_csv, table_to_xlsx)
+FORMAT_MEMETYPES = (None, "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
 class CodingjobListForm(forms.Form):
     codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
-
     export_level = forms.ChoiceField(label="Level of codings to export", choices=CODING_LEVELS, initial=CODING_LEVEL_ARTICLE)
     
     def __init__(self, data=None, files=None, **kwargs):
@@ -69,10 +72,7 @@ class CodingJobResultsForm(CodingjobListForm):
     in all codingjobs, depending on their type.
     """
     include_duplicates = forms.BooleanField(initial=False, required=False)
-
-    export_format = forms.ChoiceField(tuple((c,c) for c in (
-        "csv", "xlsx", "ascii"
-    )))
+    export_format = forms.ChoiceField(zip(FORMAT_CHOICES, FORMAT_CHOICES))
 
     def __init__(self, data=None,  files=None, **kwargs):
         """
@@ -205,20 +205,14 @@ class CodingColumn(table3.ObjectColumn):
         value = coding.get_value(field=self.field)
         return self.function(value)
 
-TYPE_OUTPUT = {
-    "ascii" : lambda t : t.output(),
-    "csv" : table_to_csv,
-    "xlsx" : table_to_xlsx
-}
 
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
     def get_table(self, codingjobs, export_level, **kargs):
-        export_level = int(export_level) # why is this necessary??
         codingjobs = list(CodingJob.objects.filter(pk__in=codingjobs).prefetch_related("codings__values"))
         rows = _get_rows(codingjobs,
-                         include_sentences=(export_level != CODING_LEVEL_ARTICLE),
+                         include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
                          include_multiple=True,
                          include_uncoded_articles=False,
                          )
@@ -236,7 +230,7 @@ class GetCodingJobResults(Script):
         return t
 
     def _run(self, export_format, **kargs):
-        return TYPE_OUTPUT.get(export_format)(self.get_table(**kargs))
+        return dict(zip(FORMAT_CHOICES, FORMAT_FUNCS)).get(export_format)(self.get_table(**kargs))
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
