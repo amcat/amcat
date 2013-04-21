@@ -22,7 +22,8 @@ from django import forms
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
 
-from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchemaFieldType
+from amcat.models import Coding, CodingJob, CodingSchemaField, Label
+from amcat.models import Article, CodingSchemaFieldType, Sentence
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
 
@@ -32,8 +33,11 @@ from amcat.scripts.output.csv_output import table_to_csv
 import logging
 log = logging.getLogger(__name__)
 
+import csv
 import collections
 import itertools
+
+from cStringIO import StringIO
 
 FIELD_LABEL = "{label} {schemafield.label} (from {schemafield.codingschema})"
 
@@ -150,6 +154,8 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
     @param include_multiple: include multiple codedarticles per article
     @param include_uncoded_article: include articles without corresponding codings
     """
+    job_articles = { a.id : a for a in Article.objects.filter(coding__codingjob__in=jobs)}
+    article_sentences = { s.id : s for s in Sentence.objects.filter(article__id__in=job_articles.keys())}
 
     seen_articles = set() # articles that have been seen in a codingjob already
 
@@ -159,13 +165,15 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
         article_codings = {} # {article : coding} 
         sentence_codings = collections.defaultdict(list) # {sentence : [codings]}
         coded_sentences = collections.defaultdict(set) # {article : {sentences}}
+
         for c in job.codings.all():
-            articles.add(c.article)
-            if c.sentence is None:
-                article_codings[c.article] = c
+            articles.add(job_articles.get(c.article_id, c.article))
+            if c.sentence_id is None:
+                article_codings[job_articles.get(c.article_id, c.article)] = c
             else:
-                sentence_codings[c.sentence].append(c)
-                coded_sentences[c.article].add(c.sentence)
+                sentence_codings[article_sentences.get(c.sentence_id, c.sentence)].append(c)
+                coded_sentences[job_articles.get(c.article_id, c.article)].add(article_sentences.get(c.sentence_id, c.sentence))
+
         # output the rows for this job
         for a in articles:
             if a in seen_articles and not include_multiple:
@@ -239,8 +247,11 @@ class GetCodingJobResults(Script):
 from amcat.tools import amcattest
 
 class TestGetCodingJobResults(amcattest.PolicyTestCase):
-
     def _get_results(self, jobs, options):
+        result = self._get_results_script(jobs, options).run()
+        return list(csv.reader(StringIO(result)))
+        
+    def _get_results_script(self, jobs, options):
         """
         @param options: {field :{options}} -> include that field with those options
         """
@@ -260,11 +271,7 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
             
         f = CodingJobResultsForm(data=MultiValueDict(data), project=jobs[0].project)
         validate(f)
-        result = GetCodingJobResults(f).run()
-        #print(result.output())
-        import csv
-        from cStringIO import StringIO
-        return list(csv.reader(StringIO(result)))
+        return GetCodingJobResults(f)
 
     def test_get_rows(self):
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields()
@@ -311,17 +318,21 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
         amcattest.create_test_coding(codingjob=job, article=articles[3]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
         amcattest.create_test_coding(codingjob=job, article=articles[4]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})                        
 
-        codingjobs = list(CodingJob.objects.filter(pk__in=[job.id]).prefetch_related("codings__values"))
+        codingjobs = list(CodingJob.objects.filter(pk__in=[job.id])
         c = codingjobs[0].codings.all()[0]
         amcatlogging.debug_module('django.db.backends')
-        with self.checkMaxQueries(6):
-            list(self._get_results([job], {strf : {}, intf : {}}))
 
-
+        script = self._get_results_script([job], {strf : {}, intf : {}})
         with self.checkMaxQueries(6, output="print"):
-            list(self._get_results([job], {strf : {}, intf : {}, codef : dict(ids=True)}))
+            list(csv.reader(StringIO(script.run())))
 
 
+        script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(ids=True)})
         with self.checkMaxQueries(6, output="print"):
-            list(self._get_results([job], {strf : {}, intf : {}, codef : dict(labels=True)}))
+            list(csv.reader(StringIO(script.run())))
+
+
+        script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(labels=True)})
+        with self.checkMaxQueries(6, output="print"):
+            list(csv.reader(StringIO(script.run())))
 
