@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 
 import collections
 import itertools
+import json
 
 FIELD_LABEL = "{label} {schemafield.label} (from {schemafield.codingschema})"
 
@@ -71,7 +72,7 @@ class CodingJobResultsForm(CodingjobListForm):
     include_duplicates = forms.BooleanField(initial=False, required=False)
 
     export_format = forms.ChoiceField(tuple((c,c) for c in (
-        "csv", "xlsx", "ascii"
+        "csv", "xlsx", "ascii", "json"
     )))
 
     def __init__(self, data=None,  files=None, **kwargs):
@@ -187,8 +188,8 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
         for job in jobs:
             for article in job.articleset.articles.all():
                 if article not in seen_articles:
-                    yield CodingRow(job, a, None, None, None)
-                    seen_articles.add(a)
+                    yield CodingRow(job, article, None, None, None)
+                    seen_articles.add(article)
 
 
 class CodingColumn(table3.ObjectColumn):
@@ -208,7 +209,8 @@ class CodingColumn(table3.ObjectColumn):
 TYPE_OUTPUT = {
     "ascii" : lambda t : t.output(),
     "csv" : table_to_csv,
-    "xlsx" : table_to_xlsx
+    "xlsx" : table_to_xlsx,
+    "json" : lambda t : json.dumps(list(t.to_list()))
 }
 
 class GetCodingJobResults(Script):
@@ -222,7 +224,7 @@ class GetCodingJobResults(Script):
                          include_multiple=True,
                          include_uncoded_articles=False,
                          )
-        
+
         t = table3.ObjectTable(rows=rows)
 
         for schemafield in self.bound_form.schemafields:
@@ -246,7 +248,7 @@ from amcat.tools import amcattest
 
 class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
-    def _get_results(self, jobs, options):
+    def _get_results(self, jobs, options, export_level=0):
         """
         @param options: {field :{options}} -> include that field with those options
         """
@@ -256,8 +258,8 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
         
         data = dict(codingjobs=[job.id for job in jobs],
-                    export_format=['csv'],
-                    export_level=['0'],
+                    export_format=['json'],
+                    export_level=[str(export_level)],
                     )
         for field, opts in options.items():
             data["schemafield_{field.id}_included".format(**locals())] = [True]
@@ -268,39 +270,72 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
         validate(f)
         result = GetCodingJobResults(f).run()
         #print(result.output())
+        return [tuple(x) for x in json.loads(result)]
+        
         import csv
         from cStringIO import StringIO
-        return list(csv.reader(StringIO(result)))
+        result = result.strip().split("\n")[1:]
+        return list(tuple(x) for x in csv.reader(result))
 
     def test_get_rows(self):
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields()
         job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
         articles = list(job.articleset.articles.all())
         c = amcattest.create_test_coding(codingjob=job, article=articles[0])
+        # simple coding
         rows = set(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=False))
         self.assertEqual(rows, {(job, articles[0], None, c, None)})
-        rows = list(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=True))
-        print rows
-        
+        # test uncoded_articles
+        rows = set(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=True))
         self.assertEqual(rows, {(job, articles[0], None, c, None)} | {(job, a, None, None, None) for a in articles[1:]})
+        # test sentence
+        s = amcattest.create_test_sentence(article=articles[0])
+        sc = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s)
+        rows = set(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=False))
+        self.assertEqual(rows, {(job, articles[0], None, c, None)})
+        rows = set(_get_rows([job], include_sentences=True, include_multiple=True, include_uncoded_articles=False))
+        self.assertEqual(rows, {(job, articles[0], s, c, sc)})
+        # multiple sentence codings on the same article should duplicate article(coding)
+        s2 = amcattest.create_test_sentence(article=articles[0])
+        sc2 = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s2)
+        rows = set(_get_rows([job], include_sentences=True, include_multiple=True, include_uncoded_articles=False))
+        self.assertEqual(rows, {(job, articles[0], s, c, sc), (job, articles[0], s2, c, sc2)})        
+        # if an article contains an article coding but no sentence coding, it should still show up with sentence=True
+        c2 = amcattest.create_test_coding(codingjob=job, article=articles[1])
+        rows = set(_get_rows([job], include_sentences=True, include_multiple=True, include_uncoded_articles=False))
+        self.assertEqual(rows, {(job, articles[0], s, c, sc), (job, articles[0], s2, c, sc2), (job, articles[1], None, c2, None)})
+        
+        
 
     def test_results(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
-        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
-        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
+        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook, isarticleschema=True)
+        sschema, codebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(codebook=codebook)
+        job = amcattest.create_test_job(unitschema=sschema, articleschema=schema, narticles=5)
         articles = list(job.articleset.articles.all())
         
         c = amcattest.create_test_coding(codingjob=job, article=articles[0])
-        c.update_values({strf:"bla", intf:1, codef:codes["A1b"]})
 
+        # test simple coding with a codebook code
+        c.update_values({strf:"bla", intf:1, codef:codes["A1b"]})
         self.assertEqual(self._get_results([job], {strf : {}, intf : {}, codef : dict(ids=True)}),
                          [('bla', 1, codes["A1b"].id)])
-        
-        c = amcattest.create_test_coding(codingjob=job, article=articles[1])
-        c.update_values({strf:"blx", intf:1, codef:codes["B1"]})
+        # test multiple codings and parents
+        c2 = amcattest.create_test_coding(codingjob=job, article=articles[1])
+        c2.update_values({strf:"blx", intf:1, codef:codes["B1"]})
         self.assertEqual(set(self._get_results([job], {strf : {}, intf : {}, codef : dict(labels=True, parents=2)})),
                          {('bla', 1, "A", "A1", "A1b"), ('blx', 1, "B", "B1", "B1")})
 
+
+        # test sentence result
+        s = amcattest.create_test_sentence(article=articles[0])
+        sc = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s)
+        sc.update_values({sstrf:"z", sintf:-1, scodef:codes["A"]})
+                
+        print(self._get_results([job], {strf : {}, sstrf : {}, sintf : {}}, export_level=2))
+        self.assertEqual(set(self._gte_results
+        
+        
         
     def test_nqueries(self):
         from amcat.tools import amcatlogging
