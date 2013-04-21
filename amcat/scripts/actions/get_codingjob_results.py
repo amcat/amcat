@@ -165,7 +165,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
 
     job_articles = { a.id : a for a in Article.objects.filter(art_filter)}
     article_sentences = { s.id : s for s in Sentence.objects.filter(article__id__in=job_articles.keys())}
-        
+
     # Articles that have been seen in a codingjob already
     seen_articles = set() 
 
@@ -201,10 +201,10 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
                 yield CodingRow(job, a, None, article_coding, None)
 
             seen_articles.add(a)
-                
+
     if include_uncoded_articles:
         for article in set(job_articles.values()) - seen_articles:
-            yield CodingRow(job, a, None, None, None)
+            yield CodingRow(job, article, None, None, None)
 
 class CodingColumn(table3.ObjectColumn):
     def __init__(self, field, label, function):
