@@ -55,7 +55,8 @@ from django.forms.models import modelform_factory
 from django.forms import Form, FileField, ChoiceField
 from django.http import HttpResponse
 from django.db import transaction
-
+from django.utils.datastructures import SortedDict
+    
 from amcat.models import Project, Language, Role, ProjectRole, Code, Label
 from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
@@ -398,6 +399,23 @@ def codingjob_export_options(request, project):
         request.POST or None, project=project, codingjobs=jobs, export_level=level,
         initial=dict(codingjobs=request.GET.getlist("codingjobs"), export_level=level)
     )
+
+    sections = SortedDict() # section : [(field, subfields) ..]
+    subfields = {} # fieldname -> subfields reference
+    for name in form.fields:
+        prefix = name.split("_")[0]
+        section = {"schemafield" : "Field options", "meta" : "Metadata options"}.get(prefix, "General options")
+
+        if prefix == "schemafield" and not name.endswith("_included"):
+            continue
+        subfields[name] = []
+        sections.setdefault(section, []).append((form[name], subfields[name]))
+        form[name].subfields = []
+        
+    for name in form.fields: # add subordinate fields        
+        prefix = name.split("_")[0]
+        if prefix == "schemafield" and not name.endswith("_included"):
+            subfields[name.rsplit("_", 1)[0] + "_included"].append(form[name])
 
     if form.is_valid():
         results = GetCodingJobResults(form).run()

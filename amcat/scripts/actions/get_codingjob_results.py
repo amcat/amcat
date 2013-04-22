@@ -41,7 +41,7 @@ import json
 
 from cStringIO import StringIO
 
-FIELD_LABEL = "{label} {schemafield.label} (from {schemafield.codingschema})"
+FIELD_LABEL = "{label} {schemafield.label}"
 
 CODING_LEVEL_ARTICLE, CODING_LEVEL_SENTENCE, CODING_LEVEL_BOTH = range(3)
 CODING_LEVELS = [(CODING_LEVEL_ARTICLE, "Article Codings"),
