@@ -92,7 +92,7 @@ class BaseSerialiser(object):
         The label need only be locally unique, it will be prepended with the field name.
         @param **options: the form values of the fields specified by get_export_fields
         """
-        yield "_val", lambda x:x
+        yield "", self.value_label
     
 class TextSerialiser(BaseSerialiser):
     """Simple str - str serialiser"""
@@ -182,9 +182,13 @@ class _CodebookSerialiser(BaseSerialiser):
         yield "parents", forms.IntegerField(initial=0, required=False, label="# parents")
 
     def _get_ancestor(self, value, i, label=False):
-        ancestors = list(self.field.codebook.get_ancestor_ids(value))
+        try:
+            ancestors = list(self.field.codebook.get_ancestor_ids(value))
+        except ValueError:
+            return None
         ancestor_id = ancestors[max(0, len(ancestors) - i - 1)]
         return self.value_label(self.deserialise(ancestor_id)) if label else ancestor_id
+
                              
         
     def get_export_columns(self, ids, labels, parents, **options):
@@ -195,9 +199,9 @@ class _CodebookSerialiser(BaseSerialiser):
                 if labels:
                     yield "_parent_{i}_label".format(**locals()), functools.partial(self._get_ancestor, i=i, label=True)
         if ids:
-            yield "_id", lambda x:x
+            yield " (id)", lambda x:x
         if labels:
-            yield "_lbl", lambda x:self.value_label(self.deserialise(x))
+            yield "", lambda x:self.value_label(self.deserialise(x))
             
         
 ###########################################################################

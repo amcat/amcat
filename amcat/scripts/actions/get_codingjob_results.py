@@ -242,7 +242,8 @@ class CodingColumn(table3.ObjectColumn):
         if coding is None:
             return None
         value = coding.get_value(field=self.field)
-        return self.function(value)
+        if value is not None:
+            return self.function(value)
 
 class MetaColumn(table3.ObjectColumn):
     def __init__(self, field):
