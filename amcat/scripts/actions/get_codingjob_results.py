@@ -251,7 +251,7 @@ class MetaColumn(table3.ObjectColumn):
     def getCell(self, row):
         obj = getattr(row, self.field.object)
         if obj:
-            return getattr(obj, self.field.attr)
+            return unicode(getattr(obj, self.field.attr))
     
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm

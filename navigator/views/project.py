@@ -402,11 +402,14 @@ def codingjob_export_options(request, project):
     if form.is_valid():
         results = GetCodingJobResults(form).run()
 
-        eformat = form.cleaned_data["export_format"]
-        mimetype = {f.label : f.mimetype for f in EXPORT_FORMATS}[eformat]
+        eformat = {f.label : f for f in EXPORT_FORMATS}[form.cleaned_data["export_format"]]
         
-        if mimetype is not None:
-            return HttpResponse(results, mimetype=mimetype)
+        if eformat.mimetype is not None:
+            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(jobs), now=datetime.datetime.now(), ext=eformat.label)
+            response = HttpResponse(content_type=eformat.mimetype, status=201)
+            response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
+            response.write(results)
+            return response
 
     return render(request, 'navigator/project/export_options.html', locals())
 
