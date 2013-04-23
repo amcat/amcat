@@ -8,13 +8,17 @@
 <div>
  <h1 class="noline">Select options for exporting below</h1>
  <form method="POST">
+    {% for hidden in form.hidden_fields %}
+    {{ hidden }}
+    {% endfor %}
+
   <table>
 {% for section, fields in sections.items %}
 <tr><th colspan="2">{{ section }}</th></tr>
-  {% for field, subfields in fields %}
-  <tr><td>{{ field.label_tag }}</td><td>{{ field }}</td></tr>
-  {% for subfield in subfields %}
-    <tr><td class='subfield'>{{ subfield.label_tag }}</td><td>{{ subfield }}</td></tr>
+  {% for id, field, subfields in fields %}
+  <tr><td>{{ field.label_tag }}</td><td>{{ field }}</td><td>{{ field.errors }}</td></tr>
+  {% for id, subfield in subfields %}
+    <tr><td class='subfield'>{{ subfield.label_tag }}</td><td>{{ subfield }}</td><td>{{ subfield.errors }}</td></tr>
   {% endfor %}
   {% endfor %}
 {% endfor %}

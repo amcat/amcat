@@ -413,8 +413,9 @@ def codingjob_export_options(request, project):
     sections = SortedDict() # section : [(id, field, subfields) ..]
     subfields = {} # fieldname -> subfields reference
 
-    for name, field in form.fields.item():
-        print field.is_hidden
+    for name in form.fields:
+        if form[name].is_hidden:
+            continue
         prefix = name.split("_")[0]
         section = {"schemafield" : "Field options", "meta" : "Metadata options"}.get(prefix, "General options")
 
@@ -431,9 +432,9 @@ def codingjob_export_options(request, project):
     for name in form.fields: # add subordinate fields        
         prefix = name.split("_")[0]
         if prefix == "schemafield" and not name.endswith("_included"):
-            subfields[name.rsplit("_", 1)[0] + "_included"].append(form[name])
+            subfields[name.rsplit("_", 1)[0] + "_included"].append((name, form[name]))
 
-    for flds in subfields.items():
+    for flds in subfields.values():
         flds.sort()
             
     if form.is_valid():
