@@ -431,6 +431,8 @@ def codingjob_export_options(request, project):
         eformat = {f.label : f for f in EXPORT_FORMATS}[form.cleaned_data["export_format"]]
         
         if eformat.mimetype is not None:
+            if len(jobs) > 3:
+                jobs = jobs[:3] + ["etc"]
             filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in jobs), now=datetime.datetime.now(), ext=eformat.label)
             response = HttpResponse(content_type=eformat.mimetype, status=201)
             response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
