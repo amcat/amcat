@@ -143,17 +143,19 @@ class CodingJobResultsForm(CodingjobListForm):
             label=FIELD_LABEL.format(label="Include", **locals()), initial=True, required=False,
         )
 
-        
         # Show 'include this field' checkbox (for every field)
-        code_name = "schemafield_{s.id}".format(s=schemafield)
-        yield ("{}_included".format(code_name), include_field)
+        prefix = _get_field_prefix(schemafield)
+        yield ("{prefix}_included".format(**locals()), include_field)
 
         # Include field-specific form fields
         for id, field in schemafield.serialiser.get_export_fields():
             field.label = FIELD_LABEL.format(label="Export "+field.label, **locals())
-            id = "schemafield_{schemafield.id}_{id}".format(**locals())
+            id = "{prefix}_{id}".format(**locals())
             yield id, field
 
+def _get_field_prefix(schemafield):
+    return  "schemafield_{schemafield.codingschema_id}_{schemafield.fieldnr}".format(**locals())
+            
 def _get_schemafields(codingjobs, level):
     unitfilter = Q(codingschema__codingjobs_unit__in=codingjobs)
     articlefilter = Q(codingschema__codingjobs_article__in=codingjobs)
@@ -273,7 +275,7 @@ class GetCodingJobResults(Script):
                 
         # Build columns based on form schemafields
         for schemafield in self.bound_form.schemafields:
-            prefix = "schemafield_{schemafield.id}".format(**locals())
+            prefix = _get_field_prefix(schemafield)
             if self.options[prefix+"_included"]:
                 options = {k[len(prefix)+1:] :v for (k,v) in self.options.iteritems() if k.startswith(prefix)}
                 

@@ -408,23 +408,34 @@ def codingjob_export_options(request, project):
         initial=dict(codingjobs=jobs, export_level=level)
     )
 
-    sections = SortedDict() # section : [(field, subfields) ..]
+    
+    
+    sections = SortedDict() # section : [(id, field, subfields) ..]
     subfields = {} # fieldname -> subfields reference
-    for name in form.fields:
+
+    for name, field in form.fields.item():
+        print field.is_hidden
         prefix = name.split("_")[0]
         section = {"schemafield" : "Field options", "meta" : "Metadata options"}.get(prefix, "General options")
 
         if prefix == "schemafield" and not name.endswith("_included"):
             continue
         subfields[name] = []
-        sections.setdefault(section, []).append((form[name], subfields[name]))
+        sections.setdefault(section, []).append((name, form[name], subfields[name]))
         form[name].subfields = []
-        
+
+    # sort coding fields
+    codingfields = sorted(sections["Field options"])
+    sections["Field options"].sort()
+    
     for name in form.fields: # add subordinate fields        
         prefix = name.split("_")[0]
         if prefix == "schemafield" and not name.endswith("_included"):
             subfields[name.rsplit("_", 1)[0] + "_included"].append(form[name])
 
+    for flds in subfields.items():
+        flds.sort()
+            
     if form.is_valid():
         results = GetCodingJobResults(form).run()
 
