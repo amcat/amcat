@@ -97,6 +97,7 @@ class CodingSchemaField(AmcatModel):
     class Meta():
         db_table = 'codingschemas_fields'
         app_label = 'amcat'
+        unique_together = [('codingschema', 'fieldnr')]
 
     @property
     def serialiser(self):
