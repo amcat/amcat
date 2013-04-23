@@ -383,8 +383,13 @@ def codingjob_export_select(request, project):
 
     if form.is_valid():
         url = reverse(codingjob_export_options, args=[project.id])
-        codingjobs_url = "&".join("codingjobs={}".format(c.id) for c in form.cleaned_data["codingjobs"])
-
+        jobs = form.cleaned_data["codingjobs"]
+        if len(jobs) < 100:
+            codingjobs_url = "&".join("codingjobs={}".format(c.id) for c in jobs)
+        else:
+            codingjobs_url = "use_session=1"
+            request.session['export_job_ids'] = json.dumps([c.id for c in jobs])
+            
         return redirect("{url}?export_level={level}&{codingjobs_url}"
                         .format(level=form.cleaned_data["export_level"], **locals()))
 
@@ -393,11 +398,14 @@ def codingjob_export_select(request, project):
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 def codingjob_export_options(request, project):
-    jobs = request.GET.getlist("codingjobs")
+    if request.GET.get("use_session"):
+        jobs = json.loads(request.session['export_job_ids'])
+    else:
+        jobs = request.GET.getlist("codingjobs")
     level = int(request.GET["export_level"])
     form = GetCodingJobResults.options_form(
         request.POST or None, project=project, codingjobs=jobs, export_level=level,
-        initial=dict(codingjobs=request.GET.getlist("codingjobs"), export_level=level)
+        initial=dict(codingjobs=jobs, export_level=level)
     )
 
     sections = SortedDict() # section : [(field, subfields) ..]
@@ -423,7 +431,7 @@ def codingjob_export_options(request, project):
         eformat = {f.label : f for f in EXPORT_FORMATS}[form.cleaned_data["export_format"]]
         
         if eformat.mimetype is not None:
-            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(jobs), now=datetime.datetime.now(), ext=eformat.label)
+            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in jobs), now=datetime.datetime.now(), ext=eformat.label)
             response = HttpResponse(content_type=eformat.mimetype, status=201)
             response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
             response.write(results)
