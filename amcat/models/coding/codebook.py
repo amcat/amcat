@@ -269,11 +269,17 @@ class Codebook(AmcatModel):
                     return parent
             raise ValueError("Code {code!r} not in hierarchy!")
 
+        seen = set()
         while True:
             yield code_id
-            parent = _get_parent(code_id)
+            seen.add(code_id)
+            parent = hierarchy[code_id]#_get_parent(code_id)
             if parent is None:
                 return
+            elif parent in seen:
+                raise ValueError("Cycle in hierarchy: parent {parent} already in seen {seen}".format(**locals()))
+            seen.add(parent)
+
             code_id = parent
             
 class CodebookBase(AmcatModel):

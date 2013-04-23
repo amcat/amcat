@@ -237,6 +237,7 @@ class CodingColumn(table3.ObjectColumn):
         self.function = function
         self.field = field
         label = self.field.label + label
+        self.cache = {} # assume that the function is deterministic!
         super(CodingColumn, self).__init__(label)
 
     def getCell(self, row):
@@ -245,7 +246,11 @@ class CodingColumn(table3.ObjectColumn):
             return None
         value = coding.get_value(field=self.field)
         if value is not None:
-            return self.function(value)
+            try:
+                return self.cache[value]
+            except KeyError:
+                self.cache[value] = self.function(value)
+                return self.cache[value]
 
 class MetaColumn(table3.ObjectColumn):
     def __init__(self, field):
@@ -261,7 +266,7 @@ class GetCodingJobResults(Script):
 
     def get_table(self, codingjobs, export_level, **kargs):
         codingjobs = CodingJob.objects.prefetch_related("codings__values").filter(pk__in=codingjobs)
-
+        
         # Get all row of table
         table = table3.ObjectTable(rows=_get_rows(
             codingjobs, include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
@@ -281,7 +286,6 @@ class GetCodingJobResults(Script):
                 
                 for label, function in schemafield.serialiser.get_export_columns(**options):
                     table.addColumn(CodingColumn(schemafield, label, function))
-
         return table
 
     def _run(self, export_format, **kargs):
@@ -289,6 +293,10 @@ class GetCodingJobResults(Script):
         format_dict = {f.label : f.function for f in EXPORT_FORMATS}
         return format_dict[export_format](table)
 
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    result = cli.run_cli()
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

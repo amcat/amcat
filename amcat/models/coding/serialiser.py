@@ -184,7 +184,8 @@ class _CodebookSerialiser(BaseSerialiser):
     def _get_ancestor(self, value, i, label=False):
         try:
             ancestors = list(self.field.codebook.get_ancestor_ids(value))
-        except ValueError:
+        except (KeyError, ValueError):
+            log.exception("Error on getting ancestors for {value}".format(**locals()))
             return None
         ancestor_id = ancestors[max(0, len(ancestors) - i - 1)]
         return self.value_label(self.deserialise(ancestor_id)) if label else ancestor_id
