@@ -79,6 +79,8 @@ from amcat.scripts.output.csv_output import TableToSemicolonCSV
 
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
+from amcat.models.articleset import create_new_articleset
+
 
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
@@ -291,7 +293,8 @@ def articleset(request, project, aset):
     cls = "Article Set"
     articles = (Datatable(ArticleMetaResource, rowlink='../article/{id}')
                 .filter(articlesets_set__id=aset.id)
-                .hide('project'))
+                .hide('metastring', 'url', 'externalid',
+                      'byline', 'pagenr', 'project', 'section', 'text'))
 
     indexed = request.GET.get("indexed")
     if indexed is not None:
@@ -988,10 +991,16 @@ def add_codingjob(request, project):
         cj = form.save(commit=False)
         cj.insertuser = request.user
         cj.project = project
+
+        # Copy articleset, as is done in api/webscripts/assign_codingjob.py
+        # AssignCodingJob.run()
+        a = create_new_articleset(cj.name, project)
+        a.add_articles(cj.articleset.articles.all())
+        cj.articleset = a
+        # Split all articles 
         cj.save()
 
-        # Split sentences
-        SplitArticles(articlesets=[cj.articleset.id]).run()
+        SplitArticles(dict(articlesets=[a.id])).run()
 
         form = forms.CodingJobForm(project=project, edit=False, data=None)
         form.saved = True

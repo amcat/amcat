@@ -46,6 +46,23 @@ def get_or_create_articleset(name, project):
     """
     return get_or_create(ArticleSet, name=name, project=project) if name else None
 
+def create_new_articleset(name, project):
+    """
+    Creates new articleset based on name. If articleset exists add postfix number to make articleset name unique.
+
+    @type name: unicode
+    @param name: proposed name of new articleset
+    @type project: project.Project
+    @param project: project attribute of ArticleSet    
+    @return: new ArticleSet
+    """
+    name1 = name
+    i = 1
+    while ArticleSet.objects.filter(project=project, name=name1).exists():
+        i += 1
+        name1 = "{name} ({i})".format(**locals())
+    return ArticleSet.objects.create(project=project, name=name1)
+
 def _articles_to_ids(articles):
     """
     Convert given articles to article ids.

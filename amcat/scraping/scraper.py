@@ -30,11 +30,10 @@ from django.core.exceptions import ObjectDoesNotExist
 from httplib2 import iri2uri
 
 from amcat.scripts.script import Script
-from amcat.models.articleset import ArticleSet
 from amcat.models.article import Article
 from amcat.models.project import Project
 from amcat.models.medium import get_or_create_medium
-from amcat.models.articleset import ArticleSet, get_or_create_articleset
+from amcat.models.articleset import ArticleSet, create_new_articleset
 
 from amcat.scraping.htmltools import HTTPOpener
 from amcat.scraping.document import Document
@@ -92,14 +91,7 @@ class Scraper(Script):
         if self.options['articleset']:
             return self.options['articleset']
         if self.options['articleset_name']:
-            i = 1
-            name = self.options['articleset_name']
-            while ArticleSet.objects.filter(project=self.project, name=name).exists():
-                i += 1
-                name = "{n} ({i})".format(n=self.options['articleset_name'], **locals())
-            aset = ArticleSet.objects.create(project=self.project, name=name)
-
-                    
+            aset = create_new_articleset(self.options['articleset_name'], self.project)
             self.options['articleset'] = aset
             return aset
         return
