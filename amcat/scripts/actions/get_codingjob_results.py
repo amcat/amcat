@@ -36,11 +36,12 @@ log = logging.getLogger(__name__)
 import csv
 import collections
 import itertools
+import functools
 import json
 
 from cStringIO import StringIO
 
-FIELD_LABEL = "{label} {schemafield.label} (from {schemafield.codingschema})"
+FIELD_LABEL = "{label} {schemafield.label}"
 
 CODING_LEVEL_ARTICLE, CODING_LEVEL_SENTENCE, CODING_LEVEL_BOTH = range(3)
 CODING_LEVELS = [(CODING_LEVEL_ARTICLE, "Article Codings"),
@@ -53,7 +54,23 @@ EXPORT_FORMATS = (ExportFormat(label="ascii", function=lambda t:t.output(), mime
            ExportFormat(label="csv", function=table_to_csv, mimetype="text/csv"),
            ExportFormat(label="xlsx", function=table_to_xlsx, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
            ExportFormat(label="json", function=lambda t:json.dumps(list(t.to_list())), mimetype="application/json"),
-           )    
+           )
+
+_MetaField = collections.namedtuple("MetaField", ["object", "attr", "label"])
+
+_METAFIELDS = [
+    _MetaField("article", "id", "Article ID"),
+    _MetaField("article", "headline", "Headline"),
+    _MetaField("article", "medium", "Medium"),
+    _MetaField("article", "date", "Date"),
+    _MetaField("job", "id", "Codingjob ID"),
+    _MetaField("job", "name", "Codingjob Name"),
+    _MetaField("job", "coder", "Coder"),
+    _MetaField("sentence", "id", "Sentence ID"),
+    _MetaField("sentence", "parnr", "Paragraph"),
+    _MetaField("sentence", "sentnr", "Sentence nr"),
+    _MetaField("sentence", "sentence", "Sentence"),
+]
 
 class CodingjobListForm(forms.Form):
     codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
@@ -72,6 +89,8 @@ class CodingjobListForm(forms.Form):
         self.fields["codingjobs"].queryset = self.project.codingjob_set.all()
         self.data = self.data or MultiValueDict()
 
+
+                
 class CodingJobResultsForm(CodingjobListForm):
     """
     This is a dynamically rendered form, which consists of a static part (general
@@ -91,16 +110,21 @@ class CodingJobResultsForm(CodingjobListForm):
         codingjobs = kwargs.pop("codingjobs", None)
         export_level = kwargs.pop("export_level", None)
         super(CodingJobResultsForm, self).__init__(data, files, **kwargs)
+        if codingjobs is None: # is this necessary?
+            codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
+        if export_level is None:
+            export_level = int(self.fields["export_level"].clean(self.data['export_level']))
 
         # Hide fields from step (1)
         self.fields["codingjobs"].widget = forms.MultipleHiddenInput()
         self.fields["export_level"].widget = forms.HiddenInput()
-        
-        # Get all codingjobs and their fields
-        if not codingjobs: # is this necessary?
-            codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
-        if not export_level:
-            export_level = int(self.fields["export_level"].clean(self.data['export_level']))
+           
+        # Add meta fields
+        for field in _METAFIELDS:
+            if export_level == CODING_LEVEL_ARTICLE and field.object == "sentence": continue
+            self.fields["meta_{field.object}_{field.attr}".format(**locals())] = forms.BooleanField(
+                initial=True, required=False, label="Include {field.label}".format(**locals()))
+            
         # Insert dynamic fields based on schemafields
         self.schemafields = _get_schemafields(codingjobs, export_level)
         self.fields.update(self.get_form_fields(self.schemafields))
@@ -119,17 +143,19 @@ class CodingJobResultsForm(CodingjobListForm):
             label=FIELD_LABEL.format(label="Include", **locals()), initial=True, required=False,
         )
 
-        
         # Show 'include this field' checkbox (for every field)
-        code_name = "schemafield_{s.id}".format(s=schemafield)
-        yield ("{}_included".format(code_name), include_field)
+        prefix = _get_field_prefix(schemafield)
+        yield ("{prefix}_included".format(**locals()), include_field)
 
         # Include field-specific form fields
         for id, field in schemafield.serialiser.get_export_fields():
             field.label = FIELD_LABEL.format(label="Export "+field.label, **locals())
-            id = "schemafield_{schemafield.id}_{id}".format(**locals())
+            id = "{prefix}_{id}".format(**locals())
             yield id, field
 
+def _get_field_prefix(schemafield):
+    return  "schemafield_{schemafield.codingschema_id}_{schemafield.fieldnr}".format(**locals())
+            
 def _get_schemafields(codingjobs, level):
     unitfilter = Q(codingschema__codingjobs_unit__in=codingjobs)
     articlefilter = Q(codingschema__codingjobs_article__in=codingjobs)
@@ -211,6 +237,7 @@ class CodingColumn(table3.ObjectColumn):
         self.function = function
         self.field = field
         label = self.field.label + label
+        self.cache = {} # assume that the function is deterministic!
         super(CodingColumn, self).__init__(label)
 
     def getCell(self, row):
@@ -218,29 +245,47 @@ class CodingColumn(table3.ObjectColumn):
         if coding is None:
             return None
         value = coding.get_value(field=self.field)
-        return self.function(value)
+        if value is not None:
+            try:
+                return self.cache[value]
+            except KeyError:
+                self.cache[value] = self.function(value)
+                return self.cache[value]
 
+class MetaColumn(table3.ObjectColumn):
+    def __init__(self, field):
+        self.field = field
+        super(MetaColumn, self).__init__(self.field.label)
+    def getCell(self, row):
+        obj = getattr(row, self.field.object)
+        if obj:
+            return unicode(getattr(obj, self.field.attr))
+    
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
     def get_table(self, codingjobs, export_level, **kargs):
         codingjobs = CodingJob.objects.prefetch_related("codings__values").filter(pk__in=codingjobs)
-
+        
         # Get all row of table
         table = table3.ObjectTable(rows=_get_rows(
             codingjobs, include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
             include_multiple=True, include_uncoded_articles=False
         ))
 
+        # Meta field columns
+        for field in _METAFIELDS:
+            if self.options.get("meta_{field.object}_{field.attr}".format(**locals())):
+                table.addColumn(MetaColumn(field))
+                
         # Build columns based on form schemafields
         for schemafield in self.bound_form.schemafields:
-            prefix = "schemafield_{schemafield.id}".format(**locals())
+            prefix = _get_field_prefix(schemafield)
             if self.options[prefix+"_included"]:
                 options = {k[len(prefix)+1:] :v for (k,v) in self.options.iteritems() if k.startswith(prefix)}
                 
                 for label, function in schemafield.serialiser.get_export_columns(**options):
                     table.addColumn(CodingColumn(schemafield, label, function))
-
         return table
 
     def _run(self, export_format, **kargs):
@@ -248,6 +293,10 @@ class GetCodingJobResults(Script):
         format_dict = {f.label : f.function for f in EXPORT_FORMATS}
         return format_dict[export_format](table)
 
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    result = cli.run_cli()
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
