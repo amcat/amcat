@@ -7,10 +7,4 @@
 <h1> Please select a script to use for uploading articles</h1>
  {{ table }}
 
-{% if can_create_plugin %}
-  <a href="{% url manage-plugins id=plugin_type.id %}"> 
-    Register a new upload script
-  </a>
-{% endif %}
-
 {% endblock %}

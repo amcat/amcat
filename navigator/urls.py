@@ -78,7 +78,6 @@ urlpatterns = patterns(
 
     # Plugins
     url(r'^plugins$', 'navigator.views.plugin.index', name='plugins'),
-    url(r'^plugins/(?P<id>[0-9]+)$', 'navigator.views.plugin.manage', name='manage-plugins'),
     
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
