@@ -63,15 +63,11 @@ class Datatable(object):
         self.resource = resource() if callable(resource) else resource
         self.options = options or dict()
         self.rowlink = rowlink or getattr(self.resource, "get_rowlink", lambda  : None)()
+        self.ordering = ordering
 
         self.hidden = set(hidden) if isinstance(hidden, collections.Iterable) else set()
         self.url = url
 
-        if ordering is None:
-            self.ordering = self.get_default_ordering()
-        else:
-            self.ordering = ordering
-        
         if self.url is None:
             self.url =  "{self.resource.url}?format=json".format(**locals())
 
@@ -145,8 +141,12 @@ class Datatable(object):
     def _get_js(self):
         aoColumns = (dict(mDataProp=n) for n in self.fields)
 
+        ordering = self.ordering
+        if ordering is None:
+            ordering = self.get_default_ordering()
+
         options = copy.copy(self.options)
-        options['aaSorting'] = [order_by(f) for f in self.ordering]
+        options['aaSorting'] = [order_by(f) for f in ordering]
         options['aoColumns'] = options.get('aoColumns', list(aoColumns)) 
 
         return get_template('api/datatables.js.html').render(Context({
