@@ -49,7 +49,7 @@ class UploadForm(ScraperForm):
 
     def clean_articleset_name(self):
         """If article set name not specified, use file base name instead"""
-        if self.files['file'] and not (self.cleaned_data['articleset_name'] or self.cleaned_data['articleset']):
+        if self.files.get('file') and not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
             fn = os.path.basename(self.files['file'].name)
             return fn
         return super(UploadForm, self).clean_articleset_name()
