@@ -290,8 +290,7 @@ def articleset(request, project, aset):
     cls = "Article Set"
     articles = (Datatable(ArticleMetaResource, rowlink='../article/{id}')
                 .filter(articlesets_set__id=aset.id)
-                .hide('metastring', 'url', 'externalid',
-                      'byline', 'pagenr', 'project', 'section', 'text'))
+                .hide('project'))
 
     indexed = request.GET.get("indexed")
     if indexed is not None:
