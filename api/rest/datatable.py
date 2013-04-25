@@ -52,6 +52,8 @@ class Datatable(object):
     """
     def __init__(self, resource, rowlink=None, options=None, hidden=None, url=None, ordering=None):
         """
+        Default ordering is "id" if possible.
+
         @param resource: handler to base datatable on
         @type resource: AmCATResource
 
@@ -59,12 +61,16 @@ class Datatable(object):
         @type hidden: set
         """
         self.resource = resource() if callable(resource) else resource
-        self.ordering = ordering or tuple()
         self.options = options or dict()
         self.rowlink = rowlink or getattr(self.resource, "get_rowlink", lambda  : None)()
 
         self.hidden = set(hidden) if isinstance(hidden, collections.Iterable) else set()
         self.url = url
+
+        if ordering is None:
+            self.ordering = self.get_default_ordering()
+        else:
+            self.ordering = ordering
         
         if self.url is None:
             self.url =  "{self.resource.url}?format=json".format(**locals())
@@ -88,6 +94,9 @@ class Datatable(object):
             - and periods (".").
         """
         return "d" + re.sub(r'[^0-9A-Za-z_:.-]', '__', self.url)
+
+    def get_default_ordering(self):
+        return ("-id",) if "id" in self.get_fields() else ()
 
     def get_fields(self):
         """
