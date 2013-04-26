@@ -23,23 +23,35 @@ from api.rest.serializer import AmCATModelSerializer
 from amcat.models import ArticleSet, AnalysedArticle
 from rest_framework.filters import DjangoFilterBackend
 from rest_framework.serializers import Serializer
+from django_filters.filterset import FilterSet
 
 class AnalysedArticleResource(AmCATResource):
     model = AnalysedArticle
+    extra_filters = ["article__articlesets_set__id", "article__articlesets_set__project__id"]
 
-    filter_backend = DjangoFilterBackend
     paginate_by = None
     paginate_by_param = None
     
     class serializer_class(Serializer):
         def convert_object(self, obj):
             return obj
-    
+
     def get_queryset(self, *args, **kargs):
         qs = super(AnalysedArticleResource, self).get_queryset(*args, **kargs)
         print(qs.query)
-        qs = qs.values("done","error", "article__articlesets_set").annotate(n=Count("id")) 
+        qs = qs.values("article__articlesets_set__project", "plugin_id", "done","error", "article__articlesets_set").annotate(n=Count("id")) 
         return qs
 
-
+    # avoid AmCAT filter backend because annotate and distinct don't go together very well
+    # could also add a distinct flag on the backend I guess
     
+    class filter_backend(DjangoFilterBackend):
+        def get_filter_class(self, view):
+            class AnalysedArticleFilterClass(FilterSet):
+                class Meta:
+                    model = view.model
+                    fields = tuple(view.get_filter_fields())
+                    print ">>>>>", fields
+
+
+            return AnalysedArticleFilterClass
