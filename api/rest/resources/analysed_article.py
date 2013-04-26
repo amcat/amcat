@@ -22,7 +22,7 @@ from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
 from amcat.models import ArticleSet, AnalysedArticle
 from rest_framework.filters import DjangoFilterBackend
-from rest_framework.serializers import Serializer
+from rest_framework.serializers import Serializer, SerializerMethodField
 from django_filters.filterset import FilterSet
 from django_boolean_sum import BooleanSum
 
@@ -32,9 +32,16 @@ class AnalysedArticleResource(AmCATResource):
 
     paginate_by = None
     paginate_by_param = None
+    use_distinct = False
     
     class serializer_class(Serializer):
         def convert_object(self, obj):
+            if not hasattr(self, "_narticles"):
+                asets = {x["article__articlesets_set"] for x in self.object.qs}
+                self._narticles =dict(ArticleSet.objects.filter(pk__in=asets).values("pk")
+                                      .annotate(n=Count("articles"))
+                                      .values_list("pk", "n"))
+            obj["articles"] = self._narticles.get(obj["article__articlesets_set"])
             return obj
 
     def get_queryset(self, *args, **kargs):
@@ -43,13 +50,3 @@ class AnalysedArticleResource(AmCATResource):
               .annotate(assigned=Count("id"), done=Count("done"), error=Count("error"))
               )
         return qs
-
-    # avoid AmCAT filter backend because annotate and distinct don't go together very well
-    # could also add a distinct flag on the backend I guess
-    class filter_backend(DjangoFilterBackend):
-        def get_filter_class(self, view):
-            class AnalysedArticleFilterClass(FilterSet):
-                class Meta:
-                    model = view.model
-                    fields = tuple(view.get_filter_fields())
-            return AnalysedArticleFilterClass
