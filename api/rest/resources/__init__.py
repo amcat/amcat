@@ -33,6 +33,7 @@ from api.rest.resources.codebook import CodebookHierarchyResource, CodebookResou
 from api.rest.resources.article import ArticleMetaResource
 from api.rest.resources.articleset import ArticleSetResource
 from api.rest.resources.codingjob import CodingJobResource
+from api.rest.resources.analysed_article import AnalysedArticleResource
 
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
