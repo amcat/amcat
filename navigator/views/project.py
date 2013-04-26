@@ -33,7 +33,7 @@ import collections
 import itertools
 import datetime
 
-from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource
+from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource, AnalysedArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
 from api.rest.resources import ProjectRoleResource
 
@@ -684,6 +684,18 @@ def codebooks(request, project):
 
     return render(request, "navigator/project/codebooks.html", locals())
 
+
+@check(Project)
+def preprocessing(request, project):
+    """
+    Codebooks-tab.
+    """
+    table = Datatable(AnalysedArticleResource).filter(article__articlesets_set__project=project)
+
+    context = project
+    menu = PROJECT_MENU
+
+    return render(request, "navigator/project/preprocessing.html", locals())
 
 
 @check(Project, args_map={'project' : 'id'}, args='project')
