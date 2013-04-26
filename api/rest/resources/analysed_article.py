@@ -75,6 +75,6 @@ class AnalysedArticleResource(AmCATResource):
     def get_queryset(self, *args, **kargs):
         qs = (super(AnalysedArticleResource, self).get_queryset(*args, **kargs)
               .values("article__articlesets_set__project", "plugin_id", "article__articlesets_set")
-              .annotate(assigned=Count("id"), done=Count("done"), error=Count("error"))
+              .annotate(assigned=Count("id"), done=BooleanSum("done"), error=BooleanSum("error"))
               )
         return qs
