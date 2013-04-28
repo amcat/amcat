@@ -1,0 +1,14 @@
+{% extends "navigator/project/base.html" %}
+
+{% block title %}Project {{project.id}} - {{project.name}}{% endblock %}
+
+{% block content %}
+
+<div>
+ <h1 class="noline">Select codingjobs below</h1>
+ <form method="POST">
+  <table>{{form}}</table>
+  <input type="submit"></input>
+  </form>
+</div>
+{% endblock %}

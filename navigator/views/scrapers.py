@@ -31,29 +31,34 @@ from amcat.tools.table.table3 import ObjectTable
 from amcat.tools.table.tableoutput import table2htmlDjango
 
 def index(request):
-    scrapers = Scraper.objects.filter(run_daily=True)
-    \
+    daily_scrapers = Scraper.objects.filter(run_daily=True)
+    non_daily_scrapers = Scraper.objects.filter(run_daily=False)
     dates = [datetime.date.today() - datetime.timedelta(days=n) for n in range(14)]
     
-    for scraper in scrapers:
+    for scraper in daily_scrapers + non_daily_scrapers:
         print(scraper.n_scraped_articles(from_date=dates[-1], to_date=dates[0]))
         scraper.articles = scraper.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
         print(scraper.articles)
 
-    scraper_table = ObjectTable(rows=list(scrapers), columns=["id", "label" ,"run_daily"])
+    daily_scraper_table = ObjectTable(rows=list(daily_scrapers), columns=["id", "label"])
+    non_daily_scraper_table = ObjectTable(rows=list(non_daily_scrapers), columns=["id", "label"])
 
     def Set(scraper):
         s = scraper.articleset
         if s is None: return ""
         url = reverse(articleset, args=[s.project.id, s.id])
         return "<a href='{url}'>{s}</a>".format(**locals())
-    scraper_table.addColumn(Set)
+
+    daily_scraper_table.addColumn(Set)
+    non_daily_scraper_table.addColumn(Set)
 
     def getdate(date, scraper):
         return scraper.articles.get(date, 0)
     
     for date in dates:
-        scraper_table.addColumn(partial(getdate, date), str(date)[-5:])
+        daily_scraper_table.addColumn(partial(getdate, date), str(date)[-5:])
+        non_daily_scraper_table.addColumn(partial(getdate, date), str(date)[-5:])
     
-    scraper_table = table2htmlDjango(scraper_table, safe=True)
+    daily_scraper_table = table2htmlDjango(daily_scraper_table, safe=True)
+    non_daily_scraper_table = table2htmlDjango(non_daily_scraper_table, safe=True)
     return render(request, 'navigator/scrapers/index.html', locals())

@@ -33,9 +33,12 @@ from amcat.tools import amcatlogging
 import logging; log = logging.getLogger(__name__)
 from datetime import timedelta
 from datetime import date as m_date
-import re
+import re, collections
 
 class DeduplicateForm(forms.Form):
+    slow = forms.BooleanField(required = False, initial=False)   
+    test = forms.BooleanField(required = False, initial=False)   
+    printout = forms.BooleanField(required = False, initial=False)   
     first_date = forms.DateField(required = False)
     last_date = forms.DateField(required = False)    
     articleset = forms.ModelChoiceField(queryset = ArticleSet.objects.all())
@@ -43,28 +46,24 @@ class DeduplicateForm(forms.Form):
 class DeduplicateScript(Script):
     options_form = DeduplicateForm
 
-    def run(self, _input):
+    def run(self, _input=None):
+        articles = self.options['articleset'].articles.all()
+        if not articles.exists():
+            log.info("Set {aset.id} is empty, no dedpulication needed!".format(aset=self.options['articleset']))
+            return
         mode = self.handle_input()
         if mode == "date range":
             self.options['date'] = self.options['first_date']
-            self.run_range(_input)
+            self.run_range(self.options['first_date'], self.options['last_date'])
 
         elif mode == "single date":
-            self.options['date'] = self.options['first_date']
-            self._run(_input)
+            self._run_date(self.options['first_date'])
 
         elif mode == "whole set":
-            articles = Article.objects.filter(articlesetarticle__articleset = self.options['articleset'])
-            self.options['date'] = articles.aggregate(Min('date'))['date__min'].date()
-            self.options['last_date'] = articles.aggregate(Max('date'))['date__max'].date()
-            log.info("first date: {mi}; last date: {ma}".format(mi = self.options['date'], ma = self.options['last_date']))
-            self.run_range(_input)
-
-
-    def run_range(self, _input):
-        while self.options['date'] <= self.options['last_date']:
-            self._run(_input)
-            self.options['date'] += timedelta(days = 1)
+            start = articles.aggregate(Min('date'))['date__min'].date()
+            end = articles.aggregate(Max('date'))['date__max'].date()
+            log.info("first date: {start}; last date: {end}".format(**locals()))
+            self.run_range(start, end)
 
     def handle_input(self):
         if self.options["first_date"]:
@@ -82,104 +81,82 @@ class DeduplicateScript(Script):
             return "whole set"
             
 
-    def _run(self, _input):
+    def run_range(self, start, end):
+        date = start
+        while date <= end:
+            self._run_date(date)
+            date += timedelta(days = 1)
+            
+    def _run_date(self, date):
         """
         deduplicates given articleset for given date
         """
-        log.info("Deduplicating for articleset '{articleset}' at {date}".format(**self.options))
+        from django.db import connection
+        connection.queries = []
+        
+        articleset = self.options['articleset']
+        log.info("Deduplicating for articleset '{articleset}' at {date}".format(**locals()))
 
-        articles = Article.objects.filter( articlesetarticle__articleset = self.options['articleset'],
-                                           date__contains = self.options['date']
-            )
+        articles = articleset.articles.filter(date__gte = date, date__lt = date + timedelta(days=1))
+        articles = articles.only("date", "medium", "headline")
+        articles = list(articles)
 
+        # get text hash for articles with missing or nonsensical headlines
+        no_headline = [a.id for a in articles if (not a.headline) or (a.headline in ('missing', 'no headline', 'Kort nieuws'))]
+        texts = dict(Article.objects.filter(pk__in=no_headline).extra(select={'texthash':'md5(text)'}).values_list('id', 'texthash'))
+        
         log.info("Selected {n} articles".format(n = len(articles)))
 
-        arDict = {}
+        arDict = collections.defaultdict(list)
         for article in articles:
-            if article.headline:
-                identifier = (article.headline, str(article.date.date()), article.medium)
-            else:
-                identifier = (article.text, str(article.date), article.medium)
+            identifier = (texts.get(article.id, article.headline), str(article.date.date()), article.medium_id)
                 
-            if identifier:
-                if not identifier in arDict.keys():
-                    arDict[identifier] = []
-                arDict[identifier].append(article)
-
+            arDict[identifier].append(article)
+                
         removable_ids = []
-        for articles in arDict.values():
-            keep = self.compare(articles)
-            removable_ids.extend([a.pk for a in articles if a.pk != keep.pk])
-            
-        ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
+        for arts in arDict.values():
+            arts = sorted(arts, key=self.score)
+            removable_ids.extend(a.id for a in arts[:-1]) # keep the last one, it has highest score
+
+        if self.options['printout']:
+            self.printout(articles, removable_ids)
+        
+        if not self.options['test']:
+            ArticleSetArticle.objects.filter(article__in = removable_ids).delete()
+        
         log.info("Removed {n} duplications from articleset".format(n = len(removable_ids)))
 
+    def printout(self, articles, removable_ids):
+        """Print the given articles to a csv file to facilitate checking"""
+        import csv, sys
+        w = csv.writer(sys.stdout)
+        if not getattr(self, 'csv_header_printed', False):
+            w.writerow(["aid", "date", "medium", 'headline', 'len(text)', 'text[:100]', 'delete?'])
+            self.csv_header_printed = True
+        for a in sorted(articles, key=lambda a : (a.date, a.medium_id, a.headline, a.id)):
+            w.writerow([a.id, a.date, a.medium_id, a.headline.encode('ascii','replace'), len(a.text), `a.text[:100]`, a.id in removable_ids])
 
-    def compare(self, articles):
+
+    def score(self, article):
         """
-        Determines which article of the given articles gets to stay. 
+        Determines the score for an article of the given articles gets to stay, where the highest score will be kept.
         Sometimes a later article has a better quality (extra metadata) because of scraper fixes/improvements.
         If not, it is better to keep the old article because of possible codings attached to it
         """
-
-        #check which articles have been through html2text
-        has_html2text = []
-        for article in articles:
+        if self.options['slow']:
+            # has_html2text?
             p = re.compile("\[.+\]\(.+\)")
             matches = p.search(article.text)
-            if matches:
-                has_html2text.append(article)
-        #if any, let those go first
-        if has_html2text:
-            articles_2 = has_html2text
+            has_html2text = 1 if matches else 0
+            
+            #determine the highest amount of fields in the articles
+            n_fields = len([f for f in article._meta.get_all_field_names() if f != 'metastring' and getattr(article, f, None) is not None])
+            n_fields += article.metastring.count(":")
+            
+            return (has_html2text, n_fields, len(article.text), -article.id)
         else:
-            articles_2 = articles
-        #determine the highest amount of fields in the articles
-        n_fields = 0
-        for article in articles_2:
-            l = 0
-            for field in [getattr(article, f) for f in article._meta.get_all_field_names() if f != 'metastring' and hasattr(article, f)]:
-
-
-                if field != None:
-                    l += 1
-            if article.metastring:
-                l += article.metastring.count(":")
-            if l > n_fields:
-                n_fields = l
-                    
-
-        #filter out the articles with less fields
-        articles_3 = []
-        for article in articles_2:
-            le = 0
-            for field in [getattr(article, f) for f in article._meta.get_all_field_names() if f != 'metastring' and hasattr(article, f)]:
-                if field != None:
-                    le += 1
-            if article.metastring:
-                le += article.metastring.count(":")
-
-            if le == n_fields:
-                articles_3.append(article)
-
-        #if still multiple articles, pick article with longest text    
-        l_text = -1
-        for article in articles_3:
-            if len(article.text) > l_text:
-                l_text = len(article.text)
-
-        articles_4 = []
-        for article in articles_3:
-            if len(article.text) == l_text:
-                articles_4.append(article)
-
-        #if still multiple, pick out oldest version
-        article_ids = sorted([article.pk for article in articles_4])
-        for article in articles_4:
-            if article.id == article_ids[0]:
-                return article
-
-
+            return -article.id
+        
 def deduplicate_scrapers(date):
     options = {
         'last_date' : date,
@@ -209,23 +186,12 @@ class TestDeduplicateScript(amcattest.PolicyTestCase):
         """One article should be deleted from artset and added to project 2"""
         p = amcattest.create_test_project()
 
-        art1 = amcattest.create_test_article( 
-            headline='blaat1', 
-            project=p,
-            text="""
-bla bla bla
-[bla](http://www.bla.com) bla bla bla
-""",
-            date = m_date(2012,01,01),
-            section = "kaas",
-            metastring = {'moet_door':True,'delete?':False,'mist':'niets'}
-            )
-
-
+        m = amcattest.create_test_medium()
+        
         art2 = amcattest.create_test_article( 
             headline='blaat1', 
             project=p, 
-            medium=art1.medium,
+            medium=m,
             text = """
 bla bla bla
 bla bla bla bla
@@ -263,10 +229,24 @@ timer_is_on=0;
             )
 
 
+        
+        art1 = amcattest.create_test_article( 
+            headline='blaat1', 
+            project=p,
+            text="""
+bla bla bla
+[bla](http://www.bla.com) bla bla bla
+""",
+            date = m_date(2012,01,01),
+            section = "kaas",
+            metastring = {'moet_door':True,'delete?':False,'mist':'niets'},
+            medium=m,
+            )
+
         art3 = amcattest.create_test_article( 
             headline='blaat1', 
             project=p, 
-            medium=art1.medium,
+            medium=m,
             text="""
 bla bla bla
 [bla](http://www.bla.com) bla bla bla
@@ -278,7 +258,7 @@ bla bla bla
         art4 = amcattest.create_test_article( 
             headline='blaat1', 
             project=p, 
-            medium=art1.medium,
+            medium=m,
             text = """
 bla bla bla
 [bla](http://www.bla.com) bla bla bla
@@ -289,7 +269,7 @@ bla bla bla
             )
 
         artset = amcattest.create_test_set(articles=[art1, art2, art3, art4])
-        d = DeduplicateScript(articleset = artset.id)
+        d = DeduplicateScript(articleset = artset.id, slow=True)
         d.run( None )
         self.assertEqual(len(artset.articles.all()), 1)
         self.assertEqual(len(Article.objects.filter(project = p)), 4)

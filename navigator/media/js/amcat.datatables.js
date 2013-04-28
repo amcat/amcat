@@ -44,7 +44,7 @@ _AMCAT_DEFAULT_OPTS = {
     },
     "bDeferRender": true,
     "bFilter" : false,
-    "iDisplayLength" : 20,
+    "iDisplayLength" : 100,
     "bProcessing" : true
 };
 
@@ -615,7 +615,7 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
  * TODO: Try again a few times before giving up.
  */
 amcat.datatables.fetched_initial_error = function(jqXHR, textStatus, errorThrown){
-    alert(
+    console.log(
         "Could not load table: " + this['name'] + 
         ". You can find debugging information in the console."
     );

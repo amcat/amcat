@@ -41,19 +41,25 @@ class SplitArticles(Script):
     def run(self, _input=None):
         sets = self.options['articlesets']
         log.info("Listing articles from sets {sets}".format(**locals()))
-        to_split = list(Article.objects.filter(articlesets_set__in=sets).only("id"))
+
+        # Determine which articles are already splitted, and which are not
+        all_articles = Article.objects.filter(articlesets_set__in=sets)
+        all_ids = all_articles.values_list("id", flat=True)
+        splitteds_ids = all_articles.filter(sentences__id__gte=0).values_list("id", flat=True)
+
+        # Get articles to be split and precache headline, byline, text
+        to_split = Article.objects.filter(id__in=set(all_ids) - set(splitteds_ids)).only("headline", "byline", "text")
         n = len(to_split)
 
-        log.info("Will check and split {n} articles".format(**locals()))
+        log.info("Total articles: {m}. To be split: {n}.".format(m=len(all_ids), **locals()))
         for i, article in enumerate(to_split):
             if not i % 100:
                 log.info("Processing article {i}/{n}".format(**locals()))
-            if not Sentence.objects.filter(article=article).exists():
-                sbd.get_or_create_sentences(article)
+
+            sbd.create_sentences(article)
 
         log.info("Splitted {n} articles!".format(**locals()))
         
-    
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli()

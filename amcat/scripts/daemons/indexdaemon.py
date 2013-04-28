@@ -44,6 +44,7 @@ class IndexDaemon(DaemonScript):
 
         log.debug("Refreshing index for set: {aset.id} : {aset}".format(**locals()))
         with transaction.commit_on_success():
+            aset.deduplicate()
             aset.refresh_index()
         return aset
 

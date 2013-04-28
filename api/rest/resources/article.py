@@ -26,7 +26,8 @@ from rest_framework import serializers
 class ArticleMetaSerializer(AmCATModelSerializer):
     class Meta:
         model = Article
-        fields = ("id", "date", "project", "medium")
+        fields = ("id", "date", "project", "medium", "headline",
+                    "section", "pagenr", "author")
 
 class ArticleMetaResource(AmCATResource):
     model = Article

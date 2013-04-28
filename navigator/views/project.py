@@ -33,7 +33,7 @@ import collections
 import itertools
 import datetime
 
-from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource
+from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource, AnalysedArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
 from api.rest.resources import ProjectRoleResource
 
@@ -55,7 +55,8 @@ from django.forms.models import modelform_factory
 from django.forms import Form, FileField, ChoiceField
 from django.http import HttpResponse
 from django.db import transaction
-
+from django.utils.datastructures import SortedDict
+    
 from amcat.models import Project, Language, Role, ProjectRole, Code, Label
 from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
@@ -64,7 +65,7 @@ from amcat.scripts.actions.add_project import AddProject
 from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
-from amcat.scripts.actions.get_codingjob_results import CodingJobResultsForm, CodingjobListForm
+from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
 
 from navigator import forms
 from navigator.utils.auth import check, check_perm
@@ -78,6 +79,8 @@ from amcat.scripts.output.csv_output import TableToSemicolonCSV
 
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
+from amcat.models.articleset import create_new_articleset
+
 
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
@@ -382,22 +385,73 @@ def codingjob_export_select(request, project):
 
     if form.is_valid():
         url = reverse(codingjob_export_options, args=[project.id])
-        return redirect("{}?{}".format(url, "&".join(
-            ["codingjobs={}".format(c.id) for c in form.cleaned_data["codingjobs"]]
-        )))
+        jobs = form.cleaned_data["codingjobs"]
+        if len(jobs) < 100:
+            codingjobs_url = "&".join("codingjobs={}".format(c.id) for c in jobs)
+        else:
+            codingjobs_url = "use_session=1"
+            request.session['export_job_ids'] = json.dumps([c.id for c in jobs])
+            
+        return redirect("{url}?export_level={level}&{codingjobs_url}"
+                        .format(level=form.cleaned_data["export_level"], **locals()))
+
 
     return render(request, 'navigator/project/export_select.html', locals())
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 def codingjob_export_options(request, project):
-    form = CodingJobResultsForm(
-        request.POST or None, project=project, codingjobs=request.GET.getlist("codingjobs"),
-        initial={"codingjobs" : request.GET.getlist("codingjobs")}
+    if request.GET.get("use_session"):
+        jobs = json.loads(request.session['export_job_ids'])
+    else:
+        jobs = request.GET.getlist("codingjobs")
+    level = int(request.GET["export_level"])
+    form = GetCodingJobResults.options_form(
+        request.POST or None, project=project, codingjobs=jobs, export_level=level,
+        initial=dict(codingjobs=jobs, export_level=level)
     )
 
+    
+    
+    sections = SortedDict() # section : [(id, field, subfields) ..]
+    subfields = {} # fieldname -> subfields reference
+
+    for name in form.fields:
+        if form[name].is_hidden:
+            continue
+        prefix = name.split("_")[0]
+        section = {"schemafield" : "Field options", "meta" : "Metadata options"}.get(prefix, "General options")
+
+        if prefix == "schemafield" and not name.endswith("_included"):
+            continue
+        subfields[name] = []
+        sections.setdefault(section, []).append((name, form[name], subfields[name]))
+        form[name].subfields = []
+
+    # sort coding fields
+    codingfields = sorted(sections["Field options"])
+    sections["Field options"].sort()
+    
+    for name in form.fields: # add subordinate fields        
+        prefix = name.split("_")[0]
+        if prefix == "schemafield" and not name.endswith("_included"):
+            subfields[name.rsplit("_", 1)[0] + "_included"].append((name, form[name]))
+
+    for flds in subfields.values():
+        flds.sort()
+            
     if form.is_valid():
-        # Voer script uit??
-        pass
+        results = GetCodingJobResults(form).run()
+
+        eformat = {f.label : f for f in EXPORT_FORMATS}[form.cleaned_data["export_format"]]
+        
+        if eformat.mimetype is not None:
+            if len(jobs) > 3:
+                jobs = jobs[:3] + ["etc"]
+            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in jobs), now=datetime.datetime.now(), ext=eformat.label)
+            response = HttpResponse(content_type=eformat.mimetype, status=201)
+            response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
+            response.write(results)
+            return response
 
     return render(request, 'navigator/project/export_options.html', locals())
 
@@ -630,6 +684,18 @@ def codebooks(request, project):
 
     return render(request, "navigator/project/codebooks.html", locals())
 
+
+@check(Project)
+def preprocessing(request, project):
+    """
+    Codebooks-tab.
+    """
+    table = Datatable(AnalysedArticleResource).filter(article__articlesets_set__project=project)
+
+    context = project
+    menu = PROJECT_MENU
+
+    return render(request, "navigator/project/preprocessing.html", locals())
 
 
 @check(Project, args_map={'project' : 'id'}, args='project')
@@ -937,10 +1003,16 @@ def add_codingjob(request, project):
         cj = form.save(commit=False)
         cj.insertuser = request.user
         cj.project = project
+
+        # Copy articleset, as is done in api/webscripts/assign_codingjob.py
+        # AssignCodingJob.run()
+        a = create_new_articleset(cj.name, project)
+        a.add_articles(cj.articleset.articles.all())
+        cj.articleset = a
+        # Split all articles 
         cj.save()
 
-        # Split sentences
-        SplitArticles(articlesets=[cj.articleset.id]).run()
+        SplitArticles(dict(articlesets=[a.id])).run()
 
         form = forms.CodingJobForm(project=project, edit=False, data=None)
         form.saved = True

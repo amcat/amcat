@@ -32,6 +32,9 @@ Deserialised Value: a domain object, possibly a django Model instance
 import logging; log = logging.getLogger(__name__)
 
 from amcat.models.coding.code import Code
+from amcat.models.coding.codebook import Codebook
+from django import forms
+import functools
 
 class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
@@ -75,6 +78,21 @@ class BaseSerialiser(object):
         @param language: an optional preferred language, which may be ignored
         """
         return unicode(value)
+
+    def get_export_fields(self):
+        """Return a sequence of (id, django form fields) pairs with export options for this field
+        The id and field label need only be locally unique, they will be prepended with the field name
+        """
+        return []
+
+    def get_export_columns(self, **options):
+        """
+        Return (label, function) pair for each column that a coding job export should include.
+        The function will be called with the serialised coded value as the only argument.
+        The label need only be locally unique, it will be prepended with the field name.
+        @param **options: the form values of the fields specified by get_export_fields
+        """
+        yield "", self.value_label
     
 class TextSerialiser(BaseSerialiser):
     """Simple str - str serialiser"""
@@ -124,14 +142,24 @@ def CodebookSerialiser(field):
         _memo[codebookid] = _CodebookSerialiser(field)
         return  _memo[codebookid]
         
+    
 class _CodebookSerialiser(BaseSerialiser):
     """int - amcat.models.coding.Code serialiser"""
     def __init__(self, field):
         super(_CodebookSerialiser, self).__init__(field, Code, int)
+
+    @property
+    def codebook(self):
+        try:
+            return self._codebook
+        except AttributeError:
+            self._codebook = list(Codebook.objects.filter(pk = self.field.codebook_id)
+                                  .prefetch_related("codebookcode_set"))[0]
+            return self._codebook
         
     def deserialise(self, value):
         try:
-            return self.field.codebook.get_code(value)
+            return self.codebook.get_code(value)
         except Code.DoesNotExist:
             # code was removed from codebook
             return Code.objects.get(pk=value)
@@ -148,6 +176,35 @@ class _CodebookSerialiser(BaseSerialiser):
         #self.field.codebook.cache_labels(language)
         return value.get_label(language)
 
+    def get_export_fields(self):
+        yield "ids", forms.BooleanField(initial=True, label="ids", required=False)
+        yield "labels", forms.BooleanField(initial=True, label="labels", required=False)
+        yield "parents", forms.IntegerField(initial=0, required=False, label="# parents")
+
+    def _get_ancestor(self, value, i, label=False):
+        try:
+            ancestors = list(self.field.codebook.get_ancestor_ids(value))
+        except (KeyError, ValueError):
+            log.exception("Error on getting ancestors for {value}".format(**locals()))
+            return None
+        ancestor_id = ancestors[max(0, len(ancestors) - i - 1)]
+        return self.value_label(self.deserialise(ancestor_id)) if label else ancestor_id
+
+                             
+        
+    def get_export_columns(self, ids, labels, parents, **options):
+        if parents:
+            for i in range(parents):
+                if ids:
+                    yield "_parent_{i}_id".format(**locals()), functools.partial(self._get_ancestor, i=i)
+                if labels:
+                    yield "_parent_{i}_label".format(**locals()), functools.partial(self._get_ancestor, i=i, label=True)
+        if ids:
+            yield " (id)", lambda x:x
+        if labels:
+            yield "", lambda x:self.value_label(self.deserialise(x))
+            
+        
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

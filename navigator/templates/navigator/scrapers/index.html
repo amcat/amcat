@@ -4,8 +4,12 @@
 
 {% block content %}
 
-<h2>Scrapers:</h2>
+<h2>Daily Scrapers:</h2>
 
-{{ scraper_table|safe }}
+{{ daily_scraper_table|safe }}
+
+<h2>Non-daily Scrapers:</h2>
+
+{{ non_daily_scraper_table|safe }}
 
 {% endblock %}

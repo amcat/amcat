@@ -231,6 +231,25 @@ def create_test_codebook(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Codebook.objects.create(**kargs)
 
+def  create_test_codebook_with_codes():
+    """
+    Create a test codebook with codes like this
+    A
+     A1
+      A1a
+      A1b
+     A2
+    B
+     B1
+    @return: A pair of the codebook and the {label : code} dict
+    """ 
+    parents = {"A1a":"A1", "A1b":"A1", "A1":"A", "A2":"A", "B1":"B", "A":None, "B":None} 
+    codes = {l : create_test_code(label=l) for l in parents}
+    codebook = create_test_codebook()
+    for code, parent in parents.items():
+        codebook.add_code(codes[code], codes.get(parent))
+    return codebook, codes
+
 def create_test_word(lemma=None, word=None, pos="N"):
     """Create a test word"""
     from amcat.models.word import Word, Lemma

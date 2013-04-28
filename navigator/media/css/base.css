@@ -381,3 +381,5 @@ table.key_value tr :first-child{
 .dragging{
     font-weight:bold;
 }
+
+td.subfield {padding-left:1em; font-style:italic}

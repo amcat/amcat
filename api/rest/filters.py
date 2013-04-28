@@ -149,18 +149,19 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
                 self._qs = self._filter(self._qs)
                 self._qs = self._order_by(self._qs)
 
-                # Only return non-duplicates
-                if can_distinct_on_pk(self._qs):
-                    # Postgres (and other databases) only allow distinct when
-                    # no ordering is specified, or if the first order-column
-                    # is the same as the one you're 'distincting' on.
-                    self._qs = self._qs.distinct("pk")
-                else:
-                    # Use naive way of defining distinct. The database has to
-                    # iterate over all rows (well, not in theory, but postgres
-                    # does..)
-                    self._qs = self._qs.distinct()
-                    
+                if getattr(view, "use_distinct", True):
+                      # Only return non-duplicates
+                      if can_distinct_on_pk(self._qs):
+                          # Postgres (and other databases) only allow distinct when
+                          # no ordering is specified, or if the first order-column
+                          # is the same as the one you're 'distincting' on.
+                          self._qs = self._qs.distinct("pk")
+                      else:
+                          # Use naive way of defining distinct. The database has to
+                          # iterate over all rows (well, not in theory, but postgres
+                          # does..)
+                          self._qs = self._qs.distinct()
+                      
                 return self.qs
 
             class Meta:
