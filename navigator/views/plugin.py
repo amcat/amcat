@@ -43,12 +43,3 @@ def index(request):
     menu = get_menu()
     types = PluginType.objects.all()
     return render(request, 'navigator/plugin/index.html', locals())
-
-@check(PluginType)
-def manage(request, plugin_type):
-    menu = get_menu()
-    selected = plugin_type.label
-    canmanage = Plugin.can_create(request.user)
-    plugins = (Datatable(PluginResource)
-               .filter(plugin_type=plugin_type).hide('id', 'plugin_type'))
-    return render(request, 'navigator/plugin/manage.html', locals())

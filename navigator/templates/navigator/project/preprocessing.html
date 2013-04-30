@@ -4,28 +4,9 @@
 
 {% block content %}
 
-<h1>Preprocessing activated for this project</h1>
 <div>
- {{ table }}
+ <br/>
+ <h1 class="noline">Preprocessing</h1>
+ {{ table|safe }}
 </div>
-
-{% if in_queue %}
-<p>
- <span class="label label-info">Note</span> 
- Articles are being checked whether they need preprocessing, so the numbers
- above might not be complete.</p>
-{% endif %}
-
-<h2>Activate preprocessing:</h2>
-
-<form action="" method="POST">
- <table>
-  {{ form.as_table }}
- </table>
- <input type="submit" value="Activate"></input>
-</form>
-
-
-
-
 {% endblock %}

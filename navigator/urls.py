@@ -78,7 +78,6 @@ urlpatterns = patterns(
 
     # Plugins
     url(r'^plugins$', 'navigator.views.plugin.index', name='plugins'),
-    url(r'^plugins/(?P<id>[0-9]+)$', 'navigator.views.plugin.manage', name='manage-plugins'),
     
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
@@ -88,8 +87,8 @@ urlpatterns = patterns(
     url(r'^project/(?P<id>[0-9]+)/codingjobs$', 'navigator.views.project.codingjobs', name='project-codingjobs'),
     url(r'^project/(?P<id>[0-9]+)/schemas$', 'navigator.views.project.schemas', name='project-schemas'),
     url(r'^project/(?P<id>[0-9]+)/codebooks$', 'navigator.views.project.codebooks', name='project-codebooks'),
-
-
+    url(r'^project/(?P<id>[0-9]+)/preprocessing$', 'navigator.views.project.preprocessing', name='project-preprocessing'),
+    
     url(r'^project/(?P<id>[0-9]+)/edit$', 'navigator.views.project.edit', name='project-edit'),
     url(r'^project/(?P<id>[0-9]+)/users$', 'navigator.views.project.users_view', name='project-users'),
     url(r'^project/(?P<id>[0-9]+)/users/add$', 'navigator.views.project.users_add'),

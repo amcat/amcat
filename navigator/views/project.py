@@ -33,7 +33,7 @@ import collections
 import itertools
 import datetime
 
-from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource
+from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource, AnalysedArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
 from api.rest.resources import ProjectRoleResource
 
@@ -79,6 +79,8 @@ from amcat.scripts.output.csv_output import TableToSemicolonCSV
 
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
+from amcat.models.articleset import create_new_articleset
+
 
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
@@ -683,6 +685,18 @@ def codebooks(request, project):
     return render(request, "navigator/project/codebooks.html", locals())
 
 
+@check(Project)
+def preprocessing(request, project):
+    """
+    Codebooks-tab.
+    """
+    table = Datatable(AnalysedArticleResource).filter(article__articlesets_set__project=project)
+
+    context = project
+    menu = PROJECT_MENU
+
+    return render(request, "navigator/project/preprocessing.html", locals())
+
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook')
@@ -989,10 +1003,16 @@ def add_codingjob(request, project):
         cj = form.save(commit=False)
         cj.insertuser = request.user
         cj.project = project
+
+        # Copy articleset, as is done in api/webscripts/assign_codingjob.py
+        # AssignCodingJob.run()
+        a = create_new_articleset(cj.name, project)
+        a.add_articles(cj.articleset.articles.all())
+        cj.articleset = a
+        # Split all articles 
         cj.save()
 
-        # Split sentences
-        SplitArticles(articlesets=[cj.articleset.id]).run()
+        SplitArticles(dict(articlesets=[a.id])).run()
 
         form = forms.CodingJobForm(project=project, edit=False, data=None)
         form.saved = True
