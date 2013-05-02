@@ -7,7 +7,7 @@
 # the terms of the GNU Affero General Public License as published by the  #
 # Free Software Foundation, either version 3 of the License, or (at your  #
 # option) any later version.                                              #
-#                                                                         #
+#                                                                        #
 # AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
 # FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
@@ -63,7 +63,7 @@ def view(request, user=None, form=None):
 
     ref = request.META.get('HTTP_REFERER', '')
     success = ref.endswith(reverse(view, args=[user.id])) and not form
-    form = form or forms.UserForm(request, instance=user)
+    form = form or forms.UserDetailsForm(request, instance=user)
 
     # Generate projects-table javascript
     projects = Datatable(ProjectResource).filter(projectrole__user=user)
@@ -77,7 +77,7 @@ def view(request, user=None, form=None):
 
 @check(User, action='update')
 def edit(request, user):
-    form = forms.UserForm(request, data=request.POST or None, instance=user)
+    form = forms.UserDetailsForm(request, data=request.POST or None, instance=user)
     if form.is_valid():
         form.save()
         return redirect(reverse(view, args=[user.id]))
