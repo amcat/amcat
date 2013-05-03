@@ -1,12 +1,30 @@
 {% extends "accounts/base.html" %}
 {% block content %}
+<div class="login_head">
 {% if error %}
 <div class="alert alert-error">
     <p style="margin-bottom:0px;">Could not log you in. Did you forget your username or password? Use <a href="{% url accounts-recover %}">this</a> form to reset them.</div>
 {% else %}
- <p>Welcome to the AmCAT Navigator! Supply your credentials below to gain access.</p>
 {% endif %}
 
+</div>
+<div class="login_columns">
+<div class="login_help">
+<h2>Welcome to AmCAT3</h2>
+<p>If you are new to AmCAT3, feel free to create a user account using the
+registration button on the right hand side. If you have an existing
+AmCAT2 account, you probably need to reset your password using the
+link below the sign in box.
+</p>
+<h2>AmCAT Manual</h2>
+<p>We are working on a manual for using AmCAT3. The versions provided
+here are drafts, so all comments and suggestions are welcome. Download
+the <a href="{{ MEDIA_URL }}misc/manual_en.pdf">English</a> or
+<br/><a href="{{ MEDIA_URL }}misc/manual_nl.pdf">Dutch</a> version.</p>
+
+</div>
+<div class="login_buttons">
+<h2>Sign in</h2>
 <p>
  <form method="POST" class="well form-inline" action = "{% url accounts-login %}">
      <input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="input-small" placeholder="Username" />
@@ -22,10 +40,19 @@
 
 
 <p>
-Or create a new account:
+<h2>Or create a new account:</h2>
 
 <form method="POST" class="well form-inline">
     <a href="{% url accounts-register %}" class="btn btn-primary">Register</a>
  </form>
 </p>
+</div>
+</div>
+<div class="login_foot">
+<div class="alert alert-warning"><h2>Looking for AmCAT2?</h2><p>AmCAT2, the previous version of
+  AmCAT, is unfortunately still
+  down. <br/>Mail <a href='mailto:wouter@vanatteveldt.com'>wouter@vanatteveldt.com</a>
+  for more information. You can visit AmCAT2  <a href="https://amcat2.labs.vu.nl/navigator">here</a></p>
+</div>
+
 {% endblock %}
