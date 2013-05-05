@@ -5,7 +5,7 @@ body{
 
 #container{
     top:100px;
-    width:500px;
+    width:650px;
     margin:auto;
     padding:10px;
     text-align: center;
@@ -30,3 +30,14 @@ input{
 .error{
     color:red;
 }
+
+h2 {font-size: medium}
+
+.login_help {float: left; width: 300px}
+.login_buttons {border-left: 1px solid #ccc; padding-left: 15px; float:right; width: 310px; height: 320px}
+.login_head {}
+.login_foot {padding-top: 1em}
+
+.login_help p {text-align: left}
+
+.login_columns {height: 320px}

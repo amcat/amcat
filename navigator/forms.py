@@ -139,6 +139,12 @@ class UserForm(forms.ModelForm):
     class Meta:
         model = User
 
+class UserDetailsForm(UserForm):
+    def __init__(self, request, *args, **kwargs):
+        super(UserDetailsForm, self).__init__(request, True, *args, **kwargs)
+        for name in ["password", "is_staff", "is_superuser", "last_login", "date_joined"]:
+            del self.fields[name]
+
 
 class AddUserForm(UserForm):
     def __init__(self, request, *args, **kwargs):
