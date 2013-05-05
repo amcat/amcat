@@ -31,8 +31,8 @@ from amcat.tools.table.table3 import ObjectTable
 from amcat.tools.table.tableoutput import table2htmlDjango
 
 def index(request):
-    daily_scrapers = Scraper.objects.filter(run_daily=True)
-    non_daily_scrapers = Scraper.objects.filter(run_daily=False)
+    daily_scrapers = list(Scraper.objects.filter(run_daily=True))
+    non_daily_scrapers = list(Scraper.objects.filter(run_daily=False))
     dates = [datetime.date.today() - datetime.timedelta(days=n) for n in range(14)]
     
     for scraper in daily_scrapers + non_daily_scrapers:
@@ -40,8 +40,8 @@ def index(request):
         scraper.articles = scraper.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
         print(scraper.articles)
 
-    daily_scraper_table = ObjectTable(rows=list(daily_scrapers), columns=["id", "label"])
-    non_daily_scraper_table = ObjectTable(rows=list(non_daily_scrapers), columns=["id", "label"])
+    daily_scraper_table = ObjectTable(rows=daily_scrapers, columns=["id", "label"])
+    non_daily_scraper_table = ObjectTable(rows=non_daily_scrapers, columns=["id", "label"])
 
     def Set(scraper):
         s = scraper.articleset
