@@ -21,6 +21,7 @@ Assess the quality of articles in a given set at a given date
 """
 from django import forms
 import logging; log = logging.getLogger(__name__)
+import json
 
 from amcat.scripts.script import Script
 from amcat.models.articleset import ArticleSet
@@ -38,27 +39,26 @@ class ValueArticleScript(Script):
         'length','url','text','parent',
         'medium','author'
         ]
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        super(ValueArticleScript, self).__init__(*args, **kwargs)
         self.article_props_occurrences = {prop : 0 for prop in self.article_properties}
-
+        
 
     def run(self, _input=None):
         articles = Article.objects.filter(
             date = self.options['date'],
-            articlesetarticle__articlesetid = self.options['articleset'].id)
+            articlesetarticle__articleset = self.options['articleset'])
         for article in articles:
             print(article.headline, "\n")
 
             #evaluate regular properties
             for prop in self.article_properties:
-                if hasattr(prop, article):
-                    value = getattr(prop, article)
+                if hasattr(article, prop):
+                    value = getattr(article, prop)
                 else:
                     value = None
-                
                 if value:
                     self.article_props_occurrences[prop] += 1
-
                 print("{prop} : {v}".format(v = self.truncate(value), **locals()))
 
             #evaluate metastring
@@ -79,10 +79,11 @@ class ValueArticleScript(Script):
             print("{key}: {value} / {total_articles} = {percentage}%".format(**locals()))
 
     def truncate(self, value):
-        value = str(value)
-        if len(value) > 100:
-            value = value[0:99] + "..."
-        return value
+        value = unicode(value)
+        value = " ".join(value.split("\n"))
+        if len(value) > 80:
+            value = value[0:79] + "..."
+        return value.encode('utf-8')
         
 
 if __name__ == "__main__":
