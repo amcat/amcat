@@ -44,8 +44,6 @@ from django.db import transaction
 import logging; log = logging.getLogger(__name__)
 import traceback
 
-from amcat.scraping.toolkit import safeloops
-
 class ScraperForm(forms.Form):
     """Form for scrapers"""
     project = forms.ModelChoiceField(queryset=Project.objects.all())
