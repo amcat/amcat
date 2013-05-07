@@ -37,6 +37,7 @@ import re, collections
 
 class DeduplicateForm(forms.Form):
     slow = forms.BooleanField(required = False, initial=False)   
+    keep_latest = forms.BooleanField(required = False, initial = False)
     test = forms.BooleanField(required = False, initial=False)   
     printout = forms.BooleanField(required = False, initial=False)   
     first_date = forms.DateField(required = False)
@@ -154,6 +155,8 @@ class DeduplicateScript(Script):
             n_fields += article.metastring.count(":")
             
             return (has_html2text, n_fields, len(article.text), -article.id)
+        elif self.options['keep_latest']:
+            return article.id
         else:
             return -article.id
         
