@@ -38,6 +38,7 @@ import re, collections
 class DeduplicateForm(forms.Form):
     slow = forms.BooleanField(required = False, initial=False)   
     keep_latest = forms.BooleanField(required = False, initial = False)
+    ignore_medium = forms.BooleanField(required = False, initial = False)
     test = forms.BooleanField(required = False, initial=False)   
     printout = forms.BooleanField(required = False, initial=False)   
     first_date = forms.DateField(required = False)
@@ -99,7 +100,10 @@ class DeduplicateScript(Script):
         log.info("Deduplicating for articleset '{articleset}' at {date}".format(**locals()))
 
         articles = articleset.articles.filter(date__gte = date, date__lt = date + timedelta(days=1))
-        articles = articles.only("date", "medium", "headline")
+        if self.options['ignore_medium']:
+            articles = articles.only("date", "headline")
+        else:
+            articles = articles.only("date", "medium", "headline")
         articles = list(articles)
 
         # get text hash for articles with missing or nonsensical headlines

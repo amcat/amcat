@@ -48,7 +48,7 @@ class ValueArticleScript(Script):
 
     def run(self, _input=None):
         articles = Article.objects.filter(
-            date = self.options['date'],
+            date__contains = self.options['date'],
             articlesetarticle__articleset = self.options['articleset'])
         for article in articles:
             print

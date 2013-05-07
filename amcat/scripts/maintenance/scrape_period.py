@@ -25,7 +25,7 @@ from amcat.scripts.script import Script
 from amcat.scraping.scraper import ScraperForm
 from amcat.models.scraper import Scraper
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
-
+from amcat.scraping.controller import RobustController
 
 from django import forms
 from datetime import date, timedelta
@@ -89,14 +89,12 @@ class PeriodScraper(Script):
         else:
             dedu = False
 
-        while date <= last_date:
-            scraper = self.get_scraper(date)
-            try:
-                scraper.run(_input, deduplicate = dedu)
-            except Exception:
-                log.exception("scraper failed")
-                    
-            date += timedelta(days = 1)
+        n_days = (self.options['last_date'] - self.options['first_date']).days
+        days = [self.options['first_date'] + timedelta(days = x) for x in range(n_days)]
+        scrapers = [self.get_scraper(date) for date in days]
+        RobustController().scrape(scrapers, deduplicate = dedu)
+
+
 
 
 if __name__ == "__main__":
