@@ -16,9 +16,11 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+
 """
 Assess the quality of articles in a given set at a given date
 """
+
 from django import forms
 import logging; log = logging.getLogger(__name__)
 import json
@@ -49,7 +51,8 @@ class ValueArticleScript(Script):
             date = self.options['date'],
             articlesetarticle__articleset = self.options['articleset'])
         for article in articles:
-            print(article.headline, "\n")
+            print
+            print(article.headline)
 
             #evaluate regular properties
             for prop in self.article_properties:
@@ -62,8 +65,7 @@ class ValueArticleScript(Script):
                 print("{prop} : {v}".format(v = self.truncate(value), **locals()))
 
             #evaluate metastring
-            meta_dict = json.loads(article.metastring)
-            for key, value in meta_dict.items():
+            for key, value in eval(article.metastring).items():
                 print("meta.{key} : {v}".format(v = self.truncate(value), **locals()))
                 if key in self.article_props_occurrences.keys():
                     self.article_props_occurrences[key] += 1
@@ -75,7 +77,7 @@ class ValueArticleScript(Script):
         print("{key}: {value} / {total articles} = {percentage}")
         total_articles = len(articles)
         for key, value in self.article_props_occurrences.items():
-            percentage = (value / total_articles) * 100
+            percentage = int((float(value) / float(total_articles)) * 100)
             print("{key}: {value} / {total_articles} = {percentage}%".format(**locals()))
 
     def truncate(self, value):
