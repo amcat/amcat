@@ -46,7 +46,7 @@ class ShowAssociations(WebScript):
         
         articles = ArticleListScript(articleListFormData).run()
         articleTable = ArticleListToTable({'columns':('hits', )}).run(articles)
-        print(articleTable.output())
+        #print(articleTable.output())
         assocTable = AssociationsScript(self.formData).run(articleTable)
         return self.outputResponse(assocTable, AssociationsScript.output_type)
             
