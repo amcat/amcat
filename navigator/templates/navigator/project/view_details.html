@@ -1,3 +1,27 @@
+
+
+<div class="buttons" id="frontpage_buttons">
+<div class="buttonrow">
+ <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/upload.jpg" /><a href="{% url upload-articles context.id %}">Add Articles</a></div>
+ <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/files.jpg" /><a href="{% url project-articlesets context.id %}">View Articles</a></div>
+ <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/query.png" /><a href="{% url project-selection context.id %}">Query</a></div>
+ <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/annotate.jpg" /><a href="{% url project-codingjobs context.id %}">Coding Jobs</a></div>
+
+</div>
+</div>
+
+<script type="text/javascript">
+ /* Convert each button to a clickable button */
+ $.each($('.buttons .button'), function(i, el){
+  var href = $('a', el)[0].href;
+  $(el).click((function(){
+    window.location=this;
+   }).bind(href));
+ });
+</script>
+
+<h1>Details</h1>
+
   <table class="key_value">
    <tr>
     <td>ID:</td>
@@ -15,20 +39,8 @@
     <td>Index by default:</td>
     <td>{% if context.index_default %}Yes{% else %}No{% endif %}</td>
    </tr>
-   <tr><td></td><td></td></tr>
-   <tr>
-    <td>Created by:</td>
-    <td>{{context.insert_user.fullname}} ({{context.insert_user.username}})</td>
-   </tr>
-   <tr>
-    <td>Created on:</td>
-    <td>{{context.insert_date}}</td>
-   </tr>
-   <tr>
-    <td>Guest role:</td>
-    <td>{{context.guest_role}}</td>
-   </tr>
   </table>
+
   <a class="btn" href="{% url project-edit context.id %}">
       <i class="icon-edit"></i>
       Edit details

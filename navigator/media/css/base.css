@@ -76,14 +76,25 @@ article{
 }
 
 #frontpage_buttons{
-   margin-top:5%;
+   margin-top:2%;
+  width: 70%;
+  margin-left: 1px;
 }
+#frontpage_buttons .button{
+  width:200px;
+  height:75px;
+  font-size:1.25em;
+}
+
 
 .buttons a, .buttons a:visited{
   text-decoration:none;
   color:black;
 }
 
+.buttonrow {
+ display: table-row
+}
 
 .buttons .button{
   width:250px;
