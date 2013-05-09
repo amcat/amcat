@@ -81,6 +81,8 @@ from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
 from amcat.models.articleset import create_new_articleset
 
+from api.rest.resources.codebook import _get_tree, CodebookCycleException
+
 
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
@@ -746,12 +748,25 @@ def _get_codebook_code(ccodes, code, codebook):
 
     return ccodes.get(code.id)
 
+def _get_all_nodes(*nodes):
+    """Chain all (sub)nodes found in `nodes`"""
+    for node in nodes:
+        yield node
+        for child in node["children"]:
+            for child_node in _get_all_nodes(child):
+                yield child_node
+
+def _get_tree_size(codebook):
+    return sum(1 for n in _get_all_nodes(*_get_tree(codebook)))
+
 @transaction.commit_on_success
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
 def save_changesets(request, codebook, project):
     moves = json.loads(request.POST.get("moves", "[]"))
     hides = json.loads(request.POST.get("hides", "[]"))
+
+    original_size = _get_tree_size(codebook)
 
     # Gather all codes needed for moves and hides (so that we don't have to
     # retrieve them on by one
@@ -789,6 +804,14 @@ def save_changesets(request, codebook, project):
     # Commit all changes
     for ccode_id, ccode in codebook_codes.items():
         ccode.save()
+
+    # Check for any other cycles. _get_tree will raise a CodebookCycleException
+    # when it detects one. It will not detect cycli introduced by erroneously moved
+    # codes, which will appear in a cut off part of the tree. This results in a new
+    # tree which is smaller than the original, which we also check for.
+    codebook = Codebook.objects.get(id=codebook.id) # Make sure cache is gone
+    if original_size > _get_tree_size(codebook):
+        raise CodebookCycleException("Cycle detected: new hierarchy smaller than old one!")
 
     return HttpResponse(status=200)
 
