@@ -81,7 +81,7 @@ from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
 from amcat.models.articleset import create_new_articleset
 
-from api.rest.resources.codebook import _get_tree, CodebookCycleException
+from api.rest.resources.codebook import CodebookHierarchyResource
 
 
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
@@ -748,17 +748,6 @@ def _get_codebook_code(ccodes, code, codebook):
 
     return ccodes.get(code.id)
 
-def _get_all_nodes(*nodes):
-    """Chain all (sub)nodes found in `nodes`"""
-    for node in nodes:
-        yield node
-        for child in node["children"]:
-            for child_node in _get_all_nodes(child):
-                yield child_node
-
-def _get_tree_size(codebook):
-    return sum(1 for n in _get_all_nodes(*_get_tree(codebook)))
-
 @transaction.commit_on_success
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
@@ -804,8 +793,9 @@ def save_changesets(request, codebook, project):
         ccode.save()
 
     # Check for any cycles. 
-    Codebook.objects.get(id=codebook.id).get_hierarchy()
+    CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)
 
+    # No error thrown, so no cycles detected
     return HttpResponse(status=200)
 
 @check(Project, args_map={'project' : 'id'}, args='project')

@@ -168,12 +168,6 @@ class Codebook(AmcatModel):
         nodes = self.get_roots(include_missing_parents=include_missing_parents, include_hidden=include_hidden)
         seen = set()
 
-        self.cache()
-
-        if include_labels:
-            for lang in CACHE_LABELS:
-                self.cache_labels(lang)
-
         for child, parent in hierarchy:
             if parent:
                 children[parent].add(child)

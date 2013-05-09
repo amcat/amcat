@@ -30,8 +30,9 @@ from django.conf.urls import url
 import collections
 import itertools
 
+from amcat.models.coding.codebook import CACHE_LABELS
+
 MAX_CODEBOOKS = 5
-CACHE_LABELS = (2, 1)
 
 class CodebookHierarchyResource(AmCATResource):
     """
@@ -72,13 +73,24 @@ class CodebookHierarchyResource(AmCATResource):
     def get_model_name(cls):
         return "codebookhierarchy"
 
+    @classmethod
+    def get_tree(cls, codebook, include_labels=True, **kwargs):
+        """Codebook.get_tree() with caching enabled"""
+        codebook.cache()
+
+        if include_labels:
+            for lang in CACHE_LABELS:
+                codebook.cache_labels(lang)
+
+        return codebook.get_tree(include_labels=include_labels, **kwargs)
+
     def _get(self, request, *args, **kwargs):
         qs = self.filter_queryset(self.get_queryset())
 
         if len(qs) > MAX_CODEBOOKS:
             return ("Please select at most {} codebook(s)".format(MAX_CODEBOOKS),)
         else:
-            return (codebook.get_tree() for codebook in qs)
+            return (self.get_tree(codebook) for codebook in qs)
 
     def get(self, request, *args, **kwargs):
         return Response(self._get(request, *args, **kwargs))
