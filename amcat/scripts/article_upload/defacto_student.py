@@ -85,12 +85,22 @@ def get_section(div):
         return # no ressort?
 
 def get_body(div):
-    return "\n\n".join(p.text for p in div.findall("p")).strip()
+    return "\n\n".join(stringify_children(p).strip() for p in div.findall("p")).strip()
 
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
     run_cli(handle_output=False)
 
+    
+def stringify_children(node):
+    """http://stackoverflow.com/questions/4624062/get-all-text-inside-a-tag-in-lxml"""
+    from lxml.etree import tostring
+    from itertools import chain
+    parts = ([node.text] +
+            list(chain(*([c.text, tostring(c), c.tail] for c in node.getchildren()))) +
+            [node.tail])
+    # filter removes possible Nones in texts and tails
+    return ''.join(filter(None, parts))
 
 
 
@@ -112,7 +122,7 @@ class TestDeFactoStudent(amcattest.PolicyTestCase):
 
     def test_split(self):
         elems = split_html(self.test1_html)
-        self.assertEqual(len(elems), 20)
+        self.assertEqual(len(elems), 21)
 
     def test_articles(self):
         arts = [get_article(x) for x in split_html(self.test1_html)]
@@ -140,3 +150,6 @@ class TestDeFactoStudent(amcattest.PolicyTestCase):
         self.assertTrue(body.startswith(u'Frankreichs Botschafter'))
         self.assertTrue(body.endswith("Treffen im Oktober 2012. epa"))
         self.assertEqual(len(body.split("\n\n")), 28) # no of paragraphs
+
+        body = get_body(elems[-1])
+        self.assertTrue('<a href="mailto:peter.filzmaier@donau-uni.ac.at">peter.filzmaier@donau-uni.ac.at</a>' in body)
