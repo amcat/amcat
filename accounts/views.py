@@ -26,7 +26,7 @@ def _redirect_login(request):
     """
     next1 = request.REQUEST.get("next")
     if next1 is not None:
-        return redirect(next)
+        return redirect(next1)
 
     # Redirect to frontpage
     return redirect("navigator.views.report.index")
