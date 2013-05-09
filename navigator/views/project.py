@@ -243,6 +243,11 @@ def unlink_articleset(request, project, aset):
     request.session['unlinked_articleset'] = True
     return redirect(reverse("project-articlesets", args=[project.id]))
 
+@check(ArticleSet, args='id')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid', action='update')
+def refresh_articleset(request, project, aset):
+    aset.reset_index(full_refresh=True)
+    return redirect(reverse("articleset", args=[project.id, aset.id]))
 
 @check(ArticleSet, args='id', action='delete')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')

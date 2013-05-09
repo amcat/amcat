@@ -33,6 +33,10 @@
      <a href="{% url articleset context.id object.id %}?indexed={% if object.indexed %}0{% else %}1{% endif %}"
          class="btn">{% if object.indexed %}Disable{% else %}Enable{% endif %} Indexing</a>
 
+     {% if object.indexed %}
+         <a class="btn confirm" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url articleset-refresh context.id object.id %}">Refresh Index</a>
+     {% endif %}
+
      <a class="btn confirm" data-confirm="You're about to deduplicate <i>{{ object.name }}</i>. This action is not reversible and could take a while, depending on the amount of articles ({{ articlecount }})." href="{% url articleset-deduplicate context.id object.id %}"><i class="icon-filter"></i> Deduplicate</a>
 
      {% if object.project.id == context.id %}
@@ -40,6 +44,7 @@
      {% else %}
          <a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url articleset-unlink context.id object.id %}"><i class="icon-white icon-remove"></i> Unlink</a>
      {% endif %}
+
 
  </div>
 <hr />
