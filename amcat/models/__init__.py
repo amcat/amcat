@@ -28,6 +28,7 @@ from amcat.models.user import *
 from amcat.models.project import *
 from amcat.models.sentence import *
 from amcat.models.sentiment import *  
+from amcat.models.amcat import *
 
 from amcat.models.plugin import *
 

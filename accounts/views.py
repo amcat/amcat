@@ -11,13 +11,14 @@ from navigator.utils.auth import create_user
 
 from amcat.models.user import Affiliation
 from amcat.models.authorisation import Role
+from amcat.models import AmCAT
 
-def _login(request, error, username):
+def _login(request, error, username, announcement):
     """
     Render shortcut
     """
     return render(request, "accounts/login.html",
-        dict(error=error, username=username)
+        dict(error=error, username=username, announcement=announcement)
     )
 
 def _redirect_login(request):
@@ -40,6 +41,8 @@ def login(request):
         # User already logged in
         return _redirect_login(request)
 
+    announcement = AmCAT.get_instance().get_announcement().replace("<br","<hr")
+
     if request.method == "POST":
         username = request.POST.get("username")
         passwd = request.POST.get("password")
@@ -48,7 +51,7 @@ def login(request):
 
         if user is None or not user.is_active:
             # Credentials wrong or account disabled
-            return _login(request, True, username)
+            return _login(request, True, username, announcement)
 
         # Credentials OK, log user in
         auth_login(request, user)
@@ -56,7 +59,7 @@ def login(request):
         return _redirect_login(request)
 
     # GET request, send empty form
-    return _login(request, False, None)
+    return _login(request, False, None, announcement)
 
 def logout(request):
     auth_logout(request)
