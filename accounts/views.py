@@ -41,7 +41,10 @@ def login(request):
         # User already logged in
         return _redirect_login(request)
 
-    announcement = AmCAT.get_instance().get_announcement().replace("<br","<hr")
+    system = AmCAT.get_instance()
+    announcements = [system.server_warning, system.global_announcement]
+    
+    announcement = "<hr/>".join(a for a in announcements if a is not None)
 
     if request.method == "POST":
         username = request.POST.get("username")

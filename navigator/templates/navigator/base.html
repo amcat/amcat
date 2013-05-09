@@ -42,6 +42,9 @@
      <div id="logo-headline">AmCAT Navigator 3</div>
      <div id="logo-byline">{{ 1|AMCAT_VERSION }}</div>
     </div>
+    {% if warning %}
+      <div id="logo-announce"><div class="alert alert-error">{{warning|safe }}</div></div>	
+    {% endif %}
 
     <div id="menu-tabs">
      <span id="menu-tabs-title">{% block tabtitle %}{% endblock %}</span>

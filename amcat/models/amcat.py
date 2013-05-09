@@ -25,7 +25,7 @@ import os
 import logging;
 log = logging.getLogger(__name__)
 
-ANNOUNCE_NOT_PRODUCTION = ("This is not the production server. "
+WARNING_NOT_PRODUCTION = ("This is {server}. "
                            "Use <a href='http://amcat.vu.nl'>amcat.vu.nl</a> "
                            "unless you explicitly want to use this server.")
 
@@ -37,17 +37,15 @@ class AmCAT(AmcatModel):
     
     global_announcement = models.TextField(blank=True, null=True)
 
-    def get_announcement(self):
+    @property
+    def server_warning(self):
         status = os.environ.get('AMCAT_SERVER_STATUS', '')
-        announcement = []
         if status != "production":
-            announcement.append(ANNOUNCE_NOT_PRODUCTION)
             if status:
-                announcement[-1] += " This server's status: "+status
-        if self.global_announcement:
-            announcement.append(self.global_announcement)
-        return "<br/>\n".join(announcement)
-        return announcement
+                server = "the {status} server".format(**locals())
+            else:
+                server = "not the production server"
+            return WARNING_NOT_PRODUCTION.format(**locals())
 
     @classmethod
     def get_instance(cls):

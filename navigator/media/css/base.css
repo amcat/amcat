@@ -75,6 +75,7 @@ article{
    margin-top:-20px;
 }
 
+
 #frontpage_buttons{
    margin-top:2%;
 }
@@ -159,6 +160,9 @@ article{
    height: 30px;
    left: 200px;
 }
+#logo-announce div {padding-top: 4px; padding-bottom: 4px; margin-top: 2px;
+    margin-left: 2px}
+
 #logo-wrapper{
    background-image:url('/media/img/amcat/amcat-logo.png');
    background-repeat:no-repeat;
