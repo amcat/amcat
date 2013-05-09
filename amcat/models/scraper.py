@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals, print_function, absolute_import
 
 """ORM Module representing scrapers"""
 
@@ -150,4 +151,4 @@ if __name__ == '__main__':
     date = datetime.date.today() - datetime.timedelta(days=1)
     scrapers = get_scrapers(date)
     for scraper in scrapers:
-        print scraper.__class__.__name__, scraper.options["date"]
+        print(scraper.__class__.__name__, scraper.options["date"])

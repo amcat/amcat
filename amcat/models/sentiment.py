@@ -16,6 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals, print_function, absolute_import
+
 from amcat.tools.model import AmcatModel
 from django.db import models
 

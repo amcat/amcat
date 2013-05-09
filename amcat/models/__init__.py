@@ -17,6 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from __future__ import unicode_literals, print_function, absolute_import
+
 from amcat.models.article import *
 from amcat.models.authorisation import *
 from amcat.models.language import *
