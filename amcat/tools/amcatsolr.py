@@ -177,6 +177,7 @@ def _get_article_dicts(article_ids):
                    section=_clean(a.section),
                    projectid=a.project_id,
                    mediumid=a.medium_id,
+                   page=a.pagenr,
                    date=a.date.replace(tzinfo=GMT0()),
                    sets=sets.get(a.id))
 
