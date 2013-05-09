@@ -90,7 +90,7 @@ class CodebookHierarchyResource(AmCATResource):
         if len(qs) > MAX_CODEBOOKS:
             return ("Please select at most {} codebook(s)".format(MAX_CODEBOOKS),)
         else:
-            return (self.get_tree(codebook) for codebook in qs)
+            return itertools.chain.from_iterable(self.get_tree(codebook) for codebook in qs)
 
     def get(self, request, *args, **kwargs):
         return Response(self._get(request, *args, **kwargs))

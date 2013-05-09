@@ -104,7 +104,7 @@ Array.prototype.remove=function(s){
             }
 
             self._is_hidden = function(){
-                return !((this.codebook_code === null) || (!this.codebook_code.hide))
+                return this.hidden;
             }
 
             self._set_is_hidden_functions = function(object){
@@ -139,8 +139,8 @@ Array.prototype.remove=function(s){
                  */
                 self.root = {
                     "label" : "Codebook: ",
-                    "id" : null,
-                    "codebook_code" : null,
+                    "code_id" : null,
+                    "hidden" : false,
                     "children" : objects,
                 }
 
@@ -389,9 +389,9 @@ Array.prototype.remove=function(s){
                     code_el.addClass("hide");
                 }
 
-                if (object.codebook_code == null){
+                /*if (object.codebook_code == null){
                     code_el.addClass("inherited");
-                }
+                }*/
 
                 // Add expanding icon to tree
                 var action_icon = $("<img>");
@@ -550,14 +550,14 @@ Array.prototype.remove=function(s){
 
                 $(this.dom_element).addClass("hide");
                 $(".code", this.dom_element).addClass("hide");
-                this.codebook_code.hide = true;
-                self.changesets.hides[this.id] = this;
+                this.hidden = true;
+                self.changesets.hides[this.code_id] = this;
             }
 
 
             self.unhide_code_clicked = function(event){
                 /* Unhide code clicked. This function is bound to an object */
-                this.codebook_code.hide = false;
+                this.hidden = false;
 
                 // Set correct icon
                 $(".icon-eye-open", this.options_dom_element).hide();
@@ -573,12 +573,12 @@ Array.prototype.remove=function(s){
                     self._unhide_code_and_children(this); 
                 }
 
-                self.changesets.hides[this.id] = this;
+                self.changesets.hides[this.code_id] = this;
             }
 
             self.show_labels_clicked = function(event){
                 // Create and acivate modal window
-                var modal = self._create_modal_window("labels", "Labels of code " + this.id).modal();
+                var modal = self._create_modal_window("labels", "Labels of code " + this.code_id).modal();
 
                 modal.on("hidden", function(){
                     $("#labels").remove()
@@ -589,7 +589,7 @@ Array.prototype.remove=function(s){
                     "code" : this
                 }));
 
-                $.getJSON(api_url + 'label?format=json&paginate=false&code__id=' + this.id, self.labels_loaded.bind(this));
+                $.getJSON(api_url + 'label?format=json&paginate=false&code__id=' + this.code_id, self.labels_loaded.bind(this));
             }
 
             self.labels_loaded = function(labels){
@@ -722,10 +722,10 @@ Array.prototype.remove=function(s){
                 var callback_func = null;
 
                 if (this.new_code == true){
-                    callback_data.parent = this.parent.id;
+                    callback_data.parent = this.parent.code_id;
                     callback_func = self.new_code_created;
                 } else {
-                    callback_data.code  = this.code.id;
+                    callback_data.code  = this.code.code_id;
                     callback_func = self.labels_updated;
                 }
 
@@ -775,7 +775,7 @@ Array.prototype.remove=function(s){
 
                 // Init new code
                 new_code.children = [];
-                new_code.codebook_code = { hide : false };
+                new_code.hidden = false;
                 new_code.parent = this.parent;
                 new_code.label = this.labels[0].label;
                 self._set_is_hidden_functions(new_code);
@@ -882,7 +882,8 @@ Array.prototype.remove=function(s){
                 $(this.dom_element).prependTo($(".children", new_parent_el).get(0));
                 self.expand(this.dom_element, "slow");
 
-                self.changesets.moves[this.id] = this;
+                console.log(this);
+                self.changesets.moves[this.code_id] = this;
                 self.moving = false;
             }
 
@@ -956,12 +957,12 @@ Array.prototype.remove=function(s){
 
                 // Get all moves
                 $.each(self.changesets.moves, function(id, code){
-                    moves.push({ new_parent : code.parent.id, id : code.id })
+                    moves.push({ new_parent : code.parent.code_id, code_id : code.code_id })
                 });
 
                 // Get hides
                 $.each(self.changesets.hides, function(id, code){
-                    hides.push({ id : code.id, hide : code.codebook_code.hide })
+                    hides.push({ code_id : code.code_id, hide : code.hidden })
                 });
 
                 // Create "saving changesets" modal

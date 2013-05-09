@@ -406,10 +406,6 @@ class CodebookCode(AmcatModel):
             if self.validto and co.validfrom and self.validto <= co.validfrom: continue
             raise ValueError("Codebook code {!r} overlaps with {!r}".format(self, co))
 
-        if (self.parent != None) and self.hide:
-            raise ValueError("Parent code {!r} of code {!r} hidden.".format(self.parent, self.code))
-
-        
     def __unicode__(self):
         return "{0.code}:{0.parent} ({0.codebook}, {0.validfrom}-{0.validto})".format(self)
 

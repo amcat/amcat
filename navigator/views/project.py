@@ -758,8 +758,8 @@ def save_changesets(request, codebook, project):
     # Gather all codes needed for moves and hides (so that we don't have to
     # retrieve them on by one
     codes = { c.id : c for c in Code.objects.filter(id__in=itertools.chain(
-        set([h["id"] for h in hides]),
-        set(itertools.chain(*[tuple(m.values()) for m in moves]))
+        set([h["code_id"] for h in hides]),
+        set(itertools.chain.from_iterable(m.values() for m in moves))
     )) }
 
     codebook_codes = { 
@@ -770,7 +770,7 @@ def save_changesets(request, codebook, project):
 
     # Save all moves
     for move in moves:
-        code, new_parent = codes[move['id']], codes.get(move['new_parent'])
+        code, new_parent = codes[move['code_id']], codes.get(move['new_parent'])
         ccode = _get_codebook_code(codebook_codes, code, codebook)
 
         # User must have sufficient privileges to read both codes and update the codebookcode 
@@ -785,7 +785,7 @@ def save_changesets(request, codebook, project):
 
     # Save all hides
     for hide in hides:
-        ccode = _get_codebook_code(codebook_codes, codes[hide['id']], codebook)
+        ccode = _get_codebook_code(codebook_codes, codes[hide['code_id']], codebook)
         ccode.hide = hide.get("hide", False)
 
     # Commit all changes
