@@ -6,6 +6,7 @@ import sys, csv, StringIO, traceback, json
 from amcat.tools import amcatlogging;
 
 from django.template import Template, Context
+import functools
 
 #amcatlogging.debugModule()
 
@@ -249,7 +250,7 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
             csvwriter = csv.writer(outfile, dialect=dialect)
         pm.worked(5)
         cols = list(table.getColumns())
-        if writecolnames == True: writecolnames = str 
+        if writecolnames == True: writecolnames =str 
         if writerownames == True: writerownames = str            
         if writecolnames:
             c = ([""] + cols) if writerownames else cols
@@ -268,7 +269,7 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
 """
 
 def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
-              tabseparated=False):
+              tabseparated=False, encoding='utf-8'):
     table = getTable(table, colnames)
     if table.rowNamesRequired == True:
         writerownames = True
@@ -276,7 +277,7 @@ def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecol
         dialect = csv.excel_tab if tabseparated else csv.excel
         csvwriter = csv.writer(outfile, dialect=dialect)
     cols = list(table.getColumns())
-    if writecolnames == True: writecolnames = str 
+    if writecolnames == True: writecolnames = lambda col : unicode(col).encode(encoding)
     if writerownames == True: writerownames = str            
     if writecolnames:
         c = ([""] + cols) if writerownames else cols

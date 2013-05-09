@@ -226,7 +226,9 @@ class ObjectColumn(object):
             log.error("Exception on getting column %r on row %r" % (self.label, row))
             raise 
     def __str__(self):
-        return self.label
+        return self.label.encode('utf-8')
+    def __unicode__(self):
+        return unicode(self.label)
 
 class AttributeColumn(ObjectColumn):
     """An ObjectColumn subclass that works as an attribute getter"""

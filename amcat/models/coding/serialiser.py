@@ -92,12 +92,12 @@ class BaseSerialiser(object):
         The label need only be locally unique, it will be prepended with the field name.
         @param **options: the form values of the fields specified by get_export_fields
         """
-        yield "", self.value_label
+        yield "", self.deserialise
     
 class TextSerialiser(BaseSerialiser):
     """Simple str - str serialiser"""
     def __init__(self, field):
-        super(TextSerialiser, self).__init__(field, str, str)
+        super(TextSerialiser, self).__init__(field, unicode, unicode)
 
 class IntSerialiser(BaseSerialiser):
     """Simple int - int serialiser"""

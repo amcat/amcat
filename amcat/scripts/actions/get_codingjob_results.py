@@ -18,6 +18,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from __future__ import unicode_literals, print_function, absolute_import
+
+
 from django import forms
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
@@ -50,7 +53,7 @@ CODING_LEVELS = [(CODING_LEVEL_ARTICLE, "Article Codings"),
                  ]
 
 ExportFormat = collections.namedtuple('ExportFormat', ["label", "function", "mimetype"])
-EXPORT_FORMATS = (ExportFormat(label="ascii", function=lambda t:t.output(), mimetype=None),
+EXPORT_FORMATS = (#ExportFormat(label="ascii", function=lambda t:t.output(), mimetype=None),
            ExportFormat(label="csv", function=table_to_csv, mimetype="text/csv"),
            ExportFormat(label="xlsx", function=table_to_xlsx, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
            ExportFormat(label="json", function=lambda t:json.dumps(list(t.to_list())), mimetype="application/json"),
@@ -268,10 +271,12 @@ class GetCodingJobResults(Script):
         codingjobs = CodingJob.objects.prefetch_related("codings__values").filter(pk__in=codingjobs)
         
         # Get all row of table
-        table = table3.ObjectTable(rows=_get_rows(
+        rows = _get_rows(
             codingjobs, include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
             include_multiple=True, include_uncoded_articles=False
-        ))
+            )
+        
+        table = table3.ObjectTable(rows=list(rows))
 
         # Meta field columns
         for field in _METAFIELDS:
@@ -290,6 +295,7 @@ class GetCodingJobResults(Script):
 
     def _run(self, export_format, **kargs):
         table = self.get_table(**kargs)
+
         format_dict = {f.label : f.function for f in EXPORT_FORMATS}
         return format_dict[export_format](table)
 
@@ -305,7 +311,7 @@ from amcat.tools import amcattest
 
 class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
-    def _get_results_script(self, jobs, options, export_level=0):
+    def _get_results_script(self, jobs, options, export_level=0, export_format='json'):
         """
         @param options: {field :{options}} -> include that field with those options
         """
@@ -315,13 +321,14 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
         
         data = dict(codingjobs=[job.id for job in jobs],
-                    export_format=['json'],
+                    export_format=[export_format],
                     export_level=[str(export_level)],
                     )
         for field, opts in options.items():
-            data["schemafield_{field.id}_included".format(**locals())] = [True]
+            prefix = _get_field_prefix(field)
+            data["{prefix}_included".format(**locals())] = [True]
             for k, v in opts.items():
-                data["schemafield_{field.id}_{k}".format(**locals())] = [v]
+                data["{prefix}_{k}".format(**locals())] = [v]
             
         f = CodingJobResultsForm(data=MultiValueDict(data), project=jobs[0].project)
         validate(f)
@@ -329,7 +336,8 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
     def _get_results(self, *args, **kargs):
         script = self._get_results_script(*args, **kargs)
-        return [tuple(x) for x in json.loads(script.run())]
+        result = script.run()
+        return [tuple(x) for x in json.loads(result)]
 
     def test_get_rows(self):
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields()
@@ -390,6 +398,35 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
                          {('bla', 'z', -1), ('blx', None, None)})
         
         
+
+    def test_unicode(self):
+        """Test whether the export can handle unicode in column names and cell values"""
+        schema = amcattest.create_test_schema(isarticleschema=True)
+        s1 = u'S1 \xc4\u0193 \u02a2 \u038e\u040e'
+        s2 = u'S2 \u053e\u06a8 \u090c  \u0b8f\u0c8a'
+        f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=1, label=s1,
+                                             fieldtype_id=1, codebook=None)
+
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
+
+        articles = list(job.articleset.articles.all())
+        amcattest.create_test_coding(codingjob=job, article=articles[0]).update_values({f:s2})
+        
+        # test csv
+        s = self._get_results_script([job], {f : {}}, export_format='csv')
+        table = [[cell.decode('utf-8') for cell in row] for row in csv.reader(StringIO(s.run()))]
+        self.assertEqual(table, [[s1], [s2]])
+
+        # test json
+        s = self._get_results_script([job], {f : {}}, export_format='json')
+        self.assertEqual(json.loads(s.run()), [[s2]]) # json export has no header (?)
+
+        # test excel, can't test content but we can test output and no error        
+        s = self._get_results_script([job], {f : {}}, export_format='xlsx')
+        self.assertTrue(s.run())
+        
+        
+
         
     def test_nqueries(self):
         from amcat.tools import amcatlogging
