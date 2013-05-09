@@ -139,7 +139,11 @@ article{
    height:50px;
    width:100%;
 }
-
+#logo-announce {
+   position: absolute; 
+   height: 30px;
+   left: 200px;
+}
 #logo-wrapper{
    background-image:url('/media/img/amcat/amcat-logo.png');
    background-repeat:no-repeat;

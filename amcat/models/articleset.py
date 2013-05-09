@@ -95,7 +95,6 @@ class ArticleSet(AmcatModel):
     class Meta():
         app_label = 'amcat'
         db_table = 'articlesets'
-        unique_together = ('name', 'project')
         ordering = ['name']
 
     def __init__(self, *args, **kargs):
@@ -156,7 +155,22 @@ class ArticleSet(AmcatModel):
         @param solr: The amcatsolr.Solr object to use
         """
         return solr.query_ids("sets:{self.id}".format(**locals()))
-    
+
+    def reset_index(self, full_refresh=False, solr=None):
+        """
+        Set the index to dirty so it will be refreshed.
+        @param full_refresh: if True, delete all existing information from the set
+        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
+        """
+        # lazy load to prevent import cycle
+        from amcat.tools.amcatsolr import Solr
+        if solr is None: solr = Solr()
+        if full_refresh:
+            solr_ids = self._get_article_ids_solr(solr=solr)
+            for i, batch in enumerate(splitlist(solr_ids)):
+                solr.delete_articles(batch)
+        self.index_dirty=True
+        self.save()
     
     def refresh_index(self, solr=None, full_refresh=False):
         """

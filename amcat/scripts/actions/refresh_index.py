@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -17,34 +19,33 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from __future__ import unicode_literals, print_function, absolute_import
+"""
+Script to get queries for a codebook
+"""
 
-from amcat.models.article import *
-from amcat.models.authorisation import *
-from amcat.models.language import *
-from amcat.models.medium import *
-from amcat.models.articleset import *
-from amcat.models.user import *
-from amcat.models.project import *
-from amcat.models.sentence import *
-from amcat.models.sentiment import *  
-from amcat.models.amcat import *
+import logging; log = logging.getLogger(__name__)
 
-from amcat.models.plugin import *
+from django import forms
+from django.db import transaction
 
-from amcat.models.word import *
-from amcat.models.analysis import *
-from amcat.models.token import *
+from amcat.scripts.script import Script
+from amcat.models import ArticleSet, Plugin, AnalysedArticle
 
+PLUGINTYPE_PARSER=1
 
-from amcat.models.coding.codingschema import *
-from amcat.models.coding.codingschemafield import *
-from amcat.models.coding.codingjob import *
-from amcat.models.coding.coding import *
-from amcat.models.coding.code import *
-from amcat.models.coding.codebook import *
-from amcat.models.coding.codedarticle import *
+class RefreshIndex(Script):
+    class options_form(forms.Form):
+        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+        full_refresh = forms.BooleanField(initial=False, required=False)
+        
 
-from amcat.models.scraper import *
-
+                                        
+    def _run(self, articleset, full_refresh):
+        log.info("Refreshing {articleset}, full_refresh={full_refresh}".format(**locals()))
+        articleset.reset_index(full_refresh=full_refresh)
+        
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    result = cli.run_cli()
+    #print result.output()
 

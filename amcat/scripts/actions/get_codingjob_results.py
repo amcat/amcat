@@ -65,6 +65,7 @@ _METAFIELDS = [
     _MetaField("article", "id", "Article ID"),
     _MetaField("article", "headline", "Headline"),
     _MetaField("article", "medium", "Medium"),
+    _MetaField("article", "medium_id", "Medium ID"),
     _MetaField("article", "date", "Date"),
     _MetaField("job", "id", "Codingjob ID"),
     _MetaField("job", "name", "Codingjob Name"),
