@@ -6,6 +6,7 @@
     <p style="margin-bottom:0px;">Could not log you in. Did you forget your username or password? Use <a href="{% url accounts-recover %}">this</a> form to reset them.</div>
 {% else %}
 {% endif %}
+<div class="alert alert-info">{{ announcement|safe }}</div>
 
 </div>
 <div class="login_columns">
