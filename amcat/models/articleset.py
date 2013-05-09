@@ -95,7 +95,6 @@ class ArticleSet(AmcatModel):
     class Meta():
         app_label = 'amcat'
         db_table = 'articlesets'
-        unique_together = ('name', 'project')
         ordering = ['name']
 
     def __init__(self, *args, **kargs):
