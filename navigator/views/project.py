@@ -766,8 +766,6 @@ def save_changesets(request, codebook, project):
     moves = json.loads(request.POST.get("moves", "[]"))
     hides = json.loads(request.POST.get("hides", "[]"))
 
-    original_size = _get_tree_size(codebook)
-
     # Gather all codes needed for moves and hides (so that we don't have to
     # retrieve them on by one
     codes = { c.id : c for c in Code.objects.filter(id__in=itertools.chain(
@@ -805,13 +803,8 @@ def save_changesets(request, codebook, project):
     for ccode_id, ccode in codebook_codes.items():
         ccode.save()
 
-    # Check for any other cycles. _get_tree will raise a CodebookCycleException
-    # when it detects one. It will not detect cycli introduced by erroneously moved
-    # codes, which will appear in a cut off part of the tree. This results in a new
-    # tree which is smaller than the original, which we also check for.
-    codebook = Codebook.objects.get(id=codebook.id) # Make sure cache is gone
-    if original_size > _get_tree_size(codebook):
-        raise CodebookCycleException("Cycle detected: new hierarchy smaller than old one!")
+    # Check for any cycles. 
+    Codebook.objects.get(id=codebook.id).get_hierarchy()
 
     return HttpResponse(status=200)
 

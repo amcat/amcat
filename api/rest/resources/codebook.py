@@ -33,51 +33,6 @@ import itertools
 MAX_CODEBOOKS = 5
 CACHE_LABELS = (2, 1)
 
-class CodebookCycleException(APIException):
-    pass
-
-def _walk(codebook, children, nodes, seen=None):
-    seen = set() if seen is None else seen
-
-    for node in nodes:
-        if node in seen:
-            # A cycle was detected in this hierarchy.
-            raise CodebookCycleException("Cycle? {}".format(node))
-
-        seen.add(node)
-
-        cc = codebook.get_codebookcode(node)
-        cc = cc if cc is None else {
-            "hide" : cc.hide,
-        }
-
-        yield {
-            "id" : node.id,
-            "label" : node.get_label(*CACHE_LABELS),
-            "children" : _walk(codebook, children, children[node], seen),
-            "codebook_code" : cc
-        }
-
-def _get_tree(codebook):
-    # Cache bases and objects thereof
-    codebook.cache()
-
-    # Cache all labels
-    for lang in CACHE_LABELS:
-        codebook.cache_labels(lang)
-
-    children = collections.defaultdict(set)
-    hierarchy = codebook.get_hierarchy(include_hidden=True)
-    nodes = codebook.get_roots(include_missing_parents=True, include_hidden=True)
-
-    for child, parent in hierarchy:
-        if parent:
-            children[parent].add(child)
-
-    for node in _walk(codebook, children, nodes):
-        yield node
-
-
 class CodebookHierarchyResource(AmCATResource):
     """
     This resource has no direct relationship to one model. Instead, it's
@@ -123,12 +78,10 @@ class CodebookHierarchyResource(AmCATResource):
         if len(qs) > MAX_CODEBOOKS:
             return ("Please select at most {} codebook(s)".format(MAX_CODEBOOKS),)
         else:
-            return itertools.chain.from_iterable((node for node in _get_tree(codebook))
-                                                    for codebook in qs)
+            return (codebook.get_tree() for codebook in qs)
 
     def get(self, request, *args, **kwargs):
         return Response(self._get(request, *args, **kwargs))
-
 
 
 class CodebookResource(AmCATResource):
