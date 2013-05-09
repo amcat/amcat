@@ -27,15 +27,20 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 import logging; log = logging.getLogger(__name__)
 from datetime import datetime
-
-
 from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.code import Code, Label
 from django.core.exceptions import ValidationError
 
+import collections
 
+# Used in Codebook.get_tree()
+CACHE_LABELS = (2, 1)
+TreeItem = collections.namedtuple("TreeItem", ["code_id", "children", "hidden", "label"])
+
+class CodebookCycleException(ValueError):
+    pass
 
 class Codebook(AmcatModel):
     """Model class for table codebooks
@@ -125,6 +130,61 @@ class Codebook(AmcatModel):
                 result[co.code_id] = co.parent_id
         return result
 
+    def _get_node(self, include_labels, children, node, seen):
+        """
+        Return a namedtuple as described in get_tree(). Raises a CodebookCycleException
+        when it detects a cycle.
+        """
+        if node in seen:
+            raise CodebookCycleException("Cycle? {}".format(node))
+
+        cc = self.get_codebookcode(node)
+        seen.add(node)
+
+        return TreeItem(
+            code_id=cc.code_id, hidden=cc.hide if cc else None,
+            children=self._walk(include_labels, children, children[node], seen),
+            label=node.get_label(*CACHE_LABELS) if include_labels else None
+        )
+        
+    def _walk(self, include_labels, children, nodes, seen):
+        return tuple(self._get_node(include_labels, children, n, seen) for n in nodes)
+
+    def get_tree(self, include_missing_parents=True, include_hidden=True, include_labels=True):
+        """
+        Get a tree representation of the tuples returned by get_hierarchy. For each root
+        it yields a namedtuple("TreeItem", ["code_id", "children", "hidden"]) where
+        parent points to a TreeItem, and children to a list of TreeItems.
+        
+        This method will check for cycli and raise an error when one is detected.
+
+        @param include_missing_parents: if True, also include nodes used as parent but not
+                                            explicitly listed as root or child.
+        @param include_hidden: include hidden codes
+        @param include_labels: include .label property on each TreeItem
+        """
+        children = collections.defaultdict(set)
+        hierarchy = self.get_hierarchy(include_hidden=include_hidden)
+        nodes = self.get_roots(include_missing_parents=include_missing_parents, include_hidden=include_hidden)
+        seen = set()
+
+        self.cache()
+
+        if include_labels:
+            for lang in CACHE_LABELS:
+                self.cache_labels(lang)
+
+        for child, parent in hierarchy:
+            if parent:
+                children[parent].add(child)
+
+        tree = self._walk(include_labels, children, nodes, seen)
+        if len(seen) < CodebookCode.objects.filter(codebook=self).count():
+            # Not all codes included in this tree.. cycle!
+            raise CodebookCycleException("Graph disconnected")
+
+        return tree
+
     def get_hierarchy(self, date=None, include_hidden=False):
         """Return a sequence of code, parent pairs that forms the hierarchy of this codebook
 
@@ -137,10 +197,12 @@ class Codebook(AmcatModel):
         If validfrom and/or validto are given, only consider codebook codes
           where validfrom <= date < validto.
         """
+        if self.codebookbases.exists():
+            raise NotImplemented("Hierarchies with bases not yet supported.")
+
         hierarchy = self._get_hierarchy_ids(date, include_hidden)
         code_ids = set(hierarchy.keys()) | set(hierarchy.values()) - set([None])
-        codes = dict((c.id, c) for c in Code.objects.filter(pk__in=code_ids))
-
+        codes = Code.objects.in_bulk(code_ids)
 
         for codeid, parentid in hierarchy.iteritems():
             code = codes[codeid]
