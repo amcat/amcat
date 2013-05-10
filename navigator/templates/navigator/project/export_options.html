@@ -10,6 +10,7 @@
  <form method="POST">
     {% for hidden in form.hidden_fields %}
     {{ hidden }}
+    {% if hidden.errors %}{{ hidden.name}} : {{ hidden.errors }}{% endif %}
     {% endfor %}
 
   <table>
