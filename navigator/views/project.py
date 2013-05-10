@@ -66,6 +66,7 @@ from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
+from amcat.scripts.actions.assign_for_parsing import AssignParsing
 
 from navigator import forms
 from navigator.utils.auth import check, check_perm
@@ -698,6 +699,15 @@ def preprocessing(request, project):
     Codebooks-tab.
     """
     table = Datatable(AnalysedArticleResource).filter(article__articlesets_set__project=project)
+
+    form = AssignParsing.options_form(request.POST or None)
+    form.fields['articleset'].queryset = ArticleSet.objects.filter(pk__in=project.all_articlesets())
+
+    if form.is_valid():
+        assigned_n = AssignParsing(form).run()
+        assigned_plugin = form.cleaned_data["plugin"]
+        assigned_set = form.cleaned_data["articleset"]
+
 
     context = project
     menu = PROJECT_MENU

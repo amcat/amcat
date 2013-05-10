@@ -37,7 +37,7 @@ class AssignParsing(Script):
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
         plugin = forms.ModelChoiceField(queryset=Plugin.objects.filter(plugin_type__id=PLUGINTYPE_PARSER))
-        resubmit_error = forms.BooleanField(initial=False, required=False)
+        resubmit_error = forms.BooleanField(initial=False, required=False, help_text = "Select this option to re-assign 'error' cases to the parser")
                                         
     def _run(self, articleset, plugin, resubmit_error):
         if resubmit_error:

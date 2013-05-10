@@ -5,8 +5,23 @@
 {% block content %}
 
 <div>
+
  <br/>
  <h1 class="noline">Preprocessing</h1>
  {{ table|safe }}
+
+ <form action="{% url project-preprocessing context.id %}" method="POST">
+
+<h1>Assign aricles for parsing</h1>
+ {% if assigned_plugin %}
+<div class="alert alert-success">Assigned {{ assigned_n }} articles
+ from {{assigned_set}} for parsing
+ by {{assigned_plugin}}. You can add more articles using the form below.</div>
+ {% endif %}
+   <table>
+  {{ form.as_table }}
+ </table>
+ <input name="submit" type="submit"></input>
+</form>
 </div>
 {% endblock %}
