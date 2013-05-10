@@ -25,9 +25,9 @@ urlpatterns = patterns(
      url(r'^$', 'navigator.views.report.index', name="index"),
 
     # Project report
-    url(r'^projects$', 'navigator.views.project.my_active', name='projects'),
-    url(r'^projects/my_all$', 'navigator.views.project.my_all'),
-    url(r'^projects/all$', 'navigator.views.project.all'),
+    url(r'^projects$', 'navigator.views.project.projectlist_favourite', name='projects'),
+    url(r'^projects/my$', 'navigator.views.project.projectlist_my'),
+    url(r'^projects/all$', 'navigator.views.project.projectlist_all'),
 
     # User report
     url(r'^users$', 'navigator.views.user.my_affiliated_active', name='users'),

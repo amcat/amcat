@@ -132,3 +132,26 @@ class TestUploadText(amcattest.PolicyTestCase):
             self.assertEqual(a.headline, fn.replace("1999-12-31_",""))
             self.assertEqual(a.date.isoformat()[:10], '1999-12-31')
             self.assertEqual(a.text, text)
+
+    def test_zip(self):
+        from tempfile import NamedTemporaryFile
+        from django.core.files import File
+        import zipfile
+        
+        base = dict(project=amcattest.create_test_project().id,
+                    articleset=amcattest.create_test_set().id,
+                    medium=amcattest.create_test_medium().id)
+
+        
+        with NamedTemporaryFile(prefix=u"upload_test", suffix=".zip") as f:
+            with zipfile.ZipFile(f, "w") as zf:
+                zf.writestr("headline1.txt", "TEXT1")
+                zf.writestr("x/headline2.txt", "TEXT2")
+            f.flush()
+            
+            s = Text(file=File(f),date='2010-01-01', **base)
+            arts = s.run()
+            self.assertEqual({a.headline for a in arts}, {"headline1","headline2"})
+            self.assertEqual({a.section for a in arts}, {'',"x"})
+            self.assertEqual({a.text for a in arts}, {"TEXT1", "TEXT2"})
+            

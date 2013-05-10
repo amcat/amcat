@@ -23,19 +23,32 @@ from django.db import models
 from amcat.tools.model import AmcatModel
 import os
 import logging;
+
 log = logging.getLogger(__name__)
 
 WARNING_NOT_PRODUCTION = ("This is {server}. "
                            "Use <a href='http://amcat.vu.nl'>amcat.vu.nl</a> "
                            "unless you explicitly want to use this server.")
 
+
+SINGLETON_ID = 1
+
+# Increment to current db version to trigger db upgrades that syncdb can't handle
+# See amcat.tools.db_upgrader
+CURRENT_DB_VERSION = 1
+
+
 class AmCAT(AmcatModel):
+    
     id = models.BooleanField(primary_key=True, db_column="singleton_pk")
 
-    def save(self, *args, **kwargs):
-        raise NotImplementedError()
-    
     global_announcement = models.TextField(blank=True, null=True)
+    db_version = models.IntegerField()
+
+    def save(self, *args, **kwargs):
+        if self.id != SINGLETON_ID:
+            raise NotImplementedError()
+        super(AmCAT, self).save(*args, **kwargs)
 
     @property
     def server_warning(self):
@@ -49,8 +62,12 @@ class AmCAT(AmcatModel):
 
     @classmethod
     def get_instance(cls):
-        return cls.objects.get(pk=1)
-
+        try:
+            return cls.objects.get(pk=SINGLETON_ID)
+        except AmCAT.DoesNotExist:
+            # create singleton here - don't use initial data as that will override db_version on syncdb
+            return AmCAT.objects.create(db_version = CURRENT_DB_VERSION, id=SINGLETON_ID)
+            
 
     class Meta():
         db_table = 'amcat_system'
@@ -69,17 +86,9 @@ class TestAmCAT(amcattest.PolicyTestCase):
         self.assertEqual(type(a), AmCAT)
 
         os.environ['AMCAT_SERVER_STATUS']=""
-        self.assertEqual(a.get_announcement(), ANNOUNCE_NOT_PRODUCTION)
+        self.assertEqual(a.server_warning,
+                         ANNOUNCE_NOT_PRODUCTION.format(server = "not the production server"))
 
         os.environ['AMCAT_SERVER_STATUS']="production"
-        self.assertEqual(a.get_announcement(), "")
+        self.assertEqual(a.server_warning, None)
 
-        os.environ['AMCAT_SERVER_STATUS']="test"
-        self.assertEqual(a.get_announcement(), ANNOUNCE_NOT_PRODUCTION + " This server's status: test")
-
-        a.global_announcement = "Testing 123"
-        os.environ['AMCAT_SERVER_STATUS']="production"
-        self.assertEqual(a.get_announcement(), "Testing 123")
-        
-        os.environ['AMCAT_SERVER_STATUS']=""
-        self.assertEqual(a.get_announcement(), ANNOUNCE_NOT_PRODUCTION + "<br/>\nTesting 123")

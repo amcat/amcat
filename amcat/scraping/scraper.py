@@ -48,10 +48,11 @@ class ScraperForm(forms.Form):
     """Form for scrapers"""
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
-    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False)
+    articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False, help_text="If you choose an existing articleset, the articles will be appended to that set. If you leave this empty, a new articleset will be created using either the name given below, or using the file name")
     articleset_name = forms.CharField(
         max_length=ArticleSet._meta.get_field_by_name('name')[0].max_length,
-        required = False)
+        required = False,
+)
 
     def clean_articleset_name(self):
         name = self.cleaned_data['articleset_name']

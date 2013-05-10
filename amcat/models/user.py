@@ -68,6 +68,9 @@ class UserProfile(AmcatModel):
 
     objects = RowCacheManager()
 
+    favourite_projects = models.ManyToManyField("amcat.project")
+    favourite_articlesets = models.ManyToManyField("amcat.articleset")
+    
     @property
     def projects(self):
         return Project.objects.filter(projectrole__user=self.user)

@@ -66,6 +66,7 @@ from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.maintenance.deduplicate import DeduplicateScript
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
+from amcat.scripts.actions.assign_for_parsing import AssignParsing
 
 from navigator import forms
 from navigator.utils.auth import check, check_perm
@@ -165,21 +166,26 @@ def _list_projects(request, title, overview=False, **filter):
     projects = Datatable(ProjectResource).filter(**filter)
     return table_view(request, None, projects, title, overview, PROJECT_OVERVIEW_MENU)
 
-def my_active(request):
+def projectlist_favourite(request):
     """
     Render my active projects
     """
-    return _list_projects(request, 'my active projects',
+    # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
+    # (or use api request.user to add only current user's favourite status). But good enough for now...
+    ids = request.user.get_profile().favourite_projects.all().values_list("id")
+    ids = [id for (id, ) in ids]
+    if not ids: ids = [-1] # even uglier, how to force an empty table?
+    return _list_projects(request, 'favourite projects', id=ids,
             projectrole__user=request.user, active=True, overview=True)
 
-def my_all(request):
+def projectlist_my(request):
     """
     Render all my (including non-active) projects
     """
-    return _list_projects(request, 'all my projects', projectrole__user=request.user,
-            overview=True)
+    return _list_projects(request, 'my projects', projectrole__user=request.user,
+            active=True, overview=True)
 
-def all(request):
+def projectlist_all(request):
     """
     Render 'all' projects. We don't need to filter here as the 'security' filtering
     will happen in the API resource module
@@ -194,9 +200,19 @@ def view(request, project):
     """
     edited = session_pop(request.session, "project-edited", False)
 
+    starred = request.user.get_profile().favourite_projects.filter(pk=project.id).exists()
+    star = request.GET.get("star")
+    if (star is not None):
+        if bool(int(star)) != starred:
+            starred = not starred
+            if starred:
+                request.user.get_profile().favourite_projects.add(project.id)
+            else:
+                request.user.get_profile().favourite_projects.remove(project.id)
+    
     return render(request, 'navigator/project/view.html', {
         "context" : project, "menu" : PROJECT_MENU,
-        "selected" : "overview", "edited" : edited
+        "selected" : "overview", "edited" : edited, "starred" : starred
     })
         
 
@@ -699,9 +715,18 @@ def preprocessing(request, project):
     """
     table = Datatable(AnalysedArticleResource).filter(article__articlesets_set__project=project)
 
+    form = AssignParsing.options_form(request.POST or None)
+    form.fields['articleset'].queryset = ArticleSet.objects.filter(pk__in=project.all_articlesets())
+
+    if form.is_valid():
+        assigned_n = AssignParsing(form).run()
+        assigned_plugin = form.cleaned_data["plugin"]
+        assigned_set = form.cleaned_data["articleset"]
+
+
     context = project
     menu = PROJECT_MENU
-
+    selected = "preprocessing"
     return render(request, "navigator/project/preprocessing.html", locals())
 
 
