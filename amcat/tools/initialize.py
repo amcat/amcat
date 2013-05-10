@@ -37,7 +37,7 @@ from amcat.models.authorisation import Role
 from amcat.models.plugin import PluginType, Plugin
 
 import amcat.models
-from amcat.tools import classtools
+from amcat.tools import classtools, db_upgrader
 
 INITIAL_DATA_MODULE = amcat.models
 INITIAL_DATA_FILE = "initial_data.json"
@@ -59,11 +59,12 @@ def create_admin():
         
 def initialize(sender, **kwargs):
     """
-    Initialize the amcat database by loading data and creating the admin account
+    Initialize the amcat database by loading data, creating the admin account, and upgrading the db if needed
     """
     datafile = os.path.join(os.path.dirname(amcat.models.__file__), "initial_data.json")
     Command().run_from_argv(["manage", "loaddata", datafile])
     create_admin()
+    db_upgrader.upgrade_database()
 
 def set_signals():
     """
