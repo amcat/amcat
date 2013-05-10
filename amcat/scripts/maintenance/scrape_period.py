@@ -79,19 +79,17 @@ class PeriodScraper(Script):
 
 
     def run(self, _input):
-        date = self.options['first_date']
-        if self.options['last_date']:
-            last_date = self.options['last_date']
-        else:
-            last_date = date.today()
+        if not self.options['last_date']:
+            self.options['last_date'] = date.today()
+
         if self.options['deduplicate']:
             dedu = True
         else:
             dedu = False
 
         n_days = (self.options['last_date'] - self.options['first_date']).days
-        days = [self.options['first_date'] + timedelta(days = x) for x in range(n_days)]
-        scrapers = [self.get_scraper(date) for date in days]
+        days = [self.options['first_date'] + timedelta(days = x) for x in range(n_days + 1)]
+        scrapers = [self.get_scraper(d) for d in days]
         RobustController().scrape(scrapers, deduplicate = dedu)
 
 
