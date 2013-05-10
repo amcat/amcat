@@ -58,6 +58,7 @@ PROJECT_MENU = (
     ('codingschemas', 'project-schemas'),
     ('codebooks', 'project-codebooks'),
     ('users', 'project-users'),
+    ('preprocessing', 'project-preprocessing'),
 )
 
 PROJECT_OVERVIEW_MENU = (

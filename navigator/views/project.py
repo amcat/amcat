@@ -711,7 +711,7 @@ def preprocessing(request, project):
 
     context = project
     menu = PROJECT_MENU
-
+    selected = "preprocessing"
     return render(request, "navigator/project/preprocessing.html", locals())
 
 
