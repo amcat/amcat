@@ -22,14 +22,17 @@ Base module for article upload scripts
 """
 
 import os.path
+import shutil
+import tempfile
 import datetime
 import logging
 log = logging.getLogger(__name__)
-
+import zipfile 
 import chardet
 
 from django.db import transaction
 from django import forms
+from django.core.files import File
 
 from amcat.scripts import script
 from amcat.scripts.types import ArticleIterator
@@ -45,7 +48,7 @@ class UploadForm(ScraperForm):
     encoding = forms.ChoiceField(choices=enumerate(ENCODINGS),
                                  initial=0, required=False, 
                                  help_text="Try to change this value when character issues arise.", )
-    file = forms.FileField()
+    file = forms.FileField(help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
 
     def clean_articleset_name(self):
         """If article set name not specified, use file base name instead"""
@@ -104,6 +107,7 @@ class UploadScript(Scraper):
                 "using {self.__class__.__name__}".format(**locals()))
         
     def run(self, _dummy=None):
+        self._delete_after_run = []
         file = self.options['file']
         log.info(u"Importing {self.__class__.__name__} from {file.name} into {self.project}"
                  .format(**locals()))
@@ -115,12 +119,37 @@ class UploadScript(Scraper):
             new_provenance = self.get_provenance(file, arts)
             self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
             self.articleset.save()
-        
+
+
+        try:
+            self._cleanup()
+        except:
+            log.exception("Error on cleaning up")
         return arts
 
+    def _cleanup(self):
+        if self._delete_after_run:
+            for fn in self._delete_after_run:
+                shutil.rmtree(fn)
 
+    
+    def _read_zip(self, zip_file):
+        tempdir = tempfile.mkdtemp()
+        log.info("Extracting files from {zip_file.name} to {tempdir}".format(**locals()))
+        if not hasattr(self, "_delete_after_run"):
+            self._delete_after_run = []
+        self._delete_after_run.append(tempdir)
+        with zipfile.ZipFile(zip_file) as zf:
+            for name in zf.namelist():
+                fn = zf.extract(name, tempdir)
+                yield File(open(fn), name=name)
+    
     def _get_units(self):
-        return [self.options['file']]
+        f = self.options['file']
+        extension = os.path.splitext(f.name)[1]
+        if extension == ".zip":
+            return list(self._read_zip(f))
+        return [f]
 
     def _scrape_unit(self, file):
         documents = self.split_file(file)
@@ -149,3 +178,39 @@ class UploadScript(Scraper):
         @return: a sequence of objects (e.g. strings) to pass to parse_documents
         """
         return [self.decode(file.read())]
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+from amcat.tools import amcatlogging
+amcatlogging.debug_module("amcat.scripts.article_upload.upload")
+
+class TestUpload(amcattest.PolicyTestCase):
+    def test_zip_file(self):
+        from tempfile import NamedTemporaryFile, mkstemp
+        from django.core.files import File
+        # does _get_units perform normally
+        with NamedTemporaryFile(prefix=u"upload_test", suffix=".txt") as f:
+            f.write("Test")
+            f.flush()
+            s = UploadScript(project=amcattest.create_test_project().id,
+                             file=File(f))
+            self.assertEqual({u.name for u in s._get_units()}, {f.name})
+
+        # does a zip file work?
+
+            #handle, fn = mkstemp(suffix=".zip")
+        with NamedTemporaryFile(suffix=".zip") as f:
+            with zipfile.ZipFile(f,  "w") as zf:
+                zf.writestr("test.txt", "TEST")
+                zf.writestr("x/test.txt", "TAST")
+
+            s = UploadScript(project=amcattest.create_test_project().id,
+                             file=File(f))
+            self.assertEqual({f.name for f in s._get_units()}, {"test.txt", "x/test.txt"})
+            self.assertEqual({f.read() for f in s._get_units()}, {"TEST", "TAST"})
+
+            s._cleanup() # needs to be done manually as run() is not used for this test
+            

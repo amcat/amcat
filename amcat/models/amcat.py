@@ -69,17 +69,9 @@ class TestAmCAT(amcattest.PolicyTestCase):
         self.assertEqual(type(a), AmCAT)
 
         os.environ['AMCAT_SERVER_STATUS']=""
-        self.assertEqual(a.get_announcement(), ANNOUNCE_NOT_PRODUCTION)
+        self.assertEqual(a.server_warning,
+                         ANNOUNCE_NOT_PRODUCTION.format(server = "not the production server"))
 
         os.environ['AMCAT_SERVER_STATUS']="production"
-        self.assertEqual(a.get_announcement(), "")
+        self.assertEqual(a.server_warning, None)
 
-        os.environ['AMCAT_SERVER_STATUS']="test"
-        self.assertEqual(a.get_announcement(), ANNOUNCE_NOT_PRODUCTION + " This server's status: test")
-
-        a.global_announcement = "Testing 123"
-        os.environ['AMCAT_SERVER_STATUS']="production"
-        self.assertEqual(a.get_announcement(), "Testing 123")
-        
-        os.environ['AMCAT_SERVER_STATUS']=""
-        self.assertEqual(a.get_announcement(), ANNOUNCE_NOT_PRODUCTION + "<br/>\nTesting 123")
