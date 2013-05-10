@@ -5,7 +5,10 @@
 
 {% block content %}
 
-<h1>Project {{context.id}} : {{ context.name }}</h1>
+<h1>
+ <a href="{% url project context.id %}?star={{starred|yesno:'0,1'}}"><img src="{{ MEDIA_URL }}/img/star{{starred|yesno:',_bw'}}.png" /></a>
+ Project {{context.id}} : {{ context.name }}
+</h1>
 {% if edited %}
 <br/>
 <div class="alert alert-success">Project details saved successfully.</div>

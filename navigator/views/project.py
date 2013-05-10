@@ -195,9 +195,19 @@ def view(request, project):
     """
     edited = session_pop(request.session, "project-edited", False)
 
+    starred = request.user.get_profile().favourite_projects.filter(pk=project.id).exists()
+    star = request.GET.get("star")
+    if (star is not None):
+        if bool(int(star)) != starred:
+            starred = not starred
+            if starred:
+                request.user.get_profile().favourite_projects.add(project.id)
+            else:
+                request.user.get_profile().favourite_projects.remove(project.id)
+    
     return render(request, 'navigator/project/view.html', {
         "context" : project, "menu" : PROJECT_MENU,
-        "selected" : "overview", "edited" : edited
+        "selected" : "overview", "edited" : edited, "starred" : starred
     })
         
 
