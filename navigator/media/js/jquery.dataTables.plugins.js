@@ -74,7 +74,7 @@ jQuery.fn.dataTableExt.oApi.fnSetRowlink = function(oSettings, sRowlink){
 
               data = self.fnGetData(event.currentTarget);
               if (typeof(data) != "object"){
-                // mDataProps not used
+                // mDatas not used
                 for (var i=0; i < oSettings.aoColumns.length; i++){
                     name = oSettings.aoColumns[i].sName;
                     if (!name){ throw "Error: column `sName` should be set!" }
@@ -148,7 +148,7 @@ jQuery.fn.dataTableExt.oApi.fnSearchHighlighting = function(oSettings) {
       
       if (data == undefined){
         // Using DataProps
-        data = aData[oSettings.aoColumns[j].mDataProp];
+        data = aData[oSettings.aoColumns[j].mData];
       }
 
       // Only try to highlight if the cell is not empty or null
