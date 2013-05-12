@@ -1124,9 +1124,16 @@
 					/* Render if needed - if bUseRendered is true then we already have the rendered
 					 * value in the data source - so can just use that
 					 */
-					$(nTd).html((typeof oCol.fnRender === 'function' && (!oCol.bUseRendered || oCol.mData === null)) ?
+                    var html = (typeof oCol.fnRender === 'function' && (!oCol.bUseRendered || oCol.mData === null)) ?
 						_fnRender( oSettings, iRow, i ) :
-						_fnGetCellData( oSettings, iRow, i, 'display' ));
+						_fnGetCellData( oSettings, iRow, i, 'display' );
+
+                    if (typeof(html) === "object"){
+                        // Probably a jQuery type
+                        $(nTd).html(html);
+                    } else {
+                        nTd.innerHTML = html;
+                    }
 				
 					/* Add user defined class */
 					if ( oCol.sClass !== null )
