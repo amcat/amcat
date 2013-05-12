@@ -3,7 +3,7 @@
 <div class="login_head">
 {% if error %}
 <div class="alert alert-error">
-    <p style="margin-bottom:0px;">Could not log you in. Did you forget your username or password? Use <a href="{% url accounts-recover %}">this</a> form to reset them.</div>
+    <p style="margin-bottom:0px;">Could not log you in. Did you forget your username or password? Use <a href="{% url "accounts-recover" %}">this</a> form to reset them.</div>
 {% else %}
 {% endif %}
 <div class="alert alert-info">{{ announcement|safe }}</div>
@@ -27,13 +27,13 @@ the <a href="{{ MEDIA_URL }}misc/manual_en.pdf">English</a> or
 <div class="login_buttons">
 <h2>Sign in</h2>
 <p>
- <form method="POST" class="well form-inline" action = "{% url accounts-login %}">
+ <form method="POST" class="well form-inline" action = "{% url "accounts-login" %}">
      <input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="input-small" placeholder="Username" />
   <input name="password" type="password" class="input-small" placeholder="Password" />
   <button type="submit" class="btn">Sign in</button>
   <p>
     <small>If you forgot your username or password use 
-           <a href="{% url accounts-recover %}">this</a> form.
+           <a href="{% url "accounts-recover" %}">this</a> form.
     </small>
   </p>
  </form>
@@ -44,7 +44,7 @@ the <a href="{{ MEDIA_URL }}misc/manual_en.pdf">English</a> or
 <h2>Or create a new account:</h2>
 
 <form method="POST" class="well form-inline">
-    <a href="{% url accounts-register %}" class="btn btn-primary">Register</a>
+    <a href="{% url "accounts-register" %}" class="btn btn-primary">Register</a>
  </form>
 </p>
 </div>

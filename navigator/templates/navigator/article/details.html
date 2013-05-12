@@ -17,7 +17,7 @@
  </tr> 
  <tr>
   <td>Project:</td>
-  <td><a href="{% url project article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
+  <td><a href="{% url "project" article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
  </tr>
  {% if article.section %}
  <tr>
@@ -50,7 +50,7 @@
   <td>In articlesets:</td>
   <td>
   {% for aset in article.articlesets.all.distinct %}
-    <a href="{% url articleset article.project.id aset.id %}">{{aset.id}} - {{aset}}</a><br/>
+    <a href="{% url "articleset" article.project.id aset.id %}">{{aset.id}} - {{aset}}</a><br/>
   {% empty %}
     This article does not occur in any set
   {% endfor %}

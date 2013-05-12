@@ -2,10 +2,10 @@
 
 <div class="buttons" id="project_buttons">
 <div class="buttonrow">
- <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/upload.jpg" /><a href="{% url upload-articles context.id %}">Add Articles</a></div>
- <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/files.jpg" /><a href="{% url project-articlesets context.id %}">View Articles</a></div>
- <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/query.png" /><a href="{% url project-selection context.id %}">Query</a></div>
- <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/annotate.jpg" /><a href="{% url project-codingjobs context.id %}">Coding Jobs</a></div>
+ <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/upload.jpg" /><a href="{% url "upload-articles" context.id %}">Add Articles</a></div>
+ <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/files.jpg" /><a href="{% url "project-articlesets" context.id %}">View Articles</a></div>
+ <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/query.png" /><a href="{% url "project-selection" context.id %}">Query</a></div>
+ <div class="button"><img class="icon" src="{{ MEDIA_URL }}img/navigator/annotate.jpg" /><a href="{% url "project-codingjobs" context.id %}">Coding Jobs</a></div>
 
 </div>
 </div>
@@ -41,7 +41,7 @@
    </tr>
   </table>
 
-  <a class="btn" href="{% url project-edit context.id %}">
+  <a class="btn" href="{% url "project-edit" context.id %}">
       <i class="icon-edit"></i>
       Edit details
   </a> 

@@ -5,7 +5,7 @@
    <li>
      <h3 class="article-headline">
         {% if a.totalHits %} <span class="hit-count">{{a.totalHits}} hits - </span>{% endif %}
-        <a href="{% url navigator.views.article.view a.id %}" target="_blank">
+        <a href="{% url "navigator.views.article.view" a.id %}" target="_blank">
              {% if a.highlightedHeadline %}
                 {{ a.highlightedHeadline|first|safe|default:"[No headline]"}}
                {% else %}

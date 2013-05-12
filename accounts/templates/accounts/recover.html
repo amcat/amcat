@@ -18,7 +18,7 @@
      <br><br>
      <input class="btn btn-primary" type="submit" value="Recover" />
      <div style="margin-bottom:0px;" class="form-actions">
-      <a href="{% url accounts-login %}" class="btn">
+      <a href="{% url "accounts-login" %}" class="btn">
       {% if form.email.errors %}Back to Login Form
       {% else %}Cancel{% endif %}
       </a>

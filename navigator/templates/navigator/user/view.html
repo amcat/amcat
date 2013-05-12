@@ -13,10 +13,10 @@
 
 <h1>User Details for User {{user.id}}: {{user.first_name}} {{user.last_name}}</h1>
 {% if user == request.user %}
-<p>Actions: <a href="{% url user-change-password %}">Change password</a></p>
+<p>Actions: <a href="{% url "user-change-password" %}">Change password</a></p>
 {% endif %}
 <h2>Edit details</h2>
-<form action="{% url user-edit user.id %}" method="POST">
+<form action="{% url "user-edit" user.id %}" method="POST">
  <table>
   {{ form.as_table }}
  </table>

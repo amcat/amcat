@@ -6,7 +6,7 @@
  <script src="{{MEDIA_URL}}js/jquery.djangofields.js"></script>
  <script src="{{MEDIA_URL}}js/jquery.schemaeditor.js"></script>
  <script src="{{MEDIA_URL}}js/jquery.tablednd.0.7.min.js"></script>
- <script>$(function(){ jQuery.fn.schemaeditor("{% url api %}v4/", {{schema.id}}, {{context.id}}).main(); });</script>
+ <script>$(function(){ jQuery.fn.schemaeditor("{% url "api" %}v4/", {{schema.id}}, {{context.id}}).main(); });</script>
  {% endblock %}
 
 {% block content %}
@@ -18,7 +18,7 @@
 </table>
 <div class="form-actions">
  <input class="btn btn-primary" type="submit" name="codingschema-submit" value="Save" />
- <a href="{% url project-schema context.id schema.id %}" class="btn" value="Cancel">Cancel</a>
+ <a href="{% url "project-schema" context.id schema.id %}" class="btn" value="Cancel">Cancel</a>
 </div>
 </form>
 <h1 class="noline">Schemafields</h1>
@@ -57,6 +57,6 @@
 
 <div class="form-actions">
 <div name="save" class="btn btn-primary disabled">Save</div>
-<a href="{% url project-schema context.id schema.id %}" class="btn">Cancel</a>
+<a href="{% url "project-schema" context.id schema.id %}" class="btn">Cancel</a>
 </div>
 {% endblock %}

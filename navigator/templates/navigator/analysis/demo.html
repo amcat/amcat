@@ -10,7 +10,7 @@
 
 		  <h1> Demo for analysis {{ analysis }} </h1>
 
-		  <form action="{% url analysis-demo analysis.id %}" method="POST">
+		  <form action="{% url "analysis-demo" analysis.id %}" method="POST">
 			<table>
 			 {{ form.as_table }}
 			</table>

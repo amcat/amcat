@@ -37,8 +37,8 @@
     
     <div class="articlelist-part">
         <div class="links">
-            <a href="{% url codingjobs %}">&laquo; Back to Overview</a> | 
-            {% comment %}<a href="{% url annotator-codingjob-ontology codingjob.id %}" target="_blank">View Ontologies</a> |
+            <a href="{% url "codingjobs" %}">&laquo; Back to Overview</a> | 
+            {% comment %}<a href="{% url "annotator-codingjob-ontology" codingjob.id %}" target="_blank">View Ontologies</a> |
             {% endcomment %}
             <a href="javascript:;" id="help-button">Help</a>
         </div>
@@ -55,7 +55,7 @@
         <script type="text/javascript">
         $(document).ready(function(){
             var jqueryElement = $('#article-table-container');
-            var url = "{% url annotator-codingjob-articles codingjob.id %}";
+            var url = "{% url "annotator-codingjob-articles" codingjob.id %}";
             var columns = [
                 //[null,'codingjob'], 
                 //[null,'coder'], 

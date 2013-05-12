@@ -9,10 +9,10 @@
  <h1 class="noline">Actions</h1>
  <p>
 {% if can_import %}
-  <a href="{% url codebook-import project.id %}" class="btn"><i class="icon-edit"></i> Import codebooks</a>
+  <a href="{% url "codebook-import" project.id %}" class="btn"><i class="icon-edit"></i> Import codebooks</a>
 {% endif %}
 {% if can_create %}
-  <a href="{% url project-add-codebook project.id %}" class="btn"><i class="icon-certificate"></i> Create new codebook</a>
+  <a href="{% url "project-add-codebook" project.id %}" class="btn"><i class="icon-certificate"></i> Create new codebook</a>
 {% endif %}
  </p>
 

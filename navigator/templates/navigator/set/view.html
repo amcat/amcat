@@ -3,7 +3,7 @@
 {% block content %}
 
 <h1>Set {{ set.id }}: {{set.name}}</h1>
-<p>Belongs to project: <a href="{% url project set.project.id %}">{{set.project}}</a></p>
+<p>Belongs to project: <a href="{% url "project" set.project.id %}">{{set.project}}</a></p>
 
 <h2>Articles</h2>
 {{ articles|safe }}

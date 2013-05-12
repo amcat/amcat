@@ -78,7 +78,7 @@ class ApiTestCase(TestCase):
 
     def get_options(self, resource):
         self._login()
-        request = self.client.options(resource.get_url())
+        request = self.client.options(resource.get_url() + "?format=json")
         return json.loads(request.content)
 
     def get(self, resource, **options):
