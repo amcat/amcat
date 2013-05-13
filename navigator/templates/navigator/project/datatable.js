@@ -17,7 +17,7 @@
             event.stopPropagation();
 
             // This script is parsed with Django templates, so we can use url.
-            var url = "{% url 'project' 123 %}".replace("123", new String(row.id)) + "?star=" + (favourite ? "1" : "0");
+            var url = "{% url 'project' 123 %}".replace("123", new String(row.id)) + "?star=" + (row.favourite ? "1" : "0");
             $.get(url).success(function(data, textStatus, jqXHR){
                 row.__notify.pnotify({ hide : true, delay : 0 });
             }).error(function(data, textStatus, jqXHR){
