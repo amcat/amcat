@@ -29,8 +29,14 @@
 
  <div>
      {% if object.indexed %}
-         <a class="btn btn-primary" href="{% url "project-selection" context.id %}?articlesets={{ context.id }}">Query</a>
+         <a class="btn btn-primary" href="{% url "project-selection" context.id %}?articlesets={{ object.id }}">Query</a>
      {% endif %}
+
+
+
+
+
+     {% if object.project.id == context.id %}
 
      <a href="{% url "articleset" context.id object.id %}?indexed={% if object.indexed %}0{% else %}1{% endif %}"
          class="btn">{% if object.indexed %}Disable{% else %}Enable{% endif %} Indexing</a>
@@ -42,8 +48,12 @@
      <a class="btn confirm" data-confirm="You're about to deduplicate <i>{{ object.name }}</i>. This action is not reversible and could take a while, depending on the amount of articles ({{ articlecount }})." href="{% url "articleset-deduplicate" context.id object.id %}"><i class="icon-filter"></i> Deduplicate</a>
      <a class="btn" href="{% url "articleset-edit" context.id object.id %}"><i class="icon icon-edit"></i> Edit details</a>
 
-     {% if object.project.id == context.id %}
-         <a class="btn btn-danger confirm" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible." href="{% url "articleset-delete" context.id object.id %}"><i class="icon-white icon-trash"></i> Delete</a>
+         <a class="btn btn-danger confirm" data-confirm="You're about
+         to delete <i>{{ object.name }}</i>. This action is not
+         reversible." href="{% url "articleset-delete" context.id
+         object.id %}"><i class="icon-white icon-trash"></i>
+         Delete</a>
+
      {% else %}
          <a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "articleset-unlink" context.id object.id %}"><i class="icon-white icon-remove"></i> Unlink</a>
      {% endif %}
