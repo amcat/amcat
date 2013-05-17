@@ -28,11 +28,11 @@ amcat.datatables = {};
 
 _TARGET_ERR = "You can't use number to target columns in columndefs, as " +
                 "create_rest_table creates the table for you. Please use " +
-                "strings which refer to mDataProp.";
+                "strings which refer to mData.";
 
 _SORTCOL = "iSortCol_";
 _SORTDIR = "sSortDir_";
-_DPROP = "mDataProp_";
+_DPROP = "mData_";
 
 // Default options passed to datatables.
 _AMCAT_DEFAULT_OPTS = {
@@ -47,6 +47,8 @@ _AMCAT_DEFAULT_OPTS = {
     "iDisplayLength" : 100,
     "bProcessing" : true
 };
+
+$.fn.dataTableExt.sErrMode = 'throw';
 
 
 /*
@@ -459,7 +461,7 @@ amcat.datatables.fnServerData = function(sSource, aoData, fnCallback){
 /*
  * Build aoColumnDefs out of metadata. Refer to the datatables
  * documentation for more information. This currently renders the
- * properties aTargets, mDataProp.
+ * properties aTargets, mData.
  */
 amcat.datatables.gen_aoColumnDefs = function(metadata){
     var res = [], i = 0;
@@ -467,7 +469,7 @@ amcat.datatables.gen_aoColumnDefs = function(metadata){
     for (var fieldname in metadata.fields){
         res.push({
             aTargets : [fieldname],
-            mDataProp : fieldname
+            mData : fieldname
             // TODO: Add sType
         });
         
@@ -501,27 +503,34 @@ amcat.datatables.get_columns = function(opts){
 
     // Reset aTargets
     $.each(coldefs, function(i, coldef){
-        coldef.aTargets = [coldef.mDataProp];
+        coldef.aTargets = [coldef.mData];
     });
 
     // Process aoColumns
     if (opts.aoColumns !== undefined){
         $.each(opts.aoColumns, function(colnr, coldef){
-            if(coldef.mDataProp === undefined || coldef.mDataProp === null){
+            if(coldef.mData === undefined || coldef.mData === null){
                 throw _TARGET_ERR;
             }
 
-            $.extend(true, coldefs[coldef.mDataProp], coldef);
+            $.extend(true, coldefs[coldef.mData], coldef);
         });
     };
 
     // Convert to list
-    var res = [];
+    var res = [], coldef = null;
     if (opts.aoColumns !== undefined){
         // Keep order of aoColumns (and ignore superfluous coldefs defined
         // in aoColumnDefs.
         for (var i in opts.aoColumns){
-            res.push(coldefs[opts.aoColumns[i].mDataProp]);
+            coldef = coldefs[opts.aoColumns[i].mData];
+
+            if (coldef === null || coldef === undefined){
+                coldef = opts.aoColumns[i];
+                coldef.aTargets = [coldef.mData];
+            }
+
+            res.push(coldef);
         }
     } else {
         // No aoColumns defined. Display columns in (semi)random fashion.
@@ -530,7 +539,6 @@ amcat.datatables.get_columns = function(opts){
             delete coldefs[target].aTargets;
         }
     }
-
 
     return res;
 }
@@ -543,7 +551,7 @@ amcat.datatables.create_table_header = function(opts){
 
     $.each(opts.aoColumns, function(colnr, coldef){
         tr.append(
-            $("<th>").text(coldef.mDataProp)
+            $("<th>").text(coldef.mData)
         );
     });
 
@@ -577,7 +585,8 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
         this.datatables_options.aoColumnDefs = [];
     }
 
-    this.datatables_options.aoColumnDefs = amcat.datatables.gen_aoColumnDefs(data).concat(this.datatables_options.aoColumnDefs);
+    this.datatables_options.aoColumnDefs = amcat.datatables.gen_aoColumnDefs(data)
+                                                .concat(this.datatables_options.aoColumnDefs);
 
     // Merge aoColumnDefs / aoColumns
     this.datatables_options.aoColumns = amcat.datatables.get_columns(this.datatables_options);
@@ -593,7 +602,7 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
     $.each(this.datatables_options.aaSorting, (function(i, order){
         $.each(this.datatables_options.aoColumns, function(columnr, column){
             // Replace human-readable name with columnr
-            if(order[0] === column.mDataProp){ order[0] = columnr; }
+            if(order[0] === column.mData){ order[0] = columnr; }
         });
     }).bind(this));
 

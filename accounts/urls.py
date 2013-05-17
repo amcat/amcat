@@ -1,4 +1,4 @@
-from django.conf.urls.defaults import patterns, url
+from django.conf.urls import patterns, url
 from accounts.views import login, logout, register, recover
 from accounts.views import recover_confirm, recover_requested
 

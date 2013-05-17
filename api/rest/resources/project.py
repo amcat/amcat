@@ -18,10 +18,34 @@
 ###########################################################################
 
 from amcat.models import Project
+from amcat.tools.caching import cached
+
+from rest_framework import serializers
 
 from api.rest.resources.amcatresource import AmCATResource
+from api.rest.serializer import AmCATModelSerializer
 
+class ProjectSerializer(AmCATModelSerializer):
+    """
+    This serializer includes another boolean field `favourite` which is is True
+    when the serialized project is in request.user.user_profile.favourite_projects.
+    """
+    favourite = serializers.SerializerMethodField("is_favourite")
+
+    @property
+    @cached
+    def favourite_projects(self):
+        """List of id's of all favourited projects by the currently logged in user"""
+        return set(self.context['request'].user.userprofile
+                    .favourite_projects.values_list("id", flat=True))
+
+    def is_favourite(self, project):
+        return project.id in self.favourite_projects
+
+    class Meta:
+        model = Project
 
 class ProjectResource(AmCATResource):
     model = Project
     extra_filters = ['projectrole__user__id']
+    serializer_class = ProjectSerializer

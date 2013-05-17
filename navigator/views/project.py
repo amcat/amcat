@@ -32,6 +32,7 @@ import json
 import collections
 import itertools
 import datetime
+import functools
 
 from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource, AnalysedArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
@@ -51,11 +52,14 @@ from django.core.exceptions import PermissionDenied
 from api.rest.datatable import Datatable
 from api.rest.count import count
 
+from django.template.loader import get_template
+from django.template import Context
 from django.forms.models import modelform_factory
 from django.forms import Form, FileField, ChoiceField
 from django.http import HttpResponse
 from django.db import transaction
 from django.utils.datastructures import SortedDict
+from django.utils.functional import SimpleLazyObject
     
 from amcat.models import Project, Language, Role, ProjectRole, Code, Label
 from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
@@ -88,6 +92,18 @@ from api.rest.resources.codebook import CodebookHierarchyResource
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
 import logging; log = logging.getLogger(__name__)
+
+class ReprString(unicode):
+    """Unicode object were __repr__ == __unicode__"""
+    def __repr__(self): return unicode(self)
+
+class ProjectDatatable(Datatable):
+     def get_aoColumnDefs(self):
+        return {
+            "aTargets" : ["favourite"],
+            "mRender" : (ReprString(get_template("navigator/project/datatable.js")
+                            .render(Context())))
+        }
 
 def table_view(request, context, table, selected=None, overview=False,
                menu=PROJECT_MENU, template=None, **kargs):
@@ -163,7 +179,7 @@ def _list_projects(request, title, overview=False, **filter):
     @param overview: see table_view
     @params filter: django-compatible key-value filters on Project
     """
-    projects = Datatable(ProjectResource).filter(**filter)
+    projects = ProjectDatatable(ProjectResource).filter(**filter)
     return table_view(request, None, projects, title, overview, PROJECT_OVERVIEW_MENU)
 
 def projectlist_favourite(request):

@@ -10,7 +10,7 @@
 
 <ul>
 {% for type in types %}
-  <li> <a href="{% url manage-plugins id=type.id %}">{{ type.label }}</a>: {{ type.description }}
+  <li> <a href="{% url "manage-plugins" id=type.id %}">{{ type.label }}</a>: {{ type.description }}
 {% endfor %}
 </ul>
 

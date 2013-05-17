@@ -8,9 +8,9 @@
    {% if form.is_valid and not form.errors %}
    <div class="alert alert-success">
        Successfully updated 
-       <a href="{% url articleset context.id articleset.id %}">{{ articleset.name }}</a>
+       <a href="{% url "articleset" context.id articleset.id %}">{{ articleset.name }}</a>
         in project
-        <a href="{% url project context.id %}">{{ context.name }}</a>.
+        <a href="{% url "project" context.id %}">{{ context.name }}</a>.
    </div>
    {% endif %}
 
@@ -20,7 +20,7 @@
  
    <div class="form-actions">
     <input class="btn btn-primary" type="submit" value="Save"></input>
-    <a href="{% url project context.id %}" class="btn">Cancel</a>
+    <a href="{% url "project" context.id %}" class="btn">Cancel</a>
    </div>
 </form>
 

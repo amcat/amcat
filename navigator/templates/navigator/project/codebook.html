@@ -11,5 +11,5 @@
 
 <script src="{{ MEDIA_URL }}js/jquery.djangofields.js"></script>
 <script src="{{ MEDIA_URL }}js/jquery.codebookeditor.js"></script>
-<script>$(".codebook").codebookeditor("{% url api %}v4/");</script>
+<script>$(".codebook").codebookeditor("{% url "api" %}v4/");</script>
 {% endblock %}

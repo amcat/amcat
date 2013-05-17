@@ -22,7 +22,7 @@
     <p>Your error has been logged as error <strong>{{sentry_id}}</strong>, please
       provide this number if you request support. If you have
       permission, you can 
-      <a href="{% url sentry-search %}?q={{sentry_id}}"> view the log entry </a> directly
+      <a href="{% url "sentry-search" %}?q={{sentry_id}}"> view the log entry </a> directly
 </p>
 {% endif %}
 {% endblock %}

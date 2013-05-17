@@ -44,7 +44,7 @@ prevent such behaviour, include order_by in your url. <a href="v4/project?order_
 <p>
 <ul>
 {% for resource, name in resources %}
-<li><a href="{% url name %}">{{resource.verbose_name}}</a>
+<li><a href="{% url "name" %}">{{resource.verbose_name}}</a>
 {% if resource.readonly %}
 (read only)
 {% endif %}</li>

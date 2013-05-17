@@ -126,7 +126,12 @@ class Datatable(object):
     def fields(self):
         return list(self.get_fields())
 
-    def _copy(self, **kwargs):
+    def copy(self, **kwargs):
+        """
+        If called with no keyword arguments, this method will return a copy
+        of this object. All given keyword arguments will be passed to the
+        constructor of the new object.
+        """
         kws = {
             'rowlink' : self.rowlink,
             'options' : self.options,
@@ -138,25 +143,42 @@ class Datatable(object):
         kws.update(kwargs)
         return self.__class__(self.resource, **kws)
 
-    def _get_js(self):
-        aoColumns = (dict(mDataProp=n) for n in self.fields)
-
+    def get_js(self):
+        """Returns a string with rendered javascript"""
         ordering = self.ordering
         if ordering is None:
             ordering = self.get_default_ordering()
 
         options = copy.copy(self.options)
-        options['aaSorting'] = [order_by(f) for f in ordering]
-        options['aoColumns'] = options.get('aoColumns', list(aoColumns)) 
+        options['aaSorting'] = [list(order_by(f)) for f in ordering]
+        options['aoColumns'] = self.get_aoColumns()
+        options['aoColumnDefs'] = self.get_aoColumnDefs()
 
         return get_template('api/datatables.js.html').render(Context({
             'id' : self.name,
             'rowlink' : self.rowlink,
             'url' : self.url,
-            'options' : json.dumps(options)
+            'options' : options
         }))
 
+    def get_aoColumns(self):
+        """
+        Returns a list with (default) columns.
+
+        @param *cols: extra columns
+        """
+        return self.options.get('aoColumns', [dict(mData=n) for n in self.fields]) 
+
+    def get_aoColumnDefs(self):
+        """Use this method to override when providing special colums"""
+        return []
+
     def _filter(self, selector, value):
+        """
+        @param selector: field to filter on, including filter type (name__iexact, for example)
+        @param value: value to filter on
+        @type value: QuerySet, list, tuple, generator, Model, str, int
+        """
         if isinstance(value, QuerySet):
             return self._filter(selector, list(value))
 
@@ -181,7 +203,7 @@ class Datatable(object):
             dt.hide('name', 'description')
 
         """
-        return self._copy(hidden=self.hidden | set(columns))
+        return self.copy(hidden=self.hidden | set(columns))
 
     def order_by(self, *fields):
         """
@@ -199,7 +221,7 @@ class Datatable(object):
             if field not in self.fields:
                 raise ValueError("Cannot order by field '{}', column does not exist on this table".format(field))
 
-        return self._copy(ordering=tuple(fields))
+        return self.copy(ordering=tuple(fields))
 
     def filter(self, **filters):
         """
@@ -216,11 +238,11 @@ class Datatable(object):
         url = self.url
         url += "".join(['&%s' % self._filter(*f) for f in filters.items()])
 
-        return self._copy(url=url)
+        return self.copy(url=url)
 
     def __unicode__(self):
         return get_template('api/datatables.html').render(Context({
-            'js' : self._get_js(),
+            'js' : self.get_js(),
             'id' : self.name,
             'cols' : self.fields
         }))
@@ -306,7 +328,7 @@ class TestDatatable(amcattest.PolicyTestCase):
     def test_js(self):
         from api.rest.resources import ProjectResource
         d = Datatable(ProjectResource)
-        js = d._get_js()
+        js = d.get_js()
 
     def test_get_name(self):
         from api.rest.resources import ProjectResource

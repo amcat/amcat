@@ -8,8 +8,8 @@
  <br/>
  <h1 class="noline">Actions</h1>
  <p>
-  <a href="{% url upload-articles context.id %}" class="btn"><i class="icon-upload"></i> Upload articles</a>
-  <a href="{% url articleset-importable context.id %}" class="btn">Link articleset</a>
+  <a href="{% url "upload-articles" context.id %}" class="btn"><i class="icon-upload"></i> Upload articles</a>
+  <a href="{% url "articleset-importable" context.id %}" class="btn">Link articleset</a>
  </p>
  <hr/>
  {% if deleted %}

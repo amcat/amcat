@@ -18,7 +18,7 @@
     <p style="margin-bottom:0px">An email with instructions has been sent.</p>
 </div>
 <form method="POST" class="well form-inline">
-    <a href="{% url accounts-login %}" class="btn btn-primary">Proceed</a>
+    <a href="{% url "accounts-login" %}" class="btn btn-primary">Proceed</a>
  </form>
 </p>
 {% else %}
@@ -30,7 +30,7 @@
     </table>
      <div class="form-actions">
       <input type="submit" value="Register" class="btn btn-primary" />
-      <a href="{% url accounts-login %}" class="btn">Cancel</a>
+      <a href="{% url "accounts-login" %}" class="btn">Cancel</a>
      </div>
  </form>
  </p>

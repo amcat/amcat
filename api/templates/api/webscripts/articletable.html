@@ -51,7 +51,7 @@
             "bProcessing": true,
             "bServerSide": true,
             "iDeferLoading": 99999,
-            "sAjaxSource": "{% url api.webscripts.handler.index 'ShowArticleList' %}",
+            "sAjaxSource": "{% url "api.webscripts.handler.index" 'ShowArticleList' %}",
             "fnServerData": doServerRequest,
             //"fnDrawCallback": onTableRedraw,
             "fnRowCallback": function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {

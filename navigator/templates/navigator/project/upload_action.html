@@ -7,7 +7,7 @@
 {% if created_set %}
 <div class="alert alert-success">Successfully uploaded {{created_n}}
   article(s)! You can use the form below to upload more articles, or inspect the
-<a href="{% url articleset created_set.project_id created_set.id %}">article set {{created_set}}</a>
+<a href="{% url "articleset" created_set.project_id created_set.id %}">article set {{created_set}}</a>
 <br>
 </div>
 {% endif %}

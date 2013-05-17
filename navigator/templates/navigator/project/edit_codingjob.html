@@ -3,12 +3,6 @@
 {% block content %}
 
 <form action="" method="POST">
-<br/>
-<h1 class="noline">Export</h1>
-<div>
-<a href="{% url project-codingjob-article-export project.id codingjob.id %}" class="btn">Article codings</a>
-<a href="{% url project-codingjob-unit-export project.id codingjob.id %}" class="btn">Unit codings</a>
-</div>
 
 <br/>
     <legend>Edit codingjob details of codingjob "{{ codingjob.name }}" below.</legend>
@@ -19,7 +13,7 @@
  
    <div class="form-actions">
     <input class="btn btn-primary" type="submit" value="Save"></input>
-    <a href="{% url project-codingjobs project.id %}" class="btn">Cancel</a>
+    <a href="{% url "project-codingjobs" project.id %}" class="btn">Cancel</a>
    </div>
 
 </form>

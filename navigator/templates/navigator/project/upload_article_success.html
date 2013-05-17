@@ -8,11 +8,11 @@
  <table>
   <tr>
    <td>Actions:</td>
-   <td><a href="{% url project context.id %}">Go to project</a></td>
+   <td><a href="{% url "project" context.id %}">Go to project</a></td>
   </tr>
   <tr>
    <td></td>
-   <td><a href="{% url upload-articles context.id %}">Upload more articles</a></td>
+   <td><a href="{% url "upload-articles" context.id %}">Upload more articles</a></td>
   </tr>
  </table>
 </div>
