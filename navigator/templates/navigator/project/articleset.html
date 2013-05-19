@@ -28,7 +28,8 @@
  </div>
 
  <div>
-         <a class="btn btn-primary" href="{% url "project-selection" context.id %}?articlesets={{ object.id }}">Query</a>
+         <a class="btn btn-primary" href="{% url "project-selection"
+         context.id %}?articlesets={{ object.id }}"><i class="icon-white icon-cog"></i>Query</a>
 
      {% if object.project.id == context.id %}
 
