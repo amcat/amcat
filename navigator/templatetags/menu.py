@@ -29,5 +29,13 @@ def tab_url(view, arg=None):
     @type arg: whatever your view requires
     @param arg: args passed to reverse()
     """
-    return reverse(view, args=toolkit.totuple(arg) if arg is not None else None)
+    if arg is None:
+        return reverse(view)
+    elif isinstance(arg, dict):
+        append = arg.pop("APPEND")
+        url = reverse(view, kwargs=arg)
+        if append: url += append
+        return url
+    else:
+        return reverse(view, args=toolkit.totuple(arg))
 tab_url.is_safe = True

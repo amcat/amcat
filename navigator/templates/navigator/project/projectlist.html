@@ -4,16 +4,6 @@
 
 {% block content %}
 
-<br/>
-<div class="btn-group" data-toggle="buttons-radio">
-{% for name, label, filter in tables %}
-
-  <a  class="btn btn-primary {% if what == name %}active{% endif %}"
-      href='{% url "projects" %}/{{ name }}'>{{ label }}</a>
-
-{% endfor %}
-</div>
-
 
 <div>
  <br/>

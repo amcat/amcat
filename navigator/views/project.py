@@ -180,6 +180,10 @@ def projectlist(request, what):
               ("all", "All Projects", dict()),
               ]
     selected_filter = {name : filter for (name, label, filter) in tables}[what]
+
+    # ugly code! but the menu render code will change anyway I suppose...?
+    menu = [(label, "projects", {"APPEND":"/"+name}) for (name, label, filter) in tables]
+    selected =  {name : label for (name, label, filter) in tables}[what]
     
     if what == "favourite":
         # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
