@@ -80,15 +80,12 @@ article{
    margin-top:2%;
 }
 
-#project_buttons{
-   margin-top:2%;
-  width: 70%;
-  margin-left: 1px;
+#project_buttons a {
+width:10em; margin-right:1em
 }
-#project_buttons .button{
-  width:200px;
-  height:75px;
-  font-size:1.25em;
+
+#project_buttons {
+    margin: 2em;
 }
 
 
