@@ -1,0 +1,26 @@
+{% extends "navigator/base.html" %}
+
+{% block title %}{{ what }} projects {% endblock %}
+
+{% block content %}
+
+<br/>
+<div class="btn-group" data-toggle="buttons-radio">
+{% for name, label, filter in tables %}
+
+  <a  class="btn btn-primary {% if what == name %}active{% endif %}"
+      href='{% url "projects" %}/{{ name }}'>{{ label }}</a>
+
+{% endfor %}
+</div>
+
+
+<div>
+ <br/>
+ {{ table|safe }}
+</div>
+<h1 class="noline">Actions</h1>
+<a href="{% url "project-add" %}" class="btn"><i class="icon icon-plus"></i>Create Project</a>
+
+
+{% endblock %}

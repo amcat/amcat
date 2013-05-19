@@ -25,7 +25,7 @@ NAVIGATOR_MENU_CACHE = "navigator_menu_%s"
 NAVIGATOR_MENU = [
     # (title, view[, minimum_role])
     ("Home", "navigator.views.report.index"),
-    ("Projects", "navigator.views.project.projectlist_favourite"),
+    ("Projects", "navigator.views.project.projectlist"),
     ("Coding Jobs", "navigator.views.codingjob.index"),
     #("Query", None),
     #("Article Selection", "navigator.views.selection.index"),
@@ -59,12 +59,6 @@ PROJECT_MENU = (
     ('codebooks', 'project-codebooks'),
     ('users', 'project-users'),
     ('preprocessing', 'project-preprocessing'),
-)
-
-PROJECT_OVERVIEW_MENU = (
-    ('favourite projects', 'navigator.views.project.projectlist_favourite'),
-    ('my projects', 'navigator.views.project.projectlist_my'),
-    ('all projects', 'navigator.views.project.projectlist_all')
 )
 
 USER_MENU = (

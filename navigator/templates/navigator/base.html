@@ -47,20 +47,22 @@
     {% endif %}
 
     <div id="menu-tabs">
-     <span id="menu-tabs-title">{% block tabtitle %}{% endblock %}</span>
-      {% block tabs %}
+
+<ul class="nav nav-tabs">
        {% for title, view, arg in menu %}
-       <span class="tab {% if selected == title %}selected{% endif %}">
+       <li {% if selected == title %}class='active'{% endif %}>
          <a href="{% if context %}{{ view|tab_url:context.id }}
                   {% else %}{% if arg %}{{ view|tab_url:arg}}
                             {% else %}{{ view|tab_url}}
-			    {% endif %}
+                            {% endif %}
                   {% endif %}">
            {{ title|title }}
-	 </a>
-       </span>
-       {% endfor %}
-      {% endblock %}
+        </a>
+       </li>
+      {% endfor %}
+</ul>
+
+
     </div>
    </div>
   </div>
@@ -70,7 +72,7 @@
     <div id="message-wrap">
      {% block message %}{% endblock %}
     </div>
-   <div id="content">
+   <div id="content"> 
     {% block content %}<h1>Sorry, this feature is not yet implemented.</h1>{% endblock %}
    </div>
  </body>

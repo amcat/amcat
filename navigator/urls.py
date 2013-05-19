@@ -27,9 +27,7 @@ urlpatterns = patterns(
      url(r'^$', 'navigator.views.report.index', name="index"),
 
     # Project report
-    url(r'^projects$', 'navigator.views.project.projectlist_favourite', name='projects'),
-    url(r'^projects/my$', 'navigator.views.project.projectlist_my'),
-    url(r'^projects/all$', 'navigator.views.project.projectlist_all'),
+    url(r'^projects(?P<what>/\w+)?$', 'navigator.views.project.projectlist', name='projects'),
 
     # User report
     url(r'^users$', 'navigator.views.user.my_affiliated_active', name='users'),
@@ -84,7 +82,7 @@ urlpatterns = patterns(
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
     url(r'^project/(?P<id>[0-9]+)$', 'navigator.views.project.view', name='project'),
-    url(r'^project/(?P<id>[0-9]+)/articlesets$', 'navigator.views.project.articlesets', name='project-articlesets'),
+    url(r'^project/(?P<id>[0-9]+)/articlesets(?P<what>/\w+)?$', 'navigator.views.project.articlesets', name='project-articlesets'),
     url(r'^project/(?P<id>[0-9]+)/selection$', 'navigator.views.project.selection', name='project-selection'),
     url(r'^project/(?P<id>[0-9]+)/codingjobs$', 'navigator.views.project.codingjobs', name='project-codingjobs'),
     url(r'^project/(?P<id>[0-9]+)/schemas$', 'navigator.views.project.schemas', name='project-schemas'),

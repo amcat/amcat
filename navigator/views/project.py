@@ -43,7 +43,7 @@ from api.rest.resources import CodebookBaseResource, CodebookCodeResource
 from api.rest.resources import CodingSchemaFieldResource
 from api.rest.resources import PluginResource, ScraperResource
 
-from settings.menu import PROJECT_MENU, PROJECT_OVERVIEW_MENU
+from settings.menu import PROJECT_MENU
 
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
@@ -169,43 +169,33 @@ def upload_article_action(request, plugin, project):
 
     return render(request, "navigator/project/upload_action.html", locals())
 
-### PROJECTS OVERVIEW ###
-def _list_projects(request, title, overview=False, **filter):
-    """
-    Convenience function to render a project-overview table
+def projectlist(request, what):
 
-    @param title: title of page
-    @param overview: see table_view
-    @params filter: django-compatible key-value filters on Project
-    """
-    projects = ProjectDatatable(ProjectResource).filter(**filter)
-    return table_view(request, None, projects, title, overview, PROJECT_OVERVIEW_MENU)
+        
+    if what is None: what = "favourite"
+    if what.startswith("/"): what = what[1:]
 
-def projectlist_favourite(request):
-    """
-    Render my active projects
-    """
-    # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
-    # (or use api request.user to add only current user's favourite status). But good enough for now...
-    ids = request.user.get_profile().favourite_projects.all().values_list("id")
-    ids = [id for (id, ) in ids]
-    if not ids: ids = [-1] # even uglier, how to force an empty table?
-    return _list_projects(request, 'favourite projects', id=ids,
-            projectrole__user=request.user, active=True, overview=True)
+    tables = [("favourite", "Favourite Projects", dict(active=True)),
+              ("my", "My Projects", dict(projectrole__user=request.user, active=True)),
+              ("all", "All Projects", dict()),
+              ]
+    selected_filter = {name : filter for (name, label, filter) in tables}[what]
+    
+    if what == "favourite":
+        # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
+        # (or use api request.user to add only current user's favourite status). But good enough for now...
+        
+        ids = request.user.get_profile().favourite_projects.all().values_list("id")
+        ids = [id for (id, ) in ids]
+        if not ids: ids = [-1] # even uglier, how to force an empty table?
+        selected_filter["id"] = ids
+        
+    table = ProjectDatatable(ProjectResource)
+    table = table.filter(**selected_filter)
+    table = table.hide("project", "index_dirty", "indexed")
 
-def projectlist_my(request):
-    """
-    Render all my (including non-active) projects
-    """
-    return _list_projects(request, 'my projects', projectrole__user=request.user,
-            active=True, overview=True)
+    return render(request, 'navigator/project/projectlist.html', locals())
 
-def projectlist_all(request):
-    """
-    Render 'all' projects. We don't need to filter here as the 'security' filtering
-    will happen in the API resource module
-    """
-    return _list_projects(request, 'all projects', overview=True)
 
 ### VIEW SINGLE PROJECT ###
 @check(Project)
@@ -232,24 +222,30 @@ def view(request, project):
         
 
 @check(Project)
-def articlesets(request, project):
+def articlesets(request, project, what):
     """
     Project articlesets page
     """
-    owned_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
-                  .filter(project=project, codingjob_set__id='null')\
-                  .hide("project", "index_dirty", "indexed")
+    if what is None: what = "own"
+    if what.startswith("/"): what = what[1:]
+    
 
-    imported_as = Datatable(ArticleSetResource, rowlink="./articleset/{id}")\
-                  .filter(projects_set=project).hide("project", "index_dirty", "indexed")
+    tables = [("own", "Own Sets", dict(project=project, codingjob_set__id='null')),
+              ("linked", "Linked Sets", dict(projects_set=project)),
+              ]
+    selected_filter = {name : filter for (name, label, filter) in tables}[what]
+    
+    table =  Datatable(ArticleSetResource, rowlink="./articleset/{id}")
+    table = table.filter(**selected_filter)
+    table = table.hide("project", "index_dirty", "indexed")
 
-    return render(request, 'navigator/project/articlesets.html', {
-        "context" : project, "menu" : PROJECT_MENU,
-        "owned_articlesets" : owned_as, "selected" : "article sets",
-        "imported_articlesets" : imported_as,
-        "deleted" : session_pop(request.session, "deleted_articleset"),
-        "unlinked" : session_pop(request.session, "unlinked_articleset"),
-    })
+    context = project
+    menu = PROJECT_MENU
+    deleted = session_pop(request.session, "deleted_articleset")
+    unlinked = session_pop(request.session, "unlinked_articleset")
+    selected = "article sets"
+    
+    return render(request, 'navigator/project/articlesets.html', locals())
 
 @check(ArticleSet, args='id', action='delete')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
@@ -693,7 +689,7 @@ def codebooks(request, project):
 
     context = project
     menu = PROJECT_MENU
-
+    selected = "codebooks"
     return render(request, "navigator/project/codebooks.html", locals())
 
 

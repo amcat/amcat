@@ -2,13 +2,16 @@
 
 {% block title %}Users{% endblock %}
 
+
 {% block content %}
+<br/><h1>Users and permissions</h1>
+
 {{ users|safe }}
 
 <h2>Actions</h2>
 {% if add_user %}
    <h3>Add user(s) to Project</h3>
- <form action="{% url navigator.views.project.users_add context.id %}" method="POST">
+ <form action="{% url "navigator.views.project.users_add" context.id %}" method="POST">
   {{ add_user }}
   <input type="submit" value="Add User(s)" />
  </form>

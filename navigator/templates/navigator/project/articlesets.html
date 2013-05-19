@@ -14,15 +14,23 @@
  {% if deleted %}
     <div class="alert alert-success">Successfully deleted an articleset. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
  {% endif %}
- <h1 class="nonline">Owned articlesets:</h1>
- {{ owned_articlesets }}
- <div><span class="label label-info">Note</span> Articlesets which are also linked to a codingjob are hidden in this overview.</div>
-
- <hr/>
  {% if unlinked %}
     <div class="alert alert-success">Successfully unlinked an articleset.</div>
  {% endif %}
- <h1 class="nonline">Linked articlesets:</h1>
- {{ imported_articlesets }}
+
+
+<div class="btn-group" data-toggle="buttons-radio">
+{% for name, label, filter in tables %}
+
+  <a  class="btn btn-primary {% if what == name %}active{% endif %}"
+      href='{% url "project-articlesets" context.id %}/{{ name }}'>{{ label }}</a>
+
+{% endfor %}
+</div>
+
+<br/>
+
+ {{ table }}
+
 </div>
 {% endblock %}

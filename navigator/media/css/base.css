@@ -19,6 +19,17 @@
 ###########################################################################
 */
 
+.nav-tabs > li > a {
+    background-color: #f2f2f2;
+}
+
+.nav-tabs > li > a:hover {
+
+    background-color: #d0d0d0;
+
+}
+
+.btn-group {margin-top: 1em; margin-bottom: 1em}
 
 body{
    margin:0px;
@@ -147,9 +158,9 @@ width:10em; margin-right:1em
 
 #header{
    background-color:#f2f2f2;
-   border-bottom:1px solid #e2e2e2;
+
    
-   height:50px;
+   height:70px;
    width:100%;
 }
 #logo-announce {
