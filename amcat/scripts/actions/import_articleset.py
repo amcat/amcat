@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -17,36 +19,25 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.core.urlresolvers import reverse
+import logging; log = logging.getLogger(__name__)
 
-from amcat.scripts.actions.sample_articleset import SampleSet
-from amcat.scripts.actions.import_articleset import ImportSet
-from navigator.views.scriptview import ProjectScriptView
-from amcat.models import Project
+from django import forms
+from django.db import transaction
 
-class SampleSetView(ProjectScriptView):
-    script = SampleSet
+from amcat.scripts.script import Script
+from amcat.models import ArticleSet, Project
 
-    def get_success_url(self):
-        return reverse("project-articlesets", kwargs=dict(id=self.project.id))
-    
-class ImportSetView(ProjectScriptView):
-    script = ImportSet
+class ImportSet(Script):
+    class options_form(forms.Form):
+        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+        project = forms.ModelChoiceField(queryset=Project.objects.all())
 
-    
-    def get_success_url(self):
-        target = self.form.cleaned_data["project"]
-        return reverse("project-articlesets", kwargs=dict(id=target.id))
-    
-    def get_form(self, form_class):
-        form = super(ImportSetView, self).get_form(form_class)
-        if self.request.method == 'GET':
-            # list current users favourite projects but exclude already imported and currect project
-            qs = Project.objects.filter(favourite_users=self.request.user.get_profile())
-            qs = qs.exclude(articlesets=self.url_data["articleset"])
-            qs = qs.exclude(pk=self.project.id)
-            form.fields['project'].queryset = qs
-            form.fields['project'].help_text = "Only showing your favourite projects that do not use this set already"
+    def _run(self, articleset, project):
+        project.articlesets.add(articleset)
 
-        return form
-            
+        
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    result = cli.run_cli()
+    #print result.output()
+

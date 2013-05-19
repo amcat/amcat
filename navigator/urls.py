@@ -20,7 +20,7 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views.articleset_views import SampleSetView
+from navigator.views.articleset_views import ImportSetView, SampleSetView
 
 urlpatterns = patterns(
     '',
@@ -54,15 +54,10 @@ urlpatterns = patterns(
         'navigator.views.project.refresh_articleset', name="articleset-refresh"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/unlink/(?P<id>[0-9]+)$',
         'navigator.views.project.unlink_articleset', name="articleset-unlink"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/deduplicate/(?P<id>[0-9]+)$',
-        'navigator.views.project.deduplicate_articleset', name="articleset-deduplicate"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/importable$',
-        'navigator.views.project.show_importable_articlesets', name="articleset-importable"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/name-import/(?P<id>[0-9]+)$$',
-        'navigator.views.project.import_articleset', name="articleset-import"),
-
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/sample$',
         SampleSetView.as_view(), name="articleset-sample"),
+    url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/import$',
+        ImportSetView.as_view(), name="articleset-import"),
     
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),

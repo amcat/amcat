@@ -35,7 +35,8 @@ class ScriptMixin(FormMixin):
         return self.get_script().options_form
 
     def form_valid(self, form):
-        self.get_script().run_script(form)
+        self.form = form
+        self.result = self.get_script().run_script(form)
         return super(ScriptMixin, self).form_valid(form)
 
     def get_context_data(self, **kwargs):
@@ -52,7 +53,7 @@ class ProjectScriptView(ScriptView):
     template_name = "navigator/project/script_base.html"
 
     def get_success_url(self):
-        return reverse("project-articlesets", kwargs=dict(id=self.project.id))
+        return reverse("project", kwargs=dict(id=self.project.id))
 
         
     def get_form(self, form_class):

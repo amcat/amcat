@@ -68,7 +68,6 @@ from amcat.models import CodingSchemaField, ArticleSet, Plugin
 from amcat.scripts.actions.add_project import AddProject
 from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scripts.maintenance.deduplicate import DeduplicateScript
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
 from amcat.scripts.actions.assign_for_parsing import AssignParsing
 
@@ -281,12 +280,6 @@ def refresh_articleset(request, project, aset):
     aset.reset_index(full_refresh=True)
     return redirect(reverse("articleset", args=[project.id, aset.id]))
 
-@check(ArticleSet, args='id', action='delete')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid')
-def deduplicate_articleset(request, project, aset):
-    DeduplicateScript(articleset=aset.id, recycle_bin_project=LITTER_PROJECT_ID).run(None)
-
-    return redirect(reverse("articleset", args=[project.id, aset.id]))
 
 @check(ArticleSet, args='id', action='update')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
@@ -304,26 +297,6 @@ def edit_articleset(request, project, aset):
         "context" : project, "menu" : PROJECT_MENU, "selected" : "overview",
         "form" : form, "articleset" : aset, 
     })
-
-@check(Project, args_map={'projectid' : 'id'}, args='projectid', action="update")
-def show_importable_articlesets(request, project):
-    rowlink = reverse("articleset-import", args=[project.id, 0])
-    rowlink = rowlink.replace("/0", "/{id}")
-
-    table = Datatable(ArticleSetResource, rowlink=rowlink).filter(
-        project=Project.objects.all().exclude(id=project.id)
-    ).hide("indexed", "index_dirty")
-
-    return render(request, 'navigator/project/table.html', {
-        "context" : project, "menu" : PROJECT_MENU, "selected" : "article sets",
-        "table" : table
-    })
-
-@check(ArticleSet, args='id')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid', action="update")
-def import_articleset(request, project, aset):
-    project.articlesets.add(aset)
-    return redirect(reverse("articleset", args=[project.id, aset.id]))
 
 
 @check(ArticleSet, args='id')

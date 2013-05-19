@@ -9,7 +9,6 @@
  <h1 class="noline">Actions</h1>
  <p>
   <a href="{% url "upload-articles" context.id %}" class="btn"><i class="icon-upload"></i> Upload articles</a>
-  <a href="{% url "articleset-importable" context.id %}" class="btn">Link articleset</a>
  </p>
  <hr/>
  {% if deleted %}
@@ -21,7 +20,7 @@
 
  <hr/>
  {% if unlinked %}
-    <div class="alert alert-success">Successfully unlinked an articleset. You can link it again by clicking on "Import articleset", if you need to.</div>
+    <div class="alert alert-success">Successfully unlinked an articleset.</div>
  {% endif %}
  <h1 class="nonline">Linked articlesets:</h1>
  {{ imported_articlesets }}

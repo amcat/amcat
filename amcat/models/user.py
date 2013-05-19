@@ -68,7 +68,7 @@ class UserProfile(AmcatModel):
 
     objects = RowCacheManager()
 
-    favourite_projects = models.ManyToManyField("amcat.project")
+    favourite_projects = models.ManyToManyField("amcat.project", related_name="favourite_users")
     favourite_articlesets = models.ManyToManyField("amcat.articleset")
     
     @property
