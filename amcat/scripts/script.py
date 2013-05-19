@@ -145,3 +145,7 @@ class Script(object):
             # maybe we are the 'plugintype' instead of a plugin?
             qualified_name = ".".join([cls.__module__, cls.__name__])
             return PluginType.objects.get(class_name=qualified_name)
+
+    @classmethod
+    def run_script(cls, *args, **kargs):
+        cls(*args, **kargs).run()
