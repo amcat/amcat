@@ -28,9 +28,7 @@
  </div>
 
  <div>
-     {% if object.indexed %}
          <a class="btn btn-primary" href="{% url "project-selection" context.id %}?articlesets={{ object.id }}">Query</a>
-     {% endif %}
 
      {% if object.project.id == context.id %}
 
