@@ -45,7 +45,8 @@
          <a class="btn confirm" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "articleset-refresh" context.id object.id %}">Refresh Index</a>
      {% endif %}
 
-     <a class="btn confirm" data-confirm="You're about to deduplicate <i>{{ object.name }}</i>. This action is not reversible and could take a while, depending on the amount of articles ({{ articlecount }})." href="{% url "articleset-deduplicate" context.id object.id %}"><i class="icon-filter"></i> Deduplicate</a>
+     <a class="btn " href="{% url "articleset-sample" context.id object.id %}"><i class="icon-filter"></i> Sample</a>
+
      <a class="btn" href="{% url "articleset-edit" context.id object.id %}"><i class="icon icon-edit"></i> Edit details</a>
 
          <a class="btn btn-danger confirm" data-confirm="You're about

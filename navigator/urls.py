@@ -20,6 +20,8 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
+from navigator.views.articleset_views import SampleSetView
+
 urlpatterns = patterns(
     '',
      url(r'^$', 'navigator.views.report.index', name="index"),
@@ -59,6 +61,9 @@ urlpatterns = patterns(
     url(r'^project/(?P<projectid>[0-9]+)/articleset/name-import/(?P<id>[0-9]+)$$',
         'navigator.views.project.import_articleset', name="articleset-import"),
 
+    url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/sample$',
+        SampleSetView.as_view(), name="articleset-sample"),
+    
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),
 
