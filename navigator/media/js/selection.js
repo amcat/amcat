@@ -188,14 +188,6 @@ $(document).ready(function(){
     
     $('#help-link').click(amcat.selection.showQuerySyntaxHelp);
     
-    /*$('#query-time').position({ /// werkt niet goed..
-				of: $("#selectionform"),
-				my: 'right bottom',
-				at: 'right bottom',
-				offset: 0
-    });*/
-    
-    
 })
 
 
