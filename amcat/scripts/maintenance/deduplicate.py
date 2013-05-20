@@ -114,15 +114,17 @@ class DeduplicateScript(Script):
 
         arDict = collections.defaultdict(list)
         for article in articles:
-            identifier = (texts.get(article.id, article.headline), str(article.date.date()), article.medium_id)
-                
+            if self.options['ignore_medium']:
+                identifier = (texts.get(article.id, article.headline), str(article.date.date()))
+            else:
+                identifier = (texts.get(article.id, article.headline), str(article.date.date()), article.medium_id)
             arDict[identifier].append(article)
-                
+        
         removable_ids = []
         for arts in arDict.values():
             arts = sorted(arts, key=self.score)
             removable_ids.extend(a.id for a in arts[:-1]) # keep the last one, it has highest score
-
+        
         if self.options['printout']:
             self.printout(articles, removable_ids)
         
