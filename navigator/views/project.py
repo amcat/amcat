@@ -226,7 +226,7 @@ def articlesets(request, project, what):
     if what.startswith("/"): what = what[1:]
     
 
-    tables = [("favourite", '<i class="icon-white icon-star"></i> <b>Favourites</b>', dict()),
+    tables = [("favourite", '<i class="icon-star"></i> <b>Favourites</b>', dict()),
               ("own", "Own Sets", dict(project=project, codingjob_set__id='null')),
               ("linked", "Linked Sets", dict(projects_set=project)),
               ("codingjob", "Coding Job Sets", dict()),
