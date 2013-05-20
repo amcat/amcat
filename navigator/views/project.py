@@ -34,6 +34,8 @@ import itertools
 import datetime
 import functools
 
+from django.db.models import Q
+
 from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource, AnalysedArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
 from api.rest.resources import ProjectRoleResource
@@ -224,11 +226,27 @@ def articlesets(request, project, what):
     if what.startswith("/"): what = what[1:]
     
 
-    tables = [("own", "Own Sets", dict(project=project, codingjob_set__id='null')),
+    tables = [("favourite", "Favourite Sets", dict()),
+              ("own", "Own Sets", dict(project=project, codingjob_set__id='null')),
               ("linked", "Linked Sets", dict(projects_set=project)),
+              ("codingjob", "Coding Job Sets", dict()),
               ]
     selected_filter = {name : filter for (name, label, filter) in tables}[what]
 
+    if what == "favourite":
+        # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
+        # (or use api request.user to add only current user's favourite status). But good enough for now...
+        
+        ids = request.user.get_profile().favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id))
+        ids = [id for (id, ) in ids.values_list("id")]
+        if not ids: ids = [-1] # even uglier, how to force an empty table?
+        selected_filter["id"] = ids
+    elif what == "codingjob":
+        # more ugliness. Filtering the api on codingjob_set__id__isnull=False gives error from filter set
+        ids = ArticleSet.objects.filter(Q(project=project.id) | Q(projects_set=project.id), codingjob_set__id__isnull=False)
+        ids = [id for (id, ) in ids.values_list("id")]
+        if not ids: ids = [-1] # even uglier, how to force an empty table?
+        selected_filter["id"] = ids
     
     url = reverse('articleset', args=[project.id, 123]) 
     
