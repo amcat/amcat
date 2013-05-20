@@ -11,13 +11,17 @@ $(function(){
   var favourites = {{ favourites }};
 
   var select = function(event){
+      var aids = this;
+
       $("#id_articlesets").multiselect("uncheckAll");
-      for (var aid in this){
-          var query = "input[name='multiselect_id_articlesets'][value='" + this[aid] + "']";
-          $("#id_articlesets").multiselect("widget").find(query).each(function(){
-              this.click();
-          });
-      }
+      $("#id_articlesets").multiselect("widget").find(":checkbox").each(function(){
+          if (aids.indexOf(parseInt(this.value)) != -1){
+              $(this).parent().show();
+              $(this).click();
+          } else {
+            $(this).parent().hide();
+          }
+      })
   }
 
   $("#select-favourites").click(select.bind(favourites));
