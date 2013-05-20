@@ -23,7 +23,7 @@
 {% for name, label, filter in tables %}
 
   <a  class="btn btn-primary {% if what == name %}active{% endif %}"
-      href='{% url "project-articlesets" context.id %}/{{ name }}'>{{ label }}</a>
+      href='{% url "project-articlesets" context.id %}/{{ name }}'>{{ label|safe }}</a>
 
 {% endfor %}
 </div>

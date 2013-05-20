@@ -222,11 +222,11 @@ def articlesets(request, project, what):
     """
     Project articlesets page
     """
-    if what is None: what = "own"
+    if what is None: what = "favourite"
     if what.startswith("/"): what = what[1:]
     
 
-    tables = [("favourite", "Favourite Sets", dict()),
+    tables = [("favourite", '<i class="icon-white icon-star"></i> <b>Favourites</b>', dict()),
               ("own", "Own Sets", dict(project=project, codingjob_set__id='null')),
               ("linked", "Linked Sets", dict(projects_set=project)),
               ("codingjob", "Coding Job Sets", dict()),
