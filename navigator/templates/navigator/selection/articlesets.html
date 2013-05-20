@@ -1,5 +1,6 @@
 <div class="btn-group">
- <a id="select-favourites" class="btn"><i class="icon icon-star"></i> Favourite</a>
+ <a id="select-all" class="btn">All</a>
+ <a id="select-favourites" class="btn"><i class="icon icon-star"></i> Favourites</a>
  <a id="select-indexed" class="btn">Indexed</a>
  <a id="select-codingjobs" class="btn">Codingjobs</a>
 </div>
@@ -27,5 +28,11 @@ $(function(){
   $("#select-favourites").click(select.bind(favourites));
   $("#select-indexed").click(select.bind(indexed));
   $("#select-codingjobs").click(select.bind(codingjobs));
+  $("#select-all").click(function(){
+      $("#id_articlesets").multiselect("widget").find(":checkbox").each(function(){
+          $(this).parent().show();
+          $("#id_articlesets").multiselect("uncheckAll");
+      });
+  });
 });
 </script>
