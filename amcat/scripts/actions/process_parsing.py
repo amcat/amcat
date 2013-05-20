@@ -47,9 +47,8 @@ class CheckParsing(Script):
         self.process(analysed_articles)
                 
     def process(self, articles):
-        import csv, sys
-        w = csv.writer(sys.stdout)
-        w.writerow(["aaid", "aid", "plugin_id", "ready", "message"])
+        print(getattr(self, "verbose"))
+        return
         for aa in articles:
             parser = aa.plugin.get_class()()
             try:
@@ -57,11 +56,10 @@ class CheckParsing(Script):
                 if self.options["check_only"]:
                     result = parser.check_article(aa)
                 else:
-                    result = parser.retrieve_article(aa)
+                    result = parser.retrieve_article(aa, verbose=self.options["verbose"])
             except Exception, e:
                 result = "Error"
                 msg = repr(e)
-            w.writerow([aa.id, aa.article_id, aa.plugin_id, result, msg])
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
