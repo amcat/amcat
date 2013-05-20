@@ -16,8 +16,10 @@
             row.favourite = !row.favourite;
             event.stopPropagation();
 
-            // This script is parsed with Django templates, so we can use url.
-            var url = "{% url 'project' 123 %}".replace("123", new String(row.id)) + "?star=" + (row.favourite ? "1" : "0");
+	    // get the url from the template, and customize by replacing 123 -> row.id
+	    var url = row.favourite ? "{{ set_url }}" : "{{ unset_url }}";
+	    var url = url.replace("123", new String(row.id))
+
             $.get(url).success(function(data, textStatus, jqXHR){
                 row.__notify.pnotify({ hide : true, delay : 0 });
             }).error(function(data, textStatus, jqXHR){
@@ -31,7 +33,7 @@
 
             row.__notify = $.pnotify({ 
                 type : "info",
-                text : (row.favourite ? "Setting" : "Removing") + " project " + row.id + " as a favourite..",
+                text : (row.favourite ? "Setting" : "Removing") + " {{ label }} " + row.id + " as a favourite..",
                 nonblock: true,
                 hide: false,
                 closer: false,

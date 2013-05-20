@@ -49,7 +49,7 @@ from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 
-from api.rest.datatable import Datatable
+from api.rest.datatable import Datatable, FavouriteDatatable
 from api.rest.count import count
 
 from django.template.loader import get_template
@@ -92,17 +92,6 @@ PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
 import logging; log = logging.getLogger(__name__)
 
-class ReprString(unicode):
-    """Unicode object were __repr__ == __unicode__"""
-    def __repr__(self): return unicode(self)
-
-class ProjectDatatable(Datatable):
-     def get_aoColumnDefs(self):
-        return {
-            "aTargets" : ["favourite"],
-            "mRender" : (ReprString(get_template("navigator/project/datatable.js")
-                            .render(Context())))
-        }
 
 def table_view(request, context, table, selected=None, overview=False,
                menu=PROJECT_MENU, template=None, **kargs):
@@ -193,8 +182,9 @@ def projectlist(request, what):
         ids = [id for (id, ) in ids]
         if not ids: ids = [-1] # even uglier, how to force an empty table?
         selected_filter["id"] = ids
-        
-    table = ProjectDatatable(ProjectResource)
+
+    url = reverse('project', args=[123]) + "?star="
+    table = FavouriteDatatable(set_url=url+"1", unset_url=url+"0", label="project", resource=ProjectResource)
     table = table.filter(**selected_filter)
     table = table.hide("project", "index_dirty", "indexed")
 
