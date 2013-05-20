@@ -377,6 +377,15 @@
       "label": "Stanford",
       "plugin_type": 1
     }
+  },
+  {
+    "pk": 9,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.nlp.alpino.AlpinoParser",
+      "label": "Alpino",
+      "plugin_type": 1
+    }
   }
 
 
