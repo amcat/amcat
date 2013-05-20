@@ -7,6 +7,7 @@
 
 <script>
 $(function(){
+  var all = {{ all_sets }};
   var indexed = {{ indexed }};
   var codingjobs = {{ codingjobs }};
   var favourites = {{ favourites }};
@@ -14,25 +15,22 @@ $(function(){
   var select = function(event){
       var aids = this;
 
-      $("#id_articlesets").multiselect("uncheckAll");
+      $(".btn", $(event.currentTarget).parent()).removeClass("active");
+      $(event.currentTarget).addClass("active");
+
       $("#id_articlesets").multiselect("widget").find(":checkbox").each(function(){
           if (aids.indexOf(parseInt(this.value)) != -1){
               $(this).parent().show();
-              $(this).click();
           } else {
             $(this).parent().hide();
+            this.checked = false;
           }
       })
   }
 
-  $("#select-favourites").click(select.bind(favourites));
+  $("#select-favourites").click(select.bind(favourites)).click();
   $("#select-indexed").click(select.bind(indexed));
   $("#select-codingjobs").click(select.bind(codingjobs));
-  $("#select-all").click(function(){
-      $("#id_articlesets").multiselect("widget").find(":checkbox").each(function(){
-          $(this).parent().show();
-          $("#id_articlesets").multiselect("uncheckAll");
-      });
-  });
+  $("#select-all").click(select.bind(all));
 });
 </script>

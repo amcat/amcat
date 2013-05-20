@@ -379,6 +379,7 @@ def selection(request, project):
     favourites = json.dumps(tuple(request.user.userprofile.favourite_articlesets.all().values_list("id", flat=True)))
     indexed = json.dumps(tuple(all_articlesets.filter(indexed=True).values_list("id", flat=True)))
     codingjobs = json.dumps(tuple(CodingJob.objects.filter(articleset__in=all_articlesets).values_list("articleset_id", flat=True)))
+    all_sets = json.dumps(tuple(all_articlesets.values_list("id", flat=True)))
 
     ctx = locals()
     ctx.update({
