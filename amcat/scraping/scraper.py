@@ -243,11 +243,17 @@ class HTTPScraper(Scraper):
             return self.opener.getdoc(uri, encoding)
 
     def open(self, url,  encoding=None):
-        try:
-            return self.opener.opener.open(url, encoding)
-        except UnicodeEncodeError:
-            uri = iri2uri(url)
-            return self.opener.opener.open(uri, encoding)
+        if isinstance(url, str):
+            log.info('Retrieving "{url}"'.format(**locals()))
+            try:
+                return self.opener.opener.open(url, encoding)
+            except UnicodeEncodeError:
+                uri = iri2uri(url)
+                return self.opener.opener.open(uri, encoding)
+        else:
+            req = url
+            log.info('Retrieving "{url}"'.format(url = req.get_full_url()))
+            return self.opener.opener.open(req, encoding)
      
 
 
