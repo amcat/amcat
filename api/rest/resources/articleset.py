@@ -34,13 +34,13 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
     @property
     @cached
-    def favourite_projects(self):
+    def favourite_articlesets(self):
         """List of id's of all favourited projects by the currently logged in user"""
         return set(self.context['request'].user.userprofile
-                    .favourite_projects.values_list("id", flat=True))
+                    .favourite_articlesets.values_list("id", flat=True))
 
     def is_favourite(self, project):
-        return project.id in self.favourite_projects
+        return project.id in self.favourite_articlesets
     
     class Meta:
         model = ArticleSet

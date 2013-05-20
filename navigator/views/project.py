@@ -228,8 +228,12 @@ def articlesets(request, project, what):
               ("linked", "Linked Sets", dict(projects_set=project)),
               ]
     selected_filter = {name : filter for (name, label, filter) in tables}[what]
+
     
-    table =  Datatable(ArticleSetResource, rowlink="./articleset/{id}")
+    url = reverse('articleset', args=[project.id, 123]) 
+    
+    table =  FavouriteDatatable(resource=ArticleSetResource, rowlink=url.replace("123", "{id}"),
+                                label="article set", set_url=url + "?star=1", unset_url=url+"?star=0")
     table = table.filter(**selected_filter)
     table = table.hide("project", "index_dirty", "indexed")
 
@@ -298,6 +302,20 @@ def articleset(request, project, aset):
                 .hide('metastring', 'url', 'externalid',
                       'byline', 'pagenr', 'project', 'section', 'text'))
 
+
+
+    profile = request.user.get_profile()
+    starred = profile.favourite_articlesets.filter(pk=aset.id).exists()
+    star = request.GET.get("star")
+    if (star is not None):
+        if bool(int(star)) != starred:
+            starred = not starred
+            if starred:
+                profile.favourite_articlesets.add(aset.id)
+            else:
+                profile.favourite_articlesets.remove(aset.id)
+
+    
     indexed = request.GET.get("indexed")
     if indexed is not None:
         indexed = bool(int(indexed))
@@ -314,7 +332,7 @@ def articleset(request, project, aset):
         else:
             pass
     
-    return table_view(request, project, articles, form=form, object=aset, cls=cls,
+    return table_view(request, project, articles, form=form, object=aset, cls=cls, starred=starred,
                       template="navigator/project/articleset.html", articlecount=count(aset.articles.all()))
 
 

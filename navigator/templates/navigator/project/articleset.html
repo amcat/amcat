@@ -4,7 +4,8 @@
 
 {% block content %}
 
-<h1>Article Set {{object.id}} : {{ object.name }}</h1>
+<h1> <a href="{% url "articleset" context.id object.id %}?star={{starred|yesno:'0,1'}}"><img src="{{ MEDIA_URL }}/img/star{{starred|yesno:',_bw'}}_24.png" /></a>
+Article Set {{object.id}} : {{ object.name }}</h1>
 
  <div>
   <table class="key_value">
