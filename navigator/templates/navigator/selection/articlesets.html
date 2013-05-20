@@ -2,6 +2,7 @@
  <a id="select-all" class="btn">All</a>
  <a id="select-favourites" class="btn"><i class="icon icon-star"></i> Favourites</a>
  <a id="select-indexed" class="btn">Indexed</a>
+ <a id="select-dirty" class="btn">Indexed (including dirty)</a>
  <a id="select-codingjobs" class="btn">Codingjobs</a>
 </div>
 
@@ -9,6 +10,7 @@
 $(function(){
   var all = {{ all_sets }};
   var indexed = {{ indexed }};
+  var dirty = {{ indexed_with_dirty }};
   var codingjobs = {{ codingjobs }};
   var favourites = {{ favourites }};
 
@@ -30,6 +32,7 @@ $(function(){
 
   $("#select-favourites").click(select.bind(favourites)).click();
   $("#select-indexed").click(select.bind(indexed));
+  $("#select-dirty").click(select.bind(dirty));
   $("#select-codingjobs").click(select.bind(codingjobs));
   $("#select-all").click(select.bind(all));
 });
