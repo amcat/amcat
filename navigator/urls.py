@@ -40,7 +40,6 @@ urlpatterns = patterns(
     url(r'^selection$', 'navigator.views.selection.index', name='selection'),
 
     # Articles
-    url(r'^article/(?P<id>[0-9]+)$', 'navigator.views.article.view', name='article'),
     url(r'^project/(?P<projectid>[0-9]+)/article/(?P<id>[0-9]+)$', 'navigator.views.project.article'),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<id>[0-9]+)$',
         'navigator.views.project.articleset', name="articleset"),
@@ -56,6 +55,10 @@ urlpatterns = patterns(
         SampleSetView.as_view(), name="articleset-sample"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/import$',
         ImportSetView.as_view(), name="articleset-import"),
+
+    # parses
+    url(r'^project/(?P<projectid>[0-9]+)/analysedarticle/(?P<id>[0-9]+)$',
+        'navigator.views.article.analysedarticle', name='analysedarticle'),
     
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),

@@ -22,9 +22,7 @@ from django.conf import settings
 from settings.menu import PROJECT_MENU
 
 from amcat.tools import toolkit
-from amcat.models.article import Article
-from amcat.models.project import Project
-from amcat.models.articleset import ArticleSet
+from amcat.models import Article, Project, ArticleSet, AnalysedArticle
 
 from navigator.utils.auth import check, check_perm
 from navigator import forms
@@ -33,15 +31,40 @@ from amcat.scripts import article_upload as article_upload_scripts
 
 import logging; log = logging.getLogger(__name__)
 
-@check(Article)
-def view(request, art, projectid=None):
-    ctx = dict(article=art)
-
-    if projectid is not None:
-        ctx['menu'] = PROJECT_MENU
-        ctx['context'] = Project.objects.get(id=projectid)
+def get_paragraphs(sentences):
+    parnr = None
+    for sentence in sentences:
+        if sentence.sentence.parnr != parnr:
+            if parnr is not None:
+                paragraph.sort(key = lambda s: s.sentence.sentnr)
+                yield paragraph
+            parnr = sentence.sentence.parnr
+            paragraph = []
+        paragraph.append(sentence)
     
-    return render(request, "navigator/article/view.html", ctx)
+
+@check(AnalysedArticle, args='id')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def analysedarticle(request, project, analysed_article):
+    sentences = analysed_article.sentences.all()
+    sentences = sentences.prefetch_related("tokens", "tokens__word", "tokens__word__lemma").select_related("sentence")
+
+    paragraphs = list(get_paragraphs(sentences))
+    
+    menu = PROJECT_MENU
+    context = project
+    return render(request, "navigator/article/analysedarticle.html", locals())
+    
+@check(Article, args='id')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def view(request, project, article):
+    
+    menu = PROJECT_MENU
+    context = project
+
+    print AnalysedArticle.objects.filter(article=article)
+    
+    return render(request, "navigator/article/view.html", locals())
 
 
 ### UPLOAD ARTICLES ###

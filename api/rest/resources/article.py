@@ -32,7 +32,7 @@ class ArticleMetaSerializer(AmCATModelSerializer):
 class ArticleMetaResource(AmCATResource):
     model = Article
     serializer_class = ArticleMetaSerializer
-
+    
     @classmethod
     def get_model_name(cls):
         return "ArticleMeta".lower()

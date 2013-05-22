@@ -63,7 +63,7 @@ from django.db import transaction
 from django.utils.datastructures import SortedDict
 from django.utils.functional import SimpleLazyObject
     
-from amcat.models import Project, Language, Role, ProjectRole, Code, Label
+from amcat.models import Project, Language, Role, ProjectRole, Code, Label, Article
 from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
 
@@ -119,6 +119,17 @@ def table_view(request, context, table, selected=None, overview=False,
 # views from other modules prevents wrongly unselected items, while preserving
 # modularity.
 from navigator.views.article import view as article
+
+@check(Article)
+def sentences(request, art, projectid=None):
+    ctx = dict(article=art)
+
+    if projectid is not None:
+        ctx['menu'] = PROJECT_MENU
+        ctx['context'] = Project.objects.get(id=projectid)
+    
+    return render(request, "navigator/article/view.html", ctx)
+
 
 @check(Project)
 def upload_article(request, project):
