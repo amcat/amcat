@@ -41,137 +41,142 @@ import logging; log = logging.getLogger(__name__)
 
 ORDER_BY_FIELD = "order_by"
 
-class AmCATFilterBackend(filters.DjangoFilterBackend):
-    def get_filter_class(self, view):
-        filter_fields = tuple(view.get_filter_fields())
 
-        class AutoFilterSet(filterset.FilterSet):
-            pk = NumberFilter(name='id')
+class AmCATFilterSet(filterset.FilterSet):
+    pk = NumberFilter(name='id')
 
-            # This overrides the default FilterSet value
-            order_by_field = ORDER_BY_FIELD
+    # This overrides the default FilterSet value
+    order_by_field = ORDER_BY_FIELD
 
-            def __len__(self):
-                return count.count(self.qs)
+    def __len__(self):
+        return count.count(self.qs)
 
-            def get_order_by_fields(self):
-                """
-                Get order_by fields based on current request.
-                """
-                if not self.data: return
+    def get_order_by_fields(self):
+        """
+        Get order_by fields based on current request.
+        """
+        if not self.data: return
 
-                for ofield in self.data.getlist(ORDER_BY_FIELD):
-                    # We use '-' and '?' for ordering descending or randomly
-                    # respectively
-                    desc = ofield.startswith(("-", "?"))
+        for ofield in self.data.getlist(ORDER_BY_FIELD):
+            # We use '-' and '?' for ordering descending or randomly
+            # respectively
+            desc = ofield.startswith(("-", "?"))
 
-                    if (ofield[1:] if desc else ofield) in self._meta.fields:
-                        yield ofield
+            field = ofield[1:] if desc else ofield
+            if field in self._meta.fields:
+                yield ofield
+            else:
+                log.warn("Could not find order by field {field} in _meta.fields {fields}"
+                         .format(fields = list(self._meta.fields), **locals()))
 
-            def get_ordered_fields(self):
-                """
-                Same as get_order_by_fields, but it does not includes the direction
-                of ordering.
-                """
-                for f in self.get_order_by_fields():
-                    yield f[1:] if f.startswith(("-", "?")) else f
+    def get_ordered_fields(self):
+        """
+        Same as get_order_by_fields, but it does not includes the direction
+        of ordering.
+        """
+        for f in self.get_order_by_fields():
+            yield f[1:] if f.startswith(("-", "?")) else f
 
-            def _order_by(self, qs):
-                """
-                Order results according to allowed values in Meta class, and
-                the value given by the client.
-                """
-                if not hasattr(self.data, "getlist"):
-                    # Empty query parameters
-                    return qs
+    def _order_by(self, qs):
+        """
+        Order results according to allowed values in Meta class, and
+        the value given by the client.
+        """
 
-                return qs.order_by(*self.get_order_by_fields())
+        
+        if not hasattr(self.data, "getlist"):
+            # Empty query parameters
+            return qs
 
-            def _filter(self, qs):
-                """
-                Filter all fields based on given filters.
-                """
-                for name, filter_ in self.filters.iteritems():
-                    qs = self._filter_field(qs, name, filter_)
+        return qs.order_by(*self.get_order_by_fields())
 
-                return qs
+    def _filter(self, qs):
+        """
+        Filter all fields based on given filters.
+        """
+        for name, filter_ in self.filters.iteritems():
+            qs = self._filter_field(qs, name, filter_)
 
-            def _filter_field(self, qs, name, filter_):
-                """
-                Filter specific field
-                """
-                data = self.data.getlist(name) if hasattr(self.data, 'getlist') else []
-                data = data or [self.form.initial.get(name, self.form[name].field.initial)]
+        return qs
 
-                # Filter all given fields OR'ed.
-                q = models.Q()
-                for value in data:
-                    # To filter on model properties which are None, provide
-                    # null as argument.
-                    if value == "null" and name.endswith("__id"):
-                        q = q | models.Q(**{ name[0:-4] : None })
-                        continue
+    def _filter_field(self, qs, name, filter_):
+        """
+        Filter specific field
+        """
+        data = self.data.getlist(name) if hasattr(self.data, 'getlist') else []
+        data = data or [self.form.initial.get(name, self.form[name].field.initial)]
 
-                    try:
-                        value = self.form.fields[name].clean(value)
-                    except ValidationError:
-                        continue
-                    else:
-                        if value == []: continue
+        # Filter all given fields OR'ed.
+        q = models.Q()
+        for value in data:
+            # To filter on model properties which are None, provide
+            # null as argument.
+            if value == "null" and name.endswith("__id"):
+                q = q | models.Q(**{ name[0:-4] : None })
+                continue
 
-                    # Do not filter when value is None or an empty string
-                    if (isinstance(value, basestring) and not value) or value is None:
-                        continue
+            try:
+                value = self.form.fields[name].clean(value)
+            except ValidationError:
+                continue
+            else:
+                if value == []: continue
 
-                    q = q | models.Q(**{ name : value })
+            # Do not filter when value is None or an empty string
+            if (isinstance(value, basestring) and not value) or value is None:
+                continue
 
-                return qs.filter(q)
+            q = q | models.Q(**{ name : value })
 
-            @property
-            def qs(self):
-                """
-                By default, filterset.Filterset does not allow for multiple
-                GET arguments with the same identifier. This results in being
-                unable to get a specific set of objects based on their id. For
-                example:
+        return qs.filter(q)
 
-                  ?id=1&id=2
+    @property
+    def qs(self):
+        """
+        By default, filterset.Filterset does not allow for multiple
+        GET arguments with the same identifier. This results in being
+        unable to get a specific set of objects based on their id. For
+        example:
 
-                wouldn't work. We override qs to provide this function, while
-                keeping the same overall tactics of super.qs.
-                """
-                if hasattr(self, '_qs'):
-                    return self._qs
+          ?id=1&id=2
 
-                # No caches queryset has been found, try to create one by
-                # filtering, followed by ordering.
-                self._qs = self.queryset.all()
-                self._qs = self._filter(self._qs)
-                self._qs = self._order_by(self._qs)
+        wouldn't work. We override qs to provide this function, while
+        keeping the same overall tactics of super.qs.
+        """
+        if hasattr(self, '_qs'):
+            return self._qs
 
-                if getattr(view, "use_distinct", True):
-                      # Only return non-duplicates
-                      if can_distinct_on_pk(self._qs):
-                          # Postgres (and other databases) only allow distinct when
-                          # no ordering is specified, or if the first order-column
-                          # is the same as the one you're 'distincting' on.
-                          self._qs = self._qs.distinct("pk")
-                      else:
-                          # Use naive way of defining distinct. The database has to
-                          # iterate over all rows (well, not in theory, but postgres
-                          # does..)
-                          self._qs = self._qs.distinct()
-                      
-                return self.qs
+        # No caches queryset has been found, try to create one by
+        # filtering, followed by ordering.
+        self._qs = self.queryset.all()
+        self._qs = self._filter(self._qs)
+        self._qs = self._order_by(self._qs)
 
-            class Meta:
-                model = view.model
-                fields = filter_fields
+        if getattr(self.Meta.view, "use_distinct", True):
+              # Only return non-duplicates
+              if can_distinct_on_pk(self._qs):
+                  # Postgres (and other databases) only allow distinct when
+                  # no ordering is specified, or if the first order-column
+                  # is the same as the one you're 'distincting' on.
+                  self._qs = self._qs.distinct("pk")
+              else:
+                  # Use naive way of defining distinct. The database has to
+                  # iterate over all rows (well, not in theory, but postgres
+                  # does..)
+                  self._qs = self._qs.distinct()
 
-        return AutoFilterSet
+        return self.qs
 
-    def filter_queryset(self, request, queryset, view):
-        return super(AmCATFilterBackend, self).filter_queryset(request, queryset, view)
+
+
+class AmCATFilterBackend(filters.DjangoFilterBackend):    
+    default_filter_set = AmCATFilterSet
+    def get_filter_class(self, view, *args, **kargs):
+        
+        filter_class = super(AmCATFilterBackend, self).get_filter_class(view, *args, **kargs)
+        filter_class.Meta.view = view
+        return filter_class
+
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

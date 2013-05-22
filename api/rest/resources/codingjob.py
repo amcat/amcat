@@ -43,13 +43,13 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     @cached
     def _get_n_done_jobs(self):
-        return dict(self.context['view'].object_list.qs.distinct().filter(
+        return dict(self.context['view'].object_list.distinct().filter(
                     codings__status__in=STATUS_DONE).annotate(Count("codings"))
                     .values_list("id", "codings__count"))
 
     @cached
     def _get_n_articles(self):
-        return dict(self.context['view'].object_list.qs.distinct()
+        return dict(self.context['view'].object_list.distinct()
                 .annotate(n=Count("articleset__articles")).values_list("id", "n"))
 
     def get_n_articles(self, obj):

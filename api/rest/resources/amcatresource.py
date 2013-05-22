@@ -30,7 +30,7 @@ from django.db.models.fields.related import RelatedObject, RelatedField
 from rest_framework import generics, serializers, fields, relations
 
 import api.rest.resources
-
+from api.rest.serializer import AmCATModelSerializer
 def get_related_fieldname(model, fieldname):
     field = model._meta.get_field_by_name(fieldname)[0]
 
@@ -39,6 +39,10 @@ def get_related_fieldname(model, fieldname):
 
     return fieldname
 
+class ClassProperty(property):
+    def __get__(self, cls, owner):
+        return self.fget.__get__(None, owner)()
+    
 class AmCATResource(generics.ListAPIView):
     """
     Base class for the AmCAT REST API
@@ -60,10 +64,13 @@ class AmCATResource(generics.ListAPIView):
     @classmethod
     def get_filter_fields(cls):
         """Return a list of fields that will be used to filter on"""
+        result = []
         for field in cls._get_filter_fields_for_model():
-            yield field
+            result.append(field)
         for field in cls.extra_filters:
-            yield field
+            result.append(field)
+        return result
+    filter_fields=ClassProperty(get_filter_fields)
     
     @classmethod
     def get_url_pattern(cls):
@@ -117,7 +124,7 @@ class AmCATResource(generics.ListAPIView):
         """Get a list of field names from the serializer"""
         # We are a class method and rest_framework likes instance methods, so lots of ()'s
         return [name for (name, field) in cls().get_serializer_class()().get_fields().iteritems()
-                if not isinstance(field, relations.ManyPrimaryKeyRelatedField)]
+                if not AmCATModelSerializer.skip_field(field)]
     
     def metadata(self, request):
         """This is used by the OPTIONS request; add models, fields, and label for datatables"""
@@ -147,16 +154,7 @@ class AmCATResource(generics.ListAPIView):
         subclass.__name__ = '{use_model.__name__}Resource'.format(**locals())
         return subclass
 
-    def get_paginate_by(self, queryset):
-        """
-        Make pagination configurable by request parameteres
-        """
-        page_size = self.request.QUERY_PARAMS.get('page_size', "")
 
-        try:
-            return int(page_size)
-        except ValueError:
-            return super(AmCATResource, self).get_paginate_by(queryset)
 
 def _get_field_name(field):
     "Return the field name to report in OPTIONS (for datatables)"
@@ -226,17 +224,23 @@ class TestAmCATResource(ApiTestCase):
     def test_options(self):
         from api.rest.resources import ArticleResource, ProjectResource
         opts = self.get_options(ProjectResource)
-        name = u'Project List'
+        name = u'Project Resource'
         models = {u'owner': u'/api/v4/user', u'guest_role': u'/api/v4/role',
-                  #u'codebooks': u'/api/v4/codebook', u'codingschemas': u'/api/v4/codingschema',
+                  #these should NOT be included as we don't want the foreign key fields
+                  #u'codebooks': u'/api/v4/codebook',
+                  #u'codingschemas': u'/api/v4/codingschema',
+                  #u'articlesets': u'/api/v4/articleset',
                   u'insert_user': u'/api/v4/user', }
         
         fields = {u'index_default': u'BooleanField', u'name': u'CharField', u'guest_role': u'ModelChoiceField',
-                  #u'codebooks': u'ModelMultipleChoiceField', u'codingschemas': u'ModelMultipleChoiceField',
+                  #these should NOT be included as we don't want the foreign key fields
+                  #u'codebooks': u'ModelChoiceField', u'codingschemas': u'ModelChoiceField',
+                  #u'articlesets': u'ModelChoiceField',
                   u'owner': u'ModelChoiceField', u'active': u'BooleanField', u'description': u'CharField',
-                  u'id': u'Field',
+                  u'id': u'IntegerField',
                   u'insert_date': u'DateTimeField',
                   u'insert_user': u'ModelChoiceField',
+                  u'favourite': u'SerializerMethodField',
                   }
         parses = [u'application/json', u'application/x-www-form-urlencoded', u'multipart/form-data',
                   u'application/xml']
@@ -248,8 +252,11 @@ class TestAmCATResource(ApiTestCase):
         self.assertEqual(opts['name'], name)
         self.assertEqual(opts['label'], label)
         self.assertEqual(opts['description'], description)
-        self.assertEqual(opts['models'], models)
-        self.assertEqual(opts['fields'], fields)
+
+            
+        
+        self.assertDictsEqual(opts['models'], models)
+        self.assertDictsEqual(opts['fields'], fields)
         # CSV not supported yet, this will fail:
         missing = renders - set(opts['renders'])
         self.assertFalse(missing, "Missing renderers: {missing}".format(**locals()))

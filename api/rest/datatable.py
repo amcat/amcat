@@ -297,7 +297,7 @@ from amcat.tools import amcattest
 
 class TestDatatable(amcattest.PolicyTestCase):
     PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner',
-                      'insert_user', 'guest_role', 'active', 'index_default'}
+                      'insert_user', 'guest_role', 'active', 'index_default', 'favourite'}
 
     def test_url(self):
         from api.rest.resources import UserResource
@@ -386,8 +386,8 @@ class TestDatatable(amcattest.PolicyTestCase):
 
         d = Datatable(ProjectResource).order_by("name")
         self.assertTrue("name" in unicode(d))
-        self.assertTrue('["name", "asc"]' in unicode(d))
-        self.assertTrue('["name", "desc"]' in unicode(d.order_by("-name")))
+        self.assertTrue("['name', 'asc']" in unicode(d))
+        self.assertTrue("['name', 'desc']" in unicode(d.order_by("-name")))
 
         with self.assertRaises(ValueError):
             d.order_by("bla")

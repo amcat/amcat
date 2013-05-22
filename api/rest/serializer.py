@@ -24,7 +24,7 @@ activated by settings.REST_FRAMEWORK['DEFAULT_PAGINATION_SERIALIZER_CLASS']
 import collections
 
 from rest_framework import pagination, serializers
-from rest_framework.relations import ManyPrimaryKeyRelatedField
+from rest_framework.relations import PrimaryKeyRelatedField
 
 from api.rest.fields import DatatablesEchoField
 
@@ -41,12 +41,18 @@ class AmCATPaginationSerializer(pagination.BasePaginationSerializer):
     previous = pagination.PreviousPageField(source='*')
 
 class AmCATModelSerializer(serializers.ModelSerializer):
+
+    @classmethod
+    def skip_field(cls, field):
+        """Do we skip serializing this field?"""
+        return isinstance(field, PrimaryKeyRelatedField) and field.many
+    
     def get_fields(self):
         fields = super(AmCATModelSerializer, self).get_fields()
 
         return collections.OrderedDict(
             [(name, field) for (name, field) in fields.iteritems()
-              if not isinstance(field, ManyPrimaryKeyRelatedField)]
+              if not self.skip_field(field)]
         )
 
 
@@ -84,10 +90,13 @@ class TestSerializer(ApiTestCase):
         actual = self.get(ProjectResource, id=p1.id)
 
         actual_results = actual.pop("results")
-        date = actual_results[0].pop('insert_date')
+        self.assertEqual(len(actual_results), 1)
+        actual_results = actual_results[0]
+        
+        date = actual_results.pop('insert_date')
         toolkit.readDate(date)# check valid date, not much more to check here?
 
-        expected_results=[{u'insert_user': p1.insert_user.id,
+        expected_results={u'insert_user': p1.insert_user.id,
                            u'index_default': True,
                            u'description': 'testdescription',
                            u'name': u'testnaam',
@@ -95,7 +104,8 @@ class TestSerializer(ApiTestCase):
                            u'owner': p1.owner.id,
                            u'active': True,
                            u'id': p1.id,
-                           }]
+                           u'favourite' : False,
+                           }
         
         expected_meta = {
             u'page' : 1,
@@ -107,5 +117,5 @@ class TestSerializer(ApiTestCase):
             u'echo' : None,
             }
 
-        self.assertEqual(actual, expected_meta)
-        self.assertEqual(actual_results, expected_results)
+        self.assertDictsEqual(actual, expected_meta)
+        self.assertDictsEqual(actual_results, expected_results)
