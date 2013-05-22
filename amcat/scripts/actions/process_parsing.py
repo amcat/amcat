@@ -47,8 +47,6 @@ class CheckParsing(Script):
         self.process(analysed_articles)
                 
     def process(self, articles):
-        print(getattr(self, "verbose"))
-        return
         for aa in articles:
             parser = aa.plugin.get_class()()
             try:
@@ -56,7 +54,7 @@ class CheckParsing(Script):
                 if self.options["check_only"]:
                     result = parser.check_article(aa)
                 else:
-                    result = parser.retrieve_article(aa, verbose=self.options["verbose"])
+                    result = parser.retrieve_article(aa)
             except Exception, e:
                 result = "Error"
                 msg = repr(e)
