@@ -38,6 +38,9 @@ else:
     DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
 
+COMPRESS_ENABLED = os.environ.get("DJANGO_COMPRESS", not DEBUG) in (True, "1", "Y", "ON")
+COMPRESS_PARSER = 'compressor.parser.LxmlParser'
+
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO' if DEBUG else 'WARNING')
 DISABLE_SENTRY = os.environ.get("DJANGO_DISABLE_SENTRY", None) in ("1","Y", "ON")
                  
@@ -122,6 +125,12 @@ MIDDLEWARE_CLASSES = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
+STATICFILES_FINDERS = (
+        'django.contrib.staticfiles.finders.FileSystemFinder',
+        'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+        'compressor.finders.CompressorFinder',
+)
+
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
     #'django.contrib.auth.backends.RemoteUserBackend',
@@ -157,6 +166,7 @@ INSTALLED_APPS = [
     'debug_toolbar',
     'amcat',
     'django_extensions',
+    'compressor'
 ]
                     
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
