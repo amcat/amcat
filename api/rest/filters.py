@@ -42,7 +42,7 @@ import logging; log = logging.getLogger(__name__)
 ORDER_BY_FIELD = "order_by"
 
 class InFilter(filterset.ModelMultipleChoiceFilter):
-    """Filter for pk_in=1,2,3 queries"""
+    """Filter for {'pk':[1,2,3]} / pk=1&pk=2 queries"""
 
     def filter(self, qs, value):
         if not value: return qs
@@ -54,17 +54,15 @@ class AmCATFilterSet(filterset.FilterSet):
     - Allow descending /  ascending order
     - Allow filtering on pk and ordering by default
     """
-
     
-    pk = NumberFilter(name='id')
-    pk_in = InFilter(name='pk', queryset=None)
+    pk = InFilter(name='id', queryset=None)
 
     # This overrides the default FilterSet value
     order_by_field = ORDER_BY_FIELD
 
     def __init__(self, *args, **kargs):
         super(AmCATFilterSet, self).__init__(*args, **kargs)
-        self.filters["pk_in"].field.queryset = self.queryset
+        self.filters["pk"].field.queryset = self.queryset
     
     def __len__(self):
         """Default implementation does len(self.qs)  which runs the whole query..."""
@@ -211,7 +209,7 @@ class TestFilters(ApiTestCase):
 
         # Filter on multiple values of same key. Expect them to be OR'ed.
         #self.assertEqual(self._get_ids(ProjectResource, id=[p.id, p2.id]), {p2.id, p.id})
-        self.assertEqual(self._get_ids(ProjectResource, pk_in=[p.id, p2.id]), {p2.id, p.id})
+        self.assertEqual(self._get_ids(ProjectResource, pk=[p.id, p2.id]), {p2.id, p.id})
 
         # Filter on date ranges, use articles for this
         a1 = amcattest.create_test_article(project=p, date="2012-01-01")
@@ -225,7 +223,7 @@ class TestFilters(ApiTestCase):
 
         # Filter on multiple pk values
         #self.assertEqual(self._get_ids(ArticleMetaResource, pk_in=",".join(map(str, [a1.id, a2.id]))), {a1.id, a2.id})
-        self.assertEqual(self._get_ids(ArticleMetaResource, pk_in=[a1.id, a2.id]), {a1.id, a2.id})
+        self.assertEqual(self._get_ids(ArticleMetaResource, pk=[a1.id, a2.id]), {a1.id, a2.id})
         
     def _assertEqualIDs(self, resource, ids, **filters):
         self.assertEqual(self._get_ids(resource, **filters), ids)
