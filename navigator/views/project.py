@@ -193,8 +193,10 @@ def projectlist(request, what):
         
         ids = request.user.get_profile().favourite_projects.all().values_list("id")
         ids = [id for (id, ) in ids]
-        if not ids: ids = [-1] # even uglier, how to force an empty table?
-        selected_filter["id"] = ids
+        if ids: 
+            selected_filter["pk"] = ids
+        else:
+            selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
 
     url = reverse('project', args=[123]) + "?star="
     table = FavouriteDatatable(set_url=url+"1", unset_url=url+"0", label="project", resource=ProjectResource)
@@ -250,14 +252,19 @@ def articlesets(request, project, what):
         
         ids = request.user.get_profile().favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id))
         ids = [id for (id, ) in ids.values_list("id")]
-        if not ids: ids = [-1] # even uglier, how to force an empty table?
-        selected_filter["id"] = ids
+        if ids: 
+            selected_filter["pk"] = ids
+        else:
+            selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
+            
     elif what == "codingjob":
         # more ugliness. Filtering the api on codingjob_set__id__isnull=False gives error from filter set
         ids = ArticleSet.objects.filter(Q(project=project.id) | Q(projects_set=project.id), codingjob_set__id__isnull=False)
         ids = [id for (id, ) in ids.values_list("id")]
-        if not ids: ids = [-1] # even uglier, how to force an empty table?
-        selected_filter["id"] = ids
+        if ids: 
+            selected_filter["pk"] = ids
+        else:
+            selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
     
     url = reverse('articleset', args=[project.id, 123]) 
     

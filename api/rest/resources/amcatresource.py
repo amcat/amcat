@@ -64,7 +64,7 @@ class AmCATResource(generics.ListAPIView):
     @classmethod
     def get_filter_fields(cls):
         """Return a list of fields that will be used to filter on"""
-        result = []
+        result = ['pk']
         for field in cls._get_filter_fields_for_model():
             result.append(field)
         for field in cls.extra_filters:
