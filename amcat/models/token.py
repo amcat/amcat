@@ -67,7 +67,7 @@ class Relation(AmcatModel):
 class Triple(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='triple_id')
 
-    parent = models.ForeignKey(Token, related_name="+")
+    parent = models.ForeignKey(Token, related_name="triples")
     child = models.ForeignKey(Token, related_name="+")
     relation = models.ForeignKey(Relation)
 

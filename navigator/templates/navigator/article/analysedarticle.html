@@ -8,20 +8,19 @@
 <h2>Tokens:</h2>
 
 <div class="btn-group" data-toggle="buttons-checkbox">
-  <button id="btn_words" type="button" class="btn active" onclick="check();">Words</button>
-  <button id="btn_lemmata" type="button" class="btn active" onclick="check();">Lemmata</button>
-  <button id="btn_pos" type="button" class="btn active" onclick="check();" >POS</button>
+  <button id="btn_words" type="button" class="btn active" onclick="toggle_words();">Words</button>
+  <button id="btn_lemmata" type="button" class="btn active" onclick="toggle_lemmata();">Lemmata</button>
+  <button id="btn_pos" type="button" class="btn active" onclick="toggle_pos();" >POS</button>
 </div>
 
 {% for paragraph in paragraphs %}
 <p>
 {% for sentence in paragraph %}
-<span class="sentence"><span class="meta" title="{{sentence.sentence.sentence}}">[{{sentence.sentence.parnr}}.{{sentence.sentence.sentnr}}]</span>
+<a href="{% url 'analysedsentence' context.id sentence.id %}"><span class="sentence"><span class="meta" title="{{sentence.sentence.sentence}}">[{{sentence.sentence.parnr}}.{{sentence.sentence.sentnr}}]</span>
 {% for token in sentence.tokens.all %}
-<span class="word">{{token.word.word}}</span>
-<span class="lemma">/{{token.word.lemma}}</span>
-<span class="pos">/{{token.word.lemma.pos}} </span>
+<span class="word">{{token.word.word}}</span><span class="lemma">{{token.word.lemma}}</span><span class="pos">{{token.word.lemma.pos}} </span>
 {% endfor %}
+</a>
 
 </span>
 {% endfor %}
@@ -29,10 +28,8 @@
 {% endfor %}
 
 <script>
-function check() {
-$(".word").css("display", $("#btn_words").hasClass("active")?"inline":"none");
-$(".lemma").css("display", $("#btn_lemmata").hasClass("active")?"inline":"none");
-$(".pos").css("display", $("#btn_pos").hasClass("active")?"inline":"none");
-}
+function toggle_words() {$(".word").css("display",!$("#btn_words").hasClass("active")?"inline":"none");}
+function toggle_lemmata() {$(".lemma").css("display",!$("#btn_lemmata").hasClass("active")?"inline":"none");}
+function toggle_pos() {$(".pos").css("display",!$("#btn_pos").hasClass("active")?"inline":"none");}
 </script>
 {% endblock %}

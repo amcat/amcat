@@ -59,6 +59,8 @@ urlpatterns = patterns(
     # parses
     url(r'^project/(?P<projectid>[0-9]+)/analysedarticle/(?P<id>[0-9]+)$',
         'navigator.views.article.analysedarticle', name='analysedarticle'),
+        url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)$',
+        'navigator.views.article.analysedsentence', name='analysedsentence'),
     
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),

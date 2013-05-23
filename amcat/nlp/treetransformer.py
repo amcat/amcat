@@ -192,13 +192,10 @@ def set_attribute_if_missing(obj, attr, value):
     if not hasattr(obj, attr):
         setattr(obj, attr, value)
 
-def iterate_nodes(triples):
-    seen = set()
+def nodes(triples):
     for triple in triples:
         for node in (triple.subject, triple.object):
-            if node in seen: continue
             yield node
-            seen.add(node)
 
 def visualise_triples(triples, triple_args_function=None,
                       ignore_properties=VIS_IGNORE_PROPERTIES):
@@ -211,7 +208,7 @@ def visualise_triples(triples, triple_args_function=None,
     g = dot.Graph()
     nodes = {} # Node -> dot.Node
     # create nodes
-    for n in iterate_nodes(triples):
+    for n in set(nodes(triples)):
         label = "%s: %s" % (n.position, n.label)
         for k,v in n.__dict__.iteritems():
             if k not in ignore_properties:

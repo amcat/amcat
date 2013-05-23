@@ -22,7 +22,7 @@ from django.conf import settings
 from settings.menu import PROJECT_MENU
 
 from amcat.tools import toolkit
-from amcat.models import Article, Project, ArticleSet, AnalysedArticle
+from amcat.models import Article, Project, ArticleSet, AnalysedArticle, AnalysisSentence
 
 from navigator.utils.auth import check, check_perm
 from navigator import forms
@@ -30,6 +30,10 @@ from navigator import forms
 from amcat.scripts import article_upload as article_upload_scripts
 
 import logging; log = logging.getLogger(__name__)
+
+from amcat.nlp import syntaxtree
+from amcat.models import AnalysisSentence
+from amcat.tools.pysoh.pysoh import SOHServer
 
 def get_paragraphs(sentences):
     parnr = None
@@ -54,7 +58,25 @@ def analysedarticle(request, project, analysed_article):
     menu = PROJECT_MENU
     context = project
     return render(request, "navigator/article/analysedarticle.html", locals())
-    
+
+
+
+@check(AnalysisSentence, args='id')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def analysedsentence(request, project, sentence):
+
+    tokens = (sentence.tokens.all().select_related("word", "word__word",  "word__lemma")
+              .prefetch_related("triples", "triples__child", "triples__parent", "triples__relation"))
+
+    soh = SOHServer(url="http://localhost:3030/x")
+    tree = syntaxtree.SyntaxTree(soh, tokens)
+    g = tree.visualise()
+    dot = g.getDot()
+    picture = g.getHTMLObject()
+    menu = PROJECT_MENU
+    context = project
+    return render(request, "navigator/article/analysedsentence.html", locals())
+
 @check(Article, args='id')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def view(request, project, article):
