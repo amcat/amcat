@@ -31,7 +31,7 @@ from django_filters.filters import Filter
 
 from django_filters.filters import NumberFilter
 from django.db import models
-
+from django import forms
 # Monkey patch filterset for autofield - no idea why it's not in that list
 filterset.FILTER_FOR_DBFIELD_DEFAULTS[models.AutoField] = dict(filter_class=NumberFilter)
 
@@ -41,132 +41,81 @@ import logging; log = logging.getLogger(__name__)
 
 ORDER_BY_FIELD = "order_by"
 
+class InFilter(filterset.ModelMultipleChoiceFilter):
+    """Filter for pk_in=1,2,3 queries"""
+
+    def filter(self, qs, value):
+        if not value: return qs
+        values = [obj.id for obj in value]
+        return qs.filter(**{'%s__in' % (self.name): value})
 
 class AmCATFilterSet(filterset.FilterSet):
+    """
+    - Allow descending /  ascending order
+    - Allow filtering on pk and ordering by default
+    """
+
+    
     pk = NumberFilter(name='id')
+    pk_in = InFilter(name='pk', queryset=None)
 
     # This overrides the default FilterSet value
     order_by_field = ORDER_BY_FIELD
 
+    def __init__(self, *args, **kargs):
+        super(AmCATFilterSet, self).__init__(*args, **kargs)
+        self.filters["pk_in"].field.queryset = self.queryset
+    
     def __len__(self):
+        """Default implementation does len(self.qs)  which runs the whole query..."""
         return count.count(self.qs)
 
-    def get_order_by_fields(self):
+    def get_ordering_field(self):
         """
-        Get order_by fields based on current request.
+        - Add descending order (-field) to the list of valid choices
+        - Make MultipleChoiceField to allow for ordering on more than one field
+          (requires changing the order_by behaviour in qs below)
         """
-        if not self.data: return
-
-        for ofield in self.data.getlist(ORDER_BY_FIELD):
-            # We use '-' and '?' for ordering descending or randomly
-            # respectively
-            desc = ofield.startswith(("-", "?"))
-
-            field = ofield[1:] if desc else ofield
-            if field in self._meta.fields:
-                yield ofield
-            else:
-                log.warn("Could not find order by field {field} in _meta.fields {fields}"
-                         .format(fields = list(self._meta.fields), **locals()))
-
-    def get_ordered_fields(self):
-        """
-        Same as get_order_by_fields, but it does not includes the direction
-        of ordering.
-        """
-        for f in self.get_order_by_fields():
-            yield f[1:] if f.startswith(("-", "?")) else f
-
-    def _order_by(self, qs):
-        """
-        Order results according to allowed values in Meta class, and
-        the value given by the client.
-        """
-
-        
-        if not hasattr(self.data, "getlist"):
-            # Empty query parameters
-            return qs
-
-        return qs.order_by(*self.get_order_by_fields())
-
-    def _filter(self, qs):
-        """
-        Filter all fields based on given filters.
-        """
-        for name, filter_ in self.filters.iteritems():
-            qs = self._filter_field(qs, name, filter_)
-
-        return qs
-
-    def _filter_field(self, qs, name, filter_):
-        """
-        Filter specific field
-        """
-        data = self.data.getlist(name) if hasattr(self.data, 'getlist') else []
-        data = data or [self.form.initial.get(name, self.form[name].field.initial)]
-
-        # Filter all given fields OR'ed.
-        q = models.Q()
-        for value in data:
-            # To filter on model properties which are None, provide
-            # null as argument.
-            if value == "null" and name.endswith("__id"):
-                q = q | models.Q(**{ name[0:-4] : None })
-                continue
-
-            try:
-                value = self.form.fields[name].clean(value)
-            except ValidationError:
-                continue
-            else:
-                if value == []: continue
-
-            # Do not filter when value is None or an empty string
-            if (isinstance(value, basestring) and not value) or value is None:
-                continue
-
-            q = q | models.Q(**{ name : value })
-
-        return qs.filter(q)
+        field = super(AmCATFilterSet, self).get_ordering_field()
+        if field:
+            choices = field.choices + [("-"+key, label + " (Desc)") for (key, label) in field.choices]
+            return forms.MultipleChoiceField(label=field.label, required=field.required, choices=choices)
+        return field
 
     @property
     def qs(self):
-        """
-        By default, filterset.Filterset does not allow for multiple
-        GET arguments with the same identifier. This results in being
-        unable to get a specific set of objects based on their id. For
-        example:
-
-          ?id=1&id=2
-
-        wouldn't work. We override qs to provide this function, while
-        keeping the same overall tactics of super.qs.
-        """
-        if hasattr(self, '_qs'):
-            return self._qs
-
-        # No caches queryset has been found, try to create one by
-        # filtering, followed by ordering.
-        self._qs = self.queryset.all()
-        self._qs = self._filter(self._qs)
-        self._qs = self._order_by(self._qs)
-
-        if getattr(self.Meta.view, "use_distinct", True):
-              # Only return non-duplicates
-              if can_distinct_on_pk(self._qs):
-                  # Postgres (and other databases) only allow distinct when
-                  # no ordering is specified, or if the first order-column
-                  # is the same as the one you're 'distincting' on.
-                  self._qs = self._qs.distinct("pk")
-              else:
-                  # Use naive way of defining distinct. The database has to
-                  # iterate over all rows (well, not in theory, but postgres
-                  # does..)
-                  self._qs = self._qs.distinct()
-
-        return self.qs
-
+        # 'Monkey patch' to allow order by to take muliple values from MultipleChoiceField
+        # function is copy/paste from filterset.py except for import, order_by, and silent validation exceptions
+        from django.utils import six
+        if not hasattr(self, '_qs'):
+            qs = self.queryset.all()
+            for name, filter_ in six.iteritems(self.filters):
+                try:
+                    if self.is_bound:
+                        data = self.form[name].data
+                    else:
+                        data = self.form.initial.get(
+                            name, self.form[name].field.initial)
+                    # change    
+                    val = None if data == 'null' else self.form.fields[name].clean(data)
+                    # end of change
+                    qs = filter_.filter(qs, val)
+                except forms.ValidationError:
+                    raise# was: pass
+            if self._meta.order_by:
+                try:
+                    order_field = self.form.fields[self.order_by_field]
+                    data = self.form[self.order_by_field].data
+                    # changes
+                    if data and data != ['']:
+                        value = order_field.clean(data)
+                        if value:
+                            qs = qs.order_by(*value)
+                    # end of changes
+                except forms.ValidationError:
+                    raise# was:pass
+            self._qs = qs
+        return self._qs
 
 
 class AmCATFilterBackend(filters.DjangoFilterBackend):    
@@ -174,7 +123,7 @@ class AmCATFilterBackend(filters.DjangoFilterBackend):
     def get_filter_class(self, view, *args, **kargs):
         
         filter_class = super(AmCATFilterBackend, self).get_filter_class(view, *args, **kargs)
-        filter_class.Meta.view = view
+        filter_class._meta.order_by = True
         return filter_class
 
 
@@ -261,8 +210,23 @@ class TestFilters(ApiTestCase):
         self.assertEqual(self._get_ids(ProjectResource, projectrole__user__id=u.id), {p3.id})
 
         # Filter on multiple values of same key. Expect them to be OR'ed.
-        self.assertEqual(self._get_ids(ProjectResource, id=[p.id, p2.id]), {p2.id, p.id})
+        #self.assertEqual(self._get_ids(ProjectResource, id=[p.id, p2.id]), {p2.id, p.id})
+        self.assertEqual(self._get_ids(ProjectResource, pk_in=[p.id, p2.id]), {p2.id, p.id})
 
+        # Filter on date ranges, use articles for this
+        a1 = amcattest.create_test_article(project=p, date="2012-01-01")
+        a2 = amcattest.create_test_article(project=p, date="2012-02-01")
+        a3 = amcattest.create_test_article(project=p, date="2012-03-01")
+        from api.rest.resources import ArticleMetaResource
+        self.assertEqual(self._get_ids(ArticleMetaResource, project=p.id), {a1.id, a2.id, a3.id})
+        self.assertEqual(self._get_ids(ArticleMetaResource, project=p.id, date='2012-01-01'), {a1.id})
+        self.assertEqual(self._get_ids(ArticleMetaResource, project=p.id, date_from='2012-01-15'), {a2.id, a3.id})
+        self.assertEqual(self._get_ids(ArticleMetaResource, project=p.id, date_to='2012-01-15'), {a1.id})
+
+        # Filter on multiple pk values
+        #self.assertEqual(self._get_ids(ArticleMetaResource, pk_in=",".join(map(str, [a1.id, a2.id]))), {a1.id, a2.id})
+        self.assertEqual(self._get_ids(ArticleMetaResource, pk_in=[a1.id, a2.id]), {a1.id, a2.id})
+        
     def _assertEqualIDs(self, resource, ids, **filters):
         self.assertEqual(self._get_ids(resource, **filters), ids)
 

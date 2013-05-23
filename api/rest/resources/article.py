@@ -20,9 +20,19 @@
 from amcat.models import Article
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.filters import AmCATFilterSet
 
 from rest_framework import serializers
+from django_filters import filters, filterset
 
+
+class ArticleMetaFilter(AmCATFilterSet):
+    date_from = filters.DateFilter(name='date', lookup_type='gte')
+    date_to = filters.DateFilter(name='date', lookup_type='lt')
+    
+    class Meta:
+        model = Article
+         
 class ArticleMetaSerializer(AmCATModelSerializer):
     class Meta:
         model = Article
@@ -32,6 +42,7 @@ class ArticleMetaSerializer(AmCATModelSerializer):
 class ArticleMetaResource(AmCATResource):
     model = Article
     serializer_class = ArticleMetaSerializer
+    filter_class = ArticleMetaFilter
     
     @classmethod
     def get_model_name(cls):
