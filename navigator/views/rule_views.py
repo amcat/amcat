@@ -33,11 +33,11 @@ from navigator.views.datatableview import DatatableCreateView
 class RuleForm(ModelForm):
     class Meta:
         model = Rule
-        fields = ["id", "order", "label", "where", "insert", "delete", "remarks"]
+        fields = ["id", "ruleset", "order", "label", "where", "insert", "delete", "remarks"]
         widgets = {field : Textarea(attrs={'cols': 5, 'rows': 4})
                    for field in ["insert","delete","where","remarks"]}
         widgets["ruleset"] = HiddenInput
-
+    
 class RuleSetTableView(DatatableCreateView):
     model = RuleSet
     rowlink_urlname = "ruleset"
@@ -57,10 +57,24 @@ class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
     
     def post(self, request, pk, **kwargs):
         self.object = self.get_object()
-        formset = formset_factory(RuleForm, formset=BaseModelFormSet, can_delete=True)
+        ruleset_id = self.object.id
+        class RuleFormWithRuleset(RuleForm):
+            def clean(self):
+                # HACK! How to add ruleset info to extra fields in a meaningful way?
+                cleaned_data = super(RuleForm, self).clean()
+                if "ruleset" not in cleaned_data and len(self._errors.get("ruleset", [])) == 1 and self._errors["ruleset"][0] == u"This field is required.":
+                    cleaned_data["ruleset"] = RuleSet.objects.get(pk=ruleset_id)
+                    del self._errors["ruleset"]
+                return cleaned_data
+        
+        formset = formset_factory(RuleFormWithRuleset, formset=BaseModelFormSet, can_delete=True)
         formset.model = Rule
         formset = formset(request.POST, request.FILES, queryset=self.object.rules.all())
         if formset.is_valid():
             formset.save()
+            formset = formset_factory(RuleForm, formset=BaseModelFormSet, can_delete=True)
+            formset.model = Rule
+            formset = formset(queryset=self.object.rules.all())
+
 
         return self.render_to_response(self.get_context_data(formset=formset))

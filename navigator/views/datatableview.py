@@ -74,7 +74,10 @@ class DatatableCreateView(CreateView, DatatableMixin):
     template_name = "datatable.html"
     
     def get_form_class(self):
-        return modelform_factory(self.model)
+        form_class = getattr(self, "form_class", None)
+        if form_class is None:
+            form_class =  modelform_factory(self.model)
+        return form_class
 
     def get_success_url(self):
         try:
