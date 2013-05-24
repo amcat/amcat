@@ -1,0 +1,39 @@
+{% extends "navigator/base.html" %}
+
+{% block css %}
+<style>
+textarea {width:10em}
+input {width:3em}
+</style>
+
+{% endblock %}
+
+{% block content %}
+
+<div style="float:left; width:65%">
+ <h1>Ruleset {{ruleset.id}} : {{ruleset}}</h1>
+</div>
+<form method="post" action="">
+<input type="submit">
+    {{ formset.management_form }}
+{{ formset.management_form }}
+<table border=1>
+<tr>
+{% for field in formset.0.visible_fields %}
+<th>{{ field.label_tag }}</th>
+{% endfor %}
+</tr>
+{% for form in formset %}
+<tr>
+  {% for hidden in form.hidden_fields %}
+  {{ hidden }}
+  {% endfor %}
+{% for field in form.visible_fields %}
+<td>{{ field.errors }} {{ field }}</td>
+{% endfor %}
+</tr>
+{% endfor %}
+</table>
+<input type="submit">
+</form>
+{% endblock %}

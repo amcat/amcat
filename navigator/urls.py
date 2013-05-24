@@ -21,6 +21,7 @@ from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
 from navigator.views.articleset_views import ImportSetView, SampleSetView
+from navigator.views.rule_views import RuleSetView
 
 urlpatterns = patterns(
     '',
@@ -59,8 +60,12 @@ urlpatterns = patterns(
     # parses
     url(r'^project/(?P<projectid>[0-9]+)/analysedarticle/(?P<id>[0-9]+)$',
         'navigator.views.article.analysedarticle', name='analysedarticle'),
-        url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)$',
+    url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)$',
         'navigator.views.article.analysedsentence', name='analysedsentence'),
+
+    
+    url(r'^ruleset/(?P<pk>[0-9]+)$',
+        RuleSetView.as_view(), name='ruleset'),
     
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),

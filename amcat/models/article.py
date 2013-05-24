@@ -41,10 +41,6 @@ import re
 WORD_RE = re.compile('[{L}{N}]+') # {L} --> All (unicode) letters
                                   # {N} --> All numbers
 
-def help():
-    1/0
-
-
 def word_len(txt):
     """Count words in `txt`
 
