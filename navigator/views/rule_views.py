@@ -20,33 +20,39 @@
 from django.forms import Textarea, ModelForm, HiddenInput
 
 from django.core.urlresolvers import reverse
-from django.views.generic.base import View, TemplateResponseMixin, ContextMixin
+from django.views.generic.base import View, TemplateResponseMixin, ContextMixin, TemplateView
 from django.views.generic.detail import SingleObjectMixin
 
 from amcat.models import RuleSet, Rule
 from django.forms.formsets import formset_factory
 from django.forms.models import BaseModelFormSet
 
+from api.rest.resources import ProjectResource as RuleSetResource
+from navigator.views.datatableview import DatatableCreateView
+
 class RuleForm(ModelForm):
     class Meta:
         model = Rule
-        fields = ["id", "order", "label", "where", "insert", "delete"]
+        fields = ["id", "order", "label", "where", "insert", "delete", "remarks"]
         widgets = {field : Textarea(attrs={'cols': 5, 'rows': 4})
                    for field in ["insert","delete","where","remarks"]}
         widgets["ruleset"] = HiddenInput
-        
+
+class RuleSetTableView(DatatableCreateView):
+    model = RuleSet
+    rowlink_urlname = "ruleset"
+    
 class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
     model = RuleSet
     template_name = "navigator/rule/ruleset.html"
 
     def get(self, request, pk, **kwargs):
-        print ">>>>",self.kwargs
         self.object = self.get_object()
 
         formset = formset_factory(RuleForm, formset=BaseModelFormSet, can_delete=True)
         formset.model = Rule
         formset = formset(queryset=self.object.rules.all())
-        print ">?>>", self.get_context_data(formset=formset)
+        
         return self.render_to_response(self.get_context_data(formset=formset))
     
     def post(self, request, pk, **kwargs):

@@ -2,8 +2,13 @@
 
 {% block css %}
 <style>
-textarea {width:10em}
-input {width:3em}
+textarea {width:16em}
+input {width:6em}
+td.Order input {width:2em}
+textarea, input[type="text"] {font-size: 8pt; margin:1px}
+th {background-color:#60a3ff; color:white;}
+tr.odd {background-color: #e9e9e9}
+
 </style>
 
 {% endblock %}
@@ -17,19 +22,19 @@ input {width:3em}
 <input type="submit">
     {{ formset.management_form }}
 {{ formset.management_form }}
-<table border=1>
+<table>
 <tr>
 {% for field in formset.0.visible_fields %}
-<th>{{ field.label_tag }}</th>
+<th>{{ field.label }}</th>
 {% endfor %}
 </tr>
 {% for form in formset %}
-<tr>
+<tr class="{% cycle 'odd' 'even' %}">
   {% for hidden in form.hidden_fields %}
   {{ hidden }}
   {% endfor %}
 {% for field in form.visible_fields %}
-<td>{{ field.errors }} {{ field }}</td>
+<td class="{{field.label}}">{{ field.errors }} {{ field }}</td>
 {% endfor %}
 </tr>
 {% endfor %}
