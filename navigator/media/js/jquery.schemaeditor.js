@@ -181,7 +181,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         var url = self._get_api_url(resource, filters)
         $.getJSON(url).success(callback_success).error(callback_error);
 
-        console.log("Getting " + url);
+        // console.log("Getting " + url);
     }
 
     self.api_post = function(resource, callback_success, data, filters, callback_error){
@@ -194,6 +194,22 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         ).error(callback_error);
 
         console.log("Getting (POST) " + self._get_api_url(resource, filters));
+    }
+
+    self.api_options = function(resource, callback_success, filters, callback_error) {
+	// Handle default function parameters
+        callback_error = (callback_error === undefined) ? self.standard_error : callback_error;
+	url = self._get_api_url(resource, filters);
+
+	console.log("HTTP OPTIONS "+url);
+	
+	$.ajax({
+	    type: "OPTIONS",
+	    url: url,
+	    success: callback_success
+	});
+	    
+
     }
 
     self.add_row = function(field, add_to_state){
@@ -531,9 +547,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         // Get all fieldtypes
         self.api_get("codingschemafieldtype", self.fieldtypes_initialised);
         self.api_get("codingschemafieldtype", self.fieldtypes_initialised);
-        self.api_post("codingschemafield", self.fieldtypes_types_initialised, {
-            "_method" : "OPTIONS"   
-        });
+        self.api_options("codingschemafield", self.fieldtypes_types_initialised);
 
         // Get owned and imported codebooks
         self.api_get("codebook", self.codebooks_initialised, {"project__id" : self.PROJECT_ID});
