@@ -183,8 +183,10 @@ def scrape_logged(controller, scrapers, deduplicate = False):
              log: a string representation of the log messages from the scrapers
     """
     result = {s : [] for s in scrapers}
-    from sentry.client.handlers import SentryHandler
-    amcatlogging.install_handler(SentryHandler())
+
+    #from sentry.client.handlers import SentryHandler
+    #amcatlogging.install_handler(SentryHandler())
+    #importerror?
 
     counts = dict((s, 0) for s in scrapers)
     log_stream = StringIO()
