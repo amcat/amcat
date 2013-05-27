@@ -9,6 +9,7 @@ navigator/media/static/*
 *.html.py
 *.pyc
 *.orig
+*.rej
 *~
 \#*\#
 .\#*

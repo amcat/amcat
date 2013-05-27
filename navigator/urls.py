@@ -21,6 +21,7 @@ from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
 from navigator.views.articleset_views import ImportSetView, SampleSetView
+from navigator.views import rule_views
 
 urlpatterns = patterns(
     '',
@@ -40,7 +41,6 @@ urlpatterns = patterns(
     url(r'^selection$', 'navigator.views.selection.index', name='selection'),
 
     # Articles
-    url(r'^article/(?P<id>[0-9]+)$', 'navigator.views.article.view', name='article'),
     url(r'^project/(?P<projectid>[0-9]+)/article/(?P<id>[0-9]+)$', 'navigator.views.project.article'),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<id>[0-9]+)$',
         'navigator.views.project.articleset', name="articleset"),
@@ -56,6 +56,16 @@ urlpatterns = patterns(
         SampleSetView.as_view(), name="articleset-sample"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/import$',
         ImportSetView.as_view(), name="articleset-import"),
+
+    # parses
+    url(r'^project/(?P<projectid>[0-9]+)/analysedarticle/(?P<id>[0-9]+)$',
+        'navigator.views.article.analysedarticle', name='analysedarticle'),
+    url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)$',
+        'navigator.views.article.analysedsentence', name='analysedsentence'),
+
+    
+    url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),
+    url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
     
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),

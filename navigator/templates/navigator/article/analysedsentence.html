@@ -1,0 +1,16 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+
+<div style="float:left; width:65%">
+ <h1>Sentence {{sentence.sentence.id}} ({{ sentence.sentence }}) parsed by {{sentence.analysed_article.plugin}}</h1>
+
+{{picture|safe}}
+
+<h2>DOT code</h2>
+
+<pre>
+{{dot}}
+</pre>
+
+{% endblock %}

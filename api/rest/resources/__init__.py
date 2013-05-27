@@ -47,7 +47,8 @@ MODELS = ['Article',
           'CodingSchema', 'CodingSchemaField',
           'CodebookCode', 'CodebookBase', 'Label', 'CodingSchemaFieldType',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
-          'Plugin', 'Scraper', 'PluginType'
+          'Plugin', 'Scraper', 'PluginType',
+          "RuleSet"
           ]
 
 # Automatically generate resources for these models

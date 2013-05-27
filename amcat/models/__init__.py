@@ -48,3 +48,5 @@ from amcat.models.coding.codedarticle import *
 from amcat.models.scraper import *
 
 
+
+from amcat.models.rule import *

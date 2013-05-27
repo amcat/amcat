@@ -55,10 +55,12 @@ def run_cli(cls=None, handle_output=None, get_script_depth=2):
     args = parser.parse_args()
     options = args.__dict__
 
-    if options.pop("verbose", None):
+    verbose = options.pop("verbose", None)
+    if verbose:
         amcatlogging.debug_module(cls.__module__)
     
     instance = cls(options)
+    instance.verbose = verbose
 
     input = None
     if cls.input_type in (file, str, unicode):

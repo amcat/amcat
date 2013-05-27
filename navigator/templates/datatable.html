@@ -1,0 +1,25 @@
+{% extends "navigator/base.html" %}
+
+{% block content %}
+
+{% block table %}
+<h2>{{model_name}} list:</h1>
+
+{{ table|safe }}
+{% endblock %}
+
+{% block create_form %}
+{% if form %}
+<h2>Create a new {{model_name}}:</h1>
+<form action="" method="post">
+<table>
+{{ form }}
+</table>
+   <div class="form-actions">
+    <input class="btn btn-primary" type="submit" value="Create"></input>
+   </div>
+</form>
+{% endif %}
+{% endblock %}
+
+{% endblock %}

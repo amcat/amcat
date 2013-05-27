@@ -1,38 +1,45 @@
 {% load menu %}
 {% load misc %}
+{% load compress %}
+{% load staticfiles %}
 <!DOCTYPE html>
 <html>
  <head>
   <title>AmCAT Navigator 3 - {% block title %}Beta{% endblock %}</title>
   
-  <link rel="shortcut icon" href="{{ MEDIA_URL }}img/amcat/favicon.png">
+  <link rel="shortcut icon" href="{{ MEDIA_URL  }}img/amcat/favicon.png">
   
   <!--  CSS -->
-  <link href="{{ MEDIA_URL }}css/bootstrap.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/bootstrap-responsive.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/base.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/datatables.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/forms.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/tabs.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/jquery.expand.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/jquery-ui.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/jquery.multiselect.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/jquery.multiselect.filter.css" rel="stylesheet" type="text/css"  />
-  <link href="{{ MEDIA_URL }}css/jquery.pnotify.default.css" media="all" rel="stylesheet" type="text/css" />
+  {% compress css %}
+  <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/bootstrap-responsive.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/base.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/datatables.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/forms.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/tabs.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/jquery.expand.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/jquery.multiselect.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/jquery.multiselect.filter.css' %}" rel="stylesheet" type="text/css"  />
+  <link href="{% static 'css/jquery.pnotify.default.css' %}" media="all" rel="stylesheet" type="text/css" />
+  <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
+  {% endcompress %}
   {% block css %}{% endblock %}
   
   <!--  Javascript -->
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.7.2.min.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-ui-1.8.22.custom.min.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.dataTables.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.dataTables.plugins.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/amcat.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/amcat.datatables.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.multiselect.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.multiselect.filter.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/bootstrap.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/bootstrap.scrollspy.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.pnotify.min.js"></script>
+  {% compress js %}
+  <script type="text/javascript" src="{% static 'js/jquery-1.7.2.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery-ui-1.8.22.custom.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.multiselect.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.multiselect.filter.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.dataTables.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/bootstrap.scrollspy.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.pnotify.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
+  {% endcompress %}
   {% block javascript %}{% endblock %}
  </head>
  <body>
@@ -83,7 +90,7 @@
 $(function(){
     $.pnotify({
         title: 'AmCAT Announcement',
-        text: "{{announcement|safe}}",
+        text: '{{announcement|safe}}',
         type: 'info',
         hide: false,
     });

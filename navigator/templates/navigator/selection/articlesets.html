@@ -1,0 +1,39 @@
+<div class="btn-group">
+ <a id="select-favourites" class="btn"><i class="icon icon-star"></i> Favourites</a>
+ <a id="select-indexed" class="btn">Indexed Sets</a>
+ <a id="select-dirty" class="btn">Indexed (including dirty)</a>
+ <a id="select-codingjobs" class="btn">Coding Job Sets</a>
+ <a id="select-all" class="btn">All Sets</a>
+</div>
+
+<script>
+$(function(){
+  var all = {{ all_sets }};
+  var indexed = {{ indexed }};
+  var dirty = {{ indexed_with_dirty }};
+  var codingjobs = {{ codingjobs }};
+  var favourites = {{ favourites }};
+
+  var select = function(event){
+      var aids = this;
+
+      $(".btn", $(event.currentTarget).parent()).removeClass("active");
+      $(event.currentTarget).addClass("active");
+
+      $("#id_articlesets").multiselect("widget").find(":checkbox").each(function(){
+          if (aids.indexOf(parseInt(this.value)) != -1){
+              $(this).parent().show();
+          } else {
+            $(this).parent().hide();
+            this.checked = false;
+          }
+      })
+  }
+
+  $("#select-favourites").click(select.bind(favourites)).click();
+  $("#select-indexed").click(select.bind(indexed));
+  $("#select-dirty").click(select.bind(dirty));
+  $("#select-codingjobs").click(select.bind(codingjobs));
+  $("#select-all").click(select.bind(all));
+});
+</script>

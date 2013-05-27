@@ -330,7 +330,7 @@ class CodingJobForm(forms.ModelForm):
             del self.fields['articleset']
         else:
             # Only display articlesets in project
-            qs = ArticleSet.objects.filter(project=project)
+            qs = ArticleSet.objects.filter(Q(project=project) | Q(projects_set=project))
             self.fields['articleset'].queryset = qs
 
         schemas_qs = project.get_codingschemas()

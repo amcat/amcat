@@ -93,4 +93,17 @@ class ApiTestCase(TestCase):
         return t(*values)
     
 
+
+    def assertDictsEqual(self, a,b):
+        if a != b:
+            msg = []
+            for x in a:
+                if x not in b:
+                    msg += [">> {x} not in b".format(**locals())]
+                elif a[x] != b[x]:
+                    msg += ["!! a[x]={ax} != b[x]={bx}".format(ax=a[x], bx=b[x])]
+            for x in b:
+                if x not in a:
+                    msg += ["<< {x} not in a".format(**locals())]
+            self.assertEqual(a,b, "\n".join(msg))
     

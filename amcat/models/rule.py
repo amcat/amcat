@@ -17,33 +17,47 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import Article
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializer import AmCATModelSerializer
-from api.rest.filters import AmCATFilterSet
+"""
+Model module containing the Article class representing documents in the
+articles database table.
+"""
 
-from rest_framework import serializers
-from django_filters import filters, filterset
+from __future__ import unicode_literals, print_function, absolute_import
+
+from amcat.tools.model import AmcatModel
+from django.db import models
+
+import logging;
+log = logging.getLogger(__name__)
 
 
-class ArticleMetaFilter(AmCATFilterSet):
-    date_from = filters.DateFilter(name='date', lookup_type='gte')
-    date_to = filters.DateFilter(name='date', lookup_type='lt')
+class RuleSet(AmcatModel):
+    """
+    Class representing a set of syntax transformation rule
+    """
+    id = models.AutoField(primary_key=True, db_column="rule_id")
+    label = models.CharField(max_length=255)
+
+    class Meta():
+        db_table = 'rulesets'
+        app_label = 'amcat'
+
+class Rule(AmcatModel):
+    """
+    Class representing a syntax transformation rule
+    """
+    id = models.AutoField(primary_key=True, db_column="rule_id")
+
+    label = models.CharField(max_length=255)
+
+    ruleset = models.ForeignKey(RuleSet, related_name="rules")
+    order = models.IntegerField()
     
-    class Meta:
-        model = Article
-         
-class ArticleMetaSerializer(AmCATModelSerializer):
-    class Meta:
-        model = Article
-        fields = ("id", "date", "project", "medium", "headline",
-                    "section", "pagenr", "author")
+    where = models.TextField()
+    insert = models.TextField(null=True, blank=True)
+    delete = models.TextField(null=True, blank=True)
+    remarks = models.TextField(null=True, blank=True)
 
-class ArticleMetaResource(AmCATResource):
-    model = Article
-    serializer_class = ArticleMetaSerializer
-    filter_class = ArticleMetaFilter
-    
-    @classmethod
-    def get_model_name(cls):
-        return "ArticleMeta".lower()
+    class Meta():
+        db_table = 'rules'
+        app_label = 'amcat'

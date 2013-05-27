@@ -34,6 +34,8 @@ import itertools
 import datetime
 import functools
 
+from django.db.models import Q
+
 from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource, AnalysedArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
 from api.rest.resources import ProjectRoleResource
@@ -49,7 +51,7 @@ from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.core.exceptions import PermissionDenied
 
-from api.rest.datatable import Datatable
+from api.rest.datatable import Datatable, FavouriteDatatable
 from api.rest.count import count
 
 from django.template.loader import get_template
@@ -61,7 +63,7 @@ from django.db import transaction
 from django.utils.datastructures import SortedDict
 from django.utils.functional import SimpleLazyObject
     
-from amcat.models import Project, Language, Role, ProjectRole, Code, Label
+from amcat.models import Project, Language, Role, ProjectRole, Code, Label, Article
 from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
 
@@ -92,17 +94,6 @@ PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
 import logging; log = logging.getLogger(__name__)
 
-class ReprString(unicode):
-    """Unicode object were __repr__ == __unicode__"""
-    def __repr__(self): return unicode(self)
-
-class ProjectDatatable(Datatable):
-     def get_aoColumnDefs(self):
-        return {
-            "aTargets" : ["favourite"],
-            "mRender" : (ReprString(get_template("navigator/project/datatable.js")
-                            .render(Context())))
-        }
 
 def table_view(request, context, table, selected=None, overview=False,
                menu=PROJECT_MENU, template=None, **kargs):
@@ -128,6 +119,17 @@ def table_view(request, context, table, selected=None, overview=False,
 # views from other modules prevents wrongly unselected items, while preserving
 # modularity.
 from navigator.views.article import view as article
+
+@check(Article)
+def sentences(request, art, projectid=None):
+    ctx = dict(article=art)
+
+    if projectid is not None:
+        ctx['menu'] = PROJECT_MENU
+        ctx['context'] = Project.objects.get(id=projectid)
+    
+    return render(request, "navigator/article/view.html", ctx)
+
 
 @check(Project)
 def upload_article(request, project):
@@ -191,10 +193,13 @@ def projectlist(request, what):
         
         ids = request.user.get_profile().favourite_projects.all().values_list("id")
         ids = [id for (id, ) in ids]
-        if not ids: ids = [-1] # even uglier, how to force an empty table?
-        selected_filter["id"] = ids
-        
-    table = ProjectDatatable(ProjectResource)
+        if ids: 
+            selected_filter["pk"] = ids
+        else:
+            selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
+
+    url = reverse('project', args=[123]) + "?star="
+    table = FavouriteDatatable(set_url=url+"1", unset_url=url+"0", label="project", resource=ProjectResource)
     table = table.filter(**selected_filter)
     table = table.hide("project", "index_dirty", "indexed")
 
@@ -230,16 +235,41 @@ def articlesets(request, project, what):
     """
     Project articlesets page
     """
-    if what is None: what = "own"
+    if what is None: what = "favourite"
     if what.startswith("/"): what = what[1:]
     
 
-    tables = [("own", "Own Sets", dict(project=project, codingjob_set__id='null')),
+    tables = [("favourite", '<i class="icon-star"></i> <b>Favourites</b>', dict()),
+              ("own", "Own Sets", dict(project=project, codingjob_set__id='null')),
               ("linked", "Linked Sets", dict(projects_set=project)),
+              ("codingjob", "Coding Job Sets", dict()),
               ]
     selected_filter = {name : filter for (name, label, filter) in tables}[what]
+
+    if what == "favourite":
+        # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
+        # (or use api request.user to add only current user's favourite status). But good enough for now...
+        
+        ids = request.user.get_profile().favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id))
+        ids = [id for (id, ) in ids.values_list("id")]
+        if ids: 
+            selected_filter["pk"] = ids
+        else:
+            selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
+            
+    elif what == "codingjob":
+        # more ugliness. Filtering the api on codingjob_set__id__isnull=False gives error from filter set
+        ids = ArticleSet.objects.filter(Q(project=project.id) | Q(projects_set=project.id), codingjob_set__id__isnull=False)
+        ids = [id for (id, ) in ids.values_list("id")]
+        if ids: 
+            selected_filter["pk"] = ids
+        else:
+            selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
     
-    table =  Datatable(ArticleSetResource, rowlink="./articleset/{id}")
+    url = reverse('articleset', args=[project.id, 123]) 
+    
+    table =  FavouriteDatatable(resource=ArticleSetResource, rowlink=url.replace("123", "{id}"),
+                                label="article set", set_url=url + "?star=1", unset_url=url+"?star=0")
     table = table.filter(**selected_filter)
     table = table.hide("project", "index_dirty", "indexed")
 
@@ -308,6 +338,20 @@ def articleset(request, project, aset):
                 .hide('metastring', 'url', 'externalid',
                       'byline', 'pagenr', 'project', 'section', 'text'))
 
+
+
+    profile = request.user.get_profile()
+    starred = profile.favourite_articlesets.filter(pk=aset.id).exists()
+    star = request.GET.get("star")
+    if (star is not None):
+        if bool(int(star)) != starred:
+            starred = not starred
+            if starred:
+                profile.favourite_articlesets.add(aset.id)
+            else:
+                profile.favourite_articlesets.remove(aset.id)
+
+    
     indexed = request.GET.get("indexed")
     if indexed is not None:
         indexed = bool(int(indexed))
@@ -324,7 +368,7 @@ def articleset(request, project, aset):
         else:
             pass
     
-    return table_view(request, project, articles, form=form, object=aset, cls=cls,
+    return table_view(request, project, articles, form=form, object=aset, cls=cls, starred=starred,
                       template="navigator/project/articleset.html", articlecount=count(aset.articles.all()))
 
 
@@ -347,6 +391,14 @@ def selection(request, project):
 
     formData = request.GET.copy()
     formData['projects'] = project.id
+
+    all_articlesets = project.all_articlesets()
+
+    favourites = json.dumps(tuple(request.user.userprofile.favourite_articlesets.all().values_list("id", flat=True)))
+    indexed = json.dumps(tuple(all_articlesets.filter(indexed=True, index_dirty=False).values_list("id", flat=True)))
+    indexed_with_dirty = json.dumps(tuple(all_articlesets.filter(indexed=True).values_list("id", flat=True)))
+    codingjobs = json.dumps(tuple(CodingJob.objects.filter(articleset__in=all_articlesets).values_list("articleset_id", flat=True)))
+    all_sets = json.dumps(tuple(all_articlesets.values_list("id", flat=True)))
 
     ctx = locals()
     ctx.update({

@@ -47,9 +47,6 @@ class CheckParsing(Script):
         self.process(analysed_articles)
                 
     def process(self, articles):
-        import csv, sys
-        w = csv.writer(sys.stdout)
-        w.writerow(["aaid", "aid", "plugin_id", "ready", "message"])
         for aa in articles:
             parser = aa.plugin.get_class()()
             try:
@@ -61,7 +58,6 @@ class CheckParsing(Script):
             except Exception, e:
                 result = "Error"
                 msg = repr(e)
-            w.writerow([aa.id, aa.article_id, aa.plugin_id, result, msg])
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

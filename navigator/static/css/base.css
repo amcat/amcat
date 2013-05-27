@@ -39,9 +39,12 @@ body{
    font-size:12px;
 }
 
-h1, h2, h3{
+h1, h2, h3, .hbreak {
    border-bottom:1px dotted #e2e2e2;
 }
+
+
+
 
 h1.noline, h2.noline, h3.noline{
    border-bottom:none;
@@ -414,3 +417,4 @@ table.key_value tr :first-child{
 }
 
 td.subfield {padding-left:1em; font-style:italic}
+
