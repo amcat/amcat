@@ -243,7 +243,7 @@ class HTTPScraper(Scraper):
             return self.opener.getdoc(uri, encoding)
 
     def open(self, url,  encoding=None):
-        if isinstance(url, str):
+        if isinstance(url, (str, unicode)):
             log.info('Retrieving "{url}"'.format(**locals()))
             try:
                 return self.opener.opener.open(url, encoding)

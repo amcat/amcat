@@ -3,9 +3,13 @@ from amcat.models.medium import get_or_create_medium
 articles_2025 = Article.objects.filter(articlesetarticle__articleset = 2025)
 
 def run():
-    for article in articles_2025:
+    i = 0
+    while True:
+        article = articles_2025[i]
+        i += 1
         m = article.metastring
-        if "'_parent'" in m:
+        print(m)
+        if m and "'_parent'" in m:
             #article is comment
             article.medium = get_or_create_medium("Haaretz - Comments")
         else:
