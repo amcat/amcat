@@ -106,12 +106,6 @@ class DailyScript(Script):
     options_form = DailyForm
 
     def run(self, _input):
-        """c_logger = logging.getLogger("amcat.scraping.controller")
-        s_logger = logging.getLogger("amcat.scraping.scraper")
-        print(c_logger.getEffectiveLevel())
-        print(s_logger.getEffectiveLevel())
-        c_logger.info("test controller")
-        s_logger.info("test scraper")"""
         date = self.options['date']
 
         scrapers = list(get_scrapers(date = date, ignore_errors = True))
@@ -153,5 +147,11 @@ if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
     amcatlogging.info_module("amcat.scraping")
+    amcatlogging.info_module("amcat.scripts.maintenance.daily")
+    d = date.today()
+    amcatlogging.setFileHandler(
+        "daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals()),
+        directory = "/home/amcat/log/",
+        filesize = None)
     #amcatlogging.set_sentry_handler()
     cli.run_cli(DailyScript)
