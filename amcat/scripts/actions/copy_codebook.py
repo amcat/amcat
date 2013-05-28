@@ -50,11 +50,12 @@ def copy_codingschema(source_schema, target_project):
     # create fields
     codebooks = {} # old id : new codebook
     for field in source_schema.fields.all():
-        cb = None
-        if field.codebook_id and field.codebook_id not in codebooks:
+        cb = codebooks.get(field.codebook_id)
+        if field.codebook_id and not cb:
             if field.codebook_id == -5001:
                 continue
             cb = copy_codebook(field.codebook, target_project)
+            print "Copied codebook ", field.codebook_id, ":",field.codebook.name, " to ", cb.id
             codebooks[field.codebook_id] = cb
 
 
@@ -71,9 +72,9 @@ settings.DATABASES["source"]['NAME']='amcat'
 
 target_project = Project.objects.get(pk=int(sys.argv[1]))
 
-#source_schema = CodingSchema.objects.using('source').get(pk=int(sys.argv[2]))
-#copy_codingschema(source_schema, target_project)
+source_schema = CodingSchema.objects.using('source').get(pk=int(sys.argv[2]))
+copy_codingschema(source_schema, target_project)
 
-source = Codebook.objects.using('source').get(pk=int(sys.argv[2]))
-copy_codebook(source, target_project)
+#source = Codebook.objects.using('source').get(pk=int(sys.argv[2]))
+#copy_codebook(source, target_project)
 
