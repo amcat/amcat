@@ -30,7 +30,7 @@ import logging; log = logging.getLogger(__name__)
 
 from django.db import models
 
-from amcat.tools.model import AmcatModel
+from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.models.language import Language
 
 PARTYMEMBER_FUNCTIONID = 0
@@ -39,6 +39,7 @@ class Code(AmcatModel):
     """Model class for table codes"""
 
     id = models.AutoField(primary_key=True, db_column='code_id')
+    uuid = PostgresNativeUUIDField(db_index=True, unique=True)
     
     class Meta():
         db_table = 'codes'
