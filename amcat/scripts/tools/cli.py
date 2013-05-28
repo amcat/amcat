@@ -44,7 +44,7 @@ def get_script(depth=2):
 
 def run_cli(cls=None, handle_output=None, get_script_depth=2):
     """Handle command line interface invocation of this script"""
-    #amcatlogging.setup()
+    amcatlogging.setup()
 
     if cls is None: cls = get_script(get_script_depth)
 

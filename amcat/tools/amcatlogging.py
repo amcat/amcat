@@ -145,7 +145,7 @@ def setSyslogHandler():
 
 def setStreamHandler(*args, **kargs):
     """Add a StreamHandler to the root logger with module level filters"""
-    root = logging.getLogger()
+    root = logging.root
     h = logging.StreamHandler(*args, **kargs)
     h.setFormatter(AmcatFormatter(date=True))
     h.addFilter(ModuleLevelFilter())
@@ -163,8 +163,10 @@ def setFileHandler(filename, directory=None, filesize=50):
     root = logging.getLogger()
     if directory is None: directory = tempfile.gettempdir()
     fn = os.path.join(directory, filename)
-    
-    h = logging.handlers.RotatingFileHandler(filename=fn, maxBytes = 1024*1024*filesize, backupCount = 3)
+    if filesize:
+        h = logging.handlers.RotatingFileHandler(filename=fn, maxBytes = 1024*1024*filesize, backupCount = 3)
+    else:
+        h = logging.FileHandler(filename=fn)
     h.setFormatter(AmcatFormatter(date=True))
     h.addFilter(ModuleLevelFilter())
     root.addHandler(h)
