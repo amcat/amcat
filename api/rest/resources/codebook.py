@@ -34,6 +34,13 @@ from amcat.models.coding.codebook import CACHE_LABELS
 
 MAX_CODEBOOKS = 5
 
+def _walk(nodes):
+    """Convert all TreeItems to dictionaries"""
+    for node in nodes:
+        node = node._asdict()
+        node['children'] = tuple(_walk(node['children']))
+        yield node
+
 class CodebookHierarchyResource(AmCATResource):
     """
     This resource has no direct relationship to one model. Instead, it's
@@ -82,7 +89,7 @@ class CodebookHierarchyResource(AmCATResource):
             for lang in CACHE_LABELS:
                 codebook.cache_labels(lang)
 
-        return codebook.get_tree(include_labels=include_labels, **kwargs)
+        return tuple(_walk(codebook.get_tree(include_labels=include_labels, **kwargs)))
 
     def _get(self, request, *args, **kwargs):
         qs = self.filter_queryset(self.get_queryset())
