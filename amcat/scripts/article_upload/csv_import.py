@@ -105,3 +105,49 @@ class CSV(UploadScript):
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli(CSV)
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+
+
+def _run_test_csv(header, rows, **options):
+    p = amcattest.create_test_project()
+    from tempfile import NamedTemporaryFile
+    from django.core.files import File
+    with NamedTemporaryFile(suffix=".txt") as f:
+        w = csv.writer(f)
+        for row in [header] + list(rows):
+            w.writerow([field.encode('utf-8') for field in row])
+        f.flush()
+            
+        return CSV(dict(file=File(open(f.name)), encoding=0, project=p.id,
+                        medium_name='testmedium', **options)).run()
+
+class TestCSV(amcattest.PolicyTestCase):
+    
+    def test_csv(self):
+        header = ('kop', 'datum', 'tekst')
+        data = [('kop1', '2001-01-01', 'text1'), ('kop2', '10 maart 1980', 'text2')]
+        articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum")
+        self.assertEqual(len(articles), 2)
+        self.assertEqual(articles[0].headline, 'kop1')
+        self.assertEqual(articles[1].date.isoformat()[:10], '1980-03-10')
+
+    def test_date_format(self):
+        # Stump class to test future 'date format' option, if needed. Currently just checks that
+        # a variety of formats load correctly. 
+        header = "date", "text"
+
+        for datestr, dateformat, expected in [
+            ("2001-01-01", None, "2001-01-01"),
+            ("10/03/80", None, "1980-03-10"),
+            ("15/08/2008", None, "2008-08-15"),
+            ]:
+        
+            data = [(datestr, "text")]
+            a, = _run_test_csv(header, data, date="date", text="text")
+            self.assertEqual(a.date.isoformat()[:10], expected)
