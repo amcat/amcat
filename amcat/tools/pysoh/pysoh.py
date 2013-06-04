@@ -15,7 +15,7 @@ class SOHServer(object):
 
     def get_triples(self, format="text/turtle", parse=True):
         url = "{self.url}/data?default".format(**locals())
-        r = self.session.get(url, headers=dict(Accept=format), prefetch=True)
+        r = self.session.get(url, headers=dict(Accept=format))
         if r.status_code != 200:
             raise Exception(r.text)
         result = r.text
@@ -30,7 +30,7 @@ class SOHServer(object):
         if isinstance(rdf, rdflib.Graph):
             rdf = rdf.serialize(format="turtle")
             #print rdf
-        r = self.session.request(method, url, headers={'Content-Type' : format}, data=rdf, prefetch=True)
+        r = self.session.request(method, url, headers={'Content-Type' : format}, data=rdf)
         if r.status_code != 204:
             raise Exception(r.text)
 
