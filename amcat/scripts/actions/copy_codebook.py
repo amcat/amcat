@@ -65,16 +65,17 @@ def copy_codingschema(source_schema, target_project):
         fieldtype = 1 if field.codebook_id == -5001 else field.fieldtype_id
 
         CodingSchemaField.objects.create(codingschema=target_schema, codebook=cb, fieldtype_id=fieldtype, **attrs)
-        
-settings.DATABASES["source"] = dict(settings.DATABASES['default'].items())
-#settings.DATABASES["source"]['HOST']='amcatdb'
-settings.DATABASES["source"]['NAME']='amcat'
 
-target_project = Project.objects.get(pk=int(sys.argv[1]))
+if __name__ == '__main__':
+    settings.DATABASES["source"] = dict(settings.DATABASES['default'].items())
+    #settings.DATABASES["source"]['HOST']='amcatdb'
+    settings.DATABASES["source"]['NAME']='amcat'
 
-source_schema = CodingSchema.objects.using('source').get(pk=int(sys.argv[2]))
-copy_codingschema(source_schema, target_project)
-
-#source = Codebook.objects.using('source').get(pk=int(sys.argv[2]))
-#copy_codebook(source, target_project)
+    target_project = Project.objects.get(pk=int(sys.argv[1]))
+    
+    source_schema = CodingSchema.objects.using('source').get(pk=int(sys.argv[2]))
+    copy_codingschema(source_schema, target_project)
+    
+    #source = Codebook.objects.using('source').get(pk=int(sys.argv[2]))
+    #copy_codebook(source, target_project)
 
