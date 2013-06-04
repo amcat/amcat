@@ -927,7 +927,7 @@ def save_labels(request, codebook, project):
         label.label = changed_labels_map[label.id]["label"]
         label.save()
 
-    content = json.dumps(dict(id=code.id))
+    content = json.dumps(dict(code_id=code.id))
     return HttpResponse(content=content, status=201, content_type="application/json")
 
 
