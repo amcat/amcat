@@ -34,7 +34,7 @@ from api.rest.resources.article import ArticleMetaResource
 from api.rest.resources.articleset import ArticleSetResource
 from api.rest.resources.codingjob import CodingJobResource
 from api.rest.resources.analysed_article import AnalysedArticleResource
-
+from api.rest.resources.token import TokenResource, AnalysedArticleListResource
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.reverse import reverse
@@ -48,7 +48,8 @@ MODELS = ['Article',
           'CodebookCode', 'CodebookBase', 'Label', 'CodingSchemaFieldType',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
           'Plugin', 'Scraper', 'PluginType',
-          "RuleSet"
+          "RuleSet",
+          "Word", "Lemma"
           ]
 
 # Automatically generate resources for these models
