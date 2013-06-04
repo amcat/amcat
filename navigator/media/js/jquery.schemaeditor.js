@@ -373,8 +373,11 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
                 th = $("th[name=" + field_name + "]", self.table).get(0);
 
                 if (th === undefined){
-                    // No such column in this table
-                    return;
+		    if (field_name == '__all__')
+			th = tr;
+		    else 
+			// No such column in this table
+			return;
                 }
 
                 td = tr.children().get(th.cellIndex);
