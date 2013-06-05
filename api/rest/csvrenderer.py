@@ -39,9 +39,9 @@ class CSVRenderer(BaseRenderer):
         """
         Renders serialized *data* into CSV. For a dictionary:
         """
-        if data is None:
+        if data is None or 'results' not in data:
             return ''
-
+        
         data = data['results']
         
         table = self.tablize(data)
