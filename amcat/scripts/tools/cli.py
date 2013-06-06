@@ -73,9 +73,6 @@ def run_cli(cls=None, handle_output=None, get_script_depth=2):
         input = input.decode(encoding)
         
     out = instance.run(input)
-
-    if handle_output:
-        out = handleOutput(out, instance.output_type)
     return out
 
 def handleOutput(out, output_type):
