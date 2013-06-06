@@ -318,7 +318,7 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
 
             // Determine url by adding the correct filtering paramters
             url = this.metadata.models[fieldname];
-            url += "?id=" + needed_labels.join("&id=");
+            url += "?pk=" + needed_labels.join("&pk=");
             url += "&page_size=" + needed_labels.length;
 
             $.ajax({
