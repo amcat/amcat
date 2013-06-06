@@ -62,6 +62,8 @@ urlpatterns = patterns(
         'navigator.views.article.analysedarticle', name='analysedarticle'),
     url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)$',
         'navigator.views.article.analysedsentence', name='analysedsentence'),
+    url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)/ruleset/(?P<rulesetid>[0-9]+)$',
+        'navigator.views.article.analysedsentence', name='analysedsentence-ruleset'),
 
     
     url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),

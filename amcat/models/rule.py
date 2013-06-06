@@ -52,7 +52,8 @@ class Rule(AmcatModel):
 
     ruleset = models.ForeignKey(RuleSet, related_name="rules")
     order = models.IntegerField()
-    
+
+    display = models.BooleanField(default=False)
     where = models.TextField()
     insert = models.TextField(null=True, blank=True)
     delete = models.TextField(null=True, blank=True)
@@ -61,3 +62,4 @@ class Rule(AmcatModel):
     class Meta():
         db_table = 'rules'
         app_label = 'amcat'
+        ordering = ['ruleset', 'order']

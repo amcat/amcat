@@ -83,9 +83,13 @@ class SyntaxTree(object):
                 parent = nodes.setdefault(o, Node())
                 yield Triple(child, pred, parent)
     
-    def visualise(self):
-        return visualise_triples(list(self.get_triples()))
-        
+    def visualise(self, **kargs):
+        return visualise_triples(list(self.get_triples()), **kargs)
+
+    def apply_rule(self, rule):
+        """Apply the given amcat.models.rule.Rule"""
+        self.soh.update(rule.where, rule.insert, rule.delete)
+    
 def _id(obj):
     return obj if isinstance(obj, int) else obj.id
 def _token_uri(token):
@@ -115,7 +119,7 @@ def _tokens_to_rdf(tokens):
             yield _token_uri(triple.child), pred, _token_uri(triple.parent)
 
 
-def visualise_triples(triples, ignore_properties=VIS_IGNORE_PROPERTIES):
+def visualise_triples(triples,  triple_args_function=None, ignore_properties=VIS_IGNORE_PROPERTIES):
     """
     Visualise a triples representation of Triples such as retrieved from
     TreeTransformer.get_triples
@@ -134,7 +138,7 @@ def visualise_triples(triples, ignore_properties=VIS_IGNORE_PROPERTIES):
         nodes[n] = node
     # create edges
     for triple in triples:
-        kargs = {}#triple_args_function(triple) if  triple_args_function else {}
+        kargs = triple_args_function(triple) if  triple_args_function else {}
         if 'label' not in kargs: kargs['label'] = triple.predicate
         g.addEdge(nodes[triple.subject], nodes[triple.object], **kargs)
     # some theme options

@@ -32,8 +32,10 @@ from amcat.scripts import article_upload as article_upload_scripts
 import logging; log = logging.getLogger(__name__)
 
 from amcat.nlp import syntaxtree
-from amcat.models import AnalysisSentence
+from amcat.models import AnalysisSentence, RuleSet
 from amcat.tools.pysoh.pysoh import SOHServer
+
+from api.rest.datatable import Datatable
 
 def get_paragraphs(sentences):
     parnr = None
@@ -60,21 +62,41 @@ def analysedarticle(request, project, analysed_article):
     return render(request, "navigator/article/analysedarticle.html", locals())
 
 
-
 @check(AnalysisSentence, args='id')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
-def analysedsentence(request, project, sentence):
+def analysedsentence(request, project, sentence, rulesetid=None):
 
     tokens = (sentence.tokens.all().select_related("word", "word__word",  "word__lemma")
               .prefetch_related("triples", "triples__child", "triples__parent", "triples__relation"))
 
     soh = SOHServer(url="http://localhost:3030/x")
     tree = syntaxtree.SyntaxTree(soh, tokens)
-    g = tree.visualise()
-    dot = g.getDot()
-    picture = g.getHTMLObject()
+    parsetree = tree.visualise().getHTMLObject()
     menu = PROJECT_MENU
     context = project
+
+    rulesets = Datatable(RuleSet).rowlink_reverse("analysedsentence-ruleset", args=[project.id, sentence.id, "{id}"])#, rowlink="./upload-articles/{id}")
+
+    if rulesetid:
+        ruleset = RuleSet.objects.get(pk=rulesetid)
+        trees = []
+        ruleset_error = None
+
+        grey_rel = lambda triple : ({'color':'grey'} if 'rel_' in triple.predicate else {})
+        
+        for rule in ruleset.rules.all():
+            try:
+                tree.apply_rule(rule)
+                if rule.display:
+                    trees.append((rule, tree.visualise(triple_args_function=grey_rel).getHTMLObject()))
+            except Exception, e:
+                ruleset_error = "Exception processing rule {rule.order}: {rule.label}\n\n{e}".format(**locals())
+                break
+
+        if not ruleset_error:
+            finaltree = tree.visualise(triple_args_function=grey_rel).getHTMLObject()
+            
+
     return render(request, "navigator/article/analysedsentence.html", locals())
 
 @check(Article, args='id')

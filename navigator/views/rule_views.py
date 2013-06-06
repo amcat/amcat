@@ -33,7 +33,7 @@ from navigator.views.datatableview import DatatableCreateView
 class RuleForm(ModelForm):
     class Meta:
         model = Rule
-        fields = ["id", "ruleset", "order", "label", "where", "insert", "delete", "remarks"]
+        fields = ["id", "ruleset", "order", "label", "display", "where", "insert", "delete", "remarks"]
         widgets = {field : Textarea(attrs={'cols': 5, 'rows': 4})
                    for field in ["insert","delete","where","remarks"]}
         widgets["ruleset"] = HiddenInput
@@ -41,6 +41,14 @@ class RuleForm(ModelForm):
 class RuleSetTableView(DatatableCreateView):
     model = RuleSet
     rowlink_urlname = "ruleset"
+
+def _normalize_quotes(x):
+    for quote in u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb\xb0':
+        x = x.replace(quote, "'")
+    for quote in u'\x93\x94\x84\u201c\u201d\u201e\u201f\xa8':
+        x= x.replace(quote, '"')
+    return x
+    
     
 class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
     model = RuleSet
@@ -65,6 +73,8 @@ class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
                 if "ruleset" not in cleaned_data and len(self._errors.get("ruleset", [])) == 1 and self._errors["ruleset"][0] == u"This field is required.":
                     cleaned_data["ruleset"] = RuleSet.objects.get(pk=ruleset_id)
                     del self._errors["ruleset"]
+                for field in ("insert", "delete", "where"):
+                    self.cleaned_data[field] = _normalize_quotes(self.cleaned_data[field])
                 return cleaned_data
         
         formset = formset_factory(RuleFormWithRuleset, formset=BaseModelFormSet, can_delete=True)

@@ -1,16 +1,49 @@
 {% extends "navigator/project/base.html" %}
 
+{% block css %}
+<style>
+th {text-align: left; white-space:nowrap; padding-right: 1em}
+h1 {white-space: nowrap}
+</style>
+{% endblock %}
+
 {% block content %}
 
 <div style="float:left; width:65%">
- <h1>Sentence {{sentence.sentence.id}} ({{ sentence.sentence }}) parsed by {{sentence.analysed_article.plugin}}</h1>
+ <h1>Parsed Sentence {{sentence.id}}
+     {% if ruleset %}processed by ruleset {{ruleset.id}}:{{ruleset}} {% endif %}
+</h1>
 
-{{picture|safe}}
+<h2>Details</h2>
 
-<h2>DOT code</h2>
+<table>
+<tr><th>Analysed Sentence</th><td><a href="{% url 'analysedsentence' context.id sentence.id %}">{{sentence.id}} : {{sentence.sentence}}</a></td></tr>
+<tr><th>Analysed Article</th><td><a href="{% url 'analysedarticle' context.id sentence.analysed_article.id %}">{{sentence.analysed_article.id}} : {{sentence.analysed_article.article}}</a></td></tr>
+<tr><th>Parser</th><td>{{sentence.analysed_article.plugin.id}} : {{sentence.analysed_article.plugin}}</td></tr>
+{% if ruleset %}
+<tr><th>Applied Rule Set</th><td><a href="{% url 'ruleset' ruleset.id %}">{{ruleset.id}} : {{ruleset}}</a></td></tr>
+{% endif %}
+</table>
 
-<pre>
-{{dot}}
-</pre>
+{% if ruleset_error %}
+  <div class="error">
+    <h2>Error applying transformation rules:</h2> 
+    <pre>{{ ruleset_error }}</pre>
+  </div>
+{% endif %}
 
+<h2>Parse Tree</h3>
+{{parsetree|safe}}
+
+{% if ruleset %}
+{% for rule, tree in trees %}
+<h2>After applying rule {{rule.id}} : {{rule.label}}</h2>
+{{tree|safe}}
+{% endfor %}
+<h2>Result of graph transformations:</h2>
+{{finaltree|safe}}
+{% else %}
+<h2>Apply grammatical rules:</h2>
+{{rulesets}}
+{% endif %}
 {% endblock %}
