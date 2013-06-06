@@ -56,7 +56,7 @@ class Rule(AmcatModel):
     display = models.BooleanField(default=False)
     where = models.TextField()
     insert = models.TextField(null=True, blank=True)
-    delete = models.TextField(null=True, blank=True)
+    remove = models.TextField(null=True, blank=True)
     remarks = models.TextField(null=True, blank=True)
 
     class Meta():

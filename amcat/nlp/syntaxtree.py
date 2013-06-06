@@ -88,7 +88,7 @@ class SyntaxTree(object):
 
     def apply_rule(self, rule):
         """Apply the given amcat.models.rule.Rule"""
-        self.soh.update(rule.where, rule.insert, rule.delete)
+        self.soh.update(rule.where, rule.insert, rule.remove)
     
 def _id(obj):
     return obj if isinstance(obj, int) else obj.id

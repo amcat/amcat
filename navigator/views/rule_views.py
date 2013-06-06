@@ -33,9 +33,9 @@ from navigator.views.datatableview import DatatableCreateView
 class RuleForm(ModelForm):
     class Meta:
         model = Rule
-        fields = ["id", "ruleset", "order", "label", "display", "where", "insert", "delete", "remarks"]
+        fields = ["id", "ruleset", "order", "label", "display", "where", "insert", "remove", "remarks"]
         widgets = {field : Textarea(attrs={'cols': 5, 'rows': 4})
-                   for field in ["insert","delete","where","remarks"]}
+                   for field in ["insert","remove","where","remarks"]}
         widgets["ruleset"] = HiddenInput
     
 class RuleSetTableView(DatatableCreateView):
@@ -73,7 +73,7 @@ class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
                 if "ruleset" not in cleaned_data and len(self._errors.get("ruleset", [])) == 1 and self._errors["ruleset"][0] == u"This field is required.":
                     cleaned_data["ruleset"] = RuleSet.objects.get(pk=ruleset_id)
                     del self._errors["ruleset"]
-                for field in ("insert", "delete", "where"):
+                for field in ("insert", "remove", "where"):
                     self.cleaned_data[field] = _normalize_quotes(self.cleaned_data[field])
                 return cleaned_data
         
