@@ -37,13 +37,13 @@ class SOHServer(object):
     def do_update(self, sparql):
         url = "{self.url}/update".format(**locals())
         #log.debug("Updating {url}:\n{sparql}".format(**locals()))
-        r = self.session.post(url, data=dict(update=sparql), prefetch=True)
+        r = self.session.post(url, data=dict(update=sparql))
         if r.status_code != 200:
             raise Exception(r.text)
 
     def do_query(self, sparql, format="csv", parse=True):
         url = "{self.url}/query?default".format(**locals())
-        r = self.session.post(url, data=dict(query=sparql, output=format), prefetch=True)
+        r = self.session.post(url, data=dict(query=sparql, output=format))
         if r.status_code != 200:
             raise Exception(r.text)
         if parse:
