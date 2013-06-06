@@ -21,6 +21,7 @@ import copy
 from django.db.models.query import QuerySet
 from django.db.models import Model
 from django.conf import settings
+from django.core.urlresolvers import reverse
 
 from django.template import Context
 from django.template.loader import get_template
@@ -30,6 +31,8 @@ import logging; log=logging.getLogger(__name__)
 import json, types, collections, re
 
 from amcat.tools.caching import cached
+import inspect
+from api.rest.resources import get_resource_for_model
 
 FIELDS_EMPTY = (None, [])
 
@@ -60,7 +63,10 @@ class Datatable(object):
         @param hidden: hidden fields
         @type hidden: set
         """
+        if inspect.isclass(resource) and issubclass(resource, Model):
+            resource = get_resource_for_model(resource)
         self.resource = resource() if callable(resource) else resource
+            
         self.options = options or dict()
         self.rowlink = rowlink or getattr(self.resource, "get_rowlink", lambda  : None)()
         self.ordering = ordering
@@ -209,6 +215,26 @@ class Datatable(object):
         """
         return self.copy(hidden=self.hidden | set(columns))
 
+    def rowlink_reverse(self, viewname, urlconf=None, args=None, kwargs=None, current_app=None):
+        """
+        Rowlink this table to the 'reverse' of the view.
+        Use '{id}' for the arg of kwarg you want to be tied to the row id.
+        """
+        # do funky replacing with a number because the urls generally want numers
+        # any better idea would be, ehm, a better idea
+        # but at least this concentrates the badness in one place instead of hard
+        # coding absolute urls all over the view code
+        ID_REPLACE_NUMBER = 9999999999
+        replace = lambda arg: (ID_REPLACE_NUMBER if arg=='{id}' else arg)
+        if args: args = [replace(arg) for arg in args]
+        if kwargs: kwargs = {k : replace(v) for k,v in kwargs.iteritems()}
+
+        url = reverse(viewname, urlconf=urlconf, args=args, kwargs=kwargs, current_app=current_app)
+        url = url.replace(str(ID_REPLACE_NUMBER), '{id}')
+        
+        return self.copy(rowlink = url)
+
+        
     def order_by(self, *fields):
         """
         Order this table by given columns. This will overwrite previous
