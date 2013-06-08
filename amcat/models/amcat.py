@@ -35,7 +35,7 @@ SINGLETON_ID = 1
 
 # Increment to current db version to trigger db upgrades that syncdb can't handle
 # See amcat.tools.db_upgrader
-CURRENT_DB_VERSION = 5
+CURRENT_DB_VERSION = 6
 
 
 class AmCAT(AmcatModel):

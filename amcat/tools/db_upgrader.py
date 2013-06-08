@@ -24,26 +24,34 @@ log = logging.getLogger(__name__)
 import os.path
 
 from amcat.models import AmCAT, CURRENT_DB_VERSION
-from django.db import transaction
+from django.db import transaction, connection, connections
+
+def execute_sql_file(filename):
+    """@param filename: filename relative to tools/sql folder"""
+    import amcat.tools
+    fn = os.path.join(os.path.dirname(amcat.tools.__file__), "sql", filename)
+    if not os.path.exists(fn):
+        raise ValueError("File {fn} does not exist.".format(**locals()))
+    sql = open(fn).read()
+    log.info("Executing {n} bytes from {fn}".format(n=len(sql), **locals()))
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    cursor.close()
 
 def _upgrade_from(version):
     function = "upgrade_from_{version}".format(**locals())
     if function in globals():
         globals()[function]()
     else:
-        import amcat.tools
-        fn = os.path.join(os.path.dirname(amcat.tools.__file__), "sql", "upgrade_{version}.sql".format(**locals()))
-        if not os.path.exists(fn):
-            raise ValueError("Can't upgrade from version {version}! Neither function {function} nor file {fn} exist.".format(**locals()))
-        sql = open(fn).read()
-        log.debug("Will execute {n} bytes of SQL to perform upgrade".format(n=len(sql)))
-        from django.db import connection
-        cursor = connection.cursor()
-        cursor.execute(sql)
-        cursor.close()
+        execute_sql_file("upgrade_{version}.sql".format(**locals()))
 
 @transaction.commit_on_success
 def upgrade_database():
+
+    # create uuid extension if needed
+    if connections.databases['default']["ENGINE"] == 'django.db.backends.postgresql_psycopg2':
+        execute_sql_file("uuid_extension.sql")
+    
     version = AmCAT.get_instance().db_version
     if version == CURRENT_DB_VERSION:
         return # early exit to avoid spurious log message
