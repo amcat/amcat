@@ -32,5 +32,12 @@
 
  {{ table }}
 
+{% if no_favourites %}
+<div class="alert alert-success">
+No favourite sets yet? Use the star icon to add some sets to this
+list!<br/> (now showing all sets)
+</div>
+{% endif %}
+
 </div>
 {% endblock %}

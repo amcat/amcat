@@ -256,7 +256,8 @@ def articlesets(request, project, what):
         if ids: 
             selected_filter["pk"] = ids
         else:
-            selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
+            no_favourites = True
+            # keep the table with all ids - better some output than none
         selected_filter["project__id"] = project.id
             
     elif what == "codingjob":
