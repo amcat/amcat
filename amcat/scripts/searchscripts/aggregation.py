@@ -111,7 +111,7 @@ class AggregationScript(script.Script):
                 vals.append('y')
 
             # the following line will perform a group by database query
-            data = queryset.extra(select=select_data).values(*vals).annotate(count=Count('id'))
+            data = queryset.extra(select=select_data).values(*vals).annotate(count=Count('id', distinct=True))
             xDict = {}
             if xAxis == 'medium':
                 xDict = Medium.objects.in_bulk(set(row['x'] for row in data)) # retrieve the Medium objects
@@ -150,7 +150,6 @@ def fill_months(van, tot, interval=1, max_month=12, output="{y}-{m:02}"):
 
         _max_month = max_month(y) if callable(max_month) else max_month
 
-        print y, _max_month
         if m > _max_month:
             m  -= _max_month
             y += 1
