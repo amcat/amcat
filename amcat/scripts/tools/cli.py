@@ -133,7 +133,7 @@ def add_argument_from_field(parser, name, field):
     else:
         args["type"] = argument_type_from_field(field)
 
-    parser.add_argument(*argname, help = help, default=field.initial, metavar=name, **args)
+    parser.add_argument(*argname, help = help, default=field.initial, metavar=name, dest=name, **args)
 
 def django_file(fn):
     return File(open(fn))
