@@ -30,8 +30,9 @@ from django import forms
 from django.db.models import Sum, Count
 from amcat.models.medium import Medium
 from amcat.tools import table
+from django.db import connections
 
-
+import datetime
 
 class AggregationForm(amcat.scripts.forms.SelectionForm):
     """the form used by the Aggregation script"""
@@ -77,8 +78,18 @@ class AggregationScript(script.Script):
             if xAxis == 'date':
                 dateInterval = self.options['dateInterval']
                 if not dateInterval: raise Exception('Missing date interval')
-                dateStrDict = {'day':'YYYY-MM-DD', 'week':'YYYY-WW', 'month':'YYYY-MM', 'quarter':'YYYY-Q', 'year':'YYYY'}
-                xSql = "to_char(date, '%s')" % dateStrDict[dateInterval] # notice: this might be Postgres specific SQL..
+                engine = connections.databases['default']["ENGINE"]
+                if engine == 'django.db.backends.postgresql_psycopg2':
+                    dateStrDict = {'day':'YYYY-MM-DD', 'week':'YYYY-WW', 'month':'YYYY-MM', 'quarter':'YYYY-Q', 'year':'YYYY'}
+                    xSql = "to_char(date, '%s')" % dateStrDict[dateInterval]
+                elif engine == 'django.db.backends.sqlite3':
+                    xSql = {'day':"strftime('%Y-%m-%d', date)",
+                            'month':"strftime('%Y-%m', date)",
+                            'year':"strftime('%Y', date)",
+                            'quarter':"strftime('%Y', date) || '-' ||  cast((cast(strftime('%m', date) as integer) + 2) / 3 as string)",
+                            }[dateInterval]
+                else:
+                    raise Exception("Aggregation not supported for engine {engine}".format(**locals()))
             elif xAxis == 'medium':
                 xSql = 'medium_id'
             else:
@@ -110,17 +121,117 @@ class AggregationScript(script.Script):
             
             table3 = table.table3.DictTable(0) # the start aggregation count is 0
             table3.rowNamesRequired = True # make sure row names are printed
+
             for row in data:
                 x = row['x']
                 y = row.get('y', 'total')
                 count = row['count']
                 table3.addValue(xDict.get(x, x), yDict.get(y, y), count)
+
+            print table3.rows
+            table3.rows = list(fill_out(table3.rows, dateInterval))
+            print table3.rows
+                
             return table3
         else:
             return solrlib.basicAggregate(self.options)
             
+
+def fill_months(van, tot, interval=1, max_month=12, output="{y}-{m:02}"):
+    y,m = map(int, van.split("-"))
+    toty, totm = map(int, tot.split("-"))
+    while True:
+        date = output.format(**locals())
+        yield date
+
+        if y > toty or (y == toty and m >= totm):
+            break
         
+        m += interval
+
+        _max_month = max_month(y) if callable(max_month) else max_month
+
+        print y, _max_month
+        if m > _max_month:
+            m  -= _max_month
+            y += 1
+
+def fill_days(van, tot):
+    van = datetime.datetime.strptime(van, "%Y-%m-%d")
+    tot = datetime.datetime.strptime(tot, "%Y-%m-%d")
+    while True:
+        yield van.strftime("%Y-%m-%d")
+        van += datetime.timedelta(days=1)
+        if van >= tot:
+            break
+            
+def _get_n_weeks(year):
+    for i in range(31, 24, -1):
+        d = datetime.datetime(year, 12, i)
+        wk = d.isocalendar()[1]
+        if wk != 1:
+            return wk
+            
+
+def fill_out(rows, interval):
+    rows = sorted(rows)
+    if interval == 'month':
+        return fill_months(rows[0], rows[-1])
+    elif interval == 'quarter':
+        return fill_months(rows[0], rows[-1], max_month=4, output="{y}-{m}")
+    elif interval == 'year':
+        return map(str, range(int(rows[0]), int(rows[-1]) + 1))
+    elif interval == 'week':
+        return fill_months(rows[0], rows[-1], max_month=_get_n_weeks)
+    elif interval == 'day':
+        return fill_days(rows[0], rows[-1])
+    else:
+        raise Exception("Cannot fill %s" % interval)
         
 if __name__ == '__main__':
-    from amcat.scripts.tools import cli
-    cli.run_cli(AggregationScript)
+    for x in fill_months("2001-01", "2002-02"):
+        print x
+    
+    #from amcat.scripts.tools import cli
+    #cli.run_cli(AggregationScript)
+
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestAggregation(amcattest.PolicyTestCase):
+    def test_n_weeks(self):
+        self.assertEqual(_get_n_weeks(2013), 52)
+        self.assertEqual(_get_n_weeks(2012), 52)
+        self.assertEqual(_get_n_weeks(2011), 52)
+        self.assertEqual(_get_n_weeks(2010), 52)
+        self.assertEqual(_get_n_weeks(2009), 53)
+        self.assertEqual(_get_n_weeks(2008), 52)        
+        
+    def test_fill_days(self):
+        self.assertEqual(list(fill_days('2003-12-27', '2004-01-03'))
+                         ['2003-12-27', '2003-12-28', '2003-12-29', '2003-12-30', '2003-12-31', '2004-01-01', '2004-01-02'])
+    
+    def test_dates(self):
+
+        base = dict(xAxis='date', yAxis='medium', counterType='numberOfArticles', datetype='all')
+        
+        a1 = amcattest.create_test_article(date='2001-01-01')
+        a2 = amcattest.create_test_article(date='2001-03-02', medium=a1.medium)
+        a3 = amcattest.create_test_article(date='2001-08-12', medium=a1.medium)
+        aset = amcattest.create_test_set(articles=[a1,a2,a3])
+
+        
+        
+        t = AggregationScript.run_script(dict(articlesets=[aset.id], projects=[aset.project_id],dateInterval='month', **base))
+        
+        self.assertEqual(set(t.to_list(row_names=True, tuple_name=None)), {('2001-%02i' % i, int(i in (1,3,8))) for i in range(1,9)})
+        
+
+        t = AggregationScript.run_script(dict(articlesets=[aset.id], projects=[aset.project_id],dateInterval='quarter', **base))
+        self.assertEqual(set(t.to_list(row_names=True, tuple_name=None)), {('2001-1', 2), ('2001-2', 0), ('2001-3', 1)})
+        
