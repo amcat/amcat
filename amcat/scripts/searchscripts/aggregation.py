@@ -128,9 +128,8 @@ class AggregationScript(script.Script):
                 count = row['count']
                 table3.addValue(xDict.get(x, x), yDict.get(y, y), count)
 
-            print table3.rows
-            table3.rows = list(fill_out(table3.rows, dateInterval))
-            print table3.rows
+            if xAxis == 'date':
+                table3.rows = list(fill_out(table3.rows, dateInterval))
                 
             return table3
         else:
