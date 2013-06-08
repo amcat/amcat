@@ -34,6 +34,7 @@ class ImportSet(Script):
 
     def _run(self, articleset, project):
         project.articlesets.add(articleset)
+        project.favourite_articlesets.add(articleset)
 
         
 if __name__ == '__main__':

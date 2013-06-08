@@ -38,13 +38,16 @@ class ArticleSetSerializer(AmCATModelSerializer):
     @cached
     def favourite_articlesets(self):
         """
-        List of id's of all favourited projects for the requested project
-        if no project is requested, raises NoProjectRequestedError
+        List of id's of all favourited projects for the project specified
+        by the project_for_favourites GET argument
+        (I'm all for a more elegant solution!)
         """
+
         try:
-            project = self.context['request'].GET['project__id']
+            project = self.context['request'].GET['project_for_favourites']
         except KeyError:
             raise _NoProjectRequestedError()
+
         return set(ArticleSet.objects.filter(favourite_of_projects=project).values_list("id", flat=True))
 
     def is_favourite(self, project):
