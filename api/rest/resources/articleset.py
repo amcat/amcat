@@ -25,6 +25,8 @@ from api.rest.serializer import AmCATModelSerializer
 
 from rest_framework import serializers
 
+class _NoProjectRequestedError(ValueError): pass
+
 class ArticleSetSerializer(AmCATModelSerializer):
     index_status = serializers.SerializerMethodField('get_status')
     favourite = serializers.SerializerMethodField("is_favourite")
@@ -35,12 +37,21 @@ class ArticleSetSerializer(AmCATModelSerializer):
     @property
     @cached
     def favourite_articlesets(self):
-        """List of id's of all favourited projects by the currently logged in user"""
-        return set(self.context['request'].user.userprofile
-                    .favourite_articlesets.values_list("id", flat=True))
+        """
+        List of id's of all favourited projects for the requested project
+        if no project is requested, raises NoProjectRequestedError
+        """
+        try:
+            project = self.context['request'].GET['project__id']
+        except KeyError:
+            raise _NoProjectRequestedError()
+        return set(ArticleSet.objects.filter(favourite_of_projects=project).values_list("id", flat=True))
 
     def is_favourite(self, project):
-        return project.id in self.favourite_articlesets
+        try:
+            return project.id in self.favourite_articlesets
+        except _NoProjectRequestedError:
+            return None
     
     class Meta:
         model = ArticleSet

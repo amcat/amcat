@@ -70,6 +70,7 @@ class Project(AmcatModel):
     codingschemas = models.ManyToManyField("amcat.CodingSchema", related_name="projects_set")
     codebooks = models.ManyToManyField("amcat.Codebook", related_name="projects_set")
     articlesets = models.ManyToManyField("amcat.ArticleSet", related_name="projects_set")
+    favourite_articlesets = models.ManyToManyField("amcat.articleset", related_name="favourite_of_projects")
 
     def get_codingschemas(self):
         """
@@ -136,7 +137,7 @@ class Project(AmcatModel):
 
         super(Project, self).save(*args, **kargs)
 
-        
+    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

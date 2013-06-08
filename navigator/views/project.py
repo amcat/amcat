@@ -249,13 +249,15 @@ def articlesets(request, project, what):
     if what == "favourite":
         # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
         # (or use api request.user to add only current user's favourite status). But good enough for now...
-        
-        ids = request.user.get_profile().favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id))
+
+        # they need to be favourte AND still contained in the project
+        ids = project.favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id))
         ids = [id for (id, ) in ids.values_list("id")]
         if ids: 
             selected_filter["pk"] = ids
         else:
             selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
+        selected_filter["project__id"] = project.id
             
     elif what == "codingjob":
         # more ugliness. Filtering the api on codingjob_set__id__isnull=False gives error from filter set
@@ -340,16 +342,15 @@ def articleset(request, project, aset):
 
 
 
-    profile = request.user.get_profile()
-    starred = profile.favourite_articlesets.filter(pk=aset.id).exists()
+    starred = project.favourite_articlesets.filter(pk=aset.id).exists()
     star = request.GET.get("star")
     if (star is not None):
         if bool(int(star)) != starred:
             starred = not starred
             if starred:
-                profile.favourite_articlesets.add(aset.id)
+                project.favourite_articlesets.add(aset.id)
             else:
-                profile.favourite_articlesets.remove(aset.id)
+                project.favourite_articlesets.remove(aset.id)
 
     
     indexed = request.GET.get("indexed")
