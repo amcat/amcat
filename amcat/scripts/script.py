@@ -148,4 +148,4 @@ class Script(object):
 
     @classmethod
     def run_script(cls, *args, **kargs):
-        cls(*args, **kargs).run()
+        return cls(*args, **kargs).run()
