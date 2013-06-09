@@ -739,6 +739,17 @@ def add_codebook(request, project):
     c = Codebook.objects.create(project=project, name='New codebook')
     return redirect(reverse('project-codebook', args=[project.id, c.id]))
 
+@check(Codebook, args='id', action='delete')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def codebook_delete(request, project, codebook):
+    codebook.project = Project.objects.get(id=LITTER_PROJECT_ID)
+    codebook.save()
+
+    request.session['deleted_codebook'] = True
+    return redirect(reverse("project-codebooks", args=[project.id]))
+
+
+
 @check(Project)
 def codebooks(request, project):
     """
@@ -751,6 +762,8 @@ def codebooks(request, project):
     can_import = project.can_update(request.user)
     can_create = Codebook.can_create(request.user) and project.can_update(request.user)
 
+    deleted = session_pop(request.session, "deleted_codebook")
+    
     context = project
     menu = PROJECT_MENU
     selected = "codebooks"

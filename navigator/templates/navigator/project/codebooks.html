@@ -16,6 +16,9 @@
 {% endif %}
  </p>
 
+ {% if deleted %}
+    <div class="alert alert-success">Successfully deleted a codebook. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+ {% endif %}
 
  <h1>Imported codebooks</h1>
  {{ linked_codebooks|safe }}

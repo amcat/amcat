@@ -64,11 +64,25 @@ Array.prototype.remove=function(s){
                 $("<i>").addClass("icon icon-edit")                
             ).append($(document.createTextNode(" Edit codebook name")));
 
-            self.btn_manage_bases = $("<div>").addClass("btn").append(
+	    /* self.btn_manage_bases = $("<div>").addClass("btn").append(
                 $("<i>").addClass("icon icon-list")                
             ).append(
                 $(document.createTextNode(" Manage bases"))               
-            );
+            );*/
+
+
+
+
+            self.btn_delete = $("<a>").addClass("btn btn-danger confirm")
+		.attr("data-confirm", "Are you sure you want to delete this codebook?")
+		.attr("href", document.URL + "/delete")
+		.append(
+		    $("<i>").addClass("icon-white icon-trash")                
+		).append(
+                    $(document.createTextNode(" Delete"))               
+		);
+
+	    self.btn_delete.click(confirm_dialog);
 
             /* PRIVATE METHODS */
             self._escape = function(str){
@@ -161,7 +175,7 @@ Array.prototype.remove=function(s){
 
                 // Add main action buttons
                 var buttons = $("<p>").addClass("btn-group")
-                buttons.append(self.btn_save_changes).append(self.btn_edit_name).append(self.btn_manage_bases);
+                buttons.append(self.btn_save_changes).append(self.btn_edit_name).append(self.btn_delete);
 
                 $(self).contents().remove();
                 $(self).append(self.searchbox);
