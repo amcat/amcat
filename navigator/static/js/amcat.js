@@ -55,11 +55,9 @@ $(function(){
    
 });
 
-/* For <a> with a class 'confirm', display confirmation dialog */
-$(function(){
-    $("a.confirm").click(function(event){
+function confirm_dialog(event) {
         event.preventDefault();
-        
+       
         var dialog = $('' +
             '<div class="modal hide fade">' +
                 '<div class="modal-header">' +
@@ -78,8 +76,11 @@ $(function(){
         $(".cancel-button", dialog).click((function(){
             this.modal("hide");
         }).bind(dialog))
-    });
-});
+}
+
+
+/* For <a> with a class 'confirm', display confirmation dialog */
+$(function(){$("a.confirm").click(confirm_dialog);});
 
 
 amcat.multiselectCheckIfMatches = function(event, matches){
