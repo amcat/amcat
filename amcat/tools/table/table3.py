@@ -112,7 +112,7 @@ class Table(object):
         """Output the table; see tableoutput.table2unicode for options"""
         return tableoutput.table2unicode(self, **kargs)
 
-    def to_list(self, tuple_name="row"):
+    def to_list(self, tuple_name="row", row_names=False):
         """Return the data in the table as a sequence of named tuples
 
         @param tuple_name: the name for the named tuples, or None to get simple tuples
@@ -125,7 +125,9 @@ class Table(object):
         else:
             factory = tuple
         for row in self.getRows():
-            yield factory([self.getValue(row, col) for col in cols])
+            vals = [self.getValue(row, col) for col in cols]
+            if row_names: vals.insert(0, row)
+            yield factory(vals)
             
 
             

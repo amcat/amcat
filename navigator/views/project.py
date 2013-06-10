@@ -249,13 +249,15 @@ def articlesets(request, project, what):
     if what == "favourite":
         # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
         # (or use api request.user to add only current user's favourite status). But good enough for now...
-        
-        ids = request.user.get_profile().favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id))
+
+        # they need to be favourte AND still contained in the project
+        ids = project.favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id))
         ids = [id for (id, ) in ids.values_list("id")]
         if ids: 
             selected_filter["pk"] = ids
         else:
-            selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
+            no_favourites = True
+            # keep the table with all ids - better some output than none
             
     elif what == "codingjob":
         # more ugliness. Filtering the api on codingjob_set__id__isnull=False gives error from filter set
@@ -267,12 +269,14 @@ def articlesets(request, project, what):
             selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
     
     url = reverse('articleset', args=[project.id, 123]) 
-    
-    table =  FavouriteDatatable(resource=ArticleSetResource, rowlink=url.replace("123", "{id}"),
-                                label="article set", set_url=url + "?star=1", unset_url=url+"?star=0")
+
+    table = FavouriteDatatable(resource=ArticleSet, label="article set", set_url=url + "?star=1", unset_url=url+"?star=0")
+    table = table.rowlink_reverse('articleset', args=[project.id, '{id}'])
     table = table.filter(**selected_filter)
     table = table.hide("project", "index_dirty", "indexed")
 
+    table.url += "&project_for_favourites={project.id}".format(**locals())
+    
     context = project
     menu = PROJECT_MENU
     deleted = session_pop(request.session, "deleted_articleset")
@@ -340,16 +344,15 @@ def articleset(request, project, aset):
 
 
 
-    profile = request.user.get_profile()
-    starred = profile.favourite_articlesets.filter(pk=aset.id).exists()
+    starred = project.favourite_articlesets.filter(pk=aset.id).exists()
     star = request.GET.get("star")
     if (star is not None):
         if bool(int(star)) != starred:
             starred = not starred
             if starred:
-                profile.favourite_articlesets.add(aset.id)
+                project.favourite_articlesets.add(aset.id)
             else:
-                profile.favourite_articlesets.remove(aset.id)
+                project.favourite_articlesets.remove(aset.id)
 
     
     indexed = request.GET.get("indexed")
@@ -394,9 +397,14 @@ def selection(request, project):
 
     all_articlesets = project.all_articlesets()
 
-    favourites = json.dumps(tuple(request.user.userprofile.favourite_articlesets.all().values_list("id", flat=True)))
-    indexed = json.dumps(tuple(all_articlesets.filter(indexed=True, index_dirty=False).values_list("id", flat=True)))
-    indexed_with_dirty = json.dumps(tuple(all_articlesets.filter(indexed=True).values_list("id", flat=True)))
+    favs = tuple(project.favourite_articlesets.filter(project=project).values_list("id", flat=True))
+    no_favourites = not favs
+    favourites = json.dumps(favs)
+    
+    indexed = tuple(all_articlesets.filter(indexed=True, index_dirty=False).values_list("id", flat=True))
+    no_indexed = not indexed
+    indexed = json.dumps(indexed)
+    
     codingjobs = json.dumps(tuple(CodingJob.objects.filter(articleset__in=all_articlesets).values_list("articleset_id", flat=True)))
     all_sets = json.dumps(tuple(all_articlesets.values_list("id", flat=True)))
 
@@ -731,6 +739,17 @@ def add_codebook(request, project):
     c = Codebook.objects.create(project=project, name='New codebook')
     return redirect(reverse('project-codebook', args=[project.id, c.id]))
 
+@check(Codebook, args='id', action='delete')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def codebook_delete(request, project, codebook):
+    codebook.project = Project.objects.get(id=LITTER_PROJECT_ID)
+    codebook.save()
+
+    request.session['deleted_codebook'] = True
+    return redirect(reverse("project-codebooks", args=[project.id]))
+
+
+
 @check(Project)
 def codebooks(request, project):
     """
@@ -743,6 +762,8 @@ def codebooks(request, project):
     can_import = project.can_update(request.user)
     can_create = Codebook.can_create(request.user) and project.can_update(request.user)
 
+    deleted = session_pop(request.session, "deleted_codebook")
+    
     context = project
     menu = PROJECT_MENU
     selected = "codebooks"

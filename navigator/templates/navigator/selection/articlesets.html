@@ -1,16 +1,31 @@
 <div class="btn-group">
  <a id="select-favourites" class="btn"><i class="icon icon-star"></i> Favourites</a>
  <a id="select-indexed" class="btn">Indexed Sets</a>
- <a id="select-dirty" class="btn">Indexed (including dirty)</a>
  <a id="select-codingjobs" class="btn">Coding Job Sets</a>
  <a id="select-all" class="btn">All Sets</a>
 </div>
+
+{% if no_favourites %}
+<div class="alert alert-success" id="nofav" style="display: none">
+No favourite sets yet? You can mark sets as favourite in
+to <a href='{% url "project-articlesets" context.id %}/own'>the
+    articlesets view</a> and using the star icon to
+add some sets to this list.
+</div>
+{% endif %}
+
+{% if no_indexed %}
+<div class="alert alert-success" id="noindex" style="display: none">
+No indexed sets yet? To use full text search, please select one of
+<a href='{% url "project-articlesets" context.id %}/own'>your
+  articlesets</a> and select 'enable indexing'</div>
+</div>
+{% endif %}
 
 <script>
 $(function(){
   var all = {{ all_sets }};
   var indexed = {{ indexed }};
-  var dirty = {{ indexed_with_dirty }};
   var codingjobs = {{ codingjobs }};
   var favourites = {{ favourites }};
 
@@ -27,13 +42,23 @@ $(function(){
             $(this).parent().hide();
             this.checked = false;
           }
-      })
+      });
+      var favdisplay = event.currentTarget.id=="select-favourites"?"block":"none";
+      $("#nofav").css("display", favdisplay);
+      var indexdisplay = event.currentTarget.id=="select-indexed"?"block":"none";
+      $("#noindex").css("display", indexdisplay);
   }
 
+{% if no_favourites %}
+  $("#select-favourites").click(select.bind(favourites));
+  $("#select-all").click(select.bind(all)).click();
+{% else %}
   $("#select-favourites").click(select.bind(favourites)).click();
-  $("#select-indexed").click(select.bind(indexed));
-  $("#select-dirty").click(select.bind(dirty));
-  $("#select-codingjobs").click(select.bind(codingjobs));
   $("#select-all").click(select.bind(all));
+{% endif %}
+
+  $("#select-indexed").click(select.bind(indexed));
+  $("#select-codingjobs").click(select.bind(codingjobs));
+
 });
 </script>

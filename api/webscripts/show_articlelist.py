@@ -53,7 +53,9 @@ class ShowArticleList(WebScript):
             formData.setlist("articlesets", artsets)
 
         articles = list(ArticleListScript(formData).run())
-
+        project_id = formData['projects'][0]
+        for a in articles: a.hack_project_id = project_id
+        
         if self.options['outputTypeAl'] == 'table':
             table = ArticleListToTable(self.formData).run(articles)
             self.output_template = 'api/webscripts/articletable.html'

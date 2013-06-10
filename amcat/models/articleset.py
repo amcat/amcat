@@ -211,6 +211,17 @@ class ArticleSet(AmcatModel):
         from amcat.scripts.maintenance import deduplicate
         #TODO: the deduplicate code should go in here!
         deduplicate.DeduplicateScript(articleset=self.id).run()
+
+    def save(self, *args, **kargs):
+        new = not self.pk
+        super(ArticleSet, self).save(*args, **kargs)
+        
+        if new:
+            # new article set, add as fav to parent project
+            # (I run parent first because I guess it needs a pk to add it, but didn't test whether
+            #  this is needed...)
+            self.project.favourite_articlesets.add(self)
+            self.project.save()
         
 class ArticleSetArticle(AmcatModel):
     """

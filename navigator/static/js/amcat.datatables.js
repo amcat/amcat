@@ -32,7 +32,7 @@ _TARGET_ERR = "You can't use number to target columns in columndefs, as " +
 
 _SORTCOL = "iSortCol_";
 _SORTDIR = "sSortDir_";
-_DPROP = "mData_";
+_DPROP = "mDataProp_";
 
 // Default options passed to datatables.
 _AMCAT_DEFAULT_OPTS = {
@@ -411,13 +411,13 @@ amcat.datatables.get_order_by_query = function(aoData){
         dir = amcat.datatables._search_oa_props(aoData, _SORTDIR + i);
         prop = amcat.datatables._search_oa_props(aoData, _DPROP + col);
 
+	
         if (dir === undefined | prop === undefined | col === undefined){
             break;
         }
 
         res.push(((dir == "desc") ? "-" : "") + prop);
     }
-
     return "order_by=" + res.join("&order_by=");
 };
 
