@@ -33,6 +33,7 @@ import json, types, collections, re
 from amcat.tools.caching import cached
 import inspect
 from api.rest.resources import get_resource_for_model
+from api.rest import filters
 
 FIELDS_EMPTY = (None, [])
 
@@ -174,10 +175,9 @@ class Datatable(object):
     def get_aoColumns(self):
         """
         Returns a list with (default) columns.
-
-        @param *cols: extra columns
         """
-        return self.options.get('aoColumns', [dict(mData=n) for n in self.fields]) 
+        return self.options.get('aoColumns', [dict(mData=n, bSortable=int(self.can_order_by(n)))
+                                              for n in self.fields])
 
     def get_aoColumnDefs(self):
         """Use this method to override when providing special colums"""
@@ -234,7 +234,13 @@ class Datatable(object):
         
         return self.copy(rowlink = url)
 
-        
+    def can_order_by(self, field):
+        # create filterset for requested view
+        r = self.resource
+        filter_class = filters.AmCATFilterBackend().get_filter_class(r, queryset=r.model.objects.all())
+        filter_fields = [f for (f, label) in filter_class().get_ordering_field().choices]
+        return field in filter_fields
+
     def order_by(self, *fields):
         """
         Order this table by given columns. This will overwrite previous
@@ -247,8 +253,7 @@ class Datatable(object):
                 raise ValueError("Random ordering not yet supported ({})".format(field))
 
             # Check for existance of field
-            field = field[1:] if field.startswith(("+", "-")) else field
-            if field not in self.fields:
+            if not self.can_order_by(field):
                 raise ValueError("Cannot order by field '{}', column does not exist on this table".format(field))
 
         return self.copy(ordering=tuple(fields))
