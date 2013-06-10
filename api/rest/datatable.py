@@ -176,7 +176,11 @@ class Datatable(object):
         """
         Returns a list with (default) columns.
         """
-        return self.options.get('aoColumns', [dict(mData=n, bSortable=int(self.can_order_by(n)))
+        class jsbool(int):
+            def __repr__(self):
+                return 'true' if self else "false"
+
+        return self.options.get('aoColumns', [dict(mData=n, bSortable=jsbool(self.can_order_by(n)))
                                               for n in self.fields])
 
     def get_aoColumnDefs(self):
