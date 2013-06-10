@@ -37,9 +37,16 @@ from amcat.models.medium import Medium, get_or_create_medium
 
 from amcat.tools.toolkit import readDate
 
-FIELDS = "text", "date", "pagenr", "section", "headline", "byline",  "url", "externalid"
+FIELDS = ("text", "date", "pagenr", "section", "headline", "byline",  "url", "externalid",
+          "author", "addressee", "parent_url", "parent_externalid")
 REQUIRED = [True] * 2 + [False] * (len(FIELDS) - 2)
-PARSERS = dict(date=readDate, pagenr=int, externalid=int)
+
+PARSERS = dict(date=readDate, pagenr=int, externalid=int, parent_externalid=int)
+
+HELP_TEXTS = {
+    "parent_url" : "Column name for the URL of the parent article, which should be in the same CSV file",
+    "parent_externalid" : "Column name for the External ID of the parent article, which should be in the same CSV file",
+    }
 
 class CSVForm(UploadScript.options_form):
     medium = forms.ModelChoiceField(queryset=Medium.objects.all(), required=False)
@@ -47,34 +54,59 @@ class CSVForm(UploadScript.options_form):
         max_length=Article._meta.get_field_by_name('medium')[0].max_length,
         required = False)
 
+    addressee_from_parent = forms.BooleanField(required=False, initial=False, label="Addressee from parent",
+                                               help_text="If set, will set the addressee field to the author of the parent article")
+    
     def clean_medium_name(self):
         name = self.cleaned_data['medium_name']
         if not bool(name) ^ bool(self.cleaned_data['medium']):
             raise forms.ValidationError("Please specify either medium or medium_name")
         return name
     
-    
     def __init__(self, *args, **kargs):
         super(CSVForm, self).__init__(*args, **kargs)
-        for fieldname, required in zip(FIELDS, REQUIRED):
+        for fieldname, required in reversed(zip(FIELDS, REQUIRED)):
             label = fieldname + " field"
-            help_text = "CSV Field name for the article {}".format(fieldname)
-            if required:
-                initial = fieldname
+            if fieldname in HELP_TEXTS:
+                help_text = HELP_TEXTS[fieldname]
             else:
-                initial = None
-                help_text += ", or leave blank to leave unspecified"
+                help_text = "Column name for the article {}".format(fieldname)
+                if not required:
+                    help_text += ", or leave blank to leave unspecified"
+
+            initial = fieldname if required else None
     
             field = forms.CharField(help_text = help_text, required=required,
                                     initial=initial, label=label)
             self.fields.insert(0, fieldname, field)
     
     
+    def clean_parent_url(self):
+        idfield = self.cleaned_data['parent_url']
+        if idfield and self.cleaned_data['parent_externalid']:
+            raise forms.ValidationError("Cannot specify both external id and URL for parents")
+        return idfield
+        
 
 
 class CSV(UploadScript):
     options_form = CSVForm
 
+    def run(self, *args, **kargs):
+
+        if self.options['parent_url']:
+            self.id_field, self.parent_field = 'url', 'parent_url'
+        elif self.options['parent_externalid']:
+            self.id_field, self.parent_field = 'externalid', 'parent_externalid'
+        else:
+            self.id_field, self.parent_field = None, None
+            
+        if self.parent_field:
+            self.parents = {} # id/url : id/url
+            self.articles = {} # id/url : article
+        
+        return super(CSV, self).run(*args, **kargs)
+    
     def split_file(self, file):
 
         return csv.DictReader(file)
@@ -95,13 +127,38 @@ class CSV(UploadScript):
             csvfield = self.options[fieldname]
             if not csvfield: continue
             val = self.decode(row[csvfield])
-            if fieldname in PARSERS:
-                val = PARSERS[fieldname](val)
+            if val.strip():
+                if fieldname in PARSERS:
+                    val = PARSERS[fieldname](val)
+            else:
+                val = None
                 
             kargs[fieldname] = val
 
-        return Article(**kargs)
+        if self.parent_field:
+            doc_id = kargs.get(self.id_field)
+            parent_id = kargs.pop(self.parent_field)
+            if parent_id:
+                self.parents[doc_id] = parent_id
+            
+        article = Article(**kargs)
 
+        if self.parent_field:
+            self.articles[doc_id] = article
+            
+        return article
+
+    def postprocess(self, articles):
+        if self.parent_field:
+            for doc_id, parent_id in self.parents.iteritems():
+                doc = self.articles[doc_id]
+                doc.parent = self.articles[parent_id]
+                if not doc.addressee and self.options['addressee_from_parent']:
+                    doc.addressee = doc.parent.author
+                
+                doc.save()
+
+    
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli(CSV)
@@ -121,7 +178,7 @@ def _run_test_csv(header, rows, **options):
     with NamedTemporaryFile(suffix=".txt") as f:
         w = csv.writer(f)
         for row in [header] + list(rows):
-            w.writerow([field.encode('utf-8') for field in row])
+            w.writerow([field and field.encode('utf-8') for field in row])
         f.flush()
             
         return CSV(dict(file=File(open(f.name)), encoding=0, project=p.id,
@@ -130,12 +187,44 @@ def _run_test_csv(header, rows, **options):
 class TestCSV(amcattest.PolicyTestCase):
     
     def test_csv(self):
-        header = ('kop', 'datum', 'tekst')
-        data = [('kop1', '2001-01-01', 'text1'), ('kop2', '10 maart 1980', 'text2')]
-        articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum")
+        header = ('kop', 'datum', 'tekst', 'pagina')
+        data = [('kop1', '2001-01-01', 'text1', '12'), ('kop2', '10 maart 1980', 'text2', None)]
+        articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum", pagenr='pagina')
         self.assertEqual(len(articles), 2)
         self.assertEqual(articles[0].headline, 'kop1')
+        self.assertEqual(articles[0].pagenr, 12)
         self.assertEqual(articles[1].date.isoformat()[:10], '1980-03-10')
+        self.assertEqual(articles[1].pagenr, None)
+
+    def test_parents(self):
+        header = ('kop', 'datum', 'tekst', 'id', 'parent', 'van')
+        data = [('kop1', '2001-01-01', 'text1', "7", "12", 'piet'), ('kop1', '2001-01-01', 'text1', "12", None, 'jan')]
+        articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum",
+                                 externalid='id',  parent_externalid='parent', author='van')
+        
+        self.assertEqual(len(articles), 2)
+        self.assertEqual(articles[0].parent, articles[1])
+        self.assertEqual(articles[0].externalid, 7)
+        self.assertEqual(articles[0].author, 'piet')
+        self.assertEqual(articles[0].addressee, None)
+
+        
+        self.assertEqual(articles[1].parent, None)
+        self.assertEqual(articles[1].externalid, 12)
+        self.assertEqual(articles[1].author, 'jan')
+        self.assertEqual(articles[1].addressee, None)
+
+        
+        articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum",
+                                 externalid='id',  parent_externalid='parent', author='van',
+                                 addressee_from_parent=True)
+
+        self.assertEqual(articles[0].author, 'piet')
+        self.assertEqual(articles[0].addressee, 'jan')
+        self.assertEqual(articles[1].author, 'jan')
+        self.assertEqual(articles[1].addressee, None)
+                
+        
 
     def test_date_format(self):
         # Stump class to test future 'date format' option, if needed. Currently just checks that

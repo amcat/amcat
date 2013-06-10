@@ -114,12 +114,12 @@ class UploadScript(Scraper):
         from amcat.scraping.controller import SimpleController
         with transaction.commit_on_success():
             arts = list(SimpleController(self.articleset).scrape(self))
+            self.postprocess(arts)
 
             old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
             new_provenance = self.get_provenance(file, arts)
             self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
             self.articleset.save()
-
 
         try:
             self._cleanup()
@@ -127,6 +127,13 @@ class UploadScript(Scraper):
             log.exception("Error on cleaning up")
         return arts
 
+    def postprocess(self, articles):
+        """
+        Optional postprocessing of articles. Removing aricles from the list will exclude them from the
+        article set (if needed, list should be changed in place)
+        """
+        pass
+    
     def _cleanup(self):
         if self._delete_after_run:
             for fn in self._delete_after_run:
