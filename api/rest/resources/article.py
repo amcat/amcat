@@ -17,7 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import Article
+from amcat.models import Article, ArticleSet
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.filters import AmCATFilterSet
@@ -29,10 +29,13 @@ from django_filters import filters, filterset
 class ArticleMetaFilter(AmCATFilterSet):
     date_from = filters.DateFilter(name='date', lookup_type='gte')
     date_to = filters.DateFilter(name='date', lookup_type='lt')
+    articleset = filters.ModelChoiceFilter(name='articlesets_set', queryset=ArticleSet.objects.all())
+
     
     class Meta:
         model = Article
-         
+        order_by=True
+        
 class ArticleMetaSerializer(AmCATModelSerializer):
     class Meta:
         model = Article

@@ -338,7 +338,7 @@ def edit_articleset(request, project, aset):
 def articleset(request, project, aset):
     cls = "Article Set"
     articles = (Datatable(ArticleMetaResource, rowlink='../article/{id}')
-                .filter(articlesets_set__id=aset.id)
+                .filter(articleset=aset.id)
                 .hide('metastring', 'url', 'externalid',
                       'byline', 'pagenr', 'project', 'section', 'text'))
 

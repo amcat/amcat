@@ -204,7 +204,7 @@ class Datatable(object):
             return self._filter(selector + '__%s' % value._meta.pk.attname, value.pk)
 
         # Determine if filtering on selector is allowed
-        if selector not in self.resource.get_filter_fields():
+        if not self.can_filter(selector):
             raise ValueError("Filtering on field '{selector}' is not allowed on '{self}'".format(**locals()))
 
         return '%s=%s' % (selector, value)
@@ -238,12 +238,20 @@ class Datatable(object):
         
         return self.copy(rowlink = url)
 
-    def can_order_by(self, field):
-        # create filterset for requested view
+    def _get_filter_class(self):
+        # There is probably a more standard way to do this        
         r = self.resource
-        filter_class = filters.AmCATFilterBackend().get_filter_class(r, queryset=r.model.objects.all())
-        filter_fields = [f for (f, label) in filter_class().get_ordering_field().choices]
-        return field in filter_fields
+        try:
+            fc = r.filter_class
+        except AttributeError:
+            fc = filters.AmCATFilterBackend().get_filter_class(r, queryset=r.model.objects.all())
+        return fc()
+
+    def can_order_by(self, field):
+        return any(f==field for (f, label) in self._get_filter_class().get_ordering_field().choices)
+
+    def can_filter(self, field):
+        return any(f==field for f in self._get_filter_class().filters.keys())
 
     def order_by(self, *fields):
         """

@@ -211,11 +211,20 @@ class TestFilters(ApiTestCase):
         #self.assertEqual(self._get_ids(ProjectResource, id=[p.id, p2.id]), {p2.id, p.id})
         self.assertEqual(self._get_ids(ProjectResource, pk=[p.id, p2.id]), {p2.id, p.id})
 
-        # Filter on date ranges, use articles for this
+    def test_filter_articlemeta(self):
+        # Filter on date ranges and make sure normal filters still work
+        p = amcattest.create_test_project(name="test")
         a1 = amcattest.create_test_article(project=p, date="2012-01-01")
         a2 = amcattest.create_test_article(project=p, date="2012-02-01")
         a3 = amcattest.create_test_article(project=p, date="2012-03-01")
         from api.rest.resources import ArticleMetaResource
+
+
+        # filter on article set
+        s = amcattest.create_test_set(articles=[a1, a2])
+        self.assertEqual(self._get_ids(ArticleMetaResource, articleset=s.id), {a1.id, a2.id})
+
+        # filter on dates
         self.assertEqual(self._get_ids(ArticleMetaResource, project=p.id), {a1.id, a2.id, a3.id})
         self.assertEqual(self._get_ids(ArticleMetaResource, project=p.id, date='2012-01-01'), {a1.id})
         self.assertEqual(self._get_ids(ArticleMetaResource, project=p.id, date_from='2012-01-15'), {a2.id, a3.id})
