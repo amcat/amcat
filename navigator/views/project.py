@@ -552,7 +552,8 @@ def schemas(request, project):
         'linked_schemas' : linked_schemas,
         'menu' : PROJECT_MENU,
         'selected' : 'codingschemas',
-        'context' : project
+        'context' : project,
+        'deleted' : session_pop(request.session, "deleted_schema"),
     }
 
     return render(request, "navigator/project/schemas.html", ctx)
@@ -573,6 +574,17 @@ def schema(request, schema, project):
 def new_schema(request, project):
     schema = CodingSchema.objects.create(name="Untitled schema", project=project)
     return redirect(reverse("project-edit-schema", args=(project.id, schema.id)))
+
+
+@check(Project, args_map={'project' : 'id'}, args='project')
+@check(CodingSchema, args_map={'schema' : 'id'}, args='schema', action='delete')
+def delete_schema(request, schema, project):
+    schema.project_id = LITTER_PROJECT_ID
+    schema.save()
+
+    request.session['deleted_schema'] = schema.id
+    
+    return redirect(reverse("project-schemas", args=(project.id, )))
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')

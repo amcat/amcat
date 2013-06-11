@@ -11,6 +11,9 @@
   <a href="{% url "project-new-schema" context.id %}" class="btn"><i class="icon-certificate"></i> New schema</a>
   <a href="{% url "codebook-import" context.id %}" class="btn"><i class="icon-edit"></i> Import schemas</a>
  </p>
+ {% if deleted %}
+    <div class="alert alert-success">Successfully deleted a schema. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+ {% endif %}
 
  <h1>Imported schemas</h1>
  {{ linked_schemas|safe }}
