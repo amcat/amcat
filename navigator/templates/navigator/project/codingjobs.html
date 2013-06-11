@@ -11,6 +11,15 @@
   <a href="{% url "codingjob-add" context.id %}" class="btn"><i class="icon-certificate"></i> New codingjob</a>
   <a href="{% url "project-codingjobs-export-select" context.id %}" class="btn">Export codingjobs</a>
   </p>
+
+
+ {% if deleted %}
+    <div class="alert alert-success">Successfully deleted the coding job. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+ {% endif %}
+ {% if added %}
+    <div class="alert alert-success">Succesfully created coding job <a href='{% url "codingjob" context.id added.id %}'>{{added.id}} : {{added}}</a> </div>
+ {% endif %}
+
  {{ table|safe }}
 </div>
 {% endblock %}

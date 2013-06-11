@@ -85,6 +85,7 @@ from amcat.scripts.output.csv_output import TableToSemicolonCSV
 
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
+from amcat.models.user import LITTER_USER_ID
 from amcat.models.articleset import create_new_articleset
 
 from api.rest.resources.codebook import CodebookHierarchyResource
@@ -428,8 +429,13 @@ def codingjobs(request, project):
     cdjobs = (Datatable(CodingJobResource, rowlink='./codingjob/{id}')
                 .filter(project=project).hide('project').order_by("-insertdate"))
 
+    deleted = session_pop(request.session, "deleted_codingjob")
+    added = session_pop(request.session, "added_codingjob")
+    if added:
+        added = CodingJob.objects.get(pk=added)
+        
     return table_view(request, project, cdjobs, 'codingjobs',
-           template="navigator/project/codingjobs.html")
+           template="navigator/project/codingjobs.html", added=added, deleted=deleted)
 
 def _codingjob_export(results, codingjob, filename):
     results = TableToSemicolonCSV().run(results)
@@ -1075,7 +1081,7 @@ def view_codingjob(request, codingjob, project):
     """
     form = forms.CodingJobForm(data=(request.POST or None), instance=codingjob)
     articles = Datatable(ArticleMetaResource)\
-                    .filter(articlesets_set=codingjob.articleset)\
+                    .filter(articleset=codingjob.articleset.id)\
                     .hide("section", "pagenr", "byline", "metastring", "url")\
                     .hide("project", "medium", "text", "uuid")
 
@@ -1086,6 +1092,18 @@ def view_codingjob(request, codingjob, project):
     ctx.update(dict(menu=PROJECT_MENU, context=project))
 
     return render(request, 'navigator/project/edit_codingjob.html', ctx)
+
+@check(Project, args_map={'project' : 'id'}, args='project', action='delete')
+@check(CodingJob, args_map={'codingjob' : 'id'}, args='codingjob')
+def delete_codingjob(request, codingjob, project):
+    codingjob.project_id = LITTER_PROJECT_ID
+    codingjob.coder_id = LITTER_USER_ID
+    codingjob.save()
+
+    request.session['deleted_codingjob'] = True
+    return redirect(reverse("project-codingjobs", args=[project.id]))
+
+    
 
 @check_perm("manage_codingjobs", True)
 @check(Project)
@@ -1114,6 +1132,10 @@ def add_codingjob(request, project):
 
         form = forms.CodingJobForm(project=project, edit=False, data=None)
         form.saved = True
+
+        
+        request.session['added_codingjob'] = cj.id
+        return redirect(reverse("project-codingjobs", args=[project.id]))
 
     # Create context for template
     ctx = locals()

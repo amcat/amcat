@@ -13,7 +13,14 @@
  
    <div class="form-actions">
     <input class="btn btn-primary" type="submit" value="Save"></input>
-    <a href="{% url "project-codingjobs" project.id %}" class="btn">Cancel</a>
+    <a href="{% url "project-codingjobs" project.id %}"
+    class="btn">Cancel</a>
+
+         <a class="btn btn-danger confirm" data-confirm="You're about
+         to delete job <i>{{codingjob.id}} : {{ codingjob.name }}</i>. This action is not
+         reversible." href="{% url "project-codingjob-delete" context.id codingjob.id %}"><i class="icon-white icon-trash"></i>
+         Delete</a>
+
    </div>
 
 </form>

@@ -36,6 +36,7 @@ import string, random
 
 from django.db import models
 from amcat.tools.model import AmcatModel
+LITTER_USER_ID = 1
 
 
 class Affiliation(AmcatModel):
