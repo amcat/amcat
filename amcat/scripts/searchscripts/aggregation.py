@@ -29,7 +29,7 @@ import amcat.scripts.forms
 from django import forms
 from django.db.models import Sum, Count
 from amcat.models.medium import Medium
-from amcat.tools import table
+from amcat.tools.table import table3
 from django.db import connections
 
 import datetime
@@ -57,6 +57,7 @@ class AggregationForm(amcat.scripts.forms.SelectionForm):
                         ('numberOfArticles', 'Number of Articles'), 
                         ('numberOfHits', 'Number of Hits')
                    ), initial='numberOfArticles')
+    relative = forms.BooleanField(label="Make values relative to (and exclude) first column", required=False)
 
 class AggregationScriptForm(AggregationForm, amcat.scripts.forms.SelectionForm):
     pass
@@ -65,18 +66,17 @@ class AggregationScriptForm(AggregationForm, amcat.scripts.forms.SelectionForm):
 class AggregationScript(script.Script):
     input_type = None
     options_form = AggregationScriptForm
-    output_type = table.table3.Table
+    output_type = table3.Table
 
 
     def run(self, input=None):
         """ returns a table containing the aggregations"""
-        
+        xAxis = self.options['xAxis']
+        dateInterval = self.options['dateInterval']
         if self.options['useSolr'] == False: # make database query
             queryset = database.getQuerySet(**self.options).distinct()
-            xAxis = self.options['xAxis']
             yAxis = self.options['yAxis']
             if xAxis == 'date':
-                dateInterval = self.options['dateInterval']
                 if not dateInterval: raise Exception('Missing date interval')
                 engine = connections.databases['default']["ENGINE"]
                 if engine == 'django.db.backends.postgresql_psycopg2':
@@ -119,22 +119,55 @@ class AggregationScript(script.Script):
             if yAxis == 'medium':
                 yDict = Medium.objects.in_bulk(set(row['y'] for row in data)) # retrieve the Medium objects
             
-            table3 = table.table3.DictTable(0) # the start aggregation count is 0
-            table3.rowNamesRequired = True # make sure row names are printed
+            table = table3.DictTable(0) # the start aggregation count is 0
+            table.rowNamesRequired = True # make sure row names are printed
 
             for row in data:
                 x = row['x']
                 y = row.get('y', 'total')
                 count = row['count']
-                table3.addValue(xDict.get(x, x), yDict.get(y, y), count)
-
-            if xAxis == 'date':
-                table3.rows = list(fill_out(table3.rows, dateInterval))
-                
-            return table3
+                table.addValue(xDict.get(x, x), yDict.get(y, y), count)
         else:
-            return solrlib.basicAggregate(self.options)
+            table = solrlib.basicAggregate(self.options)
+
+        if self.options['relative']:
+            table = RelativeTable(table)
             
+        if xAxis == 'date':
+            table = FilledOutTable(table, dateInterval=dateInterval)
+
+        return table
+
+class RelativeTable(table3.WrappedTable):
+    def getColumns(self):
+        return list(self.table.getColumns())[1:]
+    def getValue(self, row, column):
+        total_col = list(self.table.getColumns())[0]
+        val = self.table.getValue(row, column)
+        if val == 0: return val
+        total = self.table.getValue(row, total_col)
+        return float(val) / total if total else None
+
+class FilledOutTable(table3.WrappedTable):
+    def getRows(self):
+        return fill_out(self.table.getRows(), self._kargs['dateInterval'])
+
+def fill_out(rows, interval):
+    rows = sorted(rows)
+    if interval == 'month':
+        return fill_months(rows[0], rows[-1])
+    elif interval == 'quarter':
+        return fill_months(rows[0], rows[-1], max_month=4, output="{y}-{m}")
+    elif interval == 'year':
+        return map(str, range(int(rows[0]), int(rows[-1]) + 1))
+    elif interval == 'week':
+        return fill_months(rows[0], rows[-1], max_month=_get_n_weeks)
+    elif interval == 'day':
+        return fill_days(rows[0], rows[-1])
+    else:
+        raise Exception("Cannot fill %s" % interval)
+        
+    
 
 def fill_months(van, tot, interval=1, max_month=12, output="{y}-{m:02}"):
     y,m = map(int, van.split("-"))
@@ -171,21 +204,6 @@ def _get_n_weeks(year):
             return wk
             
 
-def fill_out(rows, interval):
-    rows = sorted(rows)
-    if interval == 'month':
-        return fill_months(rows[0], rows[-1])
-    elif interval == 'quarter':
-        return fill_months(rows[0], rows[-1], max_month=4, output="{y}-{m}")
-    elif interval == 'year':
-        return map(str, range(int(rows[0]), int(rows[-1]) + 1))
-    elif interval == 'week':
-        return fill_months(rows[0], rows[-1], max_month=_get_n_weeks)
-    elif interval == 'day':
-        return fill_days(rows[0], rows[-1])
-    else:
-        raise Exception("Cannot fill %s" % interval)
-        
 if __name__ == '__main__':
     for x in fill_months("2001-01", "2002-02"):
         print x

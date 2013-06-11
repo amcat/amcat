@@ -27,8 +27,7 @@
                 <div id="query-form">
                     <label>Keyword Search string(s)</label> <a id="help-link" href="#">Search Syntax Help</a><br />
                     {{ form.query }}
-                    <div><input name="include-all" type="checkbox"></input> Include amount of all articles</div>
-                    <div><input name="include-non-matching" type="checkbox"></input> Include amount of non-matching articles</div>
+		    <div>{{ form.includeAll }} {{ form.includeAll.label_tag }}</div>
                 </div>
                 <div id="articleid-form">
                     <label>Article IDs</label> <br />

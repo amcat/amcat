@@ -143,6 +143,7 @@ class SelectionForm(forms.Form):
     startDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     onDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
+    includeAll = forms.BooleanField(label="Include amount of all articles", required=False)
     # queries will be added by clean(), that contains a list of SearchQuery objects
     
     def __init__(self, data=None, *args, **kwargs):
@@ -212,6 +213,8 @@ class SelectionForm(forms.Form):
                     for query2 in cleanedData['queries']:
                         query = query.replace('[%s]' % query2.label, '(%s)' % query2.query)
                 cleanedData['queries'].append(SearchQuery(query, label))
+                if cleanedData['includeAll']:
+                    cleanedData['queries'].insert(0, SearchQuery("*:*", "All"))
             
         try:
             cleanedData['articleids'] = [int(x.strip()) for x in cleanedData['articleids'].split('\n') if x.strip()]

@@ -59,7 +59,7 @@ class Table(object):
     maps column and row to a value.
     """
     def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc,
-                 rowNamesRequired = False):
+                 rowNamesRequired = False, **kargs):
         """
         @param columns: a sequence of columns, or None if getColumns is overridden
         @param rows:a sequence of rows, or None if getRows is overridden
@@ -352,10 +352,11 @@ class WrappedTable(Table):
     def __init__(self, table, *args, **kargs):
         super(WrappedTable, self).__init__(*args, **kargs)
         self.table = table
+        self._kargs = kargs
     def getColumns(self):
-        return self.table.getColumns()
+        return self.columns if self.columns else self.table.getColumns()
     def getRows(self):
-        return self.table.getRows()
+        return self.rows if self.rows else self.table.getRows()
     def getValue(self, row, col):
         return self.table.getValue(row, col)
         

@@ -81,8 +81,10 @@ class ShowAggregation(WebScript):
                                                 'aggregationType':aggregationType,
                                                 'datesDict':datesDictJson,
                                                 'graphOnly': graphOnly,
-                                                'ownForm':self.form(self.formData)
+                                                'ownForm':self.form(self.formData),
+                                                'relative':int(self.options['relative'])
                                              })
+
             if self.output == 'json-html':
                 return self.outputJsonHtml(scriptoutput)
             else:

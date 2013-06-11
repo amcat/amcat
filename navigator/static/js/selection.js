@@ -780,10 +780,11 @@ amcat.selection.aggregation.plotBars = function(series, graphData){
             //tickInterval:'1 month'
         },
         yaxis:{
-            label:'Number of ' + amcat.selection.aggregation.aggregationType,
+            label:'Nxumber of ' + amcat.selection.aggregation.aggregationType,
             labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
             tickOptions:{formatString:'%d'},
-            min:0
+            min:0,
+	    pad:1
         }
     },
     highlighter: {
@@ -813,7 +814,7 @@ amcat.selection.aggregation.plotLines = function(series, graphData){
     
     var tickInterval = amcat.selection.aggregation.getTickInterval(graphData[0].length);
     console.log(tickInterval);
-    
+
     var plot1 = $.jqplot('output-chart', graphData, {
     //title:'Default Date Axis',
     
@@ -844,7 +845,8 @@ amcat.selection.aggregation.plotLines = function(series, graphData){
             label:'Number of ' + amcat.selection.aggregation.aggregationType,
             labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
             tickOptions:{formatString:'%d'},
-            min:0
+            min:0,
+	    max: amcat.selection.aggregation.relative?1:null
         }
     },
     highlighter: {
