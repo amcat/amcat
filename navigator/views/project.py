@@ -520,7 +520,7 @@ def codingjob_export_options(request, project):
             if len(jobs) > 3:
                 jobs = jobs[:3] + ["etc"]
             filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in jobs), now=datetime.datetime.now(), ext=eformat.label)
-            response = HttpResponse(content_type=eformat.mimetype, status=201)
+            response = HttpResponse(content_type=eformat.mimetype, status=200)
             response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
             response.write(results)
             return response
