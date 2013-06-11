@@ -32,7 +32,14 @@
 
  {{ table }}
 
-{% if no_favourites %}
+{% if no_sets %}
+<div class="alert alert-success">
+This project is empty! Use the 'upload articles' button above to add some articles to this
+project, or navigate to an article set in another project and select
+'use in another project' to link that set to this project.
+</div>
+
+{% elif no_favourites %}
 <div class="alert alert-success">
 No favourite sets yet? Use the star icon to add some sets to this
 list!<br/> (now showing all sets)

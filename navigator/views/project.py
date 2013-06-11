@@ -258,7 +258,12 @@ def articlesets(request, project, what):
         else:
             no_favourites = True
             # keep the table with all ids - better some output than none
-            selected_filter["pk"] = ArticleSet.objects.filter(Q(project=project.id) | Q(projects_set=project.id)).values_list("id", flat=True)
+            all_ids = ArticleSet.objects.filter(Q(project=project.id) | Q(projects_set=project.id)).values_list("id", flat=True)
+            if all_ids:
+                selected_filter["pk"] = all_ids
+            else:
+                no_sets = True
+                selected_filter["name"] = "This is a really stupid way to force an empty table (so sue me!)"
             
     elif what == "codingjob":
         # more ugliness. Filtering the api on codingjob_set__id__isnull=False gives error from filter set
