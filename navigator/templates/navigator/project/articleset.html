@@ -45,11 +45,11 @@ Article Set {{object.id}} : {{ object.name }}</h1>
 
      <a class="btn" href="{% url "articleset-edit" context.id object.id %}"><i class="icon icon-edit"></i> Edit details</a>
 
-         <a class="btn btn-danger confirm" data-confirm="You're about
-         to delete <i>{{ object.name }}</i>. This action is not
-         reversible." href="{% url "articleset-delete" context.id
-         object.id %}"><i class="icon-white icon-trash"></i>
-         Delete</a>
+         <a class="btn btn-danger confirm" href="{% url "articleset-delete" context.id  object.id %}"
+            data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible." 
+            <i class="icon-white icon-trash"></i>
+            Delete
+         </a>
 
      {% else %}
          <a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "articleset-unlink" context.id object.id %}"><i class="icon-white icon-remove"></i> Unlink</a>
