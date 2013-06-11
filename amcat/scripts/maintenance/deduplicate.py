@@ -62,10 +62,11 @@ class DeduplicateScript(Script):
             self._run_date(self.options['first_date'])
 
         elif mode == "whole set":
-            start = articles.aggregate(Min('date'))['date__min'].date()
-            end = articles.aggregate(Max('date'))['date__max'].date()
-            log.info("first date: {start}; last date: {end}".format(**locals()))
-            self.run_range(start, end)
+            log.info("Getting dates")
+            dates = articles.values("date").distinct().values_list("date", flat=True)
+            log.info("Deduplicating {n} dates".format(n=len(dates)))
+            for date in dates:
+                self._run_date(date)
 
     def handle_input(self):
         if self.options["first_date"]:
