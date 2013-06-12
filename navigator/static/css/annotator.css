@@ -54,8 +54,7 @@ html {
 }
 
 .articlelist-part{
-
-
+    overflow-x: scroll;
     width:69%;
     background:white;
     margin-bottom:20px;
@@ -63,7 +62,7 @@ html {
 
 .coding-part{
 
-
+    overflow-x: scroll;
     width:69%;
     background:white;
     
