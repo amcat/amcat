@@ -165,6 +165,7 @@ class SelectionForm(forms.Form):
 
         self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
 
+        self.fields['codebook'].queryset = Codebook.objects.filter(project_id=project.id)
         
     def clean(self):
         cleanedData = self.cleaned_data
