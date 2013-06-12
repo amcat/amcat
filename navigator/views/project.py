@@ -403,7 +403,7 @@ def selection(request, project):
 
     all_articlesets = project.all_articlesets()
 
-    favs = tuple(project.favourite_articlesets.filter(project=project).values_list("id", flat=True))
+    favs = tuple(project.favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id)).values_list("id", flat=True))
     no_favourites = not favs
     favourites = json.dumps(favs)
     
