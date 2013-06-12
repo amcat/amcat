@@ -100,7 +100,7 @@ class AggregationScript(script.Script):
             elif yAxis == 'total':
                 ySql = None
             elif yAxis == 'searchTerm':
-                raise Exception('searchTerm not supported when not performing a search')
+                raise Exception('searchTerm on y-axis is not supported when not doing a keyword search')
             else:
                 raise Exception('unsupported yAxis')
                 
