@@ -20,7 +20,7 @@
 from amcat.models import Article, ArticleSet
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
-from api.rest.filters import AmCATFilterSet
+from api.rest.filters import AmCATFilterSet, InFilter
 
 from rest_framework import serializers
 from django_filters import filters, filterset
@@ -29,8 +29,7 @@ from django_filters import filters, filterset
 class ArticleMetaFilter(AmCATFilterSet):
     date_from = filters.DateFilter(name='date', lookup_type='gte')
     date_to = filters.DateFilter(name='date', lookup_type='lt')
-    articleset = filters.ModelChoiceFilter(name='articlesets_set', queryset=ArticleSet.objects.all())
-
+    articleset = InFilter(name='articlesets_set', queryset=ArticleSet.objects.all())
     
     class Meta:
         model = Article
