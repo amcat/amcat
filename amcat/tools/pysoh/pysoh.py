@@ -58,7 +58,7 @@ class SOHServer(object):
                                  for (k,v) in prefixes.iteritems())
         return prefixes
 
-    def update(self, where, insert="", delete="", prefixes=None):
+    def update(self, where="", insert="", delete="", prefixes=None):
         prefixes = self._prefix_string(prefixes)
         sparql = u"""{prefixes}
                     DELETE {{ {delete} }}

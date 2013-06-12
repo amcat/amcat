@@ -21,9 +21,9 @@
 Syntax tree represented in RDF
 """
 import re
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from itertools import chain
-from amcat.models import AnalysisSentence
+from amcat.models import AnalysisSentence, Label
 import logging
 log = logging.getLogger(__name__)
 
@@ -57,11 +57,13 @@ class SyntaxTree(object):
         Load the triples for the given analysis sentence into the triple store
         """
         if isinstance(sentence_or_tokens, AnalysisSentence):        
-            sentence_or_tokens = sentence_or_tokens.tokens.all()
+            self.tokens = list(sentence_or_tokens.tokens.all())
+        else:
+            self.tokens = list(sentence_or_tokens)
             
         g = Graph()
         g.bind("amcat", AMCAT)
-        for triple in _tokens_to_rdf(sentence_or_tokens):
+        for triple in _tokens_to_rdf(self.tokens):
             g.add(triple)
         self.soh.add_triples(g, clear=True)
 
@@ -89,7 +91,46 @@ class SyntaxTree(object):
     def apply_rule(self, rule):
         """Apply the given amcat.models.rule.Rule"""
         self.soh.update(rule.where, rule.insert, rule.remove)
-    
+
+    def apply_lexicon(self, codebook, lexicon_language):
+        lexicon = read_lexicon(codebook, lexicon_language)
+        for token in self.tokens:
+            for lemma, lexclasses in lexicon.iteritems():
+                if lexical_match(lemma, token):
+                    self.apply_lexical_entry(token, lexclasses)
+                    
+    def apply_lexical_entry(self, token, lexclasses):
+        uri = _token_uri(token).replace(AMCAT, ":")
+        insert = "\n;   ".join(':lexclass "{lexclass}"'.format(**locals()) for lexclass in lexclasses)
+        self.soh.update(insert='{uri} {insert}'.format(**locals()))
+
+                    
+def lexical_match(lemma, token):
+    l = token.word.lemma.lemma
+    if l == lemma: return True
+    if lemma.endswith("*") and l.startswith(lemma[:-1]): return True
+                    
+def read_lexicon(codebook, lexicon_language):
+    """Create a lemma : {lexclass, ..} dictionary"""
+    labels = Label.objects.filter(code__codebook_codes__codebook=codebook)
+    all_labels = defaultdict(list)
+    for label in labels:
+        all_labels[label.code_id].append(label)
+    codes = {code_id : sorted(labels, key=lambda l:l.language_id)[0].label
+             for (code_id, labels) in all_labels.items()}
+        
+    lexicon = defaultdict(set)
+    for label in labels:
+        if label.language_id == lexicon_language.id:
+            for lemma in _get_lexical_entries(label.label):
+                lexicon[lemma].add(codes[label.code_id])
+    return lexicon
+        
+SOLR_KEYWORD_SET = {"AND", "OR", "NOT"}
+def _get_lexical_entries(label):
+    return set(re.findall("[\w*]+", label)) - SOLR_KEYWORD_SET
+
+        
 def _id(obj):
     return obj if isinstance(obj, int) else obj.id
 def _token_uri(token):

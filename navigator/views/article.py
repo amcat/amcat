@@ -82,6 +82,8 @@ def analysedsentence(request, project, sentence, rulesetid=None):
         trees = []
         ruleset_error = None
 
+        tree.apply_lexicon(ruleset.lexicon_codebook, ruleset.lexicon_language)
+        
         grey_rel = lambda triple : ({'color':'grey'} if 'rel_' in triple.predicate else {})
         
         for rule in ruleset.rules.all():
