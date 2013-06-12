@@ -1,11 +1,15 @@
 {% extends "navigator/project/base.html" %}
+{% load compress %}
+{% load staticfiles %}
 
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
 {% block javascript %}
- <script src="{{MEDIA_URL}}js/jquery.djangofields.js"></script>
- <script src="{{MEDIA_URL}}js/jquery.schemaeditor.js"></script>
- <script src="{{MEDIA_URL}}js/jquery.tablednd.0.7.min.js"></script>
+{% compress js %}
+ <script src="{% static 'js/jquery.djangofields.js' %}"></script>
+ <script src="{% static 'js/jquery.schemaeditor.js' %}"></script>
+ <script src="{% static 'js/jquery.tablednd.0.7.min.js' %}"></script>
+{% endcompress %}
  <script>$(function(){ jQuery.fn.schemaeditor("{% url "api" %}v4/", {{schema.id}}, {{context.id}}).main(); });</script>
  {% endblock %}
 
