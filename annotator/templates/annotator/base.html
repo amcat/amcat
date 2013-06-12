@@ -1,34 +1,41 @@
+{% load compress %}
+{% load staticfiles %}
 <!DOCTYPE html>
 <html>
  <head>
   <title>{% block title %}AmCAT Annotator 3{% endblock %}</title>
   
   <link rel="shortcut icon" href="{{ MEDIA_URL }}img/amcat/favicon.png">
-  
+
+  <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />  
   <!--  CSS -->
-  <link href="{{ MEDIA_URL }}css/base.css" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{{ MEDIA_URL }}css/datatables.css" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{{ MEDIA_URL }}css/jquery-ui.css" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{{ MEDIA_URL }}css/jquery.multiselect.css" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{{ MEDIA_URL }}css/jquery.multiselect.filter.css" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{{ MEDIA_URL }}css/annotator.css" rel="stylesheet" type="text/css" media="screen" />
+  {% compress css %}
+  <link href="{% static 'css/base.css' %}" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{% static 'css/datatables.css' %}" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{% static 'css/jquery.multiselect.css' %}" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{% static 'css/jquery.multiselect.filter.css' %}" rel="stylesheet" type="text/css" media="screen" />
+  <link href="{% static 'css/annotator.css' %}" rel="stylesheet" type="text/css" media="screen" />
+  {% endcompress %}
   {% block css %}{% endblock %}
   
   <!--  Javascript -->
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-1.6.4.min.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery-ui-1.8.16.custom.min.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.dataTables.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.dataTables.plugins.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/amcat.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.multiselect.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.multiselect.filter.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/annotator/jquery.scrollTo-1.4.2-min.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/annotator/jquery.hotkeys.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/jquery.easyMark.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/annotator/annotator.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/annotator/annotator.unitcodings.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/annotator/annotator.articletable.js"></script>
-  <script type="text/javascript" src="{{ MEDIA_URL }}js/annotator/annotator.fields.js"></script>
+  {% compress js %}
+  <script type="text/javascript" src="{% static 'js/jquery-1.6.4.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery-ui-1.8.16.custom.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.dataTables.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.multiselect.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.multiselect.filter.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/annotator/jquery.scrollTo-1.4.2-min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/annotator/jquery.hotkeys.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/jquery.easyMark.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/annotator/annotator.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/annotator/annotator.unitcodings.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/annotator/annotator.articletable.js' %}"></script>
+  <script type="text/javascript" src="{% static 'js/annotator/annotator.fields.js' %}"></script>
+  {% endcompress %}
   {% block javascript %}{% endblock %}
  </head>
  <body>
