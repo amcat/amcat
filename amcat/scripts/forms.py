@@ -19,11 +19,9 @@
 
 
 from django import forms
-from amcat.models.project import Project
-from amcat.models.articleset import ArticleSet
-from amcat.models.medium import Medium
+from amcat.models import Project, ArticleSet, Medium, Codebook, Language, Label
 
-import datetime
+import datetime, re
 
 import logging
 log = logging.getLogger(__name__)
@@ -35,7 +33,7 @@ class ModelMultipleChoiceFieldWithIdLabel(forms.ModelMultipleChoiceField):
         
 class ModelChoiceFieldWithIdLabel(forms.ModelChoiceField):
     def label_from_instance(self, obj):
-        return "%s - %s" % (obj.id, obj.name)
+        return "%s - %s" % (obj.id, obj)
         
         
 class DateIntervalForm(forms.Form):
@@ -121,6 +119,7 @@ class SearchQuery(object):
     """
     def __init__(self, query, label=None):
         self.query = query
+        self.declared_label = label
         self.label = label or query
             
 
@@ -144,6 +143,8 @@ class SelectionForm(forms.Form):
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     onDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     includeAll = forms.BooleanField(label="Include amount of all articles", required=False)
+    codebook = ModelChoiceFieldWithIdLabel(queryset=Codebook.objects.all(), required=False, label="Use Codebook")
+    codebooklanguage = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False, label="Language for keywords")
     # queries will be added by clean(), that contains a list of SearchQuery objects
     
     def __init__(self, data=None, *args, **kwargs):
@@ -209,18 +210,52 @@ class SelectionForm(forms.Form):
                         self._errors["query"] = self.error_class(['Invalid query (after the tab)'])
                 else: 
                     label = None
-                if '[' in query:
-                    for query2 in cleanedData['queries']:
-                        query = query.replace('[%s]' % query2.label, '(%s)' % query2.query)
                 cleanedData['queries'].append(SearchQuery(query, label))
-                if cleanedData['includeAll']:
-                    cleanedData['queries'].insert(0, SearchQuery("*:*", "All"))
-            
+
+
+        if 'queries' in cleanedData:
+            if cleanedData['includeAll']:
+                cleanedData['queries'].insert(0, SearchQuery("*:*", "All"))
+            cleanedData['queries'] = list(resolve_codes(cleanedData['queries'], cleanedData['codebook'], cleanedData['codebooklanguage']))
+
         try:
             cleanedData['articleids'] = [int(x.strip()) for x in cleanedData['articleids'].split('\n') if x.strip()]
         except:
             self._errors["articleids"] = self.error_class(['Invalid article ID list'])
+
+            
         # if 'output' not in cleanedData:
             # cleanedData['output'] = 'json-html'
             
         return cleanedData
+
+def resolve_codes(queries, codebook, keyword_language):
+    # build label -> definition dictionary
+    cb_lookup = {} # markup string -> keywords
+    if codebook:
+        labels = {} # code, language -> label
+        for label in Label.objects.filter(code__codebook_codes__codebook=codebook):
+            labels[label.code_id, label.language_id] = label.label
+        for (code, language), label in labels.iteritems():
+            if language != keyword_language.id:
+                kw_label = labels[code, keyword_language.id]
+                cb_lookup["{{{label}}}".format(**locals())] = "({kw_label})".format(**locals())
+
+    q_lookup = {'[{query.declared_label}]'.format(**locals()) : "({query.query})".format(**locals())
+                for query in queries if query.declared_label}
+                
+    # update queries
+    for query in queries:
+        q = query.query
+        for lookup in (q_lookup, cb_lookup):
+            for k, v in lookup.iteritems():
+                q = q.replace(k, v)
+        if set(q) & set("[[]{}"):
+            m = re.search(r"{(.*?)}", q)
+            if m: raise Exception("Cannot find code {} in specified codebook".format(m.group(1)))
+            m = re.search(r"\[(.*?)\]", q)
+            if m: raise Exception("Cannot find query {}".format(m.group(1)))
+            raise Exception("Mismatches or unknown code lookup in query {q!r}".format(**locals()))
+            
+        yield SearchQuery(q, query.declared_label)
+
