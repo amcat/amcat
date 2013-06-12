@@ -19,8 +19,12 @@ tr.odd {background-color: #e9e9e9}
  <h1>Ruleset {{ruleset.id}} : {{ruleset}}</h1>
 </div>
 <form method="post" action="">
+<br/>
 <input type="submit">
-    {{ formset.management_form }}
+<table>
+{{ruleset_form}}
+</table>
+<br/>
 {{ formset.management_form }}
 <table>
 <tr>

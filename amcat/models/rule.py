@@ -38,6 +38,9 @@ class RuleSet(AmcatModel):
     id = models.AutoField(primary_key=True, db_column="rule_id")
     label = models.CharField(max_length=255)
 
+    lexicon_codebook = models.ForeignKey("amcat.codebook", related_name="+")
+    lexicon_language = models.ForeignKey("amcat.language", related_name="+")
+
     class Meta():
         db_table = 'rulesets'
         app_label = 'amcat'

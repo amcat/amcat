@@ -26,17 +26,11 @@ from django.views.generic.detail import SingleObjectMixin
 from amcat.models import RuleSet, Rule
 from django.forms.formsets import formset_factory
 from django.forms.models import BaseModelFormSet
+from django.forms.models import modelform_factory
 
 from api.rest.resources import ProjectResource as RuleSetResource
 from navigator.views.datatableview import DatatableCreateView
 
-class RuleForm(ModelForm):
-    class Meta:
-        model = Rule
-        fields = ["id", "ruleset", "order", "label", "display", "where", "insert", "remove", "remarks"]
-        widgets = {field : Textarea(attrs={'cols': 5, 'rows': 4})
-                   for field in ["insert","remove","where","remarks"]}
-        widgets["ruleset"] = HiddenInput
     
 class RuleSetTableView(DatatableCreateView):
     model = RuleSet
@@ -49,6 +43,13 @@ def _normalize_quotes(x):
         x= x.replace(quote, '"')
     return x
     
+class RuleForm(ModelForm):
+    class Meta:
+        model = Rule
+        fields = ["id", "ruleset", "order", "label", "display", "where", "insert", "remove", "remarks"]
+        widgets = {field : Textarea(attrs={'cols': 5, 'rows': 4})
+                   for field in ["insert","remove","where","remarks"]}
+        widgets["ruleset"] = HiddenInput
     
 class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
     model = RuleSet
@@ -57,11 +58,13 @@ class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
     def get(self, request, pk, **kwargs):
         self.object = self.get_object()
 
+        ruleset_form = modelform_factory(RuleSet)(instance=self.object)
+        
         formset = formset_factory(RuleForm, formset=BaseModelFormSet, can_delete=True)
         formset.model = Rule
         formset = formset(queryset=self.object.rules.all())
         
-        return self.render_to_response(self.get_context_data(formset=formset))
+        return self.render_to_response(self.get_context_data(formset=formset, ruleset_form=ruleset_form))
     
     def post(self, request, pk, **kwargs):
         self.object = self.get_object()
@@ -76,6 +79,10 @@ class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
                 for field in ("insert", "remove", "where"):
                     self.cleaned_data[field] = _normalize_quotes(self.cleaned_data[field])
                 return cleaned_data
+            
+        ruleset_form = modelform_factory(RuleSet)(request.POST, instance=self.object)
+        if ruleset_form.is_valid():
+            ruleset_form.save()
         
         formset = formset_factory(RuleFormWithRuleset, formset=BaseModelFormSet, can_delete=True)
         formset.model = Rule
@@ -87,4 +94,4 @@ class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
             formset = formset(queryset=self.object.rules.all())
 
 
-        return self.render_to_response(self.get_context_data(formset=formset))
+        return self.render_to_response(self.get_context_data(formset=formset, ruleset_form=ruleset_form))
