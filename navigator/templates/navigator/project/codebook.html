@@ -1,15 +1,23 @@
 {% extends "navigator/project/base.html" %}
+{% load compress %}
+{% load staticfiles %}
 
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
-{% block css %}<link href="{{ MEDIA_URL }}css/jquery.codebookeditor.css" rel="stylesheet" type="text/css" />{% endblock %}
+{% block css %}
+{% compress css %}
+<link href="{% static 'css/jquery.codebookeditor.css' %}" rel="stylesheet" type="text/css" />
+{% endcompress %}
+{% endblock %}
 
 {% block content %}
 
 <h1>Codebook editor</h1>
 <div name="{{ codebook.id }}" class="codebook">Loading..</div>
 
-<script src="{{ MEDIA_URL }}js/jquery.djangofields.js"></script>
-<script src="{{ MEDIA_URL }}js/jquery.codebookeditor.js"></script>
+{% compress js %}
+<script src="{% static 'js/jquery.djangofields.js' %}"></script>
+<script src="{% static 'js/jquery.codebookeditor.js' %}"></script>
+{% endcompress %}
 <script>$(".codebook").codebookeditor("{% url "api" %}v4/");</script>
 {% endblock %}

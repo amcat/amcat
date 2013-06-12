@@ -3,8 +3,10 @@
 {% load staticfiles %}
 
 {% block css %}
-    <link href="{{ MEDIA_URL }}css/selection.css" rel="stylesheet" type="text/css" media="screen" />
-    <link href="{{ MEDIA_URL }}css/jquery.jqplot.min.css" rel="stylesheet" type="text/css" media="screen" />
+{% compress css %}
+    <link href="{% static 'css/selection.css' %}" rel="stylesheet" type="text/css" media="screen" />
+    <link href="{% static 'css/jquery.jqplot.min.css' %}" rel="stylesheet" type="text/css" media="screen" />
+{% endcompress %}
 {% endblock %}
 {% block javascript %}    
 <!--[if lt IE 9]><script type="text/javascript" src="{{MEDIA_URL}}js/jqplot/excanvas.min.js"></script><![endif]-->
