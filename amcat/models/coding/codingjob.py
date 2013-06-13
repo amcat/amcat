@@ -67,6 +67,7 @@ class CodingJob(AmcatModel):
     class Meta():
         db_table = 'codingjobs'
         app_label = 'amcat'
+        ordering = ('project', '-id')
 
     def get_codings(self):
         """Return a sequence of codings with pre-fetched values"""
