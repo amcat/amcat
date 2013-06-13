@@ -17,7 +17,12 @@
     <div class="alert alert-success">Successfully deleted the coding job. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
  {% endif %}
  {% if added %}
-    <div class="alert alert-success">Succesfully created coding job <a href='{% url "codingjob" context.id added.id %}'>{{added.id}} : {{added}}</a> </div>
+    <div class="alert alert-success">
+      {% for job in added %}
+      Created job: <a href='{% url "codingjob" context.id job.id %}'>{{job.id}} : {{job}}</a><br/> 
+      {% endfor %}
+    </div>
+</div>
  {% endif %}
 
  {{ table|safe }}

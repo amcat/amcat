@@ -40,3 +40,10 @@ class JQueryMultipleSelect(JQuerySelect, widgets.SelectMultiple):
     def render(self, name, value, attrs=None, *args, **kwargs):
         attrs = self._build_attrs(attrs, multiple='multiple')
         return super(JQueryMultipleSelect, self).render(name, value, attrs=attrs)
+
+def convert_to_jquery_select(form):
+    for field in form.fields:
+        print field,  type(form.fields[field].widget), type(form.fields[field].widget) == widgets.Select
+        w = form.fields[field].widget
+        if type(w) == widgets.Select:
+            form.fields[field].widget = JQuerySelect(attrs=w.attrs, choices=w.choices)

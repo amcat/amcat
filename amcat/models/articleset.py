@@ -30,7 +30,7 @@ from amcat.tools.djangotoolkit import get_or_create
 from amcat.models.article import Article
 
 from django.db import models
-
+import itertools 
 import logging
 log = logging.getLogger(__name__)
 
@@ -48,21 +48,9 @@ def get_or_create_articleset(name, project):
     return get_or_create(ArticleSet, name=name, project=project) if name else None
 
 def create_new_articleset(name, project):
-    """
-    Creates new articleset based on name. If articleset exists add postfix number to make articleset name unique.
-
-    @type name: unicode
-    @param name: proposed name of new articleset
-    @type project: project.Project
-    @param project: project attribute of ArticleSet    
-    @return: new ArticleSet
-    """
-    name1 = name
-    i = 1
-    while ArticleSet.objects.filter(project=project, name=name1).exists():
-        i += 1
-        name1 = "{name} ({i})".format(**locals())
-    return ArticleSet.objects.create(project=project, name=name1)
+    """Create a new articleset based on name. If articleset exists add postfix number to make articleset name unique."""
+    name=ArticleSet.get_unique_name(project, name)
+    return ArticleSet.objects.create(project=project, name=name) 
 
 def _articles_to_ids(articles):
     """
@@ -222,7 +210,23 @@ class ArticleSet(AmcatModel):
             #  this is needed...)
             self.project.favourite_articlesets.add(self)
             self.project.save()
-        
+
+    @classmethod
+    def get_unique_name(cls, project, name):
+        """Return a 'name [(n)]' that is unique in this project"""
+        name2 = name
+        for i in itertools.count():
+            if not ArticleSet.objects.filter(project=project, name=name2).exists():
+                return name2
+            name2 = "{name} {i}".format(**locals())
+
+    @classmethod
+    def create_set(cls, project, name, articles=None):
+        aset = cls.objects.create(project=project, name=cls.get_unique_name(project, name))
+        if articles:
+            aset.add_articles(articles)
+        return aset
+            
 class ArticleSetArticle(AmcatModel):
     """
     ManyToMany table for article sets. An explicit model allows more prefeting in

@@ -437,7 +437,7 @@ def codingjobs(request, project):
     deleted = session_pop(request.session, "deleted_codingjob")
     added = session_pop(request.session, "added_codingjob")
     if added:
-        added = CodingJob.objects.get(pk=added)
+        added = [CodingJob.objects.get(pk=i) for i in added]
         
     return table_view(request, project, cdjobs, 'codingjobs',
            template="navigator/project/codingjobs.html", added=added, deleted=deleted)
@@ -1120,44 +1120,24 @@ def delete_codingjob(request, codingjob, project):
     request.session['deleted_codingjob'] = True
     return redirect(reverse("project-codingjobs", args=[project.id]))
 
-    
+from amcat.scripts.actions.add_codingjob import AddCodingJob
+from amcat.forms.widgets import convert_to_jquery_select
 
 @check_perm("manage_codingjobs", True)
 @check(Project)
 def add_codingjob(request, project):
-    """
-    Add codingjob to a project
-    """
-    form = forms.CodingJobForm(project=project, edit=False, data=request.POST or None)
-
-    form.saved = False
+    form = AddCodingJob.options_form(data=request.POST or None, project=project, initial=dict(insertuser=request.user))
+    convert_to_jquery_select(form)
+    form.fields["insertuser"].widget = forms.HiddenInput()
     if form.is_valid():
-        # Save form and set flag on form indicating it's saved.
-        cj = form.save(commit=False)
-        cj.insertuser = request.user
-        cj.project = project
-
-        # Copy articleset, as is done in api/webscripts/assign_codingjob.py
-        # AssignCodingJob.run()
-        a = create_new_articleset(cj.name, project)
-        a.add_articles(cj.articleset.articles.all())
-        cj.articleset = a
-        # Split all articles 
-        cj.save()
-
-        SplitArticles(dict(articlesets=[a.id])).run()
-
-        form = forms.CodingJobForm(project=project, edit=False, data=None)
-        form.saved = True
-
-        
-        request.session['added_codingjob'] = cj.id
+        result = AddCodingJob.run_script(form)
+        if isinstance(result, CodingJob): result = [result]
+        request.session['added_codingjob'] = [job.id for job in result]
         return redirect(reverse("project-codingjobs", args=[project.id]))
-
-    # Create context for template
+        
     ctx = locals()
     ctx['menu'] = PROJECT_MENU
     ctx['title'] = 'codingjob'
     ctx['context'] = project
-
     return render(request, 'navigator/project/add.html', ctx)
+    
