@@ -21,6 +21,8 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 
+from amcat.scripts.forms import ModelMultipleChoiceFieldWithIdLabel
+
 from django import forms
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
@@ -77,7 +79,7 @@ _METAFIELDS = [
 ]
 
 class CodingjobListForm(forms.Form):
-    codingjobs = forms.ModelMultipleChoiceField(queryset=CodingJob.objects.all(), required=True)
+    codingjobs = ModelMultipleChoiceFieldWithIdLabel(queryset=CodingJob.objects.all(), required=True)
     export_level = forms.ChoiceField(label="Level of codings to export", choices=CODING_LEVELS, initial=CODING_LEVEL_ARTICLE)
     
     def __init__(self, data=None, files=None, **kwargs):

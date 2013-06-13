@@ -122,8 +122,11 @@ class QualitySerialiser(BaseSerialiser):
         return range(-10, 15, 5) # 15 because end point is ommitted
     def value_label(self, value, language=None):
         if value == 0: return "0"
+        if value is None: return value
         return "%+1.1f" % (value / 10.)
-
+    def get_export_columns(self, **options):
+        yield "", self.value_label
+        
 class IntervalSerialiser(BaseSerialiser):
     """Stub for interval serialiser"""
     def __init__(self, field):
