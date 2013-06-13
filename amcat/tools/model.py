@@ -101,6 +101,13 @@ class AmcatModel(models.Model):
         except AttributeError:
             return unicode(self.id)
 
+    @classmethod
+    def get_or_create(cls, **attributes):
+        try:
+            return cls.objects.get(**attributes)
+        except cls.DoesNotExist:
+            return cls.objects.create(**attributes)
+
     
 
 from django_extensions.db.fields import UUIDField
