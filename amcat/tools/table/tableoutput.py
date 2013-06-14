@@ -18,6 +18,7 @@ def getTable(table, colnames=None):
         table = table3.ListTable(table, colnames)
     return table
 
+
 ####################### table2ascii / unicode ##########################
 
 CONNECTORS = { # (unicode, box) : (sep2t, sep2b, sep, line)
@@ -303,6 +304,11 @@ def table2json(table, colnames=None, writecolnames=True, writerownames=False):
         values += (table.getValue(row,col) for col in cols)
         rowsjson.append(values)
     return json.dumps({'headers':headersjson, 'rows':rowsjson}, default=lambda o:unicode(o), indent=2)
+
+OUTPUT_FUNCTIONS = dict(
+    csv = table2csv,
+    )
+
 
 if __name__ == '__main__':
     t = table3.DictTable(default=0)

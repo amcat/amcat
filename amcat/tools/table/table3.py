@@ -34,6 +34,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 from amcat.tools import toolkit, idlabel
 from amcat.tools.toolkit import isnull
 from amcat.tools.table import tableoutput
+from amcat.tools.table.export import EXPORTERS
 
 from collections import namedtuple
 
@@ -46,6 +47,7 @@ import logging; log = logging.getLogger(__name__)
 def trivialCellFunc(row, col):
     """'Default' cell function that returns a string representation row/col"""
     return "%s/%s" % (row, col)
+
 
 class Table(object):
     """Generic interface on rectangular tables.
@@ -112,6 +114,12 @@ class Table(object):
         """Output the table; see tableoutput.table2unicode for options"""
         return tableoutput.table2unicode(self, **kargs)
 
+    def to_csv(self, **kargs):
+        return self.export(format='csv', **kargs)
+
+    def export(self, format, **kargs):
+        return EXPORTERS[format].export(self, **kargs)
+    
     def to_list(self, tuple_name="row", row_names=False):
         """Return the data in the table as a sequence of named tuples
 
