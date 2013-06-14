@@ -21,9 +21,12 @@ from django.views.generic.edit import FormMixin, ProcessFormView
 from django.views.generic.base import TemplateResponseMixin
 
 from django.core.urlresolvers import reverse
+from django.http import HttpResponse
+from django import forms
 
 from navigator.utils.auth import check
 from amcat.models import Project
+from amcat.tools.table import table3
 
 class ScriptMixin(FormMixin):
     script = None # plugin/script to base the view on
@@ -33,7 +36,7 @@ class ScriptMixin(FormMixin):
     
     def get_form_class(self):
         return self.get_script().options_form
-
+    
     def form_valid(self, form):
         self.form = form
         self.result = self.get_script().run_script(form)
@@ -50,11 +53,21 @@ class ScriptView(ProcessFormView, ScriptMixin, TemplateResponseMixin):
     pass
 
 class ProjectScriptView(ScriptView):
+    """
+    View that provides access to a Script from within a plugin.
+    Subclasses should provide a script instance.
+    """
+
+    
     template_name = "navigator/project/script_base.html"
 
+    def get_initial(self):
+        initial = super(ProjectScriptView, self).get_initial()
+        initial["project"] = self.project
+        return initial
+        
     def get_success_url(self):
         return reverse("project", kwargs=dict(id=self.project.id))
-
         
     def get_form(self, form_class):
         form = super(ScriptView, self).get_form(form_class)
@@ -62,7 +75,6 @@ class ProjectScriptView(ScriptView):
             for key, val in self.url_data.iteritems():
                 if key in form.fields:
                     form.fields[key].initial = val
-                #self.fields["codebook"].widget = HiddenInput()
         return form
 
     def _initialize_url_data(self, **kwargs):
@@ -80,4 +92,23 @@ class ProjectScriptView(ScriptView):
     def get_context_data(self, **kwargs):
         context = super(ProjectScriptView, self).get_context_data(**kwargs)
         context["project"] = self.project
+        context["script_doc"] = self.script.__doc__.strip()
         return context
+
+class TableExportMixin():
+    
+    def get_form_class(self):
+        
+        class ExportFormWrapper(self.script.options_form):
+            format = forms.ChoiceField(choices = [(k, v.name) for (k,v) in table3.EXPORTERS.items()],
+                                       label = "Export format")
+        return ExportFormWrapper
+        
+    def form_valid(self, form):
+        table = self.get_script().run_script(form)
+        exporter = table3.EXPORTERS[form.cleaned_data["format"]]
+        filename = "bla.{exporter.extension}".format(**locals())
+        response = HttpResponse(content_type='text/csv', status=200)
+        response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
+        exporter.export(table, stream = response)
+        return response

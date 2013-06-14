@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<form action="" method="POST">
+<form action="" enctype="multipart/form-data" method="POST">
    <legend>Please enter options for {{ script_name }} below.</legend>
    <table>
     {{ form.as_table }}
@@ -14,5 +14,6 @@
    </div>
 </form>
 
+<div class="alert alert-info" style="white-space:pre-wrap">{{ script_doc }}</div>
 
 {% endblock %}

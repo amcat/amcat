@@ -64,6 +64,12 @@ Array.prototype.remove=function(s){
                 $("<i>").addClass("icon icon-edit")                
             ).append($(document.createTextNode(" Edit codebook name")));
 
+            self.btn_download = $("<a>").addClass("btn")
+		.attr("href", document.URL + "/export")
+		.append(
+                    $("<i>").addClass("icon icon-download")                
+		).append($(document.createTextNode(" Donwload codebook")));
+
 	    /* self.btn_manage_bases = $("<div>").addClass("btn").append(
                 $("<i>").addClass("icon icon-list")                
             ).append(
@@ -175,7 +181,7 @@ Array.prototype.remove=function(s){
 
                 // Add main action buttons
                 var buttons = $("<p>").addClass("btn-group")
-                buttons.append(self.btn_save_changes).append(self.btn_edit_name).append(self.btn_delete);
+                buttons.append(self.btn_save_changes).append(self.btn_edit_name).append(self.btn_download).append(self.btn_delete);
 
                 $(self).contents().remove();
                 $(self).append(self.searchbox);

@@ -24,6 +24,7 @@ import logging; log = logging.getLogger(__name__)
 import csv
 
 from django import forms
+from django.forms import widgets
 from django.db import transaction
 
 from amcat.scripts.script import Script
@@ -49,9 +50,12 @@ class ImportCodebook(Script):
 
     class options_form(forms.ModelForm):
         file = forms.FileField()
-        
         class Meta:
             model = Codebook
+        def __init__(self, *args, **kargs):
+            forms.ModelForm.__init__(self, *args, **kargs)
+            self.fields["name"].label = "Codebook name"
+            self.fields["name"].widget = widgets.TextInput()
 
     @transaction.commit_on_success
     def _run(self, file, **kargs):
@@ -103,14 +107,18 @@ def csv_as_columns(file):
     header = r.next()
     result = {name : [] for name in header}
     for row in r:
+        row = row + [None] * (len(header) - len(row))
         for name, val in zip(header, row):
             result[name].append(val)
     return result
 
 def get_index(cols, row):
     for i in range(len(cols)):
-        if cols[i][row]:
-            return i
+        try:
+            if cols[i][row]:
+                return i
+        except IndexError:
+            pass # incomplete rows
     raise ValueError("Cannot parse row {row}".format(**locals()))
         
 def get_parents_from_columns(cols):

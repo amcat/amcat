@@ -8,11 +8,13 @@
  <br/>
  <h1 class="noline">Actions</h1>
  <p>
-{% if can_import %}
-  <a href="{% url "codebook-import" project.id %}" class="btn"><i class="icon-edit"></i> Import codebooks</a>
-{% endif %}
 {% if can_create %}
-  <a href="{% url "project-add-codebook" project.id %}" class="btn"><i class="icon-certificate"></i> Create new codebook</a>
+  <a href="{% url "project-add-codebook" project.id %}" class="btn"><i class="icon-plus-sign"></i> Create new codebook</a>
+  <a href="{% url "project-import-codebook" project.id %}" class="btn"><i class="icon-upload"></i> Upload codebook</a>
+{% endif %}
+{% if can_import %}
+  <a href="{% url "codebook-import" project.id %}"
+     class="btn"><i class="icon-share"></i> Link to existing codebook</a>
 {% endif %}
  </p>
 
@@ -20,11 +22,12 @@
     <div class="alert alert-success">Successfully deleted a codebook. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
  {% endif %}
 
- <h1>Imported codebooks</h1>
- {{ linked_codebooks|safe }}
-
  <h1>Owned codebooks</h1>
  {{ owned_codebooks|safe }}
+
+
+ <h1>Linked codebooks</h1>
+ {{ linked_codebooks|safe }}
 
 </div>
 {% endblock %}
