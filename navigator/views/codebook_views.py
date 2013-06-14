@@ -31,9 +31,10 @@ class ImportCodebook(ProjectScriptView):
     
 class ExportCodebook(TableExportMixin, ProjectScriptView):
     script = ExportCodebook
+
+    def export_filename(self, form):
+        c = form.cleaned_data["codebook"]
+        return "Codebook {c.id} {c}".format(**locals())
     
     def get_initial(self):
         return dict(codebook=self.url_data["codebookid"])
-
-    def get_success_url(self):
-        return reverse("project-codebook", kwargs=dict(project=self.project.id, codebook=self.url_data["codebookid"]))

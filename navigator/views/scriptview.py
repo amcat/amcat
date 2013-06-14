@@ -96,7 +96,11 @@ class ProjectScriptView(ScriptView):
         return context
 
 class TableExportMixin():
-    
+
+    def export_filename(self, form):
+        """Return the filename to export as (without extension)"""
+        return self.__class__.__name__
+        
     def get_form_class(self):
         
         class ExportFormWrapper(self.script.options_form):
@@ -107,7 +111,7 @@ class TableExportMixin():
     def form_valid(self, form):
         table = self.get_script().run_script(form)
         exporter = table3.EXPORTERS[form.cleaned_data["format"]]
-        filename = "bla.{exporter.extension}".format(**locals())
+        filename = "{fn}.{exporter.extension}".format(fn=self.export_filename(form), **locals())
         response = HttpResponse(content_type='text/csv', status=200)
         response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
         exporter.export(table, stream = response)
