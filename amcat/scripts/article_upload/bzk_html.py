@@ -61,8 +61,10 @@ class BZK(UploadScript):
                 if section:
                     article.props.section = section
             article.props.medium = get_or_create_medium(div.cssselect("#sourceTitle")[0].text)
-            article.props.date = readDate(div.cssselect("#articleDate")[0].text)
-
+            try:
+                article.props.date = readDate(div.cssselect("#articleDate")[0].text)
+            except ValueError:
+                continue
             yield article
                     
 
