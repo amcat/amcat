@@ -98,9 +98,7 @@ class SimpleController(Controller):
         units = scraper.get_units()
         for unit in units:
             for article in scraper.scrape_unit(unit):
-                result.append(self.save(article))
-        return result
-   
+                yield self.save(article)
 
 
 class RobustController(Controller):
