@@ -28,6 +28,7 @@ from amcat.tools.toolkit import readDate
 from amcat.models.medium import get_or_create_medium
 from lxml import html
 import re
+import logging; log = logging.getLogger(__name__)
 
 class BZK(UploadScript):
 
@@ -68,7 +69,7 @@ class BZK(UploadScript):
             try:
                 article.props.date = readDate(date_str)
             except ValueError:
-                print("parsing date \"{date_str}\" failed".format(**locals()))
+                log.error("parsing date \"{date_str}\" failed".format(**locals()))
             else:
                 yield article
                     
