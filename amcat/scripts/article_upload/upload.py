@@ -111,11 +111,10 @@ class UploadScript(Scraper):
         file = self.options['file']
         log.info(u"Importing {self.__class__.__name__} from {file.name} into {self.project}"
                  .format(**locals()))
-        from amcat.scraping.controller import SimpleController
+        from amcat.scraping.controller import RobustController
         with transaction.commit_on_success():
-            arts = list(SimpleController(self.articleset).scrape(self))
+            arts = list(RobustController(self.articleset).scrape(self))
             self.postprocess(arts)
-
             old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
             new_provenance = self.get_provenance(file, arts)
             self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
@@ -123,7 +122,7 @@ class UploadScript(Scraper):
 
         try:
             self._cleanup()
-        except:
+        except Exception:
             log.exception("Error on cleaning up")
         return arts
 
