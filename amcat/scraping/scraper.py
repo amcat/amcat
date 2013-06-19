@@ -32,7 +32,7 @@ from httplib2 import iri2uri
 from amcat.scripts.script import Script
 from amcat.models.article import Article
 from amcat.models.project import Project
-from amcat.models.medium import get_or_create_medium
+from amcat.models.medium import Medium
 from amcat.models.articleset import ArticleSet, create_new_articleset
 
 from amcat.scraping.htmltools import HTTPOpener
@@ -80,7 +80,7 @@ class Scraper(Script):
 
     def __init__(self, *args, **kargs):
         super(Scraper, self).__init__(*args, **kargs)
-        self.medium = get_or_create_medium(self.medium_name)
+        self.medium = Medium.get_or_create(self.medium_name)
         self.project = self.options['project']
         log.debug("Articleset: {self.articleset}, options: {self.options}"
                   .format(**locals()))
@@ -166,7 +166,7 @@ class Scraper(Script):
         if isinstance(article, Document):
             if hasattr(article, 'is_comment') and article.is_comment:
                 if not hasattr(self, 'comment_medium'):
-                    self.comment_medium = get_or_create_medium(self.medium_name + " - Comments")
+                    self.comment_medium = Medium.get_or_create(self.medium_name + " - Comments")
                 comment = True
             article = article.create_article()
 
