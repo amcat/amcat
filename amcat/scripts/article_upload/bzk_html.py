@@ -25,7 +25,7 @@ from __future__ import unicode_literals, absolute_import
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scraping.document import HTMLDocument
 from amcat.tools.toolkit import readDate
-from amcat.models.medium import get_or_create_medium
+from amcat.models.medium import Medium
 from lxml import html
 import re
 import logging; log = logging.getLogger(__name__)
@@ -62,9 +62,9 @@ class BZK(UploadScript):
                 if section:
                     article.props.section = section
             if not div.cssselect("#sourceTitle")[0].text:
-                article.props.medium = get_or_create_medium("unknown medium")
+                article.props.medium = Medium.get_or_create("unknown medium")
             else:
-                article.props.medium = get_or_create_medium(div.cssselect("#sourceTitle")[0].text)
+                article.props.medium = Medium.get_or_create(div.cssselect("#sourceTitle")[0].text)
             date_str = div.cssselect("#articleDate")[0].text
             try:
                 article.props.date = readDate(date_str)

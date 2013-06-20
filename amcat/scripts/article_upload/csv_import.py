@@ -33,7 +33,7 @@ from django import forms
 from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.models.article import Article
-from amcat.models.medium import Medium, get_or_create_medium
+from amcat.models.medium import Medium
 
 from amcat.tools.toolkit import readDate
 
@@ -116,7 +116,7 @@ class CSV(UploadScript):
         if self.options['medium']:
             return self.options['medium']
         if self.options['medium_name']:
-            med = get_or_create_medium(self.options['medium_name'])
+            med = Medium.get_or_create(self.options['medium_name'])
             self.options['medium'] = med
             return med
         raise ValueError("No medium specified!")

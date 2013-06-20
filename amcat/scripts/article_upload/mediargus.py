@@ -35,7 +35,7 @@ from django import forms
 from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.models.article import Article
-from amcat.models.medium import Medium, get_or_create_medium
+from amcat.models.medium import Medium
 from amcat.tools.toolkit import readDate
 
 
@@ -60,7 +60,7 @@ class Mediargus(UploadScript):
         kargs['headline'] = meta[0].partition('. ')[2]
         
         medium_name, date, pagenr, length = meta[2].split(', ')
-        kargs['medium'] = get_or_create_medium(medium_name)
+        kargs['medium'] = Medium.get_or_create(medium_name)
         kargs['date'] = readDate(date)
         kargs['pagenr'] = int(pagenr.strip('p.'))
         kargs['length']  = int(length.strip('w.'))
