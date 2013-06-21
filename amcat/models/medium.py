@@ -62,6 +62,19 @@ class Medium(AmcatModel):
         except MediumAlias.DoesNotExist:
             raise Medium.DoesNotExist("%s could be found in medium nor medium_dict" % name)
 
+    @classmethod
+    def get_or_create(cls, medium_name):
+        """
+        Finds a medium object or creates a new one if not found
+        @type medium name: unicode
+        @return: a Medium object (or None if medium_name was None)
+        """
+        if medium_name is None: return None
+        try:
+            return cls.get_by_name(medium_name, ignore_case = False)
+        except cls.DoesNotExist:
+            return cls.objects.create(name = medium_name)
+
     class Meta():
         db_table = 'media'
         verbose_name_plural = 'media'
