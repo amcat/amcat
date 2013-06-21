@@ -71,7 +71,7 @@ class Medium(AmcatModel):
         """
         if medium_name is None: return None
         try:
-            return cls.get_by_name(medium_name)
+            return cls.get_by_name(medium_name, ignore_case = False)
         except cls.DoesNotExist:
             return cls.objects.create(medium_name)
 
@@ -80,6 +80,10 @@ class Medium(AmcatModel):
         verbose_name_plural = 'media'
         app_label = 'amcat'
 
+<<<<<<< local
+
+=======
+>>>>>>> other
 class MediumAlias(AmcatModel):
     """
     Provide multiple names per medium. Please use get_by_name on
