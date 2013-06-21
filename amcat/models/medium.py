@@ -80,15 +80,6 @@ class Medium(AmcatModel):
         verbose_name_plural = 'media'
         app_label = 'amcat'
 
-def get_or_create_medium(medium_name):
-    """
-    Finds a medium object or creates a new one if not found
-    @type medium_name: unicode
-    @return: a Medium object (or None if medium_name was None)
-    """
-    if medium_name is None: return None
-    return get_or_create(Medium, name=medium_name)
-
 class MediumAlias(AmcatModel):
     """
     Provide multiple names per medium. Please use get_by_name on

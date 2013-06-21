@@ -26,7 +26,7 @@ from __future__ import unicode_literals, absolute_import
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scraping.document import Document
 from amcat.scraping.pdf import PDFScraper
-from amcat.models.medium import get_or_create_medium
+from amcat.models.medium import Medium
 
 
 from datetime import date
@@ -100,7 +100,7 @@ class BZKPDFScraper(PDFScraper, UploadScript):
 
         for h, medium in self.index:
             if article.props.headline.lower().strip() in h.lower().strip():
-                article.props.medium = get_or_create_medium(medium)
+                article.props.medium = Medium.get_or_create(medium)
 
         return article
 
