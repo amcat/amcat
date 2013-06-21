@@ -80,10 +80,6 @@ class Medium(AmcatModel):
         verbose_name_plural = 'media'
         app_label = 'amcat'
 
-<<<<<<< local
-
-=======
->>>>>>> other
 class MediumAlias(AmcatModel):
     """
     Provide multiple names per medium. Please use get_by_name on
