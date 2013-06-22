@@ -41,4 +41,4 @@ def add_alias(request):
         form.save()
         return redirect(reverse('media'))
 
-    return render(request, "navigator/medium/add-alias.html",  dict(form=form))
+    return render(request, "navigator/medium/add_alias.html",  dict(form=form))
