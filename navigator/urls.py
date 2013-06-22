@@ -72,6 +72,7 @@ urlpatterns = patterns(
     
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),
+    url(r'^medium/add-alias$', 'navigator.views.medium.add_alias', name='medium-alias-add'),
 
     # Users
     url(r'^user/(?P<id>[0-9]+)?$', 'navigator.views.user.view', name='user'),

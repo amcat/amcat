@@ -305,6 +305,10 @@ class MediumForm(forms.ModelForm):
     class Meta:
         model = models.medium.Medium
 
+class MediumAliasForm(forms.ModelForm):
+    class Meta:
+        model = models.medium.MediumAlias
+
 class CodingJobForm(forms.ModelForm):
     unitschema = forms.ModelChoiceField(CodingSchema.objects.none(), widget=widgets.JQuerySelect)
     articleschema = forms.ModelChoiceField(CodingSchema.objects.none(), widget=widgets.JQuerySelect)

@@ -19,7 +19,7 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 
-from navigator.forms import MediumForm
+from navigator.forms import MediumForm, MediumAliasForm
 from navigator.utils.auth import check_perm
 
 
@@ -32,3 +32,13 @@ def add(request):
         return redirect(reverse('media'))
         
     return render(request, "navigator/medium/add.html", dict(form=form))
+
+@check_perm("manage_media")
+def add_alias(request):
+    form = MediumAliasForm(request.POST or None)
+
+    if 'submit' in request.POST and form.is_valid():
+        form.save()
+        return redirect(reverse('media'))
+
+    return render(request, "navigator/medium/add-alias.html",  dict(form=form))
