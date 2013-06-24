@@ -22,7 +22,7 @@
 Daemon that checks if there are any dirty article sets that need to be
 queried and adds them to Solr
 """
-
+from django.db.models import Q 
 from django.db import transaction
 
 from amcat.scripts.daemons.daemonscript import DaemonScript
@@ -37,15 +37,21 @@ class IndexDaemon(DaemonScript):
     def run_action(self):
         try:
             with transaction.commit_on_success():
-                aset = ArticleSet.objects.filter(indexed=True, index_dirty=True)[0]
+                aset = ArticleSet.objects.filter(Q(needs_deduplication=True) | Q(indexed=True, index_dirty=True))[0]
         except IndexError:
             log.debug("No dirty sets found, skipping")
             return
 
-        log.debug("Refreshing index for set: {aset.id} : {aset}".format(**locals()))
+        log.debug("Refreshing set: {aset.id} : {aset}, deduplicate={aset.needs_deduplication}, indexed={aset.indexed}, dirty={aset.index_dirty}".format(**locals()))
+        needs_refresh = aset.indexed and aset.index_dirty
         with transaction.commit_on_success():
-            aset.deduplicate()
-            aset.refresh_index()
+            if aset.needs_deduplication:
+                aset.deduplicate()
+                aset.needs_deduplication=False
+                aset.save()
+                needs_refresh=aset.indexed
+            if needs_refresh:
+                aset.refresh_index()
         return aset
 
 if __name__ == '__main__':

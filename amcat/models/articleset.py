@@ -79,7 +79,8 @@ class ArticleSet(AmcatModel):
 
     indexed = models.BooleanField(default=None, null=False)
     index_dirty = models.BooleanField(default=True)
-
+    needs_deduplication = models.BooleanField(default=True)
+    
     class Meta():
         app_label = 'amcat'
         db_table = 'articlesets'
@@ -192,13 +193,20 @@ class ArticleSet(AmcatModel):
         
     @property
     def index_state(self):
-        return (("Indexing in progress" if self.index_dirty else "Fully indexed")
-                if self.indexed else "Not indexed")
+        in_progress = []
+        if self.indexed and self.index_dirty: in_progress.append("Indexing")
+        if self.needs_deduplication: in_progress.append("Deduplication")
+        if in_progress:
+            return "{} in progress".format(", ".join(in_progress))
+        elif self.indexed:
+            return "Fully indexed"
+        else:
+            return "Not indexed"
 
     def deduplicate(self):
         from amcat.scripts.maintenance import deduplicate
         #TODO: the deduplicate code should go in here!
-        deduplicate.DeduplicateScript(articleset=self.id).run()
+        return deduplicate.DeduplicateScript(articleset=self.id).run()
 
     def save(self, *args, **kargs):
         new = not self.pk

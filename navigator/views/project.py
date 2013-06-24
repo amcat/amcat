@@ -279,7 +279,7 @@ def articlesets(request, project, what):
     table = FavouriteDatatable(resource=ArticleSet, label="article set", set_url=url + "?star=1", unset_url=url+"?star=0")
     table = table.rowlink_reverse('articleset', args=[project.id, '{id}'])
     table = table.filter(**selected_filter)
-    table = table.hide("project", "index_dirty", "indexed")
+    table = table.hide("project", "index_dirty", "indexed", "needs_deduplication")
 
     table.url += "&project_for_favourites={project.id}".format(**locals())
     
