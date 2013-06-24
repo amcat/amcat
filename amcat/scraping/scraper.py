@@ -95,7 +95,7 @@ class Scraper(Script):
             return aset
         return
         
-    def run(self,input,deduplicate=False):
+    def run(self,input=None,deduplicate=False):
         log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium} using RobustController"
                  .format(**locals()))
         from amcat.scraping.controller import RobustController
