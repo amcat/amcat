@@ -40,6 +40,20 @@ def handler404(request):
 
     return HttpResponseNotFound(render(request, 'error.html', locals()))
 
+def handler503(request):
+    """
+    503 error handler which includes a normal request context.
+    """
+    uri = request.build_absolute_uri()
+    comment = ("\n\n------ Issue details -----\n503 error on accessing:\n{uri}"
+               .format(**locals()))
+    issue_query = urllib.urlencode(dict(comment = comment))
+    title = header = "AmCAT is down for maintenance"
+    subheader = "We are working on the problem and hopefully AmCAT will be available again soon!"
+    description = """The server is temporarily down for maintenance. Please check back later or contact the administrator"""
+
+    return HttpResponseNotFound(render(request, 'error.html', locals()))
+
 def handler403(request):
     """
     403 Forbidden handler which includes a normal request context.
