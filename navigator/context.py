@@ -1,3 +1,6 @@
+
+import logging
+log = logging.getLogger(__name__)
 from amcat.models import AmCAT
 
 DISPLAY_COUNT = 3
@@ -6,7 +9,12 @@ COUNT_KEY = "last_announcement_count"
 
 # Extra context variables
 def extra(request):
-    announcement = AmCAT.get_instance().global_announcement
+    try:
+        announcement = AmCAT.get_instance().global_announcement
+    except:
+        log.exception("Cannot get announcement")
+        return dict(request=request)
+    
     last_announcement = request.session.get(ANNOUNCE_KEY)
     count = int(request.session.get(COUNT_KEY, 0)) + 1
 
