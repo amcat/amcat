@@ -63,7 +63,6 @@ DATABASE_OPTIONS = {
 
 ALLOWED_HOSTS = ['.vu.nl'] 
 
-
 DATABASES = dict(default=dict(
         ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
         NAME = os.environ.get("DJANGO_DB_NAME", 'amcat'),
@@ -117,6 +116,7 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.common.CommonMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'navigator.utils.maintenance.MaintenanceModeMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'navigator.utils.auth.BasicAuthenticationMiddleware',
     'navigator.utils.auth.RequireLoginMiddleware',

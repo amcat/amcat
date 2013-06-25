@@ -27,7 +27,7 @@ import os; from os.path import isdir
 
 import logging; log = logging.getLogger(__name__)
 
-from navigator.utils.error_handlers import handler404, handler500, handler403
+from navigator.utils.error_handlers import handler404, handler500, handler403, handler503
 
 admin.autodiscover() 
 
