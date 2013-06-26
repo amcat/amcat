@@ -573,7 +573,7 @@ def schema(request, schema, project):
 @check(Project, args_map={'project' : 'id'}, args='project')
 def new_schema(request, project):
     schema = CodingSchema.objects.create(name="Untitled schema", project=project)
-    return redirect(reverse("project-edit-schema", args=(project.id, schema.id)))
+    return redirect(reverse("project-edit-schema-properties", args=(project.id, schema.id)))
 
 
 @check(Project, args_map={'project' : 'id'}, args='project')
