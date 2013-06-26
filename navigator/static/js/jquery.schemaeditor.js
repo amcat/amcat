@@ -553,6 +553,23 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
                      (self.editing, field_choices);
         }
 
+        if (field_name === "label"){
+            var found = false;
+            $.each(self.fields, function(i, field){
+                if (i == fieldnr) return;
+                if (field.label.toLowerCase() === value.toLowerCase()) found = true;
+            });
+
+            if(found){
+                $.pnotify({
+                    "title" : "Duplicate",
+                    "text" : "There is already a field named '" + value + "'. Are you sure you wan't to continue?",
+                    "type" : "warning"
+                });
+            }
+        }
+
+
         // Set value to state
         self.fields[fieldnr][field_name] = value;
 
