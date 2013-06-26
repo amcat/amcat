@@ -8,6 +8,10 @@
  * Designed and built with all the love in the world @twitter by @mdo and @fat.
  */
 
+td.active{
+  background-color: #d9edf7 !important;
+}
+
 article,
 aside,
 details,

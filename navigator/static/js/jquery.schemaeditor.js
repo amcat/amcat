@@ -17,6 +17,25 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
+_keymap = {
+    37 : "left",
+    38 : "up",
+    39 : "right",
+    40 : "down",
+    74 : "down",    // J
+    75 : "up",      // K
+    72 : "left",    // H
+    76 : "right",   // L
+    9 : "tab",      // Tab
+    27 : "done",    // Esc
+    73 : "start",   // I
+    13 : "start",   // Enter
+    46 : "delete",  // Enter
+    83 : "save",    // s
+    45 : "insert",  // insert
+    65 : "insert",  // a
+}
+
 jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     // Prevent scoping issues
     var self = this;
@@ -28,6 +47,8 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.LOADING_STEPS = 8;
     self.KEYCODE_ENTER = 13;
     self.ERROR_COLOUR = "#f2dede"; // Taken from bootstrap.css
+    self.INFO_COLOUR = "#d9edf7";
+    self.N_COLS = 5;
     
     // Get UI elements
     self.bar = $("[name=loading] .bar");
@@ -51,7 +72,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     // Statekeeping values
     self.loading_percent = 0;
     self.editing = false;
-    self.null_clicked = false;
+    self.active_cell = { x: 0, y : 0 };
 
     // PRIVATE FUNCTIONS //
     self._set_progress = function(){
@@ -132,7 +153,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     self._create_delete_button = function(){
         var btn = $(
-            "<div class='btn btn-mini btn-danger'>" +
+            "<div class='delete btn btn-mini btn-danger'>" +
             "<i class='icon-white icon-trash'></i>" +
             "</div>"
         );
@@ -293,10 +314,116 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         $("html").click(self.document_clicked);
     }
 
+    self.initialise_shortcuts = function(){
+        document.addEventListener('keydown', function(event) {
+            self[_keymap[event.keyCode] + "_pressed"](event);
+        });
+
+        self.update_active_cell();
+    }
+
+    /*
+     * Repaints active cell.
+     */
+    self.update_active_cell = function(){
+        // Remove all active cell markups
+        $("td.active", self.table).removeClass("active");
+        $(self.get_active_cell()).addClass("active");
+    }
+
+    /* Moves n cells forward. Does not wrap around top and bottom borders. */
+    self.move_cells = function(n){
+        var n_rows = self.fields.length;
+        var new_pos = (self.active_cell.x + self.active_cell.y * self.N_COLS) + n;
+
+        // Make sure it doesn't overflow / underflow.
+        if (new_pos < 0 || new_pos >= n_rows * self.N_COLS){
+            return;
+        }
+
+        self.active_cell.x = Math.floor(new_pos % self.N_COLS); // Kung-fu fighting.. javascript!
+        self.active_cell.y = Math.floor(new_pos / self.N_COLS);
+
+        self.update_active_cell();
+    }
+
+    self.down_pressed = function(event){
+        if(self.editing) return;
+        self.move_cells(self.N_COLS);
+    }
+
+    self.up_pressed = function(event){
+        if(self.editing) return;
+        self.move_cells(-self.N_COLS);
+    }
+
+    self.left_pressed = function(event){
+        if(self.editing) return;
+        self.move_cells(-1);
+    }
+
+    self.right_pressed = function(event){
+        if(self.editing) return;
+        self.move_cells(1);
+    }
+
+    self.insert_pressed = function(event){
+        if(self.editing) return;
+        event.preventDefault();
+        self.btn_add_field.click();
+
+        self.active_cell.y = self.fields.length - 1;
+        self.active_cell.x = 0;
+        self.update_active_cell();
+        $(self.get_active_cell()).dblclick();
+
+    }
+
+    self.delete_pressed = function(event){
+        var row = $(self.get_active_cell()).parent();
+        $(".delete", row).click();
+        self.update_active_cell();
+    }
+
+    self.done_pressed = function(event){
+        $("html").click();
+    }
+
+    self.save_pressed = function(event){
+        if(event.ctrlKey){
+            event.preventDefault();
+            self.btn_save.click();
+        }
+    }
+
+    self.tab_pressed = function(event){
+        event.preventDefault();
+        $("html").click();
+
+        if(event.shiftKey){
+            self.left_pressed(event);
+        } else {
+            self.right_pressed(event);
+        }
+
+        $(self.get_active_cell()).dblclick();
+    }
+
+    self.start_pressed = function(event){
+        if(self.editing) return;
+        event.preventDefault();
+        $(self.get_active_cell()).dblclick();
+    }
+
+    self.undefined_pressed = function(event){
+        // Other key pressed. Handle?
+    }
+
     self.initialising_done = function(){
         /* This function is called when all data is ready */
         self.initialise_table();
         self.initialise_buttons();
+        self.initialise_shortcuts();
     }
 
     // CALLBACK FUNCTIONS //
@@ -494,6 +621,15 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         self.widget_focusout();
     }
 
+    self.get_td = function(x, y){
+        var tr = $("tbody > tr", self.table)[y];
+        return $("td", tr)[x+1];
+    }
+
+    self.get_active_cell = function(){
+        return self.get_td(self.active_cell.x, self.active_cell.y);
+    }
+
     self.cell_clicked = function(event){
         var target = $(event.currentTarget);
         var th = $($("th", self.table)[target[0].cellIndex]);
@@ -590,12 +726,6 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     self.widget_null_clicked = function(event){
         self.widget_focusout(event, null);
-    }
-
-    self.widget_keyup = function(event){
-        if (event.keyCode == self.KEYCODE_ENTER){
-            self.widget_focusout(event);
-        }
     }
 
     // MAIN FUNCTIONS //
