@@ -347,8 +347,15 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
         // Should we redirect?
         if (this == true && !errors_found){
-            window.location = all_errors['schema_url'];
-            return;
+            // Uncomment line below to enable redirecting
+            //window.location = all_errors['schema_url'];
+            //return;
+            $.pnotify({
+                "title" : "Done",
+                "text" : "Schema saved succesfully.",
+                "type" : "success",
+                "delay" : 500
+            });
         }
         
         // Enable save button
