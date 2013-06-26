@@ -221,6 +221,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
          * in the state-keeping variables. Arguments left empty, are filled
          * with 'null'.
          */
+        var tr, td, name, type, choices, serialiser;
         field = (field === undefined) ? {} : field;
 
         var defaults = {
@@ -264,8 +265,6 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     }
 
     self.initialise_table = function(){
-        var tr, td, name, type, choices, serialiser;
-
         // Add each field to table
         $.each(self.fields, function(i, field){
             self.add_row(field);
@@ -371,10 +370,10 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
             }
         });
 
-        if(!errors_found){
+        if(!errors_found && self.current_message !== null){
            self.current_message.pnotify_remove(); 
            self.current_message = null;
-        } else {
+        } else if (errors_found) {
             self.td_hovered.bind(["info", [info_msg]])();            
             $.pnotify({
                 "title" : "Schema cannot be saved.",
@@ -451,7 +450,24 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     }
 
     self.btn_add_field_clicked = function(event){
-        self.add_row({}, true);
+        var textfield = null;
+        $.each(self.model_choices.fieldtype, function(i, type){
+            if (type.name === "Text") textfield = type.id;
+        });
+
+        if (textfield === null){
+            $.pnotify({
+                "title" : "Bug",
+                "text" : "Could not find textfieldtype id in btn_add_field_clicked(). Please file a bug report including this information.",
+                "type" : "error"
+            });
+            return;
+        }
+
+        self.add_row({
+            "label" : "New Field (" + self.fields.length + ")",
+            "fieldtype" : textfield
+        }, true);
         self.save(false);
     }
 
