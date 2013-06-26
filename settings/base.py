@@ -122,7 +122,7 @@ MIDDLEWARE_CLASSES = [
     'navigator.utils.auth.RequireLoginMiddleware',
     'navigator.utils.auth.SetRequestContextMiddleware',
     'navigator.utils.auth.NginxRequestMethodFixMiddleware',
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    #'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 STATICFILES_FINDERS = (
@@ -163,7 +163,7 @@ INSTALLED_APPS = [
     'annotator',
     'navigator',
     'api',
-    'debug_toolbar',
+    #'debug_toolbar',
     'amcat',
     'django_extensions',
     'compressor'
