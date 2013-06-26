@@ -107,8 +107,6 @@ class Document(object):
         _metastring = dict()
         for prop, value in self.getprops().items():
             value = self._convert(value)
-            if prop == 'parent':
-                value = value.article
             if prop in _ARTICLE_PROPS:
                 setattr(art, prop, value)
             else:
