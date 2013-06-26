@@ -14,18 +14,6 @@
  {% endblock %}
 
 {% block content %}
-<br/>
-<h1 class="noline"><i>{{schema.name}}</i> details</h1>
-<form action="" method="POST">
-<table>
- {{ schema_form }}
-</table>
-<div class="form-actions">
- <input class="btn btn-primary" type="submit" name="codingschema-submit" value="Save" />
- <a href="{% url "project-schema" context.id schema.id %}" class="btn" value="Cancel">Cancel</a>
-</div>
-</form>
-<h1 class="noline">Schemafields</h1>
 <p>
 <div name="add-field" class="btn disabled"><i class="icon-plus"></i> Add field</div>
 <!--<div name="undo" class="btn disabled"><i class="icon-step-backward"></i> Undo</div>

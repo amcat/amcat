@@ -12,7 +12,8 @@
 {% endif %}
 <h1 class="noline">Actions</h1>
 <p>
-<a href="{% url "project-edit-schema" context.id schema.id %}" class="btn btn"><i class="icon-edit"></i> Edit schema</a>
+<a href="{% url "project-edit-schemafields" context.id schema.id %}" class="btn btn"><i class="icon-edit"></i> Edit fields</a>
+<a href="{% url "project-edit-schema-properties" context.id schema.id %}" class="btn btn"><i class="icon-edit"></i> Edit properties</a>
 <a href="{% url "project-name-schema" context.id schema.id %}" class="btn"><i class="icon-share"></i> Copy schema</a>
 
 <a class="btn btn-danger confirm" href="{% url "project-delete-schema" context.id  schema.id %}"
