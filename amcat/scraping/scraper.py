@@ -132,14 +132,14 @@ class Scraper(Script):
         @return: a sequence of Article objects ready to .save()
         """
         log.debug(u"Scraping unit {}".format(unit))
+        articles = list(self._scrape_unit(unit))
 
-        for article in self._scrape_unit(unit):
+        for article in articles:
             if hasattr(article.props, 'parent'):
-                log.warning("Please use 'article.parent' rather than 'article.props.parent'")
                 article.parent = article.props.parent
 
         #initial list is any article without parent, or a non-existing parent
-        toprocess = [a for a in articles if (not hasattr(a, 'parent')) or a.parent not in articles]
+        toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
 
         while len(toprocess) > 0:
             doc = toprocess.pop(0)
@@ -147,7 +147,7 @@ class Scraper(Script):
             
             #find children, add to toprocess
             for a in articles:
-                if a.parent = doc:
+                if hasattr(a, 'parent') and a.parent == doc:
                     a.props.parent = article
                     toprocess.append(a)
                     

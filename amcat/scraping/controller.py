@@ -78,6 +78,7 @@ class Controller(object):
 
     def save(self, article):
         log.debug("Saving article %s" % article)
+
         try:
             save = transaction.savepoint()
             article.save()
@@ -89,6 +90,23 @@ class Controller(object):
         log.debug("Done")
         return article
 
+    def parents(self, articles):
+        """Figure out parent relationships and save in the right order"""
+        articles = list(articles)
+        toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
+        while len(toprocess) > 0:
+            unsaved = toprocess.pop(0)
+            saved = self.save(unsaved)
+            #find children, transfer parent props
+            for a in articles:
+                if hasattr(a, 'parent') and a.parent == unsaved:
+                    a.parent = saved
+                    toprocess.append(a)
+                    
+            yield saved
+
+
+
 class SimpleController(Controller):
     """Simple implementation of Controller"""
     
@@ -97,8 +115,8 @@ class SimpleController(Controller):
         result = []
         units = scraper.get_units()
         for unit in units:
-            for article in scraper.scrape_unit(unit):
-                yield self.save(article)
+            for article in self.parents(scraper.scrape_unit(unit)):
+                yield article
 
 
 class RobustController(Controller):
@@ -132,14 +150,8 @@ class RobustController(Controller):
         if len(scrapedunits) == 0:
             log.warning("scrape_unit returned 0 units")
         
-        for unit in scrapedunits:
-            try: #can go wrong, will go wrong
-                log.info("saving unit {unit}".format(**locals()))
-            except Exception:
-                log.exception("log.info failed")
-            unit = self.save(unit)
-            if unit:
-                yield unit
+        for unit in self.parents(scrapedunits):
+            yield unit
         
 
 
