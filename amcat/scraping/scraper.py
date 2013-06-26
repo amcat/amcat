@@ -134,7 +134,23 @@ class Scraper(Script):
         log.debug(u"Scraping unit {}".format(unit))
 
         for article in self._scrape_unit(unit):
-            article = self._postprocess_article(article)
+            if hasattr(article.props, 'parent'):
+                log.warning("Please use 'article.parent' rather than 'article.props.parent'")
+                article.parent = article.props.parent
+
+        #initial list is any article without parent, or a non-existing parent
+        toprocess = [a for a in articles if (not hasattr(a, 'parent')) or a.parent not in articles]
+
+        while len(toprocess) > 0:
+            doc = toprocess.pop(0)
+            article = self._postprocess_article(doc)
+            
+            #find children, add to toprocess
+            for a in articles:
+                if a.parent = doc:
+                    a.props.parent = article
+                    toprocess.append(a)
+                    
             log.debug(unicode(".. yields article {article}".format(**locals()),'utf-8'))
             yield article
 
