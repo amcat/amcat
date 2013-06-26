@@ -28,8 +28,8 @@ log = logging.getLogger(__name__)
 
 WARNING_NOT_PRODUCTION = ("This is {server}. "
                            "Use <a href='http://amcat.vu.nl'>amcat.vu.nl</a> "
-                           "unless you explicitly want to use this server.")
-
+                           "unless you explicitly want to use this server. "
+                          "Changes made here will probably <b>not</b> be saved")
 
 SINGLETON_ID = 1
 
