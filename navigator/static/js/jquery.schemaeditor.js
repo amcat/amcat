@@ -37,6 +37,9 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.btn_redo = $(".btn[name=redo]");
     self.table = $("table[name=schema]");
 
+    // Pnotify balloon
+    self.current_message = null;
+
     // JSON data
     self.fields;
     self.fieldtypes; // Types of each field (IntegerField, etc)
@@ -312,20 +315,30 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
          */
         var type = this[0];
         var msgs = this[1];
-        var cont = $("[name=field_errors]");
-        
-        cont.contents().remove();
 
-        var alert = $("<div>").attr("class", "alert alert-" + type);
-
-        if (msgs.length == 1){
-            alert.append(msgs[0]);
-        } else {
-            // TODO: beautify
-            alert.append(msgs);
+        if (self.current_message == null){
+            self.current_message = $;
         }
 
-        cont.append(alert);
+        if (msgs.length != 1){
+            self.current_message.pnotify({
+                "title" : "Whoops.",
+                "text" : "Multiple error messages per cell are not yet supported.",
+                "type" : "error",
+                "shadow" : false,
+                nonblock: true,
+                hide: false,
+                closer: false,
+                sticker: false
+            });
+            return;
+        }
+
+        self.current_message = self.current_message.pnotify({
+            "title" : type, "type" : type, "text" : msgs[0], "shadow" : false, 
+            nonblock: true, hide: false,closer: false, sticker: false
+        });
+
     }
 
     self.save_callback = function(all_errors){
@@ -359,9 +372,15 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         });
 
         if(!errors_found){
-            $("[name=field_errors]").contents().remove();
+           self.current_message.pnotify_remove(); 
+           self.current_message = null;
         } else {
             self.td_hovered.bind(["info", [info_msg]])();            
+            $.pnotify({
+                "title" : "Schema cannot be saved.",
+                "text" : "Errors occured while checking this schema for errors.",
+                "type" : "error",
+            });
         }
     
         // Colour tds with error
