@@ -335,7 +335,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     /* Moves n cells forward. Does not wrap around top and bottom borders. */
     self.move_cells = function(n){
-        var n_rows = self.fields.length;
+        var n_rows = $("tr", self.table).length - 1;
         var new_pos = (self.active_cell.x + self.active_cell.y * self.N_COLS) + n;
 
         // Make sure it doesn't overflow / underflow.
@@ -594,6 +594,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.delete_button_clicked = function(event){
         // Delete row
         $(event.currentTarget).parent().parent().remove();
+        self.update_active_cell();
     }
 
     self.btn_save_clicked = function(event){
