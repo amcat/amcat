@@ -388,13 +388,18 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         self.active_cell.x = 0;
         self.update_active_cell();
         $(self.get_active_cell()).dblclick();
-
     }
 
     self.delete_pressed = function(event){
         var row = $(self.get_active_cell()).parent();
-        $(".delete", row).click();
-        self.update_active_cell();
+
+        if(self.editing){
+            $(".select-nil", row).click();
+        } else {
+            $(".delete", row).click();
+            self.update_active_cell();
+        }
+
     }
 
     self.done_pressed = function(event){
@@ -664,7 +669,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         // Does this field allow a null value? If so, add a 'null' button
         var cont = null;
         if (th.attr("null") == "true"){
-            var btn_null = $(" <div class='btn btn-primary'>∅</div>");
+            var btn_null = $(" <div class='btn btn-primary select-nil'>∅</div>");
             btn_null.click(self.widget_null_clicked);
 
             cont = $("<div name='null-form' class='form-inline'>");
@@ -679,9 +684,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         widget.keyup(self.widget_keyup);
 
         // Focus textinput widgets
-        if(widget.attr("type") == "text"){
-            widget.focus();
-        }
+        widget.focus();
 
         // To prevent unfocusing (clicking table) when user
         // actually clicks widget
