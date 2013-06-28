@@ -324,11 +324,13 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     /*
      * Repaints active cell.
+     * 
+     * @return: active cell (jQuery element)
      */
     self.update_active_cell = function(){
         // Remove all active cell markups
         $("td.active", self.table).removeClass("active");
-        $(self.get_active_cell()).addClass("active");
+        return $(self.get_active_cell()).addClass("active");
     }
 
     /* Moves n cells forward. Does not wrap around top and bottom borders. */
@@ -344,7 +346,15 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         self.active_cell.x = Math.floor(new_pos % self.N_COLS); // Kung-fu fighting.. javascript!
         self.active_cell.y = Math.floor(new_pos / self.N_COLS);
 
-        self.update_active_cell();
+        var cell = self.update_active_cell();
+
+        // Check if the active cell is visible, and if not scroll page
+        if (cell.offset().top <= document.body.scrollTop){
+            window.scrollBy(0,-4*cell.height());
+        } else if (cell.offset().top + cell.height() >= document.body.scrollTop + window.innerHeight) {
+            window.scrollBy(0,4*cell.height());
+        }
+
     }
 
     self.down_pressed = function(event){
