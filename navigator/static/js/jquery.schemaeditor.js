@@ -360,11 +360,13 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.down_pressed = function(event){
         if(self.editing) return;
         self.move_cells(self.N_COLS);
+        event.preventDefault();
     }
 
     self.up_pressed = function(event){
         if(self.editing) return;
         self.move_cells(-self.N_COLS);
+        event.preventDefault();
     }
 
     self.left_pressed = function(event){
