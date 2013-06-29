@@ -135,7 +135,7 @@ class Scraper(Script):
         articles = list(self._scrape_unit(unit))
 
         for article in articles:
-            if hasattr(article.props, 'parent'):
+            if hasattr(article, 'props') and hasattr(article.props, 'parent'):
                 article.parent = article.props.parent
 
         #initial list is any article without parent, or a non-existing parent
@@ -146,7 +146,7 @@ class Scraper(Script):
             
             #find children, add to toprocess
             for a in articles:
-                if hasattr(a, 'parent') and a.parent == doc:
+                if hasattr(a, 'props') and hasattr(a, 'parent') and a.parent == doc:
                     a.props.parent = article
                     toprocess.append(a)
                     

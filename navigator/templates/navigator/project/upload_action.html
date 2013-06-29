@@ -4,19 +4,48 @@
 
 {% block content %}
 
+{% if scraper_main_error %}
+<div class="alert alert-error">
+Uploading was unsuccessful because of the following error: {{scraper_main_error}}
+{% if scraper_errors %}
+<hr/>
+A number of errors where encountered while scraping that may have caused this:
+{{scraper_errors|unordered_list}}
+{% endif %}
+</div>
+{% endif %}
+
 {% if created_set %}
+{% if scraper_errors %}
+<div class="alert alert-warning">Uploaded {{created_n}} article(s) into <a href="{% url "articleset" created_set.project_id created_set.id %}">article set {{created_set}}</a>. However, 
+some errors where encountered while uploading:
+{{scraper_errors|unordered_list}}
+</div>
+{% else %}
 <div class="alert alert-success">Successfully uploaded {{created_n}}
   article(s)! You can use the form below to upload more articles, or inspect the
 <a href="{% url "articleset" created_set.project_id created_set.id %}">article set {{created_set}}</a>
 <br>
 </div>
 {% endif %}
+{% endif %}
 
 <legend> Uploading articles using {{plugin.label}} </legend>
 
 <form method="POST" enctype="multipart/form-data" action="">
+  {{ form.non_field_errors }}
+    {% for hidden in form.hidden_fields %}
+    {{ hidden }}
+    {% endfor %}
  <table>
-  {{ form.as_table }}
+  {% for field in form.visible_fields %}
+  <tr {% if field.errors %}class="error-subtle"{% endif %}>
+    <td>{{ field.label_tag }}</td>
+    <td>{% if field.help_text %}<p class="icon-question-sign" title="{{field.help_text}}"</p>{% endif %}</td>
+    <td> {{ field }} </td>
+    <td>{{field.errors}}</td>
+  </tr>
+  {% endfor %}
  </table>
  <div class="form-actions">
  <input class="btn btn-primary" type="submit" value="Upload"></input>

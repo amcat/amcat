@@ -69,6 +69,21 @@ class UploadScript(Scraper):
     output_type = ArticleIterator
     options_form = UploadForm
 
+    def get_errors(self):
+        """return a list of document index, message pairs that explains encountered errors"""
+        try:
+            errors = self.controller.errors
+        except AttributeError:
+            log.exception("Cannot get controller errors")
+            return 
+
+        for error in errors:
+            yield self.explain_error(error)
+
+    def explain_error(self, error):
+        """Explain the error in the context of unit for the end user"""
+        return "Error in element {error.i} : {error.error!r}".format(**locals())
+            
     def decode(self, bytes):
         """
         Decode the given bytes using the encoding specified in the form.
@@ -112,8 +127,11 @@ class UploadScript(Scraper):
         log.info(u"Importing {self.__class__.__name__} from {file.name} into {self.project}"
                  .format(**locals()))
         from amcat.scraping.controller import RobustController
+        self.controller = RobustController(self.articleset)
         with transaction.commit_on_success():
-            arts = list(RobustController(self.articleset).scrape(self))
+            arts = list(self.controller.scrape(self))
+            if not arts:
+                raise Exception("No atricles were imported")
             self.postprocess(arts)
             old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
             new_provenance = self.get_provenance(file, arts)
@@ -148,23 +166,22 @@ class UploadScript(Scraper):
         with zipfile.ZipFile(zip_file) as zf:
             for name in zf.namelist():
                 fn = zf.extract(name, tempdir)
-                yield File(open(fn), name=name)
+                for unit in self.split_file(File(open(fn), name=name)):
+                    yield unit
     
     def _get_units(self):
         f = self.options['file']
         extension = os.path.splitext(f.name)[1]
         if extension == ".zip":
             return list(self._read_zip(f))
-        return [f]
-
-    def _scrape_unit(self, file):
-        documents = self.split_file(file)
-        for i, document in enumerate(documents):
-            result =  self.parse_document(document)
-            if isinstance(result, Article):
-                result = [result]
-            for art in result:
-                yield art
+        return self.split_file(f)
+    
+    def _scrape_unit(self, document):
+        result =  self.parse_document(document)
+        if isinstance(result, Article):
+            result = [result]
+        for art in result:
+            yield art
         
     def parse_document(self, document):
         """
