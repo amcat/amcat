@@ -141,8 +141,7 @@ class Scraper(Script):
         #initial list is any article without parent, or a non-existing parent
         toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
 
-        while len(toprocess) > 0:
-            doc = toprocess.pop(0)
+        for doc in toprocess:
             article = self._postprocess_article(doc)
             
             #find children, add to toprocess

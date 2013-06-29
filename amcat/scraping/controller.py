@@ -94,8 +94,7 @@ class Controller(object):
         """Figure out parent relationships and save in the right order"""
         articles = list(articles)
         toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
-        while len(toprocess) > 0:
-            unsaved = toprocess.pop(0)
+        for unsaved in toprocess:
             saved = self.save(unsaved)
             #find children, transfer parent props
             for a in articles:
