@@ -247,7 +247,7 @@ def get_triples_coding(coding):
     yield get_uri(coding), NS_DC["subject"], get_uri(subject)
 
     for field, value in coding.get_values():
-        if isinstance(value, (str, int, bool, float)):
+        if isinstance(value, (str, int, bool, float, unicode)):
             object = Literal(value)
         elif isinstance(value, Code):
             object = get_uri(value)
@@ -375,6 +375,10 @@ class TestAmcatRDF(amcattest.PolicyTestCase):
             (u(a), RDFS_LABEL, Literal(u"\xe5", lang=sv)),
             (u(b), RDFS_LABEL, Literal("b", lang=en)),
             (u(c), RDFS_LABEL, Literal("c", lang=en)),
+            # uuid
+            (u(a), NS_AMCAT["uuid"], Literal(a.uuid)),
+            (u(b), NS_AMCAT["uuid"], Literal(b.uuid)),
+            (u(c), NS_AMCAT["uuid"], Literal(c.uuid)),
             # code-attributes (id) and codebook attributes
             (u(a), PREDICATES["id"], Literal(a.id)),
             (u(b), PREDICATES["id"], Literal(b.id)),
