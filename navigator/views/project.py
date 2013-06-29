@@ -573,7 +573,7 @@ def schema(request, schema, project):
 @check(Project, args_map={'project' : 'id'}, args='project')
 def new_schema(request, project):
     schema = CodingSchema.objects.create(name="Untitled schema", project=project)
-    return redirect(reverse("project-edit-schema", args=(project.id, schema.id)))
+    return redirect(reverse("project-edit-schema-properties", args=(project.id, schema.id)))
 
 
 @check(Project, args_map={'project' : 'id'}, args='project')
@@ -588,8 +588,30 @@ def delete_schema(request, schema, project):
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-def edit_schema(request, schema, project):
-    if request.method == "POST" and not "codingschema-submit" in request.POST:
+def edit_schemafield_properties(request, schema, project):
+    form = forms.CodingSchemaForm(data=request.POST or None, instance=schema, hidden="project")
+
+    ctx = locals()
+    ctx.update({
+        'menu' : PROJECT_MENU,
+        'selected' : 'codingschemas',
+        'context' : project,
+    })
+
+    if request.method == "POST":
+        # Process codingschema form
+        if form.is_valid():
+            form.save()
+
+            request.session["schema_{}_edited".format(schema.id)] = True 
+            return redirect(reverse("project-schema", args=(project.id, schema.id)))
+
+    return render(request, "navigator/project/edit_schema_properties.html", locals())
+
+@check(Project, args_map={'project' : 'id'}, args='project')
+@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
+def edit_schemafields(request, schema, project):
+    if request.method == "POST":
         return _edit_schemafields_post(request, schema, project)
 
     # Is this schema imported?
@@ -598,20 +620,11 @@ def edit_schema(request, schema, project):
         return redirect(copy_schema, project.id, schema.id)
 
     fields_null = dict([(f.name, f.null) for f in CodingSchemaField._meta.fields])
-    form = forms.CodingSchemaForm(data=request.POST or None, instance=schema, hidden="project")
-
-    if request.method == "POST" and "codingschema-submit" in request.POST:
-        # Process codingschema form
-        if form.is_valid():
-            form.save()
-
-            request.session["schema_{}_edited".format(schema.id)] = True 
-            return redirect(reverse("project-schema", args=(project.id, schema.id)))
 
     # This schema is owned by current project. Offer edit interface.
     return table_view(request, project, None, 'codingschemas',
             template="navigator/project/edit_schema.html",
-            schema=schema, fields_null=fields_null, schema_form=form)
+            schema=schema, fields_null=fields_null)
 
 def _get_schemafield_forms(fields, schema):
     for field in fields:

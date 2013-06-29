@@ -236,8 +236,13 @@ def mediumidToObj(mediumid):
     try:
         return mediumCache[mediumid]
     except KeyError:
-        mediumCache[mediumid] = medium.Medium.objects.get(pk=mediumid)
-        return mediumCache[mediumid]
+        try:
+            med = medium.Medium.objects.get(pk=mediumid)
+        except medium.Medium.DoesNotExist:
+            med = medium.Medium(id=mediumid, name="Unknown! Index dirty?".format(**locals()))
+            
+        mediumCache[mediumid] = med
+        return med
 
 
 def increaseCounter(table, x, y, a, counterLambda):

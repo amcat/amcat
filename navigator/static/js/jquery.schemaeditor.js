@@ -17,6 +17,25 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
+_keymap = {
+    37 : "left",
+    38 : "up",
+    39 : "right",
+    40 : "down",
+    74 : "down",    // J
+    75 : "up",      // K
+    72 : "left",    // H
+    76 : "right",   // L
+    9 : "tab",      // Tab
+    27 : "done",    // Esc
+    73 : "start",   // I
+    13 : "start",   // Enter
+    46 : "delete",  // Enter
+    83 : "save",    // s
+    45 : "insert",  // insert
+    65 : "insert",  // a
+}
+
 jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     // Prevent scoping issues
     var self = this;
@@ -28,6 +47,8 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.LOADING_STEPS = 8;
     self.KEYCODE_ENTER = 13;
     self.ERROR_COLOUR = "#f2dede"; // Taken from bootstrap.css
+    self.INFO_COLOUR = "#d9edf7";
+    self.N_COLS = 5;
     
     // Get UI elements
     self.bar = $("[name=loading] .bar");
@@ -36,6 +57,9 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.btn_undo = $(".btn[name=undo]");
     self.btn_redo = $(".btn[name=redo]");
     self.table = $("table[name=schema]");
+
+    // Pnotify balloon
+    self.current_message = null;
 
     // JSON data
     self.fields;
@@ -48,7 +72,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     // Statekeeping values
     self.loading_percent = 0;
     self.editing = false;
-    self.null_clicked = false;
+    self.active_cell = { x: 0, y : 0 };
 
     // PRIVATE FUNCTIONS //
     self._set_progress = function(){
@@ -129,7 +153,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     self._create_delete_button = function(){
         var btn = $(
-            "<div class='btn btn-mini btn-danger'>" +
+            "<div class='delete btn btn-mini btn-danger'>" +
             "<i class='icon-white icon-trash'></i>" +
             "</div>"
         );
@@ -218,6 +242,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
          * in the state-keeping variables. Arguments left empty, are filled
          * with 'null'.
          */
+        var tr, td, name, type, choices, serialiser;
         field = (field === undefined) ? {} : field;
 
         var defaults = {
@@ -261,8 +286,6 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     }
 
     self.initialise_table = function(){
-        var tr, td, name, type, choices, serialiser;
-
         // Add each field to table
         $.each(self.fields, function(i, field){
             self.add_row(field);
@@ -291,10 +314,133 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         $("html").click(self.document_clicked);
     }
 
+    self.initialise_shortcuts = function(){
+        document.addEventListener('keydown', function(event) {
+            self[_keymap[event.keyCode] + "_pressed"](event);
+        });
+
+        self.update_active_cell();
+    }
+
+    /*
+     * Repaints active cell.
+     * 
+     * @return: active cell (jQuery element)
+     */
+    self.update_active_cell = function(){
+        // Remove all active cell markups
+        $("td.active", self.table).removeClass("active");
+        return $(self.get_active_cell()).addClass("active");
+    }
+
+    /* Moves n cells forward. Does not wrap around top and bottom borders. */
+    self.move_cells = function(n){
+        var n_rows = $("tr", self.table).length - 1;
+        var new_pos = (self.active_cell.x + self.active_cell.y * self.N_COLS) + n;
+
+        // Make sure it doesn't overflow / underflow.
+        if (new_pos < 0 || new_pos >= n_rows * self.N_COLS){
+            return;
+        }
+
+        self.active_cell.x = Math.floor(new_pos % self.N_COLS); // Kung-fu fighting.. javascript!
+        self.active_cell.y = Math.floor(new_pos / self.N_COLS);
+
+        var cell = self.update_active_cell();
+
+        // Check if the active cell is visible, and if not scroll page
+        if (cell.offset().top <= document.body.scrollTop){
+            window.scrollBy(0,-4*cell.height());
+        } else if (cell.offset().top + cell.height() >= document.body.scrollTop + window.innerHeight) {
+            window.scrollBy(0,4*cell.height());
+        }
+
+    }
+
+    self.down_pressed = function(event){
+        if(self.editing) return;
+        self.move_cells(self.N_COLS);
+        event.preventDefault();
+    }
+
+    self.up_pressed = function(event){
+        if(self.editing) return;
+        self.move_cells(-self.N_COLS);
+        event.preventDefault();
+    }
+
+    self.left_pressed = function(event){
+        if(self.editing) return;
+        self.move_cells(-1);
+    }
+
+    self.right_pressed = function(event){
+        if(self.editing) return;
+        self.move_cells(1);
+    }
+
+    self.insert_pressed = function(event){
+        if(self.editing) return;
+        event.preventDefault();
+        self.btn_add_field.click();
+
+        self.active_cell.y = self.fields.length - 1;
+        self.active_cell.x = 0;
+        self.update_active_cell();
+        $(self.get_active_cell()).dblclick();
+    }
+
+    self.delete_pressed = function(event){
+        var row = $(self.get_active_cell()).parent();
+
+        if(self.editing){
+            $(".select-nil", row).click();
+        } else {
+            $(".delete", row).click();
+            self.update_active_cell();
+        }
+
+    }
+
+    self.done_pressed = function(event){
+        $("html").click();
+    }
+
+    self.save_pressed = function(event){
+        if(event.ctrlKey){
+            event.preventDefault();
+            self.btn_save.click();
+        }
+    }
+
+    self.tab_pressed = function(event){
+        event.preventDefault();
+        $("html").click();
+
+        if(event.shiftKey){
+            self.left_pressed(event);
+        } else {
+            self.right_pressed(event);
+        }
+
+        $(self.get_active_cell()).dblclick();
+    }
+
+    self.start_pressed = function(event){
+        if(self.editing) return;
+        event.preventDefault();
+        $(self.get_active_cell()).dblclick();
+    }
+
+    self.undefined_pressed = function(event){
+        // Other key pressed. Handle?
+    }
+
     self.initialising_done = function(){
         /* This function is called when all data is ready */
         self.initialise_table();
         self.initialise_buttons();
+        self.initialise_shortcuts();
     }
 
     // CALLBACK FUNCTIONS //
@@ -312,20 +458,30 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
          */
         var type = this[0];
         var msgs = this[1];
-        var cont = $("[name=field_errors]");
-        
-        cont.contents().remove();
 
-        var alert = $("<div>").attr("class", "alert alert-" + type);
-
-        if (msgs.length == 1){
-            alert.append(msgs[0]);
-        } else {
-            // TODO: beautify
-            alert.append(msgs);
+        if (self.current_message == null){
+            self.current_message = $;
         }
 
-        cont.append(alert);
+        if (msgs.length != 1){
+            self.current_message.pnotify({
+                "title" : "Whoops.",
+                "text" : "Multiple error messages per cell are not yet supported.",
+                "type" : "error",
+                "shadow" : false,
+                nonblock: true,
+                hide: false,
+                closer: false,
+                sticker: false
+            });
+            return;
+        }
+
+        self.current_message = self.current_message.pnotify({
+            "title" : type, "type" : type, "text" : msgs[0], "shadow" : false, 
+            nonblock: true, hide: false,closer: false, sticker: false
+        });
+
     }
 
     self.save_callback = function(all_errors){
@@ -335,8 +491,15 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
         // Should we redirect?
         if (this == true && !errors_found){
-            window.location = all_errors['schema_url'];
-            return;
+            // Uncomment line below to enable redirecting
+            //window.location = all_errors['schema_url'];
+            //return;
+            $.pnotify({
+                "title" : "Done",
+                "text" : "Schema saved succesfully.",
+                "type" : "success",
+                "delay" : 500
+            });
         }
         
         // Enable save button
@@ -358,10 +521,16 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
             }
         });
 
-        if(!errors_found){
-            $("[name=field_errors]").contents().remove();
-        } else {
+        if(!errors_found && self.current_message !== null){
+           self.current_message.pnotify_remove(); 
+           self.current_message = null;
+        } else if (errors_found) {
             self.td_hovered.bind(["info", [info_msg]])();            
+            $.pnotify({
+                "title" : "Schema cannot be saved.",
+                "text" : "Errors occured while checking this schema for errors.",
+                "type" : "error",
+            });
         }
     
         // Colour tds with error
@@ -425,6 +594,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.delete_button_clicked = function(event){
         // Delete row
         $(event.currentTarget).parent().parent().remove();
+        self.update_active_cell();
     }
 
     self.btn_save_clicked = function(event){
@@ -432,7 +602,24 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     }
 
     self.btn_add_field_clicked = function(event){
-        self.add_row({}, true);
+        var textfield = null;
+        $.each(self.model_choices.fieldtype, function(i, type){
+            if (type.name === "Text") textfield = type.id;
+        });
+
+        if (textfield === null){
+            $.pnotify({
+                "title" : "Bug",
+                "text" : "Could not find textfieldtype id in btn_add_field_clicked(). Please file a bug report including this information.",
+                "type" : "error"
+            });
+            return;
+        }
+
+        self.add_row({
+            "label" : "New Field (" + self.fields.length + ")",
+            "fieldtype" : textfield
+        }, true);
         self.save(false);
     }
 
@@ -450,6 +637,15 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         }
 
         self.widget_focusout();
+    }
+
+    self.get_td = function(x, y){
+        var tr = $("tbody > tr", self.table)[y];
+        return $("td", tr)[x+1];
+    }
+
+    self.get_active_cell = function(){
+        return self.get_td(self.active_cell.x, self.active_cell.y);
     }
 
     self.cell_clicked = function(event){
@@ -474,7 +670,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         // Does this field allow a null value? If so, add a 'null' button
         var cont = null;
         if (th.attr("null") == "true"){
-            var btn_null = $(" <div class='btn btn-primary'>∅</div>");
+            var btn_null = $(" <div class='btn btn-primary select-nil'>∅</div>");
             btn_null.click(self.widget_null_clicked);
 
             cont = $("<div name='null-form' class='form-inline'>");
@@ -489,9 +685,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         widget.keyup(self.widget_keyup);
 
         // Focus textinput widgets
-        if(widget.attr("type") == "text"){
-            widget.focus();
-        }
+        widget.focus();
 
         // To prevent unfocusing (clicking table) when user
         // actually clicks widget
@@ -518,6 +712,23 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
                      (self.editing, field_choices);
         }
 
+        if (field_name === "label"){
+            var found = false;
+            $.each(self.fields, function(i, field){
+                if (i == fieldnr) return;
+                if (field.label.toLowerCase() === value.toLowerCase()) found = true;
+            });
+
+            if(found){
+                $.pnotify({
+                    "title" : "Duplicate",
+                    "text" : "There is already a field named '" + value + "'. Are you sure you wan't to continue?",
+                    "type" : "warning"
+                });
+            }
+        }
+
+
         // Set value to state
         self.fields[fieldnr][field_name] = value;
 
@@ -531,12 +742,6 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     self.widget_null_clicked = function(event){
         self.widget_focusout(event, null);
-    }
-
-    self.widget_keyup = function(event){
-        if (event.keyCode == self.KEYCODE_ENTER){
-            self.widget_focusout(event);
-        }
     }
 
     // MAIN FUNCTIONS //

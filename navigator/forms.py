@@ -490,7 +490,16 @@ class CodingSchemaFieldForm(forms.ModelForm):
             return serialiser.serialise(value)
         except:
             if fieldtype.serialiserclass == CodebookSerialiser:
-                raise ValidationError("Setting codebook defaults not yet implemented")
+                try:
+                    value = int(value)
+                except ValueError:
+                    raise ValidationError("This value needs to be a code_id.")
+
+                # possible_values doesn't return a queryset, so we need to iterate :(
+                if value in (code.id for code in serialiser.possible_values):
+                    return value
+
+                raise ValidationError("'{}' is not a valid value.".format(value))
 
             # Can't catch specific error
             possible_values = serialiser.possible_values

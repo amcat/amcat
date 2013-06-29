@@ -69,8 +69,8 @@ jQuery.fn.djangofields = {
     },
     BooleanField : {
         serialise : function(obj){
-            var icon = (obj) ? "ok" : "remove";
-            return $("<i class='icon-" + icon + "'>");
+            if(obj) return $("<i class='icon-ok'>");
+            return $("<span>");
         },
         to_widget : function(val){
             var checkbox = $("<input type='checkbox'>");
