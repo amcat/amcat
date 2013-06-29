@@ -164,9 +164,16 @@ def upload_article_action(request, plugin, project):
     if request.POST:
         if form.is_valid():
             script = script_class(form)
-            created_articles = script.run()
-            created_set = script.articleset
-            created_n = len(created_articles)
+            try:
+                created_articles = script.run()
+            except Exception, e:
+                scraper_main_error = e
+            else:
+                created_set = script.articleset
+                created_n = len(created_articles)
+                
+            scraper_errors = list(script.get_errors())
+
             form = script.get_empty_form(project=project)
 
 

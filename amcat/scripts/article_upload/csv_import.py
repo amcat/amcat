@@ -92,6 +92,11 @@ class CSVForm(UploadScript.options_form):
 class CSV(UploadScript):
     options_form = CSVForm
 
+    def explain_error(self, error):
+        if isinstance(error.error, KeyError):
+            return "Field {error.error} not found in row {error.i}. Check field name and/or csv dialect".format(**locals())
+        return super(CSV, self).explain_error(error)
+    
     def run(self, *args, **kargs):
 
         if self.options['parent_url']:
