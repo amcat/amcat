@@ -174,34 +174,6 @@ def clear_cache(model):
 def _get_cache_key(model, id):
     return ('%s:%s' % (model._meta.db_table, id)).replace(' ', '')
 
-class RowCacheManager(models.Manager):
-    """
-    Manager for caching single-row queries. To make invalidation easy,
-    we use an extra layer of indirection. The query arguments are used as a
-    cache key, whose stored value is the unique cache key pointing to the
-    object. When a model using RowCacheManager is saved, this unique cache
-    should be invalidated. Doing two memcached queries is still much faster
-    than fetching from the database.
-    """
-    def get(self, *args, **kwargs):
-        pointer_key = _get_cache_key(self.model, repr(kwargs))
-        instance_key = cache.get(pointer_key)
-
-        if instance_key is not None: 
-            instance = cache.get(instance_key)
-            if instance is not None:
-                return instance
-
-        # One of the cache queries missed, so we have to get the object from the database:
-        instance = super(RowCacheManager, self).get(*args, **kwargs)
-        if not instance_key:
-            instance_key = _get_cache_key(instance, instance.pk)
-            cache.set(pointer_key, instance_key, SIMPLE_CACHE_SECONDS)
-
-        cache.set(instance_key, instance, SIMPLE_CACHE_SECONDS)
-        return instance
-
-    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
