@@ -18,7 +18,6 @@ class MaintenanceModeMiddleware(object):
         import amcat
         fn = os.path.join(os.path.dirname(amcat.__file__), "maintenance-mode")
 
-        print fn, os.path.exists(fn)
         if os.path.exists(fn):
             log.warn("AmCAT is in maintenance mode, returning 503!")
 

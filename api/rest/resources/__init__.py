@@ -41,7 +41,7 @@ from rest_framework.reverse import reverse
 
 from collections import OrderedDict
 
-MODELS = ['Article', 
+MODELS = ['Article', 'AmCAT',
           'Role', 'ProjectRole',
           'Medium', 'Language',
           'CodingSchema', 'CodingSchemaField',
