@@ -130,7 +130,7 @@ class Codebook(AmcatModel):
         """
         Cache labels for the given languages. Will call cache() if not done yet. 
         """
-        if not hasattr(self, "_codes"): self.cache()
+        if self._codes is None: self.cache()
         if select_related is None: select_related = ()
 
         languages = (l.id if isinstance(l, Language) else int(l) for l in languages)
