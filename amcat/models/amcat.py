@@ -87,7 +87,7 @@ class TestAmCAT(amcattest.PolicyTestCase):
 
         os.environ['AMCAT_SERVER_STATUS']=""
         self.assertEqual(a.server_warning,
-                         ANNOUNCE_NOT_PRODUCTION.format(server = "not the production server"))
+                         WARNING_NOT_PRODUCTION.format(server = "not the production server"))
 
         os.environ['AMCAT_SERVER_STATUS']="production"
         self.assertEqual(a.server_warning, None)

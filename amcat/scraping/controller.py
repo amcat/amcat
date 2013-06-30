@@ -23,6 +23,7 @@ Module for controlling scrapers
 
 import logging; log = logging.getLogger(__name__)
 from cStringIO import StringIO
+from collections import namedtuple
 
 from amcat.tools.toolkit import to_list, retry
 from amcat.tools.multithread import distribute_tasks, QueueProcessorThread, add_to_queue_action
@@ -94,8 +95,7 @@ class Controller(object):
         """Figure out parent relationships and save in the right order"""
         articles = list(articles)
         toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
-        while len(toprocess) > 0:
-            unsaved = toprocess.pop(0)
+        for unsaved in toprocess:
             saved = self.save(unsaved)
             #find children, transfer parent props
             for a in articles:
@@ -118,19 +118,26 @@ class SimpleController(Controller):
             for article in self.parents(scraper.scrape_unit(unit)):
                 yield article
 
-
+ScrapeError = namedtuple("ScrapeError", ["i", "unit", "error"])
+                
 class RobustController(Controller):
     """More robust implementation of Controller with sensible transaction management"""
 
+    def __init__(self, *args, **kargs):
+        super(RobustController, self).__init__(*args, **kargs)
+        self.errors = [] 
+    
     def _scrape(self, scraper):
         log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
-        for unit in scraper.get_units():
+        
+        for i, unit in enumerate(scraper.get_units()):
             try:
                 for article in self.scrape_unit(scraper, unit):
                     result.append(article)
             except Exception as e:
-                log.exception("exception within get_units")
+                log.exception("exception on scrape_unit")
+                self.errors.append(ScrapeError(i, unit, e))
 
         log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
 
@@ -140,12 +147,8 @@ class RobustController(Controller):
         log.info("adding articles to set {scraper.articleset.id}".format(**locals()))
         return result
 
-    def scrape_unit(self, scraper, unit):
-        try:
-            scrapedunits = list(scraper.scrape_unit(unit))
-        except Exception:
-            log.exception("exception within scrape_unit")
-            return
+    def scrape_unit(self, scraper, unit, i=None):
+        scrapedunits = list(scraper.scrape_unit(unit))
 
         if len(scrapedunits) == 0:
             log.warning("scrape_unit returned 0 units")
