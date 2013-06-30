@@ -32,13 +32,15 @@ from django.db.models import Q
 
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.code import Code, Label
+from amcat.models import Language
 from django.core.exceptions import ValidationError
 from amcat.tools import toolkit
 
 import collections
 
+from itertools import product
+
 # Used in Codebook.get_tree()
-CACHE_LABELS = (2, 1)
 TreeItem = collections.namedtuple("TreeItem", ["code_id", "children", "hidden", "label"])
 
 class CodebookCycleException(ValueError):
@@ -119,7 +121,7 @@ class Codebook(AmcatModel):
         codes = codes.prefetch_related(*prefetch_related)
         self._prefetched_objects_cache['codebookcode_set'] = codes = tuple(codes)
         self._codes = { cc.code_id : cc.code for cc in codes }
-        self._codebookcodes = defaultdict(set)
+        self._codebookcodes = collections.defaultdict(set)
 
         for ccode in codes:
             # Cache the parent property
@@ -133,24 +135,31 @@ class Codebook(AmcatModel):
     def cache_labels(self, *languages):
         """
         Cache labels for the given languages. Will call cache() if not done yet. 
+
+        @param languages: languages to cache. If no given, we will cache all languages.
         """
         if not self.cached: self.cache()
-        if select_related is None: select_related = ()
 
-        languages = (l.id if isinstance(l, Language) else int(l) for l in languages)
-        codes = product(self._codes.keys(), languages)
+        if not languages:
+            # Cache ALL languages in this codebook
+            labels = Label.objects.filter(code__id__in=self._codes.keys()).distinct("language") 
+            languages = labels.values_list("language_id", flat=True)
+        else:
+            languages = [l.id if isinstance(l, Language) else int(l) for l in languages]
+
+        codes = set(product(self._codes.keys(), languages))
         labels = Label.objects.filter(language__id__in=languages, code__id__in=self._codes.keys())
         
         for code_id, lan_id, label in labels.values_list("code_id", "language_id", "label"):
             self._codes[code_id]._cache_label(lan_id, label)
-            codes.remove(code_id, lan_id)
+            codes.remove((code_id, lan_id))
 
         for code_id, lan_id in codes:
             # These codes don't have a label. We need to explicitely cache them to prevent
             # database trips.
             self._codes[code_id]._cache_label(lan_id, None)
 
-        self._cached_labels |= set(languages)
+        self._cached_labels |= self._cached_labels.union(set(languages))
 
     @property
     def codebookcodes(self):
@@ -268,7 +277,7 @@ class Codebook(AmcatModel):
             if parent:
                 children[parent].add(child)
 
-        tree = self._walk(include_labels, children, nodes, seen, labels)
+        tree = self._walk(include_labels, children, nodes, seen, get_labels)
         if len(seen) < CodebookCode.objects.filter(codebook=self).count():
             # Not all codes included in this tree.. cycle!
             raise CodebookCycleException("Graph disconnected")
