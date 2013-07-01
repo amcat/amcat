@@ -127,10 +127,7 @@ class Codebook(AmcatModel):
         for ccode in codes:
             # Cache the parent property
             if ccode.parent_id is not None:
-                try:
-                    ccode._parent_cache = self._codes[ccode.parent_id]
-                except KeyError:
-                    import pdb; pdb.set_trace()
+                ccode._parent_cache = self._codes[ccode.parent_id]
 
             # Make sure all Code objects are the same
             ccode._code_cache = self._codes[ccode.code_id]
