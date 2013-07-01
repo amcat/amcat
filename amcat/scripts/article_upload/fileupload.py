@@ -115,6 +115,10 @@ class CSVUploadForm(FileUploadForm):
                                 help_text="Select the kind of CSV file")
 
     def get_entries(self):
+        return self.get_reader(reader_class=csv.DictReader)
+    
+    def get_reader(self, reader_class=csv.reader):
+        
         f = self.files['file']
         d = self.cleaned_data['dialect']
         if not d: d = "autodetect"
@@ -125,7 +129,7 @@ class CSVUploadForm(FileUploadForm):
             print "dialect: ",`d`
             dialect = csv.get_dialect(d)
 
-        return csv.DictReader(f, dialect=dialect)
+        return reader_class(f, dialect=dialect)
     
 class ZipFileUploadForm(FileUploadForm):
     file = forms.FileField(help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")

@@ -29,9 +29,15 @@ from django.db import transaction
 
 from amcat.scripts.script import Script
 from django.db import transaction
-from amcat.models import Code, Codebook, Language
+from amcat.models import Code, Codebook, Language, Project
+
+from amcat.scripts.article_upload.fileupload import CSVUploadForm
+from amcat.contrib.classmaker import classmaker
 
 LABEL_PREFIX = "label - "
+
+        
+    
 
 class ImportCodebook(Script):
     """
@@ -48,19 +54,13 @@ class ImportCodebook(Script):
     but new labels will be added
     """
 
-    class options_form(forms.ModelForm):
-        file = forms.FileField()
-        class Meta:
-            model = Codebook
-        def __init__(self, *args, **kargs):
-            forms.ModelForm.__init__(self, *args, **kargs)
-            self.fields["name"].label = "Codebook name"
-            self.fields["name"].widget = widgets.TextInput()
-
+    class options_form(CSVUploadForm):
+        codebook_name = forms.CharField()
+        project = forms.ModelMultipleChoiceField(queryset=Project.objects.all())
+        
     @transaction.commit_on_success
     def _run(self, file, **kargs):
-        data = csv_as_columns(file)
-        print data
+        data = csv_as_columns(self.bound_form.get_reader())
         
         # build code, parent pairs
         if "parent" in data:
@@ -72,6 +72,7 @@ class ImportCodebook(Script):
         uuids = data["uuid"] if "uuid" in data else [None] * len(parents)
 
         # create objects
+        
         cb = self.bound_form.save()
         log.info("Created codebook {cb.id} : {cb}".format(**locals()))
 
@@ -101,9 +102,8 @@ def get_indented_columns(data):
                       key = lambda k : int(k[len(prefix):]))
     return map(data.get, colnames)
             
-def csv_as_columns(file):
+def csv_as_columns(rows):
     """Read a csv file as a dictionary of name : [values] columns"""
-    r = csv.reader(file)
     header = r.next()
     result = {name : [] for name in header}
     for row in r:
