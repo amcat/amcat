@@ -92,6 +92,15 @@ class FileUploadForm(forms.Form):
         return self.decode_file(self.files['file'])
         
 
+DIALECTS = ["Autodetect", "CSV, comma-separated", "CSV, semicolon-separated (Europe)"]
+    
+class CSVUploadForm(FileUploadForm):
+    dialect = forms.ChoiceField(choices=enumerate(DIALECTS), initial=0, required=False,
+                                help_text="Select the kind of CSV file")
+
+    def get_entries(self):
+        pass
+    
 class ZipFileUploadForm(FileUploadForm):
     file = forms.FileField(help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
         
