@@ -78,7 +78,7 @@ class CSVForm(UploadScript.options_form):
     
             field = forms.CharField(help_text = help_text, required=required,
                                     initial=initial, label=label)
-            self.fields.insert(0, fieldname, field)
+            self.fields.insert(7, fieldname, field)
     
     
     def clean_parent_url(self):

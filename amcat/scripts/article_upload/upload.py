@@ -59,6 +59,7 @@ class UploadScript(Scraper):
     input_type = None
     output_type = ArticleIterator
     options_form = UploadForm
+    raw_file = False # if true, do not decode and interpret the file
 
     def get_errors(self):
         """return a list of document index, message pairs that explains encountered errors"""
@@ -123,9 +124,13 @@ class UploadScript(Scraper):
         pass
     
     def _get_units(self):
-        for f in self.uploaded_texts:
-            for u in self.split_file(f):
+        if self.raw_text:
+            for u in self.split_file(self.options['file']):
                 yield u
+        else:
+            for f in self.uploaded_texts:
+                for u in self.split_file(f):
+                    yield u
     
     def _scrape_unit(self, document):
         result =  self.parse_document(document)

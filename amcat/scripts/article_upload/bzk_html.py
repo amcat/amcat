@@ -31,12 +31,14 @@ import re
 import logging; log = logging.getLogger(__name__)
 
 class BZK(UploadScript):
-
-    def _scrape_unit(self, _file):
+    raw_text = True
+    
+    def _scrape_unit(self, file):
         try:
-            etree = html.parse(_file).getroot()
-        except Exception:
-            raise TypeError("failed HTML parsing. Are you sure you've inserted the right file?")
+            etree = html.parse(file).getroot()
+        except Exception as e:
+            log.exception("Failed html.parse")
+            raise TypeError("failed HTML parsing. Are you sure you've inserted the right file?\n{e}".format(**locals()))
         title = etree.cssselect("title")[0].text.lower().strip()
         if "intranet/rss" in title or "werkmap" in title:
             for article in self.scrape_file(etree, title):

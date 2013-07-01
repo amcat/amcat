@@ -32,11 +32,9 @@ from amcat.models.medium import Medium
 from datetime import date
 import re
 
-class BZKPDFScraper(PDFScraper, UploadScript):
-
-    def _get_units(self):
-        yield self.doc
-        
+class BZKPDFScraper(UploadScript, PDFScraper):
+    raw_text = True
+    
     def _scrape_unit(self, unit):
         self.index = []
         article_lines = []
