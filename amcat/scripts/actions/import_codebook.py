@@ -32,7 +32,6 @@ from django.db import transaction
 from amcat.models import Code, Codebook, Language, Project
 
 from amcat.scripts.article_upload.fileupload import CSVUploadForm
-from amcat.contrib.classmaker import classmaker
 
 LABEL_PREFIX = "label - "
 
