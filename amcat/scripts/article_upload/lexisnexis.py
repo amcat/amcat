@@ -25,6 +25,7 @@ This module contains a (semi-machine readable) lexisnexis parser.
 from __future__ import unicode_literals
 
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ParseError
+from amcat.scripts.article_upload import fileupload
 
 from amcat.tools import toolkit
 
@@ -506,6 +507,9 @@ class LexisNexis(UploadScript):
     date etc.) from the file automatically.
     """
 
+    class options_form(UploadScript.options_form, fileupload.ZipFileUploadForm):
+        pass
+    
     name = 'Lexis Nexis'
 
     def split_file(self, file):

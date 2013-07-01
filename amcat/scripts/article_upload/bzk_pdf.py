@@ -33,7 +33,6 @@ from datetime import date
 import re
 
 class BZKPDFScraper(UploadScript, PDFScraper):
-    raw_text = True
     
     def _scrape_unit(self, unit):
         self.index = []

@@ -35,12 +35,12 @@ from amcat.scripts.types import ArticleIterator
 from amcat.models.article import Article
 from amcat.scraping.scraper import ScraperForm, Scraper
 
-from amcat.scripts.article_upload.fileupload import ZipFileUploadForm
+from amcat.scripts.article_upload.fileupload import RawFileUploadForm
 
 class ParseError(Exception):
     pass
     
-class UploadForm(ScraperForm, ZipFileUploadForm):
+class UploadForm(ScraperForm, RawFileUploadForm):
     def clean_articleset_name(self):
         """If article set name not specified, use file base name instead"""
         if self.files.get('file') and not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
@@ -59,7 +59,6 @@ class UploadScript(Scraper):
     input_type = None
     output_type = ArticleIterator
     options_form = UploadForm
-    raw_text = False # if true, do not decode and interpret the file
 
     def get_errors(self):
         """return a list of document index, message pairs that explains encountered errors"""
@@ -124,13 +123,14 @@ class UploadScript(Scraper):
         pass
     
     def _get_units(self):
-        if self.raw_text:
-            for u in self.split_file(self.options['file']):
+        """
+        Upload form assumes that the form (!) has a get_entries method, which you get
+        if you subclass you form from one of the fileupload forms. If not, please override
+        this method. 
+        """
+        for entry in self.bound_form.get_entries():
+            for u in self.split_file(entry):
                 yield u
-        else:
-            for f in self.uploaded_texts:
-                for u in self.split_file(f):
-                    yield u
     
     def _scrape_unit(self, document):
         result =  self.parse_document(document)

@@ -26,6 +26,7 @@ import os.path
 import shutil
 import zipfile 
 import chardet
+import csv
 import collections
 from contextlib import contextmanager
 from django.core.files import File
@@ -53,12 +54,18 @@ DecodedFile = collections.namedtuple("File", ["name", "file", "bytes", "encoding
 ENCODINGS = ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]
 
 
-class FileUploadForm(forms.Form):
+class RawFileUploadForm(forms.Form):
+    """Helper form to handle uploading a file"""
+    file = forms.FileField(help_text="Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
+
+    def get_entries(self):
+        return [self.files['file']]
+    
+class FileUploadForm(RawFileUploadForm):
     """Helper form to handle uploading a file with encoding"""
     encoding = forms.ChoiceField(choices=enumerate(ENCODINGS),
                                  initial=0, required=False, 
                                  help_text="Try to change this value when character issues arise.", )
-    file = forms.FileField(help_text="Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
 
     
     def decode(self, bytes):
@@ -91,15 +98,34 @@ class FileUploadForm(forms.Form):
         """Returns a DecodedFile object representing the file"""
         return self.decode_file(self.files['file'])
         
-
-DIALECTS = ["Autodetect", "CSV, comma-separated", "CSV, semicolon-separated (Europe)"]
+    def get_entries(self):
+        return [self.get_uploaded_text()]
     
+DIALECTS = [("autodetect", "Autodetect"),
+            ("excel", "CSV, comma-separated"),
+            ("excel-semicolon", "CSV, semicolon-separated (Europe)"),
+            ]
+
+class excel_semicolon(csv.excel):
+    delimiter = ';'
+csv.register_dialect("excel-semicolon", excel_semicolon)
+
 class CSVUploadForm(FileUploadForm):
-    dialect = forms.ChoiceField(choices=enumerate(DIALECTS), initial=0, required=False,
+    dialect = forms.ChoiceField(choices=DIALECTS, initial="autodetect", required=False, 
                                 help_text="Select the kind of CSV file")
 
     def get_entries(self):
-        pass
+        f = self.files['file']
+        d = self.cleaned_data['dialect']
+        if not d: d = "autodetect"
+        if d == 'autodetect':
+            dialect = csv.Sniffer().sniff(f.read(1024))
+            f.seek(0)
+        else:
+            print "dialect: ",`d`
+            dialect = csv.get_dialect(d)
+
+        return csv.DictReader(f, dialect=dialect)
     
 class ZipFileUploadForm(FileUploadForm):
     file = forms.FileField(help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
@@ -116,3 +142,39 @@ class ZipFileUploadForm(FileUploadForm):
                 return [self.decode_file(f) for f in files]
         else:
             return [self.decode_file(f)]
+
+    def get_entries(self):
+        return self.get_uploaded_texts()
+
+    
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestFileUpload(amcattest.PolicyTestCase):
+
+    def _get_entries(self, bytes, dialect="autodetect", encoding=0):
+         with tempfile.NamedTemporaryFile() as f:
+            f.write(bytes)
+            f.flush()
+            s = CSVUploadForm(dict(encoding=encoding, dialect=dialect),
+                              dict(file=File(open(f.name))))
+            if not s.is_valid():
+                self.assertTrue(False, s.errors)
+
+            return list(s.get_entries())
+    
+    def test_csv(self):
+        self.assertEqual(self._get_entries("a,b\n1,2", dialect="excel"),
+                         [dict(a='1',b='2')])
+
+        self.assertEqual(self._get_entries("a;b\n1;2", dialect="excel-semicolon"),
+                         [dict(a='1',b='2')])
+        
+        # does autodetect work?
+        self.assertEqual(self._get_entries("a,b\n1,2"),
+                         [dict(a='1',b='2')])
+        self.assertEqual(self._get_entries("a;b\n1;2"),
+                         [dict(a='1',b='2')]) 

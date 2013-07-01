@@ -29,6 +29,7 @@ import os.path
 from django import forms
 
 from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload import fileupload
 
 from amcat.models.article import Article
 from amcat.models.medium import Medium
@@ -36,7 +37,7 @@ from amcat.tools.djangotoolkit import get_or_create
 from amcat.tools import toolkit
 
 
-class TextForm(UploadScript.options_form):
+class TextForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
     medium = forms.ModelChoiceField(queryset=Medium.objects.all())
     headline = forms.CharField(required=False, help_text='If left blank, use filename (without extension and optional date prefix) as headline')
     date = forms.DateField(required=False, help_text='If left blank, use date from filename, which should be of form "yyyy-mm-dd_name"')

@@ -31,7 +31,6 @@ import re
 import logging; log = logging.getLogger(__name__)
 
 class BZK(UploadScript):
-    raw_text = True
     
     def _scrape_unit(self, file):
         try:
