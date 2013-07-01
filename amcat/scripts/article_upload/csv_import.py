@@ -113,8 +113,7 @@ class CSV(UploadScript):
         return super(CSV, self).run(*args, **kargs)
     
     def split_file(self, file):
-
-        return csv.DictReader(file)
+        return csv.DictReader(file.file)
 
     @property
     def _medium(self):

@@ -130,8 +130,14 @@ class RobustController(Controller):
     def _scrape(self, scraper):
         log.info("RobustController starting scraping for scraper {}".format(scraper))
         result = []
-        
-        for i, unit in enumerate(scraper.get_units()):
+
+        try:
+            units = list(enumerate(scraper.get_units()))
+        except Exception as e:
+            self.errors.append(ScrapeError(None, None, e))
+            raise
+            
+        for i, unit in units:
             try:
                 for article in self.scrape_unit(scraper, unit):
                     result.append(article)

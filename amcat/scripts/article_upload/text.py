@@ -42,10 +42,6 @@ class TextForm(UploadScript.options_form):
     date = forms.DateField(required=False, help_text='If left blank, use date from filename, which should be of form "yyyy-mm-dd_name"')
     section = forms.CharField(required=False, help_text='If left blank, use directory name')
 
-    def __init__(self, *args, **kwargs):
-        super(TextForm, self).__init__(*args, **kwargs)
-        self.fields.keyOrder = sorted(self.fields.keyOrder, key=lambda f:f == "file")
-
         
 class Text(UploadScript):
     options_form = TextForm
@@ -54,9 +50,6 @@ class Text(UploadScript):
         hl = self.options['file'].name
         if hl.endswith(".txt"): hl = hl[:-len(".txt")]
         return hl
-
-    def split_file(self, file):
-        return [file]
     
     def parse_document(self, file):
         dirname, filename = os.path.split(file.name)
@@ -77,7 +70,7 @@ class Text(UploadScript):
         if not metadata["section"].strip():
             metadata["section"] = dirname
             
-        text = self.decode(file.read())
+        text = file.text
         return Article(text=text, **metadata)
 
 if __name__ == '__main__':
