@@ -56,9 +56,12 @@ class ImportCodebook(Script):
         project = forms.ModelChoiceField(queryset=Project.objects.all())
         def clean_codebook_name(self):
             """If codebook name is not specified, use file base name instead"""
+            fn = None
             if self.files.get('file') and not self.cleaned_data.get('codebook_name'):
-                return os.path.splitext(os.path.basename(self.files['file'].name))[0]
-        
+                fn =  os.path.splitext(os.path.basename(self.files['file'].name))[0]
+            if not fn:
+                return self.cleaned_data.get('codebook_name')
+
     @transaction.commit_on_success
     def _run(self, file, project, codebook_name, **kargs):
         data = csv_as_columns(self.bound_form.get_reader())
@@ -77,6 +80,8 @@ class ImportCodebook(Script):
 
         log.info("Created codebook {cb.id} : {cb}".format(**locals()))
 
+
+        
         codes = {code : Code.get_or_create(uuid=uuid) for ((code, parent), uuid) in zip(parents, uuids)}
 
         for code, parent in parents:
@@ -203,7 +208,22 @@ class TestImportCodebook(amcattest.PolicyTestCase):
             label, = code.labels.all()
             self.assertEqual(label.label, u"code_\xe9")
 
-        
+    def test_uuid(self):
+        c = [("Code-1","uuid"),
+             ("x", "{acf728b0-e31a-11e2-a28f-0800200c9a66}")]
 
+        b = _csv_bytes(c)
+        cb = _run_test(b)
+        id,  = [c.id for c in cb.get_codes()]
+
+        c = [("Code-1","Code-2","uuid"),
+             ("y", "x", "{acf728b0-e31a-11e2-a28f-0800200c9a67}"),
+             ("x", None, "{acf728b0-e31a-11e2-a28f-0800200c9a66}")]
         
-        
+        b = _csv_bytes(c)
+        cb = _run_test(b)
+        ids2 = [c.id for c in cb.get_codes()]
+        self.assertIn(id, ids2)
+        self.assertEqual(len(ids2), 2)
+        self.assertEqual(len(set(ids2) - set([id])), 1)
+
