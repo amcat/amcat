@@ -20,6 +20,8 @@
 from django.views.generic.edit import FormMixin, ProcessFormView
 from django.views.generic.base import TemplateResponseMixin
 
+from django.forms.widgets import HiddenInput
+
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django import forms
@@ -57,8 +59,6 @@ class ProjectScriptView(ScriptView):
     View that provides access to a Script from within a plugin.
     Subclasses should provide a script instance.
     """
-
-    
     template_name = "navigator/project/script_base.html"
 
     def get_initial(self):
@@ -75,6 +75,8 @@ class ProjectScriptView(ScriptView):
             for key, val in self.url_data.iteritems():
                 if key in form.fields:
                     form.fields[key].initial = val
+            if 'project' in form.fields:
+                form.fields['project'].widget = HiddenInput()
         return form
 
     def _initialize_url_data(self, **kwargs):
