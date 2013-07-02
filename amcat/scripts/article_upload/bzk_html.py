@@ -29,19 +29,19 @@ from amcat.models.medium import Medium
 from lxml import html
 import re
 import logging; log = logging.getLogger(__name__)
-
-
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
-
 
 class BZK(UploadScript):
 
     def _scrape_unit(self, _file):
-        _file = _file.encode('utf-8')
-        try:
-            etree = html.parse(_file).getroot()
-        except IOError:
-            log.error("Failed HTML parsing. Are you sure you've inserted the right file?")
+        if type(_file) == unicode: #command line
+            etree = html.fromstring(_file)
+        else: #web interface
+            try:
+                etree = html.parse(_file).getroot()
+            except IOError:
+                log.error("Failed HTML parsing. Are you sure you've inserted the right file?")
+
         title = etree.cssselect("title")[0].text.lower().strip()
         if "intranet/rss" in title or "werkmap" in title:
             for article in self.scrape_file(etree, title):
@@ -75,7 +75,7 @@ class BZK(UploadScript):
                 yield article
 
     def create_medium(self, html):
-        if not html.txt:
+        if not html.text:
             medium = "unknown"
         else:
             medium = html.text
