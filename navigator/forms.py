@@ -31,7 +31,7 @@ from amcat.models.authorisation import Role, ProjectRole
 from amcat.models.user import Affiliation
 from amcat.models.articleset import ArticleSet
 from amcat.models.language import Language
-from amcat.models.coding.codebook import Codebook, CodebookBase, CodebookCode
+from amcat.models.coding.codebook import Codebook, CodebookCode
 from amcat.models.coding.code import Code
 from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.coding.codingschemafield import CodingSchemaField, CodingSchemaFieldType
@@ -362,24 +362,6 @@ class ImportCodingSchema(forms.Form):
         super(ImportCodingSchema, self).__init__(*args, **kwargs)
         self.fields['schemas'].choices = gen_coding_choices(user, CodingSchema)
 
-class CodebookBaseForm(forms.ModelForm):
-
-    def __init__(self, options=None, codebook=None):
-        super(CodebookBaseForm, self).__init__(options)
-        if codebook:
-            self.fields["codebook"].initial = codebook
-            self.fields["codebook"].widget = HiddenInput()
-            imported = [c.id for c in codebook.project.codebooks.all()]
-            bases = [b.base_id for b in codebook.codebookbases.all()]
-
-            self.fields["base"].queryset = (Codebook.objects.filter(Q(project=codebook.project)
-                                                                    |Q(id__in=imported))
-                                            .exclude(id=codebook.id)
-                                            .exclude(id__in=bases))
-
-
-    class Meta:
-        model = CodebookBase
 
 def add_error(form, field, error):
     form.errors[field] = form.errors.get(field, []) + [error]
