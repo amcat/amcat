@@ -46,9 +46,8 @@ from amcat.tools.toolkit import readDate
 
 class DeFactoStudent(UploadScript):
     
-    def _get_units(self):
-        html_bytes = self.options['file'].read()
-        html = get_html(html_bytes)
+    def split_file(self, f):
+        html = get_html(f.bytes)
         return split_html(html)
     
 

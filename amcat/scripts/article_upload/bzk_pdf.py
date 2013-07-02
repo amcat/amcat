@@ -32,11 +32,8 @@ from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIAS
 from datetime import date
 import re
 
-class BZKPDFScraper(PDFScraper, UploadScript):
-
-    def _get_units(self):
-        yield self.doc
-        
+class BZKPDFScraper(UploadScript, PDFScraper):
+    
     def _scrape_unit(self, unit):
         self.index = []
         article_lines = []

@@ -30,9 +30,8 @@ from django.conf.urls import url
 import collections
 import itertools
 
-from amcat.models.coding.codebook import CACHE_LABELS
-
 MAX_CODEBOOKS = 5
+CACHE_LABELS = (2, 1)
 
 def _walk(nodes):
     """Convert all TreeItems to dictionaries"""
@@ -84,11 +83,7 @@ class CodebookHierarchyResource(AmCATResource):
     def get_tree(cls, codebook, include_labels=True, **kwargs):
         """Codebook.get_tree() with caching enabled"""
         codebook.cache()
-
-        if include_labels:
-            for lang in CACHE_LABELS:
-                codebook.cache_labels(lang)
-
+        codebook.cache_labels()
         return tuple(_walk(codebook.get_tree(include_labels=include_labels, **kwargs)))
 
     def _get(self, request, *args, **kwargs):

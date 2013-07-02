@@ -32,15 +32,15 @@ import logging; log = logging.getLogger(__name__)
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
 class BZK(UploadScript):
-
     def _scrape_unit(self, _file):
         if type(_file) == unicode: #command line
             etree = html.fromstring(_file)
         else: #web interface
             try:
                 etree = html.parse(_file).getroot()
-            except IOError:
-                log.error("Failed HTML parsing. Are you sure you've inserted the right file?")
+            except IOError as e:
+                log.exception("Failed html.parse")
+                raise TypeError("failed HTML parsing. Are you sure you've inserted the right file?\n{e}".format(**locals()))
 
         title = etree.cssselect("title")[0].text.lower().strip()
         if "intranet/rss" in title or "werkmap" in title:

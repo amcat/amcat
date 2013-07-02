@@ -82,8 +82,6 @@ class Scraper(Script):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = Medium.get_or_create(self.medium_name)
         self.project = self.options['project']
-        log.debug("Articleset: {self.articleset}, options: {self.options}"
-                  .format(**locals()))
 
     @property
     def articleset(self):
@@ -131,7 +129,7 @@ class Scraper(Script):
         and medium filled in automatically.
         @return: a sequence of Article objects ready to .save()
         """
-        log.debug(u"Scraping unit {}".format(unit))
+        #log.debug(u"Scraping unit {}".format(unit))
         articles = list(self._scrape_unit(unit))
 
         for article in articles:

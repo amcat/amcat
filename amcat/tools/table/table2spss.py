@@ -126,7 +126,7 @@ def table2sav(t, filename=None):
     #log.debug("Wrote syntax:\n%s\n" % (sps))
 
     log.debug("Executing PSPP")
-    pspp = toolkit.executepipe("pspp -p")
+    pspp = toolkit.executepipe("pspp -b")
     writer = pspp.next()
     writer = EchoWriter(writer)
     log.debug("Creating SPS script and sending to PSPP")

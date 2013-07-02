@@ -152,6 +152,8 @@ class AmCATResource(generics.ListAPIView):
         class subclass(cls):
             model = use_model
         subclass.__name__ = '{use_model.__name__}Resource'.format(**locals())
+        if subclass.__name__ == 'AmCATResource':
+            subclass.__name__ = 'AmCATSystemResource'
         return subclass
 
 
