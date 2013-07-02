@@ -75,8 +75,8 @@ class ProjectScriptView(ScriptView):
             for key, val in self.url_data.iteritems():
                 if key in form.fields:
                     form.fields[key].initial = val
-            if 'project' in form.fields:
-                form.fields['project'].widget = HiddenInput()
+        if 'project' in form.fields:
+            form.fields['project'].widget = HiddenInput()
         return form
 
     def _initialize_url_data(self, **kwargs):

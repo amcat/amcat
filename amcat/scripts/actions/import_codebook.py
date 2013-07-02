@@ -22,6 +22,7 @@
 import logging; log = logging.getLogger(__name__)
 
 import csv
+import os.path
 
 from django import forms
 from django.forms import widgets
@@ -51,8 +52,12 @@ class ImportCodebook(Script):
     """
 
     class options_form(CSVUploadForm):
-        codebook_name = forms.CharField()
+        codebook_name = forms.CharField(required=False)
         project = forms.ModelChoiceField(queryset=Project.objects.all())
+        def clean_codebook_name(self):
+            """If codebook name is not specified, use file base name instead"""
+            if self.files.get('file') and not self.cleaned_data.get('codebook_name'):
+                return os.path.splitext(os.path.basename(self.files['file'].name))[0]
         
     @transaction.commit_on_success
     def _run(self, file, project, codebook_name, **kargs):
