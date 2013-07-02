@@ -345,6 +345,33 @@ class Codebook(AmcatModel):
         if self.cached: return code.id in self._codes
         return CodebookCode.objects.filter(codebook=self, code=code).exists()
 
+    def add_codes(self, codes):
+        """
+        Add a list of codes (and their parents) to the codebook
+
+        @param codes: a list/tuple of Code objects or a list/tuple of (code, parent) pairs (both Code objects, parent
+        optionally None for roots). If parents are given, all parent Codes should exist in the codebook
+        or be included as a code in the codes list.
+        """
+        if len(codes) == 0: return
+
+        # Create pairs with all parents empty if this is a list of codes
+        if isinstance(codes[0], Code):
+            codes = [(c, None) for c in codes]           
+
+        ccodes = {code.id : CodebookCode(codebook=self, code=code) for code in 
+                    chain(*codes) if code and not self._code_in_codebook(code)}
+
+        # Set parents for all codes
+        for child, parent in codes:
+            if self._code_in_codebook(child):
+                raise ValueError("{} already in codebook".format(child))
+            elif parent:
+                ccodes[child.id].parent = parent
+
+        CodebookCode.objects.bulk_create(ccodes.values())
+        self.invalidate_cache()
+
     def add_code(self, code, parent=None, update_label_cache=True, **kargs):
         """Add the given code to the hierarchy, with optional given parent.
         Any extra arguments` are passed to the CodebookCode constructor.
@@ -632,6 +659,29 @@ class TestCodebook(amcattest.PolicyTestCase):
         B.add_code(d, b)
         self.assertEqual(set(B.codes), {d, b})
 
+    def test_add_codes(self):
+        a, b, c, d, e = [amcattest.create_test_code(label=l) for l in "abcde"]
+
+        A = amcattest.create_test_codebook(name="A")
+
+        A.add_codes([a])
+        self.assertTrue(A._code_in_codebook(a))
+
+        A.add_codes([(b, c)])
+        self.assertTrue(A._code_in_codebook(b))
+        self.assertTrue(A._code_in_codebook(c))
+
+        A.add_codes([(d, c)])
+        self.assertTrue(A._code_in_codebook(d))
+        self.assertTrue(A._code_in_codebook(c))
+
+        A.add_codes([(e, None)])
+        self.assertTrue(A._code_in_codebook(e))
+
+        self.assertRaises(ValueError, A.add_codes, [e])
+        self.assertRaises(ValueError, A.add_codes, [(e, b)])
+        
+
     def test_codebookcodes(self):
         """Test the get_codebookcodes function"""
         def _copairs(codebook, code):
@@ -720,6 +770,7 @@ class TestCodebook(amcattest.PolicyTestCase):
             self.test_codebookcodes()
             self.test_roots_children()
             self.test_get_ancestors()
+            self.test_add_codes()
         finally:
             Codebook.__getattribute__ = ga 
             
