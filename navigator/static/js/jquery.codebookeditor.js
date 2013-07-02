@@ -1012,7 +1012,7 @@ Array.prototype.remove=function(s){
 
             /* Call init function after AJAX call */
             $.getJSON(api_url + 'codebookhierarchy?format=json&id=' + $(self.root_el).attr("name"), self._initialize);
-            $.getJSON(api_url + 'language?format=json&order_by=id&paginate=false', self._initialize_languages);
+            $.getJSON(api_url + 'language?format=json&order_by=id&paginate=false&page_size=100', self._initialize_languages);
         });
     };
 })(jQuery);
