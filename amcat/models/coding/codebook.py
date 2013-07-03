@@ -169,7 +169,11 @@ class Codebook(AmcatModel):
 
     @property
     def codebookcodes(self):
-        return self.codebookcode_set.all()
+        codes = self.codebookcode_set.all()
+        if self.cached:
+            codes._result_cache = list(chain(*self._codebookcodes.values()))
+
+        return codes
 
     def get_codebookcodes(self, code):
         """Return a sequence of codebookcode objects for this code in the codebook"""
@@ -796,6 +800,9 @@ class TestCodebook(amcattest.PolicyTestCase):
 
         with self.checkMaxQueries(0, "Get cached codes"):
             a, b = map(A.get_code, [a.id, b.id])
+
+        with self.checkMaxQueries(0, "Get multiple cached codes"):
+            list(A.get_codes())
 
         with self.checkMaxQueries(0, "Get exisitng labels"):
             self.assertEqual(a.get_label(l1), "a")
