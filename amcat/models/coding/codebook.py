@@ -218,7 +218,7 @@ class Codebook(AmcatModel):
             if not include_hidden: codes = codes.filter(hide=False)
             return dict(codes.values_list("code_id", "parent_id"))
             
-        codes = (co for co in self.codebookcodes.all()
+        codes = (co for co in self.codebookcodes
                     if not ((co.validfrom and date < co.validfrom) or
                             (co.validto and date >= co.validto)))
 
@@ -811,6 +811,9 @@ class TestCodebook(amcattest.PolicyTestCase):
         with self.checkMaxQueries(0, "Get non-existing labels"):
             self.assertEqual(a.get_label(l2, l1), "a")
             self.assertEqual(b.get_label(l1, l2), "b")
+
+        with self.checkMaxQueries(0, "Get tree"):
+            list(A.get_tree())
 
         c = amcattest.create_test_code(label="c", language=l2)
         with self.checkMaxQueries(5, "Add new code"):
