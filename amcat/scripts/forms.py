@@ -142,7 +142,7 @@ class SelectionForm(forms.Form):
     startDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     endDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     onDate = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
-    includeAll = forms.BooleanField(label="Include amount of all articles", required=False)
+    includeAll = forms.BooleanField(label="Include articles not matched by any keyword", required=False)
     codebook = ModelChoiceFieldWithIdLabel(queryset=Codebook.objects.all(), required=False, label="Use Codebook")
     codebooklanguage = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False, label="Language for keywords")
     # queries will be added by clean(), that contains a list of SearchQuery objects

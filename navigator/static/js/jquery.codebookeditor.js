@@ -68,7 +68,7 @@ Array.prototype.remove=function(s){
 		.attr("href", document.URL + "/export")
 		.append(
                     $("<i>").addClass("icon icon-download")                
-		).append($(document.createTextNode(" Donwload codebook")));
+		).append($(document.createTextNode(" Download codebook")));
 
 	    /* self.btn_manage_bases = $("<div>").addClass("btn").append(
                 $("<i>").addClass("icon icon-list")                

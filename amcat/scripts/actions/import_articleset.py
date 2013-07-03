@@ -28,13 +28,19 @@ from amcat.scripts.script import Script
 from amcat.models import ArticleSet, Project
 
 class ImportSet(Script):
+    """
+    Import this set into another project so you can use the set there as well.
+
+    The set is not copied to the other project, only 'linked'
+    """
+    
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-        project = forms.ModelChoiceField(queryset=Project.objects.all())
+        target_project = forms.ModelChoiceField(queryset=Project.objects.all())
 
-    def _run(self, articleset, project):
-        project.articlesets.add(articleset)
-        project.favourite_articlesets.add(articleset)
+    def _run(self, articleset, target_project):
+        target_project.articlesets.add(articleset)
+        target_project.favourite_articlesets.add(articleset)
 
         
 if __name__ == '__main__':
