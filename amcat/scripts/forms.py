@@ -53,7 +53,7 @@ class InlineTableOutputForm(forms.Form):
         ('comma-csv', 'CSV (comma separated)'),
         ('excel', 'Excel (.xslx)'),
         ('spss', 'SPSS (.sav)'), 
-        ('json-html', 'Inline HTML')
+        ('json-html', 'Show in navigator')
      ), initial='json-html')
         
 class TableOutputForm(forms.Form):
