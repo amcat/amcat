@@ -77,7 +77,7 @@ annotator.articletable.highlight = function(){
     console.log("Highlighting all labels in article..");
     $.each(annotator.fields.ontologies, function(ont_id, ont){
         var escape_regex = function(str) {
-          return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+          return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
         };
 
         // For each ontology
