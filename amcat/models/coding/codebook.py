@@ -219,9 +219,9 @@ class Codebook(AmcatModel):
                             (co.validto and date >= co.validto)))
 
         if include_hidden:
-            return { co.code_id : co.parent_id for co in codes if not co.hide }
+            return { co.code_id : co.parent_id for co in codes }
+        return { co.code_id : co.parent_id for co in codes if not co.hide }
 
-        return { co.code_id : co.parent_id for co in codes }
 
     def _get_node(self, include_labels, children, node, seen, labels=None):
         """
