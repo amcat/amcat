@@ -29,15 +29,19 @@ from amcat.models.medium import Medium
 from lxml import html
 import re
 import logging; log = logging.getLogger(__name__)
+from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
 class BZK(UploadScript):
-    
-    def _scrape_unit(self, file):
-        try:
-            etree = html.parse(file).getroot()
-        except Exception as e:
-            log.exception("Failed html.parse")
-            raise TypeError("failed HTML parsing. Are you sure you've inserted the right file?\n{e}".format(**locals()))
+    def _scrape_unit(self, _file):
+        if type(_file) == unicode: #command line
+            etree = html.fromstring(_file)
+        else: #web interface
+            try:
+                etree = html.parse(_file).getroot()
+            except IOError as e:
+                log.exception("Failed html.parse")
+                raise TypeError("failed HTML parsing. Are you sure you've inserted the right file?\n{e}".format(**locals()))
+
         title = etree.cssselect("title")[0].text.lower().strip()
         if "intranet/rss" in title or "werkmap" in title:
             for article in self.scrape_file(etree, title):
@@ -45,7 +49,6 @@ class BZK(UploadScript):
         else:
             raise ValueError("Supports only 'werkmap' and 'intranet/rss' documents")
         
-
     def scrape_file(self, _html, t):
         if "werkmap" in t:
             divs = _html.cssselect("#articleTable div")
@@ -62,11 +65,7 @@ class BZK(UploadScript):
                 article.props.pagenr, section = self.get_pagenum(articlepage[0].text)
                 if section:
                     article.props.section = section
-
-            if not div.cssselect("#sourceTitle")[0].text:
-                article.props.medium = Medium.get_or_create("unknown medium")
-            else:
-                article.props.medium = Medium.get_or_create(div.cssselect("#sourceTitle")[0].text)
+            article.props.medium = self.create_medium(div.cssselect("#sourceTitle")[0])
             date_str = div.cssselect("#articleDate")[0].text
             try:
                 article.props.date = readDate(date_str)
@@ -74,6 +73,16 @@ class BZK(UploadScript):
                 log.error("parsing date \"{date_str}\" failed".format(**locals()))
             else:
                 yield article
+
+    def create_medium(self, html):
+        if not html.text:
+            medium = "unknown"
+        else:
+            medium = html.text
+        if medium in MEDIUM_ALIASES.keys():
+            return Medium.get_or_create(MEDIUM_ALIASES[medium])
+        else:
+            return Medium.get_or_create(medium)
 
     def get_pagenum(self, text):
         p = re.compile("pagina ([0-9]+)([,\-][0-9]+)?([a-zA-Z0-9 ]+)?")

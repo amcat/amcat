@@ -27,7 +27,7 @@ from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scraping.document import Document
 from amcat.scraping.pdf import PDFScraper
 from amcat.models.medium import Medium
-
+from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
 from datetime import date
 import re
@@ -97,11 +97,17 @@ class BZKPDFScraper(UploadScript, PDFScraper):
 
         for h, medium in self.index:
             if article.props.headline.lower().strip() in h.lower().strip():
-                article.props.medium = Medium.get_or_create(medium)
+                article.props.medium = self.create_medium(medium)
 
         return article
 
-
+    def create_medium(self, medium):
+        if not medium or len(medium) < 1:
+            medium = "unknown"
+        if medium in MEDIUM_ALIASES.keys():
+            return Medium.get_or_create(MEDIUM_ALIASES[medium])
+        else:
+            return Medium.get_or_create(medium)
 
 if __name__ == "__main__":
     from amcat.tools import amcatlogging
