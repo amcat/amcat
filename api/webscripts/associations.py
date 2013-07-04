@@ -73,12 +73,11 @@ class ShowAssociations(WebScript):
             if not threshold: threshold = 0
             for x,y,a in assocTable:
                 a = float(a)
-                print  `threshold`, `a`, a<threshold
                 if threshold and a < threshold:
                     continue
 
                 opts = {}
-                if self.options['graph_label']: opts['label'] = a
+                if self.options['graph_label']: opts['label'] = "%1.2f" % a
                 w = 1 + 10 * a
                 
                 g.addEdge(x,y, weight=w, **opts)
