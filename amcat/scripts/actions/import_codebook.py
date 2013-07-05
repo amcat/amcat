@@ -70,9 +70,6 @@ class ImportCodebook(Script):
         
         # build code, parent pairs
         if "parent" in data:
-            codes = [(c if c else None) for c in data["code"]]
-            parents = [(c if c else None) for c in data["parent"]]
-            print codes
             parents = zip(data["code"], data["parent"])
         else:
             cols = get_indented_columns(data)
@@ -89,11 +86,15 @@ class ImportCodebook(Script):
         
         codes = {code : Code.get_or_create(uuid=uuid) for ((code, parent), uuid) in zip(parents, uuids)}
 
+        to_add = []
         for code, parent in parents:
             instance = codes[code]
-            cb.add_code(instance, parent=(codes[parent] if parent else None))
+            parent_instance = codes[parent] if parent else None
+            to_add.append((instance, parent_instance))
             if not instance.labels.all().exists():
                 instance.add_label(0, code)
+        cb.add_codes(to_add)
+
 
         for col in data:
             if col.startswith(LABEL_PREFIX):
