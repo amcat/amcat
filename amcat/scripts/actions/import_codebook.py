@@ -70,6 +70,9 @@ class ImportCodebook(Script):
         
         # build code, parent pairs
         if "parent" in data:
+            codes = [(c if c else None) for c in data["code"]]
+            parents = [(c if c else None) for c in data["parent"]]
+            print codes
             parents = zip(data["code"], data["parent"])
         else:
             cols = get_indented_columns(data)

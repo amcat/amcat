@@ -134,8 +134,6 @@ class AggregationScript(script.Script):
             table = RelativeTable(table)
             
         if xAxis == 'date':
-            print(table.output())
-
             table = FilledOutTable(table, dateInterval=dateInterval)
 
             
