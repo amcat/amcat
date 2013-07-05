@@ -43,7 +43,9 @@ class DeFactoProfessional(UploadScript):
 
     
     def split_file(self, file):
-        return split_xml(file.bytes)    
+        xml = get_xml(file.read())
+        return split_xml(xml)
+
 
     def _scrape_unit(self, element):
         yield get_article(element)
@@ -145,15 +147,15 @@ def get_meta(e):
         except ValueError:
             pass # try the next one!
             
-def get_xml(text):
+def get_xml(bytes):
     with NamedTemporaryFile() as f:
-        f.write(text)
+        f.write(bytes)
         f.flush()
         try:
             xml = subprocess.check_output(["rtf2xml", f.name])
         except Exception, e:
             f, fn = mkstemp(suffix=".rtf")
-            os.write(f, text)
+            os.write(f, bytes)
             raise Exception("Error on calling rtf2xml, is rtf2xml installed? RTF saved to {fn}\n(use 'sudo pip install rtf2xml' to install)\n {e}".format(**locals()))
     return parse_xml(xml)
 
