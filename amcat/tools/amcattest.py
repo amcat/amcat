@@ -146,6 +146,7 @@ def create_test_medium(**kargs):
     from amcat.models.medium import Medium
     if "language" not in kargs: kargs["language"] = get_test_language()
     if "id" not in kargs: kargs["id"] = _get_next_id()
+    if "name" not in kargs: kargs["name"] = "Medium_%i" % kargs["id"]
     return Medium.objects.create(**kargs)
     
 def create_test_article(**kargs):
