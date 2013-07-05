@@ -22,15 +22,23 @@ from webscript import WebScript
 from amcat.scripts.searchscripts.articlelist import ArticleListScript
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 from amcat.scripts.processors.associations import AssociationsScript
-import amcat.scripts.forms
+from django import forms
+from amcat.tools.table import table3
+from amcat.tools import dot
 
 import logging
 log = logging.getLogger(__name__)
 
 
-class AssociationsForm(amcat.scripts.forms.InlineTableOutputForm):
-    pass
+class AssociationsForm(forms.Form):
+    network_output = forms.ChoiceField(choices=[('oo', 'Table'),
+                                        ('ool', 'List'),
+                                        ('oon', 'Network graph'),
+                                        ])
 
+    graph_threshold = forms.DecimalField(label="Graph: threshold", required=False)
+    graph_label = forms.BooleanField(label="Graph: include association in label", required=False)
+    
 class ShowAssociations(WebScript):
     name = "Associations"
     form_template = None
@@ -48,6 +56,33 @@ class ShowAssociations(WebScript):
         articleTable = ArticleListToTable({'columns':('hits', )}).run(articles)
         #print(articleTable.output())
         assocTable = AssociationsScript(self.formData).run(articleTable)
-        return self.outputResponse(assocTable, AssociationsScript.output_type)
+        if self.options['network_output'] == 'ool':
+            self.output = 'json-html'
+            return self.outputResponse(assocTable, AssociationsScript.output_type)
+        elif self.options['network_output'] == 'oo':
+            # convert list to dict and make into dict table
+            result = table3.DictTable()
+            result.rowNamesRequired=True
+            for x,y,a in assocTable:
+                result.addValue(x,y,a)
+            self.output = 'json-html'
+            return self.outputResponse(result, AssociationsScript.output_type)
+        elif self.options['network_output'] == 'oon':
+            g = dot.Graph()
+            threshold = self.options.get('graph_threshold')
+            if not threshold: threshold = 0
+            for x,y,a in assocTable:
+                a = float(a)
+                if threshold and a < threshold:
+                    continue
+
+                opts = {}
+                if self.options['graph_label']: opts['label'] = "%1.2f" % a
+                w = 1 + 10 * a
+                
+                g.addEdge(x,y, weight=w, **opts)
+            html = g.getHTMLObject()
+            self.output = 'json-html'
+            return self.outputResponse(html, unicode)
             
-    
+            

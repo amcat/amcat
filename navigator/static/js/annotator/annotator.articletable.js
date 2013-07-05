@@ -76,10 +76,14 @@ MAX_LABELS_HIGHLIGHT = 30;
 annotator.articletable.highlight = function(){
     console.log("Highlighting all labels in article..");
     $.each(annotator.fields.ontologies, function(ont_id, ont){
+        var escape_regex = function(str) {
+          return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        };
+
         // For each ontology
         var labels = [];
         $.each(ont, function(code_id, code){
-            labels.push(code.label);
+            labels.push(escape_regex(code.label));
         });
 
         if (labels.length > MAX_LABELS_HIGHLIGHT){

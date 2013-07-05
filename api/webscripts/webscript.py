@@ -83,7 +83,7 @@ class WebScript(object):
     def getActions(self):
         for ws in api.webscripts.actionScripts:
             if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.formData.get('query')):
-                yield ws.__name__, ws.name
+                yield ws.__name__, ws.name 
 
 
     def outputJsonHtml(self, scriptoutput):
@@ -110,9 +110,12 @@ class WebScript(object):
         outputFormData['template'] = self.output_template
         if self.output == 'json-html': # special output that runs the webscript with html output,
                                        # then wraps around this the action buttons and other stuff for the amcat navigator website
-            cls = scriptmanager.findScript(data_type, 'html')
-            if not cls: raise Exception('html output not supported')
-            scriptoutput = cls(outputFormData).run(data)
+            if data_type == unicode:
+                scriptoutput = data
+            else:
+                cls = scriptmanager.findScript(data_type, 'html')
+                if not cls: raise Exception('html output not supported')
+                scriptoutput = cls(outputFormData).run(data)
             return self.outputJsonHtml(scriptoutput)
         else:
             cls = scriptmanager.findScript(data_type, self.output)

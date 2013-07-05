@@ -81,6 +81,24 @@ def unitCodings(request, codingjobid, articleid):
     return writeResponse(out)
     
 
+def get_value_labels(coding):
+    """
+    return a sequence of ('field_{field.id}', value_label) pairs for the given coding.
+    If the field is not coded or cannot be deserialized (e.g. because of a codebook change)
+    the label '' will be returned.
+    """
+    for val in coding.values.select_related("field__fieldtype", "value__strval", "value__intval"):
+        try:
+            value = val.value
+        except Code.DoesNotExist: # codebook change
+            value = None
+        f = val.field
+        if value is None:
+            label = ''
+        else:
+            label = f.serialiser.value_label(value)
+        yield f, label
+
 def articleCodings(request, codingjobid, articleid):
     """returns the article codings of an article as HTML form"""
     article = Article.objects.get(id=articleid)
@@ -88,8 +106,7 @@ def articleCodings(request, codingjobid, articleid):
     codings = codingtoolkit.get_article_coding(codingjob, article)
 
     if codings:
-        values = ((f, f.serialiser.value_label(v)) for (f,v) in codings.get_values())
-        values = dict(('field_%s' % field.id, value) for field, value in values)
+        values = {"field_%i" % f.id : label for (f, label) in get_value_labels(codings)}
     else:
         values = {}
     articlecodingform = codingtoolkit.CodingSchemaForm(codingjob.articleschema, values)

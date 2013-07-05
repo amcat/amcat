@@ -25,6 +25,7 @@ This module contains a (semi-machine readable) lexisnexis parser.
 from __future__ import unicode_literals
 
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ParseError
+from amcat.scripts.article_upload import fileupload
 
 from amcat.tools import toolkit
 
@@ -503,33 +504,25 @@ class LexisNexis(UploadScript):
     date etc.) from the file automatically.
     """
 
+    class options_form(UploadScript.options_form, fileupload.ZipFileUploadForm):
+        pass
+    
     name = 'Lexis Nexis'
 
-    def _prepare_file(self, file):
-        """
-        Split the file into header and body and annotate the file object with _ln_header and _ln_body
-        """
-        if hasattr(file, '_ln_body'):
-            return
-        text = self.decode(file.read())
-        file._ln_header, file._ln_body = split_header(text) 
-
-    
     def split_file(self, file):
-        self._prepare_file(file)
-        fragments = list(split_body(file._ln_body))
+        header, body = split_header(file.text)
+        self.ln_query  = get_query(parse_header(header))
+        fragments = list(split_body(body))
         return fragments
 
     def get_provenance(self, file, articles):
         # FIXME: redundant double reading of file
         provenance = super(LexisNexis, self).get_provenance(file, articles)
+
+        if self.ln_query is None:
+            return provenance
         
-        self._prepare_file(file)
-        header = parse_header(file._ln_header)
-        q = get_query(header)
-        if q is None: return provenance
-        
-        return "{provenance}; LexisNexis query: {q!r}".format(**locals())
+        return "{provenance}; LexisNexis query: {self.ln_query!r}".format(**locals())
     
     def parse_document(self, text):
         fields = parse_article(text)

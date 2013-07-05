@@ -32,7 +32,6 @@ from amcat.models.medium import Medium
 from django.db import models
 
 import logging;
-from amcat.tools.caching import RowCacheManager
 
 log = logging.getLogger(__name__)
 
@@ -77,8 +76,6 @@ class Article(AmcatModel):
                                db_index=True, blank=True)
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
-
-    objects = RowCacheManager()
 
     class Meta():
         db_table = 'articles'

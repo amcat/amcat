@@ -26,14 +26,14 @@ from __future__ import unicode_literals, print_function, absolute_import
 from functools import partial
 
 from amcat.models.coding.codingjob import CodingJob
-from amcat.models.coding.coding import Coding, CodingStatus, STATUS_COMPLETE
+from amcat.models.coding.coding import Coding, CodingStatus, STATUS_COMPLETE, CodingValue
 from amcat.models.coding.codedarticle import CodedArticle, bulk_create_codedarticles
 from amcat.models.coding.code import Code
 from amcat.models.coding.codingschemafield import CodingSchemaField
 from amcat.models.coding.codingschemafield import CodingSchemaFieldType
 from django import forms
 
-from amcat.tools.table.table3 import ObjectTable
+from amcat.tools.table.table3 import ObjectTable, ObjectColumn
 
 import logging; log = logging.getLogger(__name__)
 
@@ -95,18 +95,19 @@ def get_table_articles_per_job(jobs):
     result.addColumn(lambda a: a.coding and a.coding.comments, "comments")
     return result
 
-def get_value(field, coding):
-    """Return the (deserialized) value for field in this coding"""
-    value = dict(coding.get_values()).get(field)
-    return value
-
-def get_label(field, language, coding):
-    """Return a label"""
-    value = get_value(field, coding)
-    if value is None: return ''
-    return field.serialiser.value_label(value, language)
-    
-
+class CodingColumn(ObjectColumn):
+    def __init__(self, field, language):
+        super(CodingColumn, self).__init__(field.label)
+        self.field = field
+        self.language = language
+    def getCell(self, coding):
+        try:
+            value = coding.values.get(field_id=self.field.id)
+            value = value.value
+        except (CodingValue.DoesNotExist, Code.DoesNotExist):
+            value = None # field is not coded yet or codebook/schema change
+        if value is None: return ''
+        return self.field.serialiser.value_label(value, self.language)
     
 def get_table_sentence_codings_article(codedarticle, language):
     """Return a table of sentence codings x fields
@@ -119,7 +120,7 @@ def get_table_sentence_codings_article(codedarticle, language):
     result.addColumn('id')
     result.addColumn(lambda x:x.sentence_id, 'sentence')
     for field in codedarticle.codingjob.unitschema.fields.order_by('fieldnr').all():
-        result.addColumn(partial(get_label, field, language), field.label)
+        result.addColumn(CodingColumn(field, language))
     return result
 
     

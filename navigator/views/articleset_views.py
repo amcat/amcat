@@ -45,8 +45,8 @@ class ImportSetView(ProjectScriptView):
             qs = Project.objects.filter(favourite_users=self.request.user.get_profile())
             qs = qs.exclude(articlesets=self.url_data["articleset"])
             qs = qs.exclude(pk=self.project.id)
-            form.fields['project'].queryset = qs
-            form.fields['project'].help_text = "Only showing your favourite projects that do not use this set already"
+            form.fields['target_project'].queryset = qs
+            form.fields['target_project'].help_text = "Only showing your favourite projects that do not use this set already"
 
         return form
             

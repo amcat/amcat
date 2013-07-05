@@ -41,7 +41,7 @@ from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJ
 from api.rest.resources import ProjectRoleResource
 
 #from api.rest import AnalysisResource
-from api.rest.resources import CodebookBaseResource, CodebookCodeResource
+from api.rest.resources import  CodebookCodeResource
 from api.rest.resources import CodingSchemaFieldResource
 from api.rest.resources import PluginResource, ScraperResource
 

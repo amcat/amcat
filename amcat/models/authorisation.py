@@ -35,8 +35,6 @@ from amcat.tools.model import AmcatModel
 
 ADMIN_ROLE = 3
 
-from amcat.tools.caching import RowCacheManager
-
 class AccessDenied(EnvironmentError):
     def __init__(self, user, privilege, project=None):
         projectstr = " on %s" % project if project else ""
@@ -83,8 +81,6 @@ class Role(AmcatModel):
     label = models.CharField(max_length=50)
     projectlevel = models.BooleanField()
 
-    objects = RowCacheManager()
-
     class Meta():
         db_table = 'roles'
         app_label = 'amcat'
@@ -94,8 +90,6 @@ class ProjectRole(AmcatModel):
     project = models.ForeignKey("amcat.Project", db_index=True)
     user = models.ForeignKey(User, db_index=True)
     role = models.ForeignKey(Role)
-
-    objects = RowCacheManager()
 
     def __unicode__(self):
         return u"%s, %s" % (self.project, self.role)
@@ -116,8 +110,6 @@ class Privilege(AmcatModel):
 
     label = models.CharField(max_length=50)
     role = models.ForeignKey(Role)
-
-    objects = RowCacheManager()
 
     class Meta():
         db_table = 'privileges'
