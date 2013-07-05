@@ -89,7 +89,7 @@ def gen_coding_choices(user, model):
         Q(project__projectrole__user=user)|
         # User has access to project through guestrole
         Q(project__guest_role__id__gte=user.get_profile().role.id)
-    ) if not user.get_profile().role.id >= get_admin_id() else model.objects.all()
+    ).distinct() if not user.get_profile().role.id >= get_admin_id() else model.objects.all()
 
     objects.select_related("project__name").only("name")
     objects = toolkit.multidict(((cb.project, cb) for cb in objects), ltype=list)
