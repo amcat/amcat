@@ -59,8 +59,10 @@ class ImportCodebook(Script):
             fn = None
             if self.files.get('file') and not self.cleaned_data.get('codebook_name'):
                 fn =  os.path.splitext(os.path.basename(self.files['file'].name))[0]
-            if not fn:
-                return self.cleaned_data.get('codebook_name')
+            if fn:
+                return fn
+            return self.cleaned_data.get('codebook_name')
+            
 
     @transaction.commit_on_success
     def _run(self, file, project, codebook_name, **kargs):
@@ -68,7 +70,7 @@ class ImportCodebook(Script):
         
         # build code, parent pairs
         if "parent" in data:
-            raise Exception()
+            parents = zip(data["code"], data["parent"])
         else:
             cols = get_indented_columns(data)
             parents = list(get_parents_from_columns(cols))
@@ -86,7 +88,7 @@ class ImportCodebook(Script):
 
         for code, parent in parents:
             instance = codes[code]
-            cb.add_code(instance, parent=(parent and codes[parent]))
+            cb.add_code(instance, parent=(codes[parent] if parent else None))
             if not instance.labels.all().exists():
                 instance.add_label(0, code)
 
