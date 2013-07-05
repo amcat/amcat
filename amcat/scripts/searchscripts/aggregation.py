@@ -134,8 +134,11 @@ class AggregationScript(script.Script):
             table = RelativeTable(table)
             
         if xAxis == 'date':
+            print(table.output())
+
             table = FilledOutTable(table, dateInterval=dateInterval)
 
+            
         return table
 
 class RelativeTable(table3.WrappedTable):
@@ -193,7 +196,7 @@ def fill_days(van, tot):
     while True:
         yield van.strftime("%Y-%m-%d")
         van += datetime.timedelta(days=1)
-        if van >= tot:
+        if van > tot:
             break
             
 def _get_n_weeks(year):
@@ -229,8 +232,8 @@ class TestAggregation(amcattest.PolicyTestCase):
         self.assertEqual(_get_n_weeks(2008), 52)        
         
     def test_fill_days(self):
-        self.assertEqual(list(fill_days('2003-12-27', '2004-01-03'))
-                         ['2003-12-27', '2003-12-28', '2003-12-29', '2003-12-30', '2003-12-31', '2004-01-01', '2004-01-02'])
+        self.assertEqual(list(fill_days('2003-12-27', '2004-01-03')),
+                         ['2003-12-27', '2003-12-28', '2003-12-29', '2003-12-30', '2003-12-31', '2004-01-01', '2004-01-02', '2004-01-03'])
     
     def test_dates(self):
 
