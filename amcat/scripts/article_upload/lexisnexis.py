@@ -30,7 +30,6 @@ from amcat.tools import toolkit
 
 from amcat.models.article import Article
 from amcat.models.medium import Medium
-from amcat.tools.djangotoolkit import get_or_create
 
 import re, os.path
 import collections
@@ -476,9 +475,7 @@ def body_to_article(headline, byline, text, date, source, meta):
 
     art = Article(headline=headline, byline=byline, text=text, date=date)
 
-
-    art.medium = get_or_create(Medium, name=source)
-
+    art.medium = Medium.get_or_create(source)
 
     # Author / Section
     meta = meta.copy()

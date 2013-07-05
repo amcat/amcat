@@ -63,7 +63,7 @@ class DeduplicateScript(Script):
 
         elif mode == "whole set":
             log.info("Getting dates")
-            dates = articles.dates('date', 'day')
+            dates = articles.dates('date', 'day').order_by('-date')
             log.info("Deduplicating {n} dates".format(n=len(dates)))
             for date in dates:
                 self._run_date(date)
