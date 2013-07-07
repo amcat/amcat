@@ -300,7 +300,8 @@ amcat.selection.loadIframe = function(){ // this is the form submit response
 
 amcat.selection.addActionToMainForm = function(webscriptClassName, label){
     $("#webscripts").buttonset('destroy');
-    $('#radio-additional, #radio-additional-label').remove();
+    $('#radio-additional-label').prev().remove();
+    $('#radio-additional-label').remove();
     $("#webscripts").append($('<input />', {'type':"radio", id:webscriptClassName, name:"webscriptToRun", value:webscriptClassName, 'checked':true}));
     $("#webscripts").append($('<label />', {'for':webscriptClassName, 'id':'radio-additional-label'}).text(label));
     $("#webscripts").buttonset(); 
