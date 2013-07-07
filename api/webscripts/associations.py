@@ -25,7 +25,7 @@ from amcat.scripts.processors.associations import AssociationsScript
 from django import forms
 from amcat.tools.table import table3
 from amcat.tools import dot
-
+import re
 import logging
 log = logging.getLogger(__name__)
 
@@ -91,6 +91,13 @@ class ShowAssociations(WebScript):
             g = dot.Graph()
             threshold = self.options.get('graph_threshold')
             if not threshold: threshold = 0
+            nodes = {}
+            def getnode(x):
+                if not x in nodes: 
+                    id = "node_%i_%s" % (len(nodes), re.sub("\W","",x))
+                    nodes[x] = dot.Node(id, x)
+                return nodes[x]
+                
             for x,y,a in assocTable:
                 if threshold and a < threshold:
                     continue
@@ -98,8 +105,8 @@ class ShowAssociations(WebScript):
                 opts = {}
                 if self.options['graph_label']: opts['label'] = self.format(a)
                 w = 1 + 10 * a
-                
-                g.addEdge(x,y, weight=w, **opts)
+
+                g.addEdge(getnode(x),getnode(y), weight=w, **opts)
             html = g.getHTMLObject()
             self.output = 'json-html'
             return self.outputResponse(html, unicode)
