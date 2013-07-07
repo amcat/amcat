@@ -366,8 +366,10 @@ class WrappedTable(Table):
     def getRows(self):
         return self.rows if self.rows else self.table.getRows()
     def getValue(self, row, col):
-        return self.table.getValue(row, col)
-        
+        val = self.table.getValue(row, col)
+        if 'cellfunc' in self._kargs:
+            val = self._kargs['cellfunc'](val)
+        return val
         
     
 class SortedTable(WrappedTable):
