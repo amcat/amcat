@@ -75,6 +75,9 @@ annotator.fields.initFieldData = function(){
             annotator.fields.loadedFromServer = true;
             
             annotator.fields.convertOntologyJson();
+
+            $( "#loading_fields" ).dialog( "destroy" );
+    
         },
         "error": function(jqXHR, textStatus, errorThrown){
             console.debug('error loading fields' + textStatus + errorThrown);

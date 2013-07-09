@@ -474,19 +474,6 @@ annotator.stripIdAttribute = function(id){ // used for sentence numbers that con
 }
 
 
-/* NOt used anymore
-annotator.codingTypeSet = function(){ // if user picks sentence/article/both coding type
-    if($('#article-coding-radio:checked').val()){ // radio is checked
-        annotator.articlecodings.showArticleCodings();
-        annotator.unitcodings.hideSentenceCodings();
-    } else if($('#sentence-coding-radio:checked').val()){ // sentence codings radio checked
-        annotator.unitcodings.showSentenceCodings();
-        annotator.articlecodings.hideArticleCodings();
-    } else { // both
-        annotator.articlecodings.showArticleCodings();
-        annotator.unitcodings.showSentenceCodings();
-    }
-}*/
 // This function is not yet implemented
 annotator.getNextSentenceNumber = function(sentencenumber){
     var result = null;
@@ -560,13 +547,6 @@ annotator.saveNewSentenceDialog = function(){
             console.debug('ok recieved');
             annotator.articletable.showArticleFromRow($('#article-table-container .row_selected'));
             $("#new-sentence-dialog-form").dialog("close");
-            // $('#new-sentence-status').html('Saved!');
-            // $("#new-sentence-dialog-form").dialog('option', 'buttons', {
-                // "OK": function(){
-                    
-                    // $(this).dialog("close");
-                // }
-            // });
           } else {
             var errorMsg = '<h3>Error while saving</h3>' + $('<span />').text(json.errormsg).html();
             console.debug(errorMsg);
@@ -578,8 +558,6 @@ annotator.saveNewSentenceDialog = function(){
       },
       dataType: 'json'
     });
-    
-    //$("#new-sentence-dialog-form").dialog("close");
 }
 
 
@@ -939,7 +917,14 @@ annotator.initPage = function(){
         
     annotator.checkWindowWidth();
     annotator.fields.initFieldData();
-    
+
+    $("<div id='loading_fields'>Initiatlising fields, please wait..</div>" ).dialog({
+      dialogClass: "no-close",
+      modal : true,
+      title : "Loading...",
+      
+    });
+
     $(window).bind('resize', function () {
         if(annotator.previousWidth != $(window).width()){
             annotator.articletable.articleTable.fnAdjustColumnSizing();
