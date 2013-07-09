@@ -140,17 +140,23 @@ class DailyScript(Script):
         log.info("Done")
 
         
-        
+def setup_logging():
+    from amcat.tools.amcatlogging import AmcatFormatter
+    loggers = (logging.getLogger("amcat.scraping"), logging.getLogger("amcat.scripts.maintenance.daily"), logging.getLogger("scraping"))
+    d = date.today()
+    handlers = (logging.FileHandler("/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())), logging.StreamHandler())
+    formatter = AmcatFormatter(date = True)
+
+    for handler in handlers:
+        handler.setLevel(logging.INFO)
+        handler.setFormatter(formatter)
+
+    for logger in loggers:
+        logger.setLevel(logging.INFO)
+        for handler in handlers:        
+            logger.addHandler(handler)
 
 if __name__ == '__main__':
-    from amcat.tools import amcatlogging
     from amcat.scripts.tools import cli
-    amcatlogging.info_module("amcat.scraping")
-    amcatlogging.info_module("amcat.scripts.maintenance.daily")
-    d = date.today()
-    amcatlogging.setFileHandler(
-        "daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals()),
-        directory = "/home/amcat/log/",
-        filesize = None)
-    #amcatlogging.set_sentry_handler()
+    setup_logging()
     cli.run_cli(DailyScript)
