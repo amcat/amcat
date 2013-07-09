@@ -111,17 +111,17 @@ class Codebook(AmcatModel):
             self._prefetched_objects_cache = {}
 
         # Fetch codebookcodes and put them in caches
-        codes = CodebookCode.objects.filter(codebook=self)
+        ccodes = CodebookCode.objects.filter(codebook=self)
         if only is not None:
-            codes = codes.only(*only)
+            ccodes = ccodes.only(*only)
 
-        codes = codes.select_related("code", *select_related)
-        codes = codes.prefetch_related(*prefetch_related)
-        self._prefetched_objects_cache['codebookcode_set'] = codes = tuple(codes)
-        self._codes = { cc.code_id : cc.code for cc in codes }
+        ccodes = ccodes.select_related("code", *select_related)
+        ccodes = ccodes.prefetch_related(*prefetch_related)
+        self._prefetched_objects_cache['codebookcode_set'] = ccodes = tuple(ccodes)
+        self._codes = { cc.code_id : cc.code for cc in ccodes }
         self._codebookcodes = collections.defaultdict(set)
 
-        for ccode in codes:
+        for ccode in ccodes:
             # Cache the parent property
             if ccode.parent_id is not None:
                 ccode._parent_cache = self._codes[ccode.parent_id]
@@ -180,11 +180,11 @@ class Codebook(AmcatModel):
         if self.cached:
             for co in self._codebookcodes[code.id]:
                 yield co
-            
-        log.warn("get_codebookcodes() called without cache(). May be slow for multiple calls.")
-        for co in self.codebookcodes:
-            if co.code_id == code.id:
-                yield co
+        else:
+            log.warn("get_codebookcodes() called without cache(). May be slow for multiple calls.")
+            for co in self.codebookcodes:
+                if co.code_id == code.id:
+                    yield co
 
 
     def get_codebookcode(self, code, date=None):
