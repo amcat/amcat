@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.conf import settings
 
 from settings.menu import PROJECT_MENU
@@ -34,6 +34,9 @@ import logging; log = logging.getLogger(__name__)
 from amcat.nlp import syntaxtree
 from amcat.models import AnalysisSentence, RuleSet
 from amcat.tools.pysoh.pysoh import SOHServer
+from amcat.models import ArticleSetArticle
+
+from django.core.urlresolvers import reverse
 
 from api.rest.datatable import Datatable
 
@@ -108,9 +111,17 @@ def view(request, project, article):
     menu = PROJECT_MENU
     context = project
 
-    print AnalysedArticle.objects.filter(article=article)
-    
     return render(request, "navigator/article/view.html", locals())
+
+@check(ArticleSet, args_map={'articlesetid' : 'id'}, args='articlesetid', action='update')
+@check(Article, args='id')
+@check(Project, args_map={'projectid' : 'id'}, args='projectid')
+def remove_from(request, project, article, articleset):
+    """
+    Remove given article from given articleset. Does not error when it does not exist.
+    """
+    ArticleSetArticle.objects.filter(articleset=articleset, article=article).delete()
+    return redirect(reverse("article", args=[project.id, article.id]))
 
 
 ### UPLOAD ARTICLES ###
