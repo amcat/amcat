@@ -76,6 +76,9 @@ MAX_LABELS_HIGHLIGHT = 30;
 annotator.articletable.highlight = function(){
     console.log("Highlighting all labels in article..");
     $.each(annotator.fields.ontologies, function(ont_id, ont){
+        if (annotator.fields.highlighters.indexOf(parseInt(ont_id)) === -1) return;
+        console.log("Highlighting with codebook ", ont_id);
+
         var escape_regex = function(str) {
           return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
         };

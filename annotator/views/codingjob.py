@@ -173,7 +173,7 @@ def _build_ontology(codebook, language):
     return [{
         "value" : code.id,
         "label" : code.get_label(language),
-        "functions" : _get_functions(codebook, code) 
+        "functions" : _get_functions(codebook, code),
     } for code in codebook.get_codes()]
 
 def fields(request, codingjobid):
@@ -191,7 +191,15 @@ def fields(request, codingjobid):
     )
 
     # Make sure all codebooks are the same object
+    schemas = set([f.codingschema for f in fields])
     codebooks = { f.codebook.id : f.codebook for f in fields if f.codebook }
+    highlighters = set(chain.from_iterable(schema.highlighters.all() for schema in schemas))
+
+    for schema in set([f.codingschema for f in fields]):
+        for highlighter in schema.highlighters.all():
+            if highlighter.id in codebooks: continue
+            codebooks[highlighter.id] = highlighter
+        
     for field in (f for f in fields if f.codebook):
         field._codebook_cache = codebooks[field.codebook_id]
 
@@ -202,7 +210,8 @@ def fields(request, codingjobid):
 
     out = DictToJson().run({
         'fields' : [_build_field(f, language) for f in fields],
-        'ontologies': {cb.id : _build_ontology(cb, language) for cb in codebooks.values()}
+        'ontologies': {cb.id : _build_ontology(cb, language) for cb in codebooks.values()},
+        'highlighters' : [cb.id for cb in codebooks.values() if cb in highlighters]
     })
 
     return writeResponse(out)

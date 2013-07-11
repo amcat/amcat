@@ -597,6 +597,8 @@ def delete_schema(request, schema, project):
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
 def edit_schemafield_properties(request, schema, project):
     form = forms.CodingSchemaForm(data=request.POST or None, instance=schema, hidden="project")
+    form.fields['highlighters'].queryset = project.get_codebooks()
+    form.fields['highlighters'].required = False
 
     ctx = locals()
     ctx.update({
