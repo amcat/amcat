@@ -103,15 +103,15 @@ class UploadScript(Scraper):
                  .format(**locals()))
         from amcat.scraping.controller import RobustController
         self.controller = RobustController(self.articleset)
-        with transaction.commit_on_success():
-            arts = list(self.controller.scrape(self))
-            if not arts:
-                raise Exception("No atricles were imported")
-            self.postprocess(arts)
-            old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
-            new_provenance = self.get_provenance(file, arts)
-            self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
-            self.articleset.save()
+
+        arts = list(self.controller.scrape(self))
+        if not arts:
+            raise Exception("No atricles were imported")
+        self.postprocess(arts)
+        old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
+        new_provenance = self.get_provenance(file, arts)
+        self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
+        self.articleset.save()
 
         return arts
 
