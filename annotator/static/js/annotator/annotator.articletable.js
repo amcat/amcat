@@ -71,31 +71,19 @@ annotator.articletable.goToPreviousRow = function(){
     });
 }
 
-MAX_LABELS_HIGHLIGHT = 30;
-
 annotator.articletable.highlight = function(){
-    console.log("Highlighting all labels in article..");
-    $.each(annotator.fields.ontologies, function(ont_id, ont){
-        if (annotator.fields.highlighters.indexOf(parseInt(ont_id)) === -1) return;
-        console.log("Highlighting with codebook ", ont_id);
+    var _labels = [], escape_regex, labels = annotator.fields.highlight_labels;
+    console.log("Highlighting ", labels.length ," labels in article..");
 
-        var escape_regex = function(str) {
-          return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-        };
+    escape_regex = function(str) {
+        return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")
+    }; 
 
-        // For each ontology
-        var labels = [];
-        $.each(ont, function(code_id, code){
-            labels.push(escape_regex(code.label));
-        });
-
-        if (labels.length > MAX_LABELS_HIGHLIGHT){
-            console.log("Highlighting this much labels (" + labels.length + ") causes performance to degrade");
-            return;
-        }
-
-        $("div.sentences").easymark("highlight", labels.join(" ")); 
+    $.each(labels, function(i, label){
+        _labels.push(escape_regex(label));
     });
+
+    $("div.sentences").easymark("highlight", _labels.join(" ")); 
 };
 
 // Function to force redraw (recalculation) of element

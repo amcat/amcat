@@ -71,7 +71,7 @@ annotator.fields.initFieldData = function(){
             });
             console.debug('Loaded ' + count + ' fields');
             
-            annotator.fields.highlighters = json.highlighters;
+            annotator.fields.highlight_labels = json.highlight_labels;
             annotator.fields.ontologies = json.ontologies;
             annotator.fields.loadedFromServer = true;
             

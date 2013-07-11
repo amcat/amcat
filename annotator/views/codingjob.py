@@ -169,12 +169,29 @@ def _get_functions(codebook, code):
         "parentid" : cc.parent_id
     } for cc in codebook.get_codebookcodes(code)]
 
-def _build_ontology(codebook, language):
+def _build_ontology(codebook, language, fallback=True):
     return [{
         "value" : code.id,
-        "label" : code.get_label(language),
+        "label" : code.get_label(language, fallback=fallback),
         "functions" : _get_functions(codebook, code),
     } for code in codebook.get_codes()]
+
+def _get_highlighters(schemas):
+    for s in schemas:
+        for h in s.highlighters.all():
+            yield (h, s.highlight_language)
+
+def _get_highlight_labels(schemas):
+    """Returns set with (codebook, language)."""
+    for cb, language in set(_get_highlighters(schemas)):
+        _language = [language] if language else []
+        cb.cache_labels(*_language)
+
+        for code in cb.get_codes():
+            if language:
+                yield code.get_label(language, fallback=False)
+            else:
+                yield code.get_label()
 
 def fields(request, codingjobid):
     """get the fields of the articleschema and unitschema as JSON"""
@@ -185,21 +202,13 @@ def fields(request, codingjobid):
     fields = CodingSchemaField.objects.select_related(
         # Fields used later in _build_fields and _build_ontologies
         "codebook", "fieldtype", "codingschema"
-    ).filter(
+    ).prefetch_related("codingschema__highlighters").filter(
         Q(codingschema__codingjobs_unit=codingjob)|
         Q(codingschema__codingjobs_article=codingjob)
     )
 
     # Make sure all codebooks are the same object
-    schemas = set([f.codingschema for f in fields])
     codebooks = { f.codebook.id : f.codebook for f in fields if f.codebook }
-    highlighters = set(chain.from_iterable(schema.highlighters.all() for schema in schemas))
-
-    for schema in set([f.codingschema for f in fields]):
-        for highlighter in schema.highlighters.all():
-            if highlighter.id in codebooks: continue
-            codebooks[highlighter.id] = highlighter
-        
     for field in (f for f in fields if f.codebook):
         field._codebook_cache = codebooks[field.codebook_id]
 
@@ -208,10 +217,12 @@ def fields(request, codingjobid):
         codebook.cache(select_related=("function",))
         codebook.cache_labels()
 
+    labels = _get_highlight_labels(set([f.codingschema for f in fields]))
+
     out = DictToJson().run({
         'fields' : [_build_field(f, language) for f in fields],
         'ontologies': {cb.id : _build_ontology(cb, language) for cb in codebooks.values()},
-        'highlighters' : [cb.id for cb in codebooks.values() if cb in highlighters]
+        'highlight_labels' : list(set(labels) - {None,})
     })
 
     return writeResponse(out)
