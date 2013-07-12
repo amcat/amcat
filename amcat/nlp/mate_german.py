@@ -134,14 +134,23 @@ def create_values(sid, words):
     return tokens, triples
 
 def get_rdf(sent):
+    sent = sent.replace('"', "'") # mate gives invalid rdf for quotes
     data= dict(sentence=sent,
                returnType="rdf",
                )
     r = requests.post("http://parser.vanatteveldt.com/parse", data=data, stream=True)
+
     return r.raw
 
 def add_sentence(asent):
     rdf = get_rdf(asent.sentence.sentence)
+
+    bytes = rdf.read()
+    fn = "/tmp/sent_{asent.id}.rdf".format(**locals())
+    open(fn, 'w').write(bytes)
+    log.info("Parsing sent {asent.id} from {fn}".format(**locals()))
+    rdf = open(fn)
+    
     sentences, words = parse_rdf(rdf)
     tokens, triples = create_values(asent.id, words)
     wordcreator.store_analysis(asent.analysed_article, tokens, triples)
