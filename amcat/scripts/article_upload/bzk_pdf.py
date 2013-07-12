@@ -129,7 +129,6 @@ class TestBZK(amcattest.PolicyTestCase):
         self.bzk = BZKPDFScraper(project = amcattest.create_test_project().id,
                        file = File(open(os.path.join(self.dir, 'test.pdf'))),
                        articleset = amcattest.create_test_set().id)
-        self.test_html = open(os.path.join(self.dir, 'test.pdf')).read().decode('utf-8')
         self.result = self.bzk.run()
 
 

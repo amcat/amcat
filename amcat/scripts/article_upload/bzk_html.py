@@ -114,7 +114,6 @@ class TestBZK(amcattest.PolicyTestCase):
         self.bzk = BZK(project = amcattest.create_test_project().id,
                   file = File(open(os.path.join(self.dir, 'test.html'))),
                   articleset = amcattest.create_test_set().id)
-        self.test_html = open(os.path.join(self.dir, 'test.html')).read().decode('utf-8')
         self.result = self.bzk.run()
 
         def test_scrape_unit(self):
