@@ -42,7 +42,7 @@ class BZKPDFScraper(PDFScraper, UploadScript):
         article_lines = []
         headline = ""
         for i, p in enumerate(self.process_document(self.doc)):
-            
+            #is this page an index page?
             index_pattern = re.compile("^[^\(]+\([^\)]+\)..+[0-9]+$")
             if any([index_pattern.match(line.get_text()) for line in self.get_textlines(p)]):
                 for line in self.get_textlines(p):
@@ -54,8 +54,7 @@ class BZKPDFScraper(PDFScraper, UploadScript):
                         self.index.append((h, m))
                 continue
 
-
-
+            #if not, scrape lines on page for current article
             for line in self.get_textlines(p):
                 text = line.get_text()
                 if text.lower().strip() in [i[0].lower().strip() for i in self.index]:
@@ -112,3 +111,41 @@ if __name__ == "__main__":
     from amcat.scripts.tools import cli
     cli.run_cli(BZKPDFScraper)
 
+        
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestBZK(amcattest.PolicyTestCase):
+    def setUp(self):
+        from django.core.files import File
+        import os.path, json
+        self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'bzk')
+        self.bzk = BZKPDFScraper(project = amcattest.create_test_project().id,
+                       file = File(open(os.path.join(self.dir, 'test.pdf'))),
+                       articleset = amcattest.create_test_set().id)
+        self.test_html = open(os.path.join(self.dir, 'test.pdf')).read().decode('utf-8')
+        self.result = self.bzk.run()
+
+
+        def test_scrape_unit(self):
+            self.assertTrue(self.bzk.index)
+            self.assertTrue(self.result)
+        
+        def test_getarticle(self):
+            #props to check for:
+            # headline, text, date, pagenr, medium
+            must_props = ('headline', 'text', 'medium', 'date')
+            may_props = ('pagenr',)
+            must_props = [[getattr(a.props, prop) for a in self.result] for prop in must_props]
+            may_props = [[getattr(a.props, prop) for a in self.result] for prop in may_props]
+
+            for proplist in must_props:
+                self.assertTrue(all(proplist))
+            for proplist in may_props:
+                #assuming at least one of the articles has the property. if not, break.
+                self.assertTrue(any(proplist))
+                
+            

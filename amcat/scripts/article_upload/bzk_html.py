@@ -58,9 +58,7 @@ class BZK(UploadScript):
             article.props.text = div.cssselect("#articleIntro")[0]
             articlepage = div.cssselect("#articlePage")
             if articlepage:
-                article.props.pagenr, section = self.get_pagenum(articlepage[0].text)
-                if section:
-                    article.props.section = section
+                article.props.pagenr, article.props.section = self.get_pagenum(articlepage[0].text)
 
             if not div.cssselect("#sourceTitle")[0].text:
                 article.props.medium = Medium.get_or_create("unknown medium")
@@ -88,3 +86,38 @@ if __name__ == "__main__":
     cli.run_cli(BZK)
         
         
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestBZK(amcattest.PolicyTestCase):
+    def setUp(self):
+        from django.core.files import File
+        import os.path, json
+        self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'bzk')
+        self.bzk = BZK(project = amcattest.create_test_project().id,
+                  file = File(open(os.path.join(self.dir, 'test.html'))),
+                  articleset = amcattest.create_test_set().id)
+        self.test_html = open(os.path.join(self.dir, 'test.html')).read().decode('utf-8')
+        self.result = self.bzk.run()
+
+        def test_scrape_unit(self):
+            self.assertTrue(self.result)
+        
+        def test_scrape_file(self):
+            #props to check for:
+            # headline, text, pagenr, section, medium, date
+            must_props = ('headline', 'text', 'medium', 'date')
+            may_props = ('pagenr','section')
+            must_props = [[getattr(a.props, prop) for a in self.result] for prop in must_props]
+            may_props = [[getattr(a.props, prop) for a in self.result] for prop in may_props]
+
+            for proplist in must_props:
+                self.assertTrue(all(proplist))
+            for proplist in may_props:
+                #assuming at least one of the articles has the property. if not, break
+                self.assertTrue(any(proplist))
+
+            
