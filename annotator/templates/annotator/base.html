@@ -20,7 +20,6 @@
   {% block css %}{% endblock %}
   
   <!--  Javascript -->
-  {% compress js %}
   <script type="text/javascript" src="{% static 'js/jquery-1.6.4.min.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/jquery-ui-1.8.16.custom.min.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/jquery.dataTables.js' %}"></script>
@@ -35,7 +34,6 @@
   <script type="text/javascript" src="{% static 'js/annotator/annotator.unitcodings.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/annotator/annotator.articletable.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/annotator/annotator.fields.js' %}"></script>
-  {% endcompress %}
   {% block javascript %}{% endblock %}
  </head>
  <body>

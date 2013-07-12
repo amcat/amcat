@@ -81,6 +81,24 @@ def unitCodings(request, codingjobid, articleid):
     return writeResponse(out)
     
 
+def get_value_labels(coding):
+    """
+    return a sequence of ('field_{field.id}', value_label) pairs for the given coding.
+    If the field is not coded or cannot be deserialized (e.g. because of a codebook change)
+    the label '' will be returned.
+    """
+    for val in coding.values.select_related("field__fieldtype", "value__strval", "value__intval"):
+        try:
+            value = val.value
+        except Code.DoesNotExist: # codebook change
+            value = None
+        f = val.field
+        if value is None:
+            label = ''
+        else:
+            label = f.serialiser.value_label(value)
+        yield f, label
+
 def articleCodings(request, codingjobid, articleid):
     """returns the article codings of an article as HTML form"""
     article = Article.objects.get(id=articleid)
@@ -88,8 +106,7 @@ def articleCodings(request, codingjobid, articleid):
     codings = codingtoolkit.get_article_coding(codingjob, article)
 
     if codings:
-        values = ((f, f.serialiser.value_label(v)) for (f,v) in codings.get_values())
-        values = dict(('field_%s' % field.id, value) for field, value in values)
+        values = {"field_%i" % f.id : label for (f, label) in get_value_labels(codings)}
     else:
         values = {}
     articlecodingform = codingtoolkit.CodingSchemaForm(codingjob.articleschema, values)
@@ -116,117 +133,65 @@ def articleSentences(request, articleid):
         
 def getFieldItems(field, language):
     """get the codebook codes as dictionaries wrapped in a list"""
-    # Prevent querying the database lots of times
-    _function_cache = {}
-    def get_function(id):
-        if id not in _function_cache:
-            _function_cache[id] = Function.objects.get(id=id)
-        return _function_cache[id]
+    if field.serialiser.possible_values:
+        for val in field.serialiser.possible_values:
+            value = field.serialiser.serialise(val)
+            label = field.serialiser.value_label(val, language)
+            valueDict = dict(label=label, value=value)
 
-    result = []
-    if not field.serialiser.possible_values:
-        return result
+            # hack approved by wouter
+            if type(val) == Code:
+                functions = _get_functions(val)
+                if functions:
+                    valueDict['functions'] = [f for f in functions if f.id != 0]
 
-    for val in field.serialiser.possible_values:
-        value = field.serialiser.serialise(val)
-        label = field.serialiser.value_label(val, language)
-        valueDict = dict(label=label, value=value)
-        if type(val) == Code: # hack approved by wouter
-            functions = []
-            for cc in field.codebook.get_codebookcodes(val):
-                if cc.function_id != 0:
-                    functions.append({'from':cc.validfrom, 'to':cc.validto,
-                                      'function':get_function(cc.function_id).label,
-                                      'parentid':cc._parent_id})
-            if functions:
-                valueDict['functions'] = functions
-        result.append(valueDict)
-    return result
-
-def _show_all(field):
-    return None
-
-def _is_ontology(field):
-    return (unicode(field.fieldtype) == 'DB ontology')
+            yield valueDict
 
 def _build_field(field, language):
-    """
-    Returns serialized field
-    """
-    _res = {
+    result = {
         'fieldname' : field.label,
         'id' : str(field.id),
-        'isOntology' : _is_ontology(field),
-        'showAll' : _show_all(field)
+        'isOntology' : (unicode(field.fieldtype) == 'DB ontology'),
+        'showAll' : None
     }
 
     if field.codebook:
-        _res['items-key'] = field.codebook_id
+        result['items-key'] = field.codebook_id
     else:
-        _res['items'] = getFieldItems(field, language)
+        result['items'] = list(getFieldItems(field, language))
 
-    return _res
+    return result
 
-def _build_fields(fields, language):
-    """
-    Returns serialized fields as iterable
-    """
-    return (_build_field(f, language) for f in fields)
+def _get_functions(codebook, code):
+    return [{
+        "from" : cc.validfrom, "to" : cc.validto,
+        "function" : cc.function.label,
+        "parentid" : cc.parent_id
+    } for cc in codebook.get_codebookcodes(code)]
 
-def _get_functions(code, codebook):
-    """
-    Return functions belonging to given code
-    """
-    for cc in code.codebook_codes.all():
-        if not cc.function_id:
-            continue
-
-        yield {
-            "from" : cc.validfrom, "to" : cc.validto,
-            "function" : cc.function.label,
-            "parentid" : cc._parent_id
-        }
-
-        if not (cc.validfrom or cc.validto):
-            break
-
-def _get_label(code, language):
-    """
-    Get label for code for given language.
-    """
-    for label in code.labels.all():
-        if label.language == language:
-            return label
-    
-    return code.labels.all()[0]
-
-def _build_ontology(field, language):
-    distinct = ("pk",) if db_supports_distinct_on() else ()
-
-    codes = Code.objects.distinct(*distinct).prefetch_related(
-        "labels", "labels__language", "codebook_codes",
-        "codebook_codes__function"
-    ).filter(
-        id__in=field.codebook.get_code_ids()
-    )
-
-    return ({
+def _build_ontology(codebook, language, fallback=True):
+    return [{
         "value" : code.id,
-        "label" : _get_label(code, language).label,
-        "functions" : tuple(_get_functions(code, field.codebook))
-    } for code in codes)
+        "label" : code.get_label(language, fallback=fallback),
+        "functions" : _get_functions(codebook, code),
+    } for code in codebook.get_codes()]
 
-def _build_ontologies(fields, language):
-    ontids = { f.codebook_id for f in fields if f.codebook }
+def _get_highlighters(schemas):
+    for s in schemas:
+        for h in s.highlighters.all():
+            yield (h, s.highlight_language)
 
-    for field in fields:
-        # Do not process same ontology twice
-        if not field.codebook_id in ontids:
-            continue
+def _get_highlight_labels(schemas):
+    """Returns set with (codebook, language)."""
+    for cb, language in set(_get_highlighters(schemas)):
+        _language = [language] if language else []
+        cb.cache_labels(*_language)
 
-        ontids.remove(field.codebook_id)
-
-        yield (field.codebook_id, list(_build_ontology(field, language)))
+        for code in cb.get_codes():
+            if language:
+                yield code.get_label(language, fallback=False)
+            else:
+                yield code.get_label()
 
 def fields(request, codingjobid):
     """get the fields of the articleschema and unitschema as JSON"""
@@ -237,14 +202,27 @@ def fields(request, codingjobid):
     fields = CodingSchemaField.objects.select_related(
         # Fields used later in _build_fields and _build_ontologies
         "codebook", "fieldtype", "codingschema"
-    ).filter(
+    ).prefetch_related("codingschema__highlighters").filter(
         Q(codingschema__codingjobs_unit=codingjob)|
         Q(codingschema__codingjobs_article=codingjob)
     )
 
+    # Make sure all codebooks are the same object
+    codebooks = { f.codebook.id : f.codebook for f in fields if f.codebook }
+    for field in (f for f in fields if f.codebook):
+        field._codebook_cache = codebooks[field.codebook_id]
+
+    # Cache all codebooks
+    for codebook in codebooks.values():
+        codebook.cache(select_related=("function",))
+        codebook.cache_labels()
+
+    labels = _get_highlight_labels(set([f.codingschema for f in fields]))
+
     out = DictToJson().run({
-        'fields' : tuple(_build_fields(fields, language)),
-        'ontologies':dict(_build_ontologies(fields, language))
+        'fields' : [_build_field(f, language) for f in fields],
+        'ontologies': {cb.id : _build_ontology(cb, language) for cb in codebooks.values()},
+        'highlight_labels' : list(set(labels) - {None,})
     })
 
     return writeResponse(out)

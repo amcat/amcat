@@ -63,7 +63,7 @@ class AssociationsScript(script.Script):
                 q2name = q2.label.replace('Hit Count for: ', '')
                 if sum(probs1) > 0:
                     assoc = sum(p1 * p2 for (p1, p2) in zip(probs1, probs2)) / sum(probs1)
-                    assoc = "%1.3f" % assoc
+
                 else:
                     assoc = ""
                 resultTable.addRow(qname, q2name, assoc)

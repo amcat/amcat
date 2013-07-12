@@ -41,7 +41,7 @@ def _getVarDef(col, seen=set()):
         for i in xrange(400):
             if "%s_%i" % (fn, i) not in seen:
                 fn = "%s_%i" % (fn, i)
-		break
+                break
     seen.add(fn)
     vardef = "%s%s" % (fn, getSPSSFormat(col.fieldtype))
     log.debug("Col %r vardef %r" % (col, vardef))
@@ -107,10 +107,10 @@ def table2spss(t, writer=sys.stdout, saveas=None):
 class EchoWriter(object):
     def __init__(self, writer):
         self.writer = writer
-	fn = toolkit.tempfilename(".sps","data")
-	self.log = open(fn, "w")
-	log.warn("Writing spss commands to %s" % fn)
-	
+        fn = toolkit.tempfilename(".sps","data")
+        self.log = open(fn, "w")
+        log.warn("Writing spss commands to %s" % fn)
+        
     def write(self, bytes):
         self.log.write(bytes)
         self.writer.write(bytes)
@@ -126,7 +126,7 @@ def table2sav(t, filename=None):
     #log.debug("Wrote syntax:\n%s\n" % (sps))
 
     log.debug("Executing PSPP")
-    pspp = toolkit.executepipe("pspp -p")
+    pspp = toolkit.executepipe("pspp -b")
     writer = pspp.next()
     writer = EchoWriter(writer)
     log.debug("Creating SPS script and sending to PSPP")

@@ -35,7 +35,7 @@ SINGLETON_ID = 1
 
 # Increment to current db version to trigger db upgrades that syncdb can't handle
 # See amcat.tools.db_upgrader
-CURRENT_DB_VERSION = 9
+CURRENT_DB_VERSION = 13
 
 
 class AmCAT(AmcatModel):
@@ -87,7 +87,7 @@ class TestAmCAT(amcattest.PolicyTestCase):
 
         os.environ['AMCAT_SERVER_STATUS']=""
         self.assertEqual(a.server_warning,
-                         ANNOUNCE_NOT_PRODUCTION.format(server = "not the production server"))
+                         WARNING_NOT_PRODUCTION.format(server = "not the production server"))
 
         os.environ['AMCAT_SERVER_STATUS']="production"
         self.assertEqual(a.server_warning, None)

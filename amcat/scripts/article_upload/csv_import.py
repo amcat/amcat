@@ -31,6 +31,7 @@ from cStringIO import StringIO
 from django import forms
 
 from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload import fileupload
 
 from amcat.models.article import Article
 from amcat.models.medium import Medium
@@ -48,7 +49,7 @@ HELP_TEXTS = {
     "parent_externalid" : "Column name for the External ID of the parent article, which should be in the same CSV file",
     }
 
-class CSVForm(UploadScript.options_form):
+class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
     medium = forms.ModelChoiceField(queryset=Medium.objects.all(), required=False)
     medium_name = forms.CharField(
         max_length=Article._meta.get_field_by_name('medium')[0].max_length,
@@ -78,7 +79,7 @@ class CSVForm(UploadScript.options_form):
     
             field = forms.CharField(help_text = help_text, required=required,
                                     initial=initial, label=label)
-            self.fields.insert(0, fieldname, field)
+            self.fields.insert(7, fieldname, field)
     
     
     def clean_parent_url(self):
@@ -92,6 +93,11 @@ class CSVForm(UploadScript.options_form):
 class CSV(UploadScript):
     options_form = CSVForm
 
+    def explain_error(self, error):
+        if isinstance(error.error, KeyError):
+            return "Field {error.error} not found in row {error.i}. Check field name and/or csv dialect".format(**locals())
+        return super(CSV, self).explain_error(error)
+    
     def run(self, *args, **kargs):
 
         if self.options['parent_url']:
@@ -107,10 +113,6 @@ class CSV(UploadScript):
         
         return super(CSV, self).run(*args, **kargs)
     
-    def split_file(self, file):
-
-        return csv.DictReader(file)
-
     @property
     def _medium(self):
         if self.options['medium']:

@@ -42,10 +42,8 @@ from amcat.tools.toolkit import readDate
 class DeFactoProfessional(UploadScript):
 
     
-    def _get_units(self):
-        xml = get_xml(self.options['file'].read())
-        return split_xml(xml)
-    
+    def split_file(self, file):
+        return split_xml(file.bytes)    
 
     def _scrape_unit(self, element):
         yield get_article(element)

@@ -22,13 +22,9 @@ Base module for article upload scripts
 """
 
 import os.path
-import shutil
-import tempfile
 import datetime
 import logging
 log = logging.getLogger(__name__)
-import zipfile 
-import chardet
 
 from django.db import transaction
 from django import forms
@@ -39,17 +35,12 @@ from amcat.scripts.types import ArticleIterator
 from amcat.models.article import Article
 from amcat.scraping.scraper import ScraperForm, Scraper
 
+from amcat.scripts.article_upload.fileupload import RawFileUploadForm
+
 class ParseError(Exception):
     pass
-
-ENCODINGS = ["Autodetect", "ISO-8859-15", "UTF-8", "Latin-1"]
-
-class UploadForm(ScraperForm):
-    encoding = forms.ChoiceField(choices=enumerate(ENCODINGS),
-                                 initial=0, required=False, 
-                                 help_text="Try to change this value when character issues arise.", )
-    file = forms.FileField(help_text="You can also upload a zip file containing the desired files. Uploading very large files can take a long time. If you encounter timeout problems, consider uploading smaller files")
-
+    
+class UploadForm(ScraperForm, RawFileUploadForm):
     def clean_articleset_name(self):
         """If article set name not specified, use file base name instead"""
         if self.files.get('file') and not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
@@ -69,35 +60,35 @@ class UploadScript(Scraper):
     output_type = ArticleIterator
     options_form = UploadForm
 
-    def decode(self, bytes):
-        """
-        Decode the given bytes using the encoding specified in the form.
-        If encoding is Autodetect, use (1) utf-8, (2) chardet, (3) latin-1.
-        """
-        enc = ENCODINGS[int(self.options['encoding'] or 0)]
-        if enc != 'Autodetect':
-            return bytes.decode(enc)
+    def get_errors(self):
+        """return a list of document index, message pairs that explains encountered errors"""
         try:
-            return bytes.decode('utf-8')
-        except UnicodeDecodeError:
-            pass
-        enc = chardet.detect(bytes)["encoding"]
-        if enc:
-            try:
-                return bytes.decode('utf-8')
-            except UnicodeDecodeError:
-                pass
-        return bytes.decode('latin-1')
+            errors = self.controller.errors
+        except AttributeError:
+            log.exception("Cannot get controller errors")
+            return 
 
-        
+        for error in errors:
+            yield self.explain_error(error)
+
+    def explain_error(self, error):
+        """Explain the error in the context of unit for the end user"""
+        return "Error in element {error.i} : {error.error!r}".format(**locals())
+            
+
+    def decode(self, bytes):
+        """Decode the bytes using the encoding from the form"""
+        enc, text = self.bound_form.decode(bytes)
+        return text
     
     @property
-    def input_text(self):
+    def uploaded_texts(self):
+        """A cached sequence of UploadedFile objects"""
         try:
-            return self._input_text
+            return self._input_texts
         except AttributeError:
-            self._input_text = self.decode(self.options['file'].read())
-            return self._input_text
+            self._input_texts = self.bound_form.get_uploaded_texts()
+            return self._input_texts
 
     def get_provenance(self, file, articles):
         n = len(articles)
@@ -107,23 +98,21 @@ class UploadScript(Scraper):
                 "using {self.__class__.__name__}".format(**locals()))
         
     def run(self, _dummy=None):
-        self._delete_after_run = []
         file = self.options['file']
         log.info(u"Importing {self.__class__.__name__} from {file.name} into {self.project}"
                  .format(**locals()))
         from amcat.scraping.controller import RobustController
-        with transaction.commit_on_success():
-            arts = list(RobustController(self.articleset).scrape(self))
-            self.postprocess(arts)
-            old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
-            new_provenance = self.get_provenance(file, arts)
-            self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
-            self.articleset.save()
+        self.controller = RobustController(self.articleset)
 
-        try:
-            self._cleanup()
-        except Exception:
-            log.exception("Error on cleaning up")
+        arts = list(self.controller.scrape(self))
+        if not arts:
+            raise Exception("No atricles were imported")
+        self.postprocess(arts)
+        old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
+        new_provenance = self.get_provenance(file, arts)
+        self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
+        self.articleset.save()
+
         return arts
 
     def postprocess(self, articles):
@@ -133,38 +122,22 @@ class UploadScript(Scraper):
         """
         pass
     
-    def _cleanup(self):
-        if self._delete_after_run:
-            for fn in self._delete_after_run:
-                shutil.rmtree(fn)
-
-    
-    def _read_zip(self, zip_file):
-        tempdir = tempfile.mkdtemp()
-        log.info("Extracting files from {zip_file.name} to {tempdir}".format(**locals()))
-        if not hasattr(self, "_delete_after_run"):
-            self._delete_after_run = []
-        self._delete_after_run.append(tempdir)
-        with zipfile.ZipFile(zip_file) as zf:
-            for name in zf.namelist():
-                fn = zf.extract(name, tempdir)
-                yield File(open(fn), name=name)
-    
     def _get_units(self):
-        f = self.options['file']
-        extension = os.path.splitext(f.name)[1]
-        if extension == ".zip":
-            return list(self._read_zip(f))
-        return [f]
-
-    def _scrape_unit(self, file):
-        documents = self.split_file(file)
-        for i, document in enumerate(documents):
-            result =  self.parse_document(document)
-            if isinstance(result, Article):
-                result = [result]
-            for art in result:
-                yield art
+        """
+        Upload form assumes that the form (!) has a get_entries method, which you get
+        if you subclass you form from one of the fileupload forms. If not, please override
+        this method. 
+        """
+        for entry in self.bound_form.get_entries():
+            for u in self.split_file(entry):
+                yield u
+    
+    def _scrape_unit(self, document):
+        result =  self.parse_document(document)
+        if isinstance(result, Article):
+            result = [result]
+        for art in result:
+            yield art
         
     def parse_document(self, document):
         """
@@ -183,7 +156,7 @@ class UploadScript(Scraper):
         @type text: unicode string
         @return: a sequence of objects (e.g. strings) to pass to parse_documents
         """
-        return [self.decode(file.read())]
+        return [file]
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -218,5 +191,3 @@ class TestUpload(amcattest.PolicyTestCase):
             self.assertEqual({f.name for f in s._get_units()}, {"test.txt", "x/test.txt"})
             self.assertEqual({f.read() for f in s._get_units()}, {"TEST", "TAST"})
 
-            s._cleanup() # needs to be done manually as run() is not used for this test
-            

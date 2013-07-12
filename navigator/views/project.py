@@ -41,7 +41,7 @@ from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJ
 from api.rest.resources import ProjectRoleResource
 
 #from api.rest import AnalysisResource
-from api.rest.resources import CodebookBaseResource, CodebookCodeResource
+from api.rest.resources import  CodebookCodeResource
 from api.rest.resources import CodingSchemaFieldResource
 from api.rest.resources import PluginResource, ScraperResource
 
@@ -164,9 +164,16 @@ def upload_article_action(request, plugin, project):
     if request.POST:
         if form.is_valid():
             script = script_class(form)
-            created_articles = script.run()
-            created_set = script.articleset
-            created_n = len(created_articles)
+            try:
+                created_articles = script.run()
+            except Exception, e:
+                scraper_main_error = e
+            else:
+                created_set = script.articleset
+                created_n = len(created_articles)
+                
+            scraper_errors = list(script.get_errors())
+
             form = script.get_empty_form(project=project)
 
 
@@ -590,6 +597,8 @@ def delete_schema(request, schema, project):
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
 def edit_schemafield_properties(request, schema, project):
     form = forms.CodingSchemaForm(data=request.POST or None, instance=schema, hidden="project")
+    form.fields['highlighters'].queryset = project.get_codebooks()
+    form.fields['highlighters'].required = False
 
     ctx = locals()
     ctx.update({

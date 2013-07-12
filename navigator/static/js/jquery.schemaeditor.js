@@ -324,16 +324,18 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     /*
      * Repaints active cell.
+     * 
+     * @return: active cell (jQuery element)
      */
     self.update_active_cell = function(){
         // Remove all active cell markups
         $("td.active", self.table).removeClass("active");
-        $(self.get_active_cell()).addClass("active");
+        return $(self.get_active_cell()).addClass("active");
     }
 
     /* Moves n cells forward. Does not wrap around top and bottom borders. */
     self.move_cells = function(n){
-        var n_rows = self.fields.length;
+        var n_rows = $("tr", self.table).length - 1;
         var new_pos = (self.active_cell.x + self.active_cell.y * self.N_COLS) + n;
 
         // Make sure it doesn't overflow / underflow.
@@ -344,17 +346,27 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         self.active_cell.x = Math.floor(new_pos % self.N_COLS); // Kung-fu fighting.. javascript!
         self.active_cell.y = Math.floor(new_pos / self.N_COLS);
 
-        self.update_active_cell();
+        var cell = self.update_active_cell();
+
+        // Check if the active cell is visible, and if not scroll page
+        if (cell.offset().top <= document.body.scrollTop){
+            window.scrollBy(0,-4*cell.height());
+        } else if (cell.offset().top + cell.height() >= document.body.scrollTop + window.innerHeight) {
+            window.scrollBy(0,4*cell.height());
+        }
+
     }
 
     self.down_pressed = function(event){
         if(self.editing) return;
         self.move_cells(self.N_COLS);
+        event.preventDefault();
     }
 
     self.up_pressed = function(event){
         if(self.editing) return;
         self.move_cells(-self.N_COLS);
+        event.preventDefault();
     }
 
     self.left_pressed = function(event){
@@ -376,13 +388,18 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         self.active_cell.x = 0;
         self.update_active_cell();
         $(self.get_active_cell()).dblclick();
-
     }
 
     self.delete_pressed = function(event){
         var row = $(self.get_active_cell()).parent();
-        $(".delete", row).click();
-        self.update_active_cell();
+
+        if(self.editing){
+            $(".select-nil", row).click();
+        } else {
+            $(".delete", row).click();
+            self.update_active_cell();
+        }
+
     }
 
     self.done_pressed = function(event){
@@ -577,6 +594,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.delete_button_clicked = function(event){
         // Delete row
         $(event.currentTarget).parent().parent().remove();
+        self.update_active_cell();
     }
 
     self.btn_save_clicked = function(event){
@@ -652,7 +670,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         // Does this field allow a null value? If so, add a 'null' button
         var cont = null;
         if (th.attr("null") == "true"){
-            var btn_null = $(" <div class='btn btn-primary'>∅</div>");
+            var btn_null = $(" <div class='btn btn-primary select-nil'>∅</div>");
             btn_null.click(self.widget_null_clicked);
 
             cont = $("<div name='null-form' class='form-inline'>");
@@ -667,9 +685,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         widget.keyup(self.widget_keyup);
 
         // Focus textinput widgets
-        if(widget.attr("type") == "text"){
-            widget.focus();
-        }
+        widget.focus();
 
         // To prevent unfocusing (clicking table) when user
         // actually clicks widget

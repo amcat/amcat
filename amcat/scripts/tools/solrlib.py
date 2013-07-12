@@ -276,13 +276,13 @@ def basicAggregate(form):
         solrResponse = doQuery(singleQuery, form, dict(fields="score,mediumid", rows=rowLimit))
         for a in solrResponse.results:
             x = mediumidToObj(a['mediumid'])
-            y = '[total]'
+            y = 'total'
             increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'date' and yAxis == 'total':
         solrResponse = doQuery(singleQuery, form, dict(fields="score,date", rows=rowLimit))
         for a in solrResponse.results:
             x = dateToInterval(a['date'], dateInterval)
-            y = '[total]'
+            y = 'total'
             increaseCounter(table, x, y, a, counterLambda)
     elif xAxis == 'date' and yAxis == 'medium':
         solrResponse = doQuery(singleQuery, form, dict(fields="score,date,mediumid", rows=rowLimit))

@@ -71,24 +71,19 @@ annotator.articletable.goToPreviousRow = function(){
     });
 }
 
-MAX_LABELS_HIGHLIGHT = 30;
-
 annotator.articletable.highlight = function(){
-    console.log("Highlighting all labels in article..");
-    $.each(annotator.fields.ontologies, function(ont_id, ont){
-        // For each ontology
-        var labels = [];
-        $.each(ont, function(code_id, code){
-            labels.push(code.label);
-        });
+    var _labels = [], escape_regex, labels = annotator.fields.highlight_labels;
+    console.log("Highlighting ", labels.length ," labels in article..");
 
-        if (labels.length > MAX_LABELS_HIGHLIGHT){
-            console.log("Highlighting this much labels (" + labels.length + ") causes performance to degrade");
-            return;
-        }
+    escape_regex = function(str) {
+        return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")
+    }; 
 
-        $("div.sentences").easymark("highlight", labels.join(" ")); 
+    $.each(labels, function(i, label){
+        _labels.push(escape_regex(label));
     });
+
+    $("div.sentences").easymark("highlight", _labels.join(" ")); 
 };
 
 // Function to force redraw (recalculation) of element

@@ -368,6 +368,16 @@ width:10em; margin-right:1em
 	color:#ff0000;
 }
 
+.error-subtle > td > input { 
+        border-color: #B94A48;
+
+}
+
+.error-subtle {
+        border-color: #B94A48;
+        color : #B94A48;
+}
+
 .message{
 	border: 2px solid #205CA7;
     color:#004499;

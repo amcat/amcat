@@ -82,9 +82,12 @@ class Scraper(Script):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = Medium.get_or_create(self.medium_name)
         self.project = self.options['project']
+        for k, v in self.options.items():
+            if type(v) == str:
+                self.options[k] = v.decode('utf-8')
+
         log.debug("Articleset: {self.articleset}, options: {self.options}"
                   .format(**locals()))
-
     @property
     def articleset(self):
         if self.options['articleset']:
@@ -131,23 +134,22 @@ class Scraper(Script):
         and medium filled in automatically.
         @return: a sequence of Article objects ready to .save()
         """
-        log.debug(u"Scraping unit {}".format(unit))
+        #log.debug(u"Scraping unit {}".format(unit))
         articles = list(self._scrape_unit(unit))
 
         for article in articles:
-            if hasattr(article.props, 'parent'):
+            if hasattr(article, 'props') and hasattr(article.props, 'parent'):
                 article.parent = article.props.parent
 
         #initial list is any article without parent, or a non-existing parent
         toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
 
-        while len(toprocess) > 0:
-            doc = toprocess.pop(0)
+        for doc in toprocess:
             article = self._postprocess_article(doc)
             
             #find children, add to toprocess
             for a in articles:
-                if hasattr(a, 'parent') and a.parent == doc:
+                if hasattr(a, 'props') and hasattr(a, 'parent') and a.parent == doc:
                     a.props.parent = article
                     toprocess.append(a)
                     

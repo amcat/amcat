@@ -71,10 +71,14 @@ annotator.fields.initFieldData = function(){
             });
             console.debug('Loaded ' + count + ' fields');
             
+            annotator.fields.highlight_labels = json.highlight_labels;
             annotator.fields.ontologies = json.ontologies;
             annotator.fields.loadedFromServer = true;
             
             annotator.fields.convertOntologyJson();
+
+            $( "#loading_fields" ).dialog( "destroy" );
+    
         },
         "error": function(jqXHR, textStatus, errorThrown){
             console.debug('error loading fields' + textStatus + errorThrown);
