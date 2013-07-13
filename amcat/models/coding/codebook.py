@@ -171,42 +171,27 @@ class Codebook(AmcatModel):
     def codebookcodes(self):
         codes = self.codebookcode_set.all()
         if self.cached:
+            # TODO: _result_cache should be lazy
             codes._result_cache = list(chain(*self._codebookcodes.values()))
 
         return codes
 
     def get_codebookcodes(self, code):
         """Return a sequence of codebookcode objects for this code in the codebook"""
-        if self.cached:
-            for co in self._codebookcodes[code.id]:
-                yield co
-        else:
-            log.warn("get_codebookcodes() called without cache(). May be slow for multiple calls.")
-            for co in self.codebookcodes:
-                if co.code_id == code.id:
-                    yield co
+        if self.cached: return self._codebookcodes[code.id]
+        return (co for co in self.codebookcodes if co.code_id == code.id)
 
 
     def get_codebookcode(self, code, date=None):
         """Get the (unique or first) codebookcode from *this* codebook corresponding
         to the given code with the given date, or None if not found"""
         if date is None: date = datetime.now()
-    
-        if self.cached:
-            for co in self._codebookcodes[code.id]:
-                if co.validfrom and date < co.validfrom: continue
-                if co.validto and date >= co.validto: continue
-                return co
 
-            return
+        for co in self.get_codebookcodes(code):
+            if co.validfrom and date < co.validfrom: continue
+            if co.validto and date >= co.validto: continue
+            return co
 
-        log.warn("get_codebookcode() called without cache(). May be slow for multiple calls.")
-        for co in self.codebookcodes:
-            if co.code_id == code.id:
-                if co.validfrom and date < co.validfrom: continue
-                if co.validto and date >= co.validto: continue
-                return co
-    
     def _get_hierarchy_ids(self, date=None, include_hidden=False):
         """Return id:id/None mappings for get_hierarchy."""
         if date is None: date = datetime.now()
