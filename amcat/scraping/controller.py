@@ -91,7 +91,7 @@ class Controller(object):
         log.debug("Done")
         return article
 
-    def parents(self, articles):
+    def save_in_order(self, articles):
         """Figure out parent relationships and save in the right order"""
         articles = list(articles)
         toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
@@ -115,7 +115,7 @@ class SimpleController(Controller):
         result = []
         units = scraper.get_units()
         for unit in units:
-            for article in self.parents(scraper.scrape_unit(unit)):
+            for article in self.save_in_order(scraper.scrape_unit(unit)):
                 yield article
 
 ScrapeError = namedtuple("ScrapeError", ["i", "unit", "error"])
@@ -159,7 +159,7 @@ class RobustController(Controller):
         if len(scrapedunits) == 0:
             log.warning("scrape_unit returned 0 units")
         
-        for unit in self.parents(scrapedunits):
+        for unit in self.save_in_order(scrapedunits):
             yield unit
         
 

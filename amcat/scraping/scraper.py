@@ -134,9 +134,16 @@ class Scraper(Script):
         and medium filled in automatically.
         @return: a sequence of Article objects ready to .save()
         """
-        #log.debug(u"Scraping unit {}".format(unit))
         articles = list(self._scrape_unit(unit))
+        for article in self.process_in_order(articles):
+            log.debug(unicode(".. yields article {article}".format(**locals()),'utf-8'))
+            yield article
 
+
+    def process_in_order(self, articles):
+        """
+        Perform article postprocessing in the right order, because parents have to be saved before children
+        """
         for article in articles:
             if hasattr(article, 'props') and hasattr(article.props, 'parent'):
                 article.parent = article.props.parent
@@ -145,15 +152,13 @@ class Scraper(Script):
         toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
 
         for doc in toprocess:
-            article = self._postprocess_article(doc)
-            
+            article = self._postprocess_article(doc)            
             #find children, add to toprocess
             for a in articles:
                 if hasattr(a, 'props') and hasattr(a, 'parent') and a.parent == doc:
                     a.props.parent = article
                     toprocess.append(a)
                     
-            log.debug(unicode(".. yields article {article}".format(**locals()),'utf-8'))
             yield article
 
 
