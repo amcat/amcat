@@ -78,7 +78,7 @@ class Controller(object):
         return all_articles
 
     def save(self, article):
-        log.debug("Saving article %s" % article)
+        log.info("Saving article %s" % article)
 
         try:
             save = transaction.savepoint()
