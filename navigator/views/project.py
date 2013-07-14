@@ -350,7 +350,7 @@ def edit_articleset(request, project, aset):
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def articleset(request, project, aset):
     cls = "Article Set"
-    articles = (Datatable(ArticleMetaResource, rowlink='../article/{id}')
+    articles = (Datatable(ArticleMetaResource, rowlink="../article/{id}")
                 .filter(articleset=aset.id)
                 .hide('metastring', 'url', 'externalid',
                       'byline', 'pagenr', 'project', 'section', 'text'))
@@ -384,7 +384,7 @@ def articleset(request, project, aset):
         else:
             pass
     
-    return table_view(request, project, articles, form=form, object=aset, cls=cls, starred=starred,
+    return table_view(request, project, articles, form=form, object=aset, cls=cls, starred=starred, articleset=aset,
                       template="navigator/project/articleset.html", articlecount=count(aset.articles.all()))
 
 

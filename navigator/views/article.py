@@ -16,8 +16,11 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from itertools import chain 
+
 from django.shortcuts import render, redirect
 from django.conf import settings
+from django.db.models import Q
 
 from settings.menu import PROJECT_MENU
 
@@ -31,10 +34,11 @@ from amcat.scripts import article_upload as article_upload_scripts
 
 import logging; log = logging.getLogger(__name__)
 
-from amcat.nlp import syntaxtree
+from amcat.nlp import syntaxtree, sbd 
 from amcat.models import AnalysisSentence, RuleSet
 from amcat.tools.pysoh.pysoh import SOHServer
-from amcat.models import ArticleSetArticle
+from amcat.models import ArticleSetArticle, Sentence, Article
+from amcat.scripts.actions.split_articles import SplitArticles
 
 from django.core.urlresolvers import reverse
 
@@ -104,23 +108,151 @@ def analysedsentence(request, project, sentence, rulesetid=None):
 
     return render(request, "navigator/article/analysedsentence.html", locals())
 
-@check(Article, args='id')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid')
-def view(request, project, article):
+@check(Article, args_map={'article_id' : 'id'}, args='article_id')
+@check(ArticleSet, args_map={'articleset_id' : 'id'}, args='articleset_id')
+@check(Project, args_map={'project_id' : 'id'}, args='project_id')
+def view(request, project, articleset, article):
     
     menu = PROJECT_MENU
     context = project
 
     return render(request, "navigator/article/view.html", locals())
 
-@check(ArticleSet, args_map={'articlesetid' : 'id'}, args='articlesetid', action='update')
-@check(Article, args='id')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid')
-def remove_from(request, project, article, articleset):
+def _get_sentences(sentences, prev_parnr=1):
+    """
+    Yields (sentence, bool) where bool indicates whether this sentences starts
+    a new paragraph.
+    """
+    for sentence in sentences:
+        yield (sentence, prev_parnr != sentence.parnr)
+        prev_parnr = sentence.parnr
+
+def parse_sentence_name(name):
+    if not name.startswith("sentence-"): return
+
+    try:
+        return int(name.split("-")[1])
+    except IndexError, ValueError:
+        pass
+
+def get_sentence_ids(post):
+    for name, checked in post.items():
+        if checked != "on": continue
+        yield parse_sentence_name(name)
+
+def copy_article(article):
+    new = Article.objects.get(id=article.id)
+    new.id = None
+    new.uuid = None
+    new.text = ""
+    new.length = None
+    return new
+
+def get_articles(article, sentences):
+    prev_parnr = 1 
+
+    new_article = copy_article(article)
+    all_sentences = list(article.sentences.all())
+    sentences = sentences.values_list("parnr", "sentnr")
+
+    for parnr, sentnr in chain(sentences, ((None, None),)):
+        while True:
+            try: sent = all_sentences.pop(0)
+            except IndexError:
+                new_article.text = new_article.text.strip()
+                yield new_article
+                break
+
+            if sent.parnr != prev_parnr:
+                new_article.text += "\n\n"
+
+            new_article.text += sent.sentence
+            new_article.text += ". "
+            prev_parnr = sent.parnr
+
+            if (sent.sentnr == sentnr and sent.parnr == parnr):
+                new_article.text = new_article.text.strip()
+                yield new_article
+                new_article = copy_article(article)
+                break
+
+def handle_split(request, form, project, article, sentences):
+    articles = list(get_articles(article, sentences))
+
+    # We won't use bulk_create yet, as it bypasses save() and doesn't
+    # insert ids
+    for art in articles:
+        art.save()
+        sbd.create_sentences(art)
+
+    # Context variables for template
+    form_data = form.cleaned_data 
+    all_sets = list(project.all_articlesets().filter(articles=article))
+
+    # Keep a list of touched sets, so we can invalidate their indices
+    dirty_sets = ArticleSet.objects.none()
+
+    # Add splitted articles to existing sets
+    ArticleSet.articles.through.objects.bulk_create([
+        ArticleSet.articles.through(articleset=aset, article=art) for
+            art in articles for aset in form_data["add_splitted_to_sets"]
+    ])
+    dirty_sets |= ArticleSet.objects.filter(id__in=[s.id for s in form_data["add_splitted_to_sets"]])
+
+    # Add splitted articles to sets wherin the original article live{d,s}
+    if form_data["add_splitted_to_all"]:
+        articlesetarts = ArticleSet.articles.through.objects.filter(article=article, articleset__project=project)
+
+        ArticleSet.articles.through.objects.bulk_create([
+            ArticleSet.articles.through(articleset=asetart.articleset, article=art)
+                for art in articles for asetart in articlesetarts
+        ])
+
+        dirty_sets |= ArticleSet.objects.filter(Q(project=project)|Q(projects_set=project)).filter(articles=article)
+
+    if form_data["remove_from_sets"]:
+        ArticleSet.articles.through.objects.filter(article=article, articleset=form_data["remove_from_sets"]).delete()
+        dirty_sets |= ArticleSet.objects.filter(id__in=[aset.id for aset in form_data["remove_from_sets"]])
+        
+    if form_data["remove_from_all_sets"]:
+        ArticleSet.articles.through.objects.filter(article=article, articleset__project=project).delete()
+        dirty_sets |= ArticleSet.objects.filter(project=project, articles=article)
+
+    if form_data["add_splitted_to_new_set"]:
+        new_set = ArticleSet.create_set(project, form_data["add_splitted_to_new_set"], articles)
+
+    dirty_sets.update(index_dirty=True)
+    return render(request, "navigator/article/split-done.html", locals())
+
+    
+@check(Article, args_map={'article_id' : 'id'}, args='article_id')
+@check(Project, args_map={'project_id' : 'id'}, args='project_id')
+def split(request, project, article):
+    sentences = article.sentences.all().only("sentence", "parnr")
+    form = forms.SplitArticleForm(project, article, data=request.POST or None)
+
+    if form.is_valid():
+        # Check whether all selected sentences are really in this article
+        sentence_ids = sentences.values_list("id", flat=True)
+        selected_sentence_ids = set(get_sentence_ids(request.POST)) - {None,}
+        if not all(sid in sentence_ids for sid in selected_sentence_ids):
+            return HttpResponseBadRequest()
+
+        if selected_sentence_ids:
+            sentences = Sentence.objects.filter(id__in=selected_sentence_ids)
+            return handle_split(request, form, project, article, sentences)
+
+    sentences = _get_sentences(sentences)
+    return render(request, "navigator/article/split.html", locals())
+
+@check(ArticleSet, args_map={'remove_articleset_id' : 'id'}, args='remove_articleset_id', action='update')
+@check(Article, args_map={'article_id' : 'id'}, args='article_id')
+@check(Project, args_map={'project_id' : 'id'}, args='project_id')
+def remove_from(request, project, article, remove_articleset):
     """
     Remove given article from given articleset. Does not error when it does not exist.
     """
-    ArticleSetArticle.objects.filter(articleset=articleset, article=article).delete()
+    ArticleSetArticle.objects.filter(articleset=remove_articleset, article=article).delete()
     return redirect(reverse("article", args=[project.id, article.id]))
 
 

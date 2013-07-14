@@ -28,8 +28,10 @@ from amcat.tools import toolkit
 from django.core.exceptions import ValidationError
 
 from amcat.models.authorisation import Role, ProjectRole
+from amcat.models.project import Project
 from amcat.models.user import Affiliation
 from amcat.models.articleset import ArticleSet
+from amcat.models.article import Article
 from amcat.models.language import Language
 from amcat.models.coding.codebook import Codebook, CodebookCode
 from amcat.models.coding.code import Code
@@ -95,6 +97,24 @@ def gen_coding_choices(user, model):
     for project, objs in sorted(objects.items(), key=name_sort):
         yield(project, [(x.id, x.name) for x in objs])
 
+class SplitArticleForm(forms.Form):
+    remove_from_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+    remove_from_all_sets = forms.BooleanField(initial=True, required=False, help_text="Remove all instances of the original article in this project")
+
+    add_splitted_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+    add_splitted_to_new_set = forms.CharField(required=False)
+    add_splitted_to_all = forms.BooleanField(initial=False, required=False, help_text="Add new (splitted) articles to all sets containing the original article")
+
+    def __init__(self, project, article, *args, **kwargs):
+        if not isinstance(project, Project):
+            raise ValueError("First argument of constructor must be a Project")
+
+        if not isinstance(article, Article):
+            raise ValueError("Second argument of constructor must be a Article")
+
+        super(SplitArticleForm, self).__init__(*args, **kwargs)
+        self.fields["add_splitted_to_sets"].queryset = project.all_articlesets()
+        self.fields["remove_from_sets"].queryset = project.all_articlesets().filter(articles=article)
 
 class UserForm(forms.ModelForm):
     affiliation = forms.ModelChoiceField(queryset=Affiliation.objects.all())
