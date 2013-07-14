@@ -82,10 +82,7 @@ class PeriodScraper(Script):
         if not self.options['last_date']:
             self.options['last_date'] = date.today()
 
-        if self.options['deduplicate']:
-            dedu = True
-        else:
-            dedu = False
+        dedu = self.options['deduplicate'] and True
 
         n_days = (self.options['last_date'] - self.options['first_date']).days
         days = [self.options['first_date'] + timedelta(days = x) for x in range(n_days + 1)]
