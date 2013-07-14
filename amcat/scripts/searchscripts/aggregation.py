@@ -135,7 +135,7 @@ class AggregationScript(script.Script):
             
         if xAxis == 'date':
             table = FilledOutTable(table, dateInterval=dateInterval)
-
+            table.rowNamesRequired = True # make sure row names are printed
             
         return table
 
