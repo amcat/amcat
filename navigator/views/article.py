@@ -228,7 +228,7 @@ def handle_split(request, form, project, article, sentences):
 @check(Article, args_map={'article_id' : 'id'}, args='article_id')
 @check(Project, args_map={'project_id' : 'id'}, args='project_id')
 def split(request, project, article):
-    sentences = article.sentences.all().only("sentence", "parnr")
+    sentences = sbd.get_or_create_sentences(article).only("sentence", "parnr")
     form = forms.SplitArticleForm(project, article, data=request.POST or None)
 
     if form.is_valid():
