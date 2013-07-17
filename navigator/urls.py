@@ -42,7 +42,7 @@ urlpatterns = patterns(
     url(r'^selection$', 'navigator.views.selection.index', name='selection'),
 
     # Articles
-    url(r'^project/(?P<project_id>[0-9]+)//article/(?P<article_id>[0-9]+)/split$', 'navigator.views.article.split', name="split_article"),
+    url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/split$', 'navigator.views.article.split', name="split_article"),
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/remove_from/(?P<remove_articleset_id>[0-9]+)$',
             'navigator.views.article.remove_from', name="remove_from_articleset"),
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',

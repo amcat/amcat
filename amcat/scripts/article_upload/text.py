@@ -55,6 +55,8 @@ class Text(UploadScript):
     def parse_document(self, file):
         dirname, filename = os.path.split(file.name)
         filename, ext = os.path.splitext(filename)
+
+            
         
         metadata = dict((k, v) for (k,v) in self.options.items()
                         if k in ["medium", "headline", "project", "date", "section"])
@@ -70,8 +72,14 @@ class Text(UploadScript):
             
         if not metadata["section"].strip():
             metadata["section"] = dirname
+ 
             
-        text = file.text
+        if ext == ".docx":
+            text, err = toolkit.execute("docx2txt", file.bytes)
+            if not text.strip():
+                raise Exception("No text from doc2txt, err: {err}".format(**locals()))
+        else:
+            text = file.text
         return Article(text=text, **metadata)
 
 if __name__ == '__main__':
