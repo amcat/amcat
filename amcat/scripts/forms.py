@@ -240,9 +240,9 @@ def resolve_codes(queries, codebook, keyword_language):
         for (code, language), label in labels.iteritems():
             if language != keyword_language.id:
                 kw_label = labels[code, keyword_language.id]
-                cb_lookup["{{{label}}}".format(**locals())] = "({kw_label})".format(**locals())
+                cb_lookup[u"{{{label}}}".format(**locals())] = u"({kw_label})".format(**locals())
 
-    q_lookup = {'[{query.declared_label}]'.format(**locals()) : "({query.query})".format(**locals())
+    q_lookup = {u'[{query.declared_label}]'.format(**locals()) : u"({query.query})".format(**locals())
                 for query in queries if query.declared_label}
                 
     # update queries
