@@ -119,12 +119,16 @@ class Code(AmcatModel):
                 pass
 
         fallback = kargs.get("fallback", True)
-        if fallback and not self._all_labels_cached:
-            try:
-                return self.labels.all().order_by('language__id')[0].label
-            except IndexError:
-                pass
-
+        if fallback:
+            if self._all_labels_cached:
+                if self._labelcache:
+                    return self._labelcache[sorted(self._labelcache)[0]]
+            else:
+                try:
+                    return self.labels.all().order_by('language__id')[0].label
+                except IndexError:
+                    pass
+                
     def add_label(self, language, label):
         """Add the label in the given language"""
 	if isinstance(language, int):
@@ -199,7 +203,6 @@ class TestCode(amcattest.PolicyTestCase):
         l = Language.objects.create(label='zzz')
         o = amcattest.create_test_code(label="bla", language=l)
         o = Code.objects.get(id=o.id)
-
         o._all_labels_cached = True
 
         with self.checkMaxQueries(0, "Getting non-existing label with _all_cached=True"):
@@ -208,7 +211,10 @@ class TestCode(amcattest.PolicyTestCase):
         with self.checkMaxQueries(0, "Getting label with _all_cached=True"):
             self.assertEqual(o.label, "<Code: {id}>".format(id=o.id) )
 
-        o._all_labels_cached = False
+        o._cache_label(l, "bla2")
+        self.assertEqual(o.get_label(5), "bla2")
+
+        o = Code.objects.get(id=o.id)
         self.assertEqual(o.label, "bla")
 
     def test_cache(self):
