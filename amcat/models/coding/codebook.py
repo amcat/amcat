@@ -148,10 +148,12 @@ class Codebook(AmcatModel):
 
         if not languages:
             # Cache ALL languages in this codebook
-            labels = Label.objects.filter(code__id__in=codes).distinct("language") 
+            labels = Label.objects.filter(code__id__in=codes).distinct("language")
             languages = labels.values_list("language_id", flat=True)
+            all_labels = True
         else:
             languages = [l.id if isinstance(l, Language) else int(l) for l in languages]
+            all_labels = False
 
         labels = Label.objects.filter(language__id__in=languages, code__id__in=codes)
         
@@ -164,6 +166,10 @@ class Codebook(AmcatModel):
             # These codes don't have a label. We need to explicitely cache them to prevent
             # database trips.
             self._codes[code_id]._cache_label(lan_id, None)
+
+        if all_labels:
+            for code in self._codes.values():
+                code._all_labels_cached = True
 
         self._cached_labels |= self._cached_labels.union(set(languages))
 
