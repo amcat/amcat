@@ -48,6 +48,7 @@ def ZipFileContents(zip_file, *args, **kargs):
             files = []
             for name in zf.namelist():
                 if name.endswith("/"): continue # skip folders
+                name = name.encode("ascii", "ignore") # zip gives unicode errors, but only on nginx (!?)
                 fn = zf.extract(name, tempdir)
                 files.append(File(open(fn), name=name))
             yield files
