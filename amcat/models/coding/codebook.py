@@ -57,6 +57,9 @@ class Codebook(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='codebook_id')
     project = models.ForeignKey("amcat.Project")
     name = models.TextField()
+    split = models.BooleanField(default=False, help_text="Do not display a list of all codes in annotator, " +
+                                                            "but let the user first choose a root and then " + 
+                                                            "one of its descendants.")
 
     def __init__(self, *args, **kwargs):
         super(Codebook, self).__init__(*args, **kwargs)

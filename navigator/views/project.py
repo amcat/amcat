@@ -891,6 +891,7 @@ def _get_codebook_code(ccodes, code, codebook):
 def save_changesets(request, codebook, project):
     moves = json.loads(request.POST.get("moves", "[]"))
     hides = json.loads(request.POST.get("hides", "[]"))
+    split = json.loads(request.POST.get("split", str(codebook.split).lower()))
 
     # Gather all codes needed for moves and hides (so that we don't have to
     # retrieve them on by one
@@ -928,6 +929,10 @@ def save_changesets(request, codebook, project):
     # Commit all changes
     for ccode_id, ccode in codebook_codes.items():
         ccode.save()
+
+    # Save split option
+    codebook.split = split;
+    codebook.save()
 
     # Check for any cycles. 
     CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)
