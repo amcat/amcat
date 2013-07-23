@@ -1,0 +1,21 @@
+{% extends "navigator/project/base.html" %}
+
+{% block css %}
+<style>
+th {text-align: left; white-space:nowrap; padding-right: 1em}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<h2>Parse status of {{ set }} parsed by {{ plugin }}</h2>
+
+<table>
+<tr><th>Total number of Articles</th><td>{{ totaln }}</td></tr>
+<tr><th>Assigned for Parsing</th><td>{{ assigned }}</td></tr>
+<tr><th>Done</th><td>{{ done }}</td></tr>
+<tr><th>Error</th><td>{{ error }}</td></tr>
+</table>
+
+{% endblock %}
+
