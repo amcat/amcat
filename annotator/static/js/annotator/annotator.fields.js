@@ -55,28 +55,63 @@ annotator.fields.initFieldData = function(){
                         return true;
                     });
                 }
-                /*if(annotator.unitcodings.isNETcoding == true && fieldObj.fieldname == 'Quality'){ // Add items for Quality
-                    fieldObj['noSorting'] = true;
-                    fieldObj['items'] = [
-                                        {'label':'-1', 'value':'-1'},
-                                        {'label':'-0,5', 'value':'-0.5'},
-                                        {'label':'0', 'value':'0'},
-                                        {'label':'0.5', 'value':'0.5'},
-                                        {'label':'1', 'value':'1'}
-                                        ];
-                }*/
                 
                 annotator.fields.fields[fieldObj.id] = fieldObj;
                 count++;
             });
             console.debug('Loaded ' + count + ' fields');
             
+            var _hierarchies = {};
             annotator.fields.highlight_labels = json.highlight_labels;
             annotator.fields.ontologies = json.ontologies;
+            annotator.fields.ontologies_parents = {};
             annotator.fields.loadedFromServer = true;
-            
+            annotator.fields.selected_root = null;
             annotator.fields.convertOntologyJson();
+            annotator.fields.hierarchies = _hierarchies;
 
+            // Create an mapping: hierarchy[codebook_id][code_id] --> code.
+            $.each(annotator.fields.ontologies, function(cid, codebook){
+                var codes = {};
+                $.each(codebook, function(i, code){
+                    codes[code.value] = code;
+                });
+
+                _hierarchies[cid] = codes;
+            });
+
+            // For each codebook, find the roots
+            $.each(_hierarchies, function(cid, codebook){
+                annotator.fields.ontologies_parents[cid] = [];
+                $.each(codebook, function(code_id, code){
+                    if (code.functions[0].parentid === null){
+                        code.descendants = [];
+                        annotator.fields.ontologies_parents[cid].push(code);
+                    }
+                });
+            });
+
+            // .. and get their descendants
+            $.each(_hierarchies, function(cid, codebook){
+                $.each(codebook, function(code_id, code){
+                    var _code = code, seen = [code.value];
+                    if (code.functions[0].parentid !== null){
+                        while(_code.functions[0].parentid !== null){
+                            _code = _hierarchies[cid][_code.functions[0].parentid];
+
+                            if (seen.indexOf(_code.value) !== -1){
+                                // Loop detected, carry on.
+                                console.log("Cycle in " + seen);
+                                return;
+                            }
+                            seen.push(_code.value);
+                        }
+
+                        _hierarchies[cid][_code.value].descendants.push(code);
+                    }
+                });
+            });
+            
             $( "#loading_fields" ).dialog( "destroy" );
     
         },
@@ -108,9 +143,23 @@ annotator.fields.autocompletes.getSearchResults = function(field, term){
     var resultRest = []; // results where term can be anywhere in label
     var result = []; // final result
     var items = field.items;
-    
-    
-    var recentLength = 0; // just for debuggin
+    var fields = annotator.fields;
+
+    if (field["items-key"] !== undefined && field.split_codebook){
+        items = [];
+
+        if (fields.selected_root === null){
+            // First step of editing big codebook. Only display roots.
+            $.each(annotator.fields.ontologies_parents[field["items-key"]], function(code_id, code){
+                items.push(code);
+            });
+        } else {
+            // Second step of editing big codebook. Display descendants of selected root.
+            items = annotator.fields.selected_root.descendants;
+        }
+    } 
+
+    var recentLength = 0; // just for debuggin 
     
     var maxDropdownLength = annotator.fields.autocompletes.NUMBER_OF_DROPDOWN_RESULTS;
     if(field.id == 'unit'){
@@ -187,31 +236,15 @@ annotator.fields.fillOntologyDetailsBox = function(objid, label, inputEl){
                 
     var obj = annotator.fields.ontologyItemsDict[objid];
     
-    //console.debug('show', objid, obj);
-    
-    // currently parent is specific for a function, and children are not implemented (but they still can, for instance in annotator.fields.convertOntologyJson)
-    // if(obj.parentid && annotator.fields.ontologyItemsDict[obj.parentid].label){
-        // content.push('<h3>Parent</h3>');
-        // content.push('<ul>');
-        // content.push('<li value="' + obj.parentid + '"><a href="javascript:;" onclick="return false">' + annotator.fields.ontologyItemsDict[obj.parentid].label + '</a></li>');
-        // content.push('</ul>');
-    // }
-    // if(obj.children && obj.children.length > 0){
-        // content.push('<h3>Children</h3> <ul>');
-        // $.each(obj.children, function(i, id){
-            // content.push('<li value="' + id + '"><a href="javascript:;" onclick="return false">' + annotator.fields.ontologyItemsDict[id].label + '</a></li>');
-        // });
-        // content.push('</ul>');
-    // }
     if(obj.functions){
-        //obj.functions.sort(function(a,b){return (a.start || '').localeCompare(b.start)}); // sort on startdate, also if a.start == null
         content.push('<table cellspacing="3"><tr><th>Function</th><th>Parent</th><th>Start</th><th>End</th></tr>');
         $.each(obj.functions, function(i, func){
             content.push('<tr><td>')
             content.push(func['function']);
             content.push('</td><td>')
             if(func.parentid in annotator.fields.ontologyItemsDict){
-                content.push(annotator.fields.ontologyItemsDict[func.parentid].label); // TODO: make nice safe jQuery html here, this is a security risk
+                // TODO: make nice safe jQuery html here, this is a security risk
+                content.push(annotator.fields.ontologyItemsDict[func.parentid].label); 
             }
             content.push('</td><td>')
             if(func.from) content.push(func.from)
@@ -232,7 +265,7 @@ annotator.fields.fillOntologyDetailsBox = function(objid, label, inputEl){
     $('#autocomplete-details').html( content.join(''));
     $('#autocomplete-details ul').menu();
     $("#autocomplete-details li" ).bind( "click", function(event, ui) {
-        console.debug('select');
+        console.log('select');
         inputEl.val( $(this).text() );
         inputEl.next().val( $(this).attr('value') );
         inputEl.focus();
@@ -319,12 +352,33 @@ annotator.fields.autocompletes.setInputValue = function(value, label, inputEl, f
     }
     if(inputEl.parents('#unitcoding-table').length > 0){ // if input is in sentences table
         annotator.unitcodings.onchangeSentenceCoding(inputEl);
-        
         annotator.fields.setNETCodings(field, value, label);
     }
+
     if(inputEl.parents('#article-coding').length > 0){
         annotator.articlecodings.onchange(inputEl);
     }
+
+    
+    if (field["items-key"] !== undefined && field.split_codebook){
+        // This is a big codebook.
+        if (label == annotator.fields.autocompletes.EMPTY_CODING_LABEL){
+            return;
+        }
+
+        if (annotator.fields.selected_root === null){
+            // New root selected. Display autocomplete box again with only its descendants.
+            annotator.fields.selected_root = annotator.fields.hierarchies[field["items-key"]][value];
+            inputEl.val("").blur();
+
+            window.setTimeout(function(){
+                $("#" + inputEl.get(0).id).focus().click();
+            }, 50);
+
+        } else {
+            annotator.fields.selected_root = null;
+        }
+    } 
 }
 
 
@@ -392,8 +446,6 @@ annotator.fields.autocompletes.onFocus = function(){
     }
     
     inputEl.unbind('focus'); // unbind event that calls this function
-    
-    console.log(field);
     
     if(field.items.length == 0){
         console.log('no field items, ignoring', field.id);

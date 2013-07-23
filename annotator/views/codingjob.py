@@ -157,6 +157,7 @@ def _build_field(field, language):
 
     if field.codebook:
         result['items-key'] = field.codebook_id
+        result["split_codebook"] = field.codebook.split
     else:
         result['items'] = list(getFieldItems(field, language))
 
