@@ -26,6 +26,13 @@ from amcat.models import ArticleSet, AnalysedArticle
 from django.db.models import Count
 from django_boolean_sum import BooleanSum
 
+# WvA: dit slaat eigenlijk nergens op. Ik dacht dat ik het resultaat van run moest gaan
+# gebruiken, maar dat doe ik totaal niet. Ik zou gewoon kunnen redirecten naar een success form
+
+# nog beter is een aparte "analysed set" pagina, met de stats, een refresh button, en
+# een lijst van artikelen, klikbaar naar de 'analysed article' view.
+
+# (maar niet nu :-))
     
 class ProcessParsingView(ProjectScriptView):
     script = CheckParsing
@@ -39,20 +46,17 @@ class ProcessParsingView(ProjectScriptView):
         
     def get_context_data(self, **kwargs):
         context = super(ProcessParsingView, self).get_context_data(**kwargs)
-        aset, plugin = [self.form.cleaned_data[x] for x in ("articleset", "plugin")]
-        
-        context["set"] = aset
-        context["plugin"] = plugin
-        context["totaln"] = aset.articles.count()
+        if getattr(self, 'success', None):
+            aset, plugin = [self.form.cleaned_data[x] for x in ("articleset", "plugin")]
+    
+            context["set"] = aset
+            context["plugin"] = plugin
+            context["totaln"] = aset.articles.count()
 
-        q = (AnalysedArticle.objects.filter(article__articlesets_set=aset, plugin=plugin)
-             .values("article__articlesets_set__project", "plugin_id", "article__articlesets_set")
-             .annotate(assigned=Count("id"), done=BooleanSum("done"), error=BooleanSum("error")))
-
-        context.update(q[0])
-        print context
-
-        
+            q = (AnalysedArticle.objects.filter(article__articlesets_set=aset, plugin=plugin)
+                 .values("article__articlesets_set__project", "plugin_id", "article__articlesets_set")
+                 .annotate(assigned=Count("id"), done=BooleanSum("done"), error=BooleanSum("error")))
+            context.update(q[0])
         return context
         
     def form_valid(self, form):
