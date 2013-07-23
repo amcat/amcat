@@ -74,8 +74,9 @@ class Text(UploadScript):
             metadata["section"] = dirname
  
             
-        if ext == ".docx":
+        if ext.lower() == ".docx":
             text, err = toolkit.execute("docx2txt", file.bytes)
+            text = text.decode("utf-8")
             if not text.strip():
                 raise Exception("No text from doc2txt, err: {err}".format(**locals()))
         else:

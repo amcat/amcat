@@ -47,6 +47,7 @@ def ZipFileContents(zip_file, *args, **kargs):
         with zipfile.ZipFile(zip_file) as zf:
             files = []
             for name in zf.namelist():
+                if name.endswith("/"): continue # skip folders
                 fn = zf.extract(name, tempdir)
                 files.append(File(open(fn), name=name))
             yield files
