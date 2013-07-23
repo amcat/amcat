@@ -32,6 +32,7 @@ import collections
 from contextlib import contextmanager
 from django.core.files import File
 import tempfile
+import shutil
 
 @contextmanager
 def TemporaryFolder(*args, **kargs):
@@ -48,8 +49,16 @@ def ZipFileContents(zip_file, *args, **kargs):
             files = []
             for name in zf.namelist():
                 if name.endswith("/"): continue # skip folders
-                name = name.encode("ascii", "ignore") # zip gives unicode errors, but only on nginx (!?)
-                fn = zf.extract(name, tempdir)
+                # using zipfile.extract(name, tempdir) gives an error if name contains non-ascii characters
+                # this may be related to http://bugs.python.org/issue17656, but we are using 2.7.3
+                # strange enough, the issue does not occur in 'runserver' mode, but file handling might be different?
+                fn = os.path.basename(name.encode("ascii", "ignore"))
+                # use mkstemp instead of temporary folder because we don't want it to be deleted
+                # it will be deleted on __exit__ anyway since the whole tempdir will be deleted
+                _handle, fn = tempfile.mkstemp(suffix="_"+fn, dir=tempdir)
+                f = open(fn, 'w')
+                shutil.copyfileobj(zf.open(name), f)
+                f.close()
                 files.append(File(open(fn), name=name))
             yield files
         

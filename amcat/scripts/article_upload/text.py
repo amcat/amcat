@@ -115,7 +115,8 @@ class Text(UploadScript):
 
     def explain_error(self, error):
         """Explain the error in the context of unit for the end user"""
-        return "Error in file {error.unit.name} : {error.error!r}".format(**locals())
+        name = getattr(error.unit, "name", error.unit)
+        return "Error in file {name} : {error.error!r}".format(**locals())
     
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
