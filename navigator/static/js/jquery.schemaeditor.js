@@ -48,7 +48,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
     self.KEYCODE_ENTER = 13;
     self.ERROR_COLOUR = "#f2dede"; // Taken from bootstrap.css
     self.INFO_COLOUR = "#d9edf7";
-    self.N_COLS = 5;
+    self.N_COLS = 6;
     
     // Get UI elements
     self.bar = $("[name=loading] .bar");

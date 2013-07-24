@@ -66,7 +66,6 @@ annotator.fields.initFieldData = function(){
             annotator.fields.ontologies = json.ontologies;
             annotator.fields.ontologies_parents = {};
             annotator.fields.loadedFromServer = true;
-            annotator.fields.selected_root = null;
             annotator.fields.convertOntologyJson();
             annotator.fields.hierarchies = _hierarchies;
 
@@ -138,26 +137,35 @@ annotator.fields.convertOntologyJson = function(){
 }
 
 
-annotator.fields.autocompletes.getSearchResults = function(field, term){
+/*
+ * Returns a list of codes which the coder can choose from, filtered on a given
+ * search string.
+ * 
+ * @param field: selected field (must be in annotator.fields.fields)
+ * @param term: term the user entered. All labels containing it will be shown.
+ * @param selected_root: if relevant, the selected root. Only display descendants.
+ */
+annotator.fields.autocompletes.getSearchResults = function(field, term, selected_root){
     var resultStart = []; // results where term is in the start of label
     var resultRest = []; // results where term can be anywhere in label
     var result = []; // final result
     var items = field.items;
     var fields = annotator.fields;
 
-    if (field["items-key"] !== undefined && field.split_codebook){
+    if (field.isOntology && field.split_codebook){
         items = [];
 
-        if (fields.selected_root === null){
-            // First step of editing big codebook. Only display roots.
+        // This is a Codebook and needs to be splitted in root/descendants. 
+        if (selected_root === undefined){
+            // First box. Only display roots.
             $.each(annotator.fields.ontologies_parents[field["items-key"]], function(code_id, code){
                 items.push(code);
             });
         } else {
-            // Second step of editing big codebook. Display descendants of selected root.
-            items = annotator.fields.selected_root.descendants;
+            // Second box. Display descendants.
+            items = selected_root.descendants;
         }
-    } 
+    }
 
     var recentLength = 0; // just for debuggin 
     
@@ -169,7 +177,7 @@ annotator.fields.autocompletes.getSearchResults = function(field, term){
     // add recent items in front of the result list
     if(term == '' && annotator.fields.ontologyRecentItems[field['items-key']]){
         $.each(annotator.fields.ontologyRecentItems[field['items-key']], function(i, obj){
-            result.push(obj);
+            if (result.indexOf(obj) !== -1) result.push(obj);
         });
         recentLength = result.length; 
         result.reverse(); // reverse since last selected items are added last, while they should be displayed first
@@ -338,10 +346,12 @@ annotator.fields.setNETCodings = function(field, value, label){
 annotator.fields.autocompletes.setInputValue = function(value, label, inputEl, field){
     /* set the inputEl to a value with label */
     if(label == annotator.fields.autocompletes.EMPTY_CODING_LABEL){
-        inputEl.val('');
+        inputEl.val('').removeAttr("_value");
     } else {
-        inputEl.next().val(value); // set value of hidden input
-        inputEl.val(label);
+        if(!(field.isOntology && field.split_codebook && inputEl.attr("root") === undefined)){
+            inputEl.parent().children(":hidden").val(value); // set value of hidden input
+        }
+        inputEl.val(label).attr("_value", value);
         
         if(field.isOntology){
             annotator.fields.addToRecentItemsList(field, value, label);
@@ -358,27 +368,6 @@ annotator.fields.autocompletes.setInputValue = function(value, label, inputEl, f
     if(inputEl.parents('#article-coding').length > 0){
         annotator.articlecodings.onchange(inputEl);
     }
-
-    
-    if (field["items-key"] !== undefined && field.split_codebook){
-        // This is a big codebook.
-        if (label == annotator.fields.autocompletes.EMPTY_CODING_LABEL){
-            return;
-        }
-
-        if (annotator.fields.selected_root === null){
-            // New root selected. Display autocomplete box again with only its descendants.
-            annotator.fields.selected_root = annotator.fields.hierarchies[field["items-key"]][value];
-            inputEl.val("").blur();
-
-            window.setTimeout(function(){
-                $("#" + inputEl.get(0).id).focus().click();
-            }, 50);
-
-        } else {
-            annotator.fields.selected_root = null;
-        }
-    } 
 }
 
 
@@ -432,6 +421,9 @@ annotator.fields.getFieldByInputName = function(inputname){
 }
 
 
+/*
+ * Called when an element with autocompletion is focused.
+ */
 annotator.fields.autocompletes.onFocus = function(){
     if($(this).hasClass('ui-autocomplete-input')){ // already an autocomplete element
         console.log('already an autocomplete'); // should never be called, event should by unbind
@@ -454,8 +446,21 @@ annotator.fields.autocompletes.onFocus = function(){
     
     inputEl.autocomplete({
         source: function(req, resp){
+            var selected_root = undefined;
+            if (this.element.attr("root") !== undefined){
+                var root = $("#" + this.element.attr("root"));
+                if (root.attr("_value") === undefined){
+                    // No root selected! Do not display list.
+                    resp([]);
+                    return;
+                }
+
+                var codebook = annotator.fields.hierarchies[field["items-key"]];
+                selected_root = codebook[root.attr("_value")];
+            } 
+
             var term = req.term.toLowerCase();
-            var result = annotator.fields.autocompletes.getSearchResults(field, term);
+            var result = annotator.fields.autocompletes.getSearchResults(field, term, selected_root);
             resp(result);
         },
         selectItem:true,
@@ -509,9 +514,51 @@ annotator.fields.autocompletes.addAutocompletes = function(jqueryEl){
     jqueryEl.find('input:text').each(function(i, input){
         var inputEl = $(input);
         var fieldNumber = inputEl.attr('name').replace(/field_/,'');
-        //console.log(fieldNumber, annotator.fields.fields);
+        var field = annotator.fields.fields[fieldNumber];
+
         if(fieldNumber in annotator.fields.fields){
             inputEl.focus(annotator.fields.autocompletes.onFocus);
+
+            if (field.isOntology && field.split_codebook){
+                var desc = $("<input type='text'>");
+                inputEl.parent().append(desc);
+                inputEl.attr("placeholder", "Root..");
+
+                desc.attr("skip_saving", true);
+                desc.attr("placeholder", "Descendant..").attr("root", inputEl.get(0).id);
+                desc.attr("name", inputEl.attr("name"));
+                desc.focus(annotator.fields.autocompletes.onFocus);
+
+                if(inputEl.val() !== ''){
+                     /* Well.. here comes a bit of a hack. We don't know anything about the
+                     * parent and we only know the *label* of the coded value, not the id. As
+                     * we still want to display the parent, we need to find a code with the
+                     * same label as the given code. However, this label is not guarenteed to be
+                     * unique, so we could display the wrong parent.. Should work in 99% of the
+                     * cases though. */
+                     var found = []; var label = inputEl.val(); var code;
+                     $.each(annotator.fields.ontologies_parents[field['items-key']], function(i, root){
+                        for(var i=0; i < root.descendants.length; i++){
+                            code = root.descendants[i];
+                            if(code.label === label && found.indexOf(code) === -1){
+                                code.root = root;
+                                found.push(code);
+                            }
+                        }
+                     });
+
+                     if (found.length > 1){
+                        console.log("We found multiple codes for this label :-(:", found);
+                     } else if (found.length == 0){
+                        console.log("No code found for label", label, "bug?");
+                        return;
+                     } 
+
+                     code = found[0];
+                     inputEl.val(code.root.label).attr("_value", code.root.value);
+                     desc.attr("_value", code.value).val(code.label);
+                 }
+            }
         }
     });
 }

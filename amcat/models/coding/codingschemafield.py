@@ -89,6 +89,9 @@ class CodingSchemaField(AmcatModel):
     fieldtype = models.ForeignKey(CodingSchemaFieldType)
     
     codebook = models.ForeignKey(Codebook, null=True) # for codebook fields
+    split_codebook = models.BooleanField(default=False, help_text="Do not display a list of all codes in annotator, " +
+                                                                   "but let the user first choose a root and then " + 
+                                                                   "one of its descendants.")
 
     # Default needs to the last field specified, in order to allow checks on
     # `fieldtype` when validating `default` in forms.
