@@ -22,7 +22,7 @@ Assess the quality of articles in a given set at a given date
 """
 
 from django import forms
-import logging; log = logging.getLogger(__name__)
+import logging; log = logging.getLogger("amcat.scripts.maintenance.value_article")
 import json
 
 from amcat.scripts.script import Script
@@ -47,12 +47,14 @@ class ValueArticleScript(Script):
         
 
     def run(self, _input=None):
+        log.info("getting articles...")
         articles = Article.objects.filter(
             date__contains = self.options['date'],
             articlesetarticle__articleset = self.options['articleset'])
+        log.info("{} articles found. evaluating...".format(articles.count()))
         for article in articles:
-            print
-            print(article.headline)
+
+            log.debug(article.headline)
 
             #evaluate regular properties
             for prop in self.article_properties:
@@ -62,23 +64,23 @@ class ValueArticleScript(Script):
                     value = None
                 if value:
                     self.article_props_occurrences[prop] += 1
-                print("{prop} : {v}".format(v = self.truncate(value), **locals()))
+                log.debug("{prop} : {v}".format(v = self.truncate(value), **locals()))
 
             #evaluate metastring
             for key, value in eval(article.metastring).items():
-                print("meta.{key} : {v}".format(v = self.truncate(value), **locals()))
+                log.debug("meta.{key} : {v}".format(v = self.truncate(value), **locals()))
                 if key in self.article_props_occurrences.keys():
                     self.article_props_occurrences[key] += 1
                 else:
                     self.article_props_occurrences[key] = 1
 
         #print totals
-        print("\n\tTotal:\n")
-        print("{key}: {value} / {total articles} = {percentage}")
+        log.info("\n\tTotal:\n")
+        log.info("{key}: {value} / {total articles} = {percentage}")
         total_articles = len(articles)
         for key, value in self.article_props_occurrences.items():
             percentage = int((float(value) / float(total_articles)) * 100)
-            print("{key}: {value} / {total_articles} = {percentage}%".format(**locals()))
+            log.info("{key}: {value} / {total_articles} = {percentage}%".format(**locals()))
 
     def truncate(self, value):
         value = unicode(value)
