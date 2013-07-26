@@ -99,11 +99,14 @@ class Article(AmcatModel):
             for word in sentence.words:
                 yield word
 
-    def getSentence(self, parnr, sentnr):
+    def get_sentence(self, parnr, setnr):
         "@return: a Sentence object with the given paragraph and sentence number"
         for s in self.sentences:
             if s.parnr == parnr and s.sentnr == sentnr:
                 return s
+
+    def getSentence(self, parnr, sentnr):
+        return self.get_sentence(parnr, setnr)
 
     ## Auth ##
     def can_read(self, user):

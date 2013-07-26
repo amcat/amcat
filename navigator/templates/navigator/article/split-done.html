@@ -1,0 +1,50 @@
+{% extends "navigator/project/base.html" %}
+
+{% block content %}
+<div class="alert alert-success">
+ <strong>Splitting done!</strong> 
+ <ul>
+ {% if form_data.remove_from_all_sets or form_data.remove_from_sets %}
+    <li>
+    The article was removed from the following sets:
+    <ul>
+    {% if form_data.remove_from_all_sets %}
+       {% for set in all_sets %}
+        <li><a href="{% url "articleset" project.id set.id %}">{{set.name}} ({{set.id}})</a></li>
+       {% endfor %}
+    {% else %}
+       {% for set in form_data.remove_from_sets %}
+        <li><a href="{% url "articleset" project.id set.id %}">{{set.name}} ({{set.id}})</a></li>
+       {% endfor %}
+    {% endif %}
+      </ul>
+    </li>
+ {% endif %}
+
+ {% if new_set %}
+  <li>The new articles were added to new set <a href="{% url "articleset" project.id new_set.id %}">{{new_set.name}} ({{new_set.id}})</a></li>
+ {% endif %}
+
+ {% if form_data.add_splitted_to_sets %}
+   <li>Splitted articles were added to the following sets:</li>
+   <ul>
+   {% for set in form_data.add_splitted_to_sets %}
+        <li><a href="{% url "articleset" project.id set.id %}">{{set.name}} ({{set.id}})</a></li>
+   {% endfor %}
+   </ul>
+   </li>
+ {% endif %}
+
+ {% if form_data.add_splitted_to_all %}
+  <li>Splitted articles were added to all sets wherin the orginal article lived:</li>
+   <ul>
+     {% for set in all_sets %}
+      <li><a href="{% url "articleset" project.id set.id %}">{{set.name}} ({{set.id}})</a></li>
+     {% endfor %}
+   </ul>
+  </li>
+ {% endif %}
+ </ul>
+</div>
+
+{% endblock %}

@@ -57,6 +57,9 @@ class Codebook(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='codebook_id')
     project = models.ForeignKey("amcat.Project")
     name = models.TextField()
+    split = models.BooleanField(default=False, help_text="Do not display a list of all codes in annotator, " +
+                                                            "but let the user first choose a root and then " + 
+                                                            "one of its descendants.")
 
     def __init__(self, *args, **kwargs):
         super(Codebook, self).__init__(*args, **kwargs)
@@ -148,10 +151,12 @@ class Codebook(AmcatModel):
 
         if not languages:
             # Cache ALL languages in this codebook
-            labels = Label.objects.filter(code__id__in=codes).distinct("language") 
+            labels = Label.objects.filter(code__id__in=codes).distinct("language")
             languages = labels.values_list("language_id", flat=True)
+            all_labels = True
         else:
             languages = [l.id if isinstance(l, Language) else int(l) for l in languages]
+            all_labels = False
 
         labels = Label.objects.filter(language__id__in=languages, code__id__in=codes)
         
@@ -165,48 +170,37 @@ class Codebook(AmcatModel):
             # database trips.
             self._codes[code_id]._cache_label(lan_id, None)
 
+        if all_labels:
+            for code in self._codes.values():
+                code._all_labels_cached = True
+
         self._cached_labels |= self._cached_labels.union(set(languages))
 
     @property
     def codebookcodes(self):
         codes = self.codebookcode_set.all()
         if self.cached:
+            # TODO: _result_cache should be lazy
             codes._result_cache = list(chain(*self._codebookcodes.values()))
 
         return codes
 
     def get_codebookcodes(self, code):
         """Return a sequence of codebookcode objects for this code in the codebook"""
-        if self.cached:
-            for co in self._codebookcodes[code.id]:
-                yield co
-        else:
-            log.warn("get_codebookcodes() called without cache(). May be slow for multiple calls.")
-            for co in self.codebookcodes:
-                if co.code_id == code.id:
-                    yield co
+        if self.cached: return self._codebookcodes[code.id]
+        return (co for co in self.codebookcodes if co.code_id == code.id)
 
 
     def get_codebookcode(self, code, date=None):
         """Get the (unique or first) codebookcode from *this* codebook corresponding
         to the given code with the given date, or None if not found"""
         if date is None: date = datetime.now()
-    
-        if self.cached:
-            for co in self._codebookcodes[code.id]:
-                if co.validfrom and date < co.validfrom: continue
-                if co.validto and date >= co.validto: continue
-                return co
 
-            return
+        for co in self.get_codebookcodes(code):
+            if co.validfrom and date < co.validfrom: continue
+            if co.validto and date >= co.validto: continue
+            return co
 
-        log.warn("get_codebookcode() called without cache(). May be slow for multiple calls.")
-        for co in self.codebookcodes:
-            if co.code_id == code.id:
-                if co.validfrom and date < co.validfrom: continue
-                if co.validto and date >= co.validto: continue
-                return co
-    
     def _get_hierarchy_ids(self, date=None, include_hidden=False):
         """Return id:id/None mappings for get_hierarchy."""
         if date is None: date = datetime.now()

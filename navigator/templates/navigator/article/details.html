@@ -59,7 +59,8 @@
   <td>In&nbsp;articlesets:</td>
   <td>
   {% for aset in article.articlesets_set.all.distinct %}
-    <a href="{% url "articleset" article.project.id aset.id %}">{{aset.id}} - {{aset}}</a><br/>
+    <a href="{% url "articleset" article.project.id aset.id %}">{{aset.id}} - {{aset}}</a>
+    <a href="{% url "remove_from_articleset" article.project.id article.id aset.id %}" class="btn btn-mini">Remove</a><br/>
   {% empty %}
     This article does not occur in any set
   {% endfor %}

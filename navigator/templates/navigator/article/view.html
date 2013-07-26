@@ -3,6 +3,10 @@
 {% block content %}
 
 <div style="float:left; width:65%">
+ <h1>Actions</h1>
+ <div><a class="btn" href="{% url 'split_article' project.id article.id %}">Split article</a></div>
+ <br/>
+
  <h1>Article {{article.id}}</h1>
  <h2>{{article.headline}}</h2>
  <article>

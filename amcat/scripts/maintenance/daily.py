@@ -23,10 +23,9 @@ Script to be run daily for data input (scraping, preprocessing etc.
 
 from datetime import date, timedelta
 
-import logging;
-from amcat.scraping.controller import RobustController
+import logging;log = logging.getLogger(__name__)
 
-log = logging.getLogger(__name__)
+from amcat.scraping.controller import RobustController
 
 from django import forms
 

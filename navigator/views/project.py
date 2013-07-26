@@ -350,7 +350,7 @@ def edit_articleset(request, project, aset):
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def articleset(request, project, aset):
     cls = "Article Set"
-    articles = (Datatable(ArticleMetaResource, rowlink='../article/{id}')
+    articles = (Datatable(ArticleMetaResource, rowlink="../article/{id}")
                 .filter(articleset=aset.id)
                 .hide('metastring', 'url', 'externalid',
                       'byline', 'pagenr', 'project', 'section', 'text'))
@@ -384,7 +384,7 @@ def articleset(request, project, aset):
         else:
             pass
     
-    return table_view(request, project, articles, form=form, object=aset, cls=cls, starred=starred,
+    return table_view(request, project, articles, form=form, object=aset, cls=cls, starred=starred, articleset=aset,
                       template="navigator/project/articleset.html", articlecount=count(aset.articles.all()))
 
 
@@ -597,6 +597,8 @@ def delete_schema(request, schema, project):
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
 def edit_schemafield_properties(request, schema, project):
     form = forms.CodingSchemaForm(data=request.POST or None, instance=schema, hidden="project")
+    form.fields['highlighters'].queryset = project.get_codebooks()
+    form.fields['highlighters'].required = False
 
     ctx = locals()
     ctx.update({
@@ -889,6 +891,7 @@ def _get_codebook_code(ccodes, code, codebook):
 def save_changesets(request, codebook, project):
     moves = json.loads(request.POST.get("moves", "[]"))
     hides = json.loads(request.POST.get("hides", "[]"))
+    split = json.loads(request.POST.get("split", str(codebook.split).lower()))
 
     # Gather all codes needed for moves and hides (so that we don't have to
     # retrieve them on by one
@@ -926,6 +929,10 @@ def save_changesets(request, codebook, project):
     # Commit all changes
     for ccode_id, ccode in codebook_codes.items():
         ccode.save()
+
+    # Save split option
+    codebook.split = split;
+    codebook.save()
 
     # Check for any cycles. 
     CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)
