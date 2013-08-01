@@ -37,8 +37,8 @@ class CheckParsing(Script):
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False)
         analysed_articles = forms.ModelMultipleChoiceField(queryset=AnalysedArticle.objects.all(), required=False)
-        check_only = forms.BooleanField(initial=False, required=False)
         plugin = forms.ModelChoiceField(queryset=Plugin.objects.filter(plugin_type__id=1), required=False)
+        check_only = forms.BooleanField(initial=False, required=False)
         
     def _run(self, articleset=None, analysed_articles=None, check_only=False, plugin=None):
         if not analysed_articles:
@@ -51,7 +51,7 @@ class CheckParsing(Script):
                 analysed_articles = AnalysedArticle.objects.filter(done=False, error=False).select_related("plugin")
             if plugin:
                 analysed_articles = analysed_articles.filter(plugin=plugin)
-        self.process(analysed_articles)
+        return list(self.process(analysed_articles))
                 
     def process(self, articles):
         for aa in articles:
@@ -59,12 +59,11 @@ class CheckParsing(Script):
             try:
                 msg = None
                 if self.options["check_only"]:
-                    result = parser.check_article(aa)
+                    yield parser.check_article(aa)
                 else:
-                    result = parser.retrieve_article(aa)
+                    yield parser.retrieve_article(aa)
             except Exception, e:
-                result = "Error"
-                msg = repr(e)
+                yield e
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
