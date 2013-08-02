@@ -200,9 +200,20 @@ annotator.saveCodings = function(goToNext){
         storeDict['articlecodings'] = {}; //amcat.getFormDict($('#article-coding-form'));
         $('#article-coding-form').find('input:text').each(function(j, input){
             input = $(input);
+
+            if(input.attr("skip_saving")) return;
+
+
             var value = input.val();
             var field = annotator.fields.getFieldByInputName(input.attr('name'));
+            if(field.isOntology && field.split_codebook){
+                if (input.attr("root") === undefined){
+                    input = $('[root="' + input.get(0).id + '"]');
+                }
+            }
             var validationResult = annotator.validateInput(input, field);
+
+
             if(validationResult != true){
                 input.addClass("error");
                 if(validationResult != false){ // validationResult is text with error message
@@ -213,7 +224,8 @@ annotator.saveCodings = function(goToNext){
                 valid = false;
             } else {
                 input.removeClass("error");
-                storeDict['articlecodings'][input.attr('name')] = input.next().val() ? parseInt(input.next().val()) : input.val(); //{'text':input.val(), 'id':input.next().val(), 'name':input.attr('name')};
+                console.log(input);
+                storeDict['articlecodings'][input.attr('name')] = input.parent().children(":hidden").val() ? parseInt(input.parent().children(":hidden").val()) : input.val(); //{'text':input.val(), 'id':input.parent().children(":hidden").val(), 'name':input.attr('name')};
             }
         });
         console.log(storeDict['articlecodings']);
@@ -236,15 +248,25 @@ annotator.saveCodings = function(goToNext){
                 if(value.length > 0){
                     hasAnyValue = true;
                 }
+
+                if(field.isOntology && field.split_codebook){
+                    console.log(input);
+                    if (input.attr("root") === undefined){
+                        input = $('[root="' + input.get(0).id + '"]');
+                    }
+                    console.log(input);
+                }
+
                 //console.log(value, field, input.attr('name'));
                 var validationResult = annotator.validateInput(input, field);
                 
                 if(validationResult != true){
+                    console.log(validationResult);
                     annotator.markInputError(input, validationResult || '');
                     valid = false;
                 } else {
                     input.removeClass("error");
-                    rowjson[input.attr('name')] = input.next().val() || input.val();//{'text':input.val(), 'id':input.next().val(), 'name':input.attr('name')};
+                    rowjson[input.attr('name')] = input.parent().children(":hidden").val() || input.val();//{'text':input.val(), 'id':input.parent().children(":hidden").val(), 'name':input.attr('name')};
                 }
             });
             if(!valid) return;
@@ -359,7 +381,6 @@ annotator.validateInput = function(input, field){
     /* this will check if the text value of input and the related hidden input contain valid data (based on the allowed items of the field)
     it will also set the hidden value if it is outdated */
     var items = field.items;
-
     
     if(items.length == 0){
         console.log('no items for autocomplete');
@@ -369,26 +390,26 @@ annotator.validateInput = function(input, field){
     var value = input.val();
     
     if(value == ''){
-        input.next().val(''); // if text input is empty, hidden field should be cleared
+        input.parent().children(":hidden").val(''); // if text input is empty, hidden field should be cleared
         return true;
     }
     
-    var id = input.next().val(); // value of hidden input
+    var id = input.parent().children(":hidden").val(); // value of hidden input
+
+    var found = [];
     for(var i=0; i<items.length; i++){
-        var item = items[i];
-        if(value == item.label){
-            if(id == item.value){ // both label and id match an item in the autocomplete list, thus valid
-                return true;
-            } else { // hidden id is not correct, but label is present in autocomplete list, thus valid, but need to update hidden value
-                //$('input:hidden[name=' + v.name + '-hidden]').val(item.value);
-                input.next().val(item.value);
-            }
-            return true;
+        // martijn: why is label used as identifier??
+        if (value === items[i].label){
+            if (id == items[i].value) return true;
+            found.push(items[i]);
         }
-        //console.debug(v.text + ' - ' + item.label);
     }
-    
-    return 'Value not found in list of allowed values';
+
+    if (found.length == 0){
+        return 'Value not found in list of allowed values';
+    }
+
+    return "Hidden ID not correct, but label is. Bug?"
 }
 
 

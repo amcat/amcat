@@ -79,7 +79,6 @@ Array.prototype.remove=function(s){
                     $(document.createTextNode(" Delete"))               
                 );
 
-            self.btn_split = $("<input type='checkbox'>")
             self.btn_delete.click(confirm_dialog);
 
             /* PRIVATE METHODS */
@@ -143,10 +142,6 @@ Array.prototype.remove=function(s){
                 self.codebook = codebook.results[0];
                 self.root.label = "Codebook: <i>" + self._escape(self.codebook.name) + "</i>";
                 self.update_label(self.root);
-
-                if(self.codebook.split){
-                    self.btn_split.attr("checked", "checked");
-                }
             }
             
             self._initialize = function(objects){
@@ -178,13 +173,10 @@ Array.prototype.remove=function(s){
                 // Add main action buttons
                 var buttons = $("<p>").addClass("btn-group")
                 buttons.append(self.btn_save_changes).append(self.btn_edit_name).append(self.btn_download).append(self.btn_delete);
-                var split = $("<p>").append(self.btn_split).append(
-                    $(document.createTextNode(" Split codebook in Annotator (parent --> descendant)"))
-                )
 
                 $(self).contents().remove();
                 $(self).append(self.searchbox);
-                $(self).append(usage).append(buttons).append(split);
+                $(self).append(usage).append(buttons);
                 $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root"));
 
                 self.searchbox.keyup(self.searchbox_keyup);
@@ -998,7 +990,6 @@ Array.prototype.remove=function(s){
                     window.location.href + '/save_changesets', {
                         "moves" : JSON.stringify(moves),
                         "hides" : JSON.stringify(hides),
-                        "split" : JSON.stringify(self.btn_split.get(0).checked)
                     }, function(){
                         $("#loading_modal").modal("hide").remove();
                         self.changesets.moves = {};

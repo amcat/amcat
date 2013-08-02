@@ -76,6 +76,7 @@ _METAFIELDS = [
     _MetaField("sentence", "parnr", "Paragraph"),
     _MetaField("sentence", "sentnr", "Sentence nr"),
     _MetaField("sentence", "sentence", "Sentence"),
+    _MetaField("article_coding", "comments", "Comments"),
 ]
 
 class CodingjobListForm(forms.Form):

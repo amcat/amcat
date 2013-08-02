@@ -123,30 +123,17 @@ def get_table_sentence_codings_article(codedarticle, language):
         result.addColumn(CodingColumn(field, language))
     return result
 
-    
+# Will result in error when not available.
+CB_TYPE = CodingSchemaFieldType.objects.get(name="Codebook")
 
-    
-    
 def _getFieldObj(field):
     """returns a matching Django Field object 
     for a amcat.models.coding.codingschemafield.CodingSchemaField object"""
-    val = field.default
-    if unicode(field.fieldtype) in ('Boolean', 'DB ontology'):
-        fieldObj = forms.CharField(label=field.label, initial=val, 
-                                    widget=forms.TextInput(), required=field.required)
-    elif unicode(field.fieldtype) == 'integer':
-        fieldObj = forms.IntegerField(label=field.label, initial=val, 
+    yield forms.CharField(label=field.label, initial=field.default,
                             widget=forms.TextInput(), required=field.required)
-    elif unicode(field.fieldtype) == 'Decimal':
-        fieldObj = forms.DecimalField(label=field.label, initial=val, 
-                            widget=forms.TextInput(), required=field.required)
-    elif unicode(field.fieldtype) == 'Area':
-        fieldObj = forms.IntegerField(label=field.label, initial=val, 
-                            required=field.required, widget=forms.TextInput())
-    else:
-        fieldObj = forms.CharField(label=field.label, initial=val,
-                            widget=forms.TextInput(), required=field.required)
-    return fieldObj
+
+    if field.fieldtype == CB_TYPE and field.split_codebook:
+        print(field)
         
         
 class CodingSchemaForm(forms.Form):
@@ -157,8 +144,10 @@ class CodingSchemaForm(forms.Form):
     def __init__(self, schema, *args, **kargs):
         super(CodingSchemaForm, self).__init__(*args, **kargs)
         for field in schema.fields.order_by('fieldnr').all():
-            self.fields['field_%s' % field.id] = _getFieldObj(field)
-    
+            for i, _field in enumerate(_getFieldObj(field)):
+                _id = "field_{field.id}" 
+                if i: _id += "_{i}"
+                self.fields[_id.format(**locals())] = _field
             
 class CodingStatusCommentForm(forms.Form):
     """Form that represents the coding status and comment"""

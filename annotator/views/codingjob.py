@@ -23,7 +23,7 @@ from django.shortcuts import render
 
 from amcat.models.coding import codingtoolkit
 from amcat.models import Code, Coding, CodingJob, CodedArticle
-from amcat.models import Function, CodingSchemaField
+from amcat.models import Function, CodingSchemaField, CodingSchemaFieldType
 from amcat.models import Article, Sentence
 
 from django import forms
@@ -40,6 +40,8 @@ from amcat.tools.djangotoolkit import db_supports_distinct_on
 from itertools import chain
 
 import logging; log = logging.getLogger(__name__)
+
+CODEBOOK_TYPE = CodingSchemaFieldType.objects.get(name="Codebook")
 
 def index(request, codingjobid):
     """returns the HTML for the main annotator page"""
@@ -99,6 +101,14 @@ def get_value_labels(coding):
             label = f.serialiser.value_label(value)
         yield f, label
 
+def get_code_ids(coding):
+    for val in coding.values.select_related("field__fieldtype", "value__strval", "value__intval"):
+        try:
+            code = val.value
+        except Code.DoesNotExist: # codebook change
+            continue
+
+
 def articleCodings(request, codingjobid, articleid):
     """returns the article codings of an article as HTML form"""
     article = Article.objects.get(id=articleid)
@@ -107,6 +117,7 @@ def articleCodings(request, codingjobid, articleid):
 
     if codings:
         values = {"field_%i" % f.id : label for (f, label) in get_value_labels(codings)}
+        get_code_ids(codings)
     else:
         values = {}
     articlecodingform = codingtoolkit.CodingSchemaForm(codingjob.articleschema, values)
@@ -151,13 +162,13 @@ def _build_field(field, language):
     result = {
         'fieldname' : field.label,
         'id' : str(field.id),
-        'isOntology' : (unicode(field.fieldtype) == 'DB ontology'),
+        'isOntology' : field.fieldtype == CODEBOOK_TYPE,
         'showAll' : None
     }
 
     if field.codebook:
         result['items-key'] = field.codebook_id
-        result["split_codebook"] = field.codebook.split
+        result["split_codebook"] = field.split_codebook
     else:
         result['items'] = list(getFieldItems(field, language))
 
