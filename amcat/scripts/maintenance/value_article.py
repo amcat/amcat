@@ -53,7 +53,6 @@ class ValueArticleScript(Script):
             articlesetarticle__articleset = self.options['articleset'])
         log.info("{} articles found. evaluating...".format(articles.count()))
         for article in articles:
-
             log.debug(article.headline)
 
             #evaluate regular properties
@@ -74,13 +73,40 @@ class ValueArticleScript(Script):
                 else:
                     self.article_props_occurrences[key] = 1
 
+        #print samples
+        self.print_samples(articles)
+
         #print totals
-        log.info("\n\tTotal:\n")
+        log.info("Total:")
         log.info("{key}: {value} / {total articles} = {percentage}")
         total_articles = len(articles)
         for key, value in self.article_props_occurrences.items():
             percentage = int((float(value) / float(total_articles)) * 100)
             log.info("{key}: {value} / {total_articles} = {percentage}%".format(**locals()))
+
+    def print_samples(self, articles):
+        #Find 3 articles with most and least attributes
+        #most to show the less common props, least to see if anything is missing there
+
+        #find number of props per article
+        articles_nprops = {}
+        for article in articles:
+            n_props = 0
+            for prop in self.article_properties:
+                if hasattr(article, prop):
+                    n_props += 1
+            n_props += len(eval(article.metastring))
+            articles_nprops[article] = n_props
+
+        sortedlist = sorted(articles_nprops, key=articles_nprops.get)
+        to_print = set(sortedlist[:3] + sortedlist[-3:])
+        log.info("Sample articles:")
+        for article in to_print:
+            for prop in self.article_properties:
+                value = hasattr(article, prop) and getattr(article, prop) or None
+                value = self.truncate(value)
+                log.info("{prop} : {value}".format(**locals()))
+            print("\n")
 
     def truncate(self, value):
         value = unicode(value)

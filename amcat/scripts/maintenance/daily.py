@@ -141,7 +141,7 @@ class DailyScript(Script):
         
 def setup_logging():
     from amcat.tools.amcatlogging import AmcatFormatter
-    loggers = (logging.getLogger("amcat.scraping"), logging.getLogger("amcat.scripts.maintenance.daily"), logging.getLogger("scraping"))
+    loggers = (logging.getLogger("amcat.scraping"), logging.getLogger(__name__), logging.getLogger("scrapers"))
     d = date.today()
     handlers = (logging.FileHandler("/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())), logging.StreamHandler())
     formatter = AmcatFormatter(date = True)
