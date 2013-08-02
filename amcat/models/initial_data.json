@@ -379,6 +379,15 @@
     }
   },
   {
+    "pk": 5,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.scripts.article_upload.apa_prof.APA",
+      "label": "APA",
+      "plugin_type": 2
+    }
+  },
+  {
     "pk": 9,
     "model": "amcat.plugin",
     "fields": {

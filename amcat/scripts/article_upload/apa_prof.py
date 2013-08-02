@@ -36,9 +36,14 @@ given an RTF file):
                      malformed.
 
     6. to_article(): given the metadata and text it will return a Article object.
+
 """
 from tempfile import NamedTemporaryFile, mkstemp
 from collections import defaultdict
+
+from amcat.models import Medium, Article
+from amcat.scripts.article_upload.upload import UploadScript
+from amcat.scripts.article_upload import fileupload
 
 import re
 import subprocess
@@ -63,7 +68,7 @@ RE_DATE = re.compile("(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4})")
 RE_DATETIME = re.compile("(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4}) (?P<hour>\d{2})\.(?P<minute>\d{2}) Uhr")
 
 # Seite: 14
-RE_PAGE = re.compile("Seite: *(?P<page>\d*)")
+RE_PAGENR = re.compile("Seite: *(?P<pagenr>\d*)")
 
 # Ressort: Chronik
 RE_SECTION = re.compile("Ressort: *(?P<section>[^;:.?!-]*)")
@@ -72,6 +77,7 @@ RE_SECTION = re.compile("Ressort: *(?P<section>[^;:.?!-]*)")
 # (Sentence must start with Von)
 RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]*)$")
 
+### FIXING AND PARSING ###
 def _fix_fs20(s):
     last = 0
     while True:
@@ -132,7 +138,7 @@ def search(text, metadata, label, re, _type=unicode):
         return True
 
 def search_all(text, metadata):
-    return (search(text, metadata, "page", RE_PAGE, int) or
+    return (search(text, metadata, "pagenr", RE_PAGENR, int) or
                 search(text, metadata, "section", RE_SECTION) or
                 search(text, metadata, "author", RE_AUTHOR))
     
@@ -172,7 +178,7 @@ def parse_page(paragraphs):
 
         if len(text.split()) <= 3:
             # Ignoring setence with less than 3 words. Probably the version.
-            metadata["version"] = text
+            # metadata["version"] = text
             continue
 
         # Check for headline, which can include other information than the
@@ -193,16 +199,25 @@ def parse_page(paragraphs):
     # Treat the remaining paragraphs as text
     return metadata, "\n\n".join(parse_text(paragraphs))
 
-def to_article(metadata, text):
-    pass
-
 def parse_xml(xml):
     return etree.iterparse(StringIO.StringIO(xml))
 
+### NAVIGATOR INTEGRATION ###
+class APAForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
+    pass
+
+class APA(UploadScript):
+    options_form = APAForm
+
+    def parse_document(self, paragraphs):
+        metadata, text = parse_page(paragraphs)
+        metadata["medium"] = Medium.get_or_create(metadata["medium"])
+
+        return Article(text=text, **metadata)
+
+    def split_file(self, file):
+        return get_pages(parse_xml(to_xml(fix_rtf(file.bytes))))
+
 if __name__ == '__main__':
-    rtf = fix_rtf(open(sys.argv[1], 'rb').read())
-    doc = parse_xml(to_xml(rtf))
-
-    for page in get_pages(doc):
-        print(parse_page(page))
-
+    from amcat.scripts.tools.cli import run_cli
+    run_cli(handle_output=False)
