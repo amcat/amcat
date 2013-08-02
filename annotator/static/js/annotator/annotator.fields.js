@@ -110,7 +110,8 @@ annotator.fields.initFieldData = function(){
                     }
                 });
             });
-            
+
+            annotator.fields.setup_wordcount();
             $( "#loading_fields" ).dialog( "destroy" );
     
         },
@@ -121,9 +122,49 @@ annotator.fields.initFieldData = function(){
         "dataType": "json"
     });
 }
- 
 
+annotator.fields.setup_wordcount = function(){
+    // http://stackoverflow.com/questions/6743912/get-the-pure-text-without-html-element-by-javascript
+    var sentence_re = / id="sentence-[0-9]*"/g
+    var count = function(){
+        var html = "";
+        if (typeof window.getSelection != "undefined") {
+            var sel = window.getSelection();
+            if (sel.rangeCount) {
+                var container = document.createElement("div");
+                for (var i = 0, len = sel.rangeCount; i < len; ++i) {
+                    container.appendChild(sel.getRangeAt(i).cloneContents());
+                }
+                html = container.innerHTML;
+            }
+        } else if (typeof document.selection != "undefined") {
+            if (document.selection.type == "Text") {
+                html = document.selection.createRange().htmlText;
+            }
+        }
+        
+        html = $("<div>" + html.replace(sentence_re, '') + "</div>");
+        $(".annotator-sentencenr", html).remove();
 
+        var text = "";
+        $.each(html, function(i, el){
+            text += el.innerHTML.replace("</div><div>", " ");
+            text += " ";
+        });
+
+        var count = 0;
+        $.each(text.split(/ /g), function(i, word){
+            // replace functions like strip() in Python
+            if (word.replace(/^\s+|\s+$/g, '') !== "") count++;
+        });
+
+        $("#wordcount").html(count);
+    }
+
+    $("#.article-part .sentences").mouseup(function(){
+        window.setTimeout(count, 50);
+    });
+}
 
 annotator.fields.convertOntologyJson = function(){
     /* takes ontology JSON as input and creates dict with all items, including their parents/childs */
