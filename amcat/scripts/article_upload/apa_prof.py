@@ -40,6 +40,7 @@ given an RTF file):
 """
 from tempfile import NamedTemporaryFile, mkstemp
 from collections import defaultdict
+from lxml.html.soupparser import fromstring
 
 from amcat.models import Article, Medium
 from amcat.scripts.article_upload.upload import UploadScript
@@ -93,7 +94,7 @@ META_RE = (RE_DATE, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE
 UNDECODED = bytes("NON_DECODED_CHARACTER")
 UNDECODED_UNICODE = bytes(b"NON_DECODED_UNICODE_CHARACTER")
 
-RE_UNICHAR = re.compile(r"(?P<match>\\u(?P<hex>[0-9]*)\?)", re.UNICODE)
+RE_UNICHAR = re.compile(ur"(?P<match>\\u(?P<hex>[0-9]*)\?)", re.UNICODE)
 
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
@@ -152,7 +153,7 @@ def to_html(original_rtf, fixed_rtf):
     return html
 
 def parse_html(html):
-    return lxml.html.fromstring(html)
+    return fromstring(html)
 
 def _get_pages(elements):
     return list(itertools.takewhile(lambda el : el.tag != "hr", elements))
@@ -238,7 +239,7 @@ def parse_page(doc_elements):
     headline = list(headline)[0]
 
     remove_tree(meta, ["b"])
-    remove_tree(text, ["b", "i", "a"])
+    remove_tree(text, ["b", "i"])
 
     # Some text in italics is no metadata. We only use text before headline elements
     # for metadata.
@@ -297,9 +298,13 @@ class APA(UploadScript):
 """if __name__ == '__main__':
     original_rtf = open(sys.argv[1], 'rb').read()
     fixed_rtf = fix_rtf(original_rtf)
-    print(to_html(original_rtf, fixed_rtf).encode("utf-8"))
     doc = parse_html(to_html(original_rtf, fixed_rtf))
-    metadata, text = parse_page((doc, get_pages(doc).next()))"""
+    pages = list(get_pages(doc))
+
+    metadata, text = parse_page((doc, pages[0]))
+
+    print(text)"""
+
 
 if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
