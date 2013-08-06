@@ -48,7 +48,6 @@ from amcat.scripts.article_upload import fileupload
 
 import re
 import subprocess
-import rtfunicode
 import sys
 import StringIO
 import datetime
