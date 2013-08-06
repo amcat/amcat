@@ -229,21 +229,17 @@ def parse_page(doc_elements):
     headline = set(get_descendants(doc.cssselect("b"))) & set(elements)
     meta = (set(get_descendants(doc.cssselect("i"))) & set(elements)) - headline
     text = set(elements) - (headline | meta)
-    headline = get_roots(headline)
+    headline = sorted(get_roots(headline), key=lambda e:elements.index(e))
 
-    if len(headline) > 1:
-        raise ValueError("More than one possible headline found.")
-    elif not headline:
+    if not headline:
         raise ValueError("No possible headlines found.")
-
-    headline = list(headline)[0]
 
     remove_tree(meta, ["b"])
     remove_tree(text, ["b", "i"])
 
     # Some text in italics is no metadata. We only use text before headline elements
     # for metadata.
-    lesser_than_headline = lambda e:elements.index(e) <= elements.index(headline)
+    lesser_than_headline = lambda e:elements.index(e) <= elements.index(headline[0])
     meta = get_nonempty(filter(lesser_than_headline, meta))
 
     # Parse metadata
@@ -264,7 +260,7 @@ def parse_page(doc_elements):
 
     # Clean data and get headline
     metadata["medium"] = metadata["medium"].strip().strip('"')
-    medium, headline = metadata["medium"], "".join(headline.itertext())
+    medium, headline = metadata["medium"], "".join(["".join(e.itertext()) for e in headline])
 
     if medium in headline:
         headline = headline.split("-", medium.count("-") + 1)[-1]
