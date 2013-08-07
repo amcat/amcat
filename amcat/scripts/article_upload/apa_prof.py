@@ -75,17 +75,17 @@ RE_DATETIME = re.compile(_RE_DATETIME)
 
 # Title
 RE_MEDIUM = re.compile("(?P<medium>.*) vom ({_RE_DATE})".format(**locals()))
-RE_MEDIUM_QUOTE = re.compile("\"(?P<medium>.*)\" (?P<section>.*) vom ({_RE_DATE})".format(**locals()))
+RE_MEDIUM_QUOTE = re.compile("\"(?P<medium>.+)\" (?P<section>.+) vom ({_RE_DATE})".format(**locals()))
 
 # Seite: 14
-RE_PAGENR = re.compile("Seite:? *L?(?P<pagenr>\d*)")
+RE_PAGENR = re.compile("Seite:? *L?(?P<pagenr>\d+)")
 
 # Ressort: Chronik
-RE_SECTION = re.compile("Ressort: *(?P<section>[^;:.?!-]*)")
+RE_SECTION = re.compile("Ressort: *(?P<section>[^;:.?!-]+)")
 
 # Von Robert Zwickelsdorfer
 # (Sentence must start with Von)
-RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]*)$")
+RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]+)$")
 
 # All regular expressions which can match metadata
 META_RE = (RE_DATE, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE)
@@ -93,7 +93,7 @@ META_RE = (RE_DATE, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE
 UNDECODED = bytes("NON_DECODED_CHARACTER")
 UNDECODED_UNICODE = bytes(b"NON_DECODED_UNICODE_CHARACTER")
 
-RE_UNICHAR = re.compile(ur"(?P<match>\\u(?P<hex>[0-9]*)\?)", re.UNICODE)
+RE_UNICHAR = re.compile(ur"(?P<match>\\u(?P<hex>[0-9]+)\?)", re.UNICODE)
 
 ### FIXING AND PARSING ###
 def _fix_fs20(s):
