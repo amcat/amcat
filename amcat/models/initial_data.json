@@ -395,7 +395,14 @@
       "label": "Alpino",
       "plugin_type": 1
     }
+  },
+  {
+    "pk": 10,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.scripts.article_upload.bzk_html.BZK",
+      "label": "BZK HTML",
+      "plugin_type": 2
+    }
   }
-
-
 ]
