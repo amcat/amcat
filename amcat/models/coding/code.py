@@ -222,6 +222,17 @@ class TestCode(amcattest.PolicyTestCase):
         o = Code.objects.get(id=o.id)
         self.assertEqual(o.label, "bla")
 
+        # If all labels are cached, and _labelcache contains codes with None and
+        # a code with a string, get_label should return the string
+        o._labelcache = {1 : None, 2 : "grr"}
+        o._all_labels_cached = True
+
+        self.assertEqual(o.label, "grr")
+        self.assertEqual(o.get_label(3, fallback=True), "grr")
+        self.assertEqual(o.get_label(2, fallback=False), "grr")
+        self.assertEqual(o.get_label(1, fallback=True), "grr")
+
+
     def test_cache(self):
         """Are label lookups cached?"""
         l = Language.objects.create(label='zzz')
