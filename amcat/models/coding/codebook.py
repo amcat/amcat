@@ -156,20 +156,23 @@ class Codebook(AmcatModel):
             all_labels = False
 
         labels = Label.objects.filter(language__id__in=languages, code__id__in=codes)
-        
-        codes = set(product(codes, languages))
-        for code_id, lan_id, label in labels.values_list("code_id", "language_id", "label"):
-            self._codes[code_id]._cache_label(lan_id, label)
-            codes.remove((code_id, lan_id))
-
-        for code_id, lan_id in codes:
-            # These codes don't have a label. We need to explicitely cache them to prevent
-            # database trips.
-            self._codes[code_id]._cache_label(lan_id, None)
+        labels = labels.values_list("code_id", "language_id", "label")
 
         if all_labels:
+            for code_id, lan_id, label in labels:
+                self._codes[code_id]._cache_label(lan_id, label)
             for code in self._codes.values():
                 code._all_labels_cached = True
+        else:
+            codes = set(product(codes, languages))
+            for code_id, lan_id, label in labels:
+                self._codes[code_id]._cache_label(lan_id, label)
+                codes.remove((code_id, lan_id))
+                
+            for code_id, lan_id in codes:
+                # These codes don't have a label. We need to explicitely cache them to prevent
+                # database trips.
+                self._codes[code_id]._cache_label(lan_id, None)
 
         self._cached_labels |= self._cached_labels.union(set(languages))
 
