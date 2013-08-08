@@ -61,19 +61,21 @@ class Code(AmcatModel):
         
     @property
     def label(self):
-        """Get the (cached) label with the lowest language id, or a repr-like string"""
+        """Get the (cached, not-None) label with the lowest language id, or a repr-like string"""
         repr_like_string = '<{0.__class__.__name__}: {0.id}>'.format(self)
 
         if self._all_labels_cached and not self._labelcache:
+            # ALl lables are cached, but there seem to be no labels for this code
             return repr_like_string
 
         if self._labelcache:
-            key = sorted(self._labelcache)[0]
-            l = self.get_label(key)
-            if l == None:
-               return repr_like_string
-            return l
+            for key in sorted(self._labelcache):
+                l = self.get_label(key)
+                if l != None: return l
 
+            # All labels are cached, and all are None
+            if self._all_labels_cached:
+                return repr_like_string
 
         try:
             return self.labels.all().order_by('language__id')[0].label
