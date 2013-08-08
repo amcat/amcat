@@ -124,7 +124,10 @@ class Code(AmcatModel):
         if fallback:
             if self._all_labels_cached:
                 if self._labelcache:
-                    return self._labelcache[sorted(self._labelcache)[0]]
+                    for key in sorted(self._labelcache):
+                        l = self._labelcache[key]
+                        if l is not None: return l
+                    return None
             else:
                 try:
                     return self.labels.all().order_by('language__id')[0].label
