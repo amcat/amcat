@@ -409,6 +409,11 @@ annotator.validateInput = function(input, field){
         return 'Value not found in list of allowed values';
     }
 
+    if (found.length > 1){
+        return "More than one label found for " + value;
+    }
+
+    input.parent().children(":hidden").val(found[0].value);
     return true;
 
     // This is actually the correct response, but id's dont' get filled when initialising
