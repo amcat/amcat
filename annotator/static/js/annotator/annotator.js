@@ -409,6 +409,10 @@ annotator.validateInput = function(input, field){
         return 'Value not found in list of allowed values';
     }
 
+    return true;
+
+    // This is actually the correct response, but id's dont' get filled when initialising
+    // this can happen.
     return "Hidden ID not correct, but label is. Bug?"
 }
 
