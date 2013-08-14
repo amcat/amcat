@@ -17,37 +17,41 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+"""
+
 from __future__ import unicode_literals, print_function, absolute_import
 
-from amcat.models.article import *
-from amcat.models.authorisation import *
-from amcat.models.language import *
-from amcat.models.medium import *
-from amcat.models.articleset import *
-from amcat.models.user import *
-from amcat.models.project import *
-from amcat.models.sentence import *
-from amcat.models.sentiment import *  
-from amcat.models.amcat import *
+from amcat.tools.model import AmcatModel
 
-from amcat.models.plugin import *
+from django.db import models
 
-from amcat.models.word import *
-from amcat.models.analysis import *
-from amcat.models.token import *
+import logging; log = logging.getLogger(__name__)
 
+ALL = ["CodingRuleAction", "CodingRule"]
 
-from amcat.models.coding.codingschema import *
-from amcat.models.coding.codingschemafield import *
-from amcat.models.coding.codingjob import *
-from amcat.models.coding.coding import *
-from amcat.models.coding.code import *
-from amcat.models.coding.codebook import *
-from amcat.models.coding.codedarticle import *
-from amcat.models.coding.codingrule import *
+class CodingRuleAction(AmcatModel):
+    """Model representing an action  """
+    label = models.CharField(max_length=50)
+    description = models.TextField()
 
-from amcat.models.scraper import *
+    class Meta():
+        db_table = 'codingruleactions'
+        app_label = 'amcat'
 
+class CodingRule(AmcatModel):
+    """
+    A CodingRule 
+    """
+    label = models.CharField(max_length=75)
 
+    condition = models.TextField()
+    field = models.ForeignKey("amcat.CodingSchemaField", null=True)
+    action = models.ForeignKey("amcat.CodingRuleAction", null=True)
 
-from amcat.models.rule import *
+    codingschema = models.ForeignKey("amcat.CodingSchema", related_name='rules')
+
+    class Meta():
+        db_table = 'codingrules'
+        app_label = 'amcat'
+

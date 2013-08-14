@@ -570,7 +570,7 @@ def schemas(request, project):
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
 def schema(request, schema, project):
     fields = (Datatable(CodingSchemaFieldResource)
-              .filter(codingschema=schema).hide('id', 'codingschema'))
+              .filter(codingschema=schema).hide('codingschema'))
 
     return table_view(request, project, fields, 'codingschemas',
             template="navigator/project/schema.html", schema=schema,
@@ -595,17 +595,20 @@ def delete_schema(request, schema, project):
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
+def edit_schemafield_rules(request, schema, project):
+    if request.method == "POST":
+        return _edit_codingrules_post(request, schema, project)
+
+    return table_view(request, project, None, 'codingschemas',
+            template="navigator/project/edit_rules.html",
+            schema=schema)
+
+@check(Project, args_map={'project' : 'id'}, args='project')
+@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
 def edit_schemafield_properties(request, schema, project):
     form = forms.CodingSchemaForm(data=request.POST or None, instance=schema, hidden="project")
     form.fields['highlighters'].queryset = project.get_codebooks()
     form.fields['highlighters'].required = False
-
-    ctx = locals()
-    ctx.update({
-        'menu' : PROJECT_MENU,
-        'selected' : 'codingschemas',
-        'context' : project,
-    })
 
     if request.method == "POST":
         # Process codingschema form
@@ -635,14 +638,17 @@ def edit_schemafields(request, schema, project):
             template="navigator/project/edit_schema.html",
             schema=schema, fields_null=fields_null)
 
+def _get_forms(datas, schema, form):
+    for data in datas:
+        data["codingschema"] = schema.id
+        instance = form._meta.model.objects.get(id=data["id"]) if "id" in data else None
+        yield form(schema, data=data, instance=instance)
+
 def _get_schemafield_forms(fields, schema):
-    for field in fields:
-        # Check wether field already exists
-        id = field.get('id')
-        field['codingschema'] = schema.id
-        
-        instance = CodingSchemaField.objects.get(id=id) if id else None
-        yield forms.CodingSchemaFieldForm(data=field, instance=instance)
+    return _get_forms(fields, schema, forms.CodingSchemaFieldForm)
+
+def _get_codingrule_forms(fields, schema):
+    return _get_forms(fields, schema, forms.CodingRuleForm)
 
 def _get_form_errors(forms):
     """
@@ -653,7 +659,7 @@ def _get_form_errors(forms):
 
     is yielded.
     """
-    return ((f.data['fieldnr'], f.errors) for f in forms if not f.is_valid())
+    return ((f.data.get('fieldnr') or f.data["label"], f.errors) for f in forms if not f.is_valid())
 
 def _edit_schemafields_post(request, schema, project, commit=None):
     """
@@ -681,6 +687,28 @@ def _edit_schemafields_post(request, schema, project, commit=None):
     # Always send response (don't throw an error)
     schema_url = reverse("project-schema", args=[project.id, schema.id])
 
+    return HttpResponse(
+        json.dumps(dict(fields=errors, schema_url=schema_url)),
+        mimetype='application/json'
+    )
+
+def _edit_codingrules_post(request, schema, project, commit=None):
+    commit = request.GET.get("commit", commit) in (True, "true")
+    rules = json.loads(request.POST['rules'])
+    forms = list(_get_codingrule_forms(rules, schema))
+    errors = dict(_get_form_errors(forms))
+
+    if not errors and commit:
+        rules = [form.save() for form in forms]
+
+        for rule in set(schema.rules.all()) - set(rules):
+            rule.delete()
+
+        request.session["rules_{}_edited".format(schema.id)] = True 
+
+    # Always send response (don't throw an error)
+    schema_url = reverse("project-schema", args=[project.id, schema.id])
+        
     return HttpResponse(
         json.dumps(dict(fields=errors, schema_url=schema_url)),
         mimetype='application/json'

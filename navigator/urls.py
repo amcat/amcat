@@ -132,6 +132,7 @@ urlpatterns = patterns(
     url(r'^project/(?P<project>[0-9]+)/schema/new$', 'navigator.views.project.new_schema', name='project-new-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit$', 'navigator.views.project.edit_schemafields', name='project-edit-schemafields'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit-properties$', 'navigator.views.project.edit_schemafield_properties', name='project-edit-schema-properties'),
+    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit-rules$', 'navigator.views.project.edit_schemafield_rules', name='project-edit-schema-rules'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/copy$', 'navigator.views.project.copy_schema', name='project-copy-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/name$', 'navigator.views.project.name_schema', name='project-name-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit/schemafield/(?P<schemafield>[0-9]+)$', 'navigator.views.project.edit_schemafield', name='project-edit-schemafield'),

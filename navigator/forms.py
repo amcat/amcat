@@ -39,6 +39,8 @@ from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.coding.codingschemafield import CodingSchemaField, CodingSchemaFieldType
 from amcat.models.coding.codingjob import CodingJob
 from amcat.models.coding.serialiser import BooleanSerialiser, CodebookSerialiser
+from amcat.models.coding.codingrule import CodingRule
+from amcat.models.coding import codingruletoolkit
 
 from navigator.utils.auth import get_request
 from navigator.utils.misc import cache_function
@@ -436,13 +438,41 @@ class CodingSchemaForm(forms.HideFieldsForm):
     class Meta:
         model = CodingSchema
 
+class CodingRuleForm(forms.ModelForm):
+    def __init__(self, codingschema, *args, **kwargs):
+        super(CodingRuleForm, self).__init__(*args, **kwargs)
+        self.fields["action"].required = False
+        self.fields["field"].required = False
+        self.fields["field"].queryset = codingschema.fields.all()
+
+        self.codingschema = codingschema
+
+    def clean_condition(self):
+        condition = self.cleaned_data["condition"]
+
+        try:
+            tree = codingruletoolkit.parse(CodingRule(condition=condition))
+        except (Code.DoesNotExist, CodingSchemaField.DoesNotExist, CodingRule.DoesNotExist) as e:
+            raise ValidationError(e)
+        except SyntaxError as e:
+            raise ValidationError(e)
+
+        if tree is not None:
+            codingruletoolkit.clean_tree(self.codingschema, tree)
+
+        return condition
+
+    class Meta:
+        model = CodingRule
+
 class CodingSchemaFieldForm(forms.ModelForm):
     label = forms.CharField()
     default = forms.CharField(required=False)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, schema, *args, **kwargs):
         super(CodingSchemaFieldForm, self).__init__(*args, **kwargs)
         self.fields['codebook'].required = False
+        self.fields['codebook'].queryset = schema.project.get_codebooks()
 
     def _to_bool(self, val):
         if val is None:

@@ -404,5 +404,29 @@
       "label": "BZK HTML",
       "plugin_type": 2
     }
+  },
+  {
+    "pk": 1,
+    "model": "amcat.codingruleaction",
+    "fields": {
+      "label" : "display red",
+      "description" : "Display code in red."
+    }
+  },
+  {
+    "pk": 2,
+    "model": "amcat.codingruleaction",
+    "fields": {
+      "label" : "not codable",
+      "description" : "Prevent field from being codeable / ignore coded value."
+    }
+  },
+  {
+    "pk": 3,
+    "model": "amcat.codingruleaction",
+    "fields": {
+      "label" : "not null",
+      "description" : "Field must be coded before saving"
+    }
   }
 ]
