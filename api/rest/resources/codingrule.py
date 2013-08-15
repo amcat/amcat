@@ -18,8 +18,22 @@
 ###########################################################################
 
 from amcat.models import CodingRule
+from amcat.models.coding import codingruletoolkit
+from rest_framework import serializers
 
 from api.rest.resources.amcatresource import AmCATResource
+from api.rest.serializer import AmCATModelSerializer
+
+class CodingRuleSerializer(AmCATModelSerializer):
+    parsed_condition = serializers.SerializerMethodField('get_parsed_condition')
+    
+    def get_parsed_condition(self, obj):
+        return codingruletoolkit.to_json(codingruletoolkit.parse(obj), serialise=False)
+
+    class Meta:
+        model = CodingRule
 
 class CodingRuleResource(AmCATResource):
     model = CodingRule
+    serializer_class = CodingRuleSerializer
+

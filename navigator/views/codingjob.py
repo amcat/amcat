@@ -20,7 +20,7 @@
 """View for viewing all coding jobs (for a user)"""
 
 from django.shortcuts import render
-from api.rest import Datatable
+from api.rest.datatable import Datatable
 
 from navigator.utils.auth import check
 from amcat.models.user import User

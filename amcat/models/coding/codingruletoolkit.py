@@ -171,20 +171,35 @@ def is_valid(codingschema, tree):
 
 def _to_json(node):
     if isinstance(node, dict):
+        # Shallow copy
+        node = dict(node)
+
         if "value" in node:
             node["value"] = _to_json(node["value"])
         else:
             node["values"] = map(_to_json, node["values"])
+
+        return node
     elif isinstance(node, Code):
         return dict(type="code", id=node.id)
     elif isinstance(node, CodingSchemaField):
         return dict(type="codingschemafield", id=node.id)
 
-    return node
+    return dict(node)
 
-def to_json(node):
-    """Serialise tree, representing ORM objects as dicts."""
-    return json.dumps(_to_json(node))
+def to_json(node, serialise=True):
+    """
+    Serialise tree, representing ORM objects as dicts.
+    
+    @type node: dict
+    @param node: node to serialise
+    @type serialise: boolean
+    @param serialise: if False, return dict which can later be serialised
+                        with json.dumps().
+    """
+    if serialise:
+        return json.dumps(_to_json(node))
+    return _to_json(node)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -211,6 +226,9 @@ class TestCodingRuleToolkit(amcattest.PolicyTestCase):
             {"type":"codingschemafield", "id" : code_field.id},
             {"type":"code", "id" : o1.id}
         ]})
+
+        tree = parse(c("{}=={}".format(code_field.id, o1.id)))
+        self.assertEquals(json.dumps(to_json(tree, serialise=False)), to_json(tree))
 
 
     def test_clean_tree(self):
