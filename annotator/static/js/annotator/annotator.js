@@ -183,6 +183,17 @@ annotator.saveCodings = function(goToNext){
         annotator.showMessage('Unable to save: ontologies not loaded yet. Please wait a few seconds');
         return;
     }
+
+    var error = false;
+    $.each($("input[null=false]"), function(i, input){
+        if (annotator.fields.get_value($(input)).length === 0){
+            annotator.showMessage('Codingschemafield ' + $("label", $(input).parent()).text() + " cannot be null");
+            error = true;
+        };
+    });
+
+    if(error) return;
+
     var storeDict = {}
     if(annotator.commentAndStatus.modified){
         var comment = $('#article-comment').val();

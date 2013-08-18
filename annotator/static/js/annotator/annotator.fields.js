@@ -180,6 +180,7 @@ annotator.fields.add_rules = function(html){
             rule.get_field_input().css("borderColor", "");
             rule.get_field_input().get(0).disabled = false;
             rule.get_field_input().attr("null", true);
+            rule.get_field_input().attr("placeholder", "");
         });
 
         $.each(apply, function(i, rule){
@@ -193,6 +194,7 @@ annotator.fields.add_rules = function(html){
                 rule.get_field_input().get(0).disabled = true;
             } else if (action === ACTIONS.NOT_NULL){
                 rule.get_field_input().attr("null", false);
+                rule.get_field_input().attr("placeholder", "NOT NULL");
             }
         });
     });
