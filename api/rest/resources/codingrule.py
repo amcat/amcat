@@ -23,12 +23,16 @@ from rest_framework import serializers
 
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
+from django.core.exceptions import ValidationError
 
 class CodingRuleSerializer(AmCATModelSerializer):
     parsed_condition = serializers.SerializerMethodField('get_parsed_condition')
     
     def get_parsed_condition(self, obj):
-        return codingruletoolkit.to_json(codingruletoolkit.parse(obj), serialise=False)
+        try:
+            return codingruletoolkit.to_json(codingruletoolkit.parse(obj), serialise=False)
+        except (ValidationError, SyntaxError):
+            return None
 
     class Meta:
         model = CodingRule

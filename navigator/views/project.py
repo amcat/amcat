@@ -87,6 +87,7 @@ from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
 from amcat.models.user import LITTER_USER_ID
 from amcat.models.articleset import create_new_articleset
+from amcat.models.coding import codingruletoolkit
 
 from api.rest.resources.codebook import CodebookHierarchyResource
 
@@ -636,7 +637,8 @@ def edit_schemafields(request, schema, project):
     # This schema is owned by current project. Offer edit interface.
     return table_view(request, project, None, 'codingschemas',
             template="navigator/project/edit_schema.html",
-            schema=schema, fields_null=fields_null)
+            schema=schema, fields_null=fields_null,
+            rules_valid=json.dumps(codingruletoolkit.schemarules_valid(schema)))
 
 def _get_forms(datas, schema, form):
     for data in datas:
@@ -688,7 +690,10 @@ def _edit_schemafields_post(request, schema, project, commit=None):
     schema_url = reverse("project-schema", args=[project.id, schema.id])
 
     return HttpResponse(
-        json.dumps(dict(fields=errors, schema_url=schema_url)),
+        json.dumps({
+            "fields" : errors, "schema_url" : schema_url,
+            "rules_valid" : codingruletoolkit.schemarules_valid(schema)
+        }),
         mimetype='application/json'
     )
 

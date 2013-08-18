@@ -36,7 +36,7 @@ _keymap = {
     65 : "insert",  // a
 }
 
-jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
+jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
     // Prevent scoping issues
     var self = this;
 
@@ -60,6 +60,16 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
 
     // Pnotify balloon
     self.current_message = null;
+    self.rules_valid = $.pnotify({
+        title : 'Errors in codingrules',
+        text  : "Errors were found in one or more codingrules" +
+                    " belonging to this codingschema. You can" +
+                    " inspect the error by clicking 'edit rules'" +
+                    " on the previous page.",
+        hide  : false
+    });
+
+    if (rules_valid) self.rules_valid.hide();
 
     // JSON data
     self.fields;
@@ -488,6 +498,12 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid){
         // Errors found?
         var errors_found = false;
         $.each(all_errors.fields, function(){ errors_found = true; }); 
+
+        if (all_errors.rules_valid){
+            self.rules_valid.hide();
+        } else {
+            self.rules_valid.show();
+        }
 
         // Should we redirect?
         if (this == true && !errors_found){

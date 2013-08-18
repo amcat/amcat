@@ -169,6 +169,13 @@ def is_valid(codingschema, tree):
         return False
     return True
 
+def schemarules_valid(schema):
+    """Checks whether all codingrules of `codingschema` are valid"""
+    try:
+        return all(is_valid(schema, parse(rule)) for rule in schema.rules.all())
+    except (SyntaxError, Code.DoesNotExist, CodingRule.DoesNotExist, CodingSchemaField.DoesNotExist):
+        return False
+
 def _to_json(node):
     if isinstance(node, dict):
         # Shallow copy
@@ -212,6 +219,27 @@ class TestCodingRuleToolkit(amcattest.PolicyTestCase):
 
     def condition(self, s, c):
         return CodingRule(codingschema=s, condition=c)
+
+    def test_schemafield_valid(self):
+        schema_with_fields = amcattest.create_test_schema_with_fields()
+        schema = schema_with_fields[0]
+
+        self.assertTrue(schemarules_valid(schema))
+        self.condition(schema, "()").save()
+        self.assertTrue(schemarules_valid(schema))
+        self.condition(schema, "(3==2)").save()
+        self.assertFalse(schemarules_valid(schema))
+
+        CodingRule.objects.all().delete()
+
+        # Test multiple (correct) rules
+        self.condition(schema, "()").save()
+        self.condition(schema, "()").save()
+        self.condition(schema, "()").save()
+        self.assertTrue(schemarules_valid(schema))
+        self.condition(schema, "(3==2)").save()
+        self.assertFalse(schemarules_valid(schema))
+
 
     def test_to_json(self):
         import functools
