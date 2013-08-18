@@ -185,7 +185,7 @@ def _to_json(node):
     elif isinstance(node, CodingSchemaField):
         return dict(type="codingschemafield", id=node.id)
 
-    return dict(node)
+    return node
 
 def to_json(node, serialise=True):
     """

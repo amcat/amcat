@@ -85,6 +85,7 @@ annotator.unitcodings.processUnitCodingsJson = function(json, showAllRows){
     $('#unitcoding-table').empty().append(theader).append(tbody);
     //console.log($('#unitcoding-table'));
     annotator.unitcodings.setEventsOnUnitCodingRows($('#unitcoding-table'));
+    annotator.fields.add_rules.bind(["unit"])($('#unitcoding-table'));
     
     $('#unitcoding-table-loading').remove();
     

@@ -86,6 +86,7 @@ annotator.articlecodings.writeArticleCodingsTable = function(){
         "success": function(html) {
             $('#article-coding-form').html(html);
             annotator.fields.autocompletes.addAutocompletes($('#article-coding-form'));
+            annotator.fields.add_rules.bind(["article"])($('#article-coding-form'));
             $('#article-coding-form input').change(function(){
                 annotator.articlecodings.onchange($(this));
             });

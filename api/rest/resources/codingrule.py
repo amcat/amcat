@@ -36,4 +36,8 @@ class CodingRuleSerializer(AmCATModelSerializer):
 class CodingRuleResource(AmCATResource):
     model = CodingRule
     serializer_class = CodingRuleSerializer
+    extra_filters = [
+        "codingschema__codingjobs_article__id",
+        "codingschema__codingjobs_unit__id"
+    ]
 
