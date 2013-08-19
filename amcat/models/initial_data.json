@@ -207,14 +207,6 @@
       "label": "read_articles"
     }
   }, 
-  {
-    "pk": 18, 
-    "model": "amcat.privilege", 
-    "fields": {
-      "role": 3, 
-      "label": "sentry.can_view"
-    }
-  },
 {
     "pk": 19, 
     "model": "amcat.privilege", 

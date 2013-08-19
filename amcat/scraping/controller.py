@@ -203,10 +203,6 @@ def scrape_logged(controller, scrapers, deduplicate = False):
     """
     result = {s : [] for s in scrapers}
 
-    #from sentry.client.handlers import SentryHandler
-    #amcatlogging.install_handler(SentryHandler())
-    #importerror?
-
     counts = dict((s, 0) for s in scrapers)
     log_stream = StringIO()
     with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):

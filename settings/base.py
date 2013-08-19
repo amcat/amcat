@@ -42,7 +42,6 @@ COMPRESS_ENABLED = os.environ.get("DJANGO_COMPRESS", not DEBUG) in (True, "1", "
 COMPRESS_PARSER = 'compressor.parser.LxmlParser'
 
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO' if DEBUG else 'WARNING')
-DISABLE_SENTRY = os.environ.get("DJANGO_DISABLE_SENTRY", None) in ("1","Y", "ON")
                  
 LOCAL_DEVELOPMENT = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                          or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
@@ -231,23 +230,6 @@ if not DEBUG:
     EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_TLS", 'Y') in ("1","Y", "ON")
 
     logger = logging.getLogger()
-
-    if not DISABLE_SENTRY:
-        from sentry.client.handlers import SentryHandler
-
-        INSTALLED_APPS.append('sentry')
-        INSTALLED_APPS.append('sentry.client')
-
-        # ensure we havent already registered the handler
-        if SentryHandler not in map(lambda x: x.__class__, logger.handlers):
-            logger.addHandler(SentryHandler())
-
-            # Add StreamHandler to sentry's default so you can catch missed exceptions
-            logger = logging.getLogger('sentry.errors')
-            logger.propagate = False
-            logger.addHandler(logging.StreamHandler())
-
-        MIDDLEWARE_CLASSES.insert(0, 'sentry.client.middleware.SentryResponseErrorIdMiddleware')
 
     LOGGING = {
         'version': 1,
