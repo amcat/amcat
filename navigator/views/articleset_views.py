@@ -35,7 +35,7 @@ class ImportSetView(ProjectScriptView):
 
     
     def get_success_url(self):
-        target = self.form.cleaned_data["project"]
+        target = self.form.cleaned_data["target_project"]
         return reverse("project-articlesets", kwargs=dict(id=target.id))
     
     def get_form(self, form_class):
