@@ -20,7 +20,10 @@
 // CodingRules constants
 OPERATORS = {
     OR : "OR", AND : "AND", EQUALS : "EQ",
-    NOT_EQUALS : "NEQ", NOT : "NOT"
+    NOT_EQUALS : "NEQ", NOT : "NOT",
+    GREATER_THAN : "GT", LESSER_THAN : "LT",
+    GREATER_THAN_OR_EQUAL_TO : "GTE",
+    LESSER_THAN_OR_EQUAL_TO : "LTE"
 }
 
 ACTIONS = {
@@ -229,6 +232,10 @@ annotator.fields.rule_applies = function(rule){
         if(!cond) throw "AssertionError";
     }
 
+    // Get input element and its value
+    var input = $("#id_field_" + rule.values[0].id);
+    var input_value = annotator.fields.get_value(input);
+
     if (rule.type === null){
         // Empty rule. "Waardeloos waar".
         return true;
@@ -247,14 +254,29 @@ annotator.fields.rule_applies = function(rule){
         return !ra(rule.value);
     }
 
+    if (rule.type === OPERATORS.LESSER_THAN){
+        return input_value < rule.values[1];
+    }
+
+    if (rule.type === OPERATORS.GREATER_THAN){
+        return input_value > rule.values[1];
+    }
+
+    if (rule.type === OPERATORS.GREATER_THAN_OR_EQUAL_TO){
+        return input_value >= rule.values[1];
+    }
+
+    if (rule.type === OPERATORS.LESSER_THAN_OR_EQUAL_TO){
+        return input_value <= rule.values[1];
+    }
+
     // rule.type must equal either EQUALS or NOT_EQUALS. Furthermore
     // rule.values[0] must be a codingschemafield and rule.values[1]
     // a value.
     assert(rule.values[0].type === "codingschemafield");
     assert(typeof(rule.values[1]) !== typeof({}));
 
-    input = $("#id_field_" + rule.values[0].id);
-    truth = annotator.fields.get_value(input) == rule.values[1];
+    truth = input_value == rule.values[1];
     return (rule.type === OPERATORS.EQUALS) ? truth : !truth;
 }
 

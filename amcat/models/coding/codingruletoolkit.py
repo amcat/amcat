@@ -24,12 +24,14 @@ import json
 import itertools
 
 from amcat.models import CodingSchemaField, Code, CodingRule
+from amcat.models.coding.serialiser import IntSerialiser, QualitySerialiser, IntervalSerialiser
 from django.core.exceptions import ValidationError
 
 KNOWN_NODES = (
     ast.BoolOp, ast.UnaryOp, ast.And, ast.Or, ast.Not,
     ast.Eq, ast.NotEq, ast.Expr, ast.Compare, ast.Str,
-    ast.Load, ast.Num, ast.Tuple
+    ast.Load, ast.Num, ast.Tuple, ast.Lt, ast.LtE,
+    ast.Gt, ast.GtE
 )
 
 OR = "OR"
@@ -37,6 +39,18 @@ AND = "AND"
 NOT = "NOT"
 EQUALS = "EQ"
 NOT_EQUALS = "NEQ"
+GREATER_THAN = "GT"
+LESSER_THAN = "LT"
+GREATER_THAN_OR_EQUAL_TO = "GTE"
+LESSER_THAN_OR_EQUAL_TO = "LTE"
+
+AST_MAP = {
+    ast.Eq : EQUALS, ast.NotEq : NOT_EQUALS,
+    ast.Lt : LESSER_THAN, ast.Gt : GREATER_THAN,
+    ast.LtE : LESSER_THAN_OR_EQUAL_TO,
+    ast.GtE : GREATER_THAN_OR_EQUAL_TO
+
+}
 
 __all__ = (
     "OR", "AND", "NOT", "EQUALS", "NOT_EQUALS", "parse",
@@ -58,6 +72,7 @@ def walk(node):
 def resolve_operands(node):
     """Resolve types of operands of one of EQUALS / NOT_EQUALS"""
     left, right = node.left, node.comparators[0]
+    operator = node.ops[0]
 
     if not isinstance(left, ast.Num):
         raise SyntaxError("Left operand of {} must always be a Num/CodingSchemaField (col {}, line {})"
@@ -73,6 +88,10 @@ def resolve_operands(node):
     # Check if type of right operand seems to match the type requested by its serialiser
     schemafield = CodingSchemaField.objects.get(id=left.n)
     serialiser = schemafield.serialiser
+
+    if (not isinstance(serialiser, (IntervalSerialiser, IntSerialiser, QualitySerialiser))
+          and isinstance(operator, (ast.Lt, ast.LtE, ast.Gt, ast.GtE))):
+        raise SyntaxError("Cannot use greater/lesser than when comparing with {}".format(serialiser))
 
     if not isinstance(value, serialiser.serialised_type):
         raise SyntaxError("Right operand of {} must be of {} to deserialise to {} (col {}, line {}))"
@@ -91,7 +110,7 @@ def parse_node(node, _seen=()):
         }
     if isinstance(node, ast.Compare):
         return {
-            "type" : EQUALS if isinstance(node.ops[0], ast.Eq) else NOT_EQUALS,
+            "type" : AST_MAP[node.ops[0].__class__],
             "values" : resolve_operands(node)
         }
     if isinstance(node, ast.Num):
@@ -137,6 +156,7 @@ def parse(codingrule, _seen=()):
     # Not all nodes from the Python language are supported
     for node in ast.walk(tree):
         if node.__class__ not in KNOWN_NODES or (isinstance(node, ast.Compare) and len(node.ops) > 1):
+            import pdb; pdb.set_trace()
             if hasattr(node, "col_offset"):
                 raise SyntaxError("invalid syntax (col {}, line {})".format(node.col_offset, node.lineno))
             raise SyntaxError("invalid syntax")
@@ -346,5 +366,15 @@ class TestCodingRuleToolkit(amcattest.PolicyTestCase):
         cr.save()
         tree = parse(c("{cr.id} or {cr.id}".format(cr=cr)))
         self.assertEquals(tree, {"type":OR, "values":(parse(cr), parse(cr))})
+
+        # Should accept greater than / greater or equal to / ...
+        parse(c("{number_field.id} > 5".format(**locals())))
+        parse(c("{number_field.id} < 5".format(**locals())))
+        parse(c("{number_field.id} >= 5".format(**locals())))
+        parse(c("{number_field.id} <= 5".format(**locals())))
+
+        # ..but not if schemafieldtype is text or code
+        self.assertRaises(SyntaxError, parse, c("{text_field.id} > 5".format(**locals())))
+        self.assertRaises(SyntaxError, parse, c("{code_field.id} > 5".format(**locals())))
         
 
