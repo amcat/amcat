@@ -16,13 +16,21 @@
 <div name="{{ codebook.id }}" class="codebook">
  <input placeholder="Search.." type="text">
  <p><span class="label label-info">Usage</span> Hover labels to display options. To inspect the function of an icon, hover it and wait for a description to appear.</p>
+
  <p class="btn-group">
-    <div class="save-changes btn btn-primary"> Save changes</div>
-    <div class="btn edit-name"><i class="icon icon-edit"></i> Edit codebook name</div>
+    <button class="save-changes btn btn-primary">Save changes</button>
+    <button class="btn edit-name"><i class="icon icon-edit"></i> Edit codebook name</button>
     <a class="btn export" href="{% url 'project-export-codebook' context.id codebook.id %} "><i class="icon icon-download"></i> Download codebook</a>
     <a class="btn btn-danger confirm delete" data-confirm="Are you sure you want to delete this codebook?" href="{% url 'project-delete-codebook' context.id codebook.id %}">
         <i class="icon-white icon-trash"></i> Delete
     </a>
+ </p>
+
+ <p class="btn-group">
+  <button class="btn" disabled="true">Reorder:</button>
+  <button class="btn reorder-alpha">Alphabetically</button>
+  <button class="btn reorder-id">Code ID</button>
+  
  </p>
  
  <div class="loading-codebook">Loading..</div>

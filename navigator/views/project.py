@@ -876,13 +876,6 @@ def codebook(request, codebook, project):
     return table_view(request, project, None, 'codebooks',
             template="navigator/project/codebook.html", codebook=codebook)
 
-def _get_new_labels(labels, code):
-    for lbl in labels:
-        yield Label(
-            language=Language.objects.get(id=lbl.language),
-            code=code, label=lbl["label"]
-        )
-
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
 def save_name(request, codebook, project):
@@ -891,75 +884,51 @@ def save_name(request, codebook, project):
 
     return HttpResponse(status=200)
 
-def _save_moves(request, codebook, moves):
-    """
-    Helper function for save_changesets
-    """
-    move_codes_ids = set(itertools.chain(*[tuple(m.values()) for m in moves]))
-    move_codes = { c.id : c for c in Code.objects.filter(id__in=move_codes_ids)}
-    move_codebook_codes = { 
-        c.code.id : c for c in CodebookCode.objects.filter(
-            codebook=codebook, code__in=move_codes
-        ).select_related("code__id")
-    }
-
-    # Account for bad user input
-    if len(move_codes_ids) != len(move_codes):
-        return HttpResponse(status=400, content="Non-existing code requested")
-
-
-def _get_codebook_code(ccodes, code, codebook):
-    """
-    Get CodebookCode object from dictionary of (cached) codebookcodes. If not
-    available, create a new one and add it to the dict.
-    """
-    if code.id not in ccodes:
-        ccodes[code.id] = CodebookCode.objects.create(code=code, codebook=codebook)
-
-    return ccodes.get(code.id)
-
 @transaction.commit_on_success
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
 def save_changesets(request, codebook, project):
     moves = json.loads(request.POST.get("moves", "[]"))
     hides = json.loads(request.POST.get("hides", "[]"))
+    reorders = json.loads(request.POST.get("reorders", "[]"))
 
-    # Gather all codes needed for moves and hides (so that we don't have to
-    # retrieve them on by one
-    codes = { c.id : c for c in Code.objects.filter(id__in=itertools.chain(
+    codebook.cache()
+
+    # Keep a list of changed codebookcodes
+    changed_codes = tuple(itertools.chain(
         set([h["code_id"] for h in hides]),
+        set([r["code_id"] for r in reorders]),
         set(itertools.chain.from_iterable(m.values() for m in moves))
-    )) }
+    ))
 
-    codebook_codes = { 
-        c.code.id : c for c in CodebookCode.objects.filter(
-            codebook=codebook, code__in=codes
-        ).select_related("code__id")
-    }
-
-    # Save all moves
-    for move in moves:
-        code, new_parent = codes[move['code_id']], codes.get(move['new_parent'])
-        ccode = _get_codebook_code(codebook_codes, code, codebook)
-
-        # User must have sufficient privileges to read both codes and update the codebookcode 
-        if new_parent is not None:
-            if not new_parent.can_read(request.user):
-                raise PermissionDenied
-
-        if not (code.can_read(request.user) and ccode.can_update(request.user)):
-            raise PermissionDenied()
-
-        ccode.parent = new_parent
+    # Save reorders
+    for reorder in reorders:
+        ccode = codebook.get_codebookcode(codebook.get_code(reorder["code_id"]))
+        ccode.ordernr = reorder["ordernr"]
 
     # Save all hides
     for hide in hides:
-        ccode = _get_codebook_code(codebook_codes, codes[hide['code_id']], codebook)
+        ccode = codebook.get_codebookcode(codebook.get_code(hide["code_id"]))
         ccode.hide = hide.get("hide", False)
 
+    # Save all moves
+    for move in moves:
+        ccode = codebook.get_codebookcode(codebook.get_code(move["code_id"]))
+        ccode.parent = None
+
+        if move["new_parent"] is None:
+            continue
+
+        new_parent = codebook.get_code(move["new_parent"])
+        ccode.parent = new_parent
+
     # Commit all changes
-    for ccode_id, ccode in codebook_codes.items():
+    for code_id in changed_codes:
+        ccode = codebook.get_codebookcode(codebook.get_code(code_id))
+
+        # Saving a codebookcode triggers a validation function which needs
+        # the codebookcode's codebook's codebookcodes.
+        ccode._codebook_cache = codebook
         ccode.save()
 
     # Check for any cycles. 

@@ -533,9 +533,8 @@ class CodebookCode(AmcatModel):
                              .format(self.validfrom, self.validto))
         # uniqueness constraints:
         for co in self.codebook.codebookcodes:
-
             if co == self: continue #
-            if co.code != self.code: continue
+            if co.code_id != self.code_id: continue
             if self.validfrom and co.validto and self.validfrom >= co.validto: continue
             if self.validto and co.validfrom and self.validto <= co.validfrom: continue
             raise ValueError("Codebook code {!r} overlaps with {!r}".format(self, co))
