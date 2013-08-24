@@ -44,7 +44,7 @@ import collections
 from itertools import product, chain, takewhile
 
 # Used in Codebook.get_tree()
-TreeItem = collections.namedtuple("TreeItem", ["code_id", "children", "hidden", "label", "ordernr"])
+TreeItem = collections.namedtuple("TreeItem", ["code_id", "codebookcode_id", "children", "hidden", "label", "ordernr"])
 
 def sort_codebookcodes(ccodes):
     ccodes.sort(key=lambda ccode : ccode.ordernr)
@@ -239,7 +239,8 @@ class Codebook(AmcatModel):
         seen.add(node)
 
         return TreeItem(
-            code_id=node.id, hidden=cc.hide if cc else None, ordernr=cc.ordernr if cc else None,
+            code_id=node.id, codebookcode_id=cc.id if cc else None,
+            hidden=cc.hide if cc else None, ordernr=cc.ordernr if cc else None,
             children=self._walk(include_labels, children, children[node], seen),
             label=node.get_label(*(labels or self._cached_labels), fallback=labels is None) if include_labels else None
         )
