@@ -38,6 +38,8 @@ Array.prototype.remove=function(s){
             self.COLLAPSE_ICON = "/media/img/navigator/collapse-small-silver.png";
             self.EXPAND_ICON = "/media/img/navigator/expand-small-silver.png";
             self.NOACTION_ICON = "/media/img/navigator/noaction-small-silver.png";
+            self.ARROW_UP_ICON = $("<i class='icon icon-arrow-up'/>");
+            self.ARROW_DOWN_ICON = $("<i class='icon icon-arrow-down'/>");
             self.API_URL = api_url;
 
             /* EDITOR STATE VARIABLES */
@@ -47,7 +49,7 @@ Array.prototype.remove=function(s){
             self.moving = false; // Indicates wether the user is moving a code
             self.objects = null; // Flat list of all objects
             self.root = null; // Artificial (non existent in db) root code
-            self.changesets = {
+            self.changeset = {
                "moves" : {},
                "hides" : {}          
             }; // Changed objects go in here
@@ -57,29 +59,10 @@ Array.prototype.remove=function(s){
             self.searchbox = $("<input placeholder='Search..' type='text'>");
 
             // Buttons
-            self.btn_save_changes = $("<div>").addClass("btn btn-primary")
-                .append($(document.createTextNode(" Save changes")));
-
-            self.btn_edit_name = $("<div>").addClass("btn").append(
-                $("<i>").addClass("icon icon-edit")                
-            ).append($(document.createTextNode(" Edit codebook name")));
-
-            self.btn_download = $("<a>").addClass("btn")
-                .attr("href", document.URL + "/export")
-                .append(
-                    $("<i>").addClass("icon icon-download")                
-                ).append($(document.createTextNode(" Download codebook")));
-
-            self.btn_delete = $("<a>").addClass("btn btn-danger confirm")
-                .attr("data-confirm", "Are you sure you want to delete this codebook?")
-                .attr("href", document.URL + "/delete")
-                .append(
-                    $("<i>").addClass("icon-white icon-trash")                
-                ).append(
-                    $(document.createTextNode(" Delete"))               
-                );
-
-            self.btn_delete.click(confirm_dialog);
+            self.btn_save_changes = $(".save-changes", this);
+            self.btn_edit_name = $(".edit-name", this);
+            self.btn_download = $(".export", this);
+            self.btn_delete = $(".delete", this);
 
             /* PRIVATE METHODS */
             self._escape = function(str){
@@ -171,12 +154,7 @@ Array.prototype.remove=function(s){
                 );
 
                 // Add main action buttons
-                var buttons = $("<p>").addClass("btn-group")
-                buttons.append(self.btn_save_changes).append(self.btn_edit_name).append(self.btn_download).append(self.btn_delete);
-
-                $(self).contents().remove();
-                $(self).append(self.searchbox);
-                $(self).append(usage).append(buttons);
+                $(".loading-codebook", self).contents().remove();
                 $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root"));
 
                 self.searchbox.keyup(self.searchbox_keyup);
