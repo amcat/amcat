@@ -758,6 +758,9 @@ annotator.fields.autocompletes.onFocus = function(){
 
             var term = req.term.toLowerCase();
             var result = annotator.fields.autocompletes.getSearchResults(field, term, selected_root);
+            result.sort(function(a,b){
+                return a.ordernr - b.ordernr;
+            });
             resp(result);
         },
         selectItem:true,
@@ -832,7 +835,11 @@ annotator.fields.autocompletes.addAutocompletes = function(jqueryEl){
                      * we still want to display the parent, we need to find a code with the
                      * same label as the given code. However, this label is not guarenteed to be
                      * unique, so we could display the wrong parent.. Should work in 99% of the
-                     * cases though. */
+                     * cases though.
+                     *
+                     * Btw: I'm so sorry :-(
+                     * - martijn
+                     */
                      var found = []; var label = inputEl.val(); var code;
                      $.each(annotator.fields.ontologies_parents[field['items-key']], function(i, root){
                         for(var i=0; i < root.descendants.length; i++){
