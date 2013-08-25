@@ -71,6 +71,10 @@ DATABASES = dict(default=dict(
         PORT = os.environ.get("DJANGO_DB_PORT", ''),
     ))
 
+RAVEN_CONFIG = {
+    "dsn" : os.environ.get("DJANGO_RAVEN_DSN")
+}
+
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
 # although not all choices may be available on all operating systems.
@@ -157,6 +161,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.admin',
     'django.contrib.staticfiles',
+    'raven.contrib.django.raven_compat',
     'rest_framework',
     'accounts',
     'annotator',
@@ -234,54 +239,46 @@ if not DEBUG:
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': True,
+        'root': {
+            'level': 'WARNING',
+            'handlers': ['sentry'],
+        },
         'formatters': {
             'standard': {
                 'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
             },
         },
         'handlers': {
-            'default': {
-                'level':LOG_LEVEL,
-                'class':'logging.handlers.RotatingFileHandler',
-                'filename': '/tmp/django_mainlog.log',
-                'maxBytes': 1024*1024*5, # 5 MB
-                'backupCount': 5,
-                'formatter':'standard',
+            'sentry': {
+                'level': 'ERROR',
+                'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
             },
-            'request_handler': {
-                'level':LOG_LEVEL,
-                'class':'logging.handlers.RotatingFileHandler',
-                'filename': '/tmp/django_requests.log',
-                'maxBytes': 1024*1024*5, # 5 MB
-                'backupCount': 5,
-                'formatter':'standard',
-            },
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard'
+            }
         },
         'loggers': {
-            '': {
-                'handlers': ['default'],
-                'level': LOG_LEVEL,
-                'propagate': True
+            'django.db.backends': {
+                'level': 'ERROR',
+                'handlers': ['console'],
+                'propagate': False,
             },
-            'django.request': { # Stop SQL debug from logging to main logger
-                'handlers': ['request_handler'],
-                'level': LOG_LEVEL,
-                'propagate': False
+            'raven': {
+                'level': 'DEBUG',
+                'handlers': ['console'],
+                'propagate': False,
             },
-        }
+            'sentry.errors': {
+                'level': 'DEBUG',
+                'handlers': ['console'],
+                'propagate': False,
+            },
+        },
     }
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    # logger = logging.getLogger()
-    # hdlr = logging.StreamHandler()
-    # formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    # hdlr.setFormatter(formatter)
-    # logger.addHandler(hdlr)
-    # logger.setLevel(logging.WARNING)
-    # logging.basicConfig(
-        # level = logging.DEBUG,
-        # format = '%(asctime)s %(levelname)s %(message)s',
-    # )
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -294,19 +291,11 @@ else:
             'default': {
                 'level': LOG_LEVEL,
                 'class':'logging.StreamHandler',
-                # 'class':'logging.handlers.RotatingFileHandler',
-                # 'filename': 'logs/mylog.log',
-                # 'maxBytes': 1024*1024*5, # 5 MB
-                # 'backupCount': 5,
                 'formatter':'standard',
             },
             'request_handler': {
                     'level': LOG_LEVEL,
                     'class':'logging.StreamHandler',
-                    # 'class':'logging.handlers.RotatingFileHandler',
-                    # 'filename': 'logs/django_request.log',
-                    # 'maxBytes': 1024*1024*5, # 5 MB
-                    # 'backupCount': 5,
                     'formatter':'standard',
             },
         },
