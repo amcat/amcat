@@ -381,3 +381,7 @@ button:focus{
     z-index:2500;
     height:35px;
 }
+
+input.error{
+    border-color:red;
+}
