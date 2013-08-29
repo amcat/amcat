@@ -43,6 +43,10 @@ class Deduplicate(Script):
     Deduplicate articles using two articlesets. For all duplicated articles
     the articles in set 2 will be removed. 
     """
+    def __init__(self, *args, **kwargs):
+        super(Deduplicate, self).__init__(*args, **kwargs)
+        self._articles_cache_contains = None
+        self._articles_cache = None
 
     class options_form(forms.Form):
         articleset_1 = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
@@ -66,20 +70,41 @@ class Deduplicate(Script):
     def get_matching(self, compare_with, article, ratio, prop):
         return (ca for ca in compare_with if Levenshtein.ratio(
                     getattr(article, prop), getattr(ca, prop)) >= ratio)
-        
+
+    def get_articles(self, articleset, article, text_ratio):
+        medium_id, date = article.medium_id, article.date
+
+        # Same medium / date since previous call?
+        if not self._articles_cache_contains == (medium_id, date):
+            # Fill cache for next call and call self
+            self._articles_cache_contains = (medium_id, date)
+            self._articles_cache = articleset.articles.filter(date=date, medium__id=medium_id)
+            self._articles_cache = self._articles_cache.only("id", "text", "headline")
+            for art in self.get_articles(articleset, article, text_ratio):
+                yield art
+        else:
+            # Filter based on length of text. (Cheap Levenshtein filter)
+            for comp_article in self._articles_cache:
+                text_length = len(article.text)
+                min_length = text_ratio * text_length
+                max_length = ((1 - text_ratio) + 1) * text_length
+
+                if min_length <= len(comp_article.text) <= max_length:
+                    yield article
+
     def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, headline_ratio, keep_same):
         # Very naive implementation. Results in many many queries.
         log.info("Start deduplicating ({articleset_1}, {articleset_2})..".format(**locals()))
 
-        # Keep a mapping of duplicates.
-        duplicates = {}
-        n_articles = articleset_1.articles.count()
-        for i, article in enumerate(articleset_1.articles.only("id", "date", "medium", "text", "headline").iterator(), start=1):
+        all_articles = articleset_1.articles.only("id", "date", "medium", "text", "headline")
+        n_articles = all_articles.count()
+        articles = all_articles.order_by("medium", "date")
+
+        for i, article in enumerate(articles.iterator(), start=1):
             if not i % 100 or i == n_articles:
                 log.info("Checking article {i} of {n_articles}".format(**locals()))
 
-            compare_with = articleset_2.articles.filter(date=article.date, medium__id=article.medium_id)
-            compare_with = compare_with.only("id", "text", "headline")
+            compare_with = self.get_articles(articleset_2, article, text_ratio)
             compare_with = self.get_matching(compare_with, article, headline_ratio, "headline")
             compare_with = set(self.get_matching(compare_with, article, text_ratio, "text"))
 
@@ -87,7 +112,7 @@ class Deduplicate(Script):
                 compare_with -= {article,}
 
             if compare_with:
-                yield(article, compare_with)
+                yield (article, compare_with)
 
     def _run(self, dry_run, articleset_2, **kwargs):
         duplicates = collections.defaultdict(list)
