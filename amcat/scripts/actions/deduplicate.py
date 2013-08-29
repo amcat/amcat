@@ -54,7 +54,8 @@ class Deduplicate(Script):
         dry_run = forms.BooleanField(initial=False, required=False)
         text_ratio = forms.IntegerField(initial=99, help_text="Match articles which text match ..%%")
         headline_ratio = forms.IntegerField(initial=80, help_text="Compare articles which headlines match ..%%")
-        keep_same = forms.BooleanField(initial=False, required=False, help_text=r"Never remove articles with same id's")
+        keep_same = forms.BooleanField(initial=False, required=False, help_text="Never remove articles with same id's")
+        skip_simple = forms.BooleanField(initial=False, required=False, help_text="Do not use an approximation of levenhstein ratio")
 
         def clean_ratio(self, ratio):
             if not (0 <= self.cleaned_data[ratio] <= 100):
@@ -71,31 +72,29 @@ class Deduplicate(Script):
         return (ca for ca in compare_with if Levenshtein.ratio(
                     getattr(article, prop), getattr(ca, prop)) >= ratio)
 
+    def get_simple_levenhstein(self, articles, article, text_ratio):
+        text_length = len(article.text)
+        min_length = text_ratio * text_length
+        max_length = ((1 - text_ratio) + 1) * text_length
+
+        for comp_article in articles:
+            if min_length <= len(comp_article.text) <= max_length:
+                yield comp_article
+
     def get_articles(self, articleset, article, text_ratio):
         medium_id, date = article.medium_id, article.date
 
         # Same medium / date since previous call?
         if not self._articles_cache_contains == (medium_id, date):
-            # Fill cache for next call and call self
+            # Fill cache
             self._articles_cache_contains = (medium_id, date)
             self._articles_cache = articleset.articles.filter(date=date, medium__id=medium_id)
             self._articles_cache = self._articles_cache.only("id", "text", "headline")
-            for art in self.get_articles(articleset, article, text_ratio):
-                yield art
-        else:
-            # Filter based on length of text. (Cheap Levenshtein filter)
-            for comp_article in self._articles_cache:
-                text_length = len(article.text)
-                min_length = text_ratio * text_length
-                max_length = ((1 - text_ratio) + 1) * text_length
 
-                if min_length <= len(comp_article.text) <= max_length:
-                    yield article
+        return self._articles_cache
 
-    def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, headline_ratio, keep_same):
-        # Very naive implementation. Results in many many queries.
+    def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, headline_ratio, skip_simple, keep_same):
         log.info("Start deduplicating ({articleset_1}, {articleset_2})..".format(**locals()))
-
         all_articles = articleset_1.articles.only("id", "date", "medium", "text", "headline")
         n_articles = all_articles.count()
         articles = all_articles.order_by("medium", "date")
@@ -105,6 +104,8 @@ class Deduplicate(Script):
                 log.info("Checking article {i} of {n_articles}".format(**locals()))
 
             compare_with = self.get_articles(articleset_2, article, text_ratio)
+            if not skip_simple:
+                compare_with = self.get_simple_levenhstein(compare_with, article, text_ratio)
             compare_with = self.get_matching(compare_with, article, headline_ratio, "headline")
             compare_with = set(self.get_matching(compare_with, article, text_ratio, "text"))
 
