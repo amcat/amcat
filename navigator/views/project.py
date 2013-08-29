@@ -929,7 +929,7 @@ def save_changesets(request, codebook, project):
         # Saving a codebookcode triggers a validation function which needs
         # the codebookcode's codebook's codebookcodes.
         ccode._codebook_cache = codebook
-        ccode.save()
+        ccode.save(validate=False)
 
     # Check for any cycles. 
     CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)

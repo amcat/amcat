@@ -520,7 +520,8 @@ class CodebookCode(AmcatModel):
     ))
 
     def save(self, *args, **kargs):
-        self.validate()
+        if kargs.pop("validate", True):
+            self.validate()
         super(CodebookCode, self).save(*args, **kargs)
 
     def validate(self):
