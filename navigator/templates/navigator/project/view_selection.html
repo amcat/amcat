@@ -1,3 +1,14 @@
+<script>
+function upload_query(event){
+    var file = event.target.files[0];
+    var reader = new FileReader();
+    reader.onload = function(file){
+        $("#id_query").text(file.target.result);
+    }
+
+    reader.readAsText(file);
+}
+</script>
  
 <form method="POST" target="formpost" action="url_overwritten_by_js" id="selectionform">
     {% csrf_token %}
@@ -29,6 +40,7 @@
                     {{ form.query }}
 		    <div>{{ form.includeAll }} {{ form.includeAll.label_tag }}</div>
 		    <div>{{form.codebook.label_tag}} {{form.codebook}}<br/> {{form.codebooklanguage.label_tag}} {{form.codebooklanguage}}</div>
+                <label>Upload query: <input onchange="upload_query(event)" type="file" /></label>
                 </div>
                 <div id="articleid-form">
                     <label>Article IDs</label> <br />
