@@ -31,17 +31,20 @@ from amcat.tools.table.table3 import ObjectTable
 from amcat.tools.table.tableoutput import table2htmlDjango
 
 def index(request):
-    daily_scrapers = list(Scraper.objects.filter(run_daily=True))
-    non_daily_scrapers = list(Scraper.objects.filter(run_daily=False))
+    daily_scrapers = list(Scraper.objects.filter(run_daily=True,active=True))
+    non_daily_scrapers = list(Scraper.objects.filter(run_daily=False,active=True))
+    inactive_scrapers = list(Scraper.objects.filter(active=False))
     dates = [datetime.date.today() - datetime.timedelta(days=n) for n in range(14)]
-    
-    for scraper in daily_scrapers + non_daily_scrapers:
-        print(scraper.n_scraped_articles(from_date=dates[-1], to_date=dates[0]))
-        scraper.articles = scraper.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
-        print(scraper.articles)
 
-    daily_scraper_table = ObjectTable(rows=daily_scrapers, columns=["id", "label"])
-    non_daily_scraper_table = ObjectTable(rows=non_daily_scrapers, columns=["id", "label"])
+    scraper_lists = {"daily_table":daily_scrapers,
+                     "non_daily_table":non_daily_scrapers,
+                     "inactive_table":inactive_scrapers}
+
+    for s_list in scraper_lists.values():
+        for scraper in s_list:
+            scraper.articles = scraper.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
+
+    scraper_tables = {name : ObjectTable(rows=s_list, columns=["id", "label"]) for name,s_list in scraper_lists.items()}
 
     def Set(scraper):
         s = scraper.articleset
@@ -49,16 +52,18 @@ def index(request):
         url = reverse(articleset, args=[s.project.id, s.id])
         return "<a href='{url}'>{s}</a>".format(**locals())
 
-    daily_scraper_table.addColumn(Set)
-    non_daily_scraper_table.addColumn(Set)
+    for s_table in scraper_tables.values():
+        s_table.addColumn(Set)
 
     def getdate(date, scraper):
         return scraper.articles.get(date, 0)
     
     for date in dates:
-        daily_scraper_table.addColumn(partial(getdate, date), str(date)[-5:])
-        non_daily_scraper_table.addColumn(partial(getdate, date), str(date)[-5:])
-    
-    daily_scraper_table = table2htmlDjango(daily_scraper_table, safe=True)
-    non_daily_scraper_table = table2htmlDjango(non_daily_scraper_table, safe=True)
-    return render(request, 'navigator/scrapers/index.html', locals())
+        for s_table in scraper_tables.values():
+            s_table.addColumn(partial(getdate, date), str(date)[-5:])
+
+    table_dict = {}
+    for t_name, s_table in scraper_tables.items():
+        table_dict[t_name] = table2htmlDjango(s_table, safe=True)
+
+    return render(request, 'navigator/scrapers/index.html', dict(locals().items() + table_dict.items()))
