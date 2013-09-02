@@ -68,7 +68,6 @@ from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
 
 from amcat.scripts.actions.add_project import AddProject
-from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
 from amcat.scripts.actions.assign_for_parsing import AssignParsing

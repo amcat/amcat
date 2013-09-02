@@ -100,6 +100,9 @@ def gen_coding_choices(user, model):
         yield(project, [(x.id, x.name) for x in objs])
 
 class SplitArticleForm(forms.Form):
+    add_to_new_set = forms.CharField(required=False) 
+    add_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+
     remove_from_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
     remove_from_all_sets = forms.BooleanField(initial=True, required=False, help_text="Remove all instances of the original article in this project")
 
@@ -117,6 +120,7 @@ class SplitArticleForm(forms.Form):
         super(SplitArticleForm, self).__init__(*args, **kwargs)
         self.fields["add_splitted_to_sets"].queryset = project.all_articlesets()
         self.fields["remove_from_sets"].queryset = project.all_articlesets().filter(articles=article)
+        self.fields["add_to_sets"].queryset = project.all_articlesets()
 
 class UserForm(forms.ModelForm):
     affiliation = forms.ModelChoiceField(queryset=Affiliation.objects.all())
