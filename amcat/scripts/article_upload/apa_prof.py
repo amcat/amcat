@@ -152,7 +152,15 @@ def to_html(original_rtf, fixed_rtf):
     return html
 
 def parse_html(html):
-    return fromstring(html)
+    # See issue #574. Splitting the RTF in multiple documents considered too
+    # much work compared with this hack. 
+    limit = sys.getrecursionlimit()
+    sys.setrecursionlimit(3000)
+
+    try:
+        return fromstring(html)
+    finally:
+        sys.setrecursionlimit(limit)
 
 def _get_pages(elements):
     return list(itertools.takewhile(lambda el : el.tag != "hr", elements))
