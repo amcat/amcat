@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -18,12 +17,41 @@ from __future__ import absolute_import
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from .base import *
-from .menu import *
-from .misc import *
+"""
+"""
 
-try:
-    from .private import *
-except ImportError:
-    pass
+from __future__ import unicode_literals, print_function, absolute_import
+
+from amcat.tools.model import AmcatModel
+
+from django.db import models
+
+import logging; log = logging.getLogger(__name__)
+
+ALL = ["CodingRuleAction", "CodingRule"]
+
+class CodingRuleAction(AmcatModel):
+    """Model representing an action  """
+    label = models.CharField(max_length=50)
+    description = models.TextField()
+
+    class Meta():
+        db_table = 'codingruleactions'
+        app_label = 'amcat'
+
+class CodingRule(AmcatModel):
+    """
+    A CodingRule 
+    """
+    label = models.CharField(max_length=75)
+
+    condition = models.TextField()
+    field = models.ForeignKey("amcat.CodingSchemaField", null=True)
+    action = models.ForeignKey("amcat.CodingRuleAction", null=True)
+
+    codingschema = models.ForeignKey("amcat.CodingSchema", related_name='rules')
+
+    class Meta():
+        db_table = 'codingrules'
+        app_label = 'amcat'
 

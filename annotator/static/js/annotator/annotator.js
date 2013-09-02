@@ -86,6 +86,7 @@ annotator.articlecodings.writeArticleCodingsTable = function(){
         "success": function(html) {
             $('#article-coding-form').html(html);
             annotator.fields.autocompletes.addAutocompletes($('#article-coding-form'));
+            annotator.fields.add_rules.bind(["article"])($('#article-coding-form'));
             $('#article-coding-form input').change(function(){
                 annotator.articlecodings.onchange($(this));
             });
@@ -182,6 +183,17 @@ annotator.saveCodings = function(goToNext){
         annotator.showMessage('Unable to save: ontologies not loaded yet. Please wait a few seconds');
         return;
     }
+
+    var error = false;
+    $.each($("input[null=false]"), function(i, input){
+        if (annotator.fields.get_value($(input)).length === 0){
+            annotator.showMessage('Codingschemafield ' + $("label", $(input).parent()).text() + " cannot be null");
+            error = true;
+        };
+    });
+
+    if(error) return;
+
     var storeDict = {}
     if(annotator.commentAndStatus.modified){
         var comment = $('#article-comment').val();
@@ -409,6 +421,15 @@ annotator.validateInput = function(input, field){
         return 'Value not found in list of allowed values';
     }
 
+    if (found.length > 1){
+        return "More than one label found for " + value;
+    }
+
+    input.parent().children(":hidden").val(found[0].value);
+    return true;
+
+    // This is actually the correct response, but id's dont' get filled when initialising
+    // this can happen.
     return "Hidden ID not correct, but label is. Bug?"
 }
 

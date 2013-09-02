@@ -26,7 +26,10 @@ or to derive automatically generated search terms from.
 from __future__ import unicode_literals, print_function, absolute_import
 
 import logging; log = logging.getLogger(__name__)
+
 from datetime import datetime
+from collections import OrderedDict
+
 from django.db import models
 from django.db.models import Q
 
@@ -41,7 +44,10 @@ import collections
 from itertools import product, chain, takewhile
 
 # Used in Codebook.get_tree()
-TreeItem = collections.namedtuple("TreeItem", ["code_id", "children", "hidden", "label"])
+TreeItem = collections.namedtuple("TreeItem", ["code_id", "codebookcode_id", "children", "hidden", "label", "ordernr"])
+
+def sort_codebookcodes(ccodes):
+    ccodes.sort(key=lambda ccode : ccode.ordernr)
 
 class CodebookCycleException(ValueError):
     pass
@@ -118,8 +124,8 @@ class Codebook(AmcatModel):
         ccodes = ccodes.select_related("code", *select_related)
         ccodes = ccodes.prefetch_related(*prefetch_related)
         self._prefetched_objects_cache['codebookcode_set'] = ccodes = tuple(ccodes)
-        self._codes = { cc.code_id : cc.code for cc in ccodes }
-        self._codebookcodes = collections.defaultdict(set)
+        self._codes = OrderedDict((cc.code_id, cc.code) for cc in ccodes)
+        self._codebookcodes = collections.defaultdict(list)
 
         for ccode in ccodes:
             # Cache the parent property
@@ -128,7 +134,7 @@ class Codebook(AmcatModel):
 
             # Make sure all Code objects are the same
             ccode._code_cache = self._codes[ccode.code_id]
-            self._codebookcodes[ccode.code_id].add(ccode)
+            self._codebookcodes[ccode.code_id].append(ccode)
 
     def cache_labels(self, *languages, **kwargs):
         """
@@ -156,20 +162,23 @@ class Codebook(AmcatModel):
             all_labels = False
 
         labels = Label.objects.filter(language__id__in=languages, code__id__in=codes)
-        
-        codes = set(product(codes, languages))
-        for code_id, lan_id, label in labels.values_list("code_id", "language_id", "label"):
-            self._codes[code_id]._cache_label(lan_id, label)
-            codes.remove((code_id, lan_id))
-
-        for code_id, lan_id in codes:
-            # These codes don't have a label. We need to explicitely cache them to prevent
-            # database trips.
-            self._codes[code_id]._cache_label(lan_id, None)
+        labels = labels.values_list("code_id", "language_id", "label")
 
         if all_labels:
+            for code_id, lan_id, label in labels:
+                self._codes[code_id]._cache_label(lan_id, label)
             for code in self._codes.values():
                 code._all_labels_cached = True
+        else:
+            codes = set(product(codes, languages))
+            for code_id, lan_id, label in labels:
+                self._codes[code_id]._cache_label(lan_id, label)
+                codes.remove((code_id, lan_id))
+                
+            for code_id, lan_id in codes:
+                # These codes don't have a label. We need to explicitely cache them to prevent
+                # database trips.
+                self._codes[code_id]._cache_label(lan_id, None)
 
         self._cached_labels |= self._cached_labels.union(set(languages))
 
@@ -178,7 +187,7 @@ class Codebook(AmcatModel):
         codes = self.codebookcode_set.all()
         if self.cached:
             # TODO: _result_cache should be lazy
-            codes._result_cache = list(chain(*self._codebookcodes.values()))
+            codes._result_cache = self._prefetched_objects_cache['codebookcode_set']
 
         return codes
 
@@ -207,15 +216,15 @@ class Codebook(AmcatModel):
             valid_to = Q(validto=None) | Q(validto__gt=date)
             codes = self.codebookcodes.filter(valid_from, valid_to)
             if not include_hidden: codes = codes.filter(hide=False)
-            return dict(codes.values_list("code_id", "parent_id"))
+            return OrderedDict(codes.values_list("code_id", "parent_id"))
             
         codes = (co for co in self.codebookcodes
                     if not ((co.validfrom and date < co.validfrom) or
                             (co.validto and date >= co.validto)))
 
         if include_hidden:
-            return { co.code_id : co.parent_id for co in codes }
-        return { co.code_id : co.parent_id for co in codes if not co.hide }
+            return OrderedDict((co.code_id, co.parent_id) for co in codes)
+        return OrderedDict((co.code_id, co.parent_id) for co in codes if not co.hide)
 
 
     def _get_node(self, include_labels, children, node, seen, labels=None):
@@ -230,7 +239,8 @@ class Codebook(AmcatModel):
         seen.add(node)
 
         return TreeItem(
-            code_id=node.id, hidden=cc.hide if cc else None,
+            code_id=node.id, codebookcode_id=cc.id if cc else None,
+            hidden=cc.hide if cc else None, ordernr=cc.ordernr if cc else None,
             children=self._walk(include_labels, children, children[node], seen),
             label=node.get_label(*(labels or self._cached_labels), fallback=labels is None) if include_labels else None
         )
@@ -251,14 +261,14 @@ class Codebook(AmcatModel):
         @param get_labels: fetch labels in this order. This will not use fallback,
                             see docs Code.get_label().
         """
-        children = collections.defaultdict(set)
+        children = collections.defaultdict(list)
         hierarchy = self.get_hierarchy(include_hidden=include_hidden, date=date)
         nodes = self.get_roots(include_hidden=include_hidden, date=date)
         seen = set()
 
         for child, parent in hierarchy:
             if parent:
-                children[parent].add(child)
+                children[parent].append(child)
 
         return self._walk(include_labels, children, nodes, seen, get_labels)
 
@@ -386,12 +396,16 @@ class Codebook(AmcatModel):
         if parent and not self._code_in_codebook(parent):
             _parent = CodebookCode.objects.create(codebook=self, code=parent)
             if self.cached:
-                self._codebookcodes[parent.id].add(_parent)
+                self._codebookcodes[parent.id].append(_parent)
                 self._codes[parent.id] = parent
+
+                # Keep ordering according to ordernr
+                sort_codebookcodes(self._codebookcodes[parent.id])
                 
         # Update child (`code`) caching
         if self.cached:
-            self._codebookcodes[code.id].add(child)
+            self._codebookcodes[code.id].append(child)
+            sort_codebookcodes(self._codebookcodes[code.id])
             code = child._code_cache = self._codes[code.id] = self._codes.get(code.id, code)
             if parent: child._parent_cache = self._codes[parent.id]
 
@@ -426,17 +440,22 @@ class Codebook(AmcatModel):
         @return: the root nodes in this codebook
         @param kargs: passed to get_hierarchy (e.g. date, include_hidden)
         """
-        parents, children = set(), set()
+        parents, children, roots = set(), set(), set()
+        hierarchy = tuple(self.get_hierarchy(**kwargs))
 
-        for child, parent in self.get_hierarchy(**kwargs):
+        for child, parent in hierarchy:
             if parent is None:
-                yield child
+                roots.add(child)
 
             parents.add(parent)
             children.add(child)
 
-        for code in parents - children - {None,}:
-            yield code
+        # Keep ordering by using order of hierarchy
+        roots |= parents - children - {None,}
+        hierarchy = OrderedDict(hierarchy)
+        codes = hierarchy.keys() + hierarchy.values()
+        codes = { code : i for i, code in enumerate(codes)}
+        return sorted(roots, key=codes.get)
 
     def get_children(self, code, **kargs):
         """
@@ -496,8 +515,13 @@ class CodebookCode(AmcatModel):
     validto = models.DateTimeField(null=True)
     function = models.ForeignKey(Function, default=0)
 
+    ordernr = models.IntegerField(default=0, null=False, db_index=True, help_text=(
+        "Annotator should order according codes according to this number."
+    ))
+
     def save(self, *args, **kargs):
-        self.validate()
+        if kargs.pop("validate", True):
+            self.validate()
         super(CodebookCode, self).save(*args, **kargs)
 
     def validate(self):
@@ -511,9 +535,8 @@ class CodebookCode(AmcatModel):
                              .format(self.validfrom, self.validto))
         # uniqueness constraints:
         for co in self.codebook.codebookcodes:
-
             if co == self: continue #
-            if co.code != self.code: continue
+            if co.code_id != self.code_id: continue
             if self.validfrom and co.validto and self.validfrom >= co.validto: continue
             if self.validto and co.validfrom and self.validto <= co.validfrom: continue
             raise ValueError("Codebook code {!r} overlaps with {!r}".format(self, co))
@@ -524,6 +547,7 @@ class CodebookCode(AmcatModel):
     class Meta():
         db_table = 'codebooks_codes'
         app_label = 'amcat'
+        ordering = ("ordernr",)
         #unique_together = ("codebook", "code", "function_id", "validfrom")
         # TODO: does not really work since NULL!=NULL
 
@@ -746,6 +770,10 @@ class TestCodebook(amcattest.PolicyTestCase):
             "add_base", "get_roots", "get_children", "get_ancestor_ids"
         ])
 
+        caching_functions = set([
+            "cache", "cache_labels", "invalidate_cache"
+        ])
+
         def _getattr(orig):
             def wrapped(self, name):
                 if name in cached_functions:
@@ -766,6 +794,7 @@ class TestCodebook(amcattest.PolicyTestCase):
             self.test_roots_children()
             self.test_get_ancestors()
             self.test_add_codes()
+            self.test_ordering()
         finally:
             Codebook.__getattribute__ = ga 
             
@@ -809,6 +838,36 @@ class TestCodebook(amcattest.PolicyTestCase):
         c = amcattest.create_test_code(label="c", language=l2)
         with self.checkMaxQueries(5, "Add new code"):
             A.add_code(c)
+
+    def test_ordering(self):
+        """
+        Codebookcodes should always be returned in order, according
+        to their codenr-property (see CodebookCode.codenr).
+        """
+        cb = amcattest.create_test_codebook()
+        code_a, code_b, code_c = (amcattest.create_test_code() for i in range(3))
+        
+        ccode_c = cb.add_code(code_c, ordernr=3)
+        ccode_b = cb.add_code(code_b, ordernr=2)
+        ccode_a = cb.add_code(code_a, ordernr=1)
+
+        cb.invalidate_cache()
+
+        # These tests will automatically be run with caching enabled by
+        # the method test_caching_correctness()
+        self.assertEquals(tuple(cb.codebookcodes), (ccode_a, ccode_b, ccode_c))
+        roots = [ti.code_id for ti in cb.get_tree()]
+        self.assertEquals(roots, [code_a.id, code_b.id, code_c.id])
+
+        # Test again with differnt order
+        ccode_b.ordernr = 256
+        ccode_b.save()
+        cb.invalidate_cache()
+
+        self.assertEquals(tuple(cb.codebookcodes), (ccode_a, ccode_c, ccode_b))
+        roots = [ti.code_id for ti in cb.get_tree()]
+        self.assertEquals(roots, [code_a.id, code_c.id, code_b.id])
+
 
 
 if __name__ == '__main__':

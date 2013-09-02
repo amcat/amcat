@@ -68,7 +68,6 @@ from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
 
 from amcat.scripts.actions.add_project import AddProject
-from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
 from amcat.scripts.actions.assign_for_parsing import AssignParsing
@@ -87,6 +86,7 @@ from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
 from amcat.models.user import LITTER_USER_ID
 from amcat.models.articleset import create_new_articleset
+from amcat.models.coding import codingruletoolkit
 
 from api.rest.resources.codebook import CodebookHierarchyResource
 
@@ -570,7 +570,7 @@ def schemas(request, project):
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
 def schema(request, schema, project):
     fields = (Datatable(CodingSchemaFieldResource)
-              .filter(codingschema=schema).hide('id', 'codingschema'))
+              .filter(codingschema=schema).hide('codingschema'))
 
     return table_view(request, project, fields, 'codingschemas',
             template="navigator/project/schema.html", schema=schema,
@@ -595,17 +595,20 @@ def delete_schema(request, schema, project):
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
+def edit_schemafield_rules(request, schema, project):
+    if request.method == "POST":
+        return _edit_codingrules_post(request, schema, project)
+
+    return table_view(request, project, None, 'codingschemas',
+            template="navigator/project/edit_rules.html",
+            schema=schema)
+
+@check(Project, args_map={'project' : 'id'}, args='project')
+@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
 def edit_schemafield_properties(request, schema, project):
     form = forms.CodingSchemaForm(data=request.POST or None, instance=schema, hidden="project")
     form.fields['highlighters'].queryset = project.get_codebooks()
     form.fields['highlighters'].required = False
-
-    ctx = locals()
-    ctx.update({
-        'menu' : PROJECT_MENU,
-        'selected' : 'codingschemas',
-        'context' : project,
-    })
 
     if request.method == "POST":
         # Process codingschema form
@@ -633,16 +636,20 @@ def edit_schemafields(request, schema, project):
     # This schema is owned by current project. Offer edit interface.
     return table_view(request, project, None, 'codingschemas',
             template="navigator/project/edit_schema.html",
-            schema=schema, fields_null=fields_null)
+            schema=schema, fields_null=fields_null,
+            rules_valid=json.dumps(codingruletoolkit.schemarules_valid(schema)))
+
+def _get_forms(datas, schema, form):
+    for data in datas:
+        data["codingschema"] = schema.id
+        instance = form._meta.model.objects.get(id=data["id"]) if "id" in data else None
+        yield form(schema, data=data, instance=instance)
 
 def _get_schemafield_forms(fields, schema):
-    for field in fields:
-        # Check wether field already exists
-        id = field.get('id')
-        field['codingschema'] = schema.id
-        
-        instance = CodingSchemaField.objects.get(id=id) if id else None
-        yield forms.CodingSchemaFieldForm(data=field, instance=instance)
+    return _get_forms(fields, schema, forms.CodingSchemaFieldForm)
+
+def _get_codingrule_forms(fields, schema):
+    return _get_forms(fields, schema, forms.CodingRuleForm)
 
 def _get_form_errors(forms):
     """
@@ -653,7 +660,7 @@ def _get_form_errors(forms):
 
     is yielded.
     """
-    return ((f.data['fieldnr'], f.errors) for f in forms if not f.is_valid())
+    return ((f.data.get('fieldnr') or f.data["label"], f.errors) for f in forms if not f.is_valid())
 
 def _edit_schemafields_post(request, schema, project, commit=None):
     """
@@ -681,6 +688,31 @@ def _edit_schemafields_post(request, schema, project, commit=None):
     # Always send response (don't throw an error)
     schema_url = reverse("project-schema", args=[project.id, schema.id])
 
+    return HttpResponse(
+        json.dumps({
+            "fields" : errors, "schema_url" : schema_url,
+            "rules_valid" : codingruletoolkit.schemarules_valid(schema)
+        }),
+        mimetype='application/json'
+    )
+
+def _edit_codingrules_post(request, schema, project, commit=None):
+    commit = request.GET.get("commit", commit) in (True, "true")
+    rules = json.loads(request.POST['rules'])
+    forms = list(_get_codingrule_forms(rules, schema))
+    errors = dict(_get_form_errors(forms))
+
+    if not errors and commit:
+        rules = [form.save() for form in forms]
+
+        for rule in set(schema.rules.all()) - set(rules):
+            rule.delete()
+
+        request.session["rules_{}_edited".format(schema.id)] = True 
+
+    # Always send response (don't throw an error)
+    schema_url = reverse("project-schema", args=[project.id, schema.id])
+        
     return HttpResponse(
         json.dumps(dict(fields=errors, schema_url=schema_url)),
         mimetype='application/json'
@@ -843,13 +875,6 @@ def codebook(request, codebook, project):
     return table_view(request, project, None, 'codebooks',
             template="navigator/project/codebook.html", codebook=codebook)
 
-def _get_new_labels(labels, code):
-    for lbl in labels:
-        yield Label(
-            language=Language.objects.get(id=lbl.language),
-            code=code, label=lbl["label"]
-        )
-
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
 def save_name(request, codebook, project):
@@ -858,76 +883,52 @@ def save_name(request, codebook, project):
 
     return HttpResponse(status=200)
 
-def _save_moves(request, codebook, moves):
-    """
-    Helper function for save_changesets
-    """
-    move_codes_ids = set(itertools.chain(*[tuple(m.values()) for m in moves]))
-    move_codes = { c.id : c for c in Code.objects.filter(id__in=move_codes_ids)}
-    move_codebook_codes = { 
-        c.code.id : c for c in CodebookCode.objects.filter(
-            codebook=codebook, code__in=move_codes
-        ).select_related("code__id")
-    }
-
-    # Account for bad user input
-    if len(move_codes_ids) != len(move_codes):
-        return HttpResponse(status=400, content="Non-existing code requested")
-
-
-def _get_codebook_code(ccodes, code, codebook):
-    """
-    Get CodebookCode object from dictionary of (cached) codebookcodes. If not
-    available, create a new one and add it to the dict.
-    """
-    if code.id not in ccodes:
-        ccodes[code.id] = CodebookCode.objects.create(code=code, codebook=codebook)
-
-    return ccodes.get(code.id)
-
 @transaction.commit_on_success
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
 def save_changesets(request, codebook, project):
     moves = json.loads(request.POST.get("moves", "[]"))
     hides = json.loads(request.POST.get("hides", "[]"))
+    reorders = json.loads(request.POST.get("reorders", "[]"))
 
-    # Gather all codes needed for moves and hides (so that we don't have to
-    # retrieve them on by one
-    codes = { c.id : c for c in Code.objects.filter(id__in=itertools.chain(
+    codebook.cache()
+
+    # Keep a list of changed codebookcodes
+    changed_codes = tuple(itertools.chain(
         set([h["code_id"] for h in hides]),
+        set([r["code_id"] for r in reorders]),
         set(itertools.chain.from_iterable(m.values() for m in moves))
-    )) }
+    ))
 
-    codebook_codes = { 
-        c.code.id : c for c in CodebookCode.objects.filter(
-            codebook=codebook, code__in=codes
-        ).select_related("code__id")
-    }
-
-    # Save all moves
-    for move in moves:
-        code, new_parent = codes[move['code_id']], codes.get(move['new_parent'])
-        ccode = _get_codebook_code(codebook_codes, code, codebook)
-
-        # User must have sufficient privileges to read both codes and update the codebookcode 
-        if new_parent is not None:
-            if not new_parent.can_read(request.user):
-                raise PermissionDenied
-
-        if not (code.can_read(request.user) and ccode.can_update(request.user)):
-            raise PermissionDenied()
-
-        ccode.parent = new_parent
+    # Save reorders
+    for reorder in reorders:
+        ccode = codebook.get_codebookcode(codebook.get_code(reorder["code_id"]))
+        ccode.ordernr = reorder["ordernr"]
 
     # Save all hides
     for hide in hides:
-        ccode = _get_codebook_code(codebook_codes, codes[hide['code_id']], codebook)
+        ccode = codebook.get_codebookcode(codebook.get_code(hide["code_id"]))
         ccode.hide = hide.get("hide", False)
 
+    # Save all moves
+    for move in moves:
+        ccode = codebook.get_codebookcode(codebook.get_code(move["code_id"]))
+        ccode.parent = None
+
+        if move["new_parent"] is None:
+            continue
+
+        new_parent = codebook.get_code(move["new_parent"])
+        ccode.parent = new_parent
+
     # Commit all changes
-    for ccode_id, ccode in codebook_codes.items():
-        ccode.save()
+    for code_id in changed_codes:
+        ccode = codebook.get_codebookcode(codebook.get_code(code_id))
+
+        # Saving a codebookcode triggers a validation function which needs
+        # the codebookcode's codebook's codebookcodes.
+        ccode._codebook_cache = codebook
+        ccode.save(validate=False)
 
     # Check for any cycles. 
     CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)

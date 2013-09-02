@@ -17,6 +17,20 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
+// CodingRules constants
+OPERATORS = {
+    OR : "OR", AND : "AND", EQUALS : "EQ",
+    NOT_EQUALS : "NEQ", NOT : "NOT",
+    GREATER_THAN : "GT", LESSER_THAN : "LT",
+    GREATER_THAN_OR_EQUAL_TO : "GTE",
+    LESSER_THAN_OR_EQUAL_TO : "LTE"
+}
+
+ACTIONS = {
+    RED : "display red",
+    NOT_CODABLE : "not codable",
+    NOT_NULL : "not null"
+}
 
 
 annotator.fields = {};
@@ -31,6 +45,15 @@ annotator.fields.ontologyRecentItems = {}; // for each ontology, list of items r
 annotator.fields.initFieldData = function(){
     annotator.fields.fields = {}
     annotator.fields.fields['unit'] = {'showAll':true, 'isOntology':false, 'autoOpen':true, 'id':'unit', 'fieldname':'unit'};
+
+    annotator.fields.codingrules = {};
+    annotator.fields.codingruleactions = {};
+
+    var url = "/api/v4/codingrule?codingschema__codingjobs_";
+    $.getJSON(url + "unit__id=" + annotator.codingjobid, annotator.fields.codingrules_fetched.bind("unit"));
+    $.getJSON(url + "article__id=" + annotator.codingjobid, annotator.fields.codingrules_fetched.bind("article"));
+    $.getJSON("/api/v4/codingruleaction", annotator.fields.codingruleactions_fetched);
+
     $.ajax({
         "url": annotator.codingjobid + "/fields",
         "success": function(json) {
@@ -112,8 +135,7 @@ annotator.fields.initFieldData = function(){
             });
 
             annotator.fields.setup_wordcount();
-            $( "#loading_fields" ).dialog( "destroy" );
-    
+            annotator.fields.codingrules_fetched();
         },
         "error": function(jqXHR, textStatus, errorThrown){
             console.debug('error loading fields' + textStatus + errorThrown);
@@ -121,6 +143,240 @@ annotator.fields.initFieldData = function(){
         },
         "dataType": "json"
     });
+}
+
+/*
+ * Called when initialsing {article,unit}codings is done. Must be bound
+ * (with bind()) to either article or unit.
+ */
+annotator.fields.add_rules = function(html){
+    $.each($("input", html), function(i, input){
+        $(input).focus();
+        $(input).blur();
+    });
+
+    $(window).scrollTop(0);
+
+    $("input", html).keyup(function(event){
+        // We need to figure out which rules apply when a user is done
+        // editing this field. 
+        var input = $(event.currentTarget);
+
+        // Parse id when field is "id_field_n"
+        var field_id = input.get(0).id.split("_")[2];
+        var rules = annotator.fields.get_field_codingrules()[field_id];
+
+        if (rules===undefined){
+            console.log("No codingrules for field " + field_id);
+            return;
+        }
+
+        // Check each rule
+        var apply = [], not_apply = [];
+        $.each(rules, function(i, rule_id){
+            var rule = annotator.fields.codingrules[rule_id];
+            (annotator.fields.rule_applies(rule.parsed_condition)
+                ? apply : not_apply).push(rule);
+        });
+
+        $.each(not_apply, function(i, rule){
+            rule.get_field_input().css("borderColor", "");
+            rule.get_field_input().get(0).disabled = false;
+            rule.get_field_input().attr("null", true);
+            rule.get_field_input().attr("placeholder", "");
+        });
+
+        $.each(apply, function(i, rule){
+            if(rule.field === null || rule.action === null) return;
+
+            var action = rule.get_action().label;
+
+            if(action === ACTIONS.RED){
+                rule.get_field_input().css("borderColor", "red");
+            } else if (action === ACTIONS.NOT_CODABLE){
+                rule.get_field_input().get(0).disabled = true;
+            } else if (action === ACTIONS.NOT_NULL){
+                rule.get_field_input().attr("null", false);
+                rule.get_field_input().attr("placeholder", "NOT NULL");
+            }
+        });
+    });
+}
+
+/*
+ * Get current value of input element. This takes in account hidden fields
+ * and autocomplete fields.
+ *
+ * @param input: jQuery element 
+ */
+annotator.fields.get_value = function(input){
+    if (input.hasClass("ui-autocomplete-input")){
+        // This is an autocomplete field, so we need to fetch the value
+        // from the hidden input field.
+        return $(":hidden", input.parent()).val();
+    } 
+
+    return input.val();
+}
+
+
+/*
+ * Return true if rule applies, false if it is not.
+ *
+ * @type rule: object
+ * @param rule: parsed_condition property of a CodingRule
+ */
+annotator.fields.rule_applies = function(rule){
+    var ra = annotator.fields.rule_applies;
+    var truth, input, assert = function(cond){
+        if(!cond) throw "AssertionError";
+    }
+
+    // Get input element and its value
+    var input = $("#id_field_" + rule.values[0].id);
+    var input_value = annotator.fields.get_value(input);
+
+    if (rule.type === null){
+        // Empty rule. "Waardeloos waar".
+        return true;
+    }
+
+    // Resolve other types
+    if (rule.type === OPERATORS.OR){
+        return ra(rule.values[0]) || ra(rule.values[1]);
+    } 
+    
+    if (rule.type === OPERATORS.AND){
+        return ra(rule.values[0]) && ra(rule.values[1]);
+    }
+    
+    if (rule.type === OPERATORS.NOT){
+        return !ra(rule.value);
+    }
+
+    if (rule.type === OPERATORS.LESSER_THAN){
+        return input_value < rule.values[1];
+    }
+
+    if (rule.type === OPERATORS.GREATER_THAN){
+        return input_value > rule.values[1];
+    }
+
+    if (rule.type === OPERATORS.GREATER_THAN_OR_EQUAL_TO){
+        return input_value >= rule.values[1];
+    }
+
+    if (rule.type === OPERATORS.LESSER_THAN_OR_EQUAL_TO){
+        return input_value <= rule.values[1];
+    }
+
+    // rule.type must equal either EQUALS or NOT_EQUALS. Furthermore
+    // rule.values[0] must be a codingschemafield and rule.values[1]
+    // a value.
+    assert(rule.values[0].type === "codingschemafield");
+    assert(typeof(rule.values[1]) !== typeof({}));
+
+    truth = input_value == rule.values[1];
+    return (rule.type === OPERATORS.EQUALS) ? truth : !truth;
+}
+
+/*
+ * Called when codingrules are fetched.
+ */
+annotator.fields.codingrules_fetched_count = 0;
+annotator.fields.codingrules_fetched = function(json){
+    annotator.fields.codingrules_fetched_count += 1;
+
+    var get_field_input = function(){
+        return $("#id_field_" + this.field);
+    }
+
+    var get_action = function(){
+        return annotator.fields.codingruleactions[this.action];
+    }
+
+    if (json !== undefined){
+        var rules = {};
+        $.each(json.results, function(i, rule){
+            rules[rule.id] = rule;
+            rule.get_field_input = get_field_input.bind(rule);
+            rule.get_action = get_action.bind(rule);
+        });
+
+        $.extend(annotator.fields.codingrules, rules);
+    }
+
+    if (annotator.fields.codingrules_fetched_count === 4){
+        $( "#loading_fields" ).dialog( "destroy" );
+    }
+}
+
+annotator.fields.codingruleactions_fetched = function(json){
+    $.each(json.results, function(i, action){
+        annotator.fields.codingruleactions[action.id] = action;
+    });
+
+    annotator.fields.codingrules_fetched();
+}
+
+/*
+ * Get a field_id --> [rule, rule..] mapping.
+ */
+annotator.fields.get_field_codingrules = function(){
+    if (annotator.fields.field_codingrules !== undefined){
+        return annotator.fields.field_codingrules;
+    }
+
+    var codingrule_fields = {};
+    $.each(annotator.fields.codingrules, function(i, rule){
+        var self = this;
+        codingrule_fields[rule.id] = [];
+
+        /*
+         * Return a list with all nodes in parsed condition tree.
+         */
+        self.walk = function(node){
+            if (node === undefined){
+                node = self.parsed_condition;
+            }
+            var nodes = [node];
+
+            if (node.values !== undefined){
+                $.merge(nodes, self.walk(node.values[0]));
+                $.merge(nodes, self.walk(node.values[1]));
+            } else if (node.value !== undefined){
+                $.merge(nodes, self.walk(node.value));
+            }
+
+            return nodes;
+        }
+
+        $.each(self.walk(), function(i, node){
+            if (node.type === "codingschemafield"){
+                if (codingrule_fields[rule.id].indexOf(node.id) === -1){
+                    codingrule_fields[rule.id].push(node.id);
+                }
+            }
+        });
+    });
+
+    // Reverse dictionary
+    var field_codingrules = {};
+    $.each(codingrule_fields, function(rule_id, fields){
+        $.each(fields, function(i, field_id){
+            if (field_codingrules[field_id] === undefined){
+                field_codingrules[field_id] = [];
+            }
+
+            if (field_codingrules[field_id].indexOf(rule_id) === -1){
+                // Objects ('hashmaps') can only contain strings as keys, so
+                // the rule_id's got converted to strings...
+                field_codingrules[field_id].push(parseInt(rule_id));
+            }
+        });
+    });
+
+    return field_codingrules;
 }
 
 annotator.fields.setup_wordcount = function(){
@@ -502,6 +758,9 @@ annotator.fields.autocompletes.onFocus = function(){
 
             var term = req.term.toLowerCase();
             var result = annotator.fields.autocompletes.getSearchResults(field, term, selected_root);
+            result.sort(function(a,b){
+                return a.ordernr - b.ordernr;
+            });
             resp(result);
         },
         selectItem:true,
@@ -576,7 +835,11 @@ annotator.fields.autocompletes.addAutocompletes = function(jqueryEl){
                      * we still want to display the parent, we need to find a code with the
                      * same label as the given code. However, this label is not guarenteed to be
                      * unique, so we could display the wrong parent.. Should work in 99% of the
-                     * cases though. */
+                     * cases though.
+                     *
+                     * Btw: I'm so sorry :-(
+                     * - martijn
+                     */
                      var found = []; var label = inputEl.val(); var code;
                      $.each(annotator.fields.ontologies_parents[field['items-key']], function(i, root){
                         for(var i=0; i < root.descendants.length; i++){

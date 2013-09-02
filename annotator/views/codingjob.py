@@ -186,6 +186,7 @@ def _build_ontology(codebook, language, fallback=True):
         "value" : code.id,
         "label" : code.get_label(language, fallback=fallback),
         "functions" : _get_functions(codebook, code),
+        "ordernr" : codebook.get_codebookcode(code).ordernr
     } for code in codebook.get_codes()]
 
 def _get_highlighters(schemas):

@@ -32,7 +32,7 @@ from amcat.models.plugin import Plugin, PluginType
 from amcat.tools import classtools
 from navigator.utils.action import ActionHandler
 from navigator.utils.auth import check
-from api.rest import Datatable
+from api.rest.datatable import Datatable
 
 from api.rest.resources import PluginResource
 

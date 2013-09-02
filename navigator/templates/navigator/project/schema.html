@@ -11,19 +11,18 @@
 <br/><div class="alert alert-success">Schema succesfully edited.</div>
 {% endif %}
 <h1 class="noline">Actions</h1>
-<p>
+<p class="btn-group">
 <a href="{% url "project-edit-schemafields" context.id schema.id %}" class="btn btn"><i class="icon-edit"></i> Edit fields</a>
 <a href="{% url "project-edit-schema-properties" context.id schema.id %}" class="btn btn"><i class="icon-edit"></i> Edit properties</a>
+<a href="{% url "project-edit-schema-rules" context.id schema.id %}" class="btn btn"><i class="icon-list"></i> Edit rules</a>
 <a href="{% url "project-name-schema" context.id schema.id %}" class="btn"><i class="icon-share"></i> Copy schema</a>
 
 <a class="btn btn-danger confirm" href="{% url "project-delete-schema" context.id  schema.id %}"
-   data-confirm="You're about to delete schema <i>{{ schema.name }}</i>. This action is not reversible." 
+   data-confirm="You're about to delete schema <i>{{ schema.name }}</i>. This action is not reversible.">
    <i class="icon-white icon-trash"></i>
    Delete
 </a>
-
-
-</a>
+</p>
 
 <h1>Schema {{schema.id}} : {{schema.name}}</h1>
 

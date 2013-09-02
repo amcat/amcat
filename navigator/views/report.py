@@ -19,7 +19,7 @@
 from django.shortcuts import render
 from django.core.urlresolvers import reverse
 
-from api.rest import Datatable
+from api.rest.datatable import Datatable
 from api.rest.resources import MediumResource
 from amcat.models.medium import Medium
 

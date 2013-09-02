@@ -38,7 +38,6 @@ from amcat.nlp import syntaxtree, sbd
 from amcat.models import AnalysisSentence, RuleSet
 from amcat.tools.pysoh.pysoh import SOHServer
 from amcat.models import ArticleSetArticle, Sentence, Article
-from amcat.scripts.actions.split_articles import SplitArticles
 
 from django.core.urlresolvers import reverse
 
@@ -146,16 +145,44 @@ def copy_article(article):
     new.uuid = None
     new.text = ""
     new.length = None
+    new.byline = None
     return new
 
 def get_articles(article, sentences):
-    prev_parnr = 1 
+    """
+    Split `article` with `sentences` as delimeters. For each sentence the text
+    before it, including itself, is copied to a new article with is yield.
 
+    @param sentences: delimeters for splitting
+    @type sentences: QuerySet
+
+    @param article: article which contains sentences
+    @type article: models.Article
+
+    @requires: ordering of sentences ("parnr", "sentnr")
+    @requires: sbd.get_or_create_sentences() called on `article`
+    @requires: all(a in article.sentences.all() for a in sentences)
+
+    @returns: generator with newly splitted articles (not saved)
+    @raises: ValueError if a sentence in `sentences` is not in article.sentences
+    """
     new_article = copy_article(article)
-    all_sentences = list(article.sentences.all())
-    sentences = sentences.values_list("parnr", "sentnr")
 
-    for parnr, sentnr in chain(sentences, ((None, None),)):
+    # Get sentence, skipping the headline 
+    all_sentences = list(article.sentences.all()[1:])
+
+    not_in_article = set(sentences) - set(all_sentences)
+    if not_in_article:
+        raise ValueError(
+            "Sentences specified as delimters, but not in article: {not_in_article}. Did you try to split on a headline?"
+            .format(**locals())
+        )
+
+    prev_parnr = 1 
+    for parnr, sentnr in chain(sentences.values_list("parnr", "sentnr"), ((None, None),)):
+        # Skip headline paragraph
+        if parnr == 1: continue
+
         while True:
             try: sent = all_sentences.pop(0)
             except IndexError:
@@ -176,7 +203,10 @@ def get_articles(article, sentences):
                 new_article = copy_article(article)
                 break
 
-def handle_split(request, form, project, article, sentences):
+def handle_split(form, project, article, sentences):
+    if not form.is_valid():
+        raise ValueError("Non-valid form passed: {form.errors}".format(**locals()))
+
     articles = list(get_articles(article, sentences))
 
     # We won't use bulk_create yet, as it bypasses save() and doesn't
@@ -197,7 +227,10 @@ def handle_split(request, form, project, article, sentences):
         ArticleSet.articles.through(articleset=aset, article=art) for
             art in articles for aset in form_data["add_splitted_to_sets"]
     ])
-    dirty_sets |= ArticleSet.objects.filter(id__in=[s.id for s in form_data["add_splitted_to_sets"]])
+
+    # Collect changed sets
+    for field in ("add_splitted_to_sets", "remove_from_sets", "add_to_sets"):
+        dirty_sets |= form_data[field]
 
     # Add splitted articles to sets wherin the original article live{d,s}
     if form_data["add_splitted_to_all"]:
@@ -208,21 +241,28 @@ def handle_split(request, form, project, article, sentences):
                 for art in articles for asetart in articlesetarts
         ])
 
-        dirty_sets |= ArticleSet.objects.filter(Q(project=project)|Q(projects_set=project)).filter(articles=article)
+        dirty_sets |= project.all_articlesets().filter(articles=article).only("id")
 
     if form_data["remove_from_sets"]:
         ArticleSet.articles.through.objects.filter(article=article, articleset=form_data["remove_from_sets"]).delete()
-        dirty_sets |= ArticleSet.objects.filter(id__in=[aset.id for aset in form_data["remove_from_sets"]])
         
     if form_data["remove_from_all_sets"]:
         ArticleSet.articles.through.objects.filter(article=article, articleset__project=project).delete()
-        dirty_sets |= ArticleSet.objects.filter(project=project, articles=article)
+        dirty_sets |= ArticleSet.objects.filter(project=project, articles=article).distinct().only("id")
 
     if form_data["add_splitted_to_new_set"]:
-        new_set = ArticleSet.create_set(project, form_data["add_splitted_to_new_set"], articles)
+        new_splitted_set = ArticleSet.create_set(project, form_data["add_splitted_to_new_set"], articles)
+
+    if form_data["add_to_sets"]:
+        ArticleSet.articles.through.objects.bulk_create(ArticleSet.articles
+            .through(articleset=a, article=article) for a in form_data["add_to_sets"]
+        )
+
+    if form_data["add_to_new_set"]:
+        new_set = ArticleSet.create_set(project, form_data["add_to_new_set"], [article])
 
     dirty_sets.update(index_dirty=True)
-    return render(request, "navigator/article/split-done.html", locals())
+    return locals()
 
     
 @check(Article, args_map={'article_id' : 'id'}, args='article_id')
@@ -232,17 +272,15 @@ def split(request, project, article):
     form = forms.SplitArticleForm(project, article, data=request.POST or None)
 
     if form.is_valid():
-        # Check whether all selected sentences are really in this article
-        sentence_ids = sentences.values_list("id", flat=True)
         selected_sentence_ids = set(get_sentence_ids(request.POST)) - {None,}
-        if not all(sid in sentence_ids for sid in selected_sentence_ids):
-            return HttpResponseBadRequest()
-
         if selected_sentence_ids:
             sentences = Sentence.objects.filter(id__in=selected_sentence_ids)
-            return handle_split(request, form, project, article, sentences)
+            context = handle_split(form, project, article, sentences)
+            return render(request, "navigator/article/split-done.html", context)
 
+    # Get sentences, skip headline
     sentences = _get_sentences(sentences)
+    sentences.next()
     return render(request, "navigator/article/split.html", locals())
 
 @check(ArticleSet, args_map={'remove_articleset_id' : 'id'}, args='remove_articleset_id', action='update')
@@ -358,3 +396,156 @@ def upload_article(request, id):
                                                                         option_forms=option_forms,
                                                                         menu=PROJECT_MENU))
 
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestArticleViews(amcattest.PolicyTestCase):
+    def create_test_sentences(self):
+        article = amcattest.create_test_article(byline="foo", text="Dit is. Tekst.\n\n"*3 + "Einde.")
+        sbd.create_sentences(article)
+        return article, article.sentences.all()
+
+    def test_get_articles(self):
+        from amcat.models import Sentence
+        _get_articles = lambda a,s : list(get_articles(a,s))
+
+        # Should raise exception if sentences not in article
+        article, sentences = self.create_test_sentences()
+        s1 = Sentence.objects.filter(id=amcattest.create_test_sentence().id)
+        self.assertRaises(ValueError, _get_articles, article, s1)
+
+        # Should raise an exception if we try to split on headline
+        self.assertRaises(ValueError, _get_articles, article, sentences.filter(parnr=1))
+
+        # Should return a "copy", with byline in "text" property 
+        arts = _get_articles(article, Sentence.objects.none())
+        map(lambda a : a.save(), arts)
+
+        self.assertEquals(len(arts), 1)
+        sbd.create_sentences(arts[0])
+
+        self.assertEquals(
+            [s.sentence for s in sentences[1:]],
+            [s.sentence for s in arts[0].sentences.all()[1:]]
+        )
+
+        self.assertTrue("foo" in arts[0].text)
+
+        # Should be able to split on byline
+        self.assertEquals(2, len(_get_articles(article, sentences[1:2])))
+        a, b = _get_articles(article, sentences[4:5])
+
+        # Check if text on splitted articles contains expected
+        self.assertTrue("Einde" not in a.text)
+        self.assertTrue("Einde" in b.text)
+        
+    def test_handle_split(self):
+        from amcat.tools import amcattest
+        from functools import partial
+
+        article, sentences = self.create_test_sentences()
+        project = amcattest.create_test_project()
+        aset1 = amcattest.create_test_set(4, project=project)
+        aset2 = amcattest.create_test_set(5, project=project)
+        aset3 = amcattest.create_test_set(0)
+
+        for _set in [aset1, aset2]:
+            for _article in _set.articles.all():
+                sbd.create_sentences(_article)
+
+        a1, a2 = aset1.articles.all()[0], aset2.articles.all()[0]
+        
+        aset1.articles.through.objects.create(articleset=aset1, article=article)
+        aset3.articles.through.objects.create(articleset=aset3, article=a1)
+
+        form = partial(forms.SplitArticleForm, project, article, initial={
+            "remove_from_sets" : False 
+        })
+
+        # Test form defaults (should do nothing!)
+        f = form(dict())
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+
+        self.assertEquals(5, aset1.articles.all().count())
+        self.assertEquals(5, aset2.articles.all().count())
+        self.assertEquals(1, aset3.articles.all().count())
+        self.assertTrue(article in aset1.articles.all())
+        self.assertTrue(article not in aset2.articles.all())
+        self.assertTrue(article not in aset3.articles.all())
+
+        # Passing invalid form should raise exception
+        f = form(dict(add_to_sets=[-1]))
+        self.assertFalse(f.is_valid())
+        self.assertRaises(ValueError, handle_split, f, project, article, Sentence.objects.none())
+
+        # Test add_to_new_set
+        f = form(dict(add_to_new_set="New Set 1"))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        aset = project.all_articlesets().filter(name="New Set 1")
+        self.assertTrue(aset.exists())
+        self.assertEquals(project, aset[0].project)
+
+        # Test add_to_sets
+        f = form(dict(add_to_sets=[aset3.id]))
+        self.assertFalse(f.is_valid())
+        f = form(dict(add_to_sets=[aset2.id]))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        self.assertTrue(article in aset2.articles.all())
+
+        # Test add_splitted_to_new_set
+        f = form(dict(add_splitted_to_new_set="New Set 2"))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        aset = project.all_articlesets().filter(name="New Set 2")
+        self.assertTrue(aset.exists())
+        self.assertEquals(project, aset[0].project)
+        self.assertEquals(1, aset[0].articles.count())
+        self.assertTrue(article not in aset[0].articles.all())
+
+        # Test add_splitted_to_sets
+        f = form(dict(add_splitted_to_sets=[aset2.id]))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        self.assertTrue(article in aset2.articles.all())
+
+        # Test remove_from_sets
+        f = form(dict(remove_from_sets=[aset1.id]))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        self.assertTrue(article not in aset1.articles.all())
+
+        # Test remove_from_all_sets
+        aset1.articles.through.objects.create(articleset=aset1, article=article)
+        aset1.articles.through.objects.create(articleset=aset3, article=article)
+        # Note: already in aset2 due to previous tests
+
+        f = form(dict(remove_from_all_sets=True))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+
+        self.assertTrue(aset1 in project.all_articlesets())
+        self.assertTrue(aset2 in project.all_articlesets())
+        self.assertFalse(aset3 in project.all_articlesets())
+
+        self.assertFalse(article in aset1.articles.all())
+        self.assertFalse(article in aset2.articles.all())
+        self.assertTrue(article in aset3.articles.all())
+
+        # Are articlesets set to index_dirty=True?
+        project = amcattest.create_test_project()
+        aset = amcattest.create_test_set(5, project=project)
+        aset.index_dirty = False
+        aset.save()
+
+        f = forms.SplitArticleForm(aset.project, aset.articles.all()[0], dict(add_splitted_to_sets=[aset.id]))
+        handle_split(f, aset.project, aset.articles.all()[0], Sentence.objects.none())
+        self.assertTrue(ArticleSet.objects.get(id=aset.id).index_dirty)
+
+        

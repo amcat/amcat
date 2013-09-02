@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -18,12 +17,31 @@ from __future__ import absolute_import
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from .base import *
-from .menu import *
-from .misc import *
+from amcat.models import CodingRule
+from amcat.models.coding import codingruletoolkit
+from rest_framework import serializers
 
-try:
-    from .private import *
-except ImportError:
-    pass
+from api.rest.resources.amcatresource import AmCATResource
+from api.rest.serializer import AmCATModelSerializer
+from django.core.exceptions import ValidationError
+
+class CodingRuleSerializer(AmCATModelSerializer):
+    parsed_condition = serializers.SerializerMethodField('get_parsed_condition')
+    
+    def get_parsed_condition(self, obj):
+        try:
+            return codingruletoolkit.to_json(codingruletoolkit.parse(obj), serialise=False)
+        except (ValidationError, SyntaxError):
+            return None
+
+    class Meta:
+        model = CodingRule
+
+class CodingRuleResource(AmCATResource):
+    model = CodingRule
+    serializer_class = CodingRuleSerializer
+    extra_filters = [
+        "codingschema__codingjobs_article__id",
+        "codingschema__codingjobs_unit__id"
+    ]
 

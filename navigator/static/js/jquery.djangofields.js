@@ -88,7 +88,7 @@ jQuery.fn.djangofields = {
 
             for (var i=0; i < choices.length; i++){
                 if (choices[i].id == obj){
-                    return choices[i].name;
+                    return choices[i].name||choices[i].label;
                 }
             }
 
@@ -101,7 +101,7 @@ jQuery.fn.djangofields = {
             var option;
             $.each(choices, function(i, choice){
                 option = $("<option>").attr("value", i);
-                option.append(document.createTextNode(choice.name));
+                option.append(document.createTextNode(choice.name||choice.label));
 
                 if(val == choice.id){
                     option = option.attr("selected", "selected");

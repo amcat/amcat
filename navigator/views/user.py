@@ -19,7 +19,7 @@
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 
-from api.rest import Datatable
+from api.rest.datatable import Datatable
 from api.rest.resources import UserResource, ProjectResource
 
 from amcat.models.user import User, Affiliation

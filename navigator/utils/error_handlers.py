@@ -9,13 +9,7 @@ def handler500(request):
     500 error handler which includes a normal request context and some extra info.
     """
     uri = request.build_absolute_uri()
-    try:
-        sentry_id = request.sentry['id'].split("$")[0]
-        comment = ("\n\n------ Issue details -----\n500 on accessing:\n{uri}\nSentry ID: {sentry_id}"
-                   .format(**locals()))
-    except AttributeError, KeyError:
-        comment = ""
-        pass
+    comment = ""
     title = header = "500 : An Error has occurred"
     exc_type, exc_value, exc_tb = sys.exc_info()
     subheader = "{exc_type.__name__}: {exc_value}".format(**locals())

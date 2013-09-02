@@ -36,7 +36,7 @@ _keymap = {
     65 : "insert",  // a
 }
 
-jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
+jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
     // Prevent scoping issues
     var self = this;
 
@@ -44,11 +44,14 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
     self.API_URL = api_url;
     self.SCHEMA_ID = schemaid;
     self.PROJECT_ID = projectid;
-    self.LOADING_STEPS = 8;
+    self.LOADING_STEPS = 7;
     self.KEYCODE_ENTER = 13;
     self.ERROR_COLOUR = "#f2dede"; // Taken from bootstrap.css
     self.INFO_COLOUR = "#d9edf7";
-    self.N_COLS = 6;
+    self.N_COLS = 4;
+
+    // Debug variables
+    self.initialising_done = false;
     
     // Get UI elements
     self.bar = $("[name=loading] .bar");
@@ -60,23 +63,14 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
 
     // Pnotify balloon
     self.current_message = null;
-    self.rules_valid = $.pnotify({
-        title : 'Errors in codingrules',
-        text  : "Errors were found in one or more codingrules" +
-                    " belonging to this codingschema. You can" +
-                    " inspect the error by clicking 'edit rules'" +
-                    " on the previous page.",
-        hide  : false
-    });
-
-    if (rules_valid) self.rules_valid.hide();
 
     // JSON data
-    self.fields;
-    self.fieldtypes; // Types of each field (IntegerField, etc)
+    self.rules;
+    self.fieldtypes; // Types of each field (apply --> ModelChoice, etc.)
+
     self.model_choices = {
-        fieldtype : [], // CodingSchemaFieldType
-        codebook : []
+        action : [], // CodingRuleAction
+        field : [], // CodingSchemaField
     }
 
     // Statekeeping values
@@ -176,7 +170,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         var trs = $("tbody tr", self.table);
 
         for (var i=0; i < trs.length; i++){
-            if (parseInt($(trs[i]).children(":first-child").text()) == fieldnr){
+            if ($(trs[i]).children(":eq(1)").text() == fieldnr){
                 return $(trs[i]);
             }
         }
@@ -188,6 +182,13 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
     self.increase_progress = function(){
         self.loading_percent += 100 / self.LOADING_STEPS;
         self._set_progress();
+    }
+
+    self._escape = function(str){
+        return str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
     }
 
     self.encode_url_params = function(params){
@@ -257,14 +258,9 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
 
         var defaults = {
             "delete" : self._create_delete_button,
-            "fieldnr" : function(){
-                // +1 to get one ahead of highigst fieldnr
-                return self.fields.length + 1;
-            }
         }
 
-        // Row ID need to be set in order for onDrop callback to be fired :-/
-        var tr = $("<tr id='row-" + (field.fieldnr||defaults.fieldnr()) + "'>");
+        tr = $("<tr>").attr("id", field.id);
 
         // Add each field to table
         var new_state = {};
@@ -288,34 +284,23 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
 
         delete new_state['delete'];
         if (add_to_state){
-            self.fields.push(new_state);
+            self.rules.push(new_state);
+            new_state.tr = tr.get(0);
         }
 
         $("tbody", self.table).append(tr);
-        self.initialise_dnd();
+        return tr.get(0);
     }
 
     self.initialise_table = function(){
         // Add each field to table
-        $.each(self.fields, function(i, field){
-            self.add_row(field);
+        $.each(self.rules, function(i, rule){
+            rule.tr = self.add_row(rule);
         });
 
         $("tbody", self.table).css("cursor", "pointer");
     }
 
-    self.initialise_dnd = function(){
-        $(self.table).tableDnD({
-            onDragClass : "dragging",
-            onDragStart : function(){
-                //$("tbody", self.table).css("cursor", "move");
-            },
-            onDrop : function(){
-                $("tbody", self.table).css("cursor", "pointer");
-            }
-        });
-    }
-    
     self.initialise_buttons = function(){
         self.btn_save.removeClass("disabled");
         self.btn_save.click(self.btn_save_clicked);
@@ -364,7 +349,6 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         } else if (cell.offset().top + cell.height() >= document.body.scrollTop + window.innerHeight) {
             window.scrollBy(0,4*cell.height());
         }
-
     }
 
     self.down_pressed = function(event){
@@ -394,7 +378,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         event.preventDefault();
         self.btn_add_field.click();
 
-        self.active_cell.y = self.fields.length - 1;
+        self.active_cell.y = self.rules.length - 1;
         self.active_cell.x = 0;
         self.update_active_cell();
         $(self.get_active_cell()).dblclick();
@@ -448,9 +432,14 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
 
     self.initialising_done = function(){
         /* This function is called when all data is ready */
+        if (self.initialising_done === true){
+            console.log("Initialising twice?");
+        }
+
         self.initialise_table();
         self.initialise_buttons();
         self.initialise_shortcuts();
+        self.initialising_done = true;
     }
 
     // CALLBACK FUNCTIONS //
@@ -488,7 +477,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         }
 
         self.current_message = self.current_message.pnotify({
-            "title" : type, "type" : type, "text" : msgs[0], "shadow" : false, 
+            "title" : type, "type" : type, "text" : self._escape(msgs[0]), "shadow" : false, 
             nonblock: true, hide: false,closer: false, sticker: false
         });
 
@@ -498,12 +487,6 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         // Errors found?
         var errors_found = false;
         $.each(all_errors.fields, function(){ errors_found = true; }); 
-
-        if (all_errors.rules_valid){
-            self.rules_valid.hide();
-        } else {
-            self.rules_valid.show();
-        }
 
         // Should we redirect?
         if (this == true && !errors_found){
@@ -553,17 +536,9 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         var tr, th, td;
         $.each(all_errors.fields, function(fieldnr, errors){
             tr = self._get_tr_by_fieldnr(fieldnr);
-            
+
             $.each(errors, function(field_name, error){
                 th = $("th[name=" + field_name + "]", self.table).get(0);
-
-                if (th === undefined){
-		    if (field_name == '__all__')
-			th = tr;
-		    else 
-			// No such column in this table
-			return;
-                }
 
                 td = tr.children().get(th.cellIndex);
 
@@ -578,34 +553,6 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         console.log(data);
     }
     
-    self.fields_initialised = function(fields){
-        self.fields = [];
-        
-        $.each(fields.results, function(i, field){
-            field.fieldnr = i+1;
-            self.fields.push(field);
-        });
-
-        self.increase_progress();
-    }
-
-    self.fieldtypes_initialised = function(fieldtypes){
-        self.model_choices['fieldtype'] = fieldtypes.results;
-        self.increase_progress();
-    }
-
-    self.fieldtypes_types_initialised = function(options){
-        self.fieldtypes = options['fields'];
-        self.increase_progress();
-    }
-
-    self.codebooks_initialised = function(codebooks){
-        var mc = self.model_choices;
-        mc['codebook'] = mc['codebook'].concat(codebooks.results);
-
-        self.increase_progress();
-    }
-
     // EVENTS //
     self.delete_button_clicked = function(event){
         // Delete row
@@ -618,24 +565,11 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
     }
 
     self.btn_add_field_clicked = function(event){
-        var textfield = null;
-        $.each(self.model_choices.fieldtype, function(i, type){
-            if (type.name === "Text") textfield = type.id;
-        });
-
-        if (textfield === null){
-            $.pnotify({
-                "title" : "Bug",
-                "text" : "Could not find textfieldtype id in btn_add_field_clicked(). Please file a bug report including this information.",
-                "type" : "error"
-            });
-            return;
-        }
-
         self.add_row({
-            "label" : "New Field (" + self.fields.length + ")",
-            "fieldtype" : textfield
+            "label" : "New rule (" + self.rules.length + ")",
+            "condition" : "()"
         }, true);
+
         self.save(false);
     }
 
@@ -667,6 +601,8 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
     self.cell_clicked = function(event){
         var target = $(event.currentTarget);
         var th = $($("th", self.table)[target[0].cellIndex]);
+        var tr = self._find_parent(target, "tr").get(0);
+        var field = self._dictlist_lookup(self.rules, "tr", tr);
 
         // Check wether field is editable
         if (th.attr("editable") != "true" || self.editing){
@@ -675,11 +611,10 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         }
 
         // Get widget
-        var fieldnr = self._get_fieldnr(target);
         var field_name = th.attr("name");
         var field_choices = self.model_choices[field_name];
 
-        var value = self.fields[fieldnr][field_name];
+        var value = field[field_name];
         var type = self.fieldtypes[field_name];
         var widget = jQuery.fn.djangofields.get(type, "to_widget")(value, field_choices);
 
@@ -715,9 +650,10 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
     self.widget_focusout = function(event, value){
         var td = self._find_parent(self.editing, "td")
         var th = $($("th", self.table)[td[0].cellIndex]);
+        var tr = self._find_parent(td, "tr").get(0);
+        var field = self._dictlist_lookup(self.rules, "tr", tr);
 
         // Get value
-        var fieldnr = self._get_fieldnr(td);
         var field_name = th.attr("name");
         var field_choices = self.model_choices[field_name];
         var type = self.fieldtypes[field_name];
@@ -730,8 +666,8 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
 
         if (field_name === "label"){
             var found = false;
-            $.each(self.fields, function(i, field){
-                if (i == fieldnr) return;
+            $.each(self.rules, function(i, field){
+                if (field.tr === tr) return;
                 if (field.label.toLowerCase() === value.toLowerCase()) found = true;
             });
 
@@ -746,7 +682,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
 
 
         // Set value to state
-        self.fields[fieldnr][field_name] = value;
+        field[field_name] = value;
 
         // Remove widget
         td.contents().remove();
@@ -760,23 +696,50 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         self.widget_focusout(event, null);
     }
 
+    // OPTIONS INITIALISED //
+    self.codingschemafield_options_initialised = function(options){
+        self.increase_progress();
+    }
+
+    self.codingrule_options_initialised = function(options){
+        self.fieldtypes = options["fields"];
+        self.increase_progress();
+    }
+
+    self.codingruleaction_options_initialised = function(options){
+        // ??
+        self.increase_progress();
+    }
+
+    // API_GETS INITIALISED //
+    self.codingrules_initialised = function(rules){
+        self.rules = rules["results"];
+        self.increase_progress();
+    }
+
+    self.codingruleactions_initialised = function(actions){
+        self.model_choices["action"] = actions["results"];
+        self.increase_progress();
+    }
+
+    self.codingschemafields_initialised = function(schemafields){
+        self.model_choices["field"] = schemafields["results"];
+        self.increase_progress();
+    }
+
     // MAIN FUNCTIONS //
     self.main = function(){
-        // Get fields of this schema
-        self.api_get("codingschemafield", self.fields_initialised, {
-            "codingschema__id" : self.SCHEMA_ID,
-            "order_by" : "fieldnr"
-        });
+        // Get all rules and their fieldtypes of this schema
+        self.api_options("codingrule", self.codingrule_options_initialised);
+        self.api_get("codingrule", self.codingrules_initialised, {"codingschema__id" : self.SCHEMA_ID});
 
-        // Get all fieldtypes
-        self.api_get("codingschemafieldtype", self.fieldtypes_initialised);
-        self.api_get("codingschemafieldtype", self.fieldtypes_initialised);
-        self.api_options("codingschemafield", self.fieldtypes_types_initialised);
+        // Get actions which can be selected in 'apply' box
+        self.api_get("codingruleaction", self.codingruleactions_initialised);
+        self.api_options("codingruleaction", self.codingruleaction_options_initialised);
 
-        // Get owned and imported codebooks
-        self.api_get("codebook", self.codebooks_initialised, {"project__id" : self.PROJECT_ID});
-        self.api_get("codebook", self.codebooks_initialised, {"projects_set__id" : self.PROJECT_ID});
-        self.api_get("codebook", self.codebooks_initialised, {"codingschemafield__codingschema__id" : self.SCHEMA_ID});
+        // Get schemafields belonging to this schema
+        self.api_get("codingschemafield", self.codingschemafields_initialised, {"codingschema__id" : self.SCHEMA_ID});
+        self.api_options("codingschemafield", self.codingschemafield_options_initialised);
 
         // Initialising 'done'
         self.increase_progress();
@@ -790,20 +753,24 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
          * @param commit: commit state to database
          * @type commit: boolean (default: true)
          */
-        // If commit is not give, it is true
+        // If commit is not given, it is true
         commit = (commit === undefined) ? true : commit;
 
-        var fieldnr, field, fields = [];
+        var rule, rules = [];
         $.each($("tbody tr", self.table), function(i, tr){
-            fieldnr = parseInt($(tr).children(":first-child").text());
-            field = self._dictlist_lookup(self.fields, "fieldnr", fieldnr);
-            fields.push(field);
+            rule = self._dictlist_lookup(self.rules, "tr", tr);
+            rules.push($.extend({}, rule));
+            delete rules[i]["tr"];
+
+            if (rules[i].id === null){
+                delete rules[i]["id"];
+            }
         });
 
         // Send data to server for checking / comitting
         $.post(
             window.location + '?commit=' + commit, {
-                fields : JSON.stringify(fields)                
+                rules : JSON.stringify(rules)                
             },
             self.save_callback.bind(commit)
         );

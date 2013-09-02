@@ -61,19 +61,21 @@ class Code(AmcatModel):
         
     @property
     def label(self):
-        """Get the (cached) label with the lowest language id, or a repr-like string"""
+        """Get the (cached, not-None) label with the lowest language id, or a repr-like string"""
         repr_like_string = '<{0.__class__.__name__}: {0.id}>'.format(self)
 
         if self._all_labels_cached and not self._labelcache:
+            # ALl lables are cached, but there seem to be no labels for this code
             return repr_like_string
 
         if self._labelcache:
-            key = sorted(self._labelcache)[0]
-            l = self.get_label(key)
-            if l == None:
-               return repr_like_string
-            return l
+            for key in sorted(self._labelcache):
+                l = self.get_label(key)
+                if l != None: return l
 
+            # All labels are cached, and all are None
+            if self._all_labels_cached:
+                return repr_like_string
 
         try:
             return self.labels.all().order_by('language__id')[0].label
@@ -122,7 +124,10 @@ class Code(AmcatModel):
         if fallback:
             if self._all_labels_cached:
                 if self._labelcache:
-                    return self._labelcache[sorted(self._labelcache)[0]]
+                    for key in sorted(self._labelcache):
+                        l = self._labelcache[key]
+                        if l is not None: return l
+                    return None
             else:
                 try:
                     return self.labels.all().order_by('language__id')[0].label
@@ -216,6 +221,17 @@ class TestCode(amcattest.PolicyTestCase):
 
         o = Code.objects.get(id=o.id)
         self.assertEqual(o.label, "bla")
+
+        # If all labels are cached, and _labelcache contains codes with None and
+        # a code with a string, get_label should return the string
+        o._labelcache = {1 : None, 2 : "grr"}
+        o._all_labels_cached = True
+
+        self.assertEqual(o.label, "grr")
+        self.assertEqual(o.get_label(3, fallback=True), "grr")
+        self.assertEqual(o.get_label(2, fallback=False), "grr")
+        self.assertEqual(o.get_label(1, fallback=True), "grr")
+
 
     def test_cache(self):
         """Are label lookups cached?"""

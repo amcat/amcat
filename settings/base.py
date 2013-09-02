@@ -42,7 +42,6 @@ COMPRESS_ENABLED = os.environ.get("DJANGO_COMPRESS", not DEBUG) in (True, "1", "
 COMPRESS_PARSER = 'compressor.parser.LxmlParser'
 
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO' if DEBUG else 'WARNING')
-DISABLE_SENTRY = os.environ.get("DJANGO_DISABLE_SENTRY", None) in ("1","Y", "ON")
                  
 LOCAL_DEVELOPMENT = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                          or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
@@ -71,6 +70,10 @@ DATABASES = dict(default=dict(
         HOST = os.environ.get("DJANGO_DB_HOST", ''),
         PORT = os.environ.get("DJANGO_DB_PORT", ''),
     ))
+
+RAVEN_CONFIG = {
+    "dsn" : os.environ.get("DJANGO_RAVEN_DSN")
+}
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -158,6 +161,7 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.admin',
     'django.contrib.staticfiles',
+    'raven.contrib.django.raven_compat',
     'rest_framework',
     'accounts',
     'annotator',
@@ -232,74 +236,49 @@ if not DEBUG:
 
     logger = logging.getLogger()
 
-    if not DISABLE_SENTRY:
-        from sentry.client.handlers import SentryHandler
-
-        INSTALLED_APPS.append('sentry')
-        INSTALLED_APPS.append('sentry.client')
-
-        # ensure we havent already registered the handler
-        if SentryHandler not in map(lambda x: x.__class__, logger.handlers):
-            logger.addHandler(SentryHandler())
-
-            # Add StreamHandler to sentry's default so you can catch missed exceptions
-            logger = logging.getLogger('sentry.errors')
-            logger.propagate = False
-            logger.addHandler(logging.StreamHandler())
-
-        MIDDLEWARE_CLASSES.insert(0, 'sentry.client.middleware.SentryResponseErrorIdMiddleware')
-
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': True,
+        'root': {
+            'level': 'WARNING',
+            'handlers': ['sentry'],
+        },
         'formatters': {
             'standard': {
                 'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
             },
         },
         'handlers': {
-            'default': {
-                'level':LOG_LEVEL,
-                'class':'logging.handlers.RotatingFileHandler',
-                'filename': '/tmp/django_mainlog.log',
-                'maxBytes': 1024*1024*5, # 5 MB
-                'backupCount': 5,
-                'formatter':'standard',
+            'sentry': {
+                'level': 'ERROR',
+                'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
             },
-            'request_handler': {
-                'level':LOG_LEVEL,
-                'class':'logging.handlers.RotatingFileHandler',
-                'filename': '/tmp/django_requests.log',
-                'maxBytes': 1024*1024*5, # 5 MB
-                'backupCount': 5,
-                'formatter':'standard',
-            },
+            'console': {
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+                'formatter': 'standard'
+            }
         },
         'loggers': {
-            '': {
-                'handlers': ['default'],
-                'level': LOG_LEVEL,
-                'propagate': True
+            'django.db.backends': {
+                'level': 'ERROR',
+                'handlers': ['console'],
+                'propagate': False,
             },
-            'django.request': { # Stop SQL debug from logging to main logger
-                'handlers': ['request_handler'],
-                'level': LOG_LEVEL,
-                'propagate': False
+            'raven': {
+                'level': 'DEBUG',
+                'handlers': ['console'],
+                'propagate': False,
             },
-        }
+            'sentry.errors': {
+                'level': 'DEBUG',
+                'handlers': ['console'],
+                'propagate': False,
+            },
+        },
     }
 else:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-    # logger = logging.getLogger()
-    # hdlr = logging.StreamHandler()
-    # formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-    # hdlr.setFormatter(formatter)
-    # logger.addHandler(hdlr)
-    # logger.setLevel(logging.WARNING)
-    # logging.basicConfig(
-        # level = logging.DEBUG,
-        # format = '%(asctime)s %(levelname)s %(message)s',
-    # )
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': False,
@@ -312,19 +291,11 @@ else:
             'default': {
                 'level': LOG_LEVEL,
                 'class':'logging.StreamHandler',
-                # 'class':'logging.handlers.RotatingFileHandler',
-                # 'filename': 'logs/mylog.log',
-                # 'maxBytes': 1024*1024*5, # 5 MB
-                # 'backupCount': 5,
                 'formatter':'standard',
             },
             'request_handler': {
                     'level': LOG_LEVEL,
                     'class':'logging.StreamHandler',
-                    # 'class':'logging.handlers.RotatingFileHandler',
-                    # 'filename': 'logs/django_request.log',
-                    # 'maxBytes': 1024*1024*5, # 5 MB
-                    # 'backupCount': 5,
                     'formatter':'standard',
             },
         },

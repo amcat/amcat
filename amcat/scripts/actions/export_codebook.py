@@ -87,7 +87,7 @@ class ExportCodebook(Script):
 
         
     def _run(self, codebook, structure, **kargs):
-        codebook.cache()
+        codebook.cache_labels()
         result =  STRUCTURE[structure](codebook)
         return result
 
