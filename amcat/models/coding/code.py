@@ -36,7 +36,15 @@ from amcat.models.language import Language
 PARTYMEMBER_FUNCTIONID = 0
 
 class Code(AmcatModel):
-    """Model class for table codes"""
+    """
+    Model class for table codes
+    
+    @property _labelcache: is a dictionary mapping a languageid to a label (string)
+    @property _all_labels_cached: can be set to True by a caller to indicate all
+                existing labels are cached. This prevents get_label with fallback=True
+                from quering the database, if no label is found in cache.
+
+    """
 
     id = models.AutoField(primary_key=True, db_column='code_id')
     uuid = PostgresNativeUUIDField(db_index=True, unique=True)
@@ -49,17 +57,26 @@ class Code(AmcatModel):
     def __init__(self, *args, **kargs):
         super(Code, self).__init__(*args, **kargs)
         self._labelcache = {}
+        self._all_labels_cached = False
         
     @property
     def label(self):
-        """Get the (cached) label with the lowest language id, or a repr-like string"""
+        """Get the (cached, not-None) label with the lowest language id, or a repr-like string"""
         repr_like_string = '<{0.__class__.__name__}: {0.id}>'.format(self)
+
+        if self._all_labels_cached and not self._labelcache:
+            # ALl lables are cached, but there seem to be no labels for this code
+            return repr_like_string
+
         if self._labelcache:
-            key = sorted(self._labelcache)[0]
-            l = self.get_label(key)
-            if l == None:
-               return repr_like_string
-            return l
+            for key in sorted(self._labelcache):
+                l = self.get_label(key)
+                if l != None: return l
+
+            # All labels are cached, and all are None
+            if self._all_labels_cached:
+                return repr_like_string
+
         try:
             return self.labels.all().order_by('language__id')[0].label
         except IndexError:
@@ -73,6 +90,9 @@ class Code(AmcatModel):
             if lbl is None: raise Label.DoesNotExist()
             return lbl
         except KeyError:
+            if self._all_labels_cached:
+                raise Label.DoesNotExist()
+
             try:
                 lbl = self.labels.get(language=language).label
                 self._labelcache[language] = lbl
@@ -102,15 +122,22 @@ class Code(AmcatModel):
 
         fallback = kargs.get("fallback", True)
         if fallback:
-            try:
-                return self.labels.all().order_by('language__id')[0].label
-            except IndexError:
-                pass
-
+            if self._all_labels_cached:
+                if self._labelcache:
+                    for key in sorted(self._labelcache):
+                        l = self._labelcache[key]
+                        if l is not None: return l
+                    return None
+            else:
+                try:
+                    return self.labels.all().order_by('language__id')[0].label
+                except IndexError:
+                    pass
+                
     def add_label(self, language, label):
         """Add the label in the given language"""
-	if isinstance(language, int):
-	    language = Language.objects.get(pk=language)
+        if isinstance(language, int):
+            language = Language.objects.get(pk=language)
         Label.objects.create(language=language, label=label, code=self)
         self._cache_label(language, label)
 
@@ -176,6 +203,35 @@ class TestCode(amcattest.PolicyTestCase):
         self.assertIsInstance(o.label, unicode)
         self.assertIsInstance(o.get_label(l2), unicode)
         self.assertIsInstance(o2.label, unicode)
+
+    def test_all_labels_cached(self):
+        l = Language.objects.create(label='zzz')
+        o = amcattest.create_test_code(label="bla", language=l)
+        o = Code.objects.get(id=o.id)
+        o._all_labels_cached = True
+
+        with self.checkMaxQueries(0, "Getting non-existing label with _all_cached=True"):
+            self.assertEqual(o.get_label(5), None)
+
+        with self.checkMaxQueries(0, "Getting label with _all_cached=True"):
+            self.assertEqual(o.label, "<Code: {id}>".format(id=o.id) )
+
+        o._cache_label(l, "bla2")
+        self.assertEqual(o.get_label(5), "bla2")
+
+        o = Code.objects.get(id=o.id)
+        self.assertEqual(o.label, "bla")
+
+        # If all labels are cached, and _labelcache contains codes with None and
+        # a code with a string, get_label should return the string
+        o._labelcache = {1 : None, 2 : "grr"}
+        o._all_labels_cached = True
+
+        self.assertEqual(o.label, "grr")
+        self.assertEqual(o.get_label(3, fallback=True), "grr")
+        self.assertEqual(o.get_label(2, fallback=False), "grr")
+        self.assertEqual(o.get_label(1, fallback=True), "grr")
+
 
     def test_cache(self):
         """Are label lookups cached?"""

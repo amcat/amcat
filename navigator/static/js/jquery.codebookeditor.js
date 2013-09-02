@@ -49,7 +49,8 @@ Array.prototype.remove=function(s){
             self.root = null; // Artificial (non existent in db) root code
             self.changesets = {
                "moves" : {},
-               "hides" : {}          
+               "hides" : {},
+               "reorders" : {}
             }; // Changed objects go in here
  
             /* ELEMENTS */
@@ -57,38 +58,12 @@ Array.prototype.remove=function(s){
             self.searchbox = $("<input placeholder='Search..' type='text'>");
 
             // Buttons
-            self.btn_save_changes = $("<div>").addClass("btn btn-primary")
-                .append($(document.createTextNode(" Save changes")));
-
-            self.btn_edit_name = $("<div>").addClass("btn").append(
-                $("<i>").addClass("icon icon-edit")                
-            ).append($(document.createTextNode(" Edit codebook name")));
-
-            self.btn_download = $("<a>").addClass("btn")
-		.attr("href", document.URL + "/export")
-		.append(
-                    $("<i>").addClass("icon icon-download")                
-		).append($(document.createTextNode(" Download codebook")));
-
-	    /* self.btn_manage_bases = $("<div>").addClass("btn").append(
-                $("<i>").addClass("icon icon-list")                
-            ).append(
-                $(document.createTextNode(" Manage bases"))               
-            );*/
-
-
-
-
-            self.btn_delete = $("<a>").addClass("btn btn-danger confirm")
-		.attr("data-confirm", "Are you sure you want to delete this codebook?")
-		.attr("href", document.URL + "/delete")
-		.append(
-		    $("<i>").addClass("icon-white icon-trash")                
-		).append(
-                    $(document.createTextNode(" Delete"))               
-		);
-
-	    self.btn_delete.click(confirm_dialog);
+            self.btn_save_changes = $(".save-changes", this);
+            self.btn_edit_name = $(".edit-name", this);
+            self.btn_download = $(".export", this);
+            self.btn_delete = $(".delete", this);
+            self.btn_reorder_by_alpha = $(".reorder-alpha", this);
+            self.btn_reorder_by_id = $(".reorder-id", this);
 
             /* PRIVATE METHODS */
             self._escape = function(str){
@@ -147,10 +122,38 @@ Array.prototype.remove=function(s){
             }
 
             self._codebook_name_initialized = function(codebook){
-                console.log(codebook);
                 self.codebook = codebook.results[0];
                 self.root.label = "Codebook: <i>" + self._escape(self.codebook.name) + "</i>";
                 self.update_label(self.root);
+            }
+
+            /*
+             * Removes duplicate ordernr and sets ordernr according to html elements.
+             *
+             * @param node: apply function to children of this node
+             * @param recusive (default:true): call this function for each child
+             */ 
+            self._ensure_order = function(node, recursive){
+                // No ordering applicable
+                if (node.children.length <= 1) return;
+                recursive = (recursive === undefined) ? true : recursive;
+
+                var seen = [], duplicate = false;
+                $.each(node.children, function(i, child){
+                    if (seen.indexOf(child.ordernr) !== -1){
+                        duplicate = true;
+                    }
+
+                    seen.push(child.ordernr);
+                    if (recursive) self._ensure_order(child);
+                });
+
+                if(duplicate){
+                    $.each(node.children, function(i, child){
+                        child.ordernr = i;
+                        self.changesets.reorders[child.code_id] = child;
+                    });
+                }
             }
             
             self._initialize = function(objects){
@@ -167,6 +170,7 @@ Array.prototype.remove=function(s){
                 // Create convenience pointers
                 self._set_parents(self.root);
                 self._set_is_hidden_functions(self.root);
+                self._ensure_order(self.root);
                 self.objects = self._get_descendents(self.root);
 
                 // Add usage label
@@ -180,20 +184,19 @@ Array.prototype.remove=function(s){
                 );
 
                 // Add main action buttons
-                var buttons = $("<p>").addClass("btn-group")
-                buttons.append(self.btn_save_changes).append(self.btn_edit_name).append(self.btn_download).append(self.btn_delete);
-
-                $(self).contents().remove();
-                $(self).append(self.searchbox);
-                $(self).append(usage).append(buttons);
+                $(".loading-codebook", self).contents().remove();
                 $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root"));
 
                 self.searchbox.keyup(self.searchbox_keyup);
 
                 // Remove unneeded icons from root
-                $.each(["icon-move", "icon-eye-close", "icon-tags"], function(i, cls){
+                $.each(["icon-move", "icon-eye-close", "icon-tags", "icon-arrow-up", "icon-arrow-down"], function(i, cls){
                     $($("." + cls, self.root_el)[0]).remove();
                 })
+
+                if(!($.isEmptyObject(self.changesets.reorders))){
+                    self.btn_save_changes_clicked(null);
+                }
 
                 // Get codebook name
                 $.getJSON(self.API_URL + 'codebook?format=json&paginate=false&id=' +
@@ -250,6 +253,14 @@ Array.prototype.remove=function(s){
                     // Create new child button
                     $("<i>").addClass("icon icon-asterisk").attr("title", "Create new child")
                             .click(self.create_child_clicked.bind(obj))
+                ).append(
+                    // Move up button
+                    $("<i>").addClass("icon icon-arrow-up").attr("title", "Move code up")
+                            .click(self.move_code_up_clicked.bind(obj))
+                ).append(
+                    // Move down button
+                    $("<i>").addClass("icon icon-arrow-down").attr("title", "Move code down")
+                            .click(self.move_code_down_clicked.bind(obj))
                 )
                 
                 // Hide (un)hide button
@@ -690,7 +701,6 @@ Array.prototype.remove=function(s){
 
                 // Prevent empty labels
                 for (var i=0; i < labels.length; i++){
-                    console.log(i);
                     if (labels[i].label.length == 0){
                         return ("Row " + (i+1).toString() + " contains an empty value.");
                     }
@@ -902,7 +912,6 @@ Array.prototype.remove=function(s){
                 $(this.dom_element).prependTo($(".children", new_parent_el).get(0));
                 self.expand(this.dom_element, "slow");
 
-                console.log(this);
                 self.changesets.moves[this.code_id] = this;
                 self.moving = false;
             }
@@ -920,6 +929,112 @@ Array.prototype.remove=function(s){
 
                 // Create new labels table
                 self.labels_loaded({results : [{"language" : 1, "label" : "?"}]});
+            }
+
+            self.move_code_up_clicked = function(event){
+                self.move_code(this, -1);
+            }
+
+            self.move_code_down_clicked = function(event){
+                self.move_code(this, 1);
+            }
+
+            self.move_code = function(code, change){
+                var codes = code.parent.children;
+                var index = codes.indexOf(code);
+                var swap_with, swap_with_ordernr;
+
+                // TODO: gernalise for change other than abs(change) === 1
+                if(change === 1){
+                    if (index === codes.length - 1) return;
+                    swap_with = codes[index+change];
+                } else if (change === -1){
+                    if (index === 0) return;
+                    swap_with = codes[index+change];
+                } else {
+                    throw "move_code does not implemented changes of " + change + " yet.";
+                }
+
+                // Swap ordernrs
+                swap_with_ordernr = swap_with.ordernr;
+                swap_with.ordernr = code.ordernr;
+                code.ordernr = swap_with_ordernr;
+
+                // Swap in children list
+                codes[index] = swap_with;
+                codes[index+change] = code;
+
+                // Swap DOM elements
+                $(code.dom_element).before($(swap_with.dom_element));
+                
+                // Add to changeset
+                self.changesets.reorders[code.code_id] = code;
+                self.changesets.reorders[swap_with.code_id] = swap_with;
+            }
+
+            self.btn_reorder_by_alpha_clicked = function(event){
+                self.reorder(function(a, b){
+                    if(a.label.toLowerCase() < b.label.toLowerCase()) return -1;
+                    if(a.label.toLowerCase() > b.label.toLowerCase()) return 1;
+                    return 0;
+                });
+            }
+
+            self.btn_reorder_by_id_clicked = function(event){
+                self.reorder(function(a, b){
+                    return a.code_id - b.code_id;
+                });
+            }
+
+            self.reorder_confirm = function(sort_func){
+                var dialog = $('' +
+                    '<div class="modal hide fade">' +
+                        '<div class="modal-header">' +
+                                '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
+                                '<h3 class="noline">Irreversible action</h3>' +
+                        '</div>' +
+                        '<div class="modal-body">' +
+                        '<p>' + "Your changes thusfar are saved, in order to allow reordering."  + '</p>' +
+                        '</div>' +
+                        '<div class="modal-footer">' +
+                            '<a href="#" class="btn cancel-button">Cancel</a>' +
+                            '<a class="btn btn-warning continue-button">Proceed</a>' +
+                        '</div>' +
+                    '</div>').modal("show");
+
+                $(".cancel-button", dialog).click((function(){
+                    this.modal("hide");
+                }).bind(dialog))
+
+                $(".continue-button", dialog).click(function(){
+                    $(this).attr("disabled", "true");
+                    $(".cancel-button", dialog).attr("disabled", "true");
+                    $(this).text("Reordering..");
+
+                    self.reorder(sort_func, self.root);
+                    dialog.modal("hide");
+
+                    // Call btn_save_changes_clicked with callback function
+                    // bound (which gets called after changes have been saved)
+                    self.btn_save_changes_clicked.bind(function(){
+                        location.reload();
+                    })();
+                });
+
+            }
+
+            /*
+             * 
+             */
+            self.reorder = function(sort_func, node){
+                if (node === undefined) return self.reorder_confirm(sort_func);
+
+                node.children.sort(sort_func);
+                $.each(node.children, function(i, child){
+                    child.ordernr = i;
+                    self.changesets.reorders[child.code_id] = child;
+                    self.reorder(sort_func, child);
+                });
             }
 
             self.btn_edit_name_clicked = function(event){
@@ -971,18 +1086,25 @@ Array.prototype.remove=function(s){
             }
 
             self.btn_edit_name.click(self.btn_edit_name_clicked);
+            self.btn_reorder_by_alpha.click(self.btn_reorder_by_alpha_clicked);
+            self.btn_reorder_by_id.click(self.btn_reorder_by_id_clicked);
 
             self.btn_save_changes_clicked = function(event){
-                var moves = [], hides = [];
+                var moves = [], hides = [], reorders = [];
 
                 // Get all moves
                 $.each(self.changesets.moves, function(id, code){
-                    moves.push({ new_parent : code.parent.code_id, code_id : code.code_id })
+                    moves.push({ new_parent : code.parent.code_id, code_id : code.code_id });
                 });
 
                 // Get hides
                 $.each(self.changesets.hides, function(id, code){
-                    hides.push({ code_id : code.code_id, hide : code.hidden })
+                    hides.push({ code_id : code.code_id, hide : code.hidden });
+                });
+
+                // Get reorders
+                $.each(self.changesets.reorders, function(id, code){
+                    reorders.push({ code_id : code.code_id, ordernr : code.ordernr });
                 });
 
                 // Create "saving changesets" modal
@@ -994,16 +1116,20 @@ Array.prototype.remove=function(s){
                 $(".modal-header", loading_modal).remove();
                 $(".modal-footer", loading_modal).remove();
                 $(".modal-body", loading_modal).html("Saving changesets..");
-
+                
                 $.post(
-                    window.location.href + '/save_changesets', {
+                    window.location.pathname + '/save_changesets', {
                         "moves" : JSON.stringify(moves),
-                        "hides" : JSON.stringify(hides)
-                    }, function(){
+                        "hides" : JSON.stringify(hides),
+                        "reorders" : JSON.stringify(reorders)
+                    }, (function(){
                         $("#loading_modal").modal("hide").remove();
                         self.changesets.moves = {};
                         self.changesets.hides = {};
-                    }
+                        self.changesets.reorders = {};
+
+                        if(typeof(this) === "function") this();
+                    }).bind(this)
                 );
 
             }

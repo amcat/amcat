@@ -10,7 +10,7 @@
  <script src="{% static 'js/jquery.schemaeditor.js' %}"></script>
  <script src="{% static 'js/jquery.tablednd.0.7.min.js' %}"></script>
 {% endcompress %}
- <script>$(function(){ jQuery.fn.schemaeditor("{% url "api" %}v4/", {{schema.id}}, {{context.id}}).main(); });</script>
+ <script>$(function(){ jQuery.fn.schemaeditor("{% url "api" %}v4/", {{schema.id}}, {{context.id}}, {{rules_valid}}).main(); });</script>
  {% endblock %}
 
 {% block content %}
@@ -32,6 +32,7 @@
    <th null="{{ fields_null.required|lower }}" editable="true" name="required">Required</th>
    <th null="{{ fields_null.fieldtype|lower }}" editable="true" name="fieldtype">Fieldtype</th>
    <th null="{{ fields_null.codebook|lower }}" editable="true" name="codebook">Codebook</th>
+   <th null="{{ fields_null.split_codebook|lower }}" editable="true" name="split_codebook">Split</th>
    <th null="{{ fields_null.default|lower }}" editable="true" name="default">Default</th>
    <th name="delete"></th>
   </tr>
@@ -47,7 +48,7 @@
 
 {% include "navigator/project/edit_schema_shortcuts.html" %}
 
-<p><span class="label label-info">Usage</span> You can <b>order</b> fields by draggin them to the desired place. To <b>edit</b> a field, double click on a cell you wish to edit. When your done editing, click outside the table or press <code>enter</code>. For efficient usage, <a data-toggle="modal" href="#keyboard-shortcuts">keyboard shortcuts</a> are available.</p>
+<p><span class="label label-info">Usage</span> You can <b>order</b> fields by draggin them to the desired place. To <b>edit</b> a field, double click on a cell you wish to edit. When you're done editing, click outside the table or press <code>enter</code>. For efficient usage, <a data-toggle="modal" href="#keyboard-shortcuts">keyboard shortcuts</a> are available.</p>
 
 </p>
 

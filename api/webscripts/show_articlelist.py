@@ -53,7 +53,13 @@ class ShowArticleList(WebScript):
             formData.setlist("articlesets", artsets)
 
         articles = list(ArticleListScript(formData).run())
-        project_id = formData['projects'][0]
+
+        if isinstance(formData['projects'], (basestring, int)):
+            project_id = int(formData['projects'])
+        else:
+            project_id = int(formData['projects'][0])
+
+        project_id = formData['projects']
         for a in articles: a.hack_project_id = project_id
         
         if self.options['outputTypeAl'] == 'table':

@@ -38,10 +38,15 @@ class ScriptMixin(FormMixin):
     
     def get_form_class(self):
         return self.get_script().options_form
+
+    def run_form(self, form):
+        self.form = form
+        self.result =  self.get_script().run_script(form)
+        self.success = True
+        return self.result
     
     def form_valid(self, form):
-        self.form = form
-        self.result = self.get_script().run_script(form)
+        self.run_form(form)
         return super(ScriptMixin, self).form_valid(form)
 
     def get_context_data(self, **kwargs):

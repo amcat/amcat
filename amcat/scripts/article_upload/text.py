@@ -24,7 +24,8 @@ Plugin for uploading plain text files
 
 from __future__ import unicode_literals
 
-import os.path
+import logging; log = logging.getLogger(__name__)
+import os.path, tempfile, subprocess
 
 from django import forms
 
@@ -43,7 +44,34 @@ class TextForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
     date = forms.DateField(required=False, help_text='If left blank, use date from filename, which should be of form "yyyy-mm-dd_name"')
     section = forms.CharField(required=False, help_text='If left blank, use directory name')
 
+
+def _convert_docx(file):
+    text, err = toolkit.execute("docx2txt", file.bytes)
+    if not text.strip():
+        raise Exception("No text from docx2txt. Error: {err}".format(**locals()))
+    return text.decode("utf-8")
+
+def _convert_doc(file):
+    with tempfile.NamedTemporaryFile(suffix=".doc") as f:
+        f.write(file.bytes)
+        f.flush()
+        text = subprocess.check_output(["antiword", f.name])
+    if not text.strip():
+        raise Exception("No text from {antiword?}")
+    return text.decode("utf-8")
         
+        
+
+def _convert_multiple(file, convertors):
+    errors = []
+    for convertor in convertors:
+        try:
+            return convertor(file)
+        except Exception, e:
+            log.exception("Error on converting {file.name} using {convertor}".format(**locals()))
+            errors.append("{convertor}:{e}".format(**locals()))
+    raise Exception("\n".join(errors)) 
+
 class Text(UploadScript):
     options_form = TextForm
 
@@ -55,6 +83,8 @@ class Text(UploadScript):
     def parse_document(self, file):
         dirname, filename = os.path.split(file.name)
         filename, ext = os.path.splitext(filename)
+
+            
         
         metadata = dict((k, v) for (k,v) in self.options.items()
                         if k in ["medium", "headline", "project", "date", "section"])
@@ -70,10 +100,24 @@ class Text(UploadScript):
             
         if not metadata["section"].strip():
             metadata["section"] = dirname
-            
-        text = file.text
+
+        convertors = None
+        if ext.lower() == ".docx":
+            convertors = [_convert_docx, _convert_doc]
+        elif ext.lower() == ".doc":
+            convertors = [_convert_doc, _convert_docx]
+
+        if convertors:
+            text = _convert_multiple(file, convertors)
+        else:
+            text = file.text
         return Article(text=text, **metadata)
 
+    def explain_error(self, error):
+        """Explain the error in the context of unit for the end user"""
+        name = getattr(error.unit, "name", error.unit)
+        return "Error in file {name} : {error.error!r}".format(**locals())
+    
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.debug_module("amcat.scripts.article_upload.upload")

@@ -28,7 +28,7 @@ from django.core.urlresolvers import reverse
 
 from webscript import WebScript
 
-from amcat.scripts.actions.split_articles import SplitArticles
+from amcat.scripts.actions.create_sentences import CreateSentences
 from amcat.scripts.tools import solrlib, database
 from amcat.models.articleset import ArticleSet
 from amcat.models.coding.codingschema import CodingSchema
@@ -112,7 +112,7 @@ class AssignCodingJob(WebScript):
         a.add(*articles)
 
         # Split all articles 
-        SplitArticles(dict(articlesets=[a.id])).run()
+        CreateSentences(dict(articlesets=[a.id])).run()
 
         # Create codingjob
         coder = User.objects.get(id=self.formData['coder'])

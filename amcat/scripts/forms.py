@@ -231,18 +231,22 @@ class SelectionForm(forms.Form):
         return cleanedData
 
 def resolve_codes(queries, codebook, keyword_language):
+    if codebook and not keyword_language:
+        raise Exception("Along with a codebook, you must also select a language.")
+
     # build label -> definition dictionary
     cb_lookup = {} # markup string -> keywords
     if codebook:
         labels = {} # code, language -> label
         for label in Label.objects.filter(code__codebook_codes__codebook=codebook):
             labels[label.code_id, label.language_id] = label.label
-        for (code, language), label in labels.iteritems():
-            if language != keyword_language.id:
-                kw_label = labels[code, keyword_language.id]
-                cb_lookup["{{{label}}}".format(**locals())] = "({kw_label})".format(**locals())
 
-    q_lookup = {'[{query.declared_label}]'.format(**locals()) : "({query.query})".format(**locals())
+        for (code_id, language_id), label in labels.iteritems():
+            if language_id == keyword_language.id:
+                kw_label = labels[code_id, keyword_language.id]
+                cb_lookup[u"{{{label}}}".format(**locals())] = u"({kw_label})".format(**locals())
+
+    q_lookup = {u'{{query.declared_label}}'.format(**locals()) : u"({query.query})".format(**locals())
                 for query in queries if query.declared_label}
                 
     # update queries
@@ -251,10 +255,10 @@ def resolve_codes(queries, codebook, keyword_language):
         for lookup in (q_lookup, cb_lookup):
             for k, v in lookup.iteritems():
                 q = q.replace(k, v)
-        if set(q) & set("[[]{}"):
+        if set(q) & set("{}"):
             m = re.search(r"{(.*?)}", q)
             if m: raise Exception("Cannot find code {} in specified codebook".format(m.group(1)))
-            m = re.search(r"\[(.*?)\]", q)
+            m = re.search(r"{(.*?)}", q)
             if m: raise Exception("Cannot find query {}".format(m.group(1)))
             raise Exception("Mismatches or unknown code lookup in query {q!r}".format(**locals()))
             

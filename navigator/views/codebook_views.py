@@ -18,16 +18,19 @@
 ###########################################################################
 
 from django.core.urlresolvers import reverse
+from django.http import HttpResponse
 
 
 from amcat.scripts.actions.import_codebook import ImportCodebook
 from amcat.scripts.actions.export_codebook import ExportCodebook
+from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
 from navigator.views.scriptview import ProjectScriptView, TableExportMixin
 
 class ImportCodebook(ProjectScriptView):
     script = ImportCodebook
     def get_success_url(self):
         return reverse("project-codebooks", kwargs=dict(id=self.project.id))
+
     
 class ExportCodebook(TableExportMixin, ProjectScriptView):
     script = ExportCodebook
@@ -38,3 +41,33 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
     
     def get_initial(self):
         return dict(codebook=self.url_data["codebookid"])
+
+    def get_form_class(self):
+        # Modify form class to also contain XML output
+        form_class = super(ExportCodebook, self).get_form_class()
+        form_class.base_fields['format'].choices.append(("xml", "XML"))
+        return form_class
+
+    def form_valid(self, form):
+        if form.cleaned_data['format'] == 'xml':
+            return ExportCodebookXML.as_view()(self.request, **self.kwargs)
+
+        return super(ExportCodebook, self).form_valid(form)
+
+class ExportCodebookXML(ProjectScriptView):
+    script = ExportCodebookAsXML
+
+    def export_filename(self, form):
+        c = form.cleaned_data["codebook"]
+        return "Codebook {c.id} {c}.xml".format(**locals())
+
+    def get_initial(self):
+        return dict(codebook=self.url_data["codebookid"])
+
+    def form_valid(self, form):
+        super(ExportCodebookXML, self).form_valid(form)
+
+        filename = self.export_filename(form)
+        response = HttpResponse(self.result, content_type='text/xml', status=200)
+        response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
+        return response

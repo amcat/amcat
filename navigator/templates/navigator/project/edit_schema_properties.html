@@ -1,6 +1,6 @@
 {% extends "navigator/project/base.html" %}
 
-{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+{% block title %}Project {{project.id}} - {{project.name}}{% endblock %}
 
 {% block content %}
 <h1 class="noline">Properties of codingschema {{schema.name}}</h1>
@@ -12,7 +12,7 @@
 
     <div class="form-actions">
         <input type="submit" name="save" class="btn btn-primary"></input>
-        <a href="{% url 'project-schema' context.id schema.id %}" name="save" class="btn">Cancel</a>
+        <a href="{% url 'project-schema' project.id schema.id %}" name="save" class="btn">Cancel</a>
     </div>
 
 </form>

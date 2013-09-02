@@ -42,10 +42,6 @@ urlpatterns = patterns(
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework'))
     )
 
-# Sentry
-if settings.DEBUG == False and not settings.DISABLE_SENTRY:
-    urlpatterns += patterns('', (r'^sentry/', include('sentry.web.urls')))
-
 # Static files
 if settings.LOCAL_DEVELOPMENT:
     urlpatterns += patterns("django.views",

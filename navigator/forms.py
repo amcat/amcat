@@ -28,8 +28,10 @@ from amcat.tools import toolkit
 from django.core.exceptions import ValidationError
 
 from amcat.models.authorisation import Role, ProjectRole
+from amcat.models.project import Project
 from amcat.models.user import Affiliation
 from amcat.models.articleset import ArticleSet
+from amcat.models.article import Article
 from amcat.models.language import Language
 from amcat.models.coding.codebook import Codebook, CodebookCode
 from amcat.models.coding.code import Code
@@ -37,6 +39,8 @@ from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.coding.codingschemafield import CodingSchemaField, CodingSchemaFieldType
 from amcat.models.coding.codingjob import CodingJob
 from amcat.models.coding.serialiser import BooleanSerialiser, CodebookSerialiser
+from amcat.models.coding.codingrule import CodingRule
+from amcat.models.coding import codingruletoolkit
 
 from navigator.utils.auth import get_request
 from navigator.utils.misc import cache_function
@@ -87,7 +91,7 @@ def gen_coding_choices(user, model):
         Q(project__projectrole__user=user)|
         # User has access to project through guestrole
         Q(project__guest_role__id__gte=user.get_profile().role.id)
-    ) if not user.get_profile().role.id >= get_admin_id() else model.objects.all()
+    ).distinct() if not user.get_profile().role.id >= get_admin_id() else model.objects.all()
 
     objects.select_related("project__name").only("name")
     objects = toolkit.multidict(((cb.project, cb) for cb in objects), ltype=list)
@@ -95,6 +99,28 @@ def gen_coding_choices(user, model):
     for project, objs in sorted(objects.items(), key=name_sort):
         yield(project, [(x.id, x.name) for x in objs])
 
+class SplitArticleForm(forms.Form):
+    add_to_new_set = forms.CharField(required=False) 
+    add_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+
+    remove_from_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+    remove_from_all_sets = forms.BooleanField(initial=True, required=False, help_text="Remove all instances of the original article in this project")
+
+    add_splitted_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
+    add_splitted_to_new_set = forms.CharField(required=False)
+    add_splitted_to_all = forms.BooleanField(initial=False, required=False, help_text="Add new (splitted) articles to all sets containing the original article")
+
+    def __init__(self, project, article, *args, **kwargs):
+        if not isinstance(project, Project):
+            raise ValueError("First argument of constructor must be a Project")
+
+        if not isinstance(article, Article):
+            raise ValueError("Second argument of constructor must be a Article")
+
+        super(SplitArticleForm, self).__init__(*args, **kwargs)
+        self.fields["add_splitted_to_sets"].queryset = project.all_articlesets()
+        self.fields["remove_from_sets"].queryset = project.all_articlesets().filter(articles=article)
+        self.fields["add_to_sets"].queryset = project.all_articlesets()
 
 class UserForm(forms.ModelForm):
     affiliation = forms.ModelChoiceField(queryset=Affiliation.objects.all())
@@ -416,13 +442,41 @@ class CodingSchemaForm(forms.HideFieldsForm):
     class Meta:
         model = CodingSchema
 
+class CodingRuleForm(forms.ModelForm):
+    def __init__(self, codingschema, *args, **kwargs):
+        super(CodingRuleForm, self).__init__(*args, **kwargs)
+        self.fields["action"].required = False
+        self.fields["field"].required = False
+        self.fields["field"].queryset = codingschema.fields.all()
+
+        self.codingschema = codingschema
+
+    def clean_condition(self):
+        condition = self.cleaned_data["condition"]
+
+        try:
+            tree = codingruletoolkit.parse(CodingRule(condition=condition))
+        except (Code.DoesNotExist, CodingSchemaField.DoesNotExist, CodingRule.DoesNotExist) as e:
+            raise ValidationError(e)
+        except SyntaxError as e:
+            raise ValidationError(e)
+
+        if tree is not None:
+            codingruletoolkit.clean_tree(self.codingschema, tree)
+
+        return condition
+
+    class Meta:
+        model = CodingRule
+
 class CodingSchemaFieldForm(forms.ModelForm):
     label = forms.CharField()
     default = forms.CharField(required=False)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, schema, *args, **kwargs):
         super(CodingSchemaFieldForm, self).__init__(*args, **kwargs)
         self.fields['codebook'].required = False
+        self.fields['codebook'].queryset = schema.project.get_codebooks()
 
     def _to_bool(self, val):
         if val is None:

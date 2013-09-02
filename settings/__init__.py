@@ -27,7 +27,3 @@ try:
 except ImportError:
     pass
 
-if 'sentry' in INSTALLED_APPS and not DEBUG:
-    NAVIGATOR_MENU.append(
-        ("Logs", "sentry")
-    )

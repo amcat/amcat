@@ -84,7 +84,7 @@ class ImportCodebook(Script):
 
 
         
-        codes = {code : Code.get_or_create(uuid=uuid) for ((code, parent), uuid) in zip(parents, uuids)}
+        codes = {code : Code.get_or_create(uuid=uuid or None) for ((code, parent), uuid) in zip(parents, uuids)}
 
         to_add = []
         for code, parent in parents:

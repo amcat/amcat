@@ -1,0 +1,58 @@
+  <div id="condition-syntax" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="keyboard-shortcuts-label" aria-hidden="true">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+      <h3 class="noline" id="condition-syntax-label">If-syntax</h3>
+    </div>
+    <div class="modal-body">
+        <p>The if-column (`condition`) of a coding rule determines if the action
+        associated with it be performed. If it does match, the target field can be
+        painted red, marked not null or non-codable depending on the value of the
+        apply-column.</p>
+        <p>To provide a powerful way of expressing conditions, a user can denote
+        his condition in a programming-like manner. The syntax used is a subset of
+        the <a href="http://en.wikipedia.org/wiki/Python_syntax_and_semantics">
+        syntax of Python programming language</a>.</p>
+        <p>
+         <table class="table table-striped table-bordered">
+          <thead>
+           <tr>
+            <th>Meaning</th>
+            <th width="130px">Syntax</th>
+           </tr>
+          </thead>
+          <tbody>
+           <tr><td>Codingschemafield with ID 3 must be equal to 4</td><td>3 == 4</td></tr>
+           <tr><td>Codingschemafield with ID 3 must not be equal to 4</td><td>3 != 4</td></tr>
+           <tr><td>Codingschemafield with ID 3 must be equal to either 4 or 5</td><td>(3 == 4) or (3 == 5)</td></tr>
+           <tr><td>The condition of rule 5 should be true</td><td>5</td></tr>
+           <tr><td>The condition of rule 5 should not be true</td><td>not 5</td></tr>
+           <tr><td>The condition of rule 5 should be true and codingschemafield with ID 3 must be equal to 4</td><td>5 and (3 == 4)</td></tr>
+          </tbody>
+         </table>
+        </p>
+
+        <p>Different kind of datatypes need to be represented differently:</p>
+        <p>
+         <table class="table table-striped table-bordered">
+          <thead>
+           <tr>
+            <th>Type</th>
+            <th>Example</th>
+            <th>Denote as</th>
+           </tr>
+          </thead>
+          <tbody>
+           <tr><td>Text</td><td>This is text.</td><td>u"This is text"</td></tr>
+           <tr><td>Number</td><td>45</td><td>45</td></tr>
+           <tr><td>Code</td><td>&lt;Code: 9832&gt;</td><td>9832</td></tr>
+           <tr><td>Quality</td><td>-0.5, +1.0</td><td>-5, 10</td></tr>
+           <tr><td>Boolean</td><td>True, False</td><td>1, 0</td></tr>
+          </tbody>
+         </table>
+
+        </p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" data-dismiss="modal">Close</button>
+    </div>
+  </div>

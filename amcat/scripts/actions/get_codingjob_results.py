@@ -66,6 +66,7 @@ _MetaField = collections.namedtuple("MetaField", ["object", "attr", "label"])
 _METAFIELDS = [
     _MetaField("article", "id", "Article ID"),
     _MetaField("article", "headline", "Headline"),
+    _MetaField("article", "byline", "Byline"),
     _MetaField("article", "medium", "Medium"),
     _MetaField("article", "medium_id", "Medium ID"),
     _MetaField("article", "date", "Date"),
@@ -76,6 +77,7 @@ _METAFIELDS = [
     _MetaField("sentence", "parnr", "Paragraph"),
     _MetaField("sentence", "sentnr", "Sentence nr"),
     _MetaField("sentence", "sentence", "Sentence"),
+    _MetaField("article_coding", "comments", "Comments"),
 ]
 
 class CodingjobListForm(forms.Form):

@@ -16,8 +16,21 @@
  Changes:
  * 'clear' button added
  * 'ok' button added for multiple select
- 
- 
+
+ *    diff -r 357f018c2d3a navigator/static/js/jquery.multiselect.filter.js                                                                                                                      [2/136]
+ *   --- a/navigator/static/js/jquery.multiselect.filter.js  Mon Aug 19 10:38:39 2013 +0200
+ *   +++ b/navigator/static/js/jquery.multiselect.filter.js  Mon Aug 19 10:50:14 2013 +0200
+ *   @@ -146,7 +146,7 @@
+ *    
+ *                                   this._trigger( "filter", e, $.map(cache, function(v,i){
+ *                                           if( v.search(regex) !== -1 ){
+ *   -                                               rows.eq(i).show();
+ *   +                                               rows.eq(i+1).show();
+ *                                                   return inputs.get(i);
+ *                                           }
+ *
+ *    
+ *
 */
 (function($){
 	var rEscape = /[\-\[\]{}()*+?.,\\^$|#\s]/g;
@@ -146,7 +159,7 @@
 				
 				this._trigger( "filter", e, $.map(cache, function(v,i){
 					if( v.search(regex) !== -1 ){
-						rows.eq(i).show();
+						rows.eq(i+1).show();
 						return inputs.get(i);
 					}
 					

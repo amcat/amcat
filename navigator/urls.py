@@ -21,6 +21,7 @@ from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
 from navigator.views.articleset_views import ImportSetView, SampleSetView
+from navigator.views.preprocessing_views import ProcessParsingView
 from navigator.views.codebook_views import ImportCodebook, ExportCodebook
 from navigator.views import rule_views
 
@@ -42,9 +43,11 @@ urlpatterns = patterns(
     url(r'^selection$', 'navigator.views.selection.index', name='selection'),
 
     # Articles
-    url(r'^project/(?P<projectid>[0-9]+)/article/(?P<id>[0-9]+)/remove_from/(?P<articlesetid>[0-9]+)/$',
+    url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/split$', 'navigator.views.article.split', name="split_article"),
+    url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/remove_from/(?P<remove_articleset_id>[0-9]+)$',
             'navigator.views.article.remove_from', name="remove_from_articleset"),
-    url(r'^project/(?P<projectid>[0-9]+)/article/(?P<id>[0-9]+)$', 'navigator.views.project.article', name="article"),
+    url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
+            'navigator.views.project.article', name="article"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<id>[0-9]+)$',
         'navigator.views.project.articleset', name="articleset"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/edit/(?P<id>[0-9]+)$',
@@ -60,6 +63,8 @@ urlpatterns = patterns(
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/import$',
         ImportSetView.as_view(), name="articleset-import"),
 
+    url(r'^project/(?P<projectid>[0-9]+)/processparsing$',
+        ProcessParsingView.as_view(), name="processparsing"),
     # parses
     url(r'^project/(?P<projectid>[0-9]+)/analysedarticle/(?P<id>[0-9]+)$',
         'navigator.views.article.analysedarticle', name='analysedarticle'),
@@ -117,16 +122,17 @@ urlpatterns = patterns(
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)$', 'navigator.views.project.codebook', name='project-codebook'),
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_labels$', 'navigator.views.project.save_labels'),
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_name$', 'navigator.views.project.save_name'),
-    url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<id>[-0-9]+)/delete$', 'navigator.views.project.codebook_delete'), 
+    url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<id>[-0-9]+)/delete$', 'navigator.views.project.codebook_delete', name="project-delete-codebook"), 
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_changesets$', 'navigator.views.project.save_changesets'),
     url(r'^project/(?P<id>[0-9]+)/codebook/add$', 'navigator.views.project.add_codebook', name='project-add-codebook'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/import$', ImportCodebook.as_view(), name='project-import-codebook'),
-    url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/export$', ExportCodebook.as_view(), name='project-import-codebook'),
+    url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/export$', ExportCodebook.as_view(), name='project-export-codebook'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)$', 'navigator.views.project.schema', name='project-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/delete$', 'navigator.views.project.delete_schema', name='project-delete-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/new$', 'navigator.views.project.new_schema', name='project-new-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit$', 'navigator.views.project.edit_schemafields', name='project-edit-schemafields'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit-properties$', 'navigator.views.project.edit_schemafield_properties', name='project-edit-schema-properties'),
+    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit-rules$', 'navigator.views.project.edit_schemafield_rules', name='project-edit-schema-rules'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/copy$', 'navigator.views.project.copy_schema', name='project-copy-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/name$', 'navigator.views.project.name_schema', name='project-name-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit/schemafield/(?P<schemafield>[0-9]+)$', 'navigator.views.project.edit_schemafield', name='project-edit-schemafield'),
