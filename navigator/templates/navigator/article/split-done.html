@@ -21,6 +21,10 @@
     </li>
  {% endif %}
 
+ {% if new_splitted_set %}
+  <li>The original article added to new set <a href="{% url "articleset" project.id new_splitted_set.id %}">{{new_splitted_set.name}} ({{new_splitted_set.id}})</a></li>
+ {% endif %}
+
  {% if new_set %}
   <li>The new articles were added to new set <a href="{% url "articleset" project.id new_set.id %}">{{new_set.name}} ({{new_set.id}})</a></li>
  {% endif %}
@@ -29,6 +33,16 @@
    <li>Splitted articles were added to the following sets:</li>
    <ul>
    {% for set in form_data.add_splitted_to_sets %}
+        <li><a href="{% url "articleset" project.id set.id %}">{{set.name}} ({{set.id}})</a></li>
+   {% endfor %}
+   </ul>
+   </li>
+ {% endif %}
+
+ {% if form_data.add_to_sets %}
+   <li>Original article added to the following sets:</li>
+   <ul>
+   {% for set in form_data.add_to_sets %}
         <li><a href="{% url "articleset" project.id set.id %}">{{set.name}} ({{set.id}})</a></li>
    {% endfor %}
    </ul>

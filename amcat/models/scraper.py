@@ -40,6 +40,7 @@ class Scraper(AmcatModel):
     password = models.CharField(max_length=25, null=True)
 
     run_daily = models.BooleanField(default=False)
+    active = models.BooleanField(default=True)
 
     # Storage options
     articleset = models.ForeignKey("amcat.ArticleSet", null=True)
@@ -92,7 +93,7 @@ def get_scrapers(date=None, days_back=7, ignore_errors=False, **options):
     """
     if date is None: date = datetime.date.today()
     dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
-    for s in Scraper.objects.filter(run_daily=True):
+    for s in Scraper.objects.filter(run_daily=True, active=True):
         scraped = s.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
         for day in dates:
             if day not in scraped.keys():
