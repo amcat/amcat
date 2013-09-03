@@ -43,11 +43,11 @@ class Twitter(Scraper):
         key = self.options['key']
         print "Connecting to twitter with key", key
 
-    def _get_units(self):
-        keyword = self.options['keyword']
-        print "Searching twitter on keyword", keyword
-        return ["bla", "ble", "blo"]
-
     def _scrape_unit(self, unit):
-        yield Article(text=unit, headline=unit, date='2010-01-01')
+        tweets = ["list", "from", "api"]
+        for tweet in tweets:
+            yield Article(text=tweet, headline=tweet, date='2010-01-01')
 
+
+    def get_errors(self):
+        return []
