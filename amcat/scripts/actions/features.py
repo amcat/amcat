@@ -38,8 +38,8 @@ class Features(Script):
     """
 
     class options_form(forms.Form):
-        articlesets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
-        unitlevel = forms.ChoiceField([('article','article'),('paragraph','paragraph'),('sentence','sentence')])
+        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+        unitlevel = forms.ChoiceField([('article','article'),('paragraph','paragraph'),('sentence','sentence')], initial='article')
         offset = forms.IntegerField(initial=0)
         batchsize = forms.IntegerField(initial = 1000, max_value=2500)
         mindocfreq = forms.IntegerField(initial=0) ## usefull for reducing size of output, but perhaps this problem should be for the user and not the server.
