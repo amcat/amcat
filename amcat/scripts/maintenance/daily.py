@@ -145,7 +145,7 @@ def setup_logging():
     loggers = (logging.getLogger("amcat.scraping"), logging.getLogger(__name__), logging.getLogger("scrapers"))
     d = date.today()
     filename = "/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())
-    sys.stderr = open(filename, 'w')
+    sys.stderr = open(filename, 'a')
     handlers = (logging.FileHandler(filename), logging.StreamHandler())
 
     formatter = AmcatFormatter(date = True)
