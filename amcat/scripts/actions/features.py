@@ -39,15 +39,17 @@ class Features(Script):
 
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-        unit_level = forms.CharField()
-        offset = forms.IntegerField()
-        batchsize = forms.IntegerField()
+        unit_level = forms.ChoiceField([('article','article'),('paragraph','paragraph'),('sentence','sentence')])
+        #unit_level = forms.CharField()
+        offset = forms.IntegerField(initial=0)
+        batchsize = forms.IntegerField(initial = 9999999)
+        min_docfreq = forms.IntegerField(initial=0) ## usefull for reducing size of output, but perhaps this problem should be for the user and not the server.
         
         # implement more options later 
         #features_type = forms.ChoiceField(['Stemmed words with POS'])
         #posfilter = forms.MultipleChoiceField
 
-        min_docfreq = forms.IntegerField(initial=0) ## usefull for reducing size of output, but perhaps this problem should be for the user and not the server.
+        
     output_type = Table
     
     def run(self, _input=None):
@@ -77,7 +79,8 @@ class Features(Script):
             rows = [row for row in rows if row['word'] in relevantwords]
                
         if unit_level == 'article': columns = ['id','word','pos','hits']
-        else: columns = ['id',unit_level,'word','pos','hits']
+        if unit_level == 'paragraph': columns = ['id','paragraph','word','pos','hits']
+        if unit_level == 'sentence': columns = ['id','paragraph','sentence','word','pos','hits']
 
         t = Table(rows=rows, columns = columns, cellfunc=dict.get)
         return t
