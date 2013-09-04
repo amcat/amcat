@@ -42,6 +42,11 @@ class Features(Script):
         unit_level = forms.CharField()
         offset = forms.IntegerField()
         batchsize = forms.IntegerField()
+        
+        # implement more options later 
+        #features_type = forms.ChoiceField(['Stemmed words with POS'])
+        #posfilter = forms.MultipleChoiceField
+
         min_docfreq = forms.IntegerField(initial=0) ## usefull for reducing size of output, but perhaps this problem should be for the user and not the server.
     output_type = Table
     
@@ -51,8 +56,9 @@ class Features(Script):
         min_docfreq = self.options['min_docfreq']
         offset = self.options['offset']
         batchsize = self.options['batchsize']
-        
-        featurestream_parameters = {'delete_stopwords':True, 'posfilter':['noun','NN','verb']}
+
+        ## implement more options later
+        featurestream_parameters = {'posfilter':['noun','NN','verb'], 'zeropunctuation':True}
         f = featureStream(**featurestream_parameters)
 
         rows = []
@@ -73,34 +79,11 @@ class Features(Script):
         if unit_level == 'article': columns = ['id','word','pos','hits']
         else: columns = ['id',unit_level,'word','pos','hits']
 
-        filename = 'features_set%s_offset%s_batchsize%s.csv' % (articleset_id,offset,batchsize)
-        w = csv.writer(open(filename, 'w'))
-        for nr, line in enumerate(rows):
-            if nr == 0: line = [c for c in columns]
-            else: line = [line[c] for c in columns]
-            w.writerow(line)
-        
-        #t = Table(rows=rows, columns = columns, cellfunc=dict.get)
-        #return t
-
-    def index(self, word, pos, index={}, index_counter=1):
-        """
-        Currently not used.
-        Indexing saves memory, but perhaps it is better to work in smaller batches using 'offset' and 'batchsize', in which case indexing has less memory to save, and increases processing time, thereby using memory busy for longer.
-        """
-        if not word in index:
-            index[word] = index_counter
-            index_counter += 1
-        if pos:
-            if not pos in index:
-                index[pos] = index_counter
-                index_counter += 1
-        word = index[word]
-        if pos: pos = index[pos]
-        return (word, pos, index, index_counter)
+        t = Table(rows=rows, columns = columns, cellfunc=dict.get)
+        return t
                     
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     result = cli.run_cli()
-    #print result.output()
+    print result.output()
     
