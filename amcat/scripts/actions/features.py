@@ -38,7 +38,7 @@ class Features(Script):
     """
 
     class options_form(forms.Form):
-        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
+        articlesets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.all())
         unitlevel = forms.ChoiceField([('article','article'),('paragraph','paragraph'),('sentence','sentence')])
         offset = forms.IntegerField(initial=0)
         batchsize = forms.IntegerField(initial = 1000, max_value=2500)
