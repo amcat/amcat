@@ -21,7 +21,7 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.models import Article, Coding, Token, Lemma, Word, AnalysedArticle
-from amcat.tools.toolkit import clean, stripAccents, RepeatReplacer
+from amcat.tools.toolkit import clean, stripAccents#, RepeatReplacer
 from amcat.nlp import sbd
 from django import db
 
