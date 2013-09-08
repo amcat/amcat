@@ -78,3 +78,4 @@ class AnalysedArticleResource(AmCATResource):
               .annotate(assigned=Count("id"), done=BooleanSum("done"), error=BooleanSum("error"))
               )
         return qs
+

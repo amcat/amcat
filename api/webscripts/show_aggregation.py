@@ -29,6 +29,7 @@ from amcat.tools import table
 from amcat.scripts import scriptmanager
 
 from amcat.scripts.searchscripts.aggregation import AggregationScript, AggregationForm
+from amcat.scripts.forms import SelectionForm
 import amcat.scripts.forms
 
 TITLE_COLUMN_NAME = 'x'
@@ -54,6 +55,12 @@ class ShowAggregation(WebScript):
     
     
     def run(self):
+        selection = SelectionForm(self.formData)
+        selection.full_clean()
+        queries = selection.cleaned_data["queries"]
+
+        import pdb; pdb.set_trace()
+
         aggrTable = AggregationScript(self.formData).run()
         if self.output == 'json-html' or (self.output == 'html' and self.options['graphOnly'] == True):
             datesDict = self.getDatesDict(aggrTable)
@@ -74,7 +81,7 @@ class ShowAggregation(WebScript):
             
             aggregationType = 'hits' if self.options['counterType'] == 'numberOfHits' else 'articles'
             graphOnly = 'true' if self.options['graphOnly'] == True else 'false'
-        
+
             scriptoutput = render_to_string('api/webscripts/aggregation.html', { 
                                                 'dataJson':dataJson, 
                                                 'columnsJson':columnsJson,
