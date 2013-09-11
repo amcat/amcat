@@ -136,6 +136,10 @@ class VUNLPParser(AnalysisScript):
         if self.check_article(analysed_article):
             parse = Client().download(analysed_article.info)
             open("/tmp/aa_%i.xml" % analysed_article.id, "w").write(parse)
+            if len(parse) == 0:
+                raise Exception("Empty article: downloading %i / %s yielded %r"
+                                % (analysed_article.id, analysed_article.info, parse))
+            
             self.store_parse(analysed_article, parse)
             log.info("Stored article  {analysed_article.id}".format(**locals()))
             return True
