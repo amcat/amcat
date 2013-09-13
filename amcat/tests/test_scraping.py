@@ -107,11 +107,8 @@ class TestScraping(amcattest.PolicyTestCase):
     def test_logged_scraper(self):
         ds = self.ds.get_scraper(date = date.today(), project=self.project.id)
         dbs = self.dbs.get_scraper(date = date.today(), project=self.project.id)
-        
-        counts, log, articles = scrape_logged(SimpleController(), [ds, dbs])
-        counts = {c.__class__.__name__ : n for (c,n) in counts.items()}
-        self.assertEqual(counts, dict(TestDatedScraper=4, TestDBScraper=5))
-
+        scrape_logged(SimpleController(), [ds, dbs])
+        #TODO have scrape_logged return something to test
         #TODO log message not found? self.assertIn("DEBUG] Scraping 5", log)
 
         

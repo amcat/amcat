@@ -118,19 +118,10 @@ class DailyScript(Script):
         if self.options['deduplicate']:
             kwargs['deduplicate'] = True
 
-        count, messages, result =  scrape_logged(
+        scrape_logged(
             RobustController(), 
             scrapers, 
             **kwargs)
-
-
-        general_index_articleset = ArticleSet.objects.get(pk = 2)
-        #CAUTION: destination articleset is hardcoded
-
-        for (scraper, articles) in result.items():
-            if scraper.module().split(".")[-2].lower().strip() == "newspapers":
-                log.info("Adding result to general index set ({general_index_articleset})".format(**locals()))
-                general_index_articleset.add_articles(articles)
 
         log.info("Sending email...")
         
