@@ -174,6 +174,7 @@ class HTMLDocument(Document):
             except AttributeError:
                 # no need to prepare if opener or url not known
                 pass 
+        return self
 
     def __str__(self):
         return "HTMLDocument(url={})".format(getattr(self.props, "url", None))

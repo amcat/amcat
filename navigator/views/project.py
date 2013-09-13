@@ -68,7 +68,6 @@ from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
 
 from amcat.scripts.actions.add_project import AddProject
-from amcat.scripts.actions.split_articles import SplitArticles
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
 from amcat.scripts.actions.assign_for_parsing import AssignParsing
@@ -929,7 +928,7 @@ def save_changesets(request, codebook, project):
         # Saving a codebookcode triggers a validation function which needs
         # the codebookcode's codebook's codebookcodes.
         ccode._codebook_cache = codebook
-        ccode.save()
+        ccode.save(validate=False)
 
     # Check for any cycles. 
     CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)

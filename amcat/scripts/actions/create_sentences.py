@@ -30,7 +30,7 @@ from amcat.models import ArticleSet, Article, Sentence
 
 from amcat.nlp import sbd
 
-class SplitArticles(Script):
+class CreateSentences(Script):
     """
     Perform a keyword query on an articleset.
     """

@@ -31,6 +31,7 @@ import traceback
 
 from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
 from amcat.scripts.actions.query import Query
+from amcat.scripts.actions.features import Features
 from amcat.scripts.actions.get_queries import GetQueries
 from amcat.scripts.script import Script
 from amcat.scripts import scriptmanager

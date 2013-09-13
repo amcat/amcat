@@ -118,19 +118,10 @@ class DailyScript(Script):
         if self.options['deduplicate']:
             kwargs['deduplicate'] = True
 
-        count, messages, result =  scrape_logged(
+        scrape_logged(
             RobustController(), 
             scrapers, 
             **kwargs)
-
-
-        general_index_articleset = ArticleSet.objects.get(pk = 2)
-        #CAUTION: destination articleset is hardcoded
-
-        for (scraper, articles) in result.items():
-            if scraper.module().split(".")[-2].lower().strip() == "newspapers":
-                log.info("Adding result to general index set ({general_index_articleset})".format(**locals()))
-                general_index_articleset.add_articles(articles)
 
         log.info("Sending email...")
         
@@ -141,9 +132,13 @@ class DailyScript(Script):
         
 def setup_logging():
     from amcat.tools.amcatlogging import AmcatFormatter
+    import sys
     loggers = (logging.getLogger("amcat.scraping"), logging.getLogger(__name__), logging.getLogger("scrapers"))
     d = date.today()
-    handlers = (logging.FileHandler("/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())), logging.StreamHandler())
+    filename = "/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())
+    sys.stderr = open(filename, 'a')
+    handlers = (logging.FileHandler(filename), logging.StreamHandler())
+
     formatter = AmcatFormatter(date = True)
 
     for handler in handlers:

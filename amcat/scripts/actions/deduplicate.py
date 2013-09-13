@@ -54,7 +54,7 @@ class Deduplicate(Script):
         dry_run = forms.BooleanField(initial=False, required=False)
         text_ratio = forms.IntegerField(initial=99, help_text="Match articles which text match ..%%")
         headline_ratio = forms.IntegerField(initial=80, help_text="Compare articles which headlines match ..%%")
-        keep_same = forms.BooleanField(initial=False, required=False, help_text="Never remove articles with same id's")
+        delete_same = forms.BooleanField(initial=False, required=False, help_text="Remove articles with same id's")
         skip_simple = forms.BooleanField(initial=False, required=False, help_text="Do not use an approximation of levenhstein ratio")
 
         def clean_ratio(self, ratio):
@@ -93,7 +93,7 @@ class Deduplicate(Script):
 
         return self._articles_cache
 
-    def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, headline_ratio, skip_simple, keep_same):
+    def _get_deduplicates(self, articleset_1, articleset_2, text_ratio, headline_ratio, skip_simple, delete_same):
         log.info("Start deduplicating ({articleset_1}, {articleset_2})..".format(**locals()))
         all_articles = articleset_1.articles.only("id", "date", "medium", "text", "headline")
         n_articles = all_articles.count()
@@ -109,8 +109,12 @@ class Deduplicate(Script):
             compare_with = self.get_matching(compare_with, article, headline_ratio, "headline")
             compare_with = set(self.get_matching(compare_with, article, text_ratio, "text"))
 
-            if not keep_same:
-                compare_with -= {article,}
+            if not delete_same:
+                discard = None
+                for a in compare_with:
+                    if a.id == article.id:
+                        discard = a
+                compare_with.discard(discard)
 
             if compare_with:
                 yield (article, compare_with)

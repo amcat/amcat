@@ -267,6 +267,8 @@ class HTTPScraper(Scraper):
 
     def open(self, url,  encoding=None):
         if isinstance(url, (str, unicode)):
+            if isinstance(url, unicode):
+                url = url.encode('utf-8')
             log.info('Retrieving "{url}"'.format(**locals()))
             try:
                 return self.opener.opener.open(url, encoding)

@@ -18,36 +18,34 @@
 ###########################################################################
 
 """
-Simple scraping of twitter API
+Script for removing html2text tags such as [link]this one[/link] in articles
 """
-
+import re
 from django import forms
-from amcat.scraping.scraper import ScraperForm, Scraper
-from amcat.models import Article
+from django.db.models import Max
 
-class Twitter(Scraper):
-    medium_name = "twitter"
+from amcat.scripts.script import Script
+from amcat.models.article import Article
+from amcat.models.articleset import ArticleSet
+
+class RemoveHTML2TextForm(forms.Form):
+    articleset = forms.ModelChoiceField(ArticleSet.objects.all(), required = False)
     
-    class options_form(ScraperForm):
-        key = forms.CharField(required=True, help_text='Twitter API key')
-        keyword = forms.CharField(required=True, help_text='Keyword to search')
+class RemoveHTML2TextScript(Script):
+    def run(self, _input):
+        articles = Article.objects.filter(articlesetarticle__articleset = self.options['articleset'].id)
+        for article in articles:
+            article.text = self.clean_text(article.text)
+        #article.save()
 
-        def clean_articleset_name(self):
-            """If article set name not specified, use keyword instead"""
-            if self.data.get('keyword') and not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
-                return self.data.get('keyword')
-            else:
-                return ScraperForm.clean_articleset_name(self)
+    def clean_text(self, text):
+        pass
         
-    def _initialize(self):
-        key = self.options['key']
-        print "Connecting to twitter with key", key
 
-    def _scrape_unit(self, unit):
-        tweets = ["list", "from", "api"]
-        for tweet in tweets:
-            yield Article(text=tweet, headline=tweet, date='2010-01-01')
+if __name__ == "__main__":
+    #testing
+    article = Article.objects.get(id=9192776)
+    script = RemoveHTML2TextScript()
+    text = script.clean_text(article.text)
+    print(text)
 
-
-    def get_errors(self):
-        return []
