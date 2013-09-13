@@ -39,11 +39,10 @@ class Features(Script):
 
     class options_form(forms.Form):
         articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-        unit_level = forms.ChoiceField([('article','article'),('paragraph','paragraph'),('sentence','sentence')])
-        #unit_level = forms.CharField()
+        unitlevel = forms.ChoiceField([('article','article'),('paragraph','paragraph'),('sentence','sentence')], initial='article')
         offset = forms.IntegerField(initial=0)
-        batchsize = forms.IntegerField(initial = 9999999)
-        min_docfreq = forms.IntegerField(initial=0) ## usefull for reducing size of output, but perhaps this problem should be for the user and not the server.
+        batchsize = forms.IntegerField(initial = 1000, max_value=2500)
+        mindocfreq = forms.IntegerField(initial=0) ## usefull for reducing size of output, but perhaps this problem should be for the user and not the server.
         
         # implement more options later 
         #features_type = forms.ChoiceField(['Stemmed words with POS'])
@@ -54,8 +53,8 @@ class Features(Script):
     
     def run(self, _input=None):
         articleset_id = self.options['articleset'].id
-        unit_level = self.options['unit_level']
-        min_docfreq = self.options['min_docfreq']
+        unit_level = self.options['unitlevel']
+        min_docfreq = self.options['mindocfreq']
         offset = self.options['offset']
         batchsize = self.options['batchsize']
 
