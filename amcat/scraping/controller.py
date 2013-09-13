@@ -201,20 +201,24 @@ def scrape_logged(controller, scrapers, deduplicate = False):
              counts: a mapping of number of articles scraper per scraper
              log: a string representation of the log messages from the scrapers
     """
-    result = {s : [] for s in scrapers}
 
-    counts = dict((s, 0) for s in scrapers)
-    log_stream = StringIO()
-    with amcatlogging.install_handler(logging.StreamHandler(stream=log_stream)):
-        for a in controller.scrape(scrapers, deduplicate=deduplicate):
-            counts[a.scraper] += 1
-            result[a.scraper].append(a)
-                
-    return counts, log_stream.getvalue(), result
+    general_index_articleset = ArticleSet.objects.get(pk = 2)
+    #CAUTION: destination articleset is hardcoded
 
+    result = []
+    current = None
+    for a in controller.scrape(scrapers, deduplicate=deduplicate):
+        result.append(a)
+        if a.scraper != current:
+            #new scraper started
+            if a.scraper.module().split(".")[-2].lower().strip() == "newspapers":
+                #if scraper in newspapers module, add it's result to set 2
+                log.info("Adding {x} articles of {a.scraper.__class__.__name__} to general index set ({general_index_articleset})".format(x = len(result), **locals()))
+                general_index_articleset.add_articles(result)
+            result = []
+            current = a.scraper
 
-
-
+        
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
