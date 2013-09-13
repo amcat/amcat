@@ -109,14 +109,12 @@ class Deduplicate(Script):
             compare_with = self.get_matching(compare_with, article, headline_ratio, "headline")
             compare_with = set(self.get_matching(compare_with, article, text_ratio, "text"))
 
-            print(compare_with)
             if not delete_same:
                 discard = None
                 for a in compare_with:
                     if a.id == article.id:
                         discard = a
                 compare_with.discard(discard)
-            print(compare_with)
 
             if compare_with:
                 yield (article, compare_with)
