@@ -197,7 +197,7 @@ from amcat.tools import amcattest
 
 def _valuestr(coding):
     """Dense representation of coding values for quick comparison"""
-    return ";".join("{0.label}:{1!r}".format(*fv) for (fv) in
+    return ";".join("{0.label}:{1!s}".format(*fv) for (fv) in
                     sorted(coding.get_values(), key=lambda fv:fv[0].label))
         
 
@@ -312,10 +312,10 @@ class TestCoding(amcattest.PolicyTestCase):
         a.set_value(self.intfield, 12)
         self.assertEqual(_valuestr(a), "number:12")
         a.update_values({self.strfield:"bla"})
-        self.assertEqual(_valuestr(a), "text:'bla'")
+        self.assertEqual(_valuestr(a), "text:bla")
         a.update_values({self.strfield:None, self.intfield:"999", self.codefield:self.c})
         
-        self.assertEqual(_valuestr(a), "code:<Code: CODED>;number:999")
+        self.assertEqual(_valuestr(a), "code:CODED;number:999")
         
         newfield = CodingSchemaField.objects.create(
             codingschema=amcattest.create_test_schema(),
