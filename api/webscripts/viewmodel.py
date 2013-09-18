@@ -40,8 +40,8 @@ class ViewModel(WebScript):
     
     
     def run(self):
-        objects = FindObjectsScript(self.formData).run()
-        result = ObjectsToTable(self.formData).run(objects)
+        objects = FindObjectsScript(self.data).run()
+        result = ObjectsToTable(self.data).run(objects)
 
         return self.outputResponse(result, ObjectsToTable.output_type)
         

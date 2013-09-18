@@ -42,7 +42,7 @@ class ExportArticles(WebScript):
     
     
     def run(self):
-        articles = ArticleListScript(self.formData).run()
-        table = ArticleListToTable(self.formData).run(articles)
+        articles = ArticleListScript(self.data).run()
+        table = ArticleListToTable(self.data).run(articles)
 
         return self.outputResponse(table, ArticleListToTable.output_type, filename='Export Articles')

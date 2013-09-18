@@ -156,7 +156,6 @@ def parse(codingrule, _seen=()):
     # Not all nodes from the Python language are supported
     for node in ast.walk(tree):
         if node.__class__ not in KNOWN_NODES or (isinstance(node, ast.Compare) and len(node.ops) > 1):
-            import pdb; pdb.set_trace()
             if hasattr(node, "col_offset"):
                 raise SyntaxError("invalid syntax (col {}, line {})".format(node.col_offset, node.lineno))
             raise SyntaxError("invalid syntax")

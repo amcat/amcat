@@ -248,7 +248,7 @@ class Codebook(AmcatModel):
     def _walk(self, include_labels, children, nodes, seen, labels=None):
         return tuple(self._get_node(include_labels, children, n, seen, labels=labels) for n in nodes)
 
-    def get_tree(self, include_hidden=True, include_labels=True, get_labels=None, date=None):
+    def get_tree(self, include_hidden=True, include_labels=True, get_labels=None, date=None, roots=None):
         """
         Get a tree representation of the tuples returned by get_hierarchy. For each root
         it yields a namedtuple("TreeItem", ["code_id", "children", "hidden"]) where
@@ -260,10 +260,14 @@ class Codebook(AmcatModel):
         @param include_labels: include .label property on each TreeItem
         @param get_labels: fetch labels in this order. This will not use fallback,
                             see docs Code.get_label().
+
+        @param roots: start tree at given nodes.
+        @type roots: List of CodebookCodes
+        @requires: roots in self.codebookcodes
         """
         children = collections.defaultdict(list)
         hierarchy = self.get_hierarchy(include_hidden=include_hidden, date=date)
-        nodes = self.get_roots(include_hidden=include_hidden, date=date)
+        nodes = roots or self.get_roots(include_hidden=include_hidden, date=date)
         seen = set()
 
         for child, parent in hierarchy:

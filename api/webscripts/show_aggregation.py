@@ -55,13 +55,11 @@ class ShowAggregation(WebScript):
     
     
     def run(self):
-        selection = SelectionForm(self.formData)
+        selection = SelectionForm(project=self.project, data=self.data)
         selection.full_clean()
-        queries = selection.cleaned_data["queries"]
+        queries = {q.declared_label : q.query  for q in selection.cleaned_data["queries"]}
 
-        import pdb; pdb.set_trace()
-
-        aggrTable = AggregationScript(self.formData).run()
+        aggrTable = AggregationScript(project=self.project, options=self.data).run()
         if self.output == 'json-html' or (self.output == 'html' and self.options['graphOnly'] == True):
             datesDict = self.getDatesDict(aggrTable)
             dictToJsonCls = scriptmanager.findScript(dict, 'json')
@@ -88,7 +86,7 @@ class ShowAggregation(WebScript):
                                                 'aggregationType':aggregationType,
                                                 'datesDict':datesDictJson,
                                                 'graphOnly': graphOnly,
-                                                'ownForm':self.form(self.formData),
+                                                'ownForm':self.form(project=self.project, data=self.data),
                                                 'relative':int(self.options['relative'])
                                              })
 

@@ -39,7 +39,7 @@ def index(request):
     for ws in mainScripts:
         outputs.append({'id':ws.__name__, 'name':ws.name, 'formAsHtml': ws.formHtml()})
     
-    context = {'form':SelectionForm(request.REQUEST), 'outputs':outputs}
+    context = {'form':SelectionForm(data=request.REQUEST), 'outputs':outputs}
     return render(request, 'navigator/selection/form.html', context)
     
     

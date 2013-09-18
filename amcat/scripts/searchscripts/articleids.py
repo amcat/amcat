@@ -59,8 +59,8 @@ class ArticleidsScript(script.Script):
     def run(self, input=None): 
         start = self.options['start']
         length = self.options['length']
-        if self.options['useSolr'] == False: # make database query
-            return database.getQuerySet(**self.options)[start:start+length].values_list('id', flat=True)
+        if self.bound_form.use_solr == False: # make database query
+            return database.get_queryset(**self.options)[start:start+length].values_list('id', flat=True)
         else:
             return solrlib.articleids(self.options)
 
@@ -72,7 +72,7 @@ class ArticleidsDictScript(script.Script):
 
 
     def run(self, input=None):
-        if self.options['useSolr'] == False: # make database query
+        if self.bound_form.use_solr == False: # make database query
             raise Exception('This works only for Solr searches')
         else:
             return solrlib.articleidsDict(self.options)

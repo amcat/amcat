@@ -23,22 +23,29 @@ Library that makes it easier to access Solr features as used in Amcat3
 Requires solrpy
 """
 import solr, re
+
 from amcat.models import article
 from amcat.models import medium
 from amcat.tools.toolkit import dateToInterval
-
 from amcat.tools.table.table3 import DictTable
+from amcat.tools.amcatsolr import get_filters
+
+
 import time
 import logging
 log = logging.getLogger(__name__)
 
 
-def doQuery(query, form, kargs, additionalFilters=None):
-    filters = createFilters(form)
+def doQuery(query, cleaned_data, kargs, additionalFilters=None):
+    filters = get_filters(cleaned_data)
     if additionalFilters:
         filters += additionalFilters
     startTime = time.time()
 
+    if not query or query == "()":
+        query = "*:*"
+
+    log.info("solr-query: {}, with filters: {}".format(query, filters))
     solrResponse = solr.SolrConnection('http://localhost:8983/solr').query(query,
                     fq=filters,
                     **kargs)
@@ -94,7 +101,6 @@ def highlightArticles(form, snippets=3):
     #http://localhost:8983/solr/select/?indent=on&q=des&fl=id,headline,body&hl=true
     #   &hl.fl=body,headline&hl.snippets=3&hl.mergeContiguous=true
     #   &hl.usePhraseHighlighter=true&hl.highlightMultiTerm=true
-    query = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
     kargs = dict(
         highlight=True,
         fields="id,score,body,headline",
@@ -105,14 +111,12 @@ def highlightArticles(form, snippets=3):
         hl_mergeContiguous='true',
         start=form['start'],
         rows=form['length'])
-    solrResponse = doQuery(query, form, kargs)
+    solrResponse = doQuery(form['query'], form, kargs)
     return parseSolrHighlightingToArticles(solrResponse)
 
 
 
 def getArticles(form):
-    #if len(queries) == 1:
-    query = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
     kargs = dict(
             fields="id,score",
             rows=form['length']
@@ -141,7 +145,7 @@ def getArticles(form):
             hl_mergeContiguous='false',
         ))
 
-    solrResponse = doQuery(query, form, kargsMainQuery)
+    solrResponse = doQuery(form['query'], form, kargsMainQuery)
 
     if 'keywordInContext' in form['columns']:
         contextDict = parseSolrHighlightingToContextDict(solrResponse)
@@ -303,27 +307,3 @@ def basicAggregate(form):
         raise Exception('%s %s combination not possible' % (xAxis, yAxis))
     return table
 
-
-
-def createFilters(form):
-    """ takes a form as input and ceate filter queries for start/end date, mediumid and set """
-    startDateTime = (form['startDate'].strftime('%Y-%m-%dT00:00:00.000Z')
-                     if 'startDate' in form else '*')
-    endDateTime = form['endDate'].strftime('%Y-%m-%dT23:59:59.999Z-1DAY') if 'endDate' in form else '*'
-    result = []
-    if startDateTime != '*' or endDateTime != '*': # if at least one of the 2 is a date
-        result.append('date:[%s TO %s]' % (startDateTime, endDateTime))
-    if 'mediums' in form:
-        mediumidQuery = ('mediumid:%d' % m.id for m in form['mediums'])
-        result.append(' OR '.join(mediumidQuery))
-    if 'articleids' in form:
-        articleidQuery = ('id:%d' % a for a in form['articleids'])
-        result.append(' OR '.join(articleidQuery))
-    if 'articlesets' in form and form['articlesets']:
-        setsQuery = ('sets:%d' % s.id for s in form['articlesets'])
-        result.append(' OR '.join(setsQuery))
-    if 'articlesets' not in form or not form['articlesets'] and 'projects' in form:
-        setsQuery = ('sets:%d' % s.id for s in form['projects'][0].all_articlesets())
-        result.append(' OR '.join(setsQuery))
-
-    return result

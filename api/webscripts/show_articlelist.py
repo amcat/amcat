@@ -44,7 +44,7 @@ class ShowArticleList(WebScript):
     
     
     def run(self):
-        formData = self.formData.copy() # copy needed since formData is inmutable
+        formData = self.data.copy() # copy needed since formData is inmutable
         if self.options['outputTypeAl'] == 'list':
             formData['highlight'] = True
         
@@ -54,16 +54,16 @@ class ShowArticleList(WebScript):
 
         articles = list(ArticleListScript(formData).run())
 
-        if isinstance(formData['projects'], (basestring, int)):
-            project_id = int(formData['projects'])
+        if isinstance(self.data['projects'], (basestring, int)):
+            project_id = int(self.data['projects'])
         else:
-            project_id = int(formData['projects'][0])
+            project_id = int(self.data['projects'][0])
 
-        project_id = formData['projects']
-        for a in articles: a.hack_project_id = project_id
+        for a in articles:
+            a.hack_project_id = project_id
         
         if self.options['outputTypeAl'] == 'table':
-            table = ArticleListToTable(self.formData).run(articles)
+            table = ArticleListToTable(self.data).run(articles)
             self.output_template = 'api/webscripts/articletable.html'
             return self.outputResponse(table, ArticleListToTable.output_type)
         else:

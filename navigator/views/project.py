@@ -402,11 +402,8 @@ def selection(request, project):
     for ws in mainScripts:
         outputs.append({
             'id':ws.__name__, 'name':ws.name,
-            'formAsHtml': ws.formHtml(project)
+            'formAsHtml': ws.formHtml(project=project)
         })
-
-    formData = request.GET.copy()
-    formData['projects'] = project.id
 
     all_articlesets = project.all_articlesets()
 
@@ -423,7 +420,7 @@ def selection(request, project):
 
     ctx = locals()
     ctx.update({
-        'form' : SelectionForm(formData, initial={"datetype" : "all" }),
+        'form' : SelectionForm(project=project, data=request.GET, initial={"datetype" : "all" }),
         'outputs' : outputs,
         'project' : project,
         'context' : project,

@@ -55,14 +55,18 @@ class WebScript(object):
     output_template = None # path to template used for html output
     solrOnly = False # only for Solr output, not on database queries
 
-    def __init__(self, formData):
+    def __init__(self, project=None, data=None, **kwargs):
         self.initTime = time.time()
-        self.formData = formData
-        self.output = formData.get('output', 'json')
+        self.data = data
+        self.output = data.get('output', 'json')
+        self.project = project
 
         if self.form:
 
-            form = self.form(data=formData)
+            try:
+                form = self.form(project=project, data=data, **kwargs)
+            except TypeError:
+                form = self.form(data=data, **kwargs)
 
             if not form.is_valid():
                 raise InvalidFormException("Invalid or missing options: %r" % form.errors, form.errors)
@@ -76,20 +80,30 @@ class WebScript(object):
     def formHtml(cls, project=None):
         if cls.form == None:
             return ''
-        form = cls.form()
+        try:
+            form = cls.form(project=project)
+        except TypeError:
+            form = cls.form()
         return render_to_string(cls.form_template, {'form':form}) if cls.form_template else form.as_p()
 
 
     def getActions(self):
         for ws in api.webscripts.actionScripts:
-            if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.formData.get('query')):
+            if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.data.get('query')):
                 yield ws.__name__, ws.name 
 
 
     def outputJsonHtml(self, scriptoutput):
         actions = self.getActions()
-        webscriptform = self.form(self.formData) if self.form else None
-        selectionform = SelectionForm(self.formData)
+
+        webscriptform = None
+        if self.form:
+            try:
+                webscriptform = self.form(project=self.project, data=self.data)
+            except TypeError:
+                webscriptform = self.form(data=self.data)
+
+        selectionform = SelectionForm(project=self.project, data=self.data)
         html = render_to_string('navigator/selection/webscriptoutput.html', {
                                     'scriptoutput':scriptoutput,
                                     'actions': actions,
@@ -106,7 +120,7 @@ class WebScript(object):
         return HttpResponse(jsondata, mimetype='text/plain')
 
     def outputResponse(self, data, data_type, filename=None):
-        outputFormData = self.formData.copy() # need copy, else it's unmutable
+        outputFormData = self.data.copy() # need copy, else it's unmutable
         outputFormData['template'] = self.output_template
         if self.output == 'json-html': # special output that runs the webscript with html output,
                                        # then wraps around this the action buttons and other stuff for the amcat navigator website

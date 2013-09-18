@@ -67,13 +67,13 @@ class ShowAssociations(WebScript):
         
     
     def run(self):
-        articleListFormData = self.formData.copy()
+        articleListFormData = self.data.copy()
         articleListFormData['columns'] = 'hits' # need to add columns, since this is required for ArticleListScript 
         
         articles = ArticleListScript(articleListFormData).run()
         articleTable = ArticleListToTable({'columns':('hits', )}).run(articles)
         #print(articleTable.output())
-        assocTable = AssociationsScript(self.formData).run(articleTable)
+        assocTable = AssociationsScript(self.data).run(articleTable)
         if self.options['network_output'] == 'ool':
             self.output = 'json-html'
             assocTable = table3.WrappedTable(assocTable, cellfunc = lambda a: self.format(a) if isinstance(a, float) else a)

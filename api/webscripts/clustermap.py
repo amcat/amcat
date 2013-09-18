@@ -40,13 +40,13 @@ class ShowClusterMap(WebScript):
 
 
     def run(self):
-        form = self.formData.copy()
+        form = self.data.copy()
         form["length"] = 9999999 # HACK! clustermap should use all data
         articleidDict = ArticleidsDictScript(form).run()
         if self.output == 'html' or self.output == 'json-html':
-            result = ClustermapScript(self.formData).run(articleidDict)
+            result = ClustermapScript(self.data).run(articleidDict)
             outputType = ClustermapScript.output_type
         else:
-            result = ClustermapTableScript(self.formData).run(articleidDict)
+            result = ClustermapTableScript(self.data).run(articleidDict)
             outputType = ClustermapTableScript.output_type
         return self.outputResponse(result, outputType)

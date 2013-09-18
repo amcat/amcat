@@ -31,8 +31,17 @@ def index(request, webscriptName):
     if not hasattr(webscripts, webscriptName) or webscriptName not in webscripts.webscriptNames:
         return showErrorMsg('invalid webscript name', 'json')
     webscriptClass = getattr(webscripts, webscriptName)
+
+
+    project = Project.objects.only("id").get(id=request.GET["project"])
+    data = (request.POST if request.method == "POST" else request.GET).copy()
+    data['projects'] = project.id
+
     try:
-        ws = webscriptClass(request.POST if request.method == "POST" else request.GET)
+        try:
+            ws = webscriptClass(project=project, data=data)
+        except TypeError:
+            ws = webscriptClass(data=data)
         return ws.run()
     except InvalidFormException, e:
         log.exception('Invalid form for Webscript: %s' % webscriptName)

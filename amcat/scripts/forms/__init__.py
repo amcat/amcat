@@ -17,28 +17,5 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-
-from webscript import WebScript
-from django import forms
-from amcat.scripts.processors.export_codingjobs import ExportCodingjobsScript, CodingjobsForm
-
-import logging
-log = logging.getLogger(__name__)
-
-class ExportCodingjobsForm(CodingjobsForm):
-    pass
-
-    
-class ExportCodingjobs(WebScript):
-    name = "Export Codingjob"
-    form_template = None
-    form = ExportCodingjobsForm
-    displayLocation = ()
-    output_template = None
-    
-    
-    def run(self):
-        result = ExportCodingjobsScript(self.data).run()
-        return self.outputResponse(result, ExportCodingjobsScript.output_type)
-        
-    
+from .general import *
+from .selection import *

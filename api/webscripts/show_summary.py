@@ -17,7 +17,7 @@ class ShowSummary(WebScript):
     form = None
     
     def run(self):
-        form = amcat.scripts.forms.SelectionForm(self.formData) # check form here already, so no invalid ajax requests will be made later
+        form = amcat.scripts.forms.SelectionForm(project=self.project, data=self.data) # check form here already, so no invalid ajax requests will be made later
         if not form.is_valid():
             raise amcat.forms.InvalidFormException("Invalid or missing options: %r" % form.errors, form.errors)
         return self.outputJsonHtml(render_to_string('api/webscripts/summary.html'))

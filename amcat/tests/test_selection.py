@@ -38,7 +38,10 @@ class TestArticleList(amcattest.PolicyTestCase):
     def list(self, **kargs):
         options = DEFAULTS.copy()
         options.update(kargs)
-        return set(ArticleListScript(**options).run())
+        return self.pks(set(ArticleListScript(**options).run()))
+
+    def pks(self, objs):
+        return {o.id for o in objs}
 
     def aggr(self, **kargs):
         options = DEFAULTS.copy()
@@ -51,16 +54,19 @@ class TestArticleList(amcattest.PolicyTestCase):
         # baseline: can we select articles in a project
         p = amcattest.create_test_project()
         arts = {amcattest.create_test_article(project=p) for i in range(10)}
-        amcattest.create_test_set(project=p).add_articles(arts)
-        self.assertEqual(self.list(projects=[p.id]), arts)
+        aset = amcattest.create_test_set(project=p)
+        aset.add_articles(arts)
+        aset.refresh_index()
+        self.assertEqual(self.list(projects=[p.id]), self.pks(arts))
 
         # add second project with articles from first project in set
         p2 = amcattest.create_test_project()
         s = amcattest.create_test_set(project=p2)
         s.add(*arts)
+        s.refresh_index()
         # selecting on only project OR on project and set should give the articles
-        self.assertEqual(self.list(projects=[p2.id]), arts)
-        self.assertEqual(self.list(projects=[p2.id], articlesets=[s.id]), arts)
+        self.assertEqual(self.list(projects=[p2.id]), self.pks(arts))
+        self.assertEqual(self.list(projects=[p2.id], articlesets=[s.id]), self.pks(arts))
 
     def test_aggregation(self):
         """Can we create nice tables?"""
@@ -68,10 +74,14 @@ class TestArticleList(amcattest.PolicyTestCase):
         m1, m2 = [amcattest.create_test_medium() for x in [1,2]]
         arts1 = {amcattest.create_test_article(project=p, medium=m1) for i in range(5)}
         arts2 = {amcattest.create_test_article(project=p, medium=m2) for i in range(15)}
-        amcattest.create_test_set(project=p).add_articles(arts1|arts2)
+        aset = amcattest.create_test_set(project=p)
+        aset.add_articles(arts1|arts2)
+        aset.refresh_index()
+
+
         # can we select on mediumid
-        self.assertEqual(self.list(projects=[p.id]), arts1|arts2)
-        self.assertEqual(self.list(projects=[p.id], mediums=[m1.id]), arts1)
+        self.assertEqual(self.list(projects=[p.id]), self.pks(arts1|arts2))
+        self.assertEqual(self.list(projects=[p.id], mediums=[m1.id]), self.pks(arts1))
 
         # can we make a table?
         x = self.aggr(projects=[p.id], xAxis='medium')

@@ -73,8 +73,8 @@ class AggregationScript(script.Script):
         """ returns a table containing the aggregations"""
         xAxis = self.options['xAxis']
         dateInterval = self.options['dateInterval']
-        if self.options['useSolr'] == False: # make database query
-            queryset = database.getQuerySet(**self.options).distinct()
+        if self.bound_form.use_solr == False: # make database query
+            queryset = database.get_queryset(**self.options).distinct()
             yAxis = self.options['yAxis']
             if xAxis == 'date':
                 if not dateInterval: raise Exception('Missing date interval')
@@ -209,11 +209,6 @@ if __name__ == '__main__':
     for x in fill_months("2001-01", "2002-02"):
         print x
     
-    #from amcat.scripts.tools import cli
-    #cli.run_cli(AggregationScript)
-
-
-
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -241,6 +236,7 @@ class TestAggregation(amcattest.PolicyTestCase):
         a2 = amcattest.create_test_article(date='2001-03-02', medium=a1.medium)
         a3 = amcattest.create_test_article(date='2001-08-12', medium=a1.medium)
         aset = amcattest.create_test_set(articles=[a1,a2,a3])
+        aset.refresh_index()
 
         
         

@@ -24,13 +24,15 @@ Script that will run a search on the database or Solr and return the matching Ar
 
 from amcat.scripts import script, types
 from amcat.scripts.tools import solrlib, database
+from amcat.forms.forms import order_fields
 import amcat.scripts.forms
 from django import forms
 
 import logging
 log = logging.getLogger(__name__)
 
-class ArticleListForm(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.ArticleColumnsForm):
+@order_fields(classes=(amcat.scripts.forms.SelectionForm, amcat.scripts.forms.ArticleColumnsForm))
+class ArticleListForm(amcat.scripts.forms.ArticleColumnsForm, amcat.scripts.forms.SelectionForm):
     start = forms.IntegerField(initial=0, min_value=0, widget=forms.HiddenInput, required=False)
     length = forms.IntegerField(initial=100, min_value=1, max_value=9999999,
                                 widget=forms.HiddenInput, required=False)
@@ -88,8 +90,8 @@ class ArticleListScript(script.Script):
         if not self.options['sortColumn']:
             self.options['sortColumn'] = 'id'
 
-        if self.options['useSolr'] == False: # make database query
-            qs = database.getQuerySet(**self.options)
+        if self.bound_form.use_solr == False: # make database query
+            qs = database.get_queryset(**self.options)
             if self.options['sortColumn']:
                 qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '')
                                  + self.options['sortColumn'])

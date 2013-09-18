@@ -65,6 +65,7 @@ class Solr(object):
     def query_all(self, query, batch=1000, filters=[], **kargs):
         """Make repeated calls to solr to get all articles"""
         response = self._connect().query(query, fq=filters, rows=batch, **kargs)
+
         while response.results:
             log.debug("Iterating over all results, n={response.numFound}, "
                       "start={response.start}, |response.results|={n}"
@@ -90,6 +91,7 @@ class Solr(object):
         ids = set()
         c = self._connect()
         for start in itertools.count(step=batch_size):
+            log.info("Executing raw solr query: {}".format(query))
             result = c.raw_query(q=query, rows=batch_size, fl="id", wt="csv", start=start)
             _ids = {int(x) for x in result.split("\n")[1:] if x}
             ids |= _ids
@@ -181,31 +183,27 @@ def _get_article_dicts(article_ids):
                    date=a.date.replace(tzinfo=GMT0()),
                    sets=sets.get(a.id))
 
-def filters_from_form(form):
-    """takes a form as input and ceate filter queries for start/end date, mediumid and set """
-    startDateTime = (form['startDate'].strftime('%Y-%m-%dT00:00:00.000Z')
-                     if 'startDate' in form else '*')
-    endDateTime = form['endDate'].strftime('%Y-%m-%dT00:00:00.000Z') if 'endDate' in form else '*'
-    filters = []
-    if startDateTime != '*' or endDateTime != '*': # if at least one of the 2 is a date
-        filters.append('date:[%s TO %s]' % (startDateTime, endDateTime))
-    if form.get('mediums'):
-        mediumidQuery = ('mediumid:%d' % m.id for m in form['mediums'])
-        filters.append(' OR '.join(mediumidQuery))
-    if form.get('articleids'):
-        articleidQuery = ('id:%d' % a for a in form['articleids'])
-        filters.append(' OR '.join(articleidQuery))
-    if form.get('articlesets'):
-        setsQuery = ('sets:%d' % s.id for s in form['articlesets'])
-        filters.append(' OR '.join(setsQuery))
-    else:
-        projectQuery = ('projectid:%d' % p.id for p in form['projects'])
-        filters.append(' OR '.join(projectQuery))
-    return filters
+def _get_filter_date(cleaned_data, prop):
+    if prop not in cleaned_data: return "*"
+    return cleaned_data[prop].strftime('%Y-%m-%dT00:00:00.000Z')
+
+def _get_filters(cleaned_data):
+    # Get date filter
+    start_date = _get_filter_date(cleaned_data, "start_date")
+    end_date = _get_filter_date(cleaned_data, "end_date")
+    if not (start_date == "*" and end_date == "*"):
+        yield "date:[{start_date} TO {end_date}]".format(**locals())
+
+    yield " OR ".join(map("mediumid:{.id}".format, cleaned_data["mediums"]))
+    yield " OR ".join(map("id:{}".format, cleaned_data["article_ids"]))
+    yield " OR ".join(map("sets:{.id}".format, cleaned_data["articlesets"]))
+
+def get_filters(cleaned_data):
+    return filter(bool, _get_filters(cleaned_data))
 
 def query_args_from_form(form):
     """ takes a form as input and return a dict of filter, start, and rows arguments for query"""
-    return dict(filters=filters_from_form(form), start=form['start'], rows=form['length'])
+    return dict(filters=get_filters(form), start=form['start'], rows=form['length'])
 
 class TestDummySolr(object):
     """
@@ -316,6 +314,7 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
             return
         
         with TestSolr() as solr:
+            self.clear_solr(solr)
             a1 = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla')
             a2 = amcattest.create_test_article(text='en alweer een test blo')
             # can we add articles, and are the right articles returned?
@@ -370,6 +369,7 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
             
     def todo_test_version(self):
         with TestSolr() as solr:
+            self.clear_solr(solr)
             url = "{solr.url}/admin/registry.jsp".format(**locals())
             import urllib
             resp = urllib.urlopen(url).read()
@@ -382,9 +382,9 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
         s1 = amcattest.create_test_set()
         s2 = amcattest.create_test_set()
 
-        form = dict(sortColumn='', useSolr=True,
+        form = dict(sortColumn='', use_solr=True,
                     start=100, length=100,
-                    articleids=[], articlesets=[s1,s2], mediums=[m], projects=[],
+                    article_ids=[], articlesets=[s1,s2], mediums=[m], projects=[],
                     columns= [u'article_id', u'date', u'medium_id', u'medium_name', u'headline'],
                     highlight=False, columnInterval='month', datetype='all', sortOrder='')
         args = query_args_from_form(form)

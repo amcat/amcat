@@ -26,7 +26,6 @@ from django import forms
 
 import collections, csv
 from amcat.scripts.script import Script
-from amcat.tools.amcatsolr import Solr, filters_from_form
 from amcat.tools.table.table3 import Table
 from amcat.models import ArticleSet
 

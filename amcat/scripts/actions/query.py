@@ -26,7 +26,7 @@ from functools import partial
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.tools.amcatsolr import Solr, filters_from_form
+from amcat.tools.amcatsolr import Solr, get_filters
 from amcat.tools.table.table3 import Table
 from amcat.models import ArticleSet
 
@@ -41,7 +41,7 @@ class Query(Script):
     output_type = Table
     
     def run(self, _input=None):
-        filters = filters_from_form(self.options)
+        filters = get_filters(self.options)
         query = self.options['query']
         t = Table(rows = Solr().query_all(query, filters=filters, fields=["id"]),
                   columns = ["id", "score"],

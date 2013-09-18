@@ -27,7 +27,7 @@
                 <div id="query-form">
                     <label>Keyword Search string(s)</label> <a id="help-link" href="#">Search Syntax Help</a><br />
                     {{ form.query }}
-		    <div>{{ form.includeAll }} {{ form.includeAll.label_tag }}</div>
+		    <div>{{ form.include_all }} {{ form.include_all.label_tag }}</div>
 		    <div>{{form.codebook.label_tag}} {{form.codebook}}<br/> {{form.codebooklanguage.label_tag}} {{form.codebooklanguage}}</div>
                 <label>Upload query: <input id="upload-query" type="file" /></label>
                 </div>
@@ -50,9 +50,9 @@
                 <option value="between">Between</option>
                 <option value="before">Before</option>
             </select>
-            <span id="date-start" style="display:none">Start: {{ form.startDate }} </span>
-            <span id="date-end" style="display:none"> End: {{ form.endDate }}</span> 
-            <span id="date-on" style="display:none">{{ form.onDate }}</span> 
+            <span id="date-start" style="display:none">Start: {{ form.start_date }} </span>
+            <span id="date-end" style="display:none"> End: {{ form.end_date }}</span> 
+            <span id="date-on" style="display:none">{{ form.on_date }}</span> 
         </td>
     </tr>
     <tr>

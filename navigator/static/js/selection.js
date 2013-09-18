@@ -31,9 +31,11 @@ amcat.selection.hideMessage = function(){
 
 
 amcat.selection.callWebscript = function(name, data, callBack){
+    var url = amcat.selection.apiUrl + 'webscript/' + name + '/run?project=' + amcat.selection.get_project();
+
     $.ajax({
       type: 'POST',
-      url: amcat.selection.apiUrl + 'webscript/' + name + '/run',
+      url: url,
       success: callBack,
       error: function(jqXHR, textStatus){
         console.log('error form data', textStatus);
@@ -190,7 +192,10 @@ $(document).ready(function(){
     
 })
 
-
+amcat.selection.get_project = function(){
+    // This is fugly, I'm sorry..
+    return (/[0-9]+/).exec(window.location.pathname)[0];
+}
 
 amcat.selection.onFormSubmit = function(){
     amcat.selection.setMessage('Loading...')
@@ -201,7 +206,10 @@ amcat.selection.onFormSubmit = function(){
     
     var webscriptName = $('input[name=webscriptToRun]:checked').attr("id"); // name of selected webscript to run
     console.log('script to run', webscriptName);
-    $('#selectionform').attr('action', amcat.selection.apiUrl + 'webscript/' + webscriptName + '/run');
+
+    var url = amcat.selection.apiUrl + 'webscript/' + webscriptName + '/run' + '?project=' + amcat.selection.get_project();
+
+    $('#selectionform').attr('action', url);
     
     amcat.selection.loadIframeTimeout = window.setTimeout(function(){ // in rare cases iframe may not load, and this will give the user some feedback
         var iframeLength = 0;
@@ -305,8 +313,7 @@ amcat.selection.addActionToMainForm = function(webscriptClassName, label){
     $("#webscripts").append($('<input />', {'type':"radio", id:webscriptClassName, name:"webscriptToRun", value:webscriptClassName, 'checked':true}));
     $("#webscripts").append($('<label />', {'for':webscriptClassName, 'id':'radio-additional-label'}).text(label));
     $("#webscripts").buttonset(); 
-    var url = amcat.selection.apiUrl + 'webscript/' + webscriptClassName + '/form';
-    url += '?project=' + document.getElementById("id_projects_0").value;
+    var url = amcat.selection.apiUrl + 'webscript/' + webscriptClassName + '/form?project=' + amcat.selection.get_project();
 
     $.ajax({
       type: 'GET',
@@ -551,76 +558,76 @@ amcat.selection.aggregation.click = function(x, y, count){
     var title = count + ' ' + amcat.selection.aggregation.aggregationType + ' ';
 
     if(amcat.selection.aggregation.xAxis == 'date'){
-        var startDate = endDate = null;
+        var start_date = end_date = null;
 
         if(amcat.selection.aggregation.dateType == "year"){
-            var startDate = endDate = new Date(x);
+            var start_date = end_date = new Date(x);
 
-            startDate = startDate.getFullYear() + "-" + (startDate.getMonth() + 1) + "-" + startDate.getUTCDate();
-            endDate = (endDate.getFullYear()+1) + "-" + (endDate.getMonth() + 1) + "-" + (endDate.getUTCDate() );
+            start_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getUTCDate();
+            end_date = (end_date.getFullYear()+1) + "-" + (end_date.getMonth() + 1) + "-" + (end_date.getUTCDate() );
             
         } else if(amcat.selection.aggregation.dateType == "day"){
-            var startDate = new Date(x);
+            var start_date = new Date(x);
 
-            var endDate = new Date(0);
-            endDate.setUTCSeconds((startDate / 1000) + (24*60*60));
+            var end_date = new Date(0);
+            end_date.setUTCSeconds((start_date / 1000) + (24*60*60));
 
-            startDate = startDate.getFullYear() + "-" + (startDate.getMonth() + 1) + "-" + startDate.getUTCDate();
-            endDate = endDate.getFullYear() + "-" + (endDate.getMonth() + 1) + "-" + (endDate.getUTCDate() );
+            start_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getUTCDate();
+            end_date = end_date.getFullYear() + "-" + (end_date.getMonth() + 1) + "-" + (end_date.getUTCDate() );
 
         } else if(isNaN(x) == false){
             var date = new Date(x);
             $.each(amcat.selection.aggregation.datesDict, function(i, dateObj){
-                var startDateObj = new Date(dateObj[0]);
-                //console.log('compare', startDateObj, date);
-                if(startDateObj.getTime() == date.getTime()){
+                var start_dateObj = new Date(dateObj[0]);
+                //console.log('compare', start_dateObj, date);
+                if(start_dateObj.getTime() == date.getTime()){
                     //console.log('equal')
-                    endDate = dateObj[1];
-                    startDate = dateObj[0];
+                    end_date = dateObj[1];
+                    start_date = dateObj[0];
                     return false;
                 }
             });
         } else {
-            startDate = amcat.selection.aggregation.datesDict[x][0];
-            endDate = amcat.selection.aggregation.datesDict[x][1];
+            start_date = amcat.selection.aggregation.datesDict[x][0];
+            end_date = amcat.selection.aggregation.datesDict[x][1];
         }
 
         if(formValues['datetype'][0] == 'between' || formValues['datetype'][0] == 'after'){
-            var queriedStartDate = amcat.selection.aggregation.reverseDateOrder(formValues['startDate'][0]);
+            var queriedStartDate = amcat.selection.aggregation.reverseDateOrder(formValues['start_date'][0]);
 
-            if(queriedStartDate >= startDate){
-                startDate = queriedStartDate;
+            if(queriedStartDate >= start_date){
+                start_date = queriedStartDate;
             }
         }
 
         if(formValues['datetype'][0] == 'between' || formValues['datetype'][0] == 'before'){
-            var queriedEndDate = amcat.selection.aggregation.reverseDateOrder(formValues['endDate'][0]);
+            var queriedEndDate = amcat.selection.aggregation.reverseDateOrder(formValues['end_date'][0]);
 
-            if(queriedEndDate <= endDate){
-                endDate = queriedEndDate;
+            if(queriedEndDate <= end_date){
+                end_date = queriedEndDate;
             }
         }
 
         if (formValues['datetype'][0] == 'on'){
-            startDate = new Date(amcat.selection.aggregation.reverseDateOrder(formValues['onDate'][0]));
-            endDate = new Date(0);
+            start_date = new Date(amcat.selection.aggregation.reverseDateOrder(formValues['on_date'][0]));
+            end_date = new Date(0);
 
-            endDate.setUTCSeconds((startDate / 1000) + (24*60*60));
+            end_date.setUTCSeconds((start_date / 1000) + (24*60*60));
 
-            startDate = startDate.getFullYear() + "-" + (startDate.getMonth() + 1) + "-" + startDate.getUTCDate();
-            endDate = endDate.getFullYear() + "-" + (endDate.getMonth() + 1) + "-" + (endDate.getUTCDate() );
+            start_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getUTCDate();
+            end_date = end_date.getFullYear() + "-" + (end_date.getMonth() + 1) + "-" + (end_date.getUTCDate() );
             
         }
 
 
-        startDate = amcat.selection.aggregation.reverseDateOrder(startDate);
-        endDate = amcat.selection.aggregation.reverseDateOrder(endDate);
+        start_date = amcat.selection.aggregation.reverseDateOrder(start_date);
+        end_date = amcat.selection.aggregation.reverseDateOrder(end_date);
 
         addedFormValues['datetype'] = 'between';
-        addedFormValues['startDate'] = startDate; // change 2008-10-01 to 01-10-2008
-        addedFormValues['endDate'] = endDate; 
+        addedFormValues['start_date'] = start_date; // change 2008-10-01 to 01-10-2008
+        addedFormValues['end_date'] = end_date; 
 
-        title += ' between ' + addedFormValues['startDate'] + ' and ' + addedFormValues['endDate']
+        title += ' between ' + addedFormValues['start_date'] + ' and ' + addedFormValues['end_date']
     }
     
     

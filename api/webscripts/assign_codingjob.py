@@ -87,7 +87,7 @@ class AssignCodingJob(WebScript):
         return render_to_string(cls.form_template, locals())
 
     def run(self):
-        sel = SelectionForm(self.formData)
+        sel = SelectionForm(project=self.project, data=self.data)
 
         if not sel.is_valid():
             # This should not happen when using normal pages (i.e., someone is trying
@@ -95,7 +95,7 @@ class AssignCodingJob(WebScript):
             forms.ValidationError("Non-valid values entered.")
 
         sel.full_clean()
-        if sel.cleaned_data['useSolr']:
+        if sel.use_solr:
             sel.cleaned_data['length'] = 99999999 # Return 'unlimited' results
             sel.cleaned_data['sortColumn'] = None
             sel.cleaned_data['start'] = 0
@@ -103,28 +103,28 @@ class AssignCodingJob(WebScript):
 
             articles = solrlib.getArticles(sel.cleaned_data)
         else:
-            articles = database.getQuerySet(**sel.cleaned_data)
+            articles = database.get_queryset(**sel.cleaned_data)
 
-        project = Project.objects.get(id=self.formData.get('projects'))
+        project = Project.objects.get(id=self.data.get('projects'))
 
         # Create articleset
-        a = ArticleSet.objects.create(project=project, name=self.formData['setname'])
+        a = ArticleSet.objects.create(project=project, name=self.data['setname'])
         a.add(*articles)
 
         # Split all articles 
         CreateSentences(dict(articlesets=[a.id])).run()
 
         # Create codingjob
-        coder = User.objects.get(id=self.formData['coder'])
-        articleschema = CodingSchema.objects.get(id=self.formData['articleschema'])
-        unitschema = CodingSchema.objects.get(id=self.formData['unitschema'])
+        coder = User.objects.get(id=self.data['coder'])
+        articleschema = CodingSchema.objects.get(id=self.data['articleschema'])
+        unitschema = CodingSchema.objects.get(id=self.data['unitschema'])
 
-        if not 'insertuser' in self.formData:
+        if not 'insertuser' in self.data:
             insertuser = auth.get_request().user
         else:
-            insertuser = User.objects.get(id=self.formData['insertuser'])
+            insertuser = User.objects.get(id=self.data['insertuser'])
 
-        c = CodingJob.objects.create(project=project, name=self.formData['setname'], articleset=a,
+        c = CodingJob.objects.create(project=project, name=self.data['setname'], articleset=a,
                                      coder=coder, articleschema=articleschema, unitschema=unitschema,
                                      insertuser=insertuser)
         html = "<div>Saved as <a href='%s'>coding job %s</a>.</div>"

@@ -35,7 +35,7 @@ class ShowArticleSetStatistics(WebScript):
     
     
     def run(self):
-        stats = ArticleSetStatisticsScript(self.formData).run()
+        stats = ArticleSetStatisticsScript(self.data).run()
         return self.outputResponse(stats, ArticleSetStatisticsScript.output_type)
 
         

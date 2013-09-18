@@ -160,7 +160,7 @@ class Label(AmcatModel):
     label = models.TextField(blank=False, null=False)
 
     code = models.ForeignKey(Code, db_index=True, related_name="labels")
-    language = models.ForeignKey(Language, db_index=True, related_name="+")
+    language = models.ForeignKey(Language, db_index=True, related_name="labels")
 
     class Meta():
         db_table = 'codes_labels'

@@ -40,8 +40,8 @@ class ArticleSetStatisticsScript(script.Script):
     def run(self, input=None):
         s = types.ArticleSetStatistics()
 
-        if self.options['useSolr'] == False: # make database query
-            qs = database.getQuerySet(**self.options)
+        if self.bound_form.use_solr == False: # make database query
+            qs = database.get_queryset(**self.options)
             s.articleCount = qs.count()
             result = qs.distinct().aggregate(firstDate=Min('date'), lastDate=Max('date'))
             s.firstDate = result['firstDate']
