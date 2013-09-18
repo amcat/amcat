@@ -211,7 +211,7 @@ def get_secret():
     return get_secret()
 
 SECRET_KEY = get_secret()
-FIXTURE_DIRS = ('../amcat', './fixtures')
+FIXTURE_DIRS = (os.path.join(ROOT, "amcat/models"),)
 
 REST_FRAMEWORK = {
     'PAGINATE_BY': 10,
