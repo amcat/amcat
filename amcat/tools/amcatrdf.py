@@ -165,7 +165,9 @@ def get_triples_project(project):
     for schema in project.get_codingschemas():
         triples += list(get_triples_schema(schema))
 
-    codebooks = set_closure(project.get_codebooks(), lambda c: c.bases)
+    # Codebook bases not yet implemented
+    #codebooks = set_closure(project.get_codebooks(), lambda c: c.bases)
+    codebooks = project.get_codebooks()
     triples += list(get_triples_codebooks(codebooks))
 
     for job in CodingJob.objects.filter(project=project):
@@ -231,8 +233,9 @@ def get_triples_codebooks(codebooks):
     # serialize bases and codebook-attributes
     for cb in codebooks:
         for triple in get_triples(cb): yield triple
-        for base in cb.bases:
-            yield (get_uri(cb), RDFS_SUBPROP, get_uri(base))
+        # Bases not yet implemented
+        #for base in cb.bases:
+        #    yield (get_uri(cb), RDFS_SUBPROP, get_uri(base))
 
 def get_triples_coding(coding):
     """
@@ -299,9 +302,10 @@ class TestAmcatRDF(amcattest.PolicyTestCase):
         self.code_a.add_label(label=u"\xe5", language=sv)
         self.code_b = amcattest.create_test_code(label="b", parent=self.code_a, **_cargs)
         self.code_c = amcattest.create_test_code(label="c", parent=self.code_a, **_cargs)
-       
+
+        # Codebook bases not yet implemented
         self.sub_codebook = amcattest.create_test_codebook(project=self.project, name="sub codebook")
-        self.sub_codebook.add_base(self.codebook)
+        #self.sub_codebook.add_base(self.codebook)
         self.code_d = amcattest.create_test_code(label="d", language=en,
                                                  codebook=self.sub_codebook, parent=self.code_a)
         CodebookCode.objects.create(codebook=self.sub_codebook, code=self.code_c, hide=True)
@@ -508,10 +512,10 @@ class TestAmcatRDF(amcattest.PolicyTestCase):
 
         self.assertEqual(set(get_triples_codebooks({self.codebook})), cb_triples)
 
-        sub_triples = self._expected_triples_sub_codebook()
-        
-        self.assertEqual(set(get_triples_codebooks({self.codebook, self.sub_codebook})),
-                         cb_triples | sub_triples)
+        # Codebook bases not yet implemented
+        #sub_triples = self._expected_triples_sub_codebook()
+        #self.assertEqual(set(get_triples_codebooks({self.codebook, self.sub_codebook})),
+        #                 cb_triples | sub_triples)
         
 
     def test_triples_schema(self):
