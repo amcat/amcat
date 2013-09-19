@@ -21,7 +21,7 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from itertools import ifilterfalse
+from itertools import ifilterfalse, permutations
 from amcat.models import Project, ArticleSet, Medium
 from amcat.models import Codebook, Language, Label, Article
 from amcat.forms.forms import order_fields
@@ -525,15 +525,20 @@ class TestSelectionForm(amcattest.PolicyTestCase):
 
         root = next(c for c in c.get_codes() if c.get_label(lan0.id) == "A")
 
+
         # Should be able to handle recursion when defined on label
         p, _, form = _form(query="<{}+>".format(root.get_label(lan0.id)))
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.solr_query, "(A OR (A2 OR A1 OR (A1b OR A1a)))")
-        
+        self.assertEquals(3, form.solr_query.count("(")) # Three levels of nesting
+        for label in ["A", "A2", "A1", "A1b", "A1a"]:
+            self.assertTrue(label in form.solr_query)
+
         # Should be able to handle recursion when defined on id
         p, _, form = _form(query="<{}+>".format(root.id))
         self.assertTrue(form.is_valid())
-        self.assertEqual(form.solr_query, "(A OR (A2 OR A1 OR (A1b OR A1a)))")
+        self.assertEquals(3, form.solr_query.count("(")) # Three levels of nesting
+        for label in ["A", "A2", "A1", "A1b", "A1a"]:
+            self.assertTrue(label in form.solr_query)
 
         # Should raise error when not all nodes have a label in lan0
         a1b = next(c for c in c.get_codes() if c.get_label(lan0.id) == "A1b")
