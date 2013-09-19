@@ -24,6 +24,8 @@ Base module for article upload scripts
 import os.path
 import datetime
 import logging
+import zipfile
+
 log = logging.getLogger(__name__)
 
 from django.db import transaction
