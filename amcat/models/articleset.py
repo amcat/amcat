@@ -294,6 +294,10 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s.refresh_index(TestDummySolr())
         self.assertEqual(s.index_dirty, False)
 
+    def clear_solr(self, solr):
+        ids = set(solr.query_ids("*:*", rows=99999))
+        solr.delete_articles(ids)
+
     def test_refresh_index(self):
         """Are added/removed articles added/removed from the index?"""
         if amcattest.skip_slow_tests():
@@ -303,6 +307,7 @@ class TestArticleSet(amcattest.PolicyTestCase):
         from amcat.tools.amcatsolr import TestSolr, TestDummySolr
 
         with TestSolr() as solr:
+            self.clear_solr(solr)
             s = amcattest.create_test_set(indexed=True)
             a = amcattest.create_test_article()
             
@@ -339,11 +344,11 @@ class TestArticleSet(amcattest.PolicyTestCase):
 
             
 
-            # test that changing an article's properties can be reindexed 
+            # test that changing an article's properties can be reindexed
             arts[1].medium = amcattest.create_test_medium()
             arts[1].save()
 
-            query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium_id, **locals())
+            query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium.id, **locals())
             self.assertEqual(set(solr.query_ids(query)), set()) # before refresh
             s.refresh_index(solr, full_refresh=True)
             self.assertEqual(set(solr.query_ids(query)), {arts[1].id}) # after refresh
