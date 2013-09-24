@@ -22,6 +22,7 @@ from amcat.scripts import script, types
 from django.utils import simplejson
 from django import forms
 import datetime
+from amcat.tools.toolkit import writeDateTime
 
 
 class DataTableForm(forms.Form):
@@ -30,6 +31,10 @@ class DataTableForm(forms.Form):
     
 import logging
 log = logging.getLogger(__name__)
+
+def _default_json(obj):
+    if not isinstance(obj, datetime.datetime): return unicode(obj)
+    return writeDateTime(obj, year=True, seconds=False, time=False)
 
 class TableToDatatable(script.Script):
     input_type = table3.Table
@@ -54,4 +59,4 @@ class TableToDatatable(script.Script):
         dictObj['iTotalDisplayRecords'] = 9999 if len(tableData) > 0 else 0
         dictObj['sEcho'] = self.options['sEcho']
         
-        return simplejson.dumps(dictObj, default = lambda obj: obj.strftime('%d-%m-%Y') if isinstance(obj, datetime.datetime) else unicode(obj))
+        return simplejson.dumps(dictObj, default=_default_json)
