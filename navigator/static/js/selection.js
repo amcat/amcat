@@ -646,7 +646,8 @@ amcat.selection.aggregation.click = function(x, y, count){
     }
     
     if(amcat.selection.aggregation.yAxis == 'searchTerm'){
-        var query = y;
+        var query = amcat.selection.aggregation.labels[y];
+        if (query === undefined) query = y;
         addedFormValues['query'] = query;
         title += ' for search term &quot;' + query + '&quot;';
     }

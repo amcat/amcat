@@ -17,20 +17,19 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django import forms
-from webscript import WebScript
-from django.template.loader import render_to_string
-from django.utils import simplejson
-from django.http import HttpResponse
-from amcat.models.article import Article
-from amcat.models.article import Medium
-import time, calendar, datetime
-from amcat.tools import table
-from amcat.scripts import scriptmanager
+import calendar
+import datetime
+import json
 
+from django import forms
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+
+from webscript import WebScript
+from amcat.scripts import scriptmanager
 from amcat.scripts.searchscripts.aggregation import AggregationScript, AggregationForm
 from amcat.scripts.forms import SelectionForm
-import amcat.scripts.forms
+
 
 TITLE_COLUMN_NAME = 'x'
 
@@ -80,12 +79,13 @@ class ShowAggregation(WebScript):
             aggregationType = 'hits' if self.options['counterType'] == 'numberOfHits' else 'articles'
             graphOnly = 'true' if self.options['graphOnly'] == True else 'false'
 
-            scriptoutput = render_to_string('api/webscripts/aggregation.html', { 
-                                                'dataJson':dataJson, 
+            scriptoutput = render_to_string('api/webscripts/aggregation.html', {
+                                                'dataJson':dataJson,
                                                 'columnsJson':columnsJson,
                                                 'aggregationType':aggregationType,
                                                 'datesDict':datesDictJson,
                                                 'graphOnly': graphOnly,
+                                                'labels' : json.dumps({q.label : q.query for q in selection.queries}),
                                                 'ownForm':self.form(project=self.project, data=self.data),
                                                 'relative':int(self.options['relative'])
                                              })
