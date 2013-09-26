@@ -182,8 +182,8 @@ def _add_to_dict(dict, key, value):
 @order_fields()
 class SelectionForm(forms.Form):
     include_all = forms.BooleanField(label="Include articles not matched by any keyword", required=False, initial=False)
-    articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False)
-    mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.all(), required=False)
+    articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False, initial=())
+    mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.all(), required=False, initial=())
     article_ids = forms.CharField(widget=forms.Textarea, required=False)
     start_date = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
     end_date = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
@@ -208,9 +208,7 @@ class SelectionForm(forms.Form):
         codebooks = Codebook.objects.filter(project_id=project.id)
 
         self.fields['codebook'].queryset = codebooks
-        self.fields['mediums'].initial = list(Medium.objects.all().values_list("id", flat=True))
         self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
-        self.fields['articlesets'].initial = list(project.all_articlesets().values_list('id', flat=True))
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
             Language.objects.filter(labels__code__codebook_codes__codebook__in=codebooks).distinct("id")
         )
@@ -269,7 +267,7 @@ class SelectionForm(forms.Form):
         """
         self.full_clean()
         query = self.cleaned_data.get("query")
-        return bool(query) or query != "()"
+        return bool(query) and query != "()"
 
     def clean_codebook_label_language(self):
         return self.cleaned_data.get("codebook_label_language")
@@ -334,6 +332,17 @@ class SelectionForm(forms.Form):
             self.cleaned_data["end_date"] = on_date + datetime.timedelta(1)
 
         return None
+
+    def clean_articlesets(self):
+        if not self.cleaned_data["articlesets"]:
+            return self.project.all_articlesets()
+        return self.cleaned_data["articlesets"]
+
+    def clean_mediums(self):
+        if not self.cleaned_data["mediums"]:
+            return Medium.objects.filter(article__articlesetarticle__articleset__in=self.cleaned_data["articlesets"]).distinct("id")
+        return self.cleaned_data["mediums"]
+
 
     def clean_article_ids(self):
         article_ids = self.cleaned_data["article_ids"].split("\n")
@@ -476,6 +485,19 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         self.assertFalse(form.is_valid())
         p, c, form = self.get_form(datetype="before", end_date=now)
         self.assertTrue(form.is_valid())
+
+    def test_use_solr(self):
+        p, c, form = self.get_form(query="  Bla   #  Balkenende")
+        self.assertTrue(form.use_solr)
+
+        p, c, form = self.get_form(query="")
+        self.assertFalse(form.use_solr)
+
+        p, c, form = self.get_form(query="()")
+        self.assertFalse(form.use_solr)
+
+        p, c, form = self.get_form(query=" () ")
+        self.assertFalse(form.use_solr)
 
     def test_clean_query(self):
         import functools
