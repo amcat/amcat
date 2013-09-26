@@ -335,7 +335,7 @@ amcat.selection.submitAction = function(webscriptClassName){
     console.log('submitting action');
     $('#dialog-message-content').children().appendTo('#hidden-form-extra'); // move form elements to hidden form (to submit everything)
     //$('#hidden-form input[name=webscriptToRun]').val(webscriptClassName);
-    $('#hidden-form').attr('action', amcat.selection.apiUrl + 'webscript/' + webscriptClassName + '/run');
+    $('#hidden-form').attr('action', amcat.selection.apiUrl + 'webscript/' + webscriptClassName + '/run' + '?project=' + amcat.selection.get_project());
     
     var output = $('#hidden-form select[name=output]').val();
     //console.log('output', output);
