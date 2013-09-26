@@ -56,8 +56,6 @@ import lxml.html
 
 import htmlentitydefs
 
-from sh import unrtf
-
 import StringIO
 import logging; log = logging.getLogger(__name__)
 
@@ -139,6 +137,8 @@ def to_html(original_rtf, fixed_rtf):
     with NamedTemporaryFile() as xml:
         xml.write(fixed_rtf)
         xml.flush()
+        from sh import unrtf
+
         html = bytes(unrtf(xml.name))
 
     for u in get_unencoded(original_rtf):
