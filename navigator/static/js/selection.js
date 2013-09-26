@@ -357,8 +357,7 @@ amcat.selection.setDialogButtons = function(){
 }
 
 amcat.selection.actionClick = function(webscriptClassName, el){
-    var url = amcat.selection.apiUrl + 'webscript/' + webscriptClassName + '/form'
-    url += '?project=' + document.getElementById("id_projects_0").value;
+    var url = amcat.selection.apiUrl + 'webscript/' + webscriptClassName + '/form?project=' + amcat.selection.get_project();
     amcat.selection.submitActionWrapper = function(){
         amcat.selection.submitAction(webscriptClassName);
     }
