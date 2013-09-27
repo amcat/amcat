@@ -19,7 +19,7 @@
 
 """
 Script that creates a cluster map, showing the overlap between queries
-Requires a dictionary with articleids per query as input
+Requires a dictionary with article_ids per query as input
 """
 
 from amcat.scripts import script, types
@@ -55,10 +55,10 @@ class ClustermapScript(script.Script):
         objects = '\n'.join(objects)
 
         classifications = []
-        for query, articleids in articleidDict.items():
+        for query, article_ids in articleidDict.items():
             keywordStr = xml.sax.saxutils.escape(query)
             keywordQuote = xml.sax.saxutils.quoteattr(query)
-            articleidStr = ' '.join(map(str, articleids))
+            articleidStr = ' '.join(map(str, article_ids))
             classifications.append("""
             <Classification ID=%s>
              <Name>%s</Name>
@@ -137,8 +137,8 @@ class ClustermapTableScript(script.Script):
         counterDict = collections.defaultdict(lambda:0)
         for aid in allArticleids:
             key = []
-            for query, articleids in articleidDict.items():
-                if aid in articleids:
+            for query, article_ids in articleidDict.items():
+                if aid in article_ids:
                     key.append(1)
                 else:
                     key.append(0)

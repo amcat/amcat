@@ -88,7 +88,7 @@ class SaveAsSetScript(script.Script):
     output_type = ArticleSet
 
 
-    def run(self, articleids):
+    def run(self, article_ids):
         if self.options['existingset']:
             s = self.options['existingset']
         else:
@@ -103,7 +103,7 @@ class SaveAsSetScript(script.Script):
             else:
                 raise ValueError("Set with this name already exists!")
 
-        s.add(*articleids)
+        s.add(*article_ids)
         return s
     
         

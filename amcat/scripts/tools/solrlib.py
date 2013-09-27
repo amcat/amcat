@@ -56,8 +56,8 @@ def doQuery(query, cleaned_data, kargs, additionalFilters=None):
 
 def parseSolrHighlightingToArticles(solrResponse):
     scoresDict = dict((x['id'], int(x['score'])) for x in solrResponse.results)
-    articleids = map(int, solrResponse.highlighting.keys())
-    articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
+    article_ids = map(int, solrResponse.highlighting.keys())
+    articlesDict = article.Article.objects.defer('text').in_bulk(article_ids)
     for articleid, highlights in solrResponse.highlighting.iteritems():
         articleid = int(articleid)
         if articleid not in articlesDict: continue
@@ -153,14 +153,14 @@ def getArticles(form):
     else:
         contextDict = {}
 
-    articleids = [x['id'] for x in solrResponse.results]
+    article_ids = [x['id'] for x in solrResponse.results]
 
     hitsTable = DictTable(0)
     hitsTable.rowNamesRequired = True
 
     if 'hits' in form['columns']:
         if len(form['queries']) > 1:
-            additionalFilters = [' OR '.join(['id:%d' % id for id in articleids])]
+            additionalFilters = [' OR '.join(['id:%d' % id for id in article_ids])]
             for singleQuery in form['queries']:
                 hitsTable.columns.add(singleQuery.label)
                 solrResponseSingleQuery = doQuery(singleQuery.query, form, kargs, additionalFilters)
@@ -184,9 +184,9 @@ def getArticles(form):
 
 
     articlesDict = (article.Article.objects.defer('text')
-                    .select_related('medium__name').in_bulk(articleids))
+                    .select_related('medium__name').in_bulk(article_ids))
     result = []
-    for articleid in articleids:
+    for articleid in article_ids:
         if articleid not in articlesDict: continue
         a = articlesDict[articleid]
         a.hits = hitsTable.getNamedRow(articleid)
@@ -219,15 +219,15 @@ def getStats(statsObj, form):
 
     statsObj.lastDate = solrResponse.results[0]['date']
 
-def articleids(form):
-    """get only the articleids for a query"""
+def article_ids(form):
+    """get only the article_ids for a query"""
     query = '(%s)' % ') OR ('.join([q.query for q in form['queries']])
     kargs = dict(fields="id", start=form['start'], rows=form['length'], score=False)
     solrResponse = doQuery(query, form, kargs)
     return [x['id'] for x in solrResponse.results]
 
-def articleidsDict(form):
-    """get only the articleids for a query"""
+def article_idsDict(form):
+    """get only the article_ids for a query"""
     result = {}
     for query in form['queries']:
         kargs = dict(fields="id", start=form['start'], rows=form['length'], score=False)

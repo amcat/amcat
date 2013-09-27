@@ -134,8 +134,8 @@ class Solr(object):
 
 def parseSolrHighlightingToArticles(solrResponse):
     scoresDict = dict((x['id'], int(x['score'])) for x in solrResponse.results)
-    articleids = map(int, solrResponse.highlighting.keys())
-    articlesDict = article.Article.objects.defer('text').in_bulk(articleids)
+    article_ids = map(int, solrResponse.highlighting.keys())
+    articlesDict = article.Article.objects.defer('text').in_bulk(article_ids)
     for articleid, highlights in solrResponse.highlighting.iteritems():
         articleid = int(articleid)
         if articleid not in articlesDict: continue

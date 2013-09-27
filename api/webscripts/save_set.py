@@ -44,8 +44,8 @@ class SaveAsSet(WebScript):
     
     
     def run(self):
-        articleids = ArticleidsScript(self.data).run()
-        result = SaveAsSetScript(self.data).run(articleids)
+        article_ids = ArticleidsScript(self.data).run()
+        result = SaveAsSetScript(self.data).run(article_ids)
         result.provenance = json.dumps(dict(self.data))
         result.save()
 

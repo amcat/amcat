@@ -178,9 +178,9 @@ class CopyArticleSetScript(Script):
     def _do_copy_articles(self, aids):
         # Create the article objects
         fields = ", ".join(ARTICLE_FIELDS)
-        articleids = ", ".join(map(str, aids))
+        article_ids = ", ".join(map(str, aids))
         export_sql = ("SELECT {self.dest_project.id} AS projectid, {fields} FROM articles a"
-                      " WHERE article_id IN ({articleids})").format(**locals())
+                      " WHERE article_id IN ({article_ids})").format(**locals())
         export_sql = "COPY ({export_sql}) TO STDOUT WITH BINARY".format(**locals())
 
         import_sql = "COPY articles (project_id, {fields}) FROM STDIN WITH BINARY".format(**locals())
