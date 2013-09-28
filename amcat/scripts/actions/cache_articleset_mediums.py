@@ -25,17 +25,17 @@ Script add a codebook
 import logging; log = logging.getLogger(__name__)
 from amcat.scripts.script import Script
 
-from amcat.models import Project
+from amcat.models import ArticleSet
 
-class CacheProjectMediums(Script):
+
+class CacheArticleSetMediums(Script):
     def run(self, _input=None):
-        # Don't query database to find out how many projects we have, since
-        # we'll already have to fetch all projects.
-        projects = Project.objects.only("id")
+        asets = ArticleSet.objects.only("id").all()
+        nasets = asets.count()
 
-        for i, project in enumerate(projects, start=1):
-            log.info("Warming cache for project {project.id} [{i}/{}]".format(len(projects), **locals()))
-            project.cache_mediums()
+        for i, aset in enumerate(asets.iterator(), start=1):
+            log.info("Warming cache for articleset {aset.id} [{i}/{}]".format(nasets, **locals()))
+            aset.cache_mediums()
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
@@ -48,11 +48,11 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest
 
-class TestCacheProjectMediums(amcattest.PolicyTestCase):
+class TestCacheArticleSetMediums(amcattest.PolicyTestCase):
     def test_caching(self):
         aset = amcattest.create_test_set(1)
-        CacheProjectMediums().run()
+        CacheArticleSetMediums().run()
 
         with self.checkMaxQueries(1, "Get cached project mediums"):
-            list(aset.project.get_mediums())
+            list(aset.get_mediums())
 
