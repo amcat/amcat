@@ -18,17 +18,18 @@
 ###########################################################################
 
 
+from itertools import ifilterfalse
+import datetime
+import re
+import logging
+
 from django import forms
 from django.core.exceptions import ValidationError
 
-from itertools import ifilterfalse, permutations
-from amcat.models import Project, ArticleSet, Medium
+from amcat.models import Project, ArticleSet, Medium, AmCAT
 from amcat.models import Codebook, Language, Label, Article
 from amcat.forms.forms import order_fields
 
-import datetime, re
-
-import logging
 log = logging.getLogger(__name__)
 
 DATETYPES = {
@@ -195,7 +196,7 @@ class SelectionForm(forms.Form):
     codebook = ModelChoiceFieldWithIdLabel(queryset=Codebook.objects.all(), required=False, label="Use Codebook")
 
     query = forms.CharField(widget=forms.Textarea, required=False)
-    
+
     def __init__(self, project=None, data=None, *args, **kwargs):
         super(SelectionForm, self).__init__(data, *args, **kwargs)
 
@@ -205,16 +206,16 @@ class SelectionForm(forms.Form):
         elif project is None:
             raise ValueError("Project cannot be None")
 
-        codebooks = Codebook.objects.filter(project_id=project.id)
+        self._queries = None
+        self.project = project
 
+        codebooks = Codebook.objects.filter(project_id=project.id)
+        self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook'].queryset = codebooks
         self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
             Language.objects.filter(labels__code__codebook_codes__codebook__in=codebooks).distinct("id")
         )
-
-        self._queries = None
-        self.project = project
 
         if data is not None:
             self.data = self.get_data()
@@ -231,6 +232,11 @@ class SelectionForm(forms.Form):
             if field_name not in data:
                 _add_to_dict(data, field_name, field.initial)
         return data
+
+    def _get_mediums(self):
+        if AmCAT.mediums_cache_enabled():
+            return self.project.get_mediums()
+        return Medium.objects.all()
 
     def _get_queries(self, unresolved_queries):
         if self._queries is not None: self._queries
@@ -340,7 +346,7 @@ class SelectionForm(forms.Form):
 
     def clean_mediums(self):
         if not self.cleaned_data["mediums"]:
-            return Medium.objects.filter(article__articlesetarticle__articleset__in=self.cleaned_data["articlesets"]).distinct("id")
+            return self._get_mediums()
         return self.cleaned_data["mediums"]
 
 
@@ -403,7 +409,19 @@ class TestSelectionForm(amcattest.PolicyTestCase):
             project = codebook.project
 
         return project, codebook, SelectionForm(project, data=kwargs)
-        
+
+    def test_defaults(self):
+        from django.core.cache import cache
+        cache.clear()
+
+        set1 = amcattest.create_test_set(1)
+
+        p, c, form = self.get_form()
+        self.assertEqual({set1.articles.all()[0].medium}, set(form.fields['mediums'].queryset))
+        AmCAT.enable_mediums_cache()
+        p, c, form = self.get_form()
+        self.assertEqual(set(), set(form.fields['mediums'].queryset))
+
 
     def test_get_label_delimiter(self):
         self.assertEquals(_get_label_delimiter("abc", "a"), "a")

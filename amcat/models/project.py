@@ -24,6 +24,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
+from amcat.models import Medium
 
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codebook import Codebook
@@ -119,7 +120,15 @@ class Project(AmcatModel):
             yield a.id
         for asa in ArticleSetArticle.objects.filter(articleset__project=self):
             yield asa.article_id
-        
+
+    def get_mediums(self):
+        # mediums = [a.get_mediums() for a in self.all_articlesets()]
+        # return reduce(QuerySet.__or__, mediums, Medium.objects.none())
+        mediums = Medium.objects.none()
+        for aset in self.all_articlesets():
+            mediums |= aset.get_mediums()
+        return mediums
+
     class Meta():
         db_table = 'projects'
         app_label = 'amcat'
@@ -197,4 +206,18 @@ class TestProject(amcattest.PolicyTestCase):
         self.assertEqual(len(p.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p2.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p3.get_codingschemas().filter(pk=cs.id)), 0)
+
+    def test_get_mediums(self):
+        from django.core.cache import cache
+        cache.clear()
+
+        set1 = amcattest.create_test_set(2)
+        set2 = amcattest.create_test_set(2, project=set1.project)
+        set3 = amcattest.create_test_set(2)
+
+        self.assertEqual(
+            set(set1.project.get_mediums()),
+            { a.medium for a in set1.articles.all() } | { a.medium for a in set2.articles.all() }
+        )
+
 

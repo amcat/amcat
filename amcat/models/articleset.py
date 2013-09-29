@@ -21,6 +21,7 @@ from django.core.cache import cache
 from django.core.exceptions import ImproperlyConfigured
 import memcache
 from amcat.models import Medium, to_medium_ids
+from amcat.models.amcat import AmCAT
 
 """
 Model module for Article Sets. A Set is a generic collection of articles,
@@ -38,7 +39,7 @@ import itertools
 import logging
 log = logging.getLogger(__name__)
 
-MEDIUM_CACHE_KEY = "project_{project.id}_mediums"
+MEDIUM_CACHE_KEY = "project_{articleset.id}_mediums"
 
 def get_or_create_articleset(name, project):
     """
@@ -152,16 +153,16 @@ class ArticleSet(AmcatModel):
         @type return: QuerySet
         @param return: Mediums linked to this project
         """
-        mediums_ids = cache.get(self._cache_key)
-        if mediums_ids is None:
-            log.warning("Medium cache for project {self.id} not set!".format(**locals()))
+        mediums_ids = cache.get(self._cache_key, ())
+        if not AmCAT.mediums_cache_enabled():
+            log.warning("Medium cache not enabled. This function might be slow.".format(**locals()))
             mediums_ids = self.get_medium_ids()
         return Medium.objects.filter(id__in=mediums_ids)
 
     @property
     def _cache_key(self):
         """Returns the key of the cache for cache backends."""
-        return MEDIUM_CACHE_KEY.format(project=self).encode("UTF-8")
+        return MEDIUM_CACHE_KEY.format(articleset=self).encode("UTF-8")
 
     def add(self, *articles):
         """Add the given articles to this article set"""
@@ -429,6 +430,7 @@ class TestArticleSet(amcattest.PolicyTestCase):
     def test_cache_mediums(self):
         from django.core.cache import cache
         cache.clear()
+        AmCAT.enable_mediums_cache()
 
         # Does cache backend work in test environment?
         aset = amcattest.create_test_set(0)
@@ -440,7 +442,7 @@ class TestArticleSet(amcattest.PolicyTestCase):
         # Test whether cache is really used
         self.assertEquals([], list(aset.get_mediums()))
         aset.add_to_mediums_cache(arts[0].medium)
-        self.assertEquals([arts[0].medium], list(aset.get_mediums()))
+        self.assertEquals({arts[0].medium}, set(aset.get_mediums()))
         aset.add_articles(arts)
         self.assertEquals({a.medium for a in arts}, set(aset.get_mediums()))
 
@@ -448,6 +450,7 @@ class TestArticleSet(amcattest.PolicyTestCase):
     def test_add_to_mediums_cache(self):
         from django.core.cache import cache
         cache.clear()
+        AmCAT.enable_mediums_cache()
 
         aset = amcattest.create_test_set(0)
         Medium.objects.bulk_create([Medium(name="adfqwe" + str(i)) for i in range(50)])
