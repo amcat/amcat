@@ -185,7 +185,7 @@ def _get_article_dicts(article_ids):
 
 def _get_filter_date(cleaned_data, prop):
     if prop not in cleaned_data: return "*"
-    return cleaned_data[prop].strftime('%Y-%m-%dT00:00:00.000Z')
+    return cleaned_data[prop].isoformat() + "Z"
 
 def _get_filters(cleaned_data):
     # Get date filter

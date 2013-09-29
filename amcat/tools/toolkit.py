@@ -43,6 +43,7 @@ this organisation!
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+from functools import wraps
 import warnings, os, random, gzip, types, datetime, itertools, re, collections
 import threading, subprocess, sys, colorsys, base64, time, inspect, logging
 import htmlentitydefs, string, csv
@@ -143,6 +144,16 @@ def to_list(func):
     This decorator puts the result of a (generator) function in a list.
     """
     return wrapped(list)(func)
+
+
+def flip(func):
+    """Create a new function from the original with the arguments reversed
+
+    Credits: http://stackoverflow.com/a/9850282/478503"""
+    @wraps(func)
+    def newfunc(*args):
+        return func(*args[::-1])
+    return newfunc
 
 
 def log_error():
@@ -1115,6 +1126,10 @@ def toDate(date):
     if type(date) == str:
         return readDate(date)
     return datetime.datetime(*date.timetuple()[:6])
+
+def to_datetime(date):
+    """Convert datetime.date object to datetime.datetime"""
+    return datetime.datetime(year=date.year, month=date.month, day=date.day)
 
 def cmpDate(date1, date2):
     """Compares to date-like arguments (see L{toDate}), returning cmp-score"""

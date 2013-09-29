@@ -29,6 +29,7 @@ from django.core.exceptions import ValidationError
 from amcat.models import Project, ArticleSet, Medium, AmCAT
 from amcat.models import Codebook, Language, Label, Article
 from amcat.forms.forms import order_fields
+from amcat.tools.toolkit import to_datetime
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +49,8 @@ __all__ = [
     "TestSelectionForm", "ModelMultipleChoiceFieldWithIdLabel",
     "ModelChoiceFieldWithIdLabel"
 ]
+
+DAY_DELTA = datetime.timedelta(hours=23, minutes=59, seconds=59, milliseconds=999)
 
 class SearchQuery(object):
     """
@@ -321,8 +324,18 @@ class SelectionForm(forms.Form):
 
         return datetype
 
+    def clean_start_date(self):
+        if self.cleaned_data["start_date"]:
+            return to_datetime(self.cleaned_data["start_date"])
+
+    def clean_end_date(self):
+        if self.cleaned_data["end_date"]:
+            return to_datetime(self.cleaned_data["end_date"]) + DAY_DELTA
+
     def clean_on_date(self):
         on_date = self.cleaned_data["on_date"]
+        if on_date: on_date = to_datetime(on_date)
+
         if "datetype" not in self.cleaned_data:
             # Don't bother checking, datetype raised ValidationError
             return on_date
@@ -335,7 +348,7 @@ class SelectionForm(forms.Form):
         if datetype == "on":
             self.cleaned_data["datetype"] = "between"
             self.cleaned_data["start_date"] = on_date
-            self.cleaned_data["end_date"] = on_date + datetime.timedelta(1)
+            self.cleaned_data["end_date"] = on_date + DAY_DELTA
 
         return None
 
@@ -465,11 +478,13 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         end_date = form.cleaned_data["end_date"]
 
         self.assertEquals(form.cleaned_data["datetype"], "between")
-        self.assertEquals(form.cleaned_data["start_date"], now)
-        self.assertEquals(end_date - start_date, datetime.timedelta(days=1))
+        self.assertEquals(form.cleaned_data["start_date"], to_datetime(now))
+        self.assertEquals(end_date - start_date, DAY_DELTA)
+        self.assertTrue(end_date != start_date)
 
         p, c, form = self.get_form(datetype="on")
         self.assertFalse(form.is_valid())
+
 
     def test_clean_datetype(self):
         now = datetime.datetime.now().date()
@@ -482,7 +497,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         p, c, form = self.get_form(datetype="between", end_date=now)
         self.assertFalse(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now, start_date=now)
-        self.assertFalse(form.is_valid())
+        self.assertTrue(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now - datetime.timedelta(days=1), start_date=now)
         self.assertFalse(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now + datetime.timedelta(days=1), start_date=now)
