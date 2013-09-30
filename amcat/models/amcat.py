@@ -40,7 +40,9 @@ SINGLETON_ID = 1
 # See amcat.tools.db_upgrader
 CURRENT_DB_VERSION = 16
 
-MEDIUM_CACHE_ENABLED = "articleset_mediums_cache"
+MEDIUM_CACHE_ENABLED = "medium_cache_enabled"
+TIMEOUT_INFINITY = 31536000 # One year, actually. By then we should have upgraded to Django
+                            # 1.6, which allows 'real' infinite caching.
 
 class AmCAT(AmcatModel):
     id = models.BooleanField(primary_key=True, db_column="singleton_pk")
@@ -70,7 +72,7 @@ class AmCAT(AmcatModel):
         @param enable: Disables caching for mediums when set to False
         @return: None
         """
-        return cache.set(MEDIUM_CACHE_ENABLED, enable)
+        return cache.set(MEDIUM_CACHE_ENABLED, enable, TIMEOUT_INFINITY)
 
     @property
     def server_warning(self):
