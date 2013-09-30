@@ -159,7 +159,7 @@
 				
 				this._trigger( "filter", e, $.map(cache, function(v,i){
 					if( v.search(regex) !== -1 ){
-						rows.eq(i+1).show();
+						rows.eq(i).show();
 						return inputs.get(i);
 					}
 					
