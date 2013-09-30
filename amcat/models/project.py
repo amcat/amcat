@@ -123,7 +123,7 @@ class Project(AmcatModel):
         )
 
     def get_mediums(self):
-        medium_ids = (a.get_medium_ids() for a in self.all_articlesets().only("id"))
+        medium_ids = (a.get_medium_ids() for a in self.all_articlesets())
         return Medium.objects.filter(id__in=set(itertools.chain.from_iterable(medium_ids)))
 
     class Meta():
