@@ -137,14 +137,23 @@ class ArticleSet(AmcatModel):
 
         @rtype: iterable with added medium id's
         """
-        return self.add_to_mediums_cache(self.get_medium_ids())
+        return self.add_to_mediums_cache(self._get_medium_ids())
 
-    def get_medium_ids(self):
+    def _get_medium_ids(self):
         """
         Returns medium ids used in this articleset, but does not uses cache. May
         return duplicates.
         """
-        return self.articles.all().values_list("medium__id", flat=True)
+        return tuple(self.articles.all().values_list("medium__id", flat=True))
+
+    def get_medium_ids(self):
+        """
+        Returns medium ids used in this articleset. Uses cache if enabled.
+        """
+        if not AmCAT.mediums_cache_enabled():
+            log.warning("Medium cache not enabled. This function might be slow.".format(**locals()))
+            mediums_ids = self._get_medium_ids()
+        return cache.get(self._cache_key, ())
 
     def get_mediums(self):
         """
@@ -153,11 +162,7 @@ class ArticleSet(AmcatModel):
         @type return: QuerySet
         @param return: Mediums linked to this project
         """
-        mediums_ids = cache.get(self._cache_key, ())
-        if not AmCAT.mediums_cache_enabled():
-            log.warning("Medium cache not enabled. This function might be slow.".format(**locals()))
-            mediums_ids = self.get_medium_ids()
-        return Medium.objects.filter(id__in=mediums_ids)
+        return Medium.objects.filter(id__in=self.get_medium_ids())
 
     @property
     def _cache_key(self):

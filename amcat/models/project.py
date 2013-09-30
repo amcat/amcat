@@ -24,6 +24,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
+import itertools
 from amcat.models import Medium
 
 from amcat.tools.model import AmcatModel
@@ -116,18 +117,14 @@ class Project(AmcatModel):
         Get a sequence of article ids either owned by this project
         or contained in a set owned by this project
         """
-        for a in Article.objects.filter(project=self).only("id"):
-            yield a.id
-        for asa in ArticleSetArticle.objects.filter(articleset__project=self):
-            yield asa.article_id
+        return itertools.chain(
+            Article.objects.filter(project=self).values_list("id", flat=True),
+            ArticleSetArticle.objects.filter(articleset__project=self).values_list("article__id", flat=True)
+        )
 
     def get_mediums(self):
-        # mediums = [a.get_mediums() for a in self.all_articlesets()]
-        # return reduce(QuerySet.__or__, mediums, Medium.objects.none())
-        mediums = Medium.objects.none()
-        for aset in self.all_articlesets():
-            mediums |= aset.get_mediums()
-        return mediums
+        medium_ids = (a.get_medium_ids() for a in self.all_articlesets().only("id"))
+        return Medium.objects.filter(id__in=set(itertools.chain.from_iterable(medium_ids)))
 
     class Meta():
         db_table = 'projects'
