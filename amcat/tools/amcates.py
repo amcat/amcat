@@ -1,0 +1,77 @@
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+
+from __future__ import unicode_literals, print_function, absolute_import
+import logging
+import pyes
+from pyes import queryset
+import re
+
+def _clean(text):
+    if text: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
+       
+def _get_article_dict(a):
+    return dict(id=a.id,
+                headline=_clean(a.headline),
+                body=_clean(a.text),
+                byline=_clean(a.byline),
+                section=_clean(a.section),
+                projectid=a.project_id,
+                mediumid=a.medium_id,
+                page=a.pagenr,
+                date=a.date)
+ 
+
+class AmCATES(object):
+    def __init__(self, host='localhost:9500', index='amcat'):
+        self.host = host
+        self.conn = pyes.ES(self.host)
+        self.index = index
+
+    def index_articles(self, articles):
+        for a in articles:
+            self.conn.index(_get_article_dict(a), self.index, "article", a.id)
+
+            
+    @property
+    def Article(self):
+        """
+        Get the elastic search Article model
+        """
+        return queryset.generate_model(self.index, "article", es_url=self.host)
+    
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestAmcatES(amcattest.PolicyTestCase):
+    
+    def test_article_date(self):
+        from amcat.models import Article
+        es = AmCATES(index='amcat___unittest')
+        db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla', date='2010-01-01')
+        db_a = Article.objects.get(id=db_a.id)
+        es.index_articles([db_a])
+        es_a  = es.Article.objects.get(id=db_a.id)
+        self.assertEqual(es_a.date, db_a.date)
+
