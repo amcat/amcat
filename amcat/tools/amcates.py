@@ -23,7 +23,9 @@ import logging
 import pyes
 from pyes import queryset
 import re
-
+from amcat.tools.toolkit import multidict
+from amcat.models.articleset import ArticleSetArticle
+    
 def _clean(text):
     if text: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
        
@@ -46,9 +48,13 @@ class AmCATES(object):
         self.index = index
 
     def index_articles(self, articles):
+        sets = multidict((aa.article_id, aa.articleset_id)
+                         for aa in ArticleSetArticle.objects.filter(article__in=articles))
         for a in articles:
-            self.conn.index(_get_article_dict(a), self.index, "article", a.id)
-
+            d = _get_article_dict(a)
+            d["sets"] = sets.get(a.id)
+            self.conn.index(d, self.index, "article", a.id)
+        self.conn.refresh(self.index)
             
     @property
     def Article(self):
@@ -75,3 +81,17 @@ class TestAmcatES(amcattest.PolicyTestCase):
         es_a  = es.Article.objects.get(id=db_a.id)
         self.assertEqual(es_a.date, db_a.date)
 
+
+    def test_article_sets(self):
+        es = AmCATES(index='amcat___unittest')
+        a, b, c = [amcattest.create_test_article() for _x in range(3)]
+        s1 = amcattest.create_test_set(articles=[a,b,c])
+        s2 = amcattest.create_test_set(articles=[b,c])
+        s3 = amcattest.create_test_set(articles=[b])
+        es.index_articles([a,b,c])
+        
+        self.assertEqual(set(es.Article.objects.get(id=c.id).sets), {s1.id, s2.id})
+
+        print(es.Article.objects.filter(sets=s2.id))
+        
+        
