@@ -25,9 +25,11 @@ articles database table.
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel
+from amcat.models import Label
 from django.db import models
-
-import logging;
+from collections import defaultdict
+import logging
+import re
 log = logging.getLogger(__name__)
 
 
@@ -41,6 +43,33 @@ class RuleSet(AmcatModel):
     lexicon_codebook = models.ForeignKey("amcat.codebook", related_name="+")
     lexicon_language = models.ForeignKey("amcat.language", related_name="+")
 
+
+    @property
+    def lexicon(self):
+        """Return a lemma : {lexclass, ..} dictionary"""
+        
+        SOLR_KEYWORD_SET = {"AND", "OR", "NOT"}
+        def _get_lexical_entries(label):
+            return set(re.findall("[\w*]+", label)) - SOLR_KEYWORD_SET
+        lexicon = getattr(self, "_cached_lexicon", None)
+        if lexicon is None:
+            lexicon = {}
+            labels = Label.objects.filter(code__codebook_codes__codebook=self.lexicon_codebook)
+            all_labels = defaultdict(list)
+            for label in labels:
+                all_labels[label.code_id].append(label)
+            codes = {code_id : sorted(labels, key=lambda l:l.language_id)[0].label
+                     for (code_id, labels) in all_labels.items()}
+
+            lexicon = defaultdict(set)
+            for label in labels:
+                if label.language_id == self.lexicon_language.id:
+                    for lemma in _get_lexical_entries(label.label):
+                        lexicon[lemma].add(codes[label.code_id])
+            self._cached_lexicon = lexicon
+        return lexicon
+        
+    
     class Meta():
         db_table = 'rulesets'
         app_label = 'amcat'
