@@ -50,27 +50,29 @@ class SyntaxTree(object):
         self.soh.prefixes[""] = AMCAT
         if sentence_or_tokens:
             self.load_sentence(sentence_or_tokens)
-        
 
     def load_sentence(self, sentence_or_tokens):
         """
         Load the triples for the given analysis sentence into the triple store
         """
-        if isinstance(sentence_or_tokens, AnalysisSentence):        
+        if isinstance(sentence_or_tokens, AnalysisSentence):
             self.tokens = list(sentence_or_tokens.tokens.all())
         else:
             self.tokens = list(sentence_or_tokens)
             
         g = Graph()
         g.bind("amcat", AMCAT)
+        from amcat.tools import djangotoolkit
         for triple in _tokens_to_rdf(self.tokens):
             g.add(triple)
         self.soh.add_triples(g, clear=True)
 
 
 
-    def get_triples(self, ignore_rel=True, limit_predicate=None):
+    def get_triples(self, ignore_rel=True, filter_predicate=None):
         """Retrieve the Node-predicate_string-Node triples for the loaded sentence"""
+        if isinstance(filter_predicate, (str, unicode)):
+            filter_predicate = [filter_predicate]
         nodes = {}
         for s,p,o in self.soh.get_triples(parse=True):
             child = nodes.setdefault(s, Node())
@@ -81,6 +83,7 @@ class SyntaxTree(object):
                 setattr(child, pred, unicode(o))
             else:
                 if ignore_rel and pred == "rel": continue
+                if filter_predicate and pred not in filter_predicate: continue
                 if pred == "http://www.w3.org/1999/02/22-rdf-syntax-ns#type": continue
                 parent = nodes.setdefault(o, Node())
                 yield Triple(child, pred, parent)
@@ -88,12 +91,17 @@ class SyntaxTree(object):
     def visualise(self, **kargs):
         return visualise_triples(list(self.get_triples()), **kargs)
 
+    def apply_ruleset(self, ruleset):
+        self.apply_lexicon(ruleset)
+        for rule in ruleset.rules.all():
+            self.apply_rule(rule)
+    
     def apply_rule(self, rule):
         """Apply the given amcat.models.rule.Rule"""
         self.soh.update(rule.where, rule.insert, rule.remove)
 
-    def apply_lexicon(self, codebook, lexicon_language):
-        lexicon = read_lexicon(codebook, lexicon_language)
+    def apply_lexicon(self, ruleset):
+        lexicon = ruleset.lexicon
         for token in self.tokens:
             for lemma, lexclasses in lexicon.iteritems():
                 if lexical_match(lemma, token):
@@ -110,25 +118,6 @@ def lexical_match(lemma, token):
     if l == lemma: return True
     if lemma.endswith("*") and l.startswith(lemma[:-1]): return True
                     
-def read_lexicon(codebook, lexicon_language):
-    """Create a lemma : {lexclass, ..} dictionary"""
-    labels = Label.objects.filter(code__codebook_codes__codebook=codebook)
-    all_labels = defaultdict(list)
-    for label in labels:
-        all_labels[label.code_id].append(label)
-    codes = {code_id : sorted(labels, key=lambda l:l.language_id)[0].label
-             for (code_id, labels) in all_labels.items()}
-        
-    lexicon = defaultdict(set)
-    for label in labels:
-        if label.language_id == lexicon_language.id:
-            for lemma in _get_lexical_entries(label.label):
-                lexicon[lemma].add(codes[label.code_id])
-    return lexicon
-        
-SOLR_KEYWORD_SET = {"AND", "OR", "NOT"}
-def _get_lexical_entries(label):
-    return set(re.findall("[\w*]+", label)) - SOLR_KEYWORD_SET
 
         
 def _id(obj):
@@ -147,7 +136,12 @@ def _tokens_to_rdf(tokens):
     """
     # token literals
     triples = set()
+    from amcat.tools import djangotoolkit
+
+
+    tokens_by_id = {} # prevent loading token again via triple.parent/child
     for token in tokens:
+        tokens_by_id[token.id] = token
         uri = _token_uri(token)
         yield uri, NS_AMCAT["label"], Literal(str(token.word))
         yield uri, NS_AMCAT["lemma"], Literal(str(token.word.lemma))
@@ -157,7 +151,9 @@ def _tokens_to_rdf(tokens):
 
     for triple in triples:
         for pred in _rel_uri(triple.relation), NS_AMCAT["rel"]:
-            yield _token_uri(triple.child), pred, _token_uri(triple.parent)
+            child = tokens_by_id[triple.child_id]
+            parent = tokens_by_id[triple.parent_id]            
+            yield _token_uri(child), pred, _token_uri(parent)
 
 
 def visualise_triples(triples,  triple_args_function=None, ignore_properties=VIS_IGNORE_PROPERTIES):
