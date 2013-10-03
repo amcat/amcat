@@ -36,7 +36,7 @@ class UUIDLogMiddleware(object):
         url = "?".join((request.META["PATH_INFO"], request.META["QUERY_STRING"]))
         log.info("Start of request {request.uuid} ({ppid}, {pid}): {url}".format(**locals()), extra={"request":request})
 
-    def proces_response(self, request, response):
+    def process_response(self, request, response):
         log.info("End of request {}".format(request.uuid))
         return response
 
