@@ -60,7 +60,7 @@ DATABASE_OPTIONS = {
    "init_command" : "set transaction isolation level read uncommitted"
 }
 
-ALLOWED_HOSTS = ['.vu.nl'] 
+ALLOWED_HOSTS = ['.vu.nl']
 
 DATABASES = dict(default=dict(
         ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
@@ -132,6 +132,7 @@ MIDDLEWARE_CLASSES = [
     'navigator.utils.auth.RequireLoginMiddleware',
     'navigator.utils.auth.SetRequestContextMiddleware',
     'navigator.utils.auth.NginxRequestMethodFixMiddleware',
+    'navigator.utils.misc.UUIDLogMiddleware',
     #'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
@@ -174,7 +175,6 @@ INSTALLED_APPS = [
     'annotator',
     'navigator',
     'api',
-    #'debug_toolbar',
     'amcat',
     'django_extensions',
     'compressor'
@@ -247,7 +247,7 @@ if not DEBUG:
         'version': 1,
         'disable_existing_loggers': True,
         'root': {
-            'level': 'WARNING',
+            'level': 'INFO',
             'handlers': ['sentry'],
         },
         'formatters': {
@@ -257,7 +257,7 @@ if not DEBUG:
         },
         'handlers': {
             'sentry': {
-                'level': 'ERROR',
+                'level': 'INFO',
                 'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
             },
             'console': {
@@ -285,6 +285,7 @@ if not DEBUG:
         },
     }
 else:
+    ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
     LOGGING = {
         'version': 1,
