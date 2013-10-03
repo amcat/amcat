@@ -24,7 +24,7 @@ import pyes
 from pyes import queryset
 import re
 from amcat.tools.toolkit import multidict
-from amcat.models.articleset import ArticleSetArticle
+from amcat.models import ArticleSetArticle, Article
     
 def _clean(text):
     if text: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', text)
@@ -47,15 +47,28 @@ class AmCATES(object):
         self.conn = pyes.ES(self.host)
         self.index = index
 
-    def index_articles(self, articles):
+    def clear_index(self):
+        """
+        Completely removes and recreates the index. This is not always a good idea :-)
+        """
+        try:
+            self.conn.indices.delete_index(self.index)
+        except pyes.exceptions.IndexMissingException:
+            pass
+        self.conn.indices.create_index(self.index)
+        
+        
+    def add_articles(self, article_ids):
         sets = multidict((aa.article_id, aa.articleset_id)
-                         for aa in ArticleSetArticle.objects.filter(article__in=articles))
-        for a in articles:
+                         for aa in ArticleSetArticle.objects.filter(article__in=article_ids))
+        for a in Article.objects.filter(pk__in=article_ids):
             d = _get_article_dict(a)
             d["sets"] = sets.get(a.id)
-            self.conn.index(d, self.index, "article", a.id)
+            self.conn.index(d, self.index, "article", a.id, bulk=True)
+        self.conn.flush_bulk()
         self.conn.refresh(self.index)
-            
+
+        
     @property
     def Article(self):
         """
@@ -77,7 +90,7 @@ class TestAmcatES(amcattest.PolicyTestCase):
         es = AmCATES(index='amcat___unittest')
         db_a = amcattest.create_test_article(text='een dit is een test bla', headline='bla bla', date='2010-01-01')
         db_a = Article.objects.get(id=db_a.id)
-        es.index_articles([db_a])
+        es.add_articles([db_a])
         es_a  = es.Article.objects.get(id=db_a.id)
         self.assertEqual(es_a.date, db_a.date)
 
@@ -88,7 +101,7 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s1 = amcattest.create_test_set(articles=[a,b,c])
         s2 = amcattest.create_test_set(articles=[b,c])
         s3 = amcattest.create_test_set(articles=[b])
-        es.index_articles([a,b,c])
+        es.add_articles([a,b,c])
         
         self.assertEqual(set(es.Article.objects.get(id=c.id).sets), {s1.id, s2.id})
 
