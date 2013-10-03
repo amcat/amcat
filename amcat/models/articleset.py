@@ -113,7 +113,7 @@ class ArticleSet(AmcatModel):
 
     name = models.CharField(max_length=200)
     project = models.ForeignKey("amcat.Project", related_name='articlesets_set')
-    articles = models.ManyToManyField(Article, through="amcat.ArticleSetArticle", related_name="articlesets_set")
+    articles = models.ManyToManyField(Article, related_name="articlesets_set")
 
     provenance = models.TextField(null=True)
 
@@ -390,25 +390,10 @@ class ArticleSet(AmcatModel):
         if articles:
             aset.add_articles(articles)
         return aset
-            
-class ArticleSetArticle(AmcatModel):
-    """
-    ManyToMany table for article sets. An explicit model allows more prefeting in
-    django queries and doesn't cost anything
 
-    WVA: I believe this is no longer needed with the new prefetch_related, so
-         we might be able to refactor this class away?
-    """
-    id = models.AutoField(primary_key=True, db_column='id')
-    articleset = models.ForeignKey(ArticleSet)
-    article = models.ForeignKey(Article)
+# Legacy
+ArticleSetArticle = ArticleSet.articles.through
 
-    class Meta():
-        app_label = 'amcat'
-        db_table="articlesets_articles"
-        unique_together = ('article', 'articleset')
-    
-    
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
