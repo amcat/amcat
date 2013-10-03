@@ -44,6 +44,36 @@ log = logging.getLogger(__name__)
 
 MEDIUM_CACHE_KEY = "project_{articleset.id}_mediums"
 
+def deduplicate(articles, compare):
+    """
+    Yield id's of duplicate articles. Articles in `compare` will be treated with a
+    lower priority than those in `articles`, meaning they will be deleted first.
+
+    @param articles: high-priority articles
+    @type articles: iterator with tuples (id, md5)
+    @param compare: low-priority articles
+    @type compare: iterator with tuples(id, md5)
+    @return: generator yielding duplicate articles
+    """
+    hashes = set()
+    aids = set()
+
+    # Build md5 -> id mapping, yield duplicates in `articles`
+    for id, md5 in articles:
+        if md5 in hashes:
+            yield id
+        else:
+            aids.add(id)
+            hashes.add(md5)
+
+    # For all articles in compare, with a hash in hashes: yield id
+    for id, md5 in compare:
+        if md5 in hashes and not id in aids:
+            yield id
+
+def _get_hashes(articles, md5_query=None):
+    return articles.distinct("id").extra({"md5":md5_query}).values_list("id", "md5")
+
 def get_or_create_articleset(name, project):
     """
     Finds an articleset based on its name. If it does not exists, it creates
@@ -303,42 +333,11 @@ class ArticleSet(AmcatModel):
         # Checking per date prevents loading whole articlesets at once
         for date in { d.date() for d in dates }:
             date_filter = Q(date__year=date.year, date__month=date.month, date__day=date.day)
-            compare_articles = compare.filter(date_filter).extra({"md5":md5_query})
-            articles = self.articles.filter(date_filter).extra({"md5":md5_query})
-            articles = articles.values_list("id", "md5")
+            compare_articles = _get_hashes(compare.filter(date_filter), md5_query)
+            articles = _get_hashes(self.articles.filter(date_filter), md5_query)
 
-            # Build md5 -> [id] mapping
-            hashes = collections.defaultdict(list)
-            for id, md5 in articles.values_list("id", "md5").iterator():
-                hashes[md5].append(id)
-
-            compare_articles = compare_articles.values_list("id", "md5")
-            compare_articles_ids = {a[0] for a in compare_articles}
-
-            for cid, hash in compare_articles.values_list("id", "md5"):
-                ids = hashes.get(hash, None)
-
-                # No duplicates
-                if ids is None:
-                    hashes[hash] = []
-                    continue
-
-                # Two articles in the compare had the same hash
-                if not ids: continue
-
-                if cid not in ids:
-                    yield cid
-                else:
-                    # Make sure the ones in compare_articles go extinct :-)
-                    ids.sort(key=lambda id : 1 if id in compare_articles_ids else -1)
-
-                # We always yield the id in compare articles. This is useful for deduplicating
-                # newly added articles. The old articles (which have a higher change of being
-                # referenced to) will stay this way.
-                for id in ids[1:]:
-                    yield id
-
-                hashes[hash] = []
+            for id in deduplicate(articles, compare_articles):
+                yield id
 
     def deduplicate(self, compare=None, set_dirty=True, columns=("headline", "byline", "text", "date", "medium_id")):
         """
@@ -357,7 +356,6 @@ class ArticleSet(AmcatModel):
         """
         compare = self.articles.all() if compare is None else compare
         remove = set(self._deduplicate(compare, columns))
-        print("remove", remove)
         if not remove: return
 
         self.articles.through.objects.filter(article__id__in=remove).delete()
