@@ -313,7 +313,12 @@ class SelectionForm(forms.Form):
         queries = [parse_query(q) for q in query.split("\n") if q.strip()]
         self._queries = self._get_queries(queries)
 
-        return "\n".join(q.query for q in self.queries)
+        if len(queries) > 1:
+            return "\n".join("({q.query})".format(**locals()) for q in queries)
+        elif queries:
+            return queries[0].query
+        else:
+            return ''
 
     def clean_datetype(self):
         datetype = self.cleaned_data["datetype"]
@@ -612,7 +617,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         # Test refering to previously defined label
         p, _, form = _form(query="lbl#foo\n<lbl>".format(root.id))
         self.assertTrue(form.is_valid())
-        self.assertEquals("foo\nfoo", form.solr_query)
+        self.assertEquals("(foo)\n(foo)", form.solr_query)
 
         # test initial tabs and accents
 
@@ -621,3 +626,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         self.assertEquals(len(list(form.queries)), 1)
         self.assertEquals(next(form.queries).declared_label, "Bla")
         self.assertEquals(next(form.queries).query, "Balkenende")
+
+        p, c, form = self.get_form(query=u"piet NOT jan\nbla#jan NOT piet")
+        self.assertTrue(form.is_valid())
+        self.assertEquals(form.cleaned_data['query'], "(piet NOT jan)\n(jan NOT piet)")
