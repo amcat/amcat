@@ -22,7 +22,6 @@ from django.core.exceptions import ImproperlyConfigured
 import memcache
 from amcat.models import Medium, to_medium_ids
 from amcat.models.amcat import AmCAT
-
 """
 Model module for Article Sets. A Set is a generic collection of articles,
 either created manually or as a result of importing articles or assigning
@@ -216,56 +215,13 @@ class ArticleSet(AmcatModel):
         cursor.close() # no idea if it's needed, but Martijn told me to do it
         return result
 
-    def _get_article_ids_solr(self, solr):
-        """
-        Get a list of article ids in this set according to solr. 
-        @param solr: The amcatsolr.Solr object to use
-        """
-        return solr.query_ids("sets:{self.id}".format(**locals()))
-
-    def reset_index(self, full_refresh=False, solr=None):
-        """
-        Set the index to dirty so it will be refreshed.
-        @param full_refresh: if True, delete all existing information from the set
-        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
-        """
-        # lazy load to prevent import cycle
-        from amcat.tools.amcatsolr import Solr
-        if solr is None: solr = Solr()
-        if full_refresh:
-            solr_ids = self._get_article_ids_solr(solr=solr)
-            for i, batch in enumerate(splitlist(solr_ids)):
-                solr.delete_articles(batch)
-        self.index_dirty=True
-        self.save()
-    
-    def refresh_index(self, solr=None, full_refresh=False):
+    def refresh_index(self, full_refresh=False):
         """
         Make sure that the SOLR index for this set is up to date
         @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
         """
-        # lazy load to prevent import cycle
-        from amcat.tools.amcatsolr import Solr
-        if solr is None: solr = Solr()
-        log.debug("Getting SOLR ids")
-        solr_ids = self._get_article_ids_solr(solr)
-        log.debug("Getting DB ids")
-        db_ids = set(id for (id,) in self.articles.all().values_list("id")) if self.indexed else set()
-        to_remove = solr_ids - db_ids
-        to_add = db_ids if full_refresh else  db_ids - solr_ids
-
-        log.warn("Refreshing index, full_refresh={full_refresh}, |solr_ids|={nsolr}, |db_ids|={ndb}, "
-                 "|to_add|={nta}, |to_remove|={ntr}"
-                  .format(nsolr=len(solr_ids), ndb=len(db_ids), nta=len(to_add), ntr=len(to_remove),**locals()))
-        
-            
-        for i, batch in enumerate(splitlist(to_remove)):
-            solr.delete_articles(batch)
-            log.debug("Removed batch {i}".format(**locals()))
-        for i, batch in enumerate(splitlist(to_add, itemsperbatch=1000)):
-            solr.add_articles(batch)
-            log.debug("Added batch {i}".format(**locals()))
-
+        from amcat.tools.amcates import ES
+        ES().refresh_articleset_index(self, full_refresh=full_refresh)
         self.index_dirty = False
         self.save()
         
@@ -361,8 +317,6 @@ class TestArticleSet(amcattest.PolicyTestCase):
         
     def test_dirty(self):
         """Is the dirty flag set correctly?"""
-        from amcat.tools.amcatsolr import TestDummySolr
-
         p = amcattest.create_test_project(index_default=True)
         s = amcattest.create_test_set(project=p)
         self.assertEqual(s.indexed, True)
@@ -371,66 +325,9 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s.save()
         s.add(amcattest.create_test_article())
         self.assertEqual(s.index_dirty, True)
-        s.refresh_index(TestDummySolr())
+        s.refresh_index()
         self.assertEqual(s.index_dirty, False)
 
-    def clear_solr(self, solr):
-        ids = set(solr.query_ids("*:*", rows=99999))
-        solr.delete_articles(ids)
-
-    def test_refresh_index(self):
-        """Are added/removed articles added/removed from the index?"""
-        if amcattest.skip_slow_tests():
-            return
-
-        from amcat.tools.amcatsolr import TestSolr
-
-        with TestSolr() as solr:
-            self.clear_solr(solr)
-            s = amcattest.create_test_set(indexed=True)
-            a = amcattest.create_test_article()
-            
-            s.add(a)
-            self.assertEqual(set(), s._get_article_ids_solr(solr))
-            s.refresh_index(solr)
-            self.assertEqual({a.id}, s._get_article_ids_solr(solr))
-
-            s.remove(a)
-            self.assertEqual({a.id}, s._get_article_ids_solr(solr))
-            s.refresh_index(solr)
-            self.assertEqual(set(), s._get_article_ids_solr(solr))
-
-            # test that if not set.indexed, it is not added to solr
-            s = amcattest.create_test_set(indexed=False)
-            s.add(a)
-            s.refresh_index(solr)
-            self.assertEqual(set(), s._get_article_ids_solr(solr))
-
-            # test that remove from index works for larger sets
-            s = amcattest.create_test_set(indexed=True)
-            arts = [amcattest.create_test_article(medium=a.medium) for i in range(20)]
-            s.add(*arts)
-            
-            s.refresh_index(solr)
-            solr_ids = s._get_article_ids_solr(solr)
-            self.assertEqual(set(solr_ids), {a.id for a in arts})
-
-            s.remove(arts[0])
-            s.remove(arts[-1])
-            s.refresh_index(solr)
-            solr_ids = s._get_article_ids_solr(solr)
-            self.assertEqual(set(solr_ids), {a.id for a in arts[1:-1]})
-
-            
-
-            # test that changing an article's properties can be reindexed
-            arts[1].medium = amcattest.create_test_medium()
-            arts[1].save()
-
-            query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium.id, **locals())
-            self.assertEqual(set(solr.query_ids(query)), set()) # before refresh
-            s.refresh_index(solr, full_refresh=True)
-            self.assertEqual(set(solr.query_ids(query)), {arts[1].id}) # after refresh
 
     def test_cache_mediums(self):
         from django.core.cache import cache

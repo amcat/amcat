@@ -28,7 +28,6 @@ from django.db import transaction
 from amcat.scripts.daemons.daemonscript import DaemonScript
 
 from amcat.models import ArticleSet
-from amcat.tools import amcatsolr
 
 import logging
 log = logging.getLogger(__name__)

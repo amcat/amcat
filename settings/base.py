@@ -151,6 +151,8 @@ PASSWORD_HASHERS = (
     'django.contrib.auth.hashers.SHA1PasswordHasher',
 )
 
+ES_INDEX = 'test_performance'
+
 AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 LOGIN_REDIRECT_URL = "/navigator/"
 
