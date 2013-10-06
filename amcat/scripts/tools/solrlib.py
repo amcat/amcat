@@ -28,13 +28,28 @@ from amcat.models import article
 from amcat.models import medium
 from amcat.tools.toolkit import dateToInterval
 from amcat.tools.table.table3 import DictTable
-from amcat.tools.amcatsolr import get_filters
-
 
 import time
 import logging
 log = logging.getLogger(__name__)
 
+def _get_filter_date(cleaned_data, prop):
+    if prop not in cleaned_data: return "*"
+    return cleaned_data[prop].isoformat() + "Z"
+
+def _get_filters(cleaned_data):
+    # Get date filter
+    start_date = _get_filter_date(cleaned_data, "start_date")
+    end_date = _get_filter_date(cleaned_data, "end_date")
+    if not (start_date == "*" and end_date == "*"):
+        yield "date:[{start_date} TO {end_date}]".format(**locals())
+
+    yield " OR ".join(map("mediumid:{.id}".format, cleaned_data["mediums"]))
+    yield " OR ".join(map("id:{}".format, cleaned_data["article_ids"]))
+    yield " OR ".join(map("sets:{.id}".format, cleaned_data["articlesets"]))
+
+def get_filters(cleaned_data):
+    return filter(bool, _get_filters(cleaned_data))
 
 def doQuery(query, cleaned_data, kargs, additionalFilters=None):
     filters = get_filters(cleaned_data)

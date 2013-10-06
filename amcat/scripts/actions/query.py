@@ -26,7 +26,8 @@ from functools import partial
 from django import forms
 
 from amcat.scripts.script import Script
-from amcat.tools.amcatsolr import Solr, get_filters
+from amcat.tools.amcatsolr import Solr
+from amcat.scripts.tools.solrlib import get_filters
 from amcat.tools.table.table3 import Table
 from amcat.models import ArticleSet
 
