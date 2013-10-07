@@ -25,8 +25,8 @@ def filters_from_form(form_data):
             for (k,v) in form_data.iteritems() if v and k in FILTER_FIELDS}
 
 def getArticles(form):
-    fields=["id", "score"]
-
+    fields = ['mediumid', 'date', 'headline']
+    
     sort = form.get('sortColumn', None)
 
     if 'keywordInContext' in form['columns']:
@@ -39,18 +39,5 @@ def getArticles(form):
     
     log.info("Query: {query!r}, with filters: {filters}".format(**locals()))
 
-    
-    
-    solrResponse = doQuery(form['query'], form, fields)
+    return ES().query(query, filters=filters, fields=fields, sort=sort)
 
-
-    articlesDict = (article.Article.objects.defer('text')
-                    .select_related('medium__name').in_bulk(article_ids))
-    result = []
-    for articleid in article_ids:
-        if articleid not in articlesDict: continue
-        a = articlesDict[articleid]
-        a.hits = hitsTable.getNamedRow(articleid)
-        a.keywordInContext = contextDict.get(articleid)
-        result.append(a)
-    return result

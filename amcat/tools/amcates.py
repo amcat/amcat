@@ -24,6 +24,9 @@ log = logging.getLogger(__name__)
 import re
 import requests
 import json
+import collections
+from datetime import datetime
+
 from amcat.tools.toolkit import multidict, splitlist
 from amcat.models import ArticleSetArticle, Article
 from elasticsearch import Elasticsearch
@@ -48,6 +51,15 @@ def _get_article_dict(art):
 
 ARTICLE_DOCTYPE='article'
 
+class ArticleResult(object):
+    """Simple class to hold arbitrary values""" 
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+    def __repr__(self):
+        keys = sorted(self.__dict__)
+        items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
+        return "{}({})".format(type(self).__name__, ", ".join(items))
+    
 class ES(object):
     def __init__(self, index=None):
         self.es = Elasticsearch()
@@ -90,7 +102,7 @@ class ES(object):
         
 
     
-    def query_ids(self, query=None, filter=None, **filters):
+    def query_ids(self, query=None, filter=None, filters={}, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -98,9 +110,11 @@ class ES(object):
         @param filters: if filter is None, build filter from filters as accepted by build_query, e.g. sets=12345
         Note that query and filters can be combined in a single call
         """
-        body = dict(build_body(query, filter, **filters))
-            
-        res = self.es.search(index=self.index, search_type='scan', body=body, fields="", scroll="1m", size=1000)
+        body = dict(build_body(query, filter, filters))
+
+        options = dict(scroll="1m", size=1000, fields="")
+        options.update(kwargs)
+        res = self.es.search(index=self.index, search_type='scan', body=body, **options)
         sid = res['_scroll_id']
         while True:
             res = self.es.scroll(scroll_id=sid, scroll="1m")
@@ -110,17 +124,25 @@ class ES(object):
                 yield int(row['_id'])
             sid = res['_scroll_id']
 
-    def query(self, query=None, filter=None, fields=None, size=10, offset=0, **filters):
+    def query(self, query=None, filter=None, filters={}, **kwargs):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
         @param filter: field filter DSL query dict, defaults to _build_filter(**filters)
-        @param fields: the fields to return, defaults to all fields
-        @param size: the number of hits to return
-        @param offset: starting offset (eg returns docs[offset:(offset+size)])
+        @param kwargs: additional keyword arguments to pass to es.search, eg fields, sort, offset, etc
+        @return: a list of named tuples containing id, score, and the requested fields
         """
-        
-        body = dict(self.build_body(query, filter, **filters))
+        body = dict(build_body(query, filter, filters))
+        if 'sort' in kwargs: body['track_scores'] = True
+
+        log.info("es.search(body={body}, **{kwargs})".format(**locals()))
+        result = self.es.search(index=self.index, body=body, **kwargs)
+        for row in result['hits']['hits']:
+            print(row)
+            print(row['_id'], row['_score'])
+            result =  ArticleResult(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
+            if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
+            yield result
             
     def remove_from_set(self, setid, aids):
         """Remove the given articles from the given set"""
@@ -152,7 +174,7 @@ class ES(object):
         """
 
         log.debug("Getting SOLR ids")
-        solr_ids = set(self.query_ids(sets=aset.id))
+        solr_ids = set(self.query_ids(filters=dict(sets=aset.id)))
         log.debug("Getting DB ids")
         db_ids = aset._get_article_ids() if aset.indexed else set()
 
@@ -204,7 +226,7 @@ def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=N
     else:
         return {'and' : filters}
 
-def build_body(query=None, filter=None, **filters):
+def build_body(query=None, filter=None, filters=None):
     """
     Construct the query body from the query and/or filter(s)
     (call with dict(build_body)
@@ -251,14 +273,17 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s2 = amcattest.create_test_set(articles=[a,b])
         ES().add_articles([a.id,b.id,c.id])
 
-        self.assertEqual(set(ES().query_ids(start_date='2001-06-01')), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids(filters=dict(start_date='2001-06-01'))), {b.id, c.id})
         # start is inclusive
-        self.assertEqual(set(ES().query_ids(start_date='2002-01-01', end_date="2002-06-01")), {b.id})
+        self.assertEqual(set(ES().query_ids(filters=dict(start_date='2002-01-01', end_date="2002-06-01"))),
+                         {b.id})
         # end is exclusive
-        self.assertEqual(set(ES().query_ids(start_date='2001-01-01', end_date="2003-01-01")), {a.id, b.id})
+        self.assertEqual(set(ES().query_ids(filters=dict(start_date='2001-01-01', end_date="2003-01-01"))),
+                         {a.id, b.id})
 
         # combining filters works
-        self.assertEqual(set(ES().query_ids(start_date='2001-06-01', sets=s2.id)), {b.id})
+        self.assertEqual(set(ES().query_ids(filters=dict(start_date='2001-06-01', sets=s2.id))), {b.id})
+        
         
         
     def test_index(self):
@@ -270,6 +295,24 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(a['body'], db_a.text)
         self.assertEqual(datetime.datetime.strptime(a['date'], "%Y-%m-%dT%H:%M:%S"), db_a.date)
 
+    def test_query(self):
+        a = amcattest.create_test_article(headline="bla", text="artikel artikel een", date="2001-01-01")
+        ES().add_articles([a.id])
+
+        
+        es_a, = ES().query("een", fields=["date", "headline"])
+        self.assertEqual(es_a.score, 1)
+        self.assertEqual(es_a.headline, "bla")
+        self.assertEqual(es_a.id, a.id)
+
+        es_a, = ES().query("artikel")
+        self.assertEqual(es_a.score, 2)
+
+        # are scores retrieved when sorting?
+        es_a, = ES().query("artikel", sort="id")
+        self.assertEqual(es_a.score, 2)
+
+        
     def test_query_ids(self):
         """Test that filters and query strings work"""
         ES().delete_index()
@@ -280,15 +323,14 @@ class TestAmcatES(amcattest.PolicyTestCase):
 
         ES().add_articles([a.id, b.id, c.id])
 
-        self.assertEqual(set(ES().query_ids(mediumid=m2.id)), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids(filters=dict(mediumid=m2.id))), {b.id, c.id})
         self.assertEqual(set(ES().query_ids("no*")), {a.id, b.id})
-        self.assertEqual(set(ES().query_ids("no*", mediumid=m2.id)), {b.id})
-        self.assertEqual(set(ES().query_ids("zus AND jet", mediumid=m2.id)), {c.id})
-        self.assertEqual(set(ES().query_ids("zus OR jet", mediumid=m2.id)), {b.id, c.id})
-        self.assertEqual(set(ES().query_ids('"mies wim"', mediumid=m2.id)), {b.id})
-        #self.assertEqual(set(ES().query_ids('"mi* wim"', mediumid=m2.id)), {b.id})
-        self.assertEqual(set(ES().query_ids('(mies wim)^5', mediumid=m2.id)), {b.id, c.id})
-        self.assertEqual(set(ES().query_ids('(mi* wi*)^5', mediumid=m2.id)), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids("no*", filters=dict(mediumid=m2.id))), {b.id})
+        self.assertEqual(set(ES().query_ids("zus AND jet", filters=dict(mediumid=m2.id))), {c.id})
+        self.assertEqual(set(ES().query_ids("zus OR jet", filters=dict(mediumid=m2.id))), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids('"mies wim"', filters=dict(mediumid=m2.id))), {b.id})
+        self.assertEqual(set(ES().query_ids('"mies wim"~5', filters=dict(mediumid=m2.id))), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(mediumid=m2.id))), {b.id, c.id})
 
         
     def test_articlesets(self):
@@ -301,7 +343,7 @@ class TestAmcatES(amcattest.PolicyTestCase):
         es_c = ES().get_article(c.id)
         self.assertEqual(set(es_c['sets']), {s1.id, s2.id})
 
-        ids = ES().query_ids(sets=s1.id)
+        ids = ES().query_ids(filters=dict(sets=s1.id))
         self.assertEqual(set(ids), {a.id, b.id, c.id})
 
     def test_refresh_index(self):
@@ -311,20 +353,20 @@ class TestAmcatES(amcattest.PolicyTestCase):
         a = amcattest.create_test_article()
             
         s.add(a)
-        self.assertEqual(set(), set(ES().query_ids(sets=s.id)))
+        self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
         s.refresh_index()
-        self.assertEqual({a.id}, set(ES().query_ids(sets=s.id)))
+        self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
 
         s.remove(a)
-        self.assertEqual({a.id}, set(ES().query_ids(sets=s.id)))
+        self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
         s.refresh_index()
-        self.assertEqual(set(), set(ES().query_ids(sets=s.id)))
+        self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
 
         # test that if not set.indexed, it is not added to solr
         s = amcattest.create_test_set(indexed=False)
         s.add(a)
         s.refresh_index()
-        self.assertEqual(set(), set(ES().query_ids(sets=s.id)))
+        self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
 
         # test that remove from index works for larger sets
         s = amcattest.create_test_set(indexed=True)
@@ -332,13 +374,13 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s.add(*arts)
 
         s.refresh_index()
-        solr_ids = set(ES().query_ids(sets=s.id))
+        solr_ids = set(ES().query_ids(filters=dict(sets=s.id)))
         self.assertEqual(set(solr_ids), {a.id for a in arts})
 
         s.remove(arts[0])
         s.remove(arts[-1])
         s.refresh_index()
-        solr_ids = set(ES().query_ids(sets=s.id))
+        solr_ids = set(ES().query_ids(filters=dict(sets=s.id)))
         self.assertEqual(set(solr_ids), {a.id for a in arts[1:-1]})
 
         # test that changing an article's properties can be reindexed
@@ -348,6 +390,8 @@ class TestAmcatES(amcattest.PolicyTestCase):
     def test_full_refresh(self):
         "test full refresh, e.g. document content change. DOES NOT WORK YET"
         query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium.id, **locals())
-        self.assertEqual(set(ES().query_ids(sets=s.id, mediumid=arts[1].medium.id)), set()) # before refresh
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=arts[1].medium.id))),
+                         set()) # before refresh
         s.refresh_index()
-        self.assertEqual(set(ES().query_ids(sets=s.id, mediumid=arts[1].medium.id)), {arts[1].id}) # after refresh
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=arts[1].medium.id))),
+                         {arts[1].id}) # after refresh
