@@ -144,7 +144,6 @@ class DaemonScript(Script):
         fn = self._get_filename(".log")
         amcatlogging.setFileHandler(fn)
         amcatlogging.info_module()
-        amcatlogging.debug_module('amcat.tools.amcatsolr')
 
 
 

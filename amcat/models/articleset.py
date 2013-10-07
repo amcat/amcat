@@ -217,8 +217,7 @@ class ArticleSet(AmcatModel):
 
     def refresh_index(self, full_refresh=False):
         """
-        Make sure that the SOLR index for this set is up to date
-        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
+        Make sure that the index for this set is up to date
         """
         from amcat.tools.amcates import ES
         ES().refresh_articleset_index(self, full_refresh=full_refresh)
