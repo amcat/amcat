@@ -74,10 +74,10 @@ class ES(object):
         for batch in splitlist(article_ids, itemsperbatch=1000):
             sets = multidict((aa.article_id, aa.articleset_id)
                              for aa in ArticleSetArticle.objects.filter(article__in=batch))
-            
+
             for a in Article.objects.filter(pk__in=batch):
                 doc = _get_article_dict(a)
-                doc['sets'] = list(sets.get(a.id))
+                doc['sets'] = list(sets.get(a.id, []))
                 self.es.index(index=self.index, doc_type=ARTICLE_DOCTYPE, id=a.id, body=doc)
         self.flush()
 
@@ -88,14 +88,20 @@ class ES(object):
         result = self.es.get(index=self.index, id=article_id, doc_type=ARTICLE_DOCTYPE)
         return result['_source']
         
-    
-    def query_ids(self, **filters):
-        q = S().filter(**filters)._build_query()
-        print(q)
-        res = self.es.search(index=self.index, search_type='scan', body=q, fields="", scroll="1m", size=1000)
-        print("Got %d Hits:" % res['hits']['total'])
-        sid = res['_scroll_id']
 
+    
+    def query_ids(self, query=None, filter=None, **filters):
+        """
+        Query the index returning a sequence of article ids for the mathced articles
+        @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
+        @param filter: field filter DSL query dict
+        @param filters: if filter is None, build filter from filters as accepted by build_query, e.g. sets=12345
+        Note that query and filters can be combined in a single call
+        """
+        body = dict(build_body(query, filter, **filters))
+            
+        res = self.es.search(index=self.index, search_type='scan', body=body, fields="", scroll="1m", size=1000)
+        sid = res['_scroll_id']
         while True:
             res = self.es.scroll(scroll_id=sid, scroll="1m")
             if not res['hits']['hits']:
@@ -104,6 +110,18 @@ class ES(object):
                 yield int(row['_id'])
             sid = res['_scroll_id']
 
+    def query(self, query=None, filter=None, fields=None, size=10, offset=0, **filters):
+        """
+        Execute a query for the given fields with the given query and filter
+        @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
+        @param filter: field filter DSL query dict, defaults to _build_filter(**filters)
+        @param fields: the fields to return, defaults to all fields
+        @param size: the number of hits to return
+        @param offset: starting offset (eg returns docs[offset:(offset+size)])
+        """
+        
+        body = dict(self.build_body(query, filter, **filters))
+            
     def remove_from_set(self, setid, aids):
         """Remove the given articles from the given set"""
         script = 'ctx._source.sets = ($ in ctx._source.sets if $ != set)'
@@ -164,6 +182,47 @@ class ES(object):
             log.info("Index {self.index} does not exist, creating".format(**locals()))
             indices.IndicesClient(self.es).create(self.index)
 
+
+def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=None):
+    """
+    Build a elastic DSL query from the 'form' fields
+    """
+
+    filters = []
+    if sets: filters.append(dict(terms={'sets' : _list(sets)}))
+    if mediumid: filters.append(dict(terms={'mediumid' : _list(mediumid)}))
+
+    date_range = {}
+    if start_date: date_range['gte'] = start_date
+    if end_date: date_range['lt'] = end_date
+    if date_range: filters.append(dict(range={'date' : date_range}))
+
+    if len(filters) == 0:
+        return None
+    elif len(filters) == 1:
+        return filters[0]
+    else:
+        return {'and' : filters}
+
+def build_body(query=None, filter=None, **filters):
+    """
+    Construct the query body from the query and/or filter(s)
+    (call with dict(build_body)
+    @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
+    @param filter: field filter DSL query dict, defaults to _build_filter(**filters)
+    """
+    if filter is None: filter = build_filter(**filters)
+    if filter: yield ('filter', filter)
+    if query: yield ('query', {'query_string' : {'query' : query}})
+        
+            
+
+        
+
+def _list(x):
+    if isinstance(x, int): return [x]
+    return x
+        
 if __name__ == '__main__':
     ES().check_index()
 
@@ -182,7 +241,26 @@ class TestAmcatES(amcattest.PolicyTestCase):
         ES().delete_index()
         ES().create_index()
         
-    
+
+    def test_date_filter(self):
+        a = amcattest.create_test_article(text="artikel een", date="2001-01-01")
+        b = amcattest.create_test_article(text="artikel twee", date="2002-01-01")
+        c = amcattest.create_test_article(text="artikel drie", date="2003-01-01")
+        
+        s1 = amcattest.create_test_set(articles=[a,b,c])
+        s2 = amcattest.create_test_set(articles=[a,b])
+        ES().add_articles([a.id,b.id,c.id])
+
+        self.assertEqual(set(ES().query_ids(start_date='2001-06-01')), {b.id, c.id})
+        # start is inclusive
+        self.assertEqual(set(ES().query_ids(start_date='2002-01-01', end_date="2002-06-01")), {b.id})
+        # end is exclusive
+        self.assertEqual(set(ES().query_ids(start_date='2001-01-01', end_date="2003-01-01")), {a.id, b.id})
+
+        # combining filters works
+        self.assertEqual(set(ES().query_ids(start_date='2001-06-01', sets=s2.id)), {b.id})
+        
+        
     def test_index(self):
         import datetime
         aid = amcattest.create_test_article(text='test', headline='test_headline', date='2010-01-01').id
@@ -192,6 +270,27 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(a['body'], db_a.text)
         self.assertEqual(datetime.datetime.strptime(a['date'], "%Y-%m-%dT%H:%M:%S"), db_a.date)
 
+    def test_query_ids(self):
+        """Test that filters and query strings work"""
+        ES().delete_index()
+        m1, m2 = [amcattest.create_test_medium() for _ in range(2)]
+        a = amcattest.create_test_article(text='aap noot mies', medium=m1)
+        b = amcattest.create_test_article(text='noot mies wim zus', medium=m2)
+        c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2)
+
+        ES().add_articles([a.id, b.id, c.id])
+
+        self.assertEqual(set(ES().query_ids(mediumid=m2.id)), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids("no*")), {a.id, b.id})
+        self.assertEqual(set(ES().query_ids("no*", mediumid=m2.id)), {b.id})
+        self.assertEqual(set(ES().query_ids("zus AND jet", mediumid=m2.id)), {c.id})
+        self.assertEqual(set(ES().query_ids("zus OR jet", mediumid=m2.id)), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids('"mies wim"', mediumid=m2.id)), {b.id})
+        #self.assertEqual(set(ES().query_ids('"mi* wim"', mediumid=m2.id)), {b.id})
+        self.assertEqual(set(ES().query_ids('(mies wim)^5', mediumid=m2.id)), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids('(mi* wi*)^5', mediumid=m2.id)), {b.id, c.id})
+
+        
     def test_articlesets(self):
         a, b, c = [amcattest.create_test_article() for _x in range(3)]
         s1 = amcattest.create_test_set(articles=[a,b,c])
@@ -247,7 +346,7 @@ class TestAmcatES(amcattest.PolicyTestCase):
         arts[1].save()
 
     def test_full_refresh(self):
-        # DOES NOT WORK YET
+        "test full refresh, e.g. document content change. DOES NOT WORK YET"
         query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium.id, **locals())
         self.assertEqual(set(ES().query_ids(sets=s.id, mediumid=arts[1].medium.id)), set()) # before refresh
         s.refresh_index()

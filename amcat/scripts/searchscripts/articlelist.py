@@ -18,13 +18,16 @@
 ###########################################################################
 
 """
-Script that will run a search on the database or Solr and return the matching Article objects
+Script that will run a search on the database or the index and return the matching Article objects
 """
 
 
 from amcat.scripts import script, types
-from amcat.scripts.tools import solrlib, database
+from amcat.scripts.tools import database
 from amcat.forms.forms import order_fields
+
+from amcat.tools import keywordsearch
+
 import amcat.scripts.forms
 from django import forms
 
@@ -74,7 +77,7 @@ class ArticleListForm(amcat.scripts.forms.ArticleColumnsForm, amcat.scripts.form
 
 class ArticleListScript(script.Script):
     """
-    Main script for conducting a selection query in amcat, either on the database or on Solr.
+    Main script for conducting a selection query in amcat, either on the database or on the index
     """
 
     input_type = None
@@ -83,14 +86,14 @@ class ArticleListScript(script.Script):
 
 
     def run(self, input=None):
-        """ returns an iterable of articles, when Solr is used, possibly including highlighting """
+        """ returns an iterable of articles, when the index is used, possibly including highlighting """
         start = self.options['start']
         length = self.options['length']
 
         if not self.options['sortColumn']:
             self.options['sortColumn'] = 'id'
 
-        if self.bound_form.use_solr == False: # make database query
+        if self.bound_form.use_index == False: # make database query
             qs = database.get_queryset(**self.options)
             if self.options['sortColumn']:
                 qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '')
@@ -102,7 +105,7 @@ class ArticleListScript(script.Script):
             if self.options['highlight']:
                 return solrlib.highlightArticles(self.options)
             else:
-                return solrlib.getArticles(self.options)
+                return keywordsearch.getArticles(self.options)
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
