@@ -20,7 +20,7 @@
 
 """
 Daemon that checks if there are any dirty article sets that need to be
-queried and adds them to Solr
+queried and adds them to the index
 """
 from django.db.models import Q 
 from django.db import transaction
@@ -28,12 +28,16 @@ from django.db import transaction
 from amcat.scripts.daemons.daemonscript import DaemonScript
 
 from amcat.models import ArticleSet
-
+from amcat.tools import amcates
 import logging
 log = logging.getLogger(__name__)
 
 class IndexDaemon(DaemonScript):
+
     def run_action(self):
+        amcates.ES().check_index()
+        
+        
         try:
             with transaction.commit_on_success():
                 aset = ArticleSet.objects.filter(Q(needs_deduplication=True) | Q(indexed=True, index_dirty=True))[0]

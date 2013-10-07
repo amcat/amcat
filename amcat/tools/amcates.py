@@ -61,12 +61,11 @@ class ES(object):
             indices.IndicesClient(self.es).delete(self.index)
         except Exception, e:
             if 'IndexMissingException' in unicode(e): return
-            raise            
+            raise
+        
     def create_index(self):
             indices.IndicesClient(self.es).create(self.index)
-        
-    
-        
+            
         
     def add_articles(self, article_ids):
         """
@@ -152,6 +151,22 @@ class ES(object):
         for i, batch in enumerate(splitlist(to_add, itemsperbatch=1000)):
             self.add_articles(batch)
             log.debug("Added batch {i}".format(**locals()))
+
+    def check_index(self):
+        """
+        Check whether the server is up and the index exists.
+        If the server is down, raise an exception.
+        If the index does not exist, try to create it.
+        """
+        if not self.es.ping():
+            raise Exception("Elastic server cannot be reached")
+        if not indices.IndicesClient(self.es).exists(self.index):
+            log.info("Index {self.index} does not exist, creating".format(**locals()))
+            indices.IndicesClient(self.es).create(self.index)
+
+if __name__ == '__main__':
+    ES().check_index()
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
