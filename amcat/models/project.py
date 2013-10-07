@@ -20,23 +20,23 @@
 """ORM Module representing projects"""
 
 from __future__ import unicode_literals, print_function, absolute_import
+
 from django.contrib.auth.models import User
+from django.db import models
+from django.db.models import Q
+import itertools
+from amcat.models import Medium
 
 from amcat.tools.model import AmcatModel
-from amcat.tools.toolkit import wrapped
-
 from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingschema import CodingSchema
-from amcat.models.coding.codingjob import CodingJob
 from amcat.models.article import Article
 from amcat.models.articleset import ArticleSetArticle, ArticleSet
 
-from django.db import models
-from django.db.models import Q
-
-
 ROLEID_PROJECT_READER = 11
 LITTER_PROJECT_ID = 1
+
+import logging; log = logging.getLogger(__name__)
 
 class Project(AmcatModel):
     """Model for table projects.
@@ -117,11 +117,15 @@ class Project(AmcatModel):
         Get a sequence of article ids either owned by this project
         or contained in a set owned by this project
         """
-        for a in Article.objects.filter(project=self).only("id"):
-            yield a.id
-        for asa in ArticleSetArticle.objects.filter(articleset__project=self):
-            yield asa.article_id
-        
+        return itertools.chain(
+            Article.objects.filter(project=self).values_list("id", flat=True),
+            ArticleSetArticle.objects.filter(articleset__project=self).values_list("article__id", flat=True)
+        )
+
+    def get_mediums(self):
+        medium_ids = (a.get_medium_ids() for a in self.all_articlesets())
+        return Medium.objects.filter(id__in=set(itertools.chain.from_iterable(medium_ids)))
+
     class Meta():
         db_table = 'projects'
         app_label = 'amcat'
@@ -139,7 +143,7 @@ class Project(AmcatModel):
 
         super(Project, self).save(*args, **kargs)
 
-    
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -199,3 +203,18 @@ class TestProject(amcattest.PolicyTestCase):
         self.assertEqual(len(p.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p2.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p3.get_codingschemas().filter(pk=cs.id)), 0)
+
+    def test_get_mediums(self):
+        from django.core.cache import cache
+        cache.clear()
+
+        set1 = amcattest.create_test_set(2)
+        set2 = amcattest.create_test_set(2, project=set1.project)
+        set3 = amcattest.create_test_set(2)
+
+        self.assertEqual(
+            set(set1.project.get_mediums()),
+            { a.medium for a in set1.articles.all() } | { a.medium for a in set2.articles.all() }
+        )
+
+

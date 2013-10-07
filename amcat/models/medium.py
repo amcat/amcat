@@ -18,10 +18,26 @@
 ###########################################################################
 from __future__ import unicode_literals, print_function, absolute_import
 
-from amcat.tools.djangotoolkit import get_or_create
+from django.db import models
+from django.db.models.query import QuerySet
+
 from amcat.tools.model import AmcatModel
 
-from django.db import models
+def to_medium_ids(mediums):
+    """
+    Convert argument to medium ids
+
+    @param mediums: mediums to be processed
+    @type mediums: QuerySet | Medium | iterable of Mediums | iterable of medium ids
+    @return: iterable of medium ids
+    """
+    if isinstance(mediums, Medium):
+        return (mediums.id,)
+
+    if isinstance(mediums, QuerySet) and mediums.model is Medium:
+        return mediums.values_list("id", flat=True)
+
+    return ((m.id if isinstance(m, Medium) else m) for m in mediums)
 
 class MediumSourcetype(AmcatModel):
     id = models.AutoField(primary_key=True, db_column="medium_source_id")
@@ -94,3 +110,20 @@ class MediumAlias(AmcatModel):
         db_table = 'media_alias'
         verbose_name_plural = 'media_aliases'
         app_label = 'amcat'
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestMedium(amcattest.PolicyTestCase):
+
+    def test_to_medium_ids(self):
+        arts = amcattest.create_test_set(2).articles.all()
+        m1, m2 = amcattest.create_test_medium(), amcattest.create_test_medium()
+        self.assertEqual(set(to_medium_ids(m1)), {m1.id,})
+        self.assertEqual(set(to_medium_ids([m1,m2])), {m1.id, m2.id})
+        self.assertEqual(set(to_medium_ids(Medium.objects.filter(id__in=[m1.id, m2.id]))), {m1.id, m2.id})
+        self.assertEqual(set(to_medium_ids(arts.values_list("medium__id", flat=True))), {a.medium_id for a in arts})
+

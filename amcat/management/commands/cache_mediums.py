@@ -16,39 +16,38 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import logging;
 
+from django.core.management import BaseCommand, CommandError
 
-from webscript import WebScript
-from django import forms
-from amcat.scripts.searchscripts.articleids import ArticleidsScript
-from amcat.scripts.processors.save_set import SaveAsSetScript, SaveAsSetForm
+from amcat.models import AmCAT
+from amcat.scripts.actions.cache_articleset_mediums import CacheArticleSetMediums
 
-
-import logging
-import json
 
 log = logging.getLogger(__name__)
 
-class SaveAsSetWebScriptForm(SaveAsSetForm):
-    output = forms.CharField(widget=forms.HiddenInput(), initial='json-html')
-    length = forms.IntegerField(widget=forms.HiddenInput(), max_value=99999999, initial=99999999)
-    start = forms.IntegerField(widget=forms.HiddenInput(), initial=0)
+ERR = "You should pass an action: on, off or warm."
 
-    
-class SaveAsSet(WebScript):
-    name = "Save as Set"
-    form_template = None#"api/webscripts/save_set_form.html"
-    form = SaveAsSetWebScriptForm
-    displayLocation = ('ShowSummary', 'ShowArticleList')
-    output_template = "api/webscripts/save_set.html" 
-    
-    
-    def run(self):
-        article_ids = ArticleidsScript(self.data).run()
-        result = SaveAsSetScript(self.data).run(article_ids)
-        result.provenance = json.dumps(dict(self.data))
-        result.save()
+class Command(BaseCommand):
+    args = '[on|off|warm]'
+    help = 'Enables / disables / warms medium caching (see articleset.py). Warm call on when done.'
 
-        return self.outputResponse(result, object)
-        
-    
+    def handle(self, *args, **options):
+        if not len(args) or args[0] not in ("on", "off", "warm"):
+            raise CommandError(ERR)
+
+        if args[0] == "on":
+            log.info("Enabling medium caching..")
+            enable = True
+
+        if args[0] == "off":
+            log.info("Disabling medium caching..")
+            enable = False
+
+        if args[0] in ("on", "off"):
+            AmCAT.enable_mediums_cache(enable)
+            log.info("OK.")
+
+        if args[0] == "warm":
+            CacheArticleSetMediums().run()
+            self.handle("on")

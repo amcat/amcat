@@ -133,6 +133,8 @@ def get_unencoded_unicode(s):
         
 def to_html(original_rtf, fixed_rtf):
     html = None
+    from sh import unrtf
+
 
     with NamedTemporaryFile() as xml:
         xml.write(fixed_rtf)

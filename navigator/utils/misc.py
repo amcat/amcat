@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import os
 import random
 import string
 import types
@@ -23,8 +24,21 @@ import types
 from django.core.cache import cache
 from hashlib import sha1
 
+import logging; log = logging.getLogger(__name__)
+
 def gen_random(n=8):
     return ''.join(random.choice(string.ascii_uppercase) for x in range(n))
+
+class UUIDLogMiddleware(object):
+    def process_request(self, request):
+        request.uuid = gen_random(10)
+        ppid, pid = os.getppid(), os.getpid()
+        url = "?".join((request.META["PATH_INFO"], request.META["QUERY_STRING"]))
+        log.info("Start of request {request.uuid} ({ppid}, {pid}): {url}".format(**locals()), extra={"request":request})
+
+    def process_response(self, request, response):
+        log.info("End of request {}".format(request.uuid))
+        return response
 
 def session_pop(session, key, default=None):
     """

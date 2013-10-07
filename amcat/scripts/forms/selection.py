@@ -18,17 +18,20 @@
 ###########################################################################
 
 
+from itertools import ifilterfalse
+import datetime
+import re
+import logging
+
 from django import forms
 from django.core.exceptions import ValidationError
 
-from itertools import ifilterfalse, permutations
-from amcat.models import Project, ArticleSet, Medium
+from amcat.models import Project, ArticleSet, Medium, AmCAT
 from amcat.models import Codebook, Language, Label, Article
 from amcat.forms.forms import order_fields
+from amcat.tools.toolkit import to_datetime, stripAccents
+from amcat.tools import djangotoolkit 
 
-import datetime, re
-
-import logging
 log = logging.getLogger(__name__)
 
 DATETYPES = {
@@ -48,15 +51,17 @@ __all__ = [
     "ModelChoiceFieldWithIdLabel"
 ]
 
+DAY_DELTA = datetime.timedelta(hours=23, minutes=59, seconds=59, milliseconds=999)
+
 class SearchQuery(object):
     """
     Represents a query object that contains both a (Solr) query and
     an optional label
     """
     def __init__(self, query, label=None):
-        self.query = query
-        self.declared_label = label
-        self.label = label or query
+        self.query = stripAccents(query)
+        self.declared_label = stripAccents(label)
+        self.label = self.declared_label or self.query
 
 def _get_label_delimiter(query, label_delimiters):
     for label_delimiter in label_delimiters:
@@ -68,16 +73,20 @@ def parse_query(query, label_delimiters=("#", "\t")):
     Returns SearchQuery object, parsed from string `q`
     @raises: ValidationError if `q` is not valid query
     """
+    query = query.strip()
     label_delimiter = _get_label_delimiter(query, label_delimiters)
 
     if label_delimiter is not None:
-        lbl, query = query.split(label_delimiter, 1)
+        lbl, q = re.split("{label_delimiter}+".format(**locals()), query, 1)
+        #lbl, query = query.split(label_delimiter, 1)
 
         if not (0 < len(lbl) <= 20):
-            raise ValidationError("Invalid label (after the {label_delimiter})".format(**locals()), code="invalid")
+            raise ValidationError("Invalid label (after the {label_delimiter}). Query was: {query!r}"
+                                  .format(**locals()), code="invalid")
         if not len(query):
-            raise ValidationError("Invalid label (before the {label_delimiter})".format(**locals()), code="invalid")
-        return SearchQuery(query.strip(), label=lbl.strip())
+            raise ValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
+                                  .format(**locals()), code="invalid")
+        return SearchQuery(q.strip(), label=lbl.strip())
 
     return SearchQuery(query)
 
@@ -195,7 +204,7 @@ class SelectionForm(forms.Form):
     codebook = ModelChoiceFieldWithIdLabel(queryset=Codebook.objects.all(), required=False, label="Use Codebook")
 
     query = forms.CharField(widget=forms.Textarea, required=False)
-    
+
     def __init__(self, project=None, data=None, *args, **kwargs):
         super(SelectionForm, self).__init__(data, *args, **kwargs)
 
@@ -205,16 +214,19 @@ class SelectionForm(forms.Form):
         elif project is None:
             raise ValueError("Project cannot be None")
 
-        codebooks = Codebook.objects.filter(project_id=project.id)
-
-        self.fields['codebook'].queryset = codebooks
-        self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
-        self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
-            Language.objects.filter(labels__code__codebook_codes__codebook__in=codebooks).distinct("id")
-        )
-
         self._queries = None
         self.project = project
+
+        codebooks = Codebook.objects.filter(project_id=project.id)
+        self.fields['mediums'].queryset = self._get_mediums()
+        self.fields['codebook'].queryset = codebooks
+        self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
+
+        distinct_arg = ["id"] if djangotoolkit.db_supports_distinct_on() else []
+        
+        self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
+            Language.objects.filter(labels__code__codebook_codes__codebook__in=codebooks).distinct(*distinct_arg)
+        )
 
         if data is not None:
             self.data = self.get_data()
@@ -231,6 +243,11 @@ class SelectionForm(forms.Form):
             if field_name not in data:
                 _add_to_dict(data, field_name, field.initial)
         return data
+
+    def _get_mediums(self):
+        if AmCAT.mediums_cache_enabled():
+            return self.project.get_mediums()
+        return Medium.objects.all()
 
     def _get_queries(self, unresolved_queries):
         if self._queries is not None: self._queries
@@ -296,7 +313,12 @@ class SelectionForm(forms.Form):
         queries = [parse_query(q) for q in query.split("\n") if q.strip()]
         self._queries = self._get_queries(queries)
 
-        return "\n".join(q.query for q in self.queries)
+        if len(queries) > 1:
+            return "\n".join("({q.query})".format(**locals()) for q in queries)
+        elif queries:
+            return queries[0].query
+        else:
+            return ''
 
     def clean_datetype(self):
         datetype = self.cleaned_data["datetype"]
@@ -315,8 +337,18 @@ class SelectionForm(forms.Form):
 
         return datetype
 
+    def clean_start_date(self):
+        if self.cleaned_data["start_date"]:
+            return to_datetime(self.cleaned_data["start_date"])
+
+    def clean_end_date(self):
+        if self.cleaned_data["end_date"]:
+            return to_datetime(self.cleaned_data["end_date"]) + DAY_DELTA
+
     def clean_on_date(self):
         on_date = self.cleaned_data["on_date"]
+        if on_date: on_date = to_datetime(on_date)
+
         if "datetype" not in self.cleaned_data:
             # Don't bother checking, datetype raised ValidationError
             return on_date
@@ -329,7 +361,7 @@ class SelectionForm(forms.Form):
         if datetype == "on":
             self.cleaned_data["datetype"] = "between"
             self.cleaned_data["start_date"] = on_date
-            self.cleaned_data["end_date"] = on_date + datetime.timedelta(1)
+            self.cleaned_data["end_date"] = on_date + DAY_DELTA
 
         return None
 
@@ -340,7 +372,7 @@ class SelectionForm(forms.Form):
 
     def clean_mediums(self):
         if not self.cleaned_data["mediums"]:
-            return Medium.objects.filter(article__articlesetarticle__articleset__in=self.cleaned_data["articlesets"]).distinct("id")
+            return self._get_mediums()
         return self.cleaned_data["mediums"]
 
 
@@ -377,7 +409,7 @@ class SelectionForm(forms.Form):
         try:
             cleaned_data["queries"] = list(self.queries)
         except TypeError:
-            log.debug("Parsing query failed. Query was: {}".format(self.data['query']))
+            log.debug("Parsing query failed. Query was: {!r}".format(self.data['query']))
 
         cleaned_data['projects'] = [self.project.id]
 
@@ -403,7 +435,19 @@ class TestSelectionForm(amcattest.PolicyTestCase):
             project = codebook.project
 
         return project, codebook, SelectionForm(project, data=kwargs)
-        
+
+    def test_defaults(self):
+        from django.core.cache import cache
+        cache.clear()
+
+        set1 = amcattest.create_test_set(1)
+
+        p, c, form = self.get_form()
+        self.assertEqual({set1.articles.all()[0].medium}, set(form.fields['mediums'].queryset))
+        AmCAT.enable_mediums_cache()
+        p, c, form = self.get_form()
+        self.assertEqual(set(), set(form.fields['mediums'].queryset))
+
 
     def test_get_label_delimiter(self):
         self.assertEquals(_get_label_delimiter("abc", "a"), "a")
@@ -447,11 +491,13 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         end_date = form.cleaned_data["end_date"]
 
         self.assertEquals(form.cleaned_data["datetype"], "between")
-        self.assertEquals(form.cleaned_data["start_date"], now)
-        self.assertEquals(end_date - start_date, datetime.timedelta(days=1))
+        self.assertEquals(form.cleaned_data["start_date"], to_datetime(now))
+        self.assertEquals(end_date - start_date, DAY_DELTA)
+        self.assertTrue(end_date != start_date)
 
         p, c, form = self.get_form(datetype="on")
         self.assertFalse(form.is_valid())
+
 
     def test_clean_datetype(self):
         now = datetime.datetime.now().date()
@@ -464,7 +510,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         p, c, form = self.get_form(datetype="between", end_date=now)
         self.assertFalse(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now, start_date=now)
-        self.assertFalse(form.is_valid())
+        self.assertTrue(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now - datetime.timedelta(days=1), start_date=now)
         self.assertFalse(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now + datetime.timedelta(days=1), start_date=now)
@@ -571,5 +617,16 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         # Test refering to previously defined label
         p, _, form = _form(query="lbl#foo\n<lbl>".format(root.id))
         self.assertTrue(form.is_valid())
-        self.assertEquals("foo\nfoo", form.solr_query)
+        self.assertEquals("(foo)\n(foo)", form.solr_query)
 
+        # test initial tabs and accents
+
+        p, c, form = self.get_form(query=u"\t\t\tBl\u00e2\tBalk\u00ebnende")
+        self.assertTrue(form.is_valid())
+        self.assertEquals(len(list(form.queries)), 1)
+        self.assertEquals(next(form.queries).declared_label, "Bla")
+        self.assertEquals(next(form.queries).query, "Balkenende")
+
+        p, c, form = self.get_form(query=u"piet NOT jan\nbla#jan NOT piet")
+        self.assertTrue(form.is_valid())
+        self.assertEquals(form.cleaned_data['query'], "(piet NOT jan)\n(jan NOT piet)")

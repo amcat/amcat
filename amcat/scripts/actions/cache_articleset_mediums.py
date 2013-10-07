@@ -1,3 +1,4 @@
+#!/usr/bin/python
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -17,38 +18,41 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script add a codebook
+"""
 
-from webscript import WebScript
-from django import forms
-from amcat.scripts.searchscripts.articleids import ArticleidsScript
-from amcat.scripts.processors.save_set import SaveAsSetScript, SaveAsSetForm
+import logging; log = logging.getLogger(__name__)
+from amcat.scripts.script import Script
+
+from amcat.models import ArticleSet
 
 
-import logging
-import json
+class CacheArticleSetMediums(Script):
+    def run(self, _input=None):
+        asets = ArticleSet.objects.only("id").all()
+        nasets = asets.count()
 
-log = logging.getLogger(__name__)
+        for i, aset in enumerate(asets.iterator(), start=1):
+            log.info("Warming cache for articleset {aset.id} [{i}/{}]".format(nasets, **locals()))
+            aset.cache_mediums()
 
-class SaveAsSetWebScriptForm(SaveAsSetForm):
-    output = forms.CharField(widget=forms.HiddenInput(), initial='json-html')
-    length = forms.IntegerField(widget=forms.HiddenInput(), max_value=99999999, initial=99999999)
-    start = forms.IntegerField(widget=forms.HiddenInput(), initial=0)
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    cli.run_cli()
 
-    
-class SaveAsSet(WebScript):
-    name = "Save as Set"
-    form_template = None#"api/webscripts/save_set_form.html"
-    form = SaveAsSetWebScriptForm
-    displayLocation = ('ShowSummary', 'ShowArticleList')
-    output_template = "api/webscripts/save_set.html" 
-    
-    
-    def run(self):
-        article_ids = ArticleidsScript(self.data).run()
-        result = SaveAsSetScript(self.data).run(article_ids)
-        result.provenance = json.dumps(dict(self.data))
-        result.save()
 
-        return self.outputResponse(result, object)
-        
-    
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestCacheArticleSetMediums(amcattest.PolicyTestCase):
+    def test_caching(self):
+        aset = amcattest.create_test_set(1)
+        CacheArticleSetMediums().run()
+
+        with self.checkMaxQueries(1, "Get cached project mediums"):
+            list(aset.get_mediums())
+

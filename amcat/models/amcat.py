@@ -18,11 +18,14 @@
 ###########################################################################
 
 from __future__ import unicode_literals, print_function, absolute_import
-
-from django.db import models
-from amcat.tools.model import AmcatModel
 import os
 import logging;
+
+from django.core.cache import cache
+from django.db import models
+
+from amcat.tools.model import AmcatModel
+
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +40,11 @@ SINGLETON_ID = 1
 # See amcat.tools.db_upgrader
 CURRENT_DB_VERSION = 16
 
+MEDIUM_CACHE_ENABLED = "medium_cache_enabled"
+TIMEOUT_INFINITY = 31536000 # One year, actually. By then we should have upgraded to Django
+                            # 1.6, which allows 'real' infinite caching.
 
 class AmCAT(AmcatModel):
-    
     id = models.BooleanField(primary_key=True, db_column="singleton_pk")
 
     global_announcement = models.TextField(blank=True, null=True)
@@ -49,6 +54,25 @@ class AmCAT(AmcatModel):
         if self.id != SINGLETON_ID:
             raise NotImplementedError()
         super(AmCAT, self).save(*args, **kwargs)
+
+    @classmethod
+    def mediums_cache_enabled(self):
+        return cache.get(MEDIUM_CACHE_ENABLED) or False
+
+    @classmethod
+    def enable_mediums_cache(self, enable=True):
+        """
+        Disable or enable articleset medium caching. This option can also be accessed
+        via manage.py medium_cache [on|off].
+
+        When off, various parts of AmCAT won't use project <--> mediums information
+        although caches will always be updated when adding new sets / articles. This
+        allows existing installations to build their caches while running.
+
+        @param enable: Disables caching for mediums when set to False
+        @return: None
+        """
+        return cache.set(MEDIUM_CACHE_ENABLED, enable, TIMEOUT_INFINITY)
 
     @property
     def server_warning(self):

@@ -1,4 +1,6 @@
-###########################################################################
+#!/usr/bin/python
+
+##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -17,38 +19,35 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script add a user to db and users table
+"""
 
-from webscript import WebScript
+import logging; log = logging.getLogger(__name__)
+
 from django import forms
-from amcat.scripts.searchscripts.articleids import ArticleidsScript
-from amcat.scripts.processors.save_set import SaveAsSetScript, SaveAsSetForm
+
+#from amcat.tools import dbtoolkit
+from amcat.scripts.script import Script
+from amcat.models import Medium, Article, MediumAlias
 
 
-import logging
-import json
+class ReplaceMedium(Script):
+    class options_form(forms.Form):
+        old_medium = forms.ModelChoiceField(queryset=Medium.objects.all())
+        new_medium = forms.ModelChoiceField(queryset=Medium.objects.all())
 
-log = logging.getLogger(__name__)
-
-class SaveAsSetWebScriptForm(SaveAsSetForm):
-    output = forms.CharField(widget=forms.HiddenInput(), initial='json-html')
-    length = forms.IntegerField(widget=forms.HiddenInput(), max_value=99999999, initial=99999999)
-    start = forms.IntegerField(widget=forms.HiddenInput(), initial=0)
-
+    def _run(self, old_medium, new_medium):
+        arts = Article.objects.filter(medium=old_medium)
+        log.info("Replacing medium {old_medium.id}:{old_medium} -> {new_medium.id}:{new_medium} in {n} articles"
+                 .format(n=arts.count(), **locals()))
+        arts.update(medium=new_medium)
+        log.info("Deleting medium {old_medium.id}:{old_medium}".format(**locals()))
+        old_medium.delete()
+        log.info("Inserting {old_medium} as alias for {new_medium.id}:{new_medium}".format(**locals()))
+        MediumAlias.objects.create(medium=new_medium, name=old_medium.name)
+        log.info("Done")
     
-class SaveAsSet(WebScript):
-    name = "Save as Set"
-    form_template = None#"api/webscripts/save_set_form.html"
-    form = SaveAsSetWebScriptForm
-    displayLocation = ('ShowSummary', 'ShowArticleList')
-    output_template = "api/webscripts/save_set.html" 
-    
-    
-    def run(self):
-        article_ids = ArticleidsScript(self.data).run()
-        result = SaveAsSetScript(self.data).run(article_ids)
-        result.provenance = json.dumps(dict(self.data))
-        result.save()
-
-        return self.outputResponse(result, object)
-        
-    
+if __name__ == '__main__':
+    from amcat.scripts.tools import cli
+    cli.run_cli()

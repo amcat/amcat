@@ -18,7 +18,7 @@
 ###########################################################################
 
 """
-Script that will run a search on the database or Solr and return only the articleids
+Script that will run a search on the database or Solr and return only the article_ids
 Useful for performance reasons, when returning Article objects takes too much time
 """
 
@@ -62,7 +62,7 @@ class ArticleidsScript(script.Script):
         if self.bound_form.use_solr == False: # make database query
             return database.get_queryset(**self.options)[start:start+length].values_list('id', flat=True)
         else:
-            return solrlib.articleids(self.options)
+            return solrlib.article_ids(self.options)
 
             
 class ArticleidsDictScript(script.Script):
@@ -75,7 +75,7 @@ class ArticleidsDictScript(script.Script):
         if self.bound_form.use_solr == False: # make database query
             raise Exception('This works only for Solr searches')
         else:
-            return solrlib.articleidsDict(self.options)
+            return solrlib.article_idsDict(self.options)
 
         
         

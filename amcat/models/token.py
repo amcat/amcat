@@ -68,7 +68,7 @@ class Triple(AmcatModel):
     id = models.AutoField(primary_key=True, db_column='triple_id')
 
     parent = models.ForeignKey(Token, related_name="triples")
-    child = models.ForeignKey(Token, related_name="+")
+    child = models.ForeignKey(Token, related_name="outgoing_triples")
     relation = models.ForeignKey(Relation)
 
     class Meta():
