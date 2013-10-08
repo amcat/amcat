@@ -167,6 +167,7 @@ def upload_article_action(request, plugin, project):
             try:
                 created_articles = script.run()
             except Exception, e:
+                log.exception(e)
                 scraper_main_error = e
             else:
                 created_set = script.articleset
