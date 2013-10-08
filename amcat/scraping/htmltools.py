@@ -80,9 +80,12 @@ class HTTPOpener(object):
         try:
             html_string = get_unicode(self.response, encoding)
         except: # decoding failed, use lxml default
-            return html.parse(response).getroot()
+            htmldocument = html.parse(response).getroot()
         else: # decoding succeeded, use fromstring
-            return html.fromstring(html_string)
+            htmldocument = html.fromstring(html_string)
+        htmldocument.url = response.url
+        return htmldocument
+    
 
 ENCODING_HEADER = 'content-type'
 ENCODING_KEY = 'charset'
