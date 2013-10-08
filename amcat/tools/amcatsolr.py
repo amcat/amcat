@@ -191,14 +191,26 @@ def _get_filters(cleaned_data):
     # Get date filter
     start_date = _get_filter_date(cleaned_data, "start_date")
     end_date = _get_filter_date(cleaned_data, "end_date")
-    if not (start_date == "*" and end_date == "*"):
-        yield "date:[{start_date} TO {end_date}]".format(**locals())
 
-    yield " OR ".join(map("mediumid:{.id}".format, cleaned_data["mediums"]))
-    yield " OR ".join(map("id:{}".format, cleaned_data["article_ids"]))
-    yield " OR ".join(map("sets:{.id}".format, cleaned_data["articlesets"]))
+    yield "date:[{start_date} TO {end_date}]".format(**locals())
+    yield " OR ".join(map("mediumid:{.id}".format, cleaned_data.get("mediums", ())))
+    yield " OR ".join(map("id:{}".format, cleaned_data.get("article_ids", ())))
+    yield " OR ".join(map("sets:{.id}".format, cleaned_data.get("articlesets", ())))
 
 def get_filters(cleaned_data):
+    """
+    Returns iterator with lucene filters, which can be added to a its query.
+
+    @type cleaned_data: dict
+    @param cleaned_data: cleaned_data of SelectionForm, or a dictionary possibly containing
+                         the following keys: start_date, end_date, mediums, article_ids and
+                         articlesets.
+
+                         Dates must be of datetime.datetime type, all others must be integers
+                         (primary keys).
+
+    @return: iterator yielding strings (filters)
+    """
     return filter(bool, _get_filters(cleaned_data))
 
 def query_args_from_form(form):
@@ -432,5 +444,17 @@ class TestAmcatSolr(amcattest.PolicyTestCase):
         a = amcattest.create_test_article(text=text, headline='bla piet')
         solr.add_articles([a])
         solr.query_highlight("piet")
+
+    def test_get_filters(self):
+        self.assertEqual(1, len(get_filters({})))
+        self.assertEqual("date:[* TO *]", get_filters({})[0])
+
+        filters = {
+            "start_date" : datetime.datetime(2010, 10, 1, 4, 32),
+            "end_date" : datetime.datetime(2010, 10, 1, 4, 32),
+            "article_ids" : (10, 15),
+        }
+
+        self.assertEqual(2, len(get_filters(filters)))
 
 #from amcat.tools import amcatlogging; amcatlogging.debug_module()
