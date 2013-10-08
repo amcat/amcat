@@ -64,7 +64,7 @@ class Controller(object):
             all_articles |= set(articles)
             used_sets.add(scraper.articleset.id)
 
-            if deduplicate == True:                
+            if deduplicate:                
                 options = {
                     'articleset' : scraper.articleset.id,
                     }
@@ -128,7 +128,7 @@ class RobustController(Controller):
         self.errors = [] 
     
     def _scrape(self, scraper):
-        log.info("RobustController starting scraping for scraper {}".format(scraper))
+        log.info("RobustController starting {scraper.__class__.__name__} for date '{scraper.options[date]}'".format(**locals()))
         result = []
 
         try:
@@ -145,7 +145,7 @@ class RobustController(Controller):
                 log.exception("exception on scrape_unit")
                 self.errors.append(ScrapeError(i, unit, e))
 
-        log.info("Scraping %s finished, %i articles" % (scraper, len(result)))
+        log.info("Scraping {scraper.__class__.__name__} for {scraper.options[date]}  finished, {n} articles".format(n = len(result), **locals()))
 
         if not result:
             raise Exception("No results returned by _get_units()")
@@ -192,31 +192,6 @@ class ThreadedController(Controller):
         qpt.input_queue.done=True
         qpt.input_queue.join()
         return result
-
-
-def scrape_logged(controller, scrapers, deduplicate = False):
-    """Use the controller to scrape the given scrapers.
-
-    @return: a tuple (counts, log)
-             counts: a mapping of number of articles scraper per scraper
-             log: a string representation of the log messages from the scrapers
-    """
-
-    general_index_articleset = ArticleSet.objects.get(pk = 2)
-    #CAUTION: destination articleset is hardcoded
-
-    result = []
-    current = None
-    for a in controller.scrape(scrapers, deduplicate=deduplicate):
-        result.append(a)
-        if a.scraper != current:
-            #new scraper started
-            if a.scraper.module().split(".")[-2].lower().strip() == "newspapers":
-                #if scraper in newspapers module, add it's result to set 2
-                log.info("Adding {x} articles of {a.scraper.__class__.__name__} to general index set ({general_index_articleset})".format(x = len(result), **locals()))
-                general_index_articleset.add_articles(result)
-            result = []
-            current = a.scraper
 
         
 ###########################################################################

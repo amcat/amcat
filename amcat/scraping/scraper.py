@@ -144,6 +144,7 @@ class Scraper(Script):
         """
         Perform article postprocessing in the right order, because parents have to be saved before children
         """
+        #.parent is preferred over .props.parent
         for article in articles:
             if hasattr(article, 'props') and hasattr(article.props, 'parent'):
                 article.parent = article.props.parent
