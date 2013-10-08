@@ -93,15 +93,7 @@ class ArticleListScript(script.Script):
         if not self.options['sortColumn']:
             self.options['sortColumn'] = 'id'
 
-        if self.bound_form.use_index == False: # make database query
-            qs = database.get_queryset(**self.options)
-            if self.options['sortColumn']:
-                qs = qs.order_by(('-' if self.options['sortOrder'] == 'desc' else '')
-                                 + self.options['sortColumn'])
-            qs = qs[start:start+length].select_related('medium__name', 'medium')
-            return qs
-        else:
-            return keywordsearch.getArticles(self.options)
+        return keywordsearch.getArticles(self.options)
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

@@ -52,6 +52,8 @@ def _get_article_dict(art):
 ARTICLE_DOCTYPE='article'
 HIGHLIGHT_OPTIONS = {'fields' : {'body' : {"fragment_size" : 100, "number_of_fragments" : 3},
                                  'headline' : {}}}
+LEAD_SCRIPT_FIELD = {"lead" : {'lang' : 'python',
+                               "script" : '_source["body"] and _source["body"][:300] + "..."'}}
 
 
 class ArticleResult(object):
@@ -126,7 +128,7 @@ class ES(object):
                 yield int(row['_id'])
             sid = res['_scroll_id']
 
-    def query(self, query=None, filter=None, filters={}, highlight=False, **kwargs):
+    def query(self, query=None, filter=None, filters={}, highlight=False, lead=False, **kwargs):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -137,12 +139,13 @@ class ES(object):
         body = dict(build_body(query, filter, filters))
         if 'sort' in kwargs: body['track_scores'] = True
         if highlight: body['highlight'] = HIGHLIGHT_OPTIONS
+        if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
 
         log.info("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.es.search(index=self.index, body=body, **kwargs)
         for row in result['hits']['hits']:
             result =  ArticleResult(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
-            if highlight: result.highlight = row['highlight']
+            if 'highlight' in row: result.highlight = row['highlight']
             if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
             yield result
             

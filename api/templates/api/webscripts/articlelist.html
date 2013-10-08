@@ -27,7 +27,7 @@
                     {{ t|safe}} ...
                 {% endfor %}
         {% else %}
-            {{ a.text|truncatewords:40 }}
+            {{ a.lead }}
         {% endif %}
      </div>
    </li>
