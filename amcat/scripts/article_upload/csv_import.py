@@ -39,11 +39,17 @@ from amcat.models.medium import Medium
 
 from amcat.tools.toolkit import readDate
 
-FIELDS = ("text", "date", "pagenr", "section", "headline", "byline",  "url", "externalid",
+FIELDS = ("text", "date", "medium", "pagenr", "section", "headline", "byline",  "url", "externalid",
           "author", "addressee", "parent_url", "parent_externalid")
 REQUIRED = [True] * 2 + [False] * (len(FIELDS) - 2)
 
-PARSERS = dict(date=readDate, pagenr=int, externalid=int, parent_externalid=int)
+PARSERS = {
+    "date" : readDate,
+    "pagenr" : int,
+    "externalid" : int,
+    "parent_externalid" : int,
+    "medium" : Medium.get_or_create
+}
 
 HELP_TEXTS = {
     "parent_url" : "Column name for the URL of the parent article, which should be in the same CSV file",
@@ -54,18 +60,24 @@ def is_nullable(field_name):
     return Article._meta.get_field(field_name).null
 
 class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
-    medium = forms.ModelChoiceField(queryset=Medium.objects.all(), required=False)
     medium_name = forms.CharField(
         max_length=Article._meta.get_field_by_name('medium')[0].max_length,
         required = False)
+    medium_existing = forms.ModelChoiceField(
+        queryset=Medium.objects.all(), required=False,
+        help_text="Use this option if you want to choose one medium for all uploaded articles."
+    )
 
     addressee_from_parent = forms.BooleanField(required=False, initial=False, label="Addressee from parent",
                                                help_text="If set, will set the addressee field to the author of the parent article")
     
     def clean_medium_name(self):
+        cd = self.cleaned_data
         name = self.cleaned_data['medium_name']
-        if not bool(name) ^ bool(self.cleaned_data['medium']):
-            raise forms.ValidationError("Please specify either medium or medium_name")
+
+        if not (name or ("medium" in self.data and self.data["medium"]) or "medium_existing" in cd):
+            raise forms.ValidationError("Please specify either medium, medium_existing or medium_name")
+
         return name
     
     def __init__(self, *args, **kargs):
@@ -119,12 +131,17 @@ class CSV(UploadScript):
     
     @property
     def _medium(self):
-        if self.options['medium']:
-            return self.options['medium']
+        if self.options["medium"]:
+            return
+
+        if self.options['medium_existing']:
+            return self.options['medium_existing']
+
         if self.options['medium_name']:
             med = Medium.get_or_create(self.options['medium_name'])
-            self.options['medium'] = med
+            self.options['medium_existing'] = med
             return med
+
         raise ValueError("No medium specified!")
     
     def parse_document(self, row):
@@ -142,6 +159,11 @@ class CSV(UploadScript):
                 val = val.strip()
                 
             kargs[fieldname] = val
+
+        # In case medium wasn't defined in csv
+        medium = self._medium
+        if medium is not None:
+            kargs["medium"] = medium
 
         if self.parent_field:
             doc_id = kargs.get(self.id_field)
@@ -187,9 +209,9 @@ def _run_test_csv(header, rows, **options):
         for row in [header] + list(rows):
             w.writerow([field and field.encode('utf-8') for field in row])
         f.flush()
-            
+
         return CSV(dict(file=File(open(f.name)), encoding=0, project=p.id,
-                        medium_name='testmedium', **options)).run()
+                        medium_name=options.pop("medium_name", 'testmedium'), **options)).run()
 
 class TestCSV(amcattest.PolicyTestCase):
     
@@ -202,6 +224,39 @@ class TestCSV(amcattest.PolicyTestCase):
         self.assertEqual(articles[0].pagenr, 12)
         self.assertEqual(articles[1].date.isoformat()[:10], '1980-03-10')
         self.assertEqual(articles[1].pagenr, None)
+
+    def test_text(self):
+        header = ('kop', 'datum', 'tekst')
+        data = [('kop1', '2001-01-01', '')]
+        articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum")
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].text, "")
+
+    def test_medium(self):
+        import functools
+        header = ('kop', 'datum', 'tekst', 'med')
+        data = [('kop1', '2001-01-01', '', 'Bla')]
+
+        test = functools.partial(_run_test_csv, header, data, text="tekst", headline="kop", date="datum")
+        articles = test(medium_name=None, medium="med")
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].medium.name, "Bla")
+
+        articles = test(medium_existing=Medium.get_or_create("1").id)
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].medium.name, "1")
+
+        articles = test(medium_existing=Medium.get_or_create("1").id, medium="med")
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].medium.name, "Bla")
+
+        articles = test(medium_name="bla2", medium="med")
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].medium.name, "Bla")
+
+        articles = test(medium_name="bla2", medium_existing=Medium.get_or_create("2").id)
+        self.assertEqual(len(articles), 1)
+        self.assertEqual(articles[0].medium.name, "2")
 
     def test_parents(self):
         header = ('kop', 'datum', 'tekst', 'id', 'parent', 'van')
