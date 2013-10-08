@@ -34,10 +34,11 @@ def getArticles(form):
     if 'hits' in form['columns']:
         raise NotImplementedError()
 
+    highlight = form['highlight']
     query = form['query']
     filters = filters_from_form(form)
     
     log.info("Query: {query!r}, with filters: {filters}".format(**locals()))
 
-    return ES().query(query, filters=filters, fields=fields, sort=sort)
+    return ES().query(query, filters=filters, fields=fields, sort=sort, highlight=highlight)
 

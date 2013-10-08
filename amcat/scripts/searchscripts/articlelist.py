@@ -101,11 +101,7 @@ class ArticleListScript(script.Script):
             qs = qs[start:start+length].select_related('medium__name', 'medium')
             return qs
         else:
-
-            if self.options['highlight']:
-                return solrlib.highlightArticles(self.options)
-            else:
-                return keywordsearch.getArticles(self.options)
+            return keywordsearch.getArticles(self.options)
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

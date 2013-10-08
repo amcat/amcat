@@ -50,6 +50,9 @@ def _get_article_dict(art):
                 date=art.date)
 
 ARTICLE_DOCTYPE='article'
+HIGHLIGHT_OPTIONS = {'fields' : {'body' : {"fragment_size" : 100, "number_of_fragments" : 3},
+                                 'headline' : {}}}
+
 
 class ArticleResult(object):
     """Simple class to hold arbitrary values""" 
@@ -67,7 +70,6 @@ class ES(object):
 
     def flush(self):
         indices.IndicesClient(self.es).flush()
-
     def delete_index(self):
         try:
             indices.IndicesClient(self.es).delete(self.index)
@@ -124,7 +126,7 @@ class ES(object):
                 yield int(row['_id'])
             sid = res['_scroll_id']
 
-    def query(self, query=None, filter=None, filters={}, **kwargs):
+    def query(self, query=None, filter=None, filters={}, highlight=False, **kwargs):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -134,13 +136,13 @@ class ES(object):
         """
         body = dict(build_body(query, filter, filters))
         if 'sort' in kwargs: body['track_scores'] = True
+        if highlight: body['highlight'] = HIGHLIGHT_OPTIONS
 
         log.info("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.es.search(index=self.index, body=body, **kwargs)
         for row in result['hits']['hits']:
-            print(row)
-            print(row['_id'], row['_score'])
             result =  ArticleResult(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
+            if highlight: result.highlight = row['highlight']
             if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
             yield result
             
@@ -164,7 +166,6 @@ class ES(object):
                 bulk.append(payload)
             bulk = "\n".join(bulk) + "\n"
             r = self.es.bulk(body=bulk, index=self.index, doc_type=ARTICLE_DOCTYPE)
-            print(">>>>", r)
             #if r.status_code != 200:
             #    raise Exception(r.text)
         
@@ -210,6 +211,8 @@ def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=N
     Build a elastic DSL query from the 'form' fields
     """
 
+    _list = lambda x: ([x] if isinstance(x, int) else x)
+
     filters = []
     if sets: filters.append(dict(terms={'sets' : _list(sets)}))
     if mediumid: filters.append(dict(terms={'mediumid' : _list(mediumid)}))
@@ -219,6 +222,8 @@ def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=N
     if end_date: date_range['lt'] = end_date
     if date_range: filters.append(dict(range={'date' : date_range}))
 
+    if ids: filters.append(dict(ids={'values' : _list(ids)}))
+    
     if len(filters) == 0:
         return None
     elif len(filters) == 1:
@@ -240,10 +245,6 @@ def build_body(query=None, filter=None, filters=None):
             
 
         
-
-def _list(x):
-    if isinstance(x, int): return [x]
-    return x
         
 if __name__ == '__main__':
     ES().check_index()
@@ -320,7 +321,6 @@ class TestAmcatES(amcattest.PolicyTestCase):
         a = amcattest.create_test_article(text='aap noot mies', medium=m1)
         b = amcattest.create_test_article(text='noot mies wim zus', medium=m2)
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2)
-
         ES().add_articles([a.id, b.id, c.id])
 
         self.assertEqual(set(ES().query_ids(filters=dict(mediumid=m2.id))), {b.id, c.id})
@@ -329,8 +329,15 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(set(ES().query_ids("zus AND jet", filters=dict(mediumid=m2.id))), {c.id})
         self.assertEqual(set(ES().query_ids("zus OR jet", filters=dict(mediumid=m2.id))), {b.id, c.id})
         self.assertEqual(set(ES().query_ids('"mies wim"', filters=dict(mediumid=m2.id))), {b.id})
-        self.assertEqual(set(ES().query_ids('"mies wim"~5', filters=dict(mediumid=m2.id))), {b.id, c.id})
-        self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(mediumid=m2.id))), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids('"mies wim"~5', filters=dict(sets=s1.id))), {b.id, c.id})
+
+    def test_complex_phrase_query(self):
+        a = amcattest.create_test_article(text='aap noot mies')
+        b = amcattest.create_test_article(text='noot mies wim zus')
+        c = amcattest.create_test_article(text='mies bla bla bla wim zus jet')
+        s1 = amcattest.create_test_set(articles=[a,b,c])
+        ES().add_articles([a.id, b.id, c.id])
+        self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(sets=s1.id))), {b.id, c.id})
 
         
     def test_articlesets(self):
@@ -387,6 +394,7 @@ class TestAmcatES(amcattest.PolicyTestCase):
         arts[1].medium = amcattest.create_test_medium()
         arts[1].save()
 
+        
     def test_full_refresh(self):
         "test full refresh, e.g. document content change. DOES NOT WORK YET"
         query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium.id, **locals())
