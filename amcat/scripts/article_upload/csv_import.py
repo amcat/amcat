@@ -27,6 +27,7 @@ from __future__ import unicode_literals, absolute_import
 
 import csv
 from cStringIO import StringIO
+from types import NoneType
 
 from django import forms
 
@@ -48,6 +49,9 @@ HELP_TEXTS = {
     "parent_url" : "Column name for the URL of the parent article, which should be in the same CSV file",
     "parent_externalid" : "Column name for the External ID of the parent article, which should be in the same CSV file",
     }
+
+def is_nullable(field_name):
+    return Article._meta.get_field(field_name).null
 
 class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
     medium = forms.ModelChoiceField(queryset=Medium.objects.all(), required=False)
@@ -128,12 +132,14 @@ class CSV(UploadScript):
         for fieldname in FIELDS:
             csvfield = self.options[fieldname]
             if not csvfield: continue
-            val = self.decode(row[csvfield])
+            val = row[csvfield]
             if val.strip():
                 if fieldname in PARSERS:
                     val = PARSERS[fieldname](val)
-            else:
+            elif is_nullable(fieldname):
                 val = None
+            else:
+                val = val.strip()
                 
             kargs[fieldname] = val
 
@@ -144,10 +150,9 @@ class CSV(UploadScript):
                 self.parents[doc_id] = parent_id
             
         article = Article(**kargs)
-
         if self.parent_field:
             self.articles[doc_id] = article
-            
+
         return article
 
     def postprocess(self, articles):
