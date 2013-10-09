@@ -19,9 +19,6 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""
-Script add a user to db and users table
-"""
 
 import logging; log = logging.getLogger(__name__)
 
@@ -33,6 +30,16 @@ from amcat.models import Medium, Article, MediumAlias
 
 
 class ReplaceMedium(Script):
+    """
+    Globally (!) replace a medium by another medium, delete the old medium,
+    and add its name as an alias for the new medium.
+
+    Warning: This potentiall affects all projects in the database and cannot be undone
+             It should ONLY be used to fix mistakes/typos, e.g. "vk.nl" ->"volkskrant.nl"
+             It should NOT be used to merge two versions of the same medium,
+                 e.g. volkskrant and volkskrant.nl
+    """
+
     class options_form(forms.Form):
         old_medium = forms.ModelChoiceField(queryset=Medium.objects.all())
         new_medium = forms.ModelChoiceField(queryset=Medium.objects.all())
