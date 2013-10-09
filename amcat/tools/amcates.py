@@ -56,7 +56,7 @@ LEAD_SCRIPT_FIELD = {"lead" : {'lang' : 'python',
                                "script" : '_source["body"] and _source["body"][:300] + "..."'}}
 
 
-class ArticleResult(object):
+class Result(object):
     """Simple class to hold arbitrary values""" 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
@@ -144,7 +144,7 @@ class ES(object):
         log.info("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.es.search(index=self.index, body=body, **kwargs)
         for row in result['hits']['hits']:
-            result =  ArticleResult(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
+            result =  Result(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
             if 'highlight' in row: result.highlight = row['highlight']
             if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
             yield result
@@ -209,6 +209,49 @@ class ES(object):
             indices.IndicesClient(self.es).create(self.index)
 
 
+    def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month'):
+        """
+        Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>
+        If date is used as a group_by variable, uses date_interval to bin it
+        Currently, group by must be a single field as elastic doesn't support multiple group by
+        """
+        filter = build_filter(**filters)
+        body = dict(build_body(query))
+        body['facets'] = {}
+        if group_by == 'date':
+            body['facets']['group'] = {'date_histogram' : {'field' : group_by, 'interval' : date_interval}}
+        else:
+            body['facets']['group'] = {'terms' : {'field' : group_by}}
+        body['facets']['group']['facet_filter'] = filter
+        result = self.es.search(index=self.index, body=body, size=0)
+        if group_by == 'date':
+            for row in result['facets']['group']['entries']:
+                yield get_date(row['time']), row['count']
+
+        else:
+            for row in result['facets']['group']['terms']:
+                yield row['term'], row['count']
+
+
+    def statistics(self, query=None, filters=None):
+        """
+        Compute and return a Result object with n, start_date and end_date for the selection
+        """
+        filter = build_filter(**filters)
+        body = dict(build_body(query))
+        body['facets'] = {'stats' : {'statistical' : {'field' : 'date'}}}
+        body['facets']['stats']['facet_filter'] = filter        
+        stats = self.es.search(index=self.index, body=body, size=0)['facets']['stats']
+        result = Result()
+        result.n = stats['count']
+        result.start_date=get_date(stats['min'])
+        result.end_date=get_date(stats['max'])
+        return result
+
+def get_date(timestamp):
+    d = datetime.fromtimestamp(timestamp/1000)
+    return datetime(d.year, d.month, d.day)
+
 def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=None):
     """
     Build a elastic DSL query from the 'form' fields
@@ -241,13 +284,12 @@ def build_body(query=None, filter=None, filters=None):
     @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
     @param filter: field filter DSL query dict, defaults to _build_filter(**filters)
     """
-    if filter is None: filter = build_filter(**filters)
+    if filter is None and filters: filter = build_filter(**filters)
     if filter: yield ('filter', filter)
     if query: yield ('query', {'query_string' : {'query' : query}})
-        
-            
 
-        
+
+    
         
 if __name__ == '__main__':
     ES().check_index()
@@ -268,6 +310,33 @@ class TestAmcatES(amcattest.PolicyTestCase):
         ES().create_index()
         
 
+    def test_aggregate(self):
+        m1, m2 = [amcattest.create_test_medium() for _ in range(2)]
+        unused = amcattest.create_test_article(text='aap noot mies', medium=m1)
+        a = amcattest.create_test_article(text='aap noot mies', medium=m1, date='2001-01-01')
+        b = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date='2001-02-01')
+        c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2, date='2002-01-01')
+        d = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date='2001-02-03')
+        s1 = amcattest.create_test_set(articles=[a,b,c, d])
+        s2 = amcattest.create_test_set(articles=[unused])
+        ES().add_articles([unused.id, a.id,b.id,c.id, d.id])
+
+        # counts per medium
+        self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="mediumid")),
+                         {m1.id : 1, m2.id : 3})
+        
+        self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="year")),
+                         {datetime(2001,1,1) : 3, datetime(2002,1,1) : 1})
+        
+        self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="month")),
+                         {datetime(2001,1,1) : 1, datetime(2002,1,1) : 1, datetime(2001,2,1) : 2})
+        
+        # set statistics
+        stats = ES().statistics(filters=dict(sets=s1.id))
+        self.assertEqual(stats.n, 4)
+        self.assertEqual(stats.start_date, datetime(2001,1,1))
+        self.assertEqual(stats.end_date, datetime(2002,1,1))
+        
     def test_date_filter(self):
         a = amcattest.create_test_article(text="artikel een", date="2001-01-01")
         b = amcattest.create_test_article(text="artikel twee", date="2002-01-01")

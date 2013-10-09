@@ -60,75 +60,39 @@ class ShowAggregation(WebScript):
 
         aggrTable = AggregationScript(project=self.project, options=self.data).run()
         if self.output == 'json-html' or (self.output == 'html' and self.options['graphOnly'] == True):
-            datesDict = self.getDatesDict(aggrTable)
-            dictToJsonCls = scriptmanager.findScript(dict, 'json')
-            datesDictJson = dictToJsonCls().run(datesDict)
-            
+
             columns = sorted(aggrTable.getColumns(), key=lambda x:x.id if hasattr(x,'id') else x)
             dataTablesHeaderDict = [{'mDataProp':TITLE_COLUMN_NAME,'sTitle':TITLE_COLUMN_NAME, 'sType':'objid', 'sWidth':'100px'}] + \
                                     [{'mDataProp':get_key(col),'mData':get_key(col),'sTitle':col, 'sWidth':'70px'} for col in columns]
-            columnsJson = dictToJsonCls().run(dataTablesHeaderDict)
-            
+
             dataJson = []
             for row in aggrTable.getRows():
                 rowJson = dict([(get_key(col), aggrTable.getValue(row, col)) for col in columns])
                 rowJson[TITLE_COLUMN_NAME] = row
                 dataJson.append(rowJson)
-            dataJson = dictToJsonCls().run(dataJson)
-            
+
             aggregationType = 'hits' if self.options['counterType'] == 'numberOfHits' else 'articles'
             graphOnly = 'true' if self.options['graphOnly'] == True else 'false'
 
             scriptoutput = render_to_string('api/webscripts/aggregation.html', {
-                                                'dataJson':dataJson,
-                                                'columnsJson':columnsJson,
+                                                'dataJson':json.dumps(dataJson),
+                                                'columnsJson':json.dumps(dataTablesHeaderDict),
                                                 'aggregationType':aggregationType,
-                                                'datesDict':datesDictJson,
+                                                'datesDict': '{}',
                                                 'graphOnly': graphOnly,
                                                 'labels' : json.dumps({q.label : q.query for q in selection.queries}),
                                                 'ownForm':self.form(project=self.project, data=self.data),
                                                 'relative':int(self.options['relative'])
                                              })
 
+
             if self.output == 'json-html':
                 return self.outputJsonHtml(scriptoutput)
             else:
                 return HttpResponse(scriptoutput, mimetype='text/html')
         else: # json-html output
+
             return self.outputResponse(aggrTable, AggregationScript.output_type)
             
             
-    def getDatesDict(self, aggrTable):
-        datesDict = {}
-        
-        if self.options['xAxis'] == 'date':
-            dates = aggrTable.getRows()
-            interval = self.options['dateInterval']
-            if interval == 'week':
-                for datestr in dates:
-                    year = datestr.split('-')[0]
-                    week = datestr.split('-')[1]
-                    starttime = datetime.datetime.strptime('%s %s 1' % (year, week), '%Y %W %w')
-                    endtime = datetime.datetime.strptime('%s %s 0' % (year, week), '%Y %W %w')
-                    datesDict[datestr] = [starttime.strftime('%Y-%m-%d'), endtime.strftime('%Y-%m-%d')]
-            elif interval == 'month':
-                for datestr in dates:
-                    year = int(datestr.split('-')[0])
-                    month = int(datestr.split('-')[1])
-                    endday = calendar.monthrange(year, month)[1]
-                    datesDict[datestr] = ['%s-%02d-01' % (year, month), '%s-%02d-%02d' % (year, month, endday) ]
-            elif interval == 'quarter':
-                for datestr in dates:
-                    year = datestr.split('-')[0]
-                    quarter = int(datestr.split('-')[1])
-                    startmonth = ((quarter - 1) * 3 + 1)
-                    endmonth = ((quarter - 1) * 3 + 3)
-                    endday = calendar.monthrange(int(year), endmonth)[1]
-                    datesDict[datestr] = ['%s-%02d-01' % (year, startmonth), '%s-%02d-%02d' % (year, endmonth, endday)]
-                    
-        return datesDict
-        
-    # def outputNavigatorHtml(self, articles, stats=None):
-        # actions = self.getActions()
-        # return render_to_string('navigator/selection/articlesummary.html', { 'articles': articles, 'stats':stats, 'actions':actions, 'generalForm':self.generalForm, 'ownForm':self.ownForm})
-        
+  

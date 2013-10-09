@@ -22,7 +22,7 @@ Script that retrieves basic information of a search query, such as number of mat
 """
 
 from amcat.scripts import script, types
-from amcat.scripts.tools import solrlib, database
+from amcat.tools import keywordsearch
 from django.db.models import Min, Max
 from amcat.models.medium import Medium
 import amcat.scripts.forms
@@ -38,19 +38,7 @@ class ArticleSetStatisticsScript(script.Script):
     output_type = types.ArticleSetStatistics
 
     def run(self, input=None):
-        s = types.ArticleSetStatistics()
-
-        if self.bound_form.use_solr == False: # make database query
-            qs = database.get_queryset(**self.options)
-            s.articleCount = qs.count()
-            result = qs.distinct().aggregate(firstDate=Min('date'), lastDate=Max('date'))
-            s.firstDate = result['firstDate']
-            s.lastDate = result['lastDate']
-        else:
-            solrlib.getStats(s, self.options)
-        
-        return s
-
+        return keywordsearch.get_statistics(self.options)
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
