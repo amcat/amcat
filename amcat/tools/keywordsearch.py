@@ -49,18 +49,32 @@ def getArticles(form):
 def getTable(form):
     table = table3.DictTable(default=0)
     table.rowNamesRequired = True
-    query = form['query']
-    xAxis = form['xAxis']
-    yAxis = form['yAxis']
     dateInterval = form['dateInterval']
+    group_by = 'mediumid' if form['xAxis'] == 'medium' else form['xAxis']
     filters = filters_from_form(form)
 
-    # ignore yaxis for a second
-    group_by = form['xAxis']
-    if group_by == 'medium': group_by = 'mediumid'
-    for group, n in ES().aggregate_query(query, filters, group_by, dateInterval):
-        table.addValue(str(group), 'total', n)
+    yAxis = form['yAxis']
+    if yAxis == 'total':
+        query = form['query']
+        _add_column(table, 'total', query, filters, group_by, dateInterval)
+    elif yAxis == 'medium':
+        query = form['query']
+        media = ES().list_media(query, filters)
+        for mediumid in sorted(media):
+            filters['mediumid'] = mediumid
+            _add_column(table, str(mediumid), query, filters, group_by, dateInterval)
+    elif yAxis == 'searchTerm':
+        for q in form['queries']:
+            _add_column(table, q.label, q.query, filters, group_by, dateInterval)
+    else:
+        raise Exception('yAxis {yAxis} not recognized'.format(**locals()))
+
     return table
+
+def _add_column(table, column_name, query, filters, group_by, dateInterval):
+    for group, n in ES().aggregate_query(query, filters, group_by, dateInterval):
+        table.addValue(str(group), column_name, n)
+    
 
                                  
 def get_statistics(form):

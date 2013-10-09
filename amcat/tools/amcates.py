@@ -248,6 +248,13 @@ class ES(object):
         result.end_date=get_date(stats['max'])
         return result
 
+    def list_media(self, query=None, filters=None):
+        """
+        List a sequence of medium_ids that exist in the selection
+        """
+        for medium_id, count in self.aggregate_query(query, filters, group_by="mediumid"):
+            yield medium_id
+
 def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
@@ -311,8 +318,8 @@ class TestAmcatES(amcattest.PolicyTestCase):
         
 
     def test_aggregate(self):
-        m1, m2 = [amcattest.create_test_medium() for _ in range(2)]
-        unused = amcattest.create_test_article(text='aap noot mies', medium=m1)
+        m1, m2, m3 = [amcattest.create_test_medium() for _ in range(3)]
+        unused = amcattest.create_test_article(text='aap noot mies', medium=m3)
         a = amcattest.create_test_article(text='aap noot mies', medium=m1, date='2001-01-01')
         b = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date='2001-02-01')
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2, date='2002-01-01')
@@ -336,6 +343,11 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(stats.n, 4)
         self.assertEqual(stats.start_date, datetime(2001,1,1))
         self.assertEqual(stats.end_date, datetime(2002,1,1))
+
+        # media list
+        self.assertEqual(set(ES().list_media(filters=dict(sets=s1.id))),
+                         {m1.id, m2.id})
+        
         
     def test_date_filter(self):
         a = amcattest.create_test_article(text="artikel een", date="2001-01-01")
