@@ -47,7 +47,10 @@ class IndexDaemon(DaemonScript):
 
         log.debug("Refreshing set: {aset.id} : {aset}, deduplicate={aset.needs_deduplication}, indexed={aset.indexed}, dirty={aset.index_dirty}".format(**locals()))
         with transaction.commit_on_success():
-            aset.deduplicate()
+            if aset.needs_deduplication:
+                log.debug("Deduplicating...")
+                aset.deduplicate()
+            log.debug("Refreshing...)"
             aset.refresh_index()
         return aset
 
