@@ -50,7 +50,7 @@ class IndexDaemon(DaemonScript):
             if aset.needs_deduplication:
                 log.debug("Deduplicating...")
                 aset.deduplicate()
-            log.debug("Refreshing...)"
+            log.debug("Refreshing...")
             aset.refresh_index()
         return aset
 

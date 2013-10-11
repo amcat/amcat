@@ -269,13 +269,13 @@ class ArticleSet(AmcatModel):
         """
         compare = self.articles.all() if compare is None else compare
         remove = set(self._deduplicate(compare, columns))
-        if not remove: return
+        if remove: 
+            self.articles.through.objects.filter(article__id__in=remove).delete()
 
-        self.articles.through.objects.filter(article__id__in=remove).delete()
-
-        if set_dirty:
-            self.index_dirty = True
-            self.save()
+            if set_dirty:
+                self.index_dirty = True
+        self.needs_deduplication = False
+        self.save()
 
 
     def save(self, *args, **kargs):
