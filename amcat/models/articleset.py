@@ -231,15 +231,17 @@ class ArticleSet(AmcatModel):
         if self.needs_deduplication: in_progress.append("Deduplication")
         if in_progress:
             return "{} in progress".format(", ".join(in_progress))
-        elif self.indexed:
-            return "Fully indexed"
         else:
-            return "Not indexed"
+            return "Fully indexed"
+
 
     def deduplicate(self):
         from amcat.scripts.maintenance import deduplicate
         #TODO: the deduplicate code should go in here!
-        return deduplicate.DeduplicateScript(articleset=self.id).run()
+        result = deduplicate.DeduplicateScript(articleset=self.id).run()
+        self.needs_deduplication = False
+        self.save()
+        return result
 
     def save(self, *args, **kargs):
         new = not self.pk
