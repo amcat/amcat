@@ -32,8 +32,6 @@ from amcat.models import ArticleSetArticle, Article
 from elasticsearch import Elasticsearch
 from elasticsearch.client import indices, cluster
 from django.conf import settings
-from elasticutils import S # used for build_query
-
 
 def _clean(s):
     if s: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
