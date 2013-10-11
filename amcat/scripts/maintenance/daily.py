@@ -21,81 +21,15 @@
 Script to be run daily for data input (scraping, preprocessing etc.
 """
 
-from datetime import date, timedelta
-
+import datetime
+from django import forms
 import logging;log = logging.getLogger(__name__)
 
 from amcat.scraping.controller import RobustController
-
-from django import forms
-
 from amcat.scripts.script import Script
-
-from amcat.scraping.controller import scrape_logged
-from amcat.models.scraper import get_scrapers
 from amcat.models.project import Project    
 from amcat.models.articleset import ArticleSet
-
-from amcat.tools import toolkit, sendmail
-
-from amcat.tools.table import table3
-from amcat.tools.table.tableoutput import table2html
-
-MAIL_HTML = """<h3>Report for daily scraping on {datestr}</h3>
-
-<p>The following scrapers were run:</p>
-{table}
-
-<p>For log details, ssh to amcat-dev.labs.vu.nl, then open /home/amcat/log/daily_{date.year:04d}-{date.month:02d}-{date.day:02d}.txt</p>
-
-<p>For a complete overview of last week's results, navigate to http://www.amcat-production.labs.vu.nl/navigator/scrapers</p>
-
-"""
-
-
-MAIL_ASCII = MAIL_HTML
-for tag in ["h3", "p", "pre"]:
-    MAIL_ASCII = MAIL_ASCII.replace("<%s>"%tag, "").replace("</%s>"%tag, "")
-    MAIL_ASCII = unicode(MAIL_ASCII)
-
-EMAIL = "amcat-scraping@googlegroups.com"
-
-from amcat.tools.sendmail import sendmail
-
-def make_table(count):
-    from amcat.tools.table.table3 import DictTable
-    
-    table = DictTable()
-
-    for (scraper, n) in count.items():
-        try:
-            table.addValue(
-                row = scraper.__class__.__name__,
-                col = scraper.options['date'],
-                value = n
-                )
-        except KeyError:
-            pass
-
-    return table
-
-
-def send_email(count, messages, date):
-    
-    table = make_table(count).output(rownames = True)
-
-    n = sum(count.values())
-    succesful = len([1 for (s,n2) in count.items() if n2>0])
-    total = len(count.items())
-
-    datestr = toolkit.writeDate(date.today())
-
-    subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
-    
-    content = MAIL_ASCII.format(**locals())
-
-    sendmail("toon.alfrink@gmail.com", EMAIL, subject, None, content)
-
+from amcat.models.scraper import Scraper
 
 class DailyForm(forms.Form):
     date = forms.DateField()
@@ -105,40 +39,74 @@ class DailyScript(Script):
     options_form = DailyForm
 
     def run(self, _input):
-        date = self.options['date']
-
-        scrapers = list(get_scrapers(date = date, ignore_errors = True))
+        scrapers = list(self.get_scrapers(date = self.options['date']))
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
-
-
-
-        kwargs = {}
-        if self.options['deduplicate']:
-            kwargs['deduplicate'] = True
-
-        scrape_logged(
+        self.scrape(
             RobustController(), 
             scrapers, 
-            **kwargs)
+            self.options['deduplicate'] and True)
 
-        log.info("Sending email...")
-        
-        send_email(count, messages, date)
+    def scrape(self, controller, scrapers, deduplicate = False):
+        """Use the controller to scrape the given scrapers."""
+        general_index_articleset = ArticleSet.objects.get(pk = 2)
+        #CAUTION: destination articleset is hardcoded
+        result = []
+        current = None
+        for a in controller.scrape(scrapers, deduplicate = deduplicate):
+            result.append(a)
+            if a.scraper != current:
+                #new scraper started
+                if a.scraper.module().split(".")[-2].lower().strip() == "newspapers":
+                    #if scraper in newspapers module, add it's result to set 2
+                    log.info("Adding {x} articles of {a.scraper.__class__.__name__} to general index set ({general_index_articleset})".format(x = len(result), **locals()))
+                    general_index_articleset.add_articles(result)
 
-        log.info("Done")
+                result = []
+                current = a.scraper
 
-        
+    def get_scrapers(self, date=None, days_back=7, **options):
+        """
+        Return all daily scrapers as needed for the days_back days prior
+        to the given date for which no articles are recorded. The scrapers
+        are instantiated with the date, the given options, and information
+        from the database
+        """
+        if date is None: date = datetime.date.today()
+        dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
+        for s in Scraper.objects.filter(run_daily=True, active=True):
+            for day in dates:
+                if not self.satisfied(s, day):
+                    try:
+                        s_instance = s.get_scraper(date = day, **options)
+                    except Exception:
+                        log.exception("get_scraper for scraper {s.scraper_id} ({s.label}) failed".format(**locals()))
+                    else:
+                        yield s_instance
+
+    def satisfied(self, scraper, day):
+        """Has the scraper successfully run for the given date?"""
+        n_scraped = scraper.n_scraped_articles(from_date = day, to_date = day)
+        if not n_scraped:
+            return False #no articles
+        elif scraper.statistics == None:
+            return False #don't know if enough articles, playing it safe
+        elif n_scraped[day] <= scraper.statistics[day.weekday()][0]:
+            return False #not enough articles
+        else:
+            return True
+
+
+from amcat.tools.amcatlogging import AmcatFormatter
+import sys
+
 def setup_logging():
-    from amcat.tools.amcatlogging import AmcatFormatter
-    import sys
     loggers = (logging.getLogger("amcat.scraping"), logging.getLogger(__name__), logging.getLogger("scrapers"))
-    d = date.today()
+    d = datetime.date.today()
     filename = "/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())
     sys.stderr = open(filename, 'a')
     handlers = (logging.FileHandler(filename), logging.StreamHandler())
-
     formatter = AmcatFormatter(date = True)
 
     for handler in handlers:

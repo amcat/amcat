@@ -60,7 +60,7 @@ def doQuery(query, cleaned_data, kargs, additionalFilters=None):
     if not query or query == "()":
         query = "*:*"
 
-    log.info("solr-query: {}, with filters: {}".format(query, filters))
+    log.info("solr-query: {!r}, with filters: {}".format(query, filters))
     solrResponse = solr.SolrConnection('http://localhost:8983/solr').query(query,
                     fq=filters,
                     **kargs)

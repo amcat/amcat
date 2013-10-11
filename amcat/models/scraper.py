@@ -83,33 +83,6 @@ class Scraper(AmcatModel):
         q = q.annotate(models.Count("id"))
         return dict(q)
 
-
-def get_scrapers(date=None, days_back=7, ignore_errors=False, **options):
-    """
-    Return all daily scrapers as needed for the days_back days prior
-    to the given date for which no articles are recorded. The scrapers
-    are instantiated with the date, the given options, and information
-    from the database
-    """
-    if date is None: date = datetime.date.today()
-    dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
-    for s in Scraper.objects.filter(run_daily=True, active=True):
-        scraped = s.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
-        for day in dates:
-            if day not in scraped.keys():
-                scraped[day] = 0
-            if s.statistics == None or scraped[day] <= s.statistics[day.weekday()][0]:
-                if ignore_errors:
-                    try:
-                        s_instance = s.get_scraper(date = day, **options)
-                    except Exception:
-                        log.exception("get_scraper for {s.label} failed".format(**locals()))
-                else:
-                    s_instance = s.get_scraper(date = day, **options)
-
-                yield s_instance
-        
-
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -148,8 +121,3 @@ class TestScrapers(amcattest.PolicyTestCase):
                          {'2010-01-03': 5, '2010-01-01': 4})
 
 
-if __name__ == '__main__':
-    date = datetime.date.today() - datetime.timedelta(days=1)
-    scrapers = get_scrapers(date)
-    for scraper in scrapers:
-        print(scraper.__class__.__name__, scraper.options["date"])

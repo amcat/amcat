@@ -28,7 +28,7 @@ def scraper_ranges(scraper):
     ranges = [(0,0) for x in range(7)]
 
     articleset_id = scraper.articleset_id
-    rows = Article.objects.filter(articlesetarticle__articleset = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id')).filter(date__gte = date.today() - timedelta(days=210)) 
+    rows = Article.objects.filter(articlesets_set = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id')).filter(date__gte = date.today() - timedelta(days=210)) 
     # returns a day and a count for each row
     
     if rows.count() < 21:
@@ -37,7 +37,7 @@ def scraper_ranges(scraper):
     for wkday,rows in enumerate(sort_weekdays(rows)):
         numbers = [row['created_count'] for row in rows]
         med = median(numbers)
-        ranges[wkday] = (med/1.5, med*2)
+        ranges[wkday] = (med/1.5, med*1.5)
         
     #if a scraper isn't always guaranteed to return anything, the lower range is set to 0
     for r in ranges:
@@ -50,8 +50,7 @@ def sort_weekdays(rows):
     days = [[] for L in range(7)] #[[]] * 7 provides 7 of the same list, so don't edit
     for row in rows:
         wkday = row['date'].weekday()
-        days[wkday].append(row)
-        
+        days[wkday].append(row)        
     return days
         
 def median(numbers):
@@ -65,14 +64,13 @@ def median(numbers):
         pointer = int(L*(2.0/4.0))
         return numbers[pointer]
 
-def generate_expected_articles():
+def set_scraper_stats():
     for scraper in Scraper.objects.all():
         try:
             ranges = scraper_ranges(scraper)
         except ValueError:
             continue
-        _json = json.dumps(ranges)
-        scraper.statistics = _json
+        scraper.statistics = ranges
         log.info("{scraper}: {scraper.statistics}".format(**locals()))
         scraper.save()
 
@@ -80,8 +78,8 @@ def generate_expected_articles():
 
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
-    amcatlogging.info_module("amcat.scripts.maintenance.generate_expected_articles")
-    generate_expected_articles()
+    amcatlogging.info_module("amcat.scripts.maintenance.set_scraper_stats")
+    set_scraper_stats()
         
 
     

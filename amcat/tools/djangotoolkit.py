@@ -24,7 +24,9 @@ Useful functions for dealing with django (models)x
 from __future__ import unicode_literals, print_function, absolute_import
 
 from contextlib import contextmanager
-import collections, re, time, StringIO, simplejson
+import collections, re, time
+try: import simplejson as json
+except ImportError: import json
 import logging; LOG = logging.getLogger(__name__)
 
 from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
@@ -218,16 +220,11 @@ class JsonField(models.Field):
         return self.get_prep_value(self._get_val_from_obj(obj))
     def get_prep_value(self, value):
         if value:
-            stream = StringIO.StringIO()
-            simplejson.dump(value, stream, cls=DjangoJSONEncoder)
-            value = stream.getvalue()
-            stream.close()
-            return value
+            return json.dumps(value)
         return None
     def to_python(self, value):
         if isinstance(value, (str, unicode)):
-            value = StringIO.StringIO(value)
-            return simplejson.load(value)
+            return json.loads(value)
         return value
 
 

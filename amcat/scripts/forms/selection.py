@@ -32,6 +32,7 @@ from amcat.forms.forms import order_fields
 from amcat.tools.toolkit import to_datetime
 from amcat.tools.djangotoolkit import db_supports_distinct_on
 
+
 log = logging.getLogger(__name__)
 
 DATETYPES = {
@@ -59,9 +60,9 @@ class SearchQuery(object):
     an optional label
     """
     def __init__(self, query, label=None):
-        self.query = query
-        self.declared_label = label
-        self.label = label or query
+        self.query = stripAccents(query)
+        self.declared_label = stripAccents(label)
+        self.label = self.declared_label or self.query
 
 def _get_label_delimiter(query, label_delimiters):
     for label_delimiter in label_delimiters:
@@ -73,16 +74,20 @@ def parse_query(query, label_delimiters=("#", "\t")):
     Returns SearchQuery object, parsed from string `q`
     @raises: ValidationError if `q` is not valid query
     """
+    query = query.strip()
     label_delimiter = _get_label_delimiter(query, label_delimiters)
 
     if label_delimiter is not None:
-        lbl, query = query.split(label_delimiter, 1)
+        lbl, q = re.split("{label_delimiter}+".format(**locals()), query, 1)
+        #lbl, query = query.split(label_delimiter, 1)
 
         if not (0 < len(lbl) <= 20):
-            raise ValidationError("Invalid label (after the {label_delimiter})".format(**locals()), code="invalid")
+            raise ValidationError("Invalid label (after the {label_delimiter}). Query was: {query!r}"
+                                  .format(**locals()), code="invalid")
         if not len(query):
-            raise ValidationError("Invalid label (before the {label_delimiter})".format(**locals()), code="invalid")
-        return SearchQuery(query.strip(), label=lbl.strip())
+            raise ValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
+                                  .format(**locals()), code="invalid")
+        return SearchQuery(q.strip(), label=lbl.strip())
 
     return SearchQuery(query)
 
@@ -217,7 +222,9 @@ class SelectionForm(forms.Form):
         self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook'].queryset = codebooks
         self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
+
         distinct_args = ["id"] if db_supports_distinct_on() else []
+
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
             Language.objects.filter(labels__code__codebook_codes__codebook__in=codebooks).distinct(*distinct_args)
         )
@@ -307,7 +314,12 @@ class SelectionForm(forms.Form):
         queries = [parse_query(q) for q in query.split("\n") if q.strip()]
         self._queries = self._get_queries(queries)
 
-        return "\n".join(q.query for q in self.queries)
+        if len(queries) > 1:
+            return "\n".join("({q.query})".format(**locals()) for q in queries)
+        elif queries:
+            return queries[0].query
+        else:
+            return ''
 
     def clean_datetype(self):
         datetype = self.cleaned_data["datetype"]
@@ -398,7 +410,7 @@ class SelectionForm(forms.Form):
         try:
             cleaned_data["queries"] = list(self.queries)
         except TypeError:
-            log.debug("Parsing query failed. Query was: {}".format(self.data['query']))
+            log.debug("Parsing query failed. Query was: {!r}".format(self.data['query']))
 
         cleaned_data['projects'] = [self.project.id]
 
@@ -606,5 +618,16 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         # Test refering to previously defined label
         p, _, form = _form(query="lbl#foo\n<lbl>".format(root.id))
         self.assertTrue(form.is_valid())
-        self.assertEquals("foo\nfoo", form.keyword_query)
+        self.assertEquals("(foo)\n(foo)", form.solr_query)
 
+        # test initial tabs and accents
+
+        p, c, form = self.get_form(query=u"\t\t\tBl\u00e2\tBalk\u00ebnende")
+        self.assertTrue(form.is_valid())
+        self.assertEquals(len(list(form.queries)), 1)
+        self.assertEquals(next(form.queries).declared_label, "Bla")
+        self.assertEquals(next(form.queries).query, "Balkenende")
+
+        p, c, form = self.get_form(query=u"piet NOT jan\nbla#jan NOT piet")
+        self.assertTrue(form.is_valid())
+        self.assertEquals(form.cleaned_data['query'], "(piet NOT jan)\n(jan NOT piet)")
