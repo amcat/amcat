@@ -135,59 +135,12 @@ class ArticleSet(AmcatModel):
         if self.indexed is None and self.project_id is not None:
             self.indexed = self.project.index_default
 
-    def add_to_mediums_cache(self, mediums):
-        """
-        Adds given mediums to cache.
-
-        @rtype : NoneType
-        @param mediums: mediums to be added
-        @type mediums: QuerySet | Medium | iterable of Mediums | iterable of Medium ids
-        """
-        key = cache.make_key(self._cache_key)
-        ids = tuple(to_medium_ids(mediums))
-
-        # Check whether we're running memcached
-        client = cache._cache
-        if not isinstance(client, memcache.Client):
-            raise ImproperlyConfigured("To guarantee thread-safety, we need memcached as caching backend.")
-
-        # Enable cas (disabled by default..)
-        client.cache_cas = True
-
-        # Apply compare and set pattern to prevent race conditions
-        while True:
-            _ids = client.gets(key) or ()
-            if client.cas(key, tuple(set(_ids + ids))):
-                return set(_ids + ids)
-
-    def clear_medium_cache(self):
-        cache.set(self._cache_key, None)
-
-    def cache_mediums(self):
-        """
-        Warm cache mediums for this articleset. Since we can't realistically count the amount
-        of articles for each medium, we do not support automatic cache invalidation. This
-        means that get_mediums() can return false positives (but never false negatives).
-
-        @rtype: iterable with added medium id's
-        """
-        return self.add_to_mediums_cache(self._get_medium_ids())
-
-    def _get_medium_ids(self):
-        """
-        Returns medium ids used in this articleset, but does not uses cache. May
-        return duplicates.
-        """
-        return tuple(self.articles.all().values_list("medium__id", flat=True))
-
     def get_medium_ids(self):
         """
-        Returns medium ids used in this articleset. Uses cache if enabled.
+        Returns medium ids used in this articleset from the index
         """
-        if not AmCAT.mediums_cache_enabled():
-            log.warning("Medium cache not enabled. This function might be slow.".format(**locals()))
-            mediums_ids = self._get_medium_ids()
-        return cache.get(self._cache_key, ())
+        from amcat.tools.amcates import ES
+        return ES().list_media(filters=dict(sets=self.id))
 
     def get_mediums(self):
         """
@@ -196,7 +149,10 @@ class ArticleSet(AmcatModel):
         @type return: QuerySet
         @param return: Mediums linked to this project
         """
-        return Medium.objects.filter(id__in=self.get_medium_ids())
+        print(">>>>", list(self.get_medium_ids()))
+        result =  Medium.objects.filter(id__in=self.get_medium_ids())
+        print(">>>>", result)
+        return result
 
     @property
     def _cache_key(self):
@@ -207,7 +163,7 @@ class ArticleSet(AmcatModel):
         """Add the given articles to this article set"""
         return self.add_articles(articles)
 
-    def add_articles(self, articles, set_dirty=True, deduplicate=False, cache_mediums=True):
+    def add_articles(self, articles, set_dirty=True, deduplicate=False):
         """
         Add the given articles to this article set
         @param set_dirty: Set the index_dirty state of this set? (default=True)
@@ -226,9 +182,6 @@ class ArticleSet(AmcatModel):
         )
 
         to_add = Article.objects.filter(id__in=to_add)
-
-        if cache_mediums:
-            self.add_to_mediums_cache(to_add.values_list("medium__id", flat=True))
 
         if deduplicate:
             self.deduplicate(compare=to_add, set_dirty=set_dirty)
@@ -362,6 +315,15 @@ ArticleSetArticle = ArticleSet.articles.through
 from amcat.tools import amcattest
 
 class TestArticleSet(amcattest.PolicyTestCase):
+    @classmethod
+    def setUpClass(cls):
+        from django.conf import settings
+        from amcat.tools import amcates
+        cls.old_index = settings.ES_INDEX
+        settings.ES_INDEX += "__unittest"
+        amcates.ES().delete_index()
+        amcates.ES().create_index()
+        
     def test_create(self):
         """Can we create a set with some articles and retrieve the articles?"""       
         s = amcattest.create_test_set()
@@ -379,7 +341,9 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s.add_articles(arts)
         self.assertEqual(set(arts), set(s.articles.all()))
 
+        
         # Are mediums cached?
+        s.refresh_index()
         self.assertEqual(set(s.get_mediums()), {a.medium for a in arts})
 
         
@@ -396,50 +360,20 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s.refresh_index()
         self.assertEqual(s.index_dirty, False)
 
-    def test_cache_mediums(self):
-        from django.core.cache import cache
-        cache.clear()
-        AmCAT.enable_mediums_cache()
-
-        # Does cache backend work in test environment?
-        aset = amcattest.create_test_set(0)
-        arts = amcattest.create_test_set(10).articles.all()
-
-        cache.set("TEST_KEY", 1)
-        self.assertEqual(cache.get("TEST_KEY"), 1)
-
-        # Test whether cache is really used
-        self.assertEquals([], list(aset.get_mediums()))
-        aset.add_to_mediums_cache(arts[0].medium)
-        self.assertEquals({arts[0].medium}, set(aset.get_mediums()))
-        aset.add_articles(arts)
-        self.assertEquals({a.medium for a in arts}, set(aset.get_mediums()))
-
-
-    def test_add_to_mediums_cache(self):
+    def test_get_mediums(self):
         from django.core.cache import cache
         cache.clear()
         AmCAT.enable_mediums_cache()
 
         aset = amcattest.create_test_set(0)
-        Medium.objects.bulk_create([Medium(name="adfqwe" + str(i)) for i in range(50)])
-        mediums = Medium.objects.filter(name__in=["adfqwe" + str(i) for i in range(50)])
-        self.assertEqual(len(mediums), 50)
-
+        media = [amcattest.create_test_medium(name="Test__"+str(i)) for i in range(10)]
+        for m in media:
+            aset.add(amcattest.create_test_article(medium=m))
+        aset.refresh_index()
+            
         # Test if medium really added
-        aset.add_to_mediums_cache(mediums[0])
-        self.assertEqual(set(aset.get_mediums()), {mediums[0],})
-
-        # Test concurrency
-        import multiprocessing.dummy
-        p = multiprocessing.dummy.Pool(10)
-        p.map(aset.add_to_mediums_cache, mediums)
-        self.assertEqual(set(aset.get_mediums()), set(mediums))
-
-        # Test adding multiple at once
-        aset = amcattest.create_test_set()
-        aset.add_to_mediums_cache(mediums[0:2])
-        self.assertEqual(set(aset.get_mediums()), set(mediums[0:2]))
+        self.assertEqual(set(aset.get_mediums()), set(media))
+        
 
     def test_deduplicate(self):
         # add_articles should not default to removing duplicates

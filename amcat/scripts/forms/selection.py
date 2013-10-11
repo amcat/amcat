@@ -246,9 +246,7 @@ class SelectionForm(forms.Form):
         return data
 
     def _get_mediums(self):
-        if AmCAT.mediums_cache_enabled():
-            return self.project.get_mediums()
-        return Medium.objects.all()
+        return self.project.get_mediums()
 
     def _get_queries(self, unresolved_queries):
         if self._queries is not None: self._queries
@@ -442,12 +440,17 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         cache.clear()
 
         set1 = amcattest.create_test_set(1)
-
-        p, c, form = self.get_form()
-        self.assertEqual({set1.articles.all()[0].medium}, set(form.fields['mediums'].queryset))
-        AmCAT.enable_mediums_cache()
+        # should not have any media
         p, c, form = self.get_form()
         self.assertEqual(set(), set(form.fields['mediums'].queryset))
+
+        a = amcattest.create_test_article()
+        set1.add(a)
+        set1.refresh_index()
+        # should now have a.medium
+        p, c, form = self.get_form()
+        self.assertEqual({a.medium}, set(form.fields['mediums'].queryset))
+        
 
 
     def test_get_label_delimiter(self):
