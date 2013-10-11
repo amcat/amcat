@@ -325,7 +325,7 @@ def unlink_articleset(request, project, aset):
 @check(ArticleSet, args='id')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid', action='update')
 def refresh_articleset(request, project, aset):
-    aset.reset_index(full_refresh=True)
+    aset.refresh_index(full_refresh=True)
     return redirect(reverse("articleset", args=[project.id, aset.id]))
 
 

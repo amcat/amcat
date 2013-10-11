@@ -31,6 +31,7 @@ from amcat.tools.toolkit import multidict, splitlist
 from amcat.models import ArticleSetArticle, Article
 from elasticsearch import Elasticsearch
 from elasticsearch.client import indices, cluster
+from elasticsearch.serializer import JSONSerializer
 from django.conf import settings
 
 def _clean(s):
@@ -102,11 +103,12 @@ class ES(object):
         for batch in splitlist(article_ids, itemsperbatch=1000):
             sets = multidict((aa.article_id, aa.articleset_id)
                              for aa in ArticleSetArticle.objects.filter(article__in=batch))
-
+            bodies = []
             for a in Article.objects.filter(pk__in=batch):
                 doc = _get_article_dict(a)
                 doc['sets'] = list(sets.get(a.id, []))
-                self.es.index(index=self.index, doc_type=ARTICLE_DOCTYPE, id=a.id, body=doc)
+                bodies.append(doc)
+            self.bulk_index(bodies)
         self.flush()
 
 
@@ -175,7 +177,15 @@ class ES(object):
         if not aids: return
         script = 'if (!(ctx._source.sets contains set)) {ctx._source.sets += set}'
         self.bulk_update(aids, script, params={'set' : setid})
-    
+
+    def bulk_index(self, bodies):
+        serialize = JSONSerializer().dumps
+        bulk = []
+        for body in bodies:
+            bulk.append(serialize(dict(index={'_id' : body['id']})))
+            bulk.append(serialize(body))
+        r = self.es.bulk(body=bulk, index=self.index, doc_type=ARTICLE_DOCTYPE)
+        
     def bulk_update(self, aids, script, params):
         payload = json.dumps(dict(script=script, params=params))
         for batch in splitlist(aids, itemsperbatch=100):
@@ -185,8 +195,6 @@ class ES(object):
                 bulk.append(payload)
             bulk = "\n".join(bulk) + "\n"
             r = self.es.bulk(body=bulk, index=self.index, doc_type=ARTICLE_DOCTYPE)
-            #if r.status_code != 200:
-            #    raise Exception(r.text)
         
     def refresh_articleset_index(self, aset, full_refresh=False):
         """
@@ -405,11 +413,12 @@ class TestAmcatES(amcattest.PolicyTestCase):
         
     def test_index(self):
         import datetime
-        aid = amcattest.create_test_article(text='test', headline='test_headline', date='2010-01-01').id
+        aid = amcattest.create_test_article(text='test\n\n\tweede alinea', headline='test headline;\nmet enter', date='2010-01-01').id
         db_a = Article.objects.get(id=aid)
         ES().add_articles([aid])
         a = ES().get_article(aid)
         self.assertEqual(a['body'], db_a.text)
+        self.assertEqual(a['headline'], db_a.headline)
         self.assertEqual(datetime.datetime.strptime(a['date'], "%Y-%m-%dT%H:%M:%S"), db_a.date)
 
     def test_query(self):
