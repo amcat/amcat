@@ -30,7 +30,7 @@ from datetime import datetime
 from amcat.tools.toolkit import multidict, splitlist
 from amcat.models import ArticleSetArticle, Article
 from elasticsearch import Elasticsearch
-from elasticsearch.client import indices
+from elasticsearch.client import indices, cluster
 from django.conf import settings
 from elasticutils import S # used for build_query
 
@@ -80,9 +80,23 @@ class ES(object):
             raise
         
     def create_index(self):
-            indices.IndicesClient(self.es).create(self.index)
+        indices.IndicesClient(self.es).create(self.index)
             
-        
+
+
+    def check_index(self):
+        """
+        Check whether the server is up and the index exists.
+        If the server is down, raise an exception.
+        If the index does not exist, try to create it.
+        """
+        if not self.es.ping():
+            raise Exception("Elastic server cannot be reached")
+        if not indices.IndicesClient(self.es).exists(self.index):
+            log.info("Index {self.index} does not exist, creating".format(**locals()))
+            self.create_index()
+        x = cluster.ClusterClient(self.es).health(self.index, wait_for_status='yellow')
+
     def add_articles(self, article_ids):
         """
         Add the given article_ids to the index
@@ -97,6 +111,8 @@ class ES(object):
                 self.es.index(index=self.index, doc_type=ARTICLE_DOCTYPE, id=a.id, body=doc)
         self.flush()
 
+
+        
     def get_article(self, article_id):
         """
         Get a single article from the index
@@ -151,12 +167,14 @@ class ES(object):
             
     def remove_from_set(self, setid, aids):
         """Remove the given articles from the given set"""
+        if not aids: return
         script = 'ctx._source.sets = ($ in ctx._source.sets if $ != set)'
         self.bulk_update(aids, script, params={'set' : setid})
         self.flush()
 
     def add_to_set(self, setid, aids):
         """Add the given articles to the given set"""
+        if not aids: return
         script = 'if (!(ctx._source.sets contains set)) {ctx._source.sets += set}'
         self.bulk_update(aids, script, params={'set' : setid})
     
@@ -176,37 +194,40 @@ class ES(object):
         """
         Make sure the given article set is correctly stored in the index
         """
-
-        log.debug("Getting SOLR ids")
-        solr_ids = set(self.query_ids(filters=dict(sets=aset.id)))
+        self.check_index() # make sure index exists and is at least 'yellow'
+        
+        log.debug("Getting SOLR ids from set")
+        solr_set_ids = set(self.query_ids(filters=dict(sets=aset.id)))
         log.debug("Getting DB ids")
-        db_ids = aset._get_article_ids() if aset.indexed else set()
+        db_ids = aset._get_article_ids()
+        log.debug("Getting SOLR ids")
+        solr_ids = set(self.in_index(db_ids))
 
-        to_remove = solr_ids - db_ids
-        to_add = db_ids if full_refresh else  db_ids - solr_ids
+        to_remove = solr_set_ids - db_ids
+        if full_refresh:
+            to_add_docs = db_ids
+            to_add_set = set()
+        else:
+            to_add_docs = db_ids - solr_ids
+            to_add_set = (db_ids & solr_ids) - solr_set_ids
 
-        log.warn("Refreshing index, full_refresh={full_refresh}, |solr_ids|={nsolr}, |db_ids|={ndb}, "
-                 "|to_add|={nta}, |to_remove|={ntr}"
-                 .format(nsolr=len(solr_ids), ndb=len(db_ids), nta=len(to_add), ntr=len(to_remove),**locals()))
+        log.warn("Refreshing index, full_refresh={full_refresh},"
+                 "|solr_set_ids|={nsolrset}, |db_set_ids|={ndb}, |solr_ids|={nsolr} "
+                 "|to_add| = {nta}, |to_add_set|={ntas}, |to_remove_set|={ntr}"
+                 .format(nsolr=len(solr_ids), nsolrset=len(solr_set_ids), ndb=len(db_ids),
+                         nta=len(to_add_docs), ntas=len(to_add_set), ntr=len(to_remove),**locals()))
 
-        for i, batch in enumerate(splitlist(to_remove)):
+        for i, batch in enumerate(splitlist(to_remove, itemsperbatch=1000)):
             self.remove_from_set(aset.id, batch)
             log.debug("Removed batch {i}".format(**locals()))
-        for i, batch in enumerate(splitlist(to_add, itemsperbatch=1000)):
+        for i, batch in enumerate(splitlist(to_add_set, itemsperbatch=1000)):
+            self.add_to_set(aset.id, batch)
+            log.debug("Added batch {i} to set".format(**locals()))
+        for i, batch in enumerate(splitlist(to_add_docs, itemsperbatch=1000)):
             self.add_articles(batch)
-            log.debug("Added batch {i}".format(**locals()))
+            log.debug("Added batch {i} to index".format(**locals()))
 
-    def check_index(self):
-        """
-        Check whether the server is up and the index exists.
-        If the server is down, raise an exception.
-        If the index does not exist, try to create it.
-        """
-        if not self.es.ping():
-            raise Exception("Elastic server cannot be reached")
-        if not indices.IndicesClient(self.es).exists(self.index):
-            log.info("Index {self.index} does not exist, creating".format(**locals()))
-            indices.IndicesClient(self.es).create(self.index)
+        self.flush()
 
 
     def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month'):
@@ -255,6 +276,19 @@ class ES(object):
         for medium_id, count in self.aggregate_query(query, filters, group_by="mediumid"):
             yield medium_id
 
+    def in_index(self, ids):
+        """
+        Check whether the given ids are already indexed.
+        @return: a sequence of ids that are in the index
+        """
+        if not isinstance(ids, list): ids = list(ids)
+        log.info("Checking existence of {nids} documents".format(nids=len(ids)))
+        if not ids: return
+        result = self.es.mget(index=self.index, doc_type=ARTICLE_DOCTYPE, body={"ids": ids}, fields=[])
+        for doc in result['docs']:
+            if doc['exists']: yield int(doc['_id'])
+        
+            
 def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
@@ -358,12 +392,12 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s2 = amcattest.create_test_set(articles=[a,b])
         ES().add_articles([a.id,b.id,c.id])
 
-        self.assertEqual(set(ES().query_ids(filters=dict(start_date='2001-06-01'))), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s1.id, start_date='2001-06-01'))), {b.id, c.id})
         # start is inclusive
-        self.assertEqual(set(ES().query_ids(filters=dict(start_date='2002-01-01', end_date="2002-06-01"))),
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s1.id, start_date='2002-01-01', end_date="2002-06-01"))),
                          {b.id})
         # end is exclusive
-        self.assertEqual(set(ES().query_ids(filters=dict(start_date='2001-01-01', end_date="2003-01-01"))),
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s1.id, start_date='2001-01-01', end_date="2003-01-01"))),
                          {a.id, b.id})
 
         # combining filters works
@@ -381,11 +415,12 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(datetime.datetime.strptime(a['date'], "%Y-%m-%dT%H:%M:%S"), db_a.date)
 
     def test_query(self):
+        ES().delete_index()
         a = amcattest.create_test_article(headline="bla", text="artikel artikel een", date="2001-01-01")
         ES().add_articles([a.id])
-
         
         es_a, = ES().query("een", fields=["date", "headline"])
+        
         self.assertEqual(es_a.score, 1)
         self.assertEqual(es_a.headline, "bla")
         self.assertEqual(es_a.id, a.id)
@@ -413,9 +448,10 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(set(ES().query_ids("zus AND jet", filters=dict(mediumid=m2.id))), {c.id})
         self.assertEqual(set(ES().query_ids("zus OR jet", filters=dict(mediumid=m2.id))), {b.id, c.id})
         self.assertEqual(set(ES().query_ids('"mies wim"', filters=dict(mediumid=m2.id))), {b.id})
-        self.assertEqual(set(ES().query_ids('"mies wim"~5', filters=dict(sets=s1.id))), {b.id, c.id})
+        self.assertEqual(set(ES().query_ids('"mies wim"~5', filters=dict(mediumid=m2.id))), {b.id, c.id})
 
     def test_complex_phrase_query(self):
+        """Test complex phrase queries. DOES NOT WORK YET"""
         a = amcattest.create_test_article(text='aap noot mies')
         b = amcattest.create_test_article(text='noot mies wim zus')
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet')
@@ -448,16 +484,31 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s.refresh_index()
         self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
 
+        # check adding of existing articles to a new set:
+        s2 = amcattest.create_test_set()
+        s2.add(a)
+        s2.refresh_index()
+        self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s2.id))))
+        # check that removing of articles from a set works and does not affect
+        # other sets
+        s2.remove(a)        
+        s2.refresh_index()
+        self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s2.id))))
+        self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
+        
+        
+        
         s.remove(a)
         self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
         s.refresh_index()
         self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
 
         # test that if not set.indexed, it is not added to solr
-        s = amcattest.create_test_set(indexed=False)
-        s.add(a)
-        s.refresh_index()
-        self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
+        # Remove test since .indexed is deprecated
+        #s = amcattest.create_test_set(indexed=False)
+        #s.add(a)
+        #s.refresh_index()
+        #self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
 
         # test that remove from index works for larger sets
         s = amcattest.create_test_set(indexed=True)
@@ -480,10 +531,20 @@ class TestAmcatES(amcattest.PolicyTestCase):
 
         
     def test_full_refresh(self):
-        "test full refresh, e.g. document content change. DOES NOT WORK YET"
-        query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium.id, **locals())
-        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=arts[1].medium.id))),
-                         set()) # before refresh
+        "test full refresh, e.g. document content change"
+        m1, m2 = [amcattest.create_test_medium() for _ in range(2)]
+        a = amcattest.create_test_article(text='aap noot mies', medium=m1)
+        s = amcattest.create_test_set()
+        s.add(a)
         s.refresh_index()
-        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=arts[1].medium.id))),
-                         {arts[1].id}) # after refresh
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m1.id))), {a.id})
+
+        a.medium = m2
+        a.save()
+        s.refresh_index(full_refresh=False) # a should NOT be reindexed
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m2.id))), set())
+
+        s.refresh_index(full_refresh=True)
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m1.id))), set())
+        self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m2.id))), {a.id})
