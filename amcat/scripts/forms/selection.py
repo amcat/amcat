@@ -29,7 +29,7 @@ from django.core.exceptions import ValidationError
 from amcat.models import Project, ArticleSet, Medium, AmCAT
 from amcat.models import Codebook, Language, Label, Article
 from amcat.forms.forms import order_fields
-from amcat.tools.toolkit import to_datetime
+from amcat.tools.toolkit import to_datetime, stripAccents
 from amcat.tools.djangotoolkit import db_supports_distinct_on
 
 
@@ -618,7 +618,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         # Test refering to previously defined label
         p, _, form = _form(query="lbl#foo\n<lbl>".format(root.id))
         self.assertTrue(form.is_valid())
-        self.assertEquals("(foo)\n(foo)", form.solr_query)
+        self.assertEquals("(foo)\n(foo)", form.keyword_query)
 
         # test initial tabs and accents
 

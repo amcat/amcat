@@ -284,8 +284,12 @@ class ArticleSet(AmcatModel):
     def _deduplicate(self, compare, columns):
         """Yield id's of duplicates in this articleset"""
         md5_query = "MD5(ROW({})::TEXT)".format(",".join(columns))
-        dates = compare.distinct("date").values_list("date", flat=True)
-
+        from amcat.tools.djangotoolkit import db_supports_distinct_on
+        if db_supports_distinct_on():
+            dates = compare.distinct("date").values_list("date", flat=True)
+        else:
+            dates = compare.distinct().values_list("date", flat=True)
+            
         # Checking per date prevents loading whole articlesets at once
         for date in { d.date() for d in dates }:
             date_filter = Q(date__year=date.year, date__month=date.month, date__day=date.day)
