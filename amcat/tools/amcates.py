@@ -288,9 +288,11 @@ class ES(object):
         if not isinstance(ids, list): ids = list(ids)
         log.info("Checking existence of {nids} documents".format(nids=len(ids)))
         if not ids: return
-        result = self.es.mget(index=self.index, doc_type=ARTICLE_DOCTYPE, body={"ids": ids}, fields=[])
-        for doc in result['docs']:
-            if doc['exists']: yield int(doc['_id'])
+        for batch in splitlist(ids, itemsperbatch=10000):
+            result = self.es.mget(index=self.index, doc_type=ARTICLE_DOCTYPE, body={"ids": batch}, fields=[])
+            for doc in result['docs']:
+                if doc['exists']: yield int(doc['_id'])
+
         
             
 def get_date(timestamp):
