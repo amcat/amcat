@@ -37,7 +37,10 @@ class UUIDLogMiddleware(object):
         log.info("Start of request {request.uuid} ({ppid}, {pid}): {url}".format(**locals()), extra={"request":request})
 
     def process_response(self, request, response):
-        log.info("End of request {}".format(request.uuid))
+        try:
+            log.info("End of request {}".format(request.uuid))
+        except:
+            log.exception("Error on logging request end")
         return response
 
 def session_pop(session, key, default=None):
