@@ -13,13 +13,14 @@ env:
   - DJANGO_DB_USER=postgres DJANGO_SETTINGS_MODULE=settings PYLINT=N PYTHONPATH=
 
 before_install:
+ - psql -c 'create database amcat;' -U postgres
+
+install: 
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
  - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.5.deb
  - sudo dpkg -i ./elasticsearch-0.90.5.deb
  - rm ./elasticsearch-0.90.5.deb
-
-install: 
  - pip install -r ./pip_requirements.txt --use-mirrors
 
 script:
