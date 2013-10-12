@@ -149,9 +149,7 @@ class ArticleSet(AmcatModel):
         @type return: QuerySet
         @param return: Mediums linked to this project
         """
-        print(">>>>", list(self.get_medium_ids()))
         result =  Medium.objects.filter(id__in=self.get_medium_ids())
-        print(">>>>", result)
         return result
 
     @property

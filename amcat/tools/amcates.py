@@ -65,8 +65,8 @@ class Result(object):
         return "{}({})".format(type(self).__name__, ", ".join(items))
     
 class ES(object):
-    def __init__(self, index=None):
-        self.es = Elasticsearch()
+    def __init__(self, index=None, **args):
+        self.es = Elasticsearch(**args)
         self.index = settings.ES_INDEX if index is None else index
 
     def flush(self):
@@ -246,8 +246,9 @@ class ES(object):
         if group_by == 'date':
             body['facets']['group'] = {'date_histogram' : {'field' : group_by, 'interval' : date_interval}}
         else:
-            body['facets']['group'] = {'terms' : {'field' : group_by}}
+            body['facets']['group'] = {'terms' : {'size' : 999999, 'field' : group_by}}
         body['facets']['group']['facet_filter'] = filter
+
         result = self.es.search(index=self.index, body=body, size=0)
         if group_by == 'date':
             for row in result['facets']['group']['entries']:
@@ -387,6 +388,21 @@ class TestAmcatES(amcattest.PolicyTestCase):
         # media list
         self.assertEqual(set(ES().list_media(filters=dict(sets=s1.id))),
                          {m1.id, m2.id})
+
+    def test_list_media(self):
+        """Test that list media works for more than 10 media"""
+        media =  [amcattest.create_test_medium() for _ in range(20)]
+        arts = [amcattest.create_test_article(medium=m) for m in media]
+
+
+        s = amcattest.create_test_set(articles=arts[:5])
+        s.refresh_index()
+        self.assertEqual(set(s.get_mediums()), set(media[:5]))
+        
+        s = amcattest.create_test_set(articles=arts)
+        s.refresh_index()
+        self.assertEqual(set(s.get_mediums()), set(media))
+
         
         
     def test_date_filter(self):
