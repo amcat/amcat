@@ -24,12 +24,14 @@ Also aggregation by searchTerm is Solr specific.
 """
 
 from amcat.scripts import script
-from amcat.scripts.tools import solrlib, database
+from amcat.scripts.tools import database
+
 import amcat.scripts.forms
 from django import forms
 from django.db.models import Sum, Count
 from amcat.models.medium import Medium
 from amcat.tools.table import table3
+from amcat.tools import keywordsearch
 from django.db import connections
 
 import datetime
@@ -73,68 +75,15 @@ class AggregationScript(script.Script):
         """ returns a table containing the aggregations"""
         xAxis = self.options['xAxis']
         dateInterval = self.options['dateInterval']
-        if self.bound_form.use_solr == False: # make database query
-            queryset = database.get_queryset(**self.options).distinct()
-            yAxis = self.options['yAxis']
-            if xAxis == 'date':
-                if not dateInterval: raise Exception('Missing date interval')
-                engine = connections.databases['default']["ENGINE"]
-                if engine == 'django.db.backends.postgresql_psycopg2':
-                    dateStrDict = {'day':'YYYY-MM-DD', 'week':'YYYY-WW', 'month':'YYYY-MM', 'quarter':'YYYY-Q', 'year':'YYYY'}
-                    xSql = "to_char(date, '%s')" % dateStrDict[dateInterval]
-                elif engine == 'django.db.backends.sqlite3':
-                    xSql = {'day':"strftime('%Y-%m-%d', date)",
-                            'month':"strftime('%Y-%m', date)",
-                            'year':"strftime('%Y', date)",
-                            'quarter':"strftime('%Y', date) || '-' ||  cast((cast(strftime('%m', date) as integer) + 2) / 3 as string)",
-                            }[dateInterval]
-                else:
-                    raise Exception("Aggregation not supported for engine {engine}".format(**locals()))
-            elif xAxis == 'medium':
-                xSql = 'medium_id'
-            else:
-                raise Exception('unsupported xAxis')
-                
-            if yAxis == 'medium':
-                ySql = 'medium_id'
-            elif yAxis == 'total':
-                ySql = None
-            elif yAxis == 'searchTerm':
-                raise Exception('searchTerm on y-axis is not supported when not doing a keyword search')
-            else:
-                raise Exception('unsupported yAxis')
-                
-            select_data = {"x": xSql}
-            vals = ['x']
-            if ySql:
-                select_data["y"] = ySql
-                vals.append('y')
 
-            # the following line will perform a group by database query
-            data = queryset.extra(select=select_data).values(*vals).annotate(count=Count('id', distinct=True))
-            xDict = {}
-            if xAxis == 'medium':
-                xDict = Medium.objects.in_bulk(set(row['x'] for row in data)) # retrieve the Medium objects
-            yDict = {}
-            if yAxis == 'medium':
-                yDict = Medium.objects.in_bulk(set(row['y'] for row in data)) # retrieve the Medium objects
-            
-            table = table3.DictTable(0) # the start aggregation count is 0
-            table.rowNamesRequired = True # make sure row names are printed
-
-            for row in data:
-                x = row['x']
-                y = row.get('y', 'total')
-                count = row['count']
-                table.addValue(xDict.get(x, x), yDict.get(y, y), count)
-        else:
-            table = solrlib.basicAggregate(self.options)
-
+        table = keywordsearch.getTable(self.options)
+        
         if self.options['relative']:
             table = RelativeTable(table)
             
         if xAxis == 'date':
-            table = FilledOutTable(table, dateInterval=dateInterval)
+            # TODO: fill out on elastic queries
+            #table = FilledOutTable(table, dateInterval=dateInterval)
             table.rowNamesRequired = True # make sure row names are printed
             
         return table

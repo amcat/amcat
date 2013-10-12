@@ -123,8 +123,10 @@ class Project(AmcatModel):
         )
 
     def get_mediums(self):
-        medium_ids = (a.get_medium_ids() for a in self.all_articlesets())
-        return Medium.objects.filter(id__in=set(itertools.chain.from_iterable(medium_ids)))
+        from amcat.tools.amcates import ES
+        sets = [s.id for s in self.all_articlesets()]
+        medium_ids = ES().list_media(filters=dict(sets=sets))
+        return Medium.objects.filter(id__in=medium_ids)
 
     class Meta():
         db_table = 'projects'
@@ -151,6 +153,17 @@ class Project(AmcatModel):
 from amcat.tools import amcattest
 
 class TestProject(amcattest.PolicyTestCase):
+    
+    @classmethod
+    def setUpClass(cls):
+        from django.conf import settings
+        from amcat.tools.amcates import ES
+        cls.old_index = settings.ES_INDEX
+        settings.ES_INDEX += "__unittest"
+        ES().delete_index()
+        ES().create_index()
+
+    
     def test_create(self):
         """Can we create a project and access its attributes?"""
         p = amcattest.create_test_project(name="Test")
@@ -205,13 +218,12 @@ class TestProject(amcattest.PolicyTestCase):
         self.assertEqual(len(p3.get_codingschemas().filter(pk=cs.id)), 0)
 
     def test_get_mediums(self):
-        from django.core.cache import cache
-        cache.clear()
-
         set1 = amcattest.create_test_set(2)
         set2 = amcattest.create_test_set(2, project=set1.project)
         set3 = amcattest.create_test_set(2)
-
+        [s.refresh_index() for s in [set1, set2, set3]]
+        
+        media = set(set1.project.get_mediums())
         self.assertEqual(
             set(set1.project.get_mediums()),
             { a.medium for a in set1.articles.all() } | { a.medium for a in set2.articles.all() }

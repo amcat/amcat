@@ -30,7 +30,8 @@ from amcat.models import Project, ArticleSet, Medium, AmCAT
 from amcat.models import Codebook, Language, Label, Article
 from amcat.forms.forms import order_fields
 from amcat.tools.toolkit import to_datetime, stripAccents
-from amcat.tools import djangotoolkit 
+from amcat.tools.djangotoolkit import db_supports_distinct_on
+
 
 log = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ DAY_DELTA = datetime.timedelta(hours=23, minutes=59, seconds=59, milliseconds=99
 
 class SearchQuery(object):
     """
-    Represents a query object that contains both a (Solr) query and
+    Represents a query object that contains both a query and
     an optional label
     """
     def __init__(self, query, label=None):
@@ -222,10 +223,10 @@ class SelectionForm(forms.Form):
         self.fields['codebook'].queryset = codebooks
         self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
 
-        distinct_arg = ["id"] if djangotoolkit.db_supports_distinct_on() else []
-        
+        distinct_args = ["id"] if db_supports_distinct_on() else []
+
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
-            Language.objects.filter(labels__code__codebook_codes__codebook__in=codebooks).distinct(*distinct_arg)
+            Language.objects.filter(labels__code__codebook_codes__codebook__in=codebooks).distinct(*distinct_args)
         )
 
         if data is not None:
@@ -245,9 +246,7 @@ class SelectionForm(forms.Form):
         return data
 
     def _get_mediums(self):
-        if AmCAT.mediums_cache_enabled():
-            return self.project.get_mediums()
-        return Medium.objects.all()
+        return self.project.get_mediums()
 
     def _get_queries(self, unresolved_queries):
         if self._queries is not None: self._queries
@@ -273,13 +272,13 @@ class SelectionForm(forms.Form):
         return iter(self._queries)
 
     @property
-    def solr_query(self):
+    def keyword_query(self):
         return self.cleaned_data["query"]
 
     @property
-    def use_solr(self):
+    def use_index(self):
         """
-        Should query use solr database?
+        Should query use the index?
         @raises: ValidationError if form not valid
         """
         self.full_clean()
@@ -441,12 +440,17 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         cache.clear()
 
         set1 = amcattest.create_test_set(1)
-
-        p, c, form = self.get_form()
-        self.assertEqual({set1.articles.all()[0].medium}, set(form.fields['mediums'].queryset))
-        AmCAT.enable_mediums_cache()
+        # should not have any media
         p, c, form = self.get_form()
         self.assertEqual(set(), set(form.fields['mediums'].queryset))
+
+        a = amcattest.create_test_article()
+        set1.add(a)
+        set1.refresh_index()
+        # should now have a.medium
+        p, c, form = self.get_form()
+        self.assertEqual({a.medium}, set(form.fields['mediums'].queryset))
+        
 
 
     def test_get_label_delimiter(self):
@@ -532,18 +536,18 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         p, c, form = self.get_form(datetype="before", end_date=now)
         self.assertTrue(form.is_valid())
 
-    def test_use_solr(self):
+    def test_use_index(self):
         p, c, form = self.get_form(query="  Bla   #  Balkenende")
-        self.assertTrue(form.use_solr)
+        self.assertTrue(form.use_index)
 
         p, c, form = self.get_form(query="")
-        self.assertFalse(form.use_solr)
+        self.assertFalse(form.use_index)
 
         p, c, form = self.get_form(query="()")
-        self.assertFalse(form.use_solr)
+        self.assertFalse(form.use_index)
 
         p, c, form = self.get_form(query=" () ")
-        self.assertFalse(form.use_solr)
+        self.assertFalse(form.use_index)
 
     def test_clean_query(self):
         import functools
@@ -579,12 +583,12 @@ class TestSelectionForm(amcattest.PolicyTestCase):
 
         p, _, form = _form(query="<Referral>")
         self.assertTrue(form.is_valid())
-        self.assertTrue("Replacement" in form.solr_query)
+        self.assertTrue("Replacement" in form.keyword_query)
 
         # Shouldn't crash at multiple (same) referals
         p, _, form = _form(query="<Referral>_<Referral>")
         self.assertTrue(form.is_valid())
-        self.assertTrue("Replacement_Replacement" in form.solr_query)
+        self.assertTrue("Replacement_Replacement" in form.keyword_query)
 
         _form = functools.partial(
             _form, codebook_label_language=lan0.id,
@@ -597,16 +601,16 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         # Should be able to handle recursion when defined on label
         p, _, form = _form(query="<{}+>".format(root.get_label(lan0.id)))
         self.assertTrue(form.is_valid())
-        self.assertEquals(3, form.solr_query.count("(")) # Three levels of nesting
+        self.assertEquals(3, form.keyword_query.count("(")) # Three levels of nesting
         for label in ["A", "A2", "A1", "A1b", "A1a"]:
-            self.assertTrue(label in form.solr_query)
+            self.assertTrue(label in form.keyword_query)
 
         # Should be able to handle recursion when defined on id
         p, _, form = _form(query="<{}+>".format(root.id))
         self.assertTrue(form.is_valid())
-        self.assertEquals(3, form.solr_query.count("(")) # Three levels of nesting
+        self.assertEquals(3, form.keyword_query.count("(")) # Three levels of nesting
         for label in ["A", "A2", "A1", "A1b", "A1a"]:
-            self.assertTrue(label in form.solr_query)
+            self.assertTrue(label in form.keyword_query)
 
         # Should raise error when not all nodes have a label in lan0
         a1b = next(c for c in c.get_codes() if c.get_label(lan0.id) == "A1b")
@@ -617,7 +621,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         # Test refering to previously defined label
         p, _, form = _form(query="lbl#foo\n<lbl>".format(root.id))
         self.assertTrue(form.is_valid())
-        self.assertEquals("(foo)\n(foo)", form.solr_query)
+        self.assertEquals("(foo)\n(foo)", form.keyword_query)
 
         # test initial tabs and accents
 

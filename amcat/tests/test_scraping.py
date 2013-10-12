@@ -25,10 +25,10 @@ model.scraper, scraping.scraper, and scraping.controller modules
 """
 
 from amcat.scraping.scraper import DatedScraper, DBScraper
-from amcat.models.scraper import Scraper, get_scrapers
+from amcat.models.scraper import Scraper#, get_scrapers
 from datetime import date
 from amcat.models.article import Article
-from amcat.scraping.controller import SimpleController, ThreadedController, scrape_logged
+from amcat.scraping.controller import SimpleController, ThreadedController#, scrape_logged
 
 import logging; log = logging.getLogger(__name__)
 
@@ -92,7 +92,7 @@ class TestScraping(amcattest.PolicyTestCase):
                                          articleset=amcattest.create_test_set(name='TestArticleSet2'))
         self.project = amcattest.create_test_project(name='scrapetest')
     
-    def test_get_scrapers(self):
+    def doesnotexistanymore_test_get_scrapers(self):
         scrapers = set(get_scrapers(date=date.today(), project=self.project.id))        
         self.assertEqual({s.__class__.__name__ for s in scrapers}, {'TestDatedScraper', 'TestDBScraper'})
 
@@ -104,7 +104,7 @@ class TestScraping(amcattest.PolicyTestCase):
         self.assertEqual(set(self.project.articles.all()), articles)
         self.assertEqual(set("abcd"), _project_headlineset(self.project))
 
-    def test_logged_scraper(self):
+    def doesnotexistanymore_test_logged_scraper(self):
         ds = self.ds.get_scraper(date = date.today(), project=self.project.id)
         dbs = self.dbs.get_scraper(date = date.today(), project=self.project.id)
         scrape_logged(SimpleController(), [ds, dbs])

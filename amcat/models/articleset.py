@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+
 """
 Model module for Article Sets. A Set is a generic collection of articles,
 either created manually or as a result of importing articles or assigning
@@ -134,59 +135,12 @@ class ArticleSet(AmcatModel):
         if self.indexed is None and self.project_id is not None:
             self.indexed = self.project.index_default
 
-    def add_to_mediums_cache(self, mediums):
-        """
-        Adds given mediums to cache.
-
-        @rtype : NoneType
-        @param mediums: mediums to be added
-        @type mediums: QuerySet | Medium | iterable of Mediums | iterable of Medium ids
-        """
-        key = cache.make_key(self._cache_key)
-        ids = tuple(to_medium_ids(mediums))
-
-        # Check whether we're running memcached
-        client = cache._cache
-        if not isinstance(client, memcache.Client):
-            raise ImproperlyConfigured("To guarantee thread-safety, we need memcached as caching backend.")
-
-        # Enable cas (disabled by default..)
-        client.cache_cas = True
-
-        # Apply compare and set pattern to prevent race conditions
-        while True:
-            _ids = client.gets(key) or ()
-            if client.cas(key, tuple(set(_ids + ids))):
-                return set(_ids + ids)
-
-    def clear_medium_cache(self):
-        cache.set(self._cache_key, None)
-
-    def cache_mediums(self):
-        """
-        Warm cache mediums for this articleset. Since we can't realistically count the amount
-        of articles for each medium, we do not support automatic cache invalidation. This
-        means that get_mediums() can return false positives (but never false negatives).
-
-        @rtype: iterable with added medium id's
-        """
-        return self.add_to_mediums_cache(self._get_medium_ids())
-
-    def _get_medium_ids(self):
-        """
-        Returns medium ids used in this articleset, but does not uses cache. May
-        return duplicates.
-        """
-        return tuple(self.articles.all().values_list("medium__id", flat=True))
-
     def get_medium_ids(self):
         """
-        Returns medium ids used in this articleset. Uses cache if enabled.
+        Returns medium ids used in this articleset from the index
         """
-        if not AmCAT.mediums_cache_enabled():
-            log.warning("Medium cache not enabled. This function might be slow.".format(**locals()))
-            mediums_ids = self._get_medium_ids()
-        return cache.get(self._cache_key, ())
+        from amcat.tools.amcates import ES
+        return ES().list_media(filters=dict(sets=self.id))
 
     def get_mediums(self):
         """
@@ -195,7 +149,8 @@ class ArticleSet(AmcatModel):
         @type return: QuerySet
         @param return: Mediums linked to this project
         """
-        return Medium.objects.filter(id__in=self.get_medium_ids())
+        result =  Medium.objects.filter(id__in=self.get_medium_ids())
+        return result
 
     @property
     def _cache_key(self):
@@ -206,7 +161,7 @@ class ArticleSet(AmcatModel):
         """Add the given articles to this article set"""
         return self.add_articles(articles)
 
-    def add_articles(self, articles, set_dirty=True, deduplicate=False, cache_mediums=True):
+    def add_articles(self, articles, set_dirty=True, deduplicate=False):
         """
         Add the given articles to this article set
         @param set_dirty: Set the index_dirty state of this set? (default=True)
@@ -225,9 +180,6 @@ class ArticleSet(AmcatModel):
         )
 
         to_add = Article.objects.filter(id__in=to_add)
-
-        if cache_mediums:
-            self.add_to_mediums_cache(to_add.values_list("medium__id", flat=True))
 
         if deduplicate:
             self.deduplicate(compare=to_add, set_dirty=set_dirty)
@@ -257,56 +209,12 @@ class ArticleSet(AmcatModel):
         cursor.close() # no idea if it's needed, but Martijn told me to do it
         return result
 
-    def _get_article_ids_solr(self, solr):
+    def refresh_index(self, full_refresh=False):
         """
-        Get a list of article ids in this set according to solr. 
-        @param solr: The amcatsolr.Solr object to use
+        Make sure that the index for this set is up to date
         """
-        return solr.query_ids("sets:{self.id}".format(**locals()))
-
-    def reset_index(self, full_refresh=False, solr=None):
-        """
-        Set the index to dirty so it will be refreshed.
-        @param full_refresh: if True, delete all existing information from the set
-        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
-        """
-        # lazy load to prevent import cycle
-        from amcat.tools.amcatsolr import Solr
-        if solr is None: solr = Solr()
-        if full_refresh:
-            solr_ids = self._get_article_ids_solr(solr=solr)
-            for i, batch in enumerate(splitlist(solr_ids)):
-                solr.delete_articles(batch)
-        self.index_dirty=True
-        self.save()
-    
-    def refresh_index(self, solr=None, full_refresh=False):
-        """
-        Make sure that the SOLR index for this set is up to date
-        @param solr: Optional amcatsolr.Solr object to use (e.g. for testing)
-        """
-        # lazy load to prevent import cycle
-        from amcat.tools.amcatsolr import Solr
-        if solr is None: solr = Solr()
-        log.debug("Getting SOLR ids")
-        solr_ids = self._get_article_ids_solr(solr)
-        log.debug("Getting DB ids")
-        db_ids = set(id for (id,) in self.articles.all().values_list("id")) if self.indexed else set()
-        to_remove = solr_ids - db_ids
-        to_add = db_ids if full_refresh else  db_ids - solr_ids
-
-        log.warn("Refreshing index, full_refresh={full_refresh}, |solr_ids|={nsolr}, |db_ids|={ndb}, "
-                 "|to_add|={nta}, |to_remove|={ntr}"
-                  .format(nsolr=len(solr_ids), ndb=len(db_ids), nta=len(to_add), ntr=len(to_remove),**locals()))
-        
-            
-        for i, batch in enumerate(splitlist(to_remove)):
-            solr.delete_articles(batch)
-            log.debug("Removed batch {i}".format(**locals()))
-        for i, batch in enumerate(splitlist(to_add, itemsperbatch=1000)):
-            solr.add_articles(batch)
-            log.debug("Added batch {i}".format(**locals()))
-
+        from amcat.tools.amcates import ES
+        ES().refresh_articleset_index(self, full_refresh=full_refresh)
         self.index_dirty = False
         self.save()
         
@@ -317,10 +225,9 @@ class ArticleSet(AmcatModel):
         if self.needs_deduplication: in_progress.append("Deduplication")
         if in_progress:
             return "{} in progress".format(", ".join(in_progress))
-        elif self.indexed:
-            return "Fully indexed"
         else:
-            return "Not indexed"
+            return "Fully indexed"
+
 
     def fuzzy_deduplicate(self):
         raise NotImplementedError("Please use scripts/actions/deduplicate.py")
@@ -328,8 +235,12 @@ class ArticleSet(AmcatModel):
     def _deduplicate(self, compare, columns):
         """Yield id's of duplicates in this articleset"""
         md5_query = "MD5(ROW({})::TEXT)".format(",".join(columns))
-        dates = compare.distinct("date").values_list("date", flat=True)
-
+        from amcat.tools.djangotoolkit import db_supports_distinct_on
+        if db_supports_distinct_on():
+            dates = compare.distinct("date").values_list("date", flat=True)
+        else:
+            dates = compare.distinct().values_list("date", flat=True)
+            
         # Checking per date prevents loading whole articlesets at once
         for date in { d.date() for d in dates }:
             date_filter = Q(date__year=date.year, date__month=date.month, date__day=date.day)
@@ -356,13 +267,14 @@ class ArticleSet(AmcatModel):
         """
         compare = self.articles.all() if compare is None else compare
         remove = set(self._deduplicate(compare, columns))
-        if not remove: return
+        if remove: 
+            self.articles.through.objects.filter(article__id__in=remove).delete()
 
-        self.articles.through.objects.filter(article__id__in=remove).delete()
+            if set_dirty:
+                self.index_dirty = True
+        self.needs_deduplication = False
+        self.save()
 
-        if set_dirty:
-            self.index_dirty = True
-            self.save()
 
     def save(self, *args, **kargs):
         new = not self.pk
@@ -401,6 +313,15 @@ ArticleSetArticle = ArticleSet.articles.through
 from amcat.tools import amcattest
 
 class TestArticleSet(amcattest.PolicyTestCase):
+    @classmethod
+    def setUpClass(cls):
+        from django.conf import settings
+        from amcat.tools import amcates
+        cls.old_index = settings.ES_INDEX
+        settings.ES_INDEX += "__unittest"
+        amcates.ES().delete_index()
+        amcates.ES().create_index()
+        
     def test_create(self):
         """Can we create a set with some articles and retrieve the articles?"""       
         s = amcattest.create_test_set()
@@ -418,14 +339,14 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s.add_articles(arts)
         self.assertEqual(set(arts), set(s.articles.all()))
 
+        
         # Are mediums cached?
+        s.refresh_index()
         self.assertEqual(set(s.get_mediums()), {a.medium for a in arts})
 
         
     def test_dirty(self):
         """Is the dirty flag set correctly?"""
-        from amcat.tools.amcatsolr import TestDummySolr
-
         p = amcattest.create_test_project(index_default=True)
         s = amcattest.create_test_set(project=p)
         self.assertEqual(s.indexed, True)
@@ -434,109 +355,23 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s.save()
         s.add(amcattest.create_test_article())
         self.assertEqual(s.index_dirty, True)
-        s.refresh_index(TestDummySolr())
+        s.refresh_index()
         self.assertEqual(s.index_dirty, False)
 
-    def clear_solr(self, solr):
-        ids = set(solr.query_ids("*:*", rows=99999))
-        solr.delete_articles(ids)
-
-    def test_refresh_index(self):
-        """Are added/removed articles added/removed from the index?"""
-        if amcattest.skip_slow_tests():
-            return
-
-        from amcat.tools.amcatsolr import TestSolr
-
-        with TestSolr() as solr:
-            self.clear_solr(solr)
-            s = amcattest.create_test_set(indexed=True)
-            a = amcattest.create_test_article()
-            
-            s.add(a)
-            self.assertEqual(set(), s._get_article_ids_solr(solr))
-            s.refresh_index(solr)
-            self.assertEqual({a.id}, s._get_article_ids_solr(solr))
-
-            s.remove(a)
-            self.assertEqual({a.id}, s._get_article_ids_solr(solr))
-            s.refresh_index(solr)
-            self.assertEqual(set(), s._get_article_ids_solr(solr))
-
-            # test that if not set.indexed, it is not added to solr
-            s = amcattest.create_test_set(indexed=False)
-            s.add(a)
-            s.refresh_index(solr)
-            self.assertEqual(set(), s._get_article_ids_solr(solr))
-
-            # test that remove from index works for larger sets
-            s = amcattest.create_test_set(indexed=True)
-            arts = [amcattest.create_test_article(medium=a.medium) for i in range(20)]
-            s.add(*arts)
-            
-            s.refresh_index(solr)
-            solr_ids = s._get_article_ids_solr(solr)
-            self.assertEqual(set(solr_ids), {a.id for a in arts})
-
-            s.remove(arts[0])
-            s.remove(arts[-1])
-            s.refresh_index(solr)
-            solr_ids = s._get_article_ids_solr(solr)
-            self.assertEqual(set(solr_ids), {a.id for a in arts[1:-1]})
-
-            # test that changing an article's properties can be reindexed
-            arts[1].medium = amcattest.create_test_medium()
-            arts[1].save()
-
-            query = "sets:{s.id} AND mediumid:{m}".format(m=arts[1].medium.id, **locals())
-            self.assertEqual(set(solr.query_ids(query)), set()) # before refresh
-            s.refresh_index(solr, full_refresh=True)
-            self.assertEqual(set(solr.query_ids(query)), {arts[1].id}) # after refresh
-
-    def test_cache_mediums(self):
-        from django.core.cache import cache
-        cache.clear()
-        AmCAT.enable_mediums_cache()
-
-        # Does cache backend work in test environment?
-        aset = amcattest.create_test_set(0)
-        arts = amcattest.create_test_set(10).articles.all()
-
-        cache.set("TEST_KEY", 1)
-        self.assertEqual(cache.get("TEST_KEY"), 1)
-
-        # Test whether cache is really used
-        self.assertEquals([], list(aset.get_mediums()))
-        aset.add_to_mediums_cache(arts[0].medium)
-        self.assertEquals({arts[0].medium}, set(aset.get_mediums()))
-        aset.add_articles(arts)
-        self.assertEquals({a.medium for a in arts}, set(aset.get_mediums()))
-
-
-    def test_add_to_mediums_cache(self):
+    def test_get_mediums(self):
         from django.core.cache import cache
         cache.clear()
         AmCAT.enable_mediums_cache()
 
         aset = amcattest.create_test_set(0)
-        Medium.objects.bulk_create([Medium(name="adfqwe" + str(i)) for i in range(50)])
-        mediums = Medium.objects.filter(name__in=["adfqwe" + str(i) for i in range(50)])
-        self.assertEqual(len(mediums), 50)
-
+        media = [amcattest.create_test_medium(name="Test__"+str(i)) for i in range(10)]
+        for m in media:
+            aset.add(amcattest.create_test_article(medium=m))
+        aset.refresh_index()
+            
         # Test if medium really added
-        aset.add_to_mediums_cache(mediums[0])
-        self.assertEqual(set(aset.get_mediums()), {mediums[0],})
-
-        # Test concurrency
-        import multiprocessing.dummy
-        p = multiprocessing.dummy.Pool(10)
-        p.map(aset.add_to_mediums_cache, mediums)
-        self.assertEqual(set(aset.get_mediums()), set(mediums))
-
-        # Test adding multiple at once
-        aset = amcattest.create_test_set()
-        aset.add_to_mediums_cache(mediums[0:2])
-        self.assertEqual(set(aset.get_mediums()), set(mediums[0:2]))
+        self.assertEqual(set(aset.get_mediums()), set(media))
+        
 
     def test_deduplicate(self):
         # add_articles should not default to removing duplicates
