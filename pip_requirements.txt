@@ -1,0 +1,8 @@
+raven
+django-boolean-sum
+jsonrpclib
+rtf2xml
+sh
+djangorestframework
+django_compressor
+django_filter
