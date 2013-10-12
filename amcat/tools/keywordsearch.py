@@ -1,3 +1,6 @@
+#TODO: NOTE: This module replaces the old 'solrlib', but I feel it can be removed
+# entirely. The 'getTable' / 'getArticles' can move either to their respective
+# webscripts, or to the REST API. The form handling should just go to the form.
 
 from django.db import models
 import collections
