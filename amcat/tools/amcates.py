@@ -96,22 +96,20 @@ class ES(object):
             self.create_index()
         x = cluster.ClusterClient(self.es).health(self.index, wait_for_status='yellow')
 
-    def add_articles(self, article_ids):
+    def add_articles(self, article_ids, flush=True):
         """
         Add the given article_ids to the index
         """
-        for batch in splitlist(article_ids, itemsperbatch=1000):
-            sets = multidict((aa.article_id, aa.articleset_id)
-                             for aa in ArticleSetArticle.objects.filter(article__in=batch))
-            bodies = []
-            for a in Article.objects.filter(pk__in=batch):
-                doc = _get_article_dict(a)
-                doc['sets'] = list(sets.get(a.id, []))
-                bodies.append(doc)
-            self.bulk_index(bodies)
-        self.flush()
-
-
+        sets = multidict((aa.article_id, aa.articleset_id)
+                         for aa in ArticleSetArticle.objects.filter(article__in=article_ids))
+        bodies = []
+        for a in Article.objects.filter(pk__in=article_ids):
+            doc = _get_article_dict(a)
+            doc['sets'] = list(sets.get(a.id, []))
+            bodies.append(doc)
+        self.bulk_index(bodies)
+        if flush:
+            self.flush()
         
     def get_article(self, article_id):
         """
@@ -229,8 +227,8 @@ class ES(object):
         for i, batch in enumerate(splitlist(to_add_set, itemsperbatch=1000)):
             self.add_to_set(aset.id, batch)
             log.debug("Added batch {i} to set".format(**locals()))
-        for i, batch in enumerate(splitlist(to_add_docs, itemsperbatch=1000)):
-            self.add_articles(batch)
+        for i, batch in enumerate(splitlist(to_add_docs, itemsperbatch=100)):
+            self.add_articles(batch, flush=False)
             log.debug("Added batch {i} to index".format(**locals()))
 
         self.flush()
@@ -290,9 +288,11 @@ class ES(object):
         if not isinstance(ids, list): ids = list(ids)
         log.info("Checking existence of {nids} documents".format(nids=len(ids)))
         if not ids: return
-        result = self.es.mget(index=self.index, doc_type=ARTICLE_DOCTYPE, body={"ids": ids}, fields=[])
-        for doc in result['docs']:
-            if doc['exists']: yield int(doc['_id'])
+        for batch in splitlist(ids, itemsperbatch=10000):
+            result = self.es.mget(index=self.index, doc_type=ARTICLE_DOCTYPE, body={"ids": batch}, fields=[])
+            for doc in result['docs']:
+                if doc['exists']: yield int(doc['_id'])
+
         
             
 def get_date(timestamp):
