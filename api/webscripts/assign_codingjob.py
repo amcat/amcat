@@ -29,7 +29,7 @@ from django.core.urlresolvers import reverse
 from webscript import WebScript
 
 from amcat.scripts.actions.create_sentences import CreateSentences
-from amcat.scripts.tools import solrlib, database
+from amcat.scripts.tools import database
 from amcat.models.articleset import ArticleSet
 from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.project import Project

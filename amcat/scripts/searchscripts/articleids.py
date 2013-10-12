@@ -23,7 +23,7 @@ Useful for performance reasons, when returning Article objects takes too much ti
 """
 
 from amcat.scripts import script, types
-from amcat.scripts.tools import solrlib, database
+from amcat.scripts.tools import database
 import amcat.scripts.forms
 from django import forms
 
