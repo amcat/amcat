@@ -1,6 +1,9 @@
 from distutils.core import setup
 
-setup(
+requirements = filter(str.strip, open("pip_requirements.txt").readlines())
+requirements = [x for x in requirements if x and not x.startswith("#")]
+
+package = dict(
     name='amcat',
     version='3.2.6',
     packages=['api', 'api.rest', 'api.rest.resources', 'api.webscripts', 'amcat', 'amcat.nlp', 'amcat.forms',
@@ -19,5 +22,10 @@ setup(
                  'to conduct manual or automatic analyses of texts for (social) scientific purposes. AmCAT can '
                  'improve the use and standard of content analysis in the social sciences and stimulate sharing data '
                  'and analyses.'),
-    requires=('raven', 'python-memcached')
+    package_data={'amcat': ['manage.py']},
+    install_requires=requirements
 )
+
+if __name__ == '__main__':
+    from distutils.core import setup
+    setup(package)

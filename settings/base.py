@@ -26,6 +26,8 @@ from amcat.tools.toolkit import random_alphanum
 from amcat.tools import hg
 from os import path
 
+import setup
+
 # Python 2.x vs 3.x
 try:
     import ConfigParser as configparser
@@ -50,11 +52,8 @@ TEMPLATE_DEBUG = DEBUG
 
 APPNAME = 'navigator'
 APPNAME_VERBOSE = 'AmCAT Navigator'
-
+AMCAT_VERSION = setup.package['version']
 ROOT = path.abspath(path.join(path.dirname(path.abspath(__file__)), '..'))
-_repo = hg.Repository(ROOT)
-_tag = _repo.current_tag()
-AMCAT_VERSION = (_tag[1] if _tag else None) or _repo.active_branch()
 
 DATABASE_OPTIONS = {
    "init_command" : "set transaction isolation level read uncommitted"
@@ -151,8 +150,6 @@ PASSWORD_HASHERS = (
     'django.contrib.auth.hashers.PBKDF2PasswordHasher',
     'django.contrib.auth.hashers.SHA1PasswordHasher',
 )
-
-ES_INDEX = 'amcat'
 
 AUTH_PROFILE_MODULE = 'amcat.UserProfile'
 LOGIN_REDIRECT_URL = "/navigator/"

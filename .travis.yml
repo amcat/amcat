@@ -9,8 +9,12 @@ services:
 virtualenv:
   system_site_packages: true
 
+env:
+  - DJANGO_DB_USER=postgres DJANGO_SETTINGS_MODULE=settings PYLINT=N PYTHONPATH=
+
 before_install:
- - sudo apt-get install -qq `cat apt_requirements.txt | tr '\n' ' '`
+ - sudo apt-get update
+ - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
  - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.5.deb
  - sudo dpkg -i ./elasticsearch-0.90.5.deb
  - rm ./elasticsearch-0.90.5.deb
@@ -19,5 +23,5 @@ install:
  - pip install -r ./pip_requirements.txt --use-mirrors
 
 script:
- - DJANGO_DB_USER=postgres ./manage.py test amcat
- - DJANGO_DB_USER=postgres ./manage.py test navigator
+ - python ./manage.py test amcat
+ - python ./manage.py test navigator

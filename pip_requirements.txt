@@ -1,8 +1,14 @@
 raven
-django-boolean-sum
+sentry
 jsonrpclib
 rtf2xml
 sh
+cssselect
+elasticsearch
+
+django
 djangorestframework
+django-boolean-sum
 django_compressor
 django_filter
+django_extensions
