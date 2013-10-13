@@ -97,6 +97,10 @@ class Controller(object):
         toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
         for unsaved in toprocess:
             saved = self.save(unsaved)
+
+            if not saved:
+                continue
+
             #find children, transfer parent props
             for a in articles:
                 if hasattr(a, 'parent') and a.parent == unsaved:
