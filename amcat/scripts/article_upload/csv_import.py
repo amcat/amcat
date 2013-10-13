@@ -30,6 +30,7 @@ from cStringIO import StringIO
 from types import NoneType
 
 from django import forms
+from django.db.models.fields import FieldDoesNotExist
 
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.article_upload import fileupload
@@ -57,7 +58,10 @@ HELP_TEXTS = {
     }
 
 def is_nullable(field_name):
-    return Article._meta.get_field(field_name).null
+    try:
+        return Article._meta.get_field(field_name).null
+    except FieldDoesNotExist:
+        return True
 
 class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
     medium_name = forms.CharField(
@@ -260,7 +264,10 @@ class TestCSV(amcattest.PolicyTestCase):
 
     def test_parents(self):
         header = ('kop', 'datum', 'tekst', 'id', 'parent', 'van')
-        data = [('kop1', '2001-01-01', 'text1', "7", "12", 'piet'), ('kop1', '2001-01-01', 'text1', "12", None, 'jan')]
+        data = [
+            ('kop1', '2001-01-01', 'text1', "7", "12", 'piet'),
+            ('kop1', '2001-01-01', 'text1', "12", None, 'jan')
+        ]
         articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum",
                                  externalid='id',  parent_externalid='parent', author='van')
         
