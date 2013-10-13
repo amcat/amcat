@@ -95,7 +95,7 @@ class TestCodingJobResource(ApiTestCase):
         cj = amcattest.create_test_job()
 
         # Test empty codingjob
-        res = self.get(CodingJobResource)['results'][0]
+        res = self.get(CodingJobResource, id=cj.id)['results'][0]
         self.assertTrue("n_codings_done" in res)
         self.assertTrue("n_articles" in res)
         self.assertEquals(1, res["n_articles"])
@@ -103,7 +103,7 @@ class TestCodingJobResource(ApiTestCase):
 
         # Add two codings
         cj.codings.add(amcattest.create_test_coding(), amcattest.create_test_coding())
-        res = self.get(CodingJobResource)['results'][0]
+        res = self.get(CodingJobResource, id=cj.id)['results'][0]
         self.assertEquals(1, res["n_articles"])
         self.assertEquals(0, res["n_codings_done"])
 
@@ -112,12 +112,12 @@ class TestCodingJobResource(ApiTestCase):
         cd.status = CodingStatus.objects.get(id=coding.STATUS_COMPLETE)
         cd.save()
 
-        res = self.get(CodingJobResource)['results'][0]
+        res = self.get(CodingJobResource, id=cj.id)['results'][0]
         self.assertEquals(1, res["n_codings_done"])
 
         cd.status = CodingStatus.objects.get(id=coding.STATUS_IRRELEVANT)
         cd.save()
 
-        res = self.get(CodingJobResource)['results'][0]
+        res = self.get(CodingJobResource, id=cj.id)['results'][0]
         self.assertEquals(1, res["n_codings_done"])
 
