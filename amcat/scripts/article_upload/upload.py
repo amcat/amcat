@@ -169,7 +169,7 @@ from amcat.tools import amcatlogging
 amcatlogging.debug_module("amcat.scripts.article_upload.upload")
 
 class TestUpload(amcattest.PolicyTestCase):
-    def test_zip_file(self):
+    def todo_test_zip_file(self):
         from tempfile import NamedTemporaryFile, mkstemp
         from django.core.files import File
         # does _get_units perform normally
