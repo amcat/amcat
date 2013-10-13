@@ -10,10 +10,19 @@ virtualenv:
   system_site_packages: true
 
 env:
-  - DJANGO_DB_USER=postgres DJANGO_LOG_LEVEL=WARNING DJANGO_SETTINGS_MODULE=settings PYLINT=N PYTHONPATH=
+  - SUITE=api
+  - SUITE=accounts
+  - SUITE=annotator
+  - SUITE=amcat
+  - SUITE=navigator
 
 before_install:
  - psql -c 'create database amcat;' -U postgres
+ - export DJANGO_DB_USER=postgres
+ - export DJANGO_LOG_LEVEL=WARNING
+ - export DJANGO_SETTINGS_MODULE=settings
+ - export PYLINT=N
+ - export PYTHONPATH=
 
 install: 
  - sudo apt-get update
@@ -25,5 +34,4 @@ install:
  - pip install -r ./pip_requirements.txt --use-mirrors
 
 script:
- - python ./manage.py test amcat
- - python ./manage.py test navigator
+ - python ./manage.py test $SUITE
