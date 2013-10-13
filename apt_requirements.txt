@@ -13,4 +13,5 @@ python-pdfminer
 python-requests
 python-nltk
 python-pdfminer
+python-levenshtein
 unrtf
