@@ -442,14 +442,16 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         set1 = amcattest.create_test_set(1)
         # should not have any media
         p, c, form = self.get_form()
-        self.assertEqual(set(Medium.objects.all()), set(form.fields['mediums'].queryset))
+        form.full_clean()
+        self.assertEqual(set(p.get_mediums()), set(form.cleaned_data['mediums']))
 
         a = amcattest.create_test_article()
         set1.add(a)
         set1.refresh_index()
         # should now have a.medium
         p, c, form = self.get_form()
-        self.assertEqual(set(Medium.objects.all()), set(form.fields['mediums'].queryset))
+        form.full_clean()
+        self.assertEqual(set(p.get_mediums()), set(form.cleaned_data["mediums"]))
         
 
 
