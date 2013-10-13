@@ -215,7 +215,10 @@ class TestFileUpload(amcattest.PolicyTestCase):
             if not s.is_valid():
                 self.assertTrue(False, s.errors)
 
-            return list(s.get_entries())
+            return [dict(r.items()) for r in s.get_entries()]
+
+    def _to_dict(self, rows):
+        return [dict(r.items()) for r in rows]
     
     def test_csv(self):
         self.assertEqual(self._get_entries("a,b\n1,2", dialect="excel"),
