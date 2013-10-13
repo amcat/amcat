@@ -146,7 +146,7 @@ class ES(object):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
-        @param filter: field filter DSL query dict, defaults to _build_filter(**filters)
+        @param filter: field filter DSL query dict, defaults to build_filter(**filters)
         @param kwargs: additional keyword arguments to pass to es.search, eg fields, sort, offset, etc
         @return: a list of named tuples containing id, score, and the requested fields
         """
@@ -330,7 +330,7 @@ def build_body(query=None, filter=None, filters=None):
     Construct the query body from the query and/or filter(s)
     (call with dict(build_body)
     @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
-    @param filter: field filter DSL query dict, defaults to _build_filter(**filters)
+    @param filter: field filter DSL query dict, defaults to build_filter(**filters)
     """
     if filter is None and filters: filter = build_filter(**filters)
     if filter: yield ('filter', filter)
