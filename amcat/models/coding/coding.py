@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import print_function
 
 """
 Model module containing Codings
@@ -81,11 +82,20 @@ class Coding(AmcatModel):
                 self.values.order_by('field__fieldnr')
                 .select_related("field__fieldtype", "value__strval", "value__intval"))]
 
-    def get_value(self, field):
+    def get_value_object(self, field):
         """Return the Value object correspoding to this field"""
         for v in self.values.all():
             if v.field_id == field.id:
-                return v.get_serialised_value(field=field)
+                return v
+
+        raise CodingValue.DoesNotExist()
+
+    def get_value(self, field):
+        """Return serialised value correspoding to this field"""
+        try:
+            return self.get_value_object(field).get_serialised_value(field=field)
+        except CodingValue.DoesNotExist:
+            pass
     
     def update_values(self, values):
         """Update the current values

@@ -102,7 +102,10 @@ class CodingColumn(ObjectColumn):
         self.language = language
     def getCell(self, coding):
         try:
-            value = coding.values.get(field_id=self.field.id)
+            value = coding.get_value_object(self.field)
+            # Add Django caching
+            value._coding_cache = coding
+            value._field_cache = self.field
             value = value.value
         except (CodingValue.DoesNotExist, Code.DoesNotExist):
             value = None # field is not coded yet or codebook/schema change
@@ -114,10 +117,11 @@ def get_table_sentence_codings_article(codedarticle, language):
 
     The cells contain domain (deserialized) objects
     """
-    result = ObjectTable(rows = list(codedarticle.sentence_codings))
+    result = ObjectTable(rows = list(codedarticle.sentence_codings.prefetch_related("values")))
     result.addColumn('id')
     result.addColumn(lambda x:x.sentence_id, 'sentence')
-    for field in codedarticle.codingjob.unitschema.fields.order_by('fieldnr').all():
+
+    for field in codedarticle.codingjob.unitschema.fields.select_related("fieldtype").order_by('fieldnr').all():
         result.addColumn(CodingColumn(field, language))
     return result
 
@@ -273,7 +277,7 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
     def test_nqueries_table_sentence_codings(self):
         """Check for efficient retrieval of codings"""
         from amcat.models.coding.coding import CodingValue
-        from amcat.tools.djangotoolkit import list_queries
+        from amcat.tools.djangotoolkit import list_queries, query_list_to_table
         ca = CodedArticle(self.an1)
 
         # create 1000 sentence annotations
@@ -283,10 +287,11 @@ class TestCodingToolkit(amcattest.PolicyTestCase):
                                        sentence=sent)
             CodingValue.objects.create(coding=sa, field=self.intfield, intval=i)
         
+        language = ca.codingjob.coder.userprofile.language
         with list_queries() as l:
-            t = get_table_sentence_codings_article(ca, ca.codingjob.coder.userprofile.language)
+            t = get_table_sentence_codings_article(ca, language)
             t.output() # force getting all values
-	#query_list_to_table(l, output=print, maxqlen=190)
-        self.assertTrue(len(l) < 30, "Retrieving table used %i queries" % len(l))
+        #query_list_to_table(l, output=print, maxqlen=190)
+        self.assertTrue(len(l) <= 20, "Retrieving table used %i queries" % len(l))
 
         
