@@ -10,7 +10,7 @@ virtualenv:
   system_site_packages: true
 
 env:
-  - DJANGO_DB_USER=postgres DJANGO_SETTINGS_MODULE=settings PYLINT=N PYTHONPATH=
+  - DJANGO_DB_USER=postgres DJANGO_LOG_LEVEL=WARNING DJANGO_SETTINGS_MODULE=settings PYLINT=N PYTHONPATH=
 
 before_install:
  - psql -c 'create database amcat;' -U postgres
