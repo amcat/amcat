@@ -206,7 +206,7 @@ def visualise_triples(triples, triple_args_function=None,
                                  optional arguments for a triple
     """
     g = dot.Graph()
-    nodes = {} # Node -> dot.Node
+    _nodes = {} # Node -> dot.Node
     # create nodes
     for n in set(nodes(triples)):
         label = "%s: %s" % (n.position, n.label)
@@ -215,12 +215,12 @@ def visualise_triples(triples, triple_args_function=None,
                 label += "\\n%s: %s" % (k, v)
         node = dot.Node(id="node_%s"%n.position, label=label)
         g.addNode(node)
-        nodes[n] = node
+        _nodes[n] = node
     # create edges
     for triple in triples:
         kargs = triple_args_function(triple) if  triple_args_function else {}
         if 'label' not in kargs: kargs['label'] = triple.predicate
-        g.addEdge(nodes[triple.subject], nodes[triple.object], **kargs)
+        g.addEdge(_nodes[triple.subject], _nodes[triple.object], **kargs)
     # some theme options
     g.theme.graphattrs["rankdir"] = "BT"
     g.theme.shape = "rect"
