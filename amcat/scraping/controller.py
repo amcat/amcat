@@ -128,7 +128,8 @@ class RobustController(Controller):
         self.errors = [] 
     
     def _scrape(self, scraper):
-        log.info("RobustController starting {scraper.__class__.__name__} for date '{scraper.options[date]}'".format(**locals()))
+        date = scraper.options["date"] if "date" in scraper.options.keys() else "unknown"
+        log.info("RobustController starting {scraper.__class__.__name__} for date '{date}'".format(**locals()))
         result = []
 
         try:
@@ -145,7 +146,9 @@ class RobustController(Controller):
                 log.exception("exception on scrape_unit")
                 self.errors.append(ScrapeError(i, unit, e))
 
-        log.info("Scraping {scraper.__class__.__name__} for {scraper.options[date]}  finished, {n} articles".format(n = len(result), **locals()))
+        log.info("Scraping {scraper.__class__.__name__} for {date}  finished, {n} articles".format(
+            n=len(result), **locals()
+        ))
 
         if not result:
             raise Exception("No results returned by _get_units()")
