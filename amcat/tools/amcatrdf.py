@@ -425,6 +425,8 @@ class TestAmcatRDF(amcattest.PolicyTestCase):
                        (u(field), PREDICATES["name"], Literal(field.label)),
                        (u(field), NS_AMCAT["required"], Literal(field.required)),
                        (u(field), NS_AMCAT["fieldtype"], Literal(field.fieldtype.name)),
+                       (u(field), NS_AMCAT["split_codebook"],  Literal(False)),
+                       
                        }
             if field.codebook:
                 result |= {(u(field), NS_AMCAT["codebook"], u(self.sub_codebook))}

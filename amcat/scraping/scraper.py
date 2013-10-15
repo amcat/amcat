@@ -86,7 +86,10 @@ class Scraper(Script):
             if type(v) == str:
                 self.options[k] = v.decode('utf-8')
 
-        log.debug("Articleset: {self.articleset}, options: {self.options}"
+        # avoid django problem/bug with repr(File(open(uncode-string)))
+        # https://code.djangoproject.com/ticket/8156   
+        o2 = {k:v for k,v in self.options.iteritems() if k != 'file'}
+        log.debug(u"Articleset: {self.articleset!r}, options: {o2}"
                   .format(**locals()))
     @property
     def articleset(self):

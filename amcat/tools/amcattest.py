@@ -424,7 +424,15 @@ def require_es(func):
         self.check_es()
         return func(self, *args, **kargs)
     return run_or_skip
-            
+
+
+def skip_TODO(reason):
+    def inner(func):
+        def skip(self, *args, **kargs):
+            raise unittest.SkipTest("TODO: {}. Skipping test {}".format(reason, func.__name__))
+        return skip
+    return inner
+
 
 class ElasticTestCase(PolicyTestCase):
     ALL_TESTS_REQUIRE_ES = False
