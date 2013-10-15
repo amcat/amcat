@@ -226,7 +226,7 @@ class TestAmCATResource(ApiTestCase):
     def test_options(self):
         from api.rest.resources import ArticleResource, ProjectResource
         opts = self.get_options(ProjectResource)
-        name = u'Project Resource'
+        name = u'api-v4-project'
         models = {u'owner': u'/api/v4/user', u'guest_role': u'/api/v4/role',
                   #these should NOT be included as we don't want the foreign key fields
                   #u'codebooks': u'/api/v4/codebook',

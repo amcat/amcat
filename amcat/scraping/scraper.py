@@ -38,11 +38,7 @@ from amcat.models.articleset import ArticleSet, create_new_articleset
 from amcat.scraping.htmltools import HTTPOpener
 from amcat.scraping.document import Document
 
-from amcat.tools.toolkit import retry
-from django.db import transaction
-
 import logging; log = logging.getLogger(__name__)
-import traceback
 
 class ScraperForm(forms.Form):
     """Form for scrapers"""

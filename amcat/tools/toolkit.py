@@ -22,7 +22,6 @@ Toolkit of useful methods for AmCAT
 
 Policy:
  - Should not depend on any module outside to 2.5+ standard library
-   (deprecated functions may import AmCAT modules internally)
  - Each public function should be documented!
  - It should pass pychecker (+pylint?) without warnings
  - We should try to make good test cases in test/test_toolkit.py
@@ -34,7 +33,6 @@ this organisation!
  - mapping functions
  - string/unicode functions
  - date(time) functions
- - statistical functions
  - file handling
  - process handling and external processes
  - type checking
@@ -43,10 +41,23 @@ this organisation!
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-from functools import wraps
-import warnings, os, random, gzip, types, datetime, itertools, re, collections
-import threading, subprocess, sys, colorsys, base64, time, inspect, logging
-import htmlentitydefs, string, csv
+import warnings
+import os
+import random
+import types
+import datetime
+import itertools
+import re
+import collections
+import threading
+import subprocess
+import sys
+import colorsys
+import base64
+import logging
+import htmlentitydefs
+import string
+
 try: import mx.DateTime
 except: pass
 
@@ -81,42 +92,11 @@ def deprecated(func, msg = 'Call to deprecated function %(funcname)s.'):
     new_func.__dict__.update(func.__dict__)
     return new_func
 
-def cached(func):
-    """
-    Decorate a method without arguments to cache results
-
-    Uses self.__id__ as cache key. If not given, uses self
-    """
-    vals = {}
-    def inner(self):
-        """Check whether the 'self' is known, is so return cached value"""
-        try: iden = self.__id__()
-        except AttributeError: iden = self
-        if iden not in vals:
-            vals[iden] = func(self)
-        return vals[iden]
-    inner._vals = vals
-    return inner
-
 def dictionary(func):
     """This decorator converts a generator yielding (key, value) to a dictionary."""
     def _dictionary(*args, **kwargs):
         return dict(tuple(func(*args, **kwargs)))
     return _dictionary
-
-def printargs(func):
-    """This decorator dumps out the arguments passed to a function before calling it
-
-    Source: U{http://wiki.python.org/moin/PythonDecoratorLibrary}
-    """
-    argnames = func.func_code.co_varnames[:func.func_code.co_argcount]
-    fname = func.func_name
-    def echo_func(*args,**kwargs):
-        print("%s(%s)" % (fname, ', '.join(
-                    '%s=%r' % entry
-                    for entry in zip(argnames,args) + kwargs.items())))
-        return func(*args, **kwargs)
-    return echo_func
 
 def wrapped(wrapper_function, *wrapper_args, **wrapper_kargs):
     """
@@ -146,110 +126,9 @@ def to_list(func):
     return wrapped(list)(func)
 
 
-def flip(func):
-    """Create a new function from the original with the arguments reversed
-
-    Credits: http://stackoverflow.com/a/9850282/478503"""
-    @wraps(func)
-    def newfunc(*args):
-        return func(*args[::-1])
-    return newfunc
-
-
-def log_error():
-    try:
-        yield
-    except Exception as e:
-        log.error(e)
-
-###########################################################################
-##                      Statistical Functions                            ##
-###########################################################################
-
-def average(seq):
-    """Compute the mean of sequence seq"""
-    # note: use iteration over sum(x) / len(x) to avoid iterating twice
-    # and for compatability with generators
-    s, n = 0., 0
-    for e in seq:
-        if e is not None:
-            s += e; n += 1
-    return s / n if n > 0 else None
-
-def stdev(seq):
-    """Compute the stdev of seq"""
-    seq = list(seq)
-    avg = average(seq)
-    s, n = 0.0, 0
-    for e in seq:
-        if e is not None:
-            s += (e - avg)**2
-            n += 1
-    var = s / n-1 if n-1 > 0 else None
-    if var: return var ** .5
-
-def correlate(aa, bs):
-    """Compute the correlation between sequences aa and bs"""
-    ma = average(aa)
-    mb = average(bs)
-    teller = sum([(a-ma) * (b-mb) for (a, b) in zip(aa, bs)])
-    noemer = (len(aa) - 1 ) * stdev(aa) * stdev(bs)
-    if not noemer : return None
-    return teller / noemer
-
 ###########################################################################
 ##                          File Handling                                ##
 ###########################################################################
-
-def openfile(filename, mode = None, skipheader=False):
-    """
-    Open the given filename, handling zipped files
-
-    @type filename: str or file. In the latter case, return the file unmodified
-    @param filename: The file name. If it ends with .gz, uses gzip.open rather than open
-    @param mode: an optional mode to pass to open
-    @param skipheader: if True, skip one line from the file
-    @return a file object corresponding to file
-    """
-    if isString(filename):
-        opener = gzip.open if filename.endswith('.gz') else open
-        if mode:
-            f = opener(filename, mode)
-        else:
-            f = opener(filename)
-    else:
-        f = filename
-    if skipheader: f.readline()
-    return f
-
-
-def get_script_path():
-    return os.path.split(os.path.normpath(os.path.join(os.getcwd(), sys.argv[0])))[0]
-
-def mkdir(newdir):
-    """
-    Create the directory C{newdir}; and parents as needed
-
-    From: U{http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/82465}
-
-    @type newdir: string
-    @param newdir: Name of the directory to create.
-      If a regular file exists with this name, raises an exception
-      If the directory exists, returns silently
-    @return: None
-    """
-    if os.path.isdir(newdir):
-        pass
-    elif os.path.isfile(newdir):
-        raise OSError("a file with the same name as the desired " \
-                          "dir, '%s', already exists." % newdir)
-    else:
-        head, tail = os.path.split(newdir)
-        if head and not os.path.isdir(head):
-            mkdir(head)
-        if tail:
-            os.mkdir(newdir)
-
 
 def tmp():
     """
@@ -276,26 +155,6 @@ def tempfilename(suffix=None, prefix="temp-", tempdir=None):
         if not os.path.exists(fn): return fn
     raise Exception("Could not create temp file!")
 
-def writefile(string, fn = None, tmpsuffix = None, tmpprefix="temp-",
-              encoding="latin-1"):
-    """
-    Create a new file, write the given string to it, and close it
-
-    @type string: unicode (or ascii-encoded bytes)
-    @param string: The content for the new file
-    @param fn: The file name. If None, create a temp file using L{tempfilename}
-    @param tmpsuffix: optional suffic to pass to L{tempfilename}
-    @param tmpprefix: optional suffic to pass to L{tempfilename}
-    @param encoding: the encoding to use for the contents
-    @return: the file name of the file (useful if fn was None)
-    """
-    if not fn: fn = tempfilename(tmpsuffix, tmpprefix)
-    fn = openfile(fn, 'w')
-    fn.write(string.encode(encoding))
-    fn.close()
-    return fn.name
-
-
 ###########################################################################
 ##                     Sequence functions                                ##
 ###########################################################################
@@ -304,32 +163,6 @@ def flatten(seq):
     """Flattens one level of a sequence of sequences"""
     return itertools.chain(*seq)
 
-
-def ints2ranges(seq, presorted=False):
-    """Converts a seuence of integers into from, to pairs
-
-    Given a list of comparable items, create a sequence of (from, to) pairs
-    that would yield a sequence set-equivalent to the original.
-
-    i.e.
-    >>> set(flatten(range(fro, to+1) for (fro, to) in ints2ranges(seq))) == set(seq)
-
-    for all sequences of integers
-
-    @param seq: any iterable of ints
-    @param presorted: if True, do not sort seq
-    @return: a generator of (from, to) pairs of integers
-    """
-    if not presorted: seq = sorted(seq)
-    start, prev, = None, None
-    for i in sorted(seq):
-        if start is None: start = i
-        elif i > prev + 1:
-            yield start, prev
-            start = i
-        prev = i
-    if prev is not None:
-        yield start, prev
 
 
 def join(seq, sep="\t", fmt="%s", none=''):
@@ -350,88 +183,13 @@ def join(seq, sep="\t", fmt="%s", none=''):
         return fmt % elem
     return sep.join([joinformat(x, fmt, none) for x in seq])
 
-def pairs(seq, lax=False):
-    """Transforms [s1,s2,s3,s4,...] into [(s1,s2),(s3,s4),...]
 
-    @param seq: the indexable sequence (list or tuple) to transform
-    @param lax: If True a trailing single value will be paired with None
-        otherwise, an exception is thrown if there is an odd number of items
-    """
-    if len(seq) % 2:
-        if lax:
-            return pairs(seq[:-1]) + [(seq[-1], None)]
-        else:
-            raise ValueError("Non-lax pairing needs even number of items in sequence")
-    return zip(seq[::2], seq[1::2])
-
-
-
-def getseq(sequence, seqtypes=(list, tuple, set), pref=list, stringok=False, convertscalar=False):
-    """Ensures that the sequences is list/tuple/set and changes if necessary
-
-    Makes sure that the sequence is a 'proper' sequence (and not
-    an iterator/generator). If it is, return the sequence, otherwise
-    create a list out of it and return that.
-
-    @param sequence: the sequence to check
-    @param seqtypes: allowable sequence types
-    @param pref: the sequence type to change into if necessary
-    @param stringok: treat string/unicode as sequence?
-    @param convertscalar: convert scalar to [scalar]?
-    @return: the original sequence if allowed, otherwise pref(sequence)
-    """
-    if isIterable(sequence, excludeStrings=not stringok):
-        return sequence if isinstance(sequence, seqtypes) else pref(sequence)
-    elif convertscalar:
-        return pref([sequence])
-    else:
-        raise TypeError("Cannot create a sequence out of %r" % sequence)
-
-
-def count(seq):
-    """Return the number of elements in seq, also works for generators"""
-    i = 0
-    for dummy in seq: i += 1
-    return i
 def head(seq, filterfunc=None):
     """Return the first element in seq (for which filterfunc(.) is True)"""
     for val in seq:
         if (filterfunc is None) or filterfunc(val):
             return val
 
-def choose(seq, scorer, returnscore=False, verbose=False):
-    """Choose the best element in seq according to scorer
-
-    @param seq: the sequence to choose from
-    @param scorer: a function that returns a score for each element
-    @param returnscore: if True, will return a (element, score) tuple
-    @param verbose: if True, print output while choosing (for debugging)
-    @return: the best element (unless returnscore)
-    """
-    best = None
-    bestscore = None
-    for e in seq:
-        score = scorer(e)
-        better = (bestscore is None) or (score > bestscore)
-        if verbose: print("%s %r, score=%s, best so far=%s" %
-                          (better and "accepting" or "rejecting", e, score, bestscore))
-        if better:
-            best = e
-            bestscore = score
-    if returnscore:
-        return best, bestscore
-    return best
-
-
-def chomped(seq=sys.stdin, skipblanks=True, transform=None):
-    """Return non-blank chomped lines from seq"""
-    for e in seq:
-        e = e.rstrip('\n')
-        if skipblanks and not e: continue
-        if transform:
-            e = transform(e)
-            if skipblanks and not e: continue
-        yield e
 
 def totuple(v):
     """Function to convert `value` to a tuple.
@@ -459,23 +217,6 @@ def idlist(idcolumn):
         return (idcolumn,)
 
     raise TypeError("%s-like objects not supported" % repr(type(idcolumn)))
-
-def intlist(seq=sys.stdin):
-    """Return integers from seq, skipping blank lines"""
-    for el in seq:
-        if el.strip(): yield int(el)
-
-def naturalSortKey(key):
-    """Return a  sort key for an element that sorts numbers sensibly"""
-    if type(key) != unicode: key = str(key)
-    convert = lambda text: int(text) if text.isdigit() else text
-    return map(convert, re.split('([0-9]+)', key))
-
-@deprecated
-def naturalSort(sequence):
-    """B{Deprecated: use sorted(key=naturalSortKey)}"""
-    return sorted(sequence, key=naturalSortKey)
-
 
 
 def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False):
@@ -513,98 +254,6 @@ def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False)
             yield subsequence
 
 
-def pad(sequence, length, padwith=None, chopexcess=True, padwithlast=False):
-    """Pad and/or trim a sequence to the given length
-    @param sequence: the sequence to 'rightsize'
-    @param length: the appropriate length for the sequence
-    @param padwith: what to pad with if sequence is too short
-    @param chopexcess: if true, chop off excess elements
-    @param padwithlast: if true, use last seen value for padding (unless sequence
-                        was empty, in which case padwith is used)
-    """
-    last = padwith
-    i = 0
-    for e in sequence:
-        if i >= length and chopexcess: return
-        yield e
-        i += 1
-        last = e
-    while i < length:
-        if padwithlast:
-            yield last
-        else:
-            yield padwith
-        i += 1
-
-@deprecated
-def buffer(sequence, buffercall, buffersize=100):
-    """B{Deprecated: please use splitlist(..., yieldelements=True)}"""
-    return splitlist(sequence, buffersize, buffercall, yieldelements=True)
-
-
-def unique(iterable, key=None):
-    "List unique elements, preserving order. Remember all elements ever seen."
-    # from http://docs.python.org/library/itertools.html#recipes
-    # unique('AAAABBBCCDAABBB') --> A B C D
-    # unique('ABBCcAD', str.lower) --> A B C D
-    seen = set()
-    seen_add = seen.add # for performance?
-    if key is None:
-        for element in itertools.ifilterfalse(seen.__contains__, iterable):
-            seen_add(element)
-            yield element
-    else:
-        for element in iterable:
-            k = key(element)
-            if k not in seen:
-                seen_add(k)
-                yield element
-
-def zipp(*iterables):
-    """Zip function with added functionality
-    At the moment, raises Exception if iterable are not of same size"""
-    #TODO: more elegant if we use iterators rather than coerce to sequence
-    if not iterables: return ()
-    seqs = map(getseq, iterables)
-    l0 = len(seqs[0])
-    if not all(l0 == len(it) for it in seqs[1:]):
-        raise ValueError("Unequal iterable length")
-    return zip(*seqs)
-
-
-
-def csvreader(stream=None, typename=None):
-    if stream is None: stream = sys.stdin
-    if typename is None: typename = re.sub(r"\W", "", stream.name)
-    r = csv.reader(stream)
-    header = r.next()
-    return_type = collections.namedtuple(typename, header, rename=True)
-    for row in r:
-        if len(row) < len(header):
-            row += [None] * (len(header) - len(row))
-        elif len(row) > len(header):
-            raise Exception("Row has %i cells, %i expected: %r" % (len(row), len(header), row))
-        yield return_type(*row)
-
-def set_closure(seed, function):
-    """
-    Return the closure of the 'seed' set under the provided function.
-
-    The function is applied iteratively to each element of the set
-    until all new elements returned by the function are member of the set.
-    See http://en.wikipedia.org/wiki/Closure_(mathematics)
-    and NOT http://en.wikipedia.org/wiki/Closure_(computer_science)
-    """
-    new = set()
-    result = set(seed)
-    while True:
-        for e in result:
-            new |= set(function(e))
-        if new.issubset(result):
-            return result
-        result = new | result
-
-        
 ###########################################################################
 ##                      Mapping functions                                ##
 ###########################################################################
@@ -642,24 +291,6 @@ def sortByValue(dictionary, reverse=False):
     if reverse: l = list(reversed(l))
     return l
 
-
-class Indexer(object):
-    """Assign objects an index number"""
-    def __init__(self):
-        self.objects = [] # nr -> obj
-        self.index = {} # obj -> nr
-    def getNumber(self, obj):
-        """Get or create the index number of obj"""
-        return head(self.getNumbers(obj))
-    def getNumbers(self, *objs):
-        """Yield (possibly new) index numbers for mulitple objects"""
-        for obj in objs:
-            nr = self.index.get(obj)
-            if nr is None:
-                nr = len(self.objects)
-                self.objects.append(obj)
-                self.index[obj] = nr
-            yield nr
 
 def prnt(string, *args, **kargs):
     """Print the string, optionally applying %args or %kargs
@@ -709,16 +340,6 @@ class Counter(collections.defaultdict):
             if (not threshold) or  v >= threshold:
                 outfunc("%4i\t%s" % (v, k))
 
-def countmany(objects):
-    """Convenience method to create a counter, count, and return it"""
-    c = Counter()
-    c.countmany(objects)
-    return c
-
-@deprecated
-def DefaultDict(*args, **kargs):
-    """B{Deprecated: please use collections.defaultdict}"""
-    return collections.defaultdict(*args, **kargs)
 
 ###########################################################################
 ##                   String/Unicode functions                            ##
@@ -847,33 +468,6 @@ def random_alphanum(size=10):
     return ''.join([random.choice(string.letters + string.digits) for i in range(size)])
 
 
-def warn(string):
-    from amcat.tools import classtools
-    fn, lineno, func = classtools.get_caller()
-    module = classtools.get_calling_module()
-
-    log = logging.getLogger()
-    rec = log.makeRecord(module, logging.WARN, fn, lineno,
-                         string, [], exc_info=None, func=func)
-    log.handle(rec)
-
-def toJSON(value):
-    """Convert `value` to a string json can encode. Generators are converted
-    to lists, NoneTypes to empty strings.
-
-    @type value: anything
-    @param value: value you wish to convert to a json-friendly type"""
-    if type(value) in (types.GeneratorType, types.TupleType, types.ListType):
-        return map(toJSON, value)
-    elif type(value) in (types.BooleanType, types.IntType):
-        return value
-    elif type(value) is datetime.datetime:
-        return value.ctime()
-
-    if value: return unicode(value)
-
-    return ''
-
 def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
     """
     Returns a bytestring version of 's', encoded as specified in 'encoding'.
@@ -901,25 +495,6 @@ def smart_str(s, encoding='utf-8', strings_only=False, errors='strict'):
     else:
         return s
 
-def retry(function, ntries=3, logger=None, *args, **kargs):
-    """
-    Try calling the function with args and kargs. If an exception
-    occurs, log it, and retry for up to ntries-1 times. Will return
-    the first time the function returns without exception. Will re-raise
-    the exception of the function when out of retries
-    """
-    if not logger:
-        from amcat.tools import classtools
-        logger = logging.getLogger(classtools.get_calling_module())
-    while True:
-        try:
-            return function(*args, **kargs)
-        except:
-            ntries -= 1
-            if not ntries:
-                raise
-            logger.exception("Error on calling %s(*%r, **%r), %i retries left"
-                             % (function.__name__, args, kargs, ntries))
 
 
 ###########################################################################
@@ -1105,37 +680,9 @@ def writeDateTime(datetimeObj, lenient=False, year=True, seconds=True, time=True
         format += " %H:%M:%S" if seconds else " %H:%M"
     return datetimeObj.strftime(format)
 
-def getYW(date):
-    """Return a float containing year.weeknumber (eg 2002.52)"""
-    try:
-        y, w, dummy = date.isocalendar() # datetime
-    except AttributeError:
-        y, w, dummy = date.iso_week # mx
-    return y + w/100.0
-
-def getYM(date):
-    """Return a float containing year.monthnumber (eg 2002.12)"""
-    return date.year + date.month / 100.0
-
-def getYQ(date):
-    """Return a float containing year.quarter (eg 2002.4)"""
-    return date.year + (int((date.month-1)/3)+1)/10.0
-
-def toDate(date):
-    """Convert a string, datetime.datetime, or mx.DateTime into a datetime"""
-    if type(date) == str:
-        return readDate(date)
-    return datetime.datetime(*date.timetuple()[:6])
-
 def to_datetime(date):
     """Convert datetime.date object to datetime.datetime"""
     return datetime.datetime(year=date.year, month=date.month, day=date.day)
-
-def cmpDate(date1, date2):
-    """Compares to date-like arguments (see L{toDate}), returning cmp-score"""
-    date1, date2 = map(toDate, (date1, date2))
-    return cmp(date1, date2)
-
 
 
 def dateToInterval(date, interval):
@@ -1183,29 +730,6 @@ class _Reader(threading.Thread):
         else:
             self.out = self.stream.read()
 
-class ErrorReader(threading.Thread):
-    def __init__(self, stream):
-        threading.Thread.__init__(self)
-        self.stream = stream
-
-        import fcntl
-        fd = self.stream.fileno()
-        fl = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
-
-    def run(self):
-        while True:
-            try:
-                err = self.stream.read()
-            except IOError, e:
-                if e.errno not in (11,):
-                    raise
-                print(e.errno)
-            else:
-                if err.strip():
-                    raise Exception("Unexpected message:\n%s" % err)
-            time.sleep(0.1)
-
 def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
     """Execute a command, yielding an input pipe for writing,
     then yielding out and err, using threads to avoid deadlock
@@ -1250,81 +774,20 @@ def executepipe(cmd, listener=None, listenOut=False, outonly=False, **kargs):
     yield outr.out, errr.out
 
 
-def execute(cmd, inputbytes=None, outonly=False):
-    """Execute a process, feed it inputbytes, and return (output, error)
-
-    Convenience method to call executepipe and write input to the
-    process' stdin.
-
-    @param cmd: the process to run
-    @param inputbytes: (optional) input to send to the process' input pipe
-    @param outOnly: if True, any error output will result in an exception, and
-                    only the stdout output will be returned
-    """
-    log.debug("Calling {cmd} with input {inputbytes!r}".format(**locals()))
-    p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE,
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p.communicate(inputbytes)
-    if outonly:
-        if err.strip(): 
-            raise Exception("Error from {cmd}:{err!r}".format(**locals()))
-        return out
-    else:
-        return out, err
-
-def ps2pdf(ps):
-    """Call ps2pdf on the given ps bytes, returning pdf bytes"""
-    out, err = execute("ps2pdf - -", ps)
-    if err: raise Exception(err)
-    return out
-
-def convertImage(image, informat, outformat=None, quality=None, scale=None, trim=False):
-    """Call imagemagick 'convert' on the given image bytes, returning image bytes
-
-    @param image: the image bytes
-    @param informat: the input format (e.g. 'png')
-    @param outformat: the output format, if different from input
-    @type quality: float (0..1)
-    @param quality: if given, reduce quality to given percentage
-    @type scale: float (0..1)
-    @param scale: if given, reduce size to given percentage
-    """
-    cmd = 'convert '
-    if scale: cmd += ' -geometry %1.2f%%x%1.2f%% ' % (scale*100, scale*100)
-    if quality: cmd += ' -quality %i ' % int(quality*100)
-    if trim: cmd += ' -trim '
-
-    cmd += ' %s:- %s:-' % (informat, outformat or informat)
-    out, err = execute(cmd, image)
-    if err and err.strip():
-        warn(err)
-    return out
-
-
 
 ###########################################################################
 ##                          Type Checking                                ##
 ###########################################################################
 
-def isString(obj):
-    """Check whether obj is a string (str/unicode)"""
-    return type(obj) in types.StringTypes
-
-def isDate(obj):
-    """Check whether obj is a mx.DateTime or datetime"""
-    if 'mx' in globals() and isinstance(obj, mx.DateTime.DateTimeType):
-        return True
-    return isinstance(obj, datetime.datetime)
-
 def isSequence(obj, excludeStrings = False):
     """Check whether obj is a sequence, possibly excluding strings"""
-    if excludeStrings and isString(obj): return False
+    if excludeStrings and isinstance(obj, basestring): return False
     if hasattr(obj, "__getslice__"): return True
     else: return False
 
 def isIterable(obj, excludeStrings = False):
     """Check whether obj is iterable, possibly excluding strings"""
-    if excludeStrings and isString(obj): return False
+    if excludeStrings and isinstance(obj, basestring): return False
     try: iter(obj); return True
     except TypeError: return False
 
@@ -1357,217 +820,8 @@ def htmlImageObject(bytes, format='png'):
             % (format, format, data))
 
 
-def getREGroups(regExp, text, flags=re.DOTALL, groups=(1,), match=True):
-    """Return the selected groups from the regexp, or None(s) if no match
-
-    Convenience function for::
-
-      >>>m = re.match(regExp, text)
-      ...if m:
-      ...  a = m.group(1)
-      ...  #do something
-
-    @param regExp: the expression to test
-    """
-    match = re.search(regExp, text, flags)
-    if match:
-        return match.group(*groups)
-    if len(groups) == 1:
-        return None
-    return (None,) * len(groups)
-
 
 def isnull(x, alt):
     """Return alf if x is None else x"""
     return alt if x is None else x
 
-def hasattrv2(obj, attrs):
-    """Accepts dot-seperated attributes. This allow for non-shallow checking
-
-    @obj: an object
-    @attrs: dot-seperated attribute
-
-    @example:
-    >>> class A(object): pass
-    ...
-    >>> class B(object): pass
-    ...
-    >>> B.foo = 'bar'
-    >>> A.B = B
-    >>> hasattrv2(A, 'B.foo')
-    True
-    >>> hasattrv2(A, 'B.bar')
-    False
-    """
-    try: getattrv2(obj, attrs)
-    except AttributeError:
-        return False
-    return True
-
-def getattrv2(obj, attrs):
-    """Accepts dot-seperated attributes. This allows for non-shallow getting
-
-    (See: hasattrv2)"""
-    for attr in attrs.split('.'):
-        obj = getattr(obj, attr)
-    return obj
-
-def abstract():
-    """Imitates Java's abstract keyword"""
-    caller = inspect.getouterframes(inspect.currentframe())[1][3]
-    raise NotImplementedError(caller + ' must be implemented in subclass')
-
-class ThreadSafeDict(dict):
-    """
-    Thread-safe dict object.
-
-    @prevents: RuntimeError: dictionary changed size during iteration
-
-    Only useful when you're sure all iteration calls go will consume all yields.
-    """
-    def __init__(self, *args, **kwargs):
-        self.lock = threading.Lock()
-        super(ThreadSafeDict, self).__init__(*args, **kwargs)
-
-    def __iter__(self):
-        self.lock.acquire()
-        for k in super(ThreadSafeDict, self).__iter__():
-            yield k
-        self.lock.release()
-
-    def __delitem__(self, *args):
-        self.lock.acquire()
-        super(ThreadSafeDict, self).__delitem__(*args)
-        self.lock.release()
-
-    def __setitem__(self, *args):
-        self.lock.acquire()
-        super(ThreadSafeDict, self).__setitem__(*args)
-        self.lock.release()
-
-###########################################################################
-##                 Deprecated functions and imports                      ##
-###########################################################################
-
-@deprecated
-def isDict(obj):
-    """B{Deprecated: use L{isinstance}} Check whether obj is a dict"""
-    return isinstance(obj, dict)
-
-@deprecated
-def isFloat(obj):
-    """B{Deprecated: use L{isinstance}} Check whether obj is a float"""
-    return type(obj) == types.FloatType
-
-
-@deprecated
-def indexed(seq):
-    """B{Deprecated: use L{enumerate}} Enumerate with index following value"""
-    return [(e, i) for (i, e) in enumerate(seq)]
-
-@deprecated
-def reverse(seq):
-    """B{Deprecated: use L{reversed}} Reverse seq"""
-    return reversed(seq)
-
-
-@deprecated
-def log2(x, pwr = 2):
-    """B{Deprecated: use C{math.log}} Return the 2-log of x"""
-    import math
-    return math.log(x, base=pwr)
-
-#### old ticker connection ####
-
-
-@deprecated
-def tickerate(*args, **kargs):
-    """B{Deprecated: please use L{ticker.tickerate}}"""
-    import ticker as _ticker
-    return _ticker.tickerate(*args, **kargs)
-
-class _ticker_proxy(object):
-    """B{Deprecated: please use L{ticker.ticker()}"""
-    def __getattr__(self, name):
-        if "__" not in name:
-            warnings.warn(DeprecationWarning("Deprecated: please use ticker.ticker().%s" % (name)))
-        import ticker as _ticker
-        return getattr(_ticker.ticker(), name)
-ticker = _ticker_proxy()
-
-class Debug:
-    """B{Deprecated: please use amcatlogging}"""
-    @deprecated
-    def __init__(self, modulename=None, debuglevel=None, printer=warn):
-        """B{Deprecated: please use amcatlogging}"""
-        pass
-    @deprecated
-    def __call__(self, message, *dummy, **dummy2):
-        """B{Deprecated: please use amcatlogging}"""
-        warn(message)
-    @deprecated
-    def ok(self, level):
-        """B{Deprecated: please use amcatlogging}"""
-        self(level, " OK!")
-    @deprecated
-    def fail(self, level):
-        """B{Deprecated: please use amcatlogging}"""
-        self(level, " FAILED!")
-
-
-@deprecated
-def dictFromStr(string, unicode=False):
-    """B{deprecated: what is this for?} Create a dictionary from a string"""
-    try:
-        dictionary = eval(string)
-    except:
-        return None
-    if unicode and dictionary:
-        for k, dummy in dictionary.items():
-            if type(dictionary[k]) == string:
-                dictionary[k] = dictionary[k].decode('utf-8')
-    return dictionary
-
-@deprecated
-def sortByKeys(dictionary, reverse=False):
-    """B{deprecated: duplicates built-in C{sorted}} Sort a dictionary by keys"""
-    l = sorted(dictionary.iteritems())
-    if reverse: l = list(reversed(l))
-    return l
-
-@deprecated
-def debug(string, *dummy, **dummy2):
-    """B{Deprecated: please use amcatlogging}"""
-    Debug()(string)
-
-@deprecated
-def setDebug(*dummy, **dummy2):
-    """B{Deprecated: please use amcatlogging}"""
-    pass
-
-@deprecated
-def quotesql(strOrSeq):
-    """B{Deprecated: please use L{dbtoolkit.quotesql}}"""
-    import dbtoolkit
-    return dbtoolkit.quotesql(strOrSeq)
-
-
-@deprecated
-def returnTraceback():
-    """B{Deprecated: please use traceback.format_exc()}"""
-    import traceback
-    return traceback.format_exc()
-
-@deprecated
-def getGroup1(*args, **kargs):
-    """B{Deprecated: please use getREGroups}"""
-    return getREGroups(*args, **kargs)
-
-@deprecated
-def intSelection(db, *args, **kargs):
-    """B{Deprecated: please use amcatDB.intSelectionSQL}"""
-    return db.intSelectionSQL(*args, **kargs)
-
-if __name__ == '__main__':
-    import amcatlogging ;amcatlogging.setStreamHandler()
-    warn("zoiets?")

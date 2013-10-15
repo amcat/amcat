@@ -25,7 +25,6 @@ from rdflib import Graph, Namespace, Literal
 import logging
 
 from amcat.models import CodebookCode, Code, CodingJob
-from amcat.tools.toolkit import set_closure
 
 log = logging.getLogger(__name__)
 
@@ -289,7 +288,7 @@ class TestAmcatRDF(amcattest.PolicyTestCase):
 
     def setUp(self):
         """Populate a project with articles, coding etc"""
-        from amcat.models import Language, Project, Article
+        from amcat.models import Language, Article
         
         self.project = amcattest.create_test_project()
 
