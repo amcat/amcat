@@ -312,15 +312,7 @@ ArticleSetArticle = ArticleSet.articles.through
         
 from amcat.tools import amcattest
 
-class TestArticleSet(amcattest.PolicyTestCase):
-    @classmethod
-    def setUpClass(cls):
-        from django.conf import settings
-        from amcat.tools import amcates
-        cls.old_index = settings.ES_INDEX
-        settings.ES_INDEX += "__unittest"
-        amcates.ES().delete_index()
-        amcates.ES().create_index()
+class TestArticleSet(amcattest.ElasticTestCase):
         
     def test_create(self):
         """Can we create a set with some articles and retrieve the articles?"""       
@@ -330,6 +322,7 @@ class TestArticleSet(amcattest.PolicyTestCase):
             s.add(amcattest.create_test_article())
         self.assertEqual(i, len(s.articles.all()))
         
+    @amcattest.require_es
     def test_add(self):
         """Can we create a set with some articles and retrieve the articles?"""       
         s = amcattest.create_test_set()
@@ -344,7 +337,8 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s.refresh_index()
         self.assertEqual(set(s.get_mediums()), {a.medium for a in arts})
 
-        
+
+    @amcattest.require_es
     def test_dirty(self):
         """Is the dirty flag set correctly?"""
         p = amcattest.create_test_project(index_default=True)
@@ -358,6 +352,7 @@ class TestArticleSet(amcattest.PolicyTestCase):
         s.refresh_index()
         self.assertEqual(s.index_dirty, False)
 
+    @amcattest.require_es
     def test_get_mediums(self):
         from django.core.cache import cache
         cache.clear()

@@ -152,18 +152,8 @@ class Project(AmcatModel):
         
 from amcat.tools import amcattest
 
-class TestProject(amcattest.PolicyTestCase):
-    
-    @classmethod
-    def setUpClass(cls):
-        from django.conf import settings
-        from amcat.tools.amcates import ES
-        cls.old_index = settings.ES_INDEX
-        settings.ES_INDEX += "__unittest"
-        ES().delete_index()
-        ES().create_index()
-
-    
+class TestProject(amcattest.ElasticTestCase):
+        
     def test_create(self):
         """Can we create a project and access its attributes?"""
         p = amcattest.create_test_project(name="Test")
@@ -217,6 +207,7 @@ class TestProject(amcattest.PolicyTestCase):
         self.assertEqual(len(p2.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p3.get_codingschemas().filter(pk=cs.id)), 0)
 
+    @amcattest.require_es
     def test_get_mediums(self):
         set1 = amcattest.create_test_set(2)
         set2 = amcattest.create_test_set(2, project=set1.project)
