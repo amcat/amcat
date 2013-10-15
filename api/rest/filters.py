@@ -23,8 +23,6 @@ AmCAT-specific adaptations to rest_framework filters
 activated by settings.REST_FRAMEWORK['FILTER_BACKEND']
 """
 from api.rest import count
-from amcat.tools.djangotoolkit import can_distinct_on_pk
-
 from rest_framework import filters
 from django_filters import filterset
 from django_filters.filters import Filter
