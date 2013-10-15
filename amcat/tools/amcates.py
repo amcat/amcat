@@ -346,7 +346,7 @@ if __name__ == '__main__':
 ###########################################################################
 
 from amcat.tools import amcattest
-from unittest import skipUnless
+from unittest import skipUnless, skip
 
 class TestAmcatES(amcattest.ElasticTestCase):
 
@@ -469,6 +469,7 @@ class TestAmcatES(amcattest.ElasticTestCase):
         self.assertEqual(set(ES().query_ids('"mies wim"', filters=dict(mediumid=m2.id))), {b.id})
         self.assertEqual(set(ES().query_ids('"mies wim"~5', filters=dict(mediumid=m2.id))), {b.id, c.id})
 
+    @skip("ComplexPhraseQueryParser does not work for elastic")
     def test_complex_phrase_query(self):
         """Test complex phrase queries. DOES NOT WORK YET"""
         a = amcattest.create_test_article(text='aap noot mies')

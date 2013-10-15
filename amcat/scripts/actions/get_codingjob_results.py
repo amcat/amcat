@@ -313,6 +313,7 @@ if __name__ == '__main__':
 ###########################################################################
 
 from amcat.tools import amcattest
+import unittest
 
 class TestGetCodingJobResults(amcattest.PolicyTestCase):
 
@@ -426,6 +427,24 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
         s = self._get_results_script([job], {f : {}}, export_format='json')
         self.assertEqual(json.loads(s.run()), [[s2]]) # json export has no header (?)
 
+    def test_unicode_excel(self):        
+        """Test whether the export can handle unicode in column names and cell values"""
+        try:
+            import openpyxl
+        except ImportError:
+            raise unittest.SkipTest("OpenPyxl not installed, skipping excel test")
+        
+        schema = amcattest.create_test_schema(isarticleschema=True)
+        s1 = u'S1 \xc4\u0193 \u02a2 \u038e\u040e'
+        s2 = u'S2 \u053e\u06a8 \u090c  \u0b8f\u0c8a'
+        f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=1, label=s1,
+                                             fieldtype_id=1, codebook=None)
+
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
+
+        articles = list(job.articleset.articles.all())
+        amcattest.create_test_coding(codingjob=job, article=articles[0]).update_values({f:s2})
+        
         # test excel, can't test content but we can test output and no error        
         s = self._get_results_script([job], {f : {}}, export_format='xlsx')
         self.assertTrue(s.run())
