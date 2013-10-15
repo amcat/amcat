@@ -23,7 +23,6 @@ from __future__ import unicode_literals, print_function, absolute_import
 from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools import classtools
-from amcat.tools.djangotoolkit import JsonField
 
 class PluginType(AmcatModel):
     """
@@ -35,7 +34,7 @@ class PluginType(AmcatModel):
     class_name = models.CharField(max_length=100, unique=True)
 
     def get_classes(self):
-        return (p.get_class() for p in self.plugins.all())
+        return (p.get_class() for p in self.plugins.only("class_name").all())
 
     def get_class(self):
         """Return the base class defined by this plugin type"""
