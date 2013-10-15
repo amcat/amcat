@@ -1,6 +1,9 @@
 from distutils.core import setup
+from os import path
 
-requirements = filter(str.strip, open("pip_requirements.txt").readlines())
+here = path.abspath(path.join(path.dirname(path.abspath(__file__))))
+
+requirements = filter(str.strip, open(path.join(here, "pip_requirements.txt")).readlines())
 requirements = [x for x in requirements if x and not x.startswith("#")]
 
 package = dict(
