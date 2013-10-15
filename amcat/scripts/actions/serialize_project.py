@@ -23,19 +23,17 @@
 Serialize a project to zipped RDF (e.g. for storage at DANS)
 """
 
-import collections, re
-
+import collections
+import re
 from zipfile import ZipFile
 import logging
 from cStringIO import StringIO
 
 from django import forms
 
-from amcat.models import Project, Article, Codebook, CodingSchemaField
+from amcat.models import Project, CodingSchemaField
 from amcat.scripts.script import Script
-
 from amcat.tools import amcatrdf
-from amcat.tools.toolkit import set_closure
 
 
 log = logging.getLogger(__name__)

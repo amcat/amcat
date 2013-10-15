@@ -22,10 +22,9 @@ Module for controlling scrapers
 """
 
 import logging; log = logging.getLogger(__name__)
-from cStringIO import StringIO
 from collections import namedtuple
 
-from amcat.tools.toolkit import to_list, retry
+from amcat.tools.toolkit import to_list
 from amcat.tools.multithread import distribute_tasks, QueueProcessorThread, add_to_queue_action
 from amcat.tools import amcatlogging
 from amcat.models import ArticleSet

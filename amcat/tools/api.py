@@ -28,9 +28,6 @@ from collections import namedtuple
 import itertools
 import json
 
-from amcat.tools.toolkit import csvreader
-from amcat.tools import classtools
-
 log = logging.getLogger(__name__)
 
 class API(object):
