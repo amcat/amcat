@@ -38,7 +38,7 @@ from amcat.models import Medium, to_medium_ids
 from amcat.models.amcat import AmCAT
 from amcat.tools.toolkit import splitlist
 from amcat.tools.model import AmcatModel
-from amcat.tools.djangotoolkit import get_or_create
+from amcat.tools.djangotoolkit import get_or_create, distinct_args
 from amcat.models.article import Article
 
 log = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ def deduplicate(articles, compare):
             yield id
 
 def _get_hashes(articles, md5_query=None):
-    return articles.distinct("id").extra({"md5":md5_query}).values_list("id", "md5")
+    return articles.distinct(*distinct_args("id")).extra({"md5":md5_query}).values_list("id", "md5")
 
 def get_or_create_articleset(name, project):
     """
@@ -235,12 +235,7 @@ class ArticleSet(AmcatModel):
     def _deduplicate(self, compare, columns):
         """Yield id's of duplicates in this articleset"""
         md5_query = "MD5(ROW({})::TEXT)".format(",".join(columns))
-        from amcat.tools.djangotoolkit import db_supports_distinct_on
-        if db_supports_distinct_on():
-            dates = compare.distinct("date").values_list("date", flat=True)
-        else:
-            dates = compare.distinct().values_list("date", flat=True)
-            
+        dates = compare.distinct(*distinct_args("date")).values_list("date", flat=True)
         # Checking per date prevents loading whole articlesets at once
         for date in { d.date() for d in dates }:
             date_filter = Q(date__year=date.year, date__month=date.month, date__day=date.day)
@@ -311,6 +306,7 @@ ArticleSetArticle = ArticleSet.articles.through
 ###########################################################################
         
 from amcat.tools import amcattest
+from django.test import skipUnlessDBFeature
 
 class TestArticleSet(amcattest.ElasticTestCase):
         
@@ -368,6 +364,7 @@ class TestArticleSet(amcattest.ElasticTestCase):
         self.assertEqual(set(aset.get_mediums()), set(media))
         
 
+    @skipUnlessDBFeature('can_distinct_on_fields')
     def test_deduplicate(self):
         # add_articles should not default to removing duplicates
         set1 = amcattest.create_test_set(10)

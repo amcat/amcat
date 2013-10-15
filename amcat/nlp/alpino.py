@@ -91,38 +91,6 @@ def interpret_line(sentences, line):
     return parent, child, triple
 
 ###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-class TestAlpino(amcattest.PolicyTestCase):
-
-    def test_interpret(self):
-
-        sentno = -124356789
-        token_str1 = u"huis_DIM|huisje|1|2|noun|noun|noun(het,count,sg)"
-        token_str2 = u"het|het|0|1|det|det(nwh)|determiner(het,nwh,nmod,pro,nparg,wkpro)"
-
-        token1 = TokenValues(sentno, 1, "huisje", "huis_DIM", "N", "noun", "het,count,sg", None)
-        token2 = TokenValues(sentno, 0, "het", "het", "D" ,"determiner", "het,nwh,nmod,pro,nparg,wkpro", None)
-
-
-        self.assertEqual(interpret_token(sentno, *token_str1.split("|")), token1)
-        self.assertEqual(interpret_token(sentno, *token_str2.split("|")), token2)
-
-        line = u"{token_str1}|hd/det|{token_str2}|{sentno}\n".format(**locals())
-
-        parent, child, triple = interpret_line(line)
-
-        self.assertEqual(parent, token1)
-        self.assertEqual(child, token2)
-        self.assertEqual(triple.relation, "det")
-        self.assertEqual(triple.parent, token1.position)
-        self.assertEqual(triple.analysis_sentence, sentno)
-
-        
-###########################################################################
 #                        U G L Y   C O N S T A N T                        #
 ###########################################################################
 

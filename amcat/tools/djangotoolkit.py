@@ -71,7 +71,16 @@ def db_supports_distinct_on(db='default'):
     @param db: database to consider
     @type db: str
     """
-    return connections.databases[db]["ENGINE"] in DISTINCT_ON_DATABASES
+    return connections[db].features.can_distinct_on_fields
+
+
+def distinct_args(*fields):
+    """
+    return fields if the db supports distinct on, otherwise an empty list
+    Intended usage: qs.distinct(*distinct_args(field1, field2))
+    This will run distinct(field1, field2) if supported, otherwise just distinct()
+    """
+    return fields if db_supports_distinct_on() else []
 
 def get_related(appmodel):
     """Get a sequence of model classes related to the given model class"""
@@ -270,41 +279,3 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
 
     def test_db_supports_distinct_on(self):
         self.assertTrue(db_supports_distinct_on() in (True, False))
-
-    def _test_can_distint_on_pk(self):
-        from django.db import models
-        from django.db import connections
-
-        connections.databases['default']["ENGINE"] = DISTINCT_ON_DATABASES[0]
-
-        class T1(models.Model):
-            name = models.TextField()
-            class Meta: ordering = ("id",)
-
-        class T2(models.Model):
-            name = models.TextField()
-            class Meta: ordering = ("name",)
-
-        qs = T1.objects.all()
-
-        self.assertTrue(can_distinct_on_pk(qs))
-        self.assertFalse(can_distinct_on_pk(qs.order_by("name")))
-        self.assertTrue(can_distinct_on_pk(qs.order_by("-id")))
-        self.assertFalse(can_distinct_on_pk(T2.objects.all()))
-        self.assertTrue(can_distinct_on_pk(T2.objects.all().order_by("id")))
-
-        # Unknown database does not support distinct on
-        connections.databases['default']["ENGINE"] = "???"
-        self.assertFalse(can_distinct_on_pk(qs))
-
-    def test_can_distinct_on_pk(self):
-        from django.db import connections
-        pv = connections.databases['default']["ENGINE"]
-        
-        try:
-            self._test_can_distint_on_pk()
-        except:
-            raise
-        finally:
-            connections.databases['default']["ENGINE"] = pv
-

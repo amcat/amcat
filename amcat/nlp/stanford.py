@@ -123,9 +123,9 @@ class TestStanford(amcattest.PolicyTestCase):
         analysis_sentences=range(10)
         tokens, triples, corefsets = interpret_xml(analysis_sentences, self._get_test_xml())
         self.assertEqual(set(tokens), {
-                TokenValues(0, 0, 'Mary', 'Mary', 'N', "NNP", None, 'PERSON'),
+                TokenValues(0, 0, 'Mary', 'Mary', 'N', "NNP", None, 'P'),
                 TokenValues(0, 1, 'met', 'meet', 'V', "VBD", None, None),
-                TokenValues(0, 2, 'John', 'John', 'N', "NNP", None, 'PERSON'),
+                TokenValues(0, 2, 'John', 'John', 'N', "NNP", None, 'P'),
                 TokenValues(1, 0, 'She', 'she', 'O', "PRP", None, None),
                 TokenValues(1, 1, 'likes', 'like', 'V', "VBZ", None, None),
                 TokenValues(1, 2, 'him', 'he', 'O', "PRP", None, None),
