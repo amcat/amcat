@@ -96,6 +96,8 @@ class TestArticleList(amcattest.PolicyTestCase):
         s.add(*(arts1|arts2))
         x = self.aggr(projects=[p2.id], articlesets=[s.id], xAxis='medium')
 
+
+    @amcattest.use_elastic
     def test_form(self):
         p = amcattest.create_test_project()
         arts = {amcattest.create_test_article(project=p) for i in range(10)}
@@ -107,6 +109,7 @@ class TestArticleList(amcattest.PolicyTestCase):
         #self.assertTrue(valid, "Validation errors: {f.errors}".format(**locals()))
 
         s = amcattest.create_test_set(project=p)
+        s.refresh_index()
         form['articlesets'] = [unicode(s.id)]
         f = AggregationForm(data=MultiValueDict(form))
         valid = f.is_valid()

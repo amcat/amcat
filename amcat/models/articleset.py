@@ -308,7 +308,7 @@ ArticleSetArticle = ArticleSet.articles.through
 from amcat.tools import amcattest
 from django.test import skipUnlessDBFeature
 
-class TestArticleSet(amcattest.ElasticTestCase):
+class TestArticleSet(amcattest.PolicyTestCase):
         
     def test_create(self):
         """Can we create a set with some articles and retrieve the articles?"""       
@@ -318,7 +318,7 @@ class TestArticleSet(amcattest.ElasticTestCase):
             s.add(amcattest.create_test_article())
         self.assertEqual(i, len(s.articles.all()))
         
-    @amcattest.require_es
+    @amcattest.use_elastic
     def test_add(self):
         """Can we create a set with some articles and retrieve the articles?"""       
         s = amcattest.create_test_set()
@@ -334,7 +334,7 @@ class TestArticleSet(amcattest.ElasticTestCase):
         self.assertEqual(set(s.get_mediums()), {a.medium for a in arts})
 
 
-    @amcattest.require_es
+    @amcattest.use_elastic
     def test_dirty(self):
         """Is the dirty flag set correctly?"""
         p = amcattest.create_test_project(index_default=True)
@@ -348,7 +348,7 @@ class TestArticleSet(amcattest.ElasticTestCase):
         s.refresh_index()
         self.assertEqual(s.index_dirty, False)
 
-    @amcattest.require_es
+    @amcattest.use_elastic
     def test_get_mediums(self):
         from django.core.cache import cache
         cache.clear()

@@ -172,7 +172,6 @@ def create_test_sentence(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     return Sentence.objects.create(**kargs)
 
-
 def create_test_set(articles=0, **kargs):
     """Create a test (Article) set"""
     from amcat.models.articleset import ArticleSet
@@ -390,6 +389,11 @@ class PolicyTestCase(TestCase):
                 msg += "\n({}) {}".format(i+1, q["sql"])
             self.fail(msg)
     
+    @classmethod
+    def tearDownClass(cls):
+        if settings.ES_INDEX.endswith("__unittest"):
+            settings.ES_INDEX = settings.ES_INDEX[:len("__unittest")]
+
 
             
 class TestAmcatTest(PolicyTestCase):
@@ -417,15 +421,6 @@ def require_postgres(func):
         return func(self, *args, **kargs)
     return run_or_skip
     
-
-        
-def require_es(func):
-    def run_or_skip(self, *args, **kargs):
-        self.check_es()
-        return func(self, *args, **kargs)
-    return run_or_skip
-
-
 def skip_TODO(reason):
     def inner(func):
         def skip(self, *args, **kargs):
@@ -433,34 +428,23 @@ def skip_TODO(reason):
         return skip
     return inner
 
-
-class ElasticTestCase(PolicyTestCase):
-    ALL_TESTS_REQUIRE_ES = False
-
-    @classmethod
-    def setUpClass(cls):
+def use_elastic(func):
+    """
+    Decorate a test function to make sure that:
+    - The ElasticSearch server can be reached (skips otherwise)
+    - The '__unittest' index exists and is empty
+    """
+    def inner(*args, **kargs):
         from amcat.tools.amcates import ES
-        cls._old_settings = dict(ES_INDEX = settings.ES_INDEX)
         if not settings.ES_INDEX.endswith("__unittest"):
             settings.ES_INDEX += "__unittest"
         es = ES()
-        cls._es_skip = not es.es.ping()
-        if cls._es_skip:
-            log.warn("Elastic search not running, skipping tests")
-            return
+        if not es.es.ping():
+            raise unittest.SkipTest("ES not enabled")
         es.delete_index()
         es.create_index()
-
-    @classmethod
-    def tearDownClass(cls):
-        for key, val in cls._old_settings.iteritems():
-            setattr(settings, key, val)
-
-    @classmethod
-    def check_es(cls):
-        """Skip if elastic is not enabled"""
-        if cls._es_skip:
-            raise unittest.SkipTest("ES not enabled")
+        return func(*args, **kargs)
+    return inner
 
 def get_tests_from_suite(suite):
     for e in suite:

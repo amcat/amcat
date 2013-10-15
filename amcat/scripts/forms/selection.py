@@ -435,6 +435,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
 
         return project, codebook, SelectionForm(project, data=kwargs)
 
+    @amcattest.use_elastic
     def test_defaults(self):
         from django.core.cache import cache
         cache.clear()
@@ -475,6 +476,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
             fields = [SelectionForm.base_fields[f].creation_counter for f in order]
             self.assertEquals(sorted(fields), fields)
 
+    @amcattest.use_elastic
     def test_clean_include_all(self):
         p, c, form = self.get_form(include_all=False)
         self.assertTrue(form.is_valid())
@@ -487,6 +489,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         self.assertEquals(next(form.queries).declared_label, "All")
         self.assertEquals(next(form.queries).query, "*:*")
 
+    @amcattest.use_elastic
     def test_clean_on_date(self):
         now = datetime.datetime.now().date()
         p, c, form = self.get_form(datetype="on", on_date=now)
@@ -505,6 +508,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         self.assertFalse(form.is_valid())
 
 
+    @amcattest.use_elastic
     def test_clean_datetype(self):
         now = datetime.datetime.now().date()
 
@@ -538,6 +542,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         p, c, form = self.get_form(datetype="before", end_date=now)
         self.assertTrue(form.is_valid())
 
+    @amcattest.use_elastic
     def test_use_index(self):
         p, c, form = self.get_form(query="  Bla   #  Balkenende")
         self.assertTrue(form.use_index)
@@ -551,6 +556,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         p, c, form = self.get_form(query=" () ")
         self.assertFalse(form.use_index)
 
+    @amcattest.use_elastic
     def test_clean_query(self):
         import functools
         

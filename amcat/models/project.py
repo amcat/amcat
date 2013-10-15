@@ -152,7 +152,7 @@ class Project(AmcatModel):
         
 from amcat.tools import amcattest
 
-class TestProject(amcattest.ElasticTestCase):
+class TestProject(amcattest.PolicyTestCase):
         
     def test_create(self):
         """Can we create a project and access its attributes?"""
@@ -207,7 +207,7 @@ class TestProject(amcattest.ElasticTestCase):
         self.assertEqual(len(p2.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p3.get_codingschemas().filter(pk=cs.id)), 0)
 
-    @amcattest.require_es
+    @amcattest.use_elastic
     def test_get_mediums(self):
         set1 = amcattest.create_test_set(2)
         set2 = amcattest.create_test_set(2, project=set1.project)

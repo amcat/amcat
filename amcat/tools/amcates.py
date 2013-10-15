@@ -348,13 +348,9 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 from unittest import skipUnless, skip
 
-class TestAmcatES(amcattest.ElasticTestCase):
+class TestAmcatES(amcattest.PolicyTestCase):
 
-    @classmethod
-    def setUpClass(cls):
-        amcattest.ElasticTestCase.setUpClass()
-        cls.check_es()
-        
+    @amcattest.use_elastic
     def test_aggregate(self):
         m1, m2, m3 = [amcattest.create_test_medium() for _ in range(3)]
         unused = amcattest.create_test_article(text='aap noot mies', medium=m3)
@@ -386,6 +382,7 @@ class TestAmcatES(amcattest.ElasticTestCase):
         self.assertEqual(set(ES().list_media(filters=dict(sets=s1.id))),
                          {m1.id, m2.id})
 
+    @amcattest.use_elastic
     def test_list_media(self):
         """Test that list media works for more than 10 media"""
         media =  [amcattest.create_test_medium() for _ in range(20)]
@@ -402,6 +399,7 @@ class TestAmcatES(amcattest.ElasticTestCase):
 
         
         
+    @amcattest.use_elastic
     def test_date_filter(self):
         a = amcattest.create_test_article(text="artikel een", date="2001-01-01")
         b = amcattest.create_test_article(text="artikel twee", date="2002-01-01")
@@ -424,6 +422,7 @@ class TestAmcatES(amcattest.ElasticTestCase):
         
         
         
+    @amcattest.use_elastic
     def test_index(self):
         import datetime
         aid = amcattest.create_test_article(text='test\n\n\tweede alinea', headline='test headline;\nmet enter', date='2010-01-01').id
@@ -434,8 +433,8 @@ class TestAmcatES(amcattest.ElasticTestCase):
         self.assertEqual(a['headline'], db_a.headline)
         self.assertEqual(datetime.datetime.strptime(a['date'], "%Y-%m-%dT%H:%M:%S"), db_a.date)
 
+    @amcattest.use_elastic
     def test_query(self):
-        ES().delete_index()
         a = amcattest.create_test_article(headline="bla", text="artikel artikel een", date="2001-01-01")
         ES().add_articles([a.id])
         
@@ -452,9 +451,9 @@ class TestAmcatES(amcattest.ElasticTestCase):
         es_a, = ES().query("artikel", sort="id")
         self.assertEqual(es_a.score, 2)
 
+    @amcattest.use_elastic
     def test_query_ids(self):
         """Test that filters and query strings work"""
-        ES().delete_index()
         m1, m2 = [amcattest.create_test_medium() for _ in range(2)]
         a = amcattest.create_test_article(text='aap noot mies', medium=m1)
         b = amcattest.create_test_article(text='noot mies wim zus', medium=m2)
@@ -480,6 +479,7 @@ class TestAmcatES(amcattest.ElasticTestCase):
         self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(sets=s1.id))), {b.id, c.id})
 
         
+    @amcattest.use_elastic
     def test_articlesets(self):
         a, b, c = [amcattest.create_test_article() for _x in range(3)]
         s1 = amcattest.create_test_set(articles=[a,b,c])
@@ -493,6 +493,7 @@ class TestAmcatES(amcattest.ElasticTestCase):
         ids = ES().query_ids(filters=dict(sets=s1.id))
         self.assertEqual(set(ids), {a.id, b.id, c.id})
 
+    @amcattest.use_elastic
     def test_refresh_index(self):
         """Are added/removed articles added/removed from the index?"""
 
@@ -550,6 +551,7 @@ class TestAmcatES(amcattest.ElasticTestCase):
         arts[1].save()
 
         
+    @amcattest.use_elastic
     def test_full_refresh(self):
         "test full refresh, e.g. document content change"
         m1, m2 = [amcattest.create_test_medium() for _ in range(2)]
