@@ -71,7 +71,16 @@ def db_supports_distinct_on(db='default'):
     @param db: database to consider
     @type db: str
     """
-    return connections.databases[db]["ENGINE"] in DISTINCT_ON_DATABASES
+    return connections[db].features.can_distinct_on_fields
+
+
+def distinct_args(*fields):
+    """
+    return fields if the db supports distinct on, otherwise an empty list
+    Intended usage: qs.distinct(*distinct_args(field1, field2))
+    This will run distinct(field1, field2) if supported, otherwise just distinct()
+    """
+    return fields if db_supports_distinct_on() else []
 
 def get_related(appmodel):
     """Get a sequence of model classes related to the given model class"""
