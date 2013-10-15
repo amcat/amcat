@@ -16,25 +16,35 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.utils.functional import memoize
+from functools import partial
 from inspect import isclass
 from itertools import imap, chain
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from amcat.models import Plugin, PluginType
 from amcat.contrib import plugins
 
 import importlib
 import os
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+from amcat.tools.toolkit import cached
 
-PLUGIN_TYPES = tuple(p.get_class() for p in PluginType.objects.all())
+log = logging.getLogger(__name__)
+
+
 PLUGIN_MODULE = plugins.__name__
+
+def get_plugin_types():
+    """Return all classes which represent a plugintype"""
+    return tuple(p.get_class() for p in PluginType.objects.all())
+get_plugin_types = memoize(get_plugin_types, {}, 0)
 
 def is_plugin(cls):
     """Determines whether given class represents a plugin.
 
     @type return: bool"""
-    return (isclass(cls) and issubclass(cls, PLUGIN_TYPES)) and cls not in PLUGIN_TYPES
+    return (isclass(cls) and issubclass(cls, get_plugin_types())) and cls not in get_plugin_types()
 
 def is_module(path):
     """
@@ -63,7 +73,7 @@ def get_plugins(module_paths):
 
 def get_plugin_type(cls):
     """Returns PluginType instance based on given class."""
-    for pt in PLUGIN_TYPES:
+    for pt in get_plugin_types():
         if issubclass(cls, pt):
             return PluginType.objects.get(class_name=get_qualified_name(pt))
 
@@ -103,4 +113,13 @@ class Command(BaseCommand):
 
             log.info("Created new plugin: {plugin.class_name}".format(**locals()))
 
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestSyncPlugins(amcattest.PolicyTestCase):
+    pass
 
