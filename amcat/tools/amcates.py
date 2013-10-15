@@ -119,7 +119,6 @@ class ES(object):
         return result['_source']
         
 
-    
     def query_ids(self, query=None, filter=None, filters={}, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
@@ -347,17 +346,15 @@ if __name__ == '__main__':
 ###########################################################################
 
 from amcat.tools import amcattest
+from unittest import skipUnless
 
-class TestAmcatES(amcattest.PolicyTestCase):
+class TestAmcatES(amcattest.ElasticTestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.old_index = settings.ES_INDEX
-        settings.ES_INDEX += "__unittest"
-        ES().delete_index()
-        ES().create_index()
+        amcattest.ElasticTestCase.setUpClass()
+        cls.check_es()
         
-
     def test_aggregate(self):
         m1, m2, m3 = [amcattest.create_test_medium() for _ in range(3)]
         unused = amcattest.create_test_article(text='aap noot mies', medium=m3)
@@ -455,7 +452,6 @@ class TestAmcatES(amcattest.PolicyTestCase):
         es_a, = ES().query("artikel", sort="id")
         self.assertEqual(es_a.score, 2)
 
-        
     def test_query_ids(self):
         """Test that filters and query strings work"""
         ES().delete_index()

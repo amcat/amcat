@@ -38,6 +38,7 @@ except ImportError:
 import unittest 
 import logging; log = logging.getLogger(__name__)
 
+from django.conf import settings
 
 LICENSE = """###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
@@ -409,7 +410,40 @@ class TestAmcatTest(PolicyTestCase):
         
         
 
+def require_es(func):
+    def run_or_skip(self, *args, **kargs):
+        self.check_es()
+        return func(self, *args, **kargs)
+    return run_or_skip
+            
 
+class ElasticTestCase(PolicyTestCase):
+    ALL_TESTS_REQUIRE_ES = False
+
+    @classmethod
+    def setUpClass(cls):
+        from amcat.tools.amcates import ES
+        cls._old_settings = dict(ES_INDEX = settings.ES_INDEX)
+        if not settings.ES_INDEX.endswith("__unittest"):
+            settings.ES_INDEX += "__unittest"
+        es = ES()
+        cls._es_skip = not es.es.ping()
+        if cls._es_skip:
+            log.warn("Elastic search not running, skipping tests")
+            return
+        es.delete_index()
+        es.create_index()
+
+    @classmethod
+    def tearDownClass(cls):
+        for key, val in cls._old_settings.iteritems():
+            setattr(settings, key, val)
+
+    @classmethod
+    def check_es(cls):
+        """Skip if elastic is not enabled"""
+        if cls._es_skip:
+            raise unittest.SkipTest("ES not enabled")
 
 def get_tests_from_suite(suite):
     for e in suite:
