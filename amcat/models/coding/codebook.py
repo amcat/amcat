@@ -38,6 +38,7 @@ from amcat.models.coding.code import Code, Label
 from amcat.models import Language
 from django.core.exceptions import ValidationError
 from amcat.tools import toolkit
+from amcat.tools.djangotoolkit import distinct_args
 
 import collections
 
@@ -154,7 +155,7 @@ class Codebook(AmcatModel):
 
         if not languages:
             # Cache ALL languages in this codebook
-            labels = Label.objects.filter(code__id__in=codes).distinct("language")
+            labels = Label.objects.filter(code__id__in=codes).distinct(*distinct_args("language"))
             languages = labels.values_list("language_id", flat=True)
             all_labels = True
         else:
@@ -762,7 +763,7 @@ class TestCodebook(amcattest.PolicyTestCase):
         B = amcattest.create_test_codebook(name="B")
         B.add_code(f, b)
 
-
+    @amcattest.require_postgres
     def test_caching_correctness(self):
         """
         Each method gets decorated with {cache, cache_labels, cache+cache_labels} after which

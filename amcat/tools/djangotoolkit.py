@@ -36,34 +36,6 @@ from django.db import connections
 
 from amcat.tools.table.table3 import ObjectTable, SortedTable
 
-DISTINCT_ON_DATABASES = (
-    'django.db.backends.postgresql_psycopg2', 'django.db.backends.mysql',
-    'django.db.backends.oracle'
-)
-
-def can_distinct_on_pk(qs):
-    """
-    Find out whether we can filter on primary key, without producting
-    errors when submitting query to database.
-
-    @type qs: django.db.QuerySet
-    @param qs: queryset to introspect
-
-    @return boolean
-    """
-    query = qs.__dict__['query']
-    ordering = query.order_by
-
-    if not query.order_by:
-        # Check for default ordering
-        if query.default_ordering:
-            ordering = qs.model._meta.ordering
-
-    names = (qs.model._meta.pk.name, "-{}".format(qs.model._meta.pk.name))
-
-    return ((not len(ordering) or ordering[0] in names)
-                and db_supports_distinct_on())
-
 def db_supports_distinct_on(db='default'):
     """
     Return a boolean indicating whether this database supports DISTINCT ON.

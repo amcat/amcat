@@ -472,16 +472,16 @@ class TestGetCodingJobResults(amcattest.PolicyTestCase):
         amcatlogging.debug_module('django.db.backends')
 
         script = self._get_results_script([job], {strf : {}, intf : {}})
-        with self.checkMaxQueries(5, output="print"):
+        with self.checkMaxQueries(5):
             list(csv.reader(StringIO(script.run())))
 
 
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(ids=True)})
-        with self.checkMaxQueries(5, output="print"):
+        with self.checkMaxQueries(5):
             list(csv.reader(StringIO(script.run())))
 
 
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(labels=True)})
-        with self.checkMaxQueries(5, output="print"):
+        with self.checkMaxQueries(5):
             list(csv.reader(StringIO(script.run())))
 

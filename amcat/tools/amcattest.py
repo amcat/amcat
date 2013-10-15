@@ -409,7 +409,16 @@ class TestAmcatTest(PolicyTestCase):
         
         
         
+def require_postgres(func):
+    def run_or_skip(self, *args, **kargs):
+        from django.db import connection
+        if connection.vendor != 'postgresql':
+            raise unittest.SkipTest("Test function {func.__name__} requires postgres".format(**locals()))
+        return func(self, *args, **kargs)
+    return run_or_skip
+    
 
+        
 def require_es(func):
     def run_or_skip(self, *args, **kargs):
         self.check_es()
