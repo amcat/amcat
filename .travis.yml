@@ -27,10 +27,9 @@ before_install:
 install: 
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
- - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.5.deb
- - sudo dpkg -i ./elasticsearch-0.90.5.deb
- - sudo service elasticsearch start
- - rm ./elasticsearch-0.90.5.deb
+ - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.5.tar.gz  | tar xvz
+ - wget http://amcat.vu.nl/plain/hitcount.jar
+ - ES_CLASSPATH=hitcount.jar elasticsearch-0.90.5/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
  - pip install -r ./pip_requirements.txt --use-mirrors
 
 script:
