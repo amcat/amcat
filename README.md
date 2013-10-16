@@ -1,3 +1,3 @@
 amcat 
 =====
-![Build status](https://api.travis-ci.org/amcat/amcat.png)
+Master: [![Build Status](https://travis-ci.org/amcat/amcat.png?branch=master)](https://travis-ci.org/amcat/amcat)
