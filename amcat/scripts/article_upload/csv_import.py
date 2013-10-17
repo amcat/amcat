@@ -266,10 +266,15 @@ class TestCSV(amcattest.PolicyTestCase):
         header = ('kop', 'datum', 'tekst', 'id', 'parent', 'van')
         data = [
             ('kop1', '2001-01-01', 'text1', "7", "12", 'piet'),
-            ('kop1', '2001-01-01', 'text1', "12", None, 'jan')
+            ('kop2', '2001-01-01', 'text2', "12", None, 'jan')
         ]
         articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum",
                                  externalid='id',  parent_externalid='parent', author='van')
+
+
+        # for strange reasons, it seems that the order is sometimes messed up
+        # since this is not something we care about, we order the results
+        articles = sorted(articles, key=lambda a: a.externalid)
         
         self.assertEqual(len(articles), 2)
         self.assertEqual(articles[0].parent, articles[1])
@@ -288,6 +293,9 @@ class TestCSV(amcattest.PolicyTestCase):
                                  externalid='id',  parent_externalid='parent', author='van',
                                  addressee_from_parent=True)
 
+        # see above
+        articles = sorted(articles, key=lambda a: a.externalid)
+        
         self.assertEqual(articles[0].author, 'piet')
         self.assertEqual(articles[0].addressee, 'jan')
         self.assertEqual(articles[1].author, 'jan')
