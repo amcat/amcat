@@ -55,8 +55,40 @@ LEAD_SCRIPT_FIELD = {"lead" : {'lang' : 'python',
                                "script" : '_source["body"] and _source["body"][:300] + "..."'}}
 
 
+class SearchResult(object):
+    """Iterable collection of results that also has total"""
+    def __init__(self, results):
+        "@param results: the raw results dict from elasticsearch::search"
+        self.results = results
+        self.hits = self.results['hits']['hits']
+        self.total = self.results['hits']['total']
+
+    def __len__(self):
+        return len(self.hits)
+
+    def __iter__(self):
+        for row in self.hits:
+            yield Result.from_hit(row)
+
+    def __getitem__(self, i):
+        return Result.from_hit(self.hits[i])
+
+    def as_dicts(self):
+        "Return the results as fieldname : value dicts"
+        return [r.__dict__ for r in self]
+        
+
 class Result(object):
-    """Simple class to hold arbitrary values""" 
+    """Simple class to hold arbitrary values"""
+    @classmethod
+    def from_hit(cls, row):
+        "@param hit: elasticsearch hit dict"
+        result =  Result(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
+        if 'highlight' in row: result.highlight = row['highlight']
+        if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
+        return result
+
+    
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
     def __repr__(self):
@@ -156,11 +188,7 @@ class ES(object):
 
         log.info("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.es.search(index=self.index, body=body, **kwargs)
-        for row in result['hits']['hits']:
-            result =  Result(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
-            if 'highlight' in row: result.highlight = row['highlight']
-            if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
-            yield result
+        return SearchResult(result)
             
     def remove_from_set(self, setid, aids):
         """Remove the given articles from the given set"""
@@ -304,7 +332,7 @@ def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=N
     Build a elastic DSL query from the 'form' fields
     """
 
-    _list = lambda x: ([x] if isinstance(x, int) else x)
+    _list = lambda x: ([int(x)] if isinstance(x, (str, unicode, int)) else x)
 
     filters = []
     if sets: filters.append(dict(terms={'sets' : _list(sets)}))
