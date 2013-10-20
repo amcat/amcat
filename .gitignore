@@ -38,3 +38,6 @@ nosetests.xml
 # Emacs meuk 
 *~
 \#*\#
+
+# PyCharm meuk
+.idea
