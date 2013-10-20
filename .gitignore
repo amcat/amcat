@@ -39,3 +39,7 @@ nosetests.xml
 *~
 \#*\#
 .\#*
+
+# PyCharm meuk
+.idea
+

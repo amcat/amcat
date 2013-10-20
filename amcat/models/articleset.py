@@ -191,6 +191,9 @@ class ArticleSet(AmcatModel):
 
     def remove(self, *articles):
         """Remove the given articles from this set"""
+        self.remove_articles(articles)
+
+    def remove_articles(self, articles):
         ArticleSetArticle.objects.filter(articleset=self, article__in=articles).delete()
         self.index_dirty = True
         self.save()
