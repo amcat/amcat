@@ -347,45 +347,6 @@ def edit_articleset(request, project, aset):
     })
 
 
-@check(ArticleSet, args='id')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid')
-def articleset(request, project, aset):
-    cls = "Article Set"
-
-    articles = Datatable(SearchResource, rowlink='../article/{id}').filter(sets=aset.id)
-
-    starred = project.favourite_articlesets.filter(pk=aset.id).exists()
-    star = request.GET.get("star")
-    if (star is not None):
-        if bool(int(star)) != starred:
-            starred = not starred
-            if starred:
-                project.favourite_articlesets.add(aset.id)
-            else:
-                project.favourite_articlesets.remove(aset.id)
-
-    
-    indexed = request.GET.get("indexed")
-    if indexed is not None:
-        indexed = bool(int(indexed))
-        if indexed != aset.indexed:
-            aset.indexed = indexed
-            aset.index_dirty = True
-            aset.save()
-    
-    can_update = aset.can_update(request.user)
-    if can_update:
-        form = forms.ArticleSetForm(request.POST or None, instance=aset)
-        if form.is_valid():
-            form.save()
-        else:
-            pass
-    
-    return table_view(request, project, articles, form=form, object=aset, cls=cls, starred=starred, articleset=aset,
-                      template="navigator/project/articleset.html", articlecount=count(aset.articles.all()))
-
-
-
 @check(Project)
 def selection(request, project):
     """
