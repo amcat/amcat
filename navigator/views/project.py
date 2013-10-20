@@ -38,7 +38,7 @@ from django.db.models import Q
 
 from api.rest.resources import  ProjectResource, CodebookResource, ArticleMetaResource, AnalysedArticleResource
 from api.rest.resources import CodingSchemaResource, ArticleSetResource, CodingJobResource
-from api.rest.resources import ProjectRoleResource
+from api.rest.resources import ProjectRoleResource, SearchResource
 
 #from api.rest import AnalysisResource
 from api.rest.resources import  CodebookCodeResource
@@ -351,12 +351,8 @@ def edit_articleset(request, project, aset):
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def articleset(request, project, aset):
     cls = "Article Set"
-    articles = (Datatable(ArticleMetaResource, rowlink="../article/{id}")
-                .filter(articleset=aset.id)
-                .hide('metastring', 'url', 'externalid',
-                      'byline', 'pagenr', 'project', 'section', 'text'))
 
-
+    articles = Datatable(SearchResource, rowlink='../article/{id}').filter(sets=aset.id)
 
     starred = project.favourite_articlesets.filter(pk=aset.id).exists()
     star = request.GET.get("star")

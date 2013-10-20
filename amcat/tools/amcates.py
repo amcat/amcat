@@ -57,21 +57,22 @@ LEAD_SCRIPT_FIELD = {"lead" : {'lang' : 'python',
 
 class SearchResult(object):
     """Iterable collection of results that also has total"""
-    def __init__(self, results):
+    def __init__(self, results, fields):
         "@param results: the raw results dict from elasticsearch::search"
         self.results = results
         self.hits = self.results['hits']['hits']
         self.total = self.results['hits']['total']
+        self.fields = fields
 
     def __len__(self):
         return len(self.hits)
 
     def __iter__(self):
         for row in self.hits:
-            yield Result.from_hit(row)
+            yield Result.from_hit(row, self.fields)
 
     def __getitem__(self, i):
-        return Result.from_hit(self.hits[i])
+        return Result.from_hit(self.hits[i], self.fields)
 
     def as_dicts(self):
         "Return the results as fieldname : value dicts"
@@ -81,9 +82,11 @@ class SearchResult(object):
 class Result(object):
     """Simple class to hold arbitrary values"""
     @classmethod
-    def from_hit(cls, row):
+    def from_hit(cls, row, fields):
         "@param hit: elasticsearch hit dict"
-        result =  Result(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
+        field_dict = {f: None for f in fields}
+        field_dict.update(row.get('fields', {}))
+        result =  Result(id=int(row['_id']), score=int(row['_score']), **field_dict)
         if 'highlight' in row: result.highlight = row['highlight']
         if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
         return result
@@ -173,7 +176,7 @@ class ES(object):
                 yield int(row['_id'])
             sid = res['_scroll_id']
 
-    def query(self, query=None, filter=None, filters={}, highlight=False, lead=False, **kwargs):
+    def query(self, query=None, filter=None, filters={}, highlight=False, lead=False, fields=[], **kwargs):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -187,8 +190,8 @@ class ES(object):
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
 
         log.info("es.search(body={body}, **{kwargs})".format(**locals()))
-        result = self.es.search(index=self.index, body=body, **kwargs)
-        return SearchResult(result)
+        result = self.es.search(index=self.index, body=body, fields=fields, **kwargs)
+        return SearchResult(result, fields)
             
     def remove_from_set(self, setid, aids):
         """Remove the given articles from the given set"""

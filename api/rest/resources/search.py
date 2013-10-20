@@ -7,7 +7,7 @@ from rest_framework.fields import DateField, CharField, IntegerField
 from rest_framework.serializers import Serializer
 from amcat.tools import amcates
 from api.rest.resources.amcatresource import AmCATResource
-
+from django_filters import filters, filterset
 FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets"
 
 class LazyES(object):
@@ -41,14 +41,26 @@ class SearchResource(AmCATResource):
         return queryset
     
     @classmethod
-    def get_url_pattern(cls):
-        """The url pattern for use in the django urls routing table"""
-        pattern = r'^search$'
-        return url(pattern, cls.as_view(), name="search")
+    def get_model_name(cls):
+        return "search"
 
+    def get_filter_fields(cls):
+        return cls.filter_class().filters.keys()
+    
+    class filter_class(filterset.FilterSet):
+        sets = filters.NumberFilter()
 
+        def __init__(self, data=None, queryset=None, prefix=None):
+            if queryset is None:
+                queryset = LazyES()
+            filterset.FilterSet.__init__(self, data, queryset, prefix)
+            
+        class Meta:
+            order_by=True
+        
     class serializer_class(Serializer):
         id = IntegerField()
         date = DateField()
         headline = CharField()
         mediumid = IntegerField()
+        
