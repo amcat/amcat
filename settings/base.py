@@ -179,7 +179,8 @@ INSTALLED_APPS = [
     'api',
     'amcat',
     'django_extensions',
-    'compressor'
+    'compressor',
+    'djcelery',
 ]
                     
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
@@ -324,4 +325,5 @@ else:
     }
 
 
-
+import djcelery
+djcelery.setup_loader()
