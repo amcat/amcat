@@ -25,7 +25,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
 import itertools
-from amcat.models import Medium
+from amcat.models import Medium, ProjectRole
 
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codebook import Codebook
@@ -145,6 +145,17 @@ class Project(AmcatModel):
 
         super(Project, self).save(*args, **kargs)
 
+    def get_role_id(self, user=None):
+        """
+        Return the role id that this user has, by his own right or as guest
+        If user is None, returns the guest role id
+        """
+        if user:
+            try:
+                return self.projectrole_set.get(user=user).role_id
+            except ProjectRole.DoesNotExist:
+                pass
+        return self.guest_role_id
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
