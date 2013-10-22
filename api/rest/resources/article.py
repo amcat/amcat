@@ -17,10 +17,17 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import Article, ArticleSet
+from amcat.models import Article, ArticleSet, Medium
 from api.rest.resources.amcatresource import AmCATResource
+from api.rest.resources.articleset import ArticleSetViewSet
+
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.filters import AmCATFilterSet, InFilter
+from rest_framework.viewsets import ModelViewSet
+from api.rest.resources.amcatresource import DatatablesMixin
+
+from api.rest.viewsets import (ProjectViewSetMixin, ROLE_PROJECT_READER,
+                               CannotEditLinkedResource, NotFoundInProject)
 
 from rest_framework import serializers
 from django_filters import filters, filterset
@@ -51,35 +58,24 @@ class ArticleMetaResource(AmCATResource):
     def get_model_name(cls):
         return "ArticleMeta".lower()
 
-from rest_framework import viewsets
-
-from api.rest.resources.amcatresource import DatatablesMixin
-
-from rest_framework import permissions
-from amcat.models.authorisation import ROLE_PROJECT_READER, ROLE_PROJECT_WRITER, ROLE_PROJECT_ADMIN
-
-_PERM_MAP = {
-    'OPTIONS' : None,
-    'HEAD' : None,
-    'GET' : ROLE_PROJECT_READER,
-    'POST' : ROLE_PROJECT_WRITER,
-    'DELETE' : ROLE_PROJECT_ADMIN
-    }
-
-class ProjectPermission(permissions.BasePermission):
-    def has_permission(self, request, view):
-        user = request.user if request.user.is_authenticated() else None
-        required_role_id = _PERM_MAP[request.method]
-        if not required_role_id: return True
-        actual_role_id = view.get_project().get_role_id(user=user)
-        if not actual_role_id >= required_role_id:
-            log.warn("User {user} has role {actual_role_id} < {required_role_id}".format(**locals()))
-        return actual_role_id >= required_role_id
-    
-class ArticleViewSet(DatatablesMixin, viewsets.ModelViewSet):
-    permission_classes = (ProjectPermission,)
+class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Article
+    url = ArticleSetViewSet.url + '/(?P<articleset>[0-9]+)/articles'
+    permission_map = {'GET' : ROLE_PROJECT_READER}
 
+    def check_permissions(self, request):
+        # make sure that the requested set is available in the projec, raise 404 otherwiset
+        # sets linked_set to indicate whether the current set is owned by the project
+        if self.articleset.project == self.project:
+            pass
+        elif self.project.articlesets.filter(pk=self.articleset.id).exists():
+            if request.method == 'POST':
+                raise CannotEditLinkedResource()
+        else:
+            raise NotFoundInProject()
+        return super(ArticleViewSet, self).check_permissions(request)
+    
+    
     @property
     def articleset(self):
         if not hasattr(self, '_articleset'):
@@ -87,14 +83,28 @@ class ArticleViewSet(DatatablesMixin, viewsets.ModelViewSet):
             self._articleset = ArticleSet.objects.get(pk=articleset_id)
         return self._articleset
 
-    def get_project(self):
-        return self.articleset.project
-    
     def filter_queryset(self, queryset):
         queryset = super(ArticleViewSet, self).filter_queryset(queryset)
         return queryset.filter(articlesets_set=self.articleset)
 
-        
+    def post_save(self, article, created):
+        # add to articleset, index
+        if created:
+            self.articleset.add_articles([article])
+
+    def create(self, request, *args, **kwargs):
+        """Lookup medium if needed"""
+        # should this be handled by the serializer instead?
+        if 'medium' in request.DATA:
+            try:
+                int(request.DATA['medium'])
+            except ValueError:
+                mediumid = Medium.get_or_create(request.DATA['medium']).id
+                request.DATA['medium'] = mediumid
+                
+        return super(ArticleViewSet, self).create(request, *args, **kwargs)
+
+            
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -110,19 +120,67 @@ class TestArticle(ApiTestCase):
         s = amcattest.create_test_set()
                             
         # is the set empty? (aka can we get the results)
-        url = '/api/v4/articleset/{s.id}/articles/'.format(**locals())
+        url = '/api/v4/projects/{s.project.id}/sets/{s.id}/articles/'.format(**locals())
+        url = ArticleViewSet.get_url(project=s.project.id, articleset=s.id)
         result = self.get(url)
         self.assertEqual(result['results'], [])
 
-        body = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00',
-                'medium' : amcattest.create_test_medium().id,
-                'project' : s.project.id,
-                'metastring' : '{}',
-                'length' : 123}
+        body = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
+        
         result = self.post(url, body, as_user=s.project.owner)
         self.assertEqual(result['headline'], body['headline'])
-
         
-        url = '/api/v4/articleset/{s.id}/articles/'.format(**locals())
         result = self.get(url)
         self.assertEqual(len(result['results']), 1)
+        a = result['results'][0]
+        self.assertEqual(a['headline'], body['headline'])
+        self.assertEqual(a['project'], s.project_id)
+        self.assertEqual(a['length'], 2)
+
+    def test_permissions(self):
+        from amcat.models import Role, ProjectRole
+        metareader = Role.objects.get(label='metareader', projectlevel=True)
+        reader = Role.objects.get(label='reader', projectlevel=True)
+        
+        p1 = amcattest.create_test_project(guest_role=None)
+        p2 = amcattest.create_test_project(guest_role=metareader)
+        
+        s1 = amcattest.create_test_set(project=p1)        
+        s2 = amcattest.create_test_set(project=p2)
+
+        p1.articlesets.add(s2)
+        #alias
+        url, set_url = ArticleViewSet.get_url, ArticleSetViewSet.get_url
+
+        body = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
+        # anonymous user shoud be able to read p2's articlesets but not articles (requires READER), and nothing on p1
+                                                  
+        self.get(url(project=p1.id, articleset=s1.id), check_status=401)
+        self.get(url(project=p2.id, articleset=s2.id), check_status=401)
+
+        self.get(set_url(project=p1.id), check_status=401)
+        self.get(set_url(project=p2.id), check_status=200)
+
+        # it is illegal to view an articleset through a project it is not a member of
+        self.get(url(project=p2.id, articleset=s1.id), check_status=404)
+        
+        u = p1.owner
+        ProjectRole.objects.create(project=p2, user=u, role=reader)
+
+        # User u shoud be able to view all views
+        self.get(url(project=p1.id, articleset=s1.id), as_user=u, check_status=200)
+        self.get(url(project=p1.id, articleset=s2.id), as_user=u, check_status=200)
+        self.get(url(project=p2.id, articleset=s2.id), as_user=u, check_status=200)
+        # Except this one, of course, because it doesn't exist
+        self.get(url(project=p2.id, articleset=s1.id), as_user=u, check_status=404)
+
+        self.get(set_url(project=p1.id), as_user=u, check_status=200)
+        self.get(set_url(project=p2.id), as_user=u, check_status=200)
+
+        # User u should be able to add articles to set 1 via project 1, but not p2/s2
+        self.post(url(project=p1.id, articleset=s1.id), body, as_user=u, check_status=201)
+        self.post(url(project=p2.id, articleset=s2.id), body, as_user=u, check_status=403)
+        
+        # Neither u (p1.owner) nor p2.owner should be able to modify set 2 via project 1
+        self.post(url(project=p1.id, articleset=s2.id), body, as_user=u, check_status=403)
+        self.post(url(project=p1.id, articleset=s2.id), body, as_user=p2.owner, check_status=403)

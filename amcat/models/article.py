@@ -60,8 +60,8 @@ class Article(AmcatModel):
     pagenr = models.IntegerField(blank=True, null=True)
     headline = models.TextField()
     byline = models.TextField(blank=True, null=True)
-    length = models.IntegerField()
-    metastring = models.TextField(null=True)
+    length = models.IntegerField(blank=True)
+    metastring = models.TextField(null=True, blank=True)
     url = models.URLField(null=True, blank=True, db_index=True, max_length=750)
     externalid = models.IntegerField(blank=True, null=True)
     author = models.TextField(blank=True, null=True, max_length=100)
@@ -88,7 +88,7 @@ class Article(AmcatModel):
 
     def save(self, *args, **kwargs):
         if self.length is None:
-            self.length = word_len(self.text)
+            self.length = word_len(self.text) + word_len(self.headline) + word_len(self.byline)
 
         super(Article, self).save(*args, **kwargs)
 

@@ -53,7 +53,8 @@ def surlencode(query, doseq=False):
 class ApiTestCase(TestCase):
     def __init__(self, *args, **kargs):
         super(ApiTestCase, self).__init__(*args, **kargs)
-
+        self._passwords = {} # user_id -> password
+        
     def setUp(self):
         self.client = Client()
         self.user = amcattest.create_test_user()
@@ -64,13 +65,17 @@ class ApiTestCase(TestCase):
     def _login(self, as_user=None, password=None):
         as_user = as_user or self.user
         if not password:
+            password = self._passwords.get(as_user.id)
+        if not password:
             password = 'test'
             as_user.set_password(password)
             as_user.save()
+            self._passwords[as_user.id] = password
         self.assertTrue(self.client.login(username=as_user.username, password=password), "Cannot log in")
         
     def _request(self, resource, as_user=None, method='get', check_status=200, request_args=[], request_options={}, **options):
-        self._login(as_user=as_user)
+        if as_user is not None:
+            self._login(as_user=as_user)
         resource_url = resource if isinstance(resource, (str, unicode)) else resource.get_url()
         if options:
             resource_url += "?" + surlencode(options)
