@@ -5,7 +5,7 @@ class Term(object):
         self.term = tokens['term']
         self.field = tokens.get('field', None)
     def __unicode__(self):
-        field = "{self.field}:".format(**locals()) if self.field else ""
+        field = "{self.field}::".format(**locals()) if self.field else ""
         return "{field}{self.term}".format(**locals())
     def __str__(self):
         return unicode(self).encode('utf-8')
@@ -18,24 +18,36 @@ class Quote(object):
 
         pass
     def __unicode__(self):
-        result = u'"{self.quote}"'.format(**locals())
+        result = u'""{self.quote}""'.format(**locals())
         if self.slop:
-            result += u'~{self.slop}'.format(**locals())
+            result += u'~~{self.slop}'.format(**locals())
         return result
     def __str__(self):
         return unicode(self).encode('utf-8')
 
 class Boolean(object):
     def __init__(self, tokens):
-        self.operator = tokens[0].operator
-        self.terms = [t for t in tokens[0] if isinstance(t, (Term, Boolean))]
+        self.operator = tokens.operator
+        self.terms = [parse_nested(t) for t in tokens if t != self.operator]
+        
     def __unicode__(self):
         terms = " ".join(unicode(t) for t in self.terms)
         return '{self.operator}[{terms}]'.format(**locals())
     def __str__(self):
         return unicode(self).encode('utf-8')
-    
 
+def parse_nested(token):
+    if isinstance(token, ParseResults):
+        token = Boolean(token)
+    return token
+    
+def boolean_or_term(tokens):
+    token = tokens[0]
+    if isinstance(token, Term):
+        return token
+    else:
+        return Boolean(token)
+    
 class Grammar:
     # literals
     AND = Literal("AND").setResultsName("operator")
@@ -61,7 +73,7 @@ class Grammar:
             (AND, 2, opAssoc.LEFT),
             (Optional(OR, default="OR"),  2, opAssoc.LEFT),
             ])
-    boolean_expr.setParseAction(Boolean)
+    boolean_expr.setParseAction(boolean_or_term)
 
     
 parser = Grammar.boolean_expr
