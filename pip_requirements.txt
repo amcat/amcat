@@ -5,6 +5,7 @@ rtf2xml
 sh
 cssselect
 elasticsearch
+pyparsing
 
 django
 djangorestframework==2.3.8
