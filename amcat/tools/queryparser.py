@@ -171,6 +171,6 @@ parser = Grammar.boolean_expr
 
 def parse(s):
     terms =  parser.parseString(s, parseAll=True)[0]
-    print; pprint(terms); print
+    #print; pprint(terms); print
     return terms.get_dsl()
 

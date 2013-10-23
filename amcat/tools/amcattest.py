@@ -31,6 +31,7 @@ functions create_test_* create test objects for use in unit tests
 from __future__ import unicode_literals, print_function, absolute_import
 import os.path, os, inspect
 from contextlib import contextmanager
+from functools import wraps
 try:
     from django.test import TestCase
 except ImportError:
@@ -434,6 +435,7 @@ def use_elastic(func):
     - The ElasticSearch server can be reached (skips otherwise)
     - The '__unittest' index exists and is empty
     """
+    @wraps(func)
     def inner(*args, **kargs):
         from amcat.tools.amcates import ES
         if not settings.ES_INDEX.endswith("__unittest"):
