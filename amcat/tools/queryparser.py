@@ -85,7 +85,8 @@ def get_span_term(text, field):
 class Boolean(object):
     def __init__(self, tokens):
         self.operator = tokens.operator
-        self.terms = [parse_nested(t) for t in tokens if t != self.operator]
+        self.terms = [(Boolean(t) if isinstance(t, ParseResults) else t)
+                      for t in tokens if t != self.operator]
         
     def __unicode__(self):
         terms = " ".join(unicode(t) for t in self.terms)
@@ -93,13 +94,15 @@ class Boolean(object):
     def __str__(self):
         return unicode(self).encode('utf-8')
     def get_dsl(self):
-        op = dict(OR="should", AND="must")[self.operator]
-        return {"bool" : {op : [term.get_dsl() for term in self.terms]}}
-    
-def parse_nested(token):
-    if isinstance(token, ParseResults):
-        token = Boolean(token)
-    return token
+        if self.operator == "NOT":
+            # in lucene, NOT is binary rather than unary, so
+            # x NOT y means x AND (NOT y) or +x -y.
+            # We interpret x NOT y NOT z  as x AND (NOT y) AND (NOT z) or +x -y -z
+            return {"bool" : {"must" : [self.terms[0].get_dsl()],
+                              "must_not" : [t.get_dsl() for t in self.terms[1:]]}}
+        else:
+            op = dict(OR="should", AND="must", NOT="must_not")[self.operator]
+            return {"bool" : {op : [term.get_dsl() for term in self.terms]}}
 
 def get_term(tokens):
     if 'slop' in tokens:
@@ -158,6 +161,7 @@ class Grammar:
     # boolean combination
     boolean_expr = operatorPrecedence(fterm, [
             (AND, 2, opAssoc.LEFT),
+            (NOT, 2, opAssoc.LEFT),
             (Optional(OR, default="OR"),  2, opAssoc.LEFT),
             ])
     boolean_expr.setParseAction(get_boolean_or_term)
@@ -166,5 +170,7 @@ class Grammar:
 parser = Grammar.boolean_expr
 
 def parse(s):
-    return parser.parseString(s, parseAll=True)[0].get_dsl()
+    terms =  parser.parseString(s, parseAll=True)[0]
+    print; pprint(terms); print
+    return terms.get_dsl()
 
