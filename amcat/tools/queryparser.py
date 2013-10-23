@@ -113,7 +113,6 @@ def get_term(tokens):
         else:
             return Quote(tokens.quote, tokens.field)
     else:
-        print([tokens.term, tokens.field])
         t = Term(tokens.term, tokens.field)
         return t
 
@@ -167,4 +166,5 @@ class Grammar:
 parser = Grammar.boolean_expr
 
 def parse(s):
-    return parser.parseString(s, parseAll=True)[0]
+    return parser.parseString(s, parseAll=True)[0].get_dsl()
+

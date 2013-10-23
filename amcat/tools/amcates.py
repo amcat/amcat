@@ -27,6 +27,7 @@ import json
 import collections
 from datetime import datetime
 
+from amcat.tools import queryparser
 from amcat.tools.toolkit import multidict, splitlist
 from amcat.models import ArticleSetArticle, Article
 from elasticsearch import Elasticsearch
@@ -364,7 +365,7 @@ def build_body(query=None, filter=None, filters=None):
     """
     if filter is None and filters: filter = build_filter(**filters)
     if filter: yield ('filter', filter)
-    if query: yield ('query', {'query_string' : {'query' : query}})
+    if query: yield ('query', queryparser.parse(query))
 
 
     
