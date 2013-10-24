@@ -125,6 +125,7 @@ class Project(AmcatModel):
     def get_mediums(self):
         from amcat.tools.amcates import ES
         sets = [s.id for s in self.all_articlesets()]
+        if not sets: return Medium.objects.none()
         medium_ids = ES().list_media(filters=dict(sets=sets))
         return Medium.objects.filter(id__in=medium_ids)
 
@@ -220,4 +221,6 @@ class TestProject(amcattest.PolicyTestCase):
             { a.medium for a in set1.articles.all() } | { a.medium for a in set2.articles.all() }
         )
 
+        # can we get_mediums on an empty project?
+        self.assertEqual(list(amcattest.create_test_project().get_mediums()), [])
 

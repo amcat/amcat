@@ -59,7 +59,7 @@ DATABASE_OPTIONS = {
    "init_command" : "set transaction isolation level read uncommitted"
 }
 
-ALLOWED_HOSTS = ['.vu.nl']
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", ".vu.nl").split(",")
 
 DATABASES = dict(default=dict(
         ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),

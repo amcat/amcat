@@ -27,6 +27,7 @@ import json
 import collections
 from datetime import datetime
 
+from amcat.tools import queryparser
 from amcat.tools.toolkit import multidict, splitlist
 from amcat.models import ArticleSetArticle, Article
 from elasticsearch import Elasticsearch
@@ -55,8 +56,43 @@ LEAD_SCRIPT_FIELD = {"lead" : {'lang' : 'python',
                                "script" : '_source["body"] and _source["body"][:300] + "..."'}}
 
 
+class SearchResult(object):
+    """Iterable collection of results that also has total"""
+    def __init__(self, results, fields):
+        "@param results: the raw results dict from elasticsearch::search"
+        self.results = results
+        self.hits = self.results['hits']['hits']
+        self.total = self.results['hits']['total']
+        self.fields = fields
+
+    def __len__(self):
+        return len(self.hits)
+
+    def __iter__(self):
+        for row in self.hits:
+            yield Result.from_hit(row, self.fields)
+
+    def __getitem__(self, i):
+        return Result.from_hit(self.hits[i], self.fields)
+
+    def as_dicts(self):
+        "Return the results as fieldname : value dicts"
+        return [r.__dict__ for r in self]
+        
+
 class Result(object):
-    """Simple class to hold arbitrary values""" 
+    """Simple class to hold arbitrary values"""
+    @classmethod
+    def from_hit(cls, row, fields):
+        "@param hit: elasticsearch hit dict"
+        field_dict = {f: None for f in fields}
+        field_dict.update(row.get('fields', {}))
+        result =  Result(id=int(row['_id']), score=int(row['_score']), **field_dict)
+        if 'highlight' in row: result.highlight = row['highlight']
+        if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
+        return result
+
+    
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
     def __repr__(self):
@@ -141,7 +177,7 @@ class ES(object):
                 yield int(row['_id'])
             sid = res['_scroll_id']
 
-    def query(self, query=None, filter=None, filters={}, highlight=False, lead=False, **kwargs):
+    def query(self, query=None, filter=None, filters={}, highlight=False, lead=False, fields=[], **kwargs):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -155,12 +191,8 @@ class ES(object):
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
 
         log.info("es.search(body={body}, **{kwargs})".format(**locals()))
-        result = self.es.search(index=self.index, body=body, **kwargs)
-        for row in result['hits']['hits']:
-            result =  Result(id=int(row['_id']), score=int(row['_score']), **row.get('fields', {}))
-            if 'highlight' in row: result.highlight = row['highlight']
-            if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
-            yield result
+        result = self.es.search(index=self.index, body=body, fields=fields, **kwargs)
+        return SearchResult(result, fields)
             
     def remove_from_set(self, setid, aids):
         """Remove the given articles from the given set"""
@@ -304,8 +336,13 @@ def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=N
     Build a elastic DSL query from the 'form' fields
     """
 
-    _list = lambda x: ([x] if isinstance(x, int) else x)
-
+    def _list(x):
+        if isinstance(x, (str, unicode, int)):
+            return [int(x)]
+        elif hasattr(x, 'pk'):
+            return [x.pk]
+        return x
+    
     filters = []
     if sets: filters.append(dict(terms={'sets' : _list(sets)}))
     if mediumid: filters.append(dict(terms={'mediumid' : _list(mediumid)}))
@@ -333,7 +370,7 @@ def build_body(query=None, filter=None, filters=None):
     """
     if filter is None and filters: filter = build_filter(**filters)
     if filter: yield ('filter', filter)
-    if query: yield ('query', {'query_string' : {'query' : query}})
+    if query: yield ('query', queryparser.parse(query))
 
 
     
@@ -570,3 +607,16 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s.refresh_index(full_refresh=True)
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m1.id))), set())
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m2.id))), {a.id})
+
+    def test_scores(self):
+        "test if scores (and matches) are as expected for various queries" 
+        s = amcattest.create_test_set(articles=[
+                amcattest.create_test_article(headline="a", text='dit is een test'),
+                ])
+
+        s.refresh_index()
+        def q(query):
+            result = ES().query(query, filters={'sets':s.id}, fields=["headline"])
+            return {a.headline : a.score for a in result}
+        
+        self.assertEqual(q("test"), {"a" : 1})

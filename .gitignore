@@ -34,3 +34,12 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+
+# Emacs meuk 
+*~
+\#*\#
+.\#*
+
+# PyCharm meuk
+.idea
+

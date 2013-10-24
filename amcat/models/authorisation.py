@@ -35,6 +35,12 @@ from amcat.tools.model import AmcatModel
 
 ADMIN_ROLE = 3
 
+ROLE_PROJECT_METAREADER = 10
+ROLE_PROJECT_READER = 11
+ROLE_PROJECT_WRITER = 12
+ROLE_PROJECT_ADMIN = 13
+
+
 class AccessDenied(EnvironmentError):
     def __init__(self, user, privilege, project=None):
         projectstr = " on %s" % project if project else ""
