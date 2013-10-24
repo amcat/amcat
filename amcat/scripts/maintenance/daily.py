@@ -75,6 +75,7 @@ class DailyScript(Script):
         """
         if date is None: date = datetime.date.today()
         dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
+        
         for s in Scraper.objects.filter(run_daily=True, active=True):
             for day in dates:
                 if not self.satisfied(s, day):

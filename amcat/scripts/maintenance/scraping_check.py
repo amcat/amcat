@@ -59,9 +59,7 @@ class ScrapingCheck(Script):
 
     def make_table(self, result):
         from amcat.tools.table.table3 import DictTable
-
         table = DictTable()
-
         for r in result:
             if r['expected'] == "unknown":
                 exvalue = "unknown"
@@ -84,25 +82,18 @@ class ScrapingCheck(Script):
                 )
         return table
 
-    def send_mail(self, result):
-        
+    def send_mail(self, result):        
         table = self.make_table(result).output(rownames = True)
-    
         n = sum([r['count'] for r in result])
         succesful = sum([r['success'] for r in result])
         total = len(result)
-
         datestr = toolkit.writeDate(self.options['date'])
-
         subject = "Daily scraping for {datestr}: {n} articles, {succesful} out of {total} scrapers succesful".format(**locals())
-    
         _date = self.options['date']
         content = MAIL_ASCII.format(**locals())
         for addr in self.options['mail_to'].split(","):
             sendmail.sendmail("toon.alfrink@gmail.com",
                      addr, subject, None, content)
-
-
 
     def get_result(self):
         result = []
@@ -112,7 +103,7 @@ class ScrapingCheck(Script):
             else:
                 n_expected = "unknown"
             n_scraped = Article.objects.filter(
-                articlesetarticle__articleset = scraper.articleset.id,
+                articlesets_set = scraper.articleset.id,
                 date__contains = self.options['date']
                 ).count()
 
