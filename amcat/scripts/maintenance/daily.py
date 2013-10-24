@@ -120,29 +120,6 @@ def setup_logging():
             logger.addHandler(handler)
     logging.getLogger().handlers = []
 
-
-
-loggingcheck =    """
-    to_work = ["amcat.scraping.scraper","amcat.scraping.htmltools","amcat.scraping.controller", "__main__"]
-    loggerdict = logging.Logger.manager.loggerDict
-    for name, logger in loggerdict.items():
-        if name in to_work:
-            print("\nlogger: "+name)
-            #iterate through parents see if effective handlers are set correctly
-            print(effectivehandlers(logger))
-            #test logger
-            logger.info("test for {name}".format(**locals()))
-
-def effectivehandlers(logger):
-    handlers = logger.handlers
-    while True:
-        logger = logger.parent
-        handlers.extend(logger.handlers)
-        if not (logger.parent and logger.propagate):
-            break
-    return handlers
-       """
-         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     setup_logging()
