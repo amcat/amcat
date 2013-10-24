@@ -27,6 +27,7 @@ import json
 import collections
 from datetime import datetime
 
+from amcat.tools import queryparser
 from amcat.tools.toolkit import multidict, splitlist
 from amcat.models import ArticleSetArticle, Article
 from elasticsearch import Elasticsearch
@@ -335,8 +336,13 @@ def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=N
     Build a elastic DSL query from the 'form' fields
     """
 
-    _list = lambda x: ([int(x)] if isinstance(x, (str, unicode, int)) else x)
-
+    def _list(x):
+        if isinstance(x, (str, unicode, int)):
+            return [int(x)]
+        elif hasattr(x, 'pk'):
+            return [x.pk]
+        return x
+    
     filters = []
     if sets: filters.append(dict(terms={'sets' : _list(sets)}))
     if mediumid: filters.append(dict(terms={'mediumid' : _list(mediumid)}))
@@ -364,7 +370,7 @@ def build_body(query=None, filter=None, filters=None):
     """
     if filter is None and filters: filter = build_filter(**filters)
     if filter: yield ('filter', filter)
-    if query: yield ('query', {'query_string' : {'query' : query}})
+    if query: yield ('query', queryparser.parse(query))
 
 
     
@@ -601,3 +607,16 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s.refresh_index(full_refresh=True)
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m1.id))), set())
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m2.id))), {a.id})
+
+    def test_scores(self):
+        "test if scores (and matches) are as expected for various queries" 
+        s = amcattest.create_test_set(articles=[
+                amcattest.create_test_article(headline="a", text='dit is een test'),
+                ])
+
+        s.refresh_index()
+        def q(query):
+            result = ES().query(query, filters={'sets':s.id}, fields=["headline"])
+            return {a.headline : a.score for a in result}
+        
+        self.assertEqual(q("test"), {"a" : 1})
