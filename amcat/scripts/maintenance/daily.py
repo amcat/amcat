@@ -25,7 +25,7 @@ import datetime
 from django import forms
 import logging;log = logging.getLogger(__name__)
 
-from amcat.scraping.controller import RobustController
+from amcat.scraping.controller import Controller
 from amcat.scripts.script import Script
 from amcat.models.project import Project    
 from amcat.models.articleset import ArticleSet
@@ -43,28 +43,17 @@ class DailyScript(Script):
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
-        self.scrape(
-            RobustController(), 
-            scrapers, 
-            self.options['deduplicate'] and True)
+        self.scrape(Controller(),scrapers)
 
     def scrape(self, controller, scrapers, deduplicate = False):
         """Use the controller to scrape the given scrapers."""
         general_index_articleset = ArticleSet.objects.get(pk = 2)
         #CAUTION: destination articleset is hardcoded
-        result = []
-        current = None
-        for a in controller.scrape(scrapers, deduplicate = deduplicate):
-            result.append(a)
-            if a.scraper != current:
-                #new scraper started
-                if a.scraper.module().split(".")[-2].lower().strip() == "newspapers":
-                    #if scraper in newspapers module, add it's result to set 2
-                    log.info("Adding {x} articles of {a.scraper.__class__.__name__} to general index set ({general_index_articleset})".format(x = len(result), **locals()))
-                    general_index_articleset.add_articles(result)
-
-                result = []
-                current = a.scraper
+        for scraper, articles in controller.run(scrapers):
+            if scraper.module().split(".")[-2].lower().strip() == "newspapers":
+                #if scraper in newspapers module, add it's result to set 2
+                log.info("Adding {x} articles of {a.scraper.__class__.__name__} to general index set ({general_index_articleset})".format(x = len(result), **locals()))
+                general_index_articleset.add_articles(articles)
 
     def get_scrapers(self, date=None, days_back=7, **options):
         """
@@ -102,10 +91,11 @@ from amcat.tools.amcatlogging import AmcatFormatter
 import sys
 
 def setup_logging():
-    loggers = (logging.getLogger("amcat.scraping"), logging.getLogger(__name__), logging.getLogger("scrapers"))
+    loggers = (logging.getLogger("amcat.scraping"), logging.getLogger(__name__), logging.getLogger("scrapers"), logging.getLogger("celery"))
     d = datetime.date.today()
     filename = "/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())
     sys.stderr = open(filename, 'a')
+    #TODO: point stderr to both file and console
     handlers = (logging.FileHandler(filename), logging.StreamHandler())
     formatter = AmcatFormatter(date = True)
 
