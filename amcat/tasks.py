@@ -1,7 +1,7 @@
 from celery import task, group
 import time
 from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
-
+import logging
 from amcat.models.scraper import Scraper
 
 #Things that cannot be serialized:
@@ -15,8 +15,10 @@ class LockHack(object):
 
 @task()
 def run_scraper(scraper):
+    log.setLevel(logging.INFO)
     scraper._initialize()
     scraper.opener.cookiejar._cookies_lock = LockHack()
+    log.info("Running scraper {scraper._id}: {scraper.__class__.__name__}".format(**locals()))
     result = group([scrape_unit_save_unit.s(scraper, unit) for unit in scraper._get_units()]).delay()
     return (scraper, result)
     

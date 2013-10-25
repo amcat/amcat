@@ -25,14 +25,16 @@ from celery import group
 
 import logging;log = logging.getLogger(__name__)
 
+
 class Controller(object):
     def run(self, scrapers):
+        scrapers = scrapers[:1]
         if not hasattr(scrapers, '__iter__'):
             scrapers = [scrapers]
         for i,scraper in enumerate(scrapers):
             scraper._id = i
-            log.info("Running scraper {scraper._id}: {scraper.__class__.__name__}".format(**locals()))
-            scraper.opener.cookiejar._cookies_lock = LockHack()
+            if hasattr(scraper, 'opener'):
+                scraper.opener.cookiejar._cookies_lock = LockHack()
         task = group([run_scraper.s(scraper) for scraper in scrapers])
         result = task.apply_async()
         for scraper, articles in result.iterate():
@@ -40,4 +42,4 @@ class Controller(object):
             log.info("Scraper {scraper._id}, {scraper.__class__.__name__}, returned {n} articles".format(n = len(articles), **locals()))
             scraper.articleset.add_articles(articles)
             yield (scraper,articles)
-        
+    

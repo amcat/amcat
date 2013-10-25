@@ -130,7 +130,7 @@ class Document(object):
                 for js in val.cssselect("script"):
                     js.drop_tree()
                 return html2text(html.tostring(val)).strip() 
-            except (parser.HTMLParseError, TypeError) as e:
+            except (parser.HTMLParseError, TypeError, ValueError) as e:
                 log.error('html2text failed')
                 return 'Converting from HTML failed!'
 
