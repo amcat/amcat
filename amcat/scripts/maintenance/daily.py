@@ -97,7 +97,6 @@ class DailyScript(Script):
         else:
             return True
 
-
 from amcat.tools.amcatlogging import AmcatFormatter
 import sys
 
