@@ -82,7 +82,7 @@ class DailyScript(Script):
                     try:
                         s_instance = s.get_scraper(date = day, **options)
                     except Exception:
-                        log.exception("get_scraper for scraper {s.scraper_id} ({s.label}) failed".format(**locals()))
+                        log.exception("get_scraper for scraper {s.pk} ({s.label}) failed".format(**locals()))
                     else:
                         yield s_instance
 
