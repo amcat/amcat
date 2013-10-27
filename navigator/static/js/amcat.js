@@ -374,49 +374,6 @@ amcat.fetch_labels = function(data, textStatus, jqXHR, callback, url){
 }
 
 
-amcat.createServerSideTable = function(jqueryElement, url, columns, serverData, additionalDataTableOptions){
-    var columnTitles = $.map(columns, function(col, i){ return col[1]});
-    var columnFields = $.map(columns, function(col, i){ return col[0]});
-    console.log(columnTitles, columnFields);
-    jqueryElement.append(amcat.createTableHeaders(columnTitles));
-    serverData['columns'] = columnFields.join(',');
-    var aoColumns = [];
-    $.each(columns, function(i, col){
-        aoColumns.push({'sName':columnFields[i]});
-    });
-
-    var dataTableOptions = {
-        "bScrollInfinite": true,
-        "bLengthChange": false,
-		"aoColumns":aoColumns,
-        "iDisplayLength":100,
-        "sScrollY": "500",
-        "bScrollCollapse": true,
-        "bFilter": false,
-        "bSort": true,
-        "bInfo": false,
-        "bProcessing": true,
-        "bServerSide": true,
-        //"iDeferLoading": 99999,
-        "sAjaxSource": url,
-        "fnServerData": function(sSource, aoData, fnCallback){
-            amcat.doDatatableServerRequest(sSource, aoData, fnCallback, serverData)
-        }
-    }
-
-    jQuery.extend(dataTableOptions, additionalDataTableOptions);
-    var dataTable = jqueryElement.dataTable(dataTableOptions);
-
-    if('rowlink' in additionalDataTableOptions){
-      dataTable.fnSetRowlink(additionalDataTableOptions['rowlink']);
-      console.log(' added rowlink', additionalDataTableOptions['rowlink']);
-    }
-
-    return dataTable;
-}
-
-
-
 amcat.getFormDict = function(form){
     // code from http://stackoverflow.com/questions/1184624/serialize-form-to-json-with-jquery
     var o = {};
