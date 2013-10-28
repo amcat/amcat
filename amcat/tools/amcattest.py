@@ -151,7 +151,7 @@ def create_test_medium(**kargs):
     if "name" not in kargs: kargs["name"] = "Medium_%i" % kargs["id"]
     return Medium.objects.create(**kargs)
     
-def create_test_article(**kargs):
+def create_test_article(create=True, articleset=None, check_duplicate=False, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
     if "project" not in kargs: kargs["project"] = create_test_project()
@@ -160,7 +160,10 @@ def create_test_article(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     if 'headline' not in kargs: kargs['headline'] = 'test headline'
 
-    return Article.objects.create(**kargs)
+    a = Article(**kargs)
+    if create:
+        Article.create_articles([a], articleset, check_duplicate=check_duplicate)
+    return a
 
 def create_test_sentence(**kargs):
     """Create a test sentence"""    
@@ -175,17 +178,16 @@ def create_test_sentence(**kargs):
 
 def create_test_set(articles=0, **kargs):
     """Create a test (Article) set"""
-    from amcat.models.articleset import ArticleSet
+    from amcat.models.articleset import ArticleSet, Article
     if "name" not in kargs: kargs["name"] = "testset_%i" % len(ArticleSet.objects.all())
     if "project" not in kargs: kargs["project"] = create_test_project()
     if "id" not in kargs: kargs["id"] = _get_next_id()
     s = ArticleSet.objects.create(**kargs)
-    if type(articles) == int: 
-        for _x in range(int(articles)):
-            s.add(create_test_article())
+    if type(articles) == int:
+        articles = [create_test_article(create=False) for _x in range(articles)]
+        Article.create_articles(articles, articleset=s, check_duplicate=False)
     elif articles:
-        for article in articles:
-            s.add(article)
+        s.add_articles(articles)
     return s
             
 
@@ -444,7 +446,7 @@ def use_elastic(func):
         if not es.es.ping():
             raise unittest.SkipTest("ES not enabled")
         es.delete_index()
-        es.create_index()
+        ES().check_index()
         return func(*args, **kargs)
     return inner
 

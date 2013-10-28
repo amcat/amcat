@@ -25,7 +25,7 @@ articles database table.
 from __future__ import unicode_literals, print_function, absolute_import
 
 from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
-
+from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 
@@ -127,7 +127,56 @@ class Article(AmcatModel):
     def __repr__(self):
         return "<Article %s: %r>" % (self.id, self.headline)
 
+    @classmethod
+    def create_articles(cls, articles, articleset=None, check_duplicate=True):
+        """
+        Add the given articles to the database, the index, and the given set
+        @param articles: a collection of objects with the necessary properties (.headline etc)
+        @param articleset: an articleset object
+        @param check_duplicate: if True, duplicates are not added to the database or index
+        (the 'existing' article *is* added to the set.
+        """
+        es = amcates.ES()
 
+        # add dict (+hash) as property on articles so we know who is who
+        sets = [articleset.id] if articleset else None
+        for a in articles:
+            a.es_dict = amcates.get_article_dict(a, sets=sets)
+
+        if check_duplicate:
+            hashes = [a.es_dict['hash'] for a in articles]
+            results =es.query(filters={'hashes' : hashes}, fields=["hash", "sets"], score=False) 
+            dupes = {r.hash : r for r in results}
+        else:
+            dupes = {}
+
+        # add all non-dupes to the db, needed actions        
+        add_to_set = set() # duplicate article ids to add to set
+        add_new_to_set = set() # new article ids to add to set
+        add_to_index = [] # es_dicts to add to index
+        for a in articles:
+            dupe = dupes.get(a.es_dict['hash'], None)
+            if dupe:
+                a.duplicate_of = dupe.id
+                if articleset and not (dupe.sets and articleset.id in dupe.sets):
+                    add_to_set.add(dupe.id)
+            else:
+                a.save()
+                a.es_dict['id'] = a.pk
+                add_to_index.append(a.es_dict)
+                add_new_to_set.add(a.pk)
+
+        log.info("Considered {} articles: {} saved to db, {} new to add to index, {} duplicates to add to set"
+                 .format(len(articles), len(add_new_to_set), len(add_to_index), len(add_to_set)))
+
+        # add to index
+        if add_to_index:
+            es.bulk_insert(add_to_index)
+                
+        if articleset:
+            # add to articleset (db and index)
+            articleset.add_articles(add_to_set | add_new_to_set, add_to_index=False)
+            es.add_to_set(articleset.id, add_to_set)
 
 
 ###########################################################################
@@ -137,11 +186,59 @@ class Article(AmcatModel):
 from amcat.tools import amcattest
 
 class TestArticle(amcattest.PolicyTestCase):
+    
+    @amcattest.use_elastic
     def test_create(self):
-        """Can we create an article object?"""
-        a = amcattest.create_test_article()
-        self.assertIsNotNone(a)
+        """Can we create/store/index an article object?"""
+        a = amcattest.create_test_article(create=False, date='2010-12-31', headline=u'\ua000abcd\u07b4')
+        Article.create_articles([a])
+        db_a = Article.objects.get(pk=a.id)
+        amcates.ES().flush()
+        es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "headline"]))[0]
+        self.assertEqual(a.headline, db_a.headline)
+        self.assertEqual(a.headline, es_a.headline)
+        self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
+        self.assertEqual('2010-12-31T00:00:00', es_a.date.isoformat())
+        
 
+    @amcattest.use_elastic
+    def test_deduplication(self):
+        """Does deduplication work as it is supposed to?"""
+        art = dict(headline="test", byline="test", date='2001-01-01',
+                   medium=amcattest.create_test_medium(),
+                   project=amcattest.create_test_project(),
+                   )
+        
+        a1 = amcattest.create_test_article(**art)
+        def q(**filters):
+            amcates.ES().flush()
+            return set(amcates.ES().query_ids(filters=filters))
+        self.assertEqual(q(mediumid=art['medium']), {a1.id})
+
+        # duplicate articles should not be added
+        a2 = amcattest.create_test_article(check_duplicate=True,**art)
+        self.assertFalse(Article.objects.filter(pk=a2.id).exists())
+        self.assertEqual(a2.duplicate_of, a1.id)
+        self.assertEqual(q(mediumid=art['medium']), {a1.id})
+
+        # however, if an articleset is given the 'existing' article
+        # should be added to that set
+        s1 = amcattest.create_test_set()
+        a3 = amcattest.create_test_article(check_duplicate=True,articleset=s1, **art)
+        
+        self.assertFalse(Article.objects.filter(pk=a2.id).exists())
+        self.assertEqual(a3.duplicate_of, a1.id)
+        self.assertEqual(q(mediumid=art['medium']), {a1.id})
+        self.assertEqual(set(s1.get_article_ids()), {a1.id})
+        self.assertEqual(q(sets=s1.id), {a1.id})
+
+        # can we suppress duplicate checking?
+        a4 = amcattest.create_test_article(check_duplicate=False, **art)
+        self.assertTrue(Article.objects.filter(pk=a4.id).exists())
+        self.assertFalse(hasattr(a4, 'duplicate_of'))
+        self.assertIn(a4.id, q(mediumid=art['medium']))
+        
+        
     def test_unicode_word_len(self):
         """Does the word counter eat unicode??"""
         u = u'Kim says: \u07c4\u07d0\u07f0\u07cb\u07f9'
