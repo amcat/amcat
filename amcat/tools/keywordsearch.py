@@ -30,7 +30,7 @@ def filters_from_form(form_data):
             for (k,v) in form_data.iteritems() if v and k in FILTER_FIELDS}
 
 def getArticles(form):
-    fields = ['mediumid', 'date', 'headline']
+    fields = ['mediumid', 'date', 'headline', 'medium']
     
     sort = form.get('sortColumn', None)
 
