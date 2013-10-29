@@ -16,7 +16,8 @@ class LockHack(object):
 @task()
 def run_scraper(scraper):
     scraper._initialize()
-    scraper.opener.cookiejar._cookies_lock = LockHack()
+    if hasattr(scraper, 'opener') and hasattr(scraper.opener, 'cookiejar'):
+        scraper.opener.cookiejar._cookies_lock = LockHack()
     result = group([scrape_unit_save_unit.s(scraper, unit) for unit in scraper._get_units()]).delay()
     return (scraper, result)
     
