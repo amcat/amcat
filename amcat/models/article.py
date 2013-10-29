@@ -247,6 +247,7 @@ class TestArticle(amcattest.PolicyTestCase):
         b = b'Kim did not say: \xe3\xe3k'
         self.assertEqual(word_len(b), 5)
         
+    @amcattest.use_elastic
     def test_unicode(self):
         """Test unicode headlines"""
         for offset in range(1, 10000, 1000):
@@ -254,3 +255,11 @@ class TestArticle(amcattest.PolicyTestCase):
             a = amcattest.create_test_article(headline=s)
             self.assertIsInstance(a.headline, unicode)
             self.assertEqual(a.headline, s)
+
+    @amcattest.use_elastic
+    def test_medium_name(self):
+        m = amcattest.create_test_medium(name="de testkrant")
+        a = amcattest.create_test_article(medium=m)
+        r = amcates.ES().query(filters={"id" : a.id}, fields=["medium"])
+        print(r)
+                                                             

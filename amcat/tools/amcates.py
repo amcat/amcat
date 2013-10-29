@@ -45,15 +45,21 @@ def get_article_dict(art, sets=None):
     date = date.isoformat()
 
     d = dict(
+        # dublin core elements
         id = art.id,
         headline=_clean(art.headline),
         body=_clean(art.text),
-        byline=_clean(art.byline),
-        section=_clean(art.section),
+        date=date,
+        creator=_clean(art.author),
+        
+        # other elements
         projectid=art.project_id,
         mediumid=art.medium_id,
+        medium=art.medium.name,
+        byline=_clean(art.byline),
+        section=_clean(art.section),
         page=art.pagenr,
-        date=date,
+        addressee=_clean(art.addressee),
         sets = sets
         )
 
@@ -62,7 +68,7 @@ def get_article_dict(art, sets=None):
 
 def _get_hash(article_dict):
     c =hash_class()
-    keys = sorted(k for k in article_dict.keys() if k not in ('id', 'sets', 'hash'))
+    keys = sorted(k for k in article_dict.keys() if k not in ('id', 'sets', 'hash', 'medium', 'projectid'))
     for k in keys:
         v = article_dict[k]
         if isinstance(v, int):
@@ -121,7 +127,6 @@ class Result(object):
         if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
         return result
 
-    
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
     def __repr__(self):
@@ -369,9 +374,10 @@ def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
 
-def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=None, hashes=None):
+def build_filter(start_date=None, end_date=None, mediumids=None, ids=None, sets=None, hashes=None, **kwargs):
     """
-    Build a elastic DSL query from the 'form' fields
+    Build a elastic DSL query from the 'form' fields.
+    For convenience, the singular versions (mediumid, id) etc are allowed as aliases
     """
 
     def _list(x):
@@ -380,10 +386,20 @@ def build_filter(start_date=None, end_date=None, mediumid=None, ids=None, sets=N
         elif hasattr(x, 'pk'):
             return [x.pk]
         return x
+
+    # Allow singulars as alias for plurals
+    for singular, plural in [("mediumid", "mediumids"),
+                             ("id", "ids"),
+                             ("set", "sets"),
+                             ("hash", "hashes")]:
+        if locals()[plural] is None and singular in kwargs:
+            locals()[plural] = kwargs.pop(singular)
+    if kwargs:
+        raise TypeError("Unknown filter keywords: {kwargs}".format(**locals()))
     
     filters = []
     if sets: filters.append(dict(terms={'sets' : _list(sets)}))
-    if mediumid: filters.append(dict(terms={'mediumid' : _list(mediumid)}))
+    if mediumids: filters.append(dict(terms={'mediumid' : _list(mediumids)}))
 
     date_range = {}
     if start_date: date_range['gte'] = start_date
