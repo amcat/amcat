@@ -123,6 +123,8 @@ from amcat.tools import amcattest
 
 class TestBZK(amcattest.PolicyTestCase):
     def setUp(self):
+        if amcattest.skip_slow_tests(): return
+
         from django.core.files import File
         import os.path, json
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'bzk')
@@ -133,10 +135,14 @@ class TestBZK(amcattest.PolicyTestCase):
 
 
         def test_scrape_unit(self):
+            if amcattest.skip_slow_tests(): return
+
             self.assertTrue(self.bzk.index)
             self.assertTrue(self.result)
         
         def test_getarticle(self):
+            if amcattest.skip_slow_tests(): return
+
             #props to check for:
             # headline, text, date, pagenr, medium
             must_props = ('headline', 'text', 'medium', 'date')
