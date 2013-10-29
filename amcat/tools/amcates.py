@@ -60,6 +60,7 @@ def get_article_dict(art, sets=None):
         section=_clean(art.section),
         page=art.pagenr,
         addressee=_clean(art.addressee),
+        length=art.length,
         sets = sets
         )
 
@@ -312,7 +313,6 @@ class ES(object):
         else:
             body['facets']['group'] = {'terms' : {'size' : 999999, 'field' : group_by}}
         body['facets']['group']['facet_filter'] = filter
-
         result = self.es.search(index=self.index, body=body, size=0)
         if group_by == 'date':
             for row in result['facets']['group']['entries']:
@@ -374,7 +374,7 @@ def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
 
-def build_filter(start_date=None, end_date=None, mediumids=None, ids=None, sets=None, hashes=None, **kwargs):
+def build_filter(start_date=None, end_date=None, **filters):
     """
     Build a elastic DSL query from the 'form' fields.
     For convenience, the singular versions (mediumid, id) etc are allowed as aliases
@@ -388,28 +388,33 @@ def build_filter(start_date=None, end_date=None, mediumids=None, ids=None, sets=
         return x
 
     # Allow singulars as alias for plurals
+    f = {}
     for singular, plural in [("mediumid", "mediumids"),
                              ("id", "ids"),
                              ("set", "sets"),
                              ("hash", "hashes")]:
-        if locals()[plural] is None and singular in kwargs:
-            locals()[plural] = kwargs.pop(singular)
-    if kwargs:
-        raise TypeError("Unknown filter keywords: {kwargs}".format(**locals()))
+        if plural in filters:
+            if singular in filters:
+                raise TypeError("Cannot supply both {plural} and {singular}".format(**locals()))
+            f[singular] = filters.pop(plural)
+        elif singular in filters:
+            f[singular] = filters.pop(singular)
+
+    if filters:
+        raise TypeError("Unknown filter keywords: {filters}".format(**locals()))
     
     filters = []
-    if sets: filters.append(dict(terms={'sets' : _list(sets)}))
-    if mediumids: filters.append(dict(terms={'mediumid' : _list(mediumids)}))
+    if 'set' in f: filters.append(dict(terms={'sets' : _list(f['set'])}))
+    if 'mediumid' in f: filters.append(dict(terms={'mediumid' : _list(f['mediumid'])}))
+    if 'id' in f: filters.append(dict(ids={'values' : _list(f['id'])}))
 
     date_range = {}
     if start_date: date_range['gte'] = start_date
     if end_date: date_range['lt'] = end_date
     if date_range: filters.append(dict(range={'date' : date_range}))
 
-    if ids: filters.append(dict(ids={'values' : _list(ids)}))
-
-    
-    if hashes:
+    if 'hash' in f:
+        hashes = f['hash']
         if isinstance(hashes, str): hashes = [hashes]
         filters.append(dict(terms={'hash': hashes}))
             

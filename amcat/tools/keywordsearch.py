@@ -7,6 +7,7 @@ import collections
 import logging
 from amcat.tools.amcates import ES
 from amcat.tools.table import table3
+from amcat.models import Medium
 
 log = logging.getLogger(__name__)
 
@@ -53,7 +54,7 @@ def getTable(form):
     table = table3.DictTable(default=0)
     table.rowNamesRequired = True
     dateInterval = form['dateInterval']
-    group_by = 'mediumid' if form['xAxis'] == 'medium' else form['xAxis']
+    group_by = form['xAxis']
     filters = filters_from_form(form)
 
     yAxis = form['yAxis']
@@ -62,10 +63,12 @@ def getTable(form):
         _add_column(table, 'total', query, filters, group_by, dateInterval)
     elif yAxis == 'medium':
         query = form['query']
-        media = ES().list_media(query, filters)
-        for mediumid in sorted(media):
-            filters['mediumid'] = mediumid
-            _add_column(table, str(mediumid), query, filters, group_by, dateInterval)
+        media = Medium.objects.filter(pk__in=ES().list_media(query, filters)).only("name")
+        
+        for medium in sorted(media):
+            filters['mediumid'] = medium.id
+            name = u"{medium.id} - {}".format(medium.name.replace(",", " ").replace(".", " "), **locals())
+            _add_column(table, name, query, filters, group_by, dateInterval)
     elif yAxis == 'searchTerm':
         for q in form['queries']:
             _add_column(table, q.label, q.query, filters, group_by, dateInterval)
@@ -76,7 +79,7 @@ def getTable(form):
 
 def _add_column(table, column_name, query, filters, group_by, dateInterval):
     for group, n in ES().aggregate_query(query, filters, group_by, dateInterval):
-        table.addValue(str(group), column_name, n)
+        table.addValue(unicode(group), column_name, n)
     
 
                                  
