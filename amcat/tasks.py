@@ -1,7 +1,7 @@
 from celery import task, group
 import time
 from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
-
+from amcat.scraping.controller import save_ordered
 from amcat.models.scraper import Scraper
 
 #Things that cannot be serialized:
@@ -36,18 +36,3 @@ def scrape_unit_save_unit(scraper, unit):
     #articles' parents are now unsaved models. they need to be saved in the right order.
     return save_ordered(articles)
 
-def save_ordered(articles):
-    queue = [a for a in articles if a.parent == None]
-    for article in queue:
-        saved = article.save()
-        #get children, add to queue
-        for child in articles:
-            if child.parent == article and child != parent: #...
-                child.parent = saved
-                queue.append(child)
-    #safety measure
-    for article in articles:
-        if article not in queue:
-            article.save()
-    log.info("saved {n} articles".format(n = len(articles)))
-    return articles
