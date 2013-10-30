@@ -239,7 +239,7 @@ class ES(object):
         """Add the given articles to the given set. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator)."""
         if not article_ids: return
-        for batch in splitlist(article_ids, itemsperbatch=100):
+        for batch in splitlist(article_ids, itemsperbatch=1000):
             self.bulk_update(article_ids, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
         
     def bulk_insert(self, dicts):
@@ -294,9 +294,13 @@ class ES(object):
                  .format(nsolr=len(solr_ids), nsolrset=len(solr_set_ids), ndb=len(db_ids),
                          nta=len(to_add_docs), ntas=len(to_add_set), ntr=len(to_remove),**locals()))
 
+        log.info("Removing {} articles".format(len(to_remove)))
         self.remove_from_set(aset.id, to_remove)
+        log.info("Adding {} articles to set".format(len(to_add_set)))
         self.add_to_set(aset.id, to_add_set)
+        log.info("Adding {} articles to index".format(len(to_add_docs)))
         self.add_articles(to_add_docs)
+        log.info("Flushing")
         self.flush()
 
     def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month'):
