@@ -36,8 +36,7 @@ def getArticles(form):
 
     if 'keywordInContext' in form['columns']:
         raise NotImplementedError()
-    if 'hits' in form['columns']:
-        raise NotImplementedError()
+        
 
     query = form['query']
     kargs = {}
@@ -48,8 +47,22 @@ def getArticles(form):
     
     log.info("Query: {query!r}, with filters: {filters}".format(**locals()))
 
-    return ES().query(query, filters=filters, fields=fields, sort=sort, **kargs)
+    result = list(ES().query(query, filters=filters, fields=fields, sort=sort, **kargs))
 
+    if 'hits' in form['columns']:
+        # add hits columns
+        def add_hits_column(r):
+            r.hits = {q.label : 0 for q in form['queries']}
+            return r
+            
+        result_dict = {r.id : add_hits_column(r) for r in result}
+        f = dict(ids=list(result_dict.keys()))
+
+        for q in form['queries']:
+            for hit in ES().query(q.query, filters=f, fields=[]):
+                result_dict[hit.id].hits[q.label] = hit.score
+    return result
+    
 def getTable(form):
     table = table3.DictTable(default=0)
     table.rowNamesRequired = True

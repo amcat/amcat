@@ -106,13 +106,13 @@ class ScrapingCheck(Script):
 
     def get_result(self):
         result = []
-        for scraper in Scraper.objects.all():
+        for scraper in Scraper.objects.filter(active=True,run_daily=True):
             if scraper.statistics:
                 n_expected = scraper.statistics[self.options['date'].weekday()]
             else:
                 n_expected = "unknown"
             n_scraped = Article.objects.filter(
-                articlesetarticle__articleset = scraper.articleset.id,
+                articlesets_set = scraper.articleset.id,
                 date__contains = self.options['date']
                 ).count()
 
