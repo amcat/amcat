@@ -39,6 +39,7 @@ class DailyScript(Script):
     options_form = DailyForm
 
     def run(self, _input):
+        log.info("Getting scrapers...")
         scrapers = list(self.get_scrapers(date = self.options['date']))
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),
@@ -94,7 +95,7 @@ def setup_logging():
     loggers = (logging.getLogger("amcat.scraping"), logging.getLogger(__name__), logging.getLogger("scrapers"), logging.getLogger("celery"))
     d = datetime.date.today()
     filename = "/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())
-    sys.stderr = open(filename, 'a')
+    #sys.stderr = open(filename, 'a')
     #TODO: point stderr to both file and console
     handlers = (logging.FileHandler(filename), logging.StreamHandler())
     formatter = AmcatFormatter(date = True)

@@ -1,6 +1,8 @@
 from celery import task, group
 import time
-from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
+import logging
+
+from celery.utils.log import get_task_logger; log = get_task_logger(__name__); log.setLevel(logging.INFO)
 from amcat.scraping.controller import save_ordered
 from amcat.models.scraper import Scraper
 
@@ -18,6 +20,7 @@ def run_scraper(scraper):
     scraper._initialize()
     if hasattr(scraper, 'opener') and hasattr(scraper.opener, 'cookiejar'):
         scraper.opener.cookiejar._cookies_lock = LockHack()
+    log.info("Running scraper {scraper._id}: {scraper.__class__.__name__}".format(**locals()))
     result = group([scrape_unit_save_unit.s(scraper, unit) for unit in scraper._get_units()]).delay()
     return (scraper, result)
     
