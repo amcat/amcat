@@ -21,6 +21,7 @@
 from celery import task, group
 import time, logging, types
 from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
+import logging;log.setLevel(logging.INFO)
 from lxml import html, etree
 
 from amcat.models.article import Article
@@ -60,8 +61,8 @@ def html_on(unit):
     t,unit = unit
     if t in (html.HtmlElement, etree._Element):
         unit = html.fromstring(unit)
-    elif t is list:
-        return map(html_on(unit))
+    elif t in (list, tuple, types.GeneratorType):
+        return map(html_on, unit)
     elif isinstance(unit, Document):
         if hasattr(unit, 'doc') and unit.doc:
             unit.doc = html.fromstring(unit.doc)
@@ -92,5 +93,6 @@ def scrape_unit_save_unit(scraper, unit):
     for article in articles:
         if article.parent:
             article.parent = texts[article.parent.props.text]
+    log.info("saving {n} articles".format(n = len(articles)))
     return Article.ordered_save(articles, articleset = scraper.articleset)
 
