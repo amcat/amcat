@@ -28,6 +28,7 @@ from django import forms
 import amcat.scripts.forms
 import logging
 log = logging.getLogger(__name__)
+from functools import partial
 
 class ArticleListToTableForm(amcat.scripts.forms.ArticleColumnsForm):
     limitTextLength = forms.BooleanField(initial=True, required=False)
@@ -36,6 +37,10 @@ class ArticleListToTableForm(amcat.scripts.forms.ArticleColumnsForm):
 def lambdaHitFactory(query):
     return lambda a: a.hits.get(query)
 
+def gethits(row, query):
+    return row.hits[query]
+
+    
 class ArticleListToTable(script.Script):
     input_type = types.ArticleIterator
     options_form = ArticleListToTableForm
@@ -54,9 +59,12 @@ class ArticleListToTable(script.Script):
             articles = list(articles)
             if len(articles) > 0:
                 if not hasattr(articles[0], 'hits'):
-                    raise Exception('No hits attribute for article. Make sure you run a Solr query')
-                for query in articles[0].hits.table.getColumns():
-                    hitsColumns.append(table.table3.ObjectColumn("Hit Count for: %s" % query[:100], lambdaHitFactory(query)))
+                    raise Exception('No hits attribute for article. Make sure you run a query')
+                hitsColumns.append(table.table3.ObjectColumn("Total hits", lambda a: a.score))
+                for query in articles[0].hits:
+                    hitsColumns.append(table.table3.ObjectColumn("Hit Count for: %s" % query[:100],
+                                                                 partial(gethits, query=query)))
+                
         
         #log.info(hitsColumns)
         
