@@ -27,6 +27,7 @@ from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
 from django.views.generic.detail import DetailView
+from django.views.generic.base import RedirectView
 
 class SampleSetView(ProjectScriptView):
     script = SampleSet
@@ -77,3 +78,9 @@ class ArticleSetView(ProjectViewMixin, DatatableMixin, DetailView):
                     self.project.favourite_articlesets.remove(self.object.id)
         context['starred'] = starred
         return context
+
+class RefreshArticleSetView(RedirectView):
+    def get_redirect_url(self, projectid, pk):
+        # refresh the queryset. Probably not the nicest way to do this (?)
+        ArticleSet.objects.get(pk=pk).refresh_index(full_refresh=True)
+        return reverse("articleset", args=[projectid, pk])

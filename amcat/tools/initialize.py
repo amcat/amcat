@@ -37,7 +37,7 @@ from amcat.models.authorisation import Role
 from amcat.models.plugin import PluginType, Plugin
 
 import amcat.models
-from amcat.tools import classtools, db_upgrader
+from amcat.tools import classtools, db_upgrader, amcates
 
 INITIAL_DATA_MODULE = amcat.models
 INITIAL_DATA_FILE = "initial_data.json"
@@ -64,6 +64,7 @@ def initialize(sender, **kwargs):
     datafile = os.path.join(os.path.dirname(amcat.models.__file__), "initial_data.json")
     Command().run_from_argv(["manage", "loaddata", datafile])
     create_admin()
+    amcates.ES().check_index()
     db_upgrader.upgrade_database()
 
 def set_signals():

@@ -322,13 +322,6 @@ def unlink_articleset(request, project, aset):
     request.session['unlinked_articleset'] = True
     return redirect(reverse("project-articlesets", args=[project.id]))
 
-@check(ArticleSet, args='id')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid', action='update')
-def refresh_articleset(request, project, aset):
-    aset.refresh_index(full_refresh=True)
-    return redirect(reverse("articleset", args=[project.id, aset.id]))
-
-
 @check(ArticleSet, args='id', action='update')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def edit_articleset(request, project, aset):
@@ -368,10 +361,6 @@ def selection(request, project):
     favs = tuple(project.favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id)).values_list("id", flat=True))
     no_favourites = not favs
     favourites = json.dumps(favs)
-    
-    indexed = tuple(all_articlesets.filter(indexed=True, index_dirty=False).values_list("id", flat=True))
-    no_indexed = not indexed
-    indexed = json.dumps(indexed)
     
     codingjobs = json.dumps(tuple(CodingJob.objects.filter(articleset__in=all_articlesets).values_list("articleset_id", flat=True)))
     all_sets = json.dumps(tuple(all_articlesets.values_list("id", flat=True)))
