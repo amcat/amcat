@@ -61,7 +61,6 @@ def getArticles(form):
         for q in form['queries']:
             for hit in ES().query(q.query, filters=f, fields=[]):
                 result_dict[hit.id].hits[q.label] = hit.score
-
     return result
     
 def getTable(form):
