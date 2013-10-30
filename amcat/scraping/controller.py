@@ -21,7 +21,7 @@
 Module for controlling scrapers
 """
 from amcat.tasks import run_scraper, LockHack
-
+import cPickle as pickle
 from celery import group
 import logging;log = logging.getLogger(__name__)
 
@@ -35,7 +35,17 @@ class Controller(object):
             if hasattr(scraper, 'opener'):
                 scraper.opener.cookiejar._cookies_lock = LockHack()
 
-        task = group([run_scraper.s(scraper) for scraper in scrapers])
+        subtasks = []
+        for scraper in scrapers:
+            log.debug("checking pickle for {scraper}".format(**locals()))
+            try:
+                pickle.dumps(scraper)
+            except (pickle.PicklingError, TypeError):
+                log.exception("Picking {scraper} failed".format(**locals()))
+            else:
+                subtasks.append(run_scraper.s(scraper))
+                
+        task = group(subtasks)
         result = task.apply_async()
 
         for scraper, articles in result.iterate():
