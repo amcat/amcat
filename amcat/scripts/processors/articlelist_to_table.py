@@ -64,7 +64,7 @@ class ArticleListToTable(script.Script):
             'article_id': table.table3.ObjectColumn("Article ID", lambda a: a.id),
             'date': table.table3.ObjectColumn('Date', lambda a: a.date.strftime('%d-%m-%Y')),
             'medium_id': table.table3.ObjectColumn('Medium ID', lambda a:a.mediumid),
-            'medium_name': table.table3.ObjectColumn('Medium Name', lambda a:a.mediumid),#TODO a.medium.name),
+            'medium_name': table.table3.ObjectColumn('Medium Name', lambda a:a.medium),#TODO a.medium.name),
             'project_id': table.table3.ObjectColumn('Project ID', lambda a:a.project_id),
             'project_name': table.table3.ObjectColumn('Project Name', lambda a:a.project.name),
             'pagenr': table.table3.ObjectColumn('Page number', lambda a:a.pagenr),

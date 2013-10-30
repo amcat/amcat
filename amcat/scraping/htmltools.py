@@ -83,7 +83,8 @@ class HTTPOpener(object):
             htmldocument = html.parse(response).getroot()
         else: # decoding succeeded, use fromstring
             htmldocument = html.fromstring(html_string)
-        htmldocument.url = response.url
+        if htmldocument and response:
+            htmldocument.url = response.url
         return htmldocument
     
 

@@ -17,38 +17,25 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from __future__ import unicode_literals, print_function, absolute_import
+"""
+Configuration options to change how AmCAT uses elastic
+"""
 
-from amcat.models.article import *
-from amcat.models.authorisation import *
-from amcat.models.language import *
-from amcat.models.medium import *
-from amcat.models.articleset import *
-from amcat.models.user import *
-from amcat.models.project import *
-from amcat.models.sentence import *
-from amcat.models.sentiment import *  
-from amcat.models.amcat import *
-from amcat.models.task import *
+ES_INDEX = 'amcat'
+ES_ARTICLE_DOCTYPE='article'
 
-from amcat.models.plugin import *
+ES_MAPPING_STRING_OPTIONS = {"type" : "string", "omit_norms": True, "analyzer" : "simple"}
 
-from amcat.models.word import *
-from amcat.models.analysis import *
-from amcat.models.token import *
-
-
-from amcat.models.coding.codingschema import *
-from amcat.models.coding.codingschemafield import *
-from amcat.models.coding.codingjob import *
-from amcat.models.coding.coding import *
-from amcat.models.coding.code import *
-from amcat.models.coding.codebook import *
-from amcat.models.coding.codedarticle import *
-from amcat.models.coding.codingrule import *
-
-from amcat.models.scraper import *
-
-
-
-from amcat.models.rule import *
+ES_MAPPING = {"properties" : {"text": ES_MAPPING_STRING_OPTIONS,
+                              "headline": ES_MAPPING_STRING_OPTIONS,
+                              "date":{"type":"date","format":"dateOptionalTime"},
+                              "mediumid":{"type":"long"},
+                              "projectid":{"type":"long"},
+                              "sets":{"type":"long"},
+                              "hash":{"type":"string", "index" : "not_analyzed", "postings_format":"bloom_default"},
+                          },
+#              TODO: possibly interesting global options to consider
+#              "_source" : {"enabled" : false}
+#              "_routing" : {"required" : True, "path" : "mediumid"}    
+#              "_timestamp" : {"enabled" : true, "path" : "date"}
+}

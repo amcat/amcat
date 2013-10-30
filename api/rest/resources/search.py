@@ -62,5 +62,8 @@ class SearchResource(AmCATResource):
         id = IntegerField()
         date = DateField()
         headline = CharField()
-        mediumid = IntegerField()
+#        mediumid = IntegerField()
+        medium = CharField()
+        author = CharField()
+        length = IntegerField()
         

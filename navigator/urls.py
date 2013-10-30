@@ -20,7 +20,7 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views.articleset_views import ImportSetView, SampleSetView, ArticleSetView
+from navigator.views.articleset_views import ImportSetView, SampleSetView, ArticleSetView, RefreshArticleSetView
 from navigator.views.preprocessing_views import ProcessParsingView
 from navigator.views.codebook_views import ImportCodebook, ExportCodebook
 from navigator.views import rule_views
@@ -54,8 +54,9 @@ urlpatterns = patterns(
         'navigator.views.project.edit_articleset', name="articleset-edit"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/delete/(?P<id>[0-9]+)$',
         'navigator.views.project.delete_articleset', name="articleset-delete"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/refresh/(?P<id>[0-9]+)$',
-        'navigator.views.project.refresh_articleset', name="articleset-refresh"),
+    url(r'^project/(?P<projectid>[0-9]+)/articleset/refresh/(?P<pk>[0-9]+)$',
+        RefreshArticleSetView.as_view(), name="articleset-refresh"),
+    
     url(r'^project/(?P<projectid>[0-9]+)/articleset/unlink/(?P<id>[0-9]+)$',
         'navigator.views.project.unlink_articleset', name="articleset-unlink"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/sample$',

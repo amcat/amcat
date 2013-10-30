@@ -87,17 +87,16 @@ class DailyScript(Script):
         else:
             return True
 
-
 from amcat.tools.amcatlogging import AmcatFormatter
 import sys
 
 def setup_logging():
-    loggers = (logging.getLogger("amcat.scraping"), logging.getLogger(__name__), logging.getLogger("scrapers"), logging.getLogger("celery"))
+    loggers = (logging.getLogger("amcat"), logging.getLogger("scrapers"),logging.getLogger(__name__))
     d = datetime.date.today()
     filename = "/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())
-    #sys.stderr = open(filename, 'a')
-    #TODO: point stderr to both file and console
-    handlers = (logging.FileHandler(filename), logging.StreamHandler())
+    sys.stderr = open(filename, 'a')
+    #TODO: Point sys.stderr to both console and file
+    handlers = (logging.StreamHandler(sys.stdout),logging.FileHandler(filename))
     formatter = AmcatFormatter(date = True)
 
     for handler in handlers:
@@ -105,9 +104,11 @@ def setup_logging():
         handler.setFormatter(formatter)
 
     for logger in loggers:
+        logger.propagate = False
         logger.setLevel(logging.INFO)
         for handler in handlers:        
             logger.addHandler(handler)
+    logging.getLogger().handlers = []
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

@@ -28,6 +28,8 @@ from os import path
 
 import setup
 
+from .elastic import *
+
 # Python 2.x vs 3.x
 try:
     import ConfigParser as configparser
@@ -159,9 +161,6 @@ ROOT_URLCONF = 'settings.urls'
 TEMPLATE_DIRS = (
     os.path.join(ROOT, 'templates'),
 )
-
-# Elastic search index name
-ES_INDEX = 'amcat'
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -327,3 +326,4 @@ else:
 
 import djcelery
 djcelery.setup_loader()
+
