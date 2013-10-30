@@ -23,8 +23,8 @@ from amcat.scraping.toolkit import dictionary
 from html2text import html2text
 from amcat.models.article import Article
 
-from lxml import html
-from lxml import etree
+from lxml import html, etree
+
 
 try:
     # Python 3.x

@@ -91,7 +91,8 @@ from amcat.tools.amcatlogging import AmcatFormatter
 import sys
 
 def setup_logging():
-    loggers = (logging.getLogger("amcat"), logging.getLogger("scrapers"),logging.getLogger(__name__))
+    loggers = (logging.getLogger("amcat"), logging.getLogger("scrapers"),
+               logging.getLogger(__name__), logging.getLogger("celery"))
     d = datetime.date.today()
     filename = "/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())
     sys.stderr = open(filename, 'a')

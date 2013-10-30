@@ -154,6 +154,7 @@ class Article(AmcatModel):
         add_to_set = set() # duplicate article ids to add to set
         add_new_to_set = set() # new article ids to add to set
         add_to_index = [] # es_dicts to add to index
+        result = [] # return result
         for a in articles:
             dupe = dupes.get(a.es_dict['hash'], None)
             if dupe:
@@ -161,7 +162,7 @@ class Article(AmcatModel):
                 if articleset and not (dupe.sets and articleset.id in dupe.sets):
                     add_to_set.add(dupe.id)
             else:
-                a.save()
+                result.append(a.save())
                 a.es_dict['id'] = a.pk
                 add_to_index.append(a.es_dict)
                 add_new_to_set.add(a.pk)
@@ -178,6 +179,26 @@ class Article(AmcatModel):
             articleset.add_articles(add_to_set | add_new_to_set, add_to_index=False)
             es.add_to_set(articleset.id, add_to_set)
 
+        return result
+
+    @classmethod
+    def ordered_save(cls, articles, *args, **kwargs):
+        """Figures out parent-child relationships, saves parent first
+        @param articles: a collection of unsaved articles
+        @param articleset: an articleset object
+        @param check_duplicate: if True, duplicates are not added to the database or index
+        """
+        index = {a.text: a for a in articles}
+        articles = cls.create_articles(articles, *args, **kwargs)
+        for a in articles:
+            parent = index[a.text].parent
+            for b in articles:
+                if parent and b.text == parent.text:
+                    a.parent = b
+                    a.save()
+        return articles
+            
+            
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
