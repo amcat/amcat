@@ -42,7 +42,7 @@ class RefreshIndex(Script):
                                         
     def _run(self, articleset, full_refresh):
         log.info("Refreshing {articleset}, full_refresh={full_refresh}".format(**locals()))
-        articleset.reset_index(full_refresh=full_refresh)
+        articleset.refresh_index(full_refresh=full_refresh)
         
 if __name__ == '__main__':
     from amcat.scripts.tools import cli

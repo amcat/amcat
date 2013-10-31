@@ -28,7 +28,6 @@ from celery.result import AsyncResult
 
 from django.db import models
 from amcat.models import Project
-from amcat.scripts.script import Script
 from amcat.tools import classtools
 from amcat.tools.model import AmcatModel
 
@@ -72,8 +71,6 @@ class Task(AmcatModel):
 
 from amcat.tools import amcattest
 
-class _TestTaskScript(Script):
-    pass
 
 class TestTask(amcattest.PolicyTestCase):
     def _get_task(self):
@@ -88,6 +85,10 @@ class TestTask(amcattest.PolicyTestCase):
         self.assertEqual(task, task_model.get_result())
 
     def test_get_class(self):
+        from amcat.scripts.script import Script
+        class _TestTaskScript(Script):
+            pass
+        
         task = Task.objects.create(uuid="bar", task_name="foo", class_name="amcat.models.task._TestTaskScript")
         self.assertEqual(_TestTaskScript, task.get_class())
 

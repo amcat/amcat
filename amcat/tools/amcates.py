@@ -460,7 +460,8 @@ class TestAmcatES(amcattest.PolicyTestCase):
     def test_aggregate(self):
         """Can we make tables per medium/date interval?"""
         from amcat.models import Article
-        m1, m2, m3 = [amcattest.create_test_medium() for _ in range(3)]
+        m1 = amcattest.create_test_medium(name="De Nep-Krant")
+        m2, m3 = [amcattest.create_test_medium() for _ in range(2)]
         s1 = amcattest.create_test_set()
         s2 = amcattest.create_test_set() 
         unused = amcattest.create_test_article(text='aap noot mies', medium=m3, articleset=s2)
@@ -472,9 +473,13 @@ class TestAmcatES(amcattest.PolicyTestCase):
         Article.create_articles([a,b,c,d], articleset=s1, check_duplicate=False)
         ES().flush()
         
-        # counts per medium
+        # counts per mediumid
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="mediumid")),
                          {m1.id : 1, m2.id : 3})
+        
+        # counts per medium (name)
+        self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="medium")),
+                         {m1.name : 1, m2.name : 3})
         
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="year")),
                          {datetime(2001,1,1) : 3, datetime(2002,1,1) : 1})
