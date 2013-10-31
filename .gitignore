@@ -22,9 +22,6 @@ __pycache__
 # Installer logs
 pip-log.txt
 
-# static files
-navigator/media/static
-
 # Unit test / coverage reports
 .coverage
 .tox
@@ -46,3 +43,5 @@ nosetests.xml
 # PyCharm meuk
 .idea
 
+# static files
+navigator/media/static
