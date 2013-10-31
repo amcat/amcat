@@ -40,9 +40,8 @@ class LazyES(object):
             f = dict(ids=list(result_dict.keys()))
 
             for q in self.queries:
-                for hit in self.es.query(q.query, filters=f, fields=[]):
+                for hit in self.es.query_all(q.query, filters=f, fields=[]):
                     result_dict[hit.id].hits[q.label] = hit.score
-                
         return result
 
     def __len__(self):

@@ -93,13 +93,14 @@ UPDATE_SCRIPT_ADD_TO_SET = ("if (ctx._source.sets == null) {ctx._source.sets = [
 
 class SearchResult(object):
     """Iterable collection of results that also has total"""
-    def __init__(self, results, fields, score):
+    def __init__(self, results, fields, score, body):
         "@param results: the raw results dict from elasticsearch::search"
         self._results = results
         self.hits = self._results['hits']['hits']
         self.total = self._results['hits']['total']
         self.fields = fields
         self.score = score
+        self.body = body
 
     @property
     @cached
@@ -211,7 +212,7 @@ class ES(object):
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
         @param filter: field filter DSL query dict, defaults to build_filter(**filters)
-        @param kwargs: additional keyword arguments to pass to es.search, eg fields, sort, offset, etc
+        @param kwargs: additional keyword arguments to pass to es.search, eg fields, sort, from_, etc
         @return: a list of named tuples containing id, score, and the requested fields
         """
         body = dict(build_body(query, filter, filters))
@@ -221,8 +222,20 @@ class ES(object):
 
         log.info("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.es.search(index=self.index, body=body, fields=fields, **kwargs)
-        return SearchResult(result, fields, score)
-                            
+        return SearchResult(result, fields, score, body)
+
+    def query_all(self, *args, **kargs):
+        kargs.update({"from_" : 0})
+        size = kargs.setdefault('size', 100)
+        result = self.query(*args, **kargs)
+        total = result.total
+        for offset in range(size, total, size):
+            kargs['from_'] = offset
+            result2 = self.query(*args, **kargs)
+            result.hits += result2.hits
+
+        return result
+    
     def add_articles(self, article_ids):
         """
         Add the given article_ids to the index. This is done in batches, so there
@@ -524,6 +537,25 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(set(s2.get_mediums()), set(media[5:]))
         
         self.assertEqual(set(s1.project.get_mediums()), set(media))
+
+
+    @amcattest.use_elastic
+    def test_query_all(self):
+        """Test that query_all works"""
+        from amcat.models import Article
+        arts = [amcattest.create_test_article(create=False) for _ in range(20)]
+        s = amcattest.create_test_set()
+        Article.create_articles(arts, articleset=s, check_duplicate=False)
+        ES().flush()
+
+        r = ES().query(filters=dict(sets=s.id), size=10)
+        self.assertEqual(len(list(r)), 10)
+        
+        r = ES().query_all(filters=dict(sets=s.id), size=10)
+        self.assertEqual(len(list(r)), len(arts))
+        
+        
+        
         
     @amcattest.use_elastic
     def test_filters(self):

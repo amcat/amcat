@@ -57,10 +57,10 @@ def filters_from_form(form_data):
     return {FILTER_FIELDS[k] : _serialize(v)
             for (k,v) in form_data.iteritems() if v and k in FILTER_FIELDS}
 
-def getDatatable(form):
+def getDatatable(form, rowlink='article/{id}'):
     from api.rest.datatable import Datatable
     from api.rest.resources import SearchResource
-    table = Datatable(SearchResource, rowlink='../article/{id}')
+    table = Datatable(SearchResource, rowlink=rowlink)
     query = form.get('query')
     
     if query and query.strip():
