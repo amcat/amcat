@@ -34,6 +34,7 @@ from amcat.tools.toolkit import multidict, splitlist
 from elasticsearch import Elasticsearch
 from elasticsearch.client import indices, cluster
 from django.conf import settings
+from amcat.tools.caching import cached
 
 def _clean(s):
     if s: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
@@ -48,7 +49,7 @@ def get_article_dict(art, sets=None):
         # dublin core elements
         id = art.id,
         headline=_clean(art.headline),
-        body=_clean(art.text),
+        text=_clean(art.text),
         date=date,
         creator=_clean(art.author),
         
@@ -94,21 +95,25 @@ class SearchResult(object):
     """Iterable collection of results that also has total"""
     def __init__(self, results, fields, score):
         "@param results: the raw results dict from elasticsearch::search"
-        self.results = results
-        self.hits = self.results['hits']['hits']
-        self.total = self.results['hits']['total']
+        self._results = results
+        self.hits = self._results['hits']['hits']
+        self.total = self._results['hits']['total']
         self.fields = fields
         self.score = score
+
+    @property
+    @cached
+    def results(self):
+        return [Result.from_hit(h, self.fields, self.score) for h in self.hits]
 
     def __len__(self):
         return len(self.hits)
 
     def __iter__(self):
-        for row in self.hits:
-            yield Result.from_hit(row, self.fields, self.score)
+        return iter(self.results)
 
     def __getitem__(self, i):
-        return Result.from_hit(self.hits[i], self.fields, self.score)
+        return self.results[i]
 
     def as_dicts(self):
         "Return the results as fieldname : value dicts"
@@ -682,3 +687,4 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s1 = amcattest.create_test_set(articles=[a,b,c])
         ES().add_articles([a.id, b.id, c.id])
         self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(sets=s1.id))), {b.id, c.id})
+
