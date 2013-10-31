@@ -28,6 +28,8 @@ from os import path
 
 import setup
 
+from .elastic import *
+
 # Python 2.x vs 3.x
 try:
     import ConfigParser as configparser
@@ -59,7 +61,7 @@ DATABASE_OPTIONS = {
    "init_command" : "set transaction isolation level read uncommitted"
 }
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", ".vu.nl").split(",")
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", ".amcat.nl,.vu.nl").split(",")
 
 DATABASES = dict(default=dict(
         ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
@@ -131,7 +133,7 @@ MIDDLEWARE_CLASSES = [
     'navigator.utils.auth.RequireLoginMiddleware',
     'navigator.utils.auth.SetRequestContextMiddleware',
     'navigator.utils.auth.NginxRequestMethodFixMiddleware',
-    'navigator.utils.misc.UUIDLogMiddleware',
+    #'navigator.utils.misc.UUIDLogMiddleware',
     #'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
@@ -159,9 +161,6 @@ ROOT_URLCONF = 'settings.urls'
 TEMPLATE_DIRS = (
     os.path.join(ROOT, 'templates'),
 )
-
-# Elastic search index name
-ES_INDEX = 'amcat'
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -322,6 +321,5 @@ else:
             },
         }
     }
-
 
 

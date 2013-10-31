@@ -21,7 +21,7 @@ class LazyES(object):
         self.filters[key] = value
 
     def __getslice__(self, i, j):
-        return self.es.query(self.query, filters=self.filters, fields=self.fields, size=(j-i), sort=["id"], offset=i)
+        return self.es.query(self.query, filters=self.filters, fields=self.fields, size=(j-i), sort=["id"], from_=i)
 
     def __len__(self):
         return self.es.query(self.query, filters=self.filters, fields=[], size=0).total
@@ -62,5 +62,8 @@ class SearchResource(AmCATResource):
         id = IntegerField()
         date = DateField()
         headline = CharField()
-        mediumid = IntegerField()
+#        mediumid = IntegerField()
+        medium = CharField()
+        author = CharField()
+        length = IntegerField()
         

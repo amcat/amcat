@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -20,32 +18,26 @@
 ###########################################################################
 
 """
-Script to get queries for a codebook
+Configuration options to change how AmCAT uses elastic
 """
 
-import logging; log = logging.getLogger(__name__)
+ES_INDEX = 'amcat'
+ES_ARTICLE_DOCTYPE='article'
 
-from django import forms
-from django.db import transaction
+ES_MAPPING_STRING_OPTIONS = {"type" : "string", "omit_norms": True, "analyzer" : "simple"}
 
-from amcat.scripts.script import Script
-from amcat.models import ArticleSet, Plugin, AnalysedArticle
-
-PLUGINTYPE_PARSER=1
-
-class RefreshIndex(Script):
-    class options_form(forms.Form):
-        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-        full_refresh = forms.BooleanField(initial=False, required=False)
-        
-
-                                        
-    def _run(self, articleset, full_refresh):
-        log.info("Refreshing {articleset}, full_refresh={full_refresh}".format(**locals()))
-        articleset.refresh_index(full_refresh=full_refresh)
-        
-if __name__ == '__main__':
-    from amcat.scripts.tools import cli
-    result = cli.run_cli()
-    #print result.output()
-
+ES_MAPPING = {"properties" : {"id":{"type":"long"},
+                              "text": ES_MAPPING_STRING_OPTIONS,
+                              "headline": ES_MAPPING_STRING_OPTIONS,
+                              "date":{"type":"date","format":"dateOptionalTime"},
+                              "medium":{"type":"string", "index" : "not_analyzed"},
+                              "mediumid":{"type":"long"},
+                              "projectid":{"type":"long"},
+                              "sets":{"type":"long"},
+                              "hash":{"type":"string", "index" : "not_analyzed", "postings_format":"bloom_default"},
+                          },
+#              TODO: possibly interesting global options to consider
+#              "_source" : {"enabled" : false}
+#              "_routing" : {"required" : True, "path" : "mediumid"}    
+#              "_timestamp" : {"enabled" : true, "path" : "date"}
+}

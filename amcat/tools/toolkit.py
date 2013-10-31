@@ -219,39 +219,26 @@ def idlist(idcolumn):
     raise TypeError("%s-like objects not supported" % repr(type(idcolumn)))
 
 
-def splitlist(sequence, itemsperbatch=100, buffercall=None, yieldelements=False):
+def splitlist(sequence, itemsperbatch=100):
     """Split a list into smaller lists
 
     @param sequence: the iterable to split
     @param itemsperbatch: the size of the desired splits
-    @param buffercall: if given, buffercall is called once per subsequence
-      (e.g. to allow caching)
-    @param yieldelements: if True, yield individual elements rather than subsequences
     @return: yields subsequences of the same type as sequence, unless that was a generator,
-      in which case lists are yielded. If yieldelements is True, always yield individual
-      elements
+      in which case lists are yielded.
     """
-    def _splitlist(sequence, itemsperbatch):
-        """Split a sequence or iterable into sublists"""
-        if isSequence(sequence): # use slicing
-            for i in xrange(0, len(sequence), itemsperbatch):
-                yield sequence[i:i+itemsperbatch]
-        else: # use iterating, copying into a buffer
-            # can be more efficient by reusing buffer object...
-            bufferlist = []
-            for s in sequence:
-                bufferlist.append(s)
-                if len(bufferlist) >= itemsperbatch:
-                    yield bufferlist
-                    bufferlist = []
-            if bufferlist: yield bufferlist
+    if hasattr(sequence, '__getslice__'): # use slicing
+        for i in xrange(0, len(sequence), itemsperbatch):
+            yield sequence[i:i+itemsperbatch]
+    else: # use iterating, copying into a buffer
+        bufferlist = []
+        for s in sequence:
+            bufferlist.append(s)
+            if len(bufferlist) >= itemsperbatch:
+                yield bufferlist
+                bufferlist = []
+        if bufferlist: yield bufferlist
 
-    for subsequence in _splitlist(sequence, itemsperbatch):
-        if buffercall: buffercall(subsequence)
-        if yieldelements:
-            for e in subsequence: yield e
-        else:
-            yield subsequence
 
 
 ###########################################################################
