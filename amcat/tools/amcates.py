@@ -220,12 +220,13 @@ class ES(object):
         is no limit on the length of article_ids (which can be a generator).
         """
         if not article_ids: return
-        for batch in splitlist(article_ids, itemsperbatch=100):
-            from amcat.models import Article, ArticleSetArticle
+        from amcat.models import Article, ArticleSetArticle
+        for i, batch in enumerate(splitlist(article_ids, itemsperbatch=100)):
+            log.info("Adding batch {i}".format(**locals()))
             all_sets = multidict((aa.article_id, aa.articleset_id)
-                                 for aa in ArticleSetArticle.objects.filter(article__in=article_ids))
+                                 for aa in ArticleSetArticle.objects.filter(article__in=batch))
             dicts = (get_article_dict(article, list(all_sets.get(article.id, [])))
-                     for article in Article.objects.filter(pk__in=article_ids))
+                     for article in Article.objects.filter(pk__in=batch))
             self.bulk_insert(dicts)
    
     def remove_from_set(self, setid, article_ids, flush=True):
