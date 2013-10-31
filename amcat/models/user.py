@@ -23,7 +23,7 @@ from __future__ import print_function, absolute_import
 from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from amcat.models.language import Language
-from amcat.models.authorisation import Role
+from amcat.models.authorisation import Role, ProjectRole
 from amcat.models import authorisation as auth
 from amcat.models.project import Project
 
@@ -72,6 +72,30 @@ class UserProfile(AmcatModel):
     def projects(self):
         return Project.objects.filter(projectrole__user=self.user)
 
+    def has_role(self, role, onproject=None):
+        """
+        Returns whether the user has the given role. If project is given, check for a project-specific role
+        @param role: a role instance, ID, or label
+        """
+        if isinstance(role, Role):
+            role = role.id
+        elif isinstance(role, (str, unicode)):
+            role = Role.objects.get(label=role).id
+                            
+        if onproject:
+            try:
+                actual_role_id = ProjectRole.objects.get(user=self, project=onproject).role_id
+            except ProjectRole.DoesNotExist:
+                if onproject.guest_role is None:
+                    return False 
+                else:
+                    actual_role_id = onproject.guest_role_id
+        else:
+            actual_role_id = self.role_id
+
+        return actual_role_id >= role
+        
+    
     def haspriv(self, privilege, onproject=None):
         """
         @type privilege: Privilege object, id, or str

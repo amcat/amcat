@@ -322,13 +322,6 @@ def unlink_articleset(request, project, aset):
     request.session['unlinked_articleset'] = True
     return redirect(reverse("project-articlesets", args=[project.id]))
 
-@check(ArticleSet, args='id')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid', action='update')
-def refresh_articleset(request, project, aset):
-    aset.refresh_index(full_refresh=True)
-    return redirect(reverse("articleset", args=[project.id, aset.id]))
-
-
 @check(ArticleSet, args='id', action='update')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def edit_articleset(request, project, aset):
@@ -345,45 +338,6 @@ def edit_articleset(request, project, aset):
         "context" : project, "menu" : PROJECT_MENU, "selected" : "overview",
         "form" : form, "articleset" : aset, 
     })
-
-
-@check(ArticleSet, args='id')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid')
-def articleset(request, project, aset):
-    cls = "Article Set"
-
-    articles = Datatable(SearchResource, rowlink='../article/{id}').filter(sets=aset.id)
-
-    starred = project.favourite_articlesets.filter(pk=aset.id).exists()
-    star = request.GET.get("star")
-    if (star is not None):
-        if bool(int(star)) != starred:
-            starred = not starred
-            if starred:
-                project.favourite_articlesets.add(aset.id)
-            else:
-                project.favourite_articlesets.remove(aset.id)
-
-    
-    indexed = request.GET.get("indexed")
-    if indexed is not None:
-        indexed = bool(int(indexed))
-        if indexed != aset.indexed:
-            aset.indexed = indexed
-            aset.index_dirty = True
-            aset.save()
-    
-    can_update = aset.can_update(request.user)
-    if can_update:
-        form = forms.ArticleSetForm(request.POST or None, instance=aset)
-        if form.is_valid():
-            form.save()
-        else:
-            pass
-    
-    return table_view(request, project, articles, form=form, object=aset, cls=cls, starred=starred, articleset=aset,
-                      template="navigator/project/articleset.html", articlecount=count(aset.articles.all()))
-
 
 
 @check(Project)
@@ -407,10 +361,6 @@ def selection(request, project):
     favs = tuple(project.favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id)).values_list("id", flat=True))
     no_favourites = not favs
     favourites = json.dumps(favs)
-    
-    indexed = tuple(all_articlesets.filter(indexed=True, index_dirty=False).values_list("id", flat=True))
-    no_indexed = not indexed
-    indexed = json.dumps(indexed)
     
     codingjobs = json.dumps(tuple(CodingJob.objects.filter(articleset__in=all_articlesets).values_list("articleset_id", flat=True)))
     all_sets = json.dumps(tuple(all_articlesets.values_list("id", flat=True)))
