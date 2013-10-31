@@ -5,17 +5,24 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.fields import DateField, CharField, IntegerField
 from rest_framework.serializers import Serializer
-from amcat.tools import amcates
+from amcat.tools import amcates, keywordsearch
 from api.rest.resources.amcatresource import AmCATResource
 from django_filters import filters, filterset
+
+
 FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets"
 
 class LazyES(object):
-    def __init__(self, query=None, filters=None, fields=None):
-        self.query = query
+    def __init__(self, queries=None, filters=None, fields=None):
+        self.queries = queries
         self.filters = filters or {}
         self.fields = [f for f in (fields or []) if f != "id"]
         self.es = amcates.ES()
+
+    @property
+    def query(self):
+        if self.queries:
+            return "\n".join("({q.query})".format(**locals()) for q in self.queries)
         
     def filter(self, key, value):
         self.filters[key] = value
@@ -29,9 +36,9 @@ class LazyES(object):
 class SearchResource(AmCATResource):
     def get_queryset(self):
         params = self.request.QUERY_PARAMS
-        q = params.get("q")
+        queries = [keywordsearch.SearchQuery.from_string(q) for q in params.getlist("q")]
         fields = self.get_serializer().get_fields()
-        return LazyES(q, fields=fields.keys())
+        return LazyES(queries, fields=fields.keys())
         
     def filter_queryset(self, queryset):
         params = self.request.QUERY_PARAMS
@@ -65,5 +72,6 @@ class SearchResource(AmCATResource):
 #        mediumid = IntegerField()
         medium = CharField()
         author = CharField()
+        addressee = CharField()
         length = IntegerField()
         

@@ -45,8 +45,6 @@ def _get_filter_date(cleaned_data, prop):
 FILTER_FIELDS = {"mediums" : "mediumid", "article_ids" : "ids", "articlesets" : "sets",
                  "start_date" : "start_date", "end_date": "end_date"}
 
-REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
-
 def _serialize(x):
     if isinstance(x, collections.Iterable):
         return [_serialize(e) for e in x]
@@ -143,13 +141,13 @@ class SearchQuery(object):
         
 
     @classmethod
-    def _get_label_delimiter(cls, query_string, label_delimiters=("#", "\t")):
+    def _get_label_delimiter(cls, query_string, label_delimiters):
         for d in label_delimiters:
             if d in query_string:
                 return d
 
     @classmethod
-    def from_string(cls, query_string, label_delimiters=("#", "\t")):
+    def from_string(cls, query_string, label_delimiters=("#\t|")):
         """
         Returns a SearchQuery object, parsed from string `q`
         @raises: ValidationError if `q` is not valid query
@@ -159,7 +157,8 @@ class SearchQuery(object):
 
         if label_delimiter:
             label_delimiter = label_delimiter[0]
-            lbl, q = re.split("{label_delimiter}+".format(**locals()), query, 1)
+            pattern = label_delimiter.replace("|", "\\|") + "+"
+            lbl, q = re.split(pattern, query, 1)
 
             if not (0 < len(lbl) <= 20):
                 raise ValidationError("Invalid label (after the {label_delimiter}). Query was: {query!r}"
@@ -220,6 +219,8 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
         unicode(labels[reference].id), recursive,
         queries, codebook, labels, rlanguage
     )
+    
+REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 
 def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
     """
