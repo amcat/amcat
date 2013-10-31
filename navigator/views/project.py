@@ -289,7 +289,8 @@ def articlesets(request, project, what):
     table = table.filter(**selected_filter)
     table = table.hide("project", "index_dirty", "indexed", "needs_deduplication")
 
-    table.url += "&project_for_favourites={project.id}".format(**locals())
+    #table.url += "&project_for_favourites={project.id}".format(**locals())
+    table = table.add_arguments(project_for_favourites=project.id)
     
     context = project
     menu = PROJECT_MENU
