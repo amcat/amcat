@@ -60,7 +60,6 @@ class ArticleListToTable(script.Script):
             if len(articles) > 0:
                 if not hasattr(articles[0], 'hits'):
                     raise Exception('No hits attribute for article. Make sure you run a query')
-                hitsColumns.append(table.table3.ObjectColumn("Total hits", lambda a: a.score))
                 for query in articles[0].hits:
                     hitsColumns.append(table.table3.ObjectColumn("Hit Count for: %s" % query[:100],
                                                                  partial(gethits, query=query)))

@@ -70,11 +70,22 @@ def getDatatable(form):
         table = table.add_arguments(q="*")
     return table
 
-def get_ids(form):
+def get_ids_per_query(form):
+    """Return a sequnce of label, ids pairs per query"""
     filters = filters_from_form(form)
-    query = form['query']
-    if isinstance(query, (unicode, str)) and '\n' in query:
-        query = "\n".join("({q})".format(**locals()) for q in query.split())
+    queries = list(SearchQuery.from_form(form))
+    for q in queries:
+        yield q.label, list(ES().query_ids(query=q.query, filters=filters))
+
+def get_ids(form):
+    """Return a list of article ids matching this form"""
+    filters = filters_from_form(form)
+    queries = list(SearchQuery.from_form(form))
+    if queries:
+        query = "\n".join("({q.query})".format(**locals()) for q in queries)
+    else:
+        query = None
+                         
     return ES().query_ids(query=query, filters=filters)
 
 def getArticles(form):
@@ -191,6 +202,16 @@ class SearchQuery(object):
 
         return SearchQuery(query)
 
+    @classmethod
+    def from_form(cls, form):
+        """
+        Returns a sequence of SearchQuery objects taken from the form['query'] field
+        """
+        if not form['query']:
+            return
+        for line in form['query'].split("\n"):
+            if line.strip():
+                yield SearchQuery.from_string(line)
 
 def _resolve_recursive(codebook, tree_item, rlanguage):
     this = codebook.get_code(tree_item.code_id).get_label(rlanguage, fallback=False)
