@@ -34,6 +34,7 @@ from amcat.tools.caching import cached
 import inspect
 from api.rest.resources import get_resource_for_model
 from api.rest import filters
+from urllib import urlencode
 
 FIELDS_EMPTY = (None, [])
 
@@ -54,7 +55,8 @@ class Datatable(object):
 
     http://www.datatables.net/usage/options
     """
-    def __init__(self, resource, rowlink=None, options=None, hidden=None, url=None, ordering=None):
+    def __init__(self, resource, rowlink=None, options=None, hidden=None, url=None, ordering=None,
+                 format="json", filters=None, extra_args=None):
         """
         Default ordering is "id" if possible.
 
@@ -63,6 +65,9 @@ class Datatable(object):
 
         @param hidden: hidden fields
         @type hidden: set
+
+        @param filters: an optional list of selector/value pairs for filtering
+        @extra_args: an optional list of field/value pairs for extra 'get' options
         """
         if inspect.isclass(resource) and issubclass(resource, Model):
             resource = get_resource_for_model(resource)
@@ -72,12 +77,12 @@ class Datatable(object):
         self.rowlink = rowlink or getattr(self.resource, "get_rowlink", lambda  : None)()
         self.ordering = ordering
 
+        self.format = format
         self.hidden = set(hidden) if isinstance(hidden, collections.Iterable) else set()
-        self.url = url
-
-        if self.url is None:
-            self.url =  "{self.resource.url}?format=json".format(**locals())
-
+        self.filters = filters or [] # list of name : value tuples for filtering
+        self.extra_args = extra_args or [] # list of name : value tuples for GET arguments
+        self.base_url = url if url is not None else self.resource.url
+        
     @property
     def name(self):
         return self.get_name()
@@ -96,6 +101,7 @@ class Datatable(object):
             - colons (":")
             - and periods (".").
         """
+
         return "d" + re.sub(r'[^0-9A-Za-z_:.-]', '__', self.url)
 
     def get_default_ordering(self):
@@ -125,8 +131,11 @@ class Datatable(object):
                     fields.remove(field.name)
                     yield field.name
 
+        if hasattr(self.resource, 'extra_fields'):
+            fields += self.resource.extra_fields(self.extra_args)
+
         for field in fields:
-            yield field
+            yield str(field)
 
     @property
     @cached
@@ -138,8 +147,11 @@ class Datatable(object):
             'rowlink' : self.rowlink,
             'options' : self.options,
             'hidden' : self.hidden,
-            'url' : self.url,
-            'ordering' : self.ordering
+            'url' : self.base_url,
+            'ordering' : self.ordering,
+            'filters' : self.filters,
+            'extra_args' : self.extra_args,
+            'format' : self.format,
         }
         kws.update(kwargs)
         return kws
@@ -186,28 +198,6 @@ class Datatable(object):
     def get_aoColumnDefs(self):
         """Use this method to override when providing special colums"""
         return []
-
-    def _filter(self, selector, value):
-        """
-        @param selector: field to filter on, including filter type (name__iexact, for example)
-        @param value: value to filter on
-        @type value: QuerySet, list, tuple, generator, Model, str, int
-        """
-        if isinstance(value, QuerySet):
-            return self._filter(selector, list(value))
-
-        if isinstance(value, (list, tuple, types.GeneratorType)):
-            selector = selector[:-4] if selector.endswith('__in') else selector
-            return "&".join([self._filter(selector, v) for v in value])
-
-        if isinstance(value, Model):
-            return self._filter(selector + '__%s' % value._meta.pk.attname, value.pk)
-
-        # Determine if filtering on selector is allowed
-        if not self.can_filter(selector):
-            raise ValueError("Filtering on field '{selector}' is not allowed on '{self}'".format(**locals()))
-
-        return '%s=%s' % (selector, value)
 
     ### PUBLIC ###
     def hide(self, *columns):
@@ -270,6 +260,29 @@ class Datatable(object):
 
         return self.copy(ordering=tuple(fields))
 
+
+    def _filter(self, selector, value, check_can_filter=True):
+        """
+        @param selector: field to filter on, including filter type (name__iexact, for example)
+        @param value: value to filter on
+        @type value: QuerySet, list, tuple, generator, Model, str, int
+        """
+        if isinstance(value, QuerySet):
+            return self._filter(selector, list(value), check_can_filter=check_can_filter)
+
+        if isinstance(value, (list, tuple, types.GeneratorType)):
+            selector = selector[:-4] if selector.endswith('__in') else selector
+            return "&".join([self._filter(selector, v, check_can_filter=check_can_filter) for v in value])
+
+        if isinstance(value, Model):
+            return self._filter(selector + '__%s' % value._meta.pk.attname, value.pk, check_can_filter=check_can_filter)
+
+        # Determine if filtering on selector is allowed
+        if check_can_filter:
+            if not self.can_filter(selector):
+                raise ValueError("Filtering on field '{selector}' is not allowed on '{self}'".format(**locals()))
+        return urlencode({selector : value})
+
     def filter(self, **filters):
         """
         Filter on specific fields. You can use Django-style QuerySet filtering. For
@@ -282,16 +295,46 @@ class Datatable(object):
             {{ dt|safe }}
 
         """
-        url = self.url
-        url += "".join(['&%s' % self._filter(*f) for f in filters.items()])
+        filters = filters.items()
+        # Determine if filtering on selector is allowed
+        for selector, _value in filters:
+            if not self.can_filter(selector):
+                raise ValueError("Filtering on field '{selector}' is not allowed on '{self}'".format(**locals()))
+            
+        
+        filters = self.filters  + filters
+        return self.copy(filters=filters)
 
-        return self.copy(url=url)
+    def add_arguments(self, **args):
+        """
+        Add additional 'GET' arguments, e.g. cols or search queries 
+        """
+        extra_args = self.extra_args  + args.items()
+        return self.copy(extra_args=extra_args)
 
+    def set_format(self, format):
+        return self.copy(format=format)
+    
+    @property
+    def url(self):
+        url = self.base_url
+        url += "?format="+self.format
+        url += "".join(['&%s' % self._filter(sel, val) for (sel, val) in self.filters])
+        url += "".join(['&%s' % self._filter(sel, val, check_can_filter=False) for (sel, val) in self.extra_args])
+        return url
+            
+    
     def __unicode__(self):
+        links = {}
+        for fmt in ["api","csv","json"]:
+            t = self.set_format(fmt)
+            if fmt != "api": t = t.add_arguments(page_size=999999)
+            links[fmt] = t.url
         return get_template('api/datatables.html').render(Context({
             'js' : self.get_js(),
             'id' : self.name,
-            'cols' : self.fields
+            'cols' : self.fields,
+            'links' : links,
         }))
 
     def __repr__(self):
@@ -340,7 +383,7 @@ from amcat.tools import amcattest
 
 class TestDatatable(amcattest.PolicyTestCase):
     PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner',
-                      'insert_user', 'guest_role', 'active', 'index_default', 'favourite'}
+                      'insert_user', 'guest_role', 'active', 'favourite'}
 
     def test_url(self):
         from api.rest.resources import UserResource
@@ -406,6 +449,11 @@ class TestDatatable(amcattest.PolicyTestCase):
 
         # Test wrong filter field
         self.assertRaises(ValueError, lambda:d.filter(foo=1))
+
+        # Test can allow illegal filter field as extra_arg
+
+        d = Datatable(UserResource).add_arguments(q=[1,2])
+        self.assertEqual(d.url, s + "&q=1&q=2")
 
     def test_js(self):
         from api.rest.resources import ProjectResource

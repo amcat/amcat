@@ -50,7 +50,6 @@ class LazyES(object):
     
 class SearchResource(AmCATResource):
 
-
     @property
     @cached
     def columns(self):
@@ -105,7 +104,7 @@ class SearchResource(AmCATResource):
         id = IntegerField()
         date = DateField()
         headline = CharField()
-#        mediumid = IntegerField()
+        mediumid = IntegerField()
         medium = CharField()
         author = CharField()
         addressee = CharField()
@@ -123,6 +122,20 @@ class SearchResource(AmCATResource):
             if "text" in columns:
                 self.fields['text'] = CharField()
 
+    @classmethod
+    def extra_fields(cls, args):
+        """Used by datatable.py for dynamic fields. Hack?"""
+        queries = [val for (name, val) in args if name == "q"]
+        cols = [val for (name, val) in args if name == "col"]
+
+        if 'hits' in cols:
+            for q in queries:
+                q = keywordsearch.SearchQuery.from_string(q)
+                if q.query != "*":
+                    yield q.label
+        if 'text' in cols:
+            yield 'text'
+                
 class ScoreField(IntegerField):
     def field_to_native(self, obj, field_name):
         source = self.source or field_name

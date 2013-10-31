@@ -33,7 +33,6 @@ from amcat.tools.table import table3
 from amcat.models import Medium
 import re
 from amcat.tools.toolkit import stripAccents
-
 from django.core.exceptions import ValidationError
 
 log = logging.getLogger(__name__)
@@ -46,6 +45,8 @@ FILTER_FIELDS = {"mediums" : "mediumid", "article_ids" : "ids", "articlesets" : 
                  "start_date" : "start_date", "end_date": "end_date"}
 
 def _serialize(x):
+    if isinstance(x, (str, unicode)):
+        return x
     if isinstance(x, collections.Iterable):
         return [_serialize(e) for e in x]
     elif isinstance(x, models.Model):
@@ -55,6 +56,26 @@ def _serialize(x):
 def filters_from_form(form_data):
     return {FILTER_FIELDS[k] : _serialize(v)
             for (k,v) in form_data.iteritems() if v and k in FILTER_FIELDS}
+
+def getDatatable(form):
+    from api.rest.datatable import Datatable
+    from api.rest.resources import SearchResource
+    table = Datatable(SearchResource, rowlink='../article/{id}')
+    query = form.get('query')
+    
+    if query and query.strip():
+        for q in query.strip().split("\n"):
+            table = table.add_arguments(q=q.strip())
+    if form.get('include_all'):
+        table = table.add_arguments(q="*")
+    return table
+
+def get_ids(form):
+    filters = filters_from_form(form)
+    query = form['query']
+    if isinstance(query, (unicode, str)) and '\n' in query:
+        query = "\n".join("({q})".format(**locals()) for q in query.split())
+    return ES().query_ids(query=query, filters=filters)
 
 def getArticles(form):
     fields = ['mediumid', 'date', 'headline', 'medium']

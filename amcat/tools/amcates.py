@@ -130,7 +130,11 @@ class Result(object):
         result =  Result(id=int(row['_id']), **field_dict)
         if score: result.score = int(row['_score'])
         if 'highlight' in row: result.highlight = row['highlight']
-        if hasattr(result, 'date'): result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
+        if hasattr(result, 'date'):
+            if len(result.date) == 10:
+                result.date = datetime.strptime(result.date, '%Y-%m-%d')                
+            else:
+                result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
         return result
 
     def __init__(self, **kwargs):

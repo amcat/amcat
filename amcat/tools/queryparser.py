@@ -25,7 +25,8 @@ Also paves the way for more customization, i.e. allowing Lexis style queries
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-from pyparsing import *
+from pyparsing import ParseResults
+    
 
 class BaseTerm(object):
     def __init__(self, text, field):
@@ -81,7 +82,7 @@ def get_span_term(text, field):
         return {"span_multi":{"match":{"prefix" : { field :  { "value" : text } }}}}
     else:
         return {"span_term" : {field : text}}
-    
+
 class Boolean(object):
     def __init__(self, tokens):
         self.operator = tokens.operator
@@ -137,40 +138,46 @@ def pprint(q, indent=0):
     else:
         print (i, type(q).__name__, q)
 
-        
-class Grammar:
-    # literals
-    AND = Literal("AND").setResultsName("operator")
-    OR = Literal("OR").setResultsName("operator")
-    NOT = Literal("NOT").setResultsName("operator")
-    COLON = Literal(":").suppress()
-    TILDE = Literal("~").suppress()
-    LETTERS = u''.join(unichr(c) for c in xrange(65536) 
-                       if not unichr(c).isspace() and unichr(c) not in '":()~')
+from amcat.tools.caching import cached
 
-    # terms
-    term = Word(LETTERS)
-    slop = Word(nums).setResultsName("slop")
-    quote = QuotedString('"').setResultsName("quote") + Optional(TILDE + slop)
-    #quote.setParseAction(Quote)
+_grammar = None
+def get_grammar():
+    global _grammar
+    if _grammar is None:
+        from pyparsing import Literal, Word, QuotedString, Optional, operatorPrecedence, nums, alphas, opAssoc, ParseResults
 
-    field = Word(alphas).setResultsName("field")
-    fterm = Optional(field + COLON) + (quote | term).setResultsName("term")
-    fterm.setParseAction(get_term)
 
-    # boolean combination
-    boolean_expr = operatorPrecedence(fterm, [
-            (AND, 2, opAssoc.LEFT),
-            (NOT, 2, opAssoc.LEFT),
-            (Optional(OR, default="OR"),  2, opAssoc.LEFT),
-            ])
-    boolean_expr.setParseAction(get_boolean_or_term)
+        # literals
+        AND = Literal("AND").setResultsName("operator")
+        OR = Literal("OR").setResultsName("operator")
+        NOT = Literal("NOT").setResultsName("operator")
+        COLON = Literal(":").suppress()
+        TILDE = Literal("~").suppress()
+        LETTERS = u''.join(unichr(c) for c in xrange(65536) 
+                           if not unichr(c).isspace() and unichr(c) not in '":()~')
 
+        # terms
+        term = Word(LETTERS)
+        slop = Word(nums).setResultsName("slop")
+        quote = QuotedString('"').setResultsName("quote") + Optional(TILDE + slop)
+        #quote.setParseAction(Quote)
+
+        field = Word(alphas).setResultsName("field")
+        fterm = Optional(field + COLON) + (quote | term).setResultsName("term")
+        fterm.setParseAction(get_term)
+
+        # boolean combination
+        boolean_expr = operatorPrecedence(fterm, [
+                (AND, 2, opAssoc.LEFT),
+                (NOT, 2, opAssoc.LEFT),
+                (Optional(OR, default="OR"),  2, opAssoc.LEFT),
+                ])
+        boolean_expr.setParseAction(get_boolean_or_term)
+        _grammar = boolean_expr
+    return _grammar
     
-parser = Grammar.boolean_expr
-
 def parse(s):
-    terms =  parser.parseString(s, parseAll=True)[0]
+    terms =  get_grammar().parseString(s, parseAll=True)[0]
     #print; pprint(terms); print
     return terms.get_dsl()
 
