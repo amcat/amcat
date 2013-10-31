@@ -59,7 +59,7 @@ class Controller(object):
             except Exception:
                 log.exception("failed scraping {scraper}".format(**locals()))
                 continue
-            scraper.articleset.add_articles(articles, set_dirty=False)
+            scraper.articleset.add_articles(articles)
             all_articles |= set(articles)
             used_sets.add(scraper.articleset.id)
 
@@ -73,7 +73,7 @@ class Controller(object):
 
                 DeduplicateScript(**options).run(None)
 
-        ArticleSet.objects.filter(pk__in=used_sets).update(index_dirty=True)
+
         return all_articles
 
     def save(self, article):

@@ -296,12 +296,6 @@ class Datatable(object):
 
         """
         filters = filters.items()
-        # Determine if filtering on selector is allowed
-        for selector, _value in filters:
-            if not self.can_filter(selector):
-                raise ValueError("Filtering on field '{selector}' is not allowed on '{self}'".format(**locals()))
-            
-        
         filters = self.filters  + filters
         return self.copy(filters=filters)
 
