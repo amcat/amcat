@@ -1,6 +1,29 @@
-#TODO: NOTE: This module replaces the old 'solrlib', but I feel it can be removed
+############################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+
+"""
+Utility module for keyword searches
+TODO: NOTE: This module replaces the old 'solrlib', but I wonder whether it can be removed
 # entirely. The 'getTable' / 'getArticles' can move either to their respective
 # webscripts, or to the REST API. The form handling should just go to the form.
+(but then I started moving things from the form to here...)
+"""
 
 from django.db import models
 import collections
@@ -8,6 +31,10 @@ import logging
 from amcat.tools.amcates import ES
 from amcat.tools.table import table3
 from amcat.models import Medium
+import re
+from amcat.tools.toolkit import stripAccents
+
+from django.core.exceptions import ValidationError
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +44,8 @@ def _get_filter_date(cleaned_data, prop):
 
 FILTER_FIELDS = {"mediums" : "mediumid", "article_ids" : "ids", "articlesets" : "sets",
                  "start_date" : "start_date", "end_date": "end_date"}
+
+REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
 
 def _serialize(x):
     if isinstance(x, collections.Iterable):
@@ -101,3 +130,145 @@ def get_statistics(form):
     filters = filters_from_form(form)
     return ES().statistics(query, filters)
     
+
+class SearchQuery(object):
+    """
+    Represents a query object that contains both a query and
+    an optional label
+    """
+    def __init__(self, query, label=None):
+        self.query = stripAccents(query)
+        self.declared_label = stripAccents(label)
+        self.label = self.declared_label or self.query
+        
+
+    @classmethod
+    def _get_label_delimiter(cls, query_string, label_delimiters=("#", "\t")):
+        for d in label_delimiters:
+            if d in query_string:
+                return d
+
+    @classmethod
+    def from_string(cls, query_string, label_delimiters=("#", "\t")):
+        """
+        Returns a SearchQuery object, parsed from string `q`
+        @raises: ValidationError if `q` is not valid query
+        """
+        query = query_string.strip()
+        label_delimiter = cls._get_label_delimiter(query_string, label_delimiters)
+
+        if label_delimiter:
+            label_delimiter = label_delimiter[0]
+            lbl, q = re.split("{label_delimiter}+".format(**locals()), query, 1)
+
+            if not (0 < len(lbl) <= 20):
+                raise ValidationError("Invalid label (after the {label_delimiter}). Query was: {query!r}"
+                                      .format(**locals()), code="invalid")
+            if not len(query):
+                raise ValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
+                                      .format(**locals()), code="invalid")
+            return SearchQuery(q.strip(), label=lbl.strip())
+
+        return SearchQuery(query)
+
+
+def _resolve_recursive(codebook, tree_item, rlanguage):
+    this = codebook.get_code(tree_item.code_id).get_label(rlanguage, fallback=False)
+
+    if this is None:
+        raise ValidationError("Code with id '{tree_item.code_id}' has no label in replacement-language.".format(**locals()), code="invalid")
+
+    children = " OR ".join(_resolve_recursive(codebook, t, rlanguage) for t in tree_item.children)
+    return ("{this} OR ({children})".format(**locals()) if children else this)
+
+
+def resolve_reference(reference, recursive, queries, codebook=None, labels=None, rlanguage=None):
+    # Case 1: reference is numeric, so it refers to a Code
+    if reference.isnumeric():
+        code = codebook.get_code(int(reference))
+        if recursive:
+            tree = codebook.get_tree(roots=[code])
+            tree = _resolve_recursive(codebook, tree[0], rlanguage)
+            return "({})".format(tree)
+        return code.get_label(rlanguage, fallback=False)
+
+    # Case 2: reference refers to labeled subquery
+    if (reference, reference) in queries:
+        # This refernce might contain references, resolve it first.
+        return resolve_query(
+            queries[(reference, reference)],
+            queries, codebook, labels
+        ).query
+
+    # Case 3: reference refers to code in codebook, refered to by its label
+    try:
+        label = labels[reference].get_label(rlanguage, fallback=False)
+    except Label.DoesNotExist:
+        raise ValidationError("Code with label '{reference}' has no label in replacement-language."
+                              .format(**locals()), code="invalid")
+    except KeyError:
+        raise ValidationError("No code with label '{reference}' found in {codebook}"
+                              .format(**locals()), code="invalid")
+    except TypeError:
+        raise ValidationError("<{reference}> does not refer to either a code or a query-label. "
+                              "Did you forget to set a codebook?".format(**locals()), code="invalid")
+
+    if not recursive:
+        return label
+
+    return resolve_reference(
+        unicode(labels[reference].id), recursive,
+        queries, codebook, labels, rlanguage
+    )
+
+def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
+    """
+    Take a query and parse and solve all references, marked as <reference>. Each
+    query can contain three types of references:
+
+      1) A reference to a previously defined subquery (<[a-zA-Z0-9]+>)
+      2) A reference to a code in the given codebook
+    
+    """
+    for mo in REFERENCE_RE.finditer(query.query):
+        recursive = bool(mo.group("recursive"))
+        reference = mo.group("reference")
+        replacement = resolve_reference(
+            reference, recursive, queries,
+            codebook, labels, rlanguage
+        )
+
+        query.query = query.query.replace(mo.group(0), replacement, 1)
+
+    return query
+
+
+def resolve_queries(queries, codebook=None, label_language=None, replacement_language=None):
+    _queries = { (q.label, q.declared_label) : q for q in queries }
+
+    if len(queries) != len(_queries):
+        labels = [q.label for q in queries]
+        offender = next(l for l in labels if labels.count(l) > 1)
+        raise ValidationError("Label '{offender}' defined more than once".format(**locals()))
+
+    labels = None
+    if codebook is not None:
+        labels = { c.get_label(label_language, fallback=False) : c for c in codebook.get_codes() }
+
+    for query in _queries.values():   
+        yield resolve_query(query, _queries, codebook, labels, replacement_language)
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestKeywordSearch(amcattest.PolicyTestCase):
+        
+    def test_get_label_delimiter(self):
+        self.assertEquals(SearchQuery._get_label_delimiter("abc", "a"), "a")
+        self.assertEquals(SearchQuery._get_label_delimiter("abc", "ab"), "a")
+        self.assertEquals(SearchQuery._get_label_delimiter("abc", "ba"), "b")
+        self.assertEquals(SearchQuery._get_label_delimiter("abc", "d"), None)

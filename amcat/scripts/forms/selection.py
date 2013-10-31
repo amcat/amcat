@@ -31,7 +31,7 @@ from amcat.models import Codebook, Language, Label, Article
 from amcat.forms.forms import order_fields
 from amcat.tools.toolkit import to_datetime, stripAccents
 from amcat.tools.djangotoolkit import db_supports_distinct_on
-
+from amcat.tools import keywordsearch
 
 log = logging.getLogger(__name__)
 
@@ -43,137 +43,14 @@ DATETYPES = {
     "between" : "Between",
 }
 
-REFERENCE_RE = re.compile(r"<(?P<reference>.*?)(?P<recursive>\+?)>")
-
 __all__ = [
-    "parse_query", "resolve_reference", "resolve_query",
-    "resolve_queries", "SearchQuery", "SelectionForm",
+    "SelectionForm",
     "TestSelectionForm", "ModelMultipleChoiceFieldWithIdLabel",
     "ModelChoiceFieldWithIdLabel"
 ]
 
 DAY_DELTA = datetime.timedelta(hours=23, minutes=59, seconds=59, milliseconds=999)
 
-class SearchQuery(object):
-    """
-    Represents a query object that contains both a query and
-    an optional label
-    """
-    def __init__(self, query, label=None):
-        self.query = stripAccents(query)
-        self.declared_label = stripAccents(label)
-        self.label = self.declared_label or self.query
-
-def _get_label_delimiter(query, label_delimiters):
-    for label_delimiter in label_delimiters:
-        if label_delimiter in query:
-            return label_delimiter
-
-def parse_query(query, label_delimiters=("#", "\t")):
-    """
-    Returns SearchQuery object, parsed from string `q`
-    @raises: ValidationError if `q` is not valid query
-    """
-    query = query.strip()
-    label_delimiter = _get_label_delimiter(query, label_delimiters)
-
-    if label_delimiter is not None:
-        lbl, q = re.split("{label_delimiter}+".format(**locals()), query, 1)
-        #lbl, query = query.split(label_delimiter, 1)
-
-        if not (0 < len(lbl) <= 20):
-            raise ValidationError("Invalid label (after the {label_delimiter}). Query was: {query!r}"
-                                  .format(**locals()), code="invalid")
-        if not len(query):
-            raise ValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
-                                  .format(**locals()), code="invalid")
-        return SearchQuery(q.strip(), label=lbl.strip())
-
-    return SearchQuery(query)
-
-
-def _resolve_recursive(codebook, tree_item, rlanguage):
-    this = codebook.get_code(tree_item.code_id).get_label(rlanguage, fallback=False)
-
-    if this is None:
-        raise ValidationError("Code with id '{tree_item.code_id}' has no label in replacement-language.".format(**locals()), code="invalid")
-
-    children = " OR ".join(_resolve_recursive(codebook, t, rlanguage) for t in tree_item.children)
-    return ("{this} OR ({children})".format(**locals()) if children else this)
-
-
-def resolve_reference(reference, recursive, queries, codebook=None, labels=None, rlanguage=None):
-    # Case 1: reference is numeric, so it refers to a Code
-    if reference.isnumeric():
-        code = codebook.get_code(int(reference))
-        if recursive:
-            tree = codebook.get_tree(roots=[code])
-            tree = _resolve_recursive(codebook, tree[0], rlanguage)
-            return "({})".format(tree)
-        return code.get_label(rlanguage, fallback=False)
-
-    # Case 2: reference refers to labeled subquery
-    if (reference, reference) in queries:
-        # This refernce might contain references, resolve it first.
-        return resolve_query(
-            queries[(reference, reference)],
-            queries, codebook, labels
-        ).query
-
-    # Case 3: reference refers to code in codebook, refered to by its label
-    try:
-        label = labels[reference].get_label(rlanguage, fallback=False)
-    except Label.DoesNotExist:
-        raise ValidationError("Code with label '{reference}' has no label in replacement-language.".format(**locals()), code="invalid")
-    except KeyError:
-        raise ValidationError("No code with label '{reference}' found in {codebook}".format(**locals()), code="invalid")
-    except TypeError:
-        raise ValidationError("<{reference}> does not refer to either a code or a query-label. Did you forget to set a codebook?".format(**locals()), code="invalid")
-
-    if not recursive:
-        return label
-
-    return resolve_reference(
-        unicode(labels[reference].id), recursive,
-        queries, codebook, labels, rlanguage
-    )
-
-def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
-    """
-    Take a query and parse and solve all references, marked as <reference>. Each
-    query can contain three types of references:
-
-      1) A reference to a previously defined subquery (<[a-zA-Z0-9]+>)
-      2) A reference to a code in the given codebook
-    
-    """
-    for mo in REFERENCE_RE.finditer(query.query):
-        recursive = bool(mo.group("recursive"))
-        reference = mo.group("reference")
-        replacement = resolve_reference(
-            reference, recursive, queries,
-            codebook, labels, rlanguage
-        )
-
-        query.query = query.query.replace(mo.group(0), replacement, 1)
-
-    return query
-
-
-def resolve_queries(queries, codebook=None, label_language=None, replacement_language=None):
-    _queries = { (q.label, q.declared_label) : q for q in queries }
-
-    if len(queries) != len(_queries):
-        labels = [q.label for q in queries]
-        offender = next(l for l in labels if labels.count(l) > 1)
-        raise ValidationError("Label '{offender}' defined more than once".format(**locals()))
-
-    labels = None
-    if codebook is not None:
-        labels = { c.get_label(label_language, fallback=False) : c for c in codebook.get_codes() }
-
-    for query in _queries.values():   
-        yield resolve_query(query, _queries, codebook, labels, replacement_language)
 
 class ModelMultipleChoiceFieldWithIdLabel(forms.ModelMultipleChoiceField):
     def label_from_instance(self, obj):
@@ -258,7 +135,7 @@ class SelectionForm(forms.Form):
         if codebook and label_language and replacement_language:
             codebook.cache_labels(label_language, replacement_language)
 
-        return list(resolve_queries(
+        return list(keywordsearch.resolve_queries(
             unresolved_queries, codebook,
             label_language, replacement_language
         ))
@@ -307,9 +184,9 @@ class SelectionForm(forms.Form):
     def clean_query(self):
         query = self.cleaned_data["query"].strip()
         include_all = self.cleaned_data["include_all"]
-        if include_all: query += "\nAll#*:*"
+        if include_all: query += "\nAll#*"
 
-        queries = [parse_query(q) for q in query.split("\n") if q.strip()]
+        queries = [keywordsearch.SearchQuery.from_string(q) for q in query.split("\n") if q.strip()]
         self._queries = self._get_queries(queries)
 
         if len(queries) > 1:
@@ -456,11 +333,6 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         
 
 
-    def test_get_label_delimiter(self):
-        self.assertEquals(_get_label_delimiter("abc", "a"), "a")
-        self.assertEquals(_get_label_delimiter("abc", "ab"), "a")
-        self.assertEquals(_get_label_delimiter("abc", "ba"), "b")
-        self.assertEquals(_get_label_delimiter("abc", "d"), None)
 
     def test_field_ordering(self):
         """Test if fields are defined in correct order (imported for
@@ -487,7 +359,7 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         self.assertEquals(len(list(form.queries)), 1)
         self.assertEquals(next(form.queries).label, "All")
         self.assertEquals(next(form.queries).declared_label, "All")
-        self.assertEquals(next(form.queries).query, "*:*")
+        self.assertEquals(next(form.queries).query, "*")
 
     @amcattest.use_elastic
     def test_clean_on_date(self):
