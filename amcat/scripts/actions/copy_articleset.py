@@ -65,8 +65,8 @@ class CopyArticleSetScript(Script):
         self.dest_host = settings.DATABASES['default']['HOST']
         self.dest_db = settings.DATABASES['default']['NAME']
 
-        if self.dest_host == self.source_host:
-            raise Exception("Destination and source host are the same: {self.dest_host}"
+        if self.dest_host == self.source_host and self.dest_db == self.source_db:
+            raise Exception("Destination and source host are the same: {self.dest_host}:{self.dest_db}"
                             .format(**locals()))
 
         if self.dest_project is None:
