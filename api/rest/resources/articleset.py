@@ -58,7 +58,8 @@ class ArticleSetSerializer(AmCATModelSerializer):
             
     def n_articles(self, articleset):
         self.cache_results()
-        return self.nn.get(articleset.id)
+        if self.nn is not None:
+            return self.nn.get(articleset.id)
 
     def is_favourite(self, articleset):
         self.cache_results()
