@@ -401,7 +401,7 @@ def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
 
-def build_filter(start_date=None, end_date=None, **filters):
+def build_filter(start_date=None, end_date=None, on_date=None, **filters):
     """
     Build a elastic DSL query from the 'form' fields.
     For convenience, the singular versions (mediumid, id) etc are allowed as aliases
@@ -415,6 +415,9 @@ def build_filter(start_date=None, end_date=None, **filters):
         return x
 
     def parse_date(d):
+        if isinstance(d, list) and len(d) == 1:
+            d = d[0]
+
         d = toolkit.readDate(d).isoformat()
         return d
         

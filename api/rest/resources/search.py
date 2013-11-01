@@ -25,7 +25,7 @@ class LazyES(object):
     def query(self):
         if self.queries:
             return "\n".join("({q.query})".format(**locals()) for q in self.queries)
-        
+
     def filter(self, key, value):
         self.filters[key] = value
 
@@ -72,7 +72,7 @@ class SearchResource(AmCATResource):
         params = self.request.QUERY_PARAMS
         for k in FILTER_FIELDS:
             if k in params:
-                queryset.filter(k, params[k])
+                queryset.filter(k, params.getlist(k))
         return queryset
     
     @classmethod

@@ -32,8 +32,9 @@ from amcat.tools.amcates import ES
 from amcat.tools.table import table3
 from amcat.models import Medium
 import re
-from amcat.tools.toolkit import stripAccents
+from amcat.tools.toolkit import stripAccents,readDate
 from django.core.exceptions import ValidationError
+from dateutil.relativedelta import relativedelta
 
 log = logging.getLogger(__name__)
 
@@ -41,8 +42,7 @@ def _get_filter_date(cleaned_data, prop):
     if prop not in cleaned_data: return "*"
     return cleaned_data[prop].isoformat() + "Z"
 
-FILTER_FIELDS = {"mediums" : "mediumid", "article_ids" : "ids", "articlesets" : "sets",
-                 "start_date" : "start_date", "end_date": "end_date"}
+FILTER_FIELDS = {"mediums" : "mediumid", "article_ids" : "ids", "articlesets" : "sets"}
 
 def _serialize(x):
     if isinstance(x, (str, unicode)):
@@ -54,33 +54,54 @@ def _serialize(x):
     return x
 
 def filters_from_form(form_data):
-    return {FILTER_FIELDS[k] : _serialize(v)
-            for (k,v) in form_data.iteritems() if v and k in FILTER_FIELDS}
+    if form_data.get('datetype') == 'on':
+        d = readDate(form_data.get('on_date'))
+        yield 'start_date', d.isoformat()
+        yield 'end_date', (d + relativedelta(days=2)).isoformat()
+    elif form_data.get('datetype') == 'between':
+        yield 'start_date', form_data.get('start_date')
+        yield 'end_date', form_data.get('end_date')
+        
+        
+    for k in form_data.keys():
+        if  k in FILTER_FIELDS:
+            try:
+                vals = form_data.getlist(k)
+            except AttributeError:
+                vals = [form_data[k]]
+            for v in vals:
+                if v:
+                    yield FILTER_FIELDS[k], _serialize(v)
+
 
 def getDatatable(form, rowlink='article/{id}'):
     from api.rest.datatable import Datatable
     from api.rest.resources import SearchResource
     table = Datatable(SearchResource, rowlink=rowlink)
     query = form.get('query')
-    table = table.filter(**filters_from_form(form))
+    for field, val in filters_from_form(form):
+        print field, val
+        
+        table = table.filter(**{field : val})
     
     if query and query.strip():
         for q in query.strip().split("\n"):
             table = table.add_arguments(q=q.strip())
+
     if form.get('include_all'):
         table = table.add_arguments(q="*")
     return table
 
 def get_ids_per_query(form):
     """Return a sequnce of label, ids pairs per query"""
-    filters = filters_from_form(form)
+    filters = dict(filters_from_form(form))
     queries = list(SearchQuery.from_form(form))
     for q in queries:
         yield q.label, list(ES().query_ids(query=q.query, filters=filters))
 
 def get_ids(form):
     """Return a list of article ids matching this form"""
-    filters = filters_from_form(form)
+    filters = dict(filters_from_form(form))
     queries = list(SearchQuery.from_form(form))
     if queries:
         query = "\n".join("({q.query})".format(**locals()) for q in queries)
@@ -103,7 +124,7 @@ def getArticles(form):
     if form['highlight']:
         kargs["highlight" if query else "lead"] = True
         
-    filters = filters_from_form(form)
+    filters = dict(filters_from_form(form))
     
     log.info("Query: {query!r}, with filters: {filters}".format(**locals()))
 
@@ -128,7 +149,7 @@ def getTable(form):
     table.rowNamesRequired = True
     dateInterval = form['dateInterval']
     group_by = form['xAxis']
-    filters = filters_from_form(form)
+    filters = dict(filters_from_form(form))
 
     yAxis = form['yAxis']
     if yAxis == 'total':
@@ -158,7 +179,7 @@ def _add_column(table, column_name, query, filters, group_by, dateInterval):
                                  
 def get_statistics(form):
     query = form['query']
-    filters = filters_from_form(form)
+    filters = dict(filters_from_form(form))
     return ES().statistics(query, filters)
     
 

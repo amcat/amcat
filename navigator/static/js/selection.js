@@ -562,12 +562,9 @@ amcat.selection.aggregation.click = function(x, y, count){
         var datetype = amcat.selection.aggregation.dateType;
         if(datetype == "day"){
             added_form_values["datetype"] = "on";
-            var on_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getUTCDate();
+            var on_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getDate();
             added_form_values["on_date"] = amcat.selection.aggregation.reverseDateOrder(on_date);
             title += ' on ' + added_form_values['on_date'];
-        } else if (datetype == "year"){
-            start_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getUTCDate();
-            end_date = (end_date.getFullYear()+1) + "-" + (end_date.getMonth() + 1) + "-" + (end_date.getUTCDate() );
         } else if (!isNaN(x)){
             // Can't really figure out what's going on here, but it works? -- Martijn
             $.each(amcat.selection.aggregation.datesDict, function(i, dt){
