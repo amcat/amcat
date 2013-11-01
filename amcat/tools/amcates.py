@@ -417,9 +417,9 @@ def build_filter(start_date=None, end_date=None, on_date=None, **filters):
     def parse_date(d):
         if isinstance(d, list) and len(d) == 1:
             d = d[0]
-
-        d = toolkit.readDate(d).isoformat()
-        return d
+        if isinstance(d, (str, unicode)):
+            d = toolkit.readDate(d)
+        return d.isoformat()
         
     # Allow singulars as alias for plurals
     f = {}

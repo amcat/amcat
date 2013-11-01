@@ -61,6 +61,10 @@ def filters_from_form(form_data):
     elif form_data.get('datetype') == 'between':
         yield 'start_date', form_data.get('start_date')
         yield 'end_date', form_data.get('end_date')
+    elif form_data.get('datetype') == 'after':
+        yield 'start_date', form_data.get('start_date')
+    elif form_data.get('datetype') == 'before':
+        yield 'end_date', form_data.get('end_date')
         
         
     for k in form_data.keys():

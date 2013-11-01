@@ -201,15 +201,16 @@ class SelectionForm(forms.Form):
         start_date = self.cleaned_data["start_date"]
         end_date = self.cleaned_data["end_date"]
 
-        if datetype == "between" and not (start_date and end_date):
-            raise ValidationError("Both a start and an end date need to be defined when datetype is 'between'", code="missing")
+        if datetype == "between":
+            if not (start_date and end_date):
+                raise ValidationError("Both a start and an end date need to be defined when datetype is 'between'", code="missing")
+            if end_date and not (start_date < end_date):
+                raise ValidationError("End date should be greater than start date")
+
         elif datetype == "before" and not end_date:
             raise ValidationError("End date should be defined when 'datetype' is 'before'", code="missing")
         elif datetype == "after" and not start_date:
             raise ValidationError("Start date should be defined when 'datetype' is 'after'", code="missing")
-
-        if start_date and end_date and not (start_date < end_date):
-            raise ValidationError("End date should be greater than start date")
 
         return datetype
 
