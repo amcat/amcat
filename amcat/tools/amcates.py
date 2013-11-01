@@ -226,7 +226,7 @@ class ES(object):
 
     def query_all(self, *args, **kargs):
         kargs.update({"from_" : 0})
-        size = kargs.setdefault('size', 100)
+        size = kargs.setdefault('size', 10000)
         result = self.query(*args, **kargs)
         total = result.total
         for offset in range(size, total, size):
