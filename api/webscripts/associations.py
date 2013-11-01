@@ -60,9 +60,9 @@ class ShowAssociations(WebScript):
 
     def format(self, a):
         name, perc, formatstr = FORMATS[int(self.options["association_format"])]
-        print `a`
-        if perc: a*=100
-        return formatstr % (a,)
+        if a:
+            if perc: a*=100
+            return formatstr % (a,)
         
         
     
