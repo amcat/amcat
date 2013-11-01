@@ -414,6 +414,10 @@ def build_filter(start_date=None, end_date=None, **filters):
             return [x.pk]
         return x
 
+    def parse_date(d):
+        d = toolkit.readDate(d).isoformat()
+        return d
+        
     # Allow singulars as alias for plurals
     f = {}
     for singular, plural in [("mediumid", "mediumids"),
@@ -436,8 +440,8 @@ def build_filter(start_date=None, end_date=None, **filters):
     if 'id' in f: filters.append(dict(ids={'values' : _list(f['id'])}))
 
     date_range = {}
-    if start_date: date_range['gte'] = start_date
-    if end_date: date_range['lt'] = end_date
+    if start_date: date_range['gte'] = parse_date(start_date)
+    if end_date: date_range['lt'] = parse_date(end_date)
     if date_range: filters.append(dict(range={'date' : date_range}))
 
     if 'hash' in f:

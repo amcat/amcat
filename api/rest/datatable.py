@@ -277,10 +277,6 @@ class Datatable(object):
         if isinstance(value, Model):
             return self._filter(selector + '__%s' % value._meta.pk.attname, value.pk, check_can_filter=check_can_filter)
 
-        # Determine if filtering on selector is allowed
-        if check_can_filter:
-            if not self.can_filter(selector):
-                raise ValueError("Filtering on field '{selector}' is not allowed on '{self}'".format(**locals()))
         return urlencode({selector : value})
 
     def filter(self, **filters):

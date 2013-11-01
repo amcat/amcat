@@ -62,6 +62,7 @@ def getDatatable(form, rowlink='article/{id}'):
     from api.rest.resources import SearchResource
     table = Datatable(SearchResource, rowlink=rowlink)
     query = form.get('query')
+    table = table.filter(**filters_from_form(form))
     
     if query and query.strip():
         for q in query.strip().split("\n"):

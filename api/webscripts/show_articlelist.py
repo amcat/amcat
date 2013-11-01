@@ -48,6 +48,7 @@ class ShowArticleList(WebScript):
     
     def run(self):
         formData = self.data.copy() # copy needed since formData is inmutable
+        print("!!!", formData)
         if self.options['outputTypeAl'] == 'list':
             formData['highlight'] = True
         
@@ -73,8 +74,13 @@ class ShowArticleList(WebScript):
                 t = t.add_arguments(col=col)
             html = unicode(t)
             #html += "Download results as : "
-
-            return self.outputJsonHtml(html)
+            if self.output == "html":
+                from django.http import HttpResponse
+                response = HttpResponse(mimetype='text/html')
+                response.write(html)
+                return response
+            else:
+                return self.outputJsonHtml(html)
         else:
             articles = list(ArticleListScript(formData).run())
             for a in articles:

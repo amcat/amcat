@@ -70,7 +70,12 @@ class ShowAggregation(WebScript):
                 rowJson = dict([(get_key(col), aggrTable.getValue(row, col)) for col in columns])
                 rowJson[TITLE_COLUMN_NAME] = row
                 dataJson.append(rowJson)
-
+                
+            if self.options['xAxis'] == 'date':
+                datesDict = dict(_getDatesDict(aggrTable,  self.options['dateInterval']))
+            else:
+                datesDict = {}
+            
             aggregationType = 'hits' if self.options['counterType'] == 'numberOfHits' else 'articles'
             graphOnly = 'true' if self.options['graphOnly'] == True else 'false'
 
@@ -78,7 +83,7 @@ class ShowAggregation(WebScript):
                                                 'dataJson':json.dumps(dataJson),
                                                 'columnsJson':json.dumps(dataTablesHeaderDict),
                                                 'aggregationType':aggregationType,
-                                                'datesDict': '{}',
+                                                'datesDict': json.dumps(datesDict),
                                                 'graphOnly': graphOnly,
                                                 'labels' : json.dumps({q.label : q.query for q in selection.queries}),
                                                 'ownForm':self.form(project=self.project, data=self.data),
@@ -95,4 +100,21 @@ class ShowAggregation(WebScript):
             return self.outputResponse(aggrTable, AggregationScript.output_type)
             
             
-  
+from dateutil.relativedelta import relativedelta
+
+DELTAS = {'month' : relativedelta(months=1),
+          'quarter' : relativedelta(months=3),
+          'year' : relativedelta(years=1),
+          'week' : relativedelta(weeks=1),
+          'day' : relativedelta(days=1),
+          }
+
+def _getDatesDict(aggrTable, interval):
+    delta = DELTAS[interval]
+    dates = aggrTable.getRows()
+    for datestr in dates:
+        date = datetime.datetime.strptime(datestr[:10], '%Y-%m-%d')
+        end_date = date + delta
+        yield (datestr, [date.isoformat(), end_date.isoformat()])
+
+                
