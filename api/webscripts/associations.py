@@ -20,8 +20,6 @@
 from webscript import WebScript
 
 from amcat.scripts.searchscripts.articlelist import ArticleListScript
-from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
-from amcat.scripts.processors.associations import AssociationsScript
 from django import forms
 from amcat.tools.table import table3
 from amcat.tools import dot, keywordsearch
@@ -67,16 +65,21 @@ class ShowAssociations(WebScript):
     def run(self):
 
         scores = dict(keywordsearch.get_ids_per_query(self.data, score=True))
-        print(scores)
 
-        
-        
-        articleListFormData = self.data.copy()
-        articleListFormData['columns'] = 'hits' # need to add columns, since this is required for ArticleListScript 
-        articles = ArticleListScript(articleListFormData).run()
-        articleTable = ArticleListToTable({'columns':('hits', )}).run(articles)
-        #print(articleTable.output())
-        assocTable = AssociationsScript(self.data).run(articleTable)
+        assocTable = table3.ListTable(colnames=["From", "To", "Association"])
+        for q in scores:
+            sumprob1 = float(sum(scores[q].values()))
+            if sumprob1 == 0: continue
+            for q2 in scores:
+                if q == q2: continue
+                sumproduct = 0
+                for id, p1 in scores[q].iteritems():
+                    p2 = scores[q2].get(id)
+                    if not p2: continue
+                    sumproduct += p1*p2
+                p = sumproduct / sumprob1
+                assocTable.addRow(q, q2, p)
+
         if self.options['network_output'] == 'ool':
             self.output = 'json-html'
             assocTable = table3.WrappedTable(assocTable, cellfunc = lambda a: self.format(a) if isinstance(a, float) else a)
