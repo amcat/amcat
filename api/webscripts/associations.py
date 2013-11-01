@@ -23,7 +23,7 @@ from amcat.scripts.searchscripts.articlelist import ArticleListScript
 from amcat.scripts.processors.associations import AssociationsScript
 from django import forms
 from amcat.tools.table import table3
-from amcat.tools import dot, keywordsearch
+from amcat.tools import dot, keywordsearch, amcates
 import re
 import logging
 log = logging.getLogger(__name__)
@@ -64,18 +64,26 @@ class ShowAssociations(WebScript):
             return formatstr % (a,)
     
     def run(self):
-
-        scores = dict(keywordsearch.get_ids_per_query(self.data, score=True))
-
+        es = amcates.ES()
+        filters = dict(keywordsearch.filters_from_form(self.data))
+        queries = list(keywordsearch.SearchQuery.from_form(self.data))
+        qargs = dict(filters=filters, score=True, fields=[])
+        probs = {}
+        
+        p = lambda f: 1 - (.5 ** f)
+        probs = {q.label : {r.id : p(r.score) for r in
+                            es.query_all(query=q.query, **qargs)}
+                 for q in queries}
+            
         assocTable = table3.ListTable(colnames=["From", "To", "Association"])
-        for q in scores:
-            sumprob1 = float(sum(scores[q].values()))
+        for q in probs:
+            sumprob1 = float(sum(probs[q].values()))
             if sumprob1 == 0: continue
-            for q2 in scores:
+            for q2 in probs:
                 if q == q2: continue
                 sumproduct = 0
-                for id, p1 in scores[q].iteritems():
-                    p2 = scores[q2].get(id)
+                for id, p1 in probs[q].iteritems():
+                    p2 = probs[q2].get(id)
                     if not p2: continue
                     sumproduct += p1*p2
                 p = sumproduct / sumprob1
