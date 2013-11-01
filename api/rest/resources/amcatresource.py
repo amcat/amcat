@@ -156,7 +156,12 @@ class AmCATResource(generics.ListAPIView):
             subclass.__name__ = 'AmCATSystemResource'
         return subclass
 
+    def finalize_response(self, request, response, *args, **kargs):
+        response = super(AmCATResource, self).finalize_response(request, response, *args, **kargs)
+        if response.accepted_media_type == "text/csv":
+            response['Content-Disposition'] = 'attachment; filename="data.csv"'
 
+        return response
 
 def _get_field_name(field):
     "Return the field name to report in OPTIONS (for datatables)"
