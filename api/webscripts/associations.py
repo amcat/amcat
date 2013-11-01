@@ -20,6 +20,7 @@
 from webscript import WebScript
 
 from amcat.scripts.searchscripts.articlelist import ArticleListScript
+from amcat.scripts.processors.associations import AssociationsScript
 from django import forms
 from amcat.tools.table import table3
 from amcat.tools import dot, keywordsearch
