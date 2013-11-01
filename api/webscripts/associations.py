@@ -24,7 +24,7 @@ from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 from amcat.scripts.processors.associations import AssociationsScript
 from django import forms
 from amcat.tools.table import table3
-from amcat.tools import dot
+from amcat.tools import dot, keywordsearch
 import re
 import logging
 log = logging.getLogger(__name__)
@@ -63,13 +63,16 @@ class ShowAssociations(WebScript):
         if a:
             if perc: a*=100
             return formatstr % (a,)
-        
-        
     
     def run(self):
+
+        scores = dict(keywordsearch.get_ids_per_query(self.data, score=True))
+        print(scores)
+
+        
+        
         articleListFormData = self.data.copy()
         articleListFormData['columns'] = 'hits' # need to add columns, since this is required for ArticleListScript 
-        
         articles = ArticleListScript(articleListFormData).run()
         articleTable = ArticleListToTable({'columns':('hits', )}).run(articles)
         #print(articleTable.output())

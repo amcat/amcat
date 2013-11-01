@@ -96,12 +96,21 @@ def getDatatable(form, rowlink='article/{id}'):
         table = table.add_arguments(q="*")
     return table
 
-def get_ids_per_query(form):
-    """Return a sequnce of label, ids pairs per query"""
+def get_ids_per_query(form, score=False):
+    """
+    Return a sequence of label, result pairs per query
+    @param score: if False (default) result is a list of ids
+                  if True, result is a sequence of id, score
+    """
     filters = dict(filters_from_form(form))
     queries = list(SearchQuery.from_form(form))
+    print("!!!", score)
     for q in queries:
-        yield q.label, list(ES().query_ids(query=q.query, filters=filters))
+        if score:
+            result = {r.id : r.score for r in ES().query_all(query=q.query, filters=filters, score=True, fields=[])}
+        else:
+            result = list(ES().query_ids(query=q.query, filters=filters))
+        yield q.label, result
 
 def get_ids(form):
     """Return a list of article ids matching this form"""
