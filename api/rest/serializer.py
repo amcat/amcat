@@ -97,15 +97,14 @@ class TestSerializer(ApiTestCase):
         toolkit.readDate(date)# check valid date, not much more to check here?
 
         expected_results={u'insert_user': p1.insert_user.id,
-                           u'index_default': True,
-                           u'description': 'testdescription',
-                           u'name': u'testnaam',
-                           u'guest_role': 11,
-                           u'owner': p1.owner.id,
-                           u'active': True,
+                          u'description': 'testdescription',
+                          u'name': u'testnaam',
+                          u'guest_role': 11,
+                          u'owner': p1.owner.id,
+                          u'active': True,
                            u'id': p1.id,
-                           u'favourite' : False,
-                           }
+                          u'favourite' : False,
+        }
         
         expected_meta = {
             u'page' : 1,

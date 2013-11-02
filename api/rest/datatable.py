@@ -437,9 +437,6 @@ class TestDatatable(amcattest.PolicyTestCase):
         d = Datatable(UserResource).filter(id=[1,2])
         self.assertEqual(d.url, s + "&id=1&id=2")
 
-        # Test wrong filter field
-        self.assertRaises(ValueError, lambda:d.filter(foo=1))
-
         # Test can allow illegal filter field as extra_arg
 
         d = Datatable(UserResource).add_arguments(q=[1,2])

@@ -239,7 +239,8 @@ class TestAmCATResource(ApiTestCase):
                   #u'articlesets': u'/api/v4/articleset',
                   u'insert_user': u'/api/v4/user', }
         
-        fields = {u'index_default': u'BooleanField', u'name': u'CharField', u'guest_role': u'ModelChoiceField',
+        fields = {u'name': u'CharField',
+                  u'guest_role': u'ModelChoiceField',
                   #these should NOT be included as we don't want the foreign key fields
                   #u'codebooks': u'ModelChoiceField', u'codingschemas': u'ModelChoiceField',
                   #u'articlesets': u'ModelChoiceField',

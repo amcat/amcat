@@ -122,7 +122,7 @@ def get_term(tokens):
 
 def get_boolean_or_term(tokens):
     token = tokens[0]
-    if isinstance(token, BaseTerm):
+    if isinstance(token, (Boolean, BaseTerm)):
         return token
     else:
         return Boolean(token)

@@ -244,24 +244,23 @@ def handle_split(form, project, article, sentences):
         dirty_sets |= project.all_articlesets().filter(articles=article).only("id")
 
     if form_data["remove_from_sets"]:
-        ArticleSet.articles.through.objects.filter(article=article, articleset=form_data["remove_from_sets"]).delete()
+        for aset in form_data["remove_from_sets"]:
+            aset.remove_articles([article])
         
     if form_data["remove_from_all_sets"]:
-        ArticleSet.articles.through.objects.filter(article=article, articleset__project=project).delete()
-        dirty_sets |= ArticleSet.objects.filter(project=project, articles=article).distinct().only("id")
+        for aset in ArticleSet.objects.filter(project=project, articles=article).distinct():
+            aset.remove_articles([article])
 
     if form_data["add_splitted_to_new_set"]:
         new_splitted_set = ArticleSet.create_set(project, form_data["add_splitted_to_new_set"], articles)
 
     if form_data["add_to_sets"]:
-        ArticleSet.articles.through.objects.bulk_create(ArticleSet.articles
-            .through(articleset=a, article=article) for a in form_data["add_to_sets"]
-        )
+        for articleset in form_data["add_to_sets"]:
+            articleset.add_articles([article])
 
     if form_data["add_to_new_set"]:
         new_set = ArticleSet.create_set(project, form_data["add_to_new_set"], [article])
 
-    dirty_sets.update(index_dirty=True)
     return locals()
 
     
@@ -538,14 +537,3 @@ class TestArticleViews(amcattest.PolicyTestCase):
         self.assertFalse(article in aset2.articles.all())
         self.assertTrue(article in aset3.articles.all())
 
-        # Are articlesets set to index_dirty=True?
-        project = amcattest.create_test_project()
-        aset = amcattest.create_test_set(5, project=project)
-        aset.index_dirty = False
-        aset.save()
-
-        f = forms.SplitArticleForm(aset.project, aset.articles.all()[0], dict(add_splitted_to_sets=[aset.id]))
-        handle_split(f, aset.project, aset.articles.all()[0], Sentence.objects.none())
-        self.assertTrue(ArticleSet.objects.get(id=aset.id).index_dirty)
-
-        

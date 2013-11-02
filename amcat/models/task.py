@@ -69,29 +69,4 @@ class Task(AmcatModel):
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
-from amcat.tools import amcattest
-
-
-class TestTask(amcattest.PolicyTestCase):
-    def _get_task(self):
-        return task(lambda : None).delay()
-
-    def test_get_result(self):
-        task = self._get_task()
-        task_model = Task.objects.create(uuid=task.id, task_name=task.task_name, class_name=":)")
-        self.assertEqual(task.id, task_model.uuid)
-        self.assertEqual(task.id, task_model.get_result().id)
-        self.assertEqual(task.task_name, task_model.get_result().task_name)
-        self.assertEqual(task, task_model.get_result())
-
-    def test_get_class(self):
-        from amcat.scripts.script import Script
-        class _TestTaskScript(Script):
-            pass
-        
-        task = Task.objects.create(uuid="bar", task_name="foo", class_name="amcat.models.task._TestTaskScript")
-        self.assertEqual(_TestTaskScript, task.get_class())
-
-    amcattest.skip_TODO("Not yet implemented!")
-    def get_url(self):
-        pass
+# See: amcat.tests.test_task
