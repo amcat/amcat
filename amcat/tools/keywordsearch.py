@@ -82,14 +82,12 @@ def getDatatable(form, rowlink='article/{id}'):
     from api.rest.datatable import Datatable
     from api.rest.resources import SearchResource
     table = Datatable(SearchResource, rowlink=rowlink)
-    query = query_from_form(form)
     for field, val in filters_from_form(form):
         
         table = table.filter(**{field : val})
-    
-    if query and query.strip():
-        for q in query.strip().split("\n"):
-            table = table.add_arguments(q=q.strip())
+
+    for query in queries_from_form(form):
+        table = table.add_arguments(q=query.query)
 
     if form.get('include_all'):
         table = table.add_arguments(q="*")
@@ -241,7 +239,10 @@ def queries_from_form(form):
                    if line.strip()]
         resolved = resolve_queries(queries, codebook=None, label_language=None,
                                    replacement_language=None)
+        resolved = list(resolved)
         return (q for q in resolved if not q.label.startswith("_"))
+    else:
+        return []
 
 def query_from_form(form):
     queries = list(queries_from_form(form))
@@ -327,19 +328,17 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
         if not q.declared_label: continue
         label = q.declared_label
         if label.startswith("_"): label = label[1:]
+        if label in _queries:
+            raise ValidationError("Duplicate label: {label}".format(**locals()))
         _queries[label] = q
-    
-    
-    if len(queries) != len(_queries):
-        labels = [q.label for q in queries]
-        offender = next(l for l in labels if labels.count(l) > 1)
-        raise ValidationError("Label '{offender}' defined more than once".format(**locals()))
 
     labels = None
     if codebook is not None:
         labels = { c.get_label(label_language, fallback=False) : c for c in codebook.get_codes() }
-
-    for query in _queries.values():
+    else:
+        labels = None
+        
+    for query in queries:
         yield resolve_query(query, _queries, codebook, labels, replacement_language)
 
 

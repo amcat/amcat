@@ -69,7 +69,7 @@ class ShowArticleList(WebScript):
                 if f not in cols:
                     t = t.hide(f)
 
-            for col in cols & {'hits', 'text'}:
+            for col in cols & {'hits', 'text', 'lead'}:
                 t = t.add_arguments(col=col)
             html = unicode(t)
             #html += "Download results as : "
