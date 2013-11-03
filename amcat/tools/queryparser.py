@@ -25,8 +25,10 @@ Also paves the way for more customization, i.e. allowing Lexis style queries
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-from pyparsing import ParseResults
+from pyparsing import ParseResults, ParserElement
 import itertools
+
+ParserElement.enablePackrat()
 
 class ParseError(ValueError):
     pass
@@ -184,10 +186,9 @@ def get_boolean_or_term(tokens):
     else:
         op = token['operator']
         terms = [t for t in token if isinstance(t, (Boolean, BaseTerm))]
-        if op[0] == 'W/':
+        if op == 'W/':
             # create span query
-            op, slop = op
-            return Span(terms, slop)
+            return Span(terms, token['slop'])
         else:
             implicit = op.startswith("implicit_")
             if implicit: op = op.replace("implicit_", "")
@@ -210,14 +211,16 @@ _grammar = None
 def get_grammar():
     global _grammar
     if _grammar is None:
-        from pyparsing import Literal, Word, QuotedString, Optional, operatorPrecedence, nums, alphas, opAssoc, ParseResults
-
+        from pyparsing import (Literal, Word, QuotedString, Optional, operatorPrecedence,
+                               nums, alphas, opAssoc, ParseResults)
 
         # literals
-        AND = Literal("AND").setResultsName("operator")
-        OR = Literal("OR").setResultsName("operator")
-        NOT = Literal("NOT").setResultsName("operator")
-        SPAN = (Literal("W/") + Word(nums)).setResultsName("operator")
+        AND = Literal("AND")
+        OR = Literal("OR")
+        NOT = Literal("NOT")
+        SPAN = (Literal("W/") + Word(nums).setResultsName("slop"))
+        OP = Optional(AND | OR | NOT | SPAN, default="implicit_OR").setResultsName("operator")
+            
         COLON = Literal(":").suppress()
         TILDE = Literal("~").suppress()
         LETTERS = u''.join(unichr(c) for c in xrange(65536) 
@@ -235,11 +238,8 @@ def get_grammar():
 
         # boolean combination
         boolean_expr = operatorPrecedence(fterm, [
-            (AND, 2, opAssoc.LEFT),
-            (NOT, 2, opAssoc.LEFT),
-            (SPAN, 2, opAssoc.LEFT),
-            (Optional(OR, default="implicit_OR"),  2, opAssoc.LEFT),
-        ])
+            (OP, 2, opAssoc.LEFT)
+            ])
         boolean_expr.setParseAction(get_boolean_or_term)
         _grammar = boolean_expr
     return _grammar
@@ -248,7 +248,9 @@ def parse_to_terms(s):
     return get_grammar().parseString(s, parseAll=True)[0]
     
 def parse(s):
-    return parse_to_terms(s).get_dsl()
+    terms = parse_to_terms(s)
+    dsl = terms.get_dsl()
+    return dsl
 
 
 ###########################################################################
