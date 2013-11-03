@@ -92,7 +92,6 @@ class SelectionForm(forms.Form):
         elif project is None:
             raise ValueError("Project cannot be None")
 
-        self._queries = None
         self.project = project
 
         codebooks = Codebook.objects.filter(project_id=project.id)
@@ -125,33 +124,6 @@ class SelectionForm(forms.Form):
     def _get_mediums(self):
         return self.project.get_mediums()
 
-    def _get_queries(self, unresolved_queries):
-        if self._queries is not None: self._queries
-
-        codebook = self.cleaned_data["codebook"]
-        label_language = self.cleaned_data["codebook_label_language"]
-        replacement_language = self.cleaned_data["codebook_replacement_language"]
-
-        if codebook and label_language and replacement_language:
-            codebook.cache_labels(label_language, replacement_language)
-
-        return list(keywordsearch.resolve_queries(
-            unresolved_queries, codebook,
-            label_language, replacement_language
-        ))
-
-    @property
-    def queries(self):
-        """
-        Generator which yield SearchQuery objects.
-        @raises: ValidationError if form not valid
-        """
-        return iter(self._queries)
-
-    @property
-    def keyword_query(self):
-        return self.cleaned_data["query"]
-
     @property
     def use_index(self):
         """
@@ -180,21 +152,6 @@ class SelectionForm(forms.Form):
             )
 
         return codebook
-
-    def clean_query(self):
-        query = self.cleaned_data["query"].strip()
-        include_all = self.cleaned_data["include_all"]
-        if include_all: query += "\nAll#*"
-
-        queries = [keywordsearch.SearchQuery.from_string(q) for q in query.split("\n") if q.strip()]
-        self._queries = self._get_queries(queries)
-
-        if len(queries) > 1:
-            return "\n".join("({q.query})".format(**locals()) for q in queries)
-        elif queries:
-            return queries[0].query
-        else:
-            return ''
 
     def clean_datetype(self):
         datetype = self.cleaned_data["datetype"]
@@ -282,11 +239,6 @@ class SelectionForm(forms.Form):
 
     def clean(self):
         cleaned_data = { k:v for k,v in self.cleaned_data.iteritems() if v is not None }
-
-        try:
-            cleaned_data["queries"] = list(self.queries)
-        except TypeError:
-            log.debug("Parsing query failed. Query was: {!r}".format(self.data['query']))
 
         cleaned_data['projects'] = [self.project.id]
 

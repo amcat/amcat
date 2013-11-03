@@ -30,7 +30,7 @@ import collections
 import logging
 from amcat.tools.amcates import ES
 from amcat.tools.table import table3
-from amcat.models import Medium
+from amcat.models import Medium, Label
 import re
 from amcat.tools.toolkit import stripAccents,readDate
 from django.core.exceptions import ValidationError
@@ -82,9 +82,8 @@ def getDatatable(form, rowlink='article/{id}'):
     from api.rest.datatable import Datatable
     from api.rest.resources import SearchResource
     table = Datatable(SearchResource, rowlink=rowlink)
-    query = form.get('query')
+    query = query_from_form(form)
     for field, val in filters_from_form(form):
-        print field, val
         
         table = table.filter(**{field : val})
     
@@ -101,7 +100,7 @@ def get_ids_per_query(form):
     Return a sequence of label, list-of-ids pairs per query
     """
     filters = dict(filters_from_form(form))
-    queries = list(SearchQuery.from_form(form))
+    queries = list(queries_from_form(form))
     for q in queries:
         result = list(ES().query_ids(query=q.query, filters=filters))
         yield q.label, result
@@ -109,7 +108,7 @@ def get_ids_per_query(form):
 def get_ids(form):
     """Return a list of article ids matching this form"""
     filters = dict(filters_from_form(form))
-    queries = list(SearchQuery.from_form(form))
+    queries = list(queries_from_form(form))
     if queries:
         query = "\n".join("({q.query})".format(**locals()) for q in queries)
     else:
@@ -124,9 +123,8 @@ def getArticles(form):
 
     if 'keywordInContext' in form['columns']:
         raise NotImplementedError()
-        
 
-    query = form['query']
+    query = query_from_form(form)
     kargs = {}
     if form['highlight']:
         kargs["highlight" if query else "lead"] = True
@@ -145,8 +143,8 @@ def getArticles(form):
             
         result_dict = {r.id : add_hits_column(r) for r in result}
         f = dict(ids=list(result_dict.keys()))
-
-        for q in form['queries']:
+        
+        for q in queries_from_form(form):
             for hit in ES().query(q.query, filters=f, fields=[]):
                 result_dict[hit.id].hits[q.label] = hit.score
     return result
@@ -158,12 +156,13 @@ def getTable(form):
     group_by = form['xAxis']
     filters = dict(filters_from_form(form))
 
+    queries = list(queries_from_form(form))
+    query = query_from_form(form)
+
     yAxis = form['yAxis']
     if yAxis == 'total':
-        query = form['query']
         _add_column(table, 'total', query, filters, group_by, dateInterval)
     elif yAxis == 'medium':
-        query = form['query']
         media = Medium.objects.filter(pk__in=ES().list_media(query, filters)).only("name")
         
         for medium in sorted(media):
@@ -171,11 +170,12 @@ def getTable(form):
             name = u"{medium.id} - {}".format(medium.name.replace(",", " ").replace(".", " "), **locals())
             _add_column(table, name, query, filters, group_by, dateInterval)
     elif yAxis == 'searchTerm':
-        for q in form['queries']:
+        for q in queries:
             _add_column(table, q.label, q.query, filters, group_by, dateInterval)
     else:
         raise Exception('yAxis {yAxis} not recognized'.format(**locals()))
 
+    table.queries = queries
     return table
 
 def _add_column(table, column_name, query, filters, group_by, dateInterval):
@@ -185,7 +185,7 @@ def _add_column(table, column_name, query, filters, group_by, dateInterval):
 
                                  
 def get_statistics(form):
-    query = form['query']
+    query = query_from_form(form)
     filters = dict(filters_from_form(form))
     return ES().statistics(query, filters)
     
@@ -231,17 +231,23 @@ class SearchQuery(object):
 
         return SearchQuery(query)
 
-    @classmethod
-    def from_form(cls, form):
-        """
-        Returns a sequence of SearchQuery objects taken from the form['query'] field
-        """
-        if not form['query']:
-            return
-        for line in form['query'].split("\n"):
-            if line.strip():
-                yield SearchQuery.from_string(line)
+def queries_from_form(form):
+    """
+    Returns a sequence of SearchQuery objects taken from the form['query'] field
+    """
+    if form['query']:
+        queries = [SearchQuery.from_string(line)
+                   for line in form['query'].split("\n")
+                   if line.strip()]
+        resolved = resolve_queries(queries, codebook=None, label_language=None,
+                                   replacement_language=None)
+        return (q for q in resolved if not q.label.startswith("_"))
 
+def query_from_form(form):
+    queries = list(queries_from_form(form))
+    if queries:
+        return ' OR '.join('({q.query})'.format(**locals()) for q in queries)
+        
 def _resolve_recursive(codebook, tree_item, rlanguage):
     this = codebook.get_code(tree_item.code_id).get_label(rlanguage, fallback=False)
 
@@ -263,10 +269,10 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
         return code.get_label(rlanguage, fallback=False)
 
     # Case 2: reference refers to labeled subquery
-    if (reference, reference) in queries:
+    if reference in queries:
         # This refernce might contain references, resolve it first.
         return resolve_query(
-            queries[(reference, reference)],
+            queries[reference],
             queries, codebook, labels
         ).query
 
@@ -309,15 +315,21 @@ def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
             reference, recursive, queries,
             codebook, labels, rlanguage
         )
-
+        replacement = "(" + replacement + ")"
         query.query = query.query.replace(mo.group(0), replacement, 1)
 
     return query
 
 
 def resolve_queries(queries, codebook=None, label_language=None, replacement_language=None):
-    _queries = { (q.label, q.declared_label) : q for q in queries }
-
+    _queries = {}
+    for q in queries:
+        if not q.declared_label: continue
+        label = q.declared_label
+        if label.startswith("_"): label = label[1:]
+        _queries[label] = q
+    
+    
     if len(queries) != len(_queries):
         labels = [q.label for q in queries]
         offender = next(l for l in labels if labels.count(l) > 1)
@@ -327,7 +339,7 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
     if codebook is not None:
         labels = { c.get_label(label_language, fallback=False) : c for c in codebook.get_codes() }
 
-    for query in _queries.values():   
+    for query in _queries.values():
         yield resolve_query(query, _queries, codebook, labels, replacement_language)
 
 

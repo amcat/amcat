@@ -56,8 +56,6 @@ class ShowAggregation(WebScript):
     def run(self):
         selection = SelectionForm(project=self.project, data=self.data)
         selection.full_clean()
-        queries = {q.declared_label : q.query  for q in selection.cleaned_data["queries"]}
-
         aggrTable = AggregationScript(project=self.project, options=self.data).run()
         if self.output == 'json-html' or (self.output == 'html' and self.options['graphOnly'] == True):
 
@@ -75,7 +73,8 @@ class ShowAggregation(WebScript):
                 datesDict = dict(_getDatesDict(aggrTable,  self.options['dateInterval']))
             else:
                 datesDict = {}
-            
+
+            labels = {q.label : q.query for q in aggrTable.queries}
             aggregationType = 'hits' if self.options['counterType'] == 'numberOfHits' else 'articles'
             graphOnly = 'true' if self.options['graphOnly'] == True else 'false'
 
@@ -85,7 +84,7 @@ class ShowAggregation(WebScript):
                                                 'aggregationType':aggregationType,
                                                 'datesDict': json.dumps(datesDict),
                                                 'graphOnly': graphOnly,
-                                                'labels' : json.dumps({q.label : q.query for q in selection.queries}),
+                                                'labels' : json.dumps(labels),
                                                 'ownForm':self.form(project=self.project, data=self.data),
                                                 'relative':int(self.options['relative'])
                                              })

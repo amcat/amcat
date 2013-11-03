@@ -48,7 +48,6 @@ class ShowArticleList(WebScript):
     
     def run(self):
         formData = self.data.copy() # copy needed since formData is inmutable
-        print("!!!", formData)
         if self.options['outputTypeAl'] == 'list':
             formData['highlight'] = True
         
