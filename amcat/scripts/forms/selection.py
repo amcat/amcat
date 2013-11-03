@@ -302,19 +302,6 @@ class TestSelectionForm(amcattest.PolicyTestCase):
             self.assertEquals(sorted(fields), fields)
 
     @amcattest.use_elastic
-    def test_clean_include_all(self):
-        p, c, form = self.get_form(include_all=False)
-        self.assertTrue(form.is_valid())
-        self.assertEquals(len(list(form.queries)), 0)
-
-        p, c, form = self.get_form(include_all=True)
-        self.assertTrue(form.is_valid())
-        self.assertEquals(len(list(form.queries)), 1)
-        self.assertEquals(next(form.queries).label, "All")
-        self.assertEquals(next(form.queries).declared_label, "All")
-        self.assertEquals(next(form.queries).query, "*")
-
-    @amcattest.use_elastic
     def test_clean_on_date(self):
         now = datetime.datetime.now().date()
         p, c, form = self.get_form(datetype="on", on_date=now)
@@ -367,21 +354,8 @@ class TestSelectionForm(amcattest.PolicyTestCase):
         p, c, form = self.get_form(datetype="before", end_date=now)
         self.assertTrue(form.is_valid())
 
-    @amcattest.use_elastic
-    def test_use_index(self):
-        p, c, form = self.get_form(query="  Bla   #  Balkenende")
-        self.assertTrue(form.use_index)
 
-        p, c, form = self.get_form(query="")
-        self.assertFalse(form.use_index)
-
-        p, c, form = self.get_form(query="()")
-        self.assertFalse(form.use_index)
-
-        p, c, form = self.get_form(query=" () ")
-        self.assertFalse(form.use_index)
-
-    @amcattest.use_elastic
+    @amcattest.skip_TODO("moved functionality to keywordsearch, move tests there as well")
     def test_clean_query(self):
         import functools
         
