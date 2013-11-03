@@ -27,6 +27,7 @@ before_install:
 install: 
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
+ - /etc/init.d/rabbitmq-server start # why is this needed?
  - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.5.tar.gz  | tar xvz
  - wget http://amcat.vu.nl/plain/hitcount.jar
  - elasticsearch-0.90.5/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
