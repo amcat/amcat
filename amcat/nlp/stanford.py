@@ -151,6 +151,7 @@ class TestStanford(amcattest.PolicyTestCase):
 
 POSMAP = {
    '$' :'.',
+   '#' :'.',
    '"' :'.',
     "'" :'.',
    '``' : '.',

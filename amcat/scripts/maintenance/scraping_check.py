@@ -97,7 +97,7 @@ class ScrapingCheck(Script):
 
     def get_result(self):
         result = []
-        for scraper in Scraper.objects.all():
+        for scraper in Scraper.objects.filter(active=True,run_daily=True):
             if scraper.statistics:
                 n_expected = scraper.statistics[self.options['date'].weekday()]
             else:

@@ -1,6 +1,5 @@
 <div class="btn-group">
  <a id="select-favourites" class="btn"><i class="icon icon-star"></i> Favourites</a>
- <a id="select-indexed" class="btn">Indexed Sets</a>
  <a id="select-codingjobs" class="btn">Coding Job Sets</a>
  <a id="select-all" class="btn">All Sets</a>
 </div>
@@ -11,14 +10,6 @@ No favourite sets yet? You can mark sets as favourite in
 to <a href='{% url "project-articlesets" context.id %}/own'>the
     articlesets view</a> and using the star icon to
 add some sets to this list.
-</div>
-{% endif %}
-
-{% if no_indexed %}
-<div class="alert alert-success" id="noindex" style="display: none">
-No indexed sets yet? To use full text search, please select one of
-<a href='{% url "project-articlesets" context.id %}/own'>your
-  articlesets</a> and select 'enable indexing'</div>
 </div>
 {% endif %}
 

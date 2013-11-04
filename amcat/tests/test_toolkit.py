@@ -85,17 +85,13 @@ class TestToolkit(amcattest.PolicyTestCase):
         def plusone(l):
             for i,e in enumerate(l):
                 l[i] = e+1
-        for input, output, itemsperbatch, options in (
-            ([1,2,3], [[1,2], [3]], 2, {}),
-            ([1,2,3], [[1,2, 3]], 20, {}),
-            ((1,2,3), [(1,2), (3,)], 2, {}),
-            ([1,2,3], [[2,3], [4]], 2, dict(buffercall=plusone)),
-            ((i for i in (1,2,3)), [[1,2],[3]], 2, {}),
-            ((i for i in (1,2,3)), [1,2,3], 2, dict(yieldelements=True)),
-            ((i for i in (1,2,3)), [2,3,4], 2, dict(buffercall=plusone,yieldelements=True)),
-
+        for input, output, itemsperbatch in (
+            ([1,2,3], [[1,2], [3]], 2),
+            ([1,2,3], [[1,2, 3]], 20),
+            ((1,2,3), [(1,2), (3,)], 2),
+            ((i for i in (1,2,3)), [[1,2],[3]], 2),
             ):
-            o = toolkit.splitlist(input, itemsperbatch,  **options)
+            o = toolkit.splitlist(input, itemsperbatch)
             self.assertEqual(list(o), output)
 
     def test_sortbyvalue(self):

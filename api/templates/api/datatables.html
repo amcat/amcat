@@ -2,3 +2,12 @@
 
 <!-- Table initializer (javascript) -->
 {{ js|safe }}
+{% if links %}
+<div class="table-download" style="color: rgb(128, 128, 128); font-size: 12px;" >
+Open results in <a href="{{ links.api }}">API viewer</a>
+<span style="float:right">Download results as 
+<a href="{{ links.csv }}">CSV</a> |
+<a href="{{ links.json }}">JSON</a>
+</span>
+</div>
+{% endif %}

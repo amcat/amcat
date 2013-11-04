@@ -34,7 +34,7 @@ from associations import ShowAssociations
 from viewmodel import ViewModel
 
 mainScripts = [ShowSummary, ShowArticleList, ShowAggregation]
-actionScripts = [AssignCodingJob, ShowArticleSetStatistics, ExportArticles, ExportAggregation, ShowClusterMap, ShowAssociations, SaveAsSet, ViewModel, ExportCodingjobs]
+actionScripts = [AssignCodingJob, ShowArticleSetStatistics, ExportAggregation, ShowClusterMap, ShowAssociations, SaveAsSet, ViewModel, ExportCodingjobs]
 allScripts = mainScripts + actionScripts
 
 webscriptNames = [cls.__name__ for cls in allScripts]

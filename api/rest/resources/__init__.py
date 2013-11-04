@@ -37,6 +37,7 @@ from api.rest.resources.analysed_article import AnalysedArticleResource
 from api.rest.resources.token import TokenResource, AnalysedArticleListResource
 from api.rest.resources.codingrule import CodingRuleResource
 from api.rest.resources.search import SearchResource
+from api.rest.resources.aggregate import AggregateResource
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.reverse import reverse

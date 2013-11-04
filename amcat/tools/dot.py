@@ -254,11 +254,14 @@ def dotattrs(attrs, style):
 
 HEADER_SMALL = "node [fontsize=10,height=.1]; graph [ranksep=.25]; edge [fontsize=10];"
 
+from subprocess import Popen, PIPE
+
 def dot2img(dot, format="jpg", layout="dot"):
     cmd = 'dot -T%s -K%s' % (format, layout)
     if type(dot) == unicode:
         dot = dot.encode("utf-8")
-    img = toolkit.execute(cmd, dot, outonly=True)
+    p = Popen(cmd, shell=True, stdout=PIPE, stdin=PIPE)
+    img, err = p.communicate(dot)
     return img
 
 def dot2object(dot,*args,**kargs):

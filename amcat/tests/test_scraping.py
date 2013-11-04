@@ -28,7 +28,7 @@ from amcat.scraping.scraper import DatedScraper, DBScraper
 from amcat.models.scraper import Scraper#, get_scrapers
 from datetime import date
 from amcat.models.article import Article
-from amcat.scraping.controller import SimpleController, ThreadedController#, scrape_logged
+from amcat.scraping.controller import SimpleController #, scrape_logged
 
 import logging; log = logging.getLogger(__name__)
 

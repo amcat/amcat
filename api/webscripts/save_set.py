@@ -20,9 +20,8 @@
 
 from webscript import WebScript
 from django import forms
-from amcat.scripts.searchscripts.articleids import ArticleidsScript
 from amcat.scripts.processors.save_set import SaveAsSetScript, SaveAsSetForm
-
+from amcat.tools import keywordsearch
 
 import logging
 import json
@@ -44,7 +43,7 @@ class SaveAsSet(WebScript):
     
     
     def run(self):
-        article_ids = ArticleidsScript(self.data).run()
+        article_ids = list(keywordsearch.get_ids(self.data))
         result = SaveAsSetScript(self.data).run(article_ids)
         result.provenance = json.dumps(dict(self.data))
         result.save()

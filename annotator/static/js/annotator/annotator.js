@@ -1056,6 +1056,16 @@ annotator.initPage = function(){
             return false;
         }
     });
+
+    $(document).bind("keydown", "ctrl+i", function(event){
+        event.preventDefault();
+        $("#irrelevant-button").click();
+    });
+
+    $(document).bind("keydown", "ctrl+d", function(event){
+        event.preventDefault();
+        $("#save-continue-button").click();
+    });
     
     // $(document).bind('keydown', 'ctrl+a', function(event){ // disabled since it's annoying not able to select all text in an input (it has a button anyways)
         // event.preventDefault();
