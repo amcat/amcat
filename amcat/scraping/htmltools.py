@@ -83,7 +83,8 @@ class HTTPOpener(object):
             htmldocument = html.parse(response).getroot()
         else: # decoding succeeded, use fromstring
             htmldocument = html.fromstring(html_string)
-        htmldocument.url = response.url
+        if htmldocument is not None and response:
+            htmldocument.url = response.url
         return htmldocument
     
 
@@ -122,7 +123,7 @@ from amcat.tools import amcattest
 
 class TestHTMLTools(amcattest.PolicyTestCase):
     # Sorry Internet, vanatteveldt.com has no encoding...
-    TEST_SITES = {"http://amcat.vu.nl" : "utf-8", "http://vanatteveldt.com" : None}
+    TEST_SITES = {"http://amcat.vu.nl" : "utf-8"}#, "http://vanatteveldt.com" : None}
     
     def test_encoding(self):
         """Does get_encoding give the correct encoding?"""

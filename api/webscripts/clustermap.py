@@ -19,10 +19,10 @@
 
 from webscript import WebScript
 
-from amcat.scripts.searchscripts.articleids import ArticleidsDictScript
 from amcat.scripts.processors.clustermap import (ClustermapScript,
                                                  ClustermapTableScript)
 import amcat.scripts.forms
+from amcat.tools import keywordsearch
 
 import logging
 log = logging.getLogger(__name__)
@@ -41,8 +41,8 @@ class ShowClusterMap(WebScript):
 
     def run(self):
         form = self.data.copy()
-        form["length"] = 9999999 # HACK! clustermap should use all data
-        articleidDict = ArticleidsDictScript(form).run()
+        articleidDict = dict(keywordsearch.get_ids_per_query(form))
+        
         if self.output == 'html' or self.output == 'json-html':
             result = ClustermapScript(self.data).run(articleidDict)
             outputType = ClustermapScript.output_type

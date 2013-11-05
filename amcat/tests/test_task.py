@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -20,32 +18,35 @@
 ###########################################################################
 
 """
-Script to get queries for a codebook
+A Job
 """
-
-import logging; log = logging.getLogger(__name__)
-
-from django import forms
-from django.db import transaction
-
 from amcat.scripts.script import Script
-from amcat.models import ArticleSet, Plugin, AnalysedArticle
+from amcat.tools import amcattest
+from amcat.models import Task
+from celery.task import task
 
-PLUGINTYPE_PARSER=1
 
-class RefreshIndex(Script):
-    class options_form(forms.Form):
-        articleset = forms.ModelChoiceField(queryset=ArticleSet.objects.all())
-        full_refresh = forms.BooleanField(initial=False, required=False)
-        
+class _TestTaskScript(Script):
+    pass
 
-                                        
-    def _run(self, articleset, full_refresh):
-        log.info("Refreshing {articleset}, full_refresh={full_refresh}".format(**locals()))
-        articleset.refresh_index(full_refresh=full_refresh)
-        
-if __name__ == '__main__':
-    from amcat.scripts.tools import cli
-    result = cli.run_cli()
-    #print result.output()
 
+class TestTask(amcattest.PolicyTestCase):
+    def _get_task(self):
+        return task(lambda : None).delay()
+
+    def test_get_result(self):
+        task = self._get_task()
+        task_model = Task.objects.create(uuid=task.id, task_name=task.task_name, class_name=":)")
+        self.assertEqual(task.id, task_model.uuid)
+        self.assertEqual(task.id, task_model.get_result().id)
+        self.assertEqual(task.task_name, task_model.get_result().task_name)
+        self.assertEqual(task, task_model.get_result())
+
+    def test_get_class(self):
+        from amcat.scripts.script import Script
+        task = Task.objects.create(uuid="bar", task_name="foo", class_name="amcat.tests.test_task._TestTaskScript")
+        self.assertEqual(_TestTaskScript.__name__, task.get_class().__name__)
+
+    amcattest.skip_TODO("Not yet implemented!")
+    def get_url(self):
+        pass

@@ -26,6 +26,7 @@ import amcat.scripts.forms
 
 from amcat.models import ArticleSet
 from amcat.models import Project
+from amcat.tools import keywordsearch
 
 import logging
 log = logging.getLogger(__name__)
@@ -35,6 +36,8 @@ class ShowArticleListForm(amcat.scripts.forms.ArticleColumnsForm):
                     ('table', 'Table'), 
                     ('list','List with Snippets')
                   ), initial='table', required=False, label='Output As')
+
+FORM_FIELDS_TO_ELASTIC = {'article_id' : "id", "medium_name" : "medium", "medium_id" : "mediumid" }
     
 class ShowArticleList(WebScript):
     name = "Article List"
@@ -52,21 +55,35 @@ class ShowArticleList(WebScript):
             artsets = [str(aset.id) for aset in Project.objects.get(id=formData['projects']).all_articlesets()]
             formData.setlist("articlesets", artsets)
 
-        articles = list(ArticleListScript(formData).run())
 
         if isinstance(self.data['projects'], (basestring, int)):
             project_id = int(self.data['projects'])
         else:
             project_id = int(self.data['projects'][0])
 
-        for a in articles:
-            a.hack_project_id = project_id
         
         if self.options['outputTypeAl'] == 'table':
-            table = ArticleListToTable(self.data).run(articles)
-            self.output_template = 'api/webscripts/articletable.html'
-            return self.outputResponse(table, ArticleListToTable.output_type)
+            t = keywordsearch.getDatatable(self.data)
+            cols = {FORM_FIELDS_TO_ELASTIC.get(f,f) for f in self.data.getlist('columns')}
+            for f in list(t.get_fields()):
+                if f not in cols:
+                    t = t.hide(f)
+
+            for col in cols & {'hits', 'text', 'lead'}:
+                t = t.add_arguments(col=col)
+            html = unicode(t)
+            #html += "Download results as : "
+            if self.output == "html":
+                from django.http import HttpResponse
+                response = HttpResponse(mimetype='text/html')
+                response.write(html)
+                return response
+            else:
+                return self.outputJsonHtml(html)
         else:
+            articles = list(ArticleListScript(formData).run())
+            for a in articles:
+                a.hack_project_id = project_id
             self.output_template = 'api/webscripts/articlelist.html'
             return self.outputResponse(articles, ArticleListScript.output_type)
         

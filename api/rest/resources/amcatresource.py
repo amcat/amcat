@@ -166,7 +166,12 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
             subclass.__name__ = 'AmCATSystemResource'
         return subclass
 
+    def finalize_response(self, request, response, *args, **kargs):
+        response = super(AmCATResource, self).finalize_response(request, response, *args, **kargs)
+        if response.accepted_media_type == "text/csv":
+            response['Content-Disposition'] = 'attachment; filename="data.csv"'
 
+        return response
 
 def _get_field_name(field):
     "Return the field name to report in OPTIONS (for datatables)"
@@ -244,7 +249,8 @@ class TestAmCATResource(ApiTestCase):
                   #u'articlesets': u'/api/v4/articleset',
                   u'insert_user': u'/api/v4/user', }
         
-        fields = {u'index_default': u'BooleanField', u'name': u'CharField', u'guest_role': u'ModelChoiceField',
+        fields = {u'name': u'CharField',
+                  u'guest_role': u'ModelChoiceField',
                   #these should NOT be included as we don't want the foreign key fields
                   #u'codebooks': u'ModelChoiceField', u'codingschemas': u'ModelChoiceField',
                   #u'articlesets': u'ModelChoiceField',

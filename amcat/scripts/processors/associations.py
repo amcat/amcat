@@ -61,6 +61,7 @@ class AssociationsScript(script.Script):
                 if q == q2: continue
                 probs2 = probs[q2]
                 q2name = q2.label.replace('Hit Count for: ', '')
+                print(qname, q2name, probs1, probs2, sum(p1 * p2 for (p1, p2) in zip(probs1, probs2)))
                 if sum(probs1) > 0:
                     assoc = sum(p1 * p2 for (p1, p2) in zip(probs1, probs2)) / sum(probs1)
 

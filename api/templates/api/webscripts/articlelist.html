@@ -22,8 +22,8 @@
         {% if a.author %} | Author: {{a.author}} {% endif %}
      </div>
      <div class="article-snippet">
-        {% if a.highlight.body %}
-            ... {% for t in a.highlight.body %}
+        {% if a.highlight.text %}
+            ... {% for t in a.highlight.text %}
                     {{ t|safe}} ...
                 {% endfor %}
         {% else %}

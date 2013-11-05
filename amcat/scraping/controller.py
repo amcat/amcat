@@ -25,7 +25,6 @@ import logging; log = logging.getLogger(__name__)
 from collections import namedtuple
 
 from amcat.tools.toolkit import to_list
-from amcat.tools.multithread import distribute_tasks, QueueProcessorThread, add_to_queue_action
 from amcat.tools import amcatlogging
 from amcat.models import ArticleSet
 
@@ -59,7 +58,7 @@ class Controller(object):
             except Exception:
                 log.exception("failed scraping {scraper}".format(**locals()))
                 continue
-            scraper.articleset.add_articles(articles, set_dirty=False)
+            scraper.articleset.add_articles(articles)
             all_articles |= set(articles)
             used_sets.add(scraper.articleset.id)
 
@@ -73,7 +72,7 @@ class Controller(object):
 
                 DeduplicateScript(**options).run(None)
 
-        ArticleSet.objects.filter(pk__in=used_sets).update(index_dirty=True)
+
         return all_articles
 
     def save(self, article):
@@ -168,37 +167,6 @@ class RobustController(Controller):
         for unit in self.save_in_order(scrapedunits):
             yield unit
         
-
-
-class ThreadedController(Controller):
-    """Threaded implementation of Controller
-
-    Uses multithread to distribute units over threads, and sets up a committer
-    task to save the documents.
-    """
-    def __init__(self, articleset=None, nthreads=4):
-        super(ThreadedController, self).__init__(articleset)
-        self.nthreads = nthreads
-
-    def _scrape_to_queue(self, scraper, queue):
-        """
-        Start and join the multithreaded processing of the scraper,
-        placing resulting documents on the given queue for saving
-        """
-        distribute_tasks(tasks=scraper.get_units(), action=scraper.scrape_unit,
-                         nthreads=self.nthreads, retry_exceptions=3,
-                         output_action=add_to_queue_action(queue))
-
-
-    def scrape(self, scraper):
-        result = []
-        qpt = QueueProcessorThread(self.save, name="Storer", output_action=result.append)
-        qpt.start()
-        self._scrape_to_queue(scraper, qpt.input_queue)
-        qpt.input_queue.done=True
-        qpt.input_queue.join()
-        return result
-
         
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -247,19 +215,6 @@ class TestController(amcattest.PolicyTestCase):
         self.assertEqual(p.articles.count(), ts.n)
         self.assertEqual(s.articles.count(), ts.n)
 
-    def test_threaded(self):
-        """Does the threaded controller and saving work?"""
-        p = amcattest.create_test_project()
-        from Queue import Queue
-        q = Queue()
-        c = ThreadedController()
-        ts = _TestScraper(project=p)
-        # Multithreaded saving does not work in unit test, so save in-thread
-        # See below for a 'production test'
-        c._scrape_to_queue(ts, q)
-        while not q.empty():
-            c.save(q.get())
-        self.assertEqual(p.articles.count(), ts.n)
 
 class _ErrorArticle(object):
     def save(self):
@@ -284,52 +239,3 @@ class TestRobustController(amcattest.PolicyTestCase):
             list(c.scrape(sc))
         self.assertEqual(s.articles.count(), 1)
        
-       
-
-def production_test_multithreaded_saving():
-    """
-    Test whether multithreaded saving works.
-    Threaded commit does not work in unit test, code below actually creates
-        projects and articles, so run on test database only!
-    """
-    from amcat.models.project import Project
-    import threading
-    p = Project.objects.get(pk=2)
-    s = amcattest.create_test_set(project=p)
-    log.info("Created article set {s.id}".format(**locals()))
-    c = ThreadedController(s)
-    ts = _TestScraper(projectid=p.id)
-    articles = c.scrape(ts)
-    assert s.articles.count() == ts.n
-    assert articles is not None
-    assert set(s.articles.all()) == set(articles)
-
-    log.info("[OK] Production test Multithreaded Saving passed")
-
-def production_test_logged_multithreaded_error():
-    """
-    Test whether multithreaded saving works.
-    Threaded commit does not work in unit test, code below actually creates
-        projects and articles, so run on test database only!
-    """
-    from amcat.models.project import Project
-    from amcat.tests.test_scraping import TestDatedScraper, TestErrorScraper
-    p = Project.objects.get(pk=2)
-
-    s1 = TestDatedScraper(date = date.today(), project=p.id)
-    s2 = TestErrorScraper(date = date.today(), project=p.id)
-
-    counts, log = scrape_logged(ThreadedController(), [s2])
-
-    print("Scraping finished:")
-    for c, n in counts.items():
-        print("%s : %i" % (c.__class__.__name__, n))
-    if log:
-        print("\nDetails:\n%s" % log)
-    import time;time.sleep(.1)
-
-
-if __name__ == '__main__':
-    #production_test_multithreaded_saving()
-    amcatlogging.setup()
-    production_test_logged_multithreaded_error()

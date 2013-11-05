@@ -5,6 +5,7 @@ python:
 services:
  - postgresql
  - memcached
+ - rabbitmq
 
 virtualenv:
   system_site_packages: true
@@ -27,10 +28,12 @@ before_install:
 install: 
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
+ - sudo service rabbitmq-server start
  - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.5.tar.gz  | tar xvz
  - wget http://amcat.vu.nl/plain/hitcount.jar
+ - elasticsearch-0.90.5/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
  - ES_CLASSPATH=hitcount.jar elasticsearch-0.90.5/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
- - pip install -r ./pip_requirements.txt --use-mirrors
+ - pip install -r ./pip_requirements.txt --use-mirrors 
 
 script:
  - python ./manage.py test $SUITE

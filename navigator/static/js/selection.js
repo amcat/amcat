@@ -206,7 +206,6 @@ amcat.selection.onFormSubmit = function(){
     
     var webscriptName = $('input[name=webscriptToRun]:checked').attr("id"); // name of selected webscript to run
     console.log('script to run', webscriptName);
-
     var url = amcat.selection.apiUrl + 'webscript/' + webscriptName + '/run' + '?project=' + amcat.selection.get_project();
 
     $('#selectionform').attr('action', url);
@@ -561,15 +560,11 @@ amcat.selection.aggregation.click = function(x, y, count){
     if (amcat.selection.aggregation.xAxis == "date"){
         var date_clicked = start_date = end_date = new Date(x);
         var datetype = amcat.selection.aggregation.dateType;
-
         if(datetype == "day"){
             added_form_values["datetype"] = "on";
-            var on_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getUTCDate();
+            var on_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getDate();
             added_form_values["on_date"] = amcat.selection.aggregation.reverseDateOrder(on_date);
             title += ' on ' + added_form_values['on_date'];
-        } else if (datetype == "year"){
-            start_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getUTCDate();
-            end_date = (end_date.getFullYear()+1) + "-" + (end_date.getMonth() + 1) + "-" + (end_date.getUTCDate() );
         } else if (!isNaN(x)){
             // Can't really figure out what's going on here, but it works? -- Martijn
             $.each(amcat.selection.aggregation.datesDict, function(i, dt){
@@ -645,7 +640,6 @@ amcat.selection.aggregation.click = function(x, y, count){
         }
     });
     amcat.selection.callWebscript('ShowArticleList', data, function(html, textStatus, jqXHR){
-        //console.log('received form data', data);
         $('#dialog-message-content').html('<h3>' + title + '</h3>' + html);
      });
 }
@@ -675,8 +669,9 @@ amcat.selection.aggregation.textToDate = function(dateStr){
 }
 
 amcat.selection.aggregation.reverseDateOrder = function(dateStr){
-    var split = dateStr.split('-');
-    return split[2] + '-' + split[1] + '-' + split[0];
+    if (dateStr.getFullYear) {
+	return dateStr.getFullYear() + '-' + dateStr.getMonth() + '-' + dateStr.getDate();
+    } else return dateStr;
 }
 
 amcat.selection.aggregation.createGraph = function(){
