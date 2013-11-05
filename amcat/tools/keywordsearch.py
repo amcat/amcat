@@ -82,14 +82,14 @@ def getDatatable(form, rowlink='article/{id}'):
     from api.rest.datatable import Datatable
     from api.rest.resources import SearchResource
     table = Datatable(SearchResource, rowlink=rowlink)
+    
     for field, val in filters_from_form(form):
-        
         table = table.filter(**{field : val})
 
     for query in queries_from_form(form):
         table = table.add_arguments(q=query.query)
 
-    if form.get('include_all'):
+    if form.get('include_all') and form.get('include_all') != 'False':
         table = table.add_arguments(q="*")
     return table
 
