@@ -189,7 +189,7 @@ class Article(AmcatModel):
         @param check_duplicate: if True, duplicates are not added to the database or index
         """
         index = {a.text: a for a in articles if a}
-        articles = [a for a in cls.create_articles(articles, *args, **kwargs) if a]
+        articles = cls.create_articles(articles, *args, **kwargs)
         for a in articles:
             parent = index[a.text].parent
             for b in articles:
