@@ -77,7 +77,7 @@ def run_scraper(scraper):
     scraper._initialize()
     if hasattr(scraper, 'opener') and hasattr(scraper.opener, 'cookiejar'):
         scraper.opener.cookiejar._cookies_lock = LockHack()
-    log.info("Running scraper {scraper._id}: {scraper.__class__.__name__}".format(**locals()))
+    log.info("Running {scraper.__class__.__name__}".format(**locals()))
     tasks = [scrape_unit_save_unit.s(scraper, html_off(unit)) for unit in scraper._get_units()]
     result = group(tasks).delay()
     return (scraper, result)

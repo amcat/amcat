@@ -162,7 +162,8 @@ class Article(AmcatModel):
                 if articleset and not (dupe.sets and articleset.id in dupe.sets):
                     add_to_set.add(dupe.id)
             else:
-                result.append(a.save())
+                a.save()
+                result.append(a)
                 a.es_dict['id'] = a.pk
                 add_to_index.append(a.es_dict)
                 add_new_to_set.add(a.pk)
