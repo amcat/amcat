@@ -26,13 +26,19 @@ from api.rest.filters import AmCATFilterSet, InFilter
 from rest_framework.viewsets import ModelViewSet
 from api.rest.resources.amcatresource import DatatablesMixin
 
-from api.rest.viewsets import (ProjectViewSetMixin, ROLE_PROJECT_READER,
-                               CannotEditLinkedResource, NotFoundInProject)
+from api.rest.viewsets import (ProjectViewSetMixin, ROLE_PROJECT_READER)
+#                               CannotEditLinkedResource, NotFoundInProject)
 
 from rest_framework import serializers
 from django_filters import filters, filterset
 import logging
 log = logging.getLogger(__name__)
+
+class CannotEditLinkedResource(Exception):
+    pass
+
+class NotFoundInProject(Exception):
+    pass
 
 class ArticleMetaFilter(AmCATFilterSet):
     date_from = filters.DateFilter(name='date', lookup_type='gte')
