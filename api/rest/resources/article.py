@@ -58,11 +58,18 @@ class ArticleMetaResource(AmCATResource):
     def get_model_name(cls):
         return "ArticleMeta".lower()
 
+class ArticleSerializer(AmCATModelSerializer):
+    def save(self, **kwargs):
+        print("SAVING", self.object)
+    class Meta:
+        model = Article
+        
 class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Article
     url = ArticleSetViewSet.url + '/(?P<articleset>[0-9]+)/articles'
     permission_map = {'GET' : ROLE_PROJECT_READER}
-
+    serializer_class = ArticleSerializer
+    
     def check_permissions(self, request):
         # make sure that the requested set is available in the projec, raise 404 otherwiset
         # sets linked_set to indicate whether the current set is owned by the project
@@ -104,6 +111,7 @@ class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
                 
         return super(ArticleViewSet, self).create(request, *args, **kwargs)
 
+
             
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -116,6 +124,8 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 class TestArticle(ApiTestCase):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
 
+    
+    @amcattest.use_elastic
     def test_create(self):
         s = amcattest.create_test_set()
                             
@@ -137,6 +147,13 @@ class TestArticle(ApiTestCase):
         self.assertEqual(a['project'], s.project_id)
         self.assertEqual(a['length'], 2)
 
+        # Is the result added to the elastic index as well?
+        from amcat.tools import amcates
+        r = list(amcates.ES().query(filters=dict(sets=s.id), fields=["text", "headline", "mediumid", 'medium']))
+        self.assertEqual(len(r), 1)
+        print(r)
+        
+        
     def test_permissions(self):
         from amcat.models import Role, ProjectRole
         metareader = Role.objects.get(label='metareader', projectlevel=True)
