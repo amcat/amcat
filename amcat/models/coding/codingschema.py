@@ -48,7 +48,7 @@ class CodingSchema(AmcatModel):
     description = models.TextField(null=True)
 
     isnet = models.BooleanField(default=False)
-    isarticleschema = models.BooleanField(default=True)
+    isarticleschema = models.BooleanField(default=False)
     quasisentences = models.BooleanField(default=False)
 
     project = models.ForeignKey("amcat.Project")
