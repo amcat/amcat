@@ -219,9 +219,11 @@ class SearchQuery(object):
             pattern = label_delimiter.replace("|", "\\|") + "+"
             lbl, q = re.split(pattern, query, 1)
 
-            if not (0 < len(lbl) <= 20):
-                raise ValidationError("Invalid label (after the {label_delimiter}). Query was: {query!r}"
-                                      .format(**locals()), code="invalid")
+            if len(lbl) == 0:
+                raise ValidationError("Delimiter ({label_delimiter!r}) was used, but no label given!"
+                                      "Query was: {query!r}".format(**locals()), code="invalid")
+            if len(lbl) > 80:
+                raise ValidationError("Label too long: {lbl!r}".format(**locals()), code="invalid")
             if not len(query):
                 raise ValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
                                       .format(**locals()), code="invalid")
