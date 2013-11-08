@@ -26,7 +26,7 @@ from django.http import HttpResponse
 
 import logging; log = logging.getLogger(__name__)
 
-import simplejson
+import json
 import traceback
 
 from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
@@ -56,7 +56,7 @@ def handler(request, action):
                     result = converter().run(result)
                     mimetype = 'text/csv'
                 else:
-                    result =simplejson.dumps(result)
+                    result =json.dumps(result)
                     mimetype = 'application/json'
                 return HttpResponse(result, status=201, mimetype=mimetype)
             except Exception as e:
@@ -65,10 +65,10 @@ def handler(request, action):
                     'error-message' : str(e),
                     'error-traceback' : traceback.format_exc()
                     }
-                return HttpResponse(simplejson.dumps(error),
+                return HttpResponse(json.dumps(error),
                                     mimetype='application/json', status=500)
         else:
-            return HttpResponse(simplejson.dumps(form.errors),
+            return HttpResponse(json.dumps(form.errors),
                                 mimetype='application/json', status=400)
             
     else:

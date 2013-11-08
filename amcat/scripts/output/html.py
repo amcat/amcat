@@ -20,7 +20,7 @@
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
 from amcat.scripts import script, types
-from django.utils import simplejson
+import json
 import amcat.scripts.forms
 from django.template.loader import render_to_string
 from django import forms
@@ -109,4 +109,4 @@ class ErrormsgToHtml(script.Script):
     output_type = types.HtmlData
     
     def run(self, errorMsg):
-        return simplejson.dumps({'error':{'message':errorMsg.message}}) # BUG: this is not html...
+        return json.dumps({'error':{'message':errorMsg.message}}) # BUG: this is not html...
