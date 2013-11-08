@@ -75,13 +75,14 @@ class DailyScript(Script):
         """
         if date is None: date = datetime.date.today()
         dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
+        
         for s in Scraper.objects.filter(run_daily=True, active=True):
             for day in dates:
                 if not self.satisfied(s, day):
                     try:
                         s_instance = s.get_scraper(date = day, **options)
                     except Exception:
-                        log.exception("get_scraper for scraper {s.scraper_id} ({s.label}) failed".format(**locals()))
+                        log.exception("get_scraper for scraper {s.pk} ({s.label}) failed".format(**locals()))
                     else:
                         yield s_instance
 

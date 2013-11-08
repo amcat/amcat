@@ -22,7 +22,7 @@ from django.template.loader import render_to_string
 import time
 import api.webscripts
 from django.db import connection
-from django.utils import simplejson
+import json
 from amcat.scripts import scriptmanager, types
 from django.http import HttpResponse
 from amcat.scripts.forms import SelectionForm
@@ -116,7 +116,7 @@ class WebScript(object):
         reply['querytime'] = '%.2f' % (time.time() - self.initTime)
         reply['webscriptName'] = self.name
         reply['webscriptClassname'] = self.__class__.__name__
-        jsondata = simplejson.dumps(reply, default=lambda o:unicode(o))
+        jsondata = json.dumps(reply, default=lambda o:unicode(o))
         return HttpResponse(jsondata, mimetype='text/plain')
 
     def outputResponse(self, data, data_type, filename=None):

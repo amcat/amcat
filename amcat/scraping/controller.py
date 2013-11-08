@@ -51,7 +51,6 @@ class Controller(object):
             scrapers = iter(scrapers)
         except TypeError:
             scrapers = [scrapers]
-            
         for scraper in scrapers:
             try:
                 articles = self._scrape(scraper)

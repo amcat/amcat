@@ -55,7 +55,7 @@ class Term(BaseTerm):
         return unicode(self).encode('utf-8')
     def get_dsl(self):
         qtype = "wildcard" if '*' in self.text else "term"
-        return {qtype : {self.qfield : self.text}}
+        return {qtype : {self.qfield : self.text.lower()}}
 
 class Quote(BaseTerm):
     def __unicode__(self):
@@ -105,7 +105,7 @@ def _check_span(terms, field=None, allow_boolean=True):
         elif allow_boolean and isinstance(term, Boolean) and term.operator == "OR":
             fld = _check_span(term.terms, allow_boolean = False)
         else:
-            raise ParseError("Proximity queries cannot contain: {term}".format(**locals()))
+            raise ParseError("Proximity queries cannot contain: {term!r} (allow_boolean={allow_boolean})".format(**locals()))
 
         if fld:
             if not f:
@@ -140,7 +140,7 @@ class Span(Boolean, FieldTerm):
                     text = term.text[:-1]
                     return [{"span_multi":{"match":{"prefix" : { field :  { "value" : text } }}}}]
                 else:
-                    return [{"span_term" : {field : term.text}}]
+                    return [{"span_term" : {field : term.text.lower()}}]
             else:
                 # term is a disjunction: return a list of clauses
                 # index [0] because get_clause returns a list again, which we don't want here
@@ -172,7 +172,7 @@ def get_term(tokens):
         # prefixes, but span (=slop) queries do. So, make a span query
         # with slop=0 and in_order=True if a non-final wildcard is present
         if "*" in tokens.quote[:-1]:
-            return Span(tokens.quote, tokens.field, 0, in_order=True)
+            return lucene_span(tokens.quote, tokens.field, 0)
         else:
             return Quote(tokens.quote, tokens.field)
     else:

@@ -29,7 +29,7 @@ from amcat.models import Article, Sentence
 from django import forms
 from django.db.models import Q
 from django.http import HttpResponse
-from django.utils import simplejson
+import json
 from django.template.loader import render_to_string
 
 from amcat.scripts.output.datatables import TableToDatatable
@@ -261,7 +261,7 @@ def storeCodings(request, codingjobid, articleid):
     sentenceMappingDict = {}
     
     try:
-        jsonData = simplejson.loads(request.raw_post_data)
+        jsonData = json.loads(request.raw_post_data)
         
         log.info(jsonData)
         articleCodingObj = codedArticle.get_or_create_coding()
