@@ -72,10 +72,13 @@ def filters_from_form(form_data):
             try:
                 vals = form_data.getlist(k)
             except AttributeError:
-                vals = [form_data[k]]
-            for v in vals:
-                if v:
-                    yield FILTER_FIELDS[k], _serialize(v)
+                vals = form_data[k]
+                # make sure vals is a list
+                if isinstance(vals, (str, unicode)) or not isinstance(vals, collections.Iterable):
+                    vals = [vals]
+            vals = [_serialize(v) for v in vals if v]
+            if vals:
+                yield FILTER_FIELDS[k], vals
 
 
 def getDatatable(form, rowlink='article/{id}'):
