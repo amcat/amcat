@@ -59,8 +59,26 @@ class ArticleMetaResource(AmCATResource):
         return "ArticleMeta".lower()
 
 class ArticleSerializer(AmCATModelSerializer):
+
+    def restore_fields(self, data, files):
+        # convert media from name to id, if needed
+        try:
+            int(data['medium'])
+        except ValueError:
+            # medium was name instead of int
+            if not hasattr(self, 'media'):
+                self.media = {}
+                m = data['medium']
+                if m not in self.media:
+                    self.media[m] = Medium.get_or_create(m).id
+                data['medium'] = self.media[m]
+
+        return super(ArticleSerializer, self).restore_fields(data, files)
+                
     def save(self, **kwargs):
-        print("SAVING", self.object)
+        articles = self.object if isinstance(self.object, list) else [self.object]
+        Article.create_articles(articles, self.context['view'].articleset)
+        return self.object
     class Meta:
         model = Article
         
@@ -93,24 +111,6 @@ class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     def filter_queryset(self, queryset):
         queryset = super(ArticleViewSet, self).filter_queryset(queryset)
         return queryset.filter(articlesets_set=self.articleset)
-
-    def post_save(self, article, created):
-        # add to articleset, index
-        if created:
-            self.articleset.add_articles([article])
-
-    def create(self, request, *args, **kwargs):
-        """Lookup medium if needed"""
-        # should this be handled by the serializer instead?
-        if 'medium' in request.DATA:
-            try:
-                int(request.DATA['medium'])
-            except ValueError:
-                mediumid = Medium.get_or_create(request.DATA['medium']).id
-                request.DATA['medium'] = mediumid
-                
-        return super(ArticleViewSet, self).create(request, *args, **kwargs)
-
 
             
 ###########################################################################
@@ -149,10 +149,11 @@ class TestArticle(ApiTestCase):
 
         # Is the result added to the elastic index as well?
         from amcat.tools import amcates
-        r = list(amcates.ES().query(filters=dict(sets=s.id), fields=["text", "headline", "mediumid", 'medium']))
+        amcates.ES().flush()
+        r = list(amcates.ES().query(filters=dict(sets=s.id), fields=["text", "headline", 'medium']))
         self.assertEqual(len(r), 1)
-        print(r)
-        
+        self.assertEqual(r[0].medium, "test_medium")
+        self.assertEqual(r[0].headline, "headline") 
         
     def test_permissions(self):
         from amcat.models import Role, ProjectRole
