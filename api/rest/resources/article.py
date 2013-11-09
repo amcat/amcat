@@ -17,6 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import json
+
 from amcat.models import Article, ArticleSet, Medium
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.articleset import ArticleSetViewSet
@@ -60,24 +62,67 @@ class ArticleMetaResource(AmCATResource):
 
 class ArticleSerializer(AmCATModelSerializer):
 
+    def __init__(self, instance=None, data=None, files=None, **kwargs):
+        kwargs['many'] = isinstance(data, list)
+        super(ArticleSerializer, self).__init__(instance, data, files, **kwargs)
+    
     def restore_fields(self, data, files):
+        # add project info, ProjectViewSet.inject_project does not inject into children
+        # TODO: maybe move ProjectViewSet.inject_project into a 'ProjectSerializer'?
+        if 'project' not in data:
+            data['project'] = self.context['view'].project.id
+        
         # convert media from name to id, if needed
         try:
             int(data['medium'])
         except ValueError:
-            # medium was name instead of int
             if not hasattr(self, 'media'):
                 self.media = {}
-                m = data['medium']
-                if m not in self.media:
-                    self.media[m] = Medium.get_or_create(m).id
-                data['medium'] = self.media[m]
+            m = data['medium']
+            if m not in self.media:
+                self.media[m] = Medium.get_or_create(m).id
+            data['medium'] = self.media[m]
 
         return super(ArticleSerializer, self).restore_fields(data, files)
+
+    def from_native(self, data, files):
+        result = super(ArticleSerializer, self).from_native(data, files)
+
+        # deserialize children (if needed)
+        children = data.get('children')# TODO: children can be a multi-value GET param as well, e.g. handle getlist
+
+        if isinstance(children, (str, unicode)):
+            children = json.loads(children)
+        
+        if children:
+            self.many = True            
+            def get_child(obj):
+                child = self.from_native(obj, None)
+                child.parent = result
+                return child
+            return [result] + [get_child(child) for child in children]
+
+        return result
                 
     def save(self, **kwargs):
-        articles = self.object if isinstance(self.object, list) else [self.object]
-        Article.create_articles(articles, self.context['view'].articleset)
+        import collections
+        def _flatten(l):
+            """Turn either an object or a (recursive/irregular/jagged) list-of-lists into a flat list"""
+            # inspired by http://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists-in-python
+            if isinstance(l, collections.Iterable) and not isinstance(l, basestring):
+                for el in l:
+                    for sub in _flatten(el):
+                        yield sub
+            else:
+                yield l
+                
+        # flatten articles list (children in a many call yields a list of lists)
+        self.object = list(_flatten(self.object))
+
+        Article.create_articles(self.object, self.context['view'].articleset)
+
+        # make sure that self.many is True for serializing result
+        self.many = True
         return self.object
     class Meta:
         model = Article
@@ -87,6 +132,7 @@ class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     url = ArticleSetViewSet.url + '/(?P<articleset>[0-9]+)/articles'
     permission_map = {'GET' : ROLE_PROJECT_READER}
     serializer_class = ArticleSerializer
+    inject_project=False # handled by serializer
     
     def check_permissions(self, request):
         # make sure that the requested set is available in the projec, raise 404 otherwiset
@@ -123,14 +169,13 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 
 class TestArticle(ApiTestCase):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
-
+    
     
     @amcattest.use_elastic
     def test_create(self):
         s = amcattest.create_test_set()
                             
         # is the set empty? (aka can we get the results)
-        url = '/api/v4/projects/{s.project.id}/sets/{s.id}/articles/'.format(**locals())
         url = ArticleViewSet.get_url(project=s.project.id, articleset=s.id)
         result = self.get(url)
         self.assertEqual(result['results'], [])
@@ -138,6 +183,7 @@ class TestArticle(ApiTestCase):
         body = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
         
         result = self.post(url, body, as_user=s.project.owner)
+        if isinstance(result, list): result, = result
         self.assertEqual(result['headline'], body['headline'])
         
         result = self.get(url)
@@ -154,6 +200,65 @@ class TestArticle(ApiTestCase):
         self.assertEqual(len(r), 1)
         self.assertEqual(r[0].medium, "test_medium")
         self.assertEqual(r[0].headline, "headline") 
+
+    @amcattest.use_elastic
+    def test_multiple(self):
+        """Can we create multiple objects?"""
+        
+        s = amcattest.create_test_set()
+        url = ArticleViewSet.get_url(project=s.project.id, articleset=s.id)
+        base = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
+
+        a1 = dict(base, headline='a1')
+        a2 = dict(base, headline='a2')
+        body = json.dumps([a1, a2])
+        self.post(url, body, as_user=s.project.owner, request_options=dict(content_type='application/json'))
+
+        result = self.get(url)
+        self.assertEqual({r['headline'] for r in result['results']}, {'a1', 'a2'})
+
+    @amcattest.use_elastic
+    def test_parents(self):
+        """Test parents via nesting"""
+
+        s = amcattest.create_test_set()
+        url = ArticleViewSet.get_url(project=s.project.id, articleset=s.id)
+        base = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
+
+        child1 = dict(base, headline='c1')
+        child2 = dict(base, headline='c2')
+        parent = dict(base, headline='parent')
+        
+        body = dict(parent, children = json.dumps([child1, child2]))
+        self.post(url, body, as_user=s.project.owner)
+
+        # result should have 3 articles, with c1 and c2 .parent set to parent
+        result = {a['headline'] : a for a in self.get(url)['results']}
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result['c1']['parent'], result['parent']['id'])
+        self.assertEqual(result['c2']['parent'], result['parent']['id'])
+        self.assertEqual(result['parent']['parent'], None)
+        
+    @amcattest.use_elastic
+    def test_parents_multiple(self):
+        """Can we add multiple objects with children?"""
+        s = amcattest.create_test_set()
+        url = ArticleViewSet.get_url(project=s.project.id, articleset=s.id)
+        base = {'text' : 'bla', 'headline' : 'headline', 'date' : '2013-01-01T00:00:00', 'medium' : 'test_medium'}
+                
+        child = dict(base, headline='c')
+        parent = dict(base, headline='p')
+        leaf = dict(base, headline='l')
+
+        body = json.dumps([leaf, dict(parent, children=[child])])
+        self.post(url, body, as_user=s.project.owner, request_options=dict(content_type='application/json'))
+        
+        result = {a['headline'] : a for a in self.get(url)['results']}
+        self.assertEqual(len(result), 3)
+        self.assertEqual(result['c']['parent'], result['p']['id'])
+        self.assertEqual(result['p']['parent'], None)
+        self.assertEqual(result['l']['parent'], None)
+        
         
     def test_permissions(self):
         from amcat.models import Role, ProjectRole
