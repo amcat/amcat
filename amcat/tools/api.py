@@ -73,11 +73,17 @@ class AmcatAPI(object):
         url = article_url.format(**locals())
         return self.request(url, **filters)
     
-    def create_set(self, project, post_data=None, **options):
+    def create_set(self, project, json_data=None, **options):
         """Create a new article set. Provide the needed arguments using the post_data or with key-value pairs"""
         url = articleset_url.format(**locals())
-        if post_data is None: post_data=options
-        return self.request(url, method="post", data=post_data)
+        if json_data is None:
+            # form encoded request
+            return self.request(url, method="post", data=options)
+        else:
+            if not isinstance(json_data, (str, unicode)):
+                json_data = json.dumps(json_data)
+            headers = {'content-type': 'application/json'}
+            return self.request(url, method='post', data=json_data, headers=headers)
 
     def create_articles(self, project, articleset, json_data=None, **options):
         """Create one or more articles in the set. Provide the needed arguments using the json_data or with key-value pairs
@@ -86,13 +92,14 @@ class AmcatAPI(object):
         is another list of dictionaries. 
         """
         url = article_url.format(**locals())
-        if json_data is None:
+        if json_data is None: #TODO duplicated from create_set, move into requests (or separate post method?)
             # form encoded request
             return self.request(url, method="post", data=options)
         else:
+            if not isinstance(json_data, (str, unicode)):
+                json_data = json.dumps(json_data)
             headers = {'content-type': 'application/json'}
             return self.request(url, method='post', data=json_data, headers=headers)
-        if post_data is None: post_data=options
 
         
 if __name__ == '__main__':
