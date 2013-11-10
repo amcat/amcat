@@ -39,7 +39,7 @@ class LockHack(object):
     def acquire(self):pass
     def release(self):pass
 
-#to enable older scraper
+#to enable older scrapers
 def html_off(unit):
     """Turns any HTMLElement objects into text to enable serialisation"""
     t = type(unit)
@@ -87,27 +87,8 @@ def scrape_unit_save_unit(scraper, unit):
     unit = html_on(unit)
     log.info("Recieved unit: {unit}".format(**locals()))
     articles = list(scraper._scrape_unit(unit))
-
-    if len(articles) == 0:
-        log.warning("scrape_unit returned 0 units")
-
-    articles = [scraper._postprocess_article(article) for article in articles]
-    articles = transfer_parents(articles)
-
-    log.info("saving {n} articles".format(n = len(articles)))
-    return Article.ordered_save(articles, articleset = scraper.articleset)
-
-#to be removed
-def transfer_parents(articles):
-    identifiers = dict([((article.text,article.headline), article) for article in articles])
-    for article in articles:
-        if article.parent:
-            #parents could be either Document or Article instances
-            if isinstance(article, Document):
-                parent_text = article.parent.props.text
-                parent_headline = article.parent.props.headline
-            elif isinstance(article, Article):
-                parent_text = article.parent.text
-                parent_headline = article.parent.headline
-            article.parent = identifiers[(parent_text, parent_headline)]
     return articles
+
+@task()
+def postprocess(articles):
+    return Controller.postprocess(articles)
