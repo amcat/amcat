@@ -36,4 +36,4 @@ install:
  - pip install -r ./pip_requirements.txt --use-mirrors 
 
 script:
- - python ./manage.py test $SUITE
+ - python ./manage.py test ${SUITE}.tests

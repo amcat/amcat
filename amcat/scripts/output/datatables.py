@@ -19,7 +19,7 @@
 
 from amcat.tools.table import table3
 from amcat.scripts import script, types
-from django.utils import simplejson
+import json
 from django import forms
 import datetime
 from amcat.tools.toolkit import writeDateTime
@@ -59,4 +59,4 @@ class TableToDatatable(script.Script):
         dictObj['iTotalDisplayRecords'] = 9999 if len(tableData) > 0 else 0
         dictObj['sEcho'] = self.options['sEcho']
         
-        return simplejson.dumps(dictObj, default=_default_json)
+        return json.dumps(dictObj, default=_default_json)

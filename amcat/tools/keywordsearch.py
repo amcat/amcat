@@ -72,10 +72,13 @@ def filters_from_form(form_data):
             try:
                 vals = form_data.getlist(k)
             except AttributeError:
-                vals = [form_data[k]]
-            for v in vals:
-                if v:
-                    yield FILTER_FIELDS[k], _serialize(v)
+                vals = form_data[k]
+                # make sure vals is a list
+                if isinstance(vals, (str, unicode)) or not isinstance(vals, collections.Iterable):
+                    vals = [vals]
+            vals = [_serialize(v) for v in vals if v]
+            if vals:
+                yield FILTER_FIELDS[k], vals
 
 
 def getDatatable(form, rowlink='article/{id}'):
@@ -219,9 +222,11 @@ class SearchQuery(object):
             pattern = label_delimiter.replace("|", "\\|") + "+"
             lbl, q = re.split(pattern, query, 1)
 
-            if not (0 < len(lbl) <= 20):
-                raise ValidationError("Invalid label (after the {label_delimiter}). Query was: {query!r}"
-                                      .format(**locals()), code="invalid")
+            if len(lbl) == 0:
+                raise ValidationError("Delimiter ({label_delimiter!r}) was used, but no label given!"
+                                      "Query was: {query!r}".format(**locals()), code="invalid")
+            if len(lbl) > 80:
+                raise ValidationError("Label too long: {lbl!r}".format(**locals()), code="invalid")
             if not len(query):
                 raise ValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
                                       .format(**locals()), code="invalid")
