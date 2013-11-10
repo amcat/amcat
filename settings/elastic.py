@@ -26,9 +26,11 @@ ES_ARTICLE_DOCTYPE='article'
 
 ES_MAPPING_STRING_OPTIONS = {"type" : "string", "omit_norms": True, "analyzer" : "simple"}
 
-ES_MAPPING = {"properties" : {"text": ES_MAPPING_STRING_OPTIONS,
+ES_MAPPING = {"properties" : {"id":{"type":"long"},
+                              "text": ES_MAPPING_STRING_OPTIONS,
                               "headline": ES_MAPPING_STRING_OPTIONS,
                               "date":{"type":"date","format":"dateOptionalTime"},
+                              "medium":{"type":"string", "index" : "not_analyzed"},
                               "mediumid":{"type":"long"},
                               "projectid":{"type":"long"},
                               "sets":{"type":"long"},

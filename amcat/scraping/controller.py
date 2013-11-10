@@ -27,6 +27,7 @@ import logging;log = logging.getLogger(__name__)
 from amcat.scraping.document import Document
 from amcat.models.article import Article
 
+
 class Controller(object):
     def run(self, scrapers):
         if not hasattr(scrapers, '__iter__'):
@@ -57,6 +58,7 @@ class Controller(object):
             articles = Article.ordered_save(articles)
             yield (scraper, articles)
             
+<<<<<<< HEAD
 class ThreadedController(Controller):
     def _scrape(self, scrapers):
         #remove thread locks
@@ -100,7 +102,7 @@ def transfer_parents(articles):
                 parent_headline = article.parent.headline
             article.parent = identifiers[(parent_text, parent_headline)]
     return articles
-                         
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -154,6 +156,7 @@ class TestControllers(amcattest.PolicyTestCase):
         self.assertEqual(len(result), p.articles.count())
         self.assertEqual(len(result), s.articles.count())
 
+    
     """def test_threaded(self):
         self.test_scraper(c = ThreadedController())
         self.test_save(c = ThreadedController())"""

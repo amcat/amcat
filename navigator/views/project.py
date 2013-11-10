@@ -142,7 +142,7 @@ def upload_article(request, project):
     scripts = (Datatable(PluginResource, rowlink="./upload-articles/{id}")
                .filter(plugin_type=plugin_type).hide('id', 'plugin_type'))
 
-    can_create_plugin = Plugin.can_create(request.user)
+    can_create_plugin = False#Plugin.can_create(request.user)
 
     return table_view(request, project, scripts, selected='article sets',
             template='navigator/project/upload.html', can_create_plugin=can_create_plugin,
@@ -289,7 +289,8 @@ def articlesets(request, project, what):
     table = table.filter(**selected_filter)
     table = table.hide("project", "index_dirty", "indexed", "needs_deduplication")
 
-    table.url += "&project_for_favourites={project.id}".format(**locals())
+    #table.url += "&project_for_favourites={project.id}".format(**locals())
+    table = table.add_arguments(project_for_favourites=project.id)
     
     context = project
     menu = PROJECT_MENU

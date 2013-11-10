@@ -43,3 +43,5 @@ nosetests.xml
 # PyCharm meuk
 .idea
 
+# static files
+navigator/media/static

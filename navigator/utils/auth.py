@@ -264,8 +264,8 @@ class check(object):
                 _obj = obj
 
             # Check against privillege system
-            can = getattr(_obj, 'can_%s' % self.action)
-            if not can(request.user):
+            can = getattr(_obj, 'can_%s' % self.action, None)
+            if can and not can(request.user):
                 raise PermissionDenied("User {request.user} is not allows to '{self.action}' object {_obj!r}".format(**locals()))
 
             # Delete all id-keywords

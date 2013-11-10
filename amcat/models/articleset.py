@@ -130,6 +130,7 @@ class ArticleSet(AmcatModel):
         Make sure that the index for this set is up to date
         """
         from amcat.tools.amcates import ES
+        ES().check_index()
         ES().synchronize_articleset(self, full_refresh=full_refresh)
         self.index_dirty = False
         self.save()
