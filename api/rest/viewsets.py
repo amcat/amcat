@@ -74,9 +74,20 @@ class ProjectPermission(permissions.BasePermission):
             log.warn("User {user} has role {actual_role_id} < {required_role_id}".format(**locals()))
         return actual_role_id >= required_role_id
 
+from api.rest.serializer import AmCATModelSerializer
+class ProjectSerializer(AmCATModelSerializer):
+
+    def restore_fields(self, data, files):
+        data = data.copy()
+        if 'project' not in data:
+            data['project'] = self.context['view'].project.id
+        return super(ProjectSerializer, self).restore_fields(data, files)
+
+        
 class ProjectViewSetMixin(object):
     permission_classes = (ProjectPermission,)
-    inject_project = True
+    model_serializer_class = ProjectSerializer
+    
     @property
     def project(self):
         if not hasattr(self, '_project'):
@@ -84,12 +95,6 @@ class ProjectViewSetMixin(object):
             self._project = Project.objects.get(pk=project_id)
         return self._project
     
-    def create(self, request, *args, **kwargs):
-        """Inject project if needed"""
-        if self.inject_project:
-            request.DATA['project'] = self.project.id
-        return super(ProjectViewSetMixin, self).create(request, *args, **kwargs)
-
     @classmethod
     def get_url(cls, base_name=None, view='list', **kwargs):
         if base_name is None:

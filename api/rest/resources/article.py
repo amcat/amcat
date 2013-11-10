@@ -18,7 +18,7 @@
 ###########################################################################
 
 import json
-
+from django.core.exceptions import ValidationError
 from amcat.models import Article, ArticleSet, Medium
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.articleset import ArticleSetViewSet
@@ -29,7 +29,8 @@ from rest_framework.viewsets import ModelViewSet
 from api.rest.resources.amcatresource import DatatablesMixin
 
 from api.rest.viewsets import (ProjectViewSetMixin, ROLE_PROJECT_READER,
-                               CannotEditLinkedResource, NotFoundInProject)
+                               CannotEditLinkedResource, NotFoundInProject,
+                               ProjectSerializer)
 
 from rest_framework import serializers
 from django_filters import filters, filterset
@@ -60,29 +61,30 @@ class ArticleMetaResource(AmCATResource):
     def get_model_name(cls):
         return "ArticleMeta".lower()
 
-class ArticleSerializer(AmCATModelSerializer):
+class ArticleSerializer(ProjectSerializer):
 
     def __init__(self, instance=None, data=None, files=None, **kwargs):
         kwargs['many'] = isinstance(data, list)
         super(ArticleSerializer, self).__init__(instance, data, files, **kwargs)
     
     def restore_fields(self, data, files):
-        # add project info, ProjectViewSet.inject_project does not inject into children
-        # TODO: maybe move ProjectViewSet.inject_project into a 'ProjectSerializer'?
-        if 'project' not in data:
-            data['project'] = self.context['view'].project.id
-        
         # convert media from name to id, if needed
-        try:
-            int(data['medium'])
-        except ValueError:
-            if not hasattr(self, 'media'):
-                self.media = {}
-            m = data['medium']
-            if m not in self.media:
-                self.media[m] = Medium.get_or_create(m).id
-            data['medium'] = self.media[m]
-
+        data = data.copy() # make data mutable
+        if 'medium' in data:
+            try:
+                int(data['medium'])
+            except ValueError:
+                if not hasattr(self, 'media'):
+                    self.media = {}
+                m = data['medium']
+                if m not in self.media:
+                    self.media[m] = Medium.get_or_create(m).id
+                data['medium'] = self.media[m]
+                
+        # add time part to date, if needed
+        if 'date' in data and len(data['date']) == 10:
+            data['date'] += "T00:00"
+        
         return super(ArticleSerializer, self).restore_fields(data, files)
 
     def from_native(self, data, files):
@@ -124,15 +126,12 @@ class ArticleSerializer(AmCATModelSerializer):
         # make sure that self.many is True for serializing result
         self.many = True
         return self.object
-    class Meta:
-        model = Article
         
 class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Article
     url = ArticleSetViewSet.url + '/(?P<articleset>[0-9]+)/articles'
     permission_map = {'GET' : ROLE_PROJECT_READER}
-    serializer_class = ArticleSerializer
-    inject_project=False # handled by serializer
+    model_serializer_class = ArticleSerializer
     
     def check_permissions(self, request):
         # make sure that the requested set is available in the projec, raise 404 otherwiset
