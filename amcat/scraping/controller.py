@@ -58,7 +58,6 @@ class Controller(object):
             articles = Article.ordered_save(articles)
             yield (scraper, articles)
             
-<<<<<<< HEAD
 class ThreadedController(Controller):
     def _scrape(self, scrapers):
         #remove thread locks
