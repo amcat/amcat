@@ -78,12 +78,15 @@ def run_scraper(scraper):
     if hasattr(scraper, 'opener') and hasattr(scraper.opener, 'cookiejar'):
         scraper.opener.cookiejar._cookies_lock = LockHack()
     log.info("Running {scraper.__class__.__name__}".format(**locals()))
-    tasks = [scrape_unit_save_unit.s(scraper, html_off(unit)) for unit in scraper._get_units()]
+    try:
+        tasks = [scrape_unit.s(scraper, html_off(unit)) for unit in scraper._get_units()]
+    except Exception as e:
+        return (scraper, e)
     result = group(tasks).delay()
     return (scraper, result)
     
 @task()
-def scrape_unit_save_unit(scraper, unit):
+def scrape_unit(scraper, unit):
     unit = html_on(unit)
     log.info("Recieved unit: {unit}".format(**locals()))
     articles = list(scraper._scrape_unit(unit))

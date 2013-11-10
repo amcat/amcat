@@ -76,7 +76,7 @@ class Controller(object):
     @classmethod
     def _process(cls, article, articles):
         """process one article and it's children"""
-        artdict = {'metastring' : {}, 'children', []}
+        artdict = {'metastring' : {}, 'children' : []}
 
         if isinstance(article, Document):
             for prop, value in article.getprops().items():
@@ -93,7 +93,7 @@ class Controller(object):
                     artdict[prop] = getattr(article, prop)
 
         for child in articles:
-            if child.parent = article:
+            if child.parent == article:
                 artdict['children'].append(cls._process(child))
 
         return artdict
@@ -119,24 +119,31 @@ class ThreadedController(Controller):
                 
         #generate subtask list, extra check on locks
         subtasks = []
+        log.info("Creating subtasks for scrapers...")
         for scraper in scrapers:
             log.debug("checking pickle for {scraper}".format(**locals()))
             try:
                 pickle.dumps(scraper)
             except (pickle.PicklingError, TypeError):
-                log.exception("Picking {scraper} failed".format(**locals()))
+                log.warning("Pickling {scraper} failed".format(**locals()))
             else:
                 d = 'date' in scraper.options.keys() and scraper.options['date']
-                log.info("added {scraper.__class__.__name__} for date {d} to subtasks".format(**locals()))
+                log.debug("added {scraper.__class__.__name__} for date {d} to subtasks".format(**locals()))
                 subtasks.append(run_scraper.s(scraper))
                          
         #run all scrapers
         task = group(subtasks)
         result = task.apply_async()
 
+        log.info("Scrapers are now running in celery")
+
         #harvest result, run processing task for each set of articles, yield
-        for scraper, articles in result.iterate():
-            articles = [inner for outer in articles for inner in outer] #[[a,b][c,d]] -> [a,b,c,d]
+        for scraper, output in result.iterate():
+            if isinstance(output, Exception):
+                log.exception("{scraper} failed".format(**locals()))
+                continue
+            articles = [inner for outer in output for inner in outer] #[[a,b][c,d]] -> [a,b,c,d]
+            log.info("{scraper.__class__.__name__} returned {n} articles".format(n = len(articles), **locals()))
             articles = ~postprocess.s(articles)
             yield (scraper,articles)
                          
