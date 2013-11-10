@@ -50,7 +50,7 @@ class ValueArticleScript(Script):
         log.info("getting articles...")
         articles = Article.objects.filter(
             date__contains = self.options['date'],
-            articlesetarticle__articleset = self.options['articleset'])
+            articlesets_set = self.options['articleset'])
         log.info("{} articles found. evaluating...".format(articles.count()))
         for article in articles:
             log.debug(article.headline)

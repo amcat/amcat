@@ -20,12 +20,16 @@
 """
 Module for controlling scrapers
 """
-from amcat.tasks import run_scraper, LockHack
+
 import cPickle as pickle
 from celery import group
 import logging;log = logging.getLogger(__name__)
+import os
+
 from amcat.scraping.document import Document
 from amcat.models.article import Article
+from amcat.tasks import run_scraper, postprocess, LockHack
+from amcat.tools.api import AmcatAPI
 
 
 class Controller(object):
@@ -38,6 +42,7 @@ class Controller(object):
                     n = len(articles),
                     d = 'date' in scraper.options.keys() and scraper.options['date'],
                     **locals()))
+            self._save(scraper, articles)
             yield (scraper,articles)
 
     def _scrape(self, scrapers):
@@ -53,10 +58,57 @@ class Controller(object):
                     unit = unit.encode('utf-8')
                 log.info("received unit: {unit}".format(**locals()))
                 [articles.append(article) for article in scraper._scrape_unit(unit)]
-            articles = [scraper._postprocess_article(article) for article in articles]
-            articles = transfer_parents(articles)
-            articles = Article.ordered_save(articles)
+            articles = Controller.postprocess(articles)
             yield (scraper, articles)
+
+    @classmethod
+    def postprocess(cls, articles):
+        """takes whatever comes out of _scrape_unit and turns it into a list of article dictionaries"""
+        for a in articles:
+            if hasattr(a,'props') and hasattr(a.props,'parent'):
+                a.parent = a.props.parent
+                del a.props.parent
+
+        parents = [a for a in articles if not(hasattr(a,'parent'))]
+        return [cls._process(p, articles) for p in parents]
+
+
+    @classmethod
+    def _process(cls, article, articles):
+        """process one article and it's children"""
+        artdict = {'metastring' : {}, 'children', []}
+
+        if isinstance(article, Document):
+            for prop, value in article.getprops().items():
+                value = article._convert(value)
+                if prop in _ARTICLE_PROPS:
+                    artdict[prop] = value
+                else:
+                    artdict['metastring'][prop] = value
+
+        elif isinstance(article, Article):
+            fieldnames = [f.name for f in model._meta.fields]
+            for prop in fieldnames:
+                if hasattr(article, prop):
+                    artdict[prop] = getattr(article, prop)
+
+        for child in articles:
+            if child.parent = article:
+                artdict['children'].append(cls._process(child))
+
+        return artdict
+
+    def _save(self, scraper, articles):
+        """This controller's implementation of saving articles. Defaults to saving to the API"""
+        #TODO: to access the API we need auth data, 
+        #this should be provided by run_cli and the views that run controllers.
+        #for now, we will use env variables.
+        auth = {'host' : os.environ.get('AMCAT_API_HOST'),
+                'user' : os.environ.get('AMCAT_API_USER'),
+                'password' : os.environ.get('AMCAT_API_PASSWORD')}
+
+        api = AmcatAPI(*auth)
+        api.create_articles(scraper.project, scraper.articleset, json_data = json.dumps(articles))
             
 class ThreadedController(Controller):
     def _scrape(self, scrapers):
@@ -82,25 +134,12 @@ class ThreadedController(Controller):
         task = group(subtasks)
         result = task.apply_async()
 
-        #harvest result
+        #harvest result, run processing task for each set of articles, yield
         for scraper, articles in result.iterate():
             articles = [inner for outer in articles for inner in outer] #[[a,b][c,d]] -> [a,b,c,d]
+            articles = ~postprocess.s(articles)
             yield (scraper,articles)
                          
-#to be removed
-def transfer_parents(articles):
-    identifiers = dict([((article.text,article.headline), article) for article in articles])
-    for article in articles:
-        if article.parent:
-            #parents could be either Document or Article instances
-            if isinstance(article, Document):
-                parent_text = article.parent.props.text
-                parent_headline = article.parent.props.headline
-            elif isinstance(article, Article):
-                parent_text = article.parent.text
-                parent_headline = article.parent.headline
-            article.parent = identifiers[(parent_text, parent_headline)]
-    return articles
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
