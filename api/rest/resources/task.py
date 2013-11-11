@@ -19,6 +19,8 @@
 from rest_framework import serializers
 from rest_framework.decorators import api_view
 from amcat.models import Task
+from copy import copy
+from django.http import HttpResponse
 
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
@@ -68,4 +70,11 @@ class TaskResultResource(AmCATResource):
 
     serializer_class = TaskResultSerializer
 
+@api_view(http_method_names=("GET",))
+def single_task_result(request, task_id, uuid=False):
+    task = Task.objects.get(**{ "uuid" if uuid else "id" : task_id})
 
+    try:
+        return copy(task.get_response())
+    except AssertionError:
+        return HttpResponse(status=404)
