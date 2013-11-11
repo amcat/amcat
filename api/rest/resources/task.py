@@ -68,7 +68,4 @@ class TaskResultResource(AmCATResource):
 
     serializer_class = TaskResultSerializer
 
-@api_view(['GET'])
-def task_result(request, id):
-    return Task.objects.get(id=id).get_object().get_response()
 
