@@ -91,6 +91,9 @@ def create_test_user(**kargs):
         kargs['language'] = get_test_language()
     if 'role' not in kargs:
         kargs['role'] = get_test_role()
+    if 'password' not in kargs:
+        from django.contrib.auth.hashers import make_password
+        kargs['password'] =  'test'
     #if "id" not in kargs: kargs["id"] = _get_next_id()
     return create_user(**kargs)
     #return User.create_user(**kargs)
@@ -98,10 +101,13 @@ def create_test_user(**kargs):
 def create_test_project(**kargs):
     """Create a project to be used in unit testing"""
     from amcat.models.project import Project
+    from amcat.models.authorisation import ProjectRole, ROLE_PROJECT_ADMIN
     if "owner" not in kargs: kargs["owner"] = create_test_user()
     if "insert_user" not in kargs: kargs["insert_user"] = kargs["owner"]
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    return Project.objects.create(**kargs)
+    p = Project.objects.create(**kargs)
+    ProjectRole.objects.create(project=p, user=p.owner, role_id=ROLE_PROJECT_ADMIN)
+    return p
     
 def create_test_schema(**kargs):
     """Create a test schema to be used in unit testing"""

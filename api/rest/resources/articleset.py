@@ -25,6 +25,10 @@ from api.rest.serializer import AmCATModelSerializer
 from amcat.tools import amcates
 from django.db.models import Q
 
+from rest_framework.viewsets import ModelViewSet
+from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.viewsets import ProjectViewSetMixin
+
 from rest_framework import serializers
 
 class _NoProjectRequestedError(ValueError): pass
@@ -75,3 +79,11 @@ class ArticleSetResource(AmCATResource):
     model = ArticleSet
     serializer_class = ArticleSetSerializer
 
+class ArticleSetViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
+    model = ArticleSet
+    url = 'projects/(?P<project>[0-9]+)/sets'
+    
+    def filter_queryset(self, queryset):
+        queryset = super(ArticleSetViewSet, self).filter_queryset(queryset)
+        return queryset.filter(project=self.project)
+    

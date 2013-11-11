@@ -20,7 +20,7 @@
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
 from amcat.scripts import script, types
-from django.utils import simplejson
+import json
 import amcat.scripts.forms
 from amcat.models.medium import Medium
 import datetime
@@ -31,7 +31,7 @@ def encode_json(obj):
     if isinstance(obj, Medium):
         return "%s - %s" % (obj.id, obj.name)
     if isinstance(obj, table3.Table):
-        return simplejson.JSONDecoder().decode(TableToJson().run(obj)) # TODO: this is very ugly and inefficient.. (double encoding..)
+        return json.JSONDecoder().decode(TableToJson().run(obj)) # TODO: this is very ugly and inefficient.. (double encoding..)
     if isinstance(obj, datetime.datetime):
         return obj.strftime('%Y-%m-%d %H:%M')
     raise TypeError("%r is not JSON serializable" % (obj,))
@@ -54,7 +54,7 @@ class DictToJson(script.Script):
 
 
     def run(self, dictObj):
-        return simplejson.dumps(dictObj, default=encode_json)
+        return json.dumps(dictObj, default=encode_json)
        
        
 class ArticleListToJson(script.Script):
@@ -80,4 +80,4 @@ class ErrormsgToJson(script.Script):
             msgDict['code'] = errorMsg.code
         if errorMsg.fields:
             msgDict['fields'] = errorMsg.fields
-        return simplejson.dumps({'error':msgDict})
+        return json.dumps({'error':msgDict})

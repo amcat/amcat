@@ -25,8 +25,7 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 from contextlib import contextmanager
 import collections, re, time
-try: import simplejson as json
-except ImportError: import json
+import json
 import logging; LOG = logging.getLogger(__name__)
 
 from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
