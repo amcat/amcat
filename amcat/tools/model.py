@@ -59,4 +59,4 @@ class PostgresNativeUUIDField(UUIDField):
     def db_type(self, connection=None):
         if connection and connection.vendor in ("postgresql",):
             return "UUID"
-        return super(UUIDField, self).db_type(connection)
+        return super(UUIDField, self).db_type(connection=connection)
