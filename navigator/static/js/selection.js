@@ -19,30 +19,66 @@
 ###########################################################################
 */
 
+function curry (fn, scope) {
+    var scope = scope || window;
+    var args = [];
+
+    for (var i=2, len = arguments.length; i < len; ++i) {
+        args.push(arguments[i]);
+    };
+
+    return function() {
+	    fn.apply(scope, args);
+    };
+}
+
 amcat.selection = {};
 
-amcat.selection.setMessage = function(msg){
+amcat.selection.setMessage = function (msg) {
     $('#select-message').show().text(msg);
-}
+};
 
-amcat.selection.hideMessage = function(){
+amcat.selection.hideMessage = function () {
     $('#select-message').hide();
-}
+};
 
+amcat.selection.poll = function(task_uuid, callback, timeout){
+    $.ajax({
+        url : "/api/v4/task?uuid=" + task_uuid,
+        dataType : "json",
+        success : function(data){
+            task = data["results"][0];
+            if (!task["ready"]){
+                var new_timeout = (timeout >= 2000) ? timeout : timeout + 500;
+                window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
+            } else {
+                $.ajax({
+                    url : "/api/v4/taskresult/" + task_uuid,
+                    success : callback
+                });
+            }
+        },
+        error : function() {
+            amcat.selection.poll(task_uuid, callback, timeout);
+        }
+    });
+};
 
 amcat.selection.callWebscript = function(name, data, callBack){
-    var url = amcat.selection.apiUrl + 'webscript/' + name + '/run?project=' + amcat.selection.get_project();
+    var url = amcat.selection.apiUrl + 'webscript/' + name + '/run?delay=&project=' + amcat.selection.get_project();
 
     $.ajax({
       type: 'POST',
       url: url,
-      success: callBack,
+      success: function(data){
+          amcat.selection.poll(data["task_uuid"], callBack, 0);
+      },
       error: function(jqXHR, textStatus){
         console.log('error form data', textStatus);
         amcat.selection.setMessage('Error loading action ' + textStatus);
       },
       data:data,
-      dataType: 'html'
+      dataType: 'json'
     });
 }
 
@@ -181,7 +217,7 @@ $(document).ready(function(){
         dateFormat: 'dd-mm-yy',
         firstDay:1,
         maxDate:'+1y',
-        showOn:'focus',
+        showOn:'focus'
     });
     
     
@@ -197,62 +233,37 @@ amcat.selection.get_project = function(){
     return (/[0-9]+/).exec(window.location.pathname)[0];
 }
 
-amcat.selection.onFormSubmit = function(){
+amcat.selection.onFormSubmit = function(event){
     amcat.selection.setMessage('Loading...')
     $('#query-time').empty();
     $('#select-result').empty();
     $('#form-errors').empty();
     $('iframe').hide();
     
-    var webscriptName = $('input[name=webscriptToRun]:checked').attr("id"); // name of selected webscript to run
-    console.log('script to run', webscriptName);
-    var url = amcat.selection.apiUrl + 'webscript/' + webscriptName + '/run' + '?project=' + amcat.selection.get_project();
+    var name = $('input[name=webscriptToRun]:checked').attr("id"); // name of selected webscript to run
+    amcat.selection.callWebscript(name, $("#selectionform").serialize(), amcat.selection.loadIframe);
 
-    $('#selectionform').attr('action', url);
-    
-    amcat.selection.loadIframeTimeout = window.setTimeout(function(){ // in rare cases iframe may not load, and this will give the user some feedback
-        var iframeLength = 0;
-        try{
-            iframeLength = $('iframe').contents().text().length;
-        } catch(e){
-            console.error(e);
-        }
-        if(iframeLength == 0){
-            console.log('possible iframe problem');
-            $('#select-result').text('Possible problem loading data, or the server is just slow...');
-            $('iframe').show();
-            amcat.selection.hideMessage();
-        }
-    }, 10000);
-    
+    event.preventDefault();
     return true;
 }
 
 
-amcat.selection.loadIframe = function(){ // this is the form submit response
+amcat.selection.loadIframe = function(data){ // this is the form submit response
     amcat.selection.hideMessage();
     $('iframe').hide();
     
     window.clearTimeout(amcat.selection.loadIframeTimeout);
     
-    var iframeContent = $(this).contents().text(); // the responseText of the "ajax" call
-    if(iframeContent == ''){
-        console.log('no iframe content');
-        return;
-    }
-    console.log('change iframe content');
-    
     var json = {}
     try{
-        json = jQuery.parseJSON(iframeContent);
+        json = jQuery.parseJSON(data);
     } catch(e){
        $('iframe').show().css('width','900px').css('height','600px');
        $('#select-result').html('<div class="error">Received an invalid JSON response</div>');
        console.error(e.toString().substring(0,1000));
        return;
     }
-    console.log('json', json);
-    
+
     if(json.html){
         $('#select-result').html(json.html);
         if($("#dialog-message").dialog('isOpen') == true){
@@ -646,17 +657,12 @@ amcat.selection.aggregation.click = function(x, y, count){
 
 $.jqplot.eventListenerHooks.push(['jqplotClick', function(ev, gridpos, datapos, neighbor, plot) {
     if (neighbor) { // click on datapoint
-        // console.log(ev, gridpos, datapos, neighbor, plot);
-        // console.log(plot.data[neighbor.seriesIndex][neighbor.pointIndex], plot.series[neighbor.seriesIndex].label);
-        // console.log('x:' + neighbor.data[0] + ' y:' + neighbor.data[1], 'serie: ' + plot.series[neighbor.seriesIndex].label);
         var count = neighbor.data[1];
         
         var y = plot.series[neighbor.seriesIndex].label;
         var x = plot.axes.xaxis.label == 'Medium' ? plot.data[neighbor.seriesIndex][neighbor.pointIndex][0] : neighbor.data[0];
-        //console.log(x, neighbor.data[0], y);
-        
+
         amcat.selection.aggregation.click(x, y, count);
-        //console.log(count, formValues);
     }
 }]);
 
@@ -702,8 +708,7 @@ amcat.selection.aggregation.createGraph = function(){
         graphData.push(line);
     });
     
-    //console.log(graphData);
-    
+
     if(amcat.selection.aggregation.xAxis == 'date'){
         amcat.selection.aggregation.plotLines(series, graphData);
     } else if(amcat.selection.aggregation.xAxis == 'medium'){
@@ -757,7 +762,6 @@ amcat.selection.aggregation.plotBars = function(series, graphData){
         show: true,
         sizeAdjust: 7.5,
         tooltipContentEditor:   function(str, seriesIndex, pointIndex, plot){
-            //console.log(str, seriesIndex, pointIndex, plot);
             var medium = plot.data[seriesIndex][pointIndex][0]
             var value = str.split(', ')[1];
             return plot.series[seriesIndex].label + '<br />Medium: ' + medium + '<br />Number of ' + amcat.selection.aggregation.aggregationType + ': ' + value;
