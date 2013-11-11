@@ -38,7 +38,7 @@ class Task(AmcatModel):
     using Celery. Because Celery fails to remember task-names when submitted, they are
     stored here together with the class which executed the task.
     """
-    uuid = models.CharField(max_length=36)
+    uuid = models.CharField(max_length=36, db_index=True)
     task_name = models.TextField()
     class_name = models.TextField()
     issued_at = models.DateTimeField(auto_now_add=True)
