@@ -23,17 +23,30 @@ Useful functions for dealing with django (models)x
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from contextlib import contextmanager
-import collections, re, time
+import collections
+from django.http import QueryDict
+import re
+import time
 import json
+import urllib
 import logging; LOG = logging.getLogger(__name__)
 
 from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToManyField
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db import connections
+from contextlib import contextmanager
+
 
 from amcat.tools.table.table3 import ObjectTable, SortedTable
+
+def to_querydict(d, mutable=False):
+    """Convert a normal dictionary to a querydict. The dictionary can have lists as values,
+    which are interpreted as multiple arguments for one url-parameter."""
+    return QueryDict(urllib.urlencode(d, True), mutable=mutable)
+
+def from_querydict(d):
+    """Convert a QueryDict to a normal dictionary with lists as values."""
+    return dict(d.iterlists())
 
 def db_supports_distinct_on(db='default'):
     """
@@ -235,7 +248,25 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         with list_queries() as l:
             amcattest.create_test_project(owner=u)
         #query_list_to_table(l, output=print)
-        self.assertEquals(len(l), 1) 
+        self.assertEquals(len(l), 1)
+
+    def test_from_querydict(self):
+        di = dict(a=1, b=[2,3])
+        self.assertEqual(to_querydict(di), QueryDict("a=1&b=2&b=3"))
+
+    def test_to_querydict(self):
+        d = to_querydict(dict(a=1, b=[2,3]))
+        self.assertEqual(d.get("a"), "1")
+        self.assertEqual(d.get("b"), "3")
+        self.assertEqual(d.getlist("a"), ["1"])
+        self.assertEqual(d.getlist("b"), ["2","3"])
+
+        self.assertFalse(d._mutable)
+        d = to_querydict({}, mutable=False)
+        self.assertFalse(d._mutable)
+        d = to_querydict({}, mutable=True)
+        self.assertTrue(d._mutable)
+
 
     def test_get_or_create(self):
         """Test the get or create operation"""

@@ -20,6 +20,7 @@
 
 from django.template.loader import render_to_string
 import time
+from amcat.models import Project
 import api.webscripts
 from django.db import connection
 import json
@@ -27,6 +28,11 @@ from amcat.scripts import scriptmanager, types
 from django.http import HttpResponse
 from amcat.scripts.forms import SelectionForm
 from amcat.forms import InvalidFormException
+from django.contrib.auth.models import User
+from celery.task import task
+
+from django.http import QueryDict
+from amcat.tools.djangotoolkit import to_querydict
 
 import logging
 log = logging.getLogger(__name__)
@@ -42,6 +48,9 @@ mimetypeDict = { #todo: make objects of these
      'datatables':{'extension':'json', 'mime':'text/plain', 'download':False},
 }
 
+@task()
+def webscript_task(cls, **kwargs):
+    return cls(**kwargs).run()
 
 class WebScript(object):
     """
@@ -55,11 +64,17 @@ class WebScript(object):
     output_template = None # path to template used for html output
     solrOnly = False # only for Solr output, not on database queries
 
-    def __init__(self, project=None, data=None, **kwargs):
+    def __init__(self, project=None, user=None, data=None, **kwargs):
+        if not isinstance(data, QueryDict) and data is not None:
+            data = to_querydict(data, mutable=True)
+
         self.initTime = time.time()
         self.data = data
         self.output = data.get('output', 'json')
-        self.project = project
+        self.kwargs = kwargs
+
+        self.project = project = Project.objects.get(id=project) if isinstance(project, int) else project
+        self.user = User.objects.get(id=user) if isinstance(user, int) else user
 
         if self.form:
 
@@ -90,8 +105,20 @@ class WebScript(object):
     def getActions(self):
         for ws in api.webscripts.actionScripts:
             if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.data.get('query')):
-                yield ws.__name__, ws.name 
+                yield ws.__name__, ws.name
 
+    def delay(self):
+        return webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
+
+    def run(self):
+        raise NotImplementedError()
+
+    def get_result(self, result):
+        # Webscripts return an HttpResponse object, which we need te contents of
+        return result.content
+
+    def get_response(self, result):
+        return result
 
     def outputJsonHtml(self, scriptoutput):
         actions = self.getActions()

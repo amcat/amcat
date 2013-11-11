@@ -20,11 +20,12 @@
 from amcat.tools.table import tableoutput
 from amcat.tools.table import table3
 from amcat.scripts import script, types
-import json
 import amcat.scripts.forms
 from amcat.models.medium import Medium
 import datetime
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
+
+import simplejson as json
 
 def encode_json(obj):
     """ also encode Django objects to Json, preferebly by id-name""" 

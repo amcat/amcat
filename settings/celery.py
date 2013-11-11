@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -18,14 +17,5 @@ from __future__ import absolute_import
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from .base import *
-from .menu import *
-from .misc import *
-from .elastic import *
-from .celery import *
-
-try:
-    from .private import *
-except ImportError:
-    pass
-
+import djcelery
+djcelery.setup_loader()

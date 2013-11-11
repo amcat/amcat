@@ -38,15 +38,12 @@ class TestTask(amcattest.PolicyTestCase):
         task = self._get_task()
         task_model = Task.objects.create(uuid=task.id, task_name=task.task_name, class_name=":)")
         self.assertEqual(task.id, task_model.uuid)
-        self.assertEqual(task.id, task_model.get_result().id)
-        self.assertEqual(task.task_name, task_model.get_result().task_name)
-        self.assertEqual(task, task_model.get_result())
+        self.assertEqual(task.id, task_model.get_async_result().id)
+        self.assertEqual(task.task_name, task_model.get_async_result().task_name)
+        self.assertEqual(task, task_model.get_async_result())
 
     def test_get_class(self):
         from amcat.scripts.script import Script
         task = Task.objects.create(uuid="bar", task_name="foo", class_name="amcat.tests.test_task._TestTaskScript")
         self.assertEqual(_TestTaskScript.__name__, task.get_class().__name__)
 
-    amcattest.skip_TODO("Not yet implemented!")
-    def get_url(self):
-        pass

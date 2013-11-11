@@ -38,6 +38,7 @@ from api.rest.resources.token import TokenResource, AnalysedArticleListResource
 from api.rest.resources.codingrule import CodingRuleResource
 from api.rest.resources.search import SearchResource
 from api.rest.resources.aggregate import AggregateResource
+from api.rest.resources.task import TaskResource, TaskResultResource
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from rest_framework.reverse import reverse
@@ -53,8 +54,7 @@ MODELS = ['Article', 'AmCAT',
           'Plugin', 'Scraper', 'PluginType',
           "RuleSet",
           "Word", "Lemma",
-          "CodingRuleAction"
-          ]
+          "CodingRuleAction"]
 
 # Automatically generate resources for these models
 for modelname in MODELS:

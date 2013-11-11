@@ -16,6 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import json
+from amcat.models import Task
+from amcat.tools.djangotoolkit import from_querydict
 
 from api import webscripts
 from api.webscripts.webscript import showErrorMsg
@@ -34,15 +37,27 @@ def index(request, webscriptName):
 
 
     project = Project.objects.only("id").get(id=request.GET["project"])
+    user = request.user
+
     data = (request.POST if request.method == "POST" else request.GET).copy()
     data['projects'] = project.id
 
     try:
         try:
-            ws = webscriptClass(project=project, data=data)
+            called_with = dict(user=user.id, project=project.id, data=from_querydict(data))
+            ws = webscriptClass(**called_with)
         except TypeError:
-            ws = webscriptClass(data=data)
-        return ws.run()
+            called_with = dict(data=from_querydict(data))
+            ws = webscriptClass(**called_with)
+        if "delay" in request.GET:
+            task = ws.delay()
+            Task.objects.create(
+                task_name=task.task_name, uuid=task.task_id, called_with=called_with, project=project,
+                class_name=".".join((ws.__class__.__module__, ws.__class__.__name__)), user=user
+            )
+            return HttpResponse(json.dumps({"task_uuid" : task.task_id}), content_type="application/json")
+        else:
+            return ws.run()
     except InvalidFormException, e:
         log.exception('Invalid form for Webscript: %s' % webscriptName)
         return showErrorMsg('Invalid form', 'json', fields=e.getErrorDict())
