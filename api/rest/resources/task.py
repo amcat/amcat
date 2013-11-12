@@ -78,3 +78,6 @@ def single_task_result(request, task_id, uuid=False):
         return copy(task.get_response())
     except TaskPending:
         return HttpResponse(status=404)
+    except Exception, e:
+        error_msg = "{e.__class__.__name__} : {e}".format(**locals())
+        return HttpResponse(content=error_msg, status=501)

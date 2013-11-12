@@ -54,7 +54,10 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
             } else {
                 $.ajax({
                     url : "/api/v4/taskresult/" + task_uuid,
-                    success : callback
+                    success : callback,
+		    error : function(qXHR, textStatus, error){
+			amcat.selection.setMessage('Error: ' + qXHR.responseText);
+		    }
                 });
             }
         },
