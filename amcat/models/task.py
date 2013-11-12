@@ -32,6 +32,9 @@ from amcat.tools import classtools
 from amcat.tools.model import AmcatModel
 from amcat.forms.fields import JSONField
 
+class TaskPending(Exception):
+    pass
+
 class Task(AmcatModel):
     """
     A Task represents a Script (see: amcat.scripts.Script) which was ran asynchronously
@@ -50,21 +53,28 @@ class Task(AmcatModel):
     # A Task is persistent if it important to keep it around (example: saved queries)
     persistent = models.BooleanField(default=False)
 
-    def _assert_ready(self):
-        assert(self.get_async_result().ready())
+    def _get_raw_result(self):
+        """
+        Get the 'raw' result of this task.
+        Will raise a TaskPending if the task is still pending, and will re-raise
+        the original error if the task failed.
+        """
+        r = self.get_async_result()
+        if not r.ready():
+            raise TaskPending()
+        if r.failed():
+            raise r.result
+        return r.result
 
     def get_async_result(self):
         """Returns Celery AsyncResult object belonging to this Task."""
         return AsyncResult(id=self.uuid, task_name=self.task_name)
 
     def get_result(self):
-        """Get """
-        self._assert_ready()
-        return self.get_object().get_result(self.get_async_result().result)
+        return self.get_object().get_result(self._get_raw_result())
 
     def get_response(self):
-        self._assert_ready()
-        return self.get_object().get_response(self.get_async_result().result)
+        return self.get_object().get_response(self._get_raw_result())
 
     def get_class(self):
         return classtools.import_attribute(self.class_name)

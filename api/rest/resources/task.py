@@ -18,7 +18,7 @@
 ###########################################################################
 from rest_framework import serializers
 from rest_framework.decorators import api_view
-from amcat.models import Task
+from amcat.models.task import Task, TaskPending
 from copy import copy
 from django.http import HttpResponse
 
@@ -76,5 +76,5 @@ def single_task_result(request, task_id, uuid=False):
 
     try:
         return copy(task.get_response())
-    except AssertionError:
+    except TaskPending:
         return HttpResponse(status=404)
