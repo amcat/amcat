@@ -42,6 +42,17 @@ from amcat.tools.table.table3 import ObjectTable, SortedTable
 def to_querydict(d, mutable=False):
     """Convert a normal dictionary to a querydict. The dictionary can have lists as values,
     which are interpreted as multiple arguments for one url-parameter."""
+    # querydict cannot handle unicode, so utf-8 encode unicode content first
+    # TODO: this stinks
+    def encode(s):
+        if isinstance(s, list):
+            return map(encode, s)
+        elif isinstance(s, unicode):
+            return s.encode("utf-8")
+        else:
+            return s
+            
+    d = {k : encode(v) for (k,v) in d.iteritems()}
     return QueryDict(urllib.urlencode(d, True), mutable=mutable)
 
 def from_querydict(d):
