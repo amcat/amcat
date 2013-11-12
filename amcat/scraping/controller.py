@@ -26,55 +26,147 @@ from celery import group
 import logging;log = logging.getLogger(__name__)
 import os
 
-from amcat.scraping.document import Document
+from amcat.scraping.document import Document, _ARTICLE_PROPS
 from amcat.models.article import Article
-from amcat.tasks import run_scraper, postprocess, LockHack
+from amcat.models.medium import Medium
+from amcat.tasks import run_scraper, LockHack
 from amcat.tools.api import AmcatAPI
-
 
 class Controller(object):
     def run(self, scrapers):
         if not hasattr(scrapers, '__iter__'):
             scrapers = [scrapers]
 
-        for scraper, articles in self._scrape(scrapers):
+        for scraper, manager in self._scrape(scrapers):
             log.info("{scraper.__class__.__name__} at date {d} returned {n} articles".format(
-                    n = len(articles),
+                    n = manager.n_articles(),
                     d = 'date' in scraper.options.keys() and scraper.options['date'],
                     **locals()))
-            self._save(scraper, articles)
-            yield (scraper,articles)
+            
+            self._save(scraper, manager)
+            yield (scraper, manager.getmodels())
 
     def _scrape(self, scrapers):
         """
         Run the given scrapers using the control logic of this controller
         @return: a list of tuples: (scraper, [articles]) per scraper"""
-        articles = []
         for scraper in scrapers:
+            manager = ArticleManager()
             for unit in scraper._get_units():
-                if type(unit) == str:
-                    unit = unit.decode('utf-8').encode('utf-8')
-                elif type(unit) == unicode:
-                    unit = unit.encode('utf-8')
-                log.info("received unit: {unit}".format(**locals()))
-                [articles.append(article) for article in scraper._scrape_unit(unit)]
-            articles = Controller.postprocess(articles)
-            yield (scraper, articles)
+                manager.add_articles(scraper._scrape_unit(unit))
+            yield (scraper, manager)
+            
+    def _save(self, scraper, manager):
+        """Saves the articles"""
+        Article.ordered_save(manager.getmodels())
 
-    @classmethod
-    def postprocess(cls, articles):
-        """takes whatever comes out of _scrape_unit and turns it into a list of article dictionaries"""
+class APIController(Controller):
+    """Saves the articles to the API"""
+    def _save(self, scraper, manager):
+        #TODO: to access the API we need auth data, 
+        #this should be provided by run_cli and the views that run controllers.
+        #for now, we will use env variables.
+        auth = {'host' : os.environ.get('AMCAT_API_HOST'),
+                'user' : os.environ.get('AMCAT_API_USER'),
+                'password' : os.environ.get('AMCAT_API_PASSWORD')}
+        api = AmcatAPI(**auth)
+        api.create_articles(
+            scraper.articleset.project.id,
+            scraper.articleset.id,
+            json_data = manager.getdicts())
+            
+class ThreadedController(Controller):
+    def _scrape(self, scrapers):
+        #remove thread locks
+        for i, scraper in enumerate(scrapers):
+            if hasattr(scraper, 'opener'):
+                scraper.opener.cookiejar._cookies_lock = LockHack()
+        #generate subtask list, extra check on locks
+        subtasks = []
+        log.info("Creating subtasks for scrapers...")
+        for scraper in scrapers:
+            log.debug("checking pickle for {scraper}".format(**locals()))
+            try:
+                pickle.dumps(scraper)
+            except (pickle.PicklingError, TypeError):
+                log.warning("Pickling {scraper} failed".format(**locals()))
+            else:
+                d = 'date' in scraper.options.keys() and scraper.options['date']
+                log.debug("added {scraper.__class__.__name__} for date {d} to subtasks".format(**locals()))
+                scraper._initialize()
+                subtasks.append(run_scraper.s(scraper))
+                         
+        #run all scrapers
+        task = group(subtasks)
+        result = task.apply_async()
+        log.info("Scrapers are now running in celery")
+
+        #harvest result
+        for scraper, output in result.iterate():
+            if isinstance(output, Exception):
+                log.exception("{scraper} failed".format(**locals()))
+                continue
+            articles = [inner for outer in output for inner in outer] #[[a,b][c,d]] -> [a,b,c,d]
+            manager = ArticleManager(articles, scraper = scraper)
+            log.info("{scraper.__class__.__name__} returned {n} articles".format(
+                    n = manager.n_articles(), **locals()))
+            yield (scraper, manager)
+                         
+class ThreadedAPIController(ThreadedController, APIController):
+    """Controller that runs scrapers asynchronously and saves them via the API"""
+
+class ArticleManager(object):
+    """class to manage the overly complex output of scrapers
+    takes articles of various classes and types, provides convertion and postprocessing
+    also handles parent-child relationships"""
+    _articles = []
+
+    def __init__(self, articles = [], scraper = None):
+        self._articles = self.add_articles(articles, scraper = scraper)
+
+    def __iter__(self):
+        for article in self._articles:
+            yield article
+
+    def add_articles(self, articles, scraper = None):
+        """articles: a list of unprocessed/processed article/document objects"""
         for a in articles:
             if hasattr(a,'props') and hasattr(a.props,'parent'):
                 a.parent = a.props.parent
-                del a.props.parent
+                del a.props.parent #:(            
 
         parents = [a for a in articles if not(hasattr(a,'parent'))]
-        return [cls._process(p, articles) for p in parents]
+        articles = [self._postprocess(p, articles, scraper) for p in parents]
+        self._articles.extend(articles)
+        return articles
 
+    def getdicts(self):
+        """Returns a list of dictionaries that represent articles
+        the 'children' attribute is a list of more articles"""
+        return self._articles
 
-    @classmethod
-    def _process(cls, article, articles):
+    def getmodels(self):
+        """Returns a list of (unsaved) article models"""
+        #line up all dicts
+        articles = self._flatten_articles()
+        #which dict corresponds to which model?
+        convertdict = [(a, Article(**a)) for a in articles.values()]
+        toreturn = []
+        #point parent attributes at models
+        for _dict, model in convertdict:
+            if 'parent' in _dict.keys():
+                model.parent = articles[_dict['parent']]
+            toreturn.append(model)
+        return toreturn
+
+    def getjson(self):
+        """Returns articles in JSON format"""
+        return json.dumps(self._articles)
+
+    def n_articles(self):
+        return len(self._flatten_articles().keys())
+
+    def _postprocess(self, article, articles, scraper = None):
         """process one article and it's children"""
         artdict = {'metastring' : {}, 'children' : []}
 
@@ -92,61 +184,33 @@ class Controller(object):
                 if hasattr(article, prop):
                     artdict[prop] = getattr(article, prop)
 
+        elif isinstance(article, dict):
+            artdict = article
+
         for child in articles:
-            if child.parent == article:
-                artdict['children'].append(cls._process(child))
+            if hasattr(child, 'parent') and child.parent == article:
+                artdict['children'].append(self._postprocess(child))
+
+        if scraper:
+            artdict['medium'] = Medium.get_or_create(scraper.medium_name)
+            artdict['project'] = scraper.options['project']
 
         return artdict
 
-    def _save(self, scraper, articles):
-        """This controller's implementation of saving articles. Defaults to saving to the API"""
-        #TODO: to access the API we need auth data, 
-        #this should be provided by run_cli and the views that run controllers.
-        #for now, we will use env variables.
-        auth = {'host' : os.environ.get('AMCAT_API_HOST'),
-                'user' : os.environ.get('AMCAT_API_USER'),
-                'password' : os.environ.get('AMCAT_API_PASSWORD')}
-
-        api = AmcatAPI(*auth)
-        api.create_articles(scraper.project, scraper.articleset, json_data = json.dumps(articles))
+    def _flatten_articles(self):
+        """Returns a dict with articles pointing to their parents, rather than being contained by them"""
+        toprocess = self._articles[:]
+        toreturn = {}
+        i = 0
+        while toprocess:
+            i += 1
+            parent = toprocess.pop(0)
+            for child in parent['children']:
+                child['parent'] = i
+                toprocess.append(child)
+            toreturn[i] = parent
+        return toreturn
             
-class ThreadedController(Controller):
-    def _scrape(self, scrapers):
-        #remove thread locks
-        for i, scraper in enumerate(scrapers):
-            if hasattr(scraper, 'opener'):
-                scraper.opener.cookiejar._cookies_lock = LockHack()
-                
-        #generate subtask list, extra check on locks
-        subtasks = []
-        log.info("Creating subtasks for scrapers...")
-        for scraper in scrapers:
-            log.debug("checking pickle for {scraper}".format(**locals()))
-            try:
-                pickle.dumps(scraper)
-            except (pickle.PicklingError, TypeError):
-                log.warning("Pickling {scraper} failed".format(**locals()))
-            else:
-                d = 'date' in scraper.options.keys() and scraper.options['date']
-                log.debug("added {scraper.__class__.__name__} for date {d} to subtasks".format(**locals()))
-                subtasks.append(run_scraper.s(scraper))
-                         
-        #run all scrapers
-        task = group(subtasks)
-        result = task.apply_async()
-
-        log.info("Scrapers are now running in celery")
-
-        #harvest result, run processing task for each set of articles, yield
-        for scraper, output in result.iterate():
-            if isinstance(output, Exception):
-                log.exception("{scraper} failed".format(**locals()))
-                continue
-            articles = [inner for outer in output for inner in outer] #[[a,b][c,d]] -> [a,b,c,d]
-            log.info("{scraper.__class__.__name__} returned {n} articles".format(n = len(articles), **locals()))
-            articles = ~postprocess.s(articles)
-            yield (scraper,articles)
-                         
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -154,7 +218,6 @@ class ThreadedController(Controller):
 
 from amcat.tools import amcattest, amcatlogging
 from amcat.scraping.scraper import Scraper
-from amcat.models.article import Article
 from datetime import date
 
 class _TestScraper(Scraper):
@@ -179,7 +242,7 @@ class _TestScraper(Scraper):
         child = Article(headline = "re: " + unit, date = date.today(), parent = parent)
         yield child
         yield parent
-                         
+
 class TestControllers(amcattest.PolicyTestCase):
 
     def test_scraper(self, c = Controller()):

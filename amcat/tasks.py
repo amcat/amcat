@@ -23,6 +23,7 @@ import time, logging, types
 from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
 import logging;log.setLevel(logging.INFO)
 from lxml import html, etree
+from html2text import html2text
 
 from amcat.models.article import Article
 from amcat.models.scraper import Scraper
@@ -39,37 +40,21 @@ class LockHack(object):
     def acquire(self):pass
     def release(self):pass
 
-#to enable older scrapers
-def html_off(unit):
-    """Turns any HTMLElement objects into text to enable serialisation"""
+#since html elements are not serializable, we will convert them early
+def convert(unit):
     t = type(unit)
-    if t is str:
-        unit = unit.strip()
+    if isinstance(unit, Document):
+        for prop, value in unit.getprops().items():
+            value = convert(value)
+            setattr(unit.props, prop, value)
     elif t in (html.HtmlElement, etree._Element):
-        unit = html.tostring(unit)
+        for js in unit.cssselect("script"):
+            js.drop_tree()
+        unit = html2text(html.tostring(unit)).strip() 
     elif t in (list, tuple, types.GeneratorType):
-        unit = map(html_off, unit)
-    elif isinstance(unit, Document):
-        if hasattr(unit, 'doc') and unit.doc:
-            unit.doc = html.tostring(unit.doc)
-        unit.typedict = {}
-        for k,v in unit.get_props().items():
-            unit.typedict[k] = type(v)
-            setattr(unit.props, k, html_off(v))
-    return (t,unit)
-
-def html_on(unit):
-    """Turns strings back to HTMLElements to be parsed"""
-    t,unit = unit
-    if t in (html.HtmlElement, etree._Element):
-        unit = html.fromstring(unit)
-    elif t in (list, tuple, types.GeneratorType):
-        return map(html_on, unit)
-    elif isinstance(unit, Document):
-        if hasattr(unit, 'doc') and unit.doc:
-            unit.doc = html.fromstring(unit.doc)
-        for k,v in unit.get_props().items():
-            setattr(unit.props, k, html_on(v))
+        unit = tuple(unit)
+        if all([type(e) in (html.HtmlElement, etree._Element) for e in unit]):
+            unit = "\n\n".join(map(convert, unit))
     return unit
 
 @task()
@@ -79,7 +64,7 @@ def run_scraper(scraper):
         scraper.opener.cookiejar._cookies_lock = LockHack()
     log.info("Running {scraper.__class__.__name__}".format(**locals()))
     try:
-        tasks = [scrape_unit.s(scraper, html_off(unit)) for unit in scraper._get_units()]
+        tasks = [scrape_unit.s(scraper, convert(unit)) for unit in scraper._get_units()]
     except Exception as e:
         return (scraper, e)
     result = group(tasks).delay()
@@ -87,11 +72,6 @@ def run_scraper(scraper):
     
 @task()
 def scrape_unit(scraper, unit):
-    unit = html_on(unit)
     log.info("Recieved unit: {unit}".format(**locals()))
     articles = list(scraper._scrape_unit(unit))
-    return articles
-
-@task()
-def postprocess(articles):
-    return Controller.postprocess(articles)
+    return [convert(a) for a in articles]

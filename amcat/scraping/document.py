@@ -16,7 +16,8 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-"""Document objects returned by various scraping-functions."""
+"""Document objects returned by various scraping-functions.
+DEPRECATED: Please steer clear of using this. Use dicts or django models instead."""
 
 from amcat.tools.toolkit import deprecated
 from amcat.scraping.toolkit import dictionary
@@ -41,7 +42,7 @@ import logging; log = logging.getLogger(__name__)
 
 _ARTICLE_PROPS = [
     'date', 'section', 'pagenr', 'headline', 'byline', 'length',
-    'url', 'externalid', 'text', 'parent', 'medium', 'author'
+    'url', 'externalid', 'text', 'parent', 'medium', 'author',
 ]
 class Properties(object):
     pass
