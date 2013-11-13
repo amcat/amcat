@@ -277,6 +277,9 @@ class Datatable(object):
         if isinstance(value, Model):
             return self._filter(selector + '__%s' % value._meta.pk.attname, value.pk, check_can_filter=check_can_filter)
 
+        if isinstance(value, unicode):
+            value = value.encode('utf-8')
+            
         return urlencode({selector : value})
 
     def filter(self, **filters):
