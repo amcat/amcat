@@ -6,6 +6,7 @@ sh
 cssselect
 elasticsearch
 pyparsing
+colorlog
 
 django
 djangorestframework==2.3.8

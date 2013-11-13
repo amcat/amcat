@@ -85,7 +85,6 @@ class HighlightField(CharField):
         source = self.source or field_name
         target = {'lead' : 'text', 'headline' : 'headline'}[source]
         result = getattr(obj, "highlight", {}).get(target)
-        print("!!!!", source, target, result, obj)
         if result:
             return " ... ".join(result)
         else:
