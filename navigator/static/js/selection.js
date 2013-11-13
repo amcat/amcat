@@ -42,6 +42,8 @@ amcat.selection.hideMessage = function () {
     $('#select-message').hide();
 };
 
+amcat.selection.current_polls = {};
+
 amcat.selection.poll = function(task_uuid, callback, timeout){
     $.ajax({
         url : "/api/v4/task?uuid=" + task_uuid,
@@ -49,20 +51,22 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
         success : function(data){
             task = data["results"][0];
             if (!task["ready"]){
-                var new_timeout = (timeout >= 2000) ? timeout : timeout + 500;
+                var new_timeout = (timeout >= 3000) ? timeout : timeout + 500;
                 window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
+            } else if (task["ready"] && task["status"] != "SUCCESS"){
+                amcat.selection.setMessage("Task " + task_uuid + " processed by worker, but "  + task["status"]);
             } else {
                 $.ajax({
                     url : "/api/v4/taskresult/" + task_uuid,
                     success : callback,
-		    error : function(qXHR){
-			amcat.selection.setMessage('Error: ' + qXHR.responseText);
-		    }
+                    error : function(qXHR){
+                        amcat.selection.setMessage('Error: ' + qXHR.responseText);
+                    }
                 });
             }
         },
         error : function() {
-            amcat.selection.poll(task_uuid, callback, timeout);
+            amcat.selection.setMessage('Error: polling task ' + task_uuid + ' failed.');
         }
     });
 };
@@ -74,7 +78,7 @@ amcat.selection.callWebscript = function(name, data, callBack){
       type: 'POST',
       url: url,
       success: function(data){
-          amcat.selection.poll(data["task_uuid"], callBack, 0);
+          amcat.selection.poll(data["task_uuid"], callBack, 200);
       },
       error: function(jqXHR, textStatus){
         console.log('error form data', textStatus);
