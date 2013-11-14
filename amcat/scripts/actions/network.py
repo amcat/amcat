@@ -41,18 +41,19 @@ class Network(Script):
     Example network (can be pasted into the 'network' input below):
 
     subject,object,weight,quality,subgraph
-    john,mary,3,-1
+    john,mary,3,-1,dislikes
     mary,pete
-    pete,john,,0.5
-    john,mary,3,-1,pete
-    mary,john,5,.25,pete
+    pete,john,,0.5,thinks is OK
+    john,mary,3,-1,dislikes,pete
+    mary,john,5,.25,likes,pete
     """
     
     class options_form(forms.Form):
         network = forms.CharField(widget=forms.Textarea)
         normalize = forms.BooleanField(initial=False, required=False)
-        edgelabel = forms.BooleanField(label="Include quality in label", initial=False, required=False)
-        green = forms.BooleanField(initial=False, required=False)
+        weightlabel = forms.BooleanField(label="Include quality in label", initial=False, required=False)
+        predlabel = forms.BooleanField(label="Include predicate in label", initial=False, required=False)
+        blue = forms.BooleanField(initial=False, required=False)
         bw = forms.BooleanField(label="Black & White", initial=False, required=False)
         delimiter = forms.ChoiceField(choices=[("","autodetect"), (";",";"), (",",","), ("\t","tab")],
                                       required=False)
@@ -67,7 +68,7 @@ class Network(Script):
     def get_graph(self, r):
         g = dot.Graph()
         self.add_edges(r, g)
-        if self.options['green']:
+        if not self.options['blue']:
             g.theme.green = True
         elif self.options['bw']:
             g.theme = dot.BWDotTheme()
@@ -90,17 +91,28 @@ class Network(Script):
 
             if len(line) > 3 and line[3].strip():
                 kargs["sign"] = float(line[3].replace(",","."))
-                
-            if len(line) > 4 and line[4].strip():
-                kargs["graph"] = line[4]
 
-            if self.options['edgelabel'] and kargs.get("sign"):
-                kargs["label"] = "%+1.2f" % kargs["sign"]
+            if len(line) > 4 and line[4].strip():
+                pred = line[4]
+            else:
+                pred = None
+                
+            if len(line) > 5 and line[5].strip():
+                kargs["graph"] = line[5]
+
+            lbl = []
+            if self.options['predlabel'] and pred:
+                lbl.append(pred)
+            if self.options['weightlabel'] and kargs.get("sign"):
+                lbl.append( "%+1.2f" % kargs["sign"])
+            if lbl:
+                kargs['label'] = "\\n".join(lbl)
                 
                 
                 
             e = graph.addEdge(su, obj, **kargs)
             e.graph = kargs.get('graph', '')
+            e.pred = pred
             edges.append(e)
 
         if self.options['normalize']:
@@ -127,6 +139,7 @@ class Network(Script):
         t.addColumn(lambda e:e.obj.id, "object")
         t.addColumn(lambda e:fmt(e.weight), "weight")
         t.addColumn(lambda e:fmt(e.sign, fmt="%+1.2f"), "quality")
+        t.addColumn(lambda e:e.pred or "", "predicate")
         t.addColumn(lambda e:e.graph, "subgraph")
 
         html += tableoutput.table2html(t, printRowNames=False)
