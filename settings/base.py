@@ -233,7 +233,6 @@ if not DEBUG:
     EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_PASSWORD", '')
     EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_TLS", 'Y') in ("1","Y", "ON")
 
-    logger = logging.getLogger()
 else:
     ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -242,7 +241,7 @@ else:
 
 import os
 
-LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'INFO' if DEBUG else 'WARNING')
+LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
                  
 LOGGING = {
     'version': 1,
@@ -310,6 +309,6 @@ if 'DJANGO_LOG_FILE' in os.environ:
         'filename': LOG_FILE,
         'maxBytes': 50000,
         'backupCount': 2,
-        'formatter': 'standard',
+        'formatter': 'color',
         }
     LOGGING['loggers']['']['handlers'] += ['logfile']
