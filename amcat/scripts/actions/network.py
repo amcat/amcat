@@ -35,11 +35,12 @@ from django.http import HttpResponse
 class Network(Script):
     """
     Make a network diagram from a list (table) of edges.
-    The 'network' should consist of a csv-like string, without headers and
-    delimited by comma, semicolon, or tab.
+    The 'network' should consist of a csv-like string delimited by comma, semicolon, or tab.
+    A header is optional and will be ignored. If given, it must name the first columns 'subject' and 'object'
     Columns are subject and object (obligatory) and optional weight, quality, and subgraph (source).
-    Example network:
+    Example network (can be pasted into the 'network' input below):
 
+    subject,object,weight,quality,subgraph
     john,mary,3,-1
     mary,pete
     pete,john,,0.5
@@ -50,19 +51,18 @@ class Network(Script):
     class options_form(forms.Form):
         network = forms.CharField(widget=forms.Textarea)
         normalize = forms.BooleanField(initial=False, required=False)
+        edgelabel = forms.BooleanField(label="Include quality in label", initial=False, required=False)
         green = forms.BooleanField(initial=False, required=False)
         bw = forms.BooleanField(label="Black & White", initial=False, required=False)
-        
+        delimiter = forms.ChoiceField(choices=[("","autodetect"), (";",";"), (",",","), ("\t","tab")],
+                                      required=False)
     def read_network(self, network):
         lines = network.split("\n")
-        try:
-            dialect = csv.Sniffer().sniff(network)
-        except:
-            for delimiter in ",;\t":
-                if delimiter in network:
-                    return csv.reader(lines, delimiter=delimiter)
-        else:
-            return csv.reader(network.split("\n"), dialect=dialect)
+        delimiter = self.options.get('delimiter', None)
+        if not delimiter:
+            delimiters = {d : network.count(d) for d in ",;\t"}
+            delimiter = sorted(delimiters, key=delimiters.get)[-1]
+        return csv.reader(lines, delimiter=delimiter)
 
     def get_graph(self, r):
         g = dot.Graph()
@@ -86,14 +86,19 @@ class Network(Script):
             possible_header = False
             kargs = {}
             if len(line) > 2 and line[2].strip():
-                kargs["weight"] = float(line[2])
+                kargs["weight"] = float(line[2].replace(",","."))
 
             if len(line) > 3 and line[3].strip():
-                kargs["sign"] = float(line[3])
+                kargs["sign"] = float(line[3].replace(",","."))
                 
             if len(line) > 4 and line[4].strip():
                 kargs["graph"] = line[4]
 
+            if self.options['edgelabel'] and kargs.get("sign"):
+                kargs["label"] = "%+1.2f" % kargs["sign"]
+                
+                
+                
             e = graph.addEdge(su, obj, **kargs)
             e.graph = kargs.get('graph', '')
             edges.append(e)
