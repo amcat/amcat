@@ -67,12 +67,13 @@ def handler(request, action):
                 log.exception("Error on running action: {script.__class__.__name__}".format(**locals()))
                 error = {
                     'error-class' : e.__class__.__name__,
-                    'error-message' : str(e),
+                     'error-message' : str(e),
                     'error-traceback' : traceback.format_exc()
                     }
                 return HttpResponse(json.dumps(error),
                                     mimetype='application/json', status=500)
         else:
+            log.error("Error on form validation: \nPOST:{request.POST}\nform.data:{form.data}\nerrors:{form.errors}".format(**locals()))
             return HttpResponse(json.dumps(form.errors),
                                 mimetype='application/json', status=400)
             
