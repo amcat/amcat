@@ -12,6 +12,11 @@
 </pre>
 <hr/>
 {%endif%}
+{% if help_text %}
+<pre>
+{{ help_text }}
+</pre>
+{% endif %}
 <form action="" method="POST">
 <table>
 {{form.as_table}}

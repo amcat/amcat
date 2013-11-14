@@ -29,6 +29,7 @@ import logging; log = logging.getLogger(__name__)
 import json
 import traceback
 
+from amcat.scripts.actions.network import Network
 from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
 from amcat.scripts.actions.query import Query
 from amcat.scripts.actions.get_queries import GetQueries
@@ -50,16 +51,20 @@ def handler(request, action):
         form = script.options_form(request.POST)
         if form.is_valid():
             try:
-                result = script(request.POST).run(None)
-                converter = scriptmanager.findScript(script.output_type, output)
-                if converter:
-                    result = converter().run(result)
-                    mimetype = 'text/csv'
+                if hasattr(script, 'get_response'):
+                    return script(request.POST).get_response()
                 else:
-                    result =json.dumps(result)
-                    mimetype = 'application/json'
-                return HttpResponse(result, status=201, mimetype=mimetype)
+                    result = script(request.POST).run(None)
+                    converter = scriptmanager.findScript(script.output_type, output)
+                    if converter:
+                        result = converter().run(result)
+                        mimetype = 'text/csv'
+                    else:
+                        result =json.dumps(result)
+                        mimetype = 'application/json'
+                    return HttpResponse(result, status=201, mimetype=mimetype)
             except Exception as e:
+                log.exception("Error on running action: {script.__class__.__name__}".format(**locals()))
                 error = {
                     'error-class' : e.__class__.__name__,
                     'error-message' : str(e),
@@ -73,5 +78,6 @@ def handler(request, action):
             
     else:
         form = script.options_form
+        help_text = script.__doc__
         status = 200
         return render(request, "api/action.html", locals())
