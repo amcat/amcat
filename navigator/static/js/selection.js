@@ -262,8 +262,14 @@ amcat.selection.loadIframe = function(data){ // this is the form submit response
     window.clearTimeout(amcat.selection.loadIframeTimeout);
     
     var json = {}
+    if (typeof data == "string") {
+        json_string = data;
+    } else {
+        json_string = $(this).contents().text();
+    }
+
     try{
-        json = jQuery.parseJSON(data);
+        json = jQuery.parseJSON(json_string);
     } catch(e){
        $('iframe').show().css('width','900px').css('height','600px');
        $('#select-result').html('<div class="error">Received an invalid JSON response</div>');

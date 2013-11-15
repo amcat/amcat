@@ -254,7 +254,7 @@ LOGGING = {
         'DEBUG':    'bold_black',
         'INFO':     'white',
         'WARNING':  'yellow',
-        'ERROR':    'red',
+        'ERROR':    'bold_red',
         'CRITICAL': 'bold_red',
     },
 },
