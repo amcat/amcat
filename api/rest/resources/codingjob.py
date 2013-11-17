@@ -16,18 +16,20 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from amcat.tools.caching import cached
-from amcat.models import CodingJob 
-from amcat.models.coding import coding
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
+from django.db.models import Count
+from rest_framework.viewsets import ModelViewSet
 from rest_framework import serializers
 
+from amcat.tools.caching import cached
+from amcat.models import CodingJob
+from amcat.models.coding import coding
+from amcat.models import ArticleSet
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.resources.amcatresource import DatatablesMixin
 
-from django.db.models import Count
+from api.rest.viewsets import (ProjectViewSetMixin, ROLE_PROJECT_READER,
+                               CannotEditLinkedResource, NotFoundInProject )
 
 STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
 
@@ -53,9 +55,11 @@ class CodingJobSerializer(AmCATModelSerializer):
                 .annotate(n=Count("articleset__articles")).values_list("id", "n"))
 
     def get_n_articles(self, obj):
+        if not obj: return 0
         return self._get_n_articles().get(obj.id, 0)
 
     def get_n_done_jobs(self, obj):
+        if not obj: return 0
         return self._get_n_done_jobs().get(obj.id, 0)
 
     class Meta:
@@ -64,6 +68,16 @@ class CodingJobSerializer(AmCATModelSerializer):
 class CodingJobResource(AmCATResource):
     model = CodingJob
     serializer_class = CodingJobSerializer
+
+
+class CodingJobViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
+    model = CodingJob
+    url = 'projects/(?P<project>[0-9]+)/codingjobs'
+    model_serializer_class = CodingJobSerializer
+
+    def filter_queryset(self, jobs):
+        jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
+        return jobs.filter(project=self.project)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -81,7 +95,6 @@ class TestCodingJobResource(ApiTestCase):
     def _test_caching(self):
         """DISABLED: Queries not registered??"""
         from django.core.urlresolvers import reverse
-        from django.db import connection
 
         cj = amcattest.create_test_job()
         req = self.factory.get(reverse("api-v4-codingjob"))

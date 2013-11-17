@@ -18,23 +18,21 @@
 ###########################################################################
 
 import json
-from django.core.exceptions import ValidationError
+import logging
+
+from rest_framework.viewsets import ModelViewSet
+from django_filters import filters
+
 from amcat.models import Article, ArticleSet, Medium
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.articleset import ArticleSetViewSet
-
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.filters import AmCATFilterSet, InFilter
-from rest_framework.viewsets import ModelViewSet
 from api.rest.resources.amcatresource import DatatablesMixin
-
 from api.rest.viewsets import (ProjectViewSetMixin, ROLE_PROJECT_READER,
                                CannotEditLinkedResource, NotFoundInProject,
                                ProjectSerializer)
 
-from rest_framework import serializers
-from django_filters import filters, filterset
-import logging
 log = logging.getLogger(__name__)
 
 class ArticleMetaFilter(AmCATFilterSet):

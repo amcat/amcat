@@ -17,19 +17,17 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.tools.caching import cached
+from django.db.models import Q
+from rest_framework.viewsets import ModelViewSet
+from rest_framework import serializers
 
 from amcat.models import ArticleSet
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
 from amcat.tools import amcates
-from django.db.models import Q
-
-from rest_framework.viewsets import ModelViewSet
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.viewsets import ProjectViewSetMixin
 
-from rest_framework import serializers
 
 class _NoProjectRequestedError(ValueError): pass
 

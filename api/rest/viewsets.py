@@ -43,7 +43,9 @@ def get_viewsets():
     #TODO: Needs more magic?
     from api.rest.resources.article import ArticleViewSet
     from api.rest.resources.articleset import ArticleSetViewSet
-    return [ArticleViewSet, ArticleSetViewSet]
+    from api.rest.resources.codingjob import CodingJobViewSet
+
+    return [ArticleViewSet, ArticleSetViewSet, CodingJobViewSet]
 
 class CannotEditLinkedResource(exceptions.PermissionDenied):
     default_detail = 'Cannot modify a linked resource, please edit via the owning project'
