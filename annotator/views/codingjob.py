@@ -17,29 +17,23 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import collections
+import json
+import logging
 
 from django.shortcuts import render
+from django.db.models import Q
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 
 from amcat.models.coding import codingtoolkit
 from amcat.models import Code, Coding, CodingJob, CodedArticle
-from amcat.models import Function, CodingSchemaField, CodingSchemaFieldType
+from amcat.models import CodingSchemaField, CodingSchemaFieldType
 from amcat.models import Article, Sentence
-
-from django import forms
-from django.db.models import Q
-from django.http import HttpResponse
-import json
-from django.template.loader import render_to_string
-
 from amcat.scripts.output.datatables import TableToDatatable
-from amcat.scripts.output.json import DictToJson, TableToJson
+from amcat.scripts.output._json import DictToJson
 from amcat.forms import InvalidFormException
-from amcat.tools.djangotoolkit import db_supports_distinct_on
 
-from itertools import chain
-
-import logging; log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 CODEBOOK_TYPE = CodingSchemaFieldType.objects.get(name="Codebook")
 
