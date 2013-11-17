@@ -36,7 +36,6 @@ class Controller(object):
     def run(self, scrapers):
         if not hasattr(scrapers, '__iter__'):
             scrapers = [scrapers]
-
         for scraper, manager in self._scrape(scrapers):
             log.info("{scraper.__class__.__name__} at date {d} returned {n} articles".format(
                     n = manager.n_articles(),
@@ -83,7 +82,7 @@ class ThreadedController(Controller):
                 scraper.opener.cookiejar._cookies_lock = LockHack()
         #generate subtask list, extra check on locks
         subtasks = []
-        log.info("Creating subtasks for scrapers...")
+        log.info("initializing scrapers...")
         for scraper in scrapers:
             log.debug("checking pickle for {scraper}".format(**locals()))
             try:
@@ -91,9 +90,15 @@ class ThreadedController(Controller):
             except (pickle.PicklingError, TypeError):
                 log.warning("Pickling {scraper} failed".format(**locals()))
             else:
-                d = 'date' in scraper.options.keys() and scraper.options['date']
+                d = 'date' in scraper.options.keys() and scraper.options['date']                
                 log.debug("added {scraper.__class__.__name__} for date {d} to subtasks".format(**locals()))
-                scraper._initialize()
+                for x in range(3):
+                    try:
+                        scraper._initialize()
+                    except Exception:
+                        pass
+                    else:
+                        break
                 subtasks.append(run_scraper.s(scraper))
                          
         #run all scrapers

@@ -98,8 +98,9 @@ class Scraper(Script):
         return
         
     def run(self,input=None,deduplicate=False):
-        from amcat.scraping.controller import Controller
-        return Controller(self.articleset).run([self])            
+        from amcat.scraping.controller import ThreadedAPIController
+        c = ThreadedAPIController()
+        return list(c.run(self))
 
     def _get_units(self):
         """
