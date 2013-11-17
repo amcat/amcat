@@ -23,8 +23,6 @@ Convenience functions to extract information about codings
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-from functools import partial
-
 from amcat.models.coding.codingjob import CodingJob
 from amcat.models.coding.coding import Coding, CodingStatus, STATUS_COMPLETE, CodingValue
 from amcat.models.coding.codedarticle import CodedArticle, bulk_create_codedarticles
@@ -42,8 +40,12 @@ def get_table_jobs_per_user(users, **additionalFilters):
 
     Columns: ids, jobname, coder, issuer, issuedate, #articles, #completed, #inprogress
     """
-    try: iter(users)
-    except TypeError: users = [users]
+    try:
+        # Workaround: iter(x) needs to be evaluated. while LazyObjects yield only one
+        # element even though iter() is called.
+        list(iter(users))
+    except TypeError:
+        users = [users]
     jobs = list(CodingJob.objects.filter(coder__in=users, **additionalFilters).order_by("-id"))
     result = ObjectTable(rows=jobs)
     result.addColumn("id")
