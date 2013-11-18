@@ -18,7 +18,7 @@
 ###########################################################################
 
 """
-Module for controlling scrapers
+Module for running scrapers
 """
 
 import cPickle as pickle
@@ -29,7 +29,7 @@ import os
 from amcat.scraping.document import Document, _ARTICLE_PROPS
 from amcat.models.article import Article
 from amcat.models.medium import Medium
-from amcat.tasks import run_scraper, LockHack
+from amcat.tasks import _scrape_task, _scrape_unit_task, LockHack, _convert
 from amcat.tools.api import AmcatAPI
 
 class Controller(object):
@@ -41,14 +41,13 @@ class Controller(object):
                     n = manager.n_articles(),
                     d = 'date' in scraper.options.keys() and scraper.options['date'],
                     **locals()))
-            
             self._save(scraper, manager)
             yield (scraper, manager.getmodels())
 
     def _scrape(self, scrapers):
         """
         Run the given scrapers using the control logic of this controller
-        @return: a list of tuples: (scraper, [articles]) per scraper"""
+        @return: a list of tuples: (scraper, manager) per scraper"""
         for scraper in scrapers:
             manager = ArticleManager()
             for unit in scraper._get_units():
@@ -58,6 +57,7 @@ class Controller(object):
     def _save(self, scraper, manager):
         """Saves the articles"""
         Article.ordered_save(manager.getmodels())
+
 
 class APIController(Controller):
     """Saves the articles to the API"""
@@ -74,51 +74,51 @@ class APIController(Controller):
             scraper.articleset.id,
             json_data = manager.getdicts())
             
+
 class ThreadedController(Controller):
-    def _scrape(self, scrapers):
-        #remove thread locks
-        for i, scraper in enumerate(scrapers):
+    def run(self, scrapers):
+        """_scrape and _scrape_unit are called from subtasks"""
+        if not hasattr(scrapers, '__iter__'):
+            scrapers = [scrapers]
+        for scraper in self._preparescrapers(scrapers):
+            # Calls _scrape
+            _scrape_task.apply_async((self, scraper))
+
+    def _scrape(self, scraper):
+        scraper._initialize()
+        log.info("Running {scraper.__class__.__name__}".format(**locals()))
+        try:
+            tasks = [_scrape_unit_task.s(self, scraper, _convert(unit)) for unit in scraper._get_units()]
+        except Exception as e:
+            log.exception("get_units for {scraper.__class__.__name__} failed")
+        # Calls _scrape_unit for each unit
+        group(tasks).delay()
+
+    def _scrape_unit(self, scraper, unit):
+        log.info("Recieved {unit} from {scraper}".format(**locals()))
+        articles = list(scraper._scrape_unit(unit))
+        manager = ArticleManager(articles)
+        self._save(scraper, manager)
+
+    def _preparescrapers(self, scrapers):
+        """
+        Remove common lock,
+        Check for serializability.
+        """
+        for scraper in scrapers:
             if hasattr(scraper, 'opener'):
                 scraper.opener.cookiejar._cookies_lock = LockHack()
-        #generate subtask list, extra check on locks
-        subtasks = []
-        log.info("initializing scrapers...")
-        for scraper in scrapers:
-            log.debug("checking pickle for {scraper}".format(**locals()))
             try:
                 pickle.dumps(scraper)
             except (pickle.PicklingError, TypeError):
                 log.warning("Pickling {scraper} failed".format(**locals()))
             else:
-                d = 'date' in scraper.options.keys() and scraper.options['date']                
-                log.debug("added {scraper.__class__.__name__} for date {d} to subtasks".format(**locals()))
-                for x in range(3):
-                    try:
-                        scraper._initialize()
-                    except Exception:
-                        pass
-                    else:
-                        break
-                subtasks.append(run_scraper.s(scraper))
-                         
-        #run all scrapers
-        task = group(subtasks)
-        result = task.apply_async()
-        log.info("Scrapers are now running in celery")
+                yield scraper
 
-        #harvest result
-        for scraper, output in result.iterate():
-            if isinstance(output, Exception):
-                log.exception("{scraper} failed".format(**locals()))
-                continue
-            articles = [inner for outer in output for inner in outer] #[[a,b][c,d]] -> [a,b,c,d]
-            manager = ArticleManager(articles, scraper = scraper)
-            log.info("{scraper.__class__.__name__} returned {n} articles".format(
-                    n = manager.n_articles(), **locals()))
-            yield (scraper, manager)
                          
 class ThreadedAPIController(ThreadedController, APIController):
     """Controller that runs scrapers asynchronously and saves them via the API"""
+
 
 class ArticleManager(object):
     """class to manage the overly complex output of scrapers
@@ -255,8 +255,7 @@ class TestControllers(amcattest.PolicyTestCase):
         ts1 = _TestScraper()
         ts2 = _TestScraper()
         out = list(c.run([ts1,ts2]))
-        articles = [articles for scraper, articles in out] #[(a,b),(c,d)] -> [b,d]
-        articles = [inner for outer in articles for inner in outer] #[[a,b][c,d]] -> [a,b,c,d]
+        articles = out[1]
 
         self.assertEqual(len(out), 2)
         self.assertEqual(len(articles), 6)

@@ -35,13 +35,8 @@ from amcat.scraping.document import Document
 #- Any Django model
 #- lxml.html.HTMLElements
 
-class LockHack(object):
-    #awaiting a better solution
-    def acquire(self):pass
-    def release(self):pass
-
 #since html elements are not serializable, we will convert them early
-def convert(unit):
+def _convert(unit):
     t = type(unit)
     if isinstance(unit, Document):
         for prop, value in unit.getprops().items():
@@ -57,21 +52,16 @@ def convert(unit):
             unit = "\n\n".join(map(convert, unit))
     return unit
 
+class LockHack(object):
+    #awaiting a better solution
+    def acquire(self):pass
+    def release(self):pass
+
+
 @task()
-def run_scraper(scraper):
-    scraper._initialize()
-    if hasattr(scraper, 'opener') and hasattr(scraper.opener, 'cookiejar'):
-        scraper.opener.cookiejar._cookies_lock = LockHack()
-    log.info("Running {scraper.__class__.__name__}".format(**locals()))
-    try:
-        tasks = [scrape_unit.s(scraper, convert(unit)) for unit in scraper._get_units()]
-    except Exception as e:
-        return (scraper, e)
-    result = group(tasks).delay()
-    return (scraper, result)
+def _scrape_task(controller, scraper):
+    controller._scrape(scraper)
     
 @task()
-def scrape_unit(scraper, unit):
-    log.info("Recieved unit: {unit}".format(**locals()))
-    articles = list(scraper._scrape_unit(unit))
-    return [convert(a) for a in articles]
+def _scrape_unit_task(controller, scraper, unit):
+    controller._scrape_unit(scraper, unit)
