@@ -27,7 +27,8 @@ under the GNU Lesser GPL rather than the Affero GPL, so feel free to use it
 in non-GPL programs. 
 """
 
-import requests, json
+from django.core.serializers.json import DjangoJSONEncoder
+import requests
 import logging
 log = logging.getLogger(__name__)
 
@@ -81,7 +82,8 @@ class AmcatAPI(object):
             return self.request(url, method="post", data=options)
         else:
             if not isinstance(json_data, (str, unicode)):
-                json_data = json.dumps(json_data)
+                
+                json_data = DjangoJSONEncoder().encode(json_data)
             headers = {'content-type': 'application/json'}
             return self.request(url, method='post', data=json_data, headers=headers)
 
@@ -97,7 +99,7 @@ class AmcatAPI(object):
             return self.request(url, method="post", data=options)
         else:
             if not isinstance(json_data, (str, unicode)):
-                json_data = json.dumps(json_data)
+                json_data = DjangoJSONEncoder().encode(json_data)
             headers = {'content-type': 'application/json'}
             return self.request(url, method='post', data=json_data, headers=headers)
 
