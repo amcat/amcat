@@ -36,7 +36,7 @@ from amcat.scraping.document import Document
 #- lxml.html.HTMLElements
 
 #since html elements are not serializable, we will convert them early
-def _convert(unit):
+def convert(unit):
     t = type(unit)
     if isinstance(unit, Document):
         for prop, value in unit.getprops().items():

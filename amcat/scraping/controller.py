@@ -29,7 +29,7 @@ import os
 from amcat.scraping.document import Document, _ARTICLE_PROPS
 from amcat.models.article import Article
 from amcat.models.medium import Medium
-from amcat.tasks import _scrape_task, _scrape_unit_task, LockHack, _convert
+from amcat.tasks import _scrape_task, _scrape_unit_task, LockHack, convert
 from amcat.tools.api import AmcatAPI
 
 class Controller(object):
@@ -82,13 +82,14 @@ class ThreadedController(Controller):
             scrapers = [scrapers]
         for scraper in self._preparescrapers(scrapers):
             # Calls _scrape
+            log.info("Starting {scraper.__class__.__name__}".format(**locals()))
             _scrape_task.apply_async((self, scraper))
 
     def _scrape(self, scraper):
         scraper._initialize()
         log.info("Running {scraper.__class__.__name__}".format(**locals()))
         try:
-            tasks = [_scrape_unit_task.s(self, scraper, _convert(unit)) for unit in scraper._get_units()]
+            tasks = [_scrape_unit_task.s(self, scraper, convert(unit)) for unit in scraper._get_units()]
         except Exception as e:
             log.exception("get_units for {scraper.__class__.__name__} failed")
         # Calls _scrape_unit for each unit
