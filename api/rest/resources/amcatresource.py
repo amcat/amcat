@@ -42,17 +42,13 @@ def get_related_fieldname(model, fieldname):
 class ClassProperty(property):
     def __get__(self, cls, owner):
         return self.fget.__get__(None, owner)()
-    
-class AmCATResource(generics.ListAPIView):
-    """
-    Base class for the AmCAT REST API
-    Subclassing modules should specify the model that the view is based on
-    """
 
-    model = None
+class AmCATFilterMixin(object):
+    """
+    Set the correct fields for filtering
+    """
     extra_filters = []
     ignore_filters = ['auth_token__id']
-
     @classmethod
     def _get_filter_fields_for_model(cls):
         for fieldname in cls.model._meta.get_all_field_names():
@@ -72,6 +68,43 @@ class AmCATResource(generics.ListAPIView):
         return result
     filter_fields=ClassProperty(get_filter_fields)
     
+class AmCATMetadataMixin(object):
+
+    """Give the correct metadata for datatables"""
+    @classmethod
+    def get_label(cls):
+        return '{{{label}}}'.format(
+            label=getattr(cls.model, '__label__', 'label')
+        )
+    
+    def metadata(self, request):
+        """This is used by the OPTIONS request; add models, fields, and label for datatables"""
+        metadata = super(AmCATMetadataMixin, self).metadata(request)
+        metadata['label'] = self.get_label() 
+        grfm = api.rest.resources.get_resource_for_model
+        metadata['models'] = {name : grfm(field.queryset.model).get_url()
+                              for (name, field) in self.get_serializer().get_fields().iteritems()
+                              if hasattr(field, 'queryset')}
+        
+        metadata['fields'] = {name : _get_field_name(field)
+                              for (name, field) in  self.get_serializer().get_fields().iteritems()}
+
+        metadata['filter_fields'] = list(self.get_filter_fields())
+
+        return metadata
+
+class DatatablesMixin(AmCATFilterMixin, AmCATMetadataMixin):
+    pass
+
+    
+class AmCATResource(DatatablesMixin, generics.ListAPIView):
+    """
+    Base class for the AmCAT REST API
+    Subclassing modules should specify the model that the view is based on
+    """
+
+    model = None
+
     @classmethod
     def get_url_pattern(cls):
         """The url pattern for use in the django urls routing table"""
@@ -99,12 +132,6 @@ class AmCATResource(generics.ListAPIView):
         return reverse(cls.get_view_name())
 
     @classmethod
-    def get_label(cls):
-        return '{{{label}}}'.format(
-            label=getattr(cls.model, '__label__', 'label')
-        )
-
-    @classmethod
     def get_rowlink(cls):
         try:
             return reverse(cls.model.__name__.lower(), kwargs=dict(id=123)).replace('123', '{id}')
@@ -126,23 +153,6 @@ class AmCATResource(generics.ListAPIView):
         return [name for (name, field) in cls().get_serializer_class()().get_fields().iteritems()
                 if not AmCATModelSerializer.skip_field(field)]
     
-    def metadata(self, request):
-        """This is used by the OPTIONS request; add models, fields, and label for datatables"""
-        metadata = super(AmCATResource, self).metadata(request)
-        metadata['label'] = self.get_label() 
-        grfm = api.rest.resources.get_resource_for_model
-        metadata['models'] = {name : grfm(field.queryset.model).get_url()
-                              for (name, field) in self.get_serializer().get_fields().iteritems()
-                              if hasattr(field, 'queryset')}
-        
-        metadata['fields'] = {name : _get_field_name(field)
-                              for (name, field) in  self.get_serializer().get_fields().iteritems()}
-
-        metadata['filter_fields'] = list(self.get_filter_fields())
-
-        return metadata
-
-
     @classmethod
     def create_subclass(cls, use_model):
         """

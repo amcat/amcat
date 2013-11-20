@@ -31,6 +31,8 @@ from urllib import urlencode
 
 import json
 import collections
+import logging
+log = logging.getLogger(__name__)
 
 def surlencode(query, doseq=False):
     """
@@ -51,30 +53,39 @@ def surlencode(query, doseq=False):
 class ApiTestCase(TestCase):
     def __init__(self, *args, **kargs):
         super(ApiTestCase, self).__init__(*args, **kargs)
-
+        self._passwords = {} # user_id -> password
+        
     def setUp(self):
         self.client = Client()
-
-        hashed_password = make_password("geheim hoor")
-        self.user = amcattest.create_test_user(password=hashed_password)
-        self.user.get_profile().hashed_password = hashed_password    
+        self.user = amcattest.create_test_user()
         self.user.is_superuser = True
         self.user.save()
         
 
-    def _login(self, as_user=None):
+    def _login(self, as_user=None, password=None):
         as_user = as_user or self.user
-        pwd = as_user.get_profile().hashed_password
-        self.assertTrue(self.client.login(username=as_user.username, password=pwd), "Cannot log in")
+        if not password:
+            password = self._passwords.get(as_user.id)
+        if not password:
+            password = 'test'
+            as_user.set_password(password)
+            as_user.save()
+            self._passwords[as_user.id] = password
+        self.assertTrue(self.client.login(username=as_user.username, password=password), "Cannot log in")
         
-    def _get(self, resource, as_user=None, format='json', **options):
-        self._login(as_user=as_user)
-        request_options = options.pop("request_options", {})
-        options = "&{}".format(surlencode(options), True) if options else ""
-        resource_url = resource.get_url()
-        resource_url += "?format={}{}".format(format, options)
-        request = self.client.get(resource_url, **request_options)
-        return request.content
+    def _request(self, resource, as_user=None, method='get', check_status=200, request_args=[], request_options={}, **options):
+        if as_user is not None:
+            self._login(as_user=as_user)
+        resource_url = resource if isinstance(resource, (str, unicode)) else resource.get_url()
+        if options:
+            resource_url += "?" + surlencode(options)
+        log.info("{method} {resource_url} {request_args} {request_options}".format(**locals()))
+        method = getattr(self.client, method)
+        request = method(resource_url, *request_args, **request_options)
+        if check_status:
+            self.assertEqual(request.status_code, check_status,
+                             "Error: request returned status {request.status_code} (required: {check_status})\n{request.content}".format(**locals()))
+        return request
 
     def get_options(self, resource):
         self._login()
@@ -82,9 +93,13 @@ class ApiTestCase(TestCase):
         return json.loads(request.content)
 
     def get(self, resource, **options):
-        result = self._get(resource, format='json', **options)
-        return json.loads(result)
-    
+        result = self._request(resource, format='json', **options)
+        return json.loads(result.content)
+
+    def post(self, resource, body, check_status=201, **options):
+        result = self._request(resource, method='post', format='json', request_args=[body], check_status=check_status, **options)
+        return json.loads(result.content)
+
     def get_object(self, resource, pk, **options):
         result = self.get(resource, pk=pk, **options)
         result = result['results'][0]

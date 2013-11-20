@@ -83,16 +83,12 @@ class UserProfile(AmcatModel):
             role = Role.objects.get(label=role).id
                             
         if onproject:
-            try:
-                actual_role_id = ProjectRole.objects.get(user=self, project=onproject).role_id
-            except ProjectRole.DoesNotExist:
-                if onproject.guest_role is None:
-                    return False 
-                else:
-                    actual_role_id = onproject.guest_role_id
+            actual_role_id = onproject.get_role_id(user=self)
         else:
             actual_role_id = self.role_id
 
+        log.info("{self} has role {actual_role_id} on project {onproject}, >=? {role}".format(**locals()))
+            
         return actual_role_id >= role
         
     

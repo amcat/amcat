@@ -103,6 +103,7 @@ STATIC_ROOT = os.path.join(MEDIA_ROOT, 'static')
 MEDIA_URL = '/media/'
 STATIC_URL = '/media/static/'
 ACCOUNTS_URL = "/accounts/"
+API_URL = '/api/'
 
 # URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
 # trailing slash.
@@ -121,7 +122,6 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'navigator.utils.maintenance.MaintenanceModeMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'navigator.utils.auth.BasicAuthenticationMiddleware',
     'navigator.utils.auth.RequireLoginMiddleware',
     'navigator.utils.auth.SetRequestContextMiddleware',
     'navigator.utils.auth.NginxRequestMethodFixMiddleware',
@@ -222,7 +222,10 @@ REST_FRAMEWORK = {
     'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.BrowsableAPIRenderer',
                                  'rest_framework.renderers.JSONRenderer',
                                  'api.rest.csvrenderer.CSVRenderer', ),
-    
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    )
 }
 
 if not DEBUG:

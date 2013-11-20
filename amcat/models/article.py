@@ -60,8 +60,8 @@ class Article(AmcatModel):
     pagenr = models.IntegerField(blank=True, null=True)
     headline = models.TextField()
     byline = models.TextField(blank=True, null=True)
-    length = models.IntegerField()
-    metastring = models.TextField(null=True)
+    length = models.IntegerField(blank=True)
+    metastring = models.TextField(null=True, blank=True)
     url = models.URLField(null=True, blank=True, db_index=True, max_length=750)
     externalid = models.IntegerField(blank=True, null=True)
     author = models.TextField(blank=True, null=True, max_length=100)
@@ -88,7 +88,7 @@ class Article(AmcatModel):
 
     def save(self, *args, **kwargs):
         if self.length is None:
-            self.length = word_len(self.text)
+            self.length = word_len(self.text) + word_len(self.headline) + word_len(self.byline)
 
         super(Article, self).save(*args, **kwargs)
 
@@ -131,11 +131,17 @@ class Article(AmcatModel):
     def create_articles(cls, articles, articleset=None, check_duplicate=True):
         """
         Add the given articles to the database, the index, and the given set
+
+        Article objects can contain a 'custom' nested_articles attribute. In that case,
+        this should be a list of article-like objects that will also be saved, and will
+        have the .parent set to the containing article
+        
         @param articles: a collection of objects with the necessary properties (.headline etc)
         @param articleset: an articleset object
         @param check_duplicate: if True, duplicates are not added to the database or index
         (the 'existing' article *is* added to the set.
         """
+        # TODO: test parent logic (esp. together with hash/dupes)
         es = amcates.ES()
 
         # add dict (+hash) as property on articles so we know who is who
@@ -161,6 +167,8 @@ class Article(AmcatModel):
                 if articleset and not (dupe.sets and articleset.id in dupe.sets):
                     add_to_set.add(dupe.id)
             else:
+                if a.parent:
+                    a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
                 a.save()
                 a.es_dict['id'] = a.pk
                 add_to_index.append(a.es_dict)

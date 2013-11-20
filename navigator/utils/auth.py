@@ -288,8 +288,9 @@ class RequireLoginMiddleware(object):
         self.no_login = (
             settings.ACCOUNTS_URL,
             settings.MEDIA_URL,
-            settings.STATIC_URL
-        )
+            settings.STATIC_URL,
+            settings.API_URL,
+            )
 
     def _login_required(self, url):
         """
@@ -301,46 +302,6 @@ class RequireLoginMiddleware(object):
     def process_view(self, request, view_func, view_args, view_kwargs):
         if not request.user.is_authenticated() and self._login_required(request.path):
             return login_required(view_func)(request, *view_args, **view_kwargs)
-
-class BasicAuthenticationMiddleware(object):
-    """
-    This middleware tries to login a user if the Authorization-header is set. If it
-    is not, it continues silently.
-    """
-    header = "HTTP_AUTHORIZATION"
-
-    def _parse_header(self, header):
-        """
-        Parse basic auth header
-
-        @return: (user, password)
-        """
-        return b64decode(header.split()[1]).split(':', 1)
-
-    def _unauthorized(self):
-        res = HttpResponse("401 Unauthorized", status=401)
-        res['WWW-Authenticate'] = 'Basic realm="%s"' % settings.APPNAME_VERBOSE
-        return res
-
-    def process_request(self, request):
-        assert hasattr(request, 'session'), "The Django authentication middleware\
-                requires session middleware to be installed. Edit your MIDDLEWARE_CLASSES\
-                setting to insert 'django.contrib.sessions.middleware.SessionMiddleware'."
-
-        b64 = request.META.get(self.header, None)
-
-        # Check if header is in use
-        if b64 is None:
-            return
-
-        user, passwd = self._parse_header(b64)
-        user = authenticate(username=user, password=passwd)
-
-        if user:
-            login(request, user)
-            return
-
-        return self._unauthorized()
 
 class NginxRequestMethodFixMiddleware(object):
     """
