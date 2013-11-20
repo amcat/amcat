@@ -1,4 +1,3 @@
-###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -15,38 +14,39 @@
 #                                                                         #
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
-###########################################################################
-from copy import copy
-
-from rest_framework.decorators import api_view
-from django.http import HttpResponse
-
-from amcat.models.task import Task, TaskPending
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializers.task import TaskSerializer, TaskResultSerializer
+from rest_framework import serializers
+from amcat.models import Task
+from api.rest.serializer import AmCATModelSerializer
 
 
-class TaskResource(AmCATResource):
-    model = Task
-    serializer_class = TaskSerializer
+class TaskSerializer(AmCATModelSerializer):
+    """Represents a Task object defined in amcat.models.task.Task. Adds two
+    fields to the model: status and ready."""
+    status = serializers.SerializerMethodField('get_status')
+    ready = serializers.SerializerMethodField('get_ready')
 
-class TaskResultResource(AmCATResource):
-    model = Task
+    def get_status(self, task):
+        return task.get_async_result().status
 
-    @classmethod
-    def get_model_name(cls):
-        return "taskresult"
+    def get_ready(self, task):
+        return task.get_async_result().ready()
 
-    serializer_class = TaskResultSerializer
+    class Meta:
+        model = Task
 
-@api_view(http_method_names=("GET",))
-def single_task_result(request, task_id, uuid=False):
-    task = Task.objects.get(**{ "uuid" if uuid else "id" : task_id})
 
-    try:
-        return copy(task.get_response())
-    except TaskPending:
-        return HttpResponse(status=404)
-    except Exception, e:
-        error_msg = "{e.__class__.__name__} : {e}".format(**locals())
-        return HttpResponse(content=error_msg, status=500)
+class TaskResultSerializer(AmCATModelSerializer):
+    result = serializers.SerializerMethodField('get_result')
+    ready = serializers.SerializerMethodField('get_ready')
+
+    def get_ready(self, task):
+        return task.get_async_result().ready()
+
+    def get_result(self, task):
+        if not self.get_ready(task):
+            return None
+        return task.get_result()
+
+    class Meta:
+        model = Task
+        fields = ("uuid", "ready", "result")

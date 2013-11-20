@@ -1,4 +1,3 @@
-###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -15,38 +14,28 @@
 #                                                                         #
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
-###########################################################################
-from copy import copy
-
-from rest_framework.decorators import api_view
-from django.http import HttpResponse
-
-from amcat.models.task import Task, TaskPending
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializers.task import TaskSerializer, TaskResultSerializer
+from rest_framework import serializers
+from amcat.models import Project
+from amcat.tools.caching import cached
+from api.rest.serializer import AmCATModelSerializer
 
 
-class TaskResource(AmCATResource):
-    model = Task
-    serializer_class = TaskSerializer
+class ProjectSerializer(AmCATModelSerializer):
+    """
+    This serializer includes another boolean field `favourite` which is is True
+    when the serialized project is in request.user.user_profile.favourite_projects.
+    """
+    favourite = serializers.SerializerMethodField("is_favourite")
 
-class TaskResultResource(AmCATResource):
-    model = Task
+    @property
+    @cached
+    def favourite_projects(self):
+        """List of id's of all favourited projects by the currently logged in user"""
+        return set(self.context['request'].user.userprofile
+                    .favourite_projects.values_list("id", flat=True))
 
-    @classmethod
-    def get_model_name(cls):
-        return "taskresult"
+    def is_favourite(self, project):
+        return project.id in self.favourite_projects
 
-    serializer_class = TaskResultSerializer
-
-@api_view(http_method_names=("GET",))
-def single_task_result(request, task_id, uuid=False):
-    task = Task.objects.get(**{ "uuid" if uuid else "id" : task_id})
-
-    try:
-        return copy(task.get_response())
-    except TaskPending:
-        return HttpResponse(status=404)
-    except Exception, e:
-        error_msg = "{e.__class__.__name__} : {e}".format(**locals())
-        return HttpResponse(content=error_msg, status=500)
+    class Meta:
+        model = Project

@@ -16,54 +16,18 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.db.models import Count
 from rest_framework.viewsets import ModelViewSet
-from rest_framework import serializers
 
 from amcat.tools.caching import cached
 from amcat.models import CodingJob
 from amcat.models.coding import coding
-from amcat.models import ArticleSet
 from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializer import AmCATModelSerializer
 from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.serializers.codingjob import CodingJobSerializer
 
-from api.rest.viewsets import (ProjectViewSetMixin, ROLE_PROJECT_READER,
-                               CannotEditLinkedResource, NotFoundInProject )
+from api.rest.viewsets import (ProjectViewSetMixin   )
 
-STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
 
-class CodingJobSerializer(AmCATModelSerializer):
-    """
-    This serializer for codingjob includes the amount of total jobs
-    and done jobs. Because it would be wholly inefficient to calculate
-    the values per codingjob, we ask the database to aggregate for us
-    in one query.
-    """
-    n_articles = serializers.SerializerMethodField('get_n_articles')
-    n_codings_done = serializers.SerializerMethodField('get_n_done_jobs')
-
-    @cached
-    def _get_n_done_jobs(self):
-        return dict(self.context['view'].object_list.distinct().filter(
-                    codings__status__in=STATUS_DONE).annotate(Count("codings"))
-                    .values_list("id", "codings__count"))
-
-    @cached
-    def _get_n_articles(self):
-        return dict(self.context['view'].object_list.distinct()
-                .annotate(n=Count("articleset__articles")).values_list("id", "n"))
-
-    def get_n_articles(self, obj):
-        if not obj: return 0
-        return self._get_n_articles().get(obj.id, 0)
-
-    def get_n_done_jobs(self, obj):
-        if not obj: return 0
-        return self._get_n_done_jobs().get(obj.id, 0)
-
-    class Meta:
-        model = CodingJob
 
 class CodingJobResource(AmCATResource):
     model = CodingJob
@@ -78,6 +42,18 @@ class CodingJobViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
         return jobs.filter(project=self.project)
+
+class CodingjobViewSetMixin(ProjectViewSetMixin):
+    url = "projects/(?P<project>[0-9]+)/codingjobs"
+    model_serializer_class = CodingJobSerializer
+
+    @property
+    def codingjob(self):
+        return self._codingjob()
+
+    @cached
+    def _codingjob(self):
+        return CodingJob.objects.get(id=self.kwargs.get("codingjob"))
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

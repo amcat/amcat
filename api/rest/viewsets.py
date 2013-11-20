@@ -22,12 +22,16 @@ AmCAT API ViewSets base classes and utility functions
 """
 
 from amcat.models.authorisation import ROLE_PROJECT_READER, ROLE_PROJECT_WRITER, ROLE_PROJECT_ADMIN, ROLE_PROJECT_METAREADER
-from amcat.models import Project
+from amcat.tools.caching import cached
+from api.rest.serializer import AmCATModelSerializer
+from amcat.models import Project, CodingJob
 from rest_framework import permissions
 from django.core.urlresolvers import reverse
 import logging
-log = logging.getLogger(__name__)
 from rest_framework import exceptions, status
+from api.rest.serializers.codingjob import CodingJobSerializer
+
+log = logging.getLogger(__name__)
 
 _DEFAULT_PERMISSION_MAP = {
     'OPTIONS' : True,
@@ -40,12 +44,13 @@ _DEFAULT_PERMISSION_MAP = {
     }
 
 def get_viewsets():
-    #TODO: Needs more magic?
     from api.rest.resources.article import ArticleViewSet
     from api.rest.resources.articleset import ArticleSetViewSet
     from api.rest.resources.codingjob import CodingJobViewSet
 
-    return [ArticleViewSet, ArticleSetViewSet, CodingJobViewSet]
+    for vset in locals().values():
+        if issubclass(vset, ViewSetMixin) and not vset is ViewSetMixin:
+            yield vset
 
 class CannotEditLinkedResource(exceptions.PermissionDenied):
     default_detail = 'Cannot modify a linked resource, please edit via the owning project'
@@ -76,17 +81,28 @@ class ProjectPermission(permissions.BasePermission):
             log.warn("User {user} has role {actual_role_id} < {required_role_id}".format(**locals()))
         return actual_role_id >= required_role_id
 
-from api.rest.serializer import AmCATModelSerializer
 class ProjectSerializer(AmCATModelSerializer):
-
     def restore_fields(self, data, files):
         data = data.copy()
         if 'project' not in data:
             data['project'] = self.context['view'].project.id
         return super(ProjectSerializer, self).restore_fields(data, files)
 
+
+
+
+##########################################################################
+#                            VIEWSET MIXINS                              #
+##########################################################################
+
+class ViewSetMixin(object):
+    """
+    Every ViewSetMixin should inherit from this class, as it is used to
+    discover viewsets in get_viewsets(). No special properties are defined.
+    """
+    pass
         
-class ProjectViewSetMixin(object):
+class ProjectViewSetMixin(ViewSetMixin):
     permission_classes = (ProjectPermission,)
     model_serializer_class = ProjectSerializer
     
@@ -103,4 +119,5 @@ class ProjectViewSetMixin(object):
             base_name = cls.model._meta.object_name.lower()
         name = '{base_name}-{view}'.format(**locals())
         return reverse(name, kwargs=kwargs)
-    
+
+
