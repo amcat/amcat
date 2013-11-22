@@ -36,8 +36,9 @@ class ProjectSerializer(AmCATModelSerializer):
     @cached
     def favourite_projects(self):
         """List of id's of all favourited projects by the currently logged in user"""
-        return set(self.context['request'].user.userprofile
-                    .favourite_projects.values_list("id", flat=True))
+        user = self.context['request'].user
+        if user.is_anonymous(): return []
+        return set(user.userprofile.favourite_projects.values_list("id", flat=True))
 
     def is_favourite(self, project):
         return project.id in self.favourite_projects
