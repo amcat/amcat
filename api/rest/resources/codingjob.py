@@ -16,14 +16,11 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from rest_framework.viewsets import ModelViewSet
 
 from amcat.models import CodingJob
 from amcat.models.coding import coding
 from api.rest.resources.amcatresource import AmCATResource
-from api.rest.resources.amcatresource import DatatablesMixin
-from api.rest.viewsets import ProjectViewSetMixin
-from api.rest.viewsets.codingjob import CodingJobSerializer
+from api.rest.viewsets.coding.codingjob import CodingJobSerializer
 
 class CodingJobResource(AmCATResource):
     model = CodingJob

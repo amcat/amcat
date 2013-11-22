@@ -24,6 +24,7 @@ from api.rest.serializer import AmCATModelSerializer
 
 __all__ = ("CodingRuleSerializer",)
 
+
 class CodingRuleSerializer(AmCATModelSerializer):
     parsed_condition = serializers.SerializerMethodField('get_parsed_condition')
 
