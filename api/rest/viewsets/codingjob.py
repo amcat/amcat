@@ -18,12 +18,18 @@
 ###########################################################################
 from django.db.models import Count
 from rest_framework import serializers
+from rest_framework.viewsets import ModelViewSet
 from amcat.models import CodingJob
 from amcat.models.coding import coding
 from amcat.tools.caching import cached
+from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewsets.project import ProjectViewSetMixin
 
 STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
+
+__all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet")
+
 
 class CodingJobSerializer(AmCATModelSerializer):
     """
@@ -61,3 +67,23 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     class Meta:
         model = CodingJob
+
+class CodingJobViewSetMixin(ProjectViewSetMixin):
+    url = ProjectViewSetMixin.url + "/(?P<project>[0-9]+)/codingjobs"
+    model_serializer_class = CodingJobSerializer
+
+    @property
+    def codingjob(self):
+        return self._codingjob()
+
+    @cached
+    def _codingjob(self):
+        return CodingJob.objects.get(id=self.kwargs.get("codingjob"))
+
+
+class CodingJobViewSet(CodingJobViewSetMixin, DatatablesMixin, ModelViewSet):
+    model = CodingJob
+
+    def filter_queryset(self, jobs):
+        jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
+        return jobs.filter(project=self.project)

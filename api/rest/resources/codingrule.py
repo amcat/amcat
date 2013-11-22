@@ -20,7 +20,7 @@
 from amcat.models import CodingRule
 
 from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializers.codingrule import CodingRuleSerializer
+from api.rest.viewsets.codingrule import CodingRuleSerializer
 
 
 class CodingRuleResource(AmCATResource):

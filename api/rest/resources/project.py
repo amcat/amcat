@@ -20,7 +20,7 @@
 from amcat.models import Project
 
 from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializers.project import ProjectSerializer
+from api.rest.viewsets.project import ProjectSerializer
 
 
 class ProjectResource(AmCATResource):

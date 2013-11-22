@@ -1,3 +1,4 @@
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -14,11 +15,13 @@
 #                                                                         #
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 from django.db.models import Count
 from rest_framework import fields, relations
 from rest_framework.serializers import Serializer
 from amcat.models import ArticleSet, Plugin, Project
 
+__all__ = ("AnalysedArticleSerializer",)
 
 class AnalysedArticleSerializer(Serializer):
     def _set_narticles(self, rows):

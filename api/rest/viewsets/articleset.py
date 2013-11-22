@@ -1,3 +1,4 @@
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -14,12 +15,14 @@
 #                                                                         #
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 from django.db.models import Q
 from rest_framework import serializers
 from amcat.models import ArticleSet
 from amcat.tools import amcates
 from api.rest.serializer import AmCATModelSerializer
 
+__all__ = ("ArticleSetSerializer",)
 
 class ArticleSetSerializer(AmCATModelSerializer):
     favourite = serializers.SerializerMethodField("is_favourite")

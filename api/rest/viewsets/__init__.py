@@ -1,3 +1,4 @@
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -14,21 +15,19 @@
 #                                                                         #
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
-from django.core.exceptions import ValidationError
-from rest_framework import serializers
-from amcat.models import CodingRule
-from amcat.models.coding import codingruletoolkit
-from api.rest.serializer import AmCATModelSerializer
+###########################################################################
+from inspect import isclass
+from rest_framework.viewsets import ModelViewSet
 
+from api.rest.viewsets.analysed_article import *
+from api.rest.viewsets.article import *
+from api.rest.viewsets.articleset import *
+from api.rest.viewsets.codingjob import *
+from api.rest.viewsets.codingrule import *
+from api.rest.viewsets.project import *
+from api.rest.viewsets.task import *
 
-class CodingRuleSerializer(AmCATModelSerializer):
-    parsed_condition = serializers.SerializerMethodField('get_parsed_condition')
-
-    def get_parsed_condition(self, obj):
-        try:
-            return codingruletoolkit.to_json(codingruletoolkit.parse(obj), serialise=False)
-        except (ValidationError, SyntaxError):
-            return None
-
-    class Meta:
-        model = CodingRule
+def get_viewsets():
+    for cls in globals().values():
+        if isclass(cls) and issubclass(cls, ModelViewSet) and cls is not ModelViewSet:
+            yield cls

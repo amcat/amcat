@@ -21,6 +21,7 @@
 
 from __future__ import print_function, absolute_import
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.db.models.signals import post_save
 from amcat.models.language import Language
 from amcat.models.authorisation import Role, ProjectRole
@@ -71,6 +72,25 @@ class UserProfile(AmcatModel):
     @property
     def projects(self):
         return Project.objects.filter(projectrole__user=self.user)
+
+    def get_projects(self, role=None):
+        """
+        Get the projects for which the user has at least the role `role`. This function
+        allows for guest_roles. If no role is given (or role is None), it will resolve
+        to self.projects.
+
+        @param role: role to consider
+        @type role: NoneType or role.Role
+
+        @rtype: QuerySet
+        """
+        if role is None:
+            return self.projects
+
+        return Project.objects.filter(
+            Q(projectrole__user=self.user)|
+            Q(guest_role__id__lte=role.id)
+        )
 
     def has_role(self, role, onproject=None):
         """

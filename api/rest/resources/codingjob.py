@@ -18,42 +18,19 @@
 ###########################################################################
 from rest_framework.viewsets import ModelViewSet
 
-from amcat.tools.caching import cached
 from amcat.models import CodingJob
 from amcat.models.coding import coding
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.amcatresource import DatatablesMixin
-from api.rest.serializers.codingjob import CodingJobSerializer
-
-from api.rest.viewsets import (ProjectViewSetMixin   )
-
-
+from api.rest.viewsets import ProjectViewSetMixin
+from api.rest.viewsets.codingjob import CodingJobSerializer
 
 class CodingJobResource(AmCATResource):
     model = CodingJob
     serializer_class = CodingJobSerializer
 
 
-class CodingJobViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
-    model = CodingJob
-    url = 'projects/(?P<project>[0-9]+)/codingjobs'
-    model_serializer_class = CodingJobSerializer
 
-    def filter_queryset(self, jobs):
-        jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
-        return jobs.filter(project=self.project)
-
-class CodingjobViewSetMixin(ProjectViewSetMixin):
-    url = "projects/(?P<project>[0-9]+)/codingjobs"
-    model_serializer_class = CodingJobSerializer
-
-    @property
-    def codingjob(self):
-        return self._codingjob()
-
-    @cached
-    def _codingjob(self):
-        return CodingJob.objects.get(id=self.kwargs.get("codingjob"))
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

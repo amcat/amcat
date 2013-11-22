@@ -1,3 +1,4 @@
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -14,12 +15,14 @@
 #                                                                         #
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
 import json
 from amcat.models import Medium, Article
-from api.rest.viewsets import ProjectSerializer
+from api.rest.serializer import AmCATModelSerializer
 
+__all__ = ("ArticleSerializer",)
 
-class ArticleSerializer(ProjectSerializer):
+class ArticleSerializer(AmCATModelSerializer):
 
     def __init__(self, instance=None, data=None, files=None, **kwargs):
         kwargs['many'] = isinstance(data, list)
@@ -42,6 +45,9 @@ class ArticleSerializer(ProjectSerializer):
         # add time part to date, if needed
         if 'date' in data and len(data['date']) == 10:
             data['date'] += "T00:00"
+
+        if 'project' not in data:
+            data['project'] = self.context['view'].project.id
 
         return super(ArticleSerializer, self).restore_fields(data, files)
 

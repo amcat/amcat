@@ -22,7 +22,7 @@ from django_boolean_sum import BooleanSum
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATPaginationSerializer
 from amcat.models import AnalysedArticle
-from api.rest.serializers.analysed_article import AnalysedArticleSerializer
+from api.rest.viewsets.analysed_article import AnalysedArticleSerializer
 
 
 class AnalysedArticlesPaginationSerializer(AmCATPaginationSerializer):

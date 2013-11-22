@@ -23,7 +23,7 @@ from django.http import HttpResponse
 
 from amcat.models.task import Task, TaskPending
 from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializers.task import TaskSerializer, TaskResultSerializer
+from api.rest.viewsets.task import TaskSerializer, TaskResultSerializer
 
 
 class TaskResource(AmCATResource):

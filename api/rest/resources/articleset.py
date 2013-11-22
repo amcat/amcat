@@ -22,8 +22,8 @@ from rest_framework.viewsets import ModelViewSet
 from amcat.models import ArticleSet
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.amcatresource import DatatablesMixin
-from api.rest.serializers.articleset import ArticleSetSerializer
 from api.rest.viewsets import ProjectViewSetMixin
+from api.rest.viewsets.articleset import ArticleSetSerializer
 
 
 class ArticleSetResource(AmCATResource):

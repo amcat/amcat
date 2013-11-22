@@ -1,3 +1,4 @@
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -14,39 +15,23 @@
 #                                                                         #
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from amcat.models import Task
+from amcat.models import CodingRule
+from amcat.models.coding import codingruletoolkit
 from api.rest.serializer import AmCATModelSerializer
 
+__all__ = ("CodingRuleSerializer",)
 
-class TaskSerializer(AmCATModelSerializer):
-    """Represents a Task object defined in amcat.models.task.Task. Adds two
-    fields to the model: status and ready."""
-    status = serializers.SerializerMethodField('get_status')
-    ready = serializers.SerializerMethodField('get_ready')
+class CodingRuleSerializer(AmCATModelSerializer):
+    parsed_condition = serializers.SerializerMethodField('get_parsed_condition')
 
-    def get_status(self, task):
-        return task.get_async_result().status
-
-    def get_ready(self, task):
-        return task.get_async_result().ready()
-
-    class Meta:
-        model = Task
-
-
-class TaskResultSerializer(AmCATModelSerializer):
-    result = serializers.SerializerMethodField('get_result')
-    ready = serializers.SerializerMethodField('get_ready')
-
-    def get_ready(self, task):
-        return task.get_async_result().ready()
-
-    def get_result(self, task):
-        if not self.get_ready(task):
+    def get_parsed_condition(self, obj):
+        try:
+            return codingruletoolkit.to_json(codingruletoolkit.parse(obj), serialise=False)
+        except (ValidationError, SyntaxError):
             return None
-        return task.get_result()
 
     class Meta:
-        model = Task
-        fields = ("uuid", "ready", "result")
+        model = CodingRule
