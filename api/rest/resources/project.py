@@ -22,7 +22,6 @@ from amcat.models import Project
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.viewsets.project import ProjectSerializer
 
-
 class ProjectResource(AmCATResource):
     model = Project
     extra_filters = ['projectrole__user__id']

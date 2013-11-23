@@ -259,7 +259,7 @@ class TestDjangoToolkit(amcattest.PolicyTestCase):
         with list_queries() as l:
             amcattest.create_test_project(owner=u)
         #query_list_to_table(l, output=print)
-        self.assertEquals(len(l), 1)
+        self.assertEquals(len(l), 2) # create project, create role for owner
 
     def test_from_querydict(self):
         di = dict(a=1, b=[2,3])
