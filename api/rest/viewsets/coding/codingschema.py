@@ -46,6 +46,6 @@ class CodingSchemaViewSetMixin(ProjectViewSetMixin):
 class CodingSchemaViewSet(CodingSchemaViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = CodingSchema
 
-    def filter_queryset(self, jobs):
-        jobs = super(CodingSchemaViewSet, self).filter_queryset(jobs)
-        return jobs.filter(id__in=self.project.get_codingschemas())
+    def filter_queryset(self, codingschema):
+        codingschema = super(CodingSchemaViewSet, self).filter_queryset(codingschema)
+        return codingschema.filter(id__in=self.project.get_codingschemas())
