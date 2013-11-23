@@ -16,23 +16,36 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from inspect import isclass
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet
+from amcat.models import CodingSchemaField
+from amcat.tools.caching import cached
+from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewsets import CodingSchemaViewSetMixin
 
-from api.rest.viewsets.analysed_article import *
-from api.rest.viewsets.article import *
-from api.rest.viewsets.articleset import *
-from api.rest.viewsets.coding.codingjob import *
-from api.rest.viewsets.coding.codingrule import *
-from api.rest.viewsets.coding.coded_article import *
-from api.rest.viewsets.coding.coding import *
-from api.rest.viewsets.coding.codingschema import *
-from api.rest.viewsets.coding.codingschemafield import *
-#from api.rest.viewsets.sentence import *
-from api.rest.viewsets.project import *
-from api.rest.viewsets.task import *
+__all__ = ("CodingSchemaFieldViewSetMixin", "CodingSchemaFieldSerializer", "CodingSchemaFieldViewSet")
 
-def get_viewsets():
-    for cls in globals().values():
-        if isclass(cls) and issubclass(cls, GenericViewSet) and cls is not GenericViewSet:
-            yield cls
+
+class CodingSchemaFieldSerializer(AmCATModelSerializer):
+    class Meta:
+        model = CodingSchemaField
+
+class CodingSchemaFieldViewSetMixin(CodingSchemaViewSetMixin):
+    url = CodingSchemaViewSetMixin.url + "/(?P<codingschema>[0-9]+)/fields"
+    model_serializer_class = CodingSchemaFieldSerializer
+
+    @property
+    def codingschemafield(self):
+        return self._codingschemafield()
+
+    @cached
+    def _codingschemafield(self):
+        return CodingSchemaField.objects.get(id=self.kwargs.get("codingschemafield"))
+
+
+class CodingSchemaFieldViewSet(CodingSchemaFieldViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = CodingSchemaField
+
+    def filter_queryset(self, fields):
+        fields = super(CodingSchemaFieldViewSet, self).filter_queryset(fields)
+        return fields.filter(codingschema__in=self.project.get_codingschemas())
