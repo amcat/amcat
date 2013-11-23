@@ -24,7 +24,7 @@ from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewsets import CodingJobViewSetMixin
 
-__all__ = ("CodedArticleSerializer", "CodedArticleViewSetMixin", "CodingViewSet")
+__all__ = ("CodedArticleSerializer", "CodedArticleViewSetMixin", "CodedArticleViewSet")
 
 _CA_FIELDS = {
     "id", "headline", "date", "medium", "pagenr", "length",
@@ -76,10 +76,10 @@ class CodedArticleViewSetMixin(CodingJobViewSetMixin):
     def _article(self):
         return Article.objects.get(id=self.kwargs.get("article"))
 
-class CodingViewSet(CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+class CodedArticleViewSet(CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Article
 
     def filter_queryset(self, queryset):
-        qs = super(CodingViewSet, self).filter_queryset(queryset)
+        qs = super(CodedArticleViewSet, self).filter_queryset(queryset)
         return qs.filter(id__in=self.codingjob.articleset.articles.all())
 
