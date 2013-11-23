@@ -255,7 +255,7 @@ def storeCodings(request, codingjobid, articleid):
     sentenceMappingDict = {}
     
     try:
-        jsonData = json.loads(request.raw_post_data)
+        jsonData = json.loads(request.body)
         
         log.info(jsonData)
         articleCodingObj = codedArticle.get_or_create_coding()
