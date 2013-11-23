@@ -51,7 +51,7 @@ class Controller(object):
         for scraper in scrapers:
             manager = ArticleManager()
             for unit in scraper._get_units():
-                manager.add_articles(scraper._scrape_unit(unit))
+                manager.add_articles(scraper._scrape_unit(unit), scraper = scraper)
             yield (scraper, manager)
             
     def _save(self, scraper, manager):
@@ -97,7 +97,7 @@ class ThreadedController(Controller):
     def _scrape_unit(self, scraper, unit):
         log.info("Recieved {unit} from {scraper}".format(**locals()))
         articles = list(scraper._scrape_unit(unit))
-        manager = ArticleManager(articles)
+        manager = ArticleManager(articles, scraper)
         self._save(scraper, manager)
 
     def _preparescrapers(self, scrapers):
@@ -120,7 +120,7 @@ class ThreadedAPIController(ThreadedController, APIController):
     """Controller that runs scrapers asynchronously and saves them via the API"""
 
 
-class ArticleManager(list):
+class ArticleManager(object):
     """class to manage the overly complex output of scrapers
     takes articles of various classes and types, provides convertion and postprocessing
     also handles parent-child relationships"""
@@ -128,6 +128,10 @@ class ArticleManager(list):
 
     def __init__(self, articles = [], scraper = None):
         self._articles = self.add_articles(articles, scraper = scraper)
+
+    def __iter__(self):
+        for article in _articles:
+            yield article
 
     def add_articles(self, articles, scraper = None):
         """articles: a list of unprocessed/processed article/document objects"""
@@ -139,7 +143,6 @@ class ArticleManager(list):
         parents = [a for a in articles if not(hasattr(a,'parent'))]
         articles = [self._postprocess(p, articles, scraper) for p in parents]
         self._articles.extend(articles)
-        return articles
 
     def getdicts(self):
         """Returns a list of dictionaries that represent articles
@@ -168,10 +171,29 @@ class ArticleManager(list):
         """Amount of articles including children"""
         return len(self._flatten_articles().keys())
 
-    def _postprocess(self, article, articles, scraper = None):
+    def _postprocess(self, article, articles, scraper):
         """process one article and it's children"""
-        artdict = {'metastring' : {}, 'children' : []}
+        artdict = self._make_dict(article, scraper)
 
+        #handle children
+        for child in articles:            
+            if (hasattr(child, 'parent') and child.parent == article) or (isinstance(child, dict) and 'parent' in child.keys() and child['parent'] == article): #has this article as a parent attribute or dict entry
+                if isinstance(child, dict):
+                    del child['parent']
+                artdict['children'].append(self._postprocess(child, articles, scraper))
+
+        #scraper data to fill in blanks
+        if scraper:
+            if not 'medium' in artdict.keys():
+                artdict['medium'] = Medium.get_or_create(scraper.medium_name)
+            if not 'project' in artdict.keys():
+                artdict['project'] = scraper.options['project']
+
+        return artdict
+
+    def _make_dict(self, article):
+        """called by _postprocess, converts any type of article into a dict"""
+        artdict = {'metastring' : {}, 'children' : []}
         if isinstance(article, Document):
             for prop, value in article.getprops().items():
                 value = article._convert(value)
@@ -179,24 +201,13 @@ class ArticleManager(list):
                     artdict[prop] = value
                 else:
                     artdict['metastring'][prop] = value
-
         elif isinstance(article, Article):
-            fieldnames = [f.name for f in model._meta.fields]
+            fieldnames = [f.name for f in article._meta.fields]
             for prop in fieldnames:
                 if hasattr(article, prop):
                     artdict[prop] = getattr(article, prop)
-
         elif isinstance(article, dict):
             artdict = article
-
-        for child in articles:
-            if hasattr(child, 'parent') and child.parent == article:
-                artdict['children'].append(self._postprocess(child))
-
-        if scraper:
-            artdict['medium'] = Medium.get_or_create(scraper.medium_name)
-            artdict['project'] = scraper.options['project']
-
         return artdict
 
     def _flatten_articles(self):
