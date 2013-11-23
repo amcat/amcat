@@ -35,6 +35,7 @@ from amcat.models.project import Project
 from amcat.models.medium import Medium
 from amcat.models.articleset import ArticleSet, create_new_articleset
 
+from amcat.scraping import toolkit
 from amcat.scraping.htmltools import HTTPOpener
 from amcat.scraping.document import Document
 
@@ -78,6 +79,7 @@ class Scraper(Script):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = Medium.get_or_create(self.medium_name)
         self.project = self.options['project']
+        self.toolkit = toolkit
         for k, v in self.options.items():
             if type(v) == str:
                 self.options[k] = v.decode('utf-8')
@@ -87,6 +89,8 @@ class Scraper(Script):
         o2 = {k:v for k,v in self.options.iteritems() if k != 'file'}
         log.debug(u"Articleset: {self.articleset!r}, options: {o2}"
                   .format(**locals()))
+
+
     @property
     def articleset(self):
         if self.options['articleset']:
@@ -97,9 +101,10 @@ class Scraper(Script):
             return aset
         return
         
-    def run(self,input=None,deduplicate=False):
+    def run(self,input=None):
         from amcat.scraping.controller import Controller
-        return Controller().run([self])            
+        c = Controller()
+        c.run(self)
 
     def _get_units(self):
         """

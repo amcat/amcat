@@ -120,7 +120,7 @@ class ThreadedAPIController(ThreadedController, APIController):
     """Controller that runs scrapers asynchronously and saves them via the API"""
 
 
-class ArticleManager(object):
+class ArticleManager(list):
     """class to manage the overly complex output of scrapers
     takes articles of various classes and types, provides convertion and postprocessing
     also handles parent-child relationships"""
@@ -128,10 +128,6 @@ class ArticleManager(object):
 
     def __init__(self, articles = [], scraper = None):
         self._articles = self.add_articles(articles, scraper = scraper)
-
-    def __iter__(self):
-        for article in self._articles:
-            yield article
 
     def add_articles(self, articles, scraper = None):
         """articles: a list of unprocessed/processed article/document objects"""
@@ -169,6 +165,7 @@ class ArticleManager(object):
         return json.dumps(self._articles)
 
     def n_articles(self):
+        """Amount of articles including children"""
         return len(self._flatten_articles().keys())
 
     def _postprocess(self, article, articles, scraper = None):
