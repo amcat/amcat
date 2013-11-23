@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models import Coding, Sentence, CodingValue
 from amcat.tools.caching import cached
