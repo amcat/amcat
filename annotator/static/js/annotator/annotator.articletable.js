@@ -213,28 +213,26 @@ annotator.articletable.showArticleFromRow = function(row){
    
     $('.sentences').html('Loading..');
     $.ajax({
-        "url": "article/" + annotator.articleid + "/sentences",
+        "url": annotator.get_api_url() + "articles/" + annotator.articleid + "/sentences?page_size=100000",
         "success": function(json) {
-            annotator.articleSentences = json.sentences;
-            annotator.writeArticleSentences(json.sentences);
-            
-            if(json.video){
-                console.debug('video html found');
-                json.video = json.video.replace(/width="\d+"/g, 'width="250"').replace(/height="\d+"/g, 'height="140"')
-                $('.video-container').html(json.video);
-                //$('.sentences').css('height', '80%');
-            } else {
-               // $('.sentences').css('height', '100%');
-                $('.video-container').html('').hide();
-            }
-            
+            annotator.articleSentences = json.results;
+
             /*** set autocomplete for 'unit' column ***/
             annotator.fields.fields['unit'].items = [];
-            $.each(json.sentences, function(i, sentenceObj){
-                annotator.fields.fields['unit'].items.push({'label':sentenceObj.unit, 'value':sentenceObj.id})
-            });
-            console.debug('set fields for unit');
+            $.each(json.results, function(i, sentence){
+                // Register `get_unit`, which returns "%s.%s" % (parnr, sentnr), for
+                // backward compat reasons.
+                sentence.get_unit = (function(){
+                    return this.parnr + "." + this.sentnr;
+                }).bind(sentence);
 
+                annotator.fields.fields['unit'].items.push({
+                    label : sentence.get_unit(),
+                    value : sentence.id
+                })
+            });
+
+            annotator.writeArticleSentences(json.results);
             annotator.articletable.highlight();
             annotator.articletable.fit_table();
         },
@@ -292,8 +290,6 @@ annotator.articletable.clickArticleRow = function(row) { // called if user click
 
 annotator.articletable.onCreateArticleTable = function(){
     /*** set items of articles table ***/
-    //$("#article-table-container table tbody").click(annotator.articletable.clickArticleRow);
-    //$("#article-table-container table td").css('cursor', 'pointer');
     $('#next-article-button').button("option", "disabled", false);
 }
    

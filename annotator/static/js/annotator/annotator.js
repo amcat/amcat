@@ -38,6 +38,7 @@ var STATUS_NOTSTARTED = 0;
 var STATUS_INPROGRESS = 1;
 var STATUS_COMPLETE = 2;
 var STATUS_IRRELEVANT = 9;
+var API_URL = "/api/v4/"
 
 annotator.articleid = 0;
 annotator.articleSentences = null;
@@ -58,8 +59,13 @@ annotator.resetArticleState = function(){ // set state of article to unmodified
     annotator.commentAndStatus.modified = false;
 }
 
+annotator.get_api_url = function(){
+    return annotator._get_api_url(annotator.project_id, annotator.codingjob_id);
+}
 
-
+annotator._get_api_url = function(project_id, codingjob_id){
+    return API_URL + "projects/" + project_id + "/codingjobs/" + codingjob_id + "/";
+}
 
 
 /************* Article codings *************/
@@ -490,7 +496,7 @@ annotator.sortLabels = function(a, b){ // natural sort on the labels
 annotator.findSentenceByUnit = function(unit){
     var result = null;
     $.each(annotator.articleSentences, function(i, sentence){
-        if(sentence.unit == unit){
+        if(sentence.get_unit() == unit){
             result = sentence;
             return false;
         }
@@ -520,10 +526,10 @@ annotator.stripIdAttribute = function(id){ // used for sentence numbers that con
 annotator.getNextSentenceNumber = function(sentencenumber){
     var result = null;
     $.each(annotator.articleSentences, function(i, sentence){
-        if(sentence.unit == sentencenumber){
+        if(sentence.get_unit() == sentencenumber){
             //console.debug('sentences length', annotator.articleSentences.length,i+1);
             if(annotator.articleSentences.length > i+1){
-                result = annotator.articleSentences[i+1].unit;
+                result = annotator.articleSentences[i+1].get_unit();
                 console.log('next unit found', result);
             }
             return false;
@@ -539,12 +545,11 @@ annotator.findNextAvailableSentences = function(){
     var availableSentencenrs = [];
     var parnr = 0;
     $.each(annotator.articleSentences, function(i, sentence){
-        parnr = parseInt(sentence.unit.split('.')[0]);
-        var sentnr = parseInt(sentence.unit.split('.')[1]);
-        var nextSentencenr = parnr + '.' + (sentnr+1);
+        parnr = sentence.parnr;
+        var nextSentencenr = parnr + '.' + (sentence.sentnr + 1);
         var exists = false;
         $.each(annotator.articleSentences, function(j, sentence2){
-            if(sentence2.unit == nextSentencenr){
+            if(sentence2.get_unit() == nextSentencenr){
                 exists = true;
                 return true;
             }
@@ -606,21 +611,21 @@ annotator.saveNewSentenceDialog = function(){
 
 annotator.writeArticleSentences = function(sentences){
     var html = $('<div />');
-    var previousParnr = 1;
-    $.each(sentences, function(i, sentence){
-        var sentenceHtml = $('<div />').attr('id', 'sentence-' + sentence.id);
-        var parnr = sentence.unit.split('.')[0];
-        if(parnr != previousParnr){
-            sentenceHtml.addClass('new-paragraph');
+    var prev_parnr = 1;
+
+    $.each(sentences, function(i, s){
+        var _html = $('<div />').attr('id', 'sentence-' + s.id);
+        if(s.parnr != prev_parnr){
+            _html.addClass('new-paragraph');
         }
-        if(sentence.unit == '1.1'){
-            sentenceHtml.append($('<h2 />').text(sentence.text));
+        if(s.get_unit() == '1.1'){
+            _html.append($('<h2 />').text(s.text));
         } else {
-            sentenceHtml.append($('<span />').addClass('annotator-sentencenr').text('(' + sentence.unit + ') '));
-            sentenceHtml.append(document.createTextNode(sentence.text));
+            _html.append($('<span />').addClass('annotator-sentencenr').text('(' + s.get_unit() + ') '));
+            _html.append(document.createTextNode(s.sentence));
         }
-        previousParnr = parnr;
-        html.append(sentenceHtml);
+        prev_parnr = s.parnr;
+        html.append(_html);
     });
     
     if(sentences.length == 0){

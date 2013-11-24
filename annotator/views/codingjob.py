@@ -43,6 +43,7 @@ def index(request, project_id, codingjob_id):
     return render(request, "annotator/codingjob.html", {
         'codingjob': CodingJob.objects.get(id=codingjob_id),
         'project': Project.objects.get(id=project_id),
+        'coder' : request.user,
         'form': codingtoolkit.CodingStatusCommentForm(auto_id='article-%s')
     })
     
@@ -123,23 +124,6 @@ def articleCodings(request, project_id, codingjob_id, article_id):
     return render(request, "annotator/articlecodingform.html", {'form':articlecodingform})
     
 
-def articleSentences(request, project_id, codingjob_id, article_id):
-    """returns the sentences found in an article"""
-    article = Article.objects.get(id=article_id)
-    
-    sentences = []
-    for s in article.sentences.order_by('parnr', 'sentnr').all():
-        sentences.append({'id':s.id, 'unit':'%s.%s' % (s.parnr, s.sentnr), 'text':unicode(s)})
-        
-    result = {
-        'article_id':article_id,
-        'sentences':sentences
-    }
-    
-    out = DictToJson().run(result)
-    return writeResponse(out)
-        
-        
 def getFieldItems(field, language):
     """get the codebook codes as dictionaries wrapped in a list"""
     if field.serialiser.possible_values:

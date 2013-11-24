@@ -351,12 +351,6 @@ button:focus{
     cursor:auto;
 }
 
-.video-container{
-    margin-top:5px;
-}
-
-
-
 /* make sentences table look like a datatable, with colors etc. */
 #unitcoding-table tbody tr:nth-child(odd){
     background-color: #E2E4FF;

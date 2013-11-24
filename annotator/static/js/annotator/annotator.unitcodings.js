@@ -71,7 +71,7 @@ annotator.unitcodings.processUnitCodingsJson = function(json, showAllRows){
             } else if(j == 1){ // unitid, needs to be converted to paragraph nr + sentence nr
                 var sentence = annotator.findSentenceById(col);
                 //console.log('sentence', sentence, col);
-                col = sentence.unit;
+                col = sentence.get_unit();
                 $('input[name=unit]', row).val(col);
             } else {
                 $('input:text:eq(' + (j-1) + ')', row).val(col);
@@ -296,11 +296,10 @@ annotator.unitcodings.setSentence = function(){
     var currentRow = $('#unitcoding-table .row_selected');
     
     var unit = currentRow.find('input:first').val(); // find value of unit column input
-    var unitid = currentRow.find('input:first').attr('id');
     $('.article-part .selected-sentence').removeClass('selected-sentence');
     if(unit.length >= 3){
         var sentence = annotator.findSentenceByUnit(unit);
-        if(sentence.text){ // valid input
+        if(sentence.sentence){ // valid input
             $('#sentence-' + sentence.id).addClass('selected-sentence');
             $('.sentences').scrollTo($('#sentence-' + sentence.id), {offset:-150});
             
@@ -310,11 +309,11 @@ annotator.unitcodings.setSentence = function(){
                 var nCell = document.createElement('td');
                 nCell.colSpan = iColspan;
                 newRow.className = "sentence-text-row";
-                nCell.innerHTML = sentence.text;
+                nCell.innerHTML = sentence.sentence;
                 newRow.appendChild(nCell);
                  $(newRow).insertBefore(currentRow);
             } else{
-                currentRow.prev().find('td').html(sentence.text);
+                currentRow.prev().find('td').html(sentence.sentence);
             }
         }
     }
