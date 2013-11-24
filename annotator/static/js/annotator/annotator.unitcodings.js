@@ -38,7 +38,7 @@ annotator.unitcodings.createUnitCodingsTable = function(articleid){
     $('#unitcoding-table').html('<tr><td></td></tr>');
     $('#unitcoding-table-loading').remove();
     $('<div class="table-loading" id="unitcoding-table-loading">Loading...</div>').insertAfter('#unitcoding-table');
-    var url = "../codingjob/" + annotator.codingjobid + "/article/" + annotator.articleid + "/unitcodings";
+    var url = "article/" + annotator.articleid + "/unitcodings";
     $.ajax({
         "url": url,
         "success": annotator.unitcodings.processUnitCodingsJson,

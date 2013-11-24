@@ -82,7 +82,7 @@ annotator.articlecodings.writeArticleCodingsTable = function(){
     $('#article-coding-form').html('Loading...');
     
     $.ajax({
-        "url": "../codingjob/" + annotator.codingjobid + "/article/" + annotator.articleid + "/articlecodings",
+        "url": "article/" + annotator.articleid + "/articlecodings",
         "success": function(html) {
             $('#article-coding-form').html(html);
             annotator.fields.autocompletes.addAutocompletes($('#article-coding-form'));
@@ -320,7 +320,7 @@ annotator.saveCodings = function(goToNext){
     
     $.ajax({
       type: 'POST',
-      url: "../codingjob/" + annotator.codingjobid + "/article/" + annotator.articleid + "/storecodings",
+      url: "article/" + annotator.articleid + "/storecodings",
       data: data,
       success: function(json, textStatus, jqXHR){
           console.debug('saved!' + json.response);
@@ -677,7 +677,7 @@ annotator.saveSplitArticle = function(){
         'headline':headline,
         'startSentence':startSentence,
         'endSentence':endSentence,
-        'codingjobid':annotator.codingjobid,
+        'codingjob_id':annotator.codingjob_id,
         'setnr':annotator.setnr
     });
     
@@ -989,20 +989,14 @@ annotator.initPage = function(){
         }
     });
 
-   
-    
     $(window).bind('scroll', function(){
         if($(window).scrollTop() < 85){
             $('.article-part').css('position', 'absolute');
-            //$('.article-part').css('top', '90px');
-            //$('.article-part').css('height', ($(window).height() - 90) + 'px');
         } else {
             $('.article-part').css('position', 'fixed');
             $('.article-part').css('top', '5px');
-            //$('.article-part').css('height', '100%');
         }
     });
-    
     
     $(document).bind('keydown', 'ctrl+s', function(event){
         event.preventDefault();
@@ -1066,10 +1060,4 @@ annotator.initPage = function(){
         event.preventDefault();
         $("#save-continue-button").click();
     });
-    
-    // $(document).bind('keydown', 'ctrl+a', function(event){ // disabled since it's annoying not able to select all text in an input (it has a button anyways)
-        // event.preventDefault();
-        // annotator.selectText($('.sentences').get(0));
-        // return false;
-    // });
-} 
+}

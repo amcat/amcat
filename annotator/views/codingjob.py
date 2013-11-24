@@ -19,14 +19,15 @@
 
 import json
 import logging
+from django.core.urlresolvers import reverse
 
 from django.shortcuts import render
 from django.db.models import Q
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.template.loader import render_to_string
 
 from amcat.models.coding import codingtoolkit
-from amcat.models import Code, Coding, CodingJob, CodedArticle
+from amcat.models import Code, Coding, CodingJob, CodedArticle, Project
 from amcat.models import CodingSchemaField, CodingSchemaFieldType
 from amcat.models import Article, Sentence
 from amcat.scripts.output.datatables import TableToDatatable
@@ -37,10 +38,13 @@ log = logging.getLogger(__name__)
 
 CODEBOOK_TYPE = CodingSchemaFieldType.objects.get(name="Codebook")
 
-def index(request, codingjobid):
+def index(request, project_id, codingjob_id):
     """returns the HTML for the main annotator page"""
-    return render(request, "annotator/codingjob.html", {'codingjob':CodingJob.objects.get(id=codingjobid), 
-        'codingStatusCommentForm':codingtoolkit.CodingStatusCommentForm(auto_id='article-%s')})
+    return render(request, "annotator/codingjob.html", {
+        'codingjob': CodingJob.objects.get(id=codingjob_id),
+        'project': Project.objects.get(id=project_id),
+        'form': codingtoolkit.CodingStatusCommentForm(auto_id='article-%s')
+    })
     
 def writeResponse(data):
     """helper function that returns (binary/text) data as HttpResponse"""
@@ -49,19 +53,19 @@ def writeResponse(data):
     return response
  
     
-def articles(request, codingjobid):
+def articles(request, project_id, codingjob_id):
     """returns articles in a codingjob as DataTable JSON"""
     table = codingtoolkit.get_table_articles_per_job(
-        CodingJob.objects.get(id=codingjobid)
+        CodingJob.objects.get(id=codingjob_id)
     )
     out = TableToDatatable().run(table)
     return writeResponse(out)
     
    
-def unitCodings(request, codingjobid, articleid):
+def unitCodings(request, project_id, codingjob_id, article_id):
     """returns the unit codings of an article and the HTML form (a row in a table) wrapped in JSON"""
-    article = Article.objects.get(id=articleid)
-    codingjob = CodingJob.objects.get(id=codingjobid)
+    article = Article.objects.get(id=article_id)
+    codingjob = CodingJob.objects.get(id=codingjob_id)
     codedArticle = CodedArticle(codingjob, article)
     table = codingtoolkit.get_table_sentence_codings_article(codedArticle, request.user.get_profile().language)
     
@@ -103,10 +107,10 @@ def get_code_ids(coding):
             continue
 
 
-def articleCodings(request, codingjobid, articleid):
+def articleCodings(request, project_id, codingjob_id, article_id):
     """returns the article codings of an article as HTML form"""
-    article = Article.objects.get(id=articleid)
-    codingjob = CodingJob.objects.get(id=codingjobid)
+    article = Article.objects.get(id=article_id)
+    codingjob = CodingJob.objects.get(id=codingjob_id)
     codings = codingtoolkit.get_article_coding(codingjob, article)
 
     if codings:
@@ -119,16 +123,16 @@ def articleCodings(request, codingjobid, articleid):
     return render(request, "annotator/articlecodingform.html", {'form':articlecodingform})
     
 
-def articleSentences(request, articleid):
+def articleSentences(request, project_id, codingjob_id, article_id):
     """returns the sentences found in an article"""
-    article = Article.objects.get(id=articleid)
+    article = Article.objects.get(id=article_id)
     
     sentences = []
     for s in article.sentences.order_by('parnr', 'sentnr').all():
         sentences.append({'id':s.id, 'unit':'%s.%s' % (s.parnr, s.sentnr), 'text':unicode(s)})
         
     result = {
-        'articleid':articleid,
+        'article_id':article_id,
         'sentences':sentences
     }
     
@@ -200,10 +204,10 @@ def _get_highlight_labels(schemas):
             else:
                 yield code.get_label()
 
-def fields(request, codingjobid):
+def fields(request, project_id,  codingjob_id):
     """get the fields of the articleschema and unitschema as JSON"""
     language = request.user.get_profile().language
-    codingjob = CodingJob.objects.get(id=codingjobid)
+    codingjob = CodingJob.objects.get(id=codingjob_id)
 
     # Get all relevant fields for this codingjob in one query
     fields = CodingSchemaField.objects.select_related(
@@ -247,10 +251,10 @@ def updateCoding(fields, form, codingObj):
     codingObj.update_values(valuesDict)
     
     
-def storeCodings(request, codingjobid, articleid):
+def storeCodings(request, project_id, codingjob_id, article_id):
     """store the POST data as coding"""
-    article = Article.objects.get(id=articleid)
-    codingjob = CodingJob.objects.get(id=codingjobid)
+    article = Article.objects.get(id=article_id)
+    codingjob = CodingJob.objects.get(id=codingjob_id)
     codedArticle = CodedArticle(codingjob, article)
     sentenceMappingDict = {}
     
@@ -317,3 +321,10 @@ def storeCodings(request, codingjobid, articleid):
     else:
         out = DictToJson().run({'response':'ok', 'codedsentenceMapping':sentenceMappingDict})
     return writeResponse(out)
+
+
+def redirect(request, codingjob_id):
+    cj = CodingJob.objects.get(id=codingjob_id)
+    return HttpResponseRedirect(reverse(index, kwargs={
+        "codingjob_id" : codingjob_id, "project_id" : cj.project_id
+    }))

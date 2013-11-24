@@ -34,8 +34,6 @@
     <div class="articlelist-part">
         <div class="links">
             <a href="{% url "codingjobs" %}">&laquo; Back to Overview</a> | 
-            {% comment %}<a href="{% url "annotator-codingjob-ontology" codingjob.id %}" target="_blank">View Ontologies</a> |
-            {% endcomment %}
             <a href="javascript:;" id="help-button">Help</a>
         </div>
         <h2>Articles in codingjob {{codingjob.id}} - {{codingjob.name}}</h2>
@@ -51,7 +49,7 @@
         <script type="text/javascript">
         $(document).ready(function(){
             var jqueryElement = $('#article-table-container');
-            var url = "{% url "annotator-codingjob-articles" codingjob.id %}";
+            var url = "{% url "annotator-codingjob-articles" project.id codingjob.id %}";
             var columns = [
                 //[null,'codingjob'], 
                 //[null,'coder'], 
@@ -93,8 +91,8 @@
          
         
         <div id="article-comment-form">
-            <label>Comments:</label> {{codingStatusCommentForm.comment}}
-            <label>Article Status:</label>  {{codingStatusCommentForm.status}}
+            <label>Comments:</label> {{form.comment}}
+            <label>Article Status:</label>  {{form.status}}
         </div>
         
          <div id="article-coding">
@@ -183,27 +181,13 @@
     });
 
     
-    annotator.codingjobid = {{codingjob.id}};
+    annotator.codingjob_id = {{codingjob.id}};
 
     annotator.articlecodings.containsArticleSchema = {% if codingjob.articleschema != None %}true{% else %}false{% endif%};
     annotator.unitcodings.containsUnitSchema = {% if codingjob.unitschema != None %}true{% else %}false{% endif%};
     annotator.unitcodings.isNETcoding = {% if codingjob.unitschema and codingjob.unitschema.isnet %}true{% else %}false{%endif%}
 </script>
 
-<!--
-<script type="text/javascript">
-     if(location.href.indexOf('/dev/') == -1){ // not enable it for the /dev/ sites
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-59284-5']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })(); 
-}
-</script>-->
  </body>
 </html>
 

@@ -50,12 +50,12 @@ annotator.fields.initFieldData = function(){
     annotator.fields.codingruleactions = {};
 
     var url = "/api/v4/codingrule?codingschema__codingjobs_";
-    $.getJSON(url + "unit__id=" + annotator.codingjobid, annotator.fields.codingrules_fetched.bind("unit"));
-    $.getJSON(url + "article__id=" + annotator.codingjobid, annotator.fields.codingrules_fetched.bind("article"));
+    $.getJSON(url + "unit__id=" + annotator.codingjob_id, annotator.fields.codingrules_fetched.bind("unit"));
+    $.getJSON(url + "article__id=" + annotator.codingjob_id, annotator.fields.codingrules_fetched.bind("article"));
     $.getJSON("/api/v4/codingruleaction", annotator.fields.codingruleactions_fetched);
 
     $.ajax({
-        "url": annotator.codingjobid + "/fields",
+        "url": "fields",
         "success": function(json) {
             var count = 0;
             $.each(json.fields, function(i, fieldObj){
