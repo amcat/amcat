@@ -103,8 +103,7 @@ class Scraper(Script):
         
     def run(self,input=None):
         from amcat.scraping.controller import Controller
-        c = Controller()
-        c.run(self)
+        list(Controller().run(self))
 
     def _get_units(self):
         """
@@ -259,3 +258,4 @@ def _set_default(obj, attr, val):
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli(Scraper)
+

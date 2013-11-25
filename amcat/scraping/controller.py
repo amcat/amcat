@@ -127,7 +127,7 @@ class ArticleManager(object):
     _articles = []
 
     def __init__(self, articles = [], scraper = None):
-        self._articles = self.add_articles(articles, scraper = scraper)
+        self.add_articles(articles, scraper = scraper)
 
     def __iter__(self):
         for article in _articles:
@@ -177,7 +177,7 @@ class ArticleManager(object):
 
         #handle children
         for child in articles:            
-            if (hasattr(child, 'parent') and child.parent == article) or (isinstance(child, dict) and 'parent' in child.keys() and child['parent'] == article): #has this article as a parent attribute or dict entry
+            if self._isparent(article, child):
                 if isinstance(child, dict):
                     del child['parent']
                 artdict['children'].append(self._postprocess(child, articles, scraper))
@@ -185,11 +185,30 @@ class ArticleManager(object):
         #scraper data to fill in blanks
         if scraper:
             if not 'medium' in artdict.keys():
-                artdict['medium'] = Medium.get_or_create(scraper.medium_name)
+                if self._iscomment(article):
+                    artdict['medium'] = Medium.get_or_create(scraper.medium_name + " - Comments")
+                else:
+                    artdict['medium'] = Medium.get_or_create(scraper.medium_name)
             if not 'project' in artdict.keys():
                 artdict['project'] = scraper.options['project']
 
         return artdict
+
+    def _iscomment(self, article):
+        """Is this article marked as a comment?"""
+        if hasattr(article, 'is_comment') and article.is_comment:
+            return True
+        elif isinstance(child, dict) and 'is_comment' in child.keys() and child['is_comment']:
+            return True
+        else: return False
+
+    def _isparent(self, article, child):
+        """Is this object a parent of this model/Document/dict?"""
+        if hasattr(child, 'parent') and child.parent == article:
+            return True
+        elif isinstance(child, dict) and 'parent' in child.keys() and child['parent'] == article:
+            return True
+        else: return False
 
     def _make_dict(self, article):
         """called by _postprocess, converts any type of article into a dict"""
@@ -223,7 +242,7 @@ class ArticleManager(object):
                 toprocess.append(child)
             toreturn[i] = parent
         return toreturn
-            
+
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
