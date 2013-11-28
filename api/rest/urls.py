@@ -23,11 +23,12 @@ from rest_framework.urlpatterns import format_suffix_patterns
 from api.rest import resources
 
 from rest_framework.routers import DefaultRouter
+from api.rest.viewset import get_url_pattern
 from api.rest.viewsets import get_viewsets
 
 router = DefaultRouter()
 for vs in get_viewsets():
-    router.register(vs.url, vs)
+    router.register(vs.get_url_pattern(), vs)
 
 urlpatterns = format_suffix_patterns(patterns('',
     url(r'^$', resources.api_root),
@@ -38,5 +39,5 @@ urlpatterns = format_suffix_patterns(patterns('',
 ))
 
 urlpatterns +=  patterns('',
-                         url(r'^', include(router.urls)),
-                         )
+    url(r'^', include(router.urls)),
+)

@@ -38,14 +38,15 @@ class AmCATViewSetMixin(object):
     """
     model_key = None
 
-def get_url_pattern(viewset):
-    """
-    Get an url pattern (ready to be inserted in urlpatterns()) for `viewset`.
+    @classmethod
+    def get_url_pattern(cls):
+        """
+        Get an url pattern (ready to be inserted in urlpatterns()) for `viewset`.
 
-    @type viewset: must inherit from at least one AmCATViewSetMixin
-    @rtype: string
-    """
-    return "/".join(_get_url_pattern(viewset))
+        @type cls: must inherit from at least one AmCATViewSetMixin
+        @rtype: string
+        """
+        return "/".join(_get_url_pattern(cls))
 
 def _get_model_keys(viewset):
     """
@@ -53,14 +54,15 @@ def _get_model_keys(viewset):
     yields an ordered list, working up the inheritance tree according to Pythons
     MRO algorithm.
     """
-    for base in viewset.__bases__:
-        if not issubclass(base, AmCATViewSetMixin) or base.model_key is None:
-            continue
-        for model_key in _get_model_keys(base):
-            yield model_key
+    model_key = getattr(viewset, "model_key", None)
+    if model_key is None:
+        return
 
-    if hasattr(viewset, "model_key"):
-        yield viewset.model_key
+    for base in viewset.__bases__:
+        for basekey in _get_model_keys(base):
+            yield basekey
+
+    yield model_key
 
 def _get_url_pattern(viewset):
     # Deduplicate (while keeping ordering) with OrderedDict
@@ -90,9 +92,9 @@ class AmCATViewSetMixinTest(amcattest.PolicyTestCase):
         class BViewSet(AMixin, CMixin): pass
         class CViewSet(BMixin, AMixin): pass
             
-        self.assertEquals(r"projects", get_url_pattern(AMixin))
-        self.assertEquals(r"codebooks", get_url_pattern(BMixin))
-        self.assertEquals(r"projects/(?P<project>\d+)/codebooks", get_url_pattern(AViewSet))
-        self.assertEquals(r"projects/(?P<project>\d+)/codebooks", get_url_pattern(BViewSet))
-        self.assertEquals(r"codebooks/(?P<codebook>\d+)/projects", get_url_pattern(CViewSet))
+        self.assertEquals(r"projects", AMixin.get_url_pattern())
+        self.assertEquals(r"codebooks", BMixin.get_url_pattern())
+        self.assertEquals(r"projects/(?P<project>\d+)/codebooks", AViewSet.get_url_pattern())
+        self.assertEquals(r"projects/(?P<project>\d+)/codebooks", BViewSet.get_url_pattern())
+        self.assertEquals(r"codebooks/(?P<codebook>\d+)/projects", CViewSet.get_url_pattern())
 
