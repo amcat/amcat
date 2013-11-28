@@ -33,15 +33,7 @@ class CodingSchemaFieldSerializer(AmCATModelSerializer):
 class CodingSchemaFieldViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSchemaFieldSerializer
     model_key = "codingschemafield"
-
-    @property
-    def codingschemafield(self):
-        return self._codingschemafield()
-
-    @cached
-    def _codingschemafield(self):
-        return CodingSchemaField.objects.get(id=self.kwargs.get("codingschemafield"))
-
+    model = CodingSchemaField
 
 class CodingSchemaFieldViewSet(CodingSchemaFieldViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = CodingSchemaField

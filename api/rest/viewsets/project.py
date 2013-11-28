@@ -108,15 +108,7 @@ class ProjectViewSetMixin(AmCATViewSetMixin):
     permission_classes = (ProjectPermission,)
     model_serializer_class = ProjectSerializer
     model_key = "project"
-
-    @property
-    def project(self):
-        if not hasattr(self, "_project"):
-            self._project = None
-            if "project" in self.kwargs:
-                project_id = int(self.kwargs['project'])
-                self._project = Project.objects.get(pk=project_id)
-        return self._project
+    model = Project
 
     @classmethod
     def get_url(cls, base_name=None, view='list', **kwargs):

@@ -18,7 +18,7 @@
 ###########################################################################
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from amcat.models import Coding, Article
+from amcat.models import Coding, Article, CodedArticle
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
@@ -69,18 +69,12 @@ class CodedArticleSerializer(AmCATModelSerializer):
 class CodedArticleViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodedArticleSerializer
     model_key = "coded_article"
-
-    @property
-    def article(self):
-        return self._article()
-
-    @cached
-    def _article(self):
-        return Article.objects.get(id=self.kwargs.get("coded_article"))
+    model = Article
 
 class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                           CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Article
+    model_serializer_class = CodedArticleSerializer
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleViewSet, self).filter_queryset(queryset)

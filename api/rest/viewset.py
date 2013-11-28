@@ -27,8 +27,10 @@ and multiple times for viewsets with the same model, but a different scope.
 
 __all__ = ("AmCATViewSetMixin", "get_url_pattern", "AmCATViewSetMixinTest")
 
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from amcat.tools import amcattest
+
+ModelKey = namedtuple("ModelKey", ("key", "viewset"))
 
 class AmCATViewSetMixin(object):
     """
@@ -37,6 +39,12 @@ class AmCATViewSetMixin(object):
     mixin. A default implementation is given for this superclass.
     """
     model_key = None
+
+    def __getattr__(self, item):
+        for model_key, viewset in _get_model_keys(self.__class__):
+            if model_key is item:
+                return viewset.model.objects.get(pk=self.kwargs.get(model_key))
+        raise AttributeError
 
     @classmethod
     def get_url_pattern(cls):
@@ -48,11 +56,14 @@ class AmCATViewSetMixin(object):
         """
         return "/".join(_get_url_pattern(cls))
 
+
 def _get_model_keys(viewset):
     """
     Get an iterator of all model_key properties in superclasses. This function
     yields an ordered list, working up the inheritance tree according to Pythons
     MRO algorithm.
+
+    @rtype: ModelKey
     """
     model_key = getattr(viewset, "model_key", None)
     if model_key is None:
@@ -62,11 +73,12 @@ def _get_model_keys(viewset):
         for basekey in _get_model_keys(base):
             yield basekey
 
-    yield model_key
+    yield ModelKey(model_key, viewset)
 
 def _get_url_pattern(viewset):
     # Deduplicate (while keeping ordering) with OrderedDict
-    model_keys = tuple(OrderedDict.fromkeys(_get_model_keys(viewset)))
+    model_keys = (mk.key for mk in _get_model_keys(viewset))
+    model_keys = tuple(OrderedDict.fromkeys(model_keys))
 
     for model_key in model_keys[:-1]:
         yield r"{model_key}s/(?P<{model_key}>\d+)".format(**locals())

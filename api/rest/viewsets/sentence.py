@@ -16,14 +16,12 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSetMixin
+from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models import Sentence
 from amcat.nlp import sbd
-from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
-from api.rest.viewsets.coding.coded_article import CodedArticleViewSetMixin
 
 __all__ = ("SentenceSerializer", "SentenceViewSetMixin", "SentenceViewSet")
 
@@ -33,18 +31,13 @@ class SentenceSerializer(AmCATModelSerializer):
 class SentenceViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = SentenceSerializer
     model_key = "sentence"
+    model = Sentence
 
 class SentenceViewSet(SentenceViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Sentence
 
-    @property
-    def sentence(self):
-        return self._sentence()
-
-    @cached
-    def _coding(self):
-        return Sentence.objects.get(id=self.kwargs.get("sentence"))
-
     def filter_queryset(self, queryset):
         qs = super(SentenceViewSet, self).filter_queryset(queryset)
         return qs.filter(article=self.article, id__in=sbd.get_or_create_sentences(self.article))
+
+

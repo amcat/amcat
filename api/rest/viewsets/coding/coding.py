@@ -38,19 +38,12 @@ class CodingSerializer(AmCATModelSerializer):
 class CodingViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSerializer
     model_key = "coding"
+    model = Coding
 
 class CodingViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                     CodingViewSetMixin, DatatablesMixin,
                     ReadOnlyModelViewSet):
     model = Coding
-
-    @property
-    def coding(self):
-        return self._coding()
-
-    @cached
-    def _coding(self):
-        return Coding.objects.get(id=self.kwargs.get("coding"))
 
     def filter_queryset(self, queryset):
         qs = super(CodingViewSet, self).filter_queryset(queryset)
@@ -61,8 +54,9 @@ class CodingValueSerializer(AmCATModelSerializer):
     model = CodingValue
 
 class CodingValueViewSetMixin(AmCATViewSetMixin):
-    model_key = "codingvalue"
     model_serializer_class = CodingValueSerializer
+    model_key = "codingvalue"
+    model = CodingValue
 
 
 class CodingValueViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,

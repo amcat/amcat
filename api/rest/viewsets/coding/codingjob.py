@@ -18,18 +18,22 @@
 ###########################################################################
 from django.db.models import Count
 from rest_framework import serializers
-from rest_framework.viewsets import ModelViewSet
-from amcat.models import CodingJob
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from amcat.models import CodingJob, Article, Sentence
 from amcat.models.coding import coding
+from amcat.nlp import sbd
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
+from api.rest.viewsets.sentence import SentenceViewSetMixin
+from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 
 STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
 
-__all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet")
+__all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet",
+           "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet")
 
 
 class CodingJobSerializer(AmCATModelSerializer):
@@ -72,15 +76,7 @@ class CodingJobSerializer(AmCATModelSerializer):
 class CodingJobViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingJobSerializer
     model_key = "codingjob"
-
-    @property
-    def codingjob(self):
-        return self._codingjob()
-
-    @cached
-    def _codingjob(self):
-        return CodingJob.objects.get(id=self.kwargs.get("codingjob"))
-
+    model = CodingJob
 
 class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ModelViewSet):
     model = CodingJob
@@ -88,3 +84,19 @@ class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMix
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
         return jobs.filter(project=self.project)
+
+class CodingJobArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, ArticleViewSetMixin,
+                              DatatablesMixin, ReadOnlyModelViewSet):
+    model = Article
+
+    def filter_queryset(self, articles):
+        articles = super(CodingJobArticleViewSet, self).filter_queryset(articles)
+        return articles.filter(id__in=self.codingjob.articleset.articles.all())
+
+class CodingJobArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, ArticleViewSetMixin,
+                                      SentenceViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = Sentence
+
+    def filter_queryset(self, sentences):
+        sentences = super(CodingJobArticleSentenceViewSet, self).filter_queryset(sentences)
+        return sentences.filter(id__in=sbd.get_or_create_sentences(self.article))

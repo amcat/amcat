@@ -19,8 +19,13 @@
 import json
 from amcat.models import Medium, Article
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
 
 __all__ = ("ArticleSerializer",)
+
+class ArticleViewSetMixin(AmCATViewSetMixin):
+    model_key = "article"
+    model = Article
 
 class ArticleSerializer(AmCATModelSerializer):
 

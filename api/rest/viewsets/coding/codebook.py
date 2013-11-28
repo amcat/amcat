@@ -22,7 +22,6 @@ from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from amcat.models import Codebook, CodingSchema
-from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
@@ -67,18 +66,12 @@ class CodebookSerializer(AmCATModelSerializer):
 class CodebookViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodebookSerializer
     model_key = "codebook"
-
-    @property
-    def codebook(self):
-        return self._codebook()
-
-    @cached
-    def _codebook(self):
-        return Codebook.objects.get(id=self.kwargs.get("codebook"))
+    model = Codebook
 
 class CodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                       CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Codebook
+    model_serializer_class = CodebookSerializer
 
     def _get_codebook_ids(self):
         """

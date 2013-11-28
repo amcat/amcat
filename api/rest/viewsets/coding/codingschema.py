@@ -36,14 +36,7 @@ class CodingSchemaSerializer(AmCATModelSerializer):
 class CodingSchemaViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSchemaSerializer
     model_key = "codingschema"
-
-    @property
-    def codingschema(self):
-        return self._codingschema()
-
-    @cached
-    def _codingschema(self):
-        return CodingSchema.objects.get(id=self.kwargs.get("codingschema"))
+    model = CodingSchema
 
 
 class CodingJobCodingSchemaViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
