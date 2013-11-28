@@ -50,7 +50,7 @@ class DailyScript(Script):
 
     def scrape(self, controller, scrapers, deduplicate = False):
         """Use the controller to scrape the given scrapers."""
-        #general_index_articleset = ArticleSet.objects.get(pk = 2)
+        general_index_articleset = ArticleSet.objects.get(pk = 2)
         #CAUTION: destination articleset is hardcoded
         result = []
         current = None
