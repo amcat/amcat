@@ -34,7 +34,7 @@ annotator.unitcodings.writeSentenceCodingsTable = function(){
     annotator.unitcodings.enableToolbarButtons(false);
 }
 
-annotator.unitcodings.createUnitCodingsTable = function(articleid){
+annotator.unitcodings.createUnitCodingsTable = function (articleid) {
     $('#unitcoding-table').html('<tr><td></td></tr>');
     $('#unitcoding-table-loading').remove();
     $('<div class="table-loading" id="unitcoding-table-loading">Loading...</div>').insertAfter('#unitcoding-table');
@@ -42,13 +42,13 @@ annotator.unitcodings.createUnitCodingsTable = function(articleid){
     $.ajax({
         "url": url,
         "success": annotator.unitcodings.processUnitCodingsJson,
-        "error": function(jqXHR, textStatus, errorThrown){
+        "error": function (jqXHR, textStatus, errorThrown) {
             console.log('Error loading URL', url);
             $('#unitcoding-table-loading').html('<div class="error">Error loading data for table from <a href="' + url + '">' + url + '</a></div>');
         },
         "dataType": "json"
     });
-}
+};
 
 annotator.unitcodings.processUnitCodingsJson = function(json, showAllRows){
     annotator.unitcodings.emptyUnitcodingHtml = $(json.unitcodingFormTablerow);
@@ -62,7 +62,6 @@ annotator.unitcodings.processUnitCodingsJson = function(json, showAllRows){
     });
     theaderrow.append($('<th />').text(''));// last column is for 'add row' button
 
-    //console.log(theaderrow, theader);
     $.each(json.unitcodings.rows, function(i, rowData){
         var row = $(json.unitcodingFormTablerow);
         $.each(rowData, function(j, col){
@@ -70,27 +69,20 @@ annotator.unitcodings.processUnitCodingsJson = function(json, showAllRows){
                 $('input[name=codingid]', row).val(col);
             } else if(j == 1){ // unitid, needs to be converted to paragraph nr + sentence nr
                 var sentence = annotator.findSentenceById(col);
-                //console.log('sentence', sentence, col);
                 col = sentence.get_unit();
                 $('input[name=unit]', row).val(col);
             } else {
                 $('input:text:eq(' + (j-1) + ')', row).val(col);
             }
         });
-        //row.append($('<td />').append(annotator.unitcodings.createAddRowButtonHtml(rowData[0])));
-        //console.log('adding row', row);
         tbody.append(row);
     });
     
     $('#unitcoding-table').empty().append(theader).append(tbody);
-    //console.log($('#unitcoding-table'));
     annotator.unitcodings.setEventsOnUnitCodingRows($('#unitcoding-table'));
     annotator.fields.add_rules.bind(["unit"])($('#unitcoding-table'));
     
     $('#unitcoding-table-loading').remove();
-    
-    //annotator.unitcodings.initFixedHeader();
-
     
     if(json.unitcodings.rows.length == 0){ //no rows
         annotator.unitcodings.addSingleUnitCodingRow();

@@ -207,91 +207,87 @@ annotator.articletable.fit_table = function(min_size_input, min_size_header){
 
 }
 
-annotator.articletable.showArticleFromRow = function(row){
+annotator.articletable.showArticleFromRow = function (row) {
     var aid = row.children('td:first').text(); // get article id from first column of current row
     annotator.articleid = aid;
-   
+
     $('.sentences').html('Loading..');
     $.ajax({
         "url": annotator.get_api_url() + "articles/" + annotator.articleid + "/sentences?page_size=100000",
-        "success": function(json) {
+        "success": function (json) {
             annotator.articleSentences = json.results;
+            console.log("Setting article sentences");
 
             /*** set autocomplete for 'unit' column ***/
             annotator.fields.fields['unit'].items = [];
-            $.each(json.results, function(i, sentence){
+            $.each(json.results, function (i, sentence) {
                 // Register `get_unit`, which returns "%s.%s" % (parnr, sentnr), for
                 // backward compat reasons.
-                sentence.get_unit = (function(){
+                sentence.get_unit = (function () {
                     return this.parnr + "." + this.sentnr;
                 }).bind(sentence);
 
                 annotator.fields.fields['unit'].items.push({
-                    label : sentence.get_unit(),
-                    value : sentence.id
+                    label: sentence.get_unit(),
+                    value: sentence.id
                 })
             });
 
             annotator.writeArticleSentences(json.results);
             annotator.articletable.highlight();
             annotator.articletable.fit_table();
+            annotator.unitcodings.showSentenceCodings();
+            annotator.articlecodings.showArticleCodings();
+            annotator.codingsAreModified(false);
+            annotator.resetArticleState();
+            annotator.articletable.highlight();
         },
-        "error": function(jqXHR, textStatus, errorThrown){
+        "error": function (jqXHR, textStatus, errorThrown) {
             console.debug('error loading article');
             $('.article-part').html('<div class="error">Error loading article data from <a href="' + this.url + '" target="_blank">' + this.url + '</a></div>');
         },
         "dataType": "json"
     });
-    
-    
-    
+
     $('.coding-part').show();
-    //$('#irrelevant-button').focus();
-    //annotator.codingTypeSet();
-    annotator.articlecodings.showArticleCodings();
-    annotator.unitcodings.showSentenceCodings();
-    
-    annotator.codingsAreModified(false);
-    annotator.resetArticleState();
-    
+
     var comment = row.find('td:nth-child(8) div div').attr('title'); // very long comments are stored in title
-    if(!comment) comment = row.children('td:nth-child(8)').text();
+    if (!comment) comment = row.children('td:nth-child(8)').text();
     console.debug('comment', comment);
     $('#article-comment').val(comment);
-    
+
     console.debug('status', row.children('td:nth-child(7)').text());
     $('#article-status option:contains("' + row.children('td:nth-child(7)').text() + '")').attr('selected', 'selected');
-    
-    
-    $('#edit-article-button').button( "option", "disabled", false); // when article is selected, it is possible to edit
-    
-    if(row.next().length == 0){ // no next article available
-        $('#next-article-button').button( "option", "disabled", true);
-    } else {
-        $('#next-article-button').button( "option", "disabled", false);
-    }
-    if(row.prev().length == 0){ // no previous article available
-        $('#previous-article-button').button( "option", "disabled", true);
-    } else {
-        $('#previous-article-button').button( "option", "disabled", false);
-    }
-    
-    annotator.articletable.highlight();
-}
 
 
-annotator.articletable.clickArticleRow = function(row) { // called if user clicks on article table row
-    if(!annotator.confirmArticleChange()) return;
+    $('#edit-article-button').button("option", "disabled", false); // when article is selected, it is possible to edit
+
+    if (row.next().length == 0) { // no next article available
+        $('#next-article-button').button("option", "disabled", true);
+    } else {
+        $('#next-article-button').button("option", "disabled", false);
+    }
+    if (row.prev().length == 0) { // no previous article available
+        $('#previous-article-button').button("option", "disabled", true);
+    } else {
+        $('#previous-article-button').button("option", "disabled", false);
+    }
+
+};
+
+
+annotator.articletable.clickArticleRow = function (row) { // called if user clicks on article table row
+    if (!annotator.confirmArticleChange()) return;
     $('#article-table-container table .row_selected').removeClass('row_selected');
     row.addClass('row_selected');
     annotator.articletable.showArticleFromRow(row);
-} 
+};
 
 
-annotator.articletable.onCreateArticleTable = function(){
+annotator.articletable.onCreateArticleTable = function () {
     /*** set items of articles table ***/
     $('#next-article-button').button("option", "disabled", false);
-}
+};
    
 
    
@@ -301,13 +297,13 @@ annotator.articletable.showEditArticleDialog = function(articleid){
     $('#article-edit-form').html('Loading...');
     $("#article-dialog-form").dialog("open");
     annotator.articletable.articleEditForm = new Form("annotator/articleFormJSON/" + articleid, {'sortFields':true});
-    annotator.articletable.articleEditForm.ready = function(){
+    annotator.articletable.articleEditForm.ready = function () {
         $('#article-edit-form').html(annotator.articletable.articleEditForm.render.table);
-    }
-    annotator.articletable.articleEditForm.handle_loaderror = function(jqXHR, textStatus, errorThrown){
+    };
+    annotator.articletable.articleEditForm.handle_loaderror = function (jqXHR, textStatus, errorThrown) {
         console.debug('Error loading form: ' + textStatus);
         $('#article-edit-form').html('<div class="error">Failed to load form: ' + textStatus + '</div>');
-    }
+    };
     
     // ugly hack... should be removed when moving to django..
     annotator.articletable.articleEditForm.initialize_form2 = annotator.articletable.articleEditForm.initialize_form;

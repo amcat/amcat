@@ -1,36 +1,44 @@
 /**************************************************************************
-*          (C) Vrije Universiteit, Amsterdam (the Netherlands)            *
-*                                                                         *
-* This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     *
-*                                                                         *
-* AmCAT is free software: you can redistribute it and/or modify it under  *
-* the terms of the GNU Affero General Public License as published by the  *
-* Free Software Foundation, either version 3 of the License, or (at your  *
-* option) any later version.                                              *
-*                                                                         *
-* AmCAT is distributed in the hope that it will be useful, but WITHOUT    *
-* ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   *
-* FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     *
-* License for more details.                                               *
-*                                                                         *
-* You should have received a copy of the GNU Affero General Public        *
-* License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
-***************************************************************************/
+ *          (C) Vrije Universiteit, Amsterdam (the Netherlands)            *
+ *                                                                         *
+ * This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     *
+ *                                                                         *
+ * AmCAT is free software: you can redistribute it and/or modify it under  *
+ * the terms of the GNU Affero General Public License as published by the  *
+ * Free Software Foundation, either version 3 of the License, or (at your  *
+ * option) any later version.                                              *
+ *                                                                         *
+ * AmCAT is distributed in the hope that it will be useful, but WITHOUT    *
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   *
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     *
+ * License for more details.                                               *
+ *                                                                         *
+ * You should have received a copy of the GNU Affero General Public        *
+ * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
+ ***************************************************************************/
 
 // CodingRules constants
 OPERATORS = {
-    OR : "OR", AND : "AND", EQUALS : "EQ",
-    NOT_EQUALS : "NEQ", NOT : "NOT",
-    GREATER_THAN : "GT", LESSER_THAN : "LT",
-    GREATER_THAN_OR_EQUAL_TO : "GTE",
-    LESSER_THAN_OR_EQUAL_TO : "LTE"
-}
+    OR: "OR", AND: "AND", EQUALS: "EQ",
+    NOT_EQUALS: "NEQ", NOT: "NOT",
+    GREATER_THAN: "GT", LESSER_THAN: "LT",
+    GREATER_THAN_OR_EQUAL_TO: "GTE",
+    LESSER_THAN_OR_EQUAL_TO: "LTE"
+};
 
 ACTIONS = {
-    RED : "display red",
-    NOT_CODABLE : "not codable",
-    NOT_NULL : "not null"
-}
+    RED: "display red",
+    NOT_CODABLE: "not codable",
+    NOT_NULL: "not null"
+};
+
+SCHEMATYPES = {
+    TEXT: 1,
+    NUMBER: 2,
+    CODEBOOK: 5,
+    BOOLEAN: 7,
+    QUALITY: 9
+};
 
 
 annotator.fields = {};
@@ -38,111 +46,25 @@ annotator.fields.autocompletes = {};
 annotator.fields.autocompletes.NUMBER_OF_DROPDOWN_RESULTS = 40; // number of results in autocomplete dropdown list
 annotator.fields.autocompletes.EMPTY_CODING_LABEL = '[empty]';
 annotator.fields.loadedFromServer = false;
-annotator.fields.ontologyItemsDict = {}; // dict containing objids with ontology objects (global, containing all objects from all ontologies), objids should be unique
 annotator.fields.ontologyRecentItems = {}; // for each ontology, list of items recently used, for autocomplete
 
 
 annotator.fields.initFieldData = function(){
     annotator.fields.fields = {}
-    annotator.fields.fields['unit'] = {'showAll':true, 'isOntology':false, 'autoOpen':true, 'id':'unit', 'fieldname':'unit'};
+    annotator.fields.fields['unit'] = {
+        'showAll':true, 'isOntology':false, 'autoOpen':true, 'id': 'unit', 'fieldname':'unit'
+    };
 
     annotator.fields.codingrules = {};
     annotator.fields.codingruleactions = {};
 
-    var url = "/api/v4/codingrule?codingschema__codingjobs_";
+    var url = API_URL + "codingrule?codingschema__codingjobs_";
     $.getJSON(url + "unit__id=" + annotator.codingjob_id, annotator.fields.codingrules_fetched.bind("unit"));
     $.getJSON(url + "article__id=" + annotator.codingjob_id, annotator.fields.codingrules_fetched.bind("article"));
-    $.getJSON("/api/v4/codingruleaction", annotator.fields.codingruleactions_fetched);
+    $.getJSON(API_URL + "codingruleaction", annotator.fields.codingruleactions_fetched);
+    $.getJSON(annotator.get_api_url() + "codebooks", annotator.fields.codebooks_fetched);
 
-    $.ajax({
-        "url": "fields",
-        "success": function(json) {
-            var count = 0;
-            $.each(json.fields, function(i, fieldObj){
-                if(fieldObj.id in annotator.fields.fields){
-                    console.debug(fieldObj, 'autcomplete already added');
-                    return;
-                }
-                
-                if(! ('items' in fieldObj) && 'items-key' in fieldObj){
-                    fieldObj['items'] = json.ontologies[fieldObj['items-key']]; // get items from ontology obj
-                    annotator.fields.ontologyRecentItems[fieldObj['items-key']] = [];
-                }
-                
-                // TODO: fix the next two items in the schema, these hacks do not belong here
-                if(annotator.unitcodings.isNETcoding == true && fieldObj.fieldname == 'Type'){
-                    fieldObj['items'] = $.grep(fieldObj['items'], function(obj, i){ // remove outdated WIL and CON options
-                        if(obj.label == 'WIL' || obj.label == 'CON'){
-                            return false;
-                        }
-                        return true;
-                    });
-                }
-                
-                annotator.fields.fields[fieldObj.id] = fieldObj;
-                count++;
-            });
-            console.debug('Loaded ' + count + ' fields');
-            
-            var _hierarchies = {};
-            annotator.fields.highlight_labels = json.highlight_labels;
-            annotator.fields.ontologies = json.ontologies;
-            annotator.fields.ontologies_parents = {};
-            annotator.fields.loadedFromServer = true;
-            annotator.fields.convertOntologyJson();
-            annotator.fields.hierarchies = _hierarchies;
-
-            // Create an mapping: hierarchy[codebook_id][code_id] --> code.
-            $.each(annotator.fields.ontologies, function(cid, codebook){
-                var codes = {};
-                $.each(codebook, function(i, code){
-                    codes[code.value] = code;
-                });
-
-                _hierarchies[cid] = codes;
-            });
-
-            // For each codebook, find the roots
-            $.each(_hierarchies, function(cid, codebook){
-                annotator.fields.ontologies_parents[cid] = [];
-                $.each(codebook, function(code_id, code){
-                    if (code.functions[0].parentid === null){
-                        code.descendants = [];
-                        annotator.fields.ontologies_parents[cid].push(code);
-                    }
-                });
-            });
-
-            // .. and get their descendants
-            $.each(_hierarchies, function(cid, codebook){
-                $.each(codebook, function(code_id, code){
-                    var _code = code, seen = [code.value];
-                    if (code.functions[0].parentid !== null){
-                        while(_code.functions[0].parentid !== null){
-                            _code = _hierarchies[cid][_code.functions[0].parentid];
-
-                            if (seen.indexOf(_code.value) !== -1){
-                                // Loop detected, carry on.
-                                console.log("Cycle in " + seen);
-                                return;
-                            }
-                            seen.push(_code.value);
-                        }
-
-                        _hierarchies[cid][_code.value].descendants.push(code);
-                    }
-                });
-            });
-
-            annotator.fields.setup_wordcount();
-            annotator.fields.codingrules_fetched();
-        },
-        "error": function(jqXHR, textStatus, errorThrown){
-            console.debug('error loading fields' + textStatus + errorThrown);
-            $('#warning').html('<div class="error">Error loading autocomplete data from <a href="' + this.url + '" target="_blank">' + this.url + '</a></div>');
-        },
-        "dataType": "json"
-    });
+    //       $('#warning').html('<div class="error">Error loading autocomplete data from <a href="' + this.url + '" target="_blank">' + this.url + '</a></div>');
 }
 
 /*
@@ -228,9 +150,9 @@ annotator.fields.get_value = function(input){
  */
 annotator.fields.rule_applies = function(rule){
     var ra = annotator.fields.rule_applies;
-    var truth, input, assert = function(cond){
-        if(!cond) throw "AssertionError";
-    }
+    var truth, input, assert = function (cond) {
+        if (!cond) throw "AssertionError";
+    };
 
     // Get input element and its value
     var input = $("#id_field_" + rule.values[0].id);
@@ -279,6 +201,74 @@ annotator.fields.rule_applies = function(rule){
     truth = input_value == rule.values[1];
     return (rule.type === OPERATORS.EQUALS) ? truth : !truth;
 }
+
+
+/*
+ * Called when codebooks are fetched. Codebooks include all labels and all
+ * functions. codebooks_fetched converts the flat codebookcodes into an
+ * hierarchy.
+ */
+annotator.fields.codebooks_fetched = function(json){
+    // Create an (id --> codebook) mapping
+    annotator.fields.codebooks = {};
+    $.each(json.results, function(i, codebook){
+        annotator.fields.codebooks[codebook.id] = codebook;
+    });
+
+    // Create an mapping: hierarchy[codebook_id][code_id] --> codebook_code.
+    var _hierarchies = {};
+    annotator.fields.codebook_hierarchies = _hierarchies;
+    $.each(annotator.fields.codebooks, function(codebook_id, codebook){
+        _hierarchies[codebook_id] = {};
+        $.each(codebook.codes, function(i, ccode){
+            _hierarchies[codebook_id][ccode.code] = ccode;
+        });
+    });
+
+    // 1. Resolve parent id's to codebook code objects
+    // 2. Initialise descendants property (array)
+    // 3. Find roots
+    annotator.fields.codebook_roots = {};
+    $.each(_hierarchies, function(codebook_id, hierarchy){
+        var _roots = [];
+        annotator.fields.codebook_roots[codebook_id] = _roots;
+
+        $.each(hierarchy, function(code_id, code){
+            if (code.parent === null){
+                // Has no parent, so this must be a root.
+                _roots.push(code)
+                code.descendants = [];
+            } else {
+                code.parent = hierarchy[code.parent];
+            }
+        });
+    });
+
+    // .. and get their descendants
+    $.each(_hierarchies, function(cid, codebook){
+        $.each(codebook, function(code_id, code){
+            // To detect loops in the codebook, we keep a list of seen nodes.
+            var _code = code, seen = [code];
+
+            if (code.parent !== null){
+                while((_code = _code.parent) !== null){
+                    if (seen.indexOf(_code) !== -1){
+                        // Loop detected, carry on.
+                        console.log("Cycle in " + seen);
+                        return;
+                    }
+                    seen.push(_code);
+                }
+
+                _code = seen[seen.length - 1];
+                _code.descendants.push(code);
+            }
+        });
+    });
+
+    annotator.fields.setup_wordcount();
+    annotator.fields.codingrules_fetched();
+};
 
 /*
  * Called when codingrules are fetched.
@@ -421,18 +411,6 @@ annotator.fields.setup_wordcount = function(){
         window.setTimeout(count, 50);
     });
 }
-
-annotator.fields.convertOntologyJson = function(){
-    /* takes ontology JSON as input and creates dict with all items, including their parents/childs */
-    $.each(annotator.fields.ontologies, function(i, ont){
-        $.each(ont, function(j, item){
-            annotator.fields.ontologyItemsDict[item.value] = item;
-        });
-    });
-    
-    //console.debug(annotator.fields.ontologyItemsDict);
-}
-
 
 /*
  * Returns a list of codes which the coder can choose from, filtered on a given
