@@ -21,7 +21,7 @@ from amcat.models import CodingSchemaField
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
-from api.rest.viewsets import CodingSchemaViewSetMixin
+from api.rest.viewset import AmCATViewSetMixin
 
 __all__ = ("CodingSchemaFieldViewSetMixin", "CodingSchemaFieldSerializer", "CodingSchemaFieldViewSet")
 
@@ -30,9 +30,9 @@ class CodingSchemaFieldSerializer(AmCATModelSerializer):
     class Meta:
         model = CodingSchemaField
 
-class CodingSchemaFieldViewSetMixin(CodingSchemaViewSetMixin):
-    url = CodingSchemaViewSetMixin.url + "/(?P<codingschema>[0-9]+)/fields"
+class CodingSchemaFieldViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSchemaFieldSerializer
+    model_key = "codingschemafield"
 
     @property
     def codingschemafield(self):
@@ -49,3 +49,4 @@ class CodingSchemaFieldViewSet(CodingSchemaFieldViewSetMixin, DatatablesMixin, R
     def filter_queryset(self, fields):
         fields = super(CodingSchemaFieldViewSet, self).filter_queryset(fields)
         return fields.filter(codingschema__in=self.project.get_codingschemas())
+

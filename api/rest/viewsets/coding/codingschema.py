@@ -21,18 +21,22 @@ from amcat.models import CodingJob, CodingSchema
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
+from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
 
-__all__ = ("CodingSchemaViewSetMixin", "CodingSchemaSerializer", "CodingSchemaViewSet")
+__all__ = ("CodingSchemaViewSetMixin", "CodingSchemaSerializer", "CodingSchemaViewSet",
+            "CodingJobCodingSchemaViewSet")
 
 
 class CodingSchemaSerializer(AmCATModelSerializer):
     class Meta:
         model = CodingSchema
 
-class CodingSchemaViewSetMixin(ProjectViewSetMixin):
-    url = ProjectViewSetMixin.url + "/(?P<project>[0-9]+)/codingschemas"
+class CodingSchemaViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSchemaSerializer
+    model_key = "codingschema"
+    model = CodingSchema
 
     @property
     def codingschema(self):
@@ -43,9 +47,15 @@ class CodingSchemaViewSetMixin(ProjectViewSetMixin):
         return CodingSchema.objects.get(id=self.kwargs.get("codingschema"))
 
 
-class CodingSchemaViewSet(CodingSchemaViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = CodingSchema
+class CodingJobCodingSchemaViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+                                   CodingSchemaViewSetMixin, DatatablesMixin,
+                                   ReadOnlyModelViewSet):
+    def filter_queryset(self, codingschemas):
+        return super(CodingJobCodingSchemaViewSet, self).filter_queryset(codingschemas).filter(
+            id__in=(self.codingjob.unitschema_id, self.codingjob.articleschema_id)
+        )
 
-    def filter_queryset(self, codingschema):
-        codingschema = super(CodingSchemaViewSet, self).filter_queryset(codingschema)
-        return codingschema.filter(id__in=self.project.get_codingschemas())
+class CodingSchemaViewSet(ProjectViewSetMixin, CodingSchemaViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    def filter_queryset(self, codingschemas):
+        codingschemas = super(CodingSchemaViewSet, self).filter_queryset(codingschemas)
+        return codingschemas.filter(id__in=self.project.get_codingschemas())

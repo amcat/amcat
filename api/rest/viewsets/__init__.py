@@ -37,3 +37,5 @@ def get_viewsets():
     for cls in globals().values():
         if isclass(cls) and issubclass(cls, GenericViewSet) and cls is not GenericViewSet:
             yield cls
+
+

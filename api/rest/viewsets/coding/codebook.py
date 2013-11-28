@@ -16,15 +16,20 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import logging
+
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
+
 from amcat.models import Codebook, CodingSchema
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets import CodingJobViewSetMixin
+from api.rest.viewsets.project import ProjectViewSetMixin
 
-import logging; log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 __all__ = ("CodebookSerializer", "CodebookViewSetMixin", "CodebookViewSet")
 
@@ -59,9 +64,10 @@ class CodebookSerializer(AmCATModelSerializer):
         codebook.cache_labels()
         return (serialize_codebook_code(codebook, ccode) for ccode in codebook.codebookcodes)
 
-class CodebookViewSetMixin(CodingJobViewSetMixin):
-    url = CodingJobViewSetMixin.url + "/(?P<codingjob>[0-9]+)/codebooks"
+class CodebookViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodebookSerializer
+    model_key = "codebook"
+    model = Codebook
 
     @property
     def codebook(self):
@@ -71,9 +77,8 @@ class CodebookViewSetMixin(CodingJobViewSetMixin):
     def _codebook(self):
         return Codebook.objects.get(id=self.kwargs.get("codebook"))
 
-class CodebookViewSet(CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = Codebook
-
+class CodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+                      CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     def _get_codebook_ids(self):
         """
         Get codebook ids based on the current codingjob. Selects all highlighters, and
@@ -91,6 +96,8 @@ class CodebookViewSet(CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSe
 
     def filter_queryset(self, queryset):
         qs = super(CodebookViewSet, self).filter_queryset(queryset)
-        return qs.filter(id__in=set(self._get_codebook_ids()) - {None,})
+        return qs.filter(id__in=set(self._get_codebook_ids()) - {None,}).distinct()
+
+
 
 

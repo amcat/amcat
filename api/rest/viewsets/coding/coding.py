@@ -21,8 +21,11 @@ from amcat.models import Coding, Sentence, CodingValue
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
+from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
+from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.coding.coded_article import CodedArticleViewSetMixin
-from api.rest.viewsets.sentence import SentenceSerializer
+from api.rest.viewsets.sentence import SentenceSerializer, SentenceViewSetMixin
 
 __all__ = (
     "CodingSerializer", "CodingViewSetMixin", "CodingViewSet", "CodedArticleSentenceViewSet",
@@ -32,13 +35,14 @@ __all__ = (
 class CodingSerializer(AmCATModelSerializer):
     model = Coding
 
-class CodingViewSetMixin(CodedArticleViewSetMixin):
-    url = CodedArticleViewSetMixin.url + "/(?P<article>[0-9]+)/codings"
+class CodingViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSerializer
-
-class CodingViewSet(CodingViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model_key = "coding"
     model = Coding
 
+class CodingViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+                    CodingViewSetMixin, DatatablesMixin,
+                    ReadOnlyModelViewSet):
     @property
     def coding(self):
         return self._coding()
@@ -55,20 +59,23 @@ class CodingViewSet(CodingViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
 class CodingValueSerializer(AmCATModelSerializer):
     model = CodingValue
 
-class CodingValueViewSet(CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    url = CodedArticleViewSetMixin.url + "/(?P<article>[0-9]+)/coding_values"
+
+class CodingValueViewSetMixin(AmCATViewSetMixin):
+    model_key = "codingvalue"
     model_serializer_class = CodingValueSerializer
     model = CodingValue
 
+
+class CodingValueViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+                         CodedArticleViewSetMixin, CodingViewSetMixin,
+                         CodingValueViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     def filter_queryset(self, queryset):
         qs = super(CodingValueViewSet, self).filter_queryset(queryset)
         return qs.filter(coding__codingjob=self.codingjob, coding__article=self.article)
 
-class CodedArticleSentenceViewSet(CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    url = CodedArticleViewSetMixin.url + "/(?P<article>[0-9]+)/sentences"
-    model_serializer_class = SentenceSerializer
-    model = Sentence
-
+class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+                                  CodedArticleViewSetMixin, SentenceViewSetMixin,
+                                  DatatablesMixin, ReadOnlyModelViewSet):
     def filter_queryset(self, queryset):
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
         return qs.filter(article=self.article)

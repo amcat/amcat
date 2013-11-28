@@ -19,12 +19,11 @@
 
 from django.conf.urls import patterns, url, include
 from rest_framework.urlpatterns import format_suffix_patterns
+from rest_framework.routers import DefaultRouter
 
 from api.rest import resources
-
-from rest_framework.routers import DefaultRouter
-from api.rest.viewset import get_url_pattern
 from api.rest.viewsets import get_viewsets
+
 
 router = DefaultRouter()
 for vs in get_viewsets():

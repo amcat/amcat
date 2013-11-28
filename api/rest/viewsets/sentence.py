@@ -16,12 +16,13 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from rest_framework.viewsets import ReadOnlyModelViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet, ViewSetMixin
 from amcat.models import Sentence
 from amcat.nlp import sbd
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.coded_article import CodedArticleViewSetMixin
 
 __all__ = ("SentenceSerializer", "SentenceViewSetMixin", "SentenceViewSet")
@@ -29,9 +30,10 @@ __all__ = ("SentenceSerializer", "SentenceViewSetMixin", "SentenceViewSet")
 class SentenceSerializer(AmCATModelSerializer):
     model = Sentence
 
-class SentenceViewSetMixin(CodedArticleViewSetMixin):
-    url = CodedArticleViewSetMixin.url + "/(?P<article>[0-9]+)/sentences"
+class SentenceViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = SentenceSerializer
+    model_key = "sentence"
+    model = Sentence
 
 class SentenceViewSet(SentenceViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Sentence

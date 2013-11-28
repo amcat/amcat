@@ -24,6 +24,7 @@ from amcat.models.coding import coding
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 
 STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
@@ -68,9 +69,10 @@ class CodingJobSerializer(AmCATModelSerializer):
     class Meta:
         model = CodingJob
 
-class CodingJobViewSetMixin(ProjectViewSetMixin):
-    url = ProjectViewSetMixin.url + "/(?P<project>[0-9]+)/codingjobs"
+class CodingJobViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingJobSerializer
+    model_key = "codingjob"
+    model = CodingJob
 
     @property
     def codingjob(self):
@@ -81,9 +83,7 @@ class CodingJobViewSetMixin(ProjectViewSetMixin):
         return CodingJob.objects.get(id=self.kwargs.get("codingjob"))
 
 
-class CodingJobViewSet(CodingJobViewSetMixin, DatatablesMixin, ModelViewSet):
-    model = CodingJob
-
+class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ModelViewSet):
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
         return jobs.filter(project=self.project)

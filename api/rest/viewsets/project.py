@@ -18,7 +18,7 @@
 ###########################################################################
 from django.core.urlresolvers import reverse
 from rest_framework import serializers, permissions, exceptions, status
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ViewSetMixin
 from amcat.models import Project, Role
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
@@ -27,6 +27,8 @@ from amcat.models.authorisation import (ROLE_PROJECT_READER, ROLE_PROJECT_WRITER
                                         ROLE_PROJECT_ADMIN, ROLE_PROJECT_METAREADER)
 
 import logging
+from api.rest.viewset import AmCATViewSetMixin
+
 log = logging.getLogger(__name__)
 
 __all__ = ("CannotEditLinkedResource", "NotFoundInProject", "ProjectPermission",
@@ -102,10 +104,11 @@ class ProjectSerializer(AmCATModelSerializer):
     class Meta:
         model = Project
 
-class ProjectViewSetMixin(object):
+class ProjectViewSetMixin(AmCATViewSetMixin):
     permission_classes = (ProjectPermission,)
     model_serializer_class = ProjectSerializer
-    url = "projects"
+    model_key = "project"
+    model = Project
 
     @property
     def project(self):
@@ -124,8 +127,6 @@ class ProjectViewSetMixin(object):
         return reverse(name, kwargs=kwargs)
 
 class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
-    model = Project
-
     def filter_queryset(self, queryset):
         qs = super(ProjectViewSet, self).filter_queryset(queryset)
         role = Role.objects.get(label="reader", projectlevel=True)

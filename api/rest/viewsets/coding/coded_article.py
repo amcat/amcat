@@ -22,7 +22,9 @@ from amcat.models import Coding, Article
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
-from api.rest.viewsets import CodingJobViewSetMixin
+from api.rest.viewset import AmCATViewSetMixin
+from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
+from api.rest.viewsets.project import ProjectViewSetMixin
 
 __all__ = ("CodedArticleSerializer", "CodedArticleViewSetMixin", "CodedArticleViewSet")
 
@@ -64,9 +66,10 @@ class CodedArticleSerializer(AmCATModelSerializer):
     def codingjob(self):
         return self.context["view"].codingjob
 
-class CodedArticleViewSetMixin(CodingJobViewSetMixin):
-    url = CodingJobViewSetMixin.url + "/(?P<codingjob>[0-9]+)/articles"
+class CodedArticleViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodedArticleSerializer
+    model_key = "coded_article"
+    model = Article
 
     @property
     def article(self):
@@ -74,11 +77,10 @@ class CodedArticleViewSetMixin(CodingJobViewSetMixin):
 
     @cached
     def _article(self):
-        return Article.objects.get(id=self.kwargs.get("article"))
+        return Article.objects.get(id=self.kwargs.get("coded_article"))
 
-class CodedArticleViewSet(CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = Article
-
+class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+                          CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     def filter_queryset(self, queryset):
         qs = super(CodedArticleViewSet, self).filter_queryset(queryset)
         return qs.filter(id__in=self.codingjob.articleset.articles.all())
