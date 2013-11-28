@@ -83,7 +83,8 @@ class PeriodScraper(Script):
         n_days = (self.options['last_date'] - self.options['first_date']).days
         days = [self.options['first_date'] + timedelta(days = x) for x in range(n_days + 1)]
         scrapers = [self.get_scraper(d) for d in days]
-        Controller().run(scrapers)
+        for a in Controller().run(scrapers):
+            pass
 
 
 
