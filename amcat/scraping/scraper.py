@@ -79,7 +79,6 @@ class Scraper(Script):
         super(Scraper, self).__init__(*args, **kargs)
         self.medium = Medium.get_or_create(self.medium_name)
         self.project = self.options['project']
-        self.toolkit = toolkit
         for k, v in self.options.items():
             if type(v) == str:
                 self.options[k] = v.decode('utf-8')
