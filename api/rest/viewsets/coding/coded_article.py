@@ -69,7 +69,6 @@ class CodedArticleSerializer(AmCATModelSerializer):
 class CodedArticleViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodedArticleSerializer
     model_key = "coded_article"
-    model = Article
 
     @property
     def article(self):
@@ -81,6 +80,8 @@ class CodedArticleViewSetMixin(AmCATViewSetMixin):
 
 class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                           CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = Article
+
     def filter_queryset(self, queryset):
         qs = super(CodedArticleViewSet, self).filter_queryset(queryset)
         return qs.filter(id__in=self.codingjob.articleset.articles.all())

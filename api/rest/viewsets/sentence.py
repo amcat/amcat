@@ -33,7 +33,6 @@ class SentenceSerializer(AmCATModelSerializer):
 class SentenceViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = SentenceSerializer
     model_key = "sentence"
-    model = Sentence
 
 class SentenceViewSet(SentenceViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Sentence

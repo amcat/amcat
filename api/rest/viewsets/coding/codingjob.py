@@ -72,7 +72,6 @@ class CodingJobSerializer(AmCATModelSerializer):
 class CodingJobViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingJobSerializer
     model_key = "codingjob"
-    model = CodingJob
 
     @property
     def codingjob(self):
@@ -84,6 +83,8 @@ class CodingJobViewSetMixin(AmCATViewSetMixin):
 
 
 class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ModelViewSet):
+    model = CodingJob
+
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
         return jobs.filter(project=self.project)

@@ -36,7 +36,6 @@ class CodingSchemaSerializer(AmCATModelSerializer):
 class CodingSchemaViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSchemaSerializer
     model_key = "codingschema"
-    model = CodingSchema
 
     @property
     def codingschema(self):
@@ -50,12 +49,16 @@ class CodingSchemaViewSetMixin(AmCATViewSetMixin):
 class CodingJobCodingSchemaViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                                    CodingSchemaViewSetMixin, DatatablesMixin,
                                    ReadOnlyModelViewSet):
+    model = CodingSchema
+
     def filter_queryset(self, codingschemas):
         return super(CodingJobCodingSchemaViewSet, self).filter_queryset(codingschemas).filter(
             id__in=(self.codingjob.unitschema_id, self.codingjob.articleschema_id)
         )
 
 class CodingSchemaViewSet(ProjectViewSetMixin, CodingSchemaViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = CodingSchema
+
     def filter_queryset(self, codingschemas):
         codingschemas = super(CodingSchemaViewSet, self).filter_queryset(codingschemas)
         return codingschemas.filter(id__in=self.project.get_codingschemas())

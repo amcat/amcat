@@ -67,7 +67,6 @@ class CodebookSerializer(AmCATModelSerializer):
 class CodebookViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodebookSerializer
     model_key = "codebook"
-    model = Codebook
 
     @property
     def codebook(self):
@@ -79,6 +78,8 @@ class CodebookViewSetMixin(AmCATViewSetMixin):
 
 class CodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                       CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = Codebook
+
     def _get_codebook_ids(self):
         """
         Get codebook ids based on the current codingjob. Selects all highlighters, and

@@ -108,7 +108,6 @@ class ProjectViewSetMixin(AmCATViewSetMixin):
     permission_classes = (ProjectPermission,)
     model_serializer_class = ProjectSerializer
     model_key = "project"
-    model = Project
 
     @property
     def project(self):
@@ -127,6 +126,8 @@ class ProjectViewSetMixin(AmCATViewSetMixin):
         return reverse(name, kwargs=kwargs)
 
 class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
+    model = Project
+
     def filter_queryset(self, queryset):
         qs = super(ProjectViewSet, self).filter_queryset(queryset)
         role = Role.objects.get(label="reader", projectlevel=True)
