@@ -18,14 +18,13 @@
 ###########################################################################
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models import Coding, Sentence, CodingValue
-from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.coding.coded_article import CodedArticleViewSetMixin
-from api.rest.viewsets.sentence import SentenceSerializer, SentenceViewSetMixin
+from api.rest.viewsets.sentence import SentenceViewSetMixin
 
 __all__ = (
     "CodingSerializer", "CodingViewSetMixin", "CodingViewSet", "CodedArticleSentenceViewSet",
@@ -41,13 +40,13 @@ class CodingViewSetMixin(AmCATViewSetMixin):
     model = Coding
 
 class CodingViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
-                    CodingViewSetMixin, DatatablesMixin,
-                    ReadOnlyModelViewSet):
+                    CodedArticleViewSetMixin, CodingViewSetMixin,
+                    DatatablesMixin, ReadOnlyModelViewSet):
     model = Coding
 
     def filter_queryset(self, queryset):
         qs = super(CodingViewSet, self).filter_queryset(queryset)
-        return qs.filter(codingjob=self.codingjob, article=self.article)
+        return qs.filter(codingjob=self.codingjob, article=self.coded_article)
 
 
 class CodingValueSerializer(AmCATModelSerializer):
@@ -66,7 +65,7 @@ class CodingValueViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 
     def filter_queryset(self, queryset):
         qs = super(CodingValueViewSet, self).filter_queryset(queryset)
-        return qs.filter(coding__codingjob=self.codingjob, coding__article=self.article)
+        return qs.filter(coding__codingjob=self.codingjob, coding__article=self.coded_article)
 
 class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                                   CodedArticleViewSetMixin, SentenceViewSetMixin,
@@ -75,5 +74,5 @@ class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
-        return qs.filter(article=self.article)
+        return qs.filter(article=self.coded_article)
 
