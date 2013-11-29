@@ -605,9 +605,7 @@ annotator.saveNewSentenceDialog = function(){
       },
       dataType: 'json'
     });
-}
-
-
+};
 
 annotator.writeArticleSentences = function(sentences){
     var html = $('<div />');
@@ -963,13 +961,12 @@ annotator.initPage = function(){
     $('#next-article-button').focus();
         
     annotator.checkWindowWidth();
-    annotator.fields.initFieldData();
+    annotator.fields.initialise_fields();
 
-    $("<div id='loading_fields'>Initiatlising fields, please wait..</div>" ).dialog({
+    $("<div id='loading_fields'>Initialising fields, please wait..</div>" ).dialog({
       dialogClass: "no-close",
       modal : true,
-      title : "Loading...",
-      
+      title : "Loading..."
     });
 
     $(window).bind('resize', function () {
@@ -1065,4 +1062,13 @@ annotator.initPage = function(){
         event.preventDefault();
         $("#save-continue-button").click();
     });
-}
+};
+
+
+$(document).ajaxError(function(event, xhr, ajaxOptions, thrownError) {
+    var message = "An erorr occured while requesting: " + ajaxOptions.url + ". " +
+                  "Server responded: '" + xhr.status + " " + xhr.statusText + "'.";
+    $("<div>").text(message).dialog({
+      modal: true,
+    });
+});

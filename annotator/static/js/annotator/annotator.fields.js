@@ -17,6 +17,28 @@
  * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
  ***************************************************************************/
 
+function any(f, list){
+    for (var i=0; i < list.length; i++){
+        if (f(list[i])) return true;
+    }
+    return false;
+}
+
+function all(f, list){
+    for (var i=0; i < list.length; i++){
+        if (!f(list[i])) return false;
+    }
+    return true;
+}
+
+function filter(f, list){
+    var _list = [];
+    $.each(list, function(i, item){
+        if (f(item)) _list.push(item);
+    });
+    return _item;
+}
+
 // CodingRules constants
 OPERATORS = {
     OR: "OR", AND: "AND", EQUALS: "EQ",
@@ -48,24 +70,57 @@ annotator.fields.autocompletes.EMPTY_CODING_LABEL = '[empty]';
 annotator.fields.loadedFromServer = false;
 annotator.fields.ontologyRecentItems = {}; // for each ontology, list of items recently used, for autocomplete
 
+/*
+ * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
+ * the id as key, and the object as value.
+ */
+annotator.fields.map_ids = function (model_data) {
+    var _result = {};
+    $.each(model_data, function (i, object) {
+        _result[object.id] = object;
+    });
+    return _result;
+};
 
-annotator.fields.initFieldData = function(){
+annotator.fields.initialise_fields = function () {
     annotator.fields.fields = {}
     annotator.fields.fields['unit'] = {
-        'showAll':true, 'isOntology':false, 'autoOpen':true, 'id': 'unit', 'fieldname':'unit'
+        'showAll': true, 'isOntology': false, 'autoOpen': true, 'id': 'unit', 'fieldname': 'unit'
     };
 
-    annotator.fields.codingrules = {};
-    annotator.fields.codingruleactions = {};
+    annotator.fields.requests = [
+        $.getJSON(annotator.get_api_url() + "coding_rules"),
+        $.getJSON(annotator.get_api_url() + "codebooks"),
+        $.getJSON(annotator.get_api_url() + "highlighters"),
+        $.getJSON(annotator.get_api_url() + "codingschemas"),
+        $.getJSON(API_URL + "coding_rule_actions")
+    ];
 
-    var url = API_URL + "codingrule?codingschema__codingjobs_";
-    $.getJSON(url + "unit__id=" + annotator.codingjob_id, annotator.fields.codingrules_fetched.bind("unit"));
-    $.getJSON(url + "article__id=" + annotator.codingjob_id, annotator.fields.codingrules_fetched.bind("article"));
-    $.getJSON(API_URL + "codingruleaction", annotator.fields.codingruleactions_fetched);
-    $.getJSON(annotator.get_api_url() + "codebooks", annotator.fields.codebooks_fetched);
+    $.when.apply(undefined, annotator.fields.requests).then(function (rules, codebooks, highlighters, schemas, actions) {
+            var self = annotator.fields;
 
-    //       $('#warning').html('<div class="error">Error loading autocomplete data from <a href="' + this.url + '" target="_blank">' + this.url + '</a></div>');
-}
+            // Check if all request completed successfully. (If not, an
+            // error is already thrown, but we need not continue processing
+            // the data.
+            if (!all(function (request) {
+                return request.statusText === "OK";
+            }, annotator.fields.requests)) {
+                throw "Not all requests completed succesfully.";
+            }
+
+            // Extract results from response
+            self.rules = self.map_ids(rules[0].results);
+            self.actions = self.map_ids(actions[0].results);
+            self.codebooks = self.map_ids(codebooks[0].results);
+            self.highlighters = self.map_ids(highlighters[0].results);
+            self.schemas = self.map_ids(schemas[0].results);
+
+            // Initialize data
+            self.codebooks_fetched();
+            $("#loading_fields").dialog("close");
+        }
+    );
+};
 
 /*
  * Called when initialsing {article,unit}codings is done. Must be bound
@@ -208,17 +263,13 @@ annotator.fields.rule_applies = function(rule){
  * functions. codebooks_fetched converts the flat codebookcodes into an
  * hierarchy.
  */
-annotator.fields.codebooks_fetched = function(json){
-    // Create an (id --> codebook) mapping
-    annotator.fields.codebooks = {};
-    $.each(json.results, function(i, codebook){
-        annotator.fields.codebooks[codebook.id] = codebook;
-    });
+annotator.fields.codebooks_fetched = function(){
+    var self = annotator.fields;
 
     // Create an mapping: hierarchy[codebook_id][code_id] --> codebook_code.
     var _hierarchies = {};
-    annotator.fields.codebook_hierarchies = _hierarchies;
-    $.each(annotator.fields.codebooks, function(codebook_id, codebook){
+    self.codebook_hierarchies = _hierarchies;
+    $.each(self.codebooks, function(codebook_id, codebook){
         _hierarchies[codebook_id] = {};
         $.each(codebook.codes, function(i, ccode){
             _hierarchies[codebook_id][ccode.code] = ccode;
@@ -228,10 +279,10 @@ annotator.fields.codebooks_fetched = function(json){
     // 1. Resolve parent id's to codebook code objects
     // 2. Initialise descendants property (array)
     // 3. Find roots
-    annotator.fields.codebook_roots = {};
+    self.codebook_roots = {};
     $.each(_hierarchies, function(codebook_id, hierarchy){
         var _roots = [];
-        annotator.fields.codebook_roots[codebook_id] = _roots;
+        self.codebook_roots[codebook_id] = _roots;
 
         $.each(hierarchy, function(code_id, code){
             if (code.parent === null){
@@ -266,24 +317,19 @@ annotator.fields.codebooks_fetched = function(json){
         });
     });
 
-    annotator.fields.setup_wordcount();
-    annotator.fields.codingrules_fetched();
 };
 
 /*
  * Called when codingrules are fetched.
  */
-annotator.fields.codingrules_fetched_count = 0;
 annotator.fields.codingrules_fetched = function(json){
-    annotator.fields.codingrules_fetched_count += 1;
-
-    var get_field_input = function(){
+    var get_field_input = function () {
         return $("#id_field_" + this.field);
-    }
+    };
 
-    var get_action = function(){
+    var get_action = function () {
         return annotator.fields.codingruleactions[this.action];
-    }
+    };
 
     if (json !== undefined){
         var rules = {};
@@ -618,32 +664,32 @@ annotator.fields.setNETCodings = function(field, value, label){
 }
 
 
-annotator.fields.autocompletes.setInputValue = function(value, label, inputEl, field){
+annotator.fields.autocompletes.setInputValue = function (value, label, inputEl, field) {
     /* set the inputEl to a value with label */
-    if(label == annotator.fields.autocompletes.EMPTY_CODING_LABEL){
+    if (label == annotator.fields.autocompletes.EMPTY_CODING_LABEL) {
         inputEl.val('').removeAttr("_value");
     } else {
-        if(!(field.isOntology && field.split_codebook && inputEl.attr("root") === undefined)){
+        if (!(field.isOntology && field.split_codebook && inputEl.attr("root") === undefined)) {
             inputEl.parent().children(":hidden").val(value); // set value of hidden input
         }
         inputEl.val(label).attr("_value", value);
-        
-        if(field.isOntology){
+
+        if (field.isOntology) {
             annotator.fields.addToRecentItemsList(field, value, label);
         }
     }
-    if(inputEl.attr('name') == 'unit'){
+    if (inputEl.attr('name') == 'unit') {
         annotator.unitcodings.setSentence();
     }
-    if(inputEl.parents('#unitcoding-table').length > 0){ // if input is in sentences table
+    if (inputEl.parents('#unitcoding-table').length > 0) { // if input is in sentences table
         annotator.unitcodings.onchangeSentenceCoding(inputEl);
         annotator.fields.setNETCodings(field, value, label);
     }
 
-    if(inputEl.parents('#article-coding').length > 0){
+    if (inputEl.parents('#article-coding').length > 0) {
         annotator.articlecodings.onchange(inputEl);
     }
-}
+};
 
 
 annotator.fields.findInOntology = function(label, ontology){
