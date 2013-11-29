@@ -18,14 +18,23 @@
 ###########################################################################
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
-from amcat.models import CodingRule
+from rest_framework.viewsets import ReadOnlyModelViewSet
+from amcat.models import CodingRule, CodingRuleAction
 from amcat.models.coding import codingruletoolkit
+from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
 
-__all__ = ("CodingRuleSerializer",)
+__all__ = (
+    "CodingRuleSerializer", "CodingRule", "CodingRuleViewSetMixin",
+    "CodingRuleActionViewSetMixin", "CodingRuleActionViewSet",
+    "CodingRuleActionSerializer"
+
+)
 
 
 class CodingRuleSerializer(AmCATModelSerializer):
+    model = CodingRule
     parsed_condition = serializers.SerializerMethodField('get_parsed_condition')
 
     def get_parsed_condition(self, obj):
@@ -36,3 +45,21 @@ class CodingRuleSerializer(AmCATModelSerializer):
 
     class Meta:
         model = CodingRule
+
+class CodingRuleViewSetMixin(AmCATViewSetMixin):
+    model_serializer_class = CodingRuleSerializer
+    model_key = "coding_rule"
+    model = CodingRule
+
+
+class CodingRuleActionSerializer(AmCATModelSerializer):
+    model = CodingRuleAction
+
+class CodingRuleActionViewSetMixin(AmCATViewSetMixin):
+    model_serializer_class = CodingRuleActionSerializer
+    model_key = "coding_rule_action"
+    model = CodingRuleAction
+
+class CodingRuleActionViewSet(CodingRuleActionViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = CodingRuleAction
+    model_serializer_class = CodingRuleActionSerializer

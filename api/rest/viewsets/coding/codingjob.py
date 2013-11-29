@@ -16,16 +16,17 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.db.models import Count
+from django.db.models import Count, Q
 from rest_framework import serializers
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-from amcat.models import CodingJob, Article, Sentence
+from amcat.models import CodingJob, Article, Sentence, Codebook, CodingRule
 from amcat.models.coding import coding
 from amcat.nlp import sbd
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
+from api.rest.viewsets.coding.codingrule import CodingRuleViewSetMixin, CodingRuleSerializer
 from api.rest.viewsets.sentence import SentenceViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
@@ -33,7 +34,8 @@ from api.rest.viewsets.project import ProjectViewSetMixin
 STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
 
 __all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet",
-           "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet")
+           "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet",
+           "CodingJobHighlighterViewSet", "CodingJobCodingRuleViewSet")
 
 
 class CodingJobSerializer(AmCATModelSerializer):
@@ -78,7 +80,7 @@ class CodingJobViewSetMixin(AmCATViewSetMixin):
     model_key = "codingjob"
     model = CodingJob
 
-class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ModelViewSet):
+class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = CodingJob
 
     def filter_queryset(self, jobs):
@@ -100,3 +102,27 @@ class CodingJobArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin
     def filter_queryset(self, sentences):
         sentences = super(CodingJobArticleSentenceViewSet, self).filter_queryset(sentences)
         return sentences.filter(id__in=sbd.get_or_create_sentences(self.article))
+
+class HighlighterViewSetMixin(AmCATViewSetMixin):
+    model = Codebook
+    model_key = "highlighter"
+
+class CodingJobHighlighterViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, HighlighterViewSetMixin,
+                                  DatatablesMixin, ReadOnlyModelViewSet):
+    model = Codebook
+
+    def filter_queryset(self, highlighters):
+        highlighters = super(CodingJobHighlighterViewSet, self).filter_queryset(highlighters)
+        return highlighters.filter(
+            Q(pk__in=self.codingjob.articleschema.highlighters.all())|
+            Q(pk__in=self.codingjob.unitschema.highlighters.all())
+        )
+
+class CodingJobCodingRuleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, CodingRuleViewSetMixin,
+                                 DatatablesMixin, ReadOnlyModelViewSet):
+    model = CodingRule
+    model_serializer_class = CodingRuleSerializer
+
+    def filter_queryset(self, rules):
+        rules = super(CodingJobCodingRuleViewSet, self).filter_queryset(rules)
+        return rules.filter(codingschema__pk__in=(self.codingjob.unitschema_id, self.codingjob.articleschema_id))
