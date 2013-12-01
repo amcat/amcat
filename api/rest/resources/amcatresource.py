@@ -151,7 +151,7 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
         """Get a list of field names from the serializer"""
         # We are a class method and rest_framework likes instance methods, so lots of ()'s
         return [name for (name, field) in cls().get_serializer_class()().get_fields().iteritems()
-                if not AmCATModelSerializer.skip_field(field)]
+                if not AmCATModelSerializer.skip_field(name, field)]
     
     @classmethod
     def create_subclass(cls, use_model):

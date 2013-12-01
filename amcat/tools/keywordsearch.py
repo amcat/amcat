@@ -252,7 +252,7 @@ def queries_from_form(form):
 def query_from_form(form):
     queries = list(queries_from_form(form))
     if queries:
-        return ' OR '.join('({q.query})'.format(**locals()) for q in queries)
+        return u' OR '.join(u'({q.query})'.format(**locals()) for q in queries)
         
 def _resolve_recursive(codebook, tree_item, rlanguage):
     this = codebook.get_code(tree_item.code_id).get_label(rlanguage, fallback=False)

@@ -17,17 +17,5 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import CodingRule
-
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.viewsets.coding.codingrule import CodingRuleSerializer
-
-
-class CodingRuleResource(AmCATResource):
-    model = CodingRule
-    serializer_class = CodingRuleSerializer
-    extra_filters = [
-        "codingschema__codingjobs_article__id",
-        "codingschema__codingjobs_unit__id"
-    ]
-
+import djcelery
+djcelery.setup_loader()

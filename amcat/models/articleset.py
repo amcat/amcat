@@ -102,15 +102,16 @@ class ArticleSet(AmcatModel):
         """add(*a) is an alias for add_articles(a)"""
         self.add_articles(articles)
             
-    def remove_articles(self, articles):
+    def remove_articles(self, articles, remove_from_index=True):
         """
         Add the given articles to this article set
         If refresh or deduplicate are True, schedule a new celery task to do this
         """
         ArticleSetArticle.objects.filter(articleset=self, article__in=articles).delete()
         
-        self.index_dirty = True
-        self.save()
+        if remove_from_index:
+            to_remove = {(art if type(art) is int else art.id) for art in articles}
+            amcates.ES().remove_from_set(self.id, to_remove)
 
     def get_article_ids(self):
         """

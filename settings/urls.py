@@ -17,6 +17,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from __future__ import unicode_literals, print_function, absolute_import
+
+
 from django.conf.urls import include, patterns, url
 from django.views.generic import RedirectView
 from django.contrib import admin

@@ -16,18 +16,23 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from inspect import isclass
+from rest_framework.viewsets import GenericViewSet
 
-from amcat.models import CodingRule
+from api.rest.viewsets.analysed_article import *
+from api.rest.viewsets.article import *
+from api.rest.viewsets.articleset import *
+from api.rest.viewsets.coding.codingjob import *
+from api.rest.viewsets.coding.codingrule import *
+from api.rest.viewsets.coding.coded_article import *
+from api.rest.viewsets.coding.coding import *
+from api.rest.viewsets.coding.codingschema import *
+from api.rest.viewsets.coding.codingschemafield import *
+#from api.rest.viewsets.sentence import *
+from api.rest.viewsets.project import *
+from api.rest.viewsets.task import *
 
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.viewsets.coding.codingrule import CodingRuleSerializer
-
-
-class CodingRuleResource(AmCATResource):
-    model = CodingRule
-    serializer_class = CodingRuleSerializer
-    extra_filters = [
-        "codingschema__codingjobs_article__id",
-        "codingschema__codingjobs_unit__id"
-    ]
-
+def get_viewsets():
+    for cls in globals().values():
+        if isclass(cls) and issubclass(cls, GenericViewSet) and cls is not GenericViewSet:
+            yield cls

@@ -43,7 +43,7 @@ class AmCATPaginationSerializer(pagination.BasePaginationSerializer):
 class AmCATModelSerializer(serializers.ModelSerializer):
 
     @classmethod
-    def skip_field(cls, field):
+    def skip_field(cls, name, field):
         """Do we skip serializing this field?"""
         return isinstance(field, PrimaryKeyRelatedField) and field.many
     
@@ -52,10 +52,9 @@ class AmCATModelSerializer(serializers.ModelSerializer):
 
         return collections.OrderedDict(
             [(name, field) for (name, field) in fields.iteritems()
-              if not self.skip_field(field)]
+              if not self.skip_field(name, field)]
         )
 
-        
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

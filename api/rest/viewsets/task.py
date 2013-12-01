@@ -16,18 +16,40 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from rest_framework import serializers
+from amcat.models import Task
+from api.rest.serializer import AmCATModelSerializer
 
-from amcat.models import CodingRule
+__all__ = ("TaskSerializer", "TaskResultSerializer")
 
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.viewsets.coding.codingrule import CodingRuleSerializer
+class TaskSerializer(AmCATModelSerializer):
+    """Represents a Task object defined in amcat.models.task.Task. Adds two
+    fields to the model: status and ready."""
+    status = serializers.SerializerMethodField('get_status')
+    ready = serializers.SerializerMethodField('get_ready')
+
+    def get_status(self, task):
+        return task.get_async_result().status
+
+    def get_ready(self, task):
+        return task.get_async_result().ready()
+
+    class Meta:
+        model = Task
 
 
-class CodingRuleResource(AmCATResource):
-    model = CodingRule
-    serializer_class = CodingRuleSerializer
-    extra_filters = [
-        "codingschema__codingjobs_article__id",
-        "codingschema__codingjobs_unit__id"
-    ]
+class TaskResultSerializer(AmCATModelSerializer):
+    result = serializers.SerializerMethodField('get_result')
+    ready = serializers.SerializerMethodField('get_ready')
 
+    def get_ready(self, task):
+        return task.get_async_result().ready()
+
+    def get_result(self, task):
+        if not self.get_ready(task):
+            return None
+        return task.get_result()
+
+    class Meta:
+        model = Task
+        fields = ("uuid", "ready", "result")

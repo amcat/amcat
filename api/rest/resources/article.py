@@ -18,23 +18,20 @@
 ###########################################################################
 
 import json
-from django.core.exceptions import ValidationError
-from amcat.models import Article, ArticleSet, Medium
+import logging
+
+from rest_framework.viewsets import ModelViewSet
+from django_filters import filters
+
+from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.resources.articleset import ArticleSetViewSet
-
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.filters import AmCATFilterSet, InFilter
-from rest_framework.viewsets import ModelViewSet
 from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.viewsets.article import ArticleSerializer
+from api.rest.viewsets.project import ProjectViewSetMixin, CannotEditLinkedResource, NotFoundInProject
 
-from api.rest.viewsets import (ProjectViewSetMixin, ROLE_PROJECT_READER,
-                               CannotEditLinkedResource, NotFoundInProject,
-                               ProjectSerializer)
-
-from rest_framework import serializers
-from django_filters import filters, filterset
-import logging
 log = logging.getLogger(__name__)
 
 class ArticleMetaFilter(AmCATFilterSet):
@@ -61,72 +58,7 @@ class ArticleMetaResource(AmCATResource):
     def get_model_name(cls):
         return "ArticleMeta".lower()
 
-class ArticleSerializer(ProjectSerializer):
 
-    def __init__(self, instance=None, data=None, files=None, **kwargs):
-        kwargs['many'] = isinstance(data, list)
-        super(ArticleSerializer, self).__init__(instance, data, files, **kwargs)
-    
-    def restore_fields(self, data, files):
-        # convert media from name to id, if needed
-        data = data.copy() # make data mutable
-        if 'medium' in data:
-            try:
-                int(data['medium'])
-            except ValueError:
-                if not hasattr(self, 'media'):
-                    self.media = {}
-                m = data['medium']
-                if m not in self.media:
-                    self.media[m] = Medium.get_or_create(m).id
-                data['medium'] = self.media[m]
-                
-        # add time part to date, if needed
-        if 'date' in data and len(data['date']) == 10:
-            data['date'] += "T00:00"
-        
-        return super(ArticleSerializer, self).restore_fields(data, files)
-
-    def from_native(self, data, files):
-        result = super(ArticleSerializer, self).from_native(data, files)
-
-        # deserialize children (if needed)
-        children = data.get('children')# TODO: children can be a multi-value GET param as well, e.g. handle getlist
-
-        if isinstance(children, (str, unicode)):
-            children = json.loads(children)
-        
-        if children:
-            self.many = True            
-            def get_child(obj):
-                child = self.from_native(obj, None)
-                child.parent = result
-                return child
-            return [result] + [get_child(child) for child in children]
-
-        return result
-                
-    def save(self, **kwargs):
-        import collections
-        def _flatten(l):
-            """Turn either an object or a (recursive/irregular/jagged) list-of-lists into a flat list"""
-            # inspired by http://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists-in-python
-            if isinstance(l, collections.Iterable) and not isinstance(l, basestring):
-                for el in l:
-                    for sub in _flatten(el):
-                        yield sub
-            else:
-                yield l
-                
-        # flatten articles list (children in a many call yields a list of lists)
-        self.object = list(_flatten(self.object))
-
-        Article.create_articles(self.object, self.context['view'].articleset)
-
-        # make sure that self.many is True for serializing result
-        self.many = True
-        return self.object
-        
 class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Article
     url = ArticleSetViewSet.url + '/(?P<articleset>[0-9]+)/articles'
@@ -157,7 +89,6 @@ class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
         queryset = super(ArticleViewSet, self).filter_queryset(queryset)
         return queryset.filter(articlesets_set=self.articleset)
 
-            
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

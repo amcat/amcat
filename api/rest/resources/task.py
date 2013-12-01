@@ -16,18 +16,37 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from copy import copy
 
-from amcat.models import CodingRule
+from rest_framework.decorators import api_view
+from django.http import HttpResponse
 
+from amcat.models.task import Task, TaskPending
 from api.rest.resources.amcatresource import AmCATResource
-from api.rest.viewsets.coding.codingrule import CodingRuleSerializer
+from api.rest.viewsets.task import TaskSerializer, TaskResultSerializer
 
 
-class CodingRuleResource(AmCATResource):
-    model = CodingRule
-    serializer_class = CodingRuleSerializer
-    extra_filters = [
-        "codingschema__codingjobs_article__id",
-        "codingschema__codingjobs_unit__id"
-    ]
+class TaskResource(AmCATResource):
+    model = Task
+    serializer_class = TaskSerializer
 
+class TaskResultResource(AmCATResource):
+    model = Task
+
+    @classmethod
+    def get_model_name(cls):
+        return "taskresult"
+
+    serializer_class = TaskResultSerializer
+
+@api_view(http_method_names=("GET",))
+def single_task_result(request, task_id, uuid=False):
+    task = Task.objects.get(**{ "uuid" if uuid else "id" : task_id})
+
+    try:
+        return copy(task.get_response())
+    except TaskPending:
+        return HttpResponse(status=404)
+    except Exception, e:
+        error_msg = "{e.__class__.__name__} : {e}".format(**locals())
+        return HttpResponse(content=error_msg, status=500)

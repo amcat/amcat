@@ -22,10 +22,10 @@ Replacement for Django Forms.forms fields module. This module contains all
 standard forms and more.
 """
 import csv
+import json
 
 from amcat.models.user import User
 from django import forms
-from django.forms import fields
 from django.db import models
 from django.core.exceptions import ValidationError 
 
