@@ -114,12 +114,12 @@ annotator.articletable.highlight = function(){
 };
 
 // Function to force redraw (recalculation) of element
-var redraw = function(){
+var redraw = function () {
     var ut = $("#unitcoding-table");
     var _prev = ut.css("display");
     ut.css("display", "none");
     ut.css("display", _prev);
-}
+};
 
 _DECREASE_BY = 3;
 
@@ -156,11 +156,6 @@ annotator.articletable.decrease_headers = function(min_size){
             // Smaller than we can accept.
             return;
         }
-
-        // We would decrease the current header too much if
-        // we blindly accept the new_size in case this headers
-        // length is less than we aim for.
-        new_size = (new_size < aim) ? aim : new_size;
 
         // Save original header for users hovering
         if (header.attr("title") === undefined){
@@ -199,11 +194,9 @@ annotator.articletable.decrease_headers = function(min_size){
  */
 annotator.articletable.fit_table = function (min_size_input, min_size_header) {
     // Default min_size_input / min_size_header to 50px / 8px
-    min_size_input = (min_size_input === undefined) ? 50 : min_size_input;
     min_size_header = (min_size_header === undefined) ? 8 : min_size_header;
 
     var ut = $("#unitcoding-table");
-    var headers = $("th", ut);
     var inputs = $("input[type=text]", ut);
     var aimed_size = ut.parent().outerWidth();
 
@@ -294,62 +287,62 @@ annotator.articletable.get_article = function(article_id) {
 };
 
 
-annotator.articletable.showEditArticleDialog = function(article_id){
-    if(!annotator.confirmArticleChange()) return;
+annotator.articletable.showEditArticleDialog = function (article_id) {
+    if (!annotator.confirmArticleChange()) return;
     $('#article-edit-form').html('Loading...');
     $("#article-dialog-form").dialog("open");
-    annotator.articletable.articleEditForm = new Form("annotator/articleFormJSON/" + article_id, {'sortFields':true});
+    annotator.articletable.articleEditForm = new Form("annotator/articleFormJSON/" + article_id, {'sortFields': true});
     annotator.articletable.articleEditForm.ready = function () {
         $('#article-edit-form').html(annotator.articletable.articleEditForm.render.table);
     };
-    annotator.articletable.articleEditForm.handle_loaderror = function (jqXHR, textStatus, errorThrown) {
+    annotator.articletable.articleEditForm.handle_loaderror = function (jqXHR, textStatus) {
         console.debug('Error loading form: ' + textStatus);
         $('#article-edit-form').html('<div class="error">Failed to load form: ' + textStatus + '</div>');
     };
-    
+
     // ugly hack... should be removed when moving to django..
     annotator.articletable.articleEditForm.initialize_form2 = annotator.articletable.articleEditForm.initialize_form;
-    annotator.articletable.articleEditForm.initialize_form = function(json){
-        fields.autocompletes['source-6'] = {'showAll':true, 'isOntology':false, 'autoOpen':true, 'id':'source-6',
-            items:json.mediumlist
-        }
+    annotator.articletable.articleEditForm.initialize_form = function (json) {
+        fields.autocompletes['source-6'] = {'showAll': true, 'isOntology': false, 'autoOpen': true, 'id': 'source-6',
+            items: json.mediumlist
+        };
         annotator.articletable.articleEditForm.initialize_form2(json.form);
         annotator.fields.autocompletes.addAutocompletes($('#article-edit-form'));
-        
-        if(article_id == 0){ // new article form
+
+        if (article_id == 0) { // new article form
             annotator.articletable.articleEditForm.fields['setnr'].initial = annotator.setnr;
             annotator.articletable.articleEditForm.fields['jobid'].initial = annotator.codingjob_id;
             console.log('done setting setnr and jobid');
         }
-    }
-    
+    };
+
     console.debug('loading article edit form');
     annotator.articletable.articleEditForm.load();
-}
+};
 
-annotator.articletable.saveEditArticleDetails = function(){
+annotator.articletable.saveEditArticleDetails = function () {
     annotator.articletable.articleEditForm.clean();
-    if(annotator.articletable.articleEditForm.is_valid()){
+    if (annotator.articletable.articleEditForm.is_valid()) {
         $('#article-edit-form').hide();
         $('#article-edit-status').html('Saving...');
-        annotator.articletable.articleEditForm.send('annotator/storeEditArticle', function(data, textStatus, jqXHR){
+        annotator.articletable.articleEditForm.send('annotator/storeEditArticle', function (data, textStatus) {
             console.debug('article details', data);
-            if(data.response == 'ok'){
+            if (data.response == 'ok') {
                 console.debug('saved edit article!' + textStatus);
                 $("#article-dialog-form").dialog("close");
                 location.reload();
             } else {
-                 $('#article-edit-form').show();
+                $('#article-edit-form').show();
                 $('#article-edit-status').html('<div class="error">Failed to save. Error message: ' + data.errormsg + '</div>');
             }
-        }, function(){
-             $('#article-edit-form').show();
+        }, function () {
+            $('#article-edit-form').show();
             $('#article-edit-status').html('<div class="error">Failed to save. Server error</div>');
         });
     } else {
         console.debug('invalid form');
     }
-}
+};
 
 
 annotator.articletable.trimTableColumnString = function(obj) { // make sure that column text is not excessively long

@@ -19,7 +19,7 @@
 
 
 /**************************************************************************
-    This script is split up in multiple files, to keep the script 
+    This script is split up in multiple files, to keep the script
     easier to maintain.
     This file has dependencies for:
     annotator.unitcodings.js
@@ -31,14 +31,14 @@
     jquery-ui
 ***************************************************************************/
 
-var annotator = {}
+var annotator = {};
 
 
 var STATUS_NOTSTARTED = 0;
 var STATUS_INPROGRESS = 1;
 var STATUS_COMPLETE = 2;
 var STATUS_IRRELEVANT = 9;
-var API_URL = "/api/v4/"
+var API_URL = "/api/v4/";
 
 annotator.article_id = 0;
 annotator.sentences = null;
@@ -52,21 +52,21 @@ annotator.commentAndStatus = {};
 annotator.previousWidth = 0; // browser width
 
 
-annotator.resetArticleState = function(){ // set state of article to unmodified
+annotator.resetArticleState = function () { // set state of article to unmodified
     annotator.unitcodings.deletedRows = []; // list with codedsentence ids
     annotator.unitcodings.modifiedRows = []; // list with codedsentence ids
     annotator.articlecodings.modified = false;
     annotator.unitcodings.modified = false;
     annotator.commentAndStatus.modified = false;
-}
+};
 
-annotator.get_api_url = function(){
+annotator.get_api_url = function () {
     return annotator._get_api_url(annotator.project_id, annotator.codingjob_id);
-}
+};
 
-annotator._get_api_url = function(project_id, codingjob_id){
+annotator._get_api_url = function (project_id, codingjob_id) {
     return API_URL + "projects/" + project_id + "/codingjobs/" + codingjob_id + "/";
-}
+};
 
 
 /*
@@ -83,65 +83,67 @@ annotator.map_ids = function (model_data) {
 
 /************* Article codings *************/
 
-annotator.articlecodings.showArticleCodings = function(){
+annotator.articlecodings.showArticleCodings = function () {
     //$('#coding-title').html('Article Codings');
-    if(annotator.articlecodings.containsArticleSchema){
+    if (annotator.articlecodings.containsArticleSchema) {
         annotator.articlecodings.writeArticleCodingsTable();
         $('#article-coding').show();
     }
-}
+};
 
 
-annotator.articlecodings.hideArticleCodings = function(){
+annotator.articlecodings.hideArticleCodings = function () {
     $('#article-coding').hide();
-}
+};
 
 
-annotator.articlecodings.writeArticleCodingsTable = function(){
+annotator.articlecodings.writeArticleCodingsTable = function () {
     $('#article-coding-form').html('Loading...');
-    
+
     $.ajax({
         "url": "article/" + annotator.article_id + "/articlecodings",
-        "success": function(html) {
+        "success": function (html) {
             $('#article-coding-form').html(html);
             annotator.fields.autocompletes.addAutocompletes($('#article-coding-form'));
             annotator.fields.add_rules.bind(["article"])($('#article-coding-form'));
-            $('#article-coding-form input').change(function(){
+            $('#article-coding-form').find('input').change(function () {
                 annotator.articlecodings.onchange($(this));
             });
         },
-        "error": function(jqXHR, textStatus, errorThrown){
+        "error": function () {
             console.debug('error loading article codings');
             $('#article-coding-form').html('<div class="error">Error loading article codings data from <a href="' + this.url + '" target="_blank">' + this.url + '</a></div>');
         },
         "dataType": "html"
     });
-}
+};
 
 
-annotator.articlecodings.onchange = function(el){
+annotator.articlecodings.onchange = function (el) {
     console.debug('article coding', el.attr('name'), 'changed to', el.val());
     annotator.articlecodings.modified = true;
     annotator.codingsAreModified(true);
-}
+};
 
 
 /************* state saving *************/
 
 
-annotator.codingsAreModified = function(enable){
+annotator.codingsAreModified = function (enable) {
     annotator.enableSaveButtons(enable);
     //annotator.enableContinueButtons(enable);
-    if(enable){
-        $(window).bind("beforeunload", function(){return 'You have unsaved changes. Are you sure you would like to close this page?'});
+    if (enable) {
+        $(window).bind("beforeunload", function () {
+            return 'You have unsaved changes. Are you sure you would like to close this page?'
+        });
     } else {
         $(window).unbind("beforeunload");
     }
-}
+};
 
-annotator.enableSaveButtons = function(enable){
-     $('#save-button, #save-button2').button( "option", "disabled", !enable);
-}
+annotator.enableSaveButtons = function (enable) {
+    $('#save-button, #save-button2').button("option", "disabled", !enable);
+};
 // annotator.enableContinueButtons = function(enable){
     // $('#save-continue-button2, #save-continue-button').button( "option", "disabled", !enable);
 // }
@@ -152,29 +154,29 @@ annotator.enableSaveButtons = function(enable){
 /*********** Comment & article status ***************/
 
 
-annotator.commentAndStatus.onArticleStatusChange = function(){
+annotator.commentAndStatus.onArticleStatusChange = function () {
     annotator.commentAndStatus.modified = true;
     annotator.codingsAreModified(true);
-}
+};
 
 
-annotator.commentAndStatus.onCommentChange = function(){
+annotator.commentAndStatus.onCommentChange = function () {
     annotator.commentAndStatus.modified = true;
     annotator.codingsAreModified(true);
-}
+};
 
 
 /************* Storing data *************/
 
 
-annotator.setDialogSuccessButtons = function(){
+annotator.setDialogSuccessButtons = function () {
     $("#dialog-save").dialog('option', 'buttons', {
-        "Continue Editing": function(){
+        "Continue Editing": function () {
             annotator.resetArticleState();
             annotator.codingsAreModified(false);
             $(this).dialog("close");
         },
-        "Go to next article": function(){
+        "Go to next article": function () {
             annotator.resetArticleState();
             annotator.codingsAreModified(false);
             $(this).dialog("close");
@@ -182,71 +184,73 @@ annotator.setDialogSuccessButtons = function(){
         }
     });
     $('.ui-dialog-buttonpane button:first').focus();
-}
+};
 
 
-annotator.setDialogFailureButtons = function(){
+annotator.setDialogFailureButtons = function () {
     $("#dialog-save").dialog('option', 'buttons', {
-        "Return to Article": function(){
+        "Return to Article": function () {
             // annotator.resetArticleState();
             // annotator.codingsAreModified(false);
             $(this).dialog("close");
         }
     });
     $('.ui-dialog-buttonpane button:first').focus();
-}
+};
 
 
-annotator.saveCodings = function(goToNext){
+annotator.saveCodings = function (goToNext) {
     var error = false;
-    $.each($("input[null=false]"), function(i, input){
-        if (annotator.fields.get_value($(input)).length === 0){
+    $.each($("input[null=false]"), function (i, input) {
+        if (annotator.fields.get_value($(input)).length === 0) {
             annotator.showMessage('Codingschemafield ' + $("label", $(input).parent()).text() + " cannot be null");
             error = true;
         }
     });
 
-    if(error) return;
+    if (error) return;
 
-    var storeDict = {}
-    if(annotator.commentAndStatus.modified){
+    var storeDict = {};
+    if (annotator.commentAndStatus.modified) {
         var comment = $('#article-comment').val();
         var status = $('#article-status').val();
-        
+
         // set comment and status in article table
-        var commentPos = annotator.articletable.articleTable.fnGetPosition($('#article-table-container .row_selected td:nth-child(8)').get(0));
-        var statusPos = annotator.articletable.articleTable.fnGetPosition($('#article-table-container .row_selected td:nth-child(7)').get(0));
+        var commentPos = annotator.articletable.articleTable.fnGetPosition($('#article-table-container').find('.row_selected td:nth-child(8)').get(0));
+        var statusPos = annotator.articletable.articleTable.fnGetPosition($('#article-table-container').find('.row_selected td:nth-child(7)').get(0));
         annotator.articletable.articleTable.fnUpdate(comment, commentPos[0], commentPos[1]);
-        annotator.articletable.articleTable.fnUpdate($('#article-status option:selected').text(), statusPos[0], statusPos[1]);
-        
+        annotator.articletable.articleTable.fnUpdate($('#article-status').find('option:selected').text(), statusPos[0], statusPos[1]);
+
         // console.debug('set comment', comment, aPos, aData[aPos[1]]);
-        storeDict['commentAndStatus'] = {'comment': comment, 'status':status};
+        storeDict['commentAndStatus'] = {'comment': comment, 'status': status};
     }
-    if(annotator.articlecodings.modified){
+    if (annotator.articlecodings.modified) {
         storeDict['articlecodings'] = {}; //amcat.getFormDict($('#article-coding-form'));
-        $('#article-coding-form').find('input:text').each(function(j, input){
+        $('#article-coding-form').find('input:text').each(function (j, input) {
             input = $(input);
 
-            if(input.attr("skip_saving")) return;
+            if (input.attr("skip_saving")) return;
 
 
             var value = input.val();
             var field = annotator.fields.getFieldByInputName(input.attr('name'));
-            if(field.isOntology && field.split_codebook){
-                if (input.attr("root") === undefined){
+            if (field.isOntology && field.split_codebook) {
+                if (input.attr("root") === undefined) {
                     input = $('[root="' + input.get(0).id + '"]');
                 }
             }
             var validationResult = annotator.validateInput(input, field);
 
 
-            if(validationResult != true){
+            if (validationResult != true) {
                 input.addClass("error");
-                if(validationResult != false){ // validationResult is text with error message
+                if (validationResult != false) { // validationResult is text with error message
                     console.debug('validation', validationResult);
                     input.attr('title', validationResult);
                 }
-                input.bind("focus", function(){$(this).removeClass("error")});
+                input.bind("focus", function () {
+                    $(this).removeClass("error")
+                });
                 valid = false;
             } else {
                 input.removeClass("error");
@@ -256,28 +260,28 @@ annotator.saveCodings = function(goToNext){
         });
         console.log(storeDict['articlecodings']);
     }
-    
-    if($('#unitcoding-table').length > 0 && annotator.unitcodings.modified){
+
+    if ($('#unitcoding-table').length > 0 && annotator.unitcodings.modified) {
         var valid = true;
-        var formjson = {'delete':annotator.unitcodings.deletedRows, 'modify':[], 'new':[]};
+        var formjson = {'delete': annotator.unitcodings.deletedRows, 'modify': [], 'new': []};
         var hasAnyValue = false;
-        $('#unitcoding-table tbody tr').each(function(i, row){
+        $('#unitcoding-table').find('tbody tr').each(function (i, row) {
             var rowjson = {};
             rowjson['codingid'] = $(row).find('input[name=codingid]').val();
             //console.debug('check row', rowjson['codingid'])
-            if(rowjson['codingid'] == undefined) return; // for row with sentence text
-            $(row).find('input:text').each(function(j, input){
+            if (rowjson['codingid'] == undefined) return; // for row with sentence text
+            $(row).find('input:text').each(function (j, input) {
                 //console.debug(input);
                 input = $(input);
                 var value = input.val();
                 var field = annotator.fields.getFieldByInputName(input.attr('name'));
-                if(value.length > 0){
+                if (value.length > 0) {
                     hasAnyValue = true;
                 }
 
-                if(field.isOntology && field.split_codebook){
+                if (field.isOntology && field.split_codebook) {
                     console.log(input);
-                    if (input.attr("root") === undefined){
+                    if (input.attr("root") === undefined) {
                         input = $('[root="' + input.get(0).id + '"]');
                     }
                     console.log(input);
@@ -285,8 +289,8 @@ annotator.saveCodings = function(goToNext){
 
                 //console.log(value, field, input.attr('name'));
                 var validationResult = annotator.validateInput(input, field);
-                
-                if(validationResult != true){
+
+                if (validationResult != true) {
                     console.log(validationResult);
                     annotator.markInputError(input, validationResult || '');
                     valid = false;
@@ -295,147 +299,149 @@ annotator.saveCodings = function(goToNext){
                     rowjson[input.attr('name')] = input.parent().children(":hidden").val() || input.val();//{'text':input.val(), 'id':input.parent().children(":hidden").val(), 'name':input.attr('name')};
                 }
             });
-            if(!valid) return;
-            if($.inArray(rowjson.codingid, annotator.unitcodings.modifiedRows) != -1){
+            if (!valid) return;
+            if ($.inArray(rowjson.codingid, annotator.unitcodings.modifiedRows) != -1) {
                 formjson['modify'].push(rowjson);
-            } else if(rowjson.codingid.substring(0,3) == 'new'){
+            } else if (rowjson.codingid.substring(0, 3) == 'new') {
                 formjson['new'].push(rowjson);
             } else { // unmodified sentence
                 //console.debug('unmodified codedsentence', rowjson.codingid);
             }
         });
-        if(!valid && $('#unitcoding-table tbody tr').length == 1 && hasAnyValue == false){
+        if (!valid && $('#unitcoding-table').find('tbody tr').length == 1 && hasAnyValue == false) {
             //valid = true; // if there is only one row without any values added, it is still a valid sentence table (since completely empty)
             console.debug('ignoring empty sentence table');
         }
-        else if(valid && (formjson['delete'].length > 0 || formjson['modify'].length > 0 || formjson['new'].length > 0)){
+        else if (valid && (formjson['delete'].length > 0 || formjson['modify'].length > 0 || formjson['new'].length > 0)) {
             //$("#dialog-save").dialog("open");
             console.debug('valid sentence coding form');
             //var data = JSON.stringify(formjson);
             //console.debug(annotator.unitcodings.codedarticle_id, formjson);
             storeDict['unitcodings'] = formjson;
-            
-            
-        } else if(!valid){
+
+
+        } else if (!valid) {
             console.debug('invalid sentence coding form');
             $('#message-dialog-msg').text('Unable to save: An invalid entry has been found in Sentence Codings');
             $('#message-dialog').dialog('open');
             return;
         }
     }
-    
+
     $("#dialog-save-msg").html('Saving...');
     $("#dialog-save").dialog("open");
     var data = JSON.stringify(storeDict);
-    if(data == '{}'){ // empty dict
+    if (data == '{}') { // empty dict
         console.debug('no codings data to send');
         //return;
     }
-    
+
     $.ajax({
-      type: 'POST',
-      url: "article/" + annotator.article_id + "/storecodings",
-      data: data,
-      success: function(json, textStatus, jqXHR){
-          console.debug('saved!' + json.response);
-          if(json.response == 'ok'){
-            annotator.resetArticleState();
-            $("#dialog-save-msg").html('<h3>Successfully saved codings!</h3>');
-            if(goToNext){
-                $("#dialog-save").dialog("close");
-                annotator.articletable.select_next_row();
-            } else {
-                for(var oldid in json.codedsentenceMapping){
-                    $('input[name="codingid"][value="' + oldid + '"]').val(json.codedsentenceMapping[oldid]);
-                    console.debug('mapping sentenceid', oldid, 'to', json.codedsentenceMapping[oldid]);
-                }
-                
-                annotator.codingsAreModified(false);
-                annotator.setDialogSuccessButtons();
-            }
-          } else {
-            var errorMsg = '<h3>Error while saving, invalid form</h3>';
-            if(json.id && json.fields){
-                errorMsg += '<p>The fields in error are marked in red</p>';
-            }
-            if(json.message){
-                errorMsg += '<p>' + json.message + '</p>'; // TODO: escape HTML, security issue
-            }
-            console.debug(errorMsg);
-            $("#dialog-save-msg").html(errorMsg);
-            annotator.setDialogFailureButtons();
-            if(json.id){
-                if(json.id == 'articlecodings'){
-                    $.each(json.fields, function(name, errors){
-                        var el = $('input[name=' + name + ']');
-                        annotator.markInputError(el, errors[0]);
-                    });
-                } else if (json.id == 'commentAndStatus'){
-                    $.each(json.fields, function(name, errors){
-                        var el = $('input[name=' + name + ']');
-                        annotator.markInputError(el, errors[0]);
-                    });
+        type: 'POST',
+        url: "article/" + annotator.article_id + "/storecodings",
+        data: data,
+        success: function (json, textStatus, jqXHR) {
+            console.debug('saved!' + json.response);
+            if (json.response == 'ok') {
+                annotator.resetArticleState();
+                $("#dialog-save-msg").html('<h3>Successfully saved codings!</h3>');
+                if (goToNext) {
+                    $("#dialog-save").dialog("close");
+                    annotator.articletable.select_next_row();
                 } else {
-                    var row = $('input[value=' + json.id + ']').parents('tr').first();
-                    $.each(json.fields, function(name, errors){
-                        var el = $('input[name=' + name + ']', row);
-                        console.log(name, errors, el);
-                        annotator.markInputError(el, errors[0]);
-                    });
+                    for (var oldid in json.codedsentenceMapping) {
+                        $('input[name="codingid"][value="' + oldid + '"]').val(json.codedsentenceMapping[oldid]);
+                        console.debug('mapping sentenceid', oldid, 'to', json.codedsentenceMapping[oldid]);
+                    }
+
+                    annotator.codingsAreModified(false);
+                    annotator.setDialogSuccessButtons();
+                }
+            } else {
+                var errorMsg = '<h3>Error while saving, invalid form</h3>';
+                if (json.id && json.fields) {
+                    errorMsg += '<p>The fields in error are marked in red</p>';
+                }
+                if (json.message) {
+                    errorMsg += '<p>' + json.message + '</p>'; // TODO: escape HTML, security issue
+                }
+                console.debug(errorMsg);
+                $("#dialog-save-msg").html(errorMsg);
+                annotator.setDialogFailureButtons();
+                if (json.id) {
+                    if (json.id == 'articlecodings') {
+                        $.each(json.fields, function (name, errors) {
+                            var el = $('input[name=' + name + ']');
+                            annotator.markInputError(el, errors[0]);
+                        });
+                    } else if (json.id == 'commentAndStatus') {
+                        $.each(json.fields, function (name, errors) {
+                            var el = $('input[name=' + name + ']');
+                            annotator.markInputError(el, errors[0]);
+                        });
+                    } else {
+                        var row = $('input[value=' + json.id + ']').parents('tr').first();
+                        $.each(json.fields, function (name, errors) {
+                            var el = $('input[name=' + name + ']', row);
+                            console.log(name, errors, el);
+                            annotator.markInputError(el, errors[0]);
+                        });
+                    }
                 }
             }
-         }
-      }, error: function(jqXHR, textStatus, errorThrown){
-          console.debug('error!' + textStatus);
-          $("#dialog-save-msg").html('<h3>Error while saving, server error</h3><p>' + textStatus + '</p><br />');
-          annotator.setDialogFailureButtons();
-      },
-      dataType: 'json'
+        }, error: function (jqXHR, textStatus, errorThrown) {
+            console.debug('error!' + textStatus);
+            $("#dialog-save-msg").html('<h3>Error while saving, server error</h3><p>' + textStatus + '</p><br />');
+            annotator.setDialogFailureButtons();
+        },
+        dataType: 'json'
     });
-}   
+};
 
 
 
-annotator.markInputError = function(input, errorText){
+annotator.markInputError = function (input, errorText) {
     input.addClass("error");
     input.attr('title', errorText);
-    input.bind("focus", function(){$(this).removeClass("error")});
-}
+    input.bind("focus", function () {
+        $(this).removeClass("error")
+    });
+};
 
 
-annotator.validateInput = function(input, field){
+annotator.validateInput = function (input, field) {
     /* this will check if the text value of input and the related hidden input contain valid data (based on the allowed items of the field)
-    it will also set the hidden value if it is outdated */
+     it will also set the hidden value if it is outdated */
     var items = field.items;
-    
-    if(items.length == 0){
+
+    if (items.length == 0) {
         console.log('no items for autocomplete');
         return true;
     }
-    
+
     var value = input.val();
-    
-    if(value == ''){
+
+    if (value == '') {
         input.parent().children(":hidden").val(''); // if text input is empty, hidden field should be cleared
         return true;
     }
-    
+
     var id = input.parent().children(":hidden").val(); // value of hidden input
 
     var found = [];
-    for(var i=0; i<items.length; i++){
+    for (var i = 0; i < items.length; i++) {
         // martijn: why is label used as identifier??
-        if (value === items[i].label){
+        if (value === items[i].label) {
             if (id == items[i].value) return true;
             found.push(items[i]);
         }
     }
 
-    if (found.length == 0){
+    if (found.length == 0) {
         return 'Value not found in list of allowed values';
     }
 
-    if (found.length > 1){
+    if (found.length > 1) {
         return "More than one label found for " + value;
     }
 
@@ -445,145 +451,145 @@ annotator.validateInput = function(input, field){
     // This is actually the correct response, but id's dont' get filled when initialising
     // this can happen.
     return "Hidden ID not correct, but label is. Bug?"
-}
+};
 
 
 /************* General functions *************/
 
 
 
-annotator.selectText = function(obj){
+annotator.selectText = function (obj) {
     annotator.deselectText();
-    if(document.selection){
+    if (document.selection) {
         var range = document.body.createTextRange();
         range.moveToElementText(obj);
         range.select();
-    } else if(window.getSelection){
+    } else if (window.getSelection) {
         var range = document.createRange();
         range.selectNode(obj);
         window.getSelection().addRange(range);
     }
-}
+};
 
-annotator.deselectText = function(){
-    if(document.selection){
-        document.selection.empty(); 
-    } else if(window.getSelection){
+annotator.deselectText = function () {
+    if (document.selection) {
+        document.selection.empty();
+    } else if (window.getSelection) {
         window.getSelection().removeAllRanges();
     }
-}
+};
 
 
-annotator.showMessage = function(text){
+annotator.showMessage = function (text) {
     $('#message-dialog-msg').text(text);
     $('#message-dialog').dialog('open');
-}
+};
 
 
 
 
-annotator.sortLabels = function(a, b){ // natural sort on the labels
+annotator.sortLabels = function (a, b) { // natural sort on the labels
     a = a.label.toLowerCase();
     var asplit = a.split(/(\-?[0-9]+)/g);
     b = b.label.toLowerCase();
     var bsplit = b.split(/(\-?[0-9]+)/g);
-    for(var i=0; i<asplit.length; i++){
+    for (var i = 0; i < asplit.length; i++) {
         var diff = parseInt(asplit[i]) - parseInt(bsplit[i]);
-        if(isNaN(diff)){
+        if (isNaN(diff)) {
             diff = asplit[i].localeCompare(bsplit[i]);
         }
-        if(diff != 0){
+        if (diff != 0) {
             return diff;
         }
     }
     return 0;
-}
+};
 
 
 
-annotator.findSentenceByUnit = function(unit){
+annotator.findSentenceByUnit = function (unit) {
     var result = null;
-    $.each(annotator.sentences, function(i, sentence){
-        if(sentence.get_unit() == unit){
+    $.each(annotator.sentences, function (i, sentence) {
+        if (sentence.get_unit() == unit) {
             result = sentence;
             return false;
         }
     });
     return result;
-}
+};
 
 
-annotator.findSentenceById = function(sentenceid){
+annotator.findSentenceById = function (sentenceid) {
     var result = null;
-    $.each(annotator.sentences, function(i, sentence){
-        if(sentence.id == sentenceid){
+    $.each(annotator.sentences, function (i, sentence) {
+        if (sentence.id == sentenceid) {
             result = sentence;
             return true;
         }
     });
     return result;
-}
+};
 
 
-annotator.stripIdAttribute = function(id){ // used for sentence numbers that contain dots. does not work as 'id' attributes..
+annotator.stripIdAttribute = function (id) { // used for sentence numbers that contain dots. does not work as 'id' attributes..
     return id.replace(/\./g, '-')
-}
+};
 
 
 // This function is not yet implemented
-annotator.getNextSentenceNumber = function(sentencenumber){
+annotator.getNextSentenceNumber = function (sentencenumber) {
     var result = null;
-    $.each(annotator.sentences, function(i, sentence){
-        if(sentence.get_unit() == sentencenumber){
+    $.each(annotator.sentences, function (i, sentence) {
+        if (sentence.get_unit() == sentencenumber) {
             //console.debug('sentences length', annotator.sentences.length,i+1);
-            if(annotator.sentences.length > i+1){
-                result = annotator.sentences[i+1].get_unit();
+            if (annotator.sentences.length > i + 1) {
+                result = annotator.sentences[i + 1].get_unit();
                 console.log('next unit found', result);
             }
             return false;
         }
     });
-    if(result == null) console.debug('next sentence not found');
+    if (result == null) console.debug('next sentence not found');
     return result;
-}
+};
 
 
 // This function is not yet implemented
-annotator.findNextAvailableSentences = function(){
+annotator.findNextAvailableSentences = function () {
     var availableSentencenrs = [];
     var parnr = 0;
-    $.each(annotator.sentences, function(i, sentence){
+    $.each(annotator.sentences, function (i, sentence) {
         parnr = sentence.parnr;
         var nextSentencenr = parnr + '.' + (sentence.sentnr + 1);
         var exists = false;
-        $.each(annotator.sentences, function(j, sentence2){
-            if(sentence2.get_unit() == nextSentencenr){
+        $.each(annotator.sentences, function (j, sentence2) {
+            if (sentence2.get_unit() == nextSentencenr) {
                 exists = true;
                 return true;
             }
         });
-        if(!exists){
+        if (!exists) {
             availableSentencenrs.push(nextSentencenr);
         }
     });
     availableSentencenrs.push((parnr + 1) + '.1');
     return availableSentencenrs;
-}
+};
 
 // This function is not yet implemented
-annotator.showNewSentenceDialog = function(){
-    if(!annotator.confirmArticleChange()) return;
+annotator.showNewSentenceDialog = function () {
+    if (!annotator.confirmArticleChange()) return;
     $('#new-sentence-text').val('DUMMY');
     var availableSentencenrs = annotator.findNextAvailableSentences();
     console.debug('available', availableSentencenrs);
     var html = $('<select id="new-sentence-nr" />');
-    $.each(availableSentencenrs, function(i, nr){
+    $.each(availableSentencenrs, function (i, nr) {
         //html.append('<option value="' + nr + '">' + nr + '</option>');
         html.append($('<option />').attr('value', nr).text(nr));
     });
     $('#new-sentence-nr-placeholder').html(html);
     $("#new-sentence-dialog-form").dialog("open");
-}
+};
 
 // This function is not yet implemented
 annotator.saveNewSentenceDialog = function(){
@@ -600,7 +606,7 @@ annotator.saveNewSentenceDialog = function(){
           console.debug('saved!' + json.response);
           if(json.response == 'ok'){
             console.debug('ok recieved');
-            annotator.articletable.get_article($('#article-table-container .row_selected'));
+            annotator.articletable.get_article($('#article-table-container').find('.row_selected'));
             $("#new-sentence-dialog-form").dialog("close");
           } else {
             var errorMsg = '<h3>Error while saving</h3>' + $('<span />').text(json.errormsg).html();
@@ -615,16 +621,16 @@ annotator.saveNewSentenceDialog = function(){
     });
 };
 
-annotator.sentences_fetched = function(sentences){
+annotator.sentences_fetched = function (sentences) {
     var html = $('<div />');
     var prev_parnr = 1;
 
-    $.each(sentences, function(i, s){
+    $.each(sentences, function (i, s) {
         var _html = $('<div />').attr('id', 'sentence-' + s.id);
-        if(s.parnr != prev_parnr){
+        if (s.parnr != prev_parnr) {
             _html.addClass('new-paragraph');
         }
-        if(s.get_unit() == '1.1'){
+        if (s.get_unit() == '1.1') {
             _html.append($('<h2 />').text(s.text));
         } else {
             _html.append($('<span />').addClass('annotator-sentencenr').text('(' + s.get_unit() + ') '));
@@ -633,112 +639,34 @@ annotator.sentences_fetched = function(sentences){
         prev_parnr = s.parnr;
         html.append(_html);
     });
-    
-    if(sentences.length == 0){
+
+    if (sentences.length == 0) {
         html.append('No sentences found for this article');
     }
 
     $('.sentence-options').show();
     $('.sentences').html(html);
-    
-}
 
-// This function is not yet implemented
-annotator.showSplitArticleDialog = function(){ //TODO make nice form out of this
-    if(!annotator.confirmArticleChange()) return;
-    $("#article-dialog-form").dialog("option", "title", "Create new article based on split");
-    var html = $('<div />');
-    
-    var headline = $('#article-table-container .row_selected td:nth-child(3)').text(); // get headline from article table
-    html.append($('<label />').text('Headline'));
-    html.append($('<input />', {'value':headline, 'name':'headline'})).append('<br />');
-    var selecthtml1 = $('<select />', {'name':'startSentence'});
-    var selecthtml2 = $('<select />', {'name':'endSentence'});
-    $.each(annotator.sentences, function(i, sentence){
-        selecthtml1.append($('<option />', {'value': sentence.id}).text(sentence.unit));
-        selecthtml2.append($('<option />', {'value': sentence.id}).text(sentence.unit));
-    });
-    html.append($('<label />').text('Start Sentence'));
-    html.append(selecthtml1).append('<br />');
-    html.append($('<label />').text('End Sentence'));
-    html.append(selecthtml2).append('<br />');
-    
-    $('#article-edit-form').html(html);
-    $("#article-dialog-form").dialog('option', 'buttons', {
-        "Save": annotator.saveSplitArticle,
-        "Cancel": function(){
-            $(this).dialog("close");
-        }
-    });
-    $("#article-dialog-form").dialog('open');
-}
+};
 
-// This function is not yet implemented
-annotator.saveSplitArticle = function(){
-    var headline = $("#article-dialog-form input[name='headline']").val();
-    var startSentence = $("#article-dialog-form select[name='startSentence']").val();
-    var endSentence = $("#article-dialog-form select[name='endSentence']").val();
-    
-    if(!headline){
-        $('#article-edit-status').html('Please insert a headline');
-        return;
-    }
-            
-    var data = JSON.stringify({
-        'headline':headline,
-        'startSentence':startSentence,
-        'endSentence':endSentence,
-        'codingjob_id':annotator.codingjob_id,
-        'setnr':annotator.setnr
-    });
-    
-    $.ajax({
-      type: 'POST',
-      url: 'annotator/createSplit/' + annotator.article_id,
-      data: {'jsonparams' : data},
-      success: function(json, textStatus, jqXHR){
-          console.debug('saved!' + json.response);
-          if(json.response == 'ok'){
-            console.debug('ok recieved');
-            $('#article-edit-status').html('Saved!');
-            $("#article-dialog-form").dialog('option', 'buttons', {
-                "OK": function(){
-                    //$(this).dialog("close");
-                    location.reload();
-                }
-            });
-          } else {
-            var errorMsg = '<h3>Error while saving</h3>' + $('<span />').text(json.errormsg).html();
-            console.debug(errorMsg);
-            $("#article-edit-status").html(errorMsg);
-          }
-      }, error: function(jqXHR, textStatus, errorThrown){
-          console.debug('error!' + textStatus);
-          $("#article-edit-status").html('Server error! ' + textStatus + '<br />');
-      },
-      dataType: 'json'
-    });
-}
-
-
-annotator.confirmArticleChange = function(){
-    if(annotator.articlecodings.modified || annotator.unitcodings.modified || annotator.commentAndStatus.modified){
+annotator.confirmArticleChange = function () {
+    if (annotator.articlecodings.modified || annotator.unitcodings.modified || annotator.commentAndStatus.modified) {
         return confirm('You have unsaved changes. Are you sure you would like to change article?');
     }
     return true;
-}
+};
 
 
-annotator.checkWindowWidth = function(){
-    var widthMessage = 'Your browser width is lower than 1000 pixels. Please use a higher resolution for a better layout.'
-    if($(window).width() < 1000){
-        if($('#messages:contains("' + widthMessage + '")').length == 0){ // message not already visible
+annotator.checkWindowWidth = function () {
+    var widthMessage = 'Your browser width is lower than 1000 pixels. Please use a higher resolution for a better layout.';
+    if ($(window).width() < 1000) {
+        if ($('#messages:contains("' + widthMessage + '")').length == 0) { // message not already visible
             $('#messages').append('<div>' + widthMessage + '</div>')
         }
     } else {
-        $('#messages div:contains("' + widthMessage + '")').remove();
+        $('#messages').find('div:contains("' + widthMessage + '")').remove();
     }
-}
+};
 
 annotator.initPage = function(){
     annotator.resetArticleState();
@@ -821,14 +749,14 @@ annotator.initPage = function(){
     
     
     /*** set click events of buttons ***/
-    $('#save-button, #save-button2').click(function(event){
+    $('#save-button, #save-button2').click(function(){
         if($('#article-status').val() == STATUS_NOTSTARTED){
             $('#article-status').val(STATUS_INPROGRESS);
             annotator.commentAndStatus.onArticleStatusChange();
         }
         annotator.saveCodings();
     });
-    $('#save-continue-button, #save-continue-button2').click(function(event){
+    $('#save-continue-button, #save-continue-button2').click(function(){
         $('#article-status').val(STATUS_COMPLETE);
         annotator.commentAndStatus.onArticleStatusChange();
         annotator.saveCodings(true);
@@ -841,17 +769,17 @@ annotator.initPage = function(){
     $('#next-article-button').click(function(event){
         annotator.articletable.select_next_row();
     });
-    $('#delete-coding-button, #delete-coding-button2').click(function(event){
+    $('#delete-coding-button, #delete-coding-button2').click(function(){
         $("#dialog-confirm-delete-row").dialog("open");
     });
-    $('#copy-coding-button, #copy-coding-button2').click(function(event){
+    $('#copy-coding-button, #copy-coding-button2').click(function(){
         annotator.unitcodings.copySelectedRow();
     });
     $('#copy-switch-coding-button, #copy-switch-coding-button2').click(function(event){
         annotator.unitcodings.copySelectedRow();
         annotator.unitcodings.switchSubjectObject();
     });
-    $('#previous-article-button').click(function(event){
+    $('#previous-article-button').click(function(){
         annotator.articletable.select_previous_row();
     });
     // $('#article-coding-radio, #sentence-coding-radio, #both-coding-radio').click(function(){
@@ -859,7 +787,7 @@ annotator.initPage = function(){
         // annotator.codingTypeSet();
     // });
     
-    $('#help-button').click(function(event){
+    $('#help-button').click(function(){
         $("#dialog-help").dialog("open");
     });
     $(".sentence-options .add-sentence-button").click(annotator.showNewSentenceDialog);
@@ -989,8 +917,8 @@ annotator.initPage = function(){
     });
     
     
-    $('#unitcoding-table input:text').live('focus', annotator.unitcodings.focusCodingRow);
-    $('#unitcoding-table input:text').live('hover', function(){
+    $('#unitcoding-table').find('input:text').live('focus', annotator.unitcodings.focusCodingRow);
+    $('#unitcoding-table').find('input:text').live('hover', function(){
         var el = $(this);
         if(el.val().length > 10){
             el.attr('title', el.val());
@@ -1021,22 +949,22 @@ annotator.initPage = function(){
     });
     
     
-    $(document).bind('keydown', 'ctrl+down', function(event){
+    $(document).bind('keydown', 'ctrl+down', function (event) {
         var el = $(event.target);
-        if(el.is('input, button') && el.parents('#unitcoding-table').length > 0){ // pressed in sentences table
+        if (el.is('input, button') && el.parents('#unitcoding-table').length > 0) { // pressed in sentences table
             event.preventDefault();
             el.blur();
             el.parents('tr').find('.add-row-button').click();
             return false;
         }
-    })
+    });
     $(document).bind('keydown', 'ctrl+shift+down', function(event){
          var el = $(event.target);
         if(el.is('input, button') && el.parents('#unitcoding-table').length > 0){ // pressed in sentences table
             event.preventDefault();
             el.blur();
             console.debug('ctrl + sift');
-            var currentUnit = $('#unitcoding-table .row_selected input:first').val();
+            var currentUnit = $('#unitcoding-table').find('.row_selected input:first').val();
             var newUnit = annotator.getNextSentenceNumber(currentUnit);
             el.parents('tr').find('.add-row-button').trigger('click', newUnit);
             return false;
@@ -1073,10 +1001,10 @@ annotator.initPage = function(){
 };
 
 
-$(document).ajaxError(function(event, xhr, ajaxOptions, thrownError) {
+$(document).ajaxError(function(event, xhr, ajaxOptions) {
     var message = "An erorr occured while requesting: " + ajaxOptions.url + ". " +
                   "Server responded: '" + xhr.status + " " + xhr.statusText + "'.";
     $("<div>").text(message).dialog({
-      modal: true,
+      modal: true
     });
 });
