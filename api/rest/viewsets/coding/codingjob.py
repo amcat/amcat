@@ -19,13 +19,14 @@
 from django.db.models import Count, Q
 from rest_framework import serializers
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-from amcat.models import CodingJob, Article, Sentence, Codebook, CodingRule
+from amcat.models import CodingJob, Article, Sentence, Codebook, CodingRule, CodingSchemaField
 from amcat.models.coding import coding
 from amcat.nlp import sbd
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
+from api.rest.viewsets.coding.codingschemafield import CodingSchemaFieldViewSetMixin, CodingSchemaFieldSerializer
 from api.rest.viewsets.coding.codingrule import CodingRuleViewSetMixin, CodingRuleSerializer
 from api.rest.viewsets.sentence import SentenceViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
@@ -35,7 +36,8 @@ STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
 
 __all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet",
            "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet",
-           "CodingJobHighlighterViewSet", "CodingJobCodingRuleViewSet")
+           "CodingJobHighlighterViewSet", "CodingJobCodingRuleViewSet",
+           "CodingJobCodingSchemaFieldViewSet")
 
 
 class CodingJobSerializer(AmCATModelSerializer):
@@ -126,3 +128,13 @@ class CodingJobCodingRuleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, Cod
     def filter_queryset(self, rules):
         rules = super(CodingJobCodingRuleViewSet, self).filter_queryset(rules)
         return rules.filter(codingschema__pk__in=(self.codingjob.unitschema_id, self.codingjob.articleschema_id))
+
+class CodingJobCodingSchemaFieldViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, CodingSchemaFieldViewSetMixin,
+                                        DatatablesMixin, ReadOnlyModelViewSet):
+    model = CodingSchemaField
+    model_serializer_class = CodingSchemaFieldSerializer
+
+    def filter_queryset(self, fields):
+        return super(CodingJobCodingSchemaFieldViewSet, self).filter_queryset(fields).filter(
+            codingschema__pk__in=(self.codingjob.articleschema_id, self.codingjob.unitschema_id)
+        )
