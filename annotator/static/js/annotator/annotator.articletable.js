@@ -27,56 +27,83 @@ annotator.articletable.articleEditForm = null;
 
 
 /************* Article table *************/
+annotator.articletable.get_table = function(){
+    return $('#article-table-container').find('table');
+};
 
-annotator.articletable.selectRow = function(row){
-    // select a row in the article table. used by goToNextRow and goToPreviousRow functions below
+annotator.articletable.click_article_row = function (row) { // called if user clicks on article table row
+    if (!annotator.confirmArticleChange()) return;
+    annotator.articletable.get_table().find(".row_selected").removeClass("row_selected");
+    annotator.articletable.select_row(row);
+};
+
+
+
+/* Select row in article table, which means it will be loaded
+* from the server, including all their codings. */
+annotator.articletable.select_row = function (row) {
     row.addClass('row_selected');
-    annotator.articletable.showArticleFromRow(row);
-    var scroller = $('#article-table-container table').parent(); 
-    $(scroller).scrollTo(row, {offset:-50});
-}
+    annotator.articletable.get_article(annotator.articletable.get_article_id(row));
+    annotator.articletable.get_table().parent().scrollTo(row, {offset: -50});
+};
 
-annotator.articletable.goToNextRow = function(){
-    // used for articles table, by continue buttons and 'next'
-    if(!annotator.confirmArticleChange()) return;
-    $('#article-table-container table .row_selected').each(function(){
-        var row = $(this);
-        if(row.next().length == 0){
-            annotator.showMessage('last article reached!');
-        } else {
-            row.removeClass('row_selected');
-            annotator.articletable.selectRow(row.next());
-        }
-    });
-    
-    if($('#article-table-container table .row_selected').length == 0) {
-        // no selected row exists, pick first row
-        var firstTr = $('#article-table-container table tbody tr:first')
-        firstTr.addClass('row_selected');
-        annotator.articletable.showArticleFromRow(firstTr);
+/*
+ * Based on a row (jQuery tr element), return the article id corresponding
+ * to the id of the article in that row.
+ */
+annotator.articletable.get_article_id = function (tr) {
+    return parseInt(tr.children('td:first').text());
+};
+
+annotator.articletable.select_next_row = function(){
+    // Warn user for potentially lost data
+    if(!annotator.confirmArticleChange()){
+        return;
     }
-}
 
-annotator.articletable.goToPreviousRow = function(){
+    // Determine selected row
+    var row = annotator.articletable.get_table().find(".row_selected");
+    if (row.length === 0) return;
+    if (row.length !== 1) throw "Only one row can be selected at a time.";
+
+    // Last article?
+    if(row.next().length == 0){
+        annotator.showMessage('Last article reached!');
+        return;
+    }
+
+    // Move to next row
+    row.removeClass('row_selected');
+    annotator.articletable.select_row(row.next());
+};
+
+annotator.articletable.select_previous_row = function () {
     // used for articles table, by 'previous' button
-    if(!annotator.confirmArticleChange()) return;
-    $('#article-table-container table .row_selected').each(function(){
-        var row = $(this);
-        if(row.prev().length == 0){
-            annotator.showMessage('first article reached!');
-        } else {
-            row.removeClass('row_selected');
-            annotator.articletable.selectRow(row.prev());
-        }
-    });
-}
+    if (!annotator.confirmArticleChange()) {
+        return;
+    }
+
+    // Determine selected row
+    var row = annotator.articletable.get_table().find(".row_selected");
+    if (row.length === 0) return;
+    if (row.length !== 1) throw "Only one row can be selected at a time.";
+
+    // First article?
+    if (row.prev().length == 0){
+        annotator.showMessage('First article reached!');
+        return;
+    }
+
+    row.removeClass('row_selected');
+    annotator.articletable.select_row(row.prev());
+};
 
 annotator.articletable.highlight = function(){
     var _labels = [], escape_regex, labels = annotator.fields.highlight_labels;
     console.log("Highlighting ", labels.length ," labels in article..");
 
     escape_regex = function(str) {
-        return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&")
+        return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
     }; 
 
     $.each(labels, function(i, label){
@@ -162,7 +189,7 @@ annotator.articletable.decrease_headers = function(min_size){
     }
 
     return true;
-}
+};
 
 /*
  * Some codingschemas have a lot of fields, causing the table
@@ -170,11 +197,11 @@ annotator.articletable.decrease_headers = function(min_size){
  *
  * @return: resizing succesfull
  */
-annotator.articletable.fit_table = function(min_size_input, min_size_header){
+annotator.articletable.fit_table = function (min_size_input, min_size_header) {
     // Default min_size_input / min_size_header to 50px / 8px
     min_size_input = (min_size_input === undefined) ? 50 : min_size_input;
     min_size_header = (min_size_header === undefined) ? 8 : min_size_header;
-    
+
     var ut = $("#unitcoding-table");
     var headers = $("th", ut);
     var inputs = $("input[type=text]", ut);
@@ -182,121 +209,96 @@ annotator.articletable.fit_table = function(min_size_input, min_size_header){
 
 
     // Check if table initialised yet
-    if(ut.children().length < 2){
+    if (ut.children().length < 2) {
         window.setTimeout(annotator.articletable.fit_table, 200);
         return;
     }
 
     // Check if previous resize matched our goals
-    if (ut.outerWidth() <= aimed_size){
+    if (ut.outerWidth() <= aimed_size) {
         return true;
     }
 
     // Try to resize headers by deleting characters
     var decr_h = annotator.articletable.decrease_headers;
-    while(ut.outerWidth() >= aimed_size && decr_h(min_size_header)){ }
+    while (ut.outerWidth() >= aimed_size && decr_h(min_size_header)) {
+    }
 
-    if (ut.outerWidth() > aimed_size){
+    if (ut.outerWidth() > aimed_size) {
         console.log("Could not resize table to width of screen..");
     } else {
-        $.each(inputs, function(i, input){
+        $.each(inputs, function (i, input) {
             redraw();
             //$(input).width("100%");
         });
     }
 
-}
+};
 
-annotator.articletable.showArticleFromRow = function (row) {
-    var aid = row.children('td:first').text(); // get article id from first column of current row
-    annotator.articleid = aid;
 
-    $('.sentences').html('Loading..');
-    $.ajax({
-        "url": annotator.get_api_url() + "articles/" + annotator.articleid + "/sentences?page_size=100000",
-        "success": function (json) {
-            annotator.articleSentences = json.results;
-            console.log("Setting article sentences");
+/*
+ *
+ */
+annotator.articletable.get_article = function(article_id) {
+    annotator.article_id = article_id;
+    var base_url = annotator.get_api_url() + "coded_articles/" + article_id + "/";
 
-            /*** set autocomplete for 'unit' column ***/
-            annotator.fields.fields['unit'].items = [];
-            $.each(json.results, function (i, sentence) {
-                // Register `get_unit`, which returns "%s.%s" % (parnr, sentnr), for
-                // backward compat reasons.
-                sentence.get_unit = (function () {
-                    return this.parnr + "." + this.sentnr;
-                }).bind(sentence);
+    annotator.articletable.requests = [
+        $.getJSON(base_url),
+        $.getJSON(base_url + "codings"),
+        $.getJSON(base_url + "sentences")
+    ];
 
-                annotator.fields.fields['unit'].items.push({
-                    label: sentence.get_unit(),
-                    value: sentence.id
-                })
-            });
+    $("<div id='loading_codings'>Loading codings, please wait..</div>").dialog({modal:true});
 
-            annotator.writeArticleSentences(json.results);
-            annotator.articletable.highlight();
+    var get_unit = function () {
+        return this.parnr + "." + this.sentnr;
+    };
+
+    $.when.apply(undefined, annotator.articletable.requests).then(function (article, codings, sentences) {
+        console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
+        codings = annotator.map_ids(codings[0].results);
+        sentences = annotator.map_ids(sentences[0].results);
+
+        annotator.sentences = sentences;
+        annotator.codings = codings;
+        annotator.article = article;
+
+        $.each(sentences, function(sentence_id, sentence){
+            sentence.get_unit = get_unit.bind(sentence);
+        });
+
+        // Set buttons
+        $('#edit-article-button').button("option", "disabled", false);
+       // $('#next-article-button').button("option", "disabled", row.next().length == 0);
+        //$('#previous-article-button').button("option", "disabled", row.prev().length == 0);
+
+        $("#article-comment").text(article.comments || "");
+        $('#article-status').find('option:contains("' + article.status + '")').attr("selected", "selected");
+
+        // Initialise coding area
+        annotator.sentences_fetched(sentences);
+        annotator.articletable.highlight();
+
+
+        $("#loading_codings").dialog("destroy");
+    });
+
+/*            annotator.articletable.highlight();
             annotator.articletable.fit_table();
             annotator.unitcodings.showSentenceCodings();
             annotator.articlecodings.showArticleCodings();
             annotator.codingsAreModified(false);
             annotator.resetArticleState();
-            annotator.articletable.highlight();
-        },
-        "error": function (jqXHR, textStatus, errorThrown) {
-            console.debug('error loading article');
-            $('.article-part').html('<div class="error">Error loading article data from <a href="' + this.url + '" target="_blank">' + this.url + '</a></div>');
-        },
-        "dataType": "json"
-    });
-
-    $('.coding-part').show();
-
-    var comment = row.find('td:nth-child(8) div div').attr('title'); // very long comments are stored in title
-    if (!comment) comment = row.children('td:nth-child(8)').text();
-    console.debug('comment', comment);
-    $('#article-comment').val(comment);
-
-    console.debug('status', row.children('td:nth-child(7)').text());
-    $('#article-status option:contains("' + row.children('td:nth-child(7)').text() + '")').attr('selected', 'selected');
-
-
-    $('#edit-article-button').button("option", "disabled", false); // when article is selected, it is possible to edit
-
-    if (row.next().length == 0) { // no next article available
-        $('#next-article-button').button("option", "disabled", true);
-    } else {
-        $('#next-article-button').button("option", "disabled", false);
-    }
-    if (row.prev().length == 0) { // no previous article available
-        $('#previous-article-button').button("option", "disabled", true);
-    } else {
-        $('#previous-article-button').button("option", "disabled", false);
-    }
-
+            annotator.articletable.highlight();*/
 };
 
 
-annotator.articletable.clickArticleRow = function (row) { // called if user clicks on article table row
-    if (!annotator.confirmArticleChange()) return;
-    $('#article-table-container table .row_selected').removeClass('row_selected');
-    row.addClass('row_selected');
-    annotator.articletable.showArticleFromRow(row);
-};
-
-
-annotator.articletable.onCreateArticleTable = function () {
-    /*** set items of articles table ***/
-    $('#next-article-button').button("option", "disabled", false);
-};
-   
-
-   
-   
-annotator.articletable.showEditArticleDialog = function(articleid){
+annotator.articletable.showEditArticleDialog = function(article_id){
     if(!annotator.confirmArticleChange()) return;
     $('#article-edit-form').html('Loading...');
     $("#article-dialog-form").dialog("open");
-    annotator.articletable.articleEditForm = new Form("annotator/articleFormJSON/" + articleid, {'sortFields':true});
+    annotator.articletable.articleEditForm = new Form("annotator/articleFormJSON/" + article_id, {'sortFields':true});
     annotator.articletable.articleEditForm.ready = function () {
         $('#article-edit-form').html(annotator.articletable.articleEditForm.render.table);
     };
@@ -314,7 +316,7 @@ annotator.articletable.showEditArticleDialog = function(articleid){
         annotator.articletable.articleEditForm.initialize_form2(json.form);
         annotator.fields.autocompletes.addAutocompletes($('#article-edit-form'));
         
-        if(articleid == 0){ // new article form
+        if(article_id == 0){ // new article form
             annotator.articletable.articleEditForm.fields['setnr'].initial = annotator.setnr;
             annotator.articletable.articleEditForm.fields['jobid'].initial = annotator.codingjob_id;
             console.log('done setting setnr and jobid');

@@ -67,20 +67,8 @@ annotator.fields = {};
 annotator.fields.autocompletes = {};
 annotator.fields.autocompletes.NUMBER_OF_DROPDOWN_RESULTS = 40; // number of results in autocomplete dropdown list
 annotator.fields.autocompletes.EMPTY_CODING_LABEL = '[empty]';
-annotator.fields.loadedFromServer = false;
 annotator.fields.ontologyRecentItems = {}; // for each ontology, list of items recently used, for autocomplete
 
-/*
- * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
- * the id as key, and the object as value.
- */
-annotator.fields.map_ids = function (model_data) {
-    var _result = {};
-    $.each(model_data, function (i, object) {
-        _result[object.id] = object;
-    });
-    return _result;
-};
 
 annotator.fields.initialise_fields = function () {
     annotator.fields.fields = {}
@@ -89,14 +77,15 @@ annotator.fields.initialise_fields = function () {
     };
 
     annotator.fields.requests = [
+        $.getJSON(annotator.get_api_url()),
         $.getJSON(annotator.get_api_url() + "coding_rules"),
         $.getJSON(annotator.get_api_url() + "codebooks"),
-        $.getJSON(annotator.get_api_url() + "highlighters"),
         $.getJSON(annotator.get_api_url() + "codingschemas"),
+        $.getJSON(annotator.get_api_url() + "codingschemafields"),
         $.getJSON(API_URL + "coding_rule_actions")
     ];
 
-    $.when.apply(undefined, annotator.fields.requests).then(function (rules, codebooks, highlighters, schemas, actions) {
+    $.when.apply(undefined, annotator.fields.requests).then(function (codingjob, rules, codebooks, schemas, schemafields, actions) {
             var self = annotator.fields;
 
             // Check if all request completed successfully. (If not, an
@@ -105,25 +94,50 @@ annotator.fields.initialise_fields = function () {
             if (!all(function (request) {
                 return request.statusText === "OK";
             }, annotator.fields.requests)) {
-                throw "Not all requests completed succesfully.";
+                throw "Not all requests completed successfully.";
             }
 
             // Extract results from response
-            self.rules = self.map_ids(rules[0].results);
-            self.actions = self.map_ids(actions[0].results);
-            self.codebooks = self.map_ids(codebooks[0].results);
-            self.highlighters = self.map_ids(highlighters[0].results);
-            self.schemas = self.map_ids(schemas[0].results);
+            self.rules = annotator.map_ids(rules[0].results);
+            self.actions = annotator.map_ids(actions[0].results);
+            self.codebooks = annotator.map_ids(codebooks[0].results);
+            self.schemas = annotator.map_ids(schemas[0].results);
+            self.schemafields = annotator.map_ids(schemas[0].results);
+            self.codingjob = codingjob;
 
             // Initialize data
             self.codebooks_fetched();
+            self.highlighters_fetched();
             $("#loading_fields").dialog("close");
         }
     );
 };
 
 /*
- * Called when initialsing {article,unit}codings is done. Must be bound
+ * Initialise highlighters by preparing annotator.fields.highlighter_labels. May
+ * push 'undefined' if no label is available in the codebook for the requested
+ * language.
+ */
+annotator.fields.highlighters_fetched = function(){
+    var self = annotator.fields;
+    var labels = [];
+    var language_id, codebook;
+
+    $.each(self.schemas, function(schema_id, schema){
+        language_id = schema.highlight_language;
+        $.each(schema.highlighters, function(i, codebook_id){
+            codebook = self.codebooks[codebook_id];
+            $.each(codebook.codes, function(i, code){
+                labels.push(code.labels[language_id]);
+            });
+        });
+    });
+
+    annotator.fields.highlight_labels = labels;
+};
+
+/*
+ * Called when initialising {article,unit}codings is done. Must be bound
  * (with bind()) to either article or unit.
  */
 annotator.fields.add_rules = function(html){
@@ -186,15 +200,15 @@ annotator.fields.add_rules = function(html){
  *
  * @param input: jQuery element 
  */
-annotator.fields.get_value = function(input){
-    if (input.hasClass("ui-autocomplete-input")){
+annotator.fields.get_value = function (input) {
+    if (input.hasClass("ui-autocomplete-input")) {
         // This is an autocomplete field, so we need to fetch the value
         // from the hidden input field.
         return $(":hidden", input.parent()).val();
-    } 
+    }
 
     return input.val();
-}
+};
 
 
 /*
@@ -320,76 +334,61 @@ annotator.fields.codebooks_fetched = function(){
 };
 
 /*
- * Called when codingrules are fetched.
+ * Called when codingrules are fetched. Registeres two functions on each
+ * rule object:
+ *   get_action: returns action object (or undefined)
+ *   get_field_input: returns jQuery input element
  */
-annotator.fields.codingrules_fetched = function(json){
+annotator.fields.codingrules_fetched = function (rules) {
     var get_field_input = function () {
         return $("#id_field_" + this.field);
     };
 
     var get_action = function () {
-        return annotator.fields.codingruleactions[this.action];
+        return annotator.fields.actions[this.action];
     };
 
-    if (json !== undefined){
-        var rules = {};
-        $.each(json.results, function(i, rule){
-            rules[rule.id] = rule;
-            rule.get_field_input = get_field_input.bind(rule);
-            rule.get_action = get_action.bind(rule);
-        });
-
-        $.extend(annotator.fields.codingrules, rules);
-    }
-
-    if (annotator.fields.codingrules_fetched_count === 4){
-        $( "#loading_fields" ).dialog( "destroy" );
-    }
-}
-
-annotator.fields.codingruleactions_fetched = function(json){
-    $.each(json.results, function(i, action){
-        annotator.fields.codingruleactions[action.id] = action;
+    $.each(rules, function(rule_id, rule){
+        rule.get_action = get_action.bind(rule);
+        rule.get_field_input = get_field_input.bind(rule);
     });
-
-    annotator.fields.codingrules_fetched();
-}
+};
 
 /*
  * Get a field_id --> [rule, rule..] mapping.
  */
-annotator.fields.get_field_codingrules = function(){
-    if (annotator.fields.field_codingrules !== undefined){
+annotator.fields.get_field_codingrules = function () {
+    if (annotator.fields.field_codingrules !== undefined) {
         return annotator.fields.field_codingrules;
     }
 
     var codingrule_fields = {};
-    $.each(annotator.fields.codingrules, function(i, rule){
+    $.each(annotator.fields.codingrules, function (i, rule) {
         var self = this;
         codingrule_fields[rule.id] = [];
 
         /*
          * Return a list with all nodes in parsed condition tree.
          */
-        self.walk = function(node){
-            if (node === undefined){
+        self.walk = function (node) {
+            if (node === undefined) {
                 node = self.parsed_condition;
             }
             var nodes = [node];
 
-            if (node.values !== undefined){
+            if (node.values !== undefined) {
                 $.merge(nodes, self.walk(node.values[0]));
                 $.merge(nodes, self.walk(node.values[1]));
-            } else if (node.value !== undefined){
+            } else if (node.value !== undefined) {
                 $.merge(nodes, self.walk(node.value));
             }
 
             return nodes;
         }
 
-        $.each(self.walk(), function(i, node){
-            if (node.type === "codingschemafield"){
-                if (codingrule_fields[rule.id].indexOf(node.id) === -1){
+        $.each(self.walk(), function (i, node) {
+            if (node.type === "codingschemafield") {
+                if (codingrule_fields[rule.id].indexOf(node.id) === -1) {
                     codingrule_fields[rule.id].push(node.id);
                 }
             }
@@ -398,13 +397,13 @@ annotator.fields.get_field_codingrules = function(){
 
     // Reverse dictionary
     var field_codingrules = {};
-    $.each(codingrule_fields, function(rule_id, fields){
-        $.each(fields, function(i, field_id){
-            if (field_codingrules[field_id] === undefined){
+    $.each(codingrule_fields, function (rule_id, fields) {
+        $.each(fields, function (i, field_id) {
+            if (field_codingrules[field_id] === undefined) {
                 field_codingrules[field_id] = [];
             }
 
-            if (field_codingrules[field_id].indexOf(rule_id) === -1){
+            if (field_codingrules[field_id].indexOf(rule_id) === -1) {
                 // Objects ('hashmaps') can only contain strings as keys, so
                 // the rule_id's got converted to strings...
                 field_codingrules[field_id].push(parseInt(rule_id));
@@ -413,7 +412,7 @@ annotator.fields.get_field_codingrules = function(){
     });
 
     return field_codingrules;
-}
+};
 
 annotator.fields.setup_wordcount = function(){
     // http://stackoverflow.com/questions/6743912/get-the-pure-text-without-html-element-by-javascript
@@ -568,16 +567,16 @@ annotator.fields.fillOntologyDetailsBox = function(objid, label, inputEl){
     if(obj.functions){
         content.push('<table cellspacing="3"><tr><th>Function</th><th>Parent</th><th>Start</th><th>End</th></tr>');
         $.each(obj.functions, function(i, func){
-            content.push('<tr><td>')
+            content.push('<tr><td>');
             content.push(func['function']);
-            content.push('</td><td>')
+            content.push('</td><td>');
             if(func.parentid in annotator.fields.ontologyItemsDict){
                 // TODO: make nice safe jQuery html here, this is a security risk
                 content.push(annotator.fields.ontologyItemsDict[func.parentid].label); 
             }
-            content.push('</td><td>')
+            content.push('</td><td>');
             if(func.from) content.push(func.from)
-            content.push('</td><td>')
+            content.push('</td><td>');
             if(func.to) content.push(func.to);
             content.push('</td></tr>');
         });
@@ -626,44 +625,6 @@ annotator.fields.addToRecentItemsList = function(field, value, label){
 }
 
 
-annotator.fields.setNETCodings = function(field, value, label){
-    if(annotator.unitcodings.isNETcoding == true && field.fieldname == 'Type'){
-        if(label == 'IDE'){
-            //set object to ideal iff object is not ideal or a child of ideal
-            var elName = annotator.unitcodings.findSentenceFieldIdByName('Object');
-            console.debug(elName);
-            var ontology = annotator.fields.fields[elName.replace(/field_/,'')].items;
-            // current value of Object field
-            var inputLabel = $('#unitcoding-table .row_selected input[name=' + elName + ']').val(); 
-            var idealObj = annotator.fields.findInOntology('ideal', ontology);
-            console.assert(idealObj != undefined);
-            // check if current value is "ideal" or a child
-            var isObjectOrChild = annotator.fields.isObjectOrChild(inputLabel, idealObj, ontology); 
-            if(!isObjectOrChild){
-                $('#unitcoding-table .row_selected input[name=' + elName + ']').val('ideal');
-                console.debug('set object to ideal');
-                // TODO flash Object input to indicate a change has been made there
-            }
-        }
-    }
-    if(annotator.unitcodings.isNETcoding == true && field.fieldname == 'Subject' && 
-                label != annotator.fields.autocompletes.EMPTY_CODING_LABEL){
-        // set Type to REA
-        var elName = annotator.unitcodings.findSentenceFieldIdByName('Subject');
-        var ontology = annotator.fields.fields[elName.replace(/field_/,'')].items;
-        var realityObj = annotator.fields.findInOntology('reality', ontology);
-        // check if current value is "ideal" or a child
-        var isObjectOrChild = annotator.fields.isObjectOrChild(label, realityObj, ontology); 
-        if(isObjectOrChild){
-            var elNameType = annotator.unitcodings.findSentenceFieldIdByName('Type');
-            $('#unitcoding-table .row_selected input[name=' + elNameType + ']').val('REA');
-            console.debug('set Type to REA');
-            // TODO flash Object input to indicate a change has been made there
-        }
-    }
-}
-
-
 annotator.fields.autocompletes.setInputValue = function (value, label, inputEl, field) {
     /* set the inputEl to a value with label */
     if (label == annotator.fields.autocompletes.EMPTY_CODING_LABEL) {
@@ -683,7 +644,8 @@ annotator.fields.autocompletes.setInputValue = function (value, label, inputEl, 
     }
     if (inputEl.parents('#unitcoding-table').length > 0) { // if input is in sentences table
         annotator.unitcodings.onchangeSentenceCoding(inputEl);
-        annotator.fields.setNETCodings(field, value, label);
+        console.log("Should I set NET codings??");
+        //annotator.fields.setNETCodings(field, value, label);
     }
 
     if (inputEl.parents('#article-coding').length > 0) {

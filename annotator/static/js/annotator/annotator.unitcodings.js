@@ -21,24 +21,24 @@
 
 annotator.unitcodings = {};
 annotator.unitcodings.sentenceTable = null;
-annotator.unitcodings.codedarticleid = 0;
+annotator.unitcodings.codedarticle_id = 0;
 annotator.unitcodings.newrowid = 0; // counter for new rows
 annotator.unitcodings.fieldList = null;
 
 
 
 annotator.unitcodings.writeSentenceCodingsTable = function(){
-    annotator.unitcodings.createUnitCodingsTable(annotator.articleid)
+    annotator.unitcodings.createUnitCodingsTable(annotator.article_id)
     
     // no row selected, so disable these buttons
     annotator.unitcodings.enableToolbarButtons(false);
 }
 
-annotator.unitcodings.createUnitCodingsTable = function (articleid) {
+annotator.unitcodings.createUnitCodingsTable = function (article_id) {
     $('#unitcoding-table').html('<tr><td></td></tr>');
     $('#unitcoding-table-loading').remove();
     $('<div class="table-loading" id="unitcoding-table-loading">Loading...</div>').insertAfter('#unitcoding-table');
-    var url = "article/" + annotator.articleid + "/unitcodings";
+    var url = "article/" + annotator.article_id + "/unitcodings";
     $.ajax({
         "url": url,
         "success": annotator.unitcodings.processUnitCodingsJson,
@@ -283,19 +283,19 @@ annotator.unitcodings.removeSentenceTextRow = function(){
 }
 
 
-annotator.unitcodings.setSentence = function(){
+annotator.unitcodings.setSentence = function () {
     //console.debug('call setSentence');
     var currentRow = $('#unitcoding-table .row_selected');
-    
+
     var unit = currentRow.find('input:first').val(); // find value of unit column input
     $('.article-part .selected-sentence').removeClass('selected-sentence');
-    if(unit.length >= 3){
+    if (unit.length >= 3) {
         var sentence = annotator.findSentenceByUnit(unit);
-        if(sentence.sentence){ // valid input
+        if (sentence.sentence) { // valid input
             $('#sentence-' + sentence.id).addClass('selected-sentence');
-            $('.sentences').scrollTo($('#sentence-' + sentence.id), {offset:-150});
-            
-            if(!currentRow.prev().hasClass('sentence-text-row')){ // if sentence text not already visible
+            $('.sentences').scrollTo($('#sentence-' + sentence.id), {offset: -150});
+
+            if (!currentRow.prev().hasClass('sentence-text-row')) { // if sentence text not already visible
                 var iColspan = currentRow.find('td').length;
                 var newRow = document.createElement('tr');
                 var nCell = document.createElement('td');
@@ -303,13 +303,13 @@ annotator.unitcodings.setSentence = function(){
                 newRow.className = "sentence-text-row";
                 nCell.innerHTML = sentence.sentence;
                 newRow.appendChild(nCell);
-                 $(newRow).insertBefore(currentRow);
-            } else{
+                $(newRow).insertBefore(currentRow);
+            } else {
                 currentRow.prev().find('td').html(sentence.sentence);
             }
         }
     }
-}
+};
  
 annotator.unitcodings.focusCodingRow = function(){
     var currentRow = $(this).parents('tr');

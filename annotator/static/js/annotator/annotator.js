@@ -40,8 +40,9 @@ var STATUS_COMPLETE = 2;
 var STATUS_IRRELEVANT = 9;
 var API_URL = "/api/v4/"
 
-annotator.articleid = 0;
-annotator.articleSentences = null;
+annotator.article_id = 0;
+annotator.sentences = null;
+annotator.datatable = null;
 
 annotator.articlecodings = {};
 annotator.articlecodings.articleCodingForm = null;
@@ -68,6 +69,18 @@ annotator._get_api_url = function(project_id, codingjob_id){
 }
 
 
+/*
+ * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
+ * the id as key, and the object as value.
+ */
+annotator.map_ids = function (model_data) {
+    var _result = {};
+    $.each(model_data, function (i, object) {
+        _result[object.id] = object;
+    });
+    return _result;
+};
+
 /************* Article codings *************/
 
 annotator.articlecodings.showArticleCodings = function(){
@@ -88,7 +101,7 @@ annotator.articlecodings.writeArticleCodingsTable = function(){
     $('#article-coding-form').html('Loading...');
     
     $.ajax({
-        "url": "article/" + annotator.articleid + "/articlecodings",
+        "url": "article/" + annotator.article_id + "/articlecodings",
         "success": function(html) {
             $('#article-coding-form').html(html);
             annotator.fields.autocompletes.addAutocompletes($('#article-coding-form'));
@@ -165,7 +178,7 @@ annotator.setDialogSuccessButtons = function(){
             annotator.resetArticleState();
             annotator.codingsAreModified(false);
             $(this).dialog("close");
-            annotator.articletable.goToNextRow();
+            annotator.articletable.select_next_row();
         }
     });
     $('.ui-dialog-buttonpane button:first').focus();
@@ -185,17 +198,12 @@ annotator.setDialogFailureButtons = function(){
 
 
 annotator.saveCodings = function(goToNext){
-    if(annotator.fields.loadedFromServer == false){
-        annotator.showMessage('Unable to save: ontologies not loaded yet. Please wait a few seconds');
-        return;
-    }
-
     var error = false;
     $.each($("input[null=false]"), function(i, input){
         if (annotator.fields.get_value($(input)).length === 0){
             annotator.showMessage('Codingschemafield ' + $("label", $(input).parent()).text() + " cannot be null");
             error = true;
-        };
+        }
     });
 
     if(error) return;
@@ -304,7 +312,7 @@ annotator.saveCodings = function(goToNext){
             //$("#dialog-save").dialog("open");
             console.debug('valid sentence coding form');
             //var data = JSON.stringify(formjson);
-            //console.debug(annotator.unitcodings.codedarticleid, formjson);
+            //console.debug(annotator.unitcodings.codedarticle_id, formjson);
             storeDict['unitcodings'] = formjson;
             
             
@@ -326,7 +334,7 @@ annotator.saveCodings = function(goToNext){
     
     $.ajax({
       type: 'POST',
-      url: "article/" + annotator.articleid + "/storecodings",
+      url: "article/" + annotator.article_id + "/storecodings",
       data: data,
       success: function(json, textStatus, jqXHR){
           console.debug('saved!' + json.response);
@@ -335,7 +343,7 @@ annotator.saveCodings = function(goToNext){
             $("#dialog-save-msg").html('<h3>Successfully saved codings!</h3>');
             if(goToNext){
                 $("#dialog-save").dialog("close");
-                annotator.articletable.goToNextRow();
+                annotator.articletable.select_next_row();
             } else {
                 for(var oldid in json.codedsentenceMapping){
                     $('input[name="codingid"][value="' + oldid + '"]').val(json.codedsentenceMapping[oldid]);
@@ -495,7 +503,7 @@ annotator.sortLabels = function(a, b){ // natural sort on the labels
 
 annotator.findSentenceByUnit = function(unit){
     var result = null;
-    $.each(annotator.articleSentences, function(i, sentence){
+    $.each(annotator.sentences, function(i, sentence){
         if(sentence.get_unit() == unit){
             result = sentence;
             return false;
@@ -507,7 +515,7 @@ annotator.findSentenceByUnit = function(unit){
 
 annotator.findSentenceById = function(sentenceid){
     var result = null;
-    $.each(annotator.articleSentences, function(i, sentence){
+    $.each(annotator.sentences, function(i, sentence){
         if(sentence.id == sentenceid){
             result = sentence;
             return true;
@@ -525,11 +533,11 @@ annotator.stripIdAttribute = function(id){ // used for sentence numbers that con
 // This function is not yet implemented
 annotator.getNextSentenceNumber = function(sentencenumber){
     var result = null;
-    $.each(annotator.articleSentences, function(i, sentence){
+    $.each(annotator.sentences, function(i, sentence){
         if(sentence.get_unit() == sentencenumber){
-            //console.debug('sentences length', annotator.articleSentences.length,i+1);
-            if(annotator.articleSentences.length > i+1){
-                result = annotator.articleSentences[i+1].get_unit();
+            //console.debug('sentences length', annotator.sentences.length,i+1);
+            if(annotator.sentences.length > i+1){
+                result = annotator.sentences[i+1].get_unit();
                 console.log('next unit found', result);
             }
             return false;
@@ -544,11 +552,11 @@ annotator.getNextSentenceNumber = function(sentencenumber){
 annotator.findNextAvailableSentences = function(){
     var availableSentencenrs = [];
     var parnr = 0;
-    $.each(annotator.articleSentences, function(i, sentence){
+    $.each(annotator.sentences, function(i, sentence){
         parnr = sentence.parnr;
         var nextSentencenr = parnr + '.' + (sentence.sentnr + 1);
         var exists = false;
-        $.each(annotator.articleSentences, function(j, sentence2){
+        $.each(annotator.sentences, function(j, sentence2){
             if(sentence2.get_unit() == nextSentencenr){
                 exists = true;
                 return true;
@@ -586,13 +594,13 @@ annotator.saveNewSentenceDialog = function(){
     
     $.ajax({
       type: 'POST',
-      url: 'annotator/addSentence/' + annotator.articleid,
+      url: 'annotator/addSentence/' + annotator.article_id,
       data: {'jsonparams' : data},
       success: function(json, textStatus, jqXHR){
           console.debug('saved!' + json.response);
           if(json.response == 'ok'){
             console.debug('ok recieved');
-            annotator.articletable.showArticleFromRow($('#article-table-container .row_selected'));
+            annotator.articletable.get_article($('#article-table-container .row_selected'));
             $("#new-sentence-dialog-form").dialog("close");
           } else {
             var errorMsg = '<h3>Error while saving</h3>' + $('<span />').text(json.errormsg).html();
@@ -607,7 +615,7 @@ annotator.saveNewSentenceDialog = function(){
     });
 };
 
-annotator.writeArticleSentences = function(sentences){
+annotator.sentences_fetched = function(sentences){
     var html = $('<div />');
     var prev_parnr = 1;
 
@@ -646,7 +654,7 @@ annotator.showSplitArticleDialog = function(){ //TODO make nice form out of this
     html.append($('<input />', {'value':headline, 'name':'headline'})).append('<br />');
     var selecthtml1 = $('<select />', {'name':'startSentence'});
     var selecthtml2 = $('<select />', {'name':'endSentence'});
-    $.each(annotator.articleSentences, function(i, sentence){
+    $.each(annotator.sentences, function(i, sentence){
         selecthtml1.append($('<option />', {'value': sentence.id}).text(sentence.unit));
         selecthtml2.append($('<option />', {'value': sentence.id}).text(sentence.unit));
     });
@@ -686,7 +694,7 @@ annotator.saveSplitArticle = function(){
     
     $.ajax({
       type: 'POST',
-      url: 'annotator/createSplit/' + annotator.articleid,
+      url: 'annotator/createSplit/' + annotator.article_id,
       data: {'jsonparams' : data},
       success: function(json, textStatus, jqXHR){
           console.debug('saved!' + json.response);
@@ -831,7 +839,7 @@ annotator.initPage = function(){
         annotator.saveCodings(true);
     });
     $('#next-article-button').click(function(event){
-        annotator.articletable.goToNextRow();
+        annotator.articletable.select_next_row();
     });
     $('#delete-coding-button, #delete-coding-button2').click(function(event){
         $("#dialog-confirm-delete-row").dialog("open");
@@ -844,7 +852,7 @@ annotator.initPage = function(){
         annotator.unitcodings.switchSubjectObject();
     });
     $('#previous-article-button').click(function(event){
-        annotator.articletable.goToPreviousRow();
+        annotator.articletable.select_previous_row();
     });
     // $('#article-coding-radio, #sentence-coding-radio, #both-coding-radio').click(function(){
         // if(!annotator.confirmArticleChange()) return;
@@ -941,7 +949,7 @@ annotator.initPage = function(){
         
     $('#edit-article-button').click(function(){
         $("#article-dialog-form").dialog("option", "title", "Edit article");
-        annotator.articletable.showEditArticleDialog(annotator.articleid);
+        annotator.articletable.showEditArticleDialog(annotator.article_id);
     });
 
     $('#new-article-button').click(function(){
@@ -971,7 +979,7 @@ annotator.initPage = function(){
 
     $(window).bind('resize', function () {
         if(annotator.previousWidth != $(window).width()){
-            annotator.articletable.articleTable.fnAdjustColumnSizing();
+            annotator.datatable.fnAdjustColumnSizing();
             //if(annotator.unitcodings.sentenceTable) annotator.unitcodings.sentenceTable.fnAdjustColumnSizing();
             
             annotator.checkWindowWidth();

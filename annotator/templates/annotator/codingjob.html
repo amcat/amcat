@@ -45,10 +45,6 @@
         $(document).ready(function(){
             var jqueryElement = $('#article-table-container');
             var url = "{% url "article-list" project.id codingjob.id %}";
-            //var oncreate = function(datatable){
-            //    annotator.articletable.articleTable = datatable; // set variable
-            //    annotator.articletable.onCreateArticleTable();
-            //}
             var columns = [], column_order = [
                 "id", "headline", "date", "medium", "pagenr",
                 "length", "status", "comments"
@@ -66,13 +62,13 @@
 
                     fnDrawCallback: function(){
                         $("tr", $("#article-table-container")).click(function(event){
-                            annotator.articletable.clickArticleRow($(event.currentTarget));
+                            annotator.articletable.click_article_row($(event.currentTarget));
                         }).css("cursor", "pointer");
                     }
                 },
                 setup_callback: function(tbl){
-                    annotator.articletable.articleTable = tbl;
-                    annotator.articletable.onCreateArticleTable();
+                    console.log("Done setting up datatable..");
+                    annotator.datatable = tbl;
                 }
             });
         });
