@@ -16,23 +16,55 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from collections import defaultdict
+from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from amcat.models import Coding, Sentence, CodingValue
+from amcat.models import Coding, CodingValue
+from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.coding.coded_article import CodedArticleViewSetMixin
-from api.rest.viewsets.sentence import SentenceViewSetMixin
 
 __all__ = (
-    "CodingSerializer", "CodingViewSetMixin", "CodingViewSet", "CodedArticleSentenceViewSet",
+    "CodingSerializer", "CodingViewSetMixin", "CodingViewSet",
     "CodingValueViewSet", "CodingValueSerializer",
 )
 
 class CodingSerializer(AmCATModelSerializer):
+    """
+    Serialises Coding-objects, including their values.
+    """
     model = Coding
+    values = serializers.SerializerMethodField('get_coding_values')
+
+    @cached
+    def _get_coding_values(self):
+        coding_values = CodingValue.objects.filter(coding__in=self.context["view"].object_list)
+        coding_values_dict = defaultdict(list)
+
+        for coding_value in coding_values:
+            coding_values_dict[coding_value.coding_id].append({
+                "id" : coding_value.id,
+                "field" : coding_value.field_id,
+                "strval" : coding_value.strval,
+                "intval" : coding_value.intval
+            })
+
+        return coding_values_dict
+
+
+    def get_coding_values(self, coding):
+        return self._get_coding_values()[coding.pk]
+
+    @property
+    def codings(self):
+        codings = Coding.objects.filter(codingjob=self.codingjob, sentence=None)
+        if hasattr(self.context["view"], "object_list"):
+            return codings.filter(article__in=self.context["view"].object_list)
+        return codings.filter(article=self.object)
 
 class CodingViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSerializer
@@ -43,6 +75,7 @@ class CodingViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                     CodedArticleViewSetMixin, CodingViewSetMixin,
                     DatatablesMixin, ReadOnlyModelViewSet):
     model = Coding
+    model_serializer_class = CodingSerializer
 
     def filter_queryset(self, queryset):
         qs = super(CodingViewSet, self).filter_queryset(queryset)
@@ -57,7 +90,6 @@ class CodingValueViewSetMixin(AmCATViewSetMixin):
     model_key = "codingvalue"
     model = CodingValue
 
-
 class CodingValueViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                          CodedArticleViewSetMixin, CodingViewSetMixin,
                          CodingValueViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
@@ -66,13 +98,4 @@ class CodingValueViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
     def filter_queryset(self, queryset):
         qs = super(CodingValueViewSet, self).filter_queryset(queryset)
         return qs.filter(coding__codingjob=self.codingjob, coding__article=self.coded_article)
-
-class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
-                                  CodedArticleViewSetMixin, SentenceViewSetMixin,
-                                  DatatablesMixin, ReadOnlyModelViewSet):
-    model = Sentence
-
-    def filter_queryset(self, queryset):
-        qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
-        return qs.filter(article=self.coded_article)
 

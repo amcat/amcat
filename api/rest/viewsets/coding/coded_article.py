@@ -18,15 +18,18 @@
 ###########################################################################
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from amcat.models import Coding, Article, CodedArticle
+from amcat.models import Coding, Article, Sentence
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
+from api.rest.viewsets.sentence import SentenceSerializer, SentenceViewSetMixin
 
-__all__ = ("CodedArticleSerializer", "CodedArticleViewSetMixin", "CodedArticleViewSet")
+__all__ = (
+    "CodedArticleSerializer", "CodedArticleViewSetMixin", "CodedArticleViewSet",
+    "CodedArticleSentenceViewSet")
 
 _CA_FIELDS = {
     "id", "headline", "date", "medium", "pagenr", "length",
@@ -80,3 +83,13 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
         qs = super(CodedArticleViewSet, self).filter_queryset(queryset)
         return qs.filter(id__in=self.codingjob.articleset.articles.all())
 
+
+class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+                                  CodedArticleViewSetMixin, SentenceViewSetMixin,
+                                  DatatablesMixin, ReadOnlyModelViewSet):
+    model = Sentence
+    model_serializer_class = SentenceSerializer
+
+    def filter_queryset(self, queryset):
+        qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
+        return qs.filter(article=self.coded_article)
