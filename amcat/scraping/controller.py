@@ -108,7 +108,8 @@ class ThreadedController(Controller):
     def _preparescrapers(self, scrapers):
         """
         Remove common lock,
-        Check for serializability.
+        Check for serializability,
+        Remove bound_form (memory issue, contains whole articlesets)
         """
         for scraper in scrapers:
             if hasattr(scraper, 'opener'):
@@ -118,6 +119,7 @@ class ThreadedController(Controller):
             except (pickle.PicklingError, TypeError):
                 log.warning("Pickling {scraper} failed".format(**locals()))
             else:
+                scraper.bound_form = None
                 yield scraper
 
                          
@@ -178,7 +180,7 @@ class ArticleManager(object):
 
     def _postprocess(self, article, articles, scraper):
         """process one article and it's children"""
-        artdict = self._make_dict(article, scraper)
+        artdict = self._make_dict(article)
 
         #handle children
         for child in articles:            
@@ -203,7 +205,7 @@ class ArticleManager(object):
         """Is this article marked as a comment?"""
         if hasattr(article, 'is_comment') and article.is_comment:
             return True
-        elif isinstance(child, dict) and 'is_comment' in child.keys() and child['is_comment']:
+        elif isinstance(article, dict) and 'is_comment' in article.keys() and article['is_comment']:
             return True
         else: return False
 
