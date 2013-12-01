@@ -108,6 +108,7 @@ annotator.fields.initialise_fields = function () {
             // Initialize data
             self.codebooks_fetched();
             self.highlighters_fetched();
+            self.setup_wordcount();
             $("#loading_fields").dialog("close");
         }
     );
@@ -452,7 +453,7 @@ annotator.fields.setup_wordcount = function () {
         $("#wordcount").html(count);
     };
 
-    $("#.article-part").find(".sentences").mouseup(function () {
+    $(".article-part").find(".sentences").mouseup(function () {
         window.setTimeout(count, 50);
     });
 };
