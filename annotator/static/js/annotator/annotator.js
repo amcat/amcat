@@ -607,51 +607,6 @@ annotator.findNextAvailableSentences = function () {
     return availableSentencenrs;
 };
 
-// This function is not yet implemented
-annotator.showNewSentenceDialog = function () {
-    if (!annotator.confirmArticleChange()) return;
-    $('#new-sentence-text').val('DUMMY');
-    var availableSentencenrs = annotator.findNextAvailableSentences();
-    console.debug('available', availableSentencenrs);
-    var html = $('<select id="new-sentence-nr" />');
-    $.each(availableSentencenrs, function (i, nr) {
-        //html.append('<option value="' + nr + '">' + nr + '</option>');
-        html.append($('<option />').attr('value', nr).text(nr));
-    });
-    $('#new-sentence-nr-placeholder').html(html);
-    $("#new-sentence-dialog-form").dialog("open");
-};
-
-// This function is not yet implemented
-annotator.saveNewSentenceDialog = function(){
-    var text = $('#new-sentence-text').val();
-    var sentencenr = $('#new-sentence-nr').val();
-    
-    var data = JSON.stringify({'text':text, 'sentencenr':sentencenr});
-    
-    $.ajax({
-      type: 'POST',
-      url: 'annotator/addSentence/' + annotator.article_id,
-      data: {'jsonparams' : data},
-      success: function(json, textStatus, jqXHR){
-          console.debug('saved!' + json.response);
-          if(json.response == 'ok'){
-            console.debug('ok recieved');
-            annotator.articletable.get_article($('#article-table-container').find('.row_selected'));
-            $("#new-sentence-dialog-form").dialog("close");
-          } else {
-            var errorMsg = '<h3>Error while saving</h3>' + $('<span />').text(json.errormsg).html();
-            console.debug(errorMsg);
-            $("#new-sentence-status").html(errorMsg);
-          }
-      }, error: function(jqXHR, textStatus, errorThrown){
-          console.debug('error!' + textStatus);
-          $("#new-sentence-status").html('Error while adding sentence! ' + textStatus + '<br />');
-      },
-      dataType: 'json'
-    });
-};
-
 annotator.sentences_fetched = function (sentences) {
     var html = $('<div />');
     var prev_parnr = 1;
@@ -813,16 +768,10 @@ annotator.initPage = function(){
     $('#previous-article-button').click(function(){
         annotator.articletable.select_previous_row();
     });
-    // $('#article-coding-radio, #sentence-coding-radio, #both-coding-radio').click(function(){
-        // if(!annotator.confirmArticleChange()) return;
-        // annotator.codingTypeSet();
-    // });
-    
+
     $('#help-button').click(function(){
         $("#dialog-help").dialog("open");
     });
-    $(".sentence-options .add-sentence-button").click(annotator.showNewSentenceDialog);
-    $(".sentence-options .split-sentences-button").click(annotator.showSplitArticleDialog);
     $(".sentence-options .select-all-sentences-button").click(function(){
         annotator.selectText($('.sentences').get(0));
     });
