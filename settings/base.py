@@ -168,7 +168,6 @@ INSTALLED_APPS = [
     'navigator',
     'api',
     'amcat',
-    'djcelery',
     'django_extensions',
     'compressor'
 ]

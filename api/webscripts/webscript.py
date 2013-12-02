@@ -29,7 +29,7 @@ from django.http import HttpResponse
 from amcat.scripts.forms import SelectionForm
 from amcat.forms import InvalidFormException
 from django.contrib.auth.models import User
-from celery.task import task
+from amcat.celery import app
 
 from django.http import QueryDict
 from amcat.tools.djangotoolkit import to_querydict
@@ -48,7 +48,7 @@ mimetypeDict = { #todo: make objects of these
      'datatables':{'extension':'json', 'mime':'text/plain', 'download':False},
 }
 
-@task()
+@app.task()
 def webscript_task(cls, **kwargs):
     return cls(**kwargs).run()
 

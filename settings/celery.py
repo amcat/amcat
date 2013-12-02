@@ -17,5 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import djcelery
-djcelery.setup_loader()
+CELERY_RESULT_BACKEND = 'amqp'
+CELERY_TASK_RESULT_EXPIRES = 18000  # 5 hours.
+CELERY_DEFAULT_QUEUE = 'amcat'
+
