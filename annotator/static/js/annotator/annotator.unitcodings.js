@@ -151,7 +151,7 @@ annotator.unitcodings.deleteSelectedRow = function () { // delete row from unit 
 
     selectedRow.remove();
     annotator.unitcodings.modified = true;
-    annotator.codingsAreModified(true);
+    annotator.set_codings_modified(true);
 
     if ($('#unitcoding-table').find('tbody tr input').length == 0) { //no rows anymore
         annotator.unitcodings.addSingleUnitCodingRow();
@@ -187,21 +187,13 @@ annotator.unitcodings.copySelectedRow = function () {
     newRow.find('input[name=codingid]').val('new-' + annotator.unitcodings.newrowid);
     annotator.unitcodings.newrowid++;
     annotator.unitcodings.modified = true;
-    annotator.codingsAreModified(true);
+    annotator.set_codings_modified(true);
     newRow.find('input:first').blur();
     newRow.find('input:first').focus();
 };
 
 
 annotator.unitcodings.findSentenceFieldIdByName = function (name) {
-    /*var result = null;
-     $.each(annotator.unitcodings.fieldList, function(i, field){
-     if(field.label == name){
-     result = field.fieldname;
-     return true;
-     }
-     });
-     return result;*/
     var result = null;
     $.each(annotator.fields.fields, function (i, field) {
         if (field.fieldname == name) {
@@ -224,13 +216,7 @@ annotator.unitcodings.switchSubjectObject = function () {
 };
 
 annotator.unitcodings.getEmptyUnitCodingRow = function () {
-    /*var rowNew = $('<tr />');
-     $.each(annotator.unitcodings.fieldList, function(i, field){
-     if(field.fieldname == 'addrow-9999') return true;
-     rowNew.append($('<td />').append(field.construct(field.initial).html()));
-     });*/
     var rowNew = annotator.unitcodings.emptyUnitcodingHtml.clone();
-    //rowNew.append($('<td />').append(annotator.unitcodings.createAddRowButtonHtml('new-' + annotator.unitcodings.newrowid)));
     $('input[name=codingid]', rowNew).val('new-' + annotator.unitcodings.newrowid);
     annotator.unitcodings.newrowid++;
     return rowNew;
@@ -275,7 +261,7 @@ annotator.unitcodings.onchangeSentenceCoding = function (el) {
         console.debug('modified rows', annotator.unitcodings.modifiedRows);
     }
     annotator.unitcodings.modified = true;
-    annotator.codingsAreModified(true);
+    annotator.set_codings_modified(true);
 };
 
 

@@ -73,22 +73,101 @@ annotator._get_api_url = function (project_id, codingjob_id) {
  * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
  * the id as key, and the object as value.
  */
-annotator.map_ids = function (model_data) {
+annotator.map_ids = function (model_data, prop) {
+    prop = (prop === undefined) ? "id" : prop;
+
     var _result = {};
     $.each(model_data, function (i, object) {
-        _result[object.id] = object;
+        _result[object[prop]] = object;
     });
     return _result;
 };
 
-/************* Article codings *************/
+annotator.resolve_id = function(obj, target_models, prop){
+    var val = obj[prop];
+    obj[prop] = (val === null) ? null : target_models[val];
+};
 
-annotator.articlecodings.showArticleCodings = function () {
-    //$('#coding-title').html('Article Codings');
-    if (annotator.articlecodings.containsArticleSchema) {
-        annotator.articlecodings.writeArticleCodingsTable();
-        $('#article-coding').show();
+/*
+ * Some model objects contain foreign keys which are represented by
+ * and id. This function resolves those ids to real objects.
+ *
+ * @param models: model objects which contain a foreign key
+ * @param target_models: model objects which are targeted by the FK
+ * @param prop: foreign key property
+ */
+annotator.resolve_ids = function(models, target_models, prop){
+    $.each(models, function(obj_id, obj){
+        annotator.resolve_id(obj, target_models, prop);
+    });
+};
+
+/************* Article codings *************/
+/*
+ * Generates, given a schemafield-object, an HTML element for the given
+ * field. This includes autocompletes.
+ */
+annotator.articlecodings.get_coding_html = function (schemafield) {
+    var base, label, id_field = "article_codingschemafield_" + schemafield.id;
+
+    // Get 'base' input field, which will be wrapped with labels, etc.
+    if (schemafield.fieldtype == SCHEMATYPES.TEXT) {
+        base = $("<input>");
+    } else if (schemafield.fieldtype === SCHEMATYPES.NUMBER || schemafield.fieldtype == SCHEMATYPES.CODEBOOK) {
+        base = $("<input type='number'>");
+    } else if (schemafield.fieldtype === SCHEMATYPES.BOOLEAN) {
+        base = $("<input type='checkbox'>");
+    } else if (schemafield.fieldtype === SCHEMATYPES.QUALITY) {
+        base = $("<input type='number' min='-10' max='10'>");
+    } else {
+        throw "Unknown schemafieldtypeid: " + schemafield.fieldtype;
     }
+
+
+    base.attr("id", id_field).attr("class", "codingschemafield article_codingschemafield");
+    label = $("<label>").attr("for", id_field).text(schemafield.label);
+
+    return $("<tr>")
+        .append($("<td>").append(label))
+        .append($("<td>").append(base));
+};
+
+/*
+ * Called when codings
+ */
+annotator.articlecodings.codings_fetched = function(){
+
+    // Check whether there is an articleschema for this codingjob
+    if (annotator.fields.codingjob.articleschema === null) return;
+
+    // Get schemafields belonging to this articleschema
+    var articleschema = annotator.fields.codingjob.articleschema;
+    var schemafields = filter(function(f){ return f.codingschema === articleschema }, annotator.fields.schemafields);
+    schemafields.sort(function(f1, f2){ return f1.fieldnr - f2.fieldnr });
+
+    // Register get_input() on schemafield, which return the jQuery input element
+    // for this field. Also define the property `coding`, which is the Coding object
+    // associated with the field.
+    var get_input = function(){
+        return $("#article_codingschemafield_" + this.id);
+    };
+
+    $.each(schemafields, function(i, field){
+        field.get_input = get_input.bind(field);
+        field.codings = filter(function(c){ return c.sentence === null }, annotator.codings);
+        field.coding = field.codings[0];
+    });
+
+    // Create html content
+    var article_coding_el = $("#article-coding").html("");
+    $.each(map(annotator.articlecodings.get_coding_html, schemafields), function(i, el){
+        article_coding_el.append(el);
+    });
+
+    // Add autocomplete
+    $.each(schemafields, function(i, field){
+        annotator.fields.autocompletes.add_autocomplete(field);
+    });
 };
 
 
@@ -97,72 +176,37 @@ annotator.articlecodings.hideArticleCodings = function () {
 };
 
 
-annotator.articlecodings.writeArticleCodingsTable = function () {
-    $('#article-coding-form').html('Loading...');
-
-    $.ajax({
-        "url": "article/" + annotator.article_id + "/articlecodings",
-        "success": function (html) {
-            $('#article-coding-form').html(html);
-            annotator.fields.autocompletes.addAutocompletes($('#article-coding-form'));
-            annotator.fields.add_rules.bind(["article"])($('#article-coding-form'));
-            $('#article-coding-form').find('input').change(function () {
-                annotator.articlecodings.onchange($(this));
-            });
-        },
-        "error": function () {
-            console.debug('error loading article codings');
-            $('#article-coding-form').html('<div class="error">Error loading article codings data from <a href="' + this.url + '" target="_blank">' + this.url + '</a></div>');
-        },
-        "dataType": "html"
-    });
-};
-
-
 annotator.articlecodings.onchange = function (el) {
     console.debug('article coding', el.attr('name'), 'changed to', el.val());
     annotator.articlecodings.modified = true;
-    annotator.codingsAreModified(true);
+    annotator.set_codings_modified(true);
 };
 
 
 /************* state saving *************/
+annotator.before_unload = function(){
+    return 'You have unsaved changes. Are you sure you would like to close this page?'
+};
 
+annotator.set_codings_modified = function (enable) {
+    $(window).unbind("beforeunload");
+    $('#save-button, #save-button2').button("option", "disabled", !enable);
 
-annotator.codingsAreModified = function (enable) {
-    annotator.enableSaveButtons(enable);
-    //annotator.enableContinueButtons(enable);
-    if (enable) {
-        $(window).bind("beforeunload", function () {
-            return 'You have unsaved changes. Are you sure you would like to close this page?'
-        });
-    } else {
-        $(window).unbind("beforeunload");
+    if (enable){
+        $(window).bind("beforeunload", annotator.before_unload);
     }
 };
 
-annotator.enableSaveButtons = function (enable) {
-    $('#save-button, #save-button2').button("option", "disabled", !enable);
-};
-// annotator.enableContinueButtons = function(enable){
-    // $('#save-continue-button2, #save-continue-button').button( "option", "disabled", !enable);
-// }
-
-
-
-
 /*********** Comment & article status ***************/
-
-
 annotator.commentAndStatus.onArticleStatusChange = function () {
     annotator.commentAndStatus.modified = true;
-    annotator.codingsAreModified(true);
+    annotator.set_codings_modified(true);
 };
 
 
 annotator.commentAndStatus.onCommentChange = function () {
     annotator.commentAndStatus.modified = true;
-    annotator.codingsAreModified(true);
+    annotator.set_codings_modified(true);
 };
 
 
@@ -173,12 +217,12 @@ annotator.setDialogSuccessButtons = function () {
     $("#dialog-save").dialog('option', 'buttons', {
         "Continue Editing": function () {
             annotator.resetArticleState();
-            annotator.codingsAreModified(false);
+            annotator.set_codings_modified(false);
             $(this).dialog("close");
         },
         "Go to next article": function () {
             annotator.resetArticleState();
-            annotator.codingsAreModified(false);
+            annotator.set_codings_modified(false);
             $(this).dialog("close");
             annotator.articletable.select_next_row();
         }
@@ -191,7 +235,7 @@ annotator.setDialogFailureButtons = function () {
     $("#dialog-save").dialog('option', 'buttons', {
         "Return to Article": function () {
             // annotator.resetArticleState();
-            // annotator.codingsAreModified(false);
+            // annotator.set_codings_modified(false);
             $(this).dialog("close");
         }
     });
@@ -354,7 +398,7 @@ annotator.saveCodings = function (goToNext) {
                         console.debug('mapping sentenceid', oldid, 'to', json.codedsentenceMapping[oldid]);
                     }
 
-                    annotator.codingsAreModified(false);
+                    annotator.set_codings_modified(false);
                     annotator.setDialogSuccessButtons();
                 }
             } else {
@@ -490,9 +534,10 @@ annotator.showMessage = function (text) {
 
 annotator.sortLabels = function (a, b) { // natural sort on the labels
     a = a.label.toLowerCase();
-    var asplit = a.split(/(\-?[0-9]+)/g);
     b = b.label.toLowerCase();
+    var asplit = a.split(/(\-?[0-9]+)/g);
     var bsplit = b.split(/(\-?[0-9]+)/g);
+
     for (var i = 0; i < asplit.length; i++) {
         var diff = parseInt(asplit[i]) - parseInt(bsplit[i]);
         if (isNaN(diff)) {
@@ -508,26 +553,12 @@ annotator.sortLabels = function (a, b) { // natural sort on the labels
 
 
 annotator.findSentenceByUnit = function (unit) {
-    var result = null;
-    $.each(annotator.sentences, function (i, sentence) {
-        if (sentence.get_unit() == unit) {
-            result = sentence;
-            return false;
-        }
-    });
-    return result;
+    return filter(function(s){ return s.get_unit() == unit }, annotator.sentences)[0];
 };
 
 
 annotator.findSentenceById = function (sentenceid) {
-    var result = null;
-    $.each(annotator.sentences, function (i, sentence) {
-        if (sentence.id == sentenceid) {
-            result = sentence;
-            return true;
-        }
-    });
-    return result;
+    return annotator.sentences[sentenceid];
 };
 
 
@@ -1000,7 +1031,10 @@ annotator.initPage = function(){
     });
 };
 
-
+/*
+ * For all AJAX errors, display a generic error messages. This eliminates
+ * lots of boiler-plate code in functions which use AJAX calls.
+ */
 $(document).ajaxError(function(event, xhr, ajaxOptions) {
     var message = "An erorr occured while requesting: " + ajaxOptions.url + ". " +
                   "Server responded: '" + xhr.status + " " + xhr.statusText + "'.";

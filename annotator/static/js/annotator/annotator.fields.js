@@ -17,27 +17,6 @@
  * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
  ***************************************************************************/
 
-function any(f, list){
-    for (var i=0; i < list.length; i++){
-        if (f(list[i])) return true;
-    }
-    return false;
-}
-
-function all(f, list){
-    for (var i=0; i < list.length; i++){
-        if (!f(list[i])) return false;
-    }
-    return true;
-}
-
-function filter(f, list){
-    var _list = [];
-    $.each(list, function(i, item){
-        if (f(item)) _list.push(item);
-    });
-    return _list;
-}
 
 // CodingRules constants
 OPERATORS = {
@@ -102,8 +81,24 @@ annotator.fields.initialise_fields = function () {
             self.actions = annotator.map_ids(actions[0].results);
             self.codebooks = annotator.map_ids(codebooks[0].results);
             self.schemas = annotator.map_ids(schemas[0].results);
-            self.schemafields = annotator.map_ids(schemas[0].results);
-            self.codingjob = codingjob;
+            self.schemafields = annotator.map_ids(schemafields[0].results);
+            self.codingjob = codingjob[0];
+
+            // Resolve foreign keys
+
+            // Convert codebook.codes (array) to mapping code_id -> code
+            $.each(self.codebooks, function(codebook_id, codebook){
+                codebook.codes = annotator.map_ids(codebook.codes, "code");
+                annotator.resolve_ids(codebook.codes, codebook.codes, "parent");
+            });
+
+            // Resolve a bunch of foreign keys
+            annotator.resolve_ids(self.rules, self.actions, "action");
+            annotator.resolve_ids(self.rules, self.schemas, "codingschema");
+            annotator.resolve_ids(self.rules, self.schemafields, "field");
+            annotator.resolve_ids(self.schemafields, self.schemas, "codingschema");
+            annotator.resolve_id(self.codingjob, self.schemas, "articleschema");
+            annotator.resolve_id(self.codingjob, self.schemas, "unitschema");
 
             // Initialize data
             self.codebooks_fetched();
@@ -272,6 +267,27 @@ annotator.fields.rule_applies = function (rule) {
     return (rule.type === OPERATORS.EQUALS) ? truth : !truth;
 };
 
+/*
+ * Get descendants. Needs to be bound to a code object. This call is
+ * automatically cached, and stored in code.descendants.
+ */
+annotator.fields.get_descendants = function(depth){
+    depth = (depth === undefined) ? 0 : depth;
+
+    if (depth >= 1000){
+        throw "Maximum recursion depth exceeded, loop in codes?";
+    }
+
+    if (this.children.length === 0) return {};
+    if (this.descendants !== undefined) return this.descendants;
+
+    this.descendants = $.extend({}, this.children);
+    $.each(this.children, function(code_id, code){
+        $.extend(this.descendants, code.get_descendants(depth+1));
+    });
+
+    return this.descendants;
+};
 
 /*
  * Called when codebooks are fetched. Codebooks include all labels and all
@@ -281,54 +297,26 @@ annotator.fields.rule_applies = function (rule) {
 annotator.fields.codebooks_fetched = function(){
     var self = annotator.fields;
 
-    // Create an mapping: hierarchy[codebook_id][code_id] --> codebook_code.
-    var _hierarchies = {};
-    self.codebook_hierarchies = _hierarchies;
+    // Set `roots` property on each codebook which contains a mapping
+    // of code_id -> code.
     $.each(self.codebooks, function(codebook_id, codebook){
-        _hierarchies[codebook_id] = {};
-        $.each(codebook.codes, function(i, ccode){
-            _hierarchies[codebook_id][ccode.code] = ccode;
-        });
+        codebook.roots = filter(function(code){ return code.parent === null }, codebook.codes);
+        codebook.roots = annotator.map_ids(codebook.roots);
     });
 
-    // 1. Resolve parent id's to codebook code objects
-    // 2. Initialise descendants property (array)
-    // 3. Find roots
-    self.codebook_roots = {};
-    $.each(_hierarchies, function(codebook_id, hierarchy){
-        var _roots = [];
-        self.codebook_roots[codebook_id] = _roots;
-
-        $.each(hierarchy, function(code_id, code){
-            if (code.parent === null){
-                // Has no parent, so this must be a root.
-                _roots.push(code);
-                code.descendants = [];
-            } else {
-                code.parent = hierarchy[code.parent];
-            }
+    $.each(self.codebooks, function(codebook_id, codebook){
+        // Initialise children property, and register get_descendants
+        $.each(codebook.codes, function(code_id, code){
+            code.children = {};
+            code.get_descendants = annotator.fields.get_descendants.bind(code);
         });
-    });
 
-    // .. and get their descendants
-    $.each(_hierarchies, function(cid, codebook){
-        $.each(codebook, function(code_id, code){
-            // To detect loops in the codebook, we keep a list of seen nodes.
-            var _code = code, seen = [code];
-
-            if (code.parent !== null){
-                while((_code = _code.parent) !== null){
-                    if (seen.indexOf(_code) !== -1){
-                        // Loop detected, carry on.
-                        console.log("Cycle in " + seen);
-                        return;
-                    }
-                    seen.push(_code);
-                }
-
-                _code = seen[seen.length - 1];
-                _code.descendants.push(code);
-            }
+        // Add property 'children' to each code, and call get_descendants for
+        // caching purposes.
+        $.each(codebook.codes, function(code_id, code){
+            code.get_descendants();
+            if (code.parent === null) return;
+            code.parent.children[code.id] = code;
         });
     });
 
@@ -789,6 +777,14 @@ annotator.fields.autocompletes.onFocus = function () {
 
     console.debug('added autocomplete for ' + field.id);
     inputEl.focus();
+};
+
+annotator.fields.autocompletes.add_autocomplete = function (field) {
+    var self = annotator.fields;
+    var input = field.get_input();
+
+    input.focus(self.autocompletes.onFocus);
+    input.attr("codebook_id", field.codebook);
 };
 
 annotator.fields.autocompletes.addAutocompletes = function (jqueryEl) {

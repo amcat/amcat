@@ -228,6 +228,10 @@ annotator.articletable.fit_table = function (min_size_input, min_size_header) {
 
 };
 
+annotator.articletable.codings_fetched = function(){
+
+}
+
 
 /*
  *
@@ -252,6 +256,7 @@ annotator.articletable.get_article = function(article_id) {
         console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
         codings = annotator.map_ids(codings[0].results);
         sentences = annotator.map_ids(sentences[0].results);
+        annotator.resolve_ids(codings, sentences, "sentence");
 
         annotator.sentences = sentences;
         annotator.codings = codings;
@@ -272,8 +277,9 @@ annotator.articletable.get_article = function(article_id) {
         // Initialise coding area
         annotator.sentences_fetched(sentences);
         annotator.articletable.highlight();
+        annotator.articlecodings.codings_fetched();
 
-
+        $(".coding-part").show();
         $("#loading_codings").dialog("destroy");
     });
 
@@ -281,7 +287,7 @@ annotator.articletable.get_article = function(article_id) {
             annotator.articletable.fit_table();
             annotator.unitcodings.showSentenceCodings();
             annotator.articlecodings.showArticleCodings();
-            annotator.codingsAreModified(false);
+            annotator.set_codings_modified(false);
             annotator.resetArticleState();
             annotator.articletable.highlight();*/
 };
