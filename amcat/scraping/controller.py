@@ -60,7 +60,7 @@ class Controller(object):
             
     def _save(self, scraper, manager):
         """Saves the articles"""
-        Article.ordered_save(manager.getmodels())
+        Article.ordered_save(manager.getmodels(), scraper.options['articleset'])
 
 
 class APIController(Controller):
@@ -121,7 +121,7 @@ class ThreadedController(Controller):
             try:
                 pickle.dumps(scraper)
             except (pickle.PicklingError, TypeError):
-                log.warning("Pickling {scraper} failed".format(**locals()))
+                log.exception("Pickling {scraper} failed".format(**locals()))
             else:
                 yield scraper
 
