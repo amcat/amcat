@@ -29,7 +29,8 @@ from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 
-from django.db import models
+from django.db import models, transaction
+from django.db.utils import IntegrityError
 
 import logging;
 
@@ -170,7 +171,14 @@ class Article(AmcatModel):
             else:
                 if a.parent:
                     a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
-                a.save()
+                try:
+                    sid = transaction.savepoint()
+                    a.save()
+                    transaction.savepoint_commit(sid)
+                except IntegrityError:
+                    log.exception("save failed")
+                    transaction.savepoint_rollback(sid)
+                    continue
                 result.append(a)
                 a.es_dict['id'] = a.pk
                 add_to_index.append(a.es_dict)

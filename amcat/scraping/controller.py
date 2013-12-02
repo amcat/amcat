@@ -53,7 +53,7 @@ class Controller(object):
             manager = ArticleManager()
             try:
                 for unit in scraper._get_units():
-                    manager.add_articles(scraper._scrape_unit(unit), scraper = scraper)
+                    manager.add_articles(scraper._scrape_unit(unit), scraper = scraper)                    
             except Exception:
                 log.exception("scraper failed")
             yield (scraper, manager)
@@ -78,6 +78,7 @@ class APIController(Controller):
             scraper.articleset.id,
             json_data = manager.getdicts())
             
+import sys #debug
 
 class ThreadedController(Controller):
     def run(self, scrapers):
@@ -92,12 +93,14 @@ class ThreadedController(Controller):
     def _scrape(self, scraper):
         scraper._initialize()
         log.info("Running {scraper.__class__.__name__}".format(**locals()))
+
         try:
             tasks = [_scrape_unit_task.s(self, scraper, convert(unit)) for unit in scraper._get_units()]
         except Exception as e:
-            log.exception("get_units for {scraper.__class__.__name__} failed")
-        # Calls _scrape_unit for each unit
-        group(tasks).delay()
+            log.exception("get_units for {scraper.__class__.__name__} failed".format(**locals()))
+        else:
+            # Calls _scrape_unit for each unit
+            group(tasks).delay()
 
     def _scrape_unit(self, scraper, unit):
         log.info("Recieved {unit} from {scraper}".format(**locals()))
@@ -112,6 +115,7 @@ class ThreadedController(Controller):
         Remove bound_form (memory issue, contains whole articlesets)
         """
         for scraper in scrapers:
+            scraper.bound_form = None
             if hasattr(scraper, 'opener'):
                 scraper.opener.cookiejar._cookies_lock = LockHack()
             try:
@@ -119,7 +123,6 @@ class ThreadedController(Controller):
             except (pickle.PicklingError, TypeError):
                 log.warning("Pickling {scraper} failed".format(**locals()))
             else:
-                scraper.bound_form = None
                 yield scraper
 
                          
@@ -142,12 +145,13 @@ class ArticleManager(object):
 
     def add_articles(self, articles, scraper = None):
         """articles: a list of unprocessed/processed article/document objects"""
+        articles = list(articles)
         for a in articles:
             if hasattr(a,'props') and hasattr(a.props,'parent'):
                 a.parent = a.props.parent
                 del a.props.parent #:(            
 
-        parents = [a for a in articles if not(hasattr(a,'parent'))]
+        parents = [a for a in articles if not(hasattr(a,'parent')) or a.parent not in articles]
         articles = [self._postprocess(p, articles, scraper) for p in parents]
         self._articles.extend(articles)
 
