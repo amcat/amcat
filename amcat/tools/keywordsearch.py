@@ -25,6 +25,8 @@ TODO: NOTE: This module replaces the old 'solrlib', but I wonder whether it can 
 (but then I started moving things from the form to here...)
 """
 
+from __future__ import unicode_literals, print_function, absolute_import
+
 from django.db import models
 import collections
 import logging
