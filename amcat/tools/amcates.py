@@ -31,7 +31,7 @@ from json import dumps as serialize
 
 from amcat.tools import queryparser, toolkit
 from amcat.tools.toolkit import multidict, splitlist
-from elasticsearch import Elasticsearch
+from elasticsearch import Elasticsearch, connection
 from elasticsearch.client import indices, cluster
 from django.conf import settings
 from amcat.tools.caching import cached
@@ -147,7 +147,8 @@ class Result(object):
     
 class ES(object):
     def __init__(self, index=None, **args):
-        self.es = Elasticsearch(**args)
+        elhost = {"host":settings.ES_HOST, "port":ES_PORT}
+        self.es = Elasticsearch(hosts=[elhost, ], **args)
         self.index = settings.ES_INDEX if index is None else index
 
     def flush(self):

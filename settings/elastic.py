@@ -21,6 +21,10 @@
 Configuration options to change how AmCAT uses elastic
 """
 
+# Host/port on which elastic can be reached:
+ES_HOST='localhost'
+ES_PORT='9200'
+
 ES_INDEX = 'amcat'
 ES_ARTICLE_DOCTYPE='article'
 
