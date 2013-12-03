@@ -1,5 +1,3 @@
-raven
-sentry
 jsonrpclib
 rtf2xml
 sh
