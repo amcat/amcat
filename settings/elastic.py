@@ -25,12 +25,16 @@ ES_INDEX = 'amcat'
 ES_ARTICLE_DOCTYPE='article'
 
 ES_MAPPING_STRING_OPTIONS = {"type" : "string", "omit_norms": True, "analyzer" : "simple"}
+ES_MAPPING_SIMPLE_STRING_OPTIONS = {"type":"string", "index" : "not_analyzed", "include_in_all": "false"}
 
 ES_MAPPING = {"properties" : {"id":{"type":"long"},
                               "text": ES_MAPPING_STRING_OPTIONS,
                               "headline": ES_MAPPING_STRING_OPTIONS,
-                              "date":{"type":"date","format":"dateOptionalTime"},
-                              "medium":{"type":"string", "index" : "not_analyzed"},
+                              "byline": ES_MAPPING_STRING_OPTIONS,
+                              "medium": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+                              "creator": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+                              "section": ES_MAPPING_SIMPLE_STRING_OPTIONS,
+                              "date": {"type":"date","format":"dateOptionalTime"},
                               "mediumid":{"type":"long"},
                               "projectid":{"type":"long"},
                               "sets":{"type":"long"},
