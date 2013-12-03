@@ -147,7 +147,7 @@ class Result(object):
     
 class ES(object):
     def __init__(self, index=None, **args):
-        elhost = {"host":settings.ES_HOST, "port":ES_PORT}
+        elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
         self.es = Elasticsearch(hosts=[elhost, ], **args)
         self.index = settings.ES_INDEX if index is None else index
 
