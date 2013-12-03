@@ -779,12 +779,13 @@ annotator.fields.autocompletes.onFocus = function () {
     inputEl.focus();
 };
 
-annotator.fields.autocompletes.add_autocomplete = function (field) {
+annotator.fields.autocompletes.add_autocomplete = function (coding) {
     var self = annotator.fields;
-    var input = field.get_input();
+    var input = coding.get_input();
 
-    input.focus(self.autocompletes.onFocus);
-    input.attr("codebook_id", field.codebook);
+    input.focus(self.autocompletes.on_focus);
+    if (coding.schemafield.codebook !== null){
+    }
 };
 
 annotator.fields.autocompletes.addAutocompletes = function (jqueryEl) {

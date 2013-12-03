@@ -258,6 +258,13 @@ annotator.articletable.get_article = function(article_id) {
         sentences = annotator.map_ids(sentences[0].results);
         annotator.resolve_ids(codings, sentences, "sentence");
 
+        $.each(codings, function(coding_id, coding){
+            annotator.map_ids(coding.values);
+        });
+
+        console.log(codings);
+
+
         annotator.sentences = sentences;
         annotator.codings = codings;
         annotator.article = article;

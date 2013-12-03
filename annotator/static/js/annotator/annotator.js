@@ -152,10 +152,19 @@ annotator.articlecodings.codings_fetched = function(){
         return $("#article_codingschemafield_" + this.id);
     };
 
+    var empty_coding = {
+        id: null,
+        codingschema: articleschema,
+        article: annotator.article_id,
+        sentence: null,
+        comments: null,
+        codingjob: annotator.fields.codingjob
+    };
+
     $.each(schemafields, function(i, field){
-        field.get_input = get_input.bind(field);
         field.codings = filter(function(c){ return c.sentence === null }, annotator.codings);
-        field.coding = field.codings[0];
+        field.coding = (field.codings.length === 0) ? empty_coding : field.codings[0];
+        field.coding.get_input = get_input;
     });
 
     // Create html content
@@ -164,9 +173,9 @@ annotator.articlecodings.codings_fetched = function(){
         article_coding_el.append(el);
     });
 
-    // Add autocomplete
+    // Add autocomplete dialogs
     $.each(schemafields, function(i, field){
-        annotator.fields.autocompletes.add_autocomplete(field);
+        annotator.fields.autocompletes.add_autocomplete(field.coding);
     });
 };
 
