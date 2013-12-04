@@ -5,6 +5,7 @@ cssselect
 elasticsearch
 pyparsing
 colorlog
+celery>=3.1.5
 
 django
 djangorestframework==2.3.8
