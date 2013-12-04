@@ -54,7 +54,7 @@ class Term(BaseTerm):
     def __str__(self):
         return unicode(self).encode('utf-8')
     def get_dsl(self):
-        qtype = "wildcard" if '*' in self.text else "term"
+        qtype = "wildcard" if '*' in self.text else "match"
         return {qtype : {self.qfield : self.text.lower()}}
 
 class Quote(BaseTerm):

@@ -161,7 +161,9 @@ class ES(object):
             raise
         
     def create_index(self):
-        body = {"mappings" : {settings.ES_ARTICLE_DOCTYPE : settings.ES_MAPPING}}
+        body = {
+            "settings" : settings.ES_SETTINGS,
+            "mappings" : {settings.ES_ARTICLE_DOCTYPE : settings.ES_MAPPING}}
         indices.IndicesClient(self.es).create(self.index, body)
 
     def check_index(self):
@@ -731,4 +733,31 @@ class TestAmcatES(amcattest.PolicyTestCase):
         s1 = amcattest.create_test_set(articles=[a,b,c])
         ES().add_articles([a.id, b.id, c.id])
         self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(sets=s1.id))), {b.id, c.id})
+
+        
+    @amcattest.use_elastic
+    def test_tokenizer(self):
+        text = u"Rutte's Fu\xdf.d66,  50plus, 50+, el ni\xf1o, kanji (\u6f22\u5b57) en Noord-Korea"
+        a = amcattest.create_test_article(headline="test", text=text)
+        s1 = amcattest.create_test_set(articles=[a])
+        ES().add_articles([a.id])
+        ES().flush()
+        self.assertEqual(set(ES().query_ids("kanji", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids("blablabla", filters=dict(sets=s1.id))), set())
+
+        # test noord-korea --> noord korea
+        self.assertEqual(set(ES().query_ids("korea", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids('"korea-noord"', filters=dict(sets=s1.id))), set())
+        self.assertEqual(set(ES().query_ids('"noord-korea"', filters=dict(sets=s1.id))), {a.id})
+        
+        # test ni\~no -> nino
+        self.assertEqual(set(ES().query_ids(u"ni\xf1o", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids("nino", filters=dict(sets=s1.id))), {a.id})
+
+        # test real kanji
+        self.assertEqual(set(ES().query_ids(u"\u6f22\u5b57", filters=dict(sets=s1.id))), {a.id})
+
+        # test Rutte's -> rutte s
+        self.assertEqual(set(ES().query_ids("rutte", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids("Rutte", filters=dict(sets=s1.id))), {a.id})
 

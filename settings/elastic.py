@@ -49,3 +49,22 @@ ES_MAPPING = {"properties" : {"id":{"type":"long"},
 #              "_routing" : {"required" : True, "path" : "mediumid"}    
 #              "_timestamp" : {"enabled" : true, "path" : "date"}
 }
+ES_SETTINGS = {"analysis": {
+        "analyzer": {
+            "default": {
+                "type": "custom",
+                "tokenizer": "unicode_letters_digits",
+                "filter": [
+                    "icu_folding"
+                    ]
+                }
+            },
+        "tokenizer": {
+            "unicode_letters_digits": {
+                "type": "pattern",
+                "pattern": "[^\\p{L}\\p{M}\\p{N}]",
+                "lowercase": "true"
+                }
+            }
+        }
+    }
