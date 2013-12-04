@@ -29,7 +29,7 @@ from django.http import HttpResponse
 from amcat.scripts.forms import SelectionForm
 from amcat.forms import InvalidFormException
 from django.contrib.auth.models import User
-from amcat.celery import app
+from amcat.amcatcelery import app
 
 from django.http import QueryDict
 from amcat.tools.djangotoolkit import to_querydict

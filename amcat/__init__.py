@@ -13,5 +13,5 @@ Main organisation:
 
 # from http://docs.celeryproject.org/en/latest/django/first-steps-with-django.html
 from __future__ import absolute_import
-from .celery import app
+from .amcatcelery import app
 
