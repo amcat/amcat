@@ -223,7 +223,7 @@ class ES(object):
         if highlight: body['highlight'] = HIGHLIGHT_OPTIONS
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
 
-        log.info("es.search(body={body}, **{kwargs})".format(**locals()))
+        log.debug("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.es.search(index=self.index, body=body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body)
 
@@ -239,15 +239,16 @@ class ES(object):
 
         return result
     
-    def add_articles(self, article_ids):
+    def add_articles(self, article_ids, batch_size = 1000):
         """
         Add the given article_ids to the index. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator).
         """
         if not article_ids: return
         from amcat.models import Article, ArticleSetArticle
-        for i, batch in enumerate(splitlist(article_ids, itemsperbatch=100)):
-            log.info("Adding batch {i}".format(**locals()))
+        n = len(article_ids) / batch_size
+        for i, batch in enumerate(splitlist(article_ids, itemsperbatch=batch_size)):
+            log.info("Adding batch {i}/{n}".format(**locals()))
             all_sets = multidict((aa.article_id, aa.articleset_id)
                                  for aa in ArticleSetArticle.objects.filter(article__in=batch))
             dicts = (get_article_dict(article, list(all_sets.get(article.id, [])))
