@@ -78,7 +78,6 @@ class APIController(Controller):
             scraper.articleset.id,
             json_data = manager.getdicts())
             
-import sys #debug
 
 class ThreadedController(Controller):
     def run(self, scrapers):
@@ -134,9 +133,9 @@ class ArticleManager(object):
     """class to manage the overly complex output of scrapers
     takes articles of various classes and types, provides convertion and postprocessing
     also handles parent-child relationships"""
-    _articles = []
 
     def __init__(self, articles = [], scraper = None):
+        self._articles = []
         self.add_articles(articles, scraper = scraper)
 
     def __iter__(self):
