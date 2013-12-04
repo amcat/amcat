@@ -541,6 +541,7 @@ _DATEFORMATS = (
     _DateFormat("(\d{1,2})[- ](\w+)[- ](\d{2,4})",   3,2,1,True),
     _DateFormat("(\w+) (\d{1,2}), (\d{4})",          3,1,2,True),
     _DateFormat("(\d{1,2})[-/](\d{1,2})[-/](\d{2})", 3,2,1,swapamerican=True),
+
 )
 
 def _monthnr(monthname):
@@ -571,9 +572,12 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
 
         time = None
         if ':' in datestr:
-            m = re.match(r"(.*?)(\d+:[\d:]+)(\s+PM\b)?", datestr)
+            m = re.match(r"(.*?)(\d+:[\d:]+)(\s+PM\b)?(?= \+\d{4} (\d{4}))?", datestr)
             if m:
-                datestr, timestr, pm = m.groups()
+                datestr, timestr, pm, year = m.groups()
+                if year:
+                    # HACK: allow (twitter) to specify year AFTER the timezone indicator (???) 
+                    datestr += year
                 try: time = tuple(map(int, timestr.split(":")))
                 except ValueError: time = []
                 if len(time) == 3: pass

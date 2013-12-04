@@ -53,6 +53,7 @@ class TestToolkit(amcattest.PolicyTestCase):
             ("1980-13-22 01:00:00" , ValueError, False, False), # illegal date --> Error
             ("1980-3-22 27:00:00" , ValueError, False, False), # illegal time --> Error
             ("1980-3-22 23:00:00:00" , ValueError, False, False), # illegal time --> Error
+            ("Sun Sep 29 18:21:12 +0000 2013", datetime.datetime(2013,9,29,18,21,12), False, False), # twitter (??)
             ("1/1/98", datetime.datetime(1998, 1, 1,0,0,0), False, True),
             ("1/1/04", datetime.datetime(2004, 1, 1,0,0,0), False, True),
             ("31/12/72", datetime.datetime(1972, 12, 31,0,0,0), False, True),
