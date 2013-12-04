@@ -1,3 +1,4 @@
+python-memcache
 python-lxml
 python-numpy
 python-nltk
