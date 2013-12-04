@@ -6,6 +6,7 @@ elasticsearch
 pyparsing
 colorlog
 celery>=3.1.5
+python-dateutil
 
 django
 djangorestframework==2.3.8
