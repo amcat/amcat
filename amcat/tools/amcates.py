@@ -197,7 +197,7 @@ class ES(object):
         Note that query and filters can be combined in a single call
         """
         body = dict(build_body(query, filter, filters))
-
+        log.debug("Query_ids body={body!r}".format(**locals()))
         options = dict(scroll="1m", size=1000, fields="")
         options.update(kwargs)
         res = self.es.search(index=self.index, search_type='scan', body=body, **options)
@@ -238,7 +238,8 @@ class ES(object):
             result.hits += result2.hits
 
         return result
-    
+
+
     def add_articles(self, article_ids, batch_size = 1000):
         """
         Add the given article_ids to the index. This is done in batches, so there
@@ -697,7 +698,6 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m1.id))), set())
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m2.id))), {a.id})
 
-    @skip("Need to setup a good list of test searches and expected scores")
     def test_scores(self):
         "test if scores (and matches) are as expected for various queries" 
         s = amcattest.create_test_set(articles=[
@@ -715,8 +715,10 @@ class TestAmcatES(amcattest.PolicyTestCase):
         a = amcattest.create_test_article(text='aap noot mies', medium=m1)
         b = amcattest.create_test_article(text='noot mies wim zus', medium=m2)
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2)
-        ES().add_articles([a.id, b.id, c.id])
-
+        d = amcattest.create_test_article(text='ik woon in een sociale huurwoning, net als anderen', medium=m2)
+        ES().add_articles([a.id, b.id, c.id, d.id])
+        ES().flush()
+        
         self.assertEqual(set(ES().query_ids("no*")), {a.id, b.id})
         self.assertEqual(set(ES().query_ids("no*", filters=dict(mediumid=m2.id))), {b.id})
         self.assertEqual(set(ES().query_ids("zus AND jet", filters=dict(mediumid=m2.id))), {c.id})
@@ -724,7 +726,10 @@ class TestAmcatES(amcattest.PolicyTestCase):
         self.assertEqual(set(ES().query_ids('"mies wim"', filters=dict(mediumid=m2.id))), {b.id})
         self.assertEqual(set(ES().query_ids('"mies wim"~5', filters=dict(mediumid=m2.id))), {b.id, c.id})
 
-
+        self.assertEqual(set(ES().query_ids('"sociale huur*"', filters=dict(mediumid=m2.id))), {d.id})
+        self.assertEqual(set(ES().query_ids('"sociale huur*"', filters=dict(mediumid=m2.id))), {d.id})
+        
+        
     @skip("ComplexPhraseQueryParser does not work for elastic")
     def test_complex_phrase_query(self):
         """Test complex phrase queries. DOES NOT WORK YET"""

@@ -63,10 +63,7 @@ class Quote(BaseTerm):
     def __str__(self):
         return unicode(self).encode('utf-8')
     def get_dsl(self):
-        if self.text.endswith("*"):
-            return {"match_phrase_prefix" : {self.qfield : self.text[:-1]}}
-        else:
-            return {"match_phrase" : {self.qfield : self.text}}
+        return {"match_phrase" : {self.qfield : self.text}}
 
 class Boolean(object):
     def __init__(self, operator, terms, implicit=False):
@@ -171,7 +168,7 @@ def get_term(tokens):
         # this is where it gets weird: phrase queries don't support general
         # prefixes, but span (=slop) queries do. So, make a span query
         # with slop=0 and in_order=True if a non-final wildcard is present
-        if "*" in tokens.quote[:-1]:
+        if "*" in tokens.quote:
             return lucene_span(tokens.quote, tokens.field, 0)
         else:
             return Quote(tokens.quote, tokens.field)

@@ -284,6 +284,11 @@ LOGGING = {
             'propagate': True,
             'level':'WARN',
         },
+        'elasticsearch': { # avoid annoying 'starting new connection' messages
+            'handlers':['console'],
+            'propagate': True,
+            'level':'WARN',
+        },
             
         'django': {
             'handlers':['console'],
@@ -295,7 +300,7 @@ LOGGING = {
             'level': 'WARN',
             'propagate': False,
         },
-        '': {
+        'amcat': {
             'handlers': ['console'],
             'level': LOG_LEVEL,
         },
