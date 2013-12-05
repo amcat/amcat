@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -168,7 +169,7 @@ class ArticleManager(object):
         toreturn = []
         #point parent attributes at models
         for _dict, model in convertdict:
-            if 'parent' in _dict.keys():
+            if 'parent' in _dict.keys() and _dict['parent']:
                 model.parent = articles[_dict['parent']]
             toreturn.append(model)
         return toreturn

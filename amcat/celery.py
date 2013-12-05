@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -17,5 +18,11 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import djcelery
-djcelery.setup_loader()
+from celery import Celery
+import settings.scraping_celery
+
+scraping_app = Celery('scraping')
+scraping_app.config_from_object(settings.scraping_celery)
+scraping_app.autodiscover_tasks(lambda : settings.base.INSTALLED_APPS)
+
+

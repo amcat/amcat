@@ -168,10 +168,8 @@ INSTALLED_APPS = [
     'navigator',
     'api',
     'amcat',
-    'djcelery',
     'django_extensions',
     'compressor',
-    'djcelery',
 ]
                     
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
@@ -316,8 +314,4 @@ if 'DJANGO_LOG_FILE' in os.environ:
         'formatter': 'color',
         }
     LOGGING['loggers']['']['handlers'] += ['logfile']
-
-
-import djcelery
-djcelery.setup_loader()
 

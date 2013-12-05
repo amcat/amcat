@@ -44,7 +44,7 @@ class DailyScript(Script):
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
-        self.scrape(ThreadedAPIController(), scrapers)
+        self.scrape(ThreadedController(), scrapers)
 
     def scrape(self, controller, scrapers, deduplicate = False):
         """Use the controller to scrape the given scrapers."""

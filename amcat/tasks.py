@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -18,7 +19,7 @@
 ###########################################################################
 
 
-from celery import task, group
+from .scraping.celery import scraping_app
 import time, logging, types
 from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
 import logging;log.setLevel(logging.INFO)
@@ -58,10 +59,10 @@ class LockHack(object):
     def release(self):pass
 
 
-@task()
+@scraping_app.task
 def _scrape_task(controller, scraper):
     controller._scrape(scraper)
     
-@task()
+@scraping_app.task
 def _scrape_unit_task(controller, scraper, unit):
     controller._scrape_unit(scraper, unit)
