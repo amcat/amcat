@@ -25,7 +25,6 @@ from django_filters import filters
 
 from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
 from api.rest.resources.amcatresource import AmCATResource
-from api.rest.resources.articleset import ArticleSetViewSet
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.filters import AmCATFilterSet, InFilter
 from api.rest.resources.amcatresource import DatatablesMixin
@@ -59,35 +58,7 @@ class ArticleMetaResource(AmCATResource):
         return "ArticleMeta".lower()
 
 
-class ArticleViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
-    model = Article
-    url = ArticleSetViewSet.url + '/(?P<articleset>[0-9]+)/articles'
-    permission_map = {'GET' : ROLE_PROJECT_READER}
-    model_serializer_class = ArticleSerializer
-    
-    def check_permissions(self, request):
-        # make sure that the requested set is available in the projec, raise 404 otherwiset
-        # sets linked_set to indicate whether the current set is owned by the project
-        if self.articleset.project == self.project:
-            pass
-        elif self.project.articlesets.filter(pk=self.articleset.id).exists():
-            if request.method == 'POST':
-                raise CannotEditLinkedResource()
-        else:
-            raise NotFoundInProject()
-        return super(ArticleViewSet, self).check_permissions(request)
-    
-    
-    @property
-    def articleset(self):
-        if not hasattr(self, '_articleset'):
-            articleset_id = int(self.kwargs['articleset'])
-            self._articleset = ArticleSet.objects.get(pk=articleset_id)
-        return self._articleset
 
-    def filter_queryset(self, queryset):
-        queryset = super(ArticleViewSet, self).filter_queryset(queryset)
-        return queryset.filter(articlesets_set=self.articleset)
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

@@ -29,12 +29,3 @@ from api.rest.viewsets.articleset import ArticleSetSerializer
 class ArticleSetResource(AmCATResource):
     model = ArticleSet
     serializer_class = ArticleSetSerializer
-
-class ArticleSetViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
-    model = ArticleSet
-    url = 'projects/(?P<project>[0-9]+)/sets'
-    
-    def filter_queryset(self, queryset):
-        queryset = super(ArticleSetViewSet, self).filter_queryset(queryset)
-        return queryset.filter(project=self.project)
-    
