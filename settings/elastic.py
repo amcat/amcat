@@ -28,8 +28,8 @@ ES_PORT='9200'
 ES_INDEX = 'amcat'
 ES_ARTICLE_DOCTYPE='article'
 
-ES_MAPPING_STRING_OPTIONS = {"type" : "string", "omit_norms": True, "analyzer" : "simple"}
-ES_MAPPING_SIMPLE_STRING_OPTIONS = {"type":"string", "index" : "not_analyzed", "include_in_all": "false"}
+ES_MAPPING_STRING_OPTIONS = {"type" : "string", "omit_norms": True}
+ES_MAPPING_SIMPLE_STRING_OPTIONS = {"type":"string",  "omit_norms": True, "include_in_all": "false"}
 
 ES_MAPPING = {"properties" : {"id":{"type":"long"},
                               "text": ES_MAPPING_STRING_OPTIONS,
