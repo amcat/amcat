@@ -21,8 +21,11 @@ from rest_framework import serializers
 from amcat.models import ArticleSet
 from amcat.tools import amcates
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewsets.project import ProjectViewSetMixin
+from api.rest.resources.amcatresource import DatatablesMixin
+from rest_framework.viewsets import ModelViewSet
 
-__all__ = ("ArticleSetSerializer",)
+__all__ = ("ArticleSetSerializer", "ArticleSetViewSet")
 
 class ArticleSetSerializer(AmCATModelSerializer):
     favourite = serializers.SerializerMethodField("is_favourite")
@@ -68,3 +71,14 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
 
 class _NoProjectRequestedError(ValueError): pass
+
+class ArticleSetViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
+    url = ProjectViewSetMixin.url + "/(?P<project>[0-9]+)/sets"
+    model_serializer_class = ArticleSetSerializer
+    model = ArticleSet
+    
+
+    def filter_queryset(self, queryset):
+        queryset = super(ArticleSetViewSet, self).filter_queryset(queryset)
+        return queryset.filter(project=self.project)
+    
