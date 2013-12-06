@@ -54,7 +54,10 @@ class Controller(object):
             manager = ArticleManager()
             try:
                 for unit in scraper._get_units():
-                    manager.add_articles(scraper._scrape_unit(unit), scraper = scraper)                    
+                    try:
+                        manager.add_articles(scraper._scrape_unit(unit), scraper = scraper)                    
+                    except Exception:
+                        log.exception("_scrape_unit failed")
             except Exception:
                 log.exception("scraper failed")
             yield (scraper, manager)
@@ -104,7 +107,10 @@ class ThreadedController(Controller):
 
     def _scrape_unit(self, scraper, unit):
         log.info("Recieved {unit} from {scraper}".format(**locals()))
-        articles = list(scraper._scrape_unit(unit))
+        try:
+            articles = list(scraper._scrape_unit(unit))
+        except Exception:
+            log.exception("_scrape_unit failed")
         manager = ArticleManager(articles, scraper)
         self._save(scraper, manager)
 
