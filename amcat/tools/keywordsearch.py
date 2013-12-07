@@ -157,6 +157,7 @@ def getTable(form):
     table.rowNamesRequired = True
     dateInterval = form['dateInterval']
     group_by = form['xAxis']
+    if group_by == "medium": group_by = "mediumid"
     filters = dict(filters_from_form(form))
 
     queries = list(queries_from_form(form))
@@ -181,9 +182,24 @@ def getTable(form):
     table.queries = queries
     return table
 
+def add_medium_names(result):
+    "Change medium ids to medium names"
+    result = list(result)
+    ids = {group for (group, n) in result}
+    media = dict(Medium.objects.filter(pk__in=ids).values_list("pk", "name"))
+    for mid, n in result:
+        label = "{mid} - {name}".format(name=media[mid], **locals())
+        yield label, n
+    
+    
 def _add_column(table, column_name, query, filters, group_by, dateInterval):
-    for group, n in ES().aggregate_query(query, filters, group_by, dateInterval):
+    results = ES().aggregate_query(query, filters, group_by, dateInterval)
+    if group_by == "mediumid": 
+        results = add_medium_names(results)
+    
+    for group, n in results:
         table.addValue(unicode(group), column_name, n)
+        
     
 
                                  
