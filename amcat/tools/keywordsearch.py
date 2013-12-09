@@ -259,11 +259,11 @@ def queries_from_form(form):
     if form['query']:
         #HACK: clean doesn't get called with delayed webscripts, webscripts need overhaul!
         from amcat.models import Codebook, Language
-        cb, lbl, rep = [form[x] for x in ['codebook', 'codebook_label_language', 'codebook_replacement_language']]
+        cb, lbl, rep = [form.get(x) for x in ['codebook', 'codebook_label_language', 'codebook_replacement_language']]
         if isinstance(cb, (int, unicode)): cb = Codebook.objects.get(pk=int(cb))
         if isinstance(lbl, (int, unicode)): lbl = Language.objects.get(pk=int(lbl))
         if isinstance(rep, (int, unicode)): rep = Language.objects.get(pk=int(rep)) 
-        cb.cache_labels()
+        if cb: cb.cache_labels()
         
         log.warn("X {cb}:{lbl}->{rep}".format(**locals()))
         

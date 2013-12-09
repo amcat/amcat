@@ -781,8 +781,8 @@ def codebooks(request, project):
     linked_codebooks = (Datatable(CodebookResource, rowlink='./codebook/{id}')
                         .filter(projects_set=project))
 
-    can_import = project.can_update(request.user)
-    can_create = Codebook.can_create(request.user) and project.can_update(request.user)
+    can_import = True#project.can_update(request.user)
+    can_create = True#Codebook.can_create(request.user) and project.can_update(request.user)
 
     deleted = session_pop(request.session, "deleted_codebook")
     
