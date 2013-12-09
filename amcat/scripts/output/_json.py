@@ -25,7 +25,7 @@ from amcat.models.medium import Medium
 import datetime
 from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 
-import simplejson as json
+import  json
 
 def encode_json(obj):
     """ also encode Django objects to Json, preferebly by id-name""" 
