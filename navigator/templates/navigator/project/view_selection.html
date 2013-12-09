@@ -28,7 +28,11 @@
                     <label>Keyword Search string(s)</label> <a id="help-link" href="#">Search Syntax Help</a><br />
                     {{ form.query }}
 		    <div>{{ form.include_all }} {{ form.include_all.label_tag }}</div>
-		    <div>{{form.codebook.label_tag}} {{form.codebook}}<br/> {{form.codebooklanguage.label_tag}} {{form.codebooklanguage}}</div>
+		    <div>
+		      {{form.codebook.label_tag}} {{form.codebook}}<br/> 
+		      {{form.codebook_label_language.label_tag}} {{form.codebook_label_language}}<br/>
+		      {{form.codebook_replacement_language.label_tag}} {{form.codebook_replacement_language}}<br/>
+		    </div>
                 <label>Upload query: <input id="upload-query" type="file" /></label>
                 </div>
                 <div id="articleid-form">
