@@ -66,6 +66,12 @@ class ArticleSetSerializer(AmCATModelSerializer):
         else:
             return articleset.id in self.fav_articlesets
 
+    def restore_fields(self, data, files):
+        data = data.copy() # make data mutable
+        if 'project' not in data:
+            data['project'] = self.context['view'].project.id
+        return super(ArticleSetSerializer, self).restore_fields(data, files)
+            
     class Meta:
         model = ArticleSet
 

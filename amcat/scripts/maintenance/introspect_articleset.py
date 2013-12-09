@@ -50,7 +50,7 @@ class ValueArticleScript(Script):
         log.info("getting articles...")
         articles = Article.objects.filter(
             date__contains = self.options['date'],
-            articlesetarticle__articleset = self.options['articleset'])
+            articlesets_set = self.options['articleset'])
         log.info("{} articles found. evaluating...".format(articles.count()))
         for article in articles:
             log.debug(article.headline)
@@ -66,12 +66,13 @@ class ValueArticleScript(Script):
                 log.debug("{prop} : {v}".format(v = self.truncate(value), **locals()))
 
             #evaluate metastring
-            for key, value in eval(article.metastring).items():
-                log.debug("meta.{key} : {v}".format(v = self.truncate(value), **locals()))
-                if key in self.article_props_occurrences.keys():
-                    self.article_props_occurrences[key] += 1
-                else:
-                    self.article_props_occurrences[key] = 1
+            if article.metastring:
+                for key, value in eval(article.metastring).items():
+                    log.debug("meta.{key} : {v}".format(v = self.truncate(value), **locals()))
+                    if key in self.article_props_occurrences.keys():
+                        self.article_props_occurrences[key] += 1
+                    else:
+                        self.article_props_occurrences[key] = 1
 
         #print samples
         self.print_samples(articles)
@@ -95,7 +96,8 @@ class ValueArticleScript(Script):
             for prop in self.article_properties:
                 if hasattr(article, prop):
                     n_props += 1
-            n_props += len(eval(article.metastring))
+            if article.metastring:
+                n_props += len(eval(article.metastring))
             articles_nprops[article] = n_props
 
         sortedlist = sorted(articles_nprops, key=articles_nprops.get)
