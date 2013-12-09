@@ -3,9 +3,12 @@
     {% csrf_token %}
     <input type="hidden" name="output" value="json-html" />
     {{ form.projects.as_hidden }}
-  <table border=0 class="form-table">
+<div class="row">
+<div class="col-md-6">
+<legend>Filter options</legend>
+<table class="query query-filter" border="0">
     <tr>
-        <td>Show only:</td>
+        <td>Show sets:</td>
         <td colspan="2">{% include "navigator/selection/articlesets.html" %}</td>
     </tr>
     <tr>
@@ -15,7 +18,67 @@
         <td style="width:400px; min-width:380px;">
             {{ form.articlesets }}
         </td>
-         <td rowspan="6" style="vertical-align:top">
+    <tr>
+        <td>
+            <label>Date: </label>
+        </td>
+        <td>
+            <select name="datetype" id="id_datetype">
+                <option selected="selected" value="all">All Dates</option>
+                <option value="on">On</option>
+                <option value="after">After</option>
+                <option value="between">Between</option>
+                <option value="before">Before</option>
+            </select>
+            <span id="date-start" style="display:none">Start: {{ form.start_date }} </span>
+            <span id="date-end" style="display:none"> End: {{ form.end_date }}</span> 
+            <span id="date-on" style="display:none">{{ form.on_date }}</span> 
+        </td>
+    </tr>  <tr>
+        <td>
+            <label>Medium:</label>
+        </td>
+        <td>
+            {{ form.mediums }}
+        </td>
+    </tr>
+
+  </table>
+<br/>
+<legend>Output options</legend>
+<table class="query query-output" border="0">
+    <tr>
+        <td style="padding-top:30px">
+            <label>Output:</label>
+        </td>
+        <td style="padding-top:30px; min-height:50px">
+            <div id="webscripts">
+                {% for out in outputs %}
+                    <input type="radio" name="webscriptToRun" id="{{out.id}}" value="{{out.id}}" checked="checked" />
+                    <label for="{{out.id}}">{{out.name}}</label>
+                {% endfor %}
+            </div>
+        </td>
+    </tr>
+<tr>
+<td></td>
+        <td class="output-options-td">
+         {% for out in outputs %}
+             <div id="options-{{out.id}}" class="output-options">
+                {{out.formAsHtml}}
+            </div>
+        {% endfor %}
+        <div id="options-radio-additional" class="output-options">
+            
+        </div>
+        </td>
+    </tr>
+
+    <tr>
+  </table>
+</div> <!-- col -->
+<div class="col-md-6">
+<legend>Query options</legend>
     
         <!-- <button id="save-query-button">Save Form</button>
         <button id="load-query-button">Load Stored Form</button> -->
@@ -40,66 +103,18 @@
                     {{ form.article_ids }}
                 </div>
             </div>
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <label>Date: </label>
-        </td>
-        <td>
-            <select name="datetype" id="id_datetype">
-                <option selected="selected" value="all">All Dates</option>
-                <option value="on">On</option>
-                <option value="after">After</option>
-                <option value="between">Between</option>
-                <option value="before">Before</option>
-            </select>
-            <span id="date-start" style="display:none">Start: {{ form.start_date }} </span>
-            <span id="date-end" style="display:none"> End: {{ form.end_date }}</span> 
-            <span id="date-on" style="display:none">{{ form.on_date }}</span> 
-        </td>
-    </tr>
-    <tr>
-        <td>
-            <label>Medium:</label>
-        </td>
-        <td>
-            {{ form.mediums }}
-        </td>
-    </tr>
-    <tr>
-        <td style="padding-top:30px">
-            <label>Output:</label>
-        </td>
-        <td style="padding-top:30px; min-height:50px">
-            <div id="webscripts">
-                {% for out in outputs %}
-                    <input type="radio" name="webscriptToRun" id="{{out.id}}" value="{{out.id}}" checked="checked" />
-                    <label for="{{out.id}}">{{out.name}}</label>
-                {% endfor %}
-            </div>
-        </td>
-    </tr>
-    <tr>
-        <td></td>
-        <td class="output-options-td">
-         {% for out in outputs %}
-             <div id="options-{{out.id}}" class="output-options">
-                {{out.formAsHtml}}
-            </div>
-        {% endfor %}
-        <div id="options-radio-additional" class="output-options">
-            
-        </div>
-        </td>
-    </tr>
-    <tr>
-        <td></td>
-        <td style="vertical-align:bottom">
+
+</div> <!-- col -->
+</div>
+<div class="row">
+<div class="col-md-12">
             <input type="submit" value="Submit" id="form-submit" />
-        </td>
-    </tr>
-  </table>
+</div> <!-- col -->
+</div> <!-- row -->
+
+<div class="row">
+<div class="col-md-12">
+<legend>Output</legend>
     <script type="text/javascript">
      $(document).ready(function(){
         amcat.selection.apiUrl = "{% url "api" %}";
@@ -119,4 +134,6 @@
     <div id="dialog-message-status"></div>
    </div>
    
+</div> <!-- col -->
+</div> <!-- row -->
    {% include "navigator/selection/querysyntax.html" %}

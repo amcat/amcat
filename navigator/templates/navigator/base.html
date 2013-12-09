@@ -54,7 +54,7 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="{{ mainlink_url }}">{{ mainlink_label }}</a>
+	
         </div>
         <div class="navbar-collapse collapse">
 
@@ -65,8 +65,14 @@
 {% block contextmenu %}
 {% endblock %}
           </ul>
-        </div><!--/.nav-collapse -->
+	<a href="{% url 'index' %}">
+          <div class="nav navbar-brand navbar-right">
+	    <h1>AmCAT Navigator</h1>
+	    <h2>3.2.6
+	    </div>
+	  </a>
       </div>
+        </div><!--/.nav-collapse -->
    <div id="content"> 
 {% block contentcontainer %}
     {% block content %}<h1>Sorry, this feature is not yet implemented.</h1>{% endblock %}

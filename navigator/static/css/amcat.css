@@ -1,0 +1,24 @@
+.navbar-brand {background-image: url('/media/img/amcat/amcat-logo.png');
+		background-repeat: no-repeat;
+		background-position: 10px 10px;
+		padding-left: 45px;
+		padding-top: 10px;
+		height: 100%;
+}
+
+.navbar-brand h1 {
+font-size: 15px;
+font-weight: bold;
+margin-top: 0px;
+margin-bottom: 0px;
+}
+.navbar-brand h2 {
+color: grey;
+font-size: 13px;
+text-align: right;
+margin-top: 0px;
+margin-right: 10px;
+
+margin-bottom: -10px;
+}
+

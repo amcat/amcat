@@ -73,7 +73,7 @@ ul em{
 
 .form-table{
     width:100%;
-    border:1px solid grey;
+
 }
 
 #select-result{
@@ -113,3 +113,7 @@ ul em{
 .code{
     font-family: "Courier New", Courier, monospace
 }
+
+.query label {white-space:nowrap;}
+table.query {width: 100%}
+.query td:first-child { width: 130px; }

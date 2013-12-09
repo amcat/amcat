@@ -144,7 +144,11 @@ class HierarchicalViewMixin(object):
             yield "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
         
     def get_breadcrumbs(self):
-        return self._get_breadcrumbs(self.kwargs)
+        bc = self._get_breadcrumbs(self.kwargs)
+        bc.insert(0, ("Projects", reverse("projects")))
+        bc.insert(1, ("{self.project.id} : {self.project}".format(**locals()),
+                      reverse("project", args=(self.project.id, ))))
+        return bc
 
     @classmethod
     def _get_breadcrumbs(cls, kwargs):
