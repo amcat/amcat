@@ -25,7 +25,7 @@ from api.rest.datatable import Datatable
 from navigator.utils.auth import check
 from amcat.models.user import User
 
-from settings.menu import CODINGJOB_MENU
+CODINGJOB_MENU=None
 from api.rest.resources import CodingJobResource
 
 @check(User, args='coder_id', args_map={'coder_id' : 'id'})

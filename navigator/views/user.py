@@ -29,7 +29,7 @@ from navigator.utils.auth import check, create_user, check_perm
 from navigator.utils.misc import session_pop
 
 from navigator import forms
-from settings.menu import USER_MENU
+USER_MENU = None
 
 import smtplib, itertools
 

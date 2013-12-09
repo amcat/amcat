@@ -31,8 +31,6 @@ from api.rest.datatable import Datatable
 from amcat.models import authorisation, Project
 from django.core.exceptions import PermissionDenied
 
-from settings.menu import PROJECT_MENU, NAVIGATOR_MENU
-
 class ProjectViewMixin(object):
     """
     Mixin for all 'project' views (e.g. project details, articlesets) that:
@@ -52,7 +50,6 @@ class ProjectViewMixin(object):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
         context["project"] = self.project
         context["context"] = self.project # for menu / backwards compat.
-        context["menu"] = PROJECT_MENU
 
         context["main_active"] = 'Projects'
         context["context_category"] = self.context_category

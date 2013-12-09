@@ -45,7 +45,7 @@ from api.rest.resources import  CodebookCodeResource
 from api.rest.resources import CodingSchemaFieldResource
 from api.rest.resources import PluginResource, ScraperResource
 
-from settings.menu import PROJECT_MENU
+PROJECT_MENU = None
 
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse

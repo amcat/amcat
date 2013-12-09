@@ -1,5 +1,3 @@
-from .. import menu
-
 from amcat.tools import toolkit
 
 from django.core.urlresolvers import reverse

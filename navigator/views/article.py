@@ -22,7 +22,7 @@ from django.shortcuts import render, redirect
 from django.conf import settings
 from django.db.models import Q
 
-from settings.menu import PROJECT_MENU
+PROJECT_MENU = None
 
 from amcat.tools import toolkit
 from amcat.models import Article, Project, ArticleSet, AnalysedArticle, AnalysisSentence
