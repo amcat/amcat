@@ -1,0 +1,20 @@
+{% load menu %}
+
+<li {% is_active 'Articles' %}><a href="{% url 'article set-list' project_id=project.id %}">Articles</a></li>
+<li><a href="{% url 'project-selection' id=project.id %}">Query</a></li>
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Coding<b class="caret"></b></a>
+  <ul class="dropdown-menu">
+    <li><a href="{% url 'project-codingjobs' id=project.id %}">Coding Jobs</a></li>
+    <li><a href="{% url 'project-schemas' id=project.id %}">Coding Schemas</a></li>
+    <li><a href="{% url 'project-codebooks' id=project.id %}">Codebooks</a></li>
+ </ul>
+</li>
+
+<li class="dropdown">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings<b class="caret"></b></a>
+  <ul class="dropdown-menu">
+    <li><a href="{% url 'project-users' id=project.id %}">Users</a></li>
+    <li><a href="{% url 'project' id=project.id %}">Project details</a></li>
+ </ul>
+</li>
