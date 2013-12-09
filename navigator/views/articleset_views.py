@@ -22,11 +22,13 @@ from django.core.urlresolvers import reverse
 from amcat.scripts.actions.sample_articleset import SampleSet
 from amcat.scripts.actions.import_articleset import ImportSet
 from navigator.views.scriptview import ProjectScriptView
-from navigator.views.projectview import ProjectViewMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
 from django.views.generic.detail import DetailView
+from django.views.generic.list import ListView
+
 from django.views.generic.base import RedirectView
 
 class SampleSetView(ProjectScriptView):
@@ -54,18 +56,50 @@ class ImportSetView(ProjectScriptView):
             form.fields['target_project'].help_text = "Only showing your favourite projects that do not use this set already"
 
         return form
-            
-class ArticleSetView(ProjectViewMixin, DatatableMixin, DetailView):
-    resource = SearchResource
-    rowlink = '../article/{id}'
+
+from api.rest.datatable import FavouriteDatatable
+    
+class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, DatatableMixin, ListView):
     model = ArticleSet
-    template_name = "navigator/project/articleset.html"
+    parent = None
+    base_url = "projects/(?P<project_id>[0-9]+)"
+    context_category = 'Articles'
+    
+    resource = ArticleSet
+    rowlink = './{id}'
+
+    @classmethod
+    def get_url_patterns(cls):
+        patterns = list(super(ArticleSetListView, cls).get_url_patterns())
+        #patterns.append(patterns[0][:-1] + "(?P<what>/[a-z]+)?")
+        return patterns
+
+        
+    def get_datatable(self):
+        """Create the Datatable object"""
+        url = reverse('article set-details', args=[self.project.id, 123]) 
+        table = FavouriteDatatable(resource=self.get_resource(), label="article set",
+                                   set_url=url + "?star=1", unset_url=url+"?star=0")
+        table = table.rowlink_reverse('article set-details', args=[self.project.id, '{id}'])
+        table = table.hide("project")
+        table = self.filter_table(table)
+        return table
+
+
+    
+class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, DatatableMixin, DetailView):
+    parent = ArticleSetListView
+    model = ArticleSet
+    context_category = 'Articles'
+        
+    resource = SearchResource
+    rowlink = './{id}'
     
     def filter_table(self, table):
         return table.filter(sets=self.object.id)
 
     def get_context_data(self, **kwargs):
-        context = super(ArticleSetView, self).get_context_data(**kwargs)
+        context = super(ArticleSetDetailsView, self).get_context_data(**kwargs)
 
         star = self.request.GET.get("star")
         starred = self.project.favourite_articlesets.filter(pk=self.object.id).exists()

@@ -68,11 +68,14 @@ def view(request, user=None, form=None):
     # Generate projects-table javascript
     projects = Datatable(ProjectResource).filter(projectrole__user=user)
     menu = None if user == request.user else USER_MENU
-
+    main_active = "Current User" if user == request.user else "Users"
+    
+    
     return render(request, "navigator/user/view.html", {'user' : user,
                                                         'form' : form,
                                                         'projects' : projects,
                                                         'success' : success,
+                                                        'main_active' : main_active,
                                                         'menu' : menu})
 
 @check(User, action='update')

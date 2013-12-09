@@ -20,7 +20,7 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views.articleset_views import ImportSetView, SampleSetView, ArticleSetView, RefreshArticleSetView
+from navigator.views.articleset_views import ImportSetView, SampleSetView, RefreshArticleSetView
 from navigator.views.preprocessing_views import ProcessParsingView
 from navigator.views.codebook_views import ImportCodebook, ExportCodebook
 from navigator.views import rule_views
@@ -48,14 +48,12 @@ urlpatterns = patterns(
             'navigator.views.article.remove_from', name="remove_from_articleset"),
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
             'navigator.views.project.article', name="article"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<pk>[0-9]+)$',
-        ArticleSetView.as_view(), name="articleset"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/edit/(?P<id>[0-9]+)$',
         'navigator.views.project.edit_articleset', name="articleset-edit"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/delete/(?P<id>[0-9]+)$',
         'navigator.views.project.delete_articleset', name="articleset-delete"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/refresh/(?P<pk>[0-9]+)$',
-        RefreshArticleSetView.as_view(), name="articleset-refresh"),
+    #url(r'^project/(?P<projectid>[0-9]+)/articleset/refresh/(?P<pk>[0-9]+)$',
+    #    RefreshArticleSetView.as_view(), name="articleset-refresh"),
     
     url(r'^project/(?P<projectid>[0-9]+)/articleset/unlink/(?P<id>[0-9]+)$',
         'navigator.views.project.unlink_articleset', name="articleset-unlink"),
@@ -167,3 +165,14 @@ urlpatterns = patterns(
     url(r'^semanticroles/(?P<id>[0-9]+)$', 'navigator.views.semanticroles.sentence', name='semanticroles-sentence'),
 
 ) 
+
+from navigator.views.articleset_views import *
+from navigator.views.article_views import *
+
+for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView]:
+    for pattern in view.get_url_patterns():
+        urlpatterns += patterns('',
+                                url(pattern, view.as_view(), name=view.get_view_name())
+                            )
+
+

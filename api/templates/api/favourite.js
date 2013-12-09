@@ -4,10 +4,10 @@
  */
 (function(favourite, type, row){
     // Function to get icon for favourite == { true, false }
-    var get_icon = function(f){ return f ? "icon-star" : "icon-star-empty"; }
+    var get_icon = function(f){ return f ? "glyphicon-star" : "glyphicon-star-empty"; }
 
     if(type === "display"){
-        return $("<i>").addClass(get_icon(row.favourite)).hover(function(event){
+        return $("<i class='glyphicon'>").addClass(get_icon(row.favourite)).hover(function(event){
             $(event.currentTarget).removeClass(get_icon(row.favourite)).addClass(get_icon(!row.favourite));
         }, function(event){
             $(event.currentTarget).removeClass(get_icon(!row.favourite)).addClass(get_icon(row.favourite));

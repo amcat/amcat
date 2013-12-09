@@ -17,6 +17,8 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import re
+
 from django.views.generic.base import ContextMixin, TemplateResponseMixin, TemplateView
 from django.views.generic.edit import CreateView
 from django.core.urlresolvers import reverse
@@ -29,7 +31,7 @@ from api.rest.datatable import Datatable
 from amcat.models import authorisation, Project
 from django.core.exceptions import PermissionDenied
 
-from settings.menu import PROJECT_MENU
+from settings.menu import PROJECT_MENU, NAVIGATOR_MENU
 
 class ProjectViewMixin(object):
     """
@@ -42,17 +44,25 @@ class ProjectViewMixin(object):
     - required_project_permission: The required permission level on the project for accessing
                                    this view (default: metareader)
     """
-    project_id_url_kwarg = 'projectid'
+    project_id_url_kwarg = 'project_id'
     required_project_permission = authorisation.ROLE_PROJECT_METAREADER
-
+    context_category = None
+    
     def get_context_data(self, **kwargs):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
         context["project"] = self.project
         context["context"] = self.project # for menu / backwards compat.
         context["menu"] = PROJECT_MENU
+
+        context["main_active"] = 'Projects'
+        context["context_category"] = self.context_category
+        context["mainlink_label"] = "Project {self.project.id} : {self.project}".format(**locals())
+        context["mainlink_url"] = reverse("project", kwargs={'id' : self.project.id})
         return context
     
     def get_project(self):
+        kwarg = self.project_id_url_kwarg
+        x = self.kwargs
         pid = self.kwargs.get(self.project_id_url_kwarg)
         return Project.objects.get(pk=pid)
 
@@ -65,6 +75,92 @@ class ProjectViewMixin(object):
     def check_permission(self):
         if not self.request.user.get_profile().has_role(self.required_project_permission, self.project):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {self.project}".format(**locals()))
+
+
+    def get_template_names(self):
         
-    def _get_project(self):
-        projectid = Project.objects.get(pk=self.kwargs)
+        if self.template_name is not None:
+            return [self.template_name]
+        else:
+            name = re.sub("[- ]", "_", self.get_view_name())
+            return ["project/{name}.html".format(**locals())]
+        
+from django.views.generic.list import ListView
+
+class HierarchicalViewMixin(object):
+
+    @property
+    def pk_url_kwarg(self):
+        return self.get_model_key()
+
+    @classmethod
+    def get_model_key(cls):
+        return cls.model._meta.get_field("id").db_column
+
+    @classmethod
+    def get_model_name(cls):
+        return cls.model._meta.verbose_name_plural.title()
+        
+    @classmethod
+    def get_table_name(cls):
+        return cls.model._meta.db_table
+
+    @classmethod
+    def _get_object(cls, kwargs):
+        pk = kwargs[cls.get_model_key()]
+        return cls.model.objects.get(pk=pk)
+        
+    def get_context_data(self, **kwargs):
+        context = super(HierarchicalViewMixin, self).get_context_data(**kwargs)
+        context["breadcrumbs"] = list(self.get_breadcrumbs())
+        return context
+    
+    @classmethod
+    def get_view_name(cls):
+        name = cls.model._meta.verbose_name
+        name += ("-list" if issubclass(cls, ListView) else "-details")
+
+        return name
+        
+    @classmethod
+    def get_url_patterns(cls):
+        comps = cls._get_url_components()
+        return ["^" + "/".join(comps) + "/$"]
+
+    @classmethod
+    def _get_url_components(cls):
+        """Return the url pattern for this view class without suffix"""
+        if cls.parent:
+            for comp in cls.parent._get_url_components():
+                yield comp
+        else:
+            base = getattr(cls, "base_url", None)
+            if base:
+                yield base
+        
+        if issubclass(cls, ListView):
+            yield cls.get_table_name().lower()
+        else:
+            yield "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
+        
+    def get_breadcrumbs(self):
+        return self._get_breadcrumbs(self.kwargs)
+
+    @classmethod
+    def _get_breadcrumbs(cls, kwargs):
+        breadcrumbs = cls.parent._get_breadcrumbs(kwargs) if cls.parent else []
+        
+        keys = re.findall("<([^>]+)>", cls.get_url_patterns()[0])
+        kw = {k:v for (k,v) in kwargs.items() if k in keys}
+        url = reverse(cls.get_view_name(), kwargs=kw)
+
+        if issubclass(cls, ListView):
+            name = cls.get_model_name()
+        else:
+            obj = cls._get_object(kwargs)
+            name = "{obj.id} : {obj}".format(**locals())
+            
+        breadcrumbs.append((name, url))
+        return breadcrumbs
+        
+        
