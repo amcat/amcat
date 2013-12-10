@@ -7,7 +7,7 @@ pyparsing
 colorlog
 celery>=3.1.5
 python-dateutil
-
+python-memcached
 django
 djangorestframework==2.3.8
 django-boolean-sum
