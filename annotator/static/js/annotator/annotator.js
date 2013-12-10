@@ -40,6 +40,11 @@ var STATUS_COMPLETE = 2;
 var STATUS_IRRELEVANT = 9;
 var API_URL = "/api/v4/";
 
+var EMPTY_INTVAL = "null";
+
+var ARTICLECODING = "articlecoding";
+var SENTENCECODING = "sentencecoding"
+
 annotator.article_id = 0;
 annotator.sentences = null;
 annotator.datatable = null;
@@ -71,7 +76,7 @@ annotator._get_api_url = function (project_id, codingjob_id) {
 
 /*
  * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
- * the id as key, and the object as value.
+ * the prop as key, and the object as value.
  */
 annotator.map_ids = function (model_data, prop) {
     prop = (prop === undefined) ? "id" : prop;
@@ -103,22 +108,82 @@ annotator.resolve_ids = function(models, target_models, prop){
 };
 
 /************* Article codings *************/
+annotator.articlecodings.get_codingschemafield = function(input){
+    var id = $(input).attr("id").split("article_codingschemafield_")[1];
+    return annotator.fields.schemas[id];
+};
+
+
+annotator.set_autocomplete = function(input_element, choices, callback){
+
+};
+
+annotator.get_codebook_html = function(schemafield){
+    var html = $("<div>").attr("schemafield", schemafield.id);
+
+    if(schemafield.split_codebook){
+        var root = $("<input>");
+        var descendant = $("<input>");
+        var hidden = $("<input>").attr("intval", "-1").hide();
+
+        root.addClass("codebook_root").attr("placeholder", "Root..").attr("id", "-1");
+        descendant.addClass("codebook_descendant").attr("placeholder", "Descendant..");
+        descendant.attr("id", "-1");
+        hidden.addClass("codebook_value");
+
+        html.append(root).append(descendant).append(hidden);
+    } else {
+        html.append($("<input>").attr("intval", EMPTY_INTVAL));
+    }
+
+    return html;
+};
+
+annotator.get_boolean_html = function(){
+    return $("<input type='checkbox'>").attr("intval", EMPTY_INTVAL).change(function(event){
+        var input = $(event.currentTarget);
+        input.attr("intval", input.is(":checked") ? 1 : 0);
+    });
+};
+
+annotator.get_quality_html = function(){
+    return $("<input type='number' step='0.5' min='-1' max='1'>")
+        .attr("intval", EMPTY_INTVAL)
+        .change(function(event){
+            var target = $(event.currentTarget);
+            var value = parseFloat(target.val());
+            target.attr("intval", Math.round(value * 10));
+        });
+};
+
+annotator.get_number_html = function () {
+    return $("<input type='number'>").attr("intval", EMPTY_INTVAL).change(function (event) {
+        var target = $(event.currentTarget);
+        var value = parseInt(target.val());
+        target.attr("intval", isNaN(value) ? EMPTY_INTVAL : value);
+    });
+};
+
 /*
  * Generates, given a schemafield-object, an HTML element for the given
  * field. This includes autocompletes.
  */
-annotator.articlecodings.get_coding_html = function (schemafield) {
+annotator.articlecodings.get_schemafield_html = function (schemafield, coding_value) {
+    var id_field;
+
     var base, label, id_field = "article_codingschemafield_" + schemafield.id;
 
     // Get 'base' input field, which will be wrapped with labels, etc.
     if (schemafield.fieldtype == SCHEMATYPES.TEXT) {
         base = $("<input>");
-    } else if (schemafield.fieldtype === SCHEMATYPES.NUMBER || schemafield.fieldtype == SCHEMATYPES.CODEBOOK) {
-        base = $("<input type='number'>");
+    } else if (schemafield.fieldtype === SCHEMATYPES.NUMBER) {
+        base = annotator.get_number_html();
     } else if (schemafield.fieldtype === SCHEMATYPES.BOOLEAN) {
-        base = $("<input type='checkbox'>");
+        base = annotator.get_boolean_html();
     } else if (schemafield.fieldtype === SCHEMATYPES.QUALITY) {
-        base = $("<input type='number' min='-10' max='10'>");
+        base = annotator.get_quality_html();
+    } else if (schemafield.fieldtype === SCHEMATYPES.CODEBOOK){
+        base = annotator.get_codebook_html(schemafield);
     } else {
         throw "Unknown schemafieldtypeid: " + schemafield.fieldtype;
     }
@@ -130,6 +195,21 @@ annotator.articlecodings.get_coding_html = function (schemafield) {
     return $("<tr>")
         .append($("<td>").append(label))
         .append($("<td>").append(base));
+};
+
+annotator.articlecodings.get_schemafields_html = function(schemafields, coding){
+    var values = {};
+    $.each(coding.values, function (coding_id, coding) {
+        values[coding.field.id] = coding;
+    });
+
+    var html = $("<table>");
+    $.each(schemafields, function(schema_id, schemafield){
+        html.append(
+            annotator.articlecodings.get_schemafield_html(schemafield, values[schema_id] || null)
+        );
+    });
+    return html;
 };
 
 /*
@@ -145,13 +225,6 @@ annotator.articlecodings.codings_fetched = function(){
     var schemafields = filter(function(f){ return f.codingschema === articleschema }, annotator.fields.schemafields);
     schemafields.sort(function(f1, f2){ return f1.fieldnr - f2.fieldnr });
 
-    // Register get_input() on schemafield, which return the jQuery input element
-    // for this field. Also define the property `coding`, which is the Coding object
-    // associated with the field.
-    var get_input = function(){
-        return $("#article_codingschemafield_" + this.id);
-    };
-
     var empty_coding = {
         id: null,
         codingschema: articleschema,
@@ -161,22 +234,15 @@ annotator.articlecodings.codings_fetched = function(){
         codingjob: annotator.fields.codingjob
     };
 
-    $.each(schemafields, function(i, field){
-        field.codings = filter(function(c){ return c.sentence === null }, annotator.codings);
-        field.coding = (field.codings.length === 0) ? empty_coding : field.codings[0];
-        field.coding.get_input = get_input;
-    });
+    // Collect article codings. If no codings are available, create a
+    // new empty one.
+    var codings = filter(function(c){ return c.sentence === null }, annotator.codings);
+    if (codings.length === 0) codings.push(empty_coding);
 
     // Create html content
-    var article_coding_el = $("#article-coding").html("");
-    $.each(map(annotator.articlecodings.get_coding_html, schemafields), function(i, el){
-        article_coding_el.append(el);
-    });
-
-    // Add autocomplete dialogs
-    $.each(schemafields, function(i, field){
-        annotator.fields.autocompletes.add_autocomplete(field.coding);
-    });
+    $("#article-coding").html(
+        annotator.articlecodings.get_schemafields_html(schemafields, codings[0])
+    );
 };
 
 

@@ -41,6 +41,7 @@ SCHEMATYPES = {
     QUALITY: 9
 };
 
+AUTOCOMPLETE_LANGUAGE = 0;
 
 annotator.fields = {};
 annotator.fields.autocompletes = {};
@@ -84,9 +85,7 @@ annotator.fields.initialise_fields = function () {
             self.schemafields = annotator.map_ids(schemafields[0].results);
             self.codingjob = codingjob[0];
 
-            // Resolve foreign keys
-
-            // Convert codebook.codes (array) to mapping code_id -> code
+           // Convert codebook.codes (array) to mapping code_id -> code
             $.each(self.codebooks, function(codebook_id, codebook){
                 codebook.codes = annotator.map_ids(codebook.codes, "code");
                 annotator.resolve_ids(codebook.codes, codebook.codes, "parent");
@@ -97,6 +96,7 @@ annotator.fields.initialise_fields = function () {
             annotator.resolve_ids(self.rules, self.schemas, "codingschema");
             annotator.resolve_ids(self.rules, self.schemafields, "field");
             annotator.resolve_ids(self.schemafields, self.schemas, "codingschema");
+            annotator.resolve_ids(self.schemafields, self.codebooks, "codebook");
             annotator.resolve_id(self.codingjob, self.schemas, "articleschema");
             annotator.resolve_id(self.codingjob, self.schemas, "unitschema");
 
@@ -104,9 +104,33 @@ annotator.fields.initialise_fields = function () {
             self.codebooks_fetched();
             self.highlighters_fetched();
             self.setup_wordcount();
+            self.schemafields_fetched();
             $("#loading_fields").dialog("close");
         }
     );
+};
+
+annotator.fields.get_choices = function(codes, language_id){
+    language_id = language_id || AUTOCOMPLETE_LANGUAGE;
+
+    return $.map(codes, function(code){
+        console.log(code.get_descendants());
+
+        return {
+            label : code.labels[language_id],
+            value : code.code,
+            descendant_choices : annotator.fields.get_choices(code.descendants)
+        }
+    });
+};
+
+annotator.fields.schemafields_fetched = function(){
+    $.each(annotator.fields.schemafields, function(id, schemafield){
+        if (this.fieldtype === SCHEMATYPES.CODEBOOK){
+            schemafield.choices = annotator.fields.get_choices(schemafield.codebook.codes);
+            console.log(schemafield.choices);
+        }
+    });
 };
 
 /*
@@ -273,6 +297,7 @@ annotator.fields.rule_applies = function (rule) {
  */
 annotator.fields.get_descendants = function(depth){
     depth = (depth === undefined) ? 0 : depth;
+    console.log(this);
 
     if (depth >= 1000){
         throw "Maximum recursion depth exceeded, loop in codes?";
@@ -281,11 +306,12 @@ annotator.fields.get_descendants = function(depth){
     if (this.children.length === 0) return {};
     if (this.descendants !== undefined) return this.descendants;
 
-    this.descendants = $.extend({}, this.children);
+    var descendants = $.extend({}, this.children);
     $.each(this.children, function(code_id, code){
-        $.extend(this.descendants, code.get_descendants(depth+1));
+        $.extend(descendants, code.get_descendants(depth+1));
     });
 
+    this.descendants = descendants;
     return this.descendants;
 };
 
@@ -301,7 +327,7 @@ annotator.fields.codebooks_fetched = function(){
     // of code_id -> code.
     $.each(self.codebooks, function(codebook_id, codebook){
         codebook.roots = filter(function(code){ return code.parent === null }, codebook.codes);
-        codebook.roots = annotator.map_ids(codebook.roots);
+        codebook.roots = annotator.map_ids(codebook.roots, "code");
     });
 
     $.each(self.codebooks, function(codebook_id, codebook){
@@ -779,9 +805,8 @@ annotator.fields.autocompletes.onFocus = function () {
     inputEl.focus();
 };
 
-annotator.fields.autocompletes.add_autocomplete = function (coding) {
+annotator.fields.autocompletes.add_autocomplete = function (schemafield) {
     var self = annotator.fields;
-    var input = coding.get_input();
 
     input.focus(self.autocompletes.on_focus);
     if (coding.schemafield.codebook !== null){

@@ -229,8 +229,16 @@ annotator.articletable.fit_table = function (min_size_input, min_size_header) {
 };
 
 annotator.articletable.codings_fetched = function(){
+    var get_options = function(){
+        if(this.field.fieldtype !== SCHEMATYPES.CODEBOOK){
+            return this.field.get_options();
+        }
+    };
 
-}
+    $.each(annotator.codings, function(coding_id, coding){
+        coding.get_options = get_options.bind(coding);
+    });
+};
 
 
 /*
@@ -260,10 +268,12 @@ annotator.articletable.get_article = function(article_id) {
 
         $.each(codings, function(coding_id, coding){
             annotator.map_ids(coding.values);
+            annotator.resolve_ids(coding.values, annotator.fields.schemafields, "field");
+
+            $.each(coding.values, function(value_id, value){
+                value.coding = coding;
+            });
         });
-
-        console.log(codings);
-
 
         annotator.sentences = sentences;
         annotator.codings = codings;
@@ -272,6 +282,8 @@ annotator.articletable.get_article = function(article_id) {
         $.each(sentences, function(sentence_id, sentence){
             sentence.get_unit = get_unit.bind(sentence);
         });
+
+        annotator.articletable.codings_fetched();
 
         // Set buttons
         $('#edit-article-button').button("option", "disabled", false);

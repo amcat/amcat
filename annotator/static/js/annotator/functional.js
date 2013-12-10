@@ -69,3 +69,7 @@ function map(f, list){
 
     return _list;
 }
+
+function constant(value){
+    return function(){ return value };
+}
