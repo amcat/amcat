@@ -1,5 +1,5 @@
 <li {% if main_active == 'Projects' %}class="active"{% endif %}><a href="{% url 'projects' %}">Projects</a></li>
-<li {% if main_active == 'Coding' %}class="active"{% endif %}><a href="{% url 'codingjobs' %}">Coding</a></li>
+<li {% if main_active == 'Coding' %}class="active"{% endif %}><a href="{% url 'codingjobs' %}">Annotator</a></li>
 <li class="dropdown{% if main_active == 'Current User' %} active{% endif %}">
   <a href="#" class="dropdown-toggle" data-toggle="dropdown">
 {% if request.user.first_name %}

@@ -3,7 +3,7 @@
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
 {% block actions %}
-<a class="btn btn-success"  href="{% url 'upload-articles' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a>
+<a class="btn btn-primary"  href="{% url 'upload-articles' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a>
 {% endblock actions %}
 
 {% block content %}
