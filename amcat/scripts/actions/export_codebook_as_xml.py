@@ -78,7 +78,7 @@ class ExportCodebookAsXML(Script):
 ###########################################################################
 from amcat.tools import amcattest
 
-class TestExportCodebookAsXML(amcattest.PolicyTestCase):
+class TestExportCodebookAsXML(amcattest.AmCATTestCase):
     def test_codebook_to_xml(self):
         # Empty codebook
         cb = codebook_to_xml(amcattest.create_test_codebook())

@@ -402,7 +402,7 @@ def resolve_queries(queries, codebook=None, label_language=None, replacement_lan
 
 from amcat.tools import amcattest
 
-class TestKeywordSearch(amcattest.PolicyTestCase):
+class TestKeywordSearch(amcattest.AmCATTestCase):
         
     def test_get_label_delimiter(self):
         self.assertEquals(SearchQuery._get_label_delimiter("abc", "a"), "a")

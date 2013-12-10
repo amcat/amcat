@@ -56,5 +56,5 @@ class Word(AmcatModel):
 
 from amcat.tools import amcattest
 
-class TestWord(amcattest.PolicyTestCase):
+class TestWord(amcattest.AmCATTestCase):
     pass

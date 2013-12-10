@@ -90,7 +90,7 @@ class Scraper(AmcatModel):
 from amcat.tools import amcattest
 
 
-class TestScrapers(amcattest.PolicyTestCase):
+class TestScrapers(amcattest.AmCATTestCase):
 
     def test_get_scraper(self):
         """Can we get a scraper from the db?"""

@@ -180,10 +180,9 @@ def _get_cache_key(model, id):
         
 from amcat.tools import amcattest
 
-class TestCaching(amcattest.PolicyTestCase):
+class TestCaching(amcattest.AmCATTestCase):
 
     class TestClass(object):
-        """Class for testing ('docstrings, omdat het moet (van pylint)') """
         def __init__(self, x=1, y=2):
             self.changed = False
             self.x = x

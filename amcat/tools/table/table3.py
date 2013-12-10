@@ -470,7 +470,7 @@ def _striplines(x):
     """Strip each line in x to make comparison easier"""
     return "\n".join(l.strip() for l in x.split("\n")).strip()
 
-class TestTable(amcattest.PolicyTestCase):
+class TestTable(amcattest.AmCATTestCase):
     def test_list_table(self):
         """Can we create a list table and output as ascii"""
         t = ListTable(colnames = ["a1", "a2", "a3"],

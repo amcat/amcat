@@ -62,7 +62,7 @@ class Sentence(AmcatModel):
         
 from amcat.tools import amcattest
 
-class TestSentence(amcattest.PolicyTestCase):
+class TestSentence(amcattest.AmCATTestCase):
 
     def test_get_sentences(self):
         """Test retrieving all (unicode) sentences for an article"""

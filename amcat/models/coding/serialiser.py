@@ -220,8 +220,7 @@ class _DummyField(object):
         self.codebook = codebook
         self.codebook_id = codebook.id
 
-class TestSerialiser(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = ["W0613"] # unused argument on virtual method
+class TestSerialiser(amcattest.AmCATTestCase):
     def test_textserialiser(self):
         """Test the str serialiser"""
         t = TextSerialiser(None)

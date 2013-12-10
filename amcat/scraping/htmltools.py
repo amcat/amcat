@@ -121,7 +121,7 @@ def get_encoding(http_response):
         
 from amcat.tools import amcattest
 
-class TestHTMLTools(amcattest.PolicyTestCase):
+class TestHTMLTools(amcattest.AmCATTestCase):
     # Sorry Internet, vanatteveldt.com has no encoding...
     TEST_SITES = {"http://amcat.vu.nl" : "utf-8"}#, "http://vanatteveldt.com" : None}
     

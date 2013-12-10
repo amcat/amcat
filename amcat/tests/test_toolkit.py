@@ -27,7 +27,7 @@ import random
 import inspect
 import logging
 
-class TestToolkit(amcattest.PolicyTestCase):
+class TestToolkit(amcattest.AmCATTestCase):
     TARGET_MODULE = toolkit
 
     def test_multidict(self):

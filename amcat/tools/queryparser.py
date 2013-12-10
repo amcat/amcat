@@ -256,7 +256,7 @@ def parse(s):
 
 from amcat.tools import amcattest
 
-class TestQueryParser(amcattest.PolicyTestCase):
+class TestQueryParser(amcattest.AmCATTestCase):
     def test_parse(self):
         q = lambda s : unicode(parse_to_terms(s))
 

@@ -92,7 +92,7 @@ class CoreferenceSet(AmcatModel):
 
 from amcat.tools import amcattest
 
-class TestTokens(amcattest.PolicyTestCase):
+class TestTokens(amcattest.AmCATTestCase):
     def test_get_tokens_order(self):
         s = amcattest.create_test_analysis_sentence()
         t1,t2,t3 = [amcattest.create_test_token(sentence=s, position=i) for i in [2,1,3]]

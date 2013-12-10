@@ -282,10 +282,7 @@ def _print_triples(triples):
 
 from amcat.tools import amcattest
 
-class TestAmcatRDF(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = ['W0212'] # protected members _meta and _code/_parent
-                                    # TODO: latter should be removed after refactoring codebook
-
+class TestAmcatRDF(amcattest.AmCATTestCase):
     def setUp(self):
         """Populate a project with articles, coding etc"""
         from amcat.models import Language, Article

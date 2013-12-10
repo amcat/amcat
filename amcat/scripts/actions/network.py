@@ -154,5 +154,5 @@ class Network(Script):
 
 from amcat.tools import amcattest
 
-class TestArticle(amcattest.PolicyTestCase):
+class TestArticle(amcattest.AmCATTestCase):
     pass

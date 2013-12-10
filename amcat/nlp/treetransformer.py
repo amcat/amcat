@@ -240,7 +240,7 @@ from amcat.tools.pysoh.test import get_test_soh
 def get_test_transformer():
     return TreeTransformer(get_test_soh())
 
-class TestGrammar(amcattest.PolicyTestCase):
+class TestGrammar(amcattest.AmCATTestCase):
     def todo_test_load(self):
         # TODO: do something useful when fuseki is not installed!
         from amcat.models import Token, Triple, Pos, Relation

@@ -315,7 +315,7 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 import unittest
 
-class TestGetCodingJobResults(amcattest.PolicyTestCase):
+class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
     def _get_results_script(self, jobs, options, export_level=0, export_format='json'):
         """

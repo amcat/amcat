@@ -188,7 +188,7 @@ class HTMLDocument(Document):
 
 from amcat.tools import amcattest
 
-class TestDocument(amcattest.PolicyTestCase):
+class TestDocument(amcattest.AmCATTestCase):
     def test_set_get(self):
         doc = Document()
 

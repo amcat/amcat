@@ -85,7 +85,7 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest
 
-class TestAddJob(amcattest.PolicyTestCase):
+class TestAddJob(amcattest.AmCATTestCase):
     def _get_args(self, n_articles):
         s = amcattest.create_test_set(articles=n_articles)
         u = amcattest.create_test_user()

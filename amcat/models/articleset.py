@@ -171,7 +171,7 @@ ArticleSetArticle = ArticleSet.articles.through
 from amcat.tools import amcattest
 from django.test import skipUnlessDBFeature
 
-class TestArticleSet(amcattest.PolicyTestCase):
+class TestArticleSet(amcattest.AmCATTestCase):
         
     def test_create(self):
         """Can we create a set with some articles and retrieve the articles?"""       

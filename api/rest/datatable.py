@@ -374,7 +374,7 @@ class FavouriteDatatable(Datatable):
 
 from amcat.tools import amcattest
 
-class TestDatatable(amcattest.PolicyTestCase):
+class TestDatatable(amcattest.AmCATTestCase):
     PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner',
                       'insert_user', 'guest_role', 'active', 'favourite'}
 

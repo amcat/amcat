@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest
 
-class TestAddProject(amcattest.PolicyTestCase):
+class TestAddProject(amcattest.AmCATTestCase):
     def test_add(self):
         u = amcattest.create_test_user()
         p = AddProject(owner=u.id, name='test', description='test',insert_user=u.id).run()

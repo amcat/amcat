@@ -192,7 +192,7 @@ def get_predicate_structure(sentence, predicate):
 from amcat.tools import amcattest
 
 
-class TestStatementExtraction(amcattest.PolicyTestCase):
+class TestStatementExtraction(amcattest.AmCATTestCase):
 
     def test_fill_out_and_predicate(self):
         from amcat.models import Triple, Relation

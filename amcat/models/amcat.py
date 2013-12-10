@@ -104,7 +104,7 @@ class AmCAT(AmcatModel):
 
 from amcat.tools import amcattest
 
-class TestAmCAT(amcattest.PolicyTestCase):
+class TestAmCAT(amcattest.AmCATTestCase):
     def test_get_instance(self):
         a = AmCAT.get_instance()
         self.assertEqual(type(a), AmCAT)

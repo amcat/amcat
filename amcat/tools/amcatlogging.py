@@ -270,9 +270,7 @@ def format_records(records, date=True):
         
 from amcat.tools import amcattest
 
-class TestLogging(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = "W0703", 
-    
+class TestLogging(amcattest.AmCATTestCase):
     def testCollect(self):
         """Test whether collect() properly collects log records"""
         with collect() as s:
