@@ -19,10 +19,10 @@
 
 from .articleset_views import ArticleSetDetailsView
 from amcat.models import Article
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from django.views.generic.detail import DetailView
 
-class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, DetailView):
+class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
     parent = ArticleSetDetailsView
     model = Article
     context_category = 'Articles'
