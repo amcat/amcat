@@ -18,8 +18,17 @@
 
 </div>
 
-    <div>
-    {{ table|safe }}
-    </div>
+
+<script type="text/javascript">
+    $(document).ready(function(){
+        var jqueryElement = $('#codingjob-table-container');
+        var url = "{% url "annotator-overview-table" %}";
+        var columns = [[null, 'id'], [null,'name'], [null,'coder'], [null,'insertuser'], [null,'insertdate'], [null,'article count'], [null,'articles complete']];
+        var additionalServerData = {};
+        var additionalDataTableOptions = {'rowlink':'{% url "annotator-codingjob" 123%}'.replace(/123/, '{0}'), "aaSorting": [[ 0, "desc" ]]}
+        amcat.createTable(jqueryElement, url, columns, additionalServerData, additionalDataTableOptions);
+    });
+</script>
+
 
 {% endblock %}
