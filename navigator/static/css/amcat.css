@@ -3,7 +3,6 @@
     border-color: #5693E6;
 }
 
-
 .navbar-brand {
     background-image: url('/media/img/amcat/amcat-logo.png');
     background-repeat: no-repeat;
@@ -28,3 +27,13 @@
     margin-bottom: -10px;
 }
 
+.panel-title {
+font-size: 14px;
+}
+
+a, .panel-title a {
+  color: #5693E6;
+}
+a:hover, a:focus {	      
+    color: #305280;
+}

@@ -32,11 +32,9 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     
     def get_context_data(self, **kwargs):
         context = super(ProjectListView, self).get_context_data(**kwargs)
-
+        context["what"] = self.kwargs.get('what', 'favourites')
         context["main_active"] = 'Projects'
         return context
-
-
 
     def get_breadcrumbs(self):
         return [("Projects", "#")]

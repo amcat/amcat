@@ -1,20 +1,19 @@
 {% extends "project/base.html" %}
 
+{% block actions %}
+ <a class="btn btn-warning" href="{% url 'split_article' project.id article.id %}">Split article</a>
+{% endblock %}
+
 {% block content %}
-
-<div style="float:left; width:65%">
- <h1>Actions</h1>
- <div><a class="btn" href="{% url 'split_article' project.id article.id %}">Split article</a></div>
- <br/>
-
- <h1>Article {{article.id}}</h1>
- <h2>{{article.headline}}</h2>
+<div class="row">
+<div class="col-md-8 col-sm-12">
+ <h1>{{article.headline}}</h1>
  <article>
   {% if article.byline %}<h2>{{article.byline}}</h2>{% endif %}
   {{ article.text|urlizetrunc:30|linebreaks }}
  </article>
 </div>
-<div style="float:right; margin-left:20px; max-width:300px">
+<div class="col-md-4 col-sm-12">
  <h1>Article details</h1>
 
 <style type="text/css">
@@ -97,6 +96,7 @@
   </tr>
 
 </table>
+</div>
 
 
 </div>
