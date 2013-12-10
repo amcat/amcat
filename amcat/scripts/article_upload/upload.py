@@ -168,7 +168,7 @@ from amcat.tools import amcattest
 from amcat.tools import amcatlogging
 amcatlogging.debug_module("amcat.scripts.article_upload.upload")
 
-class TestUpload(amcattest.PolicyTestCase):
+class TestUpload(amcattest.AmCATTestCase):
     def todo_test_zip_file(self):
         from tempfile import NamedTemporaryFile, mkstemp
         from django.core.files import File

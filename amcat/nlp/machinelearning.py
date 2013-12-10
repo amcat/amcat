@@ -19,17 +19,18 @@
 ###########################################################################
 
 from __future__ import unicode_literals, print_function, absolute_import
-
-from amcat.nlp.featurestream import featureStream, codedFeatureStream, prepareVectors
-from django import db
-
-import re, math, collections, itertools, random, pickle
-
-import nltk, nltk.classify.util, nltk.metrics
+import collections
+import random
+import pickle
+import nltk
+import nltk.classify.util
+import nltk.metrics
 from nltk.classify import NaiveBayesClassifier
-from nltk.classify.scikitlearn import SklearnClassifier # NLTK wrapper for sklearn
+
 from sklearn.svm import LinearSVC
 from sklearn.naive_bayes import MultinomialNB
+
+from amcat.nlp.featurestream import codedFeatureStream, prepareVectors
 
 class machineLearning():
     def splitUnits(self, units, train_pct=70, shuffle=True):
@@ -161,6 +162,7 @@ class machineLearning():
         """
         Selects a classifier
         """
+        from nltk.classify.scikitlearn import SklearnClassifier # NLTK wrapper for sklearn
         if classifier_type == 'naivebayes': classifier = NaiveBayesClassifier
         if classifier_type == 'multinomialnb': classifier = SklearnClassifier(MultinomialNB())
         if classifier_type == 'linearsvc': classifier = SklearnClassifier(LinearSVC())

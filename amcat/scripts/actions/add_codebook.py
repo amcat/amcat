@@ -57,5 +57,5 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest
 
-class TestAddCodebook(amcattest.PolicyTestCase):
+class TestAddCodebook(amcattest.AmCATTestCase):
     pass

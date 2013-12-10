@@ -117,13 +117,13 @@ class CodingSchemaField(AmcatModel):
         
 from amcat.tools import amcattest
         
-class TestCodingSchemaFieldType(amcattest.PolicyTestCase):
+class TestCodingSchemaFieldType(amcattest.AmCATTestCase):
     def test_get_serialiser(self):
         """Are the built in field types present and bound to the right class?"""
         fieldtype = CodingSchemaFieldType.objects.get(pk=1)
         self.assertEqual(fieldtype.serialiserclass, serialiser.TextSerialiser)
 
-class TestCodingSchemaField(amcattest.PolicyTestCase):
+class TestCodingSchemaField(amcattest.AmCATTestCase):
     def test_create_field(self):
         """Can we create a schema field object on a schema"""
         fieldtype = CodingSchemaFieldType.objects.get(pk=1)

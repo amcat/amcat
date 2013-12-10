@@ -570,9 +570,7 @@ class CodebookCode(AmcatModel):
 
 from amcat.tools import amcattest
 
-class TestCodebook(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = "W0212",
-
+class TestCodebook(amcattest.AmCATTestCase):
     def test_create(self):
         """Can we create objects?"""
         c = amcattest.create_test_codebook()

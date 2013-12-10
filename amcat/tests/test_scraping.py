@@ -80,7 +80,7 @@ from amcat.tools import amcattest, amcatlogging
 def _project_headlineset(project):
     return set(a.headline for a in project.articles.all())
     
-class TestScraping(amcattest.PolicyTestCase):
+class TestScraping(amcattest.AmCATTestCase):
     def setUp(self):
         Scraper.objects.all().delete()
         self.ds = Scraper.objects.create(module='amcat.tests.test_scraping',

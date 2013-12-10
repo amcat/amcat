@@ -553,7 +553,7 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 import datetime
 
-class TestLexisNexis(amcattest.PolicyTestCase):
+class TestLexisNexis(amcattest.AmCATTestCase):
     def setUp(self):
         import os.path, json
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'lexisnexis')

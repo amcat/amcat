@@ -110,7 +110,7 @@ def get_token(analysis_sentence_id, token):
 
 from amcat.tools import amcattest
 
-class TestStanford(amcattest.PolicyTestCase):
+class TestStanford(amcattest.AmCATTestCase):
 
     @classmethod
     def _get_test_xml(cls):

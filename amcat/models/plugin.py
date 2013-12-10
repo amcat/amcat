@@ -78,7 +78,7 @@ class Plugin(AmcatModel):
 from amcat.tools import amcattest
 
 
-class TestPlugin(amcattest.PolicyTestCase):
+class TestPlugin(amcattest.AmCATTestCase):
     
     def test_get_classes(self):
         pt = PluginType.objects.create(class_name="amcat.models.Article")

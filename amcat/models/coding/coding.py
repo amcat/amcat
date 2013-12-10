@@ -212,7 +212,7 @@ def _valuestr(coding):
         
 
 
-class TestCoding(amcattest.PolicyTestCase):
+class TestCoding(amcattest.AmCATTestCase):
 
     def setUp(self):
         """Set up a simple coding schema with fields to use for testing"""

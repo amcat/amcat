@@ -158,7 +158,7 @@ def truncate_triplevalue(tv):
 
 from amcat.tools import amcattest
 
-class TestWordCreator(amcattest.PolicyTestCase):
+class TestWordCreator(amcattest.AmCATTestCase):
     def test_create_lemmata(self):
         from amcat.models.token import TokenValues
         lang = amcattest.get_test_language()

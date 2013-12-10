@@ -69,7 +69,7 @@ class CodingSchema(AmcatModel):
         
 from amcat.tools import amcattest
 
-class TestCodingSchema(amcattest.PolicyTestCase):
+class TestCodingSchema(amcattest.AmCATTestCase):
     def test_create(self):
         """Test whether coding schema objects can be created"""
         s = amcattest.create_test_schema(name='test')

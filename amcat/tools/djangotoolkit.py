@@ -238,10 +238,7 @@ class JsonField(models.Field):
 
 from amcat.tools import amcattest
 
-class TestDjangoToolkit(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = ('W0212', # use protected _meta
-               'W0102', # 'dangerous' {} default
-               )
+class TestDjangoToolkit(amcattest.AmCATTestCase):
     def test_related_models(self):
         """Test get_related_models function. Note: depends on the actual amcat.models"""
 

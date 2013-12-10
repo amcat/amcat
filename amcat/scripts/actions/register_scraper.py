@@ -69,10 +69,7 @@ class RegisterScraperScript(Script):
             name = self.options['new_set_name'] or self.options['label'] + " scraper"
             return ArticleSet.objects.create(name = name,
                                      project = self.options['new_set_project'],
-                                     provenance = "",
-                                     indexed = False,
-                                     index_dirty = False,
-                                     needs_deduplication = True)
+                                     provenance = "")
         else:
             raise ValueError("please provice articleset or new_set_project, new_set_name is optional")
             

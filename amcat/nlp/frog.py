@@ -118,7 +118,7 @@ def read_pos(pos):
         
 from amcat.tools import amcattest
 
-class TestFrog(amcattest.PolicyTestCase):
+class TestFrog(amcattest.AmCATTestCase):
     def todo_test_process_sentence(self):
         s = amcattest.create_test_analysis_sentence(
             sentence=amcattest.create_test_sentence(sentence="de groenste huizen"))

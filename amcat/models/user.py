@@ -209,7 +209,7 @@ def _random_password(length=8, chars=string.letters + string.digits):
 
 from amcat.tools import amcattest
 
-class TestUser(amcattest.PolicyTestCase):
+class TestUser(amcattest.AmCATTestCase):
     def test_create(self):
         """Test whether we can create a user"""
         u = amcattest.create_test_user()

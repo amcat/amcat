@@ -204,7 +204,7 @@ class ZipFileUploadForm(FileUploadForm):
 
 from amcat.tools import amcattest
 
-class TestFileUpload(amcattest.PolicyTestCase):
+class TestFileUpload(amcattest.AmCATTestCase):
 
     def _get_entries(self, bytes, dialect="autodetect", encoding=0):
          with tempfile.NamedTemporaryFile() as f:

@@ -163,7 +163,7 @@ class Project(AmcatModel):
         
 from amcat.tools import amcattest
 
-class TestProject(amcattest.PolicyTestCase):
+class TestProject(amcattest.AmCATTestCase):
         
     def test_create(self):
         """Can we create a project and access its attributes?"""

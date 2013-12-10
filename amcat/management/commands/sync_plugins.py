@@ -118,7 +118,7 @@ class Command(BaseCommand):
 
 from amcat.tools import amcattest
 
-class TestSyncPlugins(amcattest.PolicyTestCase):
+class TestSyncPlugins(amcattest.AmCATTestCase):
     def test_get_plugin_types(self):
         all_types = set(p.get_class() for p in PluginType.objects.all())
 

@@ -191,7 +191,7 @@ class _TestScraper(Scraper):
     def _scrape_unit(self, unit):
         yield Article(headline=str(unit), date=date.today())
 
-class TestController(amcattest.PolicyTestCase):
+class TestController(amcattest.AmCATTestCase):
     def test_scraper(self):
         """Does the simple controller and saving work?"""
         p = amcattest.create_test_project()
@@ -229,7 +229,7 @@ class _ErrorScraper(Scraper):
         else:
             yield Article(headline=str(unit), date=date.today())
        
-class TestRobustController(amcattest.PolicyTestCase):
+class TestRobustController(amcattest.AmCATTestCase):
     def test_rollback(self):
         c = RobustController()
         s = amcattest.create_test_set()

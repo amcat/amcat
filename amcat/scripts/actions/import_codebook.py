@@ -184,7 +184,7 @@ def _csv_bytes(rows, encoding="utf-8", **kargs):
     return out.getvalue()
     
     
-class TestImportCodebook(amcattest.PolicyTestCase):
+class TestImportCodebook(amcattest.AmCATTestCase):
 
 
     def _standardize_cb(self, codebook, **kargs):

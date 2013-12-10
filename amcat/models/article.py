@@ -193,7 +193,7 @@ class Article(AmcatModel):
 
 from amcat.tools import amcattest
 
-class TestArticle(amcattest.PolicyTestCase):
+class TestArticle(amcattest.AmCATTestCase):
     
     @amcattest.use_elastic
     def test_create(self):

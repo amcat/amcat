@@ -304,6 +304,10 @@ LOGGING = {
             'handlers': ['console'],
             'level': LOG_LEVEL,
         },
+        '': {
+            'handlers': ['console'],
+            'level': LOG_LEVEL,
+        },
     }
 }
 

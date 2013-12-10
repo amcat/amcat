@@ -117,7 +117,7 @@ class MediumAlias(AmcatModel):
 
 from amcat.tools import amcattest
 
-class TestMedium(amcattest.PolicyTestCase):
+class TestMedium(amcattest.AmCATTestCase):
 
     def test_to_medium_ids(self):
         arts = amcattest.create_test_set(2).articles.all()

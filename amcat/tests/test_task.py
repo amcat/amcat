@@ -30,7 +30,7 @@ class _TestTaskScript(Script):
     pass
 
 
-class TestTask(amcattest.PolicyTestCase):
+class TestTask(amcattest.AmCATTestCase):
     def _get_task(self):
         return task(lambda : None).delay()
 

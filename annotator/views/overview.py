@@ -18,17 +18,21 @@
 ###########################################################################
 
 from django.shortcuts import render
-
-from annotator.views.codingjob import redirect
-from api.rest.resources import CodingJobResource
-from api.rest.datatable import Datatable
-
+from amcat.models.coding import codingtoolkit
+from django.http import HttpResponse
+from amcat.scripts.output.datatables import TableToDatatable
+import datetime
 
 def index(request):
-    table = (Datatable(CodingJobResource).filter(coder__id=request.user.id)
-             .rowlink_reverse(redirect, args=["{id}"])
-             .hide("unitschema", "articleschema", "insertuser", "coder", "articleset")
-             .order_by("insertdate"))
-    return render(request, "annotator/overview.html", locals())
+    """show the main HTML"""
+    return render(request, "annotator/overview.html")
     
     
+def table(request):
+    """returns a DataTable JSON table with a list of recent codingjobs"""
+    startDate = datetime.datetime.now() - datetime.timedelta(days=365) # only show jobs from the past year
+    table = codingtoolkit.get_table_jobs_per_user(request.user, insertdate__gt=startDate) 
+    out = TableToDatatable().run(table)
+    response = HttpResponse(mimetype='text/plain')
+    response.write(out)
+    return response

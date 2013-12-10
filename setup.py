@@ -8,7 +8,7 @@ requirements = [x for x in requirements if x and not x.startswith("#")]
 
 package = dict(
     name='amcat',
-    version='3.2.6',
+    version='3.2.7',
     packages=['api', 'api.rest', 'api.rest.resources', 'api.webscripts', 'amcat', 'amcat.nlp', 'amcat.forms',
               'amcat.tests', 'amcat.tools', 'amcat.tools.pysoh', 'amcat.tools.table', 'amcat.models',
               'amcat.models.coding', 'amcat.contrib', 'amcat.scripts', 'amcat.scripts.forms', 'amcat.scripts.tools',
