@@ -213,7 +213,7 @@ annotator.articletable.showArticleFromRow = function(row){
    
     $('.sentences').html('Loading..');
     $.ajax({
-        "url": "article/" + annotator.articleid + "/sentences",
+        "url": "../article/" + annotator.articleid + "/sentences",
         "success": function(json) {
             annotator.articleSentences = json.sentences;
             annotator.writeArticleSentences(json.sentences);
@@ -324,7 +324,7 @@ annotator.articletable.showEditArticleDialog = function(articleid){
         
         if(articleid == 0){ // new article form
             annotator.articletable.articleEditForm.fields['setnr'].initial = annotator.setnr;
-            annotator.articletable.articleEditForm.fields['jobid'].initial = annotator.codingjob_id;
+            annotator.articletable.articleEditForm.fields['jobid'].initial = annotator.codingjobid;
             console.log('done setting setnr and jobid');
         }
     }
