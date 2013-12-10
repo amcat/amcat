@@ -19,7 +19,7 @@
 
 import json
 
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from django.views.generic.base import TemplateView
 from api.webscripts import mainScripts
 from django.db.models import Q
@@ -27,7 +27,7 @@ from django.db.models import Q
 from amcat.models import CodingJob
 from amcat.scripts.forms import SelectionForm
 
-class QueryView(ProjectViewMixin, TemplateView):
+class QueryView(ProjectViewMixin, BreadCrumbMixin, TemplateView):
     context_category = 'Query'
 
     @classmethod

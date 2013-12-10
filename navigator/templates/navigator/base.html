@@ -77,7 +77,7 @@
    <div id="content" class="container"> 
 
 
-
+{% if breadcrumbs %}
 <ol class="breadcrumb">
 {% for name, url in breadcrumbs %}
 {% if forloop.last %}
@@ -87,6 +87,7 @@
 {% endif %}
 {% endfor %}
 </ol>
+{% endif %}
 <div>
 {% block contentcontainer %}
     {% block content %}<h1>Sorry, this feature is not yet implemented.</h1>{% endblock %}
