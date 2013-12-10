@@ -133,7 +133,6 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcates import ES
         ES().check_index()
         ES().synchronize_articleset(self, full_refresh=full_refresh)
-        self.index_dirty = False
         self.save()
 
     def save(self, *args, **kargs):
