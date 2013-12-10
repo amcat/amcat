@@ -22,7 +22,7 @@ from django.core.urlresolvers import reverse
 from amcat.scripts.actions.sample_articleset import SampleSet
 from amcat.scripts.actions.import_articleset import ImportSet
 from navigator.views.scriptview import ProjectScriptView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
@@ -59,7 +59,7 @@ class ImportSetView(ProjectScriptView):
 
 from api.rest.datatable import FavouriteDatatable
     
-class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, DatatableMixin, ListView):
+class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = ArticleSet
     parent = None
     base_url = "projects/(?P<project_id>[0-9]+)"
@@ -87,7 +87,7 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, DatatableMixin,
 
 
     
-class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, DatatableMixin, DetailView):
+class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
     parent = ArticleSetListView
     model = ArticleSet
     context_category = 'Articles'

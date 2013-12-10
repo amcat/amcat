@@ -29,9 +29,6 @@ urlpatterns = patterns(
     '',
      url(r'^$', 'navigator.views.report.index', name="index"),
 
-    # Project report
-    url(r'^projects(?P<what>/\w+)?$', 'navigator.views.project.projectlist', name='projects'),
-
     # User report
     url(r'^users$', 'navigator.views.user.my_affiliated_active', name='users'),
     url(r'^users/my_all$', 'navigator.views.user.my_affiliated_all'),
@@ -166,6 +163,7 @@ urlpatterns = patterns(
 from navigator.views.articleset_views import *
 from navigator.views.article_views import *
 from navigator.views.query import *
+from navigator.views.project_views import *
 
 
 for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView]:
@@ -175,4 +173,8 @@ for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetails
                             )
         print view.__name__, pattern
 
-urlpatterns += patterns('', url("^project/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"))
+urlpatterns += patterns('',
+                        url("^projects/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
+                        url("^projects/$", ProjectListView.as_view(), name="projects"),
+                        )
+#    url(r'^projects(?P<what>/\w+)?$', 'navigator.views.project.projectlist', name='projects'),

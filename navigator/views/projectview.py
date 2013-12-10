@@ -31,6 +31,19 @@ from api.rest.datatable import Datatable
 from amcat.models import authorisation, Project
 from django.core.exceptions import PermissionDenied
 
+class BreadCrumbMixin(object):
+    def get_context_data(self, **kwargs):
+        context = super(BreadCrumbMixin, self).get_context_data(**kwargs)
+        context["breadcrumbs"] = list(self.get_breadcrumbs())
+        return context
+
+    def get_breadcrumbs(self):
+        bc = self._get_breadcrumbs(self.kwargs)
+        return bc
+        
+    def _get_breadcrumbs(cls, kwargs):
+        return []
+        
 class ProjectViewMixin(object):
     """
     Mixin for all 'project' views (e.g. project details, articlesets) that:
@@ -50,7 +63,6 @@ class ProjectViewMixin(object):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
         context["project"] = self.project
         context["context"] = self.project # for menu / backwards compat.
-        context["breadcrumbs"] = list(self.get_breadcrumbs())
 
         context["main_active"] = 'Projects'
         context["context_category"] = self.context_category
@@ -79,9 +91,6 @@ class ProjectViewMixin(object):
         bc.insert(1, ("{self.project.id} : {self.project}".format(**locals()),
                       reverse("project", args=(self.project.id, ))))
         return bc
-        
-    def _get_breadcrumbs(cls, kwargs):
-        return []
         
     def get_template_names(self):
         
