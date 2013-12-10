@@ -27,7 +27,7 @@
  </div>
 
  <div><div class="btn-toolbar" role="toolbar">
-         <a class="btn btn-primary" href="{% url "project-selection" project.id %}?articlesets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
+         <a class="btn btn-primary" href="{% url "query" project.id %}?articlesets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
 
      {% if object.project.id == project.id %}
 

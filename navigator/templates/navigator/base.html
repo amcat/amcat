@@ -44,9 +44,9 @@
 
  </head>
  <body>
-   <div class="container">
        <!-- Static navbar -->
-      <div class="navbar navbar-default" role="navigation">
+      <header class="navbar navbar-default" role="navigation">
+	<div class="container">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
             <span class="sr-only">Toggle navigation</span>
@@ -72,12 +72,13 @@
 	    </div>
 	  </a>
       </div>
-        </div><!--/.nav-collapse -->
-   <div id="content"> 
+	</div>
+        </header><!--/.nav-collapse -->
+   <div id="content" class="container"> 
+
 {% block contentcontainer %}
     {% block content %}<h1>Sorry, this feature is not yet implemented.</h1>{% endblock %}
 {% endblock %}
-   </div>
    </div>
  </body>
 </html>

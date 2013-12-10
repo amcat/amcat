@@ -342,43 +342,6 @@ def edit_articleset(request, project, aset):
 
 
 @check(Project)
-def selection(request, project):
-    """
-    Render article selection page.
-
-    TODO:
-     - update to meet PEP8 style
-     - remove/replace webscripts (?)
-    """
-    outputs = []
-    for ws in mainScripts:
-        outputs.append({
-            'id':ws.__name__, 'name':ws.name,
-            'formAsHtml': ws.formHtml(project=project)
-        })
-
-    all_articlesets = project.all_articlesets()
-
-    favs = tuple(project.favourite_articlesets.filter(Q(project=project.id) | Q(projects_set=project.id)).values_list("id", flat=True))
-    no_favourites = not favs
-    favourites = json.dumps(favs)
-    
-    codingjobs = json.dumps(tuple(CodingJob.objects.filter(articleset__in=all_articlesets).values_list("articleset_id", flat=True)))
-    all_sets = json.dumps(tuple(all_articlesets.values_list("id", flat=True)))
-
-    ctx = locals()
-    ctx.update({
-        'form' : SelectionForm(project=project, data=request.GET, initial={"datetype" : "all" }),
-        'outputs' : outputs,
-        'project' : project,
-        'context' : project,
-        'menu' : PROJECT_MENU,
-        'selected' : 'query'
-    })
-
-    return render(request, 'navigator/project/selection.html', ctx)
-
-@check(Project)
 def codingjobs(request, project):
     """
     Coding-jobs tab

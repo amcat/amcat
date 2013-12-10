@@ -50,11 +50,10 @@ class ProjectViewMixin(object):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
         context["project"] = self.project
         context["context"] = self.project # for menu / backwards compat.
+        context["breadcrumbs"] = list(self.get_breadcrumbs())
 
         context["main_active"] = 'Projects'
         context["context_category"] = self.context_category
-        context["mainlink_label"] = "Project {self.project.id} : {self.project}".format(**locals())
-        context["mainlink_url"] = reverse("project", kwargs={'id' : self.project.id})
         return context
     
     def get_project(self):
@@ -74,6 +73,16 @@ class ProjectViewMixin(object):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {self.project}".format(**locals()))
 
 
+    def get_breadcrumbs(self):
+        bc = self._get_breadcrumbs(self.kwargs)
+        bc.insert(0, ("Projects", reverse("projects")))
+        bc.insert(1, ("{self.project.id} : {self.project}".format(**locals()),
+                      reverse("project", args=(self.project.id, ))))
+        return bc
+        
+    def _get_breadcrumbs(cls, kwargs):
+        return []
+        
     def get_template_names(self):
         
         if self.template_name is not None:
@@ -107,10 +116,6 @@ class HierarchicalViewMixin(object):
         pk = kwargs[cls.get_model_key()]
         return cls.model.objects.get(pk=pk)
         
-    def get_context_data(self, **kwargs):
-        context = super(HierarchicalViewMixin, self).get_context_data(**kwargs)
-        context["breadcrumbs"] = list(self.get_breadcrumbs())
-        return context
     
     @classmethod
     def get_view_name(cls):
@@ -139,13 +144,6 @@ class HierarchicalViewMixin(object):
             yield cls.get_table_name().lower()
         else:
             yield "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
-        
-    def get_breadcrumbs(self):
-        bc = self._get_breadcrumbs(self.kwargs)
-        bc.insert(0, ("Projects", reverse("projects")))
-        bc.insert(1, ("{self.project.id} : {self.project}".format(**locals()),
-                      reverse("project", args=(self.project.id, ))))
-        return bc
 
     @classmethod
     def _get_breadcrumbs(cls, kwargs):

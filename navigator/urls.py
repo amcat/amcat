@@ -40,8 +40,6 @@ urlpatterns = patterns(
     url(r'^media$', 'navigator.views.report.media', name='media'),
     url(r'^nyi$', 'navigator.views.nyi.index', name='nyi'),
     
-    url(r'^selection$', 'navigator.views.selection.index', name='selection'),
-
     # Articles
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/split$', 'navigator.views.article.split', name="split_article"),
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/remove_from/(?P<remove_articleset_id>[0-9]+)$',
@@ -101,9 +99,8 @@ urlpatterns = patterns(
     
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
-    url(r'^project/(?P<id>[0-9]+)$', 'navigator.views.project.view', name='project'),
+
     url(r'^project/(?P<id>[0-9]+)/articlesets(?P<what>/\w+)?$', 'navigator.views.project.articlesets', name='project-articlesets'),
-    url(r'^project/(?P<id>[0-9]+)/selection$', 'navigator.views.project.selection', name='project-selection'),
     url(r'^project/(?P<id>[0-9]+)/codingjobs$', 'navigator.views.project.codingjobs', name='project-codingjobs'),
     url(r'^project/(?P<id>[0-9]+)/schemas$', 'navigator.views.project.schemas', name='project-schemas'),
     url(r'^project/(?P<id>[0-9]+)/codebooks$', 'navigator.views.project.codebooks', name='project-codebooks'),
@@ -168,11 +165,14 @@ urlpatterns = patterns(
 
 from navigator.views.articleset_views import *
 from navigator.views.article_views import *
+from navigator.views.query import *
 
-for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView]:
+
+for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
                             )
+        print view.__name__, pattern
 
-
+urlpatterns += patterns('', url("^project/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"))
