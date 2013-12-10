@@ -21,6 +21,7 @@ from django.conf.urls import patterns, url, include
 from annotator.views import codingjob, overview
 
 article_patterns = patterns('',
+    url(r'^sentences$', codingjob.articleSentences, name='annotator-article-sentences'),
     url(r'^articlecodings$', codingjob.articleCodings, name='annotator-article-codings'),
     url(r'^unitcodings$', codingjob.unitCodings, name='annotator-unit-codings'),
     url(r'^storecodings$', codingjob.storeCodings, name='annotator-store-codings'),
