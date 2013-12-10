@@ -29,6 +29,7 @@ from celery.result import AsyncResult
 from django.db import models
 from amcat.models import Project
 from amcat.tools import classtools
+from amcat.tools.caching import cached
 from amcat.tools.model import AmcatModel
 from amcat.forms.fields import JSONField
 
@@ -66,6 +67,7 @@ class Task(AmcatModel):
             raise r.result
         return r.result
 
+    @cached
     def get_async_result(self):
         """Returns Celery AsyncResult object belonging to this Task."""
         return AsyncResult(id=self.uuid, task_name=self.task_name)
