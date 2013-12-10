@@ -17,7 +17,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import os
+
 CELERY_RESULT_BACKEND = 'amqp'
 CELERY_TASK_RESULT_EXPIRES = 18000  # 5 hours.
-CELERY_DEFAULT_QUEUE = 'amcat'
+CELERY_DEFAULT_QUEUE = os.environ.get('AMCAT_CELERY_QUEUE', 'amcat')
 
