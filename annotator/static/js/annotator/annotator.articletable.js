@@ -228,19 +228,6 @@ annotator.articletable.fit_table = function (min_size_input, min_size_header) {
 
 };
 
-annotator.articletable.codings_fetched = function(){
-    var get_options = function(){
-        if(this.field.fieldtype !== SCHEMATYPES.CODEBOOK){
-            return this.field.get_options();
-        }
-    };
-
-    $.each(annotator.codings, function(coding_id, coding){
-        coding.get_options = get_options.bind(coding);
-    });
-};
-
-
 /*
  *
  */
@@ -283,8 +270,6 @@ annotator.articletable.get_article = function(article_id) {
             sentence.get_unit = get_unit.bind(sentence);
         });
 
-        annotator.articletable.codings_fetched();
-
         // Set buttons
         $('#edit-article-button').button("option", "disabled", false);
        // $('#next-article-button').button("option", "disabled", row.next().length == 0);
@@ -300,73 +285,8 @@ annotator.articletable.get_article = function(article_id) {
 
         $(".coding-part").show();
         $("#loading_codings").dialog("destroy");
+        $("#article-comment").focus();
     });
-
-/*            annotator.articletable.highlight();
-            annotator.articletable.fit_table();
-            annotator.unitcodings.showSentenceCodings();
-            annotator.articlecodings.showArticleCodings();
-            annotator.set_codings_modified(false);
-            annotator.resetArticleState();
-            annotator.articletable.highlight();*/
-};
-
-
-annotator.articletable.showEditArticleDialog = function (article_id) {
-    if (!annotator.confirmArticleChange()) return;
-    $('#article-edit-form').html('Loading...');
-    $("#article-dialog-form").dialog("open");
-    annotator.articletable.articleEditForm = new Form("annotator/articleFormJSON/" + article_id, {'sortFields': true});
-    annotator.articletable.articleEditForm.ready = function () {
-        $('#article-edit-form').html(annotator.articletable.articleEditForm.render.table);
-    };
-    annotator.articletable.articleEditForm.handle_loaderror = function (jqXHR, textStatus) {
-        console.debug('Error loading form: ' + textStatus);
-        $('#article-edit-form').html('<div class="error">Failed to load form: ' + textStatus + '</div>');
-    };
-
-    // ugly hack... should be removed when moving to django..
-    annotator.articletable.articleEditForm.initialize_form2 = annotator.articletable.articleEditForm.initialize_form;
-    annotator.articletable.articleEditForm.initialize_form = function (json) {
-        fields.autocompletes['source-6'] = {'showAll': true, 'isOntology': false, 'autoOpen': true, 'id': 'source-6',
-            items: json.mediumlist
-        };
-        annotator.articletable.articleEditForm.initialize_form2(json.form);
-        annotator.fields.autocompletes.addAutocompletes($('#article-edit-form'));
-
-        if (article_id == 0) { // new article form
-            annotator.articletable.articleEditForm.fields['setnr'].initial = annotator.setnr;
-            annotator.articletable.articleEditForm.fields['jobid'].initial = annotator.codingjob_id;
-            console.log('done setting setnr and jobid');
-        }
-    };
-
-    console.debug('loading article edit form');
-    annotator.articletable.articleEditForm.load();
-};
-
-annotator.articletable.saveEditArticleDetails = function () {
-    annotator.articletable.articleEditForm.clean();
-    if (annotator.articletable.articleEditForm.is_valid()) {
-        $('#article-edit-form').hide();
-        $('#article-edit-status').html('Saving...');
-        annotator.articletable.articleEditForm.send('annotator/storeEditArticle', function (data, textStatus) {
-            console.debug('article details', data);
-            if (data.response == 'ok') {
-                console.debug('saved edit article!' + textStatus);
-                $("#article-dialog-form").dialog("close");
-                location.reload();
-            } else {
-                $('#article-edit-form').show();
-                $('#article-edit-status').html('<div class="error">Failed to save. Error message: ' + data.errormsg + '</div>');
-            }
-        }, function () {
-            $('#article-edit-form').show();
-            $('#article-edit-status').html('<div class="error">Failed to save. Server error</div>');
-        });
-    } else {
-        console.debug('invalid form');
-    }
 };
 
 

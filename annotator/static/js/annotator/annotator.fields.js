@@ -112,23 +112,34 @@ annotator.fields.initialise_fields = function () {
 
 annotator.fields.get_choices = function(codes, language_id){
     language_id = language_id || AUTOCOMPLETE_LANGUAGE;
+    var get_code = function(){ return this };
 
-    return $.map(codes, function(code){
-        console.log(code.get_descendants());
-
+    var labels = $.map(codes, function(code){
         return {
+            // We can't store code directly, as it triggers an infinite
+            // in some jQuery function (autocomplete).
+            get_code : get_code.bind(code),
             label : code.labels[language_id],
-            value : code.code,
+            value : code.labels[language_id],
             descendant_choices : annotator.fields.get_choices(code.descendants)
         }
     });
+
+    labels.sort(function(a, b){
+        return a.ordernr - b.ordernr;
+    });
+
+    return labels;
 };
 
 annotator.fields.schemafields_fetched = function(){
+    var codes;
+
     $.each(annotator.fields.schemafields, function(id, schemafield){
-        if (this.fieldtype === SCHEMATYPES.CODEBOOK){
-            schemafield.choices = annotator.fields.get_choices(schemafield.codebook.codes);
-            console.log(schemafield.choices);
+        if (schemafield.choices !== undefined) return;
+        if (schemafield.fieldtype === SCHEMATYPES.CODEBOOK){
+            codes = (schemafield.split_codebook ? schemafield.codebook.roots : schemafield.codebook.codes);
+            schemafield.choices = annotator.fields.get_choices(codes);
         }
     });
 };
@@ -297,7 +308,6 @@ annotator.fields.rule_applies = function (rule) {
  */
 annotator.fields.get_descendants = function(depth){
     depth = (depth === undefined) ? 0 : depth;
-    console.log(this);
 
     if (depth >= 1000){
         throw "Maximum recursion depth exceeded, loop in codes?";
@@ -340,10 +350,12 @@ annotator.fields.codebooks_fetched = function(){
         // Add property 'children' to each code, and call get_descendants for
         // caching purposes.
         $.each(codebook.codes, function(code_id, code){
-            code.get_descendants();
             if (code.parent === null) return;
-            code.parent.children[code.id] = code;
+            code.parent.children[code_id] = code;
         });
+
+        // Cache descendants
+        $.each(codebook.codes, function(i, code) { code.get_descendants() });
     });
 
 };
@@ -783,15 +795,13 @@ annotator.fields.autocompletes.onFocus = function () {
         },
         open: function (event, ui) {
             annotator.fields.autocompletes.onOpenAutocomplete($(this));
-            //$(".ui-autocomplete").css("z-index", 1500); // needed to avoid dropdown being below fixedheader of sentencetable
         },
         delay: 5,
         close: function () {
-            $('#autocomplete-details').hide(); // when closing auto complete, also close the details box
+            $('#autocomplete-details').hide();
         }
     });
 
-    //if(autocomplete.autoOpen){
     inputEl.bind('focus', function () {
         if (field.showAll == true) {
             inputEl.autocomplete('search', '');
@@ -799,77 +809,9 @@ annotator.fields.autocompletes.onFocus = function () {
             inputEl.autocomplete('search');
         }
     });
-    //}
 
     console.debug('added autocomplete for ' + field.id);
     inputEl.focus();
-};
-
-annotator.fields.autocompletes.add_autocomplete = function (schemafield) {
-    var self = annotator.fields;
-
-    input.focus(self.autocompletes.on_focus);
-    if (coding.schemafield.codebook !== null){
-    }
-};
-
-annotator.fields.autocompletes.addAutocompletes = function (jqueryEl) {
-    jqueryEl.find('input:text').each(function (i, input) {
-        var inputEl = $(input);
-        var fieldNumber = inputEl.attr('name').replace(/field_/, '');
-        var field = annotator.fields.fields[fieldNumber];
-
-        if (fieldNumber in annotator.fields.fields) {
-            inputEl.focus(annotator.fields.autocompletes.onFocus);
-
-            if (field.isOntology && field.split_codebook) {
-                var desc = $("<input type='text'>");
-                inputEl.parent().append(desc);
-                inputEl.attr("placeholder", "Root..");
-
-                desc.attr("skip_saving", true);
-                desc.attr("placeholder", "Descendant..").attr("root", inputEl.get(0).id);
-                desc.attr("name", inputEl.attr("name"));
-                desc.focus(annotator.fields.autocompletes.onFocus);
-
-                if (inputEl.val() !== '') {
-                    /* Well.. here comes a bit of a hack. We don't know anything about the
-                     * parent and we only know the *label* of the coded value, not the id. As
-                     * we still want to display the parent, we need to find a code with the
-                     * same label as the given code. However, this label is not guarenteed to be
-                     * unique, so we could display the wrong parent.. Should work in 99% of the
-                     * cases though.
-                     *
-                     * Btw: I'm so sorry :-(
-                     * - martijn
-                     */
-                    var found = [];
-                    var label = inputEl.val();
-                    var code;
-                    $.each(annotator.fields.ontologies_parents[field['items-key']], function (i, root) {
-                        for (var i = 0; i < root.descendants.length; i++) {
-                            code = root.descendants[i];
-                            if (code.label === label && found.indexOf(code) === -1) {
-                                code.root = root;
-                                found.push(code);
-                            }
-                        }
-                    });
-
-                    if (found.length > 1) {
-                        console.log("We found multiple codes for this label :-(:", found);
-                    } else if (found.length == 0) {
-                        console.log("No code found for label", label, "bug?");
-                        return;
-                    }
-
-                    code = found[0];
-                    inputEl.val(code.root.label).attr("_value", code.root.value);
-                    desc.attr("_value", code.value).val(code.label);
-                }
-            }
-        }
-    });
 };
 
 

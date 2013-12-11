@@ -42,9 +42,6 @@ var API_URL = "/api/v4/";
 
 var EMPTY_INTVAL = "null";
 
-var ARTICLECODING = "articlecoding";
-var SENTENCECODING = "sentencecoding"
-
 annotator.article_id = 0;
 annotator.sentences = null;
 annotator.datatable = null;
@@ -113,9 +110,61 @@ annotator.articlecodings.get_codingschemafield = function(input){
     return annotator.fields.schemas[id];
 };
 
+/*
+ * Sets intval attribute and sets correct label
+ */
+annotator.on_autocomplete_change = function(event, ui){
+    var label, intval = EMPTY_INTVAL;
 
-annotator.set_autocomplete = function(input_element, choices, callback){
+    if (ui.item !== null){
+        intval = ui.item.get_code().code;
+        label = ui.item.label;
+    }
 
+    $(this).attr("intval", intval).val(label||"");
+};
+
+/*
+ * Most of the times a 'choices' property is defined on schemafield
+ * and it can be used directly. In case of a codebook split, however,
+ * the available choices of the second input field are determined
+ * by the first.
+ *
+ * This function contains the logic for ^ and can be given to
+ * jQuery autocomplete as a 'source' parameter (indirectly, as
+ * it takes two extra arguments input_element and choices).
+ */
+annotator.get_autocomplete_source = function(input_element, choices, request, callback){
+    // Are we a codebook descendant?
+    if (input_element.hasClass("codebook_descendant")){
+        var parent_id = input_element.parent().find("input.codebook_root").attr("intval");
+        if (parent_id === EMPTY_INTVAL) return callback([]);
+
+        parent_id = parseInt(parent_id);
+        choices = $.grep(choices, function(item){
+            return item.get_code().code === parent_id;
+        })[0].descendant_choices;
+    }
+
+    // Only display first 20 results (for performance)
+    callback($.ui.autocomplete.filter(choices, request.term).slice(0, 20));
+};
+
+annotator.set_autocomplete = function(input_element, choices){
+    input_element.autocomplete({
+        source : function(request, callback){
+            annotator.get_autocomplete_source(input_element, choices, request, callback);
+        },
+        autoFocus: true,
+        minLength: 0,
+        change : annotator.on_autocomplete_change,
+        select : annotator.on_autocomplete_change,
+        delay: 5
+    }).focus(function(){
+        $(this).autocomplete("search", "");
+    });
+
+    return input_element;
 };
 
 annotator.get_codebook_html = function(schemafield){
@@ -124,31 +173,37 @@ annotator.get_codebook_html = function(schemafield){
     if(schemafield.split_codebook){
         var root = $("<input>");
         var descendant = $("<input>");
-        var hidden = $("<input>").attr("intval", "-1").hide();
+        var hidden = $("<input>").attr("intval", EMPTY_INTVAL).hide();
 
-        root.addClass("codebook_root").attr("placeholder", "Root..").attr("id", "-1");
+        root.addClass("codebook_root").attr("placeholder", "Root..").attr("intval", EMPTY_INTVAL);
         descendant.addClass("codebook_descendant").attr("placeholder", "Descendant..");
-        descendant.attr("id", "-1");
-        hidden.addClass("codebook_value");
+        descendant.attr("intval", EMPTY_INTVAL);
+        hidden.addClass("codebook_value").addClass("coding");
+
+        annotator.set_autocomplete(root, schemafield.choices);
+        annotator.set_autocomplete(descendant, schemafield.choices);
 
         html.append(root).append(descendant).append(hidden);
     } else {
-        html.append($("<input>").attr("intval", EMPTY_INTVAL));
+        var input = $("<input>").attr("intval", EMPTY_INTVAL).addClass("coding");
+        annotator.set_autocomplete(input, schemafield.choices);
+        html.append(input);
+
     }
 
     return html;
 };
 
 annotator.get_boolean_html = function(){
-    return $("<input type='checkbox'>").attr("intval", EMPTY_INTVAL).change(function(event){
+    return $("<input class='coding' type='checkbox'>").attr("intval", EMPTY_INTVAL).change(function(event){
         var input = $(event.currentTarget);
-        input.attr("intval", input.is(":checked") ? 1 : 0);
+        input.attr("intval", input.is(":checked") ? 1 : 0).addClass("coding");
     });
 };
 
 annotator.get_quality_html = function(){
-    return $("<input type='number' step='0.5' min='-1' max='1'>")
-        .attr("intval", EMPTY_INTVAL)
+    return $("<input class='coding' type='number' step='0.5' min='-1' max='1'>")
+        .attr("intval", EMPTY_INTVAL).addClass("coding")
         .change(function(event){
             var target = $(event.currentTarget);
             var value = parseFloat(target.val());
@@ -157,7 +212,7 @@ annotator.get_quality_html = function(){
 };
 
 annotator.get_number_html = function () {
-    return $("<input type='number'>").attr("intval", EMPTY_INTVAL).change(function (event) {
+    return $("<input class='coding' type='number'>").attr("intval", EMPTY_INTVAL).change(function (event) {
         var target = $(event.currentTarget);
         var value = parseInt(target.val());
         target.attr("intval", isNaN(value) ? EMPTY_INTVAL : value);
@@ -168,14 +223,12 @@ annotator.get_number_html = function () {
  * Generates, given a schemafield-object, an HTML element for the given
  * field. This includes autocompletes.
  */
-annotator.articlecodings.get_schemafield_html = function (schemafield, coding_value) {
-    var id_field;
-
+annotator.articlecodings.get_schemafield_html = function (schemafield) {
     var base, label, id_field = "article_codingschemafield_" + schemafield.id;
 
     // Get 'base' input field, which will be wrapped with labels, etc.
     if (schemafield.fieldtype == SCHEMATYPES.TEXT) {
-        base = $("<input>");
+        base = $("<input class='coding'>");
     } else if (schemafield.fieldtype === SCHEMATYPES.NUMBER) {
         base = annotator.get_number_html();
     } else if (schemafield.fieldtype === SCHEMATYPES.BOOLEAN) {
@@ -188,8 +241,7 @@ annotator.articlecodings.get_schemafield_html = function (schemafield, coding_va
         throw "Unknown schemafieldtypeid: " + schemafield.fieldtype;
     }
 
-
-    base.attr("id", id_field).attr("class", "codingschemafield article_codingschemafield");
+    base.attr("id", id_field).addClass("codingschemafield article_codingschemafield");
     label = $("<label>").attr("for", id_field).text(schemafield.label);
 
     return $("<tr>")
@@ -205,9 +257,7 @@ annotator.articlecodings.get_schemafields_html = function(schemafields, coding){
 
     var html = $("<table>");
     $.each(schemafields, function(schema_id, schemafield){
-        html.append(
-            annotator.articlecodings.get_schemafield_html(schemafield, values[schema_id] || null)
-        );
+        html.append(annotator.articlecodings.get_schemafield_html(schemafield));
     });
     return html;
 };
@@ -244,12 +294,6 @@ annotator.articlecodings.codings_fetched = function(){
         annotator.articlecodings.get_schemafields_html(schemafields, codings[0])
     );
 };
-
-
-annotator.articlecodings.hideArticleCodings = function () {
-    $('#article-coding').hide();
-};
-
 
 annotator.articlecodings.onchange = function (el) {
     console.debug('article coding', el.attr('name'), 'changed to', el.val());
@@ -788,27 +832,7 @@ annotator.initPage = function(){
 	$(".sentence-options .split-sentences-button").button({
         icons:{primary:'ui-icon-scissors'}}
     );
-    
-    
-    
-    // $("#coding-type-radios").buttonset();
-    // if(!annotator.articlecodings.containsArticleSchema || !annotator.unitcodings.containsUnitSchema){
-        // $("#coding-type-radios").hide();
-    // }
-    if(!annotator.articlecodings.containsArticleSchema){
-        $("#article-coding").hide();
-    }
-    if(!annotator.unitcodings.containsUnitSchema){
-        $("#sentence-coding-table-part").hide();
-    }
-    if(!annotator.unitcodings.isNETcoding){ // only enable for net codings
-        $('#copy-switch-coding-button, #copy-switch-coding-button2').hide();
-    }
-    
-    //$('#new-article-button').hide(); // todo: make it work
-    
-    
-    
+
     /*** set click events of buttons ***/
     $('#save-button, #save-button2').click(function(){
         if($('#article-status').val() == STATUS_NOTSTARTED){
@@ -932,17 +956,9 @@ annotator.initPage = function(){
         
     $('#edit-article-button').click(function(){
         $("#article-dialog-form").dialog("option", "title", "Edit article");
-        annotator.articletable.showEditArticleDialog(annotator.article_id);
     });
 
-    $('#new-article-button').click(function(){
-        $("#article-dialog-form").dialog("option", "title", "Add new article");
-        annotator.articletable.showEditArticleDialog(0);
-    });
-  
-    
-    
-    
+
     /*** misc initialization ***/
     
     $('#article-status').change(annotator.commentAndStatus.onArticleStatusChange);

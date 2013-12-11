@@ -243,8 +243,6 @@ annotator.unitcodings.setEventsOnUnitCodingRows = function (el) { // el can be j
     addRowButton.bind('keydown', 'tab', annotator.unitcodings.onAddRowButtonTab);
     addRowButton.click(annotator.unitcodings.onAddRowButtonClick);
 
-    annotator.fields.autocompletes.addAutocompletes(el);
-
     el.find('input').change(function () {
         annotator.unitcodings.onchangeSentenceCoding($(this))
     });
