@@ -66,7 +66,7 @@ class ShowAssociations(WebScript):
     def run(self):
         es = amcates.ES()
         filters = dict(keywordsearch.filters_from_form(self.data))
-        queries = list(keywordsearch.SearchQuery.from_form(self.data))
+        queries = list(keywordsearch.queries_from_form(self.data))
         qargs = dict(filters=filters, score=True, fields=[])
         probs = {}
         

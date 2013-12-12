@@ -861,8 +861,8 @@ def save_labels(request, codebook, project):
 
     if "parent" in request.POST:
         # New code should be created
-        if not Code.can_create(request.user):
-            raise PermissionDenied
+        #if not Code.can_create(request.user):
+        #    raise PermissionDenied
 
         code = Code.objects.create()
         parent = json.loads(request.POST["parent"])
@@ -875,8 +875,8 @@ def save_labels(request, codebook, project):
     else:
         code = Code.objects.get(id=int(request.POST['code']))
 
-        if not code.can_update(request.user):
-            raise PermissionDenied
+        #if not code.can_update(request.user):
+        #    raise PermissionDenied
 
     # Get changed, deleted and new labels
     changed_labels_map = { int(lbl.get("id")) : lbl for lbl in labels if lbl.get("id") is not None}
