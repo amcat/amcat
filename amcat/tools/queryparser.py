@@ -30,6 +30,16 @@ import itertools
 
 ParserElement.enablePackrat()
 
+def c(s):
+    "Clean ('analyze') the provided string"
+    return s.lower()
+
+def query_filter(dsl, cache=True):
+    if cache:
+        return {"fquery" : {"query" : dsl, "_cache" : True}}
+    else:
+        return {"query" : dsl}
+    
 class ParseError(ValueError):
     pass
 
@@ -47,7 +57,9 @@ class BaseTerm(FieldTerm):
     def __init__(self, text, field):
         super(BaseTerm, self).__init__(field=field)
         self.text = text.replace("!", "*")
-
+    def get_filter_sql(self):
+        return query_filter(self.get_dsl())
+        
 class Term(BaseTerm):
     def __unicode__(self):
         return "{self.qfield}::{self.text}".format(**locals())
@@ -56,7 +68,15 @@ class Term(BaseTerm):
     def get_dsl(self):
         qtype = "wildcard" if '*' in self.text else "match"
         return {qtype : {self.qfield : self.text.lower()}}
-
+    def get_filter_dsl(self):
+        if "*" in self.text:
+            if "*" in self.text[:-1]:
+                return query_filter(self.get_dsl())
+            else: # last must be *
+                return {"prefix" : {self.qfield : c(self.text[:-1])}}
+        else:
+            return {"term" : {self.qfield : c(self.text)}}
+        
 class Quote(BaseTerm):
     def __unicode__(self):
         return u'{self.qfield}::QUOTE[{self.text}]'.format(**locals())
@@ -68,6 +88,7 @@ class Quote(BaseTerm):
 class Boolean(object):
     def __init__(self, operator, terms, implicit=False):
         self.operator = operator
+        print("!!", self.operator)
         self.terms = terms
         self.implicit = implicit
                 
@@ -86,7 +107,26 @@ class Boolean(object):
         else:
             op = dict(OR="should", AND="must", NOT="must_not")[self.operator]
             return {"bool" : {op : [term.get_dsl() for term in self.terms]}}
-
+            
+    def get_filter_dsl(self):
+        if self.operator == "OR" and all(isinstance(t, Term) for t in self.terms):
+            fields = {t.qfield for t in self.terms}
+            if len(fields) == 1:
+                # shortcut: disjunction of terms can be done with a simple terms filter
+                field = list(fields)[0]
+                return {field : {"terms" : [c(t.text) for t in self.terms]}}
+        
+        if self.operator == "NOT":
+            # in lucene, NOT is binary rather than unary, so
+            # x NOT y means x AND (NOT y) or +x -y.
+            # We interpret x NOT y NOT z  as x AND (NOT y) AND (NOT z) or +x -y -z
+            return {"bool" : {"must" : [self.terms[0].get_filter_dsl()],
+                              "must_not" : [t.get_filter_dsl() for t in self.terms[1:]]}}
+        else:
+            op = dict(OR="should", AND="must", NOT="must_not")[self.operator]
+            return {"bool" : {op : [term.get_filter_dsl() for term in self.terms]}}
+        
+    
 def _check_span(terms, field=None, allow_boolean=True):
     """
     Checks whether a span contains terms using the same field and
@@ -241,6 +281,18 @@ def get_grammar():
         _grammar = boolean_expr
     return _grammar
 
+def simplify(term):
+    if isinstance(term, Boolean):
+        new_terms = []
+        for t in term.terms:
+            t = simplify(t)
+            if isinstance(t, Boolean) and term.operator in ("OR", "AND") and t.operator == term.operator:
+                new_terms += t.terms
+            else:
+                new_terms.append(t)
+        term.terms = new_terms
+    return term
+    
 def parse_to_terms(s):
     return get_grammar().parseString(s, parseAll=True)[0]
     
@@ -324,3 +376,13 @@ class TestQueryParser(amcattest.AmCATTestCase):
         ]}}
 
         self.assertEqual(q('a W/10 (b c)'), expected)
+
+    def test_rewrite(self):
+        t = parse_to_terms("(a (b c)) NOT ((a (b c)) d e (f AND (g AND (i OR k))))")
+        #t = parse_to_terms("(a (b c)) NOT (x y)")
+        print(t)
+        t = simplify(t)
+        print(t)
+        print(t.get_dsl())
+        print(t.get_filter_dsl())
+        
