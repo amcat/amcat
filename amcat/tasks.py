@@ -19,7 +19,7 @@ from __future__ import absolute_import
 ###########################################################################
 
 
-from .celeryapp import scraping_app
+from .amcatcelery import app
 import time, logging, types
 from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
 import logging;log.setLevel(logging.INFO)
@@ -59,10 +59,10 @@ class LockHack(object):
     def release(self):pass
 
 
-@scraping_app.task
+@app.task
 def _scrape_task(controller, scraper):
     controller._scrape(scraper)
     
-@scraping_app.task
+@app.task
 def _scrape_unit_task(controller, scraper, unit):
     controller._scrape_unit(scraper, unit)
