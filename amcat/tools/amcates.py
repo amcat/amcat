@@ -153,6 +153,11 @@ class ES(object):
 
     def flush(self):
         indices.IndicesClient(self.es).flush()
+
+
+    def clear_cache(self):
+        indices.IndicesClient(self.es).clear_cache()
+        
     def delete_index(self):
         try:
             indices.IndicesClient(self.es).delete(self.index)
@@ -345,6 +350,7 @@ class ES(object):
         else:
             body['facets']['group'] = {'terms' : {'size' : 999999, 'field' : group_by}}
         body['facets']['group']['facet_filter'] = filter
+        import json; print(json.dumps(body))
         result = self.es.search(index=self.index, body=body, size=0)
         if group_by == 'date':
             for row in result['facets']['group']['entries']:
