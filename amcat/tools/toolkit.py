@@ -23,7 +23,7 @@ Toolkit of useful methods for AmCAT
 Policy:
  - Should not depend on any module outside to 2.5+ standard library
  - Each public function should be documented!
- - It should pass pychecker (+pylint?) without warnings
+ - It should pass pychecker without warnings
  - We should try to make good test cases in test/test_toolkit.py
 
 This toolkit is divided into a number of sections, please stick to

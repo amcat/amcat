@@ -133,7 +133,6 @@ class ArticleSet(AmcatModel):
         from amcat.tools.amcates import ES
         ES().check_index()
         ES().synchronize_articleset(self, full_refresh=full_refresh)
-        self.index_dirty = False
         self.save()
 
     def save(self, *args, **kargs):
@@ -172,7 +171,7 @@ ArticleSetArticle = ArticleSet.articles.through
 from amcat.tools import amcattest
 from django.test import skipUnlessDBFeature
 
-class TestArticleSet(amcattest.PolicyTestCase):
+class TestArticleSet(amcattest.AmCATTestCase):
         
     def test_create(self):
         """Can we create a set with some articles and retrieve the articles?"""       

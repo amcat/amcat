@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest    
 
-class TestDeduplicateScript(amcattest.PolicyTestCase):
+class TestDeduplicateScript(amcattest.AmCATTestCase):
     def test_deduplicate(self):
         """One article should be deleted from artset and added to project 2"""
         p = amcattest.create_test_project()

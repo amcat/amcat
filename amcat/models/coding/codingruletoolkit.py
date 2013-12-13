@@ -233,9 +233,7 @@ def to_json(node, serialise=True):
         
 from amcat.tools import amcattest
 
-class TestCodingRuleToolkit(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = 'W0212', #  'protected' member access
-
+class TestCodingRuleToolkit(amcattest.AmCATTestCase):
     def condition(self, s, c):
         return CodingRule(codingschema=s, condition=c)
 

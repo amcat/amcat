@@ -62,7 +62,7 @@ if __name__ == '__main__':
         
 from amcat.tools import amcattest
 
-class TestGetQueries(amcattest.PolicyTestCase):
+class TestGetQueries(amcattest.AmCATTestCase):
     
     def test_label(self):
         from amcat.models import Language

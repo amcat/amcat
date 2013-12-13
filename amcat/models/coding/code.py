@@ -175,9 +175,7 @@ class Label(AmcatModel):
         
 from amcat.tools import amcattest
 
-class TestCode(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = 'W0212', #  'protected' member access
-    
+class TestCode(amcattest.AmCATTestCase):
     def test_label(self):
         """Can we create objects and assign labels?"""
         # simple label

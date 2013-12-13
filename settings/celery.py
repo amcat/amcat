@@ -16,8 +16,16 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from kombu import Exchange, Queue
+import os
 
 CELERY_RESULT_BACKEND = 'amqp'
 CELERY_TASK_RESULT_EXPIRES = 18000  # 5 hours.
-CELERY_DEFAULT_QUEUE = 'amcat'
 
+_qname = os.environ.get('AMCAT_CELERY_QUEUE', 'amcat')
+CELERY_QUEUES = (
+    Queue(_qname, Exchange('default'), routing_key=_qname),
+)
+CELERY_DEFAULT_QUEUE = _qname
+CELERY_DEFAULT_EXCHANGE_TYPE = 'direct'
+CELERY_DEFAULT_ROUTING_KEY = _qname

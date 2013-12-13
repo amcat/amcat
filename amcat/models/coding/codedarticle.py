@@ -192,7 +192,7 @@ class CodedArticle(Identity):
         
 from amcat.tools import amcattest
 
-class TestCodedArticle(amcattest.PolicyTestCase):
+class TestCodedArticle(amcattest.AmCATTestCase):
     
     def test_codedarticle(self):
         """Test whether CodedArticle coding retrieval works"""

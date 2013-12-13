@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest
 
-class TestMediargus(amcattest.PolicyTestCase):
+class TestMediargus(amcattest.AmCATTestCase):
 
     def setUp(self):
         import os.path

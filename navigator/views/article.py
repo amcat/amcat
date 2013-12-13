@@ -402,7 +402,7 @@ def upload_article(request, id):
 
 from amcat.tools import amcattest
 
-class TestArticleViews(amcattest.PolicyTestCase):
+class TestArticleViews(amcattest.AmCATTestCase):
     def create_test_sentences(self):
         article = amcattest.create_test_article(byline="foo", text="Dit is. Tekst.\n\n"*3 + "Einde.")
         sbd.create_sentences(article)

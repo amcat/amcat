@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest
 
-class TestDeleteCodingJob(amcattest.PolicyTestCase):
+class TestDeleteCodingJob(amcattest.AmCATTestCase):
     def test_delete(self):
         """Simple deletion of a job"""
         from amcat.models import ArticleSet, Coding

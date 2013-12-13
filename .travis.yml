@@ -22,7 +22,6 @@ before_install:
  - export DJANGO_DB_USER=postgres
  - export DJANGO_LOG_LEVEL=WARNING
  - export DJANGO_SETTINGS_MODULE=settings
- - export PYLINT=N
  - export PYTHONPATH=
 
 install: 

@@ -152,7 +152,7 @@ class TokenClassifier(object):
 
 from amcat.tools import amcattest
 
-class TestWindowedSNA(amcattest.PolicyTestCase):
+class TestWindowedSNA(amcattest.AmCATTestCase):
     def _get_test_tokens(self, aa, words):
         s = amcattest.create_test_analysis_sentence(analysed_article=aa)
         if not words: words = "abcde"

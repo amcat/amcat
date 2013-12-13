@@ -135,7 +135,7 @@ from amcat.tools import amcattest
 class _TestClass(object):
     pass
 
-class TestClassTools(amcattest.PolicyTestCase):
+class TestClassTools(amcattest.AmCATTestCase):
 
     def test_get_caller(self):
         fn, line, func = get_caller(depth=0)
@@ -152,7 +152,7 @@ class TestClassTools(amcattest.PolicyTestCase):
 
     def test_get_class_from_module(self):
         m = TestClassTools.__module__
-        cls = get_class_from_module(m, amcattest.PolicyTestCase)
+        cls = get_class_from_module(m, amcattest.AmCATTestCase)
         self.assertEqual(cls, self.__class__)
         cls = get_class_from_module(m, TestClassTools)
         self.assertEqual(cls, TestClassTools)

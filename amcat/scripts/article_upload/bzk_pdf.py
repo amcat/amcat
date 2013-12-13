@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
 from amcat.tools import amcattest
 
-class TestBZK(amcattest.PolicyTestCase):
+class TestBZK(amcattest.AmCATTestCase):
     def setUp(self):
         if amcattest.skip_slow_tests(): return
 

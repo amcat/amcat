@@ -251,9 +251,7 @@ class SelectionForm(forms.Form):
 
 from amcat.tools import amcattest
 
-class TestSelectionForm(amcattest.PolicyTestCase):
-    PYLINT_IGNORE_EXTRA = "W0212",
-
+class TestSelectionForm(amcattest.AmCATTestCase):
     def get_form(self, **kwargs):
         codebook = None
 

@@ -33,7 +33,7 @@ from django.utils.datastructures import MultiValueDict
         
 DEFAULTS = dict(datetype="all", columns=['article_id'], yAxis='total', counterType='numberOfArticles')
 
-class TestArticleList(amcattest.PolicyTestCase):
+class TestArticleList(amcattest.AmCATTestCase):
 
     def list(self, **kargs):
         options = DEFAULTS.copy()

@@ -133,7 +133,7 @@ from amcat.tools import amcattest
 from amcat.tools import amcatlogging
 amcatlogging.debug_module("amcat.scripts.article_upload.upload")
 
-class TestUploadText(amcattest.PolicyTestCase):
+class TestUploadText(amcattest.AmCATTestCase):
     def test_article(self):
         from django.core.files import File
         base = dict(project=amcattest.create_test_project().id,

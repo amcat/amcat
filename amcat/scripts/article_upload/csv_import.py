@@ -217,7 +217,7 @@ def _run_test_csv(header, rows, **options):
         return CSV(dict(file=File(open(f.name)), encoding=0, project=p.id,
                         medium_name=options.pop("medium_name", 'testmedium'), **options)).run()
 
-class TestCSV(amcattest.PolicyTestCase):
+class TestCSV(amcattest.AmCATTestCase):
     
     def test_csv(self):
         header = ('kop', 'datum', 'tekst', 'pagina')

@@ -160,5 +160,5 @@ class VUNLPParser(AnalysisScript):
 
 from amcat.tools import amcattest
 
-class TestAnalysisScript(amcattest.PolicyTestCase):
+class TestAnalysisScript(amcattest.AmCATTestCase):
     pass

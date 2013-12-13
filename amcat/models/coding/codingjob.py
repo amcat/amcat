@@ -111,7 +111,7 @@ class SchemaFieldColumn(table3.ObjectColumn):
         
 from amcat.tools import amcattest
 
-class TestCodingJob(amcattest.PolicyTestCase):
+class TestCodingJob(amcattest.AmCATTestCase):
     def test_create(self):
         """Can we create a coding job with articles?"""
         from amcat.models.project import Project

@@ -164,7 +164,7 @@ if __name__ == '__main__':
 
 from amcat.tools import amcattest
 
-class TestAggregation(amcattest.PolicyTestCase):
+class TestAggregation(amcattest.AmCATTestCase):
     def test_n_weeks(self):
         self.assertEqual(_get_n_weeks(2013), 52)
         self.assertEqual(_get_n_weeks(2012), 52)

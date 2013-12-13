@@ -80,7 +80,7 @@ scripts = list(findAllScripts())
 from amcat.tools import amcattest
 from amcat.tools import table
 
-class TestScriptManager(amcattest.PolicyTestCase):
+class TestScriptManager(amcattest.AmCATTestCase):
     def test_find(self):
         """Test whether we can find certain basic scripts"""  
         self.assertIsNotNone(scripts)        

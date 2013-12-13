@@ -26,10 +26,9 @@ Script to get queries for a codebook
 import logging; log = logging.getLogger(__name__)
 
 from django import forms
-from django.db import transaction
 
 from amcat.scripts.script import Script
-from amcat.models import ArticleSet, Plugin, AnalysedArticle
+from amcat.models import ArticleSet
 
 PLUGINTYPE_PARSER=1
 

@@ -488,7 +488,7 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 from unittest import skipUnless, skip
 
-class TestAmcatES(amcattest.PolicyTestCase):
+class TestAmcatES(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_aggregate(self):

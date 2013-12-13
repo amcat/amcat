@@ -74,7 +74,6 @@ amcat.datatables.create_rest_table = function(cont, rest_url, optional_args){
         rest_url : rest_url,
         name : rest_url,
         datatables_options : {},
-        column_order : [],
 
         // Metadata contains the json returned by the initial
         // OPTIONS call to rest_url.
@@ -106,10 +105,6 @@ amcat.datatables.create_rest_table = function(cont, rest_url, optional_args){
         callbacks :  {}
     }, optional_args);
 
-    state.datatables_options = $.extend({}, _AMCAT_DEFAULT_OPTS, state.datatables_options, {
-        "sWidth" : "100%"
-    });
-
 
     // Force user to use certain options as we need them for our
     // REST API.
@@ -121,10 +116,12 @@ amcat.datatables.create_rest_table = function(cont, rest_url, optional_args){
         "bStateSave" : true
     });
 
-    console.log(state.datatables_options);
+    // Add our default options
+    $.extend(state.datatables_options, _AMCAT_DEFAULT_OPTS, {
+        "sWidth" : "100%"
+    });
+
     console.log("Fetching OPTIONS for table: ", state.name);
-    console.log(state);
-    console.log(optional_args)
 
     $.ajax({
         dataType : "json",
@@ -344,9 +341,9 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
  */
 amcat.datatables.table_objects_received = function(data, textStatus, jqXHR){
     var callback = {
-        "args": arguments,
-        "this": this
-    };
+        "args" : arguments,
+        "this" : this,
+    }
 
     // Convert to datatables requirements
     data.iDisplayStart = (data.page - 1) * data.per_page;
@@ -363,7 +360,7 @@ amcat.datatables.table_objects_received = function(data, textStatus, jqXHR){
         // If load_metadatas is finished, it should call this function
         // again with the same arguments / this-value as it is now.
         return amcat.datatables.load_metadatas.bind(this)(callback);
-    }
+    };
 
     // Find out whether we need to fetch any labels.
     if (amcat.datatables.fetch_needed_labels.bind(this)(callback)){
@@ -592,7 +589,7 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
                                                 .concat(this.datatables_options.aoColumnDefs);
 
     // Merge aoColumnDefs / aoColumns
-    this.datatables_options.aoColumns = amcat.datatables.get_columns(this.datatables_options, this.column_order);
+    this.datatables_options.aoColumns = amcat.datatables.get_columns(this.datatables_options);
     delete this.datatables_options.aoColumnDefs;
 
     // Create table element and add it to the DOM
@@ -615,7 +612,6 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
 
     // Call callback funtion with our datatables object as its
     // argument.
-    console.log(this);
     if (this.setup_callback !== undefined && this.setup_callback !== null){
         this.setup_callback(tbl);
     }

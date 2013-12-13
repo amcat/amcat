@@ -99,7 +99,7 @@ def split(text):
 
 from amcat.tools import amcattest
 
-class TestSBD(amcattest.PolicyTestCase):
+class TestSBD(amcattest.AmCATTestCase):
     def test_split(self):
         """Does splitting a text work correctly?"""
         for text, sentences in [

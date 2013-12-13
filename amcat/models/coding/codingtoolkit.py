@@ -165,7 +165,7 @@ class CodingStatusCommentForm(forms.Form):
         
 from amcat.tools import amcattest
 
-class TestCodingToolkit(amcattest.PolicyTestCase):
+class TestCodingToolkit(amcattest.AmCATTestCase):
 
     def setUp(self):
         from amcat.models.coding.coding import CodingValue

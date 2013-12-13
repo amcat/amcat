@@ -210,7 +210,7 @@ def projectlist(request, what):
     url = reverse('project', args=[123]) + "?star="
     table = FavouriteDatatable(set_url=url+"1", unset_url=url+"0", label="project", resource=ProjectResource)
     table = table.filter(**selected_filter)
-    table = table.hide("project", "index_dirty", "indexed")
+    table = table.hide("project")
 
     return render(request, 'navigator/project/projectlist.html', locals())
 
@@ -287,7 +287,7 @@ def articlesets(request, project, what):
     table = FavouriteDatatable(resource=ArticleSet, label="article set", set_url=url + "?star=1", unset_url=url+"?star=0")
     table = table.rowlink_reverse('articleset', args=[project.id, '{id}'])
     table = table.filter(**selected_filter)
-    table = table.hide("project", "index_dirty", "indexed", "needs_deduplication")
+    table = table.hide("project")
 
     #table.url += "&project_for_favourites={project.id}".format(**locals())
     table = table.add_arguments(project_for_favourites=project.id)
@@ -898,8 +898,8 @@ def save_labels(request, codebook, project):
 
     if "parent" in request.POST:
         # New code should be created
-        if not Code.can_create(request.user):
-            raise PermissionDenied
+        #if not Code.can_create(request.user):
+        #    raise PermissionDenied
 
         code = Code.objects.create()
         parent = json.loads(request.POST["parent"])
@@ -912,8 +912,8 @@ def save_labels(request, codebook, project):
     else:
         code = Code.objects.get(id=int(request.POST['code']))
 
-        if not code.can_update(request.user):
-            raise PermissionDenied
+        #if not code.can_update(request.user):
+        #    raise PermissionDenied
 
     # Get changed, deleted and new labels
     changed_labels_map = { int(lbl.get("id")) : lbl for lbl in labels if lbl.get("id") is not None}

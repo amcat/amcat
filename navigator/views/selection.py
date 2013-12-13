@@ -53,7 +53,7 @@ def index(request):
 from amcat.tools import amcattest
 import base64
 
-class TestSelectionView(amcattest.PolicyTestCase):
+class TestSelectionView(amcattest.AmCATTestCase):
     fixtures = ['user.json'] # contains user test123
     
     def setUp(self):
