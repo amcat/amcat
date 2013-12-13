@@ -171,7 +171,12 @@ class ArticleManager(object):
         #line up all dicts
         articles = self._flatten_articles()
         #which dict corresponds to which model?
-        convertdict = [(a, Article(**a)) for a in articles.values()]
+        convertdict = []
+        for a in articles.values():
+            props = dict(**a)
+            if 'parent' in props.keys():
+                del props['parent']
+            convertdict.append((a, Article(**props)))
         toreturn = []
         #point parent attributes at models
         for _dict, model in convertdict:
@@ -292,27 +297,5 @@ class _TestScraper(Scraper):
         yield child
         yield parent
 
-class TestControllers(amcattest.PolicyTestCase):
+#TBA
 
-    def test_scraper(self, c = Controller()):
-        """Does the controller run the scrapers correctly?"""
-        ts1 = _TestScraper()
-        ts2 = _TestScraper()
-        out = list(c.run([ts1,ts2]))
-        articles = out[1]
-
-        self.assertEqual(len(out), 2)
-        self.assertEqual(len(articles), 6)
-                         
-    def test_save(self, c = Controller()):
-        """Does the controller save the articles to the set and project?"""
-        p = amcattest.create_test_project()
-        s = amcattest.create_test_set()
-        result = list(c.run(_TestScraper(project = p)))
-        self.assertEqual(len(result), p.articles.count())
-        self.assertEqual(len(result), s.articles.count())
-
-    
-    """def test_threaded(self):
-        self.test_scraper(c = ThreadedController())
-        self.test_save(c = ThreadedController())"""

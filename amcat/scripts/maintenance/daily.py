@@ -25,7 +25,7 @@ import datetime
 from django import forms
 import logging;log = logging.getLogger(__name__)
 
-from amcat.scraping.controller import ThreadedAPIController, ThreadedController
+from amcat.scraping.controller import Controller, ThreadedAPIController, ThreadedController
 from amcat.scripts.script import Script
 from amcat.models.project import Project    
 from amcat.models.articleset import ArticleSet
@@ -44,7 +44,7 @@ class DailyScript(Script):
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
-        self.scrape(ThreadedController(), scrapers)
+        self.scrape(Controller(), scrapers)
 
     def scrape(self, controller, scrapers, deduplicate = False):
         """Use the controller to scrape the given scrapers."""
