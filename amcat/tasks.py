@@ -19,7 +19,7 @@ from __future__ import absolute_import
 ###########################################################################
 
 
-from .scraping.celery import scraping_app
+from .celeryapp import scraping_app
 import time, logging, types
 from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
 import logging;log.setLevel(logging.INFO)

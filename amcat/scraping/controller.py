@@ -1,4 +1,4 @@
-from __future__ import absolute_import
+from __future__  import absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -291,11 +291,49 @@ class _TestScraper(Scraper):
             yield unit
 
     def _scrape_unit(self, unit):
+        if unit == 1337:
+            a = 1 / 0 #test error handling
         unit = unicode(str(unit), 'utf-8')
         parent = Article(headline = unit, date = date.today())
         child = Article(headline = "re: " + unit, date = date.today(), parent = parent)
         yield child
         yield parent
+        #total unit count: 4
 
-#TBA
+class TestController(amcattest.AmCATTestCase):
+    controllers = [Controller(), ThreadedAPIController()]
+    
+    @amcattest.use_elastic
+    def test_run(self):
+        """Test whether controller runs without error, and whether it still does using the API and multithreaded"""
+        for c in self.controllers:
+            s = _TestScraper()
+            c.run(s)
 
+    @amcattest.use_elastic
+    def test_save(self):
+        """Test whether articles get saved in the set and project"""
+        for c in self.controllers:
+            p = amcattest.create_test_project()
+            a_s = amcattest.create_test_set(project = p)
+            s = _TestScraper(project = p, articleset = a_s)
+            g = c.run(s)
+            if g: #sometimes a generator
+                list(g) 
+            self.assertEqual(p.articles.count(), 4)
+            self.assertEqual(a_s.articles.count(), 4)
+
+    @amcattest.use_elastic
+    def test_parenting(self):
+        """Are parent articles nurturing their children well?"""
+        for c in self.controllers:
+            p = amcattest.create_test_project()
+            s = _TestScraper(project = p)
+            r = c.run(s)
+            if r: #sometimes a generator
+                list(r) 
+            self.assertTrue(any([hasattr(a, 'parent') for a in p.articles.all()]))
+            
+if __name__ == "__main__":
+    import unittest
+    unittest.main()
