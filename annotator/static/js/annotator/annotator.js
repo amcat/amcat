@@ -72,6 +72,22 @@ annotator._get_api_url = function (project_id, codingjob_id) {
 
 
 /*
+ * Usage:
+ *
+ * 'Added {0} by {1} to your collection'.f(title, artist)
+ * 'Your balance is {0} USD'.f(77.7)
+ */
+String.prototype.format = String.prototype.f = function() {
+    var s = this,
+        i = arguments.length;
+
+    while (i--) {
+        s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i]);
+    }
+    return s;
+};
+
+/*
  * Given model data ( [{ id : 5, prop1 : "asd", .. }] ), create a mapping with
  * the prop as key, and the object as value.
  */
@@ -116,6 +132,8 @@ annotator.articlecodings.get_codingschemafield = function(input){
 annotator.on_autocomplete_change = function(event, ui){
     var label, intval = EMPTY_INTVAL;
 
+    console.log(ui, this)
+
     if (ui.item !== null){
         intval = ui.item.get_code().code;
         label = ui.item.label;
@@ -151,7 +169,7 @@ annotator.get_autocomplete_source = function(input_element, choices, request, ca
 };
 
 annotator.set_autocomplete = function(input_element, choices){
-    input_element.autocomplete({
+    return input_element.autocomplete({
         source : function(request, callback){
             annotator.get_autocomplete_source(input_element, choices, request, callback);
         },
@@ -163,12 +181,10 @@ annotator.set_autocomplete = function(input_element, choices){
     }).focus(function(){
         $(this).autocomplete("search", "");
     });
-
-    return input_element;
 };
 
 annotator.get_codebook_html = function(schemafield){
-    var html = $("<div>").attr("schemafield", schemafield.id);
+    var html = $("<div>");
 
     if(schemafield.split_codebook){
         var root = $("<input>");
@@ -182,6 +198,11 @@ annotator.get_codebook_html = function(schemafield){
 
         annotator.set_autocomplete(root, schemafield.choices);
         annotator.set_autocomplete(descendant, schemafield.choices);
+
+        descendant.on("autocompletechange", function(event, ui){
+            hidden.attr("intval", (ui.item === null) ? EMPTY_INTVAL : ui.item.get_code().code);
+            hidden.trigger("change");
+        });
 
         html.append(root).append(descendant).append(hidden);
     } else {
@@ -224,29 +245,29 @@ annotator.get_number_html = function () {
  * field. This includes autocompletes.
  */
 annotator.articlecodings.get_schemafield_html = function (schemafield) {
-    var base, label, id_field = "article_codingschemafield_" + schemafield.id;
+    var widget, container;
 
     // Get 'base' input field, which will be wrapped with labels, etc.
     if (schemafield.fieldtype == SCHEMATYPES.TEXT) {
-        base = $("<input class='coding'>");
+        widget = $("<input class='coding'>");
     } else if (schemafield.fieldtype === SCHEMATYPES.NUMBER) {
-        base = annotator.get_number_html();
+        widget = annotator.get_number_html();
     } else if (schemafield.fieldtype === SCHEMATYPES.BOOLEAN) {
-        base = annotator.get_boolean_html();
+        widget = annotator.get_boolean_html();
     } else if (schemafield.fieldtype === SCHEMATYPES.QUALITY) {
-        base = annotator.get_quality_html();
+        widget = annotator.get_quality_html();
     } else if (schemafield.fieldtype === SCHEMATYPES.CODEBOOK){
-        base = annotator.get_codebook_html(schemafield);
+        widget = annotator.get_codebook_html(schemafield);
     } else {
         throw "Unknown schemafieldtypeid: " + schemafield.fieldtype;
     }
 
-    base.attr("id", id_field).addClass("codingschemafield article_codingschemafield");
-    label = $("<label>").attr("for", id_field).text(schemafield.label);
+
+    container = $("<td>").addClass("coding-container").attr("codingschemafield_id", schemafield.id);
 
     return $("<tr>")
-        .append($("<td>").append(label))
-        .append($("<td>").append(base));
+        .append($("<td>").append($("<label>").text(schemafield.label)))
+        .append(container.append(widget));
 };
 
 annotator.articlecodings.get_schemafields_html = function(schemafields, coding){
@@ -290,9 +311,9 @@ annotator.articlecodings.codings_fetched = function(){
     if (codings.length === 0) codings.push(empty_coding);
 
     // Create html content
-    $("#article-coding").html(
-        annotator.articlecodings.get_schemafields_html(schemafields, codings[0])
-    );
+    var article_coding_el = $("#article-coding");
+    article_coding_el.html(annotator.articlecodings.get_schemafields_html(schemafields, codings[0]));
+    annotator.fields.add_rules(article_coding_el);
 };
 
 annotator.articlecodings.onchange = function (el) {
@@ -417,7 +438,6 @@ annotator.saveCodings = function (goToNext) {
                 valid = false;
             } else {
                 input.removeClass("error");
-                console.log(input);
                 storeDict['articlecodings'][input.attr('name')] = input.parent().children(":hidden").val() ? parseInt(input.parent().children(":hidden").val()) : input.val(); //{'text':input.val(), 'id':input.parent().children(":hidden").val(), 'name':input.attr('name')};
             }
         });
@@ -649,37 +669,13 @@ annotator.showMessage = function (text) {
 };
 
 
-
-
-annotator.sortLabels = function (a, b) { // natural sort on the labels
-    a = a.label.toLowerCase();
-    b = b.label.toLowerCase();
-    var asplit = a.split(/(\-?[0-9]+)/g);
-    var bsplit = b.split(/(\-?[0-9]+)/g);
-
-    for (var i = 0; i < asplit.length; i++) {
-        var diff = parseInt(asplit[i]) - parseInt(bsplit[i]);
-        if (isNaN(diff)) {
-            diff = asplit[i].localeCompare(bsplit[i]);
-        }
-        if (diff != 0) {
-            return diff;
-        }
-    }
-    return 0;
-};
-
-
-
 annotator.findSentenceByUnit = function (unit) {
     return filter(function(s){ return s.get_unit() == unit }, annotator.sentences)[0];
 };
 
-
 annotator.findSentenceById = function (sentenceid) {
     return annotator.sentences[sentenceid];
 };
-
 
 annotator.stripIdAttribute = function (id) { // used for sentence numbers that contain dots. does not work as 'id' attributes..
     return id.replace(/\./g, '-')
@@ -807,11 +803,7 @@ annotator.initPage = function(){
         icons:{primary:'icon-copy-coding'},
         disabled: true
     });
-    $('#copy-switch-coding-button, #copy-switch-coding-button2').button({
-        icons:{primary:'icon-copy-switch-coding'},
-        disabled: true
-    });
-    $('#save-button, #save-button2').button({
+   $('#save-button, #save-button2').button({
         icons:{primary:'icon-save'},
         disabled: true
     });
@@ -988,7 +980,7 @@ annotator.initPage = function(){
     });
     
     
-    $('#unitcoding-table').find('input:text').live('focus', annotator.unitcodings.focusCodingRow);
+    /*$('#unitcoding-table').find('input:text').live('focus', annotator.unitcodings.focusCodingRow);
     $('#unitcoding-table').find('input:text').live('hover', function(){
         var el = $(this);
         if(el.val().length > 10){
@@ -996,7 +988,7 @@ annotator.initPage = function(){
         } else if(el.hasClass('error') == false){
             el.removeAttr('title');
         }
-    });
+    });*/
 
     $(window).bind('scroll', function(){
         if($(window).scrollTop() < 85){
