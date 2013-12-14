@@ -249,7 +249,7 @@ annotator.articletable.get_article = function(article_id) {
 
     $.when.apply(undefined, annotator.articletable.requests).then(function (article, codings, sentences) {
         console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
-        codings = annotator.map_ids(codings[0].results);
+        codings = annotator.map_ids(codings[0].results, "sentence");
         sentences = annotator.map_ids(sentences[0].results);
         annotator.resolve_ids(codings, sentences, "sentence");
 
