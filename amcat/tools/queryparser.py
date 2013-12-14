@@ -26,7 +26,7 @@ Also paves the way for more customization, i.e. allowing Lexis style queries
 
 from __future__ import unicode_literals, print_function, absolute_import
 from pyparsing import ParseResults, ParserElement
-import itertools
+import itertools, collections
 
 ParserElement.enablePackrat()
 
@@ -34,7 +34,7 @@ def c(s):
     "Clean ('analyze') the provided string"
     return s.lower()
 
-def query_filter(dsl, cache=True):
+def query_filter(dsl, cache=False):
     if cache:
         return {"fquery" : {"query" : dsl, "_cache" : True}}
     else:
@@ -57,7 +57,7 @@ class BaseTerm(FieldTerm):
     def __init__(self, text, field):
         super(BaseTerm, self).__init__(field=field)
         self.text = text.replace("!", "*")
-    def get_filter_sql(self):
+    def get_filter_dsl(self):
         return query_filter(self.get_dsl())
         
 class Term(BaseTerm):
@@ -88,7 +88,6 @@ class Quote(BaseTerm):
 class Boolean(object):
     def __init__(self, operator, terms, implicit=False):
         self.operator = operator
-        print("!!", self.operator)
         self.terms = terms
         self.implicit = implicit
                 
@@ -109,12 +108,18 @@ class Boolean(object):
             return {"bool" : {op : [term.get_dsl() for term in self.terms]}}
             
     def get_filter_dsl(self):
-        if self.operator == "OR" and all(isinstance(t, Term) for t in self.terms):
-            fields = {t.qfield for t in self.terms}
-            if len(fields) == 1:
-                # shortcut: disjunction of terms can be done with a simple terms filter
-                field = list(fields)[0]
-                return {field : {"terms" : [c(t.text) for t in self.terms]}}
+        if self.operator == "OR":
+            simple_terms = collections.defaultdict(list) # field : termlist
+            clauses = [] # OR clauses 
+            for t in self.terms:
+                if isinstance(t, Term) and "*" not in t.text:
+                    simple_terms[t.qfield].append(c(t.text))
+                else:
+                    clauses.append(t.get_filter_dsl())
+            for field, terms in simple_terms.iteritems():
+                clauses.append({"terms" : {field : terms}})
+
+            return {"bool" : {"should" : clauses}}
         
         if self.operator == "NOT":
             # in lucene, NOT is binary rather than unary, so
@@ -191,7 +196,8 @@ class Span(Boolean, FieldTerm):
             return clauses[0]
         else:
             return {"bool" : {"should" : clauses}}
-
+    def get_filter_dsl(self):
+        return query_filter(self.get_dsl())
 
 def lucene_span(quote, field, slop):
     '''Create a span query from a lucene style string, i.e. "terms"~10'''
