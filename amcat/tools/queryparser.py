@@ -300,7 +300,7 @@ def simplify(term):
     return term
     
 def parse_to_terms(s):
-    return get_grammar().parseString(s, parseAll=True)[0]
+    return simplify(get_grammar().parseString(s, parseAll=True)[0])
     
 def parse(s):
     terms = parse_to_terms(s)
