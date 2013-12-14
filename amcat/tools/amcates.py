@@ -41,10 +41,10 @@ def _clean(s):
 
 def get_article_dict(art, sets=None):
     date = art.date
-    if isinstance(art.date, (str, unicode)):
-        date = toolkit.readDate(date)
-    date = date.isoformat()
-
+    if date:
+        if isinstance(art.date, (str, unicode)):
+            date = toolkit.readDate(date)
+        date = date.isoformat()
     d = dict(
         # dublin core elements
         id = art.id,

@@ -148,11 +148,7 @@ class Article(AmcatModel):
         # add dict (+hash) as property on articles so we know who is who
         sets = [articleset.id] if articleset else None
         for a in articles:
-            try:
-                a.es_dict = amcates.get_article_dict(a, sets=sets)
-            except AttributeError:
-                log.exception("get_article_dict failed, not saving article")
-                articles.remove(a)
+            a.es_dict = amcates.get_article_dict(a, sets=sets)
 
         if check_duplicate:
             hashes = [a.es_dict['hash'] for a in articles]
@@ -178,9 +174,10 @@ class Article(AmcatModel):
                 try:
                     sid = transaction.savepoint()
                     a.save()
+                    log.info("saved article '{a.headline}'".format(**locals()))
                     transaction.savepoint_commit(sid)
-                except IntegrityError:
-                    log.exception("save failed")
+                except IntegrityError as e:
+                    log.warning(str(e))
                     transaction.savepoint_rollback(sid)
                     continue
                 result.append(a)
