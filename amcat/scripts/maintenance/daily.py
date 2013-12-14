@@ -44,20 +44,14 @@ class DailyScript(Script):
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
-        self.scrape(Controller(), scrapers)
+        self.scrape(ThreadedController(), scrapers)
 
     def scrape(self, controller, scrapers, deduplicate = False):
         """Use the controller to scrape the given scrapers."""
-        general_index_articleset = ArticleSet.objects.get(pk = 2)
-        #CAUTION: destination articleset is hardcoded
-        if not isinstance(controller, ThreadedController):
-            for scraper, articles in controller.run(scrapers):
-                if scraper.module().split(".")[-2].lower().strip() == "newspapers":
-                #if scraper in newspapers module, add it's result to set 2
-                    log.info("Adding {x} articles of {scraper.__class__.__name__} to general index set ({general_index_articleset})".format(x = len(result), **locals()))
-                    general_index_articleset.add_articles(articles)
-        else:
-            controller.run(scrapers) #todo: somehow insert these articles into set 2 anyway
+        g = controller.run(scrapers)
+        if g: #is a generator
+            for s, a in g:
+                pass
 
     def get_scrapers(self, date=None, days_back=7, **options):
         """
