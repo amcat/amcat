@@ -35,6 +35,7 @@ from amcat.models.project import Project
 from amcat.models.medium import Medium
 from amcat.models.articleset import ArticleSet, create_new_articleset
 
+from amcat.scraping import toolkit
 from amcat.scraping.htmltools import HTTPOpener
 from amcat.scraping.document import Document
 
@@ -87,6 +88,8 @@ class Scraper(Script):
         o2 = {k:v for k,v in self.options.iteritems() if k != 'file'}
         log.debug(u"Articleset: {self.articleset!r}, options: {o2}"
                   .format(**locals()))
+
+
     @property
     def articleset(self):
         if self.options['articleset']:
@@ -97,24 +100,9 @@ class Scraper(Script):
             return aset
         return
         
-    def run(self,input=None,deduplicate=False):
-        log.info("Scraping {self.__class__.__name__} into {self.project}, medium {self.medium} using RobustController"
-                 .format(**locals()))
-        from amcat.scraping.controller import RobustController
-        return RobustController(self.articleset).scrape([self],deduplicate)
-
-
-    def get_units(self):
-        """
-        Split the scraping job into a number of 'units' that can be processed independently
-        of each other.
-
-        @return: a sequence of arbitrary objects to be passed to scrape_unit
-        """
-        self._initialize()        
-        for unit in self._get_units():
-            yield unit
-            
+    def run(self,input=None):
+        from amcat.scraping.controller import Controller
+        list(Controller().run(self))
 
     def _get_units(self):
         """
@@ -126,41 +114,6 @@ class Scraper(Script):
         @return: a sequence of arbitrary objects to be passed to scrape_unit
         """
         return [None]
-
-    def scrape_unit(self, unit):
-        """
-        Scrape a single unit of work. Subclasses can override _scrape_unit to have project
-        and medium filled in automatically.
-        @return: a sequence of Article objects ready to .save()
-        """
-        articles = list(self._scrape_unit(unit))
-        for article in self.process_in_order(articles):
-            log.debug(unicode(".. yields article {article}".format(**locals()),'utf-8'))
-            yield article
-
-
-    def process_in_order(self, articles):
-        """
-        Perform article postprocessing in the right order, because parents have to be saved before children
-        """
-        #.parent is preferred over .props.parent
-        for article in articles:
-            if hasattr(article, 'props') and hasattr(article.props, 'parent'):
-                article.parent = article.props.parent
-
-        #initial list is any article without parent, or a non-existing parent
-        toprocess = [a for a in articles if (not hasattr(a, 'parent')) or not a.parent in articles]
-
-        for doc in toprocess:
-            article = self._postprocess_article(doc)            
-            #find children, add to toprocess
-            for a in articles:
-                if hasattr(a, 'props') and hasattr(a, 'parent') and a.parent == doc:
-                    a.props.parent = article
-                    toprocess.append(a)
-                    
-            yield article
-
 
     def _scrape_unit(self, unit):
         """
@@ -185,6 +138,14 @@ class Scraper(Script):
         Finalize an article. This should convert the output of _scrape_unit to the required
         output for scrape_unit, e.g. convert to Article, add project and/or medium
         """
+        try:
+            parent = article.props.parent
+        except AttributeError:
+            try:
+                parent = article.parent
+            except AttributeError:
+                parent = None
+
         comment = False
         if isinstance(article, Document):
             if hasattr(article, 'is_comment') and article.is_comment:
@@ -193,6 +154,7 @@ class Scraper(Script):
                 comment = True
             article = article.create_article()
 
+
         if comment:
             _set_default(article, "medium", self.comment_medium)
         else:
@@ -200,6 +162,8 @@ class Scraper(Script):
 
         _set_default(article, "project", self.project)
         article.scraper = self
+        if parent:
+            article.parent = parent
         return article
 
 
@@ -293,3 +257,4 @@ def _set_default(obj, attr, val):
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli(Scraper)
+

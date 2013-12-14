@@ -169,7 +169,7 @@ INSTALLED_APPS = [
     'api',
     'amcat',
     'django_extensions',
-    'compressor'
+    'compressor',
 ]
                     
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
@@ -323,3 +323,4 @@ if 'DJANGO_LOG_FILE' in os.environ:
         'formatter': 'color',
         }
     LOGGING['loggers']['']['handlers'] += ['logfile']
+

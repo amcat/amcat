@@ -43,26 +43,24 @@ class PDFScraper(Scraper):
         super(PDFScraper, self).__init__(*args, **kwargs)
         self.doc = self.load_document()
 
-
-    def load_document(self, _file = None):
+    def load_document(self, _file = None, password = None):
         """turn the file into a PDFMiner document"""
         log.info("loading document...")
-
         if _file == None:
             _file = self.options['file']
-
 
         parser = PDFParser(_file)
         doc = PDFDocument()
         parser.set_document(doc)
         doc.set_parser(parser)
         
-        if 'password' in self.options.keys():
-            password = self.options['password']
-        else:
-            password = ""
+        if not password:
+            if 'password' in self.options.keys() and self.options['password']:
+                password = self.options['password']
+            else:
+                password = ""
 
-        doc.initialize("")
+        doc.initialize(password)
 
         if not doc.is_extractable:
             raise ValueError("PDF text extraction not allowed")
@@ -103,32 +101,23 @@ class PDFScraper(Scraper):
                 result.append(obj.get_text())
             elif isinstance(obj, LTFigure):
                 result.append(self.parse_layout(obj._objs))
-
         return result
 
     def get_textlines(self, page, params = None):
-
-        
         if not params:
             params = {}
         if not isinstance(params, LAParams):
             params = LAParams(**params)
-
         objects = [o for o in page._objs if hasattr(o, 'is_compatible')]
-
-
         for line in page.get_textlines(params, objects):
             yield line
 
     def get_textboxes(self, page, params = None):
-
         if not params:
             params = {}
         if not isinstance(params, LAParams):
             params = LAParams(**params)
-        
         lines = self.get_textlines(page, params)
-
         for textbox in page.get_textboxes(params, list(lines)):
             yield textbox
 
