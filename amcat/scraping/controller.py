@@ -181,7 +181,10 @@ class ArticleManager(object):
         #point parent attributes at models
         for _dict, model in convertdict:
             if 'parent' in _dict.keys() and _dict['parent']:
-                model.parent = articles[_dict['parent']]
+                parentdict = articles[_dict['parent']]
+                for _dict2, model2 in convertdict:
+                    if parentdict == _dict2:
+                        model.parent = model2
             toreturn.append(model)
         return toreturn
 

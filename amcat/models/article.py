@@ -148,7 +148,11 @@ class Article(AmcatModel):
         # add dict (+hash) as property on articles so we know who is who
         sets = [articleset.id] if articleset else None
         for a in articles:
-            a.es_dict = amcates.get_article_dict(a, sets=sets)
+            try:
+                a.es_dict = amcates.get_article_dict(a, sets=sets)
+            except AttributeError:
+                log.exception("get_article_dict failed, not saving article")
+                articles.remove(a)
 
         if check_duplicate:
             hashes = [a.es_dict['hash'] for a in articles]
