@@ -212,7 +212,7 @@ widgets = (function(self){
         return $("<label>").attr("for", input.attr("id")).text(schemafield.label);
     };
 
-    /* Returns existing widget */
+    /* Returns existing widget(s) */
     self.find = function(schemafield, sentence){
         var scope = $((sentence === null) ? "#article-coding" : "unitcoding-table-part");
         var selector = "[schemafield_id={0}]";

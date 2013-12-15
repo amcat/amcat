@@ -17,7 +17,7 @@
 
   <div class="annotator-content">
     
-    <div class="article-part">
+    <article>
        <div class="sentence-options">
             <button class="select-all-sentences-button" title="Select all sentences">Select</button>
             <span>Selected words: <span id="wordcount">0</span></span>
@@ -26,7 +26,7 @@
            <h2>Article Text</h2>
            <p>No article selected yet</p>
        </div>
-    </div>
+    </article>
     
     <div class="articlelist-part">
         <div class="links">
@@ -62,7 +62,7 @@
 
                     fnDrawCallback: function(){
                         $("tr", $("#article-table-container")).click(function(event){
-                            annotator.articletable.click_article_row($(event.currentTarget));
+                            annotator.datatables_row_clicked($(event.currentTarget));
                         }).css("cursor", "pointer");
                     }
                 },
@@ -152,7 +152,6 @@
     <table>
     <tr><th>Key</th><th>Explanation</th></tr>
     <tr><td>CTRL + S</td><td>Save</td></tr>
-   <!--  <tr><td>CTRL + A</td><td>Select article text</td></tr> -->
     <tr><td>ESCAPE</td><td>Close a dialog</td></tr>
     <tr><td>CTRL + arrow down</td><td>Add new row in sentence codings table</td></tr>
     <tr><td>CTRL + SHIFT + arrow down</td><td>Add new row in sentence codings table, for next sentence</td></tr>
@@ -168,16 +167,8 @@
  
 <script type="text/javascript"> 
     $(document).ready(function(){
-        annotator.initPage();
+        annotator.initialise({{ project.id }}, {{ codingjob.id }}, {{ coder.id }});
     });
-
-    annotator.codingjob_id = {{ codingjob.id }};
-    annotator.project_id = {{ project.id }};
-    annotator.coder_id = {{ coder.id }};
-
-    annotator.articlecodings.containsArticleSchema = {% if codingjob.articleschema != None %}true{% else %}false{% endif%};
-    annotator.unitcodings.containsUnitSchema = {% if codingjob.unitschema != None %}true{% else %}false{% endif%};
-    annotator.unitcodings.isNETcoding = {% if codingjob.unitschema and codingjob.unitschema.isnet %}true{% else %}false{%endif%};
 </script>
 
  </body>

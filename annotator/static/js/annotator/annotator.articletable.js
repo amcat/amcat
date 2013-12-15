@@ -38,23 +38,6 @@ annotator.articletable.click_article_row = function (row) { // called if user cl
 };
 
 
-
-/* Select row in article table, which means it will be loaded
-* from the server, including all their codings. */
-annotator.articletable.select_row = function (row) {
-    row.addClass('row_selected');
-    annotator.articletable.get_article(annotator.articletable.get_article_id(row));
-    annotator.articletable.get_table().parent().scrollTo(row, {offset: -50});
-};
-
-/*
- * Based on a row (jQuery tr element), return the article id corresponding
- * to the id of the article in that row.
- */
-annotator.articletable.get_article_id = function (tr) {
-    return parseInt(tr.children('td:first').text());
-};
-
 annotator.articletable.select_next_row = function(){
     // Warn user for potentially lost data
     if(!annotator.confirmArticleChange()){
