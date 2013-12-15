@@ -342,15 +342,23 @@ class ES(object):
         If date is used as a group_by variable, uses date_interval to bin it
         Currently, group by must be a single field as elastic doesn't support multiple group by
         """
-        filter = build_filter(**filters)
-        body = dict(build_body(query))
-        body['facets'] = {}
-        if group_by == 'date':
-            body['facets']['group'] = {'date_histogram' : {'field' : group_by, 'interval' : date_interval}}
+        if filters is None: raise ValueError("Please specify filters for aggregate query")
+        filters = list(get_filter_clauses(**filters))
+        if query:
+            filters.append(queryparser.parse_to_terms(query).get_filter_dsl())
+
+        if len(filters) == 1:
+            filter = filters[0]
         else:
-            body['facets']['group'] = {'terms' : {'size' : 999999, 'field' : group_by}}
-        body['facets']['group']['facet_filter'] = filter
-        import json; print(json.dumps(body))
+            filter = {"bool" : {"must" : [filters]}}
+
+        if group_by == 'date':
+            group = {'date_histogram' : {'field' : group_by, 'interval' : date_interval}}
+        else:
+            group = {'terms' : {'size' : 999999, 'field' : group_by}}
+        body = {"query" : {"constant_score" : {"filter" : filter}},
+                "facets" : {"group" : group}}
+
         result = self.es.search(index=self.index, body=body, size=0)
         if group_by == 'date':
             for row in result['facets']['group']['entries']:
@@ -359,7 +367,6 @@ class ES(object):
         else:
             for row in result['facets']['group']['terms']:
                 yield row['term'], row['count']
-
 
     def statistics(self, query=None, filters=None):
         """
@@ -412,7 +419,7 @@ def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
 
-def build_filter(start_date=None, end_date=None, on_date=None, **filters):
+def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
     """
     Build a elastic DSL query from the 'form' fields.
     For convenience, the singular versions (mediumid, id) etc are allowed as aliases
@@ -448,27 +455,28 @@ def build_filter(start_date=None, end_date=None, on_date=None, **filters):
     if filters:
         raise TypeError("Unknown filter keywords: {filters}".format(**locals()))
     
-    filters = []
-    if 'set' in f: filters.append(dict(terms={'sets' : _list(f['set'])}))
-    if 'mediumid' in f: filters.append(dict(terms={'mediumid' : _list(f['mediumid'])}))
-    if 'id' in f: filters.append(dict(ids={'values' : _list(f['id'])}))
+    if 'set' in f: yield dict(terms={'sets' : _list(f['set'])})
+    if 'mediumid' in f: yield dict(terms={'mediumid' : _list(f['mediumid'])})
+    if 'id' in f: yield dict(ids={'values' : _list(f['id'])})
 
     date_range = {}
     if start_date: date_range['gte'] = parse_date(start_date)
     if end_date: date_range['lt'] = parse_date(end_date)
-    if date_range: filters.append(dict(range={'date' : date_range}))
+    if date_range: yield dict(range={'date' : date_range})
 
     if 'hash' in f:
         hashes = f['hash']
         if isinstance(hashes, str): hashes = [hashes]
-        filters.append(dict(terms={'hash': hashes}))
-            
+        yield dict(terms={'hash': hashes})
+
+def build_filter(*args, **kargs):
+    filters = list(get_filter_clauses(*args, **kargs))
     if len(filters) == 0:
         return None
     elif len(filters) == 1:
         return filters[0]
     else:
-        return {'and' : filters}
+        return {'bool' : {'must' : filters}}
 
 def build_body(query=None, filter=None, filters=None):
     """
