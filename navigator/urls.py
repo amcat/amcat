@@ -20,7 +20,7 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views.articleset_views import ImportSetView, SampleSetView, RefreshArticleSetView
+from navigator.views.articleset_views import ImportSetView, SampleSetView, RefreshArticleSetView, EditSetView
 from navigator.views.preprocessing_views import ProcessParsingView
 from navigator.views.codebook_views import ImportCodebook, ExportCodebook
 from navigator.views import rule_views
@@ -43,8 +43,6 @@ urlpatterns = patterns(
             'navigator.views.article.remove_from', name="remove_from_articleset"),
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
             'navigator.views.project.article', name="article"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/edit/(?P<id>[0-9]+)$',
-        'navigator.views.project.edit_articleset', name="articleset-edit"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/delete/(?P<id>[0-9]+)$',
         'navigator.views.project.delete_articleset', name="articleset-delete"),
     #url(r'^project/(?P<projectid>[0-9]+)/articleset/refresh/(?P<pk>[0-9]+)$',
@@ -95,7 +93,6 @@ urlpatterns = patterns(
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
 
-    url(r'^project/(?P<id>[0-9]+)/articlesets(?P<what>/\w+)?$', 'navigator.views.project.articlesets', name='project-articlesets'),
     url(r'^project/(?P<id>[0-9]+)/codingjobs$', 'navigator.views.project.codingjobs', name='project-codingjobs'),
     url(r'^project/(?P<id>[0-9]+)/schemas$', 'navigator.views.project.schemas', name='project-schemas'),
     url(r'^project/(?P<id>[0-9]+)/codebooks$', 'navigator.views.project.codebooks', name='project-codebooks'),
@@ -164,7 +161,7 @@ from navigator.views.query import *
 from navigator.views.project_views import *
 
 
-for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView, SampleSetView]:
+for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView, SampleSetView, EditSetView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())

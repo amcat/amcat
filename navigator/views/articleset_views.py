@@ -28,6 +28,7 @@ from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
+from django.views.generic.edit import UpdateView
 
 from django.views.generic.base import RedirectView
 from django.db.models import Q
@@ -171,4 +172,22 @@ class RefreshArticleSetView(RedirectView):
     def get_redirect_url(self, projectid, pk):
         # refresh the queryset. Probably not the nicest way to do this (?)
         ArticleSet.objects.get(pk=pk).refresh_index(full_refresh=True)
-        return reverse("articleset", args=[projectid, pk])
+        return reverse("article set-details", args=[projectid, pk])
+
+from amcat.models import Role
+PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
+class EditSetView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
+    parent = ArticleSetDetailsView
+    model = ArticleSet
+    url_fragment = 'edit'
+    context_category = 'Articles'
+    fields = ['project', 'name', 'provenance']
+    
+    def get_success_url(self):
+        return reverse("article set-details", args=[self.project.id, self.object.id])
+    def get_form(self, form_class):
+        form = super(EditSetView, self).get_form(form_class)
+        form.fields['project'].queryset = Project.objects.filter(projectrole__user=self.request.user,
+                                                                 projectrole__role_id__gte=PROJECT_READ_WRITE)
+        return form
+    
