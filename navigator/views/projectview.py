@@ -129,7 +129,10 @@ class HierarchicalViewMixin(object):
     @classmethod
     def get_view_name(cls):
         name = cls.model._meta.verbose_name
-        name += ("-list" if issubclass(cls, ListView) else "-details")
+        if hasattr(cls, 'url_fragment'):
+            name += "-" + cls.url_fragment
+        else:
+            name += ("-list" if issubclass(cls, ListView) else "-details")
 
         return name
         
@@ -148,8 +151,10 @@ class HierarchicalViewMixin(object):
             base = getattr(cls, "base_url", None)
             if base:
                 yield base
-        
-        if issubclass(cls, ListView):
+
+        if hasattr(cls, 'url_fragment'):
+            yield cls.url_fragment
+        elif issubclass(cls, ListView):
             yield cls.get_table_name().lower()
         else:
             yield "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
@@ -162,7 +167,9 @@ class HierarchicalViewMixin(object):
         kw = {k:v for (k,v) in kwargs.items() if k in keys}
         url = reverse(cls.get_view_name(), kwargs=kw)
 
-        if issubclass(cls, ListView):
+        if hasattr(cls, 'url_fragment'):
+            name = cls.url_fragment.title()
+        elif issubclass(cls, ListView):
             name = cls.get_model_name()
         else:
             obj = cls._get_object(kwargs)
@@ -171,4 +178,22 @@ class HierarchicalViewMixin(object):
         breadcrumbs.append((name, url))
         return breadcrumbs
         
+        
+from navigator.views.scriptview import ScriptView
+class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, ScriptView):
+    """
+    View that provides access to a Script from within a plugin.
+    Subclasses should provide a script instance.
+    """
+    template_name = "project/script_base.html"
+    script = None
+
+    def get_success_url(self):
+        return reverse("project", kwargs=dict(id=self.project.id))
+        
+    def get_context_data(self, **kwargs):
+        context = super(ProjectScriptView, self).get_context_data(**kwargs)
+        context["script_doc"] = self.script.__doc__ and self.script.__doc__.strip()
+        return context
+
         

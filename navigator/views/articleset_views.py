@@ -21,8 +21,8 @@ from django.core.urlresolvers import reverse
 
 from amcat.scripts.actions.sample_articleset import SampleSet
 from amcat.scripts.actions.import_articleset import ImportSet
-from navigator.views.scriptview import ProjectScriptView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
@@ -32,11 +32,6 @@ from django.views.generic.list import ListView
 from django.views.generic.base import RedirectView
 from django.db.models import Q
 
-class SampleSetView(ProjectScriptView):
-    script = SampleSet
-
-    def get_success_url(self):
-        return reverse("project-articlesets", kwargs=dict(id=self.project.id))
     
 class ImportSetView(ProjectScriptView):
     script = ImportSet
@@ -161,6 +156,17 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
         context['starred'] = starred
         return context
 
+class SampleSetView(ProjectScriptView):
+    parent = ArticleSetDetailsView
+    model = ArticleSet
+    script = SampleSet
+    url_fragment = 'sample'
+    context_category = 'Articles'
+    
+    def get_success_url(self):
+        return reverse("article set-list", args=[self.project.id])
+
+        
 class RefreshArticleSetView(RedirectView):
     def get_redirect_url(self, projectid, pk):
         # refresh the queryset. Probably not the nicest way to do this (?)

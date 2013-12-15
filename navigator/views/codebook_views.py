@@ -24,7 +24,8 @@ from django.http import HttpResponse
 from amcat.scripts.actions.import_codebook import ImportCodebook
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
-from navigator.views.scriptview import ProjectScriptView, TableExportMixin
+from navigator.views.projectview import ProjectScriptView
+from navigator.views.scriptview import TableExportMixin
 
 class ImportCodebook(ProjectScriptView):
     script = ImportCodebook

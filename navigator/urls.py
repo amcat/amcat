@@ -52,8 +52,6 @@ urlpatterns = patterns(
     
     url(r'^project/(?P<projectid>[0-9]+)/articleset/unlink/(?P<id>[0-9]+)$',
         'navigator.views.project.unlink_articleset', name="articleset-unlink"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/sample$',
-        SampleSetView.as_view(), name="articleset-sample"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/import$',
         ImportSetView.as_view(), name="articleset-import"),
 
@@ -166,7 +164,7 @@ from navigator.views.query import *
 from navigator.views.project_views import *
 
 
-for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView]:
+for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView, SampleSetView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())

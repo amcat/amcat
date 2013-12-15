@@ -39,6 +39,11 @@ class ScriptMixin(FormMixin):
     def get_form_class(self):
         return self.get_script().options_form
 
+    def get_initial(self):
+        initial = {k.replace("_id", "")  : v for (k,v) in self.kwargs.iteritems()}
+        initial.update(super(ScriptMixin, self).get_initial())
+        return initial
+                
     def run_form(self, form):
         self.form = form
         self.result =  self.get_script().run_script(form)
@@ -59,48 +64,6 @@ class ScriptMixin(FormMixin):
 class ScriptView(ProcessFormView, ScriptMixin, TemplateResponseMixin):
     pass
 
-class ProjectScriptView(ScriptView):
-    """
-    View that provides access to a Script from within a plugin.
-    Subclasses should provide a script instance.
-    """
-    template_name = "navigator/project/script_base.html"
-
-    def get_initial(self):
-        initial = super(ProjectScriptView, self).get_initial()
-        initial["project"] = self.project
-        return initial
-        
-    def get_success_url(self):
-        return reverse("project", kwargs=dict(id=self.project.id))
-        
-    def get_form(self, form_class):
-        form = super(ScriptView, self).get_form(form_class)
-        if self.request.method == 'GET':
-            for key, val in self.url_data.iteritems():
-                if key in form.fields:
-                    form.fields[key].initial = val
-        if 'project' in form.fields:
-            form.fields['project'].widget = HiddenInput()
-        return form
-
-    def _initialize_url_data(self, **kwargs):
-        self.project = Project.objects.get(pk=kwargs["projectid"])
-        self.url_data = kwargs
-    
-    def post(self, request, **kwargs):
-        self._initialize_url_data(**kwargs)
-        return super(ProjectScriptView, self).post(request, **kwargs)
-                
-    def get(self, request, **kwargs):
-        self._initialize_url_data(**kwargs)
-        return super(ProjectScriptView, self).get(request, **kwargs)
-        
-    def get_context_data(self, **kwargs):
-        context = super(ProjectScriptView, self).get_context_data(**kwargs)
-        context["project"] = self.project
-        context["script_doc"] = self.script.__doc__ and self.script.__doc__.strip()
-        return context
 
 class TableExportMixin():
 
