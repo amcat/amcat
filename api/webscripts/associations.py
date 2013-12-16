@@ -20,7 +20,6 @@
 from webscript import WebScript
 
 from amcat.scripts.searchscripts.articlelist import ArticleListScript
-from amcat.scripts.processors.associations import AssociationsScript
 from django import forms
 from amcat.tools.table import table3
 from amcat.tools import dot, keywordsearch, amcates
@@ -60,6 +59,7 @@ class ShowAssociations(WebScript):
     output_template = None
     solrOnly = True
     displayLocation = ('ShowSummary','ShowArticleList')
+    output_type = table3.Table
 
     def format(self, a):
         name, perc, formatstr = FORMATS[int(self.options["association_format"])]
@@ -120,7 +120,7 @@ class ShowAssociations(WebScript):
             self.output = 'json-html'
             assocTable = table3.WrappedTable(assocTable, cellfunc = lambda a: self.format(a) if isinstance(a, float) else a)
             
-            return self.outputResponse(assocTable, AssociationsScript.output_type)
+            return self.outputResponse(assocTable, self.output_type)
         elif self.options['network_output'] == 'oo':
             if self._interval:
                 cols = {}
@@ -133,7 +133,7 @@ class ShowAssociations(WebScript):
                 for i in sorted(probs):
                     row = [i] + [scores.get((i, ) + cols[c]) for c in colnames]
                     result.addRow(*row)
-                return self.outputResponse(result, AssociationsScript.output_type)
+                return self.outputResponse(result, self.output_type)
                 pass
             else:
                 # convert list to dict and make into dict table
@@ -142,7 +142,7 @@ class ShowAssociations(WebScript):
                 for i,x,y,a in assocTable:
                     result.addValue(x,y,self.format(a))
                 self.output = 'json-html'
-                return self.outputResponse(result, AssociationsScript.output_type)
+                return self.outputResponse(result, self.output_type)
         elif self.options['network_output'] == 'oon':
             html = ""
             for interval in sorted(probs):
