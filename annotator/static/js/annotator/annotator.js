@@ -285,7 +285,7 @@ annotator = (function(self){
         self.state.coded_article = article;
 
         var get_unit = function () {
-            return this.parnr + "." + this.sentnr;
+            return "{0}.{1}".f(this.parnr, this.sentnr);
         };
 
         $.each(sentences, function(sentence_id, sentence){

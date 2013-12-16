@@ -84,6 +84,34 @@ widgets = (function(self){
         }
     };
 
+    /* SENTENCE TYPE */
+    self.sentence = $.extend({}, self.default, {
+        get_html : function(){
+            var choices = $.map(annotator.state.sentences, function(sentence){
+                return {
+                    value : sentence.get_unit(),
+                    label : sentence.get_unit()
+                }
+            });
+
+            var widget = $("<input>");
+            autocomplete.set(widget, choices);
+            return widget;
+        },
+        get_value: function(widget){
+            var value = widget.val();
+            if (value === "") return null;
+
+            var parnr = parseInt(value.split(".")[0]);
+            var sentnr = parseInt(value.split(".")[1]);
+
+        },
+        set_value: function(widget, sentence){
+            widget.val(sentence.get_unit());
+        }
+
+    });
+
     /* TEXT TYPE */
     self.text = $.extend({}, self.default);
 
