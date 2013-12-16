@@ -597,54 +597,6 @@ def codebook_delete(request, project, codebook):
 
 
 
-@check(Project)
-def codebooks(request, project):
-    """
-    Codebooks-tab.
-    """
-    owned_codebooks = Datatable(CodebookResource, rowlink='./codebook/{id}').filter(project=project)
-    linked_codebooks = (Datatable(CodebookResource, rowlink='./codebook/{id}')
-                        .filter(projects_set=project))
-
-    can_import = True#project.can_update(request.user)
-    can_create = True#Codebook.can_create(request.user) and project.can_update(request.user)
-
-    deleted = session_pop(request.session, "deleted_codebook")
-    
-    context = project
-    menu = PROJECT_MENU
-    selected = "codebooks"
-    return render(request, "navigator/project/codebooks.html", locals())
-
-
-@check(Project)
-def preprocessing(request, project):
-    """
-    Codebooks-tab.
-    """
-    table = Datatable(AnalysedArticleResource).filter(article__articlesets_set__project=project)
-
-    form = AssignParsing.options_form(request.POST or None)
-    form.fields['articleset'].queryset = ArticleSet.objects.filter(pk__in=project.all_articlesets())
-
-    if form.is_valid():
-        assigned_n = AssignParsing(form).run()
-        assigned_plugin = form.cleaned_data["plugin"]
-        assigned_set = form.cleaned_data["articleset"]
-
-
-    context = project
-    menu = PROJECT_MENU
-    selected = "preprocessing"
-    return render(request, "navigator/project/preprocessing.html", locals())
-
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(Codebook, args_map={'codebook' : 'id'}, args='codebook')
-def codebook(request, codebook, project):
-    return table_view(request, project, None, 'codebooks',
-            template="navigator/project/codebook.html", codebook=codebook)
-
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
 def save_name(request, codebook, project):
