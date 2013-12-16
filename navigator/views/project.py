@@ -774,27 +774,6 @@ def edit(request, project):
 
     return render(request, 'navigator/project/edit.html', locals())
 
-@check(Project)
-def users_view(request, project):
-    """
-    View all users affiliated with this project. Also render a form
-    to add users to the project (if permissions are met).
-    """
-    users = Datatable(ProjectRoleResource, rowlink='./user/{user_id}')\
-            .filter(project=project).hide('project', 'id')
-
-    if request.user.get_profile().haspriv('manage_project_users', project):
-        add_user = forms.ProjectRoleForm(project)
-
-    ctx = dict(locals())
-    ctx.update({
-        'menu' : PROJECT_MENU,
-        'selected' : 'users',
-        'context' : project
-    })
-
-    return render(request, 'navigator/project/users.html', ctx)
-
 @check_perm("manage_project_users", True)
 def users_add(request, id):
     """

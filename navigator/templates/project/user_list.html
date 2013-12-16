@@ -1,0 +1,15 @@
+{% extends "project/base.html" %}
+
+{% block title %}Users{% endblock %}
+
+{% block actions %}
+ <form action="{% url "navigator.views.project.users_add" context.id %}" method="POST">
+  {{ add_user }}
+  <input type="submit" value="Add User(s)" />
+ </form>
+{% endblock %}
+
+{% block content %}
+{{ table|safe }}
+
+{% endblock %}

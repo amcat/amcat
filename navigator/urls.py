@@ -97,7 +97,6 @@ urlpatterns = patterns(
     url(r'^project/(?P<id>[0-9]+)/schemas$', 'navigator.views.project.schemas', name='project-schemas'),
     
     url(r'^project/(?P<id>[0-9]+)/edit$', 'navigator.views.project.edit', name='project-edit'),
-    url(r'^project/(?P<id>[0-9]+)/users$', 'navigator.views.project.users_view', name='project-users'),
     url(r'^project/(?P<id>[0-9]+)/users/add$', 'navigator.views.project.users_add'),
     url(r'^project/(?P<id>[0-9]+)/upload-articles$', 'navigator.views.project.upload_article', name='upload-articles'),
     url(r'^project/(?P<id>[0-9]+)/upload-articles/scrapers$', 'navigator.views.project.scrape_articles', name='scrape-articles'),
@@ -159,7 +158,9 @@ from navigator.views.article_views import *
 from navigator.views.query import *
 from navigator.views.project_views import *
 from navigator.views.codebook_views import *
-for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView, SampleSetView, EditSetView, CodebookListView, CodebookDetailsView]:
+from navigator.views.user_views import *
+
+for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView, SampleSetView, EditSetView, CodebookListView, CodebookDetailsView, UserListView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
