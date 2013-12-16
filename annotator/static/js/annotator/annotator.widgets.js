@@ -166,7 +166,7 @@ widgets = (function(self){
             self.default.set_value(widget, codingvalue, true);
             if (codingvalue.intval === null) return;
 
-            var schemafield = annotator.fields.schemas[widget.attr("codingschema_id")];
+            var schemafield = annotator.models.schemas[widget.attr("codingschema_id")];
             var code = schemafield.codebook.codes[codingvalue.intval];
 
             // Find parent-choice
@@ -230,9 +230,9 @@ widgets = (function(self){
      * Same as get_value, but returns as CodingValue object.
      */
     self.get_codingvalue = function(container) {
-        var sentence = annotator.sentences[container.attr("sentence_id")] || null;
-        var coding = annotator.codings[(sentence === null) ? "null" : sentence.id];
-        var field = annotator.fields.schemafields[container.attr("schemafield_id")];
+        var sentence = annotator.state.sentences[container.attr("sentence_id")] || null;
+        var coding = annotator.state.codings[(sentence === null) ? "null" : sentence.id];
+        var field = annotator.models.schemafields[container.attr("schemafield_id")];
         var value = self.get_value(container);
 
         return {
@@ -253,7 +253,7 @@ widgets = (function(self){
      * @return: null / int / string
      */
     self.get_value = function(container){
-        var field = annotator.fields.schemafields[container.attr("schemafield_id")];
+        var field = annotator.models.schemafields[container.attr("schemafield_id")];
         return self.get_widget_type(field).get_value(container);
     };
 

@@ -65,8 +65,8 @@ rules = (function(self){
 
        container = self.get_container_by_input($(event.currentTarget));
        sentence = container.attr("sentence_id");
-       sentence = (sentence === undefined) ? null : annotator.sentences[sentence];
-       schemafield = annotator.fields.schemafields[container.attr("schemafield_id")];
+       sentence = (sentence === undefined) ? null : annotator.state.sentences[sentence];
+       schemafield = annotator.models.schemafields[container.attr("schemafield_id")];
 
        rules = self.get_field_codingrules()[schemafield.id];
 
@@ -183,7 +183,7 @@ rules = (function(self){
         }
 
         var codingrule_fields = {};
-        $.each(annotator.fields.codingrules, function (i, rule) {
+        $.each(annotator.models.rules, function (i, rule) {
             var self = this;
             codingrule_fields[rule.id] = [];
 
@@ -226,7 +226,7 @@ rules = (function(self){
 
         $.each(field_codingrules, function(field_id, rules){
             field_codingrules[field_id] = $.map(rules, function(rule_id){
-                return annotator.fields.codingrules[rule_id];
+                return annotator.models.rules[rule_id];
             });
         });
 

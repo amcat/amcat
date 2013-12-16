@@ -204,16 +204,6 @@ annotator.unitcodings.findSentenceFieldIdByName = function (name) {
     return result;
 };
 
-annotator.unitcodings.switchSubjectObject = function () {
-    var subjectElName = annotator.unitcodings.findSentenceFieldIdByName('Subject');
-    var objectElName = annotator.unitcodings.findSentenceFieldIdByName('Object');
-    //console.debug(subjectElName, objectElName);
-    var newRow = $('#unitcoding-table').find('.row_selected'); // the newly copied row is the selected row (since when adding a row focus is put on new row)
-    var subject = newRow.find('input[name=' + subjectElName + ']').val();
-    var object = newRow.find('input[name=' + objectElName + ']').val();
-    newRow.find('input[name=' + subjectElName + ']').val(object);
-    newRow.find('input[name=' + objectElName + ']').val(subject);
-};
 
 annotator.unitcodings.getEmptyUnitCodingRow = function () {
     var rowNew = annotator.unitcodings.emptyUnitcodingHtml.clone();

@@ -45,6 +45,9 @@ annotator = (function(self){
 
     self.get_empty_state = function(){
         return {
+            requests : null,
+            coded_article_id: -1,
+            coded_article: null,
             deleted_rows: [],
             modified_rows: [],
             sentence_codings_modified: false,
@@ -72,6 +75,7 @@ annotator = (function(self){
     };
 
     self.state = self.get_empty_state();
+    self.highlight_labels = null;
     self.codingjob = null;
     self.datatable = null;
     self.previous_width = -1;
@@ -148,6 +152,61 @@ annotator = (function(self){
         }))
     };
 
+    self.initialise_fields = function(){
+        self.loading_dialog.text("Loading fields..").dialog("open");
+
+        self._requests = [
+            $.getJSON(self.get_api_url()),
+            $.getJSON(self.get_api_url() + "coding_rules"),
+            $.getJSON(self.get_api_url() + "codebooks"),
+            $.getJSON(self.get_api_url() + "codingschemas"),
+            $.getJSON(self.get_api_url() + "codingschemafields"),
+            $.getJSON(self.API_URL + "coding_rule_actions")
+        ];
+
+        $.when.apply(undefined, self._requests).then(function (codingjob, rules, codebooks, schemas, schemafields, actions) {
+                // Check if all request completed successfully. (If not, an
+                // error is already thrown, but we need not continue processing
+                // the data.
+                if (!all(function (request) {
+                    return request.statusText === "OK";
+                }, self._requests)) {
+                    throw "Not all requests completed successfully.";
+                }
+
+                // Extract results from response
+                self.models.rules = map_ids(rules[0].results);
+                self.models.actions = map_ids(actions[0].results);
+                self.models.codebooks = map_ids(codebooks[0].results);
+                self.models.schemas = map_ids(schemas[0].results);
+                self.models.schemafields = map_ids(schemafields[0].results);
+                self.codingjob = codingjob[0];
+
+                // Convert codebook.codes (array) to mapping code_id -> code
+                $.each(self.models.codebooks, function(codebook_id, codebook){
+                    codebook.codes = map_ids(codebook.codes, "code");
+                    resolve_ids(codebook.codes, codebook.codes, "parent");
+                });
+
+                // Resolve a bunch of foreign keys
+                resolve_ids(self.models.rules, self.models.actions, "action");
+                resolve_ids(self.models.rules, self.models.schemas, "codingschema");
+                resolve_ids(self.models.rules, self.models.schemafields, "field");
+                resolve_ids(self.models.schemafields, self.models.schemas, "codingschema");
+                resolve_ids(self.models.schemafields, self.models.codebooks, "codebook");
+                resolve_id(self.codingjob, self.models.schemas, "articleschema");
+                resolve_id(self.codingjob, self.models.schemas, "unitschema");
+
+                // Initialize data
+                self.codebooks_fetched();
+                self.highlighters_fetched();
+                self.schemafields_fetched();
+                self.loading_dialog.dialog("close");
+            }
+        );
+
+    };
+
     /******** KEYBOARD SHORTCUTS *******/
     self.shortcuts = function(){ return {
         "ctrl+s" : self.save_btn.click,
@@ -205,8 +264,112 @@ annotator = (function(self){
 
     };
 
-    self.get_article = function(article_id){
+    self.coded_article_fetched = function(article, codings, sentences){
+        console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
 
+        codings = map_ids(codings[0].results, "sentence");
+        sentences = map_ids(sentences[0].results);
+        resolve_ids(codings, sentences, "sentence");
+
+        $.each(codings, function(coding_id, coding){
+            map_ids(coding.values);
+            resolve_ids(coding.values, self.models.schemafields, "field");
+
+            $.each(coding.values, function(value_id, value){
+                value.coding = coding;
+            });
+        });
+
+        self.state.sentences = sentences;
+        self.state.codings = codings;
+        self.state.coded_article = article;
+
+        var get_unit = function () {
+            return this.parnr + "." + this.sentnr;
+        };
+
+        $.each(sentences, function(sentence_id, sentence){
+            sentence.get_unit = get_unit.bind(sentence);
+        });
+
+        // Set buttons
+        // $('#next-article-button').button("option", "disabled", row.next().length == 0);
+        //$('#previous-article-button').button("option", "disabled", row.prev().length == 0);
+
+        $("#article-comment").text(article.comments || "");
+        $('#article-status').find('option:contains("' + article.status + '")').attr("selected", "selected");
+
+        // Initialise coding area
+        self.sentences_fetched(sentences);
+        self.highlight();
+        self.codings_fetched();
+
+        $(".coding-part").show();
+        $("#article-comment").focus();
+
+        self.loading_dialog.dialog("close");
+    };
+
+    self.highlight = function(){
+        var _labels = [], escape_regex, labels = self.highlight_labels;
+        console.log("Highlighting ", labels.length ," labels in article..");
+
+        escape_regex = function(str) {
+            return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+        };
+
+        $.each(labels, function(i, label){
+            _labels.push(escape_regex(label));
+        });
+
+        $("div.sentences").easymark("highlight", _labels.join(" "));
+    };
+
+    /*
+     * Resets internal state and fetches new coded article, which consists of:
+     *  - coded_article
+     *  - codings + values
+     *  - sentences
+     * coded_article_fetched is called when requests finished
+     */
+    self.get_article = function(article_id){
+        var base_url = self.get_api_url() + "coded_articles/" + article_id + "/";
+
+        self.state = self.get_empty_state();
+        self.state.coded_article_id = article_id;
+
+        self.state.requests = [
+            $.getJSON(base_url),
+            $.getJSON(base_url + "codings"),
+            $.getJSON(base_url + "sentences")
+        ];
+
+        self.loading_dialog.text("Loading codings..").dialog("open");
+        $.when.apply(undefined, self.state.requests).then(self.coded_article_fetched);
+    };
+
+
+    /*
+     * Get descendants. Needs to be bound to a code object. This call is
+     * automatically cached, and stored in code.descendants.
+     */
+    self.get_descendants = function(depth){
+        depth = (depth === undefined) ? 0 : depth;
+
+        if (depth >= 1000){
+            throw "Maximum recursion depth exceeded, loop in codes?";
+        }
+
+        if (this.children.length === 0) return {};
+        if (this.descendants !== undefined) return this.descendants;
+
+        var descendants = $.extend({}, this.children);
+        $.each(this.children, function(code_id, code){
+            $.extend(descendants, code.get_descendants(depth+1));
+        });
+
+        this.descendants = descendants;
+        return this.descendants;
     };
 
     /******** EVENTS *******/
@@ -223,7 +386,7 @@ annotator = (function(self){
         var empty_coding = {
             id: null,
             codingschema: articleschema,
-            article: self.state.article_coding.article,
+            article: self.state.coded_article,
             sentence: null,
             comments: null,
             codingjob: self.codingjob
@@ -235,12 +398,83 @@ annotator = (function(self){
         if (codings.length === 0) codings.push(empty_coding);
 
         // Create html content
-        self.article_coding_container.html(
-            annotator.articlecodings.get_schemafields_html(schemafields, null)
-        );
-
+        self.article_coding_container.html(self.get_article_coding_html(schemafields));
         rules.add(self.article_coding_container);
     };
+
+    /*
+     * Registers property 'choiches' on each schemafield, which can be used
+     * for autocompletes.
+     *
+     * TODO: Move to autocomplete
+     */
+    self.schemafields_fetched = function(){
+        var codes;
+
+        $.each(self.models.schemafields, function(id, schemafield){
+            if (schemafield.choices !== undefined) return;
+            if (widgets.SCHEMATYPES[schemafield.fieldtype] === "codebook"){
+                codes = (schemafield.split_codebook ? schemafield.codebook.roots : schemafield.codebook.codes);
+                schemafield.choices = autocomplete.get_choices(codes);
+            }
+        });
+    };
+
+    /*
+     * Called when codebooks are fetched. Codebooks include all labels and all
+     * functions. codebooks_fetched converts the flat codebookcodes into an
+     * hierarchy.
+     */
+    self.codebooks_fetched = function(){
+        // Set `roots` property on each codebook which contains a mapping
+        // of code_id -> code.
+        console.log(self.models)
+        $.each(self.models.codebooks, function(codebook_id, codebook){
+            codebook.roots = filter(function(code){ return code.parent === null }, codebook.codes);
+            codebook.roots = map_ids(codebook.roots, "code");
+        });
+
+        $.each(self.models.codebooks, function(codebook_id, codebook){
+            // Initialise children property, and register get_descendants
+            $.each(codebook.codes, function(code_id, code){
+                code.children = {};
+                code.get_descendants = self.get_descendants.bind(code);
+            });
+
+            // Add property 'children' to each code, and call get_descendants for
+            // caching purposes.
+            $.each(codebook.codes, function(code_id, code){
+                if (code.parent === null) return;
+                code.parent.children[code_id] = code;
+            });
+
+            // Cache descendants
+            $.each(codebook.codes, function(i, code) { code.get_descendants() });
+        });
+    };
+
+    /*
+     * Initialise highlighters by preparing self.highlighter_labels. May
+     * push 'undefined' if no label is available in the codebook for the requested
+     * language.
+     */
+    self.highlighters_fetched = function(){
+        var labels = [];
+        var language_id, codebook;
+
+        $.each(self.models.schemas, function(schema_id, schema){
+            language_id = schema.highlight_language;
+            $.each(schema.highlighters, function(i, codebook_id){
+                codebook = self.models.codebooks[codebook_id];
+                $.each(codebook.codes, function(i, code){
+                    labels.push(code.labels[language_id]);
+                });
+            });
+        });
+
+        self.highlight_labels = labels;
+    };
+
 
     // TODO: Remove legacy code (get_unit() logic, etc.)
     self.sentences_fetched = function(sentences) {
@@ -308,9 +542,51 @@ annotator = (function(self){
         })
     };
 
-    self.initialise = function(project_id, codingjob_id, coder_id){
-        console.log("test");
+    // TODO: Clean, comment on magic
+    self.initialise_wordcount = function(){
+        // http://stackoverflow.com/questions/6743912/get-the-pure-text-without-html-element-by-javascript
+        var sentence_re = / id="sentence-[0-9]*"/g;
+        var count = function () {
+            var html = "";
+            if (typeof window.getSelection != "undefined") {
+                var sel = window.getSelection();
+                if (sel.rangeCount) {
+                    var container = document.createElement("div");
+                    for (var i = 0, len = sel.rangeCount; i < len; ++i) {
+                        container.appendChild(sel.getRangeAt(i).cloneContents());
+                    }
+                    html = container.innerHTML;
+                }
+            } else if (typeof document.selection != "undefined") {
+                if (document.selection.type == "Text") {
+                    html = document.selection.createRange().htmlText;
+                }
+            }
 
+            html = $("<div>" + html.replace(sentence_re, '') + "</div>");
+            $(".annotator-sentencenr", html).remove();
+
+            var text = "";
+            $.each(html, function (i, el) {
+                text += el.innerHTML.replace("</div><div>", " ");
+                text += " ";
+            });
+
+            var count = 0;
+            $.each(text.split(/ /g), function (i, word) {
+                // replace functions like strip() in Python
+                if (word.replace(/^\s+|\s+$/g, '') !== "") count++;
+            });
+
+            $("#wordcount").html(count);
+        };
+
+        $(".article-part").find(".sentences").mouseup(function () {
+            window.setTimeout(count, 50);
+        });
+    };
+
+    self.initialise = function(project_id, codingjob_id, coder_id){
         self.project_id = project_id;
         self.codingjob_id = codingjob_id;
         self.coder_id = coder_id;
@@ -319,6 +595,8 @@ annotator = (function(self){
         self.initialise_buttons();
         self.initialise_dialogs();
         self.initialise_shortcuts();
+        self.initialise_fields();
+        self.initialise_wordcount();
     };
 
 
@@ -327,11 +605,6 @@ annotator = (function(self){
 
 
 /************* Storing data *************/
-annotator.showMessage = function (text) {
-    $('#message-dialog-msg').text(text);
-    $('#message-dialog').dialog('open');
-};
-
 /*
  * For all AJAX errors, display a generic error messages. This eliminates
  * lots of boiler-plate code in functions which use AJAX calls.

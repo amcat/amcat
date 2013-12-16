@@ -31,12 +31,6 @@ annotator.articletable.get_table = function(){
     return $('#article-table-container').find('table');
 };
 
-annotator.articletable.click_article_row = function (row) { // called if user clicks on article table row
-    if (!annotator.confirmArticleChange()) return;
-    annotator.articletable.get_table().find(".row_selected").removeClass("row_selected");
-    annotator.articletable.select_row(row);
-};
-
 
 annotator.articletable.select_next_row = function(){
     // Warn user for potentially lost data
@@ -79,21 +73,6 @@ annotator.articletable.select_previous_row = function () {
 
     row.removeClass('row_selected');
     annotator.articletable.select_row(row.prev());
-};
-
-annotator.articletable.highlight = function(){
-    var _labels = [], escape_regex, labels = annotator.fields.highlight_labels;
-    console.log("Highlighting ", labels.length ," labels in article..");
-
-    escape_regex = function(str) {
-        return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-    }; 
-
-    $.each(labels, function(i, label){
-        _labels.push(escape_regex(label));
-    });
-
-    $("div.sentences").easymark("highlight", _labels.join(" ")); 
 };
 
 // Function to force redraw (recalculation) of element
@@ -209,67 +188,6 @@ annotator.articletable.fit_table = function (min_size_input, min_size_header) {
         });
     }
 
-};
-
-/*
- *
- */
-annotator.articletable.get_article = function(article_id) {
-    annotator.article_id = article_id;
-    var base_url = annotator.get_api_url() + "coded_articles/" + article_id + "/";
-
-    annotator.articletable.requests = [
-        $.getJSON(base_url),
-        $.getJSON(base_url + "codings"),
-        $.getJSON(base_url + "sentences")
-    ];
-
-    $("<div id='loading_codings'>Loading codings, please wait..</div>").dialog({modal:true});
-
-    var get_unit = function () {
-        return this.parnr + "." + this.sentnr;
-    };
-
-    $.when.apply(undefined, annotator.articletable.requests).then(function (article, codings, sentences) {
-        console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
-        codings = annotator.map_ids(codings[0].results, "sentence");
-        sentences = annotator.map_ids(sentences[0].results);
-        annotator.resolve_ids(codings, sentences, "sentence");
-
-        $.each(codings, function(coding_id, coding){
-            annotator.map_ids(coding.values);
-            annotator.resolve_ids(coding.values, annotator.fields.schemafields, "field");
-
-            $.each(coding.values, function(value_id, value){
-                value.coding = coding;
-            });
-        });
-
-        annotator.sentences = sentences;
-        annotator.codings = codings;
-        annotator.article = article;
-
-        $.each(sentences, function(sentence_id, sentence){
-            sentence.get_unit = get_unit.bind(sentence);
-        });
-
-        // Set buttons
-        $('#edit-article-button').button("option", "disabled", false);
-       // $('#next-article-button').button("option", "disabled", row.next().length == 0);
-        //$('#previous-article-button').button("option", "disabled", row.prev().length == 0);
-
-        $("#article-comment").text(article.comments || "");
-        $('#article-status').find('option:contains("' + article.status + '")').attr("selected", "selected");
-
-        // Initialise coding area
-        annotator.sentences_fetched(sentences);
-        annotator.articletable.highlight();
-        annotator.articlecodings.codings_fetched();
-
-        $(".coding-part").show();
-        $("#loading_codings").dialog("destroy");
-        $("#article-comment").focus();
-    });
 };
 
 

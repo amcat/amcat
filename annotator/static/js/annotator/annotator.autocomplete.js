@@ -18,6 +18,9 @@
 ***************************************************************************/
 
 autocomplete = (function(self){
+    // TODO: Fetch from server
+    self.AUTOCOMPLETE_LANGUAGE = 0;
+
     /*
      * Sets intval attribute and sets correct label
      */
@@ -56,6 +59,32 @@ autocomplete = (function(self){
 
         // Only display first 20 results (for performance)
         return callback($.ui.autocomplete.filter(choices, request.term).slice(0, 20));
+    };
+
+    /*
+     * Generate a list of choices for autocomplete, based on a list of codes and the
+     * language id for the label.
+     */
+    self.get_choices = function(codes, language_id){
+        language_id = language_id || self.AUTOCOMPLETE_LANGUAGE;
+        var get_code = function(){ return this };
+
+        var labels = $.map(codes, function(code){
+            return {
+                // We can't store code directly, as it triggers an infinite
+                // loop in some jQuery function (autocomplete).
+                get_code : get_code.bind(code),
+                label : code.labels[language_id],
+                value : code.labels[language_id],
+                descendant_choices : self.get_choices(code.descendants)
+            }
+        });
+
+        labels.sort(function(a, b){
+            return a.ordernr - b.ordernr;
+        });
+
+        return labels;
     };
 
     self.set = function(input_element, choices){
