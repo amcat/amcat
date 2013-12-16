@@ -22,7 +22,7 @@ from django.contrib.auth.views import password_change, password_change_done
 
 from navigator.views.articleset_views import ImportSetView, SampleSetView, RefreshArticleSetView, EditSetView
 from navigator.views.preprocessing_views import ProcessParsingView
-from navigator.views.codebook_views import ImportCodebook, ExportCodebook
+from navigator.views.codebook_views import ImportCodebook, ExportCodebook, AddCodebookView
 from navigator.views import rule_views
 
 urlpatterns = patterns(
@@ -109,7 +109,6 @@ urlpatterns = patterns(
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_name$', 'navigator.views.project.save_name'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<id>[-0-9]+)/delete$', 'navigator.views.project.codebook_delete', name="project-delete-codebook"), 
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_changesets$', 'navigator.views.project.save_changesets'),
-    url(r'^project/(?P<id>[0-9]+)/codebook/add$', 'navigator.views.project.add_codebook', name='project-add-codebook'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/import$', ImportCodebook.as_view(), name='project-import-codebook'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/export$', ExportCodebook.as_view(), name='project-export-codebook'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)$', 'navigator.views.project.schema', name='project-schema'),
@@ -150,6 +149,9 @@ urlpatterns = patterns(
     url(r'^semanticroles$', 'navigator.views.semanticroles.index', name='semanticroles'),
     url(r'^semanticroles/(?P<id>[0-9]+)$', 'navigator.views.semanticroles.sentence', name='semanticroles-sentence'),
 
+    url(r'^projects/(?P<project_id>[0-9]+)/codebooks/add$', AddCodebookView.as_view(), name='codebook-add'),
+
+    
 ) 
 
 from navigator.views.articleset_views import *
@@ -157,7 +159,6 @@ from navigator.views.article_views import *
 from navigator.views.query import *
 from navigator.views.project_views import *
 from navigator.views.codebook_views import *
-
 for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView, SampleSetView, EditSetView, CodebookListView, CodebookDetailsView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',

@@ -3,7 +3,7 @@
 
 
 {% block actions %}
-  <a href="{% url "project-add-codebook" project.id %}" class="btn btn-primary"><i class="glyphicon glyphicon-plus-sign"></i> Create new codebook</a>
+  <a href="{% url "codebook-add" project.id %}" class="btn btn-primary"><i class="glyphicon glyphicon-plus-sign"></i> Create new codebook</a>
   <a href="{% url "project-import-codebook" project.id %}" class="btn btn-default"><i class="glyphicon glyphicon-upload"></i> Upload codebook</a>
   <a href="{% url "codebook-import" project.id %}"  class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Link to existing codebook</a>
 {% endblock %}

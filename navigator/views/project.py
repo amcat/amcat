@@ -578,14 +578,6 @@ def name_schema(request, schema, project):
             schema=schema)
 
 
-@check(Project)
-def add_codebook(request, project):
-    """
-    Add codebook automatically creates an empty codebook and opens the edit codebook page
-    """
-    c = Codebook.objects.create(project=project, name='New codebook')
-    return redirect(reverse('project-codebook', args=[project.id, c.id]))
-
 @check(Codebook, args='id', action='delete')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def codebook_delete(request, project, codebook):

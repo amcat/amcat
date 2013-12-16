@@ -31,6 +31,7 @@ from navigator.views.datatableview import DatatableMixin
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
+from django.views.generic.base import RedirectView
 
 from amcat.models import Codebook
 
@@ -79,6 +80,14 @@ class ExportCodebookXML(ProjectScriptView):
         response = HttpResponse(self.result, content_type='text/xml', status=200)
         response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
         return response
+
+class AddCodebookView(RedirectView):
+    """
+    Add codebook automatically creates an empty codebook and opens the edit codebook page
+    """
+    def get_redirect_url(self, project_id, **kwargs):
+        c = Codebook.objects.create(project_id=project_id, name='New codebook')
+        return reverse('codebook-details', args=[project_id, c.id])
 
 
 
