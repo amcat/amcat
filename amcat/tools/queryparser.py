@@ -188,7 +188,6 @@ class Span(Boolean, FieldTerm):
                 # index [0] because get_clause returns a list again, which we don't want here
                 return [get_clause(t, field)[0] for t in term.terms]
         clauses = (get_clause(t, self.qfield) for t in self.terms)
-        #import json; clauses = list(clauses); print("\n", json.dumps(clauses, indent=4))
         clauses = itertools.product(*clauses)
         clauses = [{"span_near" : {"slop": self.slop, "in_order" : self.in_order, "clauses" : list(c)}}
                    for c in clauses]
@@ -201,7 +200,7 @@ class Span(Boolean, FieldTerm):
 
 def lucene_span(quote, field, slop):
     '''Create a span query from a lucene style string, i.e. "terms"~10'''
-    clause = parse_to_terms(quote)
+    clause = parse_to_terms(quote, simplify_terms=False)
     if not (isinstance(clause, Boolean) and clause.operator == "OR" and clause.implicit):
         raise ParseError("Lucene-style proximity queries must contain a list of terms, not {clause!r}"
                          .format(**locals()))
@@ -299,8 +298,11 @@ def simplify(term):
         term.terms = new_terms
     return term
     
-def parse_to_terms(s):
-    return simplify(get_grammar().parseString(s, parseAll=True)[0])
+def parse_to_terms(s, simplify_terms=True):
+    terms = get_grammar().parseString(s, parseAll=True)[0]
+    if simplify_terms:
+        terms = simplify(terms)
+    return terms
     
 def parse(s):
     terms = parse_to_terms(s)
