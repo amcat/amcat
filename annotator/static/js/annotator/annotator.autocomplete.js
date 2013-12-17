@@ -28,7 +28,7 @@ autocomplete = (function(self){
         var label, intval = widgets.EMPTY_INTVAL;
 
         if (ui.item !== null){
-            intval = ui.item.get_code().code;
+            intval = ui.item.intval;
             label = ui.item.label;
         }
 
@@ -74,6 +74,7 @@ autocomplete = (function(self){
                 // We can't store code directly, as it triggers an infinite
                 // loop in some jQuery function (autocomplete).
                 get_code : get_code.bind(code),
+                intval : code.code,
                 label : code.labels[language_id],
                 value : code.labels[language_id],
                 descendant_choices : self.get_choices(code.descendants)
@@ -88,7 +89,6 @@ autocomplete = (function(self){
     };
 
     self.set = function(input_element, choices){
-        console.log(choices)
         return input_element.autocomplete({
             source : function(request, callback){
                 self.get_source(input_element, choices, request, callback);

@@ -26,8 +26,8 @@
 
 
 function get_input(widget){
-    if (widget.hasClass("coding")) return widget;
-    return widget.find(".coding");
+    if (widget.hasClass("codingvalue")) return widget;
+    return widget.find(".codingvalue");
 }
 
 widgets = (function(self){
@@ -49,7 +49,7 @@ widgets = (function(self){
          * passed to get_value and set_value.
          */
         get_html : function(schemafield, _intval){
-            var widget = $("<input>").addClass("coding");
+            var widget = $("<input>").addClass("codingvalue");
             return (_intval) ? widget.attr("intval", self.EMPTY_INTVAL) : widget;
         },
 
@@ -90,7 +90,8 @@ widgets = (function(self){
             var choices = $.map(annotator.state.sentences, function(sentence){
                 return {
                     value : sentence.get_unit(),
-                    label : sentence.get_unit()
+                    label : sentence.get_unit(),
+                    intval : -1
                 }
             });
 
@@ -169,9 +170,8 @@ widgets = (function(self){
                 root.addClass("codebook_root").attr("placeholder", "Root..").attr("intval", self.EMPTY_INTVAL);
                 descendant.addClass("codebook_descendant").attr("placeholder", "Descendant..");
                 descendant.attr("intval", self.EMPTY_INTVAL);
-                hidden.addClass("codebook_value").addClass("coding");
+                hidden.addClass("codebook_value").addClass("codingvalue");
 
-                console.log(schemafield);
                 autocomplete.set(root, schemafield.choices);
                 autocomplete.set(descendant, schemafield.choices);
 
@@ -182,7 +182,7 @@ widgets = (function(self){
 
                 html.append(root).append(descendant).append(hidden);
             } else {
-                var input = $("<input>").attr("intval", self.EMPTY_INTVAL).addClass("coding");
+                var input = $("<input>").attr("intval", self.EMPTY_INTVAL).addClass("codingvalue");
                 autocomplete.set(input, schemafield.choices);
                 html.append(input);
 
@@ -220,15 +220,14 @@ widgets = (function(self){
 
     /* GENERAL FUNCTIONS */
     /* Generates an array of dom elements based on a list of schemafields. */
-    self.get_html = function(schemafields, sentence){
+    self.get_html = function(schemafields){
         return $.map(schemafields, function(schemafield){
             var widget, widget_type;
 
             widget_type = self.get_widget_type(schemafield);
             widget = widget_type.get_html(schemafield);
             widget.attr("schemafield_id", schemafield.id);
-            widget.attr("sentence_id", (sentence === null) ? undefined : sentence.id);
-            widget.addClass("coding-container");
+            widget.addClass("codingvalue-container widget");
 
             return widget;
         });
@@ -236,30 +235,22 @@ widgets = (function(self){
 
     /* Generates 'label' element based on a schemafield and a widget */
     self.get_label_html = function(schemafield, widget){
-        var input = widget.find("input.coding");
+        var input = widget.find("input.codingvalue");
         return $("<label>").attr("for", input.attr("id")).text(schemafield.label);
     };
 
-    /* Returns existing widget(s) */
-    self.find = function(schemafield, sentence){
-        var scope = $((sentence === null) ? "#article-coding" : "unitcoding-table-part");
-        var selector = "[schemafield_id={0}]";
-
-        if (sentence === null){
-            selector += ":not([sentence_id])";
-        } else {
-            selector += "[sentence_id={1}]";
-        }
-
-        return scope.find(selector.f(schemafield.id, (sentence !== null) ? sentence.id : 0));
+    /* Returns existing widget(s) given a schemafield and a scope
+    *
+    * @type scope: jQuery element
+    * @requires: scope.hasClass("coding") */
+    self.find = function(schemafield, scope){
+        return scope.find("[schemafield_id={0}]".f(schemafield.id));
     };
 
     /*
      * Same as get_value, but returns as CodingValue object.
      */
-    self.get_codingvalue = function(container) {
-        var sentence = annotator.state.sentences[container.attr("sentence_id")] || null;
-        var coding = annotator.state.codings[(sentence === null) ? "null" : sentence.id];
+    self.get_codingvalue = function(coding, sentence, container) {
         var field = annotator.models.schemafields[container.attr("schemafield_id")];
         var value = self.get_value(container);
 

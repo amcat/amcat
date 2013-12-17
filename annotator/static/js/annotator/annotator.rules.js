@@ -39,75 +39,69 @@ rules = (function(self){
      * @requires: el.hasClass("coding")
      */
     self.get_container_by_input = function(el){
-        // Work through hierarchy until we found either a coding-container or
-        // the root of this document.
-        while (!el.hasClass("coding-container") && (el=el.parent()).length){ }
+        return $(el).closest(".codingvalue-container");
+    };
 
-        if (!el.length){
-            throw "No coding-container found for this element."
-        }
-
-        return el;
+    self.get_coding_element_by_container = function(el){
+        return $(el).closest(".coding");
     };
 
     /*
      *
      */
     self.add = function(html){
-        $("input.coding", html).change(self.coding_changed);
+        $("input.codingvalue", html).change(self.codingvalue_changes);
     };
 
     /*
      * Called when a coding has changed and the rules need to be reevaluated.
      */
-    self.coding_changed = function(event){
-       var container, sentence, schemafield, rules;
+    self.codingvalue_changes = function(event){
+        var container, coding_el, coding, schemafield, rules;
 
-       container = self.get_container_by_input($(event.currentTarget));
-       sentence = container.attr("sentence_id");
-       sentence = (sentence === undefined) ? null : annotator.state.sentences[sentence];
-       schemafield = annotator.models.schemafields[container.attr("schemafield_id")];
+        container = self.get_container_by_input($(event.currentTarget));
+        coding_el = self.get_coding_element_by_container(container);
+        schemafield = annotator.models.schemafields[container.attr("schemafield_id")];
+        rules = self.get_field_codingrules()[schemafield.id];
 
-       rules = self.get_field_codingrules()[schemafield.id];
+        if (rules === undefined) {
+            console.log("No codingrules for field " + schemafield.id);
+            return;
+        }
 
-       if (rules === undefined) {
-           console.log("No codingrules for field " + schemafield.id);
-           return;
-       }
+        // Check each rule
+        var apply = [], not_apply = [];
+        $.each(rules, function (i, rule) {
+            (self.applies(coding_el, schemafield, rule.parsed_condition)
+                ? apply : not_apply).push(rule);
+        });
 
-       // Check each rule
-       var apply = [], not_apply = [];
-       $.each(rules, function (i, rule) {
-           (self.applies(sentence, schemafield, rule.parsed_condition)
-               ? apply : not_apply).push(rule);
-       });
+        // If a rule not applies, reset their error-state
+        $.each(not_apply, function (i, rule) {
+            // We mark all input fields in the container belonging to the rule destination
+            var inputs = widgets.find(rule.field, coding_el).find("input");
 
-       // If a rule not applies, reset their error-state
-       $.each(not_apply, function (i, rule) {
-           // We mark all input fields in the container belonging to the rule destination
-           var inputs = widgets.find(rule.field, sentence).find("input");
+            inputs.css("borderColor", "");
+            inputs.prop("disabled", false);
+            inputs.attr("null", true);
+            inputs.attr("placeholder", "");
+        });
 
-           inputs.css("borderColor", "");
-           inputs.prop("disabled", false);
-           inputs.attr("null", true);
-           inputs.attr("placeholder", "");
-       });
+        $.each(apply, function (i, rule) {
+            var inputs = widgets.find(rule.field, coding_el).find("input");
 
-       $.each(apply, function (i, rule) {
-           var inputs = widgets.find(rule.field, sentence).find("input");
+            if (rule.field === null || rule.action === null) return;
 
-           if (rule.field === null || rule.action === null) return;
-
-           var action = rule.action.label;
-           if (action === self.ACTIONS.RED) {
-               inputs.css("borderColor", "red");
-           } else if (action === self.ACTIONS.NOT_CODABLE) {
-               inputs.prop("disabled", true);
-           } else if (action === self.ACTIONS.NOT_NULL) {
-               inputs.attr("null", false);
-               inputs.attr("placeholder", "NOT NULL");
-           }
-       });
+            var action = rule.action.label;
+            if (action === self.ACTIONS.RED) {
+                inputs.css("borderColor", "red");
+            } else if (action === self.ACTIONS.NOT_CODABLE) {
+                inputs.prop("disabled", true);
+            } else if (action === self.ACTIONS.NOT_NULL) {
+                inputs.attr("null", false);
+                inputs.attr("placeholder", "NOT NULL");
+            }
+        });
     };
 
     /*
@@ -116,19 +110,19 @@ rules = (function(self){
      * @type rule: object
      * @param rule: CodingRule.parsed_condition
      * @type schemafield: Schemafield
-     * @type sentence: Sentence object
+     * @type coding_el: jQuery element => coding_el.hasClass("coding")
      */
-    self.applies = function (sentence, schemafield, rule) {
+    self.applies = function (coding_el, schemafield, rule) {
         // Create partially applied applies function
         var ra = function (rule) {
-            self.applies(sentence, schemafield, rule)
+            self.applies(coding_el, schemafield, rule)
         };
 
         var truth, assert = function (cond) {
             if (!cond) throw "AssertionError";
         };
 
-        var input_value = widgets.get_value(widgets.find(schemafield, sentence));
+        var input_value = widgets.get_value(widgets.find(schemafield, coding_el));
 
         if (rule.type === null) {
             // Empty rule. "Waardeloos waar".

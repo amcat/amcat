@@ -33,6 +33,12 @@ String.prototype.format = String.prototype.f = function() {
     return s;
 };
 
+$.values = function(obj) {
+    return $.map(obj, function(value, _) {
+        return value;
+    });
+};
+
 annotator = (function(self){
     /******** STATE & CONSTANTS *******/
     self.API_URL = "/api/v4/";
@@ -53,6 +59,7 @@ annotator = (function(self){
             sentence_codings_modified: false,
             article_coding_modified: false,
             article_coding : null,
+            sentence_codings: [],
             codings : [],
             sentences : []
         }
@@ -73,6 +80,9 @@ annotator = (function(self){
         "schemas" : null,
         "schemafields" : null
     };
+
+    self.sentence_schemafields = [];
+    self.article_schemafields = [];
 
     self.state = self.get_empty_state();
     self.highlight_labels = null;
@@ -99,7 +109,7 @@ annotator = (function(self){
     /* Containers & dialogs. These can only be set if DOM is ready. */
     self.initialise_containers = function(){
         self.article_coding_container = $("#article-coding");
-        self.sentence_codings_container = $("<div>");
+        self.sentence_codings_container = $("#unitcoding-table-part");
         self.article_container = $("article");
     };
 
@@ -201,6 +211,7 @@ annotator = (function(self){
                 self.codebooks_fetched();
                 self.highlighters_fetched();
                 self.schemafields_fetched();
+                self.initialise_sentence_codings_table();
                 self.loading_dialog.dialog("close");
             }
         );
@@ -209,12 +220,12 @@ annotator = (function(self){
 
     /******** KEYBOARD SHORTCUTS *******/
     self.shortcuts = function(){ return {
-        "ctrl+s" : self.save_btn.click,
+        "ctrl+s" : self.save_btn.trigger.bind(self.save_btn, "click"),
         "ctrl+down" : self.add_row,
         "ctrl+shift+down" : self.add_row,
         "shift+down" : self.copy_row,
-        "ctrl+i" : self.irrelevant_btn.click,
-        "ctrl+d" : self.save_continue_btn.click
+        "ctrl+i" : self.irrelevant_btn.trigger.bind(self.irrelevant_btn, "click"),
+        "ctrl+d" : self.save_continue_btn.trigger.bind(self.save_continue_btn, "click")
     }};
 
     /******** PUBLIC FUNCTIONS *******/
@@ -233,8 +244,13 @@ annotator = (function(self){
     };
 
     /* Returns (new) DOM representation of the articlecoding */
-    self.get_article_coding_html = function(schemafields){
-        return $("<table>").append($.map(widgets.get_html(schemafields, null), function(widget, i){
+    self.get_article_coding_html = function(){
+        var schemafields = self.article_schemafields;
+        var table = $("<table>")
+            .attr("annotator_coding_id", self.state.article_coding.annotator_id)
+            .addClass("coding");
+
+        return table.append($.map(widgets.get_html(schemafields, null), function(widget, i){
             var label = widgets.get_label_html(schemafields[i], widget);
             return $("<tr>")
                 .append($("<td>").append(label))
@@ -242,13 +258,86 @@ annotator = (function(self){
         }));
     };
 
+    /*
+     * Initialises table headers (sentence + fields + action) (columns)
+     */
+    self.initialise_sentence_codings_table = function () {
+        var table_header = $("<tr>");
+        table_header.append($("<th>").text("Sentence"));
+        table_header.append(
+            $.map(self.sentence_schemafields, function(schemafield){
+                return $("<th>").text(schemafield.label);
+            })
+        );
+
+        self.sentence_codings_container.find("table")
+            .append($("<thead>").append(table_header))
+            .append($("<tbody>"));
+    };
+
+
+    self.initialise_sentence_codings = function () {
+        if (self.codingjob.unitschema === null) return $("<div>");
+
+        if (self.state.sentence_codings.length === 0){
+            var empty_coding = self.get_empty_coding();
+            empty_coding.codingschema = self.codingjob.unitschema;
+            self.state.sentence_codings.push(empty_coding);
+        }
+
+        $.map(self.state.sentence_codings, self.append_sentence_coding);
+    };
+
+    /*
+     * Create new row, and append it to existing table
+     */
+    self.append_sentence_coding = function(coding){
+        self.sentence_codings_container.find("tbody").append(
+            self.get_sentence_coding_html(coding)
+        );
+    };
+
+    /* Returns (new) DOM representation of a single sentence coding */
+    self.get_sentence_coding_html = function(coding){
+        var coding_el = $("<tr>").addClass("coding").attr("annotator_coding_id", coding.annotator_id);
+        coding_el.append(widgets.sentence.get_html());
+        coding_el.append($.map(widgets.get_html(self.sentence_schemafields), function(widget){
+            return $("<td>").append(widget);
+        }));
+
+        return coding_el;
+    };
+
     self.select_all_sentences = function () {
 
     };
 
-    self.save_and_continue = function () {
+    self.validate = function(){
+        return true;
+    };
+
+    self.save = function(success_callback){
+        var coding_values = {};
+
+        // Check whether we want to save.
+        var validation = self.validate();
+        if (validation !== true){
+            self.message_dialog.text("Could not validate, relevant fields are marked red.").dialog("open");
+            return;
+        }
+
+        // Get codingvalues of article codings
+        var coding_el = self.article_coding_container.find(".coding");
+        var article_coding_values = $.map(coding_el.find(".widget"), function(widget){
+            return widgets.get_codingvalue(self.state.article_coding, null, $(widget));
+        });
 
     };
+
+    self.save_and_continue = function () {
+        self.save(self.select_next_article);
+    };
+
     self.irrelevant_and_save = function () {
 
     };
@@ -259,23 +348,29 @@ annotator = (function(self){
 
     };
 
-    /* Returns (new) DOM representation of a single sentence coding */
-    self.get_sentence_coding_html = function(schemafields, sentence){
-
+    /* Returns an every increasing (unique) integer */
+    self._id = 0;
+    self.get_new_id = function(){
+        return self._id += 1
     };
+
 
     self.coded_article_fetched = function(article, codings, sentences){
         console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
 
-        codings = map_ids(codings[0].results, "sentence");
+        $.each(codings[0].results, function(i, coding){
+            coding.annotator_id = self.get_new_id();
+        });
+
+        codings = map_ids(codings[0].results, "annotator_id");
         sentences = map_ids(sentences[0].results);
         resolve_ids(codings, sentences, "sentence");
 
-        $.each(codings, function(coding_id, coding){
+        $.each(codings, function(_, coding){
             map_ids(coding.values);
             resolve_ids(coding.values, self.models.schemafields, "field");
 
-            $.each(coding.values, function(value_id, value){
+            $.each(coding.values, function(_, value){
                 value.coding = coding;
             });
         });
@@ -288,7 +383,7 @@ annotator = (function(self){
             return "{0}.{1}".f(this.parnr, this.sentnr);
         };
 
-        $.each(sentences, function(sentence_id, sentence){
+        $.each(sentences, function(_, sentence){
             sentence.get_unit = get_unit.bind(sentence);
         });
 
@@ -372,34 +467,50 @@ annotator = (function(self){
         return this.descendants;
     };
 
-    /******** EVENTS *******/
-    // TODO: Only initialise article coding html once.
-    self.codings_fetched = function(){
-        // Check whether there is an articleschema for this codingjob
-        if (self.codingjob.articleschema === null) return;
-
-        // Get schemafields belonging to this articleschema
-        var articleschema = self.codingjob.articleschema;
-        var schemafields = filter(function(f){ return f.codingschema === articleschema }, self.models.schemafields);
-        schemafields.sort(function(f1, f2){ return f1.fieldnr - f2.fieldnr });
-
-        var empty_coding = {
+    self.get_empty_coding = function(){
+        return {
+            annotator_id: self.get_new_id(),
             id: null,
-            codingschema: articleschema,
+            codingschema: null,
             article: self.state.coded_article,
             sentence: null,
             comments: null,
             codingjob: self.codingjob
         };
 
-        // Collect article codings. If no codings are available, create a
-        // new empty one.
-        var codings = filter(function(c){ return c.sentence === null }, self.state.codings);
-        if (codings.length === 0) codings.push(empty_coding);
+    };
+
+    self.is_article_coding = function(coding){
+        return coding.sentence === null;
+    };
+
+
+    /******** EVENTS *******/
+    // TODO: Only initialise article coding html once.
+    self.codings_fetched = function(){
+        // Determine sentence codings
+        self.state.sentence_codings = $.grep($.values(self.state.codings), function(c){
+            return !self.is_article_coding(c);
+        });
+
+        // Determine article coding
+        var article_coding = $.grep($.values(self.state.codings), self.is_article_coding);
+
+        if (article_coding.length === 0){
+            var empty_coding = self.get_empty_coding();
+            empty_coding.codingschema = self.codingjob.articleschema;
+            self.state.article_coding = empty_coding;
+            self.state.codings[empty_coding.annotator_id] = empty_coding;
+        } else {
+            self.state.article_coding = article_coding[0];
+        }
 
         // Create html content
-        self.article_coding_container.html(self.get_article_coding_html(schemafields));
+        self.article_coding_container.html(self.get_article_coding_html());
         rules.add(self.article_coding_container);
+
+        self.initialise_sentence_codings();
+        //rules.add(self.sentence_codings_container);
     };
 
     /*
@@ -418,6 +529,21 @@ annotator = (function(self){
                 schemafield.choices = autocomplete.get_choices(codes);
             }
         });
+
+
+        // Categorize schemafields
+        var articleschema = self.codingjob.articleschema;
+        $.each(self.models.schemafields, function(id, schemafield){
+            if (schemafield.codingschema === articleschema){
+                self.article_schemafields.push(schemafield);
+            } else {
+                self.sentence_schemafields.push(schemafield)
+            }
+        });
+
+        // Sort schemafields according to fieldnr
+        self.sentence_schemafields.sort(function(f1, f2){ return f1.fieldnr - f2.fieldnr });
+        self.article_schemafields.sort(function(f1, f2){ return f1.fieldnr - f2.fieldnr });
     };
 
     /*
@@ -428,7 +554,6 @@ annotator = (function(self){
     self.codebooks_fetched = function(){
         // Set `roots` property on each codebook which contains a mapping
         // of code_id -> code.
-        console.log(self.models)
         $.each(self.models.codebooks, function(codebook_id, codebook){
             codebook.roots = filter(function(code){ return code.parent === null }, codebook.codes);
             codebook.roots = map_ids(codebook.roots, "code");
@@ -537,7 +662,7 @@ annotator = (function(self){
         $.each(self.shortcuts(), function(keys, callback){
             doc.bind("keydown", keys, function(event){
                 event.preventDefault();
-                callback(event);
+                callback();
             });
         })
     };
