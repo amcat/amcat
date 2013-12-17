@@ -128,13 +128,15 @@ class HierarchicalViewMixin(object):
     
     @classmethod
     def get_view_name(cls):
-        name = cls.model._meta.verbose_name
-        if hasattr(cls, 'url_fragment'):
-            name += "-" + cls.url_fragment
+        if hasattr(cls, 'view_name'):
+            return cls.view_name
         else:
-            name += ("-list" if issubclass(cls, ListView) else "-details")
-
-        return name
+            name = cls.model._meta.verbose_name
+            if hasattr(cls, 'url_fragment'):
+                name += "-" + cls.url_fragment
+            else:
+                name += ("-list" if issubclass(cls, ListView) else "-details")
+            return name
         
     @classmethod
     def get_url_patterns(cls):
@@ -160,21 +162,27 @@ class HierarchicalViewMixin(object):
             yield "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
 
     @classmethod
+    def _get_breadcrumb_name(cls, kwargs):
+        """Return the name of this 'level' in the breadcrumb trail"""
+        if hasattr(cls, 'url_fragment'):
+            return cls.url_fragment.title()
+        elif issubclass(cls, ListView):
+            return cls.get_model_name()
+        else:
+            obj = cls._get_object(kwargs)
+            return "{obj.id} : {obj}".format(**locals())
+            
+        
+            
+    @classmethod
     def _get_breadcrumbs(cls, kwargs):
         breadcrumbs = cls.parent._get_breadcrumbs(kwargs) if cls.parent else []
         
         keys = re.findall("<([^>]+)>", cls.get_url_patterns()[0])
         kw = {k:v for (k,v) in kwargs.items() if k in keys}
         url = reverse(cls.get_view_name(), kwargs=kw)
-
-        if hasattr(cls, 'url_fragment'):
-            name = cls.url_fragment.title()
-        elif issubclass(cls, ListView):
-            name = cls.get_model_name()
-        else:
-            obj = cls._get_object(kwargs)
-            name = "{obj.id} : {obj}".format(**locals())
-            
+        name =cls._get_breadcrumb_name(kwargs)
+        
         breadcrumbs.append((name, url))
         return breadcrumbs
         

@@ -1,5 +1,6 @@
-{% extends "accounts/base.html" %}
+{% extends "navigator/base.html" %}
 {% block content %}
+
 <div class="login_head">
 {% if error %}
 <div class="alert alert-error">
@@ -9,28 +10,27 @@
 <div class="alert alert-info">{{ announcement|safe }}</div>
 
 </div>
+<div class="jumbotron">
+
 <div class="login_columns">
 <div class="login_help">
-<h2>Welcome to AmCAT3</h2>
-<p>If you are new to AmCAT3, feel free to create a user account using the
-registration button on the right hand side. If you have an existing
-AmCAT2 account, you probably need to reset your password using the
-link below the sign in box.
-</p>
-<h2>AmCAT Manual</h2>
-<p>We are working on a manual for using AmCAT3. The versions provided
-here are drafts, so all comments and suggestions are welcome. Download
-the <a href="{{ MEDIA_URL }}misc/manual_en.pdf">English</a> or
-<br/><a href="{{ MEDIA_URL }}misc/manual_nl.pdf">Dutch</a> version.</p>
-
+<h1>Welcome to AmCAT3</h1>
+<p>Please log in or create a new account
+  below. See <a href="http://amcat.vu.nl/news">our wordpress site</a>
+  for more information.</p>
 </div>
 <div class="login_buttons">
-<h2>Sign in</h2>
 <p>
  <form method="POST" class="well form-inline" action = "">
      <input {% if username %}value="{{username}}"{% endif %} name="username" type="text" class="input-small" placeholder="Username" />
   <input name="password" type="password" class="input-small" placeholder="Password" />
   <button type="submit" class="btn">Sign in</button>
+
+or <form method="POST" class="well form-inline">
+    <a href="{% url "accounts-register" %}" class="btn
+    btn-primary">Create a new Account</a>
+ </form>
+
   <p>
     <small>If you forgot your username or password use 
            <a href="{% url "accounts-recover" %}">this</a> form.
@@ -41,19 +41,10 @@ the <a href="{{ MEDIA_URL }}misc/manual_en.pdf">English</a> or
 
 
 <p>
-<h2>Or create a new account:</h2>
+<legend>Or sign up:</legend>
 
-<form method="POST" class="well form-inline">
-    <a href="{% url "accounts-register" %}" class="btn btn-primary">Register</a>
- </form>
 </p>
 </div>
-</div>
-<div class="login_foot">
-<div class="alert alert-warning"><h2>Looking for AmCAT2?</h2><p>AmCAT2, the previous version of
-  AmCAT, is unfortunately still
-  down. <br/>Mail <a href='mailto:wouter@vanatteveldt.com'>wouter@vanatteveldt.com</a>
-  for more information. You can visit AmCAT2  <a href="https://amcat2.labs.vu.nl/navigator">here</a></p>
 </div>
 
 {% endblock %}

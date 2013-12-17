@@ -1,28 +1,3 @@
-body{
-    margin-top:100px;
-    font-size:0.9em;
-}
-
-#container{
-    top:100px;
-    width:650px;
-    margin:auto;
-    padding:10px;
-    text-align: center;
-    border-radius: 3px;
-}
-
-#logo{
-    background-image: url("/media/img/amcat/amcat-logo.png");
-    background-position:50% 50%;
-    background-repeat: no-repeat;
-    height:50px;
-}
-
-input{
-    width:300px;
-}
-
 #inputs{
     text-align: center;
 }
@@ -30,8 +5,6 @@ input{
 .error{
     color:red;
 }
-
-h2 {font-size: medium}
 
 .login_help {float: left; width: 300px}
 .login_buttons {border-left: 1px solid #ccc; padding-left: 15px; float:right; width: 310px; height: 320px}

@@ -147,10 +147,7 @@ urlpatterns = patterns(
 
     url(r'^semanticroles$', 'navigator.views.semanticroles.index', name='semanticroles'),
     url(r'^semanticroles/(?P<id>[0-9]+)$', 'navigator.views.semanticroles.sentence', name='semanticroles-sentence'),
-
     url(r'^projects/(?P<project_id>[0-9]+)/codebooks/add$', AddCodebookView.as_view(), name='codebook-add'),
-
-    
 ) 
 
 from navigator.views.articleset_views import *
