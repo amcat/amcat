@@ -49,10 +49,10 @@ class DailyScript(Script):
 
     def scrape(self, controller, scrapers, deduplicate = False):
         """Use the controller to scrape the given scrapers."""
-        g = controller.run(scrapers)
-        if g: #is a generator
-            for s, a in g:
-                pass
+        if isinstance(controller, ThreadedController):
+            controller.run(scrapers)
+        else:
+            [a for a in controller.run(scrapers)] #unpack generator
 
     def get_scrapers(self, date=None, days_back=7, **options):
         """
