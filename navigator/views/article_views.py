@@ -36,5 +36,9 @@ class ProjectArticleDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCru
     url_fragment = "articles/(?P<article_id>[0-9]+)"
 
     @classmethod
+    def _get_breadcrumb_name(cls, kwargs, view):
+        a = view.object
+        return "Article {a.id} : {a}".format(**locals())
+    @classmethod
     def get_view_name(cls):
         return "project-article-details"
