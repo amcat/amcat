@@ -27,4 +27,14 @@ class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, Brea
     model = Article
     context_category = 'Articles'
 
-    
+class ProjectArticleDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
+    model = Article
+    parent = None
+    base_url = "projects/(?P<project_id>[0-9]+)"
+    context_category = 'Articles'
+    template_name = 'project/article_details.html'
+    url_fragment = "articles/(?P<article_id>[0-9]+)"
+
+    @classmethod
+    def get_view_name(cls):
+        return "project-article-details"

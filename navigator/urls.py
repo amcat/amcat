@@ -160,7 +160,11 @@ from navigator.views.project_views import *
 from navigator.views.codebook_views import *
 from navigator.views.user_views import *
 
-for view in [ArticleSetListView, ArticleSetDetailsView, ArticleSetArticleDetailsView, QueryView, SampleSetView, EditSetView, CodebookListView, CodebookDetailsView, UserListView]:
+for view in [ArticleSetListView, ArticleSetDetailsView,
+             ArticleSetArticleDetailsView, ProjectArticleDetailsView,
+             QueryView, SampleSetView, EditSetView,
+             CodebookListView, CodebookDetailsView,
+             UserListView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
