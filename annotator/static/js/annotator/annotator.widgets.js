@@ -75,6 +75,10 @@ widgets = (function(self){
         set_value : function(widget, codingvalue, _intval){
             widget = get_input(widget);
 
+            console.log("blaat", widget)
+            console.log(_intval);
+            console.log(codingvalue);
+
             if(_intval){
                 widget.attr("intval", (codingvalue.intval === null) ? self.EMPTY_INTVAL : codingvalue.intval);
                 widget.val(codingvalue.intval);
@@ -91,12 +95,23 @@ widgets = (function(self){
                 return {
                     value : sentence.get_unit(),
                     label : sentence.get_unit(),
+                    sentence : sentence,
                     intval : -1
                 }
             });
 
-            var widget = $("<input>");
+            var widget = $("<input>").addClass("sentence");
             autocomplete.set(widget, choices);
+
+            //
+            widget.on("autocompletechange", function(event, ui){
+                var row = $(event.currentTarget).closest(".coding");
+                row.parent().find(".sentence-text-row").remove();
+                row.before($("<tr>").addClass("sentence-text-row").append($("<td>")
+                    .attr("colspan", row.closest("table").find("th").size())
+                    .text(ui.item.sentence.sentence)
+                ));
+            });
             return widget;
         },
         get_value: function(widget){
@@ -106,9 +121,13 @@ widgets = (function(self){
             var parnr = parseInt(value.split(".")[0]);
             var sentnr = parseInt(value.split(".")[1]);
 
+            return $.grep($.values(self.state.sentences), function(sentence){
+                return sentence.parnr == parnr && sentence.sentnr == sentnr;
+            })[0];
+
         },
         set_value: function(widget, sentence){
-            widget.val(sentence.get_unit());
+            widget.val((sentence === null) ? "" : sentence.get_unit());
         }
 
     });
@@ -136,6 +155,9 @@ widgets = (function(self){
                 var value = parseInt($(this).val());
                 $(this).attr("intval", isNaN(value) ? self.EMPTY_INTVAL : value);
             });
+        },
+        set_value : function(widget, codingvalue){
+            self.default.set_value(widget, codingvalue, true);
         }
     });
 
@@ -260,6 +282,11 @@ widgets = (function(self){
             intval: (value === null || typeof(value) === "number") ? value : null
         }
 
+    };
+
+    self.set_value = function(container, codingvalue){
+        var field = annotator.models.schemafields[container.attr("schemafield_id")];
+        return self.get_widget_type(field).set_value(container, codingvalue);
     };
 
     /*

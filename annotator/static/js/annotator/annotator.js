@@ -111,6 +111,13 @@ annotator = (function(self){
         self.article_coding_container = $("#article-coding");
         self.sentence_codings_container = $("#unitcoding-table-part");
         self.article_container = $("article");
+        self.article_status_dropdown = $("#article-status").change(function(){
+            self.state.article_coding.status = parseInt($(this).val());
+        });
+        self.article_comment_textarea = $("#article-comment").change(function(){
+            console.log($(this).val())
+            self.state.article_coding.comments = $(this).val();
+        });
     };
 
 
@@ -130,8 +137,8 @@ annotator = (function(self){
         self.prev_btn.click(self.select_prev_article);
         self.select_all_btn.click(self.select_all_sentences);
         self.save_btn.click(self.save);
-        self.save_continue_btn.click(self.save_and_continue);
-        self.irrelevant_btn.click(self.irrelevant_and_save);
+        self.save_continue_btn.click(self.finish_and_continue);
+        self.irrelevant_btn.click(self.irrelevant_and_continue);
         self.copy_btn.click(self.copy);
         self.delete_btn.click(self.delete);
         self.help_btn.click(function(){ self.help_dialog.dialog("open"); });
@@ -224,6 +231,7 @@ annotator = (function(self){
         "ctrl+down" : self.add_row,
         "ctrl+shift+down" : self.add_row,
         "shift+down" : self.copy_row,
+        "ctrl+shif+d": self.delete_row,
         "ctrl+i" : self.irrelevant_btn.trigger.bind(self.irrelevant_btn, "click"),
         "ctrl+d" : self.save_continue_btn.trigger.bind(self.save_continue_btn, "click")
     }};
@@ -270,6 +278,9 @@ annotator = (function(self){
             })
         );
 
+        // Used to 'steal' focus so we know we need to add another row / switch to next row
+        table_header.append($("<th>"));
+
         self.sentence_codings_container.find("table")
             .append($("<thead>").append(table_header))
             .append($("<tbody>"));
@@ -292,9 +303,32 @@ annotator = (function(self){
      * Create new row, and append it to existing table
      */
     self.append_sentence_coding = function(coding){
-        self.sentence_codings_container.find("tbody").append(
-            self.get_sentence_coding_html(coding)
-        );
+        var coding_el = self.get_sentence_coding_html(coding);
+        self.sentence_codings_container.find("tbody").append(coding_el);
+        widgets.sentence.set_value($(".sentence", coding_el), coding.sentence);
+
+        // Fill existing coding values
+        if (!("values" in coding)) return;
+
+        var widget;
+        $.each(coding.values, function(_, codingvalue){
+            widget = widgets.find(codingvalue.field, coding_el);
+            widgets.set_value(widget, codingvalue);
+        });
+    };
+
+    /*
+     * Last widget reached, and TAB was pressed. We need to either add a row
+     * or move to the next one available.
+     */
+    self.last_widget_reached = function(event){
+        var row = $(event.currentTarget).closest("tr");
+
+        if (row.next().length === 0){
+            self.append_sentence_coding(self.get_empty_coding());
+        }
+
+        row.next().find("input.sentence").focus();
     };
 
     /* Returns (new) DOM representation of a single sentence coding */
@@ -304,6 +338,7 @@ annotator = (function(self){
         coding_el.append($.map(widgets.get_html(self.sentence_schemafields), function(widget){
             return $("<td>").append(widget);
         }));
+        coding_el.append($("<td>").attr("tabindex", 0).focus(self.last_widget_reached));
 
         return coding_el;
     };
@@ -317,6 +352,7 @@ annotator = (function(self){
     };
 
     self.save = function(success_callback){
+        $(document.activeElement).blur().focus();
         var coding_values = {};
 
         // Check whether we want to save.
@@ -334,13 +370,25 @@ annotator = (function(self){
 
     };
 
+    self.set_state = function(state){
+        self.article_status_dropdown.val(state);
+        self.article_status_dropdown.trigger("change");
+    };
+
     self.save_and_continue = function () {
         self.save(self.select_next_article);
     };
 
-    self.irrelevant_and_save = function () {
-
+    self.finish_and_continue = function(){
+        self.set_state(self.STATUS.COMPLETE);
+        self.save_and_continue();
     };
+
+    self.irrelevant_and_continue = function () {
+        self.set_state(self.STATUS.IRRELEVANT);
+        self.save_and_continue();
+    };
+
     self.select_next_article = function () {
 
     };
@@ -431,6 +479,7 @@ annotator = (function(self){
         var base_url = self.get_api_url() + "coded_articles/" + article_id + "/";
 
         self.state = self.get_empty_state();
+        self.sentence_codings_container.find("table tbody").html("");
         self.state.coded_article_id = article_id;
 
         self.state.requests = [
@@ -510,7 +559,7 @@ annotator = (function(self){
         rules.add(self.article_coding_container);
 
         self.initialise_sentence_codings();
-        //rules.add(self.sentence_codings_container);
+        rules.add(self.sentence_codings_container);
     };
 
     /*
@@ -529,7 +578,6 @@ annotator = (function(self){
                 schemafield.choices = autocomplete.get_choices(codes);
             }
         });
-
 
         // Categorize schemafields
         var articleschema = self.codingjob.articleschema;
@@ -635,6 +683,7 @@ annotator = (function(self){
         self.datatable.find(".row_selected").removeClass("row_selected");
         self.datatable.parent().scrollTo(row, {offset: -50});
         self.get_article(article_id);
+        row.addClass("row_selected");
     };
 
     self.window_scrolled = function(){
