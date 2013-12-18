@@ -825,10 +825,11 @@ amcat.selection.aggregation.plotLines = function(series, graphData){
             //numberOfTicks:10
         },
         yaxis:{
-            label:'Number of ' + amcat.selection.aggregation.aggregationType,
+            label: (amcat.selection.aggregation.aggregationType=='association'?'Association':'Number of ' + amcat.selection.aggregation.aggregationType),
             labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-            tickOptions:{formatString:'%d'},
+            tickOptions:{formatString:(amcat.selection.aggregation.relative?'%1.1f':'%d')},
             min:0,
+	    tickInterval: amcat.selection.aggregation.relative?0.1:null,
 	    max: amcat.selection.aggregation.relative?1:null
         }
     },
