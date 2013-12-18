@@ -39,7 +39,7 @@ class QueryView(ProjectViewMixin, BreadCrumbMixin, TemplateView):
         return "query"
 
     @classmethod
-    def _get_breadcrumbs(cls, kwargs):
+    def _get_breadcrumbs(cls, kwargs, view):
         return [("Query", "")]
                         
     
