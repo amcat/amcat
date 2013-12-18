@@ -125,7 +125,7 @@ class ShowAssociations(WebScript):
             if self._interval:
                 cols = {}
                 assocs = {(x,y) for (i,x,y,s) in assocTable}
-                cols = {u1"{x}\u2192{y}".format(x=x, y=y) : (x,y) for (x,y) in assocs}
+                cols = {u"{x}\u2192{y}".format(x=x, y=y) : (x,y) for (x,y) in assocs}
                 colnames = sorted(cols)
                 result = table3.ListTable(colnames=["Interval"] + colnames)
                 
