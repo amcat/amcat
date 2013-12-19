@@ -66,11 +66,15 @@ class Term(BaseTerm):
     def __str__(self):
         return unicode(self).encode('utf-8')
     def get_dsl(self):
+        if self.text == "*":
+            return {"constant_score" : {"filter" : {"match_all" : {}}}}
         qtype = "wildcard" if '*' in self.text else "match"
         return {qtype : {self.qfield : self.text.lower()}}
     def get_filter_dsl(self):
         if "*" in self.text:
-            if "*" in self.text[:-1]:
+            if self.text == "*":
+                return {"match_all" : {}}
+            elif "*" in self.text[:-1]:
                 return query_filter(self.get_dsl())
             else: # last must be *
                 return {"prefix" : {self.qfield : c(self.text[:-1])}}
