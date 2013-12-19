@@ -37,6 +37,7 @@ import re
 from amcat.tools.toolkit import stripAccents,readDate
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
+from amcat.models import Project
 
 log = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ def filters_from_form(form_data):
     elif form_data.get('datetype') == 'before':
         yield 'end_date', form_data.get('end_date')
         
-        
+    
     for k in form_data.keys():
         if  k in FILTER_FIELDS:
             try:
@@ -81,6 +82,13 @@ def filters_from_form(form_data):
             vals = [_serialize(v) for v in vals if v]
             if vals:
                 yield FILTER_FIELDS[k], vals
+                
+    if 'articlesets' not in form_data:
+        # filter on all sets in project
+        p = Project.objects.get(pk=form_data['projects'][0])
+        sets = [s.id for s in p.all_articlesets()]
+        yield "sets", sets
+        
 
 
 def getDatatable(form, rowlink='article/{id}'):
