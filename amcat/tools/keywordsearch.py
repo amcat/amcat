@@ -85,7 +85,7 @@ def filters_from_form(form_data):
                 
     if 'articlesets' not in form_data:
         # filter on all sets in project
-        p = Project.objects.get(pk=form_data['projects'][0])
+        p = Project.objects.get(pk=form_data['projects'])
         sets = [s.id for s in p.all_articlesets()]
         yield "sets", sets
         
