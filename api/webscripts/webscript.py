@@ -98,6 +98,7 @@ class WebScript(object):
         try:
             form = cls.form(project=project)
         except TypeError:
+            log.exception("Could not instantiate {cls.__name__}.form(project={project}".format(**locals()))
             form = cls.form()
         return render_to_string(cls.form_template, {'form':form}) if cls.form_template else form.as_p()
 
