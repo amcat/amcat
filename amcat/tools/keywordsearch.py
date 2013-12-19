@@ -201,12 +201,16 @@ def add_medium_names(result):
     
     
 def _add_column(table, column_name, query, filters, group_by, dateInterval):
-    results = ES().aggregate_query(query, filters, group_by, dateInterval)
-    if group_by == "mediumid": 
-        results = add_medium_names(results)
-    
-    for group, n in results:
-        table.addValue(unicode(group), column_name, n)
+    if group_by == "total":
+        n = ES().count(query, filters)
+        table.addValue("Total", column_name, n)
+    else:        
+        results = ES().aggregate_query(query, filters, group_by, dateInterval)
+        if group_by == "mediumid": 
+            results = add_medium_names(results)
+
+        for group, n in results:
+            table.addValue(unicode(group), column_name, n)
         
     
 
