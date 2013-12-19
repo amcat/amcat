@@ -40,7 +40,8 @@ class AggregationForm(amcat.scripts.forms.SelectionForm):
     """the form used by the Aggregation script"""
     xAxis = forms.ChoiceField(choices=(
                                 ('date', 'Date'), 
-                                ('medium', 'Medium')
+                                ('medium', 'Medium'),
+                                ('total', 'Total')
                              ), initial = 'date')
     yAxis = forms.ChoiceField(choices=(
                             ('total', 'Total'), 
