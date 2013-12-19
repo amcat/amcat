@@ -29,7 +29,10 @@ from amcat.scripts.script import Script
 from amcat.tools.table.table3 import Table
 from amcat.models import ArticleSet
 
-from amcat.nlp.featurestream import featureStream
+try:
+    from amcat.nlp.featurestream import featureStream
+except:
+    None
 
 class Features(Script):
     """
