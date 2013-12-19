@@ -98,18 +98,18 @@
          <div id="unitcoding-table-part">
             <div id="unitcoding-table-top">
                 <h3>Sentence Codings</h3>
-                <div class="unitcoding-table-toolbar">
+                <!--<div class="unitcoding-table-toolbar">
                     <button id="copy-coding-button" title="Copy the current row">Copy</button>
                     <button id="delete-coding-button" title="Delete the current row">Delete</button>
-                </div>
+                </div>-->
             </div>
             <div>
                 <table cellpadding="0" cellspacing="0" border="0" class="display" id="unitcoding-table"></table>
             </div>
-            <div class="unitcoding-table-toolbar">
+            <!--<div class="unitcoding-table-toolbar">
                 <button id="copy-coding-button2">Copy</button>
                 <button id="delete-coding-button2">Delete</button>
-            </div>
+            </div>-->
          </div>
          
          <button id="save-continue-button2">Finish and continue</button>
@@ -150,14 +150,17 @@
 <div id="dialog-help" title="Help" style="display:none">
     <h4>Keyboard shortcuts</h4>
     <table>
-    <tr><th>Key</th><th>Explanation</th></tr>
-    <tr><td>CTRL + S</td><td>Save</td></tr>
-    <tr><td>ESCAPE</td><td>Close a dialog</td></tr>
-    <tr><td>CTRL + arrow down</td><td>Add new row in sentence codings table</td></tr>
-    <tr><td>CTRL + SHIFT + arrow down</td><td>Add new row in sentence codings table, for next sentence</td></tr>
-    <tr><td>SHIFT + arrow down</td><td>Copy row in sentence codings table</td></tr>
-    <tr><td>ALT + arrow down</td><td>Copy &amp; Switch row in sentence codings table (only for NET codings)</td></tr>
+        <tr><th>Key</th><th>Explanation</th></tr>
+        <tr><td>CTRL + S</td><td>Save</td></tr>
+        <tr><td>CTRL + D</td><td>Set to complete, save and continue</td></tr>
+        <tr><td>CTRL + I</td><td>Set to irrelevant, save and continue.</td></tr>
+        <tr><td>ESCAPE</td><td>Close a dialog</td></tr>
+        <tr><td>CTRL + ↓</td><td>Add new row in sentence codings table, copying current sentence.</td></tr>
+        <tr><td>CTRL + SHIFT + ↓</td><td>Add new row in sentence codings table, increase sentencenr by one.</td></tr>
+        <tr><td>SHIFT + ↓</td><td>Copy current row.</td></tr>
+        <tr><td>CTRL + SHIFT + d</td><td>Remove row in sentence codings table</td></tr>
     </table>
+    <br>
     <h4>Supported Browsers</h4>
     <p>AmCAT Annotator is tested with the latest versions of Mozilla Firefox, Google Chrome and Internet Explorer.<br />
     Internet Explorer 6, 7, 8 are not recommended.</p>
