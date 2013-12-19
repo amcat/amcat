@@ -33,11 +33,26 @@ String.prototype.format = String.prototype.f = function() {
     return s;
 };
 
+
+
 $.values = function(obj) {
     return $.map(obj, function(value, _) {
         return value;
     });
 };
+
+
+// Workaround: focus events don't carry *Key properties, so we don't
+// know for sure if shift is pressed.
+shifted = false;
+$(document).keydown(function(event){
+    shifted = event.shiftKey;
+});
+
+$(document).keyup(function(){
+    shifted = false;
+});
+
 
 annotator = (function(self){
     /******** STATE & CONSTANTS *******/
@@ -54,8 +69,8 @@ annotator = (function(self){
             requests : null,
             coded_article_id: -1,
             coded_article: null,
-            deleted_rows: [],
-            modified_rows: [],
+            deleted_codings: [],
+            modified_codings: [],
             sentence_codings_modified: false,
             article_coding_modified: false,
             article_coding : null,
@@ -226,12 +241,13 @@ annotator = (function(self){
     };
 
     /******** KEYBOARD SHORTCUTS *******/
-    self.shortcuts = function(){ return {
+    self.shortcuts = function(){
+        return {
         "ctrl+s" : self.save_btn.trigger.bind(self.save_btn, "click"),
         "ctrl+down" : self.add_row,
-        "ctrl+shift+down" : self.add_row,
+        "ctrl+shift+down" : self.add_next_sentence_row,
         "shift+down" : self.copy_row,
-        "ctrl+shif+d": self.delete_row,
+        "ctrl+shift+d": self.delete_row,
         "ctrl+i" : self.irrelevant_btn.trigger.bind(self.irrelevant_btn, "click"),
         "ctrl+d" : self.save_continue_btn.trigger.bind(self.save_continue_btn, "click")
     }};
@@ -243,7 +259,7 @@ annotator = (function(self){
     };
 
     self.sentence_codings_modified = function(){
-        return !!(self.state.deleted_rows.length || self.state.modified_rows.length);
+        return !!(self.state.deleted_codings.length || self.state.modified_codings.length);
     };
 
     /* Returns absolute url pointing to this codingjob (slash-terminated)  */
@@ -259,7 +275,7 @@ annotator = (function(self){
             .addClass("coding");
 
         return table.append($.map(widgets.get_html(schemafields, null), function(widget, i){
-            var label = widgets.get_label_html(schemafields[i], widget);
+           var label = widgets.get_label_html(schemafields[i], widget);
             return $("<tr>")
                 .append($("<td>").append(label))
                 .append($("<td>").append(widget));
@@ -292,7 +308,6 @@ annotator = (function(self){
 
         if (self.state.sentence_codings.length === 0){
             var empty_coding = self.get_empty_coding();
-            empty_coding.codingschema = self.codingjob.unitschema;
             self.state.sentence_codings.push(empty_coding);
         }
 
@@ -305,16 +320,123 @@ annotator = (function(self){
     self.append_sentence_coding = function(coding){
         var coding_el = self.get_sentence_coding_html(coding);
         self.sentence_codings_container.find("tbody").append(coding_el);
-        widgets.sentence.set_value($(".sentence", coding_el), coding.sentence);
+        self.set_sentence_codingvalues(coding_el, coding.values||[], coding.sentence);
+        self.set_tab_order();
+    };
 
-        // Fill existing coding values
-        if (!("values" in coding)) return;
-
+    self.set_sentence_codingvalues = function(coding_el, values, sentence){
         var widget;
-        $.each(coding.values, function(_, codingvalue){
+        $.each(values, function(_, codingvalue){
             widget = widgets.find(codingvalue.field, coding_el);
             widgets.set_value(widget, codingvalue);
         });
+
+        if (sentence !== undefined && sentence !== null){
+            widgets.sentence.set_value($(".sentence", coding_el), sentence);
+        }
+    };
+
+    self.delete_row = function(){
+        var active_row = self.get_active_row();
+        var active_coding = self.get_active_sentence_coding();
+        if (active_row === null) return;
+
+        // Select a row which need to be focused after the
+        // deletion of the currently active row.
+        var next = active_row.next();
+        if (!next.length){
+            // No next row, set previous row
+            next = active_row.prevAll(".coding").first();
+        }
+
+        if (!next.length){
+            // No previous row either
+            next = self._add_row({});
+        }
+
+        // Register deleted coding
+        self.state.deleted_codings.push(active_coding);
+        remove_from_array(self.state.modified_codings, active_coding);
+        active_row.remove();
+        $("input", next).first().focus();
+        self.set_tab_order();
+    };
+
+    /*
+     * Adds new row after currently active row, with `properties`.
+     */
+    self._add_row = function(properties){
+        var active_row = self.get_active_row();
+        var empty_coding = self.get_empty_coding(properties);
+        self.state.sentence_codings.push(empty_coding);
+        active_row.after(self.get_sentence_coding_html(empty_coding));
+        self.set_tab_order();
+        active_row.next().find(".sentence").focus();
+        return active_row.next();
+    };
+
+    /*
+     * Add new row after current active one, and copy its contents
+     */
+    self.copy_row = function(){
+        var active_coding = self.get_active_sentence_coding();
+        var active_row = self.get_active_row();
+        if (active_coding === null) return;
+
+        // Add new (empty) coding
+        var new_row = self._add_row(active_coding);
+        var new_widgets = $(".widget", new_row);
+
+        // Copy codingvalues to new row
+        $.each($(".widget", active_row), function(i, widget){
+            var coding_value = widgets.get_codingvalue(active_coding, active_coding.sentence, $(widget));
+            widgets.set_value($(new_widgets.get(i)), coding_value);
+        });
+    };
+
+    /*
+     * Add new row after currently active row. Does nothing if no row is active
+     */
+    self.add_row = function(event){
+        var active_coding = self.get_active_sentence_coding();
+        if (active_coding === null) return;
+        return self._add_row({ sentence : active_coding.sentence });
+    };
+
+    /*
+     * Adds a row after currently active row, and copies its sentence.
+     */
+    self.add_next_sentence_row = function(){
+        var coding = self.get_active_sentence_coding();
+        if (coding === null) return;
+
+        var sentence_index = self.state.sentences_array.indexOf(coding.sentence);
+        if (sentence_index + 1 === self.state.sentences_array.length){
+            // This was the last sentences, just use previous one?
+            sentence_index -= 1;
+        }
+
+        self._add_row({
+            sentence : self.state.sentences_array[sentence_index + 1]
+        });
+    };
+
+    self.get_active_row = function(){
+        var focused = $(document.activeElement);
+
+        if (!focused.closest("#unitcoding-table").length){
+            // No sentence activated.
+            return null;
+        }
+
+        var coding = focused.closest("tr.coding");
+        return (coding.length ? coding : null);
+    };
+
+    self.get_active_sentence_coding = function(){
+        var active_row = self.get_active_row();
+        if (active_row === null) return null;
+        return self.state.codings[active_row.attr("annotator_coding_id")];
     };
 
     /*
@@ -324,21 +446,48 @@ annotator = (function(self){
     self.last_widget_reached = function(event){
         var row = $(event.currentTarget).closest("tr");
 
+        if (shifted){
+            // We need to go back, do nothing!
+            $(event.currentTarget).prev().find("input").first().focus();
+            return;
+        }
+
+        var empty_coding = self.get_empty_coding();
+        self.state.sentence_codings.push(empty_coding);
+
         if (row.next().length === 0){
-            self.append_sentence_coding(self.get_empty_coding());
+            self.append_sentence_coding(empty_coding);
         }
 
         row.next().find("input.sentence").focus();
     };
 
+    /*
+     * Display sentence text above currently active coding.
+     */
+    self.refresh_sentence_text = function(){
+        self.sentence_codings_container.find(".sentence-text-row").remove();
+        var active_row = self.get_active_row();
+        var active_coding = self.get_active_sentence_coding();
+        if (active_row === null) return;
+        if (active_coding.sentence === null) return;
+
+        active_row.before($("<tr>").addClass("sentence-text-row").append($("<td>")
+                .attr("colspan", active_row.closest("table").find("th").size())
+                .text(active_coding.sentence.sentence)));
+    };
+
+
     /* Returns (new) DOM representation of a single sentence coding */
     self.get_sentence_coding_html = function(coding){
         var coding_el = $("<tr>").addClass("coding").attr("annotator_coding_id", coding.annotator_id);
-        coding_el.append(widgets.sentence.get_html());
+        coding_el.append(widgets.sentence.get_html().val((coding.sentence === null) ? "" : coding.sentence.get_unit()));
         coding_el.append($.map(widgets.get_html(self.sentence_schemafields), function(widget){
             return $("<td>").append(widget);
         }));
-        coding_el.append($("<td>").attr("tabindex", 0).focus(self.last_widget_reached));
+
+        coding_el.append($("<td>").addClass("focus-stealer").focus(self.last_widget_reached));
+        coding_el.find("input").focus(self.refresh_sentence_text);
 
         return coding_el;
     };
@@ -410,6 +559,7 @@ annotator = (function(self){
             coding.annotator_id = self.get_new_id();
         });
 
+        self.state.sentences_array = sentences[0].results;
         codings = map_ids(codings[0].results, "annotator_id");
         sentences = map_ids(sentences[0].results);
         resolve_ids(codings, sentences, "sentence");
@@ -443,14 +593,16 @@ annotator = (function(self){
         $('#article-status').find('option:contains("' + article.status + '")').attr("selected", "selected");
 
         // Initialise coding area
+        $(".coding-part").show();
         self.sentences_fetched(sentences);
         self.highlight();
         self.codings_fetched();
-
-        $(".coding-part").show();
-        $("#article-comment").focus();
+        self.set_tab_order();
 
         self.loading_dialog.dialog("close");
+
+        var container = (self.codingjob.articleschema === null) ? self.sentence_codings_container : self.article_coding_container;
+        container.find("input:visible").first().focus();
     };
 
     self.highlight = function(){
@@ -516,17 +668,18 @@ annotator = (function(self){
         return this.descendants;
     };
 
-    self.get_empty_coding = function(){
-        return {
+    self.get_empty_coding = function(properties){
+        var empty_coding = $.extend({
             annotator_id: self.get_new_id(),
             id: null,
-            codingschema: null,
             article: self.state.coded_article,
             sentence: null,
             comments: null,
             codingjob: self.codingjob
-        };
+        }, properties);
 
+        self.state.codings[empty_coding.annotator_id] = empty_coding;
+        return empty_coding;
     };
 
     self.is_article_coding = function(coding){
@@ -547,9 +700,7 @@ annotator = (function(self){
 
         if (article_coding.length === 0){
             var empty_coding = self.get_empty_coding();
-            empty_coding.codingschema = self.codingjob.articleschema;
             self.state.article_coding = empty_coding;
-            self.state.codings[empty_coding.annotator_id] = empty_coding;
         } else {
             self.state.article_coding = article_coding[0];
         }
@@ -677,6 +828,29 @@ annotator = (function(self){
         $('.sentences').html(html);
     };
 
+    /*
+     * Sets tabindex-properties to all focusable elements, which are:
+     *  - comment textarea
+     *  - article codingvalues (visible input elements)
+     *  - sentence codingvalues (visible input elements)
+     *  - additional "focus stealer" at the end of each codingrow, which is used to determine when
+     *    a user reached the end of a coding (and we need to add another coding).
+     */
+    self.set_tab_order = function(){
+        var tabindex = 1;
+
+        var set_tabindex = function(_, el) {
+            $(el).attr("tabindex", tabindex);
+            tabindex += 1;
+        };
+
+        $.each(self.article_comment_textarea, set_tabindex);
+        $.each($("input:visible", self.article_coding_container), set_tabindex);
+        $.each($("tbody tr", self.sentence_codings_container), function(_, row){
+            $.each($("input:visible, .focus-stealer", row), set_tabindex);
+        });
+    };
+
     self.datatables_row_clicked = function(row){
         // Get article id which is stored in the id-column of the datatable
         var article_id = parseInt(row.children('td:first').text());
@@ -711,7 +885,7 @@ annotator = (function(self){
         $.each(self.shortcuts(), function(keys, callback){
             doc.bind("keydown", keys, function(event){
                 event.preventDefault();
-                callback();
+                callback(event);
             });
         })
     };

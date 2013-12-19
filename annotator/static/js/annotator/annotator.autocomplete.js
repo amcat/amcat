@@ -33,6 +33,7 @@ autocomplete = (function(self){
         }
 
         $(this).attr("intval", intval).val(label||"");
+        $(this).trigger("change");
     };
 
     /*
@@ -99,7 +100,9 @@ autocomplete = (function(self){
             select : self.on_change,
             delay: 5
         }).focus(function(){
-            $(this).autocomplete("search", "");
+            var value = $(this).val();
+            $(this).autocomplete("option", "autoFocus", value !== "");
+            $(this).autocomplete("search", value);
         });
     };
 

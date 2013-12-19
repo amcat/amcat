@@ -75,10 +75,6 @@ widgets = (function(self){
         set_value : function(widget, codingvalue, _intval){
             widget = get_input(widget);
 
-            console.log("blaat", widget)
-            console.log(_intval);
-            console.log(codingvalue);
-
             if(_intval){
                 widget.attr("intval", (codingvalue.intval === null) ? self.EMPTY_INTVAL : codingvalue.intval);
                 widget.val(codingvalue.intval);
@@ -100,18 +96,8 @@ widgets = (function(self){
                 }
             });
 
-            var widget = $("<input>").addClass("sentence");
+            var widget = $("<input>").addClass("sentence").change(self.sentence.change);
             autocomplete.set(widget, choices);
-
-            //
-            widget.on("autocompletechange", function(event, ui){
-                var row = $(event.currentTarget).closest(".coding");
-                row.parent().find(".sentence-text-row").remove();
-                row.before($("<tr>").addClass("sentence-text-row").append($("<td>")
-                    .attr("colspan", row.closest("table").find("th").size())
-                    .text(ui.item.sentence.sentence)
-                ));
-            });
             return widget;
         },
         get_value: function(widget){
@@ -121,13 +107,18 @@ widgets = (function(self){
             var parnr = parseInt(value.split(".")[0]);
             var sentnr = parseInt(value.split(".")[1]);
 
-            return $.grep($.values(self.state.sentences), function(sentence){
+            return $.grep($.values(annotator.state.sentences), function(sentence){
                 return sentence.parnr == parnr && sentence.sentnr == sentnr;
             })[0];
 
         },
         set_value: function(widget, sentence){
             widget.val((sentence === null) ? "" : sentence.get_unit());
+        },
+        change : function(){
+            var sentence = self.sentence.get_value($(this));
+            var coding = annotator.state.codings[$(this).closest(".coding").attr("annotator_coding_id")];
+            coding.sentence = sentence;
         }
 
     });
@@ -216,22 +207,27 @@ widgets = (function(self){
             self.default.set_value(widget, codingvalue, true);
             if (codingvalue.intval === null) return;
 
-            var schemafield = annotator.models.schemas[widget.attr("codingschema_id")];
+            var schemafield = annotator.models.schemafields[widget.attr("schemafield_id")];
             var code = schemafield.codebook.codes[codingvalue.intval];
 
-            // Find parent-choice
-            var parent_choice = $.grep(schemafield.choices, function(choice){
-                return choice.get_code() == code.parent;
-            })[0];
+            var find_code = function(code){
+                return function(choice){
+                    return choice.get_code() == code;
+                }
+            };
 
-            // Find child choice
-            var code_choice = $.grep(parent_choice.descendant_choices, function(choice){
-                return choice.get_code() == code;
-            })[0];
+            if (!schemafield.split_codebook){
+                var choice = $.grep(schemafield.choices, find_code(code))[0];
+                return $(".codingvalue", widget).val(choice.label);
+            }
+
+            // Find parent-choice
+            var parent_choice = $.grep(schemafield.choices, find_code(code.parent))[0];
+            var child_choice = $.grep(parent_choice.descendant_choices, find_code(code))[0];
 
             // And we've got the labels!
             $(".codebook_root", widget).val(parent_choice.label);
-            $(".codebook_descendant", widget).val(code_choice.label);
+            $(".codebook_descendant", widget).val(child_choice.label);
         }
 
     });
