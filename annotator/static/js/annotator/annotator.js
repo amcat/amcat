@@ -41,6 +41,14 @@ $.values = function(obj) {
     });
 };
 
+$.chain = function(arr){
+    var chained = [];
+    $.each(arr, function(_, inner){
+        $.merge(chained, inner);
+    });
+    return chained;
+};
+
 
 // Workaround: focus events don't carry *Key properties, so we don't
 // know for sure if shift is pressed.
@@ -200,9 +208,9 @@ annotator = (function(self){
                 // Check if all request completed successfully. (If not, an
                 // error is already thrown, but we need not continue processing
                 // the data.
-                if (!all(function (request) {
+                if (!all(self._requests, function (request) {
                     return request.statusText === "OK";
-                }, self._requests)) {
+                })) {
                     throw "Not all requests completed successfully.";
                 }
 
@@ -497,25 +505,50 @@ annotator = (function(self){
     };
 
     self.validate = function(){
+        var article_errors = $("." + rules.ERROR_CLASS, self.article_coding_container);
+        var sentence_errors = $("." + rules.ERROR_CLASS, self.sentence_codings_container);
+        var error = "An error occured while validating {0} codings. Erroneous fields have been marked red.";
+
+        if (article_errors.length > 0){
+            return error.f("article");
+        } else if (sentence_errors.length > 0){
+            return error.f("sentence");
+        }
+
+        // Check ∀v [(v.sentence === null) => (v.intval === null && v.strval === null)]
+        var coding_values;
+        var codings = $(".coding", self.sentence_codings_container);
+        for (var i=0; i < codings.length; i++){
+            coding_values = widgets._get_codingvalues($(codings[i]));
+            if (any(coding_values, function(v){
+                return (v.sentence === null && (v.intval !== null || v.strval !== null));
+            })){
+                return "A non-empty coding with no sentence was found."
+            }
+        }
+
         return true;
+    };
+
+    self.is_empty_coding = function(row){
+
     };
 
     self.save = function(success_callback){
         $(document.activeElement).blur().focus();
-        var coding_values = {};
+
+        // Get codingvalues
+        var article_coding_values = widgets.get_coding_values(self.article_coding_container);
+        var sentence_coding_values = widgets.get_coding_values(self.sentence_codings_container);
 
         // Check whether we want to save.
-        var validation = self.validate();
+        var validation = self.validate(sentence_coding_values);
         if (validation !== true){
-            self.message_dialog.text("Could not validate, relevant fields are marked red.").dialog("open");
+            self.message_dialog.text(validation).dialog("open");
             return;
         }
 
-        // Get codingvalues of article codings
-        var coding_el = self.article_coding_container.find(".coding");
-        var article_coding_values = $.map(coding_el.find(".widget"), function(widget){
-            return widgets.get_codingvalue(self.state.article_coding, null, $(widget));
-        });
+        console.log("validated.");
 
     };
 

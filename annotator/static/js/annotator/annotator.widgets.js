@@ -56,14 +56,14 @@ widgets = (function(self){
         /*
          * Depending on the type, will return an intval or strval.
          *
-         * @param container: jQuery/DOM element
+         * @param widget: jQuery/DOM element
          * @return: null / int / string
          */
         get_value : function(widget){
             var value = get_input(widget).attr("intval");
 
             if (value === undefined){
-                return get_input(widget).val();
+                return get_input(widget).val() || null;
             } else if (value == self.EMPTY_INTVAL) {
                 return null;
             }
@@ -268,9 +268,9 @@ widgets = (function(self){
     /*
      * Same as get_value, but returns as CodingValue object.
      */
-    self.get_codingvalue = function(coding, sentence, container) {
-        var field = annotator.models.schemafields[container.attr("schemafield_id")];
-        var value = self.get_value(container);
+    self.get_codingvalue = function(coding, sentence, widget) {
+        var field = annotator.models.schemafields[widget.attr("schemafield_id")];
+        var value = self.get_value(widget);
 
         return {
             sentence: sentence, coding: coding, field : field,
@@ -280,23 +280,58 @@ widgets = (function(self){
 
     };
 
-    self.set_value = function(container, codingvalue){
-        var field = annotator.models.schemafields[container.attr("schemafield_id")];
-        return self.get_widget_type(field).set_value(container, codingvalue);
+    /*
+     * Returns a list of codingvalues for the current coding element.
+     *
+     * @type coding_element: jQuery DOM element
+     * @requires: coding_element.hasClass("coding")
+     */
+    self._get_codingvalues = function(coding_element){
+        var coding = annotator.state.codings[coding_element.attr("annotator_coding_id")];
+        var sentence_widget = $(".sentence", coding_element);
+
+        // Sentence codings have a special widget with the class 'sentence' which
+        // provides the sentence of the coding.
+        var sentence = null;
+        if (sentence_widget.length > 0){
+            sentence = widgets.sentence.get_value(sentence_widget);
+        }
+
+        return $.map(coding_element.find(".widget"), function(widget){
+            return self.get_codingvalue(coding, sentence, $(widget));
+        })
+    };
+
+    /*
+     * Returns a list of codingvalues, given a DOM element which contains
+     * elements with the class 'coding'.
+     *
+     * @requires: !container.hasClass("coding")
+     */
+    self.get_coding_values = function(container){
+        $.chain($.map(container.find(".coding"), function(coding_el){
+            return self._get_codingvalues($(coding_el));
+        }));
+    };
+
+    self.set_value = function(widget, codingvalue){
+        var field = annotator.models.schemafields[widget.attr("schemafield_id")];
+        return self.get_widget_type(field).set_value(widget, codingvalue);
     };
 
     /*
      * Get value of coding. This function looks for an input element with
      * class 'coding', which can either have an attribute 'intval' which
      * will be returned (or null, if EMPTY_INTVAL is set). Else, it will
-     * return a string which is equal to the inner value of the input element.
+     * return a string which is equal to the inner value of the input element
+     * or null if the value === ''.
      *
-     * @param container: jQuery/DOM element
+     * @param widget: jQuery/DOM element
      * @return: null / int / string
      */
-    self.get_value = function(container){
-        var field = annotator.models.schemafields[container.attr("schemafield_id")];
-        return self.get_widget_type(field).get_value(container);
+    self.get_value = function(widget){
+        var field = annotator.models.schemafields[widget.attr("schemafield_id")];
+        return self.get_widget_type(field).get_value(widget);
     };
 
     return self;

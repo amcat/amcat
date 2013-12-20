@@ -32,6 +32,8 @@ rules = (function(self){
         NOT_NULL: "not null"
     };
 
+    self.ERROR_CLASS = "validation-error";
+
     /*
      * Get container of coding, given an input-field which represents a coding.
      *
@@ -79,27 +81,30 @@ rules = (function(self){
         // If a rule not applies, reset their error-state
         $.each(not_apply, function (i, rule) {
             // We mark all input fields in the container belonging to the rule destination
-            var inputs = widgets.find(rule.field, coding_el).find("input");
+            var widget = widgets.find(rule.field, coding_el);
+            var inputs = widget.find("input");
 
+            widget.removeClass(self.ERROR_CLASS);
             inputs.css("borderColor", "");
             inputs.prop("disabled", false);
-            inputs.attr("null", true);
-            inputs.attr("placeholder", "");
         });
 
         $.each(apply, function (i, rule) {
-            var inputs = widgets.find(rule.field, coding_el).find("input");
+            var widget = widgets.find(rule.field, coding_el);
+            var inputs = widget.find("input");
 
             if (rule.field === null || rule.action === null) return;
 
             var action = rule.action.label;
             if (action === self.ACTIONS.RED) {
                 inputs.css("borderColor", "red");
+                widget.addClass(self.ERROR_CLASS);
             } else if (action === self.ACTIONS.NOT_CODABLE) {
                 inputs.prop("disabled", true);
             } else if (action === self.ACTIONS.NOT_NULL) {
-                inputs.attr("null", false);
-                inputs.attr("placeholder", "NOT NULL");
+                if(widgets.get_value(widget) === null){
+                    widget.addClass(self.ERROR_CLASS);
+                }
             }
         });
     };

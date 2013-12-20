@@ -24,7 +24,7 @@
  * @param f: function which takes one argument and returns a boolean
  * @param list: array / object to be iterated over
  */
-function any(f, list){
+function any(list, f){
     for (var i=0; i < list.length; i++){
         if (f(list[i])) return true;
     }
@@ -37,7 +37,7 @@ function any(f, list){
  * @param f: function which takes one argument and returns a boolean
  * @param list: array / object to be iterated over
  */
-function all(f, list){
+function all(list, f){
     for (var i=0; i < list.length; i++){
         if (!f(list[i])) return false;
     }
