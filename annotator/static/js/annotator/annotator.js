@@ -203,6 +203,15 @@ annotator = (function(self){
             $.getJSON(self.API_URL + "coding_rule_actions")
         ];
 
+        // Fill status combobox
+        $.each(self.STATUS, function(label, value){
+            console.log(label, value)
+            self.article_status_dropdown.append(
+                $("<option>").attr("value", value).text(label)
+            );
+        });
+
+
         $.when.apply(undefined, self._requests).then(function (codingjob, rules, codebooks, schemas, schemafields, actions) {
                 // Check if all request completed successfully. (If not, an
                 // error is already thrown, but we need not continue processing
@@ -556,7 +565,7 @@ annotator = (function(self){
         }), function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
 
-            if (success_callback){
+            if (success_callback !== undefined){
                 success_callback(data, textStatus, jqXHR);
             }
         });
