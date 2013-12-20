@@ -138,7 +138,6 @@ annotator = (function(self){
             self.state.article_coding.status = parseInt($(this).val());
         });
         self.article_comment_textarea = $("#article-comment").change(function(){
-            console.log($(this).val())
             self.state.article_coding.comments = $(this).val();
         });
     };
@@ -540,16 +539,27 @@ annotator = (function(self){
         // Get codingvalues
         var article_coding_values = widgets.get_coding_values(self.article_coding_container);
         var sentence_coding_values = widgets.get_coding_values(self.sentence_codings_container);
+        sentence_coding_values = $.grep(sentence_coding_values, function(cv) { return cv.sentence !== null; });
 
         // Check whether we want to save.
-        var validation = self.validate(sentence_coding_values);
+        var validation = self.validate();
         if (validation !== true){
-            self.message_dialog.text(validation).dialog("open");
-            return;
+            return self.message_dialog.text(validation).dialog("open");
         }
 
-        console.log("validated.");
+        // Send coding values to server
+        self.loading_dialog.text("Saving codings..").dialog("open");
+        $.post("save", JSON.stringify({
+            "article_coding" : self.state.article_coding,
+            "article_coding_values" : article_coding_values,
+            "sentence_coding_values" : sentence_coding_values
+        }), function(data, textStatus, jqXHR){
+            self.loading_dialog.dialog("close");
 
+            if (success_callback){
+                success_callback(data, textStatus, jqXHR);
+            }
+        });
     };
 
     self.set_state = function(state){

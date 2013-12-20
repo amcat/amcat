@@ -309,7 +309,7 @@ widgets = (function(self){
      * @requires: !container.hasClass("coding")
      */
     self.get_coding_values = function(container){
-        $.chain($.map(container.find(".coding"), function(coding_el){
+        return $.chain($.map(container.find(".coding"), function(coding_el){
             return self._get_codingvalues($(coding_el));
         }));
     };
