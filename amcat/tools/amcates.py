@@ -196,7 +196,7 @@ class ES(object):
         @param filters: if filter is None, build filter from filters as accepted by build_query, e.g. sets=12345
         Note that query and filters can be combined in a single call
         """
-        body = dict(build_body(query, filters))
+        body = dict(build_body(query, filters, query_as_filter=True))
         log.debug("Query_ids body={body!r}".format(**locals()))
         options = dict(scroll="1m", size=1000, fields="")
         options.update(kwargs)
