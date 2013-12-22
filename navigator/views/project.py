@@ -203,22 +203,6 @@ def unlink_articleset(request, project, aset):
     request.session['unlinked_articleset'] = True
     return redirect(reverse("project-articlesets", args=[project.id]))
 
-@check(Project)
-def codingjobs(request, project):
-    """
-    Coding-jobs tab
-    """
-    cdjobs = (Datatable(CodingJobResource, rowlink='./codingjob/{id}')
-                .filter(project=project).hide('project').order_by("-insertdate"))
-
-    deleted = session_pop(request.session, "deleted_codingjob")
-    added = session_pop(request.session, "added_codingjob")
-    if added:
-        added = [CodingJob.objects.get(pk=i) for i in added]
-        
-    return table_view(request, project, cdjobs, 'codingjobs',
-           template="navigator/project/codingjobs.html", added=added, deleted=deleted)
-
 def _codingjob_export(results, codingjob, filename):
     results = TableToSemicolonCSV().run(results)
     filename = filename.format(codingjob=codingjob, now=datetime.datetime.now())

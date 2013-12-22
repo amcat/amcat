@@ -93,7 +93,6 @@ urlpatterns = patterns(
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
 
-    url(r'^project/(?P<id>[0-9]+)/codingjobs$', 'navigator.views.project.codingjobs', name='project-codingjobs'),
     url(r'^project/(?P<id>[0-9]+)/schemas$', 'navigator.views.project.schemas', name='project-schemas'),
     
     url(r'^project/(?P<id>[0-9]+)/edit$', 'navigator.views.project.edit', name='project-edit'),
@@ -156,11 +155,13 @@ from navigator.views.query import *
 from navigator.views.project_views import *
 from navigator.views.codebook_views import *
 from navigator.views.user_views import *
+from navigator.views.codingjob_views import *
 
 for view in [ArticleSetListView, ArticleSetDetailsView,
              ArticleSetArticleDetailsView, ProjectArticleDetailsView,
              QueryView, SampleSetView, EditSetView,
              CodebookListView, CodebookDetailsView,
+             CodingJobListView,
              UserListView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
