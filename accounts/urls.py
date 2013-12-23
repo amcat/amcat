@@ -8,5 +8,5 @@ urlpatterns = patterns('',
     url('^register/$', register, name="accounts-register"),
     url('^recover/$', recover, name="accounts-recover"),
     url('^recover_requested/$', recover_requested, name="accounts-recover-requested"),
-    url(r'^reset/(?P<uidb36>[0-9A-Za-z]{1,13})-(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', recover_confirm, name="accounts-recover-confirm")
+    url(r'^reset/(?P<uidb64>[0-9A-Za-z]{1,13})-(?P<token>[0-9A-Za-z]{1,13}-[0-9A-Za-z]{1,20})/$', recover_confirm, name="accounts-recover-confirm")
 )
