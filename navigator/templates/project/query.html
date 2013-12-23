@@ -32,30 +32,30 @@
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
 {% block content %}
-  <form method="POST" target="formpost" action="url_overwritten_by_js" id="selectionform">
+  <form method="POST" target="formpost" action="url_overwritten_by_js" id="selectionform" role="form" class="form-horizontal">
     {% csrf_token %}
     <input type="hidden" name="output" value="json-html" />
     {{ form.projects.as_hidden }}
+
+
     <div class="row">
       <div class="col-md-6">
 	<legend>Filter options</legend>
-	<table class="query query-filter" border="0">
-	  <tr>
-            <td>Show sets:</td>
-            <td colspan="2">{% include "project/query_articlesets.html" %}</td>
-	  </tr>
-	  <tr>
-            <td style="width:70px">
-              <label>Article Set: </label>
-            </td>
-            <td style="width:400px; min-width:380px;">
-              {{ form.articlesets }}
-            </td>
-	  <tr>
-            <td>
-              <label>Date: </label>
-            </td>
-            <td>
+	<div class="form-group">
+          <label for="articlesetfilter" class="col-md-3 control-label">Show sets:</label>
+	  <div class="col-md-9">
+            {% include "project/query_articlesets.html" %}
+	  </div>
+	</div>
+	<div class="form-group">
+          <label for="articlesetfilter" class="col-md-3 control-label">Article sets:</label>
+	  <div class="col-md-9">
+            {{form.articlesets  }}
+	  </div>
+	</div>
+	<div class="form-group">
+          <label for="articleset" class="col-md-3 control-label">Date:</label>
+	  <div class="col-md-9">
               <select name="datetype" id="id_datetype">
                 <option selected="selected" value="all">All Dates</option>
                 <option value="on">On</option>
@@ -66,49 +66,36 @@
               <span id="date-start" style="display:none">Start: {{ form.start_date }} </span>
               <span id="date-end" style="display:none"> End: {{ form.end_date }}</span> 
               <span id="date-on" style="display:none">{{ form.on_date }}</span> 
-            </td>
-	  </tr>  <tr>
-            <td>
-              <label>Medium:</label>
-            </td>
-            <td>
+	  </div>
+	</div>
+	<div class="form-group">
+          <label for="articleset" class="col-md-3 control-label">Medium:</label>
+	  <div class="col-md-9">
               {{ form.mediums }}
-            </td>
-	  </tr>
-
-	</table>
+	  </div>
+	</div>
 	<br/>
 	<legend>Output options</legend>
-	<table class="query query-output" border="0">
-	  <tr>
-            <td style="padding-top:30px">
-              <label>Output:</label>
-            </td>
-            <td style="padding-top:30px; min-height:50px">
-              <div id="webscripts">
+	<div class="form-group">
+          <label for="output" class="col-md-3 control-label">Output:</label>
+	  <div class="col-md-9">
+	    <div id="webscripts">
                 {% for out in outputs %}
                 <input type="radio" name="webscriptToRun" id="{{out.id}}" value="{{out.id}}" checked="checked" />
                 <label for="{{out.id}}">{{out.name}}</label>
                 {% endfor %}
-              </div>
-            </td>
-	  </tr>
-	  <tr>
-	    <td></td>
-            <td class="output-options-td">
-              {% for out in outputs %}
-              <div id="options-{{out.id}}" class="output-options">
-                {{out.formAsHtml}}
-              </div>
-              {% endfor %}
-              <div id="options-radio-additional" class="output-options">
-		
-              </div>
-            </td>
-	  </tr>
+	    </div>
+	  </div>
+	</div>
+        {% for out in outputs %}
+        <div id="options-{{out.id}}" class="col-md-9 col-md-offset-3 output-options">
+          {{out.formAsHtml}}
+        </div>
+        {% endfor %}
+        <div id="options-radio-additional" class="output-options col-md-9 col-md-offset-3">
+            
+        </div>
 
-	  <tr>
-	</table>
       </div> <!-- col -->
       <div class="col-md-6">
 	<legend>Query options</legend>

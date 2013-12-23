@@ -1,0 +1,25 @@
+{% extends "project/base.html" %}
+
+
+
+{% block actions %}
+  <a href="{% url "codebook-add" project.id %}" class="btn btn-primary"><i class="glyphicon glyphicon-plus-sign"></i> Create new codebook</a>
+  <a href="{% url "project-import-codebook" project.id %}" class="btn btn-default"><i class="glyphicon glyphicon-upload"></i> Upload codebook</a>
+  <a href="{% url "codebook-import" project.id %}"  class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Link to existing codebook</a>
+{% endblock %}
+
+{% block content %}
+
+ {% if deleted %}
+    <div class="alert alert-success">Successfully deleted a codebook. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+ {% endif %}
+
+ <h1>Owned codebooks</h1>
+ {{ owned_codebooks|safe }}
+
+
+ <h1>Linked codebooks</h1>
+ {{ linked_codebooks|safe }}
+
+</div>
+{% endblock %}

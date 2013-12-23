@@ -2,19 +2,19 @@
 
 <li {% is_active 'Articles' %}><a href="{% url 'article set-list' project.id %}">Articles</a></li>
 <li {% is_active 'Query' %}><a href="{% url 'query' project.id %}">Query</a></li>
-<li class="dropdown">
+<li {% is_active 'Coding' classnames="dropdown" %}>
   <a href="#" class="dropdown-toggle" data-toggle="dropdown">Coding<b class="caret"></b></a>
   <ul class="dropdown-menu">
-    <li><a href="{% url 'project-codingjobs' id=project.id %}">Coding Jobs</a></li>
+    <li><a href="{% url 'coding job-list' project.id %}">Coding Jobs</a></li>
     <li><a href="{% url 'project-schemas' id=project.id %}">Coding Schemas</a></li>
-    <li><a href="{% url 'project-codebooks' id=project.id %}">Codebooks</a></li>
+    <li><a href="{% url 'codebook-list' project.id %}">Codebooks</a></li>
  </ul>
 </li>
 
-<li class="dropdown">
+<li {% is_active 'Settings' classnames="dropdown" %}>
   <a href="#" class="dropdown-toggle" data-toggle="dropdown">Settings<b class="caret"></b></a>
   <ul class="dropdown-menu">
-    <li><a href="{% url 'project-users' project.id %}">Users</a></li>
+    <li><a href="{% url 'user-list' project.id %}">Users</a></li>
     <li><a href="{% url 'project' project.id %}">Project details</a></li>
  </ul>
 </li>

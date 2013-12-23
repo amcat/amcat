@@ -36,7 +36,7 @@ from amcat.models.project import Project
 from amcat.models.coding.codingjob import CodingJob
 from amcat.models.user import User
 from amcat.forms import widgets
-
+from amcat.tools import keywordsearch
 from navigator.forms import gen_user_choices
 
 from amcat.scripts.forms import SelectionForm
@@ -94,21 +94,10 @@ class AssignCodingJob(WebScript):
             # to hack)
             forms.ValidationError("Non-valid values entered.")
 
-        sel.full_clean()
-        if sel.use_solr:
-            sel.cleaned_data['length'] = 99999999 # Return 'unlimited' results
-            sel.cleaned_data['sortColumn'] = None
-            sel.cleaned_data['start'] = 0
-            sel.cleaned_data['columns'] = []
-
-            articles = solrlib.getArticles(sel.cleaned_data)
-        else:
-            articles = database.get_queryset(**sel.cleaned_data)
-
-        project = Project.objects.get(id=self.data.get('projects'))
+        articles = list(keywordsearch.get_ids(self.data))
 
         # Create articleset
-        a = ArticleSet.objects.create(project=project, name=self.data['setname'])
+        a = ArticleSet.objects.create(project=self.project, name=self.data['setname'])
         a.add(*articles)
 
         # Split all articles 
@@ -124,14 +113,14 @@ class AssignCodingJob(WebScript):
         else:
             insertuser = User.objects.get(id=self.data['insertuser'])
 
-        c = CodingJob.objects.create(project=project, name=self.data['setname'], articleset=a,
+        c = CodingJob.objects.create(project=self.project, name=self.data['setname'], articleset=a,
                                      coder=coder, articleschema=articleschema, unitschema=unitschema,
                                      insertuser=insertuser)
         html = "<div>Saved as <a href='%s'>coding job %s</a>.</div>"
 
 
         return HttpResponse(json.dumps({
-            "html" : html % (reverse("codingjob", args=[project.id, c.id]), c.id),
+            "html" : html % (reverse("codingjob", args=[self.project.id, c.id]), c.id),
             "webscriptClassname" : self.__class__.__name__,
             "webscriptName" : self.name,
             "doNotAddActionToMainForm" : True            

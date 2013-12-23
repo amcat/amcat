@@ -20,12 +20,20 @@
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 
-
+from api.rest.datatable import Datatable
 from amcat.scripts.actions.import_codebook import ImportCodebook
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
 from navigator.views.projectview import ProjectScriptView
 from navigator.views.scriptview import TableExportMixin
+from api.rest.resources import  CodebookResource 
+from navigator.views.datatableview import DatatableMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
+from django.views.generic.list import ListView
+from django.views.generic.detail import DetailView
+from django.views.generic.base import RedirectView
+
+from amcat.models import Codebook
 
 class ImportCodebook(ProjectScriptView):
     script = ImportCodebook
@@ -72,3 +80,36 @@ class ExportCodebookXML(ProjectScriptView):
         response = HttpResponse(self.result, content_type='text/xml', status=200)
         response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
         return response
+
+class AddCodebookView(RedirectView):
+    """
+    Add codebook automatically creates an empty codebook and opens the edit codebook page
+    """
+    def get_redirect_url(self, project_id, **kwargs):
+        c = Codebook.objects.create(project_id=project_id, name='New codebook')
+        return reverse('codebook-details', args=[project_id, c.id])
+
+
+
+
+class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, ListView):
+    model = Codebook
+    parent = None
+    base_url = "projects/(?P<project_id>[0-9]+)"
+    context_category = 'Coding'
+
+    def get_context_data(self, **kwargs):
+        ctx = super(CodebookListView, self).get_context_data(**kwargs)
+        owned_codebooks = Datatable(CodebookResource, rowlink='./{id}').filter(project=self.project)
+        linked_codebooks = (Datatable(CodebookResource, rowlink='./{id}')
+                        .filter(projects_set=self.project))
+        
+        ctx.update(locals())
+        return ctx
+
+class CodebookDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
+    model = Codebook
+    parent = CodebookListView
+    context_category='Coding'
+    
+        

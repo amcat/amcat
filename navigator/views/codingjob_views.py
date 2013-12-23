@@ -17,28 +17,30 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from .articleset_views import ArticleSetDetailsView
-from amcat.models import Article
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
+from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
+from api.rest.datatable import Datatable
+from api.rest.resources import CodingJobResource
+from navigator.views.datatableview import DatatableMixin
+from amcat.models import CodingJob
+from navigator.utils.misc import session_pop
 
-class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
-    parent = ArticleSetDetailsView
-    model = Article
-    context_category = 'Articles'
 
-class ProjectArticleDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
-    model = Article
+class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+    model = CodingJob
     parent = None
     base_url = "projects/(?P<project_id>[0-9]+)"
-    context_category = 'Articles'
-    template_name = 'project/article_details.html'
-    url_fragment = "articles/(?P<article_id>[0-9]+)"
+    context_category = 'Coding'
+    resource = CodingJobResource
 
-    @classmethod
-    def _get_breadcrumb_name(cls, kwargs, view):
-        a = view.object
-        return "Article {a.id} : {a}".format(**locals())
-    @classmethod
-    def get_view_name(cls):
-        return "project-article-details"
+    def get_context_data(self, **kwargs):
+        ctx = super(CodingJobListView, self).get_context_data(**kwargs)
+
+        deleted = session_pop(self.request.session, "deleted_codingjob")
+        added = session_pop(self.request.session, "added_codingjob")
+        if added:
+            added = [CodingJob.objects.get(pk=i) for i in added]
+
+        ctx.update(**locals())
+        return ctx

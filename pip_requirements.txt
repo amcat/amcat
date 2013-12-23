@@ -5,7 +5,7 @@ cssselect
 elasticsearch
 pyparsing
 colorlog
-celery>=3.1.5
+celery==3.1.5
 python-dateutil
 python-memcached
 django
@@ -14,3 +14,5 @@ django-boolean-sum
 django_compressor
 django_filter
 django_extensions
+html2text
+pypdf

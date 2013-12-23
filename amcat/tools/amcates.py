@@ -193,7 +193,7 @@ class ES(object):
         return result['_source']
         
 
-    def query_ids(self, query=None, filter=None, filters={}, **kwargs):
+    def query_ids(self, query=None, filters={}, **kwargs):
         """
         Query the index returning a sequence of article ids for the mathced articles
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -201,7 +201,7 @@ class ES(object):
         @param filters: if filter is None, build filter from filters as accepted by build_query, e.g. sets=12345
         Note that query and filters can be combined in a single call
         """
-        body = dict(build_body(query, filter, filters))
+        body = dict(build_body(query, filters))
         log.debug("Query_ids body={body!r}".format(**locals()))
         options = dict(scroll="1m", size=1000, fields="")
         options.update(kwargs)
@@ -215,7 +215,7 @@ class ES(object):
                 yield int(row['_id'])
             sid = res['_scroll_id']
 
-    def query(self, query=None, filter=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
+    def query(self, query=None, filters={}, highlight=False, lead=False, fields=[], score=True, **kwargs):
         """
         Execute a query for the given fields with the given query and filter
         @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
@@ -223,7 +223,7 @@ class ES(object):
         @param kwargs: additional keyword arguments to pass to es.search, eg fields, sort, from_, etc
         @return: a list of named tuples containing id, score, and the requested fields
         """
-        body = dict(build_body(query, filter, filters))
+        body = dict(build_body(query, filters, query_as_filter=(not score)))
         if 'sort' in kwargs: body['track_scores'] = True
         if highlight: body['highlight'] = HIGHLIGHT_OPTIONS
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
@@ -336,28 +336,32 @@ class ES(object):
         log.info("Flushing")
         self.flush()
 
+    def count(self, query=None, filters=None):
+        """
+        Compute the number of items matching the given query / filter
+        """
+        filters=dict(build_body(query, filters, query_as_filter=True))
+        body = {"constant_score" : filters}
+        result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
+        return result["count"]
+                      
+                               
     def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month'):
         """
         Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>
         If date is used as a group_by variable, uses date_interval to bin it
         Currently, group by must be a single field as elastic doesn't support multiple group by
         """
-        if filters is None: raise ValueError("Please specify filters for aggregate query")
-        filters = list(get_filter_clauses(**filters))
-        if query:
-            filters.append(queryparser.parse_to_terms(query).get_filter_dsl())
 
-        if len(filters) == 1:
-            filter = filters[0]
-        else:
-            filter = {"bool" : {"must" : [filters]}}
+        filters=dict(build_body(query, filters, query_as_filter=True))
 
         if group_by == 'date':
             group = {'date_histogram' : {'field' : group_by, 'interval' : date_interval}}
         else:
             group = {'terms' : {'size' : 999999, 'field' : group_by}}
-        body = {"query" : {"constant_score" : {"filter" : filter}},
+        body = {"query" : {"constant_score" : filters},
                 "facets" : {"group" : group}}
+        log.debug("es.search(body={body})".format(**locals()))
 
         result = self.es.search(index=self.index, body=body, size=0)
         if group_by == 'date':
@@ -373,7 +377,7 @@ class ES(object):
         Compute and return a Result object with n, start_date and end_date for the selection
         """
         filter = build_filter(**filters)
-        body = dict(build_body(query))
+        body = dict(build_body(query, query_as_filter=True))
         body['facets'] = {'stats' : {'statistical' : {'field' : 'date'}}}
         body['facets']['stats']['facet_filter'] = filter        
         stats = self.es.search(index=self.index, body=body, size=0)['facets']['stats']
@@ -469,25 +473,36 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
         if isinstance(hashes, str): hashes = [hashes]
         yield dict(terms={'hash': hashes})
 
-def build_filter(*args, **kargs):
-    filters = list(get_filter_clauses(*args, **kargs))
+def combine_filters(filters):
     if len(filters) == 0:
         return None
     elif len(filters) == 1:
         return filters[0]
     else:
         return {'bool' : {'must' : filters}}
+       
+def build_filter(*args, **kargs):
+    filters = list(get_filter_clauses(*args, **kargs))
+    return combine_filters(filters)
 
-def build_body(query=None, filter=None, filters=None):
+def build_body(query=None, filters={}, query_as_filter=False):
     """
     Construct the query body from the query and/or filter(s)
     (call with dict(build_body)
     @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
     @param filter: field filter DSL query dict, defaults to build_filter(**filters)
+    @param query_as_filter: if True, use the query as a filter (faster but not score/relevance)
     """
-    if filter is None and filters: filter = build_filter(**filters)
-    if filter: yield ('filter', filter)
-    if query: yield ('query', queryparser.parse(query))
+    filters = list(get_filter_clauses(**filters))
+    if query:
+        terms = queryparser.parse_to_terms(query)
+        if query_as_filter:
+            filters.append(terms.get_filter_dsl())
+        else:
+            yield ('query', terms.get_dsl())
+
+    if filters:
+        yield ('filter', combine_filters(filters))
 
 
     

@@ -41,6 +41,7 @@ class LazyES(object):
         self.fields = [f for f in (fields or []) if f != "id"]
         self.es = amcates.ES()
         self.hits = hits
+        self._count = None
 
     @property
     def query(self):
@@ -50,6 +51,11 @@ class LazyES(object):
     def filter(self, key, value):
         self.filters[key] = value
 
+    def __len__(self):
+        if not self._count:
+            self._count = self.es.count(self.query, filters=self.filters)
+        return self._count
+        
     def __getslice__(self, i, j):
         kargs = {}
         fields = self.fields
@@ -60,7 +66,7 @@ class LazyES(object):
         fields = [f for f in fields if f != "lead"] 
 
         result = self.es.query(self.query, filters=self.filters, fields=fields, 
-                               size=(j-i), sort=["id"], from_=i, **kargs)
+                               size=(j-i), sort=["id"], from_=i, score=False, **kargs)
         if self.hits:
             def add_hits_column(r):
                 r.hits = {q.label : 0 for q in self.queries}
@@ -74,10 +80,6 @@ class LazyES(object):
                     result_dict[hit.id].hits[q.label] = hit.score
         result = list(result)
         return result
-
-    def __len__(self):
-        return self.es.query(self.query, filters=self.filters, fields=[], size=0).total
-
 
 class HighlightField(CharField):
     def field_to_native(self, obj, field_name):

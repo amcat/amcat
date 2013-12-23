@@ -64,6 +64,7 @@ class ShowArticleList(WebScript):
         
         if self.options['outputTypeAl'] == 'table':
             t = keywordsearch.getDatatable(self.data)
+            t = t.rowlink_reverse("project-article-details", args=[project_id, '{id}'])
             cols = {FORM_FIELDS_TO_ELASTIC.get(f,f) for f in self.data.getlist('columns')}
             for f in list(t.get_fields()):
                 if f not in cols:

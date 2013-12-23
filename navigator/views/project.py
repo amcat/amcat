@@ -203,22 +203,6 @@ def unlink_articleset(request, project, aset):
     request.session['unlinked_articleset'] = True
     return redirect(reverse("project-articlesets", args=[project.id]))
 
-@check(Project)
-def codingjobs(request, project):
-    """
-    Coding-jobs tab
-    """
-    cdjobs = (Datatable(CodingJobResource, rowlink='./codingjob/{id}')
-                .filter(project=project).hide('project').order_by("-insertdate"))
-
-    deleted = session_pop(request.session, "deleted_codingjob")
-    added = session_pop(request.session, "added_codingjob")
-    if added:
-        added = [CodingJob.objects.get(pk=i) for i in added]
-        
-    return table_view(request, project, cdjobs, 'codingjobs',
-           template="navigator/project/codingjobs.html", added=added, deleted=deleted)
-
 def _codingjob_export(results, codingjob, filename):
     results = TableToSemicolonCSV().run(results)
     filename = filename.format(codingjob=codingjob, now=datetime.datetime.now())
@@ -578,14 +562,6 @@ def name_schema(request, schema, project):
             schema=schema)
 
 
-@check(Project)
-def add_codebook(request, project):
-    """
-    Add codebook automatically creates an empty codebook and opens the edit codebook page
-    """
-    c = Codebook.objects.create(project=project, name='New codebook')
-    return redirect(reverse('project-codebook', args=[project.id, c.id]))
-
 @check(Codebook, args='id', action='delete')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
 def codebook_delete(request, project, codebook):
@@ -596,54 +572,6 @@ def codebook_delete(request, project, codebook):
     return redirect(reverse("project-codebooks", args=[project.id]))
 
 
-
-@check(Project)
-def codebooks(request, project):
-    """
-    Codebooks-tab.
-    """
-    owned_codebooks = Datatable(CodebookResource, rowlink='./codebook/{id}').filter(project=project)
-    linked_codebooks = (Datatable(CodebookResource, rowlink='./codebook/{id}')
-                        .filter(projects_set=project))
-
-    can_import = True#project.can_update(request.user)
-    can_create = True#Codebook.can_create(request.user) and project.can_update(request.user)
-
-    deleted = session_pop(request.session, "deleted_codebook")
-    
-    context = project
-    menu = PROJECT_MENU
-    selected = "codebooks"
-    return render(request, "navigator/project/codebooks.html", locals())
-
-
-@check(Project)
-def preprocessing(request, project):
-    """
-    Codebooks-tab.
-    """
-    table = Datatable(AnalysedArticleResource).filter(article__articlesets_set__project=project)
-
-    form = AssignParsing.options_form(request.POST or None)
-    form.fields['articleset'].queryset = ArticleSet.objects.filter(pk__in=project.all_articlesets())
-
-    if form.is_valid():
-        assigned_n = AssignParsing(form).run()
-        assigned_plugin = form.cleaned_data["plugin"]
-        assigned_set = form.cleaned_data["articleset"]
-
-
-    context = project
-    menu = PROJECT_MENU
-    selected = "preprocessing"
-    return render(request, "navigator/project/preprocessing.html", locals())
-
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(Codebook, args_map={'codebook' : 'id'}, args='codebook')
-def codebook(request, codebook, project):
-    return table_view(request, project, None, 'codebooks',
-            template="navigator/project/codebook.html", codebook=codebook)
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
@@ -829,27 +757,6 @@ def edit(request, project):
         return redirect(reverse('project', args=[project.id]))
 
     return render(request, 'navigator/project/edit.html', locals())
-
-@check(Project)
-def users_view(request, project):
-    """
-    View all users affiliated with this project. Also render a form
-    to add users to the project (if permissions are met).
-    """
-    users = Datatable(ProjectRoleResource, rowlink='./user/{user_id}')\
-            .filter(project=project).hide('project', 'id')
-
-    if request.user.get_profile().haspriv('manage_project_users', project):
-        add_user = forms.ProjectRoleForm(project)
-
-    ctx = dict(locals())
-    ctx.update({
-        'menu' : PROJECT_MENU,
-        'selected' : 'users',
-        'context' : project
-    })
-
-    return render(request, 'navigator/project/users.html', ctx)
 
 @check_perm("manage_project_users", True)
 def users_add(request, id):

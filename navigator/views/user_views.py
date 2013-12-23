@@ -17,28 +17,33 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from .articleset_views import ArticleSetDetailsView
-from amcat.models import Article
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from django.core.urlresolvers import reverse
+
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
+from navigator.views.datatableview import DatatableMixin
+from amcat.models import User
 from django.views.generic.detail import DetailView
+from django.views.generic.list import ListView
+from django.views.generic.edit import UpdateView
 
-class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
-    parent = ArticleSetDetailsView
-    model = Article
-    context_category = 'Articles'
+from django.views.generic.base import RedirectView
+from api.rest.resources import ProjectRoleResource
 
-class ProjectArticleDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
-    model = Article
+class UserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+    model = User
     parent = None
     base_url = "projects/(?P<project_id>[0-9]+)"
-    context_category = 'Articles'
-    template_name = 'project/article_details.html'
-    url_fragment = "articles/(?P<article_id>[0-9]+)"
+    context_category = 'Settings'
 
-    @classmethod
-    def _get_breadcrumb_name(cls, kwargs, view):
-        a = view.object
-        return "Article {a.id} : {a}".format(**locals())
+    resource = ProjectRoleResource
+    rowlink = './{id}'
     @classmethod
     def get_view_name(cls):
-        return "project-article-details"
+        return "user-list"
+
+    url_fragment = "users"
+        
+    def filter_table(self, table):
+        return table.filter(project=self.project).hide('project', 'id')
+#    if request.user.get_profile().haspriv('manage_project_users', project):
+#        add_user = forms.ProjectRoleForm(project)
