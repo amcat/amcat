@@ -41,15 +41,6 @@ $.values = function(obj) {
     });
 };
 
-$.chain = function(arr){
-    var chained = [];
-    $.each(arr, function(_, inner){
-        $.merge(chained, inner);
-    });
-    return chained;
-};
-
-
 // Workaround: focus events don't carry *Key properties, so we don't
 // know for sure if shift is pressed.
 shifted = false;
@@ -205,7 +196,6 @@ annotator = (function(self){
 
         // Fill status combobox
         $.each(self.STATUS, function(label, value){
-            console.log(label, value)
             self.article_status_dropdown.append(
                 $("<option>").attr("value", value).text(label)
             );
@@ -542,6 +532,28 @@ annotator = (function(self){
 
     };
 
+    /*
+     * Returns 'minimised' version of given coding, which can easily be serialised.
+     */
+    self.pre_serialise_coding = function(coding, codingvalues){
+        codingvalues = $.grep(codingvalues, function(v){ return v.coding == coding });
+
+        return {
+            sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
+            status_id : self.state.article_coding.status,
+            comments : coding.comments,
+            values : $.map(codingvalues, self.pre_serialise_codingvalue)
+        }
+    };
+
+    self.pre_serialise_codingvalue = function(codingvalue){
+        return {
+            codingschemafield_id : codingvalue.field.id,
+            intval : codingvalue.intval,
+            strval : codingvalue.strval
+        }
+    };
+
     self.save = function(success_callback){
         $(document.activeElement).blur().focus();
 
@@ -558,10 +570,11 @@ annotator = (function(self){
 
         // Send coding values to server
         self.loading_dialog.text("Saving codings..").dialog("open");
-        $.post("save", JSON.stringify({
-            "article_coding" : self.state.article_coding,
-            "article_coding_values" : article_coding_values,
-            "sentence_coding_values" : sentence_coding_values
+        $.post("article/{0}/save".f(self.state.coded_article_id), JSON.stringify({
+            "article_coding" : self.pre_serialise_coding(self.state.article_coding, article_coding_values),
+            "sentence_codings" : $.map(self.state.sentence_codings, function(coding){
+                return self.pre_serialise_coding(coding, sentence_coding_values);
+            })
         }), function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
 

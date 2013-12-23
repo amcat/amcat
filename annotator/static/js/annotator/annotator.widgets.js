@@ -309,9 +309,11 @@ widgets = (function(self){
      * @requires: !container.hasClass("coding")
      */
     self.get_coding_values = function(container){
-        return $.chain($.map(container.find(".coding"), function(coding_el){
+        return $.grep($.map(container.find(".coding"), function(coding_el){
             return self._get_codingvalues($(coding_el));
-        }));
+        }), function(codingvalue){
+            return codingvalue.strval !== null || codingvalue.intval !== null;
+        });
     };
 
     self.set_value = function(widget, codingvalue){

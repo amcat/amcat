@@ -21,16 +21,11 @@ from django.conf.urls import patterns, url, include
 from annotator.views import codingjob, overview
 
 article_patterns = patterns('',
-    url(r'^articlecodings$', codingjob.articleCodings, name='annotator-article-codings'),
-    url(r'^unitcodings$', codingjob.unitCodings, name='annotator-unit-codings'),
-    url(r'^storecodings$', codingjob.storeCodings, name='annotator-store-codings'),
+    url(r'save$', codingjob.save),
 )
 
 codingjob_patterns = patterns('',
     url('^$', codingjob.index),
-
-    url(r'^fields$', codingjob.fields, name='annotator-codingjob-fields'),
-    url(r'^articles$', codingjob.articles, name='annotator-codingjob-articles'),
     url(r'^article/(?P<article_id>\d+)/', include(article_patterns)),
 )
 
