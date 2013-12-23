@@ -281,7 +281,14 @@ annotator = (function(self){
             .addClass("coding");
 
         return table.append($.map(widgets.get_html(schemafields, null), function(widget, i){
-           var label = widgets.get_label_html(schemafields[i], widget);
+            var schemafield = schemafields[i];
+            var label = widgets.get_label_html(schemafield, widget);
+            var value = self.state.article_coding.values[schemafield.id];
+
+            if (value !== undefined){
+                widgets.set_value($(widget), value);
+            }
+
             return $("<tr>")
                 .append($("<td>").append(label))
                 .append($("<td>").append(widget));
@@ -557,6 +564,8 @@ annotator = (function(self){
     self.save = function(success_callback){
         $(document.activeElement).blur().focus();
 
+        console.log(success_callback);
+
         // Get codingvalues
         var article_coding_values = widgets.get_coding_values(self.article_coding_container);
         var sentence_coding_values = widgets.get_coding_values(self.sentence_codings_container);
@@ -578,7 +587,7 @@ annotator = (function(self){
         }), function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
 
-            if (success_callback !== undefined){
+            if (success_callback !== undefined && success_callback.currentTarget === undefined){
                 success_callback(data, textStatus, jqXHR);
             }
         });
@@ -630,7 +639,7 @@ annotator = (function(self){
         resolve_ids(codings, sentences, "sentence");
 
         $.each(codings, function(_, coding){
-            map_ids(coding.values);
+            coding.values = map_ids(coding.values, "field");
             resolve_ids(coding.values, self.models.schemafields, "field");
 
             $.each(coding.values, function(_, value){
