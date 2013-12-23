@@ -120,7 +120,7 @@ def save(request, project_id, codingjob_id, article_id):
             _to_codingvalues(co, c["values"]) for c, co in itertools.izip(new_codings, new_coding_objects)
         )
 
-        # TODO: Saving each coding is pretty inefficient, but Django doesn't allow retrieving
+        # Saving each coding is pretty inefficient, but Django doesn't allow retrieving
         # id's when using bulk_create. See Django ticket #19527.
         if connection.vendor == "postgres":
             a = sql.InsertQuery(Coding)
