@@ -85,7 +85,7 @@ def save(request, project_id, codingjob_id, article_id):
     """
     project = Project.objects.get(id=project_id)
     codingjob = CodingJob.objects.select_related("articleset").get(id=codingjob_id)
-    article = Article.objects.defer("text").get(id=article_id)
+    article = Article.objects.only("id").get(id=article_id)
 
     if codingjob.project_id != project.id:
         raise PermissionDenied("Given codingjob ({codingjob}) does not belong to project ({project})!".format(**locals()))
@@ -110,32 +110,27 @@ def save(request, project_id, codingjob_id, article_id):
         # Updating tactic: delete all existing codings and codingvalues, then insert
         # the new ones. This prevents calculating a delta, and confronting the
         # database with (potentially) many update queries.
-        CodingValue.objects.filter(coding__codingjob=codingjob).delete()
-        Coding.objects.filter(codingjob=codingjob).delete()
+        CodingValue.objects.filter(coding__codingjob=codingjob, coding__article=article).delete()
+        Coding.objects.filter(codingjob=codingjob, article=article).delete()
 
         new_codings = list(itertools.chain([article_coding], sentence_codings))
         new_coding_objects = map(partial(_to_coding, codingjob, article), new_codings)
 
-        coding_values = itertools.chain.from_iterable(
-            _to_codingvalues(co, c["values"]) for c, co in itertools.izip(new_codings, new_coding_objects)
-        )
-
         # Saving each coding is pretty inefficient, but Django doesn't allow retrieving
         # id's when using bulk_create. See Django ticket #19527.
-        if connection.vendor == "postgres":
-            a = sql.InsertQuery(Coding)
-            a.insert_values(Coding._meta.fields[1:], new_coding_objects)
-            raw_sql, params = a.sql_with_params()[0]
-            new_saved_coding_objects = list(Coding.objects.raw("%s %s" % (raw_sql, "RETURNING coding_id"), params))
-
-            # Replace old, unsaved codingvalues with new, saved codingvalues
-            new_saved_mapping = dict(zip(new_codings, new_saved_coding_objects))
-            for cv in coding_values:
-                cv.coding = new_saved_mapping[cv.coding]
+        if connection.vendor == "postgresql":
+            query = sql.InsertQuery(Coding)
+            query.insert_values(Coding._meta.fields[1:], new_coding_objects)
+            raw_sql, params = query.sql_with_params()[0]
+            new_coding_objects = Coding.objects.raw("%s %s" % (raw_sql, "RETURNING coding_id"), params)
         else:
             # Do naive O(n) approach
             for coding in new_coding_objects:
                 coding.save()
+
+        coding_values = itertools.chain.from_iterable(
+            _to_codingvalues(co, c["values"]) for c, co in itertools.izip(new_codings, new_coding_objects)
+        )
 
         CodingValue.objects.bulk_create(coding_values)
 
