@@ -224,12 +224,16 @@ widgets = (function(self){
                 return $(".codingvalue", widget).val(choice.label);
             }
 
-            // Find parent-choice
-            var parent_choice = $.grep(schemafield.choices, find_code(code.parent))[0];
-            var child_choice = $.grep(parent_choice.descendant_choices, find_code(code))[0];
+            var root = code;
+            while (root.parent !== null){
+                root = root.parent;
+            }
+
+            var root_choice = $.grep(schemafield.choices, find_code(root))[0];
+            var child_choice = $.grep(root_choice.descendant_choices, find_code(code))[0];
 
             // And we've got the labels!
-            $(".codebook_root", widget).val(parent_choice.label);
+            $(".codebook_root", widget).val(root_choice.label);
             $(".codebook_descendant", widget).val(child_choice.label);
         }
 
