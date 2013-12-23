@@ -51,7 +51,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
 
     @cached
     def get_codings(self):
-        codings = self.codings.values_list("id", "status__label", "comments")
+        codings = self.codings.values_list("article__id", "status__label", "comments")
         return { c[0] : (c[1], c[2]) for c in codings }
 
     def get_comments(self, article):
