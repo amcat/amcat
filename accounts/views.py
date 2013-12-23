@@ -111,9 +111,9 @@ def recover(request):
 def recover_requested(request):
     return render(request, "accounts/recover_requested.html")
 
-def recover_confirm(request, uidb36, token):
+def recover_confirm(request, uidb64, token):
     return password_reset_confirm(request,
-            uidb36=uidb36, token=token,
+            uidb64=uidb64, token=token,
             template_name="accounts/recover_confirm.html",
             post_reset_redirect=reverse(login))
 
