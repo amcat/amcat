@@ -166,6 +166,9 @@ widgets = (function(self){
             });
 
             return widget;
+        },
+        set_value : function(widget, codingvalue){
+            self.default.set_value(widget, codingvalue, true);
         }
 
     });
