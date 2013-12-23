@@ -9,12 +9,8 @@
  <form method="POST" class="well form-inline">
      {% csrf_token %}
      <legend>Credentials recovery</legend>
-     Fill in<br>
      {{form.email}}
      {{form.email.errors}}
-     <br>or<br>
-     {{form.username}}
-     {{form.username.errors}}
      <br><br>
      <input class="btn btn-primary" type="submit" value="Recover" />
      <div style="margin-bottom:0px;" class="form-actions">
