@@ -89,7 +89,7 @@ def _get_url_pattern(viewset):
 ##### UNIT TESTS #####
 ######################
 
-class AmCATViewSetMixinTest(amcattest.PolicyTestCase):
+class AmCATViewSetMixinTest(amcattest.AmCATTestCase):
     def test_get_url_pattern(self):
         class AMixin(AmCATViewSetMixin):
             model_key = "project"
