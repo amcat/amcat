@@ -16,304 +16,128 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from functools import partial
 
 import json
 import logging
+from django.core.exceptions import PermissionDenied
+from django.db import transaction, connection
+from django.db.models import sql
 
 from django.shortcuts import render
-from django.db.models import Q
-from django.http import HttpResponse
-from django.template.loader import render_to_string
+from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
+from django.core.urlresolvers import reverse
+import itertools
 
-from amcat.models.coding import codingtoolkit
-from amcat.models import Code, Coding, CodingJob, CodedArticle
-from amcat.models import CodingSchemaField, CodingSchemaFieldType
-from amcat.models import Article, Sentence
-from amcat.scripts.output.datatables import TableToDatatable
-from amcat.scripts.output._json import DictToJson
-from amcat.forms import InvalidFormException
+from amcat.models import CodingJob, Project, Article, CodingValue, Coding
 
 log = logging.getLogger(__name__)
 
-CODEBOOK_TYPE = CodingSchemaFieldType.objects.get(name="Codebook")
-
-def index(request, codingjobid):
+def index(request, project_id, codingjob_id):
     """returns the HTML for the main annotator page"""
-    return render(request, "annotator/codingjob.html", {'codingjob':CodingJob.objects.get(id=codingjobid), 
-        'codingStatusCommentForm':codingtoolkit.CodingStatusCommentForm(auto_id='article-%s')})
-    
-def writeResponse(data):
-    """helper function that returns (binary/text) data as HttpResponse"""
-    response = HttpResponse(mimetype='text/plain')
-    response.write(data)
-    return response
- 
-    
-def articles(request, codingjobid):
-    """returns articles in a codingjob as DataTable JSON"""
-    table = codingtoolkit.get_table_articles_per_job(
-        CodingJob.objects.get(id=codingjobid)
-    )
-    out = TableToDatatable().run(table)
-    return writeResponse(out)
-    
-   
-def unitCodings(request, codingjobid, articleid):
-    """returns the unit codings of an article and the HTML form (a row in a table) wrapped in JSON"""
-    article = Article.objects.get(id=articleid)
-    codingjob = CodingJob.objects.get(id=codingjobid)
-    codedArticle = CodedArticle(codingjob, article)
-    table = codingtoolkit.get_table_sentence_codings_article(codedArticle, request.user.get_profile().language)
-    
-    log.info('language: %s' % request.user.get_profile().language)
-    
-    sentenceform = codingtoolkit.CodingSchemaForm(codingjob.unitschema)
-    
-    jsondict = {'unitcodings':table, 
-                'unitcodingFormTablerow':
-                    render_to_string("annotator/unitcodingrowform.html", {'form':sentenceform})
-               }
-    out = DictToJson().run(jsondict)
-    return writeResponse(out)
-    
-
-def get_value_labels(coding):
-    """
-    return a sequence of ('field_{field.id}', value_label) pairs for the given coding.
-    If the field is not coded or cannot be deserialized (e.g. because of a codebook change)
-    the label '' will be returned.
-    """
-    for val in coding.values.select_related("field__fieldtype", "value__strval", "value__intval"):
-        try:
-            value = val.value
-        except Code.DoesNotExist: # codebook change
-            value = None
-        f = val.field
-        if value is None:
-            label = ''
-        else:
-            label = f.serialiser.value_label(value)
-        yield f, label
-
-def get_code_ids(coding):
-    for val in coding.values.select_related("field__fieldtype", "value__strval", "value__intval"):
-        try:
-            code = val.value
-        except Code.DoesNotExist: # codebook change
-            continue
-
-
-def articleCodings(request, codingjobid, articleid):
-    """returns the article codings of an article as HTML form"""
-    article = Article.objects.get(id=articleid)
-    codingjob = CodingJob.objects.get(id=codingjobid)
-    codings = codingtoolkit.get_article_coding(codingjob, article)
-
-    if codings:
-        values = {"field_%i" % f.id : label for (f, label) in get_value_labels(codings)}
-        get_code_ids(codings)
-    else:
-        values = {}
-    articlecodingform = codingtoolkit.CodingSchemaForm(codingjob.articleschema, values)
-    
-    return render(request, "annotator/articlecodingform.html", {'form':articlecodingform})
-    
-
-def articleSentences(request, articleid):
-    """returns the sentences found in an article"""
-    article = Article.objects.get(id=articleid)
-    
-    sentences = []
-    for s in article.sentences.order_by('parnr', 'sentnr').all():
-        sentences.append({'id':s.id, 'unit':'%s.%s' % (s.parnr, s.sentnr), 'text':unicode(s)})
-        
-    result = {
-        'articleid':articleid,
-        'sentences':sentences
-    }
-    
-    out = DictToJson().run(result)
-    return writeResponse(out)
-        
-        
-def getFieldItems(field, language):
-    """get the codebook codes as dictionaries wrapped in a list"""
-    if field.serialiser.possible_values:
-        for val in field.serialiser.possible_values:
-            value = field.serialiser.serialise(val)
-            label = field.serialiser.value_label(val, language)
-            valueDict = dict(label=label, value=value)
-
-            # hack approved by wouter
-            if type(val) == Code:
-                functions = _get_functions(val)
-                if functions:
-                    valueDict['functions'] = [f for f in functions if f.id != 0]
-
-            yield valueDict
-
-def _build_field(field, language):
-    result = {
-        'fieldname' : field.label,
-        'id' : str(field.id),
-        'isOntology' : field.fieldtype == CODEBOOK_TYPE,
-        'showAll' : None
-    }
-
-    if field.codebook:
-        result['items-key'] = field.codebook_id
-        result["split_codebook"] = field.split_codebook
-    else:
-        result['items'] = list(getFieldItems(field, language))
-
-    return result
-
-def _get_functions(codebook, code):
-    return [{
-        "from" : cc.validfrom, "to" : cc.validto,
-        "function" : cc.function.label,
-        "parentid" : cc.parent_id
-    } for cc in codebook.get_codebookcodes(code)]
-
-def _build_ontology(codebook, language, fallback=True):
-    return [{
-        "value" : code.id,
-        "label" : code.get_label(language, fallback=fallback),
-        "functions" : _get_functions(codebook, code),
-        "ordernr" : codebook.get_codebookcode(code).ordernr
-    } for code in codebook.get_codes()]
-
-def _get_highlighters(schemas):
-    for s in schemas:
-        for h in s.highlighters.all():
-            yield (h, s.highlight_language)
-
-def _get_highlight_labels(schemas):
-    """Returns set with (codebook, language)."""
-    for cb, language in set(_get_highlighters(schemas)):
-        _language = [language] if language else []
-        cb.cache_labels(*_language)
-
-        for code in cb.get_codes():
-            if language:
-                yield code.get_label(language, fallback=False)
-            else:
-                yield code.get_label()
-
-def fields(request, codingjobid):
-    """get the fields of the articleschema and unitschema as JSON"""
-    language = request.user.get_profile().language
-    codingjob = CodingJob.objects.get(id=codingjobid)
-
-    # Get all relevant fields for this codingjob in one query
-    fields = CodingSchemaField.objects.select_related(
-        # Fields used later in _build_fields and _build_ontologies
-        "codebook", "fieldtype", "codingschema"
-    ).prefetch_related("codingschema__highlighters").filter(
-        Q(codingschema__codingjobs_unit=codingjob)|
-        Q(codingschema__codingjobs_article=codingjob)
-    )
-
-    # Make sure all codebooks are the same object
-    codebooks = { f.codebook.id : f.codebook for f in fields if f.codebook }
-    for field in (f for f in fields if f.codebook):
-        field._codebook_cache = codebooks[field.codebook_id]
-
-    # Cache all codebooks
-    for codebook in codebooks.values():
-        codebook.cache(select_related=("function",))
-        codebook.cache_labels()
-
-    labels = _get_highlight_labels(set([f.codingschema for f in fields]))
-
-    out = DictToJson().run({
-        'fields' : [_build_field(f, language) for f in fields],
-        'ontologies': {cb.id : _build_ontology(cb, language) for cb in codebooks.values()},
-        'highlight_labels' : list(set(labels) - {None,})
+    return render(request, "annotator/codingjob.html", {
+        'codingjob': CodingJob.objects.get(id=codingjob_id),
+        'project': Project.objects.get(id=project_id),
+        'coder' : request.user,
     })
 
-    return writeResponse(out)
-    
-    
-def updateCoding(fields, form, codingObj):
-    """store the form with fields in the codingObj"""
-    valuesDict = {}
-    for field in fields:
-        data = form.cleaned_data['field_%d' % field.id]
-        if isinstance(data, int) or data.isdigit(): data = int(data)
-        if data == '': continue
-        valuesDict[field] = field.serialiser.deserialise(data)
-    log.info(valuesDict)
-    codingObj.update_values(valuesDict)
-    
-    
-def storeCodings(request, codingjobid, articleid):
-    """store the POST data as coding"""
-    article = Article.objects.get(id=articleid)
-    codingjob = CodingJob.objects.get(id=codingjobid)
-    codedArticle = CodedArticle(codingjob, article)
-    sentenceMappingDict = {}
-    
-    try:
-        jsonData = json.loads(request.body)
-        
-        log.info(jsonData)
-        articleCodingObj = codedArticle.get_or_create_coding()
+def _to_coding(codingjob, article, coding):
+    """
+    Takes a dictionary with keys 'sentence_id', 'status', 'comments' and creates
+    an (unsaved) Coding object.
 
-        if 'articlecodings' in jsonData:
-            articlecodingform = codingtoolkit.CodingSchemaForm(codingjob.articleschema, jsonData['articlecodings'])
-            
-            if not articlecodingform.is_valid():
-                raise InvalidFormException('articlecodings', articlecodingform.errors)
-            
-            updateCoding(codingjob.articleschema.fields.all(), articlecodingform, articleCodingObj)
-            
-        if 'unitcodings' in jsonData:
-            
-            for codingdict in jsonData['unitcodings']['modify']:
-                unitcodingform = codingtoolkit.CodingSchemaForm(codingjob.unitschema, codingdict)
-                
-                if not unitcodingform.is_valid() or not codingdict['unit']: # TODO: better unit validation, now unit errors are not in the errors dict (maybe add to form)
-                    raise InvalidFormException(codingdict['codingid'], unitcodingform.errors)
-                
-                unitCodingObj = Coding.objects.get(pk=codingdict['codingid'])
-                if unitCodingObj.sentence_id != codingdict['unit']:
-                    unitCodingObj.sentence = Sentence.objects.get(pk=codingdict['unit'])
-                    unitCodingObj.save()
-                updateCoding(codingjob.unitschema.fields.all(), unitcodingform, unitCodingObj)
-        
-            for codingdict in jsonData['unitcodings']['new']:
-                unitcodingform = codingtoolkit.CodingSchemaForm(codingjob.unitschema, codingdict)
-                
-                if not unitcodingform.is_valid() or not codingdict['unit']: # TODO: better unit validation
-                    raise InvalidFormException(codingdict['codingid'], unitcodingform.errors)
-                
-                sentence = Sentence.objects.get(pk=codingdict['unit'])
-                unitCodingObj = codedArticle.create_sentence_coding(sentence)
-                updateCoding(codingjob.unitschema.fields.all(), unitcodingform, unitCodingObj)
-                sentenceMappingDict[codingdict['codingid']] = unitCodingObj.id
-        
-            for coding_id in jsonData['unitcodings']['delete']:
-                unitCodingObj = Coding.objects.get(pk=coding_id)
-                unitCodingObj.delete()
-        
-        if 'commentAndStatus' in jsonData:
-            form = codingtoolkit.CodingStatusCommentForm(jsonData['commentAndStatus'])
-            
-            if not form.is_valid():
-                raise InvalidFormException('commentAndStatus', form.errors)
-            
-            articleCodingObj.comments = form.cleaned_data['comment']
-            articleCodingObj.status = form.cleaned_data['status']
-            articleCodingObj.save()
-            
-            
-    except InvalidFormException, e:
-        log.exception('form error')
-        out = DictToJson().run({'response':'error', 'fields':e.getErrorDict(), 'id':e.message})
-    except Exception, e:
-        log.exception('store error')
-        out = DictToJson().run({'response':'error', 'message':e.message})
-    else:
-        out = DictToJson().run({'response':'ok', 'codedsentenceMapping':sentenceMappingDict})
-    return writeResponse(out)
+    @type codingjob: CodingJob
+    @type article: Article
+    @type coding: dict
+    """
+    return Coding(
+        codingjob=codingjob, article=article,
+        sentence_id=coding["sentence_id"], status_id=coding["status_id"],
+        comments=coding["comments"]
+    )
+
+def _to_codingvalue(coding, codingvalue):
+    """
+    Takes a dictionary with keys 'codingschemafield_id', 'intval', 'strval' and creates
+    an (unsaved) CodingValue object.
+
+    @type coding: Coding
+    @type codingvalue: dict
+    """
+    return CodingValue(
+        field_id=codingvalue["codingschemafield_id"], intval=codingvalue["intval"],
+        strval=codingvalue["strval"], coding=coding
+    )
+
+def _to_codingvalues(coding, values):
+    """
+    Takes an iterator with codingvalue dictionaries (see _to_coding) and a coding,
+    and returns an iterator with CodingValue's.
+    """
+    return map(partial(_to_codingvalue, coding), values)
+
+
+def save(request, project_id, codingjob_id, article_id):
+    """
+    Big fat warning: we don't do server side validation for the codingvalues. We
+    do check if the codingjob and logged in user correspond, but it's the users
+    responsibilty to send correct data (we don't care!).
+    """
+    project = Project.objects.get(id=project_id)
+    codingjob = CodingJob.objects.select_related("articleset").get(id=codingjob_id)
+    article = Article.objects.only("id").get(id=article_id)
+
+    if codingjob.project_id != project.id:
+        raise PermissionDenied("Given codingjob ({codingjob}) does not belong to project ({project})!".format(**locals()))
+
+    if codingjob.coder != request.user:
+        raise PermissionDenied("Only {request.user} can edit this codingjob.".format(**locals()))
+
+    if not codingjob.articleset.articles.filter(id=article_id).exists():
+        raise PermissionDenied("{article} not in {codingjob}.".format(**locals()))
+
+    try:
+        codings = json.loads(request.body)
+    except ValueError:
+        return HttpResponseBadRequest("Invalid JSON in POST body")
+
+    article_coding = codings["article_coding"]
+    sentence_codings = codings["sentence_codings"]
+
+    with transaction.atomic():
+        to_coding = partial(_to_coding, codingjob=codingjob, article=article)
+
+        # Updating tactic: delete all existing codings and codingvalues, then insert
+        # the new ones. This prevents calculating a delta, and confronting the
+        # database with (potentially) many update queries.
+        CodingValue.objects.filter(coding__codingjob=codingjob, coding__article=article).delete()
+        Coding.objects.filter(codingjob=codingjob, article=article).delete()
+
+        new_codings = list(itertools.chain([article_coding], sentence_codings))
+        new_coding_objects = map(partial(_to_coding, codingjob, article), new_codings)
+
+        # Saving each coding is pretty inefficient, but Django doesn't allow retrieving
+        # id's when using bulk_create. See Django ticket #19527.
+        if connection.vendor == "postgresql":
+            query = sql.InsertQuery(Coding)
+            query.insert_values(Coding._meta.fields[1:], new_coding_objects)
+            raw_sql, params = query.sql_with_params()[0]
+            new_coding_objects = Coding.objects.raw("%s %s" % (raw_sql, "RETURNING coding_id"), params)
+        else:
+            # Do naive O(n) approach
+            for coding in new_coding_objects:
+                coding.save()
+
+        coding_values = itertools.chain.from_iterable(
+            _to_codingvalues(co, c["values"]) for c, co in itertools.izip(new_codings, new_coding_objects)
+        )
+
+        CodingValue.objects.bulk_create(coding_values)
+
+    return HttpResponse(status=201)
+
+def redirect(request, codingjob_id):
+    cj = CodingJob.objects.get(id=codingjob_id)
+    return HttpResponseRedirect(reverse(index, kwargs={
+        "codingjob_id" : codingjob_id, "project_id" : cj.project_id
+    }))

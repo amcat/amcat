@@ -79,6 +79,7 @@ class Codebook(AmcatModel):
         self._codes = None
         self._cached_labels = set()
         self._prefetched_objects_cache = {}
+        self._labels = collections.defaultdict(dict)
 
     @property
     def cached(self):
@@ -168,12 +169,14 @@ class Codebook(AmcatModel):
         if all_labels:
             for code_id, lan_id, label in labels:
                 self._codes[code_id]._cache_label(lan_id, label)
+                self._labels[code_id][lan_id] = label
             for code in self._codes.values():
                 code._all_labels_cached = True
         else:
             codes = set(product(codes, languages))
             for code_id, lan_id, label in labels:
                 self._codes[code_id]._cache_label(lan_id, label)
+                self._labels[code_id][lan_id] = label
                 codes.remove((code_id, lan_id))
                 
             for code_id, lan_id in codes:
@@ -824,6 +827,11 @@ class TestCodebook(amcattest.AmCATTestCase):
             # 1 for "normal" caching, and 1 for each cache_labels()
             A.cache_labels(l1)
             A.cache_labels(l2)
+
+        # Codebooks must export _lables, which is a dictionary which
+        # contains all the cached labels.
+        self.assertEqual(A._labels[a.id][l1.id], "a")
+        self.assertEqual(A._labels[b.id][l2.id], "b")
 
         A.invalidate_cache()
         with self.checkMaxQueries(2, "Cache labels"):

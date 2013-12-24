@@ -26,6 +26,7 @@ from api.rest.viewsets.coding.codingjob import *
 from api.rest.viewsets.coding.codingrule import *
 from api.rest.viewsets.coding.coded_article import *
 from api.rest.viewsets.coding.coding import *
+from api.rest.viewsets.coding.codebook import *
 from api.rest.viewsets.coding.codingschema import *
 from api.rest.viewsets.coding.codingschemafield import *
 #from api.rest.viewsets.sentence import *
@@ -36,3 +37,5 @@ def get_viewsets():
     for cls in globals().values():
         if isclass(cls) and issubclass(cls, GenericViewSet) and cls is not GenericViewSet:
             yield cls
+
+

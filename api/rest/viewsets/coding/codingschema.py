@@ -16,36 +16,58 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from amcat.models import CodingJob, CodingSchema
-from amcat.tools.caching import cached
+from amcat.models import CodingSchema, CodingSchemaField
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
+from api.rest.viewset import AmCATViewSetMixin
+from api.rest.viewsets.coding.codingschemafield import CodingSchemaFieldViewSetMixin, CodingSchemaFieldSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin
+from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
 
-__all__ = ("CodingSchemaViewSetMixin", "CodingSchemaSerializer", "CodingSchemaViewSet")
+__all__ = ("CodingSchemaViewSetMixin", "CodingSchemaSerializer", "CodingSchemaViewSet",
+            "CodingJobCodingSchemaViewSet", "_CodingSchemaFieldViewSet")
 
 
 class CodingSchemaSerializer(AmCATModelSerializer):
+    highlighters = serializers.SerializerMethodField('get_highlighters')
+
+    def get_highlighters(self, obj):
+        return [h.pk for h in obj.highlighters.all()]
+
     class Meta:
         model = CodingSchema
 
-class CodingSchemaViewSetMixin(ProjectViewSetMixin):
-    url = ProjectViewSetMixin.url + "/(?P<project>[0-9]+)/codingschemas"
+class CodingSchemaViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSchemaSerializer
-
-    @property
-    def codingschema(self):
-        return self._codingschema()
-
-    @cached
-    def _codingschema(self):
-        return CodingSchema.objects.get(id=self.kwargs.get("codingschema"))
-
-
-class CodingSchemaViewSet(CodingSchemaViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model_key = "codingschema"
     model = CodingSchema
 
-    def filter_queryset(self, codingschema):
-        codingschema = super(CodingSchemaViewSet, self).filter_queryset(codingschema)
-        return codingschema.filter(id__in=self.project.get_codingschemas())
+
+class CodingJobCodingSchemaViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+                                   CodingSchemaViewSetMixin, DatatablesMixin,
+                                   ReadOnlyModelViewSet):
+    model = CodingSchema
+    model_serializer_class = CodingSchemaSerializer
+
+    def filter_queryset(self, codingschemas):
+        return super(CodingJobCodingSchemaViewSet, self).filter_queryset(codingschemas).filter(
+            id__in=(self.codingjob.unitschema_id, self.codingjob.articleschema_id)
+        )
+
+class CodingSchemaViewSet(ProjectViewSetMixin, CodingSchemaViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = CodingSchema
+    model_serializer_class = CodingSchemaSerializer
+
+    def filter_queryset(self, codingschemas):
+        codingschemas = super(CodingSchemaViewSet, self).filter_queryset(codingschemas)
+        return codingschemas.filter(id__in=self.project.get_codingschemas()).prefetch_related("highlighters")
+
+class _CodingSchemaFieldViewSet(ProjectViewSetMixin, CodingSchemaViewSetMixin, CodingSchemaFieldViewSetMixin,
+                                DatatablesMixin, ReadOnlyModelViewSet):
+    model = CodingSchemaField
+    model_serializer_class = CodingSchemaFieldSerializer
+
+    def filter_queryset(self, fields):
+        return super(_CodingSchemaFieldViewSet, self).filter_queryset(fields).filter(codingschema=self.codingschema)

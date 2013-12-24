@@ -17,25 +17,21 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.conf.urls import patterns, url
+from django.conf.urls import patterns, url, include
+from annotator.views import codingjob, overview
+
+article_patterns = patterns('',
+    url(r'save$', codingjob.save),
+)
+
+codingjob_patterns = patterns('',
+    url('^$', codingjob.index),
+    url(r'^article/(?P<article_id>\d+)/', include(article_patterns)),
+)
 
 urlpatterns = patterns('',
-    # html pages
-    url(r'^$', 'annotator.views.overview.index'),
-    url(r'^overview$', 'annotator.views.overview.index', name='annotator-overview'),
-    url(r'^overview/table$', 'annotator.views.overview.table', name='annotator-overview-table'),
-    url(r'^codingjob/(?P<codingjobid>\d+)$', 'annotator.views.codingjob.index', name='annotator-codingjob'),
-    
-    # rest api stuff
-    url(r'^codingjob/(?P<codingjobid>\d+)/fields$', 'annotator.views.codingjob.fields', name='annotator-codingjob-fields'),
-    url(r'^codingjob/(?P<codingjobid>\d+)/articles$', 'annotator.views.codingjob.articles', 
-            name='annotator-codingjob-articles'),
-    url(r'^article/(?P<articleid>\d+)/sentences$', 'annotator.views.codingjob.articleSentences', 
-            name='annotator-article-sentences'),
-    url(r'^codingjob/(?P<codingjobid>\d+)/article/(?P<articleid>\d+)/articlecodings$', 'annotator.views.codingjob.articleCodings', name='annotator-article-codings'),
-    url(r'^codingjob/(?P<codingjobid>\d+)/article/(?P<articleid>\d+)/unitcodings$', 
-            'annotator.views.codingjob.unitCodings', name='annotator-unit-codings'),
-    url(r'^codingjob/(?P<codingjobid>\d+)/article/(?P<articleid>\d+)/storecodings$', 
-            'annotator.views.codingjob.storeCodings', name='annotator-store-codings'),
-
+    url(r'^$', overview.index),
+    url(r'^overview$', overview.index, name='annotator-overview'),
+    url(r"^codingjob/(?P<codingjob_id>\d+)$", codingjob.redirect, name="annotator-codingjob"),
+    url(r"project/(?P<project_id>\d+)/codingjob/(?P<codingjob_id>\d+)/", include(codingjob_patterns)),
 )
