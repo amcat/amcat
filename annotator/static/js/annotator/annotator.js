@@ -611,19 +611,21 @@ annotator = (function(self){
         self.save_and_continue();
     };
 
-    self.select_next_article = function () {
-        var next = self.article_table_container.find(".row_selected").next();
-
-        if (next.length === 0){
+    self._select = function(row){
+        if (row.length === 0){
             self.loading_dialog.text("Coding done!");
             return;
         }
 
-
-        next.trigger("click");
+        row.trigger("click");
     };
-    self.select_prev_article = function () {
 
+    self.select_next_article = function () {
+        self._select(self.article_table_container.find(".row_selected").next());
+    };
+
+    self.select_prev_article = function () {
+        self._select(self.article_table_container.find(".row_selected").prev());
     };
 
     /* Returns an every increasing (unique) integer */
