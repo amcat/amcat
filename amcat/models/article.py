@@ -77,6 +77,8 @@ class Article(AmcatModel):
                                db_index=True, blank=True)
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
+    provenance = models.ForeignKey("amcat.ArticleProvenance", blank = True, null = True,
+                                   db_index = True, db_column = "provenance_id")
 
     class Meta():
         db_table = 'articles'
@@ -215,6 +217,27 @@ class Article(AmcatModel):
                     a.parent = b
                     a.save()
         return articles
+
+class ArticleProvenance(AmcatModel):
+    """
+    Provide a provenance for an article
+    """
+    added_by = models.ForeignKey("amcat.User", required = False)
+    created_at = models.DateTimeField(auto_now_add = True)
+    created_by_class = models.CharField(max_length = 50, required = False)
+    
+    class Meta():
+        db_table = 'articles_provenances'
+        app_label = 'amcat'
+
+    @classmethod
+    def create(cls, user, classname):
+        provenance = cls(added_by = user, created_by_class = classname)
+        provenance.save()
+        return provenance
+    
+
+
             
             
 
