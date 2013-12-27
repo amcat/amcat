@@ -693,18 +693,8 @@ annotator = (function(self){
     };
 
     self.highlight = function(){
-        var _labels = [], escape_regex, labels = self.highlight_labels;
-        console.log("Highlighting ", labels.length ," labels in article..");
-
-        escape_regex = function(str) {
-            return str.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
-        };
-
-        $.each(labels, function(i, label){
-            _labels.push(escape_regex(label));
-        });
-
-        $("div.sentences").easymark("highlight", _labels.join(" "));
+        console.log("Highlighting ", self.highlight_labels.length ," labels in article..");
+        $("div.sentences").easymark("highlight", self.highlight_labels.join(" "));
     };
 
     /*
