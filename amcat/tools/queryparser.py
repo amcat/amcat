@@ -359,12 +359,12 @@ class TestQueryParser(amcattest.AmCATTestCase):
         q = parse
 
         
-        self.assertEqual(q('a'), {'term' : {'_all' : 'a'}})
+        self.assertEqual(q('a'), {'match' : {'_all' : 'a'}})
         self.assertEqual(q('a*'), {'wildcard' : {'_all' : 'a*'}})
         self.assertEqual(q('a!'), {'wildcard' : {'_all' : 'a*'}})
 
-        self.assertEqual(q('a AND b'), {'bool' : {'must' : [{'term' : {'_all' : 'a'}},
-                                                            {'term' : {'_all' : 'b'}},
+        self.assertEqual(q('a AND b'), {'bool' : {'must' : [{'match' : {'_all' : 'a'}},
+                                                            {'match' : {'_all' : 'b'}},
                                                             ]}})
                                                             
         self.assertEqual(q('a W/10 b'), {"span_near" : {"clauses" : [
@@ -389,7 +389,7 @@ class TestQueryParser(amcattest.AmCATTestCase):
 
         self.assertEqual(q('a W/10 (b c)'), expected)
 
-    def test_rewrite(self):
+    def todo_test_rewrite(self):
         t = parse_to_terms("(a (b c)) NOT ((a (b c)) d e (f AND (g AND (i OR k))))")
         #t = parse_to_terms("(a (b c)) NOT (x y)")
         print(t)

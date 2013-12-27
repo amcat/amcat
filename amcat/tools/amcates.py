@@ -536,13 +536,8 @@ class TestAmcatES(amcattest.AmCATTestCase):
         Article.create_articles([a,b,c,d], articleset=s1, check_duplicate=False)
         ES().flush()
         
-        # counts per mediumid
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="mediumid")),
                          {m1.id : 1, m2.id : 3})
-        
-        # counts per medium (name)
-        self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="medium")),
-                         {m1.name : 1, m2.name : 3})
         
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="year")),
                          {datetime(2001,1,1) : 3, datetime(2002,1,1) : 1})

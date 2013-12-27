@@ -30,9 +30,6 @@ import re, math, collections, itertools, random, pickle
 from nltk.metrics import BigramAssocMeasures
 from nltk.probability import FreqDist, ConditionalFreqDist
 
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.feature_extraction.text import TfidfTransformer
-from sklearn.feature_selection import SelectKBest, SelectPercentile, chi2
 
 class featureStream():
     """
@@ -349,6 +346,8 @@ class prepareVectors():
 
         A tuple is returned with the features (as dictionary or sparse matrix) and a list of the selected features. (these selected features can be used as input for 'filter_features' to match new vectors to the vectors on which a classifier is trained) 
         """
+        from sklearn.feature_extraction import DictVectorizer
+
         dv = DictVectorizer()
         fmatrix = dv.fit_transform(featureslist)
         fnames = dv.feature_names_
@@ -369,6 +368,8 @@ class prepareVectors():
         else: return (fmatrix, fnames)
 
     def selectFeatures(self, fmatrix, fnames, method, classlist, features_pct):
+        from sklearn.feature_selection import SelectKBest, SelectPercentile, chi2
+
         if method == 'chi2': sk = SelectPercentile(chi2, features_pct)
         fmatrix = sk.fit_transform(fmatrix, classlist)
         selectedfeatures = zip(sk.get_support(), fnames)
@@ -376,6 +377,8 @@ class prepareVectors():
         return (fmatrix, fnames)
   
     def transformVectors(self, fmatrix, vectortransformation):
+        from sklearn.feature_extraction.text import TfidfTransformer
+
         if vectortransformation == 'tfidf': transformer = TfidfTransformer()
         if vectortransformation == 'binomial': transformer = binomialTransformer()
         transformer.fit(fmatrix)

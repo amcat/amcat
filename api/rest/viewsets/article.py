@@ -21,7 +21,7 @@ from amcat.models import Medium, Article
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 
-__all__ = ("ArticleSerializer",)
+__all__ = ("ArticleSerializer", "ArticleViewSet")
 
 class ArticleViewSetMixin(AmCATViewSetMixin):
     model_key = "article"
@@ -94,4 +94,42 @@ class ArticleSerializer(AmCATModelSerializer):
 
         # make sure that self.many is True for serializing result
         self.many = True
+        return self.object
+        
+from api.rest.viewsets.articleset import ArticleSetViewSetMixin
+from rest_framework.viewsets import ModelViewSet
+from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.viewsets.project import ProjectViewSetMixin
+from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
+from api.rest.viewsets.project import CannotEditLinkedResource, NotFoundInProject
+
+class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
+    model = Article
+    model_key = "article"
+    permission_map = {'GET' : ROLE_PROJECT_READER}
+    model_serializer_class = ArticleSerializer
+    
+    def check_permissions(self, request):
+        # make sure that the requested set is available in the projec, raise 404 otherwiset
+        # sets linked_set to indicate whether the current set is owned by the project
+        if self.articleset.project == self.project:
+            pass
+        elif self.project.articlesets.filter(pk=self.articleset.id).exists():
+            if request.method == 'POST':
+                raise CannotEditLinkedResource()
+        else:
+            raise NotFoundInProject()
+        return super(ArticleViewSet, self).check_permissions(request)
+    
+    
+    @property
+    def articleset(self):
+        if not hasattr(self, '_articleset'):
+            articleset_id = int(self.kwargs['articleset'])
+            self._articleset = ArticleSet.objects.get(pk=articleset_id)
+        return self._articleset
+
+    def filter_queryset(self, queryset):
+        queryset = super(ArticleViewSet, self).filter_queryset(queryset)
+        return queryset.filter(articlesets_set=self.articleset)
         return self.object

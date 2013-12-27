@@ -67,6 +67,8 @@ class ArticleMetaResource(AmCATResource):
 from api.rest.apitestcase import ApiTestCase
 from amcat.tools import amcattest
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from api.rest.viewsets.article import ArticleViewSet
+from api.rest.viewsets.articleset import ArticleSetViewSet
 
 class TestArticle(ApiTestCase):
     authentication_classes = (SessionAuthentication, BasicAuthentication)

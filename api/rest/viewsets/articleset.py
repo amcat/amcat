@@ -24,6 +24,7 @@ from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.resources.amcatresource import DatatablesMixin
 from rest_framework.viewsets import ModelViewSet
+from api.rest.viewset import AmCATViewSetMixin
 
 __all__ = ("ArticleSetSerializer", "ArticleSetViewSet")
 
@@ -78,12 +79,16 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
 class _NoProjectRequestedError(ValueError): pass
 
-class ArticleSetViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
-    model_serializer_class = ArticleSetSerializer
+class ArticleSetViewSetMixin(AmCATViewSetMixin):
     model_key = "articleset"
+    model = ArticleSet
+
+class ArticleSetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
+    model_serializer_class = ArticleSetSerializer
     model = ArticleSet
     
     def filter_queryset(self, queryset):
         queryset = super(ArticleSetViewSet, self).filter_queryset(queryset)
+        print "@@@@", queryset
         return queryset.filter(project=self.project)
     

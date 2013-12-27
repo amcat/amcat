@@ -27,9 +27,6 @@ import nltk.classify.util
 import nltk.metrics
 from nltk.classify import NaiveBayesClassifier
 
-from sklearn.svm import LinearSVC
-from sklearn.naive_bayes import MultinomialNB
-
 from amcat.nlp.featurestream import codedFeatureStream, prepareVectors
 
 class machineLearning():
@@ -163,6 +160,10 @@ class machineLearning():
         Selects a classifier
         """
         from nltk.classify.scikitlearn import SklearnClassifier # NLTK wrapper for sklearn
+        from sklearn.svm import LinearSVC
+        from sklearn.naive_bayes import MultinomialNB
+
+
         if classifier_type == 'naivebayes': classifier = NaiveBayesClassifier
         if classifier_type == 'multinomialnb': classifier = SklearnClassifier(MultinomialNB())
         if classifier_type == 'linearsvc': classifier = SklearnClassifier(LinearSVC())
