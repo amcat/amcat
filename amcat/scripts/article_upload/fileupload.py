@@ -167,7 +167,7 @@ class CSVUploadForm(FileUploadForm):
         d = self.cleaned_data['dialect']
         if not d: d = "autodetect"
         if d == 'autodetect':
-            dialect = csv.Sniffer().sniff(f.read(1024))
+            dialect = csv.Sniffer().sniff(f.readline())
             f.seek(0)
             if dialect.delimiter not in "\t,;":
                 dialect = csv.get_dialect('excel')

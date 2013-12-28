@@ -30,7 +30,8 @@ from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 
 from django.db import models, transaction
-from django.db.utils import IntegrityError
+from django.db.utils import IntegrityError, DatabaseError
+from django.core.exceptions import ValidationError
 
 import logging;
 
@@ -162,6 +163,7 @@ class Article(AmcatModel):
         add_new_to_set = set() # new article ids to add to set
         add_to_index = [] # es_dicts to add to index
         result = [] # return result
+        errors = [] # return errors
         for a in articles:
             dupe = dupes.get(a.es_dict['hash'], None)
             if dupe:
@@ -176,9 +178,10 @@ class Article(AmcatModel):
                     a.save()
                     log.info("saved article '{a.headline}'".format(**locals()))
                     transaction.savepoint_commit(sid)
-                except IntegrityError as e:
+                except (IntegrityError, ValidationError, DatabaseError) as e:
                     log.warning(str(e))
                     transaction.savepoint_rollback(sid)
+                    errors.append(e)
                     continue
                 result.append(a)
                 a.es_dict['id'] = a.pk
@@ -197,7 +200,7 @@ class Article(AmcatModel):
             articleset.add_articles(add_to_set | add_new_to_set, add_to_index=False)
             es.add_to_set(articleset.id, add_to_set)
 
-        return result
+        return result, errors
 
     @classmethod
     def ordered_save(cls, articles, *args, **kwargs):
@@ -207,14 +210,14 @@ class Article(AmcatModel):
         @param check_duplicate: if True, duplicates are not added to the database or index
         """
         index = {a.text: a for a in articles if a}
-        articles = cls.create_articles(articles, *args, **kwargs)
+        articles, errors = cls.create_articles(articles, *args, **kwargs)
         for a in articles:
             parent = index[a.text].parent
             for b in articles:
                 if parent and b.text == parent.text:
                     a.parent = b
                     a.save()
-        return articles
+        return articles, errors
             
             
 

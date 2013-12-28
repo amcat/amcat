@@ -103,12 +103,13 @@ class UploadScript(Scraper):
         file = self.options['file']
         log.info(u"Importing {self.__class__.__name__} from {file.name} into {self.project}"
                  .format(**locals()))
-        from amcat.scraping.controller import RobustController
-        self.controller = RobustController(self.articleset)
+        from amcat.scraping.controller import Controller
+        self.controller = Controller()
 
-        arts = list(self.controller.scrape(self))
+        arts = []
+        [arts.extend(articles) for scraper, articles in self.controller.run([self])]
         if not arts:
-            raise Exception("No atricles were imported")
+            raise Exception("No articles were imported")
         self.postprocess(arts)
         old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
         new_provenance = self.get_provenance(file, arts)

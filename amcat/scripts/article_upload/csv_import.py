@@ -149,10 +149,9 @@ class CSV(UploadScript):
         raise ValueError("No medium specified!")
     
     def parse_document(self, row):
-        kargs = dict(medium = self._medium)
-        for fieldname in FIELDS:
-            csvfield = self.options[fieldname]
-            if not csvfield: continue
+        kargs = dict(medium = self._medium, metastring = {})
+        csvfields = [(fieldname, self.options[fieldname]) for fieldname in FIELDS if self.options[fieldname]]
+        for fieldname, csvfield in csvfields:
             val = row[csvfield]
             if val.strip():
                 if fieldname in PARSERS:
@@ -163,6 +162,12 @@ class CSV(UploadScript):
                 val = val.strip()
                 
             kargs[fieldname] = val
+
+        # Metadata to metastring
+        csvfields = [tup[1] for tup in csvfields]
+        for key, value in row.items():
+            if key not in csvfields:
+                kargs["metastring"][key] = value
 
         # In case medium wasn't defined in csv
         medium = self._medium

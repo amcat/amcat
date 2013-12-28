@@ -17,14 +17,14 @@ A number of errors where encountered while scraping that may have caused this:
 
 {% if created_set %}
 {% if scraper_errors %}
-<div class="alert alert-warning">Uploaded {{created_n}} article(s) into <a href="{% url "articleset" created_set.project_id created_set.id %}">article set {{created_set}}</a>. However, 
+<div class="alert alert-warning">Uploaded {{created_n}} article(s) into <a href="{% url "article set-details" created_set.project_id created_set.id %}">article set {{created_set}}</a>. However, 
 some errors where encountered while uploading:
 {{scraper_errors|unordered_list}}
 </div>
 {% else %}
 <div class="alert alert-success">Successfully uploaded {{created_n}}
   article(s)! You can use the form below to upload more articles, or inspect the
-<a href="{% url "articleset" created_set.project_id created_set.id %}">article set {{created_set}}</a>
+<a href="{% url "article set-details" created_set.project_id created_set.id %}">article set {{created_set}}</a>
 <br>
 </div>
 {% endif %}

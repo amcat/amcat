@@ -26,6 +26,7 @@ import cPickle as pickle
 from celery import group
 import logging;log = logging.getLogger(__name__)
 import os
+from collections import namedtuple
 
 from amcat.scraping.document import Document, _ARTICLE_PROPS
 from amcat.models.article import Article
@@ -33,7 +34,12 @@ from amcat.models.medium import Medium
 from amcat.tasks import _scrape_task, _scrape_unit_task, LockHack, convert
 from amcat.tools.api import AmcatAPI
 
+ScrapeError = namedtuple("ScrapeError", ["i", "unit", "error"])
+
 class Controller(object):
+    def __init__(self):
+        self.errors = []
+
     def run(self, scrapers):
         if not hasattr(scrapers, '__iter__'):
             scrapers = [scrapers]
@@ -53,18 +59,31 @@ class Controller(object):
             scraper._initialize()
             manager = ArticleManager()
             try:
-                for unit in scraper._get_units():
-                    try:
-                        manager.add_articles(scraper._scrape_unit(unit), scraper = scraper)                    
-                    except Exception:
-                        log.exception("_scrape_unit failed")
-            except Exception:
-                log.exception("scraper failed")
-            yield (scraper, manager)
+                units = list(scraper._get_units())
+            except Exception as e:
+                self.errors.append(ScrapeError(None,None,e))
+                log.exception("scraper._get_units failed")
+                continue
+            
+            for i, unit in enumerate(units):
+                try:
+                    articles = list(scraper._scrape_unit(unit))
+                except Exception as e:
+                    log.exception("scraper._scrape_unit failed")
+                    self.errors.append(ScrapeError(i,unit,e))
+                    continue
+                try:
+                    manager.add_articles(articles, scraper = scraper)                    
+                except Exception as e:
+                    self.errors.append(ScrapeError(i,unit,e))
+                    log.exception("processing articles failed")
+            yield scraper, manager
             
     def _save(self, scraper, manager):
         """Saves the articles"""
-        Article.ordered_save(manager.getmodels(), scraper.options['articleset'])
+        articles, errors = Article.ordered_save(manager.getmodels(), scraper.options['articleset'])
+        for e in errors:
+            self.errors.append(ScrapeError(None,None,e))
 
 
 class APIController(Controller):
