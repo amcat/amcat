@@ -127,7 +127,7 @@ def get_ids(form):
                          
     return ES().query_ids(query=query, filters=filters)
 
-def getArticles(form):
+def getArticles(form, **kargs):
     fields = ['mediumid', 'date', 'headline', 'medium']
     
     sort = form.get('sortColumn', None)
@@ -136,7 +136,6 @@ def getArticles(form):
         raise NotImplementedError()
 
     query = query_from_form(form)
-    kargs = {}
     if form['highlight']:
         kargs["highlight" if query else "lead"] = True
         
