@@ -201,7 +201,7 @@ class ES(object):
         @param filters: if filter is None, build filter from filters as accepted by build_query, e.g. sets=12345
         Note that query and filters can be combined in a single call
         """
-        body = dict(build_body(query, filters))
+        body = dict(build_body(query, filters, query_as_filter=True))
         log.debug("Query_ids body={body!r}".format(**locals()))
         options = dict(scroll="1m", size=1000, fields="")
         options.update(kwargs)
@@ -376,15 +376,16 @@ class ES(object):
         """
         Compute and return a Result object with n, start_date and end_date for the selection
         """
-        filter = build_filter(**filters)
-        body = dict(build_body(query, query_as_filter=True))
+        body = {"query" : {"constant_score" : dict(build_body(query, filters, query_as_filter=True))}}
         body['facets'] = {'stats' : {'statistical' : {'field' : 'date'}}}
-        body['facets']['stats']['facet_filter'] = filter        
         stats = self.es.search(index=self.index, body=body, size=0)['facets']['stats']
         result = Result()
         result.n = stats['count']
-        result.start_date=get_date(stats['min'])
-        result.end_date=get_date(stats['max'])
+        if result.n == 0:
+            result.start_date, result.end_data = None, None
+        else:
+            result.start_date=get_date(stats['min'])
+            result.end_date=get_date(stats['max'])
         return result
 
     def list_media(self, query=None, filters=None):
