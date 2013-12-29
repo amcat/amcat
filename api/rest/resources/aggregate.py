@@ -34,7 +34,11 @@ class AggregateES(object):
         self.filters[key] = value
 
     def _get_results(self):
-        if not self.axes: raise ValueError("Cannot aggregate without axes! Specify at least axis1")
+        if not self.axes:
+            # give raw count
+            yield {"count" : self.es.count(query=self.query, filters=self.filters)}
+            return
+
         if len(self.axes) > 2: raise NotImplementedError("Aggregation on >2 axes currently not supported")
 
         x = self.axes[0]

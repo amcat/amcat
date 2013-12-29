@@ -86,6 +86,7 @@ class CodebookHierarchyResource(AmCATResource):
         codebook.cache_labels()
         return tuple(_walk(codebook.get_tree(include_labels=include_labels, **kwargs)))
 
+
     def _get(self, request, *args, **kwargs):
         qs = self.filter_queryset(self.get_queryset())
 
@@ -102,3 +103,12 @@ class CodebookResource(AmCATResource):
     model = Codebook
     extra_filters = ["codingschemafield__codingschema__id"]
 
+
+
+from amcat.models import Label
+from api.rest.resources.amcatresource import AmCATResource
+
+
+class LabelResource(AmCATResource):
+    model = Label
+    extra_filters = ["code__codebook_codes__codebook__id"]
