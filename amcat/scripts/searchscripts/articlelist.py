@@ -93,7 +93,7 @@ class ArticleListScript(script.Script):
         if not self.options['sortColumn']:
             self.options['sortColumn'] = 'id'
 
-        return keywordsearch.getArticles(self.options)
+        return keywordsearch.getArticles(self.options, from_=start)
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
