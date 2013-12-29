@@ -67,8 +67,8 @@ class ArticleListToHtml(script.Script):
     output_type = types.HtmlData
 
 
-    def run(self, articlelist):
-        return render_to_string(self.options['template'], {'articlelist':articlelist})
+    def run(self, context):
+        return render_to_string(self.options['template'], context)
         
         
         
