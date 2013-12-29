@@ -213,6 +213,10 @@ def _add_column(table, column_name, query, filters, group_by, dateInterval):
         
     
 
+def get_total_n(form):
+    query = query_from_form(form)
+    filters = dict(filters_from_form(form))
+    return ES().count(query, filters)
                                  
 def get_statistics(form):
     query = query_from_form(form)

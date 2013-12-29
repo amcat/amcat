@@ -1,4 +1,6 @@
-<h2>Articles</h2>
+{% if not page %}
+<h2>Found {{ n }} articles</h2>
+{% endif %}
 
 <ul class="articlelist">
 {% for a in articlelist %}

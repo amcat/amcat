@@ -81,9 +81,11 @@ class ShowArticleList(WebScript):
             else:
                 return self.outputJsonHtml(html)
         else:
+            n = keywordsearch.get_total_n(formData)
             articles = list(ArticleListScript(formData).run())
             for a in articles:
                 a.hack_project_id = project_id
             self.output_template = 'api/webscripts/articlelist.html'
-            return self.outputResponse(articles, ArticleListScript.output_type)
+            
+            return self.outputResponse(dict(articlelist=articles, n=n, page=formData.get('start')), ArticleListScript.output_type)
         
