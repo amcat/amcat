@@ -140,10 +140,10 @@ def getArticles(form, **kargs):
         kargs["highlight" if query else "lead"] = True
         
     filters = dict(filters_from_form(form))
-    
+
     log.info("Query: {query!r}, with filters: {filters}".format(**locals()))
 
-    result = list(ES().query(query, filters=filters, fields=fields, sort=sort, **kargs))
+    result = list(ES().query(query, filters=filters, fields=fields, sort=sort, score=False, **kargs))
 
     if 'hits' in form['columns']:
         # add hits columns
