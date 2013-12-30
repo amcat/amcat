@@ -18,18 +18,18 @@ from __future__ import absolute_import
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from __future__ import absolute_import
 
-from .amcatcelery import app
-import time, logging, types
-from celery.utils.log import get_task_logger; log = get_task_logger(__name__)
-import logging;log.setLevel(logging.INFO)
+from amcat.amcatcelery import app
+import types
+import logging
 from lxml import html, etree
 from html2text import html2text
 
-from amcat.models.article import Article
-from amcat.models.scraper import Scraper
 from amcat.scraping.document import Document
-
+from celery.utils.log import get_task_logger
+log = get_task_logger(__name__)
+log.setLevel(logging.INFO)
 
 #Things that cannot be serialized:
 #- Scraper script (unless...)
