@@ -218,7 +218,10 @@ class ES(object):
         @param kwargs: additional keyword arguments to pass to es.search, eg fields, sort, from_, etc
         @return: a list of named tuples containing id, score, and the requested fields
         """
-        body = dict(build_body(query, filters, query_as_filter=(not score)))
+        body = dict(build_body(query, filters, query_as_filter=(not (highlight or score))))
+        if (highlight and not score):
+            body['query'] = {'constant_score' : {'query' : body['query']}}
+
         if 'sort' in kwargs: body['track_scores'] = True
         if highlight: body['highlight'] = HIGHLIGHT_OPTIONS
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
