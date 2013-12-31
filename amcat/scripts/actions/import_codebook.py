@@ -49,11 +49,17 @@ class ImportCodebook(Script):
 
     When using uuid, existing codes will be used where possible. Existing labels will not be overwritten
     but new labels will be added
+
+    Codes that do not exist yet will be added with the label from the code cell in the given language. This
+    is in addition to any labels given in the 'label - language' columns.
     """
 
     class options_form(CSVUploadForm):
-        codebook_name = forms.CharField(required=False)
         project = forms.ModelChoiceField(queryset=Project.objects.all())
+        default_language = forms.ModelChoiceField(queryset=Language.objects.all(),
+                                                  help_text="Language for new codes")
+        codebook_name = forms.CharField(required=False)
+        
         def clean_codebook_name(self):
             """If codebook name is not specified, use file base name instead"""
             fn = None
@@ -65,7 +71,7 @@ class ImportCodebook(Script):
             
 
     @transaction.commit_on_success
-    def _run(self, file, project, codebook_name, **kargs):
+    def _run(self, file, project, codebook_name, default_language, **kargs):
         data = csv_as_columns(self.bound_form.get_reader())
         
         # build code, parent pairs
@@ -92,7 +98,7 @@ class ImportCodebook(Script):
             parent_instance = codes[parent] if parent else None
             to_add.append((instance, parent_instance))
             if not instance.labels.all().exists():
-                instance.add_label(0, code)
+                instance.add_label(default_language, code)
         cb.add_codes(to_add)
 
 

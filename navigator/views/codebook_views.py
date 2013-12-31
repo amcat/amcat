@@ -19,7 +19,7 @@
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse
-
+from amcat.models import Language
 
 from amcat.scripts.actions.import_codebook import ImportCodebook
 from amcat.scripts.actions.export_codebook import ExportCodebook
@@ -47,6 +47,13 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
         form_class = super(ExportCodebook, self).get_form_class()
         form_class.base_fields['format'].choices.append(("xml", "XML"))
         return form_class
+
+    def get_form(self, *args, **kargs): 
+        form = super(ExportCodebook, self).get_form(*args, **kargs)
+        cid=self.url_data["codebookid"]
+        langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
+        form.fields['language'].queryset = langs
+        return form
 
     def form_valid(self, form):
         if form.cleaned_data['format'] == 'xml':
