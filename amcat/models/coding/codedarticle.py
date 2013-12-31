@@ -17,10 +17,15 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import collections
+from functools import partial
 
-from django.db import models
+from django.db import models, transaction, connection, IntegrityError
 
 import logging
+from django.db.models import sql
+import itertools
+from amcat.models.coding.codingschemafield import CodingSchemaField
+from amcat.models.coding.coding import CodingValue, Coding
 from amcat.tools.model import AmcatModel
 
 log = logging.getLogger(__name__)
@@ -35,6 +40,38 @@ class CodedArticleStatus(AmcatModel):
         db_table = 'coded_article_status'
         app_label = 'amcat'
 
+def _to_coding(coded_article, coding):
+    """
+    Takes a dictionary with keys 'sentence_id', and creates
+    an (unsaved) Coding object.
+
+    @type codingjob: CodingJob
+    @type article: Article
+    @type coding: dict
+    """
+    return Coding(coded_article=coded_article, sentence_id=coding["sentence_id"])
+
+def _to_codingvalue(coding, codingvalue):
+    """
+    Takes a dictionary with keys 'codingschemafield_id', 'intval', 'strval' and creates
+    an (unsaved) CodingValue object.
+
+    @type coding: Coding
+    @type codingvalue: dict
+    """
+    return CodingValue(
+        field_id=codingvalue["codingschemafield_id"], intval=codingvalue["intval"],
+        strval=codingvalue["strval"], coding=coding
+    )
+
+def _to_codingvalues(coding, values):
+    """
+    Takes an iterator with codingvalue dictionaries (see _to_coding) and a coding,
+    and returns an iterator with CodingValue's.
+    """
+    return map(partial(_to_codingvalue, coding), values)
+
+
 class CodedArticle(models.Model):
     """
     A CodedArticle is an article in a context of two other objects: a codingjob and an
@@ -48,6 +85,9 @@ class CodedArticle(models.Model):
     article = models.ForeignKey("amcat.Article", related_name="coded_articles")
     codingjob = models.ForeignKey("amcat.CodingJob", related_name="coded_articles")
 
+    def __unicode__(self):
+        return "Article: {self.article}, Codingjob: {self.codingjob}".format(**locals())
+
     def set_status(self, status):
         """Set the status of this coding, deserialising status as needed"""
         if type(status) == int:
@@ -57,8 +97,6 @@ class CodedArticle(models.Model):
 
     def get_codings(self):
         """Returns a generator yielding tuples (coding, [codingvalues])"""
-        from amcat.models import Coding, CodingValue
-
         codings = Coding.objects.filter(coded_article=self)
         values = CodingValue.objects.filter(coding__in=codings)
 
@@ -68,6 +106,77 @@ class CodedArticle(models.Model):
 
         for coding in codings:
             yield (coding, values_dict[coding.id])
+
+    def _replace_codings(self, new_codings):
+        # Updating tactic: delete all existing codings and codingvalues, then insert
+        # the new ones. This prevents calculating a delta, and confronting the
+        # database with (potentially) many update queries.
+        CodingValue.objects.filter(coding__coded_article=self).delete()
+        Coding.objects.filter(coded_article=self).delete()
+
+        new_coding_objects = map(partial(_to_coding, self), new_codings)
+
+        # Saving each coding is pretty inefficient, but Django doesn't allow retrieving
+        # id's when using bulk_create. See Django ticket #19527.
+        if connection.vendor == "postgresql":
+            query = sql.InsertQuery(Coding)
+            query.insert_values(Coding._meta.fields[1:], new_coding_objects)
+            raw_sql, params = query.sql_with_params()[0]
+            new_coding_objects = Coding.objects.raw("%s %s" % (raw_sql, "RETURNING coding_id"), params)
+        else:
+            # Do naive O(n) approach
+            for coding in new_coding_objects:
+                coding.save()
+
+        coding_values = itertools.chain.from_iterable(
+            _to_codingvalues(co, c["values"]) for c, co in itertools.izip(new_codings, new_coding_objects)
+        )
+
+        return (new_coding_objects, CodingValue.objects.bulk_create(coding_values))
+
+    def replace_codings(self, coding_dicts):
+        """
+        Creates codings and replace currently existing ones. It takes one parameter
+        which has to be an iterator of dictionaries with each dictionary following
+        a specific format:
+
+            {
+              "sentence_id" : int,
+              "comments" : str / NoneType,
+              "values" : [CodingDict]
+            }
+
+        with CodingDict being:
+
+            {
+              "codingschemafield_id" : int,
+              "intval" : int / NoneType,
+              "strval" : str / NoneType
+            }
+
+        @raises IntegrityError: codingschemafield_id is None
+        @raises ValueError: intval == strval == None
+        @raises ValueError: intval != None and strval != None
+        @returns: ([Coding], [CodingValue])
+        """
+        coding_dicts = tuple(coding_dicts)
+
+        values = tuple(itertools.chain.from_iterable(cd["values"] for cd in coding_dicts))
+        if any(v["intval"] == v["strval"] == None for v in values):
+            raise ValueError("intval and strval cannot both be None")
+
+        if any(v["intval"] is not None and v["strval"] is not None for v in values):
+            raise ValueError("intval and strval cannot both be not None")
+
+        schemas = (self.codingjob.unitschema_id, self.codingjob.articleschema_id)
+        fields = CodingSchemaField.objects.filter(codingschema__id__in=schemas)
+        field_ids = set(fields.values_list("id", flat=True)) | {None}
+
+        if any(v["codingschemafield_id"] not in field_ids for v in values):
+            raise ValueError("codingschemafield_id must be in codingjob")
+
+        with transaction.atomic():
+            return self._replace_codings(coding_dicts)
 
     class Meta():
         db_table = 'coded_articles'
@@ -93,6 +202,57 @@ class TestCodedArticle(amcattest.AmCATTestCase):
             a.save()
             a = Coding.objects.get(pk=a.id)
             self.assertEqual(a.comments, s)
+
+    def _get_coding_dict(self, sentence_id=None, field_id=None, intval=None, strval=None):
+        return {
+            "sentence_id" : sentence_id,
+            "values" : [{
+                "codingschemafield_id" : field_id,
+                "intval" : intval,
+                "strval" : strval
+            }]
+        }
+
+    def test_replace_codings(self):
+        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        schema2, codebook2, strf2, intf2, codef2 = amcattest.create_test_schema_with_fields(isarticleschema=True)
+        codingjob = amcattest.create_test_job(articleschema=schema, narticles=10)
+
+        coded_article = CodedArticle.objects.get(article=codingjob.articleset.articles.all()[0], codingjob=codingjob)
+        coded_article.replace_codings([self._get_coding_dict(intval=10, field_id=codef.id)])
+
+        self.assertEqual(1, coded_article.codings.all().count())
+        self.assertEqual(1, coded_article.codings.all()[0].values.all().count())
+        coding = coded_article.codings.all()[0]
+        value = coding.values.all()[0]
+        self.assertEqual(coding.sentence, None)
+        self.assertEqual(value.strval, None)
+        self.assertEqual(value.intval, 10)
+        self.assertEqual(value.field, codef)
+
+        # Overwrite previous coding
+        coded_article.replace_codings([self._get_coding_dict(intval=11, field_id=intf.id)])
+        self.assertEqual(1, coded_article.codings.all().count())
+        self.assertEqual(1, coded_article.codings.all()[0].values.all().count())
+        coding = coded_article.codings.all()[0]
+        value = coding.values.all()[0]
+        self.assertEqual(coding.sentence, None)
+        self.assertEqual(value.strval, None)
+        self.assertEqual(value.intval, 11)
+        self.assertEqual(value.field, intf)
+
+        # Try to insert illigal values
+        illval1 = self._get_coding_dict(intval=1, strval="a", field_id=intf.id)
+        illval2 = self._get_coding_dict(field_id=intf.id)
+        illval3 = self._get_coding_dict(intval=1)
+        illval4 = self._get_coding_dict(intval=1, field_id=strf2.id)
+
+        self.assertRaises(ValueError, coded_article.replace_codings, [illval1])
+        self.assertRaises(ValueError, coded_article.replace_codings, [illval2])
+        self.assertRaises(IntegrityError, coded_article.replace_codings, [illval3])
+        self.assertRaises(ValueError, coded_article.replace_codings, [illval4])
+
+
 
 class TestCodedArticleStatus(amcattest.AmCATTestCase):
     def test_status(self):

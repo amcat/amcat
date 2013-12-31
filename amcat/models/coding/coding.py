@@ -26,7 +26,6 @@ to a specific coding job set.
 
 from __future__ import print_function
 
-from amcat.models.coding.codedarticle import CodedArticle
 from amcat.tools.toolkit import deprecated
 
 from django.db import models
@@ -39,6 +38,7 @@ import logging
 log = logging.getLogger(__name__)
 
 def create_coding(codingjob, article, **kwargs):
+    from amcat.models.coding.codedarticle import CodedArticle
     coded_article, _ = CodedArticle.objects.get_or_create(codingjob=codingjob, article=article)
     return Coding.objects.create(coded_article=coded_article, **kwargs)
 
@@ -62,7 +62,7 @@ class Coding(AmcatModel):
     """
     id = models.AutoField(primary_key=True, db_column='coding_id')
 
-    coded_article = models.ForeignKey(CodedArticle, related_name="codings")
+    coded_article = models.ForeignKey("amcat.CodedArticle", related_name="codings")
     sentence = models.ForeignKey(Sentence, null=True)
 
     def __init__(self, *args, **kwargs):
