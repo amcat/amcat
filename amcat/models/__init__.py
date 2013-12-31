@@ -38,6 +38,7 @@ from amcat.models.analysis import *
 from amcat.models.token import *
 
 
+from amcat.models.coding.codedarticle import *
 from amcat.models.coding.codingschema import *
 from amcat.models.coding.codingschemafield import *
 from amcat.models.coding.codingjob import *

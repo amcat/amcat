@@ -19,6 +19,7 @@
 
 from amcat.models import CodingJob
 from amcat.models.coding import coding
+from amcat.models.coding.codedarticle import CodedArticleStatus
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.viewsets.coding.codingjob import CodingJobSerializer
 
@@ -53,8 +54,6 @@ class TestCodingJobResource(ApiTestCase):
             res = CodingJobResource().dispatch(req)
 
     def test_api(self):
-        from amcat.models import CodingStatus
-
         cj = amcattest.create_test_job()
 
         # Test empty codingjob
@@ -72,13 +71,13 @@ class TestCodingJobResource(ApiTestCase):
 
         # Set one coding to done
         cd= cj.codings.all()[0]
-        cd.status = CodingStatus.objects.get(id=coding.STATUS_COMPLETE)
+        cd.status = CodedArticleStatus.objects.get(id=coding.STATUS_COMPLETE)
         cd.save()
 
         res = self.get(CodingJobResource, id=cj.id)['results'][0]
         self.assertEquals(1, res["n_codings_done"])
 
-        cd.status = CodingStatus.objects.get(id=coding.STATUS_IRRELEVANT)
+        cd.status = CodedArticleStatus.objects.get(id=coding.STATUS_IRRELEVANT)
         cd.save()
 
         res = self.get(CodingJobResource, id=cj.id)['results'][0]

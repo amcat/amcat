@@ -18,9 +18,9 @@
 ###########################################################################
 from django.db.models import Count, Q
 from rest_framework import serializers
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models import CodingJob, Article, Sentence, Codebook, CodingRule, CodingSchemaField
-from amcat.models.coding import coding
+from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT
 from amcat.nlp import sbd
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
@@ -32,7 +32,7 @@ from api.rest.viewsets.sentence import SentenceViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 
-STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
+STATUS_DONE = (STATUS_COMPLETE, STATUS_IRRELEVANT)
 
 __all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet",
            "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet",

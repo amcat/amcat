@@ -193,7 +193,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
     @param include_multiple: include multiple codedarticles per article
     @param include_uncoded_articles: include articles without corresponding codings
     """
-    art_filter = Q(coding__codingjob__in=jobs)
+    art_filter = Q(coded_articles__codingjob__in=jobs)
     if include_uncoded_articles:
         art_filter |= Q(articlesets_set__codingjob_set__in=jobs)
 
@@ -212,7 +212,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
         sentence_codings = collections.defaultdict(list) # {sentence : [codings]}
         coded_sentences = collections.defaultdict(set) # {article : {sentences}}
 
-        for c in job.codings.all():
+        for c in job.codings:
             articles.add(job_articles[c.article_id])
             if c.sentence_id is None:
                 article_codings[job_articles[c.article_id]] = c
@@ -273,7 +273,7 @@ class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
     def get_table(self, codingjobs, export_level, **kargs):
-        codingjobs = CodingJob.objects.prefetch_related("codings__values").filter(pk__in=codingjobs)
+        codingjobs = CodingJob.objects.prefetch_related("coded_articles__codings__values").filter(pk__in=codingjobs)
         
         # Get all row of table
         rows = _get_rows(
@@ -468,20 +468,20 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         amcattest.create_test_coding(codingjob=job, article=articles[4]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})                        
 
         codingjobs = list(CodingJob.objects.filter(pk__in=[job.id]))
-        c = codingjobs[0].codings.all()[0]
+        c = list(codingjobs[0].codings)[0]
         amcatlogging.debug_module('django.db.backends')
 
         script = self._get_results_script([job], {strf : {}, intf : {}})
-        with self.checkMaxQueries(5):
+        with self.checkMaxQueries(6):
             list(csv.reader(StringIO(script.run())))
 
 
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(ids=True)})
-        with self.checkMaxQueries(5):
+        with self.checkMaxQueries(6):
             list(csv.reader(StringIO(script.run())))
 
 
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(labels=True)})
-        with self.checkMaxQueries(5):
+        with self.checkMaxQueries(6):
             list(csv.reader(StringIO(script.run())))
 

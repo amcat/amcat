@@ -126,4 +126,3 @@ class TestScraping(amcattest.AmCATTestCase):
         self.assertEqual(s.medium.name, TestDatedScraper.medium_name)
         self.assertEqual(Medium.objects.get(name=TestDatedScraper.medium_name), s.medium)
         
-        
