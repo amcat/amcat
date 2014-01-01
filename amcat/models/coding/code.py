@@ -134,11 +134,23 @@ class Code(AmcatModel):
                 except IndexError:
                     pass
                 
-    def add_label(self, language, label):
-        """Add the label in the given language"""
+    def add_label(self, language, label, replace=True):
+        """
+        Add the label in the given language
+        @param replace: if this code already has a label in that language, replace it?
+        """
         if isinstance(language, int):
             language = Language.objects.get(pk=language)
-        Label.objects.create(language=language, label=label, code=self)
+        try:
+            l = Label.objects.get(code=self, language=language)
+            if replace:
+                l.label = label
+                l.save()
+            else:
+                raise ValueError("Code {self} already has label in language {language} and replace is set to False"
+                                 .format(**locals()))
+        except Label.DoesNotExist:
+            Label.objects.create(language=language, label=label, code=self)
         self._cache_label(language, label)
 
     def _cache_label(self, language, label):

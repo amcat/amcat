@@ -127,6 +127,7 @@ urlpatterns = patterns(
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_changesets$', 'navigator.views.project.save_changesets'),
     url(r'^project/(?P<id>[0-9]+)/codebook/add$', 'navigator.views.project.add_codebook', name='project-add-codebook'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/import$', ImportCodebook.as_view(), name='project-import-codebook'),
+    url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/update$', ImportCodebook.as_view(), name='project-import-codebook'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/export$', ExportCodebook.as_view(), name='project-export-codebook'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)$', 'navigator.views.project.schema', name='project-schema'),
     url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/delete$', 'navigator.views.project.delete_schema', name='project-delete-schema'),
