@@ -31,6 +31,10 @@ class ImportCodebook(ProjectScriptView):
     def get_success_url(self):
         return reverse("project-codebooks", kwargs=dict(id=self.project.id))
 
+    def get_initial(self):
+        initial = super(ImportCodebook, self).get_initial()
+        initial["codebook"]=self.url_data.get("codebookid")
+        return initial
     
 class ExportCodebook(TableExportMixin, ProjectScriptView):
     script = ExportCodebook
@@ -40,7 +44,9 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
         return "Codebook {c.id} {c}".format(**locals())
     
     def get_initial(self):
-        return dict(codebook=self.url_data["codebookid"])
+        initial = super(ExportCodebook, self).get_initial()
+        initial["codebook"]=self.url_data["codebookid"]
+        return initial
 
     def get_form_class(self):
         # Modify form class to also contain XML output
@@ -53,6 +59,7 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
         cid=self.url_data["codebookid"]
         langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
         form.fields['language'].queryset = langs
+        form.fields['language'].initial = min(l.id for l in langs)
         return form
 
     def form_valid(self, form):
