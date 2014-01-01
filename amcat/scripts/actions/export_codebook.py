@@ -36,40 +36,25 @@ LABEL_PREFIX = "label - "
 TreeRow = collections.namedtuple("TreeRow", ["indent", "code"])
 
 class TreeCodeColumn(table3.ObjectColumn):
-    def __init__(self, i):
+    def __init__(self, i, language):
         super(TreeCodeColumn, self).__init__(label="code-{n}".format(n=i+1))
         self.i = i
+        self.language = language
     def getCell(self, row):
         if row.indent == self.i:
-            return row.code
+            return row.code.get_label(self.language)
         
-def tree_table(codebook):
-    rows = list(_get_tree(codebook))
-
-    result = table3.ObjectTable(rows=rows)
-    result.addColumn(lambda row : row.code.uuid, label="uuid")
-    result.addColumn(lambda row : row.code.id, label="code_id")
-
-    depth = max(row.indent for row in rows) + 1
-    for i in range(depth):
-        result.addColumn(TreeCodeColumn(i))
-
-    return result
-
-def parent_table(codebook):
-    result = table3.ObjectTable(rows=codebook.codebookcodes)
-    result.addColumn(lambda row : row.code.uuid, label="uuid")
-    result.addColumn(lambda row : row.code.id, label="code_id")
-    result.addColumn(lambda row : row.code, label="code")
-    result.addColumn(lambda row : row.parent, label="parent")
-    return result
-
-STRUCTURE = dict(
-    indented = tree_table,
-    parent = parent_table,
-    )
 
 
+class CodeColumn(table3.ObjectColumn):
+    def __init__(self, label, attr, language):
+        super(CodeColumn, self).__init__(label=label)
+        self.attr = attr
+        self.language = language
+    def getCell(self, row):
+        return getattr(row, self.attr).get_label(self.language, fallback=False)
+
+            
 class ExportCodebook(Script):
     """
     Export a codebook to a table (csv file).
@@ -83,15 +68,54 @@ class ExportCodebook(Script):
 
     class options_form(forms.Form):
         codebook = forms.ModelChoiceField(queryset=Codebook.objects.all())
-        structure = forms.ChoiceField(choices = [(s, s.title()) for s in STRUCTURE])
-
+        structure = forms.ChoiceField(choices = [(s, s.title()) for s in ['indented', 'parent']])
+        language = forms.ModelChoiceField(queryset=Language.objects.all(),
+                                          help_text="Defatul language for labels")
+        labelcols = forms.BooleanField(label="Label columns", required=False,
+                                       help_text="Export extra columns for other labels")
         
-    def _run(self, codebook, structure, **kargs):
+    def _run(self, codebook, structure, language, labelcols, **kargs):
         codebook.cache_labels()
-        result =  STRUCTURE[structure](codebook)
+        method = {"indented": self.tree_table, "parent": self.parent_table}[structure]
+        return method(codebook, language, labelcols)
+
+    def add_label_columns(self, table):
+        if self.options['labelcols']:
+            cb = self.options['codebook']
+            deflang = self.options['language']
+            langs = set(Language.objects.filter(labels__code__codebook_codes__codebook=cb).distinct())
+            langs -= {deflang}
+            for lang in langs:
+                table.addColumn(CodeColumn("label - {lang}".format(**locals()), "code", lang))
+                
+            
+            
+        
+        
+    
+    def tree_table(self, codebook, language, labelcols):
+        rows = list(_get_tree(codebook))
+
+        result = table3.ObjectTable(rows=rows)
+        result.addColumn(lambda row : row.code.uuid, label="uuid")
+        result.addColumn(lambda row : row.code.id, label="code_id")
+        self.add_label_columns(result)
+        depth = max(row.indent for row in rows) + 1
+        for i in range(depth):
+            result.addColumn(TreeCodeColumn(i, language))
+
         return result
 
+    def parent_table(codebook):
+        result = table3.ObjectTable(rows=codebook.codebookcodes)
+        result.addColumn(lambda row : row.code.uuid, label="uuid")
+        result.addColumn(lambda row : row.code.id, label="code_id")
+        result.addColumn(lambda row : row.code, label="code")
+        result.addColumn(lambda row : row.parent, label="parent")
+        self.add_label_columns(result)
+        return result
 
+        
 def _get_tree(codebook):
     parents = {cc.code : cc.parent for cc in codebook.codebookcodes}
     for root in (code for (code, parent) in parents.iteritems() if parent is None):
