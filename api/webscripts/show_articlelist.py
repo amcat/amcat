@@ -82,11 +82,16 @@ class ShowArticleList(WebScript):
             else:
                 return self.outputJsonHtml(html)
         else:
+            self.progress_monitor.update(1, "Creating article list")
+            
             n = keywordsearch.get_total_n(formData)
+            self.progress_monitor.update(39, "Found {n} articles in total".format(**locals()))
+            
             articles = list(ArticleListScript(formData).run())
             for a in articles:
                 a.hack_project_id = project_id
             self.output_template = 'api/webscripts/articlelist.html'
+            self.progress_monitor.update(40, "Created article list")
             
             return self.outputResponse(dict(articlelist=articles, n=n, page=formData.get('start')), ArticleListScript.output_type)
         
