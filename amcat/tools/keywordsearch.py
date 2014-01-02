@@ -136,8 +136,8 @@ def getArticles(form, **kargs):
         raise NotImplementedError()
 
     query = query_from_form(form)
-    if form['highlight']:
-        kargs["highlight" if query else "lead"] = True
+
+    kargs["highlight" if query else "lead"] = True
         
     filters = dict(filters_from_form(form))
 
