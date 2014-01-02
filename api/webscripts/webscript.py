@@ -30,6 +30,7 @@ from amcat.scripts.forms import SelectionForm
 from amcat.forms import InvalidFormException
 from django.contrib.auth.models import User
 from amcat.amcatcelery import app
+from amcat.tools.progress import ProgressMonitor
 
 from django.http import QueryDict
 from amcat.tools.djangotoolkit import to_querydict
@@ -48,13 +49,26 @@ mimetypeDict = { #todo: make objects of these
      'datatables':{'extension':'json', 'mime':'text/plain', 'download':False},
 }
 
+class CeleryProgressUpdater(object):
+    def __init__(self, task_id):
+        self.task_id = task_id
+    def update(self, monitor):
+        app.backend.store_result(self.task_id,
+                                 {"completed": monitor.percent, "message": monitor.message},
+                                 'INPROGRESS')
+
 @app.task(bind=True)
 def webscript_task(self, cls, **kwargs):
     task_id = self.request.id
     # TODO: Dit moet weg, stub code om status door te geven
-    app.backend.store_result(task_id, {"completed": 42, "message": "ben bezig joh"}, 'INPROGRESS')
-    import time; time.sleep(2)
-    return cls(**kwargs).run()
+    webscript = cls(**kwargs)
+    webscript.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
+    
+    webscript.progress_monitor.update(0, "Starting query")
+    return webscript.run()
+    
+
+
 
 class WebScript(object):
     """
@@ -72,6 +86,8 @@ class WebScript(object):
         if not isinstance(data, QueryDict) and data is not None:
             data = to_querydict(data, mutable=True)
 
+        self.progress_monitor = ProgressMonitor()
+        
         self.initTime = time.time()
         self.data = data
         self.output = data.get('output', 'json')
@@ -115,8 +131,10 @@ class WebScript(object):
     def delay(self):
         d = webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
         # TODO: Dit moet weg, suffe check om te kijken of result er staat
-        import time; time.sleep(.5)
-        print("@@@HACK", d.state, d.result)
+        while True:
+            print("@@@HACK", d.state, d.result)
+            if d.state == "SUCCESS": break
+            import time; time.sleep(.1)
         return d
 
     def run(self):
