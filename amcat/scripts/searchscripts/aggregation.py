@@ -77,7 +77,7 @@ class AggregationScript(script.Script):
         xAxis = self.options['xAxis']
         dateInterval = self.options['dateInterval']
 
-        table = keywordsearch.getTable(self.options)
+        table = keywordsearch.getTable(self.options, self.progress_monitor)
         
         if self.options['relative']:
             table = RelativeTable(table)

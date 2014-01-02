@@ -38,6 +38,7 @@ from amcat.tools.toolkit import stripAccents,readDate
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
 from amcat.models import Project
+from amcat.tools.progress import NullMonitor
 
 log = logging.getLogger(__name__)
 
@@ -162,7 +163,7 @@ def getArticles(form, **kargs):
 
     return result
     
-def getTable(form):
+def getTable(form, progress_monitor=NullMonitor):
     table = table3.DictTable(default=0)
     table.rowNamesRequired = True
     dateInterval = form['dateInterval']
@@ -176,6 +177,7 @@ def getTable(form):
     yAxis = form['yAxis']
     if yAxis == 'total':
         _add_column(table, 'total', query, filters, group_by, dateInterval)
+        progress_monitor.update(90, "Got results")
     elif yAxis == 'medium':
         media = Medium.objects.filter(pk__in=ES().list_media(query, filters)).only("name")
         
@@ -183,9 +185,11 @@ def getTable(form):
             filters['mediumid'] = medium.id
             name = u"{medium.id} - {}".format(medium.name.replace(",", " ").replace(".", " "), **locals())
             _add_column(table, name, query, filters, group_by, dateInterval)
+            progress_monitor.update(90 / len(media), "Got results for {medium!r}".format(**locals()))
     elif yAxis == 'searchTerm':
         for q in queries:
             _add_column(table, q.label, q.query, filters, group_by, dateInterval)
+            progress_monitor.update(90 / len(queries), "Got results for {q.label!r}".format(**locals()))
     else:
         raise Exception('yAxis {yAxis} not recognized'.format(**locals()))
 

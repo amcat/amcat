@@ -25,7 +25,10 @@ class ProgressMonitor(object):
     def remove_listener(self, func):
         self.listeners.remove(func)
 
-       
+class NullMonitor(ProgressMonitor):
+    def update(self, *args, **kargs):
+        pass
+        
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from django.conf import settings
