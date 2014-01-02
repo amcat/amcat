@@ -146,10 +146,11 @@ class Result(object):
         return "{}({})".format(type(self).__name__, ", ".join(items))
     
 class ES(object):
-    def __init__(self, index=None, **args):
+    def __init__(self, index=None, doc_type=None, **args):
         elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
         self.es = Elasticsearch(hosts=[elhost, ], **args)
         self.index = settings.ES_INDEX if index is None else index
+        self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
     def flush(self):
         indices.IndicesClient(self.es).flush()
@@ -189,8 +190,14 @@ class ES(object):
         """
         Get a single article from the index
         """
-        result = self.es.get(index=self.index, id=article_id, doc_type=settings.ES_ARTICLE_DOCTYPE)
+        result = self.es.get(index=self.index, id=article_id, doc_type=self.doc_type)
         return result['_source']
+
+    def search(self, body, **options):
+        """
+        Perform a 'raw' search on the underlying ES index
+        """
+        return self.es.search(index=self.index, doc_type=self.doc_type, body=body, **options)
         
 
     def query_ids(self, query=None, filters={}, **kwargs):
@@ -205,7 +212,7 @@ class ES(object):
         log.debug("Query_ids body={body!r}".format(**locals()))
         options = dict(scroll="1m", size=1000, fields="")
         options.update(kwargs)
-        res = self.es.search(index=self.index, search_type='scan', body=body, **options)
+        res = self.search(body, search_type='scan', **options)
         sid = res['_scroll_id']
         while True:
             res = self.es.scroll(scroll_id=sid, scroll="1m")
@@ -232,7 +239,7 @@ class ES(object):
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
 
         log.debug("es.search(body={body}, **{kwargs})".format(**locals()))
-        result = self.es.search(index=self.index, body=body, fields=fields, **kwargs)
+        result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body)
 
     def query_all(self, *args, **kargs):
@@ -366,7 +373,7 @@ class ES(object):
                 "facets" : {"group" : group}}
         log.debug("es.search(body={body})".format(**locals()))
 
-        result = self.es.search(index=self.index, body=body, size=0)
+        result = self.search(body, size=0)
         if group_by == 'date':
             for row in result['facets']['group']['entries']:
                 yield get_date(row['time']), row['count']
@@ -381,7 +388,7 @@ class ES(object):
         """
         body = {"query" : {"constant_score" : dict(build_body(query, filters, query_as_filter=True))}}
         body['facets'] = {'stats' : {'statistical' : {'field' : 'date'}}}
-        stats = self.es.search(index=self.index, body=body, size=0)['facets']['stats']
+        stats = self.search(body, size=0)['facets']['stats']
         result = Result()
         result.n = stats['count']
         if result.n == 0:
@@ -784,14 +791,15 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(ES().query_ids('"korea-noord"', filters=dict(sets=s1.id))), set())
         self.assertEqual(set(ES().query_ids('"noord-korea"', filters=dict(sets=s1.id))), {a.id})
         
+        # test Rutte's -> rutte s
+        self.assertEqual(set(ES().query_ids("rutte", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids("Rutte", filters=dict(sets=s1.id))), {a.id})
+        
         # test ni\~no -> nino
-        self.assertEqual(set(ES().query_ids(u"ni\xf1o", filters=dict(sets=s1.id))), {a.id})
         self.assertEqual(set(ES().query_ids("nino", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids(u"ni\xf1o", filters=dict(sets=s1.id))), {a.id})
 
         # test real kanji
         self.assertEqual(set(ES().query_ids(u"\u6f22\u5b57", filters=dict(sets=s1.id))), {a.id})
 
-        # test Rutte's -> rutte s
-        self.assertEqual(set(ES().query_ids("rutte", filters=dict(sets=s1.id))), {a.id})
-        self.assertEqual(set(ES().query_ids("Rutte", filters=dict(sets=s1.id))), {a.id})
 
