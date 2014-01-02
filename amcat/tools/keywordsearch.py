@@ -185,7 +185,7 @@ def getTable(form, progress_monitor=NullMonitor):
             filters['mediumid'] = medium.id
             name = u"{medium.id} - {}".format(medium.name.replace(",", " ").replace(".", " "), **locals())
             _add_column(table, name, query, filters, group_by, dateInterval)
-            progress_monitor.update(90 / len(media), "Got results for {medium!r}".format(**locals()))
+            progress_monitor.update(90 / len(media), "Got results for medium {medium.id}".format(**locals()))
     elif yAxis == 'searchTerm':
         for q in queries:
             _add_column(table, q.label, q.query, filters, group_by, dateInterval)

@@ -21,6 +21,7 @@
 from django.template.loader import render_to_string
 import time
 from amcat.models import Project
+from amcat.models.task import IN_PROGRESS
 import api.webscripts
 from django.db import connection
 import json
@@ -55,7 +56,7 @@ class CeleryProgressUpdater(object):
     def update(self, monitor):
         app.backend.store_result(self.task_id,
                                  {"completed": monitor.percent, "message": monitor.message},
-                                 'INPROGRESS')
+                                 IN_PROGRESS)
 
 @app.task(bind=True)
 def webscript_task(self, cls, **kwargs):
@@ -63,8 +64,6 @@ def webscript_task(self, cls, **kwargs):
     # TODO: Dit moet weg, stub code om status door te geven
     webscript = cls(**kwargs)
     webscript.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
-    
-    webscript.progress_monitor.update(0, "Starting query")
     return webscript.run()
     
 
@@ -129,13 +128,7 @@ class WebScript(object):
                 yield ws.__name__, ws.name
 
     def delay(self):
-        d = webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
-        # TODO: Dit moet weg, suffe check om te kijken of result er staat
-        while True:
-            print("@@@HACK", d.state, d.result)
-            if d.state == "SUCCESS": break
-            import time; time.sleep(.1)
-        return d
+        return webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
 
     def run(self):
         raise NotImplementedError()

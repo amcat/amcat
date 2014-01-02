@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from rest_framework import serializers
+from amcat.models.task import IN_PROGRESS
 from amcat.models import Task
 from amcat.tools import amcattest
 from api.rest.serializer import AmCATModelSerializer
@@ -28,15 +29,15 @@ class TaskSerializer(AmCATModelSerializer):
     fields to the model: status and ready."""
     status = serializers.SerializerMethodField('get_status')
     ready = serializers.SerializerMethodField('get_ready')
+    progress = serializers.SerializerMethodField('get_progress')
 
     def __init__(self, *args, **kwargs):
         super(TaskSerializer, self).__init__(*args, **kwargs)
         self._tasks = {}
 
     def set_status_ready(self, task):
-        ready = task.get_async_result().ready()
-        status = task.get_async_result().status
-        self._tasks[task] = (status, ready)
+        async = task.get_async_result()
+        self._tasks[task] = (async.result, async.status, async.ready())
 
     def get_status_ready(self, task):
         """Returns tuple with (status, ready) => (str, bool)"""
@@ -45,12 +46,17 @@ class TaskSerializer(AmCATModelSerializer):
         return self._tasks[task]
 
     def get_status(self, task):
-        status, _ = self.get_status_ready(task)
+        _, status, _ = self.get_status_ready(task)
         return status
 
     def get_ready(self, task):
-        _, ready = self.get_status_ready(task)
+        _, _, ready = self.get_status_ready(task)
         return ready
+
+    def get_progress(self, task):
+        result, status, _ = self.get_status_ready(task)
+        if status == IN_PROGRESS and isinstance(result, dict):
+            return result
 
     class Meta:
         model = Task
