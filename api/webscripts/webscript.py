@@ -48,8 +48,12 @@ mimetypeDict = { #todo: make objects of these
      'datatables':{'extension':'json', 'mime':'text/plain', 'download':False},
 }
 
-@app.task()
-def webscript_task(cls, **kwargs):
+@app.task(bind=True)
+def webscript_task(self, cls, **kwargs):
+    task_id = self.request.id
+    # TODO: Dit moet weg, stub code om status door te geven
+    app.backend.store_result(task_id, {"completed": 42, "message": "ben bezig joh"}, 'INPROGRESS')
+    import time; time.sleep(2)
     return cls(**kwargs).run()
 
 class WebScript(object):
@@ -109,7 +113,11 @@ class WebScript(object):
                 yield ws.__name__, ws.name
 
     def delay(self):
-        return webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
+        d = webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
+        # TODO: Dit moet weg, suffe check om te kijken of result er staat
+        import time; time.sleep(.5)
+        print("@@@HACK", d.state, d.result)
+        return d
 
     def run(self):
         raise NotImplementedError()
