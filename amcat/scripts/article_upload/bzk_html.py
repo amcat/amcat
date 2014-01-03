@@ -109,7 +109,7 @@ class BZK(UploadScript):
         for tag in item:
             if tag.tag == "p":
                 if hasattr(article.props, 'text'):
-                    article.props.text += tag
+                    article.props.text.append(tag)
                 else:
                     article.props.text = [tag]
             elif tag.tag == "h2":
