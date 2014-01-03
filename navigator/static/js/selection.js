@@ -51,6 +51,11 @@ amcat.selection.modal_html =
 
 amcat.selection.modal = null;
 
+amcat.selection.set_progress = function(percent){
+    $(".progress-bar", amcat.selection.modal).attr("aria-valuenow", percent);
+    $(".progress-bar", amcat.selection.modal).css("width", percent + "%");
+};
+
 amcat.selection.poll = function(task_uuid, callback, timeout){
     if (amcat.selection.modal === null){
         amcat.selection.modal = $("<div>").html(amcat.selection.modal_html).dialog({
@@ -70,14 +75,14 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
             task = data["results"][0];
             if (!task["ready"] && task["status"] === "INPROGRESS" && task["progress"] !== null){
                 $(".message", modal).text(task.progress.message);
-                $(".progress-bar", modal).attr("aria-valuenow", task.progress.completed);
-                $(".progress-bar", modal).css("width", task.progress.completed + "%");
+                amcat.selection.set_progress(task.progress.completed);
                 window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
             } else if (!task["ready"]){
                 window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
             } else if (task["ready"] && task["status"] != "SUCCESS"){
                 amcat.selection.setMessage("Task " + task_uuid + " processed by worker, but "  + task["status"]);
                 modal.dialog("close");
+                amcat.selection.set_progress(0);
             } else {
                 $.ajax({
                     url : "/api/v4/taskresult/" + task_uuid,
@@ -87,11 +92,13 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
                     }
                 });
 
+                amcat.selection.set_progress(0);
                 modal.dialog("close");
             }
         },
         error : function() {
             amcat.selection.setMessage('Error: polling task ' + task_uuid + ' failed.');
+            amcat.selection.set_progress(0);
             modal.dialog("close");
         }
     });
