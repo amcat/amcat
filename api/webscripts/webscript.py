@@ -21,6 +21,7 @@
 from django.template.loader import render_to_string
 import time
 from amcat.models import Project
+from amcat.models.task import IN_PROGRESS
 import api.webscripts
 from django.db import connection
 import json
@@ -30,6 +31,7 @@ from amcat.scripts.forms import SelectionForm
 from amcat.forms import InvalidFormException
 from django.contrib.auth.models import User
 from amcat.amcatcelery import app
+from amcat.tools.progress import ProgressMonitor
 
 from django.http import QueryDict
 from amcat.tools.djangotoolkit import to_querydict
@@ -48,9 +50,24 @@ mimetypeDict = { #todo: make objects of these
      'datatables':{'extension':'json', 'mime':'text/plain', 'download':False},
 }
 
-@app.task()
-def webscript_task(cls, **kwargs):
-    return cls(**kwargs).run()
+class CeleryProgressUpdater(object):
+    def __init__(self, task_id):
+        self.task_id = task_id
+    def update(self, monitor):
+        app.backend.store_result(self.task_id,
+                                 {"completed": monitor.percent, "message": monitor.message},
+                                 IN_PROGRESS)
+
+@app.task(bind=True)
+def webscript_task(self, cls, **kwargs):
+    task_id = self.request.id
+    # TODO: Dit moet weg, stub code om status door te geven
+    webscript = cls(**kwargs)
+    webscript.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
+    return webscript.run()
+    
+
+
 
 class WebScript(object):
     """
@@ -68,6 +85,8 @@ class WebScript(object):
         if not isinstance(data, QueryDict) and data is not None:
             data = to_querydict(data, mutable=True)
 
+        self.progress_monitor = ProgressMonitor()
+        
         self.initTime = time.time()
         self.data = data
         self.output = data.get('output', 'json')

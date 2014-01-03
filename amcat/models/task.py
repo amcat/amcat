@@ -33,6 +33,8 @@ from amcat.tools.caching import cached
 from amcat.tools.model import AmcatModel
 from amcat.forms.fields import JSONField
 
+IN_PROGRESS = "INPROGRESS"
+
 class TaskPending(Exception):
     pass
 

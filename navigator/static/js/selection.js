@@ -43,18 +43,46 @@ amcat.selection.hideMessage = function () {
 };
 
 amcat.selection.current_polls = {};
+amcat.selection.modal_html =
+    '<div class="message"></div>' +
+    '<div class="progress">' +
+        '<div class="progress-bar" role="progressbar" aria-valuenow="60" valuemin="0" aria-valuemax="100" style="width: 60%;"></div>' +
+    '</div>';
+
+amcat.selection.modal = null;
+
+amcat.selection.set_progress = function(percent){
+    $(".progress-bar", amcat.selection.modal).attr("aria-valuenow", percent);
+    $(".progress-bar", amcat.selection.modal).css("width", percent + "%");
+};
 
 amcat.selection.poll = function(task_uuid, callback, timeout){
+    if (amcat.selection.modal === null){
+        amcat.selection.modal = $("<div>").html(amcat.selection.modal_html).dialog({
+            autoOpen : false, modal : true
+        });
+    }
+
+    var modal = amcat.selection.modal;
+    modal.dialog("open");
+
     $.ajax({
         url : "/api/v4/task?uuid=" + task_uuid,
         dataType : "json",
         success : function(data){
+            var new_timeout = (timeout >= 3000) ? timeout : timeout + 500;
+
             task = data["results"][0];
-            if (!task["ready"]){
-                var new_timeout = (timeout >= 3000) ? timeout : timeout + 500;
+            if (!task["ready"] && task["status"] === "INPROGRESS" && task["progress"] !== null){
+                $(".message", modal).text(task.progress.message);
+                amcat.selection.set_progress(task.progress.completed);
+                window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
+            } else if (!task["ready"]){
                 window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
             } else if (task["ready"] && task["status"] != "SUCCESS"){
                 amcat.selection.setMessage("Task " + task_uuid + " processed by worker, but "  + task["status"]);
+                modal.dialog("close");
+                amcat.selection.set_progress(0);
             } else {
                 $.ajax({
                     url : "/api/v4/taskresult/" + task_uuid,
@@ -63,12 +91,18 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
                         amcat.selection.setMessage('Error: ' + qXHR.responseText);
                     }
                 });
+
+                amcat.selection.set_progress(0);
+                modal.dialog("close");
             }
         },
         error : function() {
             amcat.selection.setMessage('Error: polling task ' + task_uuid + ' failed.');
+            amcat.selection.set_progress(0);
+            modal.dialog("close");
         }
     });
+
 };
 
 amcat.selection.callWebscript = function(name, data, callBack){
@@ -313,7 +347,7 @@ amcat.selection.loadIframe = function(data){ // this is the form submit response
     if(json.queries){
         //console.log('queries', json.queries);
         $.each(json.queries, function(i, query){
-            console.log(query[0], query[1]);
+            //console.log(query[0], query[1]);
         });
     }
 

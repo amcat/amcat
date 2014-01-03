@@ -19,6 +19,7 @@ class ShowSummary(WebScript):
     form = None
     
     def run(self):
+        self.progress_monitor.update(1, "Creating summary")
 
         if isinstance(self.data['projects'], (basestring, int)):
             project_id = int(self.data['projects'])
@@ -26,10 +27,12 @@ class ShowSummary(WebScript):
             project_id = int(self.data['projects'][0])
         
         n = keywordsearch.get_total_n(self.data)
+        self.progress_monitor.update(39, "Found {n} articles in total".format(**locals()))
         articles = list(ArticleListScript(self.data).run())
         for a in articles:
             a.hack_project_id = project_id
         self.output_template = 'api/webscripts/articlelist.html'
+        self.progress_monitor.update(40, "Created summary")
             
         return self.outputResponse(dict(articlelist=articles, n=n, page=self.data.get('start')), ArticleListScript.output_type)
         

@@ -72,3 +72,4 @@ class ShowArticleList(WebScript):
             return response
         else:
             return self.outputJsonHtml(html)
+
