@@ -46,6 +46,8 @@ class CodingSchema(AmcatModel):
     
     name = models.CharField(max_length=75)
     description = models.TextField(null=True)
+    comment = models.TextField(null=True)
+    keywords = models.TextField(null=True)
 
     isnet = models.BooleanField(default=False)
     isarticleschema = models.BooleanField(default=False)
