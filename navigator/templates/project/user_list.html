@@ -3,10 +3,12 @@
 {% block title %}Users{% endblock %}
 
 {% block actions %}
- <form action="{% url "navigator.views.project.users_add" context.id %}" method="POST">
+{% if is_admin %}
+ <form action="{% url "user-add" project.id %}" method="POST">
   {{ add_user }}
-  <input type="submit" value="Add User(s)" />
+  <input class="btn btn-primary" type="submit" value="Add User(s)" />
  </form>
+{% endif %}
 {% endblock %}
 
 {% block content %}

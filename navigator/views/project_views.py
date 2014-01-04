@@ -24,6 +24,7 @@ from django.views.generic.list import ListView
 from api.rest.datatable import FavouriteDatatable
 from amcat.models import Project
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from django.views.generic.edit import UpdateView
 
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
@@ -62,7 +63,21 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
         url = reverse('project', args=[123])
         table = FavouriteDatatable(resource=self.get_resource(), label="project",
                                    set_url=url + "?star=1", unset_url=url+"?star=0")
-        table = table.rowlink_reverse('project', args=['{id}'])
+        table = table.rowlink_reverse('article set-list', args=['{id}'])
 
         table = self.filter_table(table)
         return table
+from django import forms
+class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
+    context_category = 'Settings'
+    parent = None
+    base_url = "projects"
+    model = Project
+
+    def get_success_url(self):
+        return reverse(self.get_view_name(), args=(self.project.id,))
+    
+    class form_class(forms.ModelForm):
+        class Meta:
+            model = Project
+            exclude = ('codingschemas', 'codebooks', 'articlesets', 'favourite_articlesets')

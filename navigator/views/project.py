@@ -281,53 +281,6 @@ def codingjob_export_options(request, project):
 
     return render(request, 'navigator/project/export_options.html', locals())
 
-@check(Project)
-def schemas(request, project):
-    """
-    Codingschemas-tab
-    """
-    owned_schemas = Datatable(CodingSchemaResource, rowlink='./schema/{id}').filter(project=project)
-    linked_schemas = (Datatable(CodingSchemaResource, rowlink='./schema/{id}').
-                      filter(projects_set=project))
-
-    ctx = {
-        'owned_schemas' : owned_schemas,
-        'linked_schemas' : linked_schemas,
-        'menu' : PROJECT_MENU,
-        'selected' : 'codingschemas',
-        'context' : project,
-        'deleted' : session_pop(request.session, "deleted_schema"),
-    }
-
-    return render(request, "navigator/project/schemas.html", ctx)
-
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-def schema(request, schema, project):
-    fields = (Datatable(CodingSchemaFieldResource)
-              .filter(codingschema=schema).hide('codingschema'))
-
-    return table_view(request, project, fields, 'codingschemas',
-            template="navigator/project/schema.html", schema=schema,
-            is_new=session_pop(request.session, "schema_{}_is_new".format(schema.id), False),
-            is_edited=session_pop(request.session, "schema_{}_edited".format(schema.id), False))
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-def new_schema(request, project):
-    schema = CodingSchema.objects.create(name="Untitled schema", project=project)
-    return redirect(reverse("project-edit-schema-properties", args=(project.id, schema.id)))
-
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema', action='delete')
-def delete_schema(request, schema, project):
-    schema.project_id = LITTER_PROJECT_ID
-    schema.save()
-
-    request.session['deleted_schema'] = schema.id
-    
-    return redirect(reverse("project-schemas", args=(project.id, )))
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
@@ -339,22 +292,6 @@ def edit_schemafield_rules(request, schema, project):
             template="navigator/project/edit_rules.html",
             schema=schema)
 
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-def edit_schemafield_properties(request, schema, project):
-    form = forms.CodingSchemaForm(data=request.POST or None, instance=schema, hidden="project")
-    form.fields['highlighters'].queryset = project.get_codebooks()
-    form.fields['highlighters'].required = False
-
-    if request.method == "POST":
-        # Process codingschema form
-        if form.is_valid():
-            form.save()
-
-            request.session["schema_{}_edited".format(schema.id)] = True 
-            return redirect(reverse("project-schema", args=(project.id, schema.id)))
-
-    return render(request, "navigator/project/edit_schema_properties.html", locals())
 
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(CodingSchema, args_map={'schema' : 'id'}, args='schema')

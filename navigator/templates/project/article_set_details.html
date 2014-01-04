@@ -4,14 +4,18 @@
 
 {% block actions %}
 <a class="btn btn-primary" href="{% url "query" project.id %}?articlesets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
+{% if can_edit %}
 <a class="btn btn-default confirm" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "article set-details" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
+{% endif %}
 <a class="btn btn-default" href="{% url "articleset-import" project.id object.id %}"><i class="icon-share"></i> Use in another project</a>
-<a class="btn btn-default" href="{% url "article set-sample" project.id object.id %}"><i class="icon-filter"></i> Sample</a>
+{% if can_edit %}
+  <a class="btn btn-default" href="{% url "article set-sample" project.id object.id %}"><i class="icon-filter"></i> Sample</a>
 {% if object.project.id == project.id %}
 <a class="btn btn-default" href="{% url "article set-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit details</a>
 <a class="btn btn-danger confirm" href="{% url "articleset-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
 {% else %}
 <a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "articleset-unlink" project.id object.id %}"><i class="icon-white icon-remove"></i> Unlink</a>
+{% endif %}
 {% endif %}
 {% endblock actions %}
 

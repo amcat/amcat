@@ -63,7 +63,8 @@ class ProjectViewMixin(object):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
         context["project"] = self.project
         context["context"] = self.project # for menu / backwards compat.
-
+        context["can_edit"] = self.can_edit()
+        context["is_admin"] = self.is_admin()
         context["main_active"] = 'Projects'
         context["context_category"] = self.context_category
         return context
@@ -84,12 +85,19 @@ class ProjectViewMixin(object):
         if not self.request.user.get_profile().has_role(self.required_project_permission, self.project):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {self.project}".format(**locals()))
 
-
+    def can_edit(self):
+        """Checks if the user has the right to edit this project"""
+        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, self.project)
+    
+    def is_admin(self):
+        """Checks if the user has the right to edit this project"""
+        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_ADMIN, self.project)
+        
     def get_breadcrumbs(self):
         bc = self._get_breadcrumbs(self.kwargs, self)
         bc.insert(0, ("Projects", reverse("projects")))
-        bc.insert(1, ("{self.project.id} : {self.project}".format(**locals()),
-                      reverse("project", args=(self.project.id, ))))
+        #bc.insert(1, ("{self.project.id} : {self.project}".format(**locals()),
+        #              reverse("project", args=(self.project.id, ))))
         return bc
         
     def get_template_names(self):
@@ -104,6 +112,9 @@ from django.views.generic.list import ListView
 
 class HierarchicalViewMixin(object):
 
+    def get_object(self):
+        return self._get_object(self.kwargs)
+    
     @property
     def pk_url_kwarg(self):
         return self.get_model_key()
@@ -124,7 +135,6 @@ class HierarchicalViewMixin(object):
     def _get_object(cls, kwargs):
         pk = kwargs[cls.get_model_key()]
         return cls.model.objects.get(pk=pk)
-        
     
     @classmethod
     def get_view_name(cls):

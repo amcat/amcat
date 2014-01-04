@@ -32,7 +32,7 @@ from django.views.generic.edit import UpdateView
 
 from django.views.generic.base import RedirectView
 from django.db.models import Q
-
+from navigator.views.project_views import ProjectDetailsView
     
 class ImportSetView(ProjectScriptView):
     script = ImportSet
@@ -58,8 +58,8 @@ from api.rest.datatable import FavouriteDatatable
     
 class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = ArticleSet
-    parent = None
-    base_url = "projects/(?P<project_id>[0-9]+)"
+    parent = ProjectDetailsView
+
     context_category = 'Articles'
     
     resource = ArticleSet

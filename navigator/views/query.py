@@ -26,22 +26,13 @@ from django.db.models import Q
 
 from amcat.models import CodingJob
 from amcat.scripts.forms import SelectionForm
+from navigator.views.project_views import ProjectDetailsView
 
-class QueryView(ProjectViewMixin, BreadCrumbMixin, TemplateView):
+class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, TemplateView):
     context_category = 'Query'
-
-    @classmethod
-    def get_url_patterns(cls):
-        return ["^projects/(?P<project_id>[0-9]+)/query$"]
-
-    @classmethod
-    def get_view_name(cls):
-        return "query"
-
-    @classmethod
-    def _get_breadcrumbs(cls, kwargs, view):
-        return [("Query", "")]
-                        
+    parent = ProjectDetailsView
+    url_fragment = 'query'
+    view_name = 'query'
     
     def get_context_data(self, **kwargs):
         context = super(QueryView, self).get_context_data(**kwargs)

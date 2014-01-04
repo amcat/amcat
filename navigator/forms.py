@@ -71,7 +71,8 @@ def gen_user_choices(project=None):
         'username', 'first_name', 'last_name' 
     )
 
-    users = users.filter(projectrole__project=project) if project else users
+    if project:
+        users = users.filter(projectrole__project=project) 
     vals = toolkit.multidict(((u.userprofile.affiliation, u) for u in users), ltype=list)
 
     for aff, users in sorted(vals.items(), key=name_sort):
@@ -227,26 +228,6 @@ class AddProjectForm(ProjectForm):
         super(AddProjectForm, self).__init__(*args, **kwargs)
         self.fields['owner'].initial = owner.id if owner else None
 
-class ProjectRoleForm(forms.ModelForm):
-    user = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
-
-    def __init__(self, project=None, user=None, data=None, **kwargs):
-        super(ProjectRoleForm, self).__init__(data=data, **kwargs)
-
-        self.fields['user'].choices = gen_user_choices()
-
-        if project is not None:
-            # Disable self.project
-            del self.fields['project']
-
-            choices = ((r.id, r.label) for r in Role.objects.filter(projectlevel=True))
-            self.fields['role'].choices = choices
-
-            if user is not None:
-                del self.fields['user']
-
-    class Meta:
-        model = ProjectRole
 
 class UploadScriptForm(forms.Form):
     file = forms.FileField(help_text="Supported archives: zip")

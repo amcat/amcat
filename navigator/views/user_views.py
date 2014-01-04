@@ -21,29 +21,71 @@ from django.core.urlresolvers import reverse
 
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
 from navigator.views.datatableview import DatatableMixin
-from amcat.models import User
+from amcat.models import User, authorisation
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 from django.views.generic.edit import UpdateView
 
 from django.views.generic.base import RedirectView
 from api.rest.resources import ProjectRoleResource
+from amcat.models import Project, ProjectRole, Role
+from django import forms
+from amcat.forms.widgets import JQueryMultipleSelect
+from navigator.forms import gen_user_choices
 
-class UserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+class ProjectRoleForm(forms.ModelForm):
+    user = forms.MultipleChoiceField(widget=JQueryMultipleSelect)
+
+    def __init__(self, project=None, user=None, data=None, **kwargs):
+        super(ProjectRoleForm, self).__init__(data=data, **kwargs)
+
+        self.fields['user'].choices = gen_user_choices()
+
+        if project is not None:
+            # Disable self.project
+            del self.fields['project']
+
+            choices = ((r.id, r.label) for r in Role.objects.filter(projectlevel=True))
+            self.fields['role'].choices = choices
+
+            if user is not None:
+                del self.fields['user']
+
+    class Meta:
+        model = ProjectRole
+        
+class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = User
     parent = None
     base_url = "projects/(?P<project_id>[0-9]+)"
     context_category = 'Settings'
-
+    url_fragment = "users"
     resource = ProjectRoleResource
     rowlink = './{id}'
+    
     @classmethod
     def get_view_name(cls):
         return "user-list"
 
-    url_fragment = "users"
-        
+    def get_context_data(self, **kwargs):
+        context = super(ProjectUserListView, self).get_context_data(**kwargs)
+        context['add_user'] = ProjectRoleForm(self.project)
+        return context
+
+    
     def filter_table(self, table):
         return table.filter(project=self.project).hide('project', 'id')
-#    if request.user.get_profile().haspriv('manage_project_users', project):
-#        add_user = forms.ProjectRoleForm(project)
+
+
+class ProjectUserAddView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
+    required_project_permission = authorisation.ROLE_PROJECT_ADMIN
+    parent = ProjectUserListView
+    url_fragment = "add"
+    model = User
+    
+    def get_redirect_url(self, project_id):
+        project = Project.objects.get(id=project_id)
+        role = Role.objects.get(id=self.request.POST['role'], projectlevel=True)
+        for user in User.objects.filter(id__in=self.request.REQUEST.getlist('user')):
+            ProjectRole(project=project, user=user, role=role).save()
+        return reverse("user-list", args=[project_id])

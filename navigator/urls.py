@@ -30,6 +30,7 @@ from navigator.views.project_views import *
 from navigator.views.codebook_views import *
 from navigator.views.user_views import *
 from navigator.views.codingjob_views import *
+from navigator.views.codingschema_views import *
 
 urlpatterns = patterns(
     '',
@@ -101,8 +102,6 @@ urlpatterns = patterns(
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
 
-    url(r'^project/(?P<id>[0-9]+)/schemas$', 'navigator.views.project.schemas', name='project-schemas'),
-    
     url(r'^project/(?P<id>[0-9]+)/edit$', 'navigator.views.project.edit', name='project-edit'),
     url(r'^project/(?P<id>[0-9]+)/users/add$', 'navigator.views.project.users_add'),
     url(r'^project/(?P<id>[0-9]+)/upload-articles$', 'navigator.views.project.upload_article', name='upload-articles'),
@@ -156,12 +155,14 @@ urlpatterns = patterns(
 ) 
 
 
-for view in [ArticleSetListView, ArticleSetDetailsView,
+for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              ArticleSetArticleDetailsView, ProjectArticleDetailsView,
              QueryView, SampleSetView, EditSetView,
              CodebookListView, CodebookDetailsView,
+             CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
+             CodingSchemaEditView,
              CodingJobListView,
-             UserListView]:
+             ProjectUserListView, ProjectUserAddView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
