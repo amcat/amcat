@@ -68,7 +68,7 @@ class Scraper(AmcatModel):
         scraper_options.update(options)
         return scraper_class(**scraper_options)
 
-    def n_scraped_articles(self, from_date=None, to_date=None):
+    def n_scraped_articles(self, from_date=None, to_date=None, medium = None):
         """
         Get the number of scraped articles per day for the given period.
         """
@@ -78,6 +78,7 @@ class Scraper(AmcatModel):
         q = self.articleset.articles.all()
         if to_date: q = q.filter(date__lte=to_date)
         if from_date: q = q.filter(date__gte=from_date)
+        if medium: q = q.filter(medium = medium.id)
         # aggregate count group by date, return as dict
         q = q.extra(select=dict(d="cast(date as date)")).values_list("d")
         q = q.annotate(models.Count("id"))

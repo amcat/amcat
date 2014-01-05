@@ -23,6 +23,7 @@ Script to be run daily after daily.py, checking it's success and reporting to ad
 
 from amcat.models.scraper import Scraper
 from amcat.models.article import Article
+from amcat.models.medium import Medium
 from amcat.scripts.script import Script
 from amcat.tools import toolkit, sendmail
 
@@ -102,10 +103,11 @@ class ScrapingCheck(Script):
                 n_expected = scraper.statistics[self.options['date'].weekday()]
             else:
                 n_expected = "unknown"
-            n_scraped = Article.objects.filter(
-                articlesets_set = scraper.articleset.id,
-                date__contains = self.options['date']
-                ).count()
+            n_scraped = scraper.n_scraped_articles(
+                from_date = self.options['date'],
+                to_date = self.options['date'],
+                medium = Medium.get_or_create(scraper.get_scraper_class().medium_name)
+                )[self.options['date']]
 
             if n_expected == "unknown":
                 if n_scraped > 0:
