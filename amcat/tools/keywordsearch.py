@@ -1,4 +1,4 @@
-############################################################################
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -229,7 +229,29 @@ def get_statistics(form):
     query = query_from_form(form)
     filters = dict(filters_from_form(form))
     return ES().statistics(query, filters)
+
+class QueryError(Exception):
+    pass
+
     
+class QueryValidationError(ValidationError):
+    # ugly hack inspired on https://github.com/django/django/commit/a8f4553aaecc7bc6775e0fd54f8c615c792b3d97
+    
+    def __init__(self, message, code=None, params=None):
+        """
+        ValidationError can be passed any object that can be printed (usually
+        a string), a list of objects or a dictionary.
+        """
+        Exception.__init__(self, message, code, params)
+        if isinstance(message, dict):
+            self.error_dict = message
+        elif isinstance(message, list):
+            self.error_list = message
+        else:
+            self.code = code
+            self.params = params
+            self.message = message
+            self.error_list = [self]
 
 class SearchQuery(object):
     """
@@ -263,12 +285,12 @@ class SearchQuery(object):
             lbl, q = re.split(pattern, query, 1)
 
             if len(lbl) == 0:
-                raise ValidationError("Delimiter ({label_delimiter!r}) was used, but no label given!"
+                raise QueryValidationError("Delimiter ({label_delimiter!r}) was used, but no label given!"
                                       "Query was: {query!r}".format(**locals()), code="invalid")
             if len(lbl) > 80:
-                raise ValidationError("Label too long: {lbl!r}".format(**locals()), code="invalid")
+                raise QueryValidationError("Label too long: {lbl!r}".format(**locals()), code="invalid")
             if not len(query):
-                raise ValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
+                raise QueryValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
                                       .format(**locals()), code="invalid")
             return SearchQuery(q.strip(), label=lbl.strip())
 
@@ -350,15 +372,15 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
         else:
             return code.get_label(rlanguage, fallback=False)
     except Label.DoesNotExist:
-        raise ValidationError("Code with label '{reference}' has no label in replacement-language."
+        raise QueryValidationError("Code with label '{reference}' has no label in replacement-language."
                               .format(**locals()), code="invalid")
     except KeyError:
-        raise ValidationError("No code with label '{reference}' found in {codebook}"
+        raise QueryValidationError("No code with label '{reference}' found in {codebook}"
                               .format(**locals()), code="invalid")
     except TypeError:
         log.warn(reference)
-        raise ValidationError("<{reference}> does not refer to either a code or a query-label. "
-                              "Did you forget to set a codebook?".format(**locals()), code="invalid")
+        raise QueryValidationError("<{reference}> does not refer to either a code or a query-label. "
+                            "Did you forget to set a codebook?".format(**locals()), code="invalid")
 
     if not recursive:
         return label
@@ -387,7 +409,7 @@ def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
             codebook, labels, rlanguage
         )
         if not replacement:
-            raise Exception("Empty replacement: {query.label}: {query.query} -> {replacement!r}".format(**locals()))
+            raise QueryError("Empty replacement: {query.label}: {query.query} -> {replacement!r}".format(**locals()))
 
         replacement = "(" + replacement + ")"
         query.query = query.query.replace(mo.group(0), replacement, 1)

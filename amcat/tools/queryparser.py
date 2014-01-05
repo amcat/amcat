@@ -303,7 +303,11 @@ def simplify(term):
     return term
     
 def parse_to_terms(s, simplify_terms=True):
-    terms = get_grammar().parseString(s, parseAll=True)[0]
+    try:
+        terms = get_grammar().parseString(s, parseAll=True)[0]
+    except Exception, e:
+        raise Exception("Cannot pass query {s!r}. Exception: {e.__class__.__name__}: {e}".format(**locals()))
+        
     if simplify_terms:
         terms = simplify(terms)
     return terms
