@@ -61,7 +61,7 @@ amcat.selection.setMessage = function (msg) {
 };
 
 amcat.selection.hideMessage = function () {
-    $('#select-message').hide();
+    $('#select-message').hide().removeClass("alert-danger").addClass("alert-info");
 };
 
 amcat.selection.current_polls = {};
@@ -102,13 +102,22 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
             } else if (!task["ready"]){
                 window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
             } else if (task["ready"] && task["status"] != "SUCCESS"){
+                var href = "/api/v4/taskresult/" + task_uuid;
                 var msg = $("<div>").text("Task {0} processed by worker, but {1}. ".f(task_uuid, task["status"]));
-                msg.append($("<a>")
-                    .attr("href", "/api/v4/taskresult/" + task_uuid)
-                    .text("View error."));
+                msg.append($("<a class='failure'>").attr("href", href).text("View error."));
+
+                $.ajax({
+                    url : href,
+                    dataType : "text",
+                    error: function (jqXHR, textStatus) {
+                        $(".failure", msg).replaceWith($("<b>").text(jqXHR.responseText));
+                        msg.parent().addClass("alert alert-danger");
+                    }
+                });
+
                 amcat.selection.setMessage(msg);
-                modal.dialog("close");
                 amcat.selection.set_progress(0);
+                modal.dialog("close");
             } else {
                 $.ajax({
                     url : "/api/v4/taskresult/" + task_uuid,
@@ -301,7 +310,8 @@ amcat.selection.get_project = function(){
 }
 
 amcat.selection.onFormSubmit = function(event){
-    amcat.selection.setMessage('Loading...')
+    amcat.selection.setMessage('Loading...');
+    $("select-message").removeClass("alert-danger").addClass("alert-info");
     $('#query-time').empty();
     $('#select-result').empty();
     $('#form-errors').empty();
