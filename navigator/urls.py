@@ -90,7 +90,7 @@ urlpatterns = patterns(
             template_name="navigator/user/change_password.html",
             post_change_redirect='change-password-done'
         )),
-    url(r'^user/change-password-done$', password_change_done,
+    url(r'^user/change-password-done$', password_change_done, name='change-password-done',
         kwargs=dict(
             template_name="navigator/user/change_password_done.html"
         )),
