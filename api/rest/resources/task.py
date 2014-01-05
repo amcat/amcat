@@ -52,5 +52,5 @@ def single_task_result(request, task_id, uuid=False):
             error_msg= "Cannot parse query: {e}".format(e=e.message)
                 
         else:
-            error_msg = "{e.__class__.__name__} :? {e}".format(**locals())
+            error_msg = "{e.__class__.__name__}: {e}".format(**locals())
         return HttpResponse(content=error_msg, status=500)

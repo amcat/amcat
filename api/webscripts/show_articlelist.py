@@ -31,7 +31,8 @@ from amcat.tools import keywordsearch
 import logging
 log = logging.getLogger(__name__)
 
-FORM_FIELDS_TO_ELASTIC = {'article_id' : "id", "medium_name" : "medium", "medium_id" : "mediumid" }
+FORM_FIELDS_TO_ELASTIC = {'article_id' : "id", "medium_name" : "medium", "medium_id" : "mediumid",
+                          "pagenr" : "page"}
     
 class ShowArticleList(WebScript):
     name = "Article List"
@@ -47,7 +48,6 @@ class ShowArticleList(WebScript):
             artsets = [str(aset.id) for aset in Project.objects.get(id=formData['projects']).all_articlesets()]
             formData.setlist("articlesets", artsets)
 
-
         if isinstance(self.data['projects'], (basestring, int)):
             project_id = int(self.data['projects'])
         else:
@@ -61,7 +61,10 @@ class ShowArticleList(WebScript):
             if f not in cols:
                 t = t.hide(f)
 
-        for col in cols & {'hits', 'text', 'lead'}:
+        if 'kwic' in cols and not self.data.get('query'):
+            raise Exception("Cannot provide Keyword in Context without query")
+                
+        for col in cols & {'hits', 'text', 'lead', 'kwic'}:
             t = t.add_arguments(col=col)
         html = unicode(t)
         #html += "Download results as : "
