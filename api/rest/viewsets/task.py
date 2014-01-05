@@ -72,6 +72,7 @@ class TaskResultSerializer(AmCATModelSerializer):
     def get_result(self, task):
         if not self.get_ready(task):
             return None
+        
         return task.get_result()
 
     class Meta:

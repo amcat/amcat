@@ -43,3 +43,5 @@ a:hover, a:focus {
 .articlelist li {list-style-type: none;}
 
 .article-headline {font-size: 13x; font-weight: bold}
+
+.failure-details {margin-top: 1em; font-decoration: italic; font-size:11px}

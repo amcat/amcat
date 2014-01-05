@@ -515,8 +515,6 @@ def build_body(query=None, filters={}, query_as_filter=False):
     if filters:
         yield ('filter', combine_filters(filters))
 
-
-    
         
 if __name__ == '__main__':
     ES().check_index()

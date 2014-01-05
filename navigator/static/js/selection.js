@@ -103,7 +103,7 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
                 window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
             } else if (task["ready"] && task["status"] != "SUCCESS"){
                 var href = "/api/v4/taskresult/" + task_uuid;
-                var msg = $("<div>").text("Task {0} processed by worker, but {1}. ".f(task_uuid, task["status"]));
+                var msg = $("<div>");
                 msg.append($("<a class='failure'>").attr("href", href).text("View error."));
 
                 $.ajax({
@@ -114,6 +114,8 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
                         msg.parent().addClass("alert alert-danger");
                     }
                 });
+
+		msg.append($("<p class='failure-details'>").text("Task: {0}, status {1}. ".f(task_uuid, task["status"])));
 
                 amcat.selection.setMessage(msg);
                 amcat.selection.set_progress(0);

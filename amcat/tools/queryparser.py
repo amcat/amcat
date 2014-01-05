@@ -301,12 +301,15 @@ def simplify(term):
                 new_terms.append(t)
         term.terms = new_terms
     return term
-    
+
+class QueryParseError(Exception):
+    pass
+        
 def parse_to_terms(s, simplify_terms=True):
     try:
         terms = get_grammar().parseString(s, parseAll=True)[0]
     except Exception, e:
-        raise Exception("Cannot pass query {s!r}. Exception: {e.__class__.__name__}: {e}".format(**locals()))
+        raise QueryParseError("{e.__class__.__name__}: {e}".format(**locals()))
         
     if simplify_terms:
         terms = simplify(terms)
