@@ -35,7 +35,7 @@ class ExportAssociation(WebScript):
         table = ShowAssociations(data=self.data).get_table()
         if self.data['export_format'] == 'table':
             table = self.get_table(table)
-        
+
         return self.outputResponse(table, table3.Table, filename='Export Association')
             
 

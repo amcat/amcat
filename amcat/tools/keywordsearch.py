@@ -217,7 +217,7 @@ def _add_column(table, column_name, query, filters, group_by, dateInterval):
 
         for group, n in results:
             table.addValue(unicode(group), column_name, n)
-        
+    table.columnTypes[column_name] = int
     
 
 def get_total_n(form):

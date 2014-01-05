@@ -18,12 +18,12 @@ def clean(s, maxchars=None):
     if type(s) == str: s = s.decode('latin-1')
     if type(s) == unicode: s = s.encode('ascii','replace')
     else: s = str(s)
-    s= re.sub("[^\w, ]","",str(s).strip())
+    s= re.sub("[^\w, :-]","",str(s).strip())
     if maxchars and len(s) > maxchars: s = s[:maxchars-1]
     return s
 
 def getSPSSFormat(type):
-    #log.debug("Determining format of %s" % type)
+    log.debug("Determining format of %s" % type)
     if type == int: return " (F8.0)"
     if issubclass(type, idlabel.IDLabel): return " (F8.0)"
     #if issubclass(type, cachable.Cachable): return " (F8.0)"
@@ -32,33 +32,31 @@ def getSPSSFormat(type):
     if type == datetime.datetime: return " (date10)"
     raise Exception("Unknown type: %s" % type)
 
-def _getVarDef(col, seen=set()):
-    """Remove duplicates and spaces from field names"""
-    fn = col.fieldname.replace(" ","_")
+def getVarName(col, seen):
+    fn = str(col).replace(" ","_")
     fn = fn.replace("-","_")
-    fn = re.sub('[^a-zA-Z0-9_]+', '', fn)
+    fn = re.sub('[^a-zA-Z_]+', '', fn)
+    fn = re.sub('^_+', '', fn)
     if fn in seen:
         for i in xrange(400):
             if "%s_%i" % (fn, i) not in seen:
                 fn = "%s_%i" % (fn, i)
                 break
     seen.add(fn)
-    vardef = "%s%s" % (fn, getSPSSFormat(col.fieldtype))
-    log.debug("Col %r vardef %r" % (col, vardef))
-    col.fieldname = fn # otherwise will get in trouble later
+    return fn
+    
+def _getVarDef(varname, vartype):
+    """Remove duplicates and spaces from field names"""
+    vardef = "%s%s" % (varname, getSPSSFormat(vartype))
     return vardef
 
 def table2spss(t, writer=sys.stdout, saveas=None):
     cols = list(t.getColumns())
-    if not isinstance(cols[0], table3.ObjectColumn):
-        cols = [table3.ObjectColumn(col, fieldtype=str, fieldname=col) for col in cols]
-        log.debug('cols are no ObjectColumn, changed to : %s' % cols)
-    for col in cols:
-        if col.fieldtype == None: col.fieldtype = str
-        if col.fieldname == None: col.fieldname = col.label
-
     seen = set()
-    vardefs = " ".join(_getVarDef(col, seen) for col in cols)
+    varnames = {col : getVarName(col, seen) for col in cols}
+    vartypes = {col : t.getColumnType(col) or str for col in cols}
+    
+    vardefs = " ".join(_getVarDef(varnames[col],vartypes[col]) for col in cols)
 
     log.debug("Writing var list")
     log.info(vardefs)
@@ -70,17 +68,18 @@ def table2spss(t, writer=sys.stdout, saveas=None):
     for row in t.getRows():
         for i, col in enumerate(cols):
             if i: writer.write(",")
+            typ = vartypes[col]
             val = t.getValue(row, col)
             oval = val
-            if val and issubclass(col.fieldtype, (idlabel.IDLabel, )):
-                if type(val) == int:
-                    valuelabels[col][val] = "?%i" % val
-                else:
-                    valuelabels[col][val.id] = val.label
-                    val = val.id
-            if val and col.fieldtype == str:
+            #if val and issubclass(col.fieldtype, (idlabel.IDLabel, )):
+            #    if type(val) == int:
+            #        valuelabels[col][val] = "?%i" % val
+             #   else:
+            #        valuelabels[col][val.id] = val.label
+            #        val = val.id
+            if val and typ == str:
                 val = '"%s"' % clean(val)
-            if val and col.fieldtype == datetime.datetime:
+            if val and typ == datetime.datetime:
                 val = val.strftime("%d/%m/%Y")
             val = "" if val is None else str(val)
             writer.write(val)
@@ -89,14 +88,14 @@ def table2spss(t, writer=sys.stdout, saveas=None):
     writer.write("END DATA.\n")
 
     log.debug("Writing var labels")
-    varlabels = " / ".join("%s '%s'" % (c.fieldname, clean(c.label, 55)) for c in cols)
+    varlabels = " / ".join("%s '%s'" % (varnames[c], clean(unicode(c), 55)) for c in cols)
     writer.write("VARIABLE LABELS %s.\n" % varlabels)
 
     log.debug("Writing value labels")
     for c in cols:
         vl = valuelabels[c]
         if vl:
-            writer.write("VALUE LABELS %s\n" % c.fieldname)
+            writer.write("VALUE LABELS %s\n" % varnames[c])
             for id, lbl in sorted(vl.iteritems()):
                 writer.write("  %i  '%s'\n" % (id, clean(lbl, 250)))
             writer.write(".\n")
