@@ -32,10 +32,32 @@ function curry (fn, scope) {
     };
 }
 
+/*
+ * Usage:
+ *
+ * 'Added {0} by {1} to your collection'.f(title, artist)
+ * 'Your balance is {0} USD'.f(77.7)
+ */
+String.prototype.format = String.prototype.f = function() {
+    var s = this,
+        i = arguments.length;
+
+    while (i--) {
+        s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i]);
+    }
+    return s;
+};
+
 amcat.selection = {};
 
 amcat.selection.setMessage = function (msg) {
-    $('#select-message').show().text(msg);
+    var dialog = $("#select-message").show();
+
+    if (typeof(msg) === "string"){
+        dialog.text(msg);
+    } else {
+        dialog.html(msg);
+    }
 };
 
 amcat.selection.hideMessage = function () {
@@ -80,7 +102,11 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
             } else if (!task["ready"]){
                 window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
             } else if (task["ready"] && task["status"] != "SUCCESS"){
-                amcat.selection.setMessage("Task " + task_uuid + " processed by worker, but "  + task["status"]);
+                var msg = $("<div>").text("Task {0} processed by worker, but {1}. ".f(task_uuid, task["status"]));
+                msg.append($("<a>")
+                    .attr("href", "/api/v4/taskresult/" + task_uuid)
+                    .text("View error."));
+                amcat.selection.setMessage(msg);
                 modal.dialog("close");
                 amcat.selection.set_progress(0);
             } else {
