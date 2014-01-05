@@ -160,6 +160,16 @@ class HierarchicalViewMixin(object):
         return ["^" + "/".join(comps) + "/$"]
 
     @classmethod
+    def get_url_component(cls):
+        """Return the url component for this level of the breadcrum trail"""
+        if hasattr(cls, 'url_fragment'):
+            return cls.url_fragment
+        elif issubclass(cls, ListView):
+            return cls.get_table_name().lower()
+        else:
+            return  "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
+        
+    @classmethod
     def _get_url_components(cls):
         """Return the url pattern for this view class without suffix"""
         if cls.parent:
@@ -169,14 +179,16 @@ class HierarchicalViewMixin(object):
             base = getattr(cls, "base_url", None)
             if base:
                 yield base
+        yield cls.get_url_component()
 
-        if hasattr(cls, 'url_fragment'):
-            yield cls.url_fragment
-        elif issubclass(cls, ListView):
-            yield cls.get_table_name().lower()
-        else:
-            yield "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
 
+    @classmethod
+    def _get_breadcrumb_url(cls, kwargs, view):
+        keys = re.findall("<([^>]+)>", cls.get_url_patterns()[0])
+        kw = {k:v for (k,v) in kwargs.items() if k in keys}
+        url = reverse(cls.get_view_name(), kwargs=kw)
+        return url
+        
     @classmethod
     def _get_breadcrumb_name(cls, kwargs, view):
         """Return the name of this 'level' in the breadcrumb trail"""
@@ -193,12 +205,8 @@ class HierarchicalViewMixin(object):
     @classmethod
     def _get_breadcrumbs(cls, kwargs, view):
         breadcrumbs = cls.parent._get_breadcrumbs(kwargs, view) if cls.parent else []
-        
-        keys = re.findall("<([^>]+)>", cls.get_url_patterns()[0])
-        kw = {k:v for (k,v) in kwargs.items() if k in keys}
-        url = reverse(cls.get_view_name(), kwargs=kw)
-        name =cls._get_breadcrumb_name(kwargs, view)
-        
+        url = cls._get_breadcrumb_url(kwargs, view)
+        name =cls._get_breadcrumb_name(kwargs, view)        
         breadcrumbs.append((name, url))
         return breadcrumbs
 

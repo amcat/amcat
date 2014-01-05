@@ -67,6 +67,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 
         table = self.filter_table(table)
         return table
+        
 from django import forms
 class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
     context_category = 'Settings'
@@ -74,9 +75,23 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     base_url = "projects"
     model = Project
 
+    def get(self, *args, **kargs):
+        star = self.request.GET.get('star')
+        if (star is not None):
+            favs = self.request.user.get_profile().favourite_projects
+            (favs.add if int(star) else favs.remove)(self.project.id)
+                
+        return super(ProjectDetailsView, self).get(*args, **kargs)
+
     def get_success_url(self):
         return reverse(self.get_view_name(), args=(self.project.id,))
-    
+
+
+    @classmethod
+    def _get_breadcrumb_url(cls, kwargs, view):
+        return reverse("article set-list", args=(kwargs['project_id'],))
+
+        
     class form_class(forms.ModelForm):
         class Meta:
             model = Project
