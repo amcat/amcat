@@ -46,7 +46,7 @@ amcat.selection.current_polls = {};
 amcat.selection.modal_html =
     '<div class="message"></div>' +
     '<div class="progress">' +
-        '<div class="progress-bar" role="progressbar" aria-valuenow="60" valuemin="0" aria-valuemax="100" style="width: 60%;"></div>' +
+        '<div class="progress-bar" role="progressbar" aria-valuenow="0" valuemin="0" aria-valuemax="100" style="width:0%;"></div>' +
     '</div>';
 
 amcat.selection.modal = null;
