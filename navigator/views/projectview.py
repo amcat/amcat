@@ -112,6 +112,12 @@ from django.views.generic.list import ListView
 
 class HierarchicalViewMixin(object):
 
+
+    def get_context_data(self, **kwargs):
+        context = super(HierarchicalViewMixin, self).get_context_data(**kwargs)
+        context["object"] = self.get_object
+        return context
+    
     def get_object(self):
         return self._get_object(self.kwargs)
     
@@ -195,6 +201,7 @@ class HierarchicalViewMixin(object):
         
         breadcrumbs.append((name, url))
         return breadcrumbs
+
         
         
 from navigator.views.scriptview import ScriptView
