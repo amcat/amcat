@@ -81,15 +81,15 @@ class ArticleSet(AmcatModel):
     def add_articles(self, articles, add_to_index=True):
         """
         Add the given articles to this article set
-        If refresh or deduplicate are True, schedule a new celery task to do this
         """
 
         articles = {(art if type(art) is int else art.id) for art in articles}
         to_add = articles - self.get_article_ids()
+        # check that all articles exist:
+        to_add = Article.objects.filter(pk__in=to_add).values_list("pk", flat=True)
 
         if not to_add:
             return
-
         # add to database
         ArticleSetArticle.objects.bulk_create(
             [ArticleSetArticle(articleset=self, article_id=artid) for artid in to_add]
