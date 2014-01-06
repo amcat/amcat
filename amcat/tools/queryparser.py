@@ -118,7 +118,7 @@ class Boolean(object):
             simple_terms = collections.defaultdict(list) # field : termlist
             clauses = [] # OR clauses 
             for t in self.terms:
-                if isinstance(t, Term) and "*" not in t.text:
+                if isinstance(t, Term) and "*" not in t.text and "?" not in t.text:
                     simple_terms[t.qfield].append(c(t.text))
                 else:
                     clauses.append(t.get_filter_dsl())
@@ -187,13 +187,16 @@ class Span(Boolean, FieldTerm):
                 if term.text.endswith("*"):
                     text = term.text[:-1]
                     return [{"span_multi":{"match":{"prefix" : { field :  { "value" : text } }}}}]
+                elif "?" in term.text:
+                    text = term.text.replace("?", ".")
+                    return [{"span_multi":{"match":{"regexp" : { field :  text } }}}]
                 else:
                     return [{"span_term" : {field : term.text.lower()}}]
             else:
                 # term is a disjunction: return a list of clauses
                 # index [0] because get_clause returns a list again, which we don't want here
                 return [get_clause(t, field)[0] for t in term.terms]
-        clauses = (get_clause(t, self.qfield) for t in self.terms)
+        clauses = [get_clause(t, self.qfield) for t in self.terms]
         clauses = itertools.product(*clauses)
         clauses = [{"span_near" : {"slop": self.slop, "in_order" : self.in_order, "clauses" : list(c)}}
                    for c in clauses]
@@ -219,7 +222,7 @@ def get_term(tokens):
         # this is where it gets weird: phrase queries don't support general
         # prefixes, but span (=slop) queries do. So, make a span query
         # with slop=0 and in_order=True if a non-final wildcard is present
-        if "*" in tokens.quote:
+        if "*" in tokens.quote or "?" in tokens.quote:
             return lucene_span(tokens.quote, tokens.field, 0)
         else:
             return Quote(tokens.quote, tokens.field)
