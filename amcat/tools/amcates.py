@@ -35,6 +35,7 @@ from elasticsearch import Elasticsearch, connection
 from elasticsearch.client import indices, cluster
 from django.conf import settings
 from amcat.tools.caching import cached
+from amcat.tools.progress import NullMonitor
 
 def _clean(s):
     if s: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
@@ -278,11 +279,14 @@ class ES(object):
         for batch in splitlist(article_ids, itemsperbatch=1000):
             self.bulk_update(batch, UPDATE_SCRIPT_REMOVE_FROM_SET, params={'set' : setid})
 
-    def add_to_set(self, setid, article_ids):
+    def add_to_set(self, setid, article_ids, monitor=NullMonitor()):
         """Add the given articles to the given set. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator)."""
         if not article_ids: return
-        for batch in splitlist(article_ids, itemsperbatch=1000):
+        batches = list(splitlist(article_ids, itemsperbatch=1000))
+        nbatches = len(batches)
+        for i, batch in enumerate(batches):
+            monitor.update(40/nbatches, "Added batch {i}/{nbatches}".format(**locals()))
             self.bulk_update(article_ids, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
         
     def bulk_insert(self, dicts):

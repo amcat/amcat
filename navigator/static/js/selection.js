@@ -429,8 +429,6 @@ amcat.selection.addActionToMainForm = function(webscriptClassName, label){
 amcat.selection.submitAction = function(webscriptClassName){
     console.log('submitting action');
     $('#dialog-message-content').children().appendTo('#hidden-form-extra'); // move form elements to hidden form (to submit everything)
-    //$('#hidden-form input[name=webscriptToRun]').val(webscriptClassName);
-    $('#hidden-form').attr('action', amcat.selection.apiUrl + 'webscript/' + webscriptClassName + '/run' + '?project=' + amcat.selection.get_project());
     
     var output = $('#hidden-form select[name=output]').val();
     //console.log('output', output);
@@ -438,8 +436,10 @@ amcat.selection.submitAction = function(webscriptClassName){
         $('#dialog-message-status').html('<div class="loading">Loading..</div>');
         $("#dialog-message").dialog('option', 'buttons', {});
     }
-    $('#hidden-form').submit();
-    $('#hidden-form-extra').children().appendTo('#dialog-message-content'); // move form elements back
+
+    amcat.selection.callWebscript(webscriptClassName, $("#hidden-form").serialize(), amcat.selection.loadIframe);
+    $("#dialog-message").dialog("close");
+
 }
 
 amcat.selection.setDialogButtons = function(){

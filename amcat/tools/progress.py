@@ -15,8 +15,8 @@ class ProgressMonitor(object):
         self.do_update()
 
     def do_update(self):
-        log.info(self.worked / self.total)
         self.percent = int(100. * self.worked / self.total)
+        log.info("[{self.percent}%] {self.worked} / {self.total} {self.message}".format(**locals()))
         for listener in self.listeners:
             listener(self)
 

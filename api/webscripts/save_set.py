@@ -43,8 +43,10 @@ class SaveAsSet(WebScript):
     
     
     def run(self):
+        self.progress_monitor.update(1, "Listing articles")
         article_ids = list(keywordsearch.get_ids(self.data))
-        result = SaveAsSetScript(self.data).run(article_ids)
+        self.progress_monitor.update(39, "Creating set with {n} articles".format(n=len(article_ids)))
+        result = SaveAsSetScript(self.data, monitor=self.progress_monitor).run(article_ids)
         result.provenance = json.dumps(dict(self.data))
         result.save()
 
