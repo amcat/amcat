@@ -98,7 +98,6 @@ def getDatatable(form, rowlink='article/{id}'):
     table = Datatable(SearchResource, rowlink=rowlink)
     
     for field, val in filters_from_form(form):
-        log.info(str([field, val]))
         table = table.filter(**{field : val})
 
     for query in queries_from_form(form):
