@@ -53,7 +53,7 @@ class AssignCodingJobForm(forms.Form):
     unitschema = forms.ModelChoiceField(None)
     articleschema = forms.ModelChoiceField(None)
     insertuser = forms.ModelChoiceField(None)
-
+    
     def __init__(self, project=None, *args, **kwargs):
         super(AssignCodingJobForm, self).__init__(*args, **kwargs)
 
@@ -80,6 +80,7 @@ class AssignCodingJob(WebScript):
     form = AssignCodingJobForm
     displayLocation = ('ShowSummary', 'ShowArticleList')
     output_template = None 
+    is_edit = True
 
     @classmethod
     def formHtml(cls, project=None):
