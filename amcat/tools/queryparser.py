@@ -68,9 +68,11 @@ class Term(BaseTerm):
     def get_dsl(self):
         if self.text == "*":
             return {"constant_score" : {"filter" : {"match_all" : {}}}}
-        qtype = "wildcard" if '*' in self.text else "match"
+        qtype = "wildcard" if ('*' in self.text or '?' in self.text) else "match"
         return {qtype : {self.qfield : self.text.lower()}}
     def get_filter_dsl(self):
+        if "?" in self.text:
+            return query_filter(self.get_dsl())
         if "*" in self.text:
             if self.text == "*":
                 return {"match_all" : {}}
@@ -349,10 +351,10 @@ class TestQueryParser(amcattest.AmCATTestCase):
         self.assertEqual(q('(x:a b) W/10 c'), 'x::PROX/10[OR[a b] c]')
         
         # proximity queries must have unique field and can only contain wildcards and disjunctions
-        self.assertRaises(ParseError, q, 'a W/10 (b OR (c OR d))')
-        self.assertRaises(ParseError, q, 'x:a W/10 y:b')
-        self.assertRaises(ParseError, q, 'a W/10 (b AND c)')
-        self.assertRaises(ParseError, q, 'a W/10 (b W/5 c)')
+        self.assertRaises(QueryParseError, q, 'a W/10 (b OR (c OR d))')
+        self.assertRaises(QueryParseError, q, 'x:a W/10 y:b')
+        self.assertRaises(QueryParseError, q, 'a W/10 (b AND c)')
+        self.assertRaises(QueryParseError, q, 'a W/10 (b W/5 c)')
 
         # lucene notation
         self.assertEqual(q('"a b"~5'), '_all::PROX/5[a b]')
@@ -360,7 +362,7 @@ class TestQueryParser(amcattest.AmCATTestCase):
         self.assertEqual(q('"a (b c)"~5'), '_all::PROX/5[a OR[b c]]')
 
         # disallow AND in lucene notation
-        self.assertRaises(ParseError, q, '"a (b AND c)"~5')
+        self.assertRaises(QueryParseError, q, '"a (b AND c)"~5')
 
     def test_dsl(self):
         q = parse
