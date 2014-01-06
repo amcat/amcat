@@ -80,7 +80,9 @@ class AggregationScript(script.Script):
         table = keywordsearch.getTable(self.options, self.progress_monitor)
         
         if self.options['relative']:
+            q = getattr(table, "queries", None)
             table = RelativeTable(table)
+            table.queries = q
             
         if xAxis == 'date':
             # TODO: fill out on elastic queries
