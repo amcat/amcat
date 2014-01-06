@@ -34,7 +34,7 @@ from amcat.tools.caching import cached
 
 
 FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets"
-RE_KWIC = re.compile("(?P<left>.*?)<em>(?P<keyword>.*?)</em>(?P<right>.*)")
+RE_KWIC = re.compile("(?P<left>.*?)<em>(?P<keyword>.*?)</em>(?P<right>.*)", re.DOTALL)
 
 class LazyES(object):
     def __init__(self, queries=None, filters=None, fields=None, hits=False):
@@ -102,10 +102,13 @@ class KWICField(CharField):
     
     def field_to_native(self, obj, field_name):
         # use highlighting if available, otherwise fall back to raw text
-        
-        hl = obj.highlight.get('text')
-        m = RE_KWIC.match(hl[0])
-        if m: return m.groupdict()[self.kwic]
+
+        hl = obj.highlight.get('headline')
+        if not hl: hl = obj.highlight.get('text')
+        if hl:
+            m = RE_KWIC.match(hl[0])
+            if m:
+                return m.groupdict()[self.kwic]
 
 class ScoreField(IntegerField):
     def field_to_native(self, obj, field_name):
