@@ -125,7 +125,7 @@ class WebScript(object):
     def getActions(self):
         for ws in api.webscripts.actionScripts:
             if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.data.get('query')):
-                yield ws.__name__, ws.name
+                yield ws.__name__, ws.name, ws.__name__ == "ExportAggregation"
 
     def delay(self):
         return webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)

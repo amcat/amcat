@@ -78,7 +78,7 @@ amcat.selection.set_progress = function(percent){
     $(".progress-bar", amcat.selection.modal).css("width", percent + "%");
 };
 
-amcat.selection.poll = function(task_uuid, callback, timeout){
+amcat.selection.poll = function(task_uuid, callback, timeout, download){
     if (amcat.selection.modal === null){
         amcat.selection.modal = $("<div>").html(amcat.selection.modal_html).dialog({
             autoOpen : false, modal : true
@@ -93,16 +93,16 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
         dataType : "json",
         success : function(data){
             var new_timeout = (timeout >= 3000) ? timeout : timeout + 500;
+            var href = "/api/v4/taskresult/" + task_uuid;
 
             task = data["results"][0];
             if (!task["ready"] && task["status"] === "INPROGRESS" && task["progress"] !== null){
                 $(".message", modal).text(task.progress.message);
                 amcat.selection.set_progress(task.progress.completed);
-                window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
+                window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout, download), timeout);
             } else if (!task["ready"]){
-                window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout), timeout);
+                window.setTimeout(curry(amcat.selection.poll, this, task_uuid, callback, new_timeout, download), timeout);
             } else if (task["ready"] && task["status"] != "SUCCESS"){
-                var href = "/api/v4/taskresult/" + task_uuid;
                 var msg = $("<div>");
                 msg.append($("<a class='failure'>").attr("href", href).text("View error."));
 
@@ -115,12 +115,18 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
                     }
                 });
 
-		msg.append($("<p class='failure-details'>").text("Task: {0}, status {1}. ".f(task_uuid, task["status"])));
+                msg.append($("<p class='failure-details'>").text("Task: {0}, status {1}. ".f(task_uuid, task["status"])));
 
                 amcat.selection.setMessage(msg);
                 amcat.selection.set_progress(0);
                 modal.dialog("close");
             } else {
+                if (download == true){
+                    window.location = href;
+                    modal.dialog("close");
+                    return;
+                }
+
                 $.ajax({
                     url : "/api/v4/taskresult/" + task_uuid,
                     success : callback,
@@ -142,14 +148,14 @@ amcat.selection.poll = function(task_uuid, callback, timeout){
 
 };
 
-amcat.selection.callWebscript = function(name, data, callBack){
+amcat.selection.callWebscript = function(name, data, callBack, download){
     var url = amcat.selection.apiUrl + 'webscript/' + name + '/run?delay=&project=' + amcat.selection.get_project();
 
     $.ajax({
       type: 'POST',
       url: url,
       success: function(data){
-          amcat.selection.poll(data["task_uuid"], callBack, 200);
+          amcat.selection.poll(data["task_uuid"], callBack, 200, download);
       },
       error: function(jqXHR, textStatus){
         console.log('error form data', textStatus);
@@ -345,7 +351,6 @@ amcat.selection.loadIframe = function(data){ // this is the form submit response
     } catch(e){
        $('iframe').show().css('width','900px').css('height','600px');
        $('#select-result').html('<div class="error">Received an invalid JSON response</div>');
-       console.error(e.toString().substring(0,1000));
        return;
     }
 
@@ -426,8 +431,7 @@ amcat.selection.addActionToMainForm = function(webscriptClassName, label){
     });
 }
 
-amcat.selection.submitAction = function(webscriptClassName){
-    console.log('submitting action');
+amcat.selection.submitAction = function(webscriptClassName, download){
     $('#dialog-message-content').children().appendTo('#hidden-form-extra'); // move form elements to hidden form (to submit everything)
     
     var output = $('#hidden-form select[name=output]').val();
@@ -437,7 +441,7 @@ amcat.selection.submitAction = function(webscriptClassName){
         $("#dialog-message").dialog('option', 'buttons', {});
     }
 
-    amcat.selection.callWebscript(webscriptClassName, $("#hidden-form").serialize(), amcat.selection.loadIframe);
+    amcat.selection.callWebscript(webscriptClassName, $("#hidden-form").serialize(), amcat.selection.loadIframe, download);
     $("#dialog-message").dialog("close");
 
 }
@@ -451,10 +455,10 @@ amcat.selection.setDialogButtons = function(){
     });
 }
 
-amcat.selection.actionClick = function(webscriptClassName, el){
+amcat.selection.actionClick = function(webscriptClassName, el, download){
     var url = amcat.selection.apiUrl + 'webscript/' + webscriptClassName + '/form?project=' + amcat.selection.get_project();
     amcat.selection.submitActionWrapper = function(){
-        amcat.selection.submitAction(webscriptClassName);
+        amcat.selection.submitAction(webscriptClassName, download);
     }
     $('#dialog-message-status').empty();
     $.ajax({
