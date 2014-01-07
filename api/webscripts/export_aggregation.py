@@ -33,7 +33,7 @@ class ExportAggregation(WebScript):
     form = ExportAggregationForm
     displayLocation = ('ShowAggregation')
     output_template = None
-    
+    is_download = True
     
     def run(self):
         aggrTable = AggregationScript(self.data).run()

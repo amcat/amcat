@@ -80,7 +80,7 @@ class WebScript(object):
     id = None # id used in webforms
     output_template = None # path to template used for html output
     solrOnly = False # only for Solr output, not on database queries
-
+    is_download = False # set True if the result should be downloaded by the browser instead of displayed
     def __init__(self, project=None, user=None, data=None, **kwargs):
         if not isinstance(data, QueryDict) and data is not None:
             data = to_querydict(data, mutable=True)
@@ -125,7 +125,7 @@ class WebScript(object):
     def getActions(self):
         for ws in api.webscripts.actionScripts:
             if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.data.get('query')):
-                yield ws.__name__, ws.name, ws.__name__ == "ExportAggregation"
+                yield ws.__name__, ws.name, ws.is_download
 
     def delay(self):
         return webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
