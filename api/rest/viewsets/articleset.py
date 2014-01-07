@@ -50,7 +50,7 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
         self.fav_articlesets = set(ArticleSet.objects.filter(favourite_of_projects=project)
                                    .values_list("id", flat=True))
-        sets = list(ArticleSet.objects.filter(Q(project=project)|Q(projects_set=project)).values_list("id", flat=True))
+        sets = list(ArticleSet.objects.filter(Q(project=project)|Q(projects_set=project)).distinct().values_list("id", flat=True))
         self.nn = dict(amcates.ES().aggregate_query(filters={'sets' : sets}, group_by='sets'))
 
         self._cached = True
