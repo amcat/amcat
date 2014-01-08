@@ -43,7 +43,7 @@ class AmCATViewSetMixin(object):
     def __getattr__(self, item):
         for model_key, viewset in _get_model_keys(self.__class__):
             if model_key is item:
-                return viewset.model.objects.get(pk=self.kwargs.get(model_key))
+                return viewset.model.objects.get(pk=self.kwargs.get(model_key, self.kwargs.get("pk")))
         raise AttributeError
 
     @classmethod
