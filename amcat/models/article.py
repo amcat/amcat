@@ -176,7 +176,6 @@ class Article(AmcatModel):
                 try:
                     sid = transaction.savepoint()
                     a.save()
-                    log.info("saved article '{a.headline}'".format(**locals()))
                     transaction.savepoint_commit(sid)
                 except (IntegrityError, ValidationError, DatabaseError) as e:
                     log.warning(str(e))

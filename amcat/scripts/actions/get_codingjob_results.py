@@ -443,14 +443,13 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
 
         articles = list(job.articleset.articles.all())
-        amcattest.create_test_coding(codingjob=job, article=articles[0]).update_values({f:s2})
-        
-        # test excel, can't test content but we can test output and no error        
+        coding = amcattest.create_test_coding(codingjob=job, article=articles[0])
+        coding.update_values({f:s2})
+
+
+        # test excel, can't test content but we can test output and no error
         s = self._get_results_script([job], {f : {}}, export_format='xlsx')
         self.assertTrue(s.run())
-        
-        
-
         
     def test_nqueries(self):
         from amcat.tools import amcatlogging
@@ -460,12 +459,13 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
         job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=7)
         articles = list(job.articleset.articles.all())
-        
-        amcattest.create_test_coding(codingjob=job, article=articles[0]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
-        amcattest.create_test_coding(codingjob=job, article=articles[1]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
-        amcattest.create_test_coding(codingjob=job, article=articles[2]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
-        amcattest.create_test_coding(codingjob=job, article=articles[3]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})
-        amcattest.create_test_coding(codingjob=job, article=articles[4]).update_values({strf:"bla", intf:1, codef:codes["A1b"]})                        
+
+        log.info(codes)
+        amcattest.create_test_coding(codingjob=job, article=articles[0]).update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
+        amcattest.create_test_coding(codingjob=job, article=articles[1]).update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
+        amcattest.create_test_coding(codingjob=job, article=articles[2]).update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
+        amcattest.create_test_coding(codingjob=job, article=articles[3]).update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
+        amcattest.create_test_coding(codingjob=job, article=articles[4]).update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
 
         codingjobs = list(CodingJob.objects.filter(pk__in=[job.id]))
         c = list(codingjobs[0].codings)[0]

@@ -25,6 +25,7 @@ to a specific coding job set.
 """
 
 from __future__ import print_function
+from django.db import transaction
 
 from amcat.tools.toolkit import deprecated
 
@@ -100,15 +101,15 @@ class Coding(AmcatModel):
         except CodingValue.DoesNotExist:
             pass
 
-    def set_value(self, field, value):
-        """Create a new coding value on this coding
+    def _get_coding_value(self, field, value):
+        if isinstance(value, int):
+            return CodingValue(field=field, coding=self, intval=value)
+        return CodingValue(field=field, coding=self, strval=value)
 
-        @param field: the coding schema field
-        @param value: the deserialized value
-        """
-        a = CodingValue(coding=self, field=field)
-        a.update_value(value)
-        a.save()
+    @transaction.atomic
+    def update_values(self, values_dict):
+        self.values.all().delete()
+        CodingValue.objects.bulk_create(self._get_coding_value(f, v) for f, v in values_dict.items())
 
     def save(self, *args, **kwargs):
         # This is deprecated behaviour intended to
@@ -174,15 +175,6 @@ class CodingValue(AmcatModel):
         """Get the 'deserialised' (object) value for this codingvalue"""
         return self.field.serialiser.deserialise(self.serialised_value)
 
-    def update_value(self, value):
-        """Update to the given (deserialised) value by serialising and
-        updating strval or intval, as appropriate"""
-        serval = self.field.serialiser.serialise(value)
-        stype = self.field.serialiser.deserialised_type
-        if stype == unicode: self.strval = serval
-        else: self.intval = serval
-        self.save()
-
     class Meta():
         db_table = 'codings_values'
         app_label = 'amcat'
@@ -222,6 +214,28 @@ class TestCoding(amcattest.AmCATTestCase):
         a2 = amcattest.create_test_coding(codingjob=j,
                                               sentence=amcattest.create_test_sentence())
         self.assertEqual(a2.schema, self.schema)
+
+    def test_update_values(self):
+        codebook, codes = amcattest.create_test_codebook_with_codes()
+        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=7)
+        articles = list(job.articleset.articles.all())
+
+        coding = amcattest.create_test_coding(codingjob=job, article=articles[0])
+        self.assertEqual(0, coding.values.count())
+        coding.update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
+        self.assertEqual(3, coding.values.count())
+        self.assertTrue(strf in dict(coding.get_values()))
+        self.assertTrue(intf in dict(coding.get_values()))
+        self.assertTrue(codef in dict(coding.get_values()))
+        self.assertEqual(1, dict(coding.get_values())[intf])
+
+        # Does update_values delete values not present in dict?
+        coding.update_values({strf:"blas"})
+        self.assertEqual(1, coding.values.count())
+        self.assertTrue(strf in dict(coding.get_values()))
+        self.assertEqual("blas", dict(coding.get_values())[strf])
+
 
 
     def test_create_value(self):
