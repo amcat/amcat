@@ -72,6 +72,7 @@ class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
         form = super(CodingSchemaCreateView, self).get_form(form_class)
         form.fields["project"].widget = HiddenInput()
         form.fields["project"].initial = self.project
+        form.fields["highlighters"].required = False
         return form
 
     def get_success_url(self):
