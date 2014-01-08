@@ -56,10 +56,6 @@ class AggregationForm(amcat.scripts.forms.SelectionForm):
                             ('quarter', 'Quarter'), 
                             ('year', 'Year')
                         ), initial='month', required=False)
-    counterType = forms.ChoiceField(choices=(
-                        ('numberOfArticles', 'Number of Articles'), 
-                        ('numberOfHits', 'Number of Hits')
-                   ), initial='numberOfArticles')
     relative = forms.BooleanField(label="Make values relative to (and exclude) first column", required=False)
 
 class AggregationScriptForm(AggregationForm, amcat.scripts.forms.SelectionForm):

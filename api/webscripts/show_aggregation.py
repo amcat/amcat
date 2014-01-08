@@ -75,7 +75,7 @@ class ShowAggregation(WebScript):
                 datesDict = {}
 
             labels = {q.label : q.query for q in aggrTable.queries}
-            aggregationType = 'hits' if self.options['counterType'] == 'numberOfHits' else 'articles'
+            aggregationType = 'articles'
             graphOnly = 'true' if self.options['graphOnly'] == True else 'false'
 
             scriptoutput = render_to_string('api/webscripts/aggregation.html', {

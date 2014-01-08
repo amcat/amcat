@@ -27,6 +27,8 @@ class ExportAssociation(WebScript):
     form_template = None
     displayLocation = ('ShowAssociations')
     output_template = None
+    is_download = True
+    
     class form(amcat.scripts.forms.TableOutputForm):
         export_format = forms.ChoiceField(label="Output Format", choices = (('table', 'Table'), ('list', 'List')), initial=0)
             
