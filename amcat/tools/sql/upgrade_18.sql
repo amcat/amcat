@@ -31,8 +31,8 @@ START TRANSACTION;
 	           (SELECT codingjob_id, article_id
 	            FROM coded_articles));
 
-	UPDATE codings SET ca.coded_article_id = c.id
-		FROM codings c, coded_article ca
+	UPDATE codings SET coded_article_id = ca.id
+		FROM codings c, coded_articles ca
 		WHERE
 		    c.codingjob_id = ca.codingjob_id AND
 		    c.article_id = ca.article_id;
