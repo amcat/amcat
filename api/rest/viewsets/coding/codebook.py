@@ -22,7 +22,7 @@ from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from amcat.models import Codebook, CodingSchema
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets import CodingJobViewSetMixin

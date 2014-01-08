@@ -20,9 +20,9 @@ from django.db.models import Q
 from rest_framework import serializers
 from amcat.models import ArticleSet
 from amcat.tools import amcates
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin
-from api.rest.resources.amcatresource import DatatablesMixin
 from rest_framework.viewsets import ModelViewSet
 from api.rest.viewset import AmCATViewSetMixin
 

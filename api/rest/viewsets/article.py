@@ -18,6 +18,7 @@
 ###########################################################################
 import json
 from amcat.models import Medium, Article
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 
@@ -98,7 +99,6 @@ class ArticleSerializer(AmCATModelSerializer):
         
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from rest_framework.viewsets import ModelViewSet
-from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
 from api.rest.viewsets.project import CannotEditLinkedResource, NotFoundInProject
