@@ -177,9 +177,8 @@ def getTable(form):
     if yAxis == 'total':
         _add_column(table, 'total', query, filters, group_by, dateInterval)
     elif yAxis == 'medium':
-        media = Medium.objects.filter(pk__in=ES().list_media(query, filters)).only("name")
-        
-        for medium in sorted(media):
+        media = Medium.objects.filter(pk__in=ES().list_media(query, filters)).order_by("id").only("name")
+        for medium in media:
             filters['mediumid'] = medium.id
             name = u"{medium.id} - {}".format(medium.name.replace(",", " ").replace(".", " "), **locals())
             _add_column(table, name, query, filters, group_by, dateInterval)
@@ -189,6 +188,7 @@ def getTable(form):
     else:
         raise Exception('yAxis {yAxis} not recognized'.format(**locals()))
 
+    table.rows = sorted(table.rows)
     table.queries = queries
     return table
 
@@ -211,7 +211,7 @@ def _add_column(table, column_name, query, filters, group_by, dateInterval):
         if group_by == "mediumid": 
             results = add_medium_names(results)
 
-        for group, n in results:
+        for group, n in sorted(results):
             table.addValue(unicode(group), column_name, n)
         
     

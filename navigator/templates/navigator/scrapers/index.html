@@ -6,6 +6,9 @@
 {% compress css %}
     <link href="{% static 'css/selection.css' %}" rel="stylesheet" type="text/css" media="screen" />
     <link href="{% static 'css/jquery.jqplot.min.css' %}" rel="stylesheet" type="text/css" media="screen" />
+<style>
+table.display {margin:0}
+</style>
 {% endcompress %}
 {% endblock %}
 {% block javascript %}    
@@ -33,6 +36,19 @@
 
 {% block content %}
 
+<h1>Daily output since {{ start_date }}</h1>
 {{ output|safe }}
 
+<h1>Weekly output since {{ weekly_start_date }}</h1>
+{{ weekly_output|safe }}
+
+<h1>Scrapers</h1>
+<table class="display">
+<thead><tr><th>Scraper</th><th>Article Set</th></tr></thead>
+{% for s in scrapers %}
+  <tr>
+   <td>{{ s.label }}</td>
+   <td><a href='{% url "project-selection" s.articleset.project.id %}?articlesets={{ s.articleset.id }}'>{{ s.articleset.id }} : {{ s.articleset }}</a></td>
+  </tr>
+{% endfor %}
 {% endblock %}
