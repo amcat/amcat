@@ -97,7 +97,11 @@ class SelectionForm(forms.Form):
         codebooks = Codebook.objects.filter(project_id=project.id)
         self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook'].queryset = codebooks
-        self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
+
+        if data and data.get("output") == "html":
+            self.fields['articlesets'].queryset = ArticleSet.objects.all()
+        else:
+            self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
 
         distinct_args = ["id"] if db_supports_distinct_on() else []
 
