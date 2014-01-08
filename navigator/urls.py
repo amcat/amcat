@@ -162,7 +162,6 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
                             )
-        print view.__name__, view.get_view_name(),  pattern
 
 urlpatterns += patterns('',
                         url("^projects/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
