@@ -385,12 +385,12 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         c = amcattest.create_test_coding(codingjob=job, article=articles[0])
 
         # test simple coding with a codebook code
-        c.update_values({strf:"bla", intf:1, codef:codes["A1b"]})
+        c.update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
         self.assertEqual(self._get_results([job], {strf : {}, intf : {}, codef : dict(ids=True)}),
                          [('bla', 1, codes["A1b"].id)])
         # test multiple codings and parents
         c2 = amcattest.create_test_coding(codingjob=job, article=articles[1])
-        c2.update_values({strf:"blx", intf:1, codef:codes["B1"]})
+        c2.update_values({strf:"blx", intf:1, codef:codes["B1"].id})
         self.assertEqual(set(self._get_results([job], {strf : {}, intf : {}, codef : dict(labels=True, parents=2)})),
                          {('bla', 1, "A", "A1", "A1b"), ('blx', 1, "B", "B1", "B1")})
 
@@ -398,7 +398,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         # test sentence result
         s = amcattest.create_test_sentence(article=articles[0])
         sc = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s)
-        sc.update_values({sstrf:"z", sintf:-1, scodef:codes["A"]})
+        sc.update_values({sstrf:"z", sintf:-1, scodef:codes["A"].id})
                 
         self.assertEqual(set(self._get_results([job], {strf : {}, sstrf : {}, sintf : {}}, export_level=2)),
                          {('bla', 'z', -1), ('blx', None, None)})
