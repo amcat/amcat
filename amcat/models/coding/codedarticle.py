@@ -49,7 +49,7 @@ def _to_coding(coded_article, coding):
     @type article: Article
     @type coding: dict
     """
-    return Coding(coded_article=coded_article, sentence_id=coding["sentence_id"])
+    return Coding(coded_article=coded_article, sentence_id=coding.get("sentence_id"))
 
 def _to_codingvalue(coding, codingvalue):
     """
@@ -60,8 +60,10 @@ def _to_codingvalue(coding, codingvalue):
     @type codingvalue: dict
     """
     return CodingValue(
-        field_id=codingvalue["codingschemafield_id"], intval=codingvalue["intval"],
-        strval=codingvalue["strval"], coding=coding
+        field_id=codingvalue.get("codingschemafield_id"),
+        intval=codingvalue.get("intval"),
+        strval=codingvalue.get("strval"),
+        coding=coding
     )
 
 def _to_codingvalues(coding, values):
@@ -142,7 +144,6 @@ class CodedArticle(models.Model):
 
             {
               "sentence_id" : int,
-              "comments" : str / NoneType,
               "values" : [CodingDict]
             }
 
@@ -162,17 +163,17 @@ class CodedArticle(models.Model):
         coding_dicts = tuple(coding_dicts)
 
         values = tuple(itertools.chain.from_iterable(cd["values"] for cd in coding_dicts))
-        if any(v["intval"] == v["strval"] == None for v in values):
+        if any(v.get("intval") == v.get("strval") == None for v in values):
             raise ValueError("intval and strval cannot both be None")
 
-        if any(v["intval"] is not None and v["strval"] is not None for v in values):
+        if any(v.get("intval") is not None and v.get("strval") is not None for v in values):
             raise ValueError("intval and strval cannot both be not None")
 
         schemas = (self.codingjob.unitschema_id, self.codingjob.articleschema_id)
         fields = CodingSchemaField.objects.filter(codingschema__id__in=schemas)
         field_ids = set(fields.values_list("id", flat=True)) | {None}
 
-        if any(v["codingschemafield_id"] not in field_ids for v in values):
+        if any(v.get("codingschemafield_id") not in field_ids for v in values):
             raise ValueError("codingschemafield_id must be in codingjob")
 
         with transaction.atomic():
@@ -252,7 +253,20 @@ class TestCodedArticle(amcattest.AmCATTestCase):
         self.assertRaises(IntegrityError, coded_article.replace_codings, [illval3])
         self.assertRaises(ValueError, coded_article.replace_codings, [illval4])
 
+        # Unspecified values default to None
+        val = self._get_coding_dict(intval=1, field_id=intf.id)
+        del val["values"][0]["strval"]
+        coded_article.replace_codings([val])
+        value = coded_article.codings.all()[0].values.all()[0]
+        self.assertEqual(value.strval, None)
+        self.assertEqual(value.intval, 1)
 
+        val = self._get_coding_dict(strval="a", field_id=intf.id)
+        del val["values"][0]["intval"]
+        coded_article.replace_codings([val])
+        value = coded_article.codings.all()[0].values.all()[0]
+        self.assertEqual(value.strval, "a")
+        self.assertEqual(value.intval, None)
 
 class TestCodedArticleStatus(amcattest.AmCATTestCase):
     def test_status(self):
