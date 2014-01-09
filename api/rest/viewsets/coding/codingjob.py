@@ -18,8 +18,13 @@
 ###########################################################################
 from django.db.models import Count, Q
 from rest_framework import serializers
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-from amcat.models import CodingJob, Article, Sentence, Codebook, CodingRule, CodingSchemaField
+from rest_framework.viewsets import ReadOnlyModelViewSet
+from amcat.models.coding.codingjob import CodingJob
+from amcat.models.article import Article
+from amcat.models.sentence import  Sentence
+from amcat.models.coding.codebook import Codebook
+from amcat.models.coding.codingrule import CodingRule
+from amcat.models.coding.codingschemafield import CodingSchemaField
 from amcat.models.coding import coding
 from amcat.nlp import sbd
 from amcat.tools.caching import cached
@@ -32,13 +37,13 @@ from api.rest.viewsets.sentence import SentenceViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 
-STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
 
 __all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet",
            "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet",
            "CodingJobHighlighterViewSet", "CodingJobCodingRuleViewSet",
            "CodingJobCodingSchemaFieldViewSet")
 
+STATUS_DONE = None
 
 class CodingJobSerializer(AmCATModelSerializer):
     """
@@ -58,6 +63,9 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     @cached
     def _get_n_done_jobs(self):
+        if not STATUS_DONE:
+            STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
+            global STATUS_DONE
         return dict(self._get_codingjobs().filter(
                     codings__status__in=STATUS_DONE).annotate(Count("codings"))
                     .values_list("id", "codings__count"))

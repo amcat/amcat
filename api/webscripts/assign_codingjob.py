@@ -63,6 +63,7 @@ class AssignCodingJobForm(forms.Form):
         self.fields['coder'].choices = gen_user_choices(project)
         self.fields['unitschema'].queryset = project.get_codingschemas().filter(isarticleschema=False).distinct()
         self.fields['articleschema'].queryset = project.get_codingschemas().filter(isarticleschema=True).distinct()
+        self.fields['insertuser'].queryset = User.objects.all()
 
         req = auth.get_request()
         if req is not None:
@@ -85,6 +86,11 @@ class AssignCodingJob(WebScript):
     def formHtml(cls, project=None):
         form = AssignCodingJobForm(project)
         return render_to_string(cls.form_template, locals())
+
+    def get_form(self, **kwargs):
+        form = super(AssignCodingJob, self).get_form(**kwargs)
+        self.data["insertuser"] = self.user.id
+        return form
 
     def run(self):
         sel = SelectionForm(project=self.project, data=self.data)
