@@ -1,5 +1,6 @@
 from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType
 import json
+from api.rest.viewsets import CodingSchemaFieldViewSet, _CodingSchemaFieldViewSet
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
 from navigator.views.datatableview import DatatableMixin
@@ -35,7 +36,7 @@ class CodingSchemaDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumb
     model = CodingSchema
     parent = CodingSchemaListView
     context_category = 'Coding'
-    resource = CodingSchemaFieldResource
+    resource = _CodingSchemaFieldViewSet
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingSchemaDetailsView, self).get_context_data(**kwargs)
@@ -44,6 +45,11 @@ class CodingSchemaDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumb
         is_edited=session_pop(self.request.session, "schema_{}_edited".format(object.id), False)
         ctx.update(locals())
         return ctx
+
+    def get_datatable(self, **kwargs):
+        return super(CodingSchemaDetailsView, self).get_datatable(
+            url_kwargs=dict(project=self.project.id, codingschema=self.object.id)
+        )
 
     def filter_table(self, table):
         return table.hide("codingschema")
