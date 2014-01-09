@@ -423,30 +423,4 @@ class CodingSchemaForm(forms.HideFieldsForm):
     class Meta:
         model = CodingSchema
 
-class CodingRuleForm(forms.ModelForm):
-    def __init__(self, codingschema, *args, **kwargs):
-        super(CodingRuleForm, self).__init__(*args, **kwargs)
-        self.fields["action"].required = False
-        self.fields["field"].required = False
-        self.fields["field"].queryset = codingschema.fields.all()
-
-        self.codingschema = codingschema
-
-    def clean_condition(self):
-        condition = self.cleaned_data["condition"]
-
-        try:
-            tree = codingruletoolkit.parse(CodingRule(condition=condition))
-        except (Code.DoesNotExist, CodingSchemaField.DoesNotExist, CodingRule.DoesNotExist) as e:
-            raise ValidationError(e)
-        except SyntaxError as e:
-            raise ValidationError(e)
-
-        if tree is not None:
-            codingruletoolkit.clean_tree(self.codingschema, tree)
-
-        return condition
-
-    class Meta:
-        model = CodingRule
 

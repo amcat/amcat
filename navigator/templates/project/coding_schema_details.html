@@ -8,7 +8,7 @@
 </a>
 <a href="{% url "coding schema-edit" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-edit"></i> Edit properties</a>
 <a href="{% url "coding schema-rules" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-list"></i> Edit rules</a>
-<a href="{% url "project-name-schema" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Copy schema</a>
+<a href="{% url "coding schema-name" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Copy schema</a>
 
 <a class="btn btn-danger confirm" href="{% url "coding schema-delete" project.id object.id %}"
    data-confirm="You're about to delete schema <i>{{ schema.name }}</i>. This action is not reversible.">

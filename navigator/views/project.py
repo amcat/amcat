@@ -32,43 +32,32 @@ import json
 import itertools
 import datetime
 
-from api.rest.resources import ArticleMetaResource
-from api.rest.resources import CodingSchemaResource
-from api.rest.resources import ProjectRoleResource
-
-from api.rest.resources import CodingSchemaFieldResource
-from api.rest.resources import PluginResource, ScraperResource
-
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
-
-from api.rest.datatable import Datatable
-
 from django.http import HttpResponse
 from django.db import transaction
 from django.utils.datastructures import SortedDict
 
+from api.rest.resources import ArticleMetaResource
+from api.rest.resources import CodingSchemaResource
+from api.rest.resources import ProjectRoleResource
+from api.rest.resources import CodingSchemaFieldResource
+from api.rest.resources import PluginResource, ScraperResource
+from api.rest.datatable import Datatable
 from amcat.models import Project, Language, Role, ProjectRole, Code, Label, Article
 from amcat.models import CodingJob, Codebook, CodebookCode, CodingSchema
 from amcat.models import CodingSchemaField, ArticleSet, Plugin
-
 from amcat.scripts.actions.add_project import AddProject
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS
-
 from navigator import forms
 from navigator.utils.auth import check, check_perm
 from navigator.utils.action import ActionHandler
-from navigator.utils.misc import session_pop
-
 from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
 from amcat.scripts.output.csv_output import TableToSemicolonCSV
-
 from amcat.models.project import LITTER_PROJECT_ID
 from amcat.models.user import User
 from amcat.models.user import LITTER_USER_ID
-from amcat.models.coding import codingruletoolkit
-
 from api.rest.resources.codebook import CodebookHierarchyResource
 
 
@@ -280,205 +269,6 @@ def codingjob_export_options(request, project):
             return response
 
     return render(request, 'navigator/project/export_options.html', locals())
-
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-def edit_schemafield_rules(request, schema, project):
-    if request.method == "POST":
-        return _edit_codingrules_post(request, schema, project)
-
-    return table_view(request, project, None, 'codingschemas',
-            template="navigator/project/edit_rules.html",
-            schema=schema)
-
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-def edit_schemafields(request, schema, project):
-    if request.method == "POST":
-        return _edit_schemafields_post(request, schema, project)
-
-    # Is this schema imported?
-    if schema.project != project:
-        # Offer to copy it to currect project
-        return redirect(copy_schema, project.id, schema.id)
-
-    fields_null = dict([(f.name, f.null) for f in CodingSchemaField._meta.fields])
-
-    # This schema is owned by current project. Offer edit interface.
-    return table_view(request, project, None, 'codingschemas',
-            template="navigator/project/edit_schema.html",
-            schema=schema, fields_null=fields_null,
-            rules_valid=json.dumps(codingruletoolkit.schemarules_valid(schema)))
-
-def _get_forms(datas, schema, form):
-    for data in datas:
-        data["codingschema"] = schema.id
-        instance = form._meta.model.objects.get(id=data["id"]) if "id" in data else None
-        yield form(schema, data=data, instance=instance)
-
-def _get_schemafield_forms(fields, schema):
-    return _get_forms(fields, schema, forms.CodingSchemaFieldForm)
-
-def _get_codingrule_forms(fields, schema):
-    return _get_forms(fields, schema, forms.CodingRuleForm)
-
-def _get_form_errors(forms):
-    """
-    Check each form for errors. If an error is found in a form, a tuple
-    of the form:
-
-      (fieldnr, errors_dict)
-
-    is yielded.
-    """
-    return ((f.data.get('fieldnr') or f.data["label"], f.errors) for f in forms if not f.is_valid())
-
-def _edit_schemafields_post(request, schema, project, commit=None):
-    """
-    View executed when making a POST request to edit_schema.
-    """
-    commit = request.GET.get("commit", commit) in (True, "true")
-    fields = json.loads(request.POST['fields'])
-
-    forms = list(_get_schemafield_forms(fields, schema))
-    errors = dict(_get_form_errors(forms))
-
-    if not errors and commit:
-        fields = [form.save(commit=False) for form in forms]
-
-        for i, field in enumerate(fields):
-            field.fieldnr = (i+1) * 10
-            field.save()
-
-        for field in set(schema.fields.all()) - set(fields):
-            # Remove deleted fields
-            field.delete()
-
-        request.session["schema_{}_edited".format(schema.id)] = True 
-
-    # Always send response (don't throw an error)
-    schema_url = reverse("project-schema", args=[project.id, schema.id])
-
-    return HttpResponse(
-        json.dumps({
-            "fields" : errors, "schema_url" : schema_url,
-            "rules_valid" : codingruletoolkit.schemarules_valid(schema)
-        }),
-        mimetype='application/json'
-    )
-
-def _edit_codingrules_post(request, schema, project, commit=None):
-    commit = request.GET.get("commit", commit) in (True, "true")
-    rules = json.loads(request.POST['rules'])
-    forms = list(_get_codingrule_forms(rules, schema))
-    errors = dict(_get_form_errors(forms))
-
-    if not errors and commit:
-        rules = [form.save() for form in forms]
-
-        for rule in set(schema.rules.all()) - set(rules):
-            rule.delete()
-
-        request.session["rules_{}_edited".format(schema.id)] = True 
-
-    # Always send response (don't throw an error)
-    schema_url = reverse("project-schema", args=[project.id, schema.id])
-        
-    return HttpResponse(
-        json.dumps(dict(fields=errors, schema_url=schema_url)),
-        mimetype='application/json'
-    )
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-@check(CodingSchemaField, args_map={'schemafield' : 'id'}, args='schemafield', action='update')
-def edit_schemafield(request, schemafield, schema, project):
-    # Require url to be correct
-    assert(schema.project == project)
-    assert(schemafield.codingschema == schema)
-
-    schemaform = forms.CodingSchemaFieldForm(request.POST or None, instance=schemafield)
-
-    if request.POST and schemaform.is_valid():
-        for field, val in schemaform.cleaned_data.items():
-            setattr(schemafield, field, val)
-
-        schemafield.save()
-        return redirect(edit_schema, project.id, schema.id)
-
-    return table_view(request, project, None, 'codingschemas',
-            template="navigator/project/edit_schemafield.html",
-            schemaform=schemaform, schema=schema, schemafield=schemafield)
-    
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-@check(CodingSchemaField, args_map={'schemafield' : 'id'}, args='schemafield', action='delete')
-def delete_schemafield(request, schemafield, schema, project):
-    assert(schema.project == project)
-    assert(schemafield.codingschema == schema)
-
-    if request.POST:
-        if (request.POST.get("yes", "no").lower() == "yes"):
-            # Yes clicked
-            schemafield.delete()
-            return redirect(edit_schema, project.id, schema.id)
-
-        return redirect(edit_schemafield, project.id, schema.id, schemafield.id)
-
-    return table_view(request, project, None, 'codingschemas',
-            template="navigator/project/delete_schemafield.html",
-            schema=schema, schemafield=schemafield)
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-def copy_schema(request, schema, project):
-    """
-    Offer a user to copy a schema to his project
-    """
-    if request.POST:
-        do_copy = (request.POST.get("yes", "no").lower() == "yes")
-
-        if do_copy:
-            return redirect(name_schema, project.id, schema.id)
-
-        return redirect("project-schema", project.id, schema.id)
-
-    return table_view(request, project, None, 'codingschemas',
-            template="navigator/project/copy_schema.html")
-
-@check(Project, args_map={'project' : 'id'}, args='project')
-@check(CodingSchema, args_map={'schema' : 'id'}, args='schema')
-def name_schema(request, schema, project):
-    """
-    User confirmed copying schema, ask for a name to give.
-    """
-    if request.POST:
-        if 'cancel' in request.POST:
-            return redirect("project-schema", project.id, schema.id)
-        
-        # No, copy as requested
-        new_schema = CodingSchema(
-            name=request.POST.get("name"), description=schema.description,
-            isnet=schema.isnet, isarticleschema=schema.isarticleschema,
-            quasisentences=schema.quasisentences, project=project
-        )
-
-        new_schema.save()
-
-        for field in schema.fields.all():
-            field.id = None
-            field.codingschema = new_schema
-            field.save()
-
-        request.session["schema_%s_is_new" % new_schema.id] = True
-        return redirect("project-schema", project.id, new_schema.id)
-
-    return table_view(request, project, None, 'codingschemas',
-            template="navigator/project/name_schema.html",
-            schema=schema)
 
 @check(Codebook, args='id', action='delete')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
