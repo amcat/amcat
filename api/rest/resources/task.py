@@ -48,5 +48,9 @@ def single_task_result(request, task_id, uuid=False):
     except TaskPending:
         return HttpResponse(status=404)
     except Exception, e:
-        error_msg = "{e.__class__.__name__} : {e}".format(**locals())
+        if e.__class__.__name__ in ('QueryValidationError', 'QueryError', 'QueryParseError'):
+            error_msg= "Cannot parse query: {e}".format(e=e.message)
+                
+        else:
+            error_msg = "{e.__class__.__name__}: {e}".format(**locals())
         return HttpResponse(content=error_msg, status=500)

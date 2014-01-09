@@ -39,3 +39,9 @@ a:hover, a:focus {
 }
 
 .query textarea {width: 100%}
+
+.articlelist li {list-style-type: none;}
+
+.article-headline {font-size: 13x; font-weight: bold}
+
+.failure-details {margin-top: 1em; font-decoration: italic; font-size:11px}

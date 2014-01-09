@@ -10,7 +10,7 @@
  <script src="{% static 'js/jquery.ruleeditor.js' %}"></script>
  <script src="{% static 'js/jquery.tablednd.0.7.min.js' %}"></script>
 {% endcompress %}
- <script>$(function(){ jQuery.fn.ruleeditor("{% url "api" %}v4/", {{schema.id}}, {{context.id}}).main(); });</script>
+ <script>$(function(){ jQuery.fn.ruleeditor("{% url "api" %}v4/", {{codingschema.id}}, {{project.id}}).main(); });</script>
 {% endblock %}
 
 {% block content %}
@@ -54,6 +54,6 @@
 
 <div class="form-actions">
 <div name="save" class="btn btn-primary disabled">Save</div>
-<a href="{% url "project-schema" context.id schema.id %}" class="btn">Cancel</a>
+<a href="{% url "coding schema-details" project.id codingschema.id %}" class="btn">Cancel</a>
 </div>
 {% endblock %}

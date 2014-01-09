@@ -17,39 +17,21 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+"""
+Script to update the index after scraping
+"""
 
-from webscript import WebScript
-from django import forms
-from amcat.scripts.processors.save_set import SaveAsSetScript, SaveAsSetForm
-from amcat.tools import keywordsearch
+from amcat.scripts.script import Script
+from amcat.models.articleset import ArticleSet
+from amcat.models.scraper import Scraper
 
-import logging
-import json
+class UpdateIndexScript(Script):
+    def run(self, _input = None):
+        setids = Scraper.objects.filter(active = True).values('articleset')
+        for s in ArticleSet.objects.filter(pk__in = setids):
+            s.refresh_index()
 
-log = logging.getLogger(__name__)
-
-class SaveAsSetWebScriptForm(SaveAsSetForm):
-    output = forms.CharField(widget=forms.HiddenInput(), initial='json-html')
-    length = forms.IntegerField(widget=forms.HiddenInput(), max_value=99999999, initial=99999999)
-    start = forms.IntegerField(widget=forms.HiddenInput(), initial=0)
-
-    
-class SaveAsSet(WebScript):
-    name = "Save as Set"
-    form_template = None#"api/webscripts/save_set_form.html"
-    form = SaveAsSetWebScriptForm
-    displayLocation = ('ShowSummary', 'ShowArticleList')
-    output_template = "api/webscripts/save_set.html" 
-    
-    
-    def run(self):
-        self.progress_monitor.update(1, "Listing articles")
-        article_ids = list(keywordsearch.get_ids(self.data))
-        self.progress_monitor.update(39, "Creating set with {n} articles".format(n=len(article_ids)))
-        result = SaveAsSetScript(self.data, monitor=self.progress_monitor).run(article_ids)
-        result.provenance = json.dumps(dict(self.data))
-        result.save()
-
-        return self.outputResponse(result, object)
+if __name__ == "__main__":
+    from amcat.scripts.tools import cli
+    cli.run_cli(UpdateIndexScript)
         
-    

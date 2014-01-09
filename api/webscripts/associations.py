@@ -84,8 +84,11 @@ class ShowAssociations(WebScript):
         """
         filters = dict(keywordsearch.filters_from_form(self.data))
         queries = list(keywordsearch.queries_from_form(self.data))
+
+        condprob = self.data.get('condprob', None)
+        if condprob == 'False': condprob = False
         
-        score_func = _condprob if self.data.get('condprob', None) else None
+        score_func = _condprob if condprob else None
         interval_func = getattr(Intervals, self._interval) if (self._interval) else None
         qargs = dict(filters=filters, score=(score_func is not None),
                      fields=(["date"] if interval_func else []))

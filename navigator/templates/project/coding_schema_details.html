@@ -1,0 +1,37 @@
+{% extends "project/base.html" %}
+
+
+{% block actions %} 
+{% if can_edit %}
+<a href="{% url "coding schema-fields" project.id object.id %}" class="btn btn-primary">
+  <i class="glyphicon glyphicon-edit"></i> Edit fields
+</a>
+<a href="{% url "coding schema-edit" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-edit"></i> Edit properties</a>
+<a href="{% url "coding schema-rules" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-list"></i> Edit rules</a>
+<a href="{% url "coding schema-name" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Copy schema</a>
+
+<a class="btn btn-danger confirm" href="{% url "coding schema-delete" project.id object.id %}"
+   data-confirm="You're about to delete schema <i>{{ schema.name }}</i>. This action is not reversible.">
+   <i class="glyphicon glyphicon-trash"></i>
+   Delete
+</a>
+{% endif %}
+{% endblock %}
+
+
+{% block content %}
+{% if is_new %}
+<br/><div class="alert alert-success">Schema successfully copied. To return to an overview of all your codingschemas click again on the tab 'codingschemas' above.</div>
+{% endif %}
+
+{% if is_edited %}
+<br/><div class="alert alert-success">Schema succesfully edited.</div>
+{% endif %}
+
+
+<h1>Schema {{schema.id}} : {{schema.name}}</h1>
+
+{{ table }}
+
+{% endblock %}
+

@@ -20,83 +20,14 @@
 """
 Module with base class for resources in the amcat REST API
 """
-
-
 from django.core.urlresolvers import reverse, NoReverseMatch
-from django.conf.urls import patterns, url
-from django.db.models.fields.related import RelatedObject, RelatedField
+from django.conf.urls import url
+from rest_framework import generics
 
-
-from rest_framework import generics, serializers, fields, relations
-
-import api.rest.resources
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
-def get_related_fieldname(model, fieldname):
-    field = model._meta.get_field_by_name(fieldname)[0]
 
-    if isinstance(field, (RelatedObject, RelatedField)):
-        return "{}__id".format(fieldname)
 
-    return fieldname
-
-class ClassProperty(property):
-    def __get__(self, cls, owner):
-        return self.fget.__get__(None, owner)()
-
-class AmCATFilterMixin(object):
-    """
-    Set the correct fields for filtering
-    """
-    extra_filters = []
-    ignore_filters = ['auth_token__id']
-    @classmethod
-    def _get_filter_fields_for_model(cls):
-        for fieldname in cls.model._meta.get_all_field_names():
-            fieldname = get_related_fieldname(cls.model, fieldname)
-            if fieldname in cls.ignore_filters:
-                continue
-            yield fieldname
-    
-    @classmethod
-    def get_filter_fields(cls):
-        """Return a list of fields that will be used to filter on"""
-        result = ['pk']
-        for field in cls._get_filter_fields_for_model():
-            result.append(field)
-        for field in cls.extra_filters:
-            result.append(field)
-        return result
-    filter_fields=ClassProperty(get_filter_fields)
-    
-class AmCATMetadataMixin(object):
-
-    """Give the correct metadata for datatables"""
-    @classmethod
-    def get_label(cls):
-        return '{{{label}}}'.format(
-            label=getattr(cls.model, '__label__', 'label')
-        )
-    
-    def metadata(self, request):
-        """This is used by the OPTIONS request; add models, fields, and label for datatables"""
-        metadata = super(AmCATMetadataMixin, self).metadata(request)
-        metadata['label'] = self.get_label() 
-        grfm = api.rest.resources.get_resource_for_model
-        metadata['models'] = {name : grfm(field.queryset.model).get_url()
-                              for (name, field) in self.get_serializer().get_fields().iteritems()
-                              if hasattr(field, 'queryset')}
-        
-        metadata['fields'] = {name : _get_field_name(field)
-                              for (name, field) in  self.get_serializer().get_fields().iteritems()}
-
-        metadata['filter_fields'] = list(self.get_filter_fields())
-
-        return metadata
-
-class DatatablesMixin(AmCATFilterMixin, AmCATMetadataMixin):
-    pass
-
-    
 class AmCATResource(DatatablesMixin, generics.ListAPIView):
     """
     Base class for the AmCAT REST API
@@ -172,15 +103,6 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
             response['Content-Disposition'] = 'attachment; filename="data.csv"'
 
         return response
-
-def _get_field_name(field):
-    "Return the field name to report in OPTIONS (for datatables)"
-    n = field.__class__.__name__
-    return dict(PrimaryKeyRelatedField='ModelChoiceField',
-                ManyPrimaryKeyRelatedField='ModelMultipleChoiceField',
-                ).get(n,n)
-
-
 
 
 ###########################################################################

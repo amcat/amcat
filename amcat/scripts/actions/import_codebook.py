@@ -49,11 +49,21 @@ class ImportCodebook(Script):
 
     When using uuid, existing codes will be used where possible. Existing labels will not be overwritten
     but new labels will be added
+
+    Codes that do not exist yet will be added with the label from the code cell in the given language. This
+    is in addition to any labels given in the 'label - language' columns.
+
+    If an existing codebook is selected, that codebook will be updated instead of creating a new codebook.
     """
 
     class options_form(CSVUploadForm):
-        codebook_name = forms.CharField(required=False)
         project = forms.ModelChoiceField(queryset=Project.objects.all())
+        default_language = forms.ModelChoiceField(queryset=Language.objects.all(),
+                                                  help_text="Language for new codes")
+        codebook_name = forms.CharField(required=False)
+        codebook = forms.ModelChoiceField(queryset=Codebook.objects.all(),
+                                          help_text="Update existing codebook")
+        
         def clean_codebook_name(self):
             """If codebook name is not specified, use file base name instead"""
             fn = None
@@ -65,7 +75,7 @@ class ImportCodebook(Script):
             
 
     @transaction.commit_on_success
-    def _run(self, file, project, codebook_name, **kargs):
+    def _run(self, file, project, codebook_name, default_language, codebook, **kargs):
         data = csv_as_columns(self.bound_form.get_reader())
         
         # build code, parent pairs
@@ -74,26 +84,33 @@ class ImportCodebook(Script):
         else:
             cols = get_indented_columns(data)
             parents = list(get_parents_from_columns(cols))
-
         uuids = data["uuid"] if "uuid" in data else [None] * len(parents)
 
-        # create objects
-        cb = Codebook.objects.create(project=project, name=codebook_name)
+        # create codebook
+        if not codebook:
+            codebook = Codebook.objects.create(project=project, name=codebook_name)
+            log.info("Created codebook {codebook.id} : {codebook}".format(**locals()))
+        else:
+            codebook.cache_labels()
+            log.info("Updating {codebook.id} : {codebook}".format(**locals()))
 
-        log.info("Created codebook {cb.id} : {cb}".format(**locals()))
-
-
-        
+        # create/retrieve codes
         codes = {code : Code.get_or_create(uuid=uuid or None) for ((code, parent), uuid) in zip(parents, uuids)}
 
         to_add = []
         for code, parent in parents:
             instance = codes[code]
             parent_instance = codes[parent] if parent else None
-            to_add.append((instance, parent_instance))
-            if not instance.labels.all().exists():
-                instance.add_label(0, code)
-        cb.add_codes(to_add)
+            instance.add_label(default_language, code)
+            cbc = codebook.get_codebookcode(instance)
+            if cbc is None:
+                to_add.append((instance, parent_instance))
+            else:
+                getid = lambda c: None if c is None else c.id
+                if getid(cbc.parent) != getid(parent_instance):
+                    cbc.parent = parent_instance
+                    cbc.save()
+        codebook.add_codes(to_add)
 
 
         for col in data:
@@ -104,9 +121,9 @@ class ImportCodebook(Script):
                 except ValueError:
                     lang = Language.objects.get(label=lang).id
                 for (code, parent), label in zip(parents, data[col]):
-                    if label and not codes[code].labels.filter(language_id=lang).exists():
+                    if label:
                         codes[code].add_label(lang, label)
-        return cb
+        return codebook
 
 def get_indented_columns(data):
     prefix = 'code-' if 'code-1' in data else 'c'

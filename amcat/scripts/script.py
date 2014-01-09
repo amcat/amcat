@@ -31,6 +31,7 @@ from django.http import QueryDict
 from django.utils.datastructures import MergeDict
 from amcat.forms import validate
 from amcat.models.plugin import Plugin, PluginType
+from amcat.tools.progress import NullMonitor
 
 
 class Script(object):
@@ -49,7 +50,7 @@ class Script(object):
     options_form = None
     output_type = None
 
-    def __init__(self, options=None, **kargs):
+    def __init__(self, options=None, monitor=NullMonitor(), **kargs):
         """Default __init__ validates and stores the options form"""
         if self.options_form is None:
             self.options = self.options_raw = None
@@ -57,6 +58,7 @@ class Script(object):
             self.bound_form = self._bind_form(options, **kargs)
             self._validate_form()
             self.options = self.bound_form.cleaned_data
+        self.progress_monitor = monitor
 
 
     def run(self, input=None):

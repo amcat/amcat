@@ -63,7 +63,8 @@ class ProjectViewMixin(object):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
         context["project"] = self.project
         context["context"] = self.project # for menu / backwards compat.
-
+        context["can_edit"] = self.can_edit()
+        context["is_admin"] = self.is_admin()
         context["main_active"] = 'Projects'
         context["context_category"] = self.context_category
         return context
@@ -84,12 +85,19 @@ class ProjectViewMixin(object):
         if not self.request.user.get_profile().has_role(self.required_project_permission, self.project):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {self.project}".format(**locals()))
 
-
+    def can_edit(self):
+        """Checks if the user has the right to edit this project"""
+        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, self.project)
+    
+    def is_admin(self):
+        """Checks if the user has the right to edit this project"""
+        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_ADMIN, self.project)
+        
     def get_breadcrumbs(self):
         bc = self._get_breadcrumbs(self.kwargs, self)
         bc.insert(0, ("Projects", reverse("projects")))
-        bc.insert(1, ("{self.project.id} : {self.project}".format(**locals()),
-                      reverse("project", args=(self.project.id, ))))
+        #bc.insert(1, ("{self.project.id} : {self.project}".format(**locals()),
+        #              reverse("project", args=(self.project.id, ))))
         return bc
         
     def get_template_names(self):
@@ -104,6 +112,15 @@ from django.views.generic.list import ListView
 
 class HierarchicalViewMixin(object):
 
+
+    def get_context_data(self, **kwargs):
+        context = super(HierarchicalViewMixin, self).get_context_data(**kwargs)
+        context["object"] = self.get_object
+        return context
+    
+    def get_object(self):
+        return self._get_object(self.kwargs)
+    
     @property
     def pk_url_kwarg(self):
         return self.get_model_key()
@@ -124,7 +141,6 @@ class HierarchicalViewMixin(object):
     def _get_object(cls, kwargs):
         pk = kwargs[cls.get_model_key()]
         return cls.model.objects.get(pk=pk)
-        
     
     @classmethod
     def get_view_name(cls):
@@ -144,6 +160,16 @@ class HierarchicalViewMixin(object):
         return ["^" + "/".join(comps) + "/$"]
 
     @classmethod
+    def get_url_component(cls):
+        """Return the url component for this level of the breadcrum trail"""
+        if hasattr(cls, 'url_fragment'):
+            return cls.url_fragment
+        elif issubclass(cls, ListView):
+            return cls.get_table_name().lower()
+        else:
+            return  "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
+        
+    @classmethod
     def _get_url_components(cls):
         """Return the url pattern for this view class without suffix"""
         if cls.parent:
@@ -153,14 +179,16 @@ class HierarchicalViewMixin(object):
             base = getattr(cls, "base_url", None)
             if base:
                 yield base
+        yield cls.get_url_component()
 
-        if hasattr(cls, 'url_fragment'):
-            yield cls.url_fragment
-        elif issubclass(cls, ListView):
-            yield cls.get_table_name().lower()
-        else:
-            yield "(?P<{key}>[0-9]+)".format(key=cls.get_model_key())
 
+    @classmethod
+    def _get_breadcrumb_url(cls, kwargs, view):
+        keys = re.findall("<([^>]+)>", cls.get_url_patterns()[0])
+        kw = {k:v for (k,v) in kwargs.items() if k in keys}
+        url = reverse(cls.get_view_name(), kwargs=kw)
+        return url
+        
     @classmethod
     def _get_breadcrumb_name(cls, kwargs, view):
         """Return the name of this 'level' in the breadcrumb trail"""
@@ -177,14 +205,11 @@ class HierarchicalViewMixin(object):
     @classmethod
     def _get_breadcrumbs(cls, kwargs, view):
         breadcrumbs = cls.parent._get_breadcrumbs(kwargs, view) if cls.parent else []
-        
-        keys = re.findall("<([^>]+)>", cls.get_url_patterns()[0])
-        kw = {k:v for (k,v) in kwargs.items() if k in keys}
-        url = reverse(cls.get_view_name(), kwargs=kw)
-        name =cls._get_breadcrumb_name(kwargs, view)
-        
+        url = cls._get_breadcrumb_url(kwargs, view)
+        name =cls._get_breadcrumb_name(kwargs, view)        
         breadcrumbs.append((name, url))
         return breadcrumbs
+
         
         
 from navigator.views.scriptview import ScriptView

@@ -1,0 +1,25 @@
+{% extends "project/base.html" %}
+
+{% block actions %}
+{% if can_edit %}
+  <a href="{% url "coding schema-new" context.id %}" class="btn btn-primary">
+   <i class="glyphicon glyphicon-certificate"></i> New schema
+  </a>
+  <a href="{% url "codebook-import" context.id %}" class="btn btn-default">
+    <i class="glyphicon glyphicon-edit"></i> Import schemas
+  </a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if deleted %}
+    <div class="alert alert-success">Successfully deleted a schema. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+ {% endif %}
+
+ <h1>Imported schemas</h1>
+ {{ linked_schemas|safe }}
+
+ <h1>Owned schemas</h1>
+ {{ owned_schemas|safe }}
+
+{% endblock %}

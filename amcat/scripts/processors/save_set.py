@@ -38,6 +38,7 @@ class SaveAsSetForm(forms.Form):
     existingset = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False) #TODO: change to articlesets inside project
 
     def __init__(self, *args, **kwargs):
+        project = kwargs.pop("project", None)
         super(SaveAsSetForm, self).__init__(*args, **kwargs)
 
         # Due to the design of (web)scripts, it is not possible to access
@@ -56,7 +57,10 @@ class SaveAsSetForm(forms.Form):
             return
 
         # Try to find out if we're on the Article Selection page
-        project_id = request.REQUEST.get("project")
+        if project:
+            project_id = project.id
+        else:
+            project_id = request.REQUEST.get("project")
 
         if project_id is None:
             log.debug("Not on Article Selection page. Can't filter on existing set / default project.")
@@ -103,7 +107,7 @@ class SaveAsSetScript(script.Script):
             else:
                 raise ValueError("Set with this name already exists!")
 
-        s.add(*article_ids)
+        s.add_articles(article_ids, monitor=self.progress_monitor)
         return s
     
         

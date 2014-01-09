@@ -42,14 +42,18 @@ class BZK(UploadScript):
                 log.exception("Failed html.parse")
                 raise TypeError("failed HTML parsing. Are you sure you've inserted the right file?\n{e}".format(**locals()))
 
-        title = etree.cssselect("title")[0].text.lower().strip()
-        if "intranet/rss" in title or "werkmap" in title:
-            for article in self.scrape_file(etree, title):
-                yield article
+        title = etree.cssselect("title")
+        if title:
+            title_text = title[0].text.lower().strip()
+            if "intranet/rss" in title_text or "werkmap" in title_text:
+                for article in self.scrape_old(etree, title_text):
+                    yield article
         else:
-            raise ValueError("Supports only 'werkmap' and 'intranet/rss' documents")
-        
-    def scrape_file(self, _html, t):
+            for article in self.scrape_new(etree):
+                yield article
+
+    def scrape_old(self, _html, t):
+        """Old format"""
         if "werkmap" in t:
             divs = _html.cssselect("#articleTable div")
         elif "intranet/rss" in t:
@@ -64,10 +68,7 @@ class BZK(UploadScript):
             if articlepage:
                 article.props.pagenr, article.props.section = self.get_pagenum(articlepage[0].text)
 
-            if not div.cssselect("#sourceTitle")[0].text:
-                article.props.medium = Medium.get_or_create("unknown medium")
-            else:
-                article.props.medium = Medium.get_or_create(div.cssselect("#sourceTitle")[0].text)
+            article.props.medium = self.get_medium(div.cssselect("#sourceTitle")[0].text)
             date_str = div.cssselect("#articleDate")[0].text
             try:
                 article.props.date = readDate(date_str)
@@ -76,15 +77,63 @@ class BZK(UploadScript):
             else:
                 yield article
 
-    def create_medium(self, html):
-        if not html.text:
-            medium = "unknown"
+    def scrape_new(self, _html):
+        """New format as of 2014 and a few days before"""
+
+        docdate = readDate(_html.cssselect("h1")[0].text.split("-")[1])
+
+        #split body by <hr>
+        items = []
+        item = []
+        tags = set()
+        for child in _html.cssselect("body > *"):
+            tags.add(child.tag)
+            if child.tag == "hr":
+                items.append(item)
+                item = []
+            else:
+                item.append(child)
+
+        #first item is the index
+        items = items[1:]
+
+        for item in items:
+            article = self.parse_item(item)
+            if not article.props.date:
+                article.props.date = docdate
+            yield article
+
+    def parse_item(self, item):
+        #item: a list of html tags
+        article = HTMLDocument()
+        for tag in item:
+            if tag.tag == "p":
+                if hasattr(article.props, 'text'):
+                    article.props.text.append(tag)
+                else:
+                    article.props.text = [tag]
+            elif tag.tag == "h2":
+                article.props.headline = tag.text
+            elif tag.tag == "i":
+                bits = tag.text.split()
+                if "-" in bits[-1]:
+                    article.props.date = readDate(bits[-1])
+                    article.props.medium = self.get_medium(" ".join(bits[:-1]))
+                elif bits[-1].isdigit():
+                    article.props.date = readDate(" ".join(bits[-3:]))
+                    article.props.medium = self.get_medium(" ".join(bits[:-3]))
+                else:
+                    article.props.medium = self.get_medium(" ".join(bits))
+                    article.props.date = None
+        return article
+
+    def get_medium(self, text):
+        if not text:
+            text = "unknown"
+        if text in MEDIUM_ALIASES.keys():
+            return Medium.get_or_create(MEDIUM_ALIASES[text])
         else:
-            medium = html.text
-        if medium in MEDIUM_ALIASES.keys():
-            return Medium.get_or_create(MEDIUM_ALIASES[medium])
-        else:
-            return Medium.get_or_create(medium)
+            return Medium.get_or_create(text)
 
     def get_pagenum(self, text):
         p = re.compile("pagina ([0-9]+)([,\-][0-9]+)?([a-zA-Z0-9 ]+)?")

@@ -68,9 +68,11 @@ class Term(BaseTerm):
     def get_dsl(self):
         if self.text == "*":
             return {"constant_score" : {"filter" : {"match_all" : {}}}}
-        qtype = "wildcard" if '*' in self.text else "match"
+        qtype = "wildcard" if ('*' in self.text or '?' in self.text) else "match"
         return {qtype : {self.qfield : self.text.lower()}}
     def get_filter_dsl(self):
+        if "?" in self.text:
+            return query_filter(self.get_dsl())
         if "*" in self.text:
             if self.text == "*":
                 return {"match_all" : {}}
@@ -116,7 +118,7 @@ class Boolean(object):
             simple_terms = collections.defaultdict(list) # field : termlist
             clauses = [] # OR clauses 
             for t in self.terms:
-                if isinstance(t, Term) and "*" not in t.text:
+                if isinstance(t, Term) and "*" not in t.text and "?" not in t.text:
                     simple_terms[t.qfield].append(c(t.text))
                 else:
                     clauses.append(t.get_filter_dsl())
@@ -185,13 +187,16 @@ class Span(Boolean, FieldTerm):
                 if term.text.endswith("*"):
                     text = term.text[:-1]
                     return [{"span_multi":{"match":{"prefix" : { field :  { "value" : text } }}}}]
+                elif "?" in term.text:
+                    text = term.text.replace("?", ".")
+                    return [{"span_multi":{"match":{"regexp" : { field :  text } }}}]
                 else:
                     return [{"span_term" : {field : term.text.lower()}}]
             else:
                 # term is a disjunction: return a list of clauses
                 # index [0] because get_clause returns a list again, which we don't want here
                 return [get_clause(t, field)[0] for t in term.terms]
-        clauses = (get_clause(t, self.qfield) for t in self.terms)
+        clauses = [get_clause(t, self.qfield) for t in self.terms]
         clauses = itertools.product(*clauses)
         clauses = [{"span_near" : {"slop": self.slop, "in_order" : self.in_order, "clauses" : list(c)}}
                    for c in clauses]
@@ -217,7 +222,7 @@ def get_term(tokens):
         # this is where it gets weird: phrase queries don't support general
         # prefixes, but span (=slop) queries do. So, make a span query
         # with slop=0 and in_order=True if a non-final wildcard is present
-        if "*" in tokens.quote:
+        if "*" in tokens.quote or "?" in tokens.quote:
             return lucene_span(tokens.quote, tokens.field, 0)
         else:
             return Quote(tokens.quote, tokens.field)
@@ -301,9 +306,16 @@ def simplify(term):
                 new_terms.append(t)
         term.terms = new_terms
     return term
-    
+
+class QueryParseError(Exception):
+    pass
+        
 def parse_to_terms(s, simplify_terms=True):
-    terms = get_grammar().parseString(s, parseAll=True)[0]
+    try:
+        terms = get_grammar().parseString(s, parseAll=True)[0]
+    except Exception, e:
+        raise QueryParseError("{e.__class__.__name__}: {e}".format(**locals()))
+        
     if simplify_terms:
         terms = simplify(terms)
     return terms
@@ -342,10 +354,10 @@ class TestQueryParser(amcattest.AmCATTestCase):
         self.assertEqual(q('(x:a b) W/10 c'), 'x::PROX/10[OR[a b] c]')
         
         # proximity queries must have unique field and can only contain wildcards and disjunctions
-        self.assertRaises(ParseError, q, 'a W/10 (b OR (c OR d))')
-        self.assertRaises(ParseError, q, 'x:a W/10 y:b')
-        self.assertRaises(ParseError, q, 'a W/10 (b AND c)')
-        self.assertRaises(ParseError, q, 'a W/10 (b W/5 c)')
+        self.assertRaises(QueryParseError, q, 'a W/10 (b OR (c OR d))')
+        self.assertRaises(QueryParseError, q, 'x:a W/10 y:b')
+        self.assertRaises(QueryParseError, q, 'a W/10 (b AND c)')
+        self.assertRaises(QueryParseError, q, 'a W/10 (b W/5 c)')
 
         # lucene notation
         self.assertEqual(q('"a b"~5'), '_all::PROX/5[a b]')
@@ -353,7 +365,7 @@ class TestQueryParser(amcattest.AmCATTestCase):
         self.assertEqual(q('"a (b c)"~5'), '_all::PROX/5[a OR[b c]]')
 
         # disallow AND in lucene notation
-        self.assertRaises(ParseError, q, '"a (b AND c)"~5')
+        self.assertRaises(QueryParseError, q, '"a (b AND c)"~5')
 
     def test_dsl(self):
         q = parse

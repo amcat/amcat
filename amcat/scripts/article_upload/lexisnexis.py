@@ -43,7 +43,7 @@ import logging; log = logging.getLogger(__name__)
 # Regular expressions used for parsing document
 class RES:
     # Match at least 20 whitespace characters, followed by # of # DOCUMENTS.
-    DOCUMENT_COUNT = re.compile(" {20} +\d* of \d* DOCUMENT")
+    DOCUMENT_COUNT = re.compile(" {20,}(FOCUS -)? *\d* of \d* DOCUMENT")
 
     # Header meta information group match
     HEADER_META = re.compile("([\w -]*):(.*)", re.UNICODE)
@@ -510,6 +510,7 @@ class LexisNexis(UploadScript):
     name = 'Lexis Nexis'
 
     def split_file(self, file):
+        
         header, body = split_header(file.text)
         self.ln_query  = get_query(parse_header(header))
         fragments = list(split_body(body))

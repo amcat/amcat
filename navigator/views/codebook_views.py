@@ -21,6 +21,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 
 from api.rest.datatable import Datatable
+from amcat.models import Language
 from amcat.scripts.actions.import_codebook import ImportCodebook
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
@@ -40,6 +41,10 @@ class ImportCodebook(ProjectScriptView):
     def get_success_url(self):
         return reverse("project-codebooks", kwargs=dict(id=self.project.id))
 
+    def get_initial(self):
+        initial = super(ImportCodebook, self).get_initial()
+        initial["codebook"]=self.url_data.get("codebookid")
+        return initial
     
 class ExportCodebook(TableExportMixin, ProjectScriptView):
     script = ExportCodebook
@@ -49,13 +54,23 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
         return "Codebook {c.id} {c}".format(**locals())
     
     def get_initial(self):
-        return dict(codebook=self.url_data["codebookid"])
+        initial = super(ExportCodebook, self).get_initial()
+        initial["codebook"]=self.url_data["codebookid"]
+        return initial
 
     def get_form_class(self):
         # Modify form class to also contain XML output
         form_class = super(ExportCodebook, self).get_form_class()
         form_class.base_fields['format'].choices.append(("xml", "XML"))
         return form_class
+
+    def get_form(self, *args, **kargs): 
+        form = super(ExportCodebook, self).get_form(*args, **kargs)
+        cid=self.url_data["codebookid"]
+        langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
+        form.fields['language'].queryset = langs
+        form.fields['language'].initial = min(l.id for l in langs)
+        return form
 
     def form_valid(self, form):
         if form.cleaned_data['format'] == 'xml':

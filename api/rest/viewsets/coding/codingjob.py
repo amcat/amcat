@@ -23,7 +23,7 @@ from amcat.models import CodingJob, Article, Sentence, Codebook, CodingRule, Cod
 from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT
 from amcat.nlp import sbd
 from amcat.tools.caching import cached
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingschemafield import CodingSchemaFieldViewSetMixin, CodingSchemaFieldSerializer

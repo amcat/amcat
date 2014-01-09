@@ -71,7 +71,8 @@ def gen_user_choices(project=None):
         'username', 'first_name', 'last_name' 
     )
 
-    users = users.filter(projectrole__project=project) if project else users
+    if project:
+        users = users.filter(projectrole__project=project) 
     vals = toolkit.multidict(((u.userprofile.affiliation, u) for u in users), ltype=list)
 
     for aff, users in sorted(vals.items(), key=name_sort):
@@ -227,26 +228,6 @@ class AddProjectForm(ProjectForm):
         super(AddProjectForm, self).__init__(*args, **kwargs)
         self.fields['owner'].initial = owner.id if owner else None
 
-class ProjectRoleForm(forms.ModelForm):
-    user = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
-
-    def __init__(self, project=None, user=None, data=None, **kwargs):
-        super(ProjectRoleForm, self).__init__(data=data, **kwargs)
-
-        self.fields['user'].choices = gen_user_choices()
-
-        if project is not None:
-            # Disable self.project
-            del self.fields['project']
-
-            choices = ((r.id, r.label) for r in Role.objects.filter(projectlevel=True))
-            self.fields['role'].choices = choices
-
-            if user is not None:
-                del self.fields['user']
-
-    class Meta:
-        model = ProjectRole
 
 class UploadScriptForm(forms.Form):
     file = forms.FileField(help_text="Supported archives: zip")
@@ -442,114 +423,4 @@ class CodingSchemaForm(forms.HideFieldsForm):
     class Meta:
         model = CodingSchema
 
-class CodingRuleForm(forms.ModelForm):
-    def __init__(self, codingschema, *args, **kwargs):
-        super(CodingRuleForm, self).__init__(*args, **kwargs)
-        self.fields["action"].required = False
-        self.fields["field"].required = False
-        self.fields["field"].queryset = codingschema.fields.all()
 
-        self.codingschema = codingschema
-
-    def clean_condition(self):
-        condition = self.cleaned_data["condition"]
-
-        try:
-            tree = codingruletoolkit.parse(CodingRule(condition=condition))
-        except (Code.DoesNotExist, CodingSchemaField.DoesNotExist, CodingRule.DoesNotExist) as e:
-            raise ValidationError(e)
-        except SyntaxError as e:
-            raise ValidationError(e)
-
-        if tree is not None:
-            codingruletoolkit.clean_tree(self.codingschema, tree)
-
-        return condition
-
-    class Meta:
-        model = CodingRule
-
-class CodingSchemaFieldForm(forms.ModelForm):
-    label = forms.CharField()
-    default = forms.CharField(required=False)
-
-    def __init__(self, schema, *args, **kwargs):
-        super(CodingSchemaFieldForm, self).__init__(*args, **kwargs)
-        self.fields['codebook'].required = False
-        self.fields['codebook'].queryset = schema.project.get_codebooks()
-
-    def _to_bool(self, val):
-        if val is None:
-            return 
-
-        if str(val).lower() in ("true", "1", "yes"):
-            return True
-        elif str(val).lower() in ("false", "0", "no"):
-            return False
-
-    def clean_codebook(self):
-        db_type = CodingSchemaFieldType.objects.get(name__iexact="Codebook")
-
-        if 'fieldtype' not in self.cleaned_data:
-            raise ValidationError("Fieldtype must be set in order to check this field")
-        elif self.cleaned_data['fieldtype'] == db_type:
-            if not self.cleaned_data['codebook']:
-                raise ValidationError("Codebook must be set when fieldtype is '{}'".format(db_type))
-        elif self.cleaned_data['codebook']:
-            raise ValidationError("Codebook must not be set when fieldtype is '{}'".format(self.cleaned_data['fieldtype']))
-
-        return self.cleaned_data['codebook']
-
-    def clean_default(self):
-        # Differentiate between '' and None
-        value = self.cleaned_data['default']
-
-        if 'fieldtype' not in self.cleaned_data:
-            raise ValidationError("Fieldtype must be set in order to check this field")
-
-        if self.data['default'] is None:
-            return 
-
-        # Fieldtype is set
-        fieldtype = self.cleaned_data['fieldtype']
-        if fieldtype.serialiserclass == BooleanSerialiser:
-            value = self._to_bool(value)
-
-            if value is None:
-                raise ValidationError(
-                    ("When fieldtype is of type {}, default needs " + 
-                    "to be empty, true or false.").format(fieldtype))
-
-        serialiser = fieldtype.serialiserclass(CodingSchemaField(**self.cleaned_data))
-
-        try:
-            return serialiser.serialise(value)
-        except:
-            if fieldtype.serialiserclass == CodebookSerialiser:
-                try:
-                    value = int(value)
-                except ValueError:
-                    raise ValidationError("This value needs to be a code_id.")
-
-                # possible_values doesn't return a queryset, so we need to iterate :(
-                if value in (code.id for code in serialiser.possible_values):
-                    return value
-
-                raise ValidationError("'{}' is not a valid value.".format(value))
-
-            # Can't catch specific error
-            possible_values = serialiser.possible_values
-
-            if possible_values is not None:
-                raise ValidationError(
-                    "'{}' is not a valid value. Options: {}".format(
-                        self.cleaned_data['default'], possible_values
-                    )
-                )
-
-            raise ValidationError("'{}' is not a valid value".format(value))
-
-        return value
-
-    class Meta:
-        model = CodingSchemaField

@@ -61,7 +61,7 @@ class Table(object):
     maps column and row to a value.
     """
     def __init__(self, columns=None, rows = None, cellfunc = trivialCellFunc,
-                 rowNamesRequired = False, **kargs):
+                 rowNamesRequired = False, columnTypes = None, **kargs):
         """
         @param columns: a sequence of columns, or None if getColumns is overridden
         @param rows:a sequence of rows, or None if getRows is overridden
@@ -73,6 +73,7 @@ class Table(object):
         self.rows       = isnull(rows, [])
         self.cellfunc   = cellfunc
         self.rowNamesRequired = rowNamesRequired
+        self.columnTypes = isnull(columnTypes, {})
 
     # Basic table interface
     def getValue(self, row, column):
@@ -86,6 +87,12 @@ class Table(object):
         """Get a sequence of objects representing the columns"""
         return self.columns
 
+
+    def getColumnType(self, column):
+        if column in self.columnTypes:
+            return self.columnTypes[column]
+        return getattr(column, "fieldtype", None)
+        
     # Convenience access using iteration / index and NamedRows
     def getNamedRows(self):
         """Get a sequence of NamedRow objects that can be used to access the values"""
@@ -329,8 +336,8 @@ class DictTable(Table):
         self.data[row, col] = value
         self.columns.add(col)
         self.rows.add(row)
-    def getValue(self, row, col):
-        return self.data.get((row, col), self.default)
+    def getValue(self, row, column):
+        return self.data.get((row, column), self.default)
     
 DataTable = DictTable
 

@@ -21,7 +21,7 @@ from rest_framework import serializers, permissions, exceptions, status
 from rest_framework.viewsets import ModelViewSet, ViewSetMixin
 from amcat.models import Project, Role
 from amcat.tools.caching import cached
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from amcat.models.authorisation import (ROLE_PROJECT_READER, ROLE_PROJECT_WRITER,
                                         ROLE_PROJECT_ADMIN, ROLE_PROJECT_METAREADER)

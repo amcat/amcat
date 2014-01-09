@@ -1,0 +1,59 @@
+{% extends "project/base.html" %}
+{% load compress %}
+{% load staticfiles %}
+
+{% block javascript %}
+{% compress js %}
+ <script src="{% static 'js/jquery.djangofields.js' %}"></script>
+ <script src="{% static 'js/jquery.schemaeditor.js' %}"></script>
+ <script src="{% static 'js/jquery.tablednd.0.7.min.js' %}"></script>
+{% endcompress %}
+ <script>$(function(){ jQuery.fn.schemaeditor("{% url "api" %}v4/", {{object.id}}, {{context.id}}, {{rules_valid}}).main(); });</script>
+ {% endblock %}
+
+{% block actions %}
+<div name="add-field" class="btn btn-primary disabled"><i class="glyphicon glyphicon-plus"></i> Add field</div>
+<!--<div name="undo" class="btn disabled"><i class="icon-step-backward"></i> Undo</div>
+<div name="redo" class="btn disabled"><i class="icon-step-forward"></i> Redo</div>-->
+<a href="" class="btn btn-warning"><i class="glyphicon glyphicon-refresh"></i> Reset</a>
+{% endblock %}
+
+{% block content %}
+<p><span class="label label-warning">Resetting</span> Resetting only reverts changes which are not saved.</p>
+
+<h1>Editing codingschema {{object.id}}: {{object.name}}</h1>
+<p name="field_errors"></p>
+<p>
+<table name="schema" class="table table-striped table-bordered">
+ <thead>
+  <tr>
+   <th name="fieldnr">#</th>
+   <th null="{{ fields_null.label|lower }}" editable="true" name="label">Label</th>
+   <th null="{{ fields_null.required|lower }}" editable="true" name="required">Required</th>
+   <th null="{{ fields_null.fieldtype|lower }}" editable="true" name="fieldtype">Fieldtype</th>
+   <th null="{{ fields_null.codebook|lower }}" editable="true" name="codebook">Codebook</th>
+   <th null="{{ fields_null.split_codebook|lower }}" editable="true" name="split_codebook">Split</th>
+   <th null="{{ fields_null.default|lower }}" editable="true" name="default">Default</th>
+   <th name="delete"></th>
+  </tr>
+ </thead>
+ <tbody>
+  <tr name="loading"><td colspan="7">
+   <div class="progress active">
+    <div class="bar"></div>
+   </div>
+  </td></tr>
+ </tbody>
+</table>
+
+{% include "navigator/project/edit_schema_shortcuts.html" %}
+
+<p><span class="label label-info">Usage</span> You can <b>order</b> fields by draggin them to the desired place. To <b>edit</b> a field, double click on a cell you wish to edit. When you're done editing, click outside the table or press <code>enter</code>. For efficient usage, <a data-toggle="modal" href="#keyboard-shortcuts">keyboard shortcuts</a> are available.</p>
+
+</p>
+
+<div class="form-actions">
+<div name="save" class="btn btn-primary disabled">Save</div>
+<a href="{% url "coding schema-details" context.id object.id %}" class="btn">Cancel</a>
+</div>
+{% endblock %}

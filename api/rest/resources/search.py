@@ -20,6 +20,7 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 import math
+import re
 
 from django.conf.urls import patterns, url
 from rest_framework.views import APIView
@@ -33,6 +34,7 @@ from amcat.tools.caching import cached
 
 
 FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets"
+RE_KWIC = re.compile("(?P<left>.*?)<em>(?P<keyword>.*?)</em>(?P<right>.*)", re.DOTALL)
 
 class LazyES(object):
     def __init__(self, queries=None, filters=None, fields=None, hits=False):
@@ -91,7 +93,22 @@ class HighlightField(CharField):
             return " ... ".join(result)
         else:
             return getattr(obj, source, None)
-                    
+               
+
+class KWICField(CharField):
+    def __init__(self, *args, **kargs):
+        self.kwic = kargs.pop('kwic')
+        super(KWICField, self).__init__(*args, **kargs)
+    
+    def field_to_native(self, obj, field_name):
+        # use highlighting if available, otherwise fall back to raw text
+
+        hl = obj.highlight.get('headline')
+        if not hl: hl = obj.highlight.get('text')
+        if hl:
+            m = RE_KWIC.match(hl[0])
+            if m:
+                return m.groupdict()[self.kwic]
 
 class ScoreField(IntegerField):
     def field_to_native(self, obj, field_name):
@@ -117,6 +134,7 @@ class SearchResource(AmCATResource):
         fields = self.get_serializer().get_fields().keys()
         if "text" in self.columns: fields += ["text"]
         if "lead" in self.columns: fields += ["lead"]
+        if "kwic" in self.columns and "lead" not in fields: fields += ["lead"]
         hits = "hits" in self.columns
         
         return LazyES(self.queries, fields=fields, hits=hits)
@@ -160,14 +178,17 @@ class SearchResource(AmCATResource):
         medium = CharField()
         author = CharField()
         addressee = CharField()
+        section = CharField()
+        url = CharField()
         length = IntegerField()
+        page = IntegerField()
         
         def __init__(self, *args, **kwargs):
             Serializer.__init__(self, *args, **kwargs)
             ctx = kwargs.get("context", {})
             columns = ctx.get("columns", [])
             queries = ctx.get("queries", None)
-            
+
             if "hits" in columns and queries:
                 for q in queries:
                     self.fields[q.label] = ScoreField()
@@ -175,6 +196,10 @@ class SearchResource(AmCATResource):
                 self.fields['text'] = CharField()
             if "lead" in columns:
                 self.fields['lead'] = HighlightField()
+            if "kwic" in columns:
+                self.fields['left'] = KWICField(kwic='left')
+                self.fields['keyword'] = KWICField(kwic='keyword')
+                self.fields['right'] = KWICField(kwic='right')
         
                 
     @classmethod
@@ -192,4 +217,7 @@ class SearchResource(AmCATResource):
             yield 'text'
         if 'lead' in cols:
             yield 'lead'
-
+        if 'kwic' in cols:
+            yield 'left'
+            yield 'keyword'
+            yield 'right'

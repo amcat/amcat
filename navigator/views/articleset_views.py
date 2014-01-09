@@ -32,7 +32,7 @@ from django.views.generic.edit import UpdateView
 
 from django.views.generic.base import RedirectView
 from django.db.models import Q
-
+from navigator.views.project_views import ProjectDetailsView
     
 class ImportSetView(ProjectScriptView):
     script = ImportSet
@@ -58,8 +58,8 @@ from api.rest.datatable import FavouriteDatatable
     
 class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = ArticleSet
-    parent = None
-    base_url = "projects/(?P<project_id>[0-9]+)"
+    parent = ProjectDetailsView
+
     context_category = 'Articles'
     
     resource = ArticleSet
@@ -91,13 +91,13 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
             # (or use api request.user to add only current user's favourite status). But good enough for now...
             
             # they need to be favourte AND still contained in the project
-            ids = p.favourite_articlesets.filter(Q(project=p.id) | Q(projects_set=p.id)).values_list("id", flat=True)
+            ids = p.favourite_articlesets.filter(Q(project=p.id) | Q(projects_set=p.id)).distinct().values_list("id", flat=True)
             if ids:
                 return table.filter(pk = ids)
             else:
                 no_favourites = True
                 # keep the table with all ids - better some output than none
-                all_ids = ArticleSet.objects.filter(Q(project=p.id) | Q(projects_set=p.id)).values_list("id", flat=True)
+                all_ids = ArticleSet.objects.filter(Q(project=p.id) | Q(projects_set=p.id)).distinct().values_list("id", flat=True)
                 if all_ids:
                     return table.filter(pk = all_ids)
                 else:
@@ -106,7 +106,7 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
         elif what == "coding":
             # more ugliness. Filtering the api on codingjob_set__id__isnull=False gives error from filter set
             ids = ArticleSet.objects.filter(Q(project=p.id) | Q(projects_set=p.id), codingjob_set__id__isnull=False)
-            ids = [id for (id, ) in ids.values_list("id")]
+            ids = [id for (id, ) in ids.distinct().values_list("id")]
             if ids: 
                 return table.filter(pk = ids)
             else:

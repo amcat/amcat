@@ -20,10 +20,17 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views.articleset_views import ImportSetView, SampleSetView, RefreshArticleSetView, EditSetView
 from navigator.views.preprocessing_views import ProcessParsingView
-from navigator.views.codebook_views import ImportCodebook, ExportCodebook, AddCodebookView
 from navigator.views import rule_views
+
+from navigator.views.articleset_views import *
+from navigator.views.article_views import *
+from navigator.views.query import *
+from navigator.views.project_views import *
+from navigator.views.codebook_views import *
+from navigator.views.user_views import *
+from navigator.views.codingjob_views import *
+from navigator.views.codingschema_views import *
 
 urlpatterns = patterns(
     '',
@@ -38,11 +45,13 @@ urlpatterns = patterns(
     url(r'^nyi$', 'navigator.views.nyi.index', name='nyi'),
     
     # Articles
+    url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
+            'navigator.views.article.view', name="article"),
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/split$', 'navigator.views.article.split', name="split_article"),
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/remove_from/(?P<remove_articleset_id>[0-9]+)$',
             'navigator.views.article.remove_from', name="remove_from_articleset"),
-    url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
-            'navigator.views.project.article', name="article"),
+    #url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
+    #        'navigator.views.project.article', name="article"),
     url(r'^project/(?P<projectid>[0-9]+)/articleset/delete/(?P<id>[0-9]+)$',
         'navigator.views.project.delete_articleset', name="articleset-delete"),
     #url(r'^project/(?P<projectid>[0-9]+)/articleset/refresh/(?P<pk>[0-9]+)$',
@@ -81,7 +90,7 @@ urlpatterns = patterns(
             template_name="navigator/user/change_password.html",
             post_change_redirect='change-password-done'
         )),
-    url(r'^user/change-password-done$', password_change_done,
+    url(r'^user/change-password-done$', password_change_done, name='change-password-done',
         kwargs=dict(
             template_name="navigator/user/change_password_done.html"
         )),
@@ -93,8 +102,6 @@ urlpatterns = patterns(
     # Projects (+managers)
     url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
 
-    url(r'^project/(?P<id>[0-9]+)/schemas$', 'navigator.views.project.schemas', name='project-schemas'),
-    
     url(r'^project/(?P<id>[0-9]+)/edit$', 'navigator.views.project.edit', name='project-edit'),
     url(r'^project/(?P<id>[0-9]+)/users/add$', 'navigator.views.project.users_add'),
     url(r'^project/(?P<id>[0-9]+)/upload-articles$', 'navigator.views.project.upload_article', name='upload-articles'),
@@ -108,26 +115,14 @@ urlpatterns = patterns(
     url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<id>[-0-9]+)/delete$', 'navigator.views.project.codebook_delete', name="project-delete-codebook"), 
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_changesets$', 'navigator.views.project.save_changesets'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/import$', ImportCodebook.as_view(), name='project-import-codebook'),
+    url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/update$', ImportCodebook.as_view(), name='project-import-codebook'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/export$', ExportCodebook.as_view(), name='project-export-codebook'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)$', 'navigator.views.project.schema', name='project-schema'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/delete$', 'navigator.views.project.delete_schema', name='project-delete-schema'),
-    url(r'^project/(?P<project>[0-9]+)/schema/new$', 'navigator.views.project.new_schema', name='project-new-schema'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit$', 'navigator.views.project.edit_schemafields', name='project-edit-schemafields'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit-properties$', 'navigator.views.project.edit_schemafield_properties', name='project-edit-schema-properties'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit-rules$', 'navigator.views.project.edit_schemafield_rules', name='project-edit-schema-rules'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/copy$', 'navigator.views.project.copy_schema', name='project-copy-schema'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/name$', 'navigator.views.project.name_schema', name='project-name-schema'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit/schemafield/(?P<schemafield>[0-9]+)$', 'navigator.views.project.edit_schemafield', name='project-edit-schemafield'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit/schemafield/(?P<schemafield>[0-9]+)/delete$', 'navigator.views.project.delete_schemafield', name='project-delete-schemafield'),
 
     # Coding
     url(r'^coding/schema-editor$', 'navigator.views.schemas.index'),
     url(r'^coding/codingschema/(?P<id>[0-9]+)$', 'navigator.views.schemas.schema',
         name='codingschema'),
 
-
-    #url(r'^codingjobs/(?P<coder_id>\d+|all)/(?P<status>all|unfinished)/$' ,'navigator.views.codingjob.index', name='codingjobs'),
-    #url(r'^codingjobs$' ,'navigator.views.codingjob.index', name='codingjobs'),
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
     url(r'^codingjobs/(?P<coder_id>\d+)/all$' ,'navigator.views.codingjob.all', name='codingjobs-all'),
     url(r'^project/(?P<id>[0-9-]+)/add_codingjob$', 'navigator.views.project.add_codingjob', name='codingjob-add'),
@@ -149,25 +144,20 @@ urlpatterns = patterns(
     url(r'^projects/(?P<project_id>[0-9]+)/codebooks/add$', AddCodebookView.as_view(), name='codebook-add'),
 ) 
 
-from navigator.views.articleset_views import *
-from navigator.views.article_views import *
-from navigator.views.query import *
-from navigator.views.project_views import *
-from navigator.views.codebook_views import *
-from navigator.views.user_views import *
-from navigator.views.codingjob_views import *
 
-for view in [ArticleSetListView, ArticleSetDetailsView,
+for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              ArticleSetArticleDetailsView, ProjectArticleDetailsView,
              QueryView, SampleSetView, EditSetView,
              CodebookListView, CodebookDetailsView,
+             CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
+             CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
+             CodingSchemaCopyView,
              CodingJobListView,
-             UserListView]:
+             ProjectUserListView, ProjectUserAddView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
                             )
-        print view.__name__, view.get_view_name(),  pattern
 
 urlpatterns += patterns('',
                         url("^projects/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
