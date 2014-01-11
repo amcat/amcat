@@ -173,10 +173,10 @@ class Article(AmcatModel):
             else:
                 if a.parent:
                     a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
+                sid = transaction.savepoint()
                 try:
-                    sid = transaction.savepoint()
                     a.save()
-                    log.info("saved article '{a.headline}'".format(**locals()))
+                    log.info("saved article {a.headline!r} -> {a.id} / {i}".format(i=id(a), **locals()))
                     transaction.savepoint_commit(sid)
                 except (IntegrityError, ValidationError, DatabaseError) as e:
                     log.warning(str(e))
