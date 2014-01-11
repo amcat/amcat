@@ -396,7 +396,7 @@ class TestDatatable(amcattest.AmCATTestCase):
         from api.rest.viewsets import CodingSchemaFieldViewSet
         dt = Datatable(CodingSchemaFieldViewSet, url_kwargs={"project" : 1})
         self.assertTrue(dt.url.startswith("/api/v4/projects/1/codingschemafields/"))
-        self.assertEqual(dt.fields, ['id', 'codingschema', 'fieldnr', 'label', 'required', 'fieldtype', 'codebook', 'split_codebook', 'default'])
+        self.assertEqual(dt.fields, ['id', 'codingschema', 'fieldnr', 'label', 'required', 'fieldtype', 'codebook', 'split_codebook', 'default', 'favourite'])
 
     def test_url(self):
         from api.rest.resources import UserResource
