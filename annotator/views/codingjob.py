@@ -41,30 +41,36 @@ def index(request, project_id, codingjob_id):
         'coder' : request.user,
     })
 
-def save(request, project_id, codingjob_id, article_id):
+@transaction.atomic
+def save(request, project_id, codingjob_id, coded_article_id):
     """
     Big fat warning: we don't do server side validation for the codingvalues. We
     do check if the codingjob and logged in user correspond, but it's the users
     responsibilty to send correct data (we don't care!).
     """
-    project = Project.objects.get(id=project_id)
-    codingjob = CodingJob.objects.select_related("articleset").get(id=codingjob_id)
-    article = Article.objects.only("id").get(id=article_id)
-    coded_article = CodedArticle.objects.get(article__id=article_id, codingjob__id=codingjob_id).select_related("codingjob", "article")
+    coded_article = CodedArticle.objects.select_related("project", "codingjob", "article").get(id=coded_article_id)
 
-    if codingjob.project_id != project.id:
-        raise PermissionDenied("Given codingjob ({codingjob}) does not belong to project ({project})!".format(**locals()))
+    if coded_article.codingjob.project_id != int(project_id):
+        raise PermissionDenied("Given codingjob ({coded_article.codingjob}) does not belong to project ({coded_article.codingjob.project})!".format(**locals()))
 
-    if codingjob.coder != request.user:
+    if coded_article.codingjob.coder_id != request.user.id:
         raise PermissionDenied("Only {request.user} can edit this codingjob.".format(**locals()))
 
-    if not codingjob.articleset.articles.filter(id=article_id).exists():
-        raise PermissionDenied("{article} not in {codingjob}.".format(**locals()))
+    if coded_article.codingjob_id != int(codingjob_id):
+        raise PermissionDenied("CodedArticle has codingjob_id={coded_article.codingjob_id} but {codingjob_id} given in url!")
 
     try:
         codings = json.loads(request.body)
     except ValueError:
         return HttpResponseBadRequest("Invalid JSON in POST body")
+
+    coded_article.status_id = codings["coded_article"]["status_id"]
+    coded_article.comments = codings["coded_article"]["comments"]
+    coded_article.save()
+
+    print(codings["coded_article"])
+    print(coded_article.status)
+    print(coded_article.comments)
 
     article_coding = codings["article_coding"]
     sentence_codings = codings["sentence_codings"]
