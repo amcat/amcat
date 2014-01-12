@@ -27,6 +27,7 @@ Also paves the way for more customization, i.e. allowing Lexis style queries
 from __future__ import unicode_literals, print_function, absolute_import
 from pyparsing import ParseResults, ParserElement
 import itertools, collections
+from amcat.tools.toolkit import stripAccents
 
 ParserElement.enablePackrat()
 
@@ -310,7 +311,9 @@ def simplify(term):
 class QueryParseError(Exception):
     pass
         
-def parse_to_terms(s, simplify_terms=True):
+def parse_to_terms(s, simplify_terms=True, strip_accents=True):
+    if strip_accents:
+        s = stripAccents(s)
     try:
         terms = get_grammar().parseString(s, parseAll=True)[0]
     except Exception, e:

@@ -153,7 +153,7 @@ class Article(AmcatModel):
 
         if check_duplicate:
             hashes = [a.es_dict['hash'] for a in articles]
-            results =es.query(filters={'hashes' : hashes}, fields=["hash", "sets"], score=False)
+            results =es.query(filters={'hashes' : hashes}, fields=["hash", "sets"], score=False) 
             dupes = {r.hash : r for r in results}
         else:
             dupes = {}
@@ -173,6 +173,7 @@ class Article(AmcatModel):
             else:
                 if a.parent:
                     a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
+                sid = transaction.savepoint()
                 try:
                     sid = transaction.savepoint()
                     a.save()

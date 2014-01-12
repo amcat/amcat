@@ -18,8 +18,13 @@
 ###########################################################################
 from django.db.models import Count, Q
 from rest_framework import serializers
+from amcat.models.coding.codingjob import CodingJob
+from amcat.models.article import Article
+from amcat.models.sentence import  Sentence
+from amcat.models.coding.codebook import Codebook
+from amcat.models.coding.codingrule import CodingRule
+from amcat.models.coding.codingschemafield import CodingSchemaField
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from amcat.models import CodingJob, Article, Sentence, Codebook, CodingRule, CodingSchemaField
 from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT, CodedArticle
 from amcat.nlp import sbd
 from amcat.tools.amcattest import AmCATTestCase
@@ -39,7 +44,6 @@ __all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet",
            "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet",
            "CodingJobHighlighterViewSet", "CodingJobCodingRuleViewSet",
            "CodingJobCodingSchemaFieldViewSet")
-
 
 class CodingJobSerializer(AmCATModelSerializer):
     """
