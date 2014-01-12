@@ -66,6 +66,11 @@ class Coding(AmcatModel):
     coded_article = models.ForeignKey("amcat.CodedArticle", related_name="codings")
     sentence = models.ForeignKey(Sentence, null=True)
 
+    # These values allow subsentence codings. Better names would be from
+    # and to, but from is a reserved keyword in both Python and SQL.
+    start = models.SmallIntegerField(null=True)
+    end = models.SmallIntegerField(null=True)
+
     def __init__(self, *args, **kwargs):
         super(Coding, self).__init__(*args, **kwargs)
         self._coded_article_changed = False
