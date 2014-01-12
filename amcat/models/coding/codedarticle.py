@@ -42,14 +42,17 @@ class CodedArticleStatus(AmcatModel):
 
 def _to_coding(coded_article, coding):
     """
-    Takes a dictionary with keys 'sentence_id', and creates
+    Takes a dictionary with keys 'sentence_id', 'start', 'end', and creates
     an (unsaved) Coding object.
 
     @type codingjob: CodingJob
     @type article: Article
     @type coding: dict
     """
-    return Coding(coded_article=coded_article, sentence_id=coding.get("sentence_id"))
+    return Coding(
+        coded_article=coded_article, sentence_id=coding.get("sentence_id"),
+        start=coding.get("start"), end=coding.get("end")
+    )
 
 def _to_codingvalue(coding, codingvalue):
     """
@@ -144,6 +147,8 @@ class CodedArticle(models.Model):
 
             {
               "sentence_id" : int,
+              "start" : int,
+              "end" : int,
               "values" : [CodingDict]
             }
 
@@ -204,9 +209,11 @@ class TestCodedArticle(amcattest.AmCATTestCase):
             a = Coding.objects.get(pk=a.id)
             self.assertEqual(a.comments, s)
 
-    def _get_coding_dict(self, sentence_id=None, field_id=None, intval=None, strval=None):
+    def _get_coding_dict(self, sentence_id=None, field_id=None, intval=None, strval=None, start=None, end=None):
         return {
             "sentence_id" : sentence_id,
+            "start" : start,
+            "end" : end,
             "values" : [{
                 "codingschemafield_id" : field_id,
                 "intval" : intval,

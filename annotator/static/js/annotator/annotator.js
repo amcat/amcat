@@ -472,8 +472,15 @@ annotator = (function(self){
         row.next().find("input.sentence").focus();
     };
 
+    self.parse_sentence = function(sentence){
+        return {
+            words: sentence.split(/ +/),
+            sentence: sentence
+        };
+    };
+
     /*
-     * Display sentence text above currently active coding.
+     * Display sentence text above currently active coding and update from to elements.
      */
     self.refresh_sentence_text = function(){
         self.sentence_codings_container.find(".sentence-text-row").remove();
@@ -485,19 +492,67 @@ annotator = (function(self){
         active_row.before($("<tr>").addClass("sentence-text-row").append($("<td>")
                 .attr("colspan", active_row.closest("table").find("th").size())
                 .text(active_coding.sentence.sentence)));
+
+        // Set min, max values on from/to widgets
+        var sentence = self.parse_sentence(active_coding.sentence.sentence);
+        var from = $(".from", active_row);
+        var to = $(".to", active_row);
+
+        from.attr("min", 0).attr("max", sentence.words.length - 2);
+        to.attr("min", 1).attr("max", sentence.words.length - 1);
+
+        var fromv = parseInt(from.val());
+        if (!isNaN(fromv)){
+            to.attr("min", fromv+1);
+        }
+
+        var tov = parseInt(to.val());
+        if (!isNaN(tov)){
+            from.attr("max", tov-1);
+        }
+
+        active_coding.start = fromv || null;
+        active_coding.end = tov || null;
+
+        // Highlight selected part
+        if (isNaN(fromv) && isNaN(tov)) return;
+        if (isNaN(fromv)) fromv = 0;
+        if (isNaN(tov)) tov = sentence.words.length;
+
+        var prefix = sentence.words.slice(0, fromv).join(" ");
+        var middle = sentence.words.slice(fromv, tov+1).join(" ");
+        var remainer = sentence.words.slice(tov+1, sentence.words.length).join(" ");
+
+        $("td", active_row.prev()).html(
+            $("<span>")
+                .append($("<span>").text(prefix))
+                .append($("<code>").text(middle))
+                .append($("<span>").text(remainer))
+        );
     };
 
 
     /* Returns (new) DOM representation of a single sentence coding */
     self.get_sentence_coding_html = function(coding){
         var coding_el = $("<tr>").addClass("coding").attr("annotator_coding_id", coding.annotator_id);
+
+        // Add sentencenr, from and to.
         coding_el.append(widgets.sentence.get_html().val((coding.sentence === null) ? "" : coding.sentence.get_unit()));
+
+        if(self.codingjob.unitschema.subsentences){
+            coding_el.append(widgets.from.get_html().val(coding.start||""));
+            coding_el.append(widgets.to.get_html().val(coding.end||""));
+        }
+
         coding_el.append($.map(widgets.get_html(self.sentence_schemafields), function(widget){
             return $("<td>").append(widget);
         }));
 
         coding_el.append($("<td>").addClass("focus-stealer").focus(self.last_widget_reached));
-        coding_el.find("input").focus(self.refresh_sentence_text);
+        coding_el.on("sentence-changed", self.refresh_sentence_text);
+        coding_el.find("input").focus(function(){
+            $(this).closest(".coding").trigger("sentence-changed");
+        });
 
         return coding_el;
     };
@@ -532,10 +587,6 @@ annotator = (function(self){
         return true;
     };
 
-    self.is_empty_coding = function(row){
-
-    };
-
     /*
      * Returns 'minimised' version of given coding, which can easily be serialised.
      */
@@ -543,6 +594,7 @@ annotator = (function(self){
         codingvalues = $.grep(codingvalues, function(v){ return v.coding == coding });
 
         return {
+            start : coding.start, end : coding.end,
             sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
             values : $.map(codingvalues, self.pre_serialise_codingvalue)
         }
@@ -755,6 +807,8 @@ annotator = (function(self){
             id: null,
             coded_article : self.state.coded_article,
             sentence: null,
+            start: null,
+            end: null,
             values : {} // Included to be consistent with AJAX data
         }, properties);
 
