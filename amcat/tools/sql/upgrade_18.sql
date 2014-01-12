@@ -3,7 +3,9 @@
 -- performing UPDATE.
 
 -- In case transaction 2 went wrong
-ALTER TABLE codings DROP COLUMN IF EXISTS coded_article_id ;
+ALTER TABLE codings DROP COLUMN IF EXISTS coded_article_id;
+DROP INDEX IF EXISTS temp_codingjob_article_index;
+CREATE INDEX temp_codingjob_article_index ON coded_articles (codingjob_id, article_id);
 DELETE FROM coded_articles;
 
 -- Add coded_article_id (FK) and populate coded_articles
@@ -24,12 +26,14 @@ END;
 START TRANSACTION;
 	INSERT INTO coded_articles (codingjob_id, article_id, status_id)
 	   (SELECT c.codingjob_id, aset.article_id, 0
-	    FROM codingjobs c, articlesets_articles aset
-	    WHERE
-	        c.articleset_id = aset.articleset_id AND
-	        (c.codingjob_id, aset.article_id) NOT IN
-	           (SELECT codingjob_id, article_id
-	            FROM coded_articles));
+	    FROM codingjobs c INNER JOIN articlesets_articles aset ON aset.articleset_id = c.articleset_id
+	    WHERE NOT EXISTS (
+         SELECT *
+         FROM coded_articles ca
+         WHERE
+           ca.codingjob_id = c.codingjob_id AND
+           ca.article_id = aset.article_id
+      ));
 
 	UPDATE codings SET coded_article_id = ca.id
 		FROM codings c, coded_articles ca
@@ -40,6 +44,7 @@ END;
 
 -- Clean up by deleting obsolete columns
 START TRANSACTION;
+  DROP INDEX temp_codingjob_article_index;
 	ALTER TABLE codings DROP COLUMN article_id;
 	ALTER TABLE codings DROP COLUMN codingjob_id;
 	ALTER TABLE codings DROP COLUMN status_id;
