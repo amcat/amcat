@@ -68,10 +68,6 @@ def save(request, project_id, codingjob_id, coded_article_id):
     coded_article.comments = codings["coded_article"]["comments"]
     coded_article.save()
 
-    print(codings["coded_article"])
-    print(coded_article.status)
-    print(coded_article.comments)
-
     article_coding = codings["article_coding"]
     sentence_codings = codings["sentence_codings"]
     coded_article.replace_codings(itertools.chain([article_coding], sentence_codings))
