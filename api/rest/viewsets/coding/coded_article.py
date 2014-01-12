@@ -44,11 +44,13 @@ class CodedArticleSerializer(AmCATModelSerializer):
     date = serializers.SerializerMethodField("get_date")
     pagenr = serializers.SerializerMethodField("get_pagenr")
     length = serializers.SerializerMethodField("get_length")
+    article_id = serializers.SerializerMethodField("get_article_id")
 
     get_headline = article_property("headline")
     get_date = article_property("date")
     get_pagenr = article_property("pagenr")
     get_length = article_property("length")
+    get_article_id = article_property("id")
 
     def _get_coded_articles(self):
         view = self.context["view"]

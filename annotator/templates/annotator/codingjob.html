@@ -46,7 +46,7 @@
             var jqueryElement = $('#article-table-container');
             var url = "{% url "codedarticle-list" project.id codingjob.id %}";
             var columns = [], column_order = [
-                "id", "headline", "date", "pagenr",
+                "id", "article_id", "headline", "date", "pagenr",
                 "length", "status", "comments"
             ];
 
