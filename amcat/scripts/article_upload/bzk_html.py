@@ -121,10 +121,16 @@ class BZK(UploadScript):
                 if not bits: # empty knipsel
                     return
                 if "-" in bits[-1]:
-                    article.props.date = readDate(bits[-1])
+                    try:
+                        article.props.date = readDate(bits[-1])
+                    except ValueError:
+                        article.props.date = None
                     article.props.medium = self.get_medium(" ".join(bits[:-1]))
                 elif bits[-1].isdigit():
-                    article.props.date = readDate(" ".join(bits[-3:]))
+                    try:
+                        article.props.date = readDate(" ".join(bits[-3:]))
+                    except ValueError:
+                        article.props.date = None
                     article.props.medium = self.get_medium(" ".join(bits[:-3]))
                 else:
                     article.props.medium = self.get_medium(" ".join(bits))
