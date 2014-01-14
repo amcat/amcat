@@ -16,12 +16,10 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
 from django.views.generic.list import ListView
-from django.views.generic.detail import DetailView
-from api.rest.datatable import Datatable
-from api.rest.resources import CodingJobResource
+
+from api.rest.viewsets import CodingJobViewSet
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import CodingJob
 from navigator.utils.misc import session_pop
@@ -32,7 +30,11 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
     parent = None
     base_url = "projects/(?P<project_id>[0-9]+)"
     context_category = 'Coding'
-    resource = CodingJobResource
+    resource = CodingJobViewSet
+
+    def get_datatable(self, **kwargs):
+        url_kwargs = dict(project=self.project.id)
+        return super(CodingJobListView, self).get_datatable(url_kwargs=url_kwargs, **kwargs)
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingJobListView, self).get_context_data(**kwargs)
