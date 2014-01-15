@@ -147,7 +147,7 @@ class ShowAssociations(WebScript):
                 columns += [{"mData": cn(colname), "sTitle": colname, "sWidth": "70px", "mDataProp": cn(colname)} for colname in colnames]
                 
                 data = []
-                scores = {(i,x,y) : s for (i,x,y,s) in assocTable}
+                scores = {(i,x,y) : self.format(s) for (i,x,y,s) in assocTable}
                 for i in intervals:
                     row = {"x" : i}
                     for c in colnames:
@@ -211,6 +211,7 @@ class ShowAssociations(WebScript):
                     g.addEdge(getnode(x),getnode(y), weight=w, **opts)
                 if interval is not None:
                     html += "<h1>{interval}</h1>".format(**locals())
+                g.normalizeWeights()
                 html += g.getHTMLObject()
             self.output = 'json-html'
             return self.outputResponse(html, unicode)
