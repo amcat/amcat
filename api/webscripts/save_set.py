@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
+from amcat.scripts.forms import SelectionForm
 
 from webscript import WebScript
 from django import forms
@@ -43,7 +43,10 @@ class SaveAsSet(WebScript):
     
     
     def run(self):
-        article_ids = list(keywordsearch.get_ids(self.data))
+        sf = SelectionForm(self.project, self.data)
+        sf.full_clean()
+
+        article_ids = list(keywordsearch.get_ids(sf.cleaned_data))
         result = SaveAsSetScript(self.data).run(article_ids)
         result.provenance = json.dumps(dict(self.data))
         result.save()
