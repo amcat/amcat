@@ -1,21 +1,47 @@
-from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType
+###########################################################################
+#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+#                                                                         #
+# This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
+#                                                                         #
+# AmCAT is free software: you can redistribute it and/or modify it under  #
+# the terms of the GNU Affero General Public License as published by the  #
+# Free Software Foundation, either version 3 of the License, or (at your  #
+# option) any later version.                                              #
+#                                                                         #
+# AmCAT is distributed in the hope that it will be useful, but WITHOUT    #
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or   #
+# FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public     #
+# License for more details.                                               #
+#                                                                         #
+# You should have received a copy of the GNU Affero General Public        #
+# License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
+###########################################################################
+from functools import partial
 import json
-from navigator.views.project_views import ProjectDetailsView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
-from navigator.views.datatableview import DatatableMixin
+from django.core.exceptions import ValidationError
+from django.shortcuts import redirect
+
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
-from api.rest.datatable import Datatable
 from django.views.generic.base import RedirectView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
-from api.rest.resources import CodingSchemaResource, CodingSchemaFieldResource
-from amcat.models.project import LITTER_PROJECT_ID
 from django.core.urlresolvers import reverse
 from django.forms.widgets import HiddenInput
-from amcat.models.coding import codingruletoolkit
 from django.http import HttpResponse
 from django import forms
+import itertools
+
+from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code
+from amcat.models.coding.serialiser import CodebookSerialiser, BooleanSerialiser
+from api.rest.viewsets import _CodingSchemaFieldViewSet, CodingSchemaViewSet
+from navigator.views.project_views import ProjectDetailsView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from navigator.views.datatableview import DatatableMixin
+from api.rest.datatable import Datatable
+from amcat.models.project import LITTER_PROJECT_ID
+from amcat.models.coding import codingruletoolkit
 from navigator.utils.misc import session_pop
+
 
 class CodingSchemaListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, ListView):
     model = CodingSchema
@@ -24,18 +50,19 @@ class CodingSchemaListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMix
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingSchemaListView, self).get_context_data(**kwargs)
-        owned_schemas = Datatable(CodingSchemaResource, rowlink='./{id}').filter(project=self.project)
-        linked_schemas = (Datatable(CodingSchemaResource, rowlink='./{id}')
-                        .filter(projects_set=self.project))
-        
+        schemas = Datatable(CodingSchemaViewSet, rowlink="./{id}", url_kwargs=dict(project=self.project.id)).hide("highlighters")
+        owned_schemas = schemas.filter(project=self.project)
+        linked_schemas = schemas.filter(projects_set=self.project)
         ctx.update(locals())
         return ctx
+
+
 
 class CodingSchemaDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
     model = CodingSchema
     parent = CodingSchemaListView
     context_category = 'Coding'
-    resource = CodingSchemaFieldResource
+    resource = _CodingSchemaFieldViewSet
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingSchemaDetailsView, self).get_context_data(**kwargs)
@@ -45,9 +72,63 @@ class CodingSchemaDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumb
         ctx.update(locals())
         return ctx
 
+    def get_datatable(self, **kwargs):
+        return super(CodingSchemaDetailsView, self).get_datatable(
+            url_kwargs=dict(project=self.project.id, codingschema=self.object.id)
+        )
+
     def filter_table(self, table):
         return table.hide("codingschema")
-        
+
+class CodingSchemaNameView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, TemplateView):
+    model = CodingSchema
+    parent = CodingSchemaDetailsView
+    context_category = 'Coding'
+    url_fragment = "name"
+
+    @classmethod
+    def get_view_name(cls):
+        return "coding schema-name"
+
+    def post(self, *args, **kwargs):
+        schema = self.get_object()
+
+        if 'cancel' in self.request.POST:
+            return redirect("coding schema-details", self.project.id, schema.id)
+
+        # No, copy as requested
+        new_schema = CodingSchema(
+            name=self.request.POST.get("name"), description=schema.description,
+            isnet=schema.isnet, isarticleschema=schema.isarticleschema,
+            quasisentences=schema.quasisentences, project=self.project
+        )
+
+        new_schema.save()
+
+        for field in schema.fields.all():
+            field.id = None
+            field.codingschema = new_schema
+            field.save()
+
+        self.request.session["schema_%s_is_new" % new_schema.id] = True
+        return redirect("coding schema-details", self.project.id, new_schema.id)
+
+
+class CodingSchemaCopyView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, TemplateView):
+    model = CodingSchema
+    parent = CodingSchemaDetailsView
+    context_category = 'Coding'
+    url_fragment = "copy"
+
+    @classmethod
+    def get_view_name(cls):
+        return "coding schema-copy"
+
+    def post(self, *args, **kwargs):
+        do_copy = (self.request.POST.get("yes", "no").lower() == "yes")
+        redirect_class = CodingSchemaNameView if do_copy else CodingSchemaDetailsView
+        return redirect(redirect_class, self.project.id, self.get_object().id)
+
 class CodingSchemaDeleteView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
     required_project_permission = authorisation.ROLE_PROJECT_WRITER
     parent = CodingSchemaDetailsView
@@ -72,7 +153,11 @@ class CodingSchemaCreateView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumb
         form = super(CodingSchemaCreateView, self).get_form(form_class)
         form.fields["project"].widget = HiddenInput()
         form.fields["project"].initial = self.project
+        form.fields["highlighters"].required = False
         return form
+
+
+
 
     def get_success_url(self):
         return reverse("coding schema-details", args=(self.project.id, self.object.id))
@@ -82,6 +167,11 @@ class CodingSchemaEditView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMi
     parent = CodingSchemaDetailsView
     url_fragment = "edit"
     model = CodingSchema
+
+    def get_form(self, form_class):
+        form = super(CodingSchemaEditView, self).get_form(form_class)
+        form.fields["highlighters"].required = False
+        return form
 
     def get_success_url(self):
         return reverse("coding schema-details", args=(self.project.id, self.object.id))
@@ -156,21 +246,15 @@ def _get_form_errors(forms):
     is yielded.
     """
     return ((f.data.get('fieldnr') or f.data["label"], f.errors) for f in forms if not f.is_valid())
-        
-class CodingSchemaEditRulesView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, TemplateView):
-    required_project_permission = authorisation.ROLE_PROJECT_WRITER
-    parent = CodingSchemaDetailsView
-    url_fragment = "rules"
-    model = CodingSchema
 
-    def get(self, *args, **kargs):
-        if self.get_object().project != self.project:
-            # Offer to copy it to currect project
-            pass#return redirect(copy_schema, project.id, schema.id)
-        return super(CodingSchemaEditFieldsView, self).get(*args, **kargs)
 
-    
+def _get_form(data, schema, form):
+    data["codingschema"] = schema.id
+    instance = form._meta.model.objects.get(id=data["id"]) if "id" in data else None
+    return form(schema, data=data, instance=instance)
 
+def _get_forms(datas, schema, form):
+    return itertools.imap(partial(_get_form, form=form, schema=schema), datas)
 
 class CodingSchemaFieldForm(forms.ModelForm):
     label = forms.CharField()
@@ -183,7 +267,7 @@ class CodingSchemaFieldForm(forms.ModelForm):
 
     def _to_bool(self, val):
         if val is None:
-            return 
+            return
 
         if str(val).lower() in ("true", "1", "yes"):
             return True
@@ -211,7 +295,7 @@ class CodingSchemaFieldForm(forms.ModelForm):
             raise ValidationError("Fieldtype must be set in order to check this field")
 
         if self.data['default'] is None:
-            return 
+            return
 
         # Fieldtype is set
         fieldtype = self.cleaned_data['fieldtype']
@@ -220,7 +304,7 @@ class CodingSchemaFieldForm(forms.ModelForm):
 
             if value is None:
                 raise ValidationError(
-                    ("When fieldtype is of type {}, default needs " + 
+                    ("When fieldtype is of type {}, default needs " +
                     "to be empty, true or false.").format(fieldtype))
 
         serialiser = fieldtype.serialiserclass(CodingSchemaField(**self.cleaned_data))
@@ -252,7 +336,79 @@ class CodingSchemaFieldForm(forms.ModelForm):
 
             raise ValidationError("'{}' is not a valid value".format(value))
 
-        return value
-
     class Meta:
         model = CodingSchemaField
+
+class CodingRuleForm(forms.ModelForm):
+    def __init__(self, codingschema, *args, **kwargs):
+        super(CodingRuleForm, self).__init__(*args, **kwargs)
+        self.fields["action"].required = False
+        self.fields["field"].required = False
+        self.fields["field"].queryset = codingschema.fields.all()
+
+        self.codingschema = codingschema
+
+    def clean_condition(self):
+        condition = self.cleaned_data["condition"]
+
+        try:
+            tree = codingruletoolkit.parse(CodingRule(condition=condition))
+        except (Code.DoesNotExist, CodingSchemaField.DoesNotExist, CodingRule.DoesNotExist) as e:
+            raise ValidationError(e)
+        except SyntaxError as e:
+            raise ValidationError(e)
+
+        if tree is not None:
+            codingruletoolkit.clean_tree(self.codingschema, tree)
+
+        return condition
+
+    class Meta:
+        model = CodingRule
+
+
+_get_schemafield_forms = partial(_get_forms, form=CodingSchemaFieldForm)
+_get_codingrule_forms = partial(_get_forms, form=CodingRuleForm)
+
+class CodingSchemaEditRulesView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, TemplateView):
+    required_project_permission = authorisation.ROLE_PROJECT_WRITER
+    parent = CodingSchemaDetailsView
+    url_fragment = "rules"
+    model = CodingSchema
+
+    def get_context_data(self, **kwargs):
+        ctx = super(CodingSchemaEditRulesView, self).get_context_data(**kwargs)
+        ctx["codingschema"] = self.get_object()
+        return ctx
+
+    def get(self, *args, **kargs):
+        if self.get_object().project != self.project:
+            # Offer to copy it to currect project
+            pass#return redirect(copy_schema, project.id, schema.id)
+        return super(CodingSchemaEditRulesView, self).get(*args, **kargs)
+
+    def post(self, commit, *args, **kwargs):
+        request, schema, project = self.request, self.get_object(), self.project
+
+        commit = request.GET.get("commit", commit) in (True, "true")
+        rules = json.loads(request.POST['rules'])
+        forms = list(_get_codingrule_forms(rules, schema))
+        errors = dict(_get_form_errors(forms))
+
+        if not errors and commit:
+            rules = [form.save() for form in forms]
+
+            for rule in set(schema.rules.all()) - set(rules):
+                rule.delete()
+
+            request.session["rules_{}_edited".format(schema.id)] = True
+
+        # Always send response (don't throw an error)
+        schema_url = reverse("coding schema-details", args=[project.id, schema.id])
+
+        return HttpResponse(
+            json.dumps(dict(fields=errors, schema_url=schema_url)),
+            mimetype='application/json'
+        )
+
+

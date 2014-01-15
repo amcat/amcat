@@ -24,20 +24,16 @@ Coding Jobs are sets of articles assigned to users for manual coding.
 Each coding job has codingschemas for articles and/or sentences.
 """
 
-from functools import partial
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from amcat.models import CodedArticle
 
 from amcat.tools.model import AmcatModel
-from amcat.tools.caching import set_cache
-from amcat.tools.table import table3 
-
+from amcat.tools.table import table3
 
 from amcat.models.coding.codingschema import CodingSchema
-from amcat.models.coding.codingschemafield import CodingSchemaField
-from amcat.models.coding.coding import Coding
 from amcat.models.user import User
 from amcat.models.articleset import ArticleSet
-
-
 
 from django.db import models
 
@@ -69,35 +65,29 @@ class CodingJob(AmcatModel):
         app_label = 'amcat'
         ordering = ('project', '-id')
 
-    def get_codings(self):
-        """Return a sequence of codings with pre-fetched values"""
-        # late import to prevent cycles
-        from amcat.models.coding.coding import CodingValue
-        
-        q = CodingValue.objects.filter(coding__codingjob__exact=self)
-        q = q.select_related("field__fieldtype", "value__strval", "value__intval", "coding")
-        q = q.order_by("coding", 'field__fieldnr')
-        # possible optimzation: use running values list because of sort order
-        values_per_coding = {} # coding : [(field, value), ...]
-        for val in q:
-            values_per_coding.setdefault(val.coding, []).append((val.field,  val.value))
-        for coding, values in values_per_coding.iteritems():
-            set_cache(coding, coding.get_values.__name__, values)
-            yield coding
+    @property
+    def codings(self):
+        log.warning("Deprecated: use CodedArticle.codings")
+        for coded_article in self.coded_articles.all():
+            for coding in coded_article.codings.all():
+                yield coding
 
-    def values_table(self, unit_codings=False):
-        """
-        Return the coded values in this job as a table3.Table with codings as rows
-        and the fields in the columns; cells contain serialised values. 
-        """
-        schema_id = self.unitschema_id if unit_codings else self.articleschema_id
-        fields = CodingSchemaField.objects.filter(codingschema=schema_id)
-        columns = [SchemaFieldColumn(field) for field in fields]
-        codings = Coding.objects.filter(codingjob=self, sentence__isnull=(not unit_codings))
-        codings = codings.prefetch_related("values", "values__field")
-        codings = list(codings)
-        return table3.ObjectTable(rows=codings, columns=columns)
-    
+@receiver(post_save, sender=CodingJob)
+def create_coded_articles(sender, instance=None, created=None, **kwargs):
+    """
+    For each article in the codingjobs articleset, a CodedArticle needs to be
+    present. This signal receiver creates the necessary objects after a
+    codingjob is created.
+    """
+    if not created: return
+
+    # Singal gets called multiple times, workaround:
+    if CodedArticle.objects.filter(codingjob=instance).exists(): return
+
+    aids = instance.articleset.articles.all().values_list("id", flat=True)
+    coded_articles = (CodedArticle(codingjob=instance, article_id=aid) for aid in aids)
+    CodedArticle.objects.bulk_create(coded_articles)
+
 class SchemaFieldColumn(table3.ObjectColumn):
     def __init__(self, field):
         super(SchemaFieldColumn, self).__init__(field.label)
@@ -123,38 +113,8 @@ class TestCodingJob(amcattest.AmCATTestCase):
         j.articleset.add(amcattest.create_test_article())
         j.articleset.add(amcattest.create_test_article())
         self.assertEqual(1+3, len(j.articleset.articles.all()))
-        
-    def test_values_table(self):
-        """Does getting a table of values work?"""
-        
-        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields()
-        job = amcattest.create_test_job(unitschema=schema, articleschema=schema)
-        
-        c = amcattest.create_test_coding(codingjob=job)
-        c.update_values({strf:"bla", intf:1})
-	
-        self.assertEqual(set(job.values_table().to_list()), {('bla', 1, None)})
 
-        code = amcattest.create_test_code(label="CODED")
-        codebook.add_code(code)
-        c2 = amcattest.create_test_coding(codingjob=job)
-        c2.update_values({intf:-1, codef: code})
-        t = job.values_table()
-        self.assertEqual(set(t.rows), {c, c2})
-        self.assertEqual(set(t.to_list()), {('bla', 1, None), (None, -1, code.id)})
+    def test_post_create(self):
+        job = amcattest.create_test_job(10)
+        self.assertEqual(CodedArticle.objects.filter(codingjob=job).count(), 10)
 
-    def test_nqueries(self):
-        """Does getting a table of values not use too many queries?"""
-        
-        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields()
-        job = amcattest.create_test_job(unitschema=schema, articleschema=schema)
-
-        for i in range(10):
-            c = amcattest.create_test_coding(codingjob=job)
-            c.update_values({strf:"bla %i"%i, intf:i})
-
-        job = CodingJob.objects.get(pk=job.id)
-        with self.checkMaxQueries(6):
-            # 1. get schema, 2. get codings, 3. get values, 4. get field, 5+6. get serialiser
-            t = job.values_table()
-            cells = list(t.to_list())

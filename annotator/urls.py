@@ -26,7 +26,7 @@ article_patterns = patterns('',
 
 codingjob_patterns = patterns('',
     url('^$', codingjob.index),
-    url(r'^article/(?P<article_id>\d+)/', include(article_patterns)),
+    url(r'^codedarticle/(?P<coded_article_id>\d+)/', include(article_patterns)),
 )
 
 urlpatterns = patterns('',

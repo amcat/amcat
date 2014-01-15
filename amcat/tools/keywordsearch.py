@@ -61,7 +61,7 @@ def filters_from_form(form_data):
     if form_data.get('datetype') == 'on':
         d = readDate(form_data.get('on_date'))
         yield 'start_date', d.isoformat()
-        yield 'end_date', (d + relativedelta(days=2)).isoformat()
+        yield 'end_date', (d + relativedelta(days=1)).isoformat()
     elif form_data.get('datetype') == 'between':
         yield 'start_date', form_data.get('start_date')
         yield 'end_date', form_data.get('end_date')

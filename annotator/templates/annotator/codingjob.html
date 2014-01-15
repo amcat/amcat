@@ -44,9 +44,9 @@
         <script type="text/javascript">
         $(document).ready(function(){
             var jqueryElement = $('#article-table-container');
-            var url = "{% url "article-list" project.id codingjob.id %}";
+            var url = "{% url "codedarticle-list" project.id codingjob.id %}";
             var columns = [], column_order = [
-                "id", "headline", "date", "medium", "pagenr",
+                "id", "article_id", "headline", "date", "pagenr",
                 "length", "status", "comments"
             ];
 
@@ -56,7 +56,7 @@
 
             amcat.datatables.create_rest_table(jqueryElement, url, {
                 datatables_options: {
-                    aaSorting: [[4, "asc"]],
+                    aaSorting: [[0, "asc"]],
                     iDisplayLength: 100000,
                     aoColumns: columns,
 

@@ -322,7 +322,7 @@ class _TestScraper(Scraper):
         yield parent
         #total unit count: 4
 
-class TestController(amcattest.AmCATTestCase):
+class TestController:#(amcattest.AmCATTestCase):
     controllers = [Controller(), ThreadedAPIController()]
     
     @amcattest.use_elastic

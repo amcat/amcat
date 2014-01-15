@@ -101,14 +101,14 @@ class Article(AmcatModel):
             for word in sentence.words:
                 yield word
 
-    def get_sentence(self, parnr, setnr):
+    def get_sentence(self, parnr, sentnr):
         "@return: a Sentence object with the given paragraph and sentence number"
         for s in self.sentences:
             if s.parnr == parnr and s.sentnr == sentnr:
                 return s
 
     def getSentence(self, parnr, sentnr):
-        return self.get_sentence(parnr, setnr)
+        return self.get_sentence(parnr, sentnr)
 
     ## Auth ##
     def can_read(self, user):
@@ -173,10 +173,10 @@ class Article(AmcatModel):
             else:
                 if a.parent:
                     a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
+                sid = transaction.savepoint()
                 try:
                     sid = transaction.savepoint()
                     a.save()
-                    log.info("saved article '{a.headline}'".format(**locals()))
                     transaction.savepoint_commit(sid)
                 except (IntegrityError, ValidationError, DatabaseError) as e:
                     log.warning(str(e))

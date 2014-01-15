@@ -81,6 +81,7 @@ class WebScript(object):
     output_template = None # path to template used for html output
     solrOnly = False # only for Solr output, not on database queries
     is_edit = False # does the script require edit permission on the project
+    is_download = False # set True if the result should be downloaded by the browser instead of displayed
 
     def __init__(self, project=None, user=None, data=None, **kwargs):
         if not isinstance(data, QueryDict) and data is not None:
@@ -97,12 +98,7 @@ class WebScript(object):
         self.user = User.objects.get(id=user) if isinstance(user, int) else user
 
         if self.form:
-
-            try:
-                form = self.form(project=project, data=data, **kwargs)
-            except TypeError:
-                form = self.form(data=data, **kwargs)
-
+            form = self.get_form(**kwargs)
             if not form.is_valid():
                 raise InvalidFormException("Invalid or missing options: %r" % form.errors, form.errors)
             self.options = form.cleaned_data
@@ -110,6 +106,12 @@ class WebScript(object):
         else:
             self.options = None
             self.formInstance = None
+
+    def get_form(self, **kwargs):
+        try:
+            return self.form(project=self.project, data=self.data, **kwargs)
+        except TypeError:
+            return self.form(data=self.data, **kwargs)
 
     @classmethod
     def formHtml(cls, project=None):
@@ -130,7 +132,7 @@ class WebScript(object):
             if (self.__class__.__name__ in ws.displayLocation
                 and ((not ws.solrOnly) or self.data.get('query'))
                 and ((not ws.is_edit) or can_edit)):
-                yield ws.__name__, ws.name
+                yield ws.__name__, ws.name, ws.is_download
 
     def delay(self):
         return webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)

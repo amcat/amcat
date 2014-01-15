@@ -18,7 +18,8 @@
 ###########################################################################
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from amcat.models import Coding, Article, Sentence
+from amcat.models import Sentence, CodedArticle, Article
+from amcat.tools import amcattest
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
@@ -31,57 +32,57 @@ __all__ = (
     "CodedArticleSerializer", "CodedArticleViewSetMixin", "CodedArticleViewSet",
     "CodedArticleSentenceViewSet")
 
-_CA_FIELDS = {
-    "id", "headline", "date", "medium", "pagenr", "length",
-    "status", "comments", "coding", "comments"
-}
+def article_property(property_name):
+    def inner(self, coded_article):
+        return getattr(self.get_article(coded_article), property_name)
+    return inner
 
 class CodedArticleSerializer(AmCATModelSerializer):
-    model = Article
+    model = CodedArticle
 
-    comments = serializers.SerializerMethodField('get_comments')
-    status = serializers.SerializerMethodField('get_status')
+    headline = serializers.SerializerMethodField("get_headline")
+    date = serializers.SerializerMethodField("get_date")
+    pagenr = serializers.SerializerMethodField("get_pagenr")
+    length = serializers.SerializerMethodField("get_length")
+    article_id = serializers.SerializerMethodField("get_article_id")
 
-    @property
-    def codings(self):
-        codings = Coding.objects.filter(codingjob=self.codingjob, sentence=None)
-        if hasattr(self.context["view"], "object_list"):
-            return codings.filter(article__in=self.context["view"].object_list)
-        return codings.filter(article=self.object)
+    get_headline = article_property("headline")
+    get_date = article_property("date")
+    get_pagenr = article_property("pagenr")
+    get_length = article_property("length")
+    get_article_id = article_property("id")
+
+    def _get_coded_articles(self):
+        view = self.context["view"]
+        if hasattr(view, "object_list"): return view.object_list
+        return CodedArticle.objects.filter(id=view.object.id)
 
     @cached
-    def get_codings(self):
-        codings = self.codings.values_list("article__id", "status__label", "comments")
-        return { c[0] : (c[1], c[2]) for c in codings }
+    def _get_articles(self):
+        aids = self._get_coded_articles().values_list("article__id", flat=True)
+        articles = Article.objects.filter(id__in=aids).only("headline", "date", "pagenr", "length")
+        return { a.id : a for a in articles }
 
-    def get_comments(self, article):
-        return self.get_codings()[article.id][1] if article.id in self.get_codings() else None
+    def get_article(self, coded_article):
+        return self._get_articles().get(coded_article.article_id)
 
-    def get_status(self, article):
-        return self.get_codings()[article.id][0] if article.id in self.get_codings() else "Not started"
-
-    def skip_field(cls, name, field):
-        return super(CodedArticleSerializer, cls).skip_field(name, field) or (
-            name not in _CA_FIELDS
-        )
-
-    @property
-    def codingjob(self):
-        return self.context["view"].codingjob
+    class Meta:
+        model = CodedArticle
 
 class CodedArticleViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodedArticleSerializer
     model_key = "coded_article"
-    model = Article
+    model = CodedArticle
 
 class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                           CodedArticleViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
-    model = Article
+    model = CodedArticle
     model_serializer_class = CodedArticleSerializer
+    extra_filters = ("article__pagenr",)
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleViewSet, self).filter_queryset(queryset)
-        return qs.filter(id__in=self.codingjob.articleset.articles.all())
+        return qs.filter(id__in=self.codingjob.coded_articles.all())
 
 
 class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
@@ -92,4 +93,40 @@ class CodedArticleSentenceViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleSentenceViewSet, self).filter_queryset(queryset)
-        return qs.filter(article=self.coded_article)
+        return qs.filter(article__id=self.coded_article.article_id)
+
+class TestCodedArticleSerializer(amcattest.AmCATTestCase):
+    # Simulating request
+    class View(object):
+        def __init__(self, objs):
+            if isinstance(objs, CodedArticle):
+                self.object = objs
+            else:
+                self.object_list = objs
+
+    def _get_serializer(self, coded_article):
+        return CodedArticleSerializer(context={"view" : self.View(coded_article)})
+
+    def test_fields(self):
+        c = amcattest.create_test_job()
+        a = c.articleset.articles.all()[0]
+        ca = c.coded_articles.all()[0]
+        s = self._get_serializer(c.coded_articles.all())
+
+        self.assertEqual(a.headline, s.get_headline(ca))
+        self.assertEqual(a.date, s.get_date(ca))
+        self.assertEqual(a.pagenr, s.get_pagenr(ca))
+        self.assertEqual(a.length, s.get_length(ca))
+
+    def test_n_queries(self):
+        c = amcattest.create_test_job(10)
+        s = self._get_serializer(c.coded_articles.all())
+        ca1, ca2, ca3 = c.coded_articles.all()[0:3]
+
+        with self.checkMaxQueries(1):
+            s.get_headline(ca1)
+            s.get_headline(ca2)
+            s.get_headline(ca3)
+            s.get_date(ca3)
+            s.get_pagenr(ca3)
+            s.get_length(ca3)

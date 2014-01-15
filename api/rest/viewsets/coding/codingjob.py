@@ -18,12 +18,18 @@
 ###########################################################################
 from django.db.models import Count, Q
 from rest_framework import serializers
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-from amcat.models import CodingJob, Article, Sentence, Codebook, CodingRule, CodingSchemaField
-from amcat.models.coding import coding
+from amcat.models.coding.codingjob import CodingJob
+from amcat.models.article import Article
+from amcat.models.sentence import  Sentence
+from amcat.models.coding.codebook import Codebook
+from amcat.models.coding.codingrule import CodingRule
+from amcat.models.coding.codingschemafield import CodingSchemaField
+from rest_framework.viewsets import ReadOnlyModelViewSet
+from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT, CodedArticle
 from amcat.nlp import sbd
+from amcat.tools.amcattest import AmCATTestCase
 from amcat.tools.caching import cached
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingschemafield import CodingSchemaFieldViewSetMixin, CodingSchemaFieldSerializer
@@ -32,13 +38,12 @@ from api.rest.viewsets.sentence import SentenceViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 
-STATUS_DONE = (coding.STATUS_COMPLETE, coding.STATUS_IRRELEVANT)
+STATUS_DONE = (STATUS_COMPLETE, STATUS_IRRELEVANT)
 
 __all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet",
            "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet",
            "CodingJobHighlighterViewSet", "CodingJobCodingRuleViewSet",
            "CodingJobCodingSchemaFieldViewSet")
-
 
 class CodingJobSerializer(AmCATModelSerializer):
     """
@@ -56,11 +61,14 @@ class CodingJobSerializer(AmCATModelSerializer):
             return view.object_list.distinct()
         return CodingJob.objects.filter(id=view.object.id)
 
+    def _get_coded_articles(self):
+        return CodedArticle.objects.filter(codingjob__in=self._get_codingjobs())
+
     @cached
     def _get_n_done_jobs(self):
-        return dict(self._get_codingjobs().filter(
-                    codings__status__in=STATUS_DONE).annotate(Count("codings"))
-                    .values_list("id", "codings__count"))
+        return dict(self._get_coded_articles().filter(status__id__in=STATUS_DONE)
+                    .values("codingjob").annotate(n=Count("codingjob"))
+                    .values_list("codingjob__id", "n"))
 
     @cached
     def _get_n_articles(self):
@@ -76,6 +84,7 @@ class CodingJobSerializer(AmCATModelSerializer):
 
     class Meta:
         model = CodingJob
+
 
 class CodingJobViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingJobSerializer
@@ -138,3 +147,72 @@ class CodingJobCodingSchemaFieldViewSet(ProjectViewSetMixin, CodingJobViewSetMix
         return super(CodingJobCodingSchemaFieldViewSet, self).filter_queryset(fields).filter(
             codingschema__pk__in=(self.codingjob.articleschema_id, self.codingjob.unitschema_id)
         )
+
+class TestCodingJobSerializer(AmCATTestCase):
+    # Simulating request
+    class View(object):
+        def __init__(self, objs):
+            if isinstance(objs, CodingJob):
+                self.object = objs
+            else:
+                self.object_list = objs
+
+    def _get_serializer(self, codingjob):
+        return CodingJobSerializer(context={"view" : self.View(codingjob)})
+
+    def test_get_n_done_jobs(self):
+        from amcat.tools import amcattest
+        from amcat.models.coding.codedarticle import CodedArticleStatus, STATUS_INPROGRESS
+
+        codingjob = amcattest.create_test_job(10)
+        s = self._get_serializer(codingjob)
+        self.assertEqual(0, s.get_n_done_jobs(codingjob))
+        self.assertEqual(10, codingjob.coded_articles.all().count())
+
+        ca, ca2, ca3 = codingjob.coded_articles.all()[0:3]
+        ca.status = CodedArticleStatus.objects.get(id=STATUS_COMPLETE)
+        ca.save()
+
+        s = self._get_serializer(codingjob)
+        self.assertEqual(1, s.get_n_done_jobs(codingjob))
+        self.assertEqual(10, codingjob.coded_articles.all().count())
+
+        ca2.status = CodedArticleStatus.objects.get(id=STATUS_IRRELEVANT)
+        ca2.save()
+
+        s = self._get_serializer(codingjob)
+        self.assertEqual(2, s.get_n_done_jobs(codingjob))
+        self.assertEqual(10, codingjob.coded_articles.all().count())
+
+        ca2.status = CodedArticleStatus.objects.get(id=STATUS_INPROGRESS)
+        ca2.save()
+        self.assertEqual(2, s.get_n_done_jobs(codingjob))
+
+    def test_get_n_articles(self):
+        from amcat.tools import amcattest
+        codingjob1 = amcattest.create_test_job(10)
+        codingjob2 = amcattest.create_test_job(5)
+
+        jobs = CodingJob.objects.filter(id__in=[codingjob1.id, codingjob2.id])
+        s = self._get_serializer(jobs)
+        self.assertEqual(10, s.get_n_articles(codingjob1))
+        self.assertEqual(5, s.get_n_articles(codingjob2))
+
+    def test_n_queries(self):
+        from amcat.tools import amcattest
+
+        codingjob1 = amcattest.create_test_job(10)
+        codingjob2 = amcattest.create_test_job(5)
+        jobs = CodingJob.objects.filter(id__in=[codingjob1.id, codingjob2.id])
+        s = self._get_serializer(jobs)
+
+        # Number of codingjobs should be cached for all codingsjobs after one call
+        with self.checkMaxQueries(1):
+            s.get_n_articles(codingjob1)
+            s.get_n_articles(codingjob2)
+
+        # Same for done jobs
+        s = self._get_serializer(jobs)
+        with self.checkMaxQueries(1):
+            s.get_n_done_jobs(codingjob1)
+            s.get_n_done_jobs(codingjob2)

@@ -117,11 +117,6 @@ urlpatterns = patterns(
     url(r'^project/(?P<projectid>[0-9]+)/codebook/import$', ImportCodebook.as_view(), name='project-import-codebook'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/update$', ImportCodebook.as_view(), name='project-import-codebook'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/export$', ExportCodebook.as_view(), name='project-export-codebook'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit-rules$', 'navigator.views.project.edit_schemafield_rules', name='project-edit-schema-rules'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/copy$', 'navigator.views.project.copy_schema', name='project-copy-schema'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/name$', 'navigator.views.project.name_schema', name='project-name-schema'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit/schemafield/(?P<schemafield>[0-9]+)$', 'navigator.views.project.edit_schemafield', name='project-edit-schemafield'),
-    url(r'^project/(?P<project>[0-9]+)/schema/(?P<schema>[-0-9]+)/edit/schemafield/(?P<schemafield>[0-9]+)/delete$', 'navigator.views.project.delete_schemafield', name='project-delete-schemafield'),
 
     # Coding
     url(r'^coding/schema-editor$', 'navigator.views.schemas.index'),
@@ -155,14 +150,14 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              QueryView, SampleSetView, EditSetView,
              CodebookListView, CodebookDetailsView,
              CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
-             CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView,
+             CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
+             CodingSchemaCopyView,
              CodingJobListView,
              ProjectUserListView, ProjectUserAddView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
                             )
-        print view.__name__, view.get_view_name(),  pattern
 
 urlpatterns += patterns('',
                         url("^projects/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),

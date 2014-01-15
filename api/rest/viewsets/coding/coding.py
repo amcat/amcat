@@ -21,7 +21,7 @@ from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models import Coding, CodingValue
 from amcat.tools.caching import cached
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingjob import CodingJobViewSetMixin
@@ -59,13 +59,6 @@ class CodingSerializer(AmCATModelSerializer):
     def get_coding_values(self, coding):
         return self._get_coding_values()[coding.pk]
 
-    @property
-    def codings(self):
-        codings = Coding.objects.filter(codingjob=self.codingjob, sentence=None)
-        if hasattr(self.context["view"], "object_list"):
-            return codings.filter(article__in=self.context["view"].object_list)
-        return codings.filter(article=self.object)
-
 class CodingViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingSerializer
     model_key = "coding"
@@ -79,7 +72,7 @@ class CodingViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
 
     def filter_queryset(self, queryset):
         qs = super(CodingViewSet, self).filter_queryset(queryset)
-        return qs.filter(codingjob=self.codingjob, article=self.coded_article)
+        return qs.filter(coded_article=self.coded_article)
 
 
 class CodingValueSerializer(AmCATModelSerializer):

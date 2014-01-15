@@ -19,7 +19,7 @@
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models import CodingSchema, CodingSchemaField
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.coding.codingschemafield import CodingSchemaFieldViewSetMixin, CodingSchemaFieldSerializer

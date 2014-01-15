@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import functools
 from rest_framework import serializers
 from amcat.models.task import IN_PROGRESS
 from amcat.models import Task
@@ -37,7 +38,7 @@ class TaskSerializer(AmCATModelSerializer):
 
     def set_status_ready(self, task):
         async = task.get_async_result()
-        self._tasks[task] = (async.result, async.status, async.ready())
+        self._tasks[task] = (async.ready(), async.result, async.status)
 
     def get_status_ready(self, task):
         """Returns tuple with (status, ready) => (str, bool)"""
@@ -46,15 +47,15 @@ class TaskSerializer(AmCATModelSerializer):
         return self._tasks[task]
 
     def get_status(self, task):
-        _, status, _ = self.get_status_ready(task)
+        _, _, status = self.get_status_ready(task)
         return status
 
     def get_ready(self, task):
-        _, _, ready = self.get_status_ready(task)
+        ready, _, _ = self.get_status_ready(task)
         return ready
 
     def get_progress(self, task):
-        result, status, _ = self.get_status_ready(task)
+        _, result, status = self.get_status_ready(task)
         if status == IN_PROGRESS and isinstance(result, dict):
             return result
 
@@ -82,16 +83,25 @@ class TaskResultSerializer(AmCATModelSerializer):
 class TestTaskSerializer(amcattest.AmCATTestCase):
     def test_order(self):
         class MockTask:
-            def __init__(self, ready=False, status="PENDING"):
+            def __init__(self, ready=False, status="PENDING", result=None, callback=None):
                 self._ready = ready
                 self._status = status
+                self._result = result
+                self.callback = callback
 
             def ready(self):
+                if self.callback: self.callback("_ready")
                 return self._ready
 
             @property
-            def status(self):
+            def status(self, **kwargs):
+                if self.callback: self.callback("_status")
                 return self._status
+
+            @property
+            def result(self):
+                if self.callback: self.callback("_result")
+                return self._result
 
             def get_async_result(self):
                 return self
@@ -100,6 +110,7 @@ class TestTaskSerializer(amcattest.AmCATTestCase):
         mt = MockTask()
         mt2 = MockTask(ready=True, status="SUCCESS")
         mt3 = MockTask()
+        mt4 = MockTask()
 
         # Test simple getting / caching
         self.assertEqual("PENDING", ts.get_status(mt))
@@ -107,9 +118,24 @@ class TestTaskSerializer(amcattest.AmCATTestCase):
         self.assertEqual("SUCCESS", ts.get_status(mt2))
         self.assertEqual(True, ts.get_ready(mt2))
 
-        # Test order of ready/status
-        self.assertEqual("PENDING", ts.get_status(mt3))
-        mt3._ready = True
-        self.assertEqual(False, ts.get_ready(mt))
+        # Test order of ready/status/result
+        def _change(task, set_prop, set_value, prop, callprop):
+            if prop == callprop:
+                setattr(task, set_prop, set_value)
 
+        # Set ready to True when _result is fetched
+        change = functools.partial(_change, mt3, "_ready", True, "_result")
+        mt3.callback = change
+
+        self.assertEqual("PENDING", ts.get_status(mt3))
+        self.assertEqual(False, ts.get_ready(mt3))
+        self.assertEqual(True, mt3._ready)
+
+        # Set ready to True when _status is fetched
+        change = functools.partial(_change, mt4, "_ready", True, "_status")
+        mt4.callback = change
+
+        self.assertEqual("PENDING", ts.get_status(mt4))
+        self.assertEqual(False, ts.get_ready(mt4))
+        self.assertEqual(True, mt4._ready)
 

@@ -29,7 +29,7 @@ from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpRespon
 from django.core.urlresolvers import reverse
 import itertools
 
-from amcat.models import CodingJob, Project, Article, CodingValue, Coding
+from amcat.models import CodingJob, Project, Article, CodingValue, Coding, CodedArticle
 
 log = logging.getLogger(__name__)
 
@@ -41,99 +41,36 @@ def index(request, project_id, codingjob_id):
         'coder' : request.user,
     })
 
-def _to_coding(codingjob, article, coding):
-    """
-    Takes a dictionary with keys 'sentence_id', 'status', 'comments' and creates
-    an (unsaved) Coding object.
-
-    @type codingjob: CodingJob
-    @type article: Article
-    @type coding: dict
-    """
-    return Coding(
-        codingjob=codingjob, article=article,
-        sentence_id=coding["sentence_id"], status_id=coding["status_id"],
-        comments=coding["comments"]
-    )
-
-def _to_codingvalue(coding, codingvalue):
-    """
-    Takes a dictionary with keys 'codingschemafield_id', 'intval', 'strval' and creates
-    an (unsaved) CodingValue object.
-
-    @type coding: Coding
-    @type codingvalue: dict
-    """
-    return CodingValue(
-        field_id=codingvalue["codingschemafield_id"], intval=codingvalue["intval"],
-        strval=codingvalue["strval"], coding=coding
-    )
-
-def _to_codingvalues(coding, values):
-    """
-    Takes an iterator with codingvalue dictionaries (see _to_coding) and a coding,
-    and returns an iterator with CodingValue's.
-    """
-    return map(partial(_to_codingvalue, coding), values)
-
-
-def save(request, project_id, codingjob_id, article_id):
+@transaction.atomic
+def save(request, project_id, codingjob_id, coded_article_id):
     """
     Big fat warning: we don't do server side validation for the codingvalues. We
     do check if the codingjob and logged in user correspond, but it's the users
     responsibilty to send correct data (we don't care!).
     """
-    project = Project.objects.get(id=project_id)
-    codingjob = CodingJob.objects.select_related("articleset").get(id=codingjob_id)
-    article = Article.objects.only("id").get(id=article_id)
+    coded_article = CodedArticle.objects.select_related("project", "codingjob", "article").get(id=coded_article_id)
 
-    if codingjob.project_id != project.id:
-        raise PermissionDenied("Given codingjob ({codingjob}) does not belong to project ({project})!".format(**locals()))
+    if coded_article.codingjob.project_id != int(project_id):
+        raise PermissionDenied("Given codingjob ({coded_article.codingjob}) does not belong to project ({coded_article.codingjob.project})!".format(**locals()))
 
-    if codingjob.coder != request.user:
+    if coded_article.codingjob.coder_id != request.user.id:
         raise PermissionDenied("Only {request.user} can edit this codingjob.".format(**locals()))
 
-    if not codingjob.articleset.articles.filter(id=article_id).exists():
-        raise PermissionDenied("{article} not in {codingjob}.".format(**locals()))
+    if coded_article.codingjob_id != int(codingjob_id):
+        raise PermissionDenied("CodedArticle has codingjob_id={coded_article.codingjob_id} but {codingjob_id} given in url!")
 
     try:
         codings = json.loads(request.body)
     except ValueError:
         return HttpResponseBadRequest("Invalid JSON in POST body")
 
+    coded_article.status_id = codings["coded_article"]["status_id"]
+    coded_article.comments = codings["coded_article"]["comments"]
+    coded_article.save()
+
     article_coding = codings["article_coding"]
     sentence_codings = codings["sentence_codings"]
-
-    with transaction.atomic():
-        to_coding = partial(_to_coding, codingjob=codingjob, article=article)
-
-        # Updating tactic: delete all existing codings and codingvalues, then insert
-        # the new ones. This prevents calculating a delta, and confronting the
-        # database with (potentially) many update queries.
-        CodingValue.objects.filter(coding__codingjob=codingjob, coding__article=article).delete()
-        Coding.objects.filter(codingjob=codingjob, article=article).delete()
-
-        new_codings = list(itertools.chain([article_coding], sentence_codings))
-        new_coding_objects = map(partial(_to_coding, codingjob, article), new_codings)
-
-        # Saving each coding is pretty inefficient, but Django doesn't allow retrieving
-        # id's when using bulk_create. See Django ticket #19527.
-        if connection.vendor == "postgresql":
-            query = sql.InsertQuery(Coding)
-            query.insert_values(Coding._meta.fields[1:], new_coding_objects)
-            raw_sql, params = query.sql_with_params()[0]
-            new_coding_objects = Coding.objects.raw("%s %s" % (raw_sql, "RETURNING coding_id"), params)
-        else:
-            # Do naive O(n) approach
-            for coding in new_coding_objects:
-                coding.save()
-
-        coding_values = itertools.chain.from_iterable(
-            _to_codingvalues(co, c["values"]) for c, co in itertools.izip(new_codings, new_coding_objects)
-        )
-
-        CodingValue.objects.bulk_create(coding_values)
-
+    coded_article.replace_codings(itertools.chain([article_coding], sentence_codings))
     return HttpResponse(status=201)
 
 def redirect(request, codingjob_id):

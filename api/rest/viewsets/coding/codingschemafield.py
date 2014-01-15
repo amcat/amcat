@@ -18,7 +18,7 @@
 ###########################################################################
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models import CodingSchemaField
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin

@@ -20,9 +20,9 @@ from django.db.models import Q
 from rest_framework import serializers
 from amcat.models import ArticleSet
 from amcat.tools import amcates
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin
-from api.rest.resources.amcatresource import DatatablesMixin
 from rest_framework.viewsets import ModelViewSet
 from api.rest.viewset import AmCATViewSetMixin
 
@@ -50,7 +50,7 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
         self.fav_articlesets = set(ArticleSet.objects.filter(favourite_of_projects=project)
                                    .values_list("id", flat=True))
-        sets = list(ArticleSet.objects.filter(Q(project=project)|Q(projects_set=project)).values_list("id", flat=True))
+        sets = list(ArticleSet.objects.filter(Q(project=project)|Q(projects_set=project)).distinct().values_list("id", flat=True))
         self.nn = dict(amcates.ES().aggregate_query(filters={'sets' : sets}, group_by='sets'))
 
         self._cached = True

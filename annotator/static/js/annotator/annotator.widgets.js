@@ -84,6 +84,8 @@ widgets = (function(self){
         }
     };
 
+
+
     /* SENTENCE TYPE */
     self.sentence = $.extend({}, self.default, {
         get_html : function(){
@@ -149,6 +151,23 @@ widgets = (function(self){
         },
         set_value : function(widget, codingvalue){
             self.default.set_value(widget, codingvalue, true);
+        }
+    });
+
+    /* FROM AND TO TYPES. These are, together with sentence, special types. From / to encode
+     * subsentences and highlight them. */
+    self.from = $.extend({}, self.number, {
+        get_html : function(){
+            return self.number.get_html().attr("placeholder", "from..").removeClass("codingvalue").addClass("from").change(function(){
+                $(this).closest(".coding").trigger("sentence-changed");
+            });
+        }
+
+    });
+
+    self.to = $.extend({}, self.from, {
+        get_html : function(){
+            return self.from.get_html().removeClass("from").addClass("to").attr("placeholder", "to..");
         }
     });
 

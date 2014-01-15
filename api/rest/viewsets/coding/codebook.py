@@ -17,12 +17,13 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import logging
+from django.db.models import Q
 
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
 
 from amcat.models import Codebook, CodingSchema
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
 from api.rest.viewsets import CodingJobViewSetMixin
@@ -30,7 +31,8 @@ from api.rest.viewsets.project import ProjectViewSetMixin
 
 log = logging.getLogger(__name__)
 
-__all__ = ("CodebookSerializer", "CodebookViewSetMixin", "CodebookViewSet")
+__all__ = ("CodebookSerializer", "CodebookViewSetMixin", "CodingJobCodebookViewSet",
+            "CodebookViewSet")
 
 def serialize_codebook_code(codebook, ccode):
     function = ccode.function
@@ -68,7 +70,15 @@ class CodebookViewSetMixin(AmCATViewSetMixin):
     model_key = "codebook"
     model = Codebook
 
-class CodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
+class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model = Codebook
+    model_serializer_class = CodebookSerializer
+
+    def filter_queryset(self, queryset):
+        qs = super(CodebookViewSet, self).filter_queryset(queryset)
+        return qs.filter(Q(project=self.project)|Q(projects_set=self.project))
+
+class CodingJobCodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                       CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Codebook
     model_serializer_class = CodebookSerializer
@@ -89,7 +99,7 @@ class CodebookViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
                 yield field.codebook_id
 
     def filter_queryset(self, queryset):
-        qs = super(CodebookViewSet, self).filter_queryset(queryset)
+        qs = super(CodingJobCodebookViewSet, self).filter_queryset(queryset)
         return qs.filter(id__in=set(self._get_codebook_ids()) - {None,}).distinct()
 
 

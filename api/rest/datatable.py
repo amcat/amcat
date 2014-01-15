@@ -17,26 +17,26 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import copy
+import logging
+import types
+import collections
+import re
+import inspect
+from urllib import urlencode
 
 from django.db.models.query import QuerySet
 from django.db.models import Model
-from django.conf import settings
 from django.core.urlresolvers import reverse
-
 from django.template import Context
 from django.template.loader import get_template
 
-import logging; log=logging.getLogger(__name__)
-
-import json, types, collections, re
-
 from amcat.tools.caching import cached
-import inspect
-from api.rest.resources import get_resource_for_model
+from api.rest.resources import get_resource_for_model, AmCATResource
 from api.rest import filters
-from urllib import urlencode
+
 
 FIELDS_EMPTY = (None, [])
+log=logging.getLogger(__name__)
 
 def order_by(field):
     """
@@ -54,9 +54,11 @@ class Datatable(object):
     options may be passed as `options` according to:
 
     http://www.datatables.net/usage/options
+
+    TODO: Remove Resource-references
     """
     def __init__(self, resource, rowlink=None, options=None, hidden=None, url=None, ordering=None,
-                 format="json", filters=None, extra_args=None):
+                 format="json", filters=None, extra_args=None, url_kwargs=()):
         """
         Default ordering is "id" if possible.
 
@@ -67,12 +69,13 @@ class Datatable(object):
         @type hidden: set
 
         @param filters: an optional list of selector/value pairs for filtering
-        @extra_args: an optional list of field/value pairs for extra 'get' options
+        @param extra_args: an optional list of field/value pairs for extra 'get' options
+        @param url_kwargs: if a ViewSet is given, also provide url_kwargs which are used to determine the url
         """
         if inspect.isclass(resource) and issubclass(resource, Model):
             resource = get_resource_for_model(resource)
         self.resource = resource() if callable(resource) else resource
-            
+
         self.options = options or dict()
         self.rowlink = rowlink or getattr(self.resource, "get_rowlink", lambda  : None)()
         self.ordering = ordering
@@ -81,8 +84,14 @@ class Datatable(object):
         self.hidden = set(hidden) if isinstance(hidden, collections.Iterable) else set()
         self.filters = filters or [] # list of name : value tuples for filtering
         self.extra_args = extra_args or [] # list of name : value tuples for GET arguments
-        self.base_url = url if url is not None else self.resource.url
-        
+
+        if url is None:
+            if isinstance(self.resource, AmCATResource):
+                url = self.resource.url
+            else:
+                url = self.resource.get_url(**dict(url_kwargs))
+        self.base_url = url
+
     @property
     def name(self):
         return self.get_name()
@@ -101,7 +110,6 @@ class Datatable(object):
             - colons (":")
             - and periods (".").
         """
-
         return "d" + re.sub(r'[^0-9A-Za-z_:.-]', '__', self.url)
 
     def get_default_ordering(self):
@@ -117,7 +125,12 @@ class Datatable(object):
 
         Returns, if possible, in the order specified in _meta.
         """
-        fields = list(self.resource.get_field_names())
+        if isinstance(self.resource, AmCATResource):
+            fields = list(self.resource.get_field_names())
+        else:
+            # ViewSet
+            fields = self.resource.get_serializer_class()().fields.keys()
+
         fields = [f for f in fields if f not in self.hidden]
 
         if not self.resource.get_serializer_class()().opts.fields and \
@@ -377,6 +390,13 @@ from amcat.tools import amcattest
 class TestDatatable(amcattest.AmCATTestCase):
     PROJECT_FIELDS = {'id', 'name', 'description', 'insert_date', 'owner',
                       'insert_user', 'guest_role', 'active', 'favourite'}
+
+    def test_viewset(self):
+        """Can ViewSets also be used?"""
+        from api.rest.viewsets import CodingSchemaFieldViewSet
+        dt = Datatable(CodingSchemaFieldViewSet, url_kwargs={"project" : 1})
+        self.assertTrue(dt.url.startswith("/api/v4/projects/1/codingschemafields/"))
+        self.assertEqual(dt.fields, ['id', 'codingschema', 'fieldnr', 'label', 'required', 'fieldtype', 'codebook', 'split_codebook', 'default', 'favourite'])
 
     def test_url(self):
         from api.rest.resources import UserResource
