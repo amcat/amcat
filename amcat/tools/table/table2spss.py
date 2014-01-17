@@ -37,6 +37,7 @@ def getVarName(col, seen):
     fn = fn.replace("-","_")
     fn = re.sub('[^a-zA-Z_]+', '', fn)
     fn = re.sub('^_+', '', fn)
+    fn = fn[:16]
     if fn in seen:
         for i in xrange(400):
             if "%s_%i" % (fn, i) not in seen:

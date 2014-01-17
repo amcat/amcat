@@ -80,7 +80,9 @@ class WebScript(object):
     id = None # id used in webforms
     output_template = None # path to template used for html output
     solrOnly = False # only for Solr output, not on database queries
+    is_edit = False # does the script require edit permission on the project
     is_download = False # set True if the result should be downloaded by the browser instead of displayed
+
     def __init__(self, project=None, user=None, data=None, **kwargs):
         if not isinstance(data, QueryDict) and data is not None:
             data = to_querydict(data, mutable=True)
@@ -124,8 +126,12 @@ class WebScript(object):
 
 
     def getActions(self):
+        from amcat.models import authorisation
+        can_edit = self.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, self.project)
         for ws in api.webscripts.actionScripts:
-            if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.data.get('query')):
+            if (self.__class__.__name__ in ws.displayLocation
+                and ((not ws.solrOnly) or self.data.get('query'))
+                and ((not ws.is_edit) or can_edit)):
                 yield ws.__name__, ws.name, ws.is_download
 
     def delay(self):

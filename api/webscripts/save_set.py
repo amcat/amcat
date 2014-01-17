@@ -40,7 +40,7 @@ class SaveAsSet(WebScript):
     form = SaveAsSetWebScriptForm
     displayLocation = ('ShowSummary', 'ShowArticleList')
     output_template = "api/webscripts/save_set.html" 
-    
+    is_edit = True
     
     def run(self):
         self.progress_monitor.update(1, "Listing articles")
