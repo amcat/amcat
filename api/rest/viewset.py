@@ -56,6 +56,9 @@ class AmCATViewSetMixin(object):
         """
         return "/".join(_get_url_pattern(cls))
 
+    @classmethod
+    def get_basename(cls):
+        return getattr(cls, "base_name", None)
 
 def _get_model_keys(viewset):
     """

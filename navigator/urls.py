@@ -59,7 +59,7 @@ urlpatterns = patterns(
     
     url(r'^project/(?P<projectid>[0-9]+)/articleset/unlink/(?P<id>[0-9]+)$',
         'navigator.views.project.unlink_articleset', name="articleset-unlink"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/(?P<articleset>[0-9]+)/import$',
+    url(r'^project/(?P<project_id>[0-9]+)/articleset/(?P<articleset_id>[0-9]+)/import$',
         ImportSetView.as_view(), name="articleset-import"),
 
     url(r'^project/(?P<projectid>[0-9]+)/processparsing$',

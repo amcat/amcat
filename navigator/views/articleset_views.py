@@ -21,6 +21,7 @@ from django.core.urlresolvers import reverse
 
 from amcat.scripts.actions.sample_articleset import SampleSet
 from amcat.scripts.actions.import_articleset import ImportSet
+from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
 
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
 from navigator.views.datatableview import DatatableMixin
@@ -34,35 +35,13 @@ from django.views.generic.base import RedirectView
 from django.db.models import Q
 from navigator.views.project_views import ProjectDetailsView
     
-class ImportSetView(ProjectScriptView):
-    script = ImportSet
-
-    
-    def get_success_url(self):
-        target = self.form.cleaned_data["target_project"]
-        return reverse("project-articlesets", kwargs=dict(id=target.id))
-    
-    def get_form(self, form_class):
-        form = super(ImportSetView, self).get_form(form_class)
-        if self.request.method == 'GET':
-            # list current users favourite projects but exclude already imported and currect project
-            qs = Project.objects.filter(favourite_users=self.request.user.get_profile())
-            qs = qs.exclude(articlesets=self.url_data["articleset"])
-            qs = qs.exclude(pk=self.project.id)
-            form.fields['target_project'].queryset = qs
-            form.fields['target_project'].help_text = "Only showing your favourite projects that do not use this set already"
-
-        return form
 
 from api.rest.datatable import FavouriteDatatable
     
 class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = ArticleSet
     parent = ProjectDetailsView
-
     context_category = 'Articles'
-    
-    resource = ArticleSet
     rowlink = './{id}'
 
     @classmethod
@@ -71,6 +50,10 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
         patterns.append(patterns[0][:-1] + "(?P<what>[a-z]+)/?$")
         return patterns
 
+    @property
+    def what(self):
+        return self.kwargs.get("what", "favourites")
+
     def get_context_data(self, **kwargs):
         context = super(ArticleSetListView, self).get_context_data(**kwargs)
         tables = [("favourite", '<i class="icon-star"></i> <b>Favourites</b>'),
@@ -78,55 +61,37 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
                   ("linked", "Linked Sets"),
                   ("codingjob", "Coding Job Sets"),
                   ]
-        what = self.kwargs.get('what', 'favourites')
         context.update(locals())
+        context.update({"what" : self.what})
         return context
 
+    def filter_linked_table(self, table):
+        return table.filter(projects_set=self.project)
+
+    def filter_own_table(self, table):
+        return table.filter(project=self.project, codingjob_set__id='null')
+
+    def get_resource(self):
+        if self.what == "favourites":
+            return FavouriteArticleSetViewSet
+        elif self.what == "coding":
+            return CodingjobArticleSetViewSet
+        else:
+            return ArticleSetViewSet
+
     def filter_table(self, table):
-        what = self.kwargs.get('what', 'favourites')
-        p = self.project
-        
-        if what == "favourites":
-            # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
-            # (or use api request.user to add only current user's favourite status). But good enough for now...
-            
-            # they need to be favourte AND still contained in the project
-            ids = p.favourite_articlesets.filter(Q(project=p.id) | Q(projects_set=p.id)).distinct().values_list("id", flat=True)
-            if ids:
-                return table.filter(pk = ids)
-            else:
-                no_favourites = True
-                # keep the table with all ids - better some output than none
-                all_ids = ArticleSet.objects.filter(Q(project=p.id) | Q(projects_set=p.id)).distinct().values_list("id", flat=True)
-                if all_ids:
-                    return table.filter(pk = all_ids)
-                else:
-                    no_sets = True
-                    return table.filter(name = "This is a really stupid way to force an empty table (so sue me!)")
-        elif what == "coding":
-            # more ugliness. Filtering the api on codingjob_set__id__isnull=False gives error from filter set
-            ids = ArticleSet.objects.filter(Q(project=p.id) | Q(projects_set=p.id), codingjob_set__id__isnull=False)
-            ids = [id for (id, ) in ids.distinct().values_list("id")]
-            if ids: 
-                return table.filter(pk = ids)
-            else:
-                return table.filter(name = "This is a really stupid way to force an empty table (so sue me!)")
-        elif what == "linked":
-            return table.filter(projects_set=p)
-        elif what == "own":
-            return table.filter(project=p, codingjob_set__id='null')
- 
+        return getattr(self, "filter_{}_table".format(self.what), lambda t : t)(table)
 
     
     def get_datatable(self):
         """Create the Datatable object"""
         url = reverse('article set-details', args=[self.project.id, 123]) 
         table = FavouriteDatatable(resource=self.get_resource(), label="article set",
-                                   set_url=url + "?star=1", unset_url=url+"?star=0")
+                                   set_url=url + "?star=1", unset_url=url+"?star=0",
+                                   url_kwargs={"project" : self.project.id})
         table = table.rowlink_reverse('article set-details', args=[self.project.id, '{id}'])
         table = table.hide("project")
         table = self.filter_table(table)
-        table = table.add_arguments(project_for_favourites=self.project.id)
         return table
 
 
@@ -156,6 +121,30 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
                     self.project.favourite_articlesets.remove(self.object.id)
         context['starred'] = starred
         return context
+
+
+class ImportSetView(ProjectScriptView):
+    script = ImportSet
+    parent = ArticleSetListView
+    model = ArticleSet
+
+
+    def get_success_url(self):
+        project = self.form.cleaned_data["target_project"]
+        return reverse(ArticleSetListView.get_view_name(), kwargs={"project_id":project.id})
+
+    def get_form(self, form_class):
+        form = super(ImportSetView, self).get_form(form_class)
+        if self.request.method == 'GET':
+            # list current users favourite projects but exclude already imported and currect project
+            qs = Project.objects.filter(favourite_users=self.request.user.get_profile())
+            qs = qs.exclude(articlesets=self.kwargs["articleset_id"])
+            qs = qs.exclude(pk=self.project.id)
+            form.fields['target_project'].queryset = qs
+            form.fields['target_project'].help_text = "Only showing your favourite projects that do not use this set already"
+
+        return form
+
 
 class SampleSetView(ProjectScriptView):
     parent = ArticleSetDetailsView
