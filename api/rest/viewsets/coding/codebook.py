@@ -72,7 +72,6 @@ class CodebookViewSetMixin(AmCATViewSetMixin):
 
 class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Codebook
-    model_serializer_class = CodebookSerializer
 
     def filter_queryset(self, queryset):
         qs = super(CodebookViewSet, self).filter_queryset(queryset)
