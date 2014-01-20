@@ -163,6 +163,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'accounts',
     'annotator',
     'navigator',
