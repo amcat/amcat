@@ -1,8 +1,9 @@
 from django.shortcuts import render
-from django.http import HttpResponseServerError, HttpResponseNotFound
+from django.http import HttpResponse
     
 import urllib
 import sys
+import json
 
 def _build_response(request, context):
     if 'uri' not in context: context['uri'] = request.build_absolute_uri()
@@ -14,9 +15,18 @@ def _build_response(request, context):
         context['issue_query'] = urllib.urlencode(dict(comment=context['comment']))
     
     #TODO: should check http accept
-    template = 'error_json.html' if request.path.startswith("/api") else "error.html"
+    if request.path.startswith("/api"):
+        content = json.dumps({"error": True, 
+                             "status" : context['status'],
+                             "message" : context['header'],
+                             "details" : context['subheader'],
+                              "description" : context['description']}, indent=2)
+        content_type = "application/json"
+    else:
+        content = render(request, "error.html", context)
+        content_type = "text/html"
     
-    return HttpResponseServerError(render(request, template, context))
+    return HttpResponse(content, status=context['status'], content_type=content_type)
 
 def handler500(request):
     """
