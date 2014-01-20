@@ -38,7 +38,6 @@ def handler500(request):
     subheader = "{exc_type.__name__}: {exc_value}".format(**locals())
     description = """The server encountered an internal error or misconfiguration and
                      was unable to complete your request."""
-    issue_query = urllib.urlencode(dict(comment = comment))
 
     return _build_response(request, locals())
     
