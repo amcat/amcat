@@ -148,7 +148,7 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView,
              CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
              CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
-             CodingSchemaCopyView,
+             CodingSchemaCopyView,CodingSchemaLinkView,
              CodingJobListView,
              ProjectUserListView, ProjectUserAddView]:
     for pattern in view.get_url_patterns():

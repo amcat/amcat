@@ -396,42 +396,6 @@ def save_labels(request, codebook, project):
     return HttpResponse(content=content, status=201, content_type="application/json")
 
 
-@check(Project)
-def import_codebooks(request, project):
-    """
-    Import a codebook in current project
-    """
-    # Get codebook form
-    data = request.POST if 'submit-codebooks' in request.POST.keys() else None
-    codebook_form = forms.ImportCodebook(request.user, data)
-
-    # Get codingschema form
-    data = request.POST if 'submit-schemas' in request.POST.keys() else None
-    codingschema_form = forms.ImportCodingSchema(request.user, data)
-
-    # Process codebook form
-    if codebook_form.is_valid():
-        cdbooks = Codebook.objects.filter(id__in=request.POST.getlist('codebooks'))
-        for codebook in cdbooks:
-            project.codebooks.add(codebook)
-        project.save()
-
-    # Process codingschema form
-    if codingschema_form.is_valid():
-        schemas = CodingSchema.objects.filter(id__in=request.POST.getlist('schemas'))
-        for schema in schemas:
-            project.codingschemas.add(schema)
-        project.save()
-
-    ctx = {
-        'menu' : PROJECT_MENU,
-        'codebook_form' : codebook_form,
-        'codingschema_form' : codingschema_form,
-        'context' : project,
-    }
-
-    return render(request, "navigator/project/import-codebooks.html", ctx)
-
 ### PROJECT MANAGEMENT ###
 @check_perm("create_project")
 def add(request):

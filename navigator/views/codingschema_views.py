@@ -30,12 +30,13 @@ from django.forms.widgets import HiddenInput
 from django.http import HttpResponse
 from django import forms
 import itertools
+from amcat.forms import widgets
 
 from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code
 from amcat.models.coding.serialiser import CodebookSerialiser, BooleanSerialiser
 from api.rest.viewsets import _CodingSchemaFieldViewSet, CodingSchemaViewSet
 from navigator.views.project_views import ProjectDetailsView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView
 from navigator.views.datatableview import DatatableMixin
 from api.rest.datatable import Datatable
 from amcat.models.project import LITTER_PROJECT_ID
@@ -166,7 +167,6 @@ class CodingSchemaEditView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMi
     required_project_permission = authorisation.ROLE_PROJECT_WRITER
     parent = CodingSchemaDetailsView
     url_fragment = "edit"
-    model = CodingSchema
 
     def get_form(self, form_class):
         form = super(CodingSchemaEditView, self).get_form(form_class)
@@ -181,7 +181,6 @@ class CodingSchemaEditFieldsView(HierarchicalViewMixin, ProjectViewMixin, BreadC
     required_project_permission = authorisation.ROLE_PROJECT_WRITER
     parent = CodingSchemaDetailsView
     url_fragment = "fields"
-    model = CodingSchema
 
 
     def get_context_data(self, **kwargs):
@@ -374,7 +373,6 @@ class CodingSchemaEditRulesView(HierarchicalViewMixin, ProjectViewMixin, BreadCr
     required_project_permission = authorisation.ROLE_PROJECT_WRITER
     parent = CodingSchemaDetailsView
     url_fragment = "rules"
-    model = CodingSchema
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingSchemaEditRulesView, self).get_context_data(**kwargs)
@@ -412,3 +410,16 @@ class CodingSchemaEditRulesView(HierarchicalViewMixin, ProjectViewMixin, BreadCr
         )
 
 
+
+class CodingSchemaLinkView(ProjectFormView):
+    parent = CodingSchemaListView
+    url_fragment = 'link'
+
+    class form_class(forms.Form):
+        codebooks = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
+
+    def get_form(self, form_class):
+        form = super(CodingSchemaLinkView, self).get_form(form_class)
+        from navigator.forms import gen_coding_choices
+        form.fields['codebooks'].choices = gen_coding_choices(self.request.user, CodingSchema)
+        return form
