@@ -168,8 +168,14 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
 
     def finalize_response(self, request, response, *args, **kargs):
         response = super(AmCATResource, self).finalize_response(request, response, *args, **kargs)
-        if response.accepted_media_type == "text/csv":
-            response['Content-Disposition'] = 'attachment; filename="data.csv"'
+        extensions = {"text/csv" :  'csv',
+                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'xslx',
+                      'application/x-spss-sav' : 'sav',
+        }
+        if response.accepted_media_type in extensions:
+            extension = extensions[response.accepted_media_type]
+            response['Content-Type'] = response.accepted_media_type
+            response['Content-Disposition'] = 'attachment; filename="data.{extension}"'.format(**locals())
 
         return response
 

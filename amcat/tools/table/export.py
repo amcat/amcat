@@ -20,7 +20,7 @@
 # exportfunction(table, outfile
 
 from cStringIO import StringIO
-import csv, zipfile
+import csv, zipfile, io
 
 class TableExporter():
     """
@@ -54,7 +54,9 @@ class TableExporter():
             bytes = self.to_bytes(table, encoding=encoding, **kargs)
             if stream is not None:
                 stream.write(bytes)
-            return
+                return
+            else:
+                return bytes
 
 class CSV(TableExporter):
     extension="csv"
@@ -81,32 +83,38 @@ class XLSX(TableExporter):
     extension = "xlsx"
     def to_bytes(self, table, **kargs):
         # Import openpyxl "lazy" to prevent global dependency
-        def val(x):
-            return x if x is None else unicode(x)
-        
         from openpyxl.workbook import Workbook
         from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 
         wb = Workbook(optimized_write = True)
         ws = wb.create_sheet()
-
-
-        cols =  list(table.getColumns())
-        ws.append([val(col) for col in  cols])
+        
+        ws.append(([""] if table.rowNamesRequired else []) + map(unicode, list(table.getColumns()))) # write column names
         
         for row in table.getRows():
-            ws.append([val(table.getValue(row, col)) for col in cols])
-
+            values = [unicode(row)] if table.rowNamesRequired else []
+            values += [table.getValue(row, column) for column in table.getColumns()]
+            ws.append(values)
         writer = ExcelDumpWriter(wb)
         # need to do a little bit more work here, since the openpyxl library only supports writing to a filename, while we need a buffer here..
-        # (and we can't stream directly as zipfile needs a seekable buffer)
-        stream = StringIO()
-        zf = zipfile.ZipFile(stream, 'w', zipfile.ZIP_DEFLATED)
+        #buffer = StringIO()
+        buffer = io.BytesIO()
+        zf = zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED)
         writer.write_data(zf)
         zf.close()
-        return stream.getvalue()
+        buffer.flush()
+        return buffer.getvalue()
 
+class SPSS(TableExporter):
+    extension = 'spss'
+    def to_bytes(self, table, **kargs):
+        from . import table2spss
+        
+        filename = table2spss.table2sav(table)
+        return open(filename, 'rb').read()
+        
 EXPORTERS = {'csv' : CSV(),
              'csv2' : CSV_semicolon(),
-             'xlsx' : XLSX()
+             'xlsx' : XLSX(),
+             'spss' : SPSS(),
              }
