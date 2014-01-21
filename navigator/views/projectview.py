@@ -23,6 +23,7 @@ from django.views.generic.base import ContextMixin, TemplateResponseMixin, Templ
 from django.views.generic.edit import CreateView
 from django.core.urlresolvers import reverse
 from django.forms.models import modelform_factory
+from django.views.generic.edit import FormView
 
 
 from api.rest import resources
@@ -211,7 +212,6 @@ class HierarchicalViewMixin(object):
         return breadcrumbs
 
         
-        
 from navigator.views.scriptview import ScriptView
 class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, ScriptView):
     """
@@ -222,11 +222,26 @@ class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin
     script = None
 
     def get_success_url(self):
-        return reverse("project", kwargs=dict(id=self.project.id))
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
         
     def get_context_data(self, **kwargs):
         context = super(ProjectScriptView, self).get_context_data(**kwargs)
         context["script_doc"] = self.script.__doc__ and self.script.__doc__.strip()
         return context
 
+        
+class ProjectFormView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormView):
+    template_name = "project/form_base.html"
+
+    def get_success_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+    
+    def get_cancel_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+    
+    def get_context_data(self, **kwargs):
+        context = super(ProjectFormView, self).get_context_data(**kwargs)
+        context["cancel_url"] = self.get_cancel_url()
+        return context
+        
         
