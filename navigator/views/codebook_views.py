@@ -115,7 +115,6 @@ class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, 
         return ctx
 
 class CodebookDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
-    model = Codebook
     parent = CodebookListView
     context_category='Coding'
     view_name = "coding codebook-details"
@@ -123,7 +122,6 @@ class CodebookDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixi
 class CodebookImportView(ProjectScriptView):
     script = ImportCodebook
     parent = CodebookListView
-    model = Codebook
     context_category='Coding'
     url_fragment = 'import'
 
@@ -134,7 +132,6 @@ class CodebookImportView(ProjectScriptView):
     
 class CodebookLinkView(ProjectFormView):
     parent = CodebookListView
-    model = Codebook
     context_category='Coding'
     url_fragment = 'link'
 

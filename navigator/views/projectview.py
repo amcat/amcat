@@ -127,28 +127,36 @@ class HierarchicalViewMixin(object):
         return self.get_model_key()
 
     @classmethod
+    def get_model(cls):
+        print("{cls}.get_model: .model={model}, .parent={cls.parent}".format(model=getattr(cls, "model"), **locals()))
+        try:
+            return cls.model
+        except AttributeError:
+            return cls.parent.get_model()
+    
+    @classmethod
     def get_model_key(cls):
-        return cls.model._meta.get_field("id").db_column
+        return cls.get_model()._meta.get_field("id").db_column
 
     @classmethod
     def get_model_name(cls):
-        return cls.model._meta.verbose_name_plural.title()
+        return cls.get_model()._meta.verbose_name_plural.title()
         
     @classmethod
     def get_table_name(cls):
-        return cls.model._meta.db_table
+        return cls.get_model()._meta.db_table
 
     @classmethod
     def _get_object(cls, kwargs):
         pk = kwargs[cls.get_model_key()]
-        return cls.model.objects.get(pk=pk)
+        return cls.get_model().objects.get(pk=pk)
     
     @classmethod
     def get_view_name(cls):
         if hasattr(cls, 'view_name'):
             return cls.view_name
         else:
-            name = cls.model._meta.verbose_name
+            name = cls.get_model()._meta.verbose_name
             if hasattr(cls, 'url_fragment'):
                 name += "-" + cls.url_fragment
             else:
