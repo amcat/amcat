@@ -58,7 +58,6 @@ class ProjectViewMixin(object):
     """
     project_id_url_kwarg = 'project_id'
     required_project_permission = authorisation.ROLE_PROJECT_METAREADER
-    context_category = None
     
     def get_context_data(self, **kwargs):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
@@ -67,9 +66,13 @@ class ProjectViewMixin(object):
         context["can_edit"] = self.can_edit()
         context["is_admin"] = self.is_admin()
         context["main_active"] = 'Projects'
-        context["context_category"] = self.context_category
+        context["context_category"] = self.get_context_category()
         return context
-    
+
+    @classmethod
+    def get_context_category(cls):
+        return getattr(cls, "context_category", None)
+        
     def get_project(self):
         kwarg = self.project_id_url_kwarg
         x = self.kwargs
@@ -128,12 +131,18 @@ class HierarchicalViewMixin(object):
 
     @classmethod
     def get_model(cls):
-        print("{cls}.get_model: .model={model}, .parent={cls.parent}".format(model=getattr(cls, "model"), **locals()))
-        try:
-            return cls.model
-        except AttributeError:
-            return cls.parent.get_model()
-    
+        """
+        Get the model for this class. If model is not given or None, check the parent.
+        (also check parent for model=None because SingleObjectMixin sets model=None)
+        """
+        model = getattr(cls, "model", None)
+        return model if model is not None else cls.parent.get_model()
+
+    @classmethod
+    def get_context_category(cls):
+        return cls.context_category if hasattr(cls, "context_category") else cls.parent.get_context_category()
+
+        
     @classmethod
     def get_model_key(cls):
         return cls.get_model()._meta.get_field("id").db_column

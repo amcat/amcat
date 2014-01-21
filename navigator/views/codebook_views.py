@@ -116,13 +116,11 @@ class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, 
 
 class CodebookDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
     parent = CodebookListView
-    context_category='Coding'
     view_name = "coding codebook-details"
 
 class CodebookImportView(ProjectScriptView):
     script = ImportCodebook
     parent = CodebookListView
-    context_category='Coding'
     url_fragment = 'import'
 
     def get_initial(self):
@@ -132,7 +130,6 @@ class CodebookImportView(ProjectScriptView):
     
 class CodebookLinkView(ProjectFormView):
     parent = CodebookListView
-    context_category='Coding'
     url_fragment = 'link'
 
     class form_class(forms.Form):
