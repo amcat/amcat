@@ -42,7 +42,6 @@ class DailyScript(Script):
     def run(self, _input):
         log.info("Getting scrapers...")
         scrapers = list(self.get_scrapers(date = self.options['date']))
-        print([s.__class__.__name__ for s in scrapers])
         log.info("Starting scraping with {n} scrapers: {classnames}".format(
                 n = len(scrapers),
                 classnames = [s.__class__.__name__ for s in scrapers]))
@@ -64,16 +63,14 @@ class DailyScript(Script):
         """
         if date is None: date = datetime.date.today()
         dates = [date - datetime.timedelta(days=n) for n in range(days_back)]
-        
         for s in Scraper.objects.filter(run_daily=True, active=True):
             for day in dates:
                 if not self.satisfied(s, day):
                     try:
                         s_instance = s.get_scraper(date = day, **options)
-                    except Exception:
+                    except Exception as e:
                         import traceback
-                        exc = traceback.format_exc()
-                        print(exc)
+                        traceback.print_exc()
                     else:
                         yield s_instance
 
@@ -98,7 +95,7 @@ def setup_logging():
                logging.getLogger("__main__"), logging.getLogger("celery"))
     d = datetime.date.today()
     filename = "/home/amcat/log/daily_{d.year:04d}-{d.month:02d}-{d.day:02d}.txt".format(**locals())
-    sys.stderr = open(filename, 'a')
+    #sys.stderr = open(filename, 'a')
     #TODO: Point sys.stderr to both console and file
     handlers = (logging.StreamHandler(sys.stdout),logging.FileHandler(filename))
     formatter = AmcatFormatter(date = True)
