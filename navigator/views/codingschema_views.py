@@ -416,10 +416,17 @@ class CodingSchemaLinkView(ProjectFormView):
     url_fragment = 'link'
 
     class form_class(forms.Form):
-        codebooks = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
+        schemas = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
 
     def get_form(self, form_class):
         form = super(CodingSchemaLinkView, self).get_form(form_class)
         from navigator.forms import gen_coding_choices
-        form.fields['codebooks'].choices = gen_coding_choices(self.request.user, CodingSchema)
+        form.fields['schemas'].choices = gen_coding_choices(self.request.user, CodingSchema)
         return form
+
+    def form_valid(self, form):
+        schemas = form.cleaned_data['schemas']
+        for cb in schemas:
+            self.project.codingschemas.add(cb)
+        self.request.session['notification'] = "Linked {n} codebook(s)".format(n=len(schemas))
+        return super(CodingSchemaLinkView, self).form_valid(form)
