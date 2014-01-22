@@ -241,9 +241,13 @@ class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin
     def get_success_url(self):
         return self.parent._get_breadcrumb_url(self.kwargs, self)
         
+    def get_cancel_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+        
     def get_context_data(self, **kwargs):
         context = super(ProjectScriptView, self).get_context_data(**kwargs)
         context["script_doc"] = self.script.__doc__ and self.script.__doc__.strip()
+        context["cancel_url"] = self.get_cancel_url()
         return context
 
         

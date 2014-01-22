@@ -46,7 +46,8 @@ class ScriptMixin(FormMixin):
                 
     def run_form(self, form):
         self.form = form
-        self.result =  self.get_script().run_script(form)
+        self.script_object = self.get_script()(form)
+        self.result =  self.script_object.run()
         self.success = True
         return self.result
     

@@ -47,7 +47,7 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
     @classmethod
     def get_url_patterns(cls):
         patterns = list(super(ArticleSetListView, cls).get_url_patterns())
-        patterns.append(patterns[0][:-1] + "(?P<what>[a-z]+)/?$")
+        patterns.append(patterns[0][:-1] + "(?P<what>|favourites|own|linked|coding)?/?$")
         return patterns
 
     @property
@@ -98,11 +98,9 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
     
 class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
     parent = ArticleSetListView
-    model = ArticleSet
-    context_category = 'Articles'
-        
     resource = SearchResource
     rowlink = './{id}'
+    model = ArticleSet
     
     def filter_table(self, table):
         return table.filter(sets=self.object.id)
@@ -126,8 +124,6 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 class ImportSetView(ProjectScriptView):
     script = ImportSet
     parent = ArticleSetListView
-    model = ArticleSet
-
 
     def get_success_url(self):
         project = self.form.cleaned_data["target_project"]
@@ -148,10 +144,8 @@ class ImportSetView(ProjectScriptView):
 
 class SampleSetView(ProjectScriptView):
     parent = ArticleSetDetailsView
-    model = ArticleSet
     script = SampleSet
     url_fragment = 'sample'
-    context_category = 'Articles'
     
     def get_success_url(self):
         return reverse("article set-list", args=[self.project.id])
@@ -167,9 +161,7 @@ from amcat.models import Role
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 class EditSetView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
     parent = ArticleSetDetailsView
-    model = ArticleSet
     url_fragment = 'edit'
-    context_category = 'Articles'
     fields = ['project', 'name', 'provenance']
     
     def get_success_url(self):
@@ -180,3 +172,46 @@ class EditSetView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, Upda
                                                                  projectrole__role_id__gte=PROJECT_READ_WRITE)
         return form
     
+
+
+
+from amcat.models import Plugin
+from api.rest.resources import PluginResource
+UPLOAD_PLUGIN_TYPE=2
+
+class ArticleSetUploadListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+    parent = ArticleSetListView
+    model = Plugin
+    resource = PluginResource
+    view_name = "article set-upload-list"
+    url_fragment = "upload"
+    
+    def filter_table(self, table):
+        table = table.rowlink_reverse('article set-upload', args=[self.project.id, '{id}'])
+        return table.filter(plugin_type=UPLOAD_PLUGIN_TYPE).hide('id', 'plugin_type')
+
+class ArticleSetUploadView(ProjectScriptView):
+    parent = ArticleSetUploadListView
+    view_name = "article set-upload"
+    template_name = "project/article_set_upload.html"
+
+    def get_script(self):
+        return Plugin.objects.get(pk=self.kwargs['plugin_id']).get_class()
+        
+    def get_form(self, form_class):
+        if self.request.method == 'GET':
+            return form_class.get_empty(project=self.project)
+        else:
+            return super(ArticleSetUploadView, self).get_form(form_class)
+
+    def form_valid(self, form):
+        self.run_form(form)
+        return self.render_to_response(self.get_context_data(form=form))
+        
+    def get_context_data(self, **kwargs):
+        context = super(ArticleSetUploadView, self).get_context_data(**kwargs)
+        if getattr(self, 'success', False):
+            context['created_set'] = self.script_object.articleset
+            context['created_n'] = len(self.result)
+
+        return context

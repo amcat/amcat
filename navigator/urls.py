@@ -96,25 +96,11 @@ urlpatterns = patterns(
         )),
 
 
-    # Plugins
-    url(r'^plugins$', 'navigator.views.plugin.index', name='plugins'),
-    
     # Projects (+managers)
-    url(r'^project/add$', 'navigator.views.project.add', name='project-add'),
-
-    url(r'^project/(?P<id>[0-9]+)/edit$', 'navigator.views.project.edit', name='project-edit'),
-    url(r'^project/(?P<id>[0-9]+)/users/add$', 'navigator.views.project.users_add'),
-    url(r'^project/(?P<id>[0-9]+)/upload-articles$', 'navigator.views.project.upload_article', name='upload-articles'),
-    url(r'^project/(?P<id>[0-9]+)/upload-articles/scrapers$', 'navigator.views.project.scrape_articles', name='scrape-articles'),
-
-    url(r'^project/(?P<project>[0-9]+)/upload-articles/(?P<plugin>[0-9]+)$', 'navigator.views.project.upload_article_action', name='upload-articles-action'), 
-    url(r'^project/(?P<project>[0-9]+)/user/(?P<user>[0-9]+)$', 'navigator.views.project.project_role'),
-
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_labels$', 'navigator.views.project.save_labels'),
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_name$', 'navigator.views.project.save_name'),
     url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<id>[-0-9]+)/delete$', 'navigator.views.project.codebook_delete', name="project-delete-codebook"), 
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_changesets$', 'navigator.views.project.save_changesets'),
-    url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<codebookid>[-0-9]+)/export$', ExportCodebook.as_view(), name='project-export-codebook'),
 
     # Coding
     url(r'^coding/schema-editor$', 'navigator.views.schemas.index'),
@@ -123,11 +109,9 @@ urlpatterns = patterns(
 
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
     url(r'^codingjobs/(?P<coder_id>\d+)/all$' ,'navigator.views.codingjob.all', name='codingjobs-all'),
-    url(r'^project/(?P<id>[0-9-]+)/add_codingjob$', 'navigator.views.project.add_codingjob', name='codingjob-add'),
-    url(r'^project/(?P<project>[0-9-]+)/codingjob/(?P<codingjob>[0-9]+)$', 'navigator.views.project.view_codingjob', name='codingjob'),
+    
     url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-unit$', 'navigator.views.project.codingjob_unit_export', name='project-codingjob-unit-export'),
     url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-article$', 'navigator.views.project.codingjob_article_export', name='project-codingjob-article-export'),
-    url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/delete$', 'navigator.views.project.delete_codingjob', name='project-codingjob-delete'),
     url(r'^project/(?P<project>[0-9]+)/codingjob/export-select$', 'navigator.views.project.codingjob_export_select', name='project-codingjobs-export-select'),
     url(r'^project/(?P<project>[0-9]+)/codingjob/export-options$', 'navigator.views.project.codingjob_export_options', name='project-codingjobs-export-options'),
 
@@ -143,13 +127,13 @@ urlpatterns = patterns(
 
 
 for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
-             ArticleSetArticleDetailsView, ProjectArticleDetailsView,
+             ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleSetUploadView,ArticleSetUploadListView,
              QueryView, SampleSetView, EditSetView,
              CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView,
              CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
              CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
              CodingSchemaCopyView,CodingSchemaLinkView,
-             CodingJobListView,
+             CodingJobListView, CodingJobAddView,
              ProjectUserListView, ProjectUserAddView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
@@ -159,6 +143,7 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
 urlpatterns += patterns('',
                         url("^projects/(?P<project_id>[0-9]+)/$", ArticleSetListView.as_view(), name="project"),
                         url("^projects/$", ProjectListView.as_view(), name="projects"),
+                        url("^projects/add/$$", ProjectAddView.as_view(), name="projects-add"),
                         url("^projects/(?P<what>[a-z]+)/$", ProjectListView.as_view(), name="projects"),
                         )
 #    url(r'^projects(?P<what>/\w+)?$', 'navigator.views.project.projectlist', name='projects'),

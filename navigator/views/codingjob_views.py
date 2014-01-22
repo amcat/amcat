@@ -19,16 +19,16 @@
 from django.views.generic.list import ListView
 
 from api.rest.viewsets import CodingJobViewSet
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import CodingJob
 from navigator.utils.misc import session_pop
+from navigator.views.project_views import ProjectDetailsView
 
 
 class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = CodingJob
-    parent = None
-    base_url = "projects/(?P<project_id>[0-9]+)"
+    parent = ProjectDetailsView
     context_category = 'Coding'
     resource = CodingJobViewSet
 
@@ -46,3 +46,25 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
 
         ctx.update(**locals())
         return ctx
+
+from amcat.scripts.actions.add_codingjob import AddCodingJob
+from amcat.forms.widgets import convert_to_jquery_select
+from django import forms
+
+class CodingJobAddView(ProjectScriptView):
+    parent = CodingJobListView
+    script = AddCodingJob
+    url_fragment = "add"
+    
+    def get_success_url(self):
+        result = self.result
+        if isinstance(result, CodingJob): result = [result]
+        request.session['added_codingjob'] = [job.id for job in result]
+        return reverse("coding job-list", args=[project.id])
+        
+    def get_form(self, form_class):
+        form = super(CodingJobAddView, self).get_form(form_class)
+        form.fields['insertuser'].initial = self.request.user
+        form.fields["insertuser"].widget = forms.HiddenInput()
+        convert_to_jquery_select(form)
+        return form
