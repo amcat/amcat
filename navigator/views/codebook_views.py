@@ -26,14 +26,14 @@ from django.views.generic.base import RedirectView
 from django import forms
 
 from api.rest.datatable import Datatable
-from amcat.models import Language
+from amcat.models import Language, Project
 from amcat.scripts.actions.import_codebook import ImportCodebook
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
 from api.rest.viewsets import CodebookViewSet
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.scriptview import TableExportMixin
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView, ProjectDetailView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView, ProjectDetailView, ProjectActionRedirectView
 from amcat.models import Codebook
 from amcat.forms import widgets
 
@@ -45,7 +45,7 @@ class AddCodebookView(RedirectView):
     """
     def get_redirect_url(self, project_id, **kwargs):
         c = Codebook.objects.create(project_id=project_id, name='New codebook')
-        return reverse('codebook-details', args=[project_id, c.id])
+        return reverse(CodebookDetailsView.get_view_name(), args=[project_id, c.id])
 
 
 
@@ -154,3 +154,27 @@ class CodebookLinkView(ProjectFormView):
             self.project.codebooks.add(cb)
         self.request.session['notification'] = "Linked {n} codebook(s)".format(n=len(cbs))
         return super(CodebookLinkView, self).form_valid(form)
+
+class CodebookUnlinkView(ProjectActionRedirectView):
+    parent = CodebookDetailsView
+    url_fragment = "unlink"
+
+    def action(self, project_id, codebook_id):
+        cb = Codebook.objects.get(pk=codebook_id)
+        project = Project.objects.get(pk=project_id)
+        project.codebooks.remove(cb)
+
+    def get_redirect_url(self, **kwargs):
+        return CodebookListView._get_breadcrumb_url(kwargs, self)
+        
+
+class CodebookDeleteView(ProjectActionRedirectView):
+    parent = CodebookDetailsView
+    url_fragment = "delete"
+
+    def get_redirect_url(self, project_id, codingschema_id):
+        return CodebookListView._get_breadcrumb_url(kwargs, self)
+
+    def action(self, project_id, codebook_id):
+        cb = Codebook.objects.get(pk=codebook_id)
+        cb.recycle()
