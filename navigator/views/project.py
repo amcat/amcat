@@ -91,15 +91,6 @@ def table_view(request, context, table, selected=None, overview=False,
 # views from other modules prevents wrongly unselected items, while preserving
 # modularity.
 
-@check(Article)
-def sentences(request, art, projectid=None):
-    ctx = dict(article=art)
-
-    if projectid is not None:
-        ctx['menu'] = PROJECT_MENU
-        ctx['context'] = Project.objects.get(id=projectid)
-    
-    return render(request, "navigator/article/view.html", ctx)
 
 def _codingjob_export(results, codingjob, filename):
     results = TableToSemicolonCSV().run(results)
