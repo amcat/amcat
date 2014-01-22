@@ -63,6 +63,13 @@ annotator = (function(self){
         IRRELEVANT: 9
     };
 
+    self.STATUS_TEXT = {
+        0 : "Not started",
+        1 : "In progress",
+        2 : "Finished",
+        9 : "Irrelevant"
+    };
+
     self.get_empty_state = function(){
         return {
             requests : null,
@@ -642,6 +649,11 @@ annotator = (function(self){
             })
         }), function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
+
+            // Change article status in table
+            var td_index = self.article_table_container.find("thead th:contains('status')").index();
+            var current_row = self.article_table_container.find("tr.row_selected");
+            $("td:eq({0})".f(td_index), current_row).text(self.STATUS_TEXT[self.state.coded_article.status]);
 
             if (success_callback !== undefined && success_callback.currentTarget === undefined){
                 success_callback(data, textStatus, jqXHR);
