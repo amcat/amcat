@@ -121,16 +121,17 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
         return context
 
 
-class ImportSetView(ProjectScriptView):
+class ArticleSetImportView(ProjectScriptView):
     script = ImportSet
-    parent = ArticleSetListView
+    parent = ArticleSetDetailsView
+    url_fragment = 'import'
 
     def get_success_url(self):
         project = self.form.cleaned_data["target_project"]
         return reverse(ArticleSetListView.get_view_name(), kwargs={"project_id":project.id})
 
     def get_form(self, form_class):
-        form = super(ImportSetView, self).get_form(form_class)
+        form = super(ArticleSetImportView, self).get_form(form_class)
         if self.request.method == 'GET':
             # list current users favourite projects but exclude already imported and currect project
             qs = Project.objects.filter(favourite_users=self.request.user.get_profile())
@@ -142,16 +143,12 @@ class ImportSetView(ProjectScriptView):
         return form
 
 
-class SampleSetView(ProjectScriptView):
+class ArticleSetSampleView(ProjectScriptView):
     parent = ArticleSetDetailsView
     script = SampleSet
     url_fragment = 'sample'
-    
-    def get_success_url(self):
-        return reverse("article set-list", args=[self.project.id])
-
         
-class RefreshArticleSetView(RedirectView):
+class ArticleSetRefreshView(RedirectView):
     def get_redirect_url(self, projectid, pk):
         # refresh the queryset. Probably not the nicest way to do this (?)
         ArticleSet.objects.get(pk=pk).refresh_index(full_refresh=True)
@@ -159,7 +156,7 @@ class RefreshArticleSetView(RedirectView):
 
 from amcat.models import Role
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
-class EditSetView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
+class ArticleSetEditView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
     parent = ArticleSetDetailsView
     url_fragment = 'edit'
     fields = ['project', 'name', 'provenance']

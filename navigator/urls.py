@@ -59,8 +59,6 @@ urlpatterns = patterns(
     
     url(r'^project/(?P<projectid>[0-9]+)/articleset/unlink/(?P<id>[0-9]+)$',
         'navigator.views.project.unlink_articleset', name="articleset-unlink"),
-    url(r'^project/(?P<project_id>[0-9]+)/articleset/(?P<articleset_id>[0-9]+)/import$',
-        ImportSetView.as_view(), name="articleset-import"),
 
     url(r'^project/(?P<projectid>[0-9]+)/processparsing$',
         ProcessParsingView.as_view(), name="processparsing"),
@@ -128,12 +126,12 @@ urlpatterns = patterns(
 
 for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleSetUploadView,ArticleSetUploadListView,
-             QueryView, SampleSetView, EditSetView,
+             QueryView, ArticleSetSampleView, ArticleSetEditView,ArticleSetImportView,
              CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView,
              CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
              CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
              CodingSchemaCopyView,CodingSchemaLinkView,
-             CodingJobListView, CodingJobAddView,
+             CodingJobListView, CodingJobAddView, 
              ProjectUserListView, ProjectUserAddView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
