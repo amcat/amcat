@@ -56,6 +56,8 @@ $(document).keyup(function(){
 annotator = (function(self){
     /******** STATE & CONSTANTS *******/
     self.API_URL = "/api/v4/";
+    self.API_PAGE_SIZE = 999999;
+
     self.STATUS = {
         NOT_STARTED: 0,
         IN_PROGRESS: 1,
@@ -186,16 +188,22 @@ annotator = (function(self){
         }))
     };
 
+    /* Calls $.getJSON and returns its output, while appending ?page_size=inf
+     * to the url to prevent cut-offs.*/
+    self.from_api = function(url){
+        return $.getJSON("{0}?page_size={1}".f(url, self.API_PAGE_SIZE));
+    };
+
     self.initialise_fields = function(){
         self.loading_dialog.text("Loading fields..").dialog("open");
 
         self._requests = [
-            $.getJSON(self.get_api_url()),
-            $.getJSON(self.get_api_url() + "coding_rules"),
-            $.getJSON(self.get_api_url() + "codebooks"),
-            $.getJSON(self.get_api_url() + "codingschemas"),
-            $.getJSON(self.get_api_url() + "codingschemafields"),
-            $.getJSON(self.API_URL + "coding_rule_actions")
+            self.from_api(self.get_api_url()),
+            self.from_api(self.get_api_url() + "coding_rules"),
+            self.from_api(self.get_api_url() + "codebooks"),
+            self.from_api(self.get_api_url() + "codingschemas"),
+            self.from_api(self.get_api_url() + "codingschemafields"),
+            self.from_api(self.API_URL + "coding_rule_actions")
         ];
 
         // Fill status combobox
@@ -780,9 +788,9 @@ annotator = (function(self){
         self.state.coded_article_id = coded_article_id;
 
         self.state.requests = [
-            $.getJSON(base_url),
-            $.getJSON(base_url + "codings"),
-            $.getJSON(base_url + "sentences")
+            self.from_api(base_url),
+            self.from_api(base_url + "codings"),
+            self.from_api(base_url + "sentences")
         ];
 
         self.loading_dialog.text("Loading codings..").dialog("open");
