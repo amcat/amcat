@@ -190,7 +190,7 @@ Array.prototype.remove=function(s){
                 self.searchbox.keyup(self.searchbox_keyup);
 
                 // Remove unneeded icons from root
-                $.each(["icon-move", "icon-eye-close", "icon-tags", "icon-arrow-up", "icon-arrow-down"], function (i, cls) {
+                $.each(["glyphicon-move", "glyphicon-eye-close", "glyphicon-tags", "glyphicon-arrow-up", "glyphicon-arrow-down"], function (i, cls) {
                     $($("." + cls, self.root_el)[0]).remove();
                 });
 
@@ -234,37 +234,37 @@ Array.prototype.remove=function(s){
             self._create_options_span = function (obj) {
                 var opt_span = $("<span>").addClass("options").append(
                         // Move code button
-                        $("<i>").addClass("icon icon-move").attr("title", "Move this code")
+                        $("<i>").addClass("glyphicon glyphicon-move").attr("title", "Move this code")
                             .click(self.move_code_clicked.bind(obj))
                     ).append(
                         // Unhide button
-                        $("<i>").addClass("icon icon-eye-open")
+                        $("<i>").addClass("glyphicon glyphicon-eye-open")
                             .attr("title", "Unhide this code")
                             .click(self.unhide_code_clicked.bind(obj))
                     ).append(
-                        $("<i>").addClass("icon icon-eye-close")
+                        $("<i>").addClass("glyphicon glyphicon-eye-close")
                             .attr("title", "Hide this code")
                             .click(self.hide_code_clicked.bind(obj))
                     ).append(
                         // Labels button
-                        $("<i>").addClass("icon icon-tags").attr("title", "Show labels")
+                        $("<i>").addClass("glyphicon glyphicon-tags").attr("title", "Show labels")
                             .click(self.show_labels_clicked.bind(obj))
                     ).append(
                         // Create new child button
-                        $("<i>").addClass("icon icon-asterisk").attr("title", "Create new child")
+                        $("<i>").addClass("glyphicon glyphicon-asterisk").attr("title", "Create new child")
                             .click(self.create_child_clicked.bind(obj))
                     ).append(
                         // Move up button
-                        $("<i>").addClass("icon icon-arrow-up").attr("title", "Move code up")
+                        $("<i>").addClass("glyphicon glyphicon-arrow-up").attr("title", "Move code up")
                             .click(self.move_code_up_clicked.bind(obj))
                     ).append(
                         // Move down button
-                        $("<i>").addClass("icon icon-arrow-down").attr("title", "Move code down")
+                        $("<i>").addClass("glyphicon glyphicon-arrow-down").attr("title", "Move code down")
                             .click(self.move_code_down_clicked.bind(obj))
                     );
 
                 // Hide (un)hide button
-                $(".icon-eye-" + (obj.is_hidden() ? 'close' : 'open'), opt_span).hide();
+                $(".glyphicon-eye-" + (obj.is_hidden() ? 'close' : 'open'), opt_span).hide();
 
                 return opt_span;
             };
@@ -331,7 +331,7 @@ Array.prototype.remove=function(s){
                     ).append($(
                         "<td>" +
                             "<div class='btn btn-mini btn-danger'>" +
-                            "<i class='icon-white icon-trash'></i>" +
+                            "<i class='glyphicon-white glyphicon-trash'></i>" +
                             "</div>" +
                             "</td>"
                     ).click(function (event) {
@@ -372,7 +372,7 @@ Array.prototype.remove=function(s){
                     $("<tr>").append(
                         $("<td>").attr("colspan", 3).css("text-align", "center").append(
                             $("<button>").addClass("btn").append(
-                                    $("<i>").addClass("icon icon-plus")
+                                    $("<i>").addClass("glyphicon glyphicon-plus")
                                 ).append(
                                     $(document.createTextNode(" Add label"))
                                 ).click(
@@ -576,8 +576,8 @@ Array.prototype.remove=function(s){
                 /* Hide code clicked. This function is bound to an object */
 
                 // Set correct icon
-                $(".icon-eye-close", this.options_dom_element).hide();
-                $(".icon-eye-open", this.options_dom_element).show();
+                $(".glyphicon-eye-close", this.options_dom_element).hide();
+                $(".glyphicon-eye-open", this.options_dom_element).show();
 
                 $(this.dom_element).addClass("hide");
                 $(".code", this.dom_element).addClass("hide");
@@ -591,8 +591,8 @@ Array.prototype.remove=function(s){
                 this.hidden = false;
 
                 // Set correct icon
-                $(".icon-eye-open", this.options_dom_element).hide();
-                $(".icon-eye-close", this.options_dom_element).show();
+                $(".glyphicon-eye-open", this.options_dom_element).hide();
+                $(".glyphicon-eye-close", this.options_dom_element).show();
 
                 // If node is root after the loop, a parent has a hide=true property
                 var code = this;
@@ -832,7 +832,7 @@ Array.prototype.remove=function(s){
                 code.append(
                         $(document.createTextNode(" "))
                     ).append(
-                        $("<i>").addClass("icon icon-question-sign move-help").click(
+                        $("<i>").addClass("glyphicon glyphicon-question-sign move-help").click(
                             self.move_help_clicked
                         )
                     );
