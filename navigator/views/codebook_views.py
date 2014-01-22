@@ -147,3 +147,10 @@ class CodebookLinkView(ProjectFormView):
         from navigator.forms import gen_coding_choices
         form.fields['codebooks'].choices = gen_coding_choices(self.request.user, Codebook)
         return form
+
+    def form_valid(self, form):
+        cbs = form.cleaned_data['codebooks']
+        for cb in cbs:
+            self.project.codebooks.add(cb)
+        self.request.session['notification'] = "Linked {n} codebook(s)".format(n=len(cbs))
+        return super(CodebookLinkView, self).form_valid(form)
