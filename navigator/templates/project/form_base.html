@@ -3,19 +3,14 @@
 {% block content %}
 
 <form action="" enctype="multipart/form-data" method="POST">
-   <legend>Please enter options for {{ script_name }} below.</legend>
    <table>
     {{ form.as_table }}
    </table>
  
    <div class="form-actions">
     <input class="btn btn-primary" type="submit" value="Save"></input>
-    <a href="{{cancel_url}}" class="btn">Cancel</a>
+    <a href="{{ cancel_url }}" class="btn">Cancel</a>
    </div>
 </form>
-
-{% if script_doc %}
-<div class="alert alert-info" style="white-space:pre-wrap">{{ script_doc }}</div>
-{% endif %}
 
 {% endblock %}

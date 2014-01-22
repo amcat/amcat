@@ -79,6 +79,9 @@ class Article(AmcatModel):
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
 
+    insertscript = models.CharField(blank=True, null=True, max_length=500)
+    insertdate = models.DateTimeField(blank=True,null=True,auto_now_add=True)
+
     class Meta():
         db_table = 'articles'
         app_label = 'amcat'

@@ -25,10 +25,11 @@ from api.rest.datatable import FavouriteDatatable
 from amcat.models import Project
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from django.views.generic.edit import UpdateView
+from navigator.views.scriptview import ScriptView
+from amcat.scripts.actions.add_project import AddProject
 
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
-    context_category = 'Articles'
     template_name = "project/project_list.html"
     
     def get_context_data(self, **kwargs):
@@ -96,3 +97,22 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         class Meta:
             model = Project
             exclude = ('codingschemas', 'codebooks', 'articlesets', 'favourite_articlesets')
+
+class ProjectAddView(BreadCrumbMixin, ScriptView):
+    template_name = "script_base.html"
+    script = AddProject
+    model = Project
+    
+    def get_context_data(self, **kwargs):
+        context = super(ProjectAddView, self).get_context_data(**kwargs)
+        context["cancel_url"] = reverse("projects")
+        return context
+        
+    def get_form(self, form_class):
+        if self.request.method == 'GET':
+            return form_class.get_empty(user=self.request.user)
+        else:
+            return super(ProjectAddView, self).get_form(form_class)
+
+    def get_success_url(self):
+        return reverse('article set-list', args=[self.result.id])

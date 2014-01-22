@@ -163,6 +163,7 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'accounts',
     'annotator',
     'navigator',
@@ -220,10 +221,14 @@ REST_FRAMEWORK = {
     'FILTER_BACKEND' : 'api.rest.filters.AmCATFilterBackend',
     'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.BrowsableAPIRenderer',
                                  'rest_framework.renderers.JSONRenderer',
-                                 'api.rest.csvrenderer.CSVRenderer', ),
+                                 'api.rest.tablerenderer.CSVRenderer', 
+                                 'api.rest.tablerenderer.XLSXRenderer',
+                                 'api.rest.tablerenderer.SPSSRenderer',
+                             ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'api.rest.tokenauth.ExpiringTokenAuthentication',
     )
 }
 

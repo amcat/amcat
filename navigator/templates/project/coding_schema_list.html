@@ -5,9 +5,7 @@
   <a href="{% url "coding schema-new" context.id %}" class="btn btn-primary">
    <i class="glyphicon glyphicon-certificate"></i> New schema
   </a>
-  <a href="{% url "codebook-import" context.id %}" class="btn btn-default">
-    <i class="glyphicon glyphicon-edit"></i> Import schemas
-  </a>
+  <a href="{% url "coding schema-link" project.id %}"  class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Use schema from other project</a>
 {% endif %}
 {% endblock %}
 

@@ -25,69 +25,62 @@ import csv
 from collections import defaultdict
 from rest_framework.renderers import *
 from StringIO import StringIO
+from amcat.tools.table import table3
+from functools import partial
+import collections
 
-class CSVRenderer(BaseRenderer):
+class TableRenderer(BaseRenderer):
     """
-    Renderer which serializes to CSV
+    Generic (abstract) renderer which flattens the table before writing. 
     """
-
-    media_type = 'text/csv'
-    format = 'csv'
     level_sep = '.'
 
+    def render_table(self, table):
+        """
+        Serialize the table3.Table into the target format
+        """
+        raise NotImplementedError
+    
     def render(self, data, media_type=None, renderer_context=None):
         """
-        Renders serialized *data* into CSV. For a dictionary:
+        Renders serialized *data* into target format
         """
         if data is None or 'results' not in data:
             return ''
         
         data = data['results']
-        
         table = self.tablize(data)
-        csv_buffer = StringIO()
-        csv_writer = csv.writer(csv_buffer)
-        for row in table:
-            # Assume that strings should be encoded as UTF-8
-            csv_writer.writerow([
-                elem.encode('utf-8') if isinstance(elem, basestring) else elem
-                for elem in row
-            ])
-
-        return csv_buffer.getvalue()
-
+        return self.render_table(table)
+        
     def tablize(self, data):
         """
         Convert a list of data into a table.
         """
-        if data:
+        # First, flatten the data (i.e., convert it to a list of
+        # dictionaries that are each exactly one level deep).  The key for
+        # each item designates the name of the column that the item will
+        # fall into.
+        data = self.flatten_data(data)
 
-            # First, flatten the data (i.e., convert it to a list of
-            # dictionaries that are each exactly one level deep).  The key for
-            # each item designates the name of the column that the item will
-            # fall into.
-            data = self.flatten_data(data)
+        # Get the set of all unique headers, and sort them.
+        headers = collections.defaultdict(set)
+        for item in data:
+            for k, v in item.iteritems():
+                headers[k].add(type(v))
+                
+        
+        table = table3.ObjectTable(rows=data)
+        for header in sorted(headers):
+            fieldtype = headers[header]
+            if len(fieldtype) == 1:
+                fieldtype = list(fieldtype)[0]
+            else:
+                fieldtype = None
+            fieldtype = {bool:str, type(None):str}.get(fieldtype, fieldtype)
+            table.addColumn(label=header, col=partial(lambda key, item: item.get(key, None), header), fieldtype=fieldtype)
 
-            # Get the set of all unique headers, and sort them.
-            headers = set()
-            for item in data:
-                headers.update(item.keys())
-            headers = sorted(headers)
+        return table
 
-            # Create a row for each dictionary, filling in columns for which the
-            # item has no data with None values.
-            rows = []
-            for item in data:
-                row = []
-                for key in headers:
-                    row.append(item.get(key, None))
-                rows.append(row)
-
-            # Return your "table", with the headers as the first row.
-            return [headers] + rows
-
-        else:
-            return []
 
     def flatten_data(self, data):
         """
@@ -148,6 +141,41 @@ class CSVRenderer(BaseRenderer):
             flat_dict.update(nested_item)
         return flat_dict
 
+    
+class CSVRenderer(TableRenderer):
+    """
+    Renderer which serializes to CSV
+    """
+
+    media_type = 'text/csv'
+    format = 'csv'
+
+    def render_table(self, table):
+        return table.to_csv()
 
 class CSVRendererWithUnderscores (CSVRenderer):
     level_sep = '_'
+
+class XLSXRenderer(TableRenderer):
+    """
+    Renderer which serializes to Excel XLSX
+    """
+
+    media_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    format = 'xlsx'
+
+    def render_table(self, table):
+        result = table.export(format='xlsx')
+        return result
+
+class SPSSRenderer(TableRenderer):
+    """
+    Renderer which serializes to Excel XLSX
+    """
+
+    media_type = 'application/x-spss-sav'
+    format = 'spss'
+
+    def render_table(self, table):
+        result = table.export(format='spss')
+        return result

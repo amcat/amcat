@@ -23,6 +23,8 @@ from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
 from django.views.generic.base import RedirectView
 
+from django import forms
+
 from api.rest.datatable import Datatable
 from amcat.models import Language
 from amcat.scripts.actions.import_codebook import ImportCodebook
@@ -31,19 +33,10 @@ from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
 from api.rest.viewsets import CodebookViewSet
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.scriptview import TableExportMixin
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView
 from amcat.models import Codebook
+from amcat.forms import widgets
 
-
-class ImportCodebook(ProjectScriptView):
-    script = ImportCodebook
-    def get_success_url(self):
-        return reverse("project-codebooks", kwargs=dict(id=self.project.id))
-
-    def get_initial(self):
-        initial = super(ImportCodebook, self).get_initial()
-        initial["codebook"]=self.url_data.get("codebookid")
-        return initial
     
 class ExportCodebook(TableExportMixin, ProjectScriptView):
     script = ExportCodebook
@@ -122,9 +115,28 @@ class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, 
         return ctx
 
 class CodebookDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
-    model = Codebook
     parent = CodebookListView
-    context_category='Coding'
     view_name = "coding codebook-details"
 
-        
+class CodebookImportView(ProjectScriptView):
+    script = ImportCodebook
+    parent = CodebookListView
+    url_fragment = 'import'
+
+    def get_initial(self):
+        initial = super(CodebookImportView, self).get_initial()
+        initial["codebook"]=self.kwargs.get("codebookid")
+        return initial
+    
+class CodebookLinkView(ProjectFormView):
+    parent = CodebookListView
+    url_fragment = 'link'
+
+    class form_class(forms.Form):
+        codebooks = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
+
+    def get_form(self, form_class):
+        form = super(CodebookLinkView, self).get_form(form_class)
+        from navigator.forms import gen_coding_choices
+        form.fields['codebooks'].choices = gen_coding_choices(self.request.user, Codebook)
+        return form

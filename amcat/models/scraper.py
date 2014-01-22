@@ -78,7 +78,14 @@ class Scraper(AmcatModel):
         q = self.articleset.articles.all()
         if to_date: q = q.filter(date__lte=to_date)
         if from_date: q = q.filter(date__gte=from_date)
-        if medium: q = q.filter(medium = medium.id)
+        first = q.order_by('date').first()
+        if first and first.insertscript:
+            # It's safe to use the 'insertscript' attribute, which was added later
+            scraper_class = self.get_scraper_class()
+            q = q.filter(insertscript = scraper_class.__name__)
+        else:
+            if medium: q = q.filter(medium = medium.id)
+
         # aggregate count group by date, return as dict
         q = q.extra(select=dict(d="cast(date as date)")).values_list("d")
         q = q.annotate(models.Count("id"))

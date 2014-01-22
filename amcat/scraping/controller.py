@@ -235,6 +235,7 @@ class ArticleManager(object):
                     artdict['medium'] = Medium.get_or_create(scraper.medium_name)
             if not 'project' in artdict.keys():
                 artdict['project'] = scraper.options['project']
+            artdict['insertscript'] = scraper.__class__.__name__
 
         return artdict
 

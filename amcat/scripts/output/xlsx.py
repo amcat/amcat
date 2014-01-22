@@ -27,7 +27,7 @@ import zipfile
 import io
 
 def table_to_xlsx(table):
-    return TableToXlsx().run(table)
+    return table.export(format='xlsx')
 
 class TableToXlsx(script.Script):
     input_type = table3.Table
@@ -35,29 +35,7 @@ class TableToXlsx(script.Script):
     output_type = types.ExcelData
 
     def run(self, tableObj):
-
-        # Import openpyxl "lazy" to prevent global dependency
-        from openpyxl.workbook import Workbook
-        from openpyxl.writer.dump_worksheet import ExcelDumpWriter
-
-        wb = Workbook(optimized_write = True)
-        ws = wb.create_sheet()
-        
-        ws.append(([""] if tableObj.rowNamesRequired else []) + map(unicode, list(tableObj.getColumns()))) # write column names
-        
-        for row in tableObj.getRows():
-            values = [unicode(row)] if tableObj.rowNamesRequired else []
-            values += [tableObj.getValue(row, column) for column in tableObj.getColumns()]
-            ws.append(values)
-        writer = ExcelDumpWriter(wb)
-        # need to do a little bit more work here, since the openpyxl library only supports writing to a filename, while we need a buffer here..
-        #buffer = StringIO()
-        buffer = io.BytesIO()
-        zf = zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED)
-        writer.write_data(zf)
-        zf.close()
-        buffer.flush()
-        return buffer.getvalue()
+        return tableObj.export(format='xlsx')
        
 class ArticleListToXlsx(script.Script):
     input_type = types.ArticleIterator
@@ -66,5 +44,5 @@ class ArticleListToXlsx(script.Script):
 
     def run(self, articleList):
         tableObj = ArticleListToTable(self.options).run(articleList)
-        return TableToXlsx().run(tableObj)
+        return tableObj.export(format='xlsx')
         

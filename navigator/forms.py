@@ -355,12 +355,6 @@ class CodingJobForm(forms.ModelForm):
     class Meta:
         model = CodingJob
 
-class ImportCodebook(forms.Form):
-    codebooks = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
-
-    def __init__(self, user, *args, **kwargs):
-        super(ImportCodebook, self).__init__(*args, **kwargs)
-        self.fields['codebooks'].choices = gen_coding_choices(user, Codebook)
 
 class ImportCodingSchema(forms.Form):
     schemas = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)

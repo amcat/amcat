@@ -88,6 +88,16 @@
 	{% endfor %}
       </ol>
       {% endif %}
+      <div id="notifications">
+	{% block notification %}
+	{% if notification %}
+	<div class="alert alert-success">
+	  {{ notification }}
+	</div>
+	{% endif %}
+	{% endblock %}
+      </div>
+
       <div class="btn-group" style="margin-bottom: 1em">
 	{% block actions %}{% endblock %}
       </div>

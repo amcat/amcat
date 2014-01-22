@@ -19,17 +19,18 @@
 
 import re
 
-from django.views.generic.base import ContextMixin, TemplateResponseMixin, TemplateView
-from django.views.generic.edit import CreateView
+from django.views.generic.base import ContextMixin, TemplateResponseMixin, TemplateView, RedirectView
+from django.views.generic.edit import CreateView, FormView, UpdateView
 from django.core.urlresolvers import reverse
 from django.forms.models import modelform_factory
-
+from django.core.exceptions import PermissionDenied
 
 from api.rest import resources
 from api.rest.datatable import Datatable
 
-from amcat.models import authorisation, Project
-from django.core.exceptions import PermissionDenied
+from amcat.models import authorisation, Project, Role
+
+PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
 class BreadCrumbMixin(object):
     def get_context_data(self, **kwargs):
@@ -57,7 +58,6 @@ class ProjectViewMixin(object):
     """
     project_id_url_kwarg = 'project_id'
     required_project_permission = authorisation.ROLE_PROJECT_METAREADER
-    context_category = None
     
     def get_context_data(self, **kwargs):
         context = super(ProjectViewMixin, self).get_context_data(**kwargs)
@@ -66,9 +66,14 @@ class ProjectViewMixin(object):
         context["can_edit"] = self.can_edit()
         context["is_admin"] = self.is_admin()
         context["main_active"] = 'Projects'
-        context["context_category"] = self.context_category
+        context["context_category"] = self.get_context_category()
+        context["notification"] = self.request.session.pop("notification", None)
         return context
-    
+
+    @classmethod
+    def get_context_category(cls):
+        return getattr(cls, "context_category", None)
+        
     def get_project(self):
         kwarg = self.project_id_url_kwarg
         x = self.kwargs
@@ -126,28 +131,42 @@ class HierarchicalViewMixin(object):
         return self.get_model_key()
 
     @classmethod
+    def get_model(cls):
+        """
+        Get the model for this class. If model is not given or None, check the parent.
+        (also check parent for model=None because SingleObjectMixin sets model=None)
+        """
+        model = getattr(cls, "model", None)
+        return model if model is not None else cls.parent.get_model()
+
+    @classmethod
+    def get_context_category(cls):
+        return cls.context_category if hasattr(cls, "context_category") else cls.parent.get_context_category()
+
+        
+    @classmethod
     def get_model_key(cls):
-        return cls.model._meta.get_field("id").db_column
+        return cls.get_model()._meta.get_field("id").db_column
 
     @classmethod
     def get_model_name(cls):
-        return cls.model._meta.verbose_name_plural.title()
+        return cls.get_model()._meta.verbose_name_plural.title()
         
     @classmethod
     def get_table_name(cls):
-        return cls.model._meta.db_table
+        return cls.get_model()._meta.db_table
 
     @classmethod
     def _get_object(cls, kwargs):
         pk = kwargs[cls.get_model_key()]
-        return cls.model.objects.get(pk=pk)
+        return cls.get_model().objects.get(pk=pk)
     
     @classmethod
     def get_view_name(cls):
         if hasattr(cls, 'view_name'):
             return cls.view_name
         else:
-            name = cls.model._meta.verbose_name
+            name = cls.get_model()._meta.verbose_name
             if hasattr(cls, 'url_fragment'):
                 name += "-" + cls.url_fragment
             else:
@@ -211,7 +230,6 @@ class HierarchicalViewMixin(object):
         return breadcrumbs
 
         
-        
 from navigator.views.scriptview import ScriptView
 class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, ScriptView):
     """
@@ -222,11 +240,77 @@ class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin
     script = None
 
     def get_success_url(self):
-        return reverse("project", kwargs=dict(id=self.project.id))
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+        
+    def get_cancel_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
         
     def get_context_data(self, **kwargs):
         context = super(ProjectScriptView, self).get_context_data(**kwargs)
         context["script_doc"] = self.script.__doc__ and self.script.__doc__.strip()
+        context["cancel_url"] = self.get_cancel_url()
         return context
 
+        
+class ProjectFormView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormView):
+    template_name = "project/form_base.html"
+
+    def get_success_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+    
+    def get_cancel_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+    
+    def get_context_data(self, **kwargs):
+        context = super(ProjectFormView, self).get_context_data(**kwargs)
+        context["cancel_url"] = self.get_cancel_url()
+        return context
+        
+        
+class ProjectActionRedirectView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, RedirectView):
+    permanent=False # we don't want the browser to cache the redirect and prevent the action
+    # (but what we really want is a POST request instead???)
+    required_project_permission = authorisation.ROLE_PROJECT_WRITER
+    
+    
+    def get(self, request, *args, **kwargs):
+        result = self.action(**kwargs)
+        message = self.success_message(result)
+        request.session['notification'] = message
+        return super(ProjectActionRedirectView, self).get(request, *args, **kwargs)        
+    
+    def get_redirect_url(self, **kargs):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+        
+    def action(self, **kwargs):
+        """Perform the intended action. Kwargs are the url parameters"""
+        raise NotImplementedError()
+        
+    def success_message(self, result=None):
+        """Return a message after the action. Result is the return value of action"""
+        return "Succesfully ran action {self.__class__.__name__}".format(**locals())
+
+
+class ProjectEditView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
+    url_fragment = 'edit'
+    
+    def get_success_url(self):
+        self.request.session['notification'] = "Successfully edited object details"
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+    
+    def get_form(self, form_class):
+        form = super(ProjectEditView, self).get_form(form_class)
+        if 'project' in form.fields:
+            form.fields['project'].queryset = Project.objects.filter(projectrole__user=self.request.user,
+                                                                     projectrole__role_id__gte=PROJECT_READ_WRITE)
+        return form
+    
+
+    def get_cancel_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+    
+    def get_context_data(self, **kwargs):
+        context = super(ProjectEditView, self).get_context_data(**kwargs)
+        context["cancel_url"] = self.get_cancel_url()
+        return context
         

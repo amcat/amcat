@@ -4,7 +4,7 @@
 
 {% block actions %}
 {% if can_edit %}
-<a class="btn btn-primary"  href="{% url 'upload-articles' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a>
+<a class="btn btn-primary"  href="{% url 'article set-upload-list' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a>
 {% endif %}
 {% endblock actions %}
 

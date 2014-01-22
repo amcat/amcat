@@ -332,7 +332,7 @@ class Datatable(object):
     
     def __unicode__(self):
         links = {}
-        for fmt in ["api","csv","json"]:
+        for fmt in ["api","csv","json", "xlsx", "spss"]:
             t = self.set_format(fmt)
             if fmt != "api": t = t.add_arguments(page_size=999999)
             links[fmt] = t.url
