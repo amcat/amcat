@@ -98,7 +98,7 @@ class CodingJobDeleteView(ProjectActionRedirectView):
     url_fragment = "delete"
 
     def action(self, project_id, codingjob_id):
-        CodingJob.objects.get(pk=codingjob_id).delete()
+        CodingJob.objects.get(pk=codingjob_id).recycle()
         
     def get_redirect_url(self, **kwargs):
         return CodingJobListView._get_breadcrumb_url(kwargs, self)

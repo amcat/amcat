@@ -75,7 +75,7 @@ class CodingJob(AmcatModel):
             for coding in coded_article.codings.all():
                 yield coding
 
-    def delete(self):
+    def recycle(self):
         """Move this job to the recycle bin"""
         self.project_id = LITTER_PROJECT_ID
         self.coder_id = LITTER_USER_ID
