@@ -37,56 +37,7 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from amcat.models import Codebook
 from amcat.forms import widgets
 
-    
-class ExportCodebook(TableExportMixin, ProjectScriptView):
-    script = ExportCodebook
 
-    def export_filename(self, form):
-        c = form.cleaned_data["codebook"]
-        return "Codebook {c.id} {c}".format(**locals())
-    
-    def get_initial(self):
-        initial = super(ExportCodebook, self).get_initial()
-        initial["codebook"]=self.url_data["codebookid"]
-        return initial
-
-    def get_form_class(self):
-        # Modify form class to also contain XML output
-        form_class = super(ExportCodebook, self).get_form_class()
-        form_class.base_fields['format'].choices.append(("xml", "XML"))
-        return form_class
-
-    def get_form(self, *args, **kargs): 
-        form = super(ExportCodebook, self).get_form(*args, **kargs)
-        cid=self.url_data["codebookid"]
-        langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
-        form.fields['language'].queryset = langs
-        form.fields['language'].initial = min(l.id for l in langs)
-        return form
-
-    def form_valid(self, form):
-        if form.cleaned_data['format'] == 'xml':
-            return ExportCodebookXML.as_view()(self.request, **self.kwargs)
-
-        return super(ExportCodebook, self).form_valid(form)
-
-class ExportCodebookXML(ProjectScriptView):
-    script = ExportCodebookAsXML
-
-    def export_filename(self, form):
-        c = form.cleaned_data["codebook"]
-        return "Codebook {c.id} {c}.xml".format(**locals())
-
-    def get_initial(self):
-        return dict(codebook=self.url_data["codebookid"])
-
-    def form_valid(self, form):
-        super(ExportCodebookXML, self).form_valid(form)
-
-        filename = self.export_filename(form)
-        response = HttpResponse(self.result, content_type='text/xml', status=200)
-        response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
-        return response
 
 class AddCodebookView(RedirectView):
     """
@@ -117,6 +68,62 @@ class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, 
 class CodebookDetailsView(ProjectDetailView):
     parent = CodebookListView
     view_name = "coding codebook-details"
+
+
+
+
+class ExportCodebook(TableExportMixin, ProjectScriptView):
+    script = ExportCodebook
+    parent = CodebookDetailsView
+    url_fragment = "export"
+
+    def export_filename(self, form):
+        c = form.cleaned_data["codebook"]
+        return "Codebook {c.id} {c}".format(**locals())
+
+    def get_initial(self):
+        initial = super(ExportCodebook, self).get_initial()
+        initial["codebook"]=self.url_data["codebookid"]
+        return initial
+
+    def get_form_class(self):
+        # Modify form class to also contain XML output
+        form_class = super(ExportCodebook, self).get_form_class()
+        form_class.base_fields['format'].choices.append(("xml", "XML"))
+        return form_class
+
+    def get_form(self, *args, **kargs):
+        form = super(ExportCodebook, self).get_form(*args, **kargs)
+        cid=self.url_data["codebookid"]
+        langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
+        form.fields['language'].queryset = langs
+        form.fields['language'].initial = min(l.id for l in langs)
+        return form
+
+    def form_valid(self, form):
+        if form.cleaned_data['format'] == 'xml':
+            return ExportCodebookXML.as_view()(self.request, **self.kwargs)
+
+        return super(ExportCodebook, self).form_valid(form)
+
+class ExportCodebookXML(ProjectScriptView):
+    script = ExportCodebookAsXML
+    parent = CodebookDetailsView
+
+    def export_filename(self, form):
+        c = form.cleaned_data["codebook"]
+        return "Codebook {c.id} {c}.xml".format(**locals())
+
+    def get_initial(self):
+        return dict(codebook=self.url_data["codebookid"])
+
+    def form_valid(self, form):
+        super(ExportCodebookXML, self).form_valid(form)
+
+        filename = self.export_filename(form)
+        response = HttpResponse(self.result, content_type='text/xml', status=200)
+        response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
+        return response
 
 class CodebookImportView(ProjectScriptView):
     script = ImportCodebook
