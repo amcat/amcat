@@ -188,6 +188,7 @@ widgets = (function(self){
         },
         set_value : function(widget, codingvalue){
             self.default.set_value(widget, codingvalue, true);
+            $(widget).val(codingvalue.intval / 10)
         }
 
     });
