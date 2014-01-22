@@ -19,19 +19,18 @@
 
 import re
 
-from django.views.generic.base import ContextMixin, TemplateResponseMixin, TemplateView
-from django.views.generic.edit import CreateView
+from django.views.generic.base import ContextMixin, TemplateResponseMixin, TemplateView, RedirectView
+from django.views.generic.edit import CreateView, FormView, UpdateView
 from django.core.urlresolvers import reverse
 from django.forms.models import modelform_factory
-from django.views.generic.edit import FormView
-from django.views.generic.base import RedirectView
-
+from django.core.exceptions import PermissionDenied
 
 from api.rest import resources
 from api.rest.datatable import Datatable
 
-from amcat.models import authorisation, Project
-from django.core.exceptions import PermissionDenied
+from amcat.models import authorisation, Project, Role
+
+PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 
 class BreadCrumbMixin(object):
     def get_context_data(self, **kwargs):
@@ -290,3 +289,28 @@ class ProjectActionRedirectView(HierarchicalViewMixin,ProjectViewMixin, BreadCru
     def success_message(self, result=None):
         """Return a message after the action. Result is the return value of action"""
         return "Succesfully ran action {self.__class__.__name__}".format(**locals())
+
+
+class ProjectEditView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
+    url_fragment = 'edit'
+    
+    def get_success_url(self):
+        self.request.session['notification'] = "Successfully edited object details"
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+    
+    def get_form(self, form_class):
+        form = super(ProjectEditView, self).get_form(form_class)
+        if 'project' in form.fields:
+            form.fields['project'].queryset = Project.objects.filter(projectrole__user=self.request.user,
+                                                                     projectrole__role_id__gte=PROJECT_READ_WRITE)
+        return form
+    
+
+    def get_cancel_url(self):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+    
+    def get_context_data(self, **kwargs):
+        context = super(ProjectEditView, self).get_context_data(**kwargs)
+        context["cancel_url"] = self.get_cancel_url()
+        return context
+        

@@ -23,7 +23,7 @@ from amcat.scripts.actions.sample_articleset import SampleSet
 from amcat.scripts.actions.import_articleset import ImportSet
 from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
 
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
@@ -151,21 +151,10 @@ class ArticleSetSampleView(ProjectScriptView):
 
 from amcat.models import Role
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
-class ArticleSetEditView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
+class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
-    url_fragment = 'edit'
     fields = ['project', 'name', 'provenance']
     
-    def get_success_url(self):
-        return reverse("article set-details", args=[self.project.id, self.object.id])
-    def get_form(self, form_class):
-        form = super(EditSetView, self).get_form(form_class)
-        form.fields['project'].queryset = Project.objects.filter(projectrole__user=self.request.user,
-                                                                 projectrole__role_id__gte=PROJECT_READ_WRITE)
-        return form
-    
-
-
 
 from amcat.models import Plugin
 from api.rest.resources import PluginResource

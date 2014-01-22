@@ -124,7 +124,7 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
              CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
              CodingSchemaCopyView,CodingSchemaLinkView,
-             CodingJobListView, CodingJobAddView, 
+             CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
              ProjectUserListView, ProjectUserAddView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',

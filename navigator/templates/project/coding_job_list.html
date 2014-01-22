@@ -16,7 +16,7 @@
  {% if added %}
     <div class="alert alert-success">
       {% for job in added %}
-      Created job: <a href='{% url "codingjob" context.id job.id %}'>{{job.id}} : {{job}}</a><br/> 
+      Created job: <a href='{ % url "coding job-details" context.id job.id %}'>{{job.id}} : {{job}}</a><br/> 
       {% endfor %}
     </div>
 </div>
