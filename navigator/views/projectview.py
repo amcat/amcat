@@ -24,6 +24,7 @@ from django.views.generic.edit import CreateView
 from django.core.urlresolvers import reverse
 from django.forms.models import modelform_factory
 from django.views.generic.edit import FormView
+from django.views.generic.base import RedirectView
 
 
 from api.rest import resources
@@ -67,6 +68,7 @@ class ProjectViewMixin(object):
         context["is_admin"] = self.is_admin()
         context["main_active"] = 'Projects'
         context["context_category"] = self.get_context_category()
+        context["notification"] = self.request.session.pop("notification", None)
         return context
 
     @classmethod
@@ -266,3 +268,25 @@ class ProjectFormView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, F
         return context
         
         
+class ProjectActionRedirectView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, RedirectView):
+    permanent=False # we don't want the browser to cache the redirect and prevent the action
+    # (but what we really want is a POST request instead???)
+    required_project_permission = authorisation.ROLE_PROJECT_WRITER
+    
+    
+    def get(self, request, *args, **kwargs):
+        result = self.action(**kwargs)
+        message = self.success_message(result)
+        request.session['notification'] = message
+        return super(ProjectActionRedirectView, self).get(request, *args, **kwargs)        
+    
+    def get_redirect_url(self, **kargs):
+        return self.parent._get_breadcrumb_url(self.kwargs, self)
+        
+    def action(self, **kwargs):
+        """Perform the intended action. Kwargs are the url parameters"""
+        raise NotImplementedError()
+        
+    def success_message(self, result=None):
+        """Return a message after the action. Result is the return value of action"""
+        return "Succesfully ran action {self.__class__.__name__}".format(**locals())

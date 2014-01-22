@@ -101,29 +101,6 @@ def sentences(request, art, projectid=None):
     
     return render(request, "navigator/article/view.html", ctx)
 
-@check(ArticleSet, args='id', action='delete')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid')
-def delete_articleset(request, project, aset):
-    aset.project = Project.objects.get(id=LITTER_PROJECT_ID)
-    aset.indexed = False
-    aset.provenance = json.dumps({
-        "provenance" : aset.provenance,
-        "project" : project.id,
-        "deleted_on" : datetime.datetime.now().isoformat()
-    })
-
-    aset.save()
-
-    request.session['deleted_articleset'] = True
-    return redirect(reverse("project-articlesets", args=[project.id]))
-
-@check(ArticleSet, args='id')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid', action='update')
-def unlink_articleset(request, project, aset):
-    project.articlesets.remove(aset)
-    request.session['unlinked_articleset'] = True
-    return redirect(reverse("project-articlesets", args=[project.id]))
-
 def _codingjob_export(results, codingjob, filename):
     results = TableToSemicolonCSV().run(results)
     filename = filename.format(codingjob=codingjob, now=datetime.datetime.now())

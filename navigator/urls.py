@@ -52,14 +52,6 @@ urlpatterns = patterns(
             'navigator.views.article.remove_from', name="remove_from_articleset"),
     #url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
     #        'navigator.views.project.article', name="article"),
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/delete/(?P<id>[0-9]+)$',
-        'navigator.views.project.delete_articleset', name="articleset-delete"),
-    #url(r'^project/(?P<projectid>[0-9]+)/articleset/refresh/(?P<pk>[0-9]+)$',
-    #    RefreshArticleSetView.as_view(), name="articleset-refresh"),
-    
-    url(r'^project/(?P<projectid>[0-9]+)/articleset/unlink/(?P<id>[0-9]+)$',
-        'navigator.views.project.unlink_articleset', name="articleset-unlink"),
-
     url(r'^project/(?P<projectid>[0-9]+)/processparsing$',
         ProcessParsingView.as_view(), name="processparsing"),
     # parses
@@ -126,7 +118,8 @@ urlpatterns = patterns(
 
 for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleSetUploadView,ArticleSetUploadListView,
-             QueryView, ArticleSetSampleView, ArticleSetEditView,ArticleSetImportView,
+             QueryView, ArticleSetSampleView, ArticleSetEditView,ArticleSetImportView,ArticleSetRefreshView,
+             ArticleSetDeleteView,ArticleSetUnlinkView,
              CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView,
              CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
              CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,

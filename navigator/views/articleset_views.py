@@ -23,7 +23,7 @@ from amcat.scripts.actions.sample_articleset import SampleSet
 from amcat.scripts.actions.import_articleset import ImportSet
 from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
 
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
@@ -148,11 +148,6 @@ class ArticleSetSampleView(ProjectScriptView):
     script = SampleSet
     url_fragment = 'sample'
         
-class ArticleSetRefreshView(RedirectView):
-    def get_redirect_url(self, projectid, pk):
-        # refresh the queryset. Probably not the nicest way to do this (?)
-        ArticleSet.objects.get(pk=pk).refresh_index(full_refresh=True)
-        return reverse("article set-details", args=[projectid, pk])
 
 from amcat.models import Role
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
@@ -212,3 +207,48 @@ class ArticleSetUploadView(ProjectScriptView):
             context['created_n'] = len(self.result)
 
         return context
+
+class ArticleSetRefreshView(ProjectActionRedirectView):
+    parent = ArticleSetDetailsView
+    url_fragment = "refresh"
+
+    def action(self, project_id, articleset_id):
+        # refresh the queryset. Probably not the nicest way to do this (?)
+        ArticleSet.objects.get(pk=project_id).refresh_index(full_refresh=True)
+        
+from amcat.models.project import LITTER_PROJECT_ID
+import json, datetime
+class ArticleSetDeleteView(ProjectActionRedirectView):
+    parent = ArticleSetDetailsView
+    url_fragment = "delete"
+
+    def action(self, project_id, articleset_id):
+        aset = ArticleSet.objects.get(pk=articleset_id)
+        project = Project.objects.get(pk=project_id)
+        
+        aset.project = Project.objects.get(id=LITTER_PROJECT_ID)
+        aset.indexed = False
+        aset.provenance = json.dumps({
+            "provenance" : aset.provenance,
+            "project" : project.id,
+            "deleted_on" : datetime.datetime.now().isoformat()
+        })
+        aset.save()
+        project.favourite_articlesets.remove(aset)
+
+    def get_redirect_url(self, **kwargs):
+        return ArticleSetListView._get_breadcrumb_url(kwargs, self)
+        
+class ArticleSetUnlinkView(ProjectActionRedirectView):
+    parent = ArticleSetDetailsView
+    url_fragment = "unlink"
+
+    def action(self, project_id, articleset_id):
+        aset = ArticleSet.objects.get(pk=articleset_id)
+        project = Project.objects.get(pk=project_id)
+        project.articlesets.remove(aset)
+        project.favourite_articlesets.remove(aset)
+
+    def get_redirect_url(self, **kwargs):
+        return ArticleSetListView._get_breadcrumb_url(kwargs, self)
+        
