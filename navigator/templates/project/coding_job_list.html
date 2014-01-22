@@ -6,7 +6,7 @@
 {% if can_edit %}
   <a href="{% url "coding job-add" context.id %}" class="btn btn-primary"><i class="icon-certificate"></i> New codingjob</a>
 {% endif %}
-  <a href="{% url "project-codingjobs-export-select" context.id %}"  class="btn btn-default">Export codingjobs</a>
+  <a href="{% url "coding job-export-select" context.id %}"  class="btn btn-default">Export codingjobs</a>
 {% endblock %}
 
 {% block content %}

@@ -37,6 +37,9 @@ from amcat.models.articleset import ArticleSet
 
 from django.db import models
 
+from amcat.models.user import LITTER_USER_ID
+from amcat.models.project import LITTER_PROJECT_ID
+
 import logging; log = logging.getLogger(__name__)
             
 class CodingJob(AmcatModel):
@@ -72,6 +75,12 @@ class CodingJob(AmcatModel):
             for coding in coded_article.codings.all():
                 yield coding
 
+    def delete(self):
+        """Move this job to the recycle bin"""
+        self.project_id = LITTER_PROJECT_ID
+        self.coder_id = LITTER_USER_ID
+        self.save()
+                
 @receiver(post_save, sender=CodingJob)
 def create_coded_articles(sender, instance=None, created=None, **kwargs):
     """

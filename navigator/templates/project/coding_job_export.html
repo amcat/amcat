@@ -1,0 +1,36 @@
+{% extends "project/base.html" %}
+
+{% block title %}Project {{project.id}} - {{project.name}}{% endblock %}
+
+{% block content %}
+<div>
+ <h1 class="noline">Select options for exporting below</h1>
+ <form method="POST" class="form-horizontal">
+    {% for hidden in form.hidden_fields %}
+    {{ hidden }}
+    {% if hidden.errors %}{{ hidden.name}} : {{ hidden.errors }}{% endif %}
+    {% endfor %}
+
+{% for section, fields in sections.items %}
+<legend>{{section}}</legend>
+  {% for id, field, subfields in fields %}
+  <div class="form-group">
+    <label class="col-sm-3 control-label">{{ field.label_tag }}</label>
+    <div class="col-sm-9">{{ field }}{{ field.errors }}</div>
+  </div>
+    {% for id, subfield in subfields %}
+
+  <div class="form-group">
+    <label class="col-sm-4 control-label">{{ subfield.label_tag }}</label>
+    <div class="col-sm-8">{{ subfield }}{{ subfield.errors }}</div>
+  </div>
+    {% endfor %}
+  {% endfor %}
+{% endfor %}
+
+</table>
+  <input type="submit"></input>
+  </form>
+<pre>{{ results|safe }}</pre>
+</div>
+{% endblock %}

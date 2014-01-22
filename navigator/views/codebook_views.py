@@ -33,7 +33,7 @@ from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
 from api.rest.viewsets import CodebookViewSet
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.scriptview import TableExportMixin
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView, ProjectDetailView
 from amcat.models import Codebook
 from amcat.forms import widgets
 
@@ -114,7 +114,7 @@ class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, 
         ctx.update(locals())
         return ctx
 
-class CodebookDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
+class CodebookDetailsView(ProjectDetailView):
     parent = CodebookListView
     view_name = "coding codebook-details"
 

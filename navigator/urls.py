@@ -100,12 +100,6 @@ urlpatterns = patterns(
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
     url(r'^codingjobs/(?P<coder_id>\d+)/all$' ,'navigator.views.codingjob.all', name='codingjobs-all'),
     
-    url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-unit$', 'navigator.views.project.codingjob_unit_export', name='project-codingjob-unit-export'),
-    url(r'^project/(?P<project>[0-9]+)/codingjob/(?P<codingjob>[0-9]+)/export-article$', 'navigator.views.project.codingjob_article_export', name='project-codingjob-article-export'),
-    url(r'^project/(?P<project>[0-9]+)/codingjob/export-select$', 'navigator.views.project.codingjob_export_select', name='project-codingjobs-export-select'),
-    url(r'^project/(?P<project>[0-9]+)/codingjob/export-options$', 'navigator.views.project.codingjob_export_options', name='project-codingjobs-export-options'),
-
-    
     # Scrapers
     url(r'^scrapers$', 'navigator.views.scrapers.index', name='scrapers'),
 
@@ -125,6 +119,7 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
              CodingSchemaCopyView,CodingSchemaLinkView,
              CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
+             CodingJobExportSelectView, CodingJobExportView,
              ProjectUserListView, ProjectUserAddView]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',

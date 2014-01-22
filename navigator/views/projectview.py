@@ -21,6 +21,7 @@ import re
 
 from django.views.generic.base import ContextMixin, TemplateResponseMixin, TemplateView, RedirectView
 from django.views.generic.edit import CreateView, FormView, UpdateView
+from django.views.generic.detail import DetailView
 from django.core.urlresolvers import reverse
 from django.forms.models import modelform_factory
 from django.core.exceptions import PermissionDenied
@@ -229,7 +230,10 @@ class HierarchicalViewMixin(object):
         breadcrumbs.append((name, url))
         return breadcrumbs
 
-        
+
+class ProjectDetailView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
+    pass
+    
 from navigator.views.scriptview import ScriptView
 class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, ScriptView):
     """
