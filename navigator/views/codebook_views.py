@@ -81,11 +81,6 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
         c = form.cleaned_data["codebook"]
         return "Codebook {c.id} {c}".format(**locals())
 
-    def get_initial(self):
-        initial = super(ExportCodebook, self).get_initial()
-        initial["codebook"]=self.url_data["codebookid"]
-        return initial
-
     def get_form_class(self):
         # Modify form class to also contain XML output
         form_class = super(ExportCodebook, self).get_form_class()
@@ -94,7 +89,7 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
 
     def get_form(self, *args, **kargs):
         form = super(ExportCodebook, self).get_form(*args, **kargs)
-        cid=self.url_data["codebookid"]
+        cid = self.kwargs["codebook_id"]
         langs = Language.objects.filter(labels__code__codebook_codes__codebook_id=cid).distinct()
         form.fields['language'].queryset = langs
         form.fields['language'].initial = min(l.id for l in langs)
