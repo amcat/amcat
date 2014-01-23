@@ -24,12 +24,14 @@ from django.views.generic.detail import DetailView
 from django.views.generic.base import RedirectView
 
 from django import forms
+from json_field.forms import JSONFormField
 
 from api.rest.datatable import Datatable
-from amcat.models import Language, Project
+from amcat.models import Language, Project, Code, CodebookCode, Label
 from amcat.scripts.actions.import_codebook import ImportCodebook
 from amcat.scripts.actions.export_codebook import ExportCodebook
 from amcat.scripts.actions.export_codebook_as_xml import ExportCodebookAsXML
+from api.rest.resources import CodebookHierarchyResource
 from api.rest.viewsets import CodebookViewSet
 from navigator.views.project_views import ProjectDetailsView
 from navigator.views.scriptview import TableExportMixin
@@ -204,8 +206,6 @@ class CodebookChangeNameView(CodebookFormActionView):
         codebook.save()
 
 
-from json_field.forms import JSONFormField
-
 class CodebookSaveChangesetsView(CodebookFormActionView):
     url_fragment = "save-changesets"
     class form_class(forms.Form):
@@ -277,15 +277,12 @@ class CodebookSaveLabelsView(CodebookFormActionView):
         parent = JSONFormField(required=False)
 
     def action(self, codebook, form):
-        
-        
         labels = form.cleaned_data["labels"]
-
         parent = form.cleaned_data["parent"]
         
         if parent:
             code = Code.objects.create()
-            parent = json.loads(request.POST["parent"])
+            parent = json.loads(self.request.POST["parent"])
 
             CodebookCode.objects.create(
                 parent=None if parent is None else Code.objects.get(id=parent),
@@ -293,7 +290,7 @@ class CodebookSaveLabelsView(CodebookFormActionView):
             )
 
         else:
-            code = Code.objects.get(id=int(request.POST['code']))
+            code = Code.objects.get(id=int(self.request.POST['code']))
 
         # Get changed, deleted and new labels
         changed_labels_map = { int(lbl.get("id")) : lbl for lbl in labels if lbl.get("id") is not None}
