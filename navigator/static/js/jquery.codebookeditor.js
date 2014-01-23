@@ -982,28 +982,14 @@ Array.prototype.remove=function(s){
             };
 
             self.reorder_confirm = function (sort_func) {
-                var dialog = $('' +
-                    '<div class="modal hide">' +
-                    '<div class="modal-header">' +
-                    '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
-                    '<h3 class="noline">Irreversible action</h3>' +
-                    '</div>' +
-                    '<div class="modal-body">' +
-                    '<p>' + "Your changes thusfar are saved, in order to allow reordering." + '</p>' +
-                    '</div>' +
-                    '<div class="modal-footer">' +
-                    '<a href="#" class="btn cancel-button">Cancel</a>' +
-                    '<a class="btn btn-warning continue-button">Proceed</a>' +
-                    '</div>' +
-                    '</div>').modal("show");
+                var dialog = self._create_modal_window(
+                    "reordering-confirm", "Irreversible action",
+                    $("<p>").append("Your changes thusfar are saved, in order to allow reordering.")
+                ).modal("show");
 
-                $(".cancel-button", dialog).click((function () {
-                    this.modal("hide");
-                }).bind(dialog));
-
-                $(".continue-button", dialog).click(function () {
+                $(".btn-primary", dialog).click(function () {
                     $(this).attr("disabled", "true");
-                    $(".cancel-button", dialog).attr("disabled", "true");
+                    $(".btn-default", dialog).attr("disabled", "true");
                     $(this).text("Reordering..");
 
                     self.reorder(sort_func, self.root);
