@@ -1113,7 +1113,7 @@ Array.prototype.remove=function(s){
                 $(".modal-body", loading_modal).html("Saving changesets..");
 
                 $.post(
-                    window.location.pathname + 'save_changesets/', {
+                    window.location.pathname + 'save-changesets/', {
                         "moves": JSON.stringify(moves),
                         "hides": JSON.stringify(hides),
                         "reorders": JSON.stringify(reorders)
