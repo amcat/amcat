@@ -18,7 +18,7 @@
 ###########################################################################
 
 from django.conf.urls import patterns, url, include
-from annotator.views import codingjob, overview
+from annotator.views import codingjob
 
 article_patterns = patterns('',
     url(r'save$', codingjob.save),
@@ -30,8 +30,6 @@ codingjob_patterns = patterns('',
 )
 
 urlpatterns = patterns('',
-    url(r'^$', overview.index),
-    url(r'^overview$', overview.index, name='annotator-overview'),
     url(r"^codingjob/(?P<codingjob_id>\d+)$", codingjob.redirect, name="annotator-codingjob"),
     url(r"project/(?P<project_id>\d+)/codingjob/(?P<codingjob_id>\d+)/", include(codingjob_patterns)),
 )
