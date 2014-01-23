@@ -173,15 +173,6 @@ Array.prototype.remove=function(s){
                 self._ensure_order(self.root);
                 self.objects = self._get_descendents(self.root);
 
-                // Add usage label
-                var usage = $("<p>").append(
-                        $("<span>Usage</span>").addClass("label label-info")
-                    ).append(
-                        $(document.createTextNode(
-                            " Hover labels to display options. To inspect the " +
-                                "function of an icon, hover it and wait for a description to appear."
-                        ))
-                    );
 
                 // Add main action buttons
                 $(".loading-codebook", self).contents().remove();
@@ -274,7 +265,7 @@ Array.prototype.remove=function(s){
                  * Create base modal window (hidden by default).
                  */
                 var dialog = $(
-                 '<div class="modal fade">' +
+                 '<div class="modal">' +
                   '<div class="modal-dialog">' +
                     '<div class="modal-content">' +
                       '<div class="modal-header">' +
@@ -289,6 +280,8 @@ Array.prototype.remove=function(s){
                     '</div>' +
                   '</div>' +
                 '</div>');
+
+                $("#"+id).remove();
 
                 dialog.attr("id", id);
                 $(".modal-body", dialog).append(body || "Loading..");
@@ -765,7 +758,7 @@ Array.prototype.remove=function(s){
 
                 // Send results to server
                 $.post(
-                    window.location.href + "/save_labels",
+                    window.location.href + "save-labels/",
                     callback_data, callback_func.bind({
                         "labels": labels,
                         "code": this.code,
@@ -989,28 +982,14 @@ Array.prototype.remove=function(s){
             };
 
             self.reorder_confirm = function (sort_func) {
-                var dialog = $('' +
-                    '<div class="modal hide fade">' +
-                    '<div class="modal-header">' +
-                    '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
-                    '<h3 class="noline">Irreversible action</h3>' +
-                    '</div>' +
-                    '<div class="modal-body">' +
-                    '<p>' + "Your changes thusfar are saved, in order to allow reordering." + '</p>' +
-                    '</div>' +
-                    '<div class="modal-footer">' +
-                    '<a href="#" class="btn cancel-button">Cancel</a>' +
-                    '<a class="btn btn-warning continue-button">Proceed</a>' +
-                    '</div>' +
-                    '</div>').modal("show");
+                var dialog = self._create_modal_window(
+                    "reordering-confirm", "Irreversible action",
+                    $("<p>").append("Your changes thusfar are saved, in order to allow reordering.")
+                ).modal("show");
 
-                $(".cancel-button", dialog).click((function () {
-                    this.modal("hide");
-                }).bind(dialog));
-
-                $(".continue-button", dialog).click(function () {
+                $(".btn-primary", dialog).click(function () {
                     $(this).attr("disabled", "true");
-                    $(".cancel-button", dialog).attr("disabled", "true");
+                    $(".btn-default", dialog).attr("disabled", "true");
                     $(this).text("Reordering..");
 
                     self.reorder(sort_func, self.root);
@@ -1078,7 +1057,7 @@ Array.prototype.remove=function(s){
 
                 // Send name to server
                 $.post(
-                    window.location.href + "/save_name",
+                    window.location.href + "change-name/",
                     {"codebook_name": name}, (function () {
                         self.root.label = "Codebook: <i>" + self._escape(name) + "</i>";
                         self.update_label(self.root);
@@ -1120,7 +1099,7 @@ Array.prototype.remove=function(s){
                 $(".modal-body", loading_modal).html("Saving changesets..");
 
                 $.post(
-                    window.location.pathname + '/save_changesets', {
+                    window.location.pathname + 'save-changesets/', {
                         "moves": JSON.stringify(moves),
                         "hides": JSON.stringify(hides),
                         "reorders": JSON.stringify(reorders)
