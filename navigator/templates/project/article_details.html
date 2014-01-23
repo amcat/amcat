@@ -1,7 +1,7 @@
 {% extends "project/base.html" %}
 
 {% block actions %}
- <a class="btn btn-warning" href="{% url 'split_article' project.id article.id %}">Split article</a>
+ <a class="btn btn-warning" href="{% url 'article-split' project.id articleset_id article.id %}">Split article</a>
 {% endblock %}
 
 {% block content %}
