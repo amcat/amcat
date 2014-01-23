@@ -1071,7 +1071,7 @@ Array.prototype.remove=function(s){
 
                 // Send name to server
                 $.post(
-                    window.location.href + "save-name/",
+                    window.location.href + "change-name/",
                     {"codebook_name": name}, (function () {
                         self.root.label = "Codebook: <i>" + self._escape(name) + "</i>";
                         self.update_label(self.root);
