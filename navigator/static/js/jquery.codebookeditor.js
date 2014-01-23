@@ -273,23 +273,28 @@ Array.prototype.remove=function(s){
                 /*
                  * Create base modal window (hidden by default).
                  */
-                return $("<div>").addClass("modal hide").attr("id", id).append(
-                        // Append modal header
-                        $("<div>").addClass("modal-header").append(
-                            $("<button>×</button>").addClass("close").attr("data-dismiss", "modal")
-                        ).append($("<h3>").append(title).addClass("noline"))
-                    ).append(
-                        // Modal body
-                        $("<div>").addClass("modal-body").append(body || "Loading..")
-                    ).append(
-                        // Footer
-                        $("<div>").addClass("modal-footer").append(
-                                $("<a>Cancel</a>").addClass("btn").attr("data-dismiss", "modal")
-                            ).append(
-                                $("<a>Save changes</a>").addClass("btn btn-primary")
-                            )
-                    )
+                var dialog = $(
+                 '<div class="modal fade">' +
+                  '<div class="modal-dialog">' +
+                    '<div class="modal-content">' +
+                      '<div class="modal-header">' +
+                        '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
+                        '<h4 class="modal-title"></h4>' +
+                      '</div>' +
+                      '<div class="modal-body"></div>' +
+                      '<div class="modal-footer">' +
+                        '<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>' +
+                        '<button type="button" class="btn btn-primary">Save changes</button>' +
+                      '</div>' +
+                    '</div>' +
+                  '</div>' +
+                '</div>');
 
+                dialog.attr("id", id);
+                $(".modal-body", dialog).append(body || "Loading..");
+                $("h4", dialog).append(title).addClass("noline");
+                $("body").append(dialog);
+                return dialog;
             };
 
             self._create_label_languages = function (dflt) {
@@ -916,11 +921,7 @@ Array.prototype.remove=function(s){
             };
 
             self.create_child_clicked = function () {
-                var modal = self._create_modal_window("labels", "Labels new code").modal();
-
-                modal.on("hidden", function () {
-                    $("#labels").remove()
-                });
+                var modal = self._create_modal_window("labels", "Labels new code").modal("show");
 
                 $(".btn-primary", modal).click(self.save_label_changes_clicked.bind({
                     new_code: true, parent: this
