@@ -127,7 +127,7 @@ class AssignCodingJob(WebScript):
 
 
         return HttpResponse(json.dumps({
-            "html" : html % (reverse("codingjob", args=[self.project.id, c.id]), c.id),
+            "html" : html % (reverse("coding job-details", args=[self.project.id, c.id]), c.id),
             "webscriptClassname" : self.__class__.__name__,
             "webscriptName" : self.name,
             "doNotAddActionToMainForm" : True            
