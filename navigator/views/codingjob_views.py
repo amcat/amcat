@@ -35,6 +35,7 @@ from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPOR
 from django.utils.datastructures import SortedDict
 import datetime
 from django.http import HttpResponse
+import json
 
 class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = CodingJob
@@ -124,7 +125,7 @@ class CodingJobExportSelectView(ProjectFormView):
             codingjobs_url = "&".join("codingjobs={}".format(c.id) for c in self.jobs)
         else:
             codingjobs_url = "use_session=1"
-            request.session['export_job_ids'] = json.dumps([c.id for c in self.jobs])
+            self.request.session['export_job_ids'] = json.dumps([c.id for c in self.jobs])
             
         return "{url}?export_level={self.level}&{codingjobs_url}".format(**locals())
     
