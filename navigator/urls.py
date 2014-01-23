@@ -89,7 +89,6 @@ urlpatterns = patterns(
     # Projects (+managers)
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_labels$', 'navigator.views.project.save_labels'),
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_name$', 'navigator.views.project.save_name'),
-    url(r'^project/(?P<projectid>[0-9]+)/codebook/(?P<id>[-0-9]+)/delete$', 'navigator.views.project.codebook_delete', name="project-delete-codebook"), 
     url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_changesets$', 'navigator.views.project.save_changesets'),
 
     # Coding
@@ -115,9 +114,10 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              QueryView, ArticleSetSampleView, ArticleSetEditView,ArticleSetImportView,ArticleSetRefreshView,
              ArticleSetDeleteView,ArticleSetUnlinkView,
              CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView, ExportCodebook,
+             CodebookUnlinkView, CodebookDeleteView,
              CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
              CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,
-             CodingSchemaCopyView,CodingSchemaLinkView,
+             CodingSchemaCopyView,CodingSchemaLinkView,CodingSchemaUnlinkView,
              CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
              CodingJobExportSelectView, CodingJobExportView,
              ProjectUserListView, ProjectUserAddView]:

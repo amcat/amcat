@@ -3,18 +3,26 @@
 
 {% block actions %} 
 {% if can_edit %}
+{% if project.id == object.project.id %}
 <a href="{% url "coding schema-fields" project.id object.id %}" class="btn btn-primary">
   <i class="glyphicon glyphicon-edit"></i> Edit fields
 </a>
 <a href="{% url "coding schema-edit" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-edit"></i> Edit properties</a>
 <a href="{% url "coding schema-rules" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-list"></i> Edit rules</a>
+{% endif %}
 <a href="{% url "coding schema-name" project.id object.id %}" class="btn btn-default"><i class="glyphicon glyphicon-share"></i> Copy schema</a>
 
+{% if project.id == object.project.id %}
 <a class="btn btn-danger confirm" href="{% url "coding schema-delete" project.id object.id %}"
    data-confirm="You're about to delete schema <i>{{ schema.name }}</i>. This action is not reversible.">
    <i class="glyphicon glyphicon-trash"></i>
    Delete
 </a>
+{% else %}
+<a class="btn btn-warning" href="{% url "coding schema-unlink" project.id object.id %}">
+   Unlink
+</a>
+{% endif %}
 {% endif %}
 {% endblock %}
 

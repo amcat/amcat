@@ -32,11 +32,11 @@ from django import forms
 import itertools
 from amcat.forms import widgets
 
-from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code
+from amcat.models import CodingSchema, authorisation, CodingSchemaField, CodingSchemaFieldType, CodingRule, Code, Project
 from amcat.models.coding.serialiser import CodebookSerialiser, BooleanSerialiser
 from api.rest.viewsets import _CodingSchemaFieldViewSet, CodingSchemaViewSet
 from navigator.views.project_views import ProjectDetailsView
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView, ProjectActionRedirectView
 from navigator.views.datatableview import DatatableMixin
 from api.rest.datatable import Datatable
 from amcat.models.project import LITTER_PROJECT_ID
@@ -100,8 +100,9 @@ class CodingSchemaNameView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMix
         # No, copy as requested
         new_schema = CodingSchema(
             name=self.request.POST.get("name"), description=schema.description,
-            isnet=schema.isnet, isarticleschema=schema.isarticleschema,
-            quasisentences=schema.quasisentences, project=self.project
+            isarticleschema=schema.isarticleschema, subsentences=schema.subsentences,
+            highlight_language=schema.highlight_language,
+            project=self.project
         )
 
         new_schema.save()
@@ -111,7 +112,8 @@ class CodingSchemaNameView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMix
             field.codingschema = new_schema
             field.save()
 
-        self.request.session["schema_%s_is_new" % new_schema.id] = True
+        self.request.session["notification"] = ("Copied coding schema. "
+                                                "You can return to the overview using the 'Coding Schemas' link above")
         return redirect("coding schema-details", self.project.id, new_schema.id)
 
 
@@ -430,3 +432,16 @@ class CodingSchemaLinkView(ProjectFormView):
             self.project.codingschemas.add(cb)
         self.request.session['notification'] = "Linked {n} codebook(s)".format(n=len(schemas))
         return super(CodingSchemaLinkView, self).form_valid(form)
+
+class CodingSchemaUnlinkView(ProjectActionRedirectView):
+    parent = CodingSchemaDetailsView
+    url_fragment = "unlink"
+
+    def action(self, project_id, codingschema_id):
+        schema = CodingSchema.objects.get(pk=codingschema_id)
+        project = Project.objects.get(pk=project_id)
+        project.codingschemas.remove(schema)
+
+    def get_redirect_url(self, **kwargs):
+        return CodingSchemaListView._get_breadcrumb_url(kwargs, self)
+        

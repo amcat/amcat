@@ -91,17 +91,6 @@ def table_view(request, context, table, selected=None, overview=False,
 # views from other modules prevents wrongly unselected items, while preserving
 # modularity.
 
-
-@check(Codebook, args='id', action='delete')
-@check(Project, args_map={'projectid' : 'id'}, args='projectid')
-def codebook_delete(request, project, codebook):
-    codebook.project = Project.objects.get(id=LITTER_PROJECT_ID)
-    codebook.save()
-
-    request.session['deleted_codebook'] = True
-    return redirect(reverse("project-codebooks", args=[project.id]))
-
-
 @check(Project, args_map={'project' : 'id'}, args='project')
 @check(Codebook, args_map={'codebook' : 'id'}, args='codebook', action="update")
 def save_name(request, codebook, project):
