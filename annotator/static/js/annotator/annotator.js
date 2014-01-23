@@ -1107,10 +1107,11 @@ annotator = (function(self){
         });
     };
 
-    self.initialise = function(project_id, codingjob_id, coder_id){
+    self.initialise = function(project_id, codingjob_id, coder_id, language_id){
         self.project_id = project_id;
         self.codingjob_id = codingjob_id;
         self.coder_id = coder_id;
+        self.language_id = language_id;
 
         self.initialise_containers();
         self.initialise_buttons();
