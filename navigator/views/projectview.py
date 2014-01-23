@@ -31,7 +31,7 @@ from api.rest.datatable import Datatable
 
 from amcat.models import authorisation, Project, Role
 
-PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
+PROJECT_READ_WRITE = 12 #Role.objects.get(projectlevel=True, label="read/write").id
 
 class BreadCrumbMixin(object):
     def get_context_data(self, **kwargs):

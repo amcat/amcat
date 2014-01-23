@@ -173,3 +173,110 @@ class CodebookDeleteView(ProjectActionRedirectView):
     def action(self, project_id, codebook_id):
         cb = Codebook.objects.get(pk=codebook_id)
         cb.recycle()
+
+class CodebookFormActionView(ProjectFormView):
+    "Base class for simple form based actions on codebooks"
+    parent = CodebookDetailsView
+    def get(self, request, *args, **kwargs):
+        print "GET???"
+
+        
+    def form_valid(self, form):
+        print("!!!")
+        codebook = Codebook.objects.get(pk=self.kwargs["codebook_id"])
+        result = self.action(codebook, form)
+        return HttpResponse(content=result, status=200)
+    def action(self, codebook, form):
+        "Perform the action. An optional return value will become the HttpResponse 201 content"
+        raise NotImplementedError()
+    
+class CodebookChangeNameView(CodebookFormActionView):
+    url_fragment = "change-name"
+    class form_class(forms.Form):
+        codebook_name = forms.CharField()
+    def action(self, codebook, form):
+        codebook.name = form.cleaned_data["codebook_name"]
+        codebook.save()
+
+
+from json_field.forms import JSONFormField
+
+class CodebookSaveChangesetsView(CodebookFormActionView):
+    url_fragment = "save-changesets"
+    class form_class(forms.Form):
+        moves = JSONFormField("moves")
+        hides = JSONFormField("hides")
+        reorders = JSONFormField("reorders")
+
+    def action(self, codebook, form):
+
+        moves, hides, reorders = [form.cleaned_data.get(x) for x in ["moves", "hides", "reorders"]]
+
+        print moves
+        print hides
+        print reorders
+        return 
+        
+        codebook.cache()
+
+        # Keep a list of changed codebookcodes
+        changed_codes = tuple(itertools.chain(
+            set([h["code_id"] for h in hides]),
+            set([r["code_id"] for r in reorders]),
+            set(itertools.chain.from_iterable(m.values() for m in moves))
+        ))
+
+        # Save reorders
+        for reorder in reorders:
+            ccode = codebook.get_codebookcode(codebook.get_code(reorder["code_id"]))
+            ccode.ordernr = reorder["ordernr"]
+
+        # Save all hides
+        for hide in hides:
+            ccode = codebook.get_codebookcode(codebook.get_code(hide["code_id"]))
+            ccode.hide = hide.get("hide", False)
+
+        # Save all moves
+        for move in moves:
+            ccode = codebook.get_codebookcode(codebook.get_code(move["code_id"]))
+            ccode.parent = None
+
+            if move["new_parent"] is None:
+                continue
+
+            new_parent = codebook.get_code(move["new_parent"])
+            ccode.parent = new_parent
+
+        # Commit all changes
+        for code_id in changed_codes:
+            ccode = codebook.get_codebookcode(codebook.get_code(code_id))
+
+            # Saving a codebookcode triggers a validation function which needs
+            # the codebookcode's codebook's codebookcodes.
+            ccode._codebook_cache = codebook
+            ccode.save(validate=False)
+
+        # Check for any cycles. 
+        CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+class TestCodebookViews(amcattest.AmCATTestCase):
+
+    def test_change_name(self):
+        cb = amcattest.create_test_codebook()
+        
+        from django.test import Client
+        c = Client()
+        response = c.post('/accounts/login/', {'username': 'amcat', 'password': 'amcat'})
+        self.assertEqual(response.status_code, 302)
+        r = c.post("/navigator/projects/{cb.project.id}/codebooks/{cb.id}/change-name/".format(**locals()))
+        print r
+         
+         
+
