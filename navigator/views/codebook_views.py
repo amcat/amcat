@@ -36,8 +36,8 @@ from navigator.views.scriptview import TableExportMixin
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView, ProjectDetailView, ProjectActionRedirectView
 from amcat.models import Codebook
 from amcat.forms import widgets
-
-
+import json
+import itertools
 
 class AddCodebookView(RedirectView):
     """
@@ -177,12 +177,17 @@ class CodebookDeleteView(ProjectActionRedirectView):
 class CodebookFormActionView(ProjectFormView):
     "Base class for simple form based actions on codebooks"
     parent = CodebookDetailsView
-    def get(self, request, *args, **kwargs):
-        print "GET???"
-
+    def form_invalid(self, form):
+        error = {
+            'success': False,
+            'errors': dict(form.errors.items()),
+        }
+        
+        return HttpResponse(json.dumps(error, indent=2),
+                            content_type='application/json; charset=UTF-8',
+                            status=500)
         
     def form_valid(self, form):
-        print("!!!")
         codebook = Codebook.objects.get(pk=self.kwargs["codebook_id"])
         result = self.action(codebook, form)
         return HttpResponse(content=result, status=200)
@@ -204,18 +209,13 @@ from json_field.forms import JSONFormField
 class CodebookSaveChangesetsView(CodebookFormActionView):
     url_fragment = "save-changesets"
     class form_class(forms.Form):
-        moves = JSONFormField("moves")
-        hides = JSONFormField("hides")
-        reorders = JSONFormField("reorders")
+        moves = JSONFormField(required=False)
+        hides = JSONFormField(required=False)
+        reorders = JSONFormField(required=False)
 
     def action(self, codebook, form):
 
         moves, hides, reorders = [form.cleaned_data.get(x) for x in ["moves", "hides", "reorders"]]
-
-        print moves
-        print hides
-        print reorders
-        return 
         
         codebook.cache()
 
@@ -268,15 +268,34 @@ from amcat.tools import amcattest
 
 class TestCodebookViews(amcattest.AmCATTestCase):
 
-    def test_change_name(self):
-        cb = amcattest.create_test_codebook()
-        
+    def setUp(self):
+        self.cb = amcattest.create_test_codebook()
         from django.test import Client
-        c = Client()
-        response = c.post('/accounts/login/', {'username': 'amcat', 'password': 'amcat'})
-        self.assertEqual(response.status_code, 302)
-        r = c.post("/navigator/projects/{cb.project.id}/codebooks/{cb.id}/change-name/".format(**locals()))
-        print r
+        self.client = Client()
+        response = self.client.post('/accounts/login/', {'username': 'amcat', 'password': 'amcat'})
+        self.assert_status(response, 302)
+    
+    def assert_status(self, response, expect=200):
+        if response.status_code != expect:
+            try:
+                error = response.json()
+            except:
+                error = response.content
+            self.fail("{response.status_code} Error on action:\n {error}".format(**locals()))
+    
+    def test_change_name(self):
+        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/change-name/".format(**locals())
+        response = self.client.post(url, {"codebook_name" : "bla"})
+        self.assert_status(response)
+        cb = Codebook.objects.get(pk=self.cb.id)
+        self.assertEqual(cb.name, "bla")
          
          
-
+    def test_save_changesets(self):
+        # nog geen inhoudelijke test
+        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/save-changesets/".format(**locals())
+        data = {'moves' : json.dumps({"bla" : [1,2,{"meerbla" : "abc"}]})}
+        response = self.client.post(url, data)
+        self.assert_status(response)
+        
+        

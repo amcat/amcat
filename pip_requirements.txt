@@ -16,3 +16,4 @@ django_filter
 django_extensions
 html2text
 pypdf
+django_json_field
