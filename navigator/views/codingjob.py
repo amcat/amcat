@@ -33,6 +33,8 @@ def index(request, coder=None):
     """
     Show unfinished jobs
     """
+    is_firefox = "Firefox" in request.META["HTTP_USER_AGENT"]
+
     coder = coder if coder is not None else request.user
 
     jobs = Datatable(CodingJobResource, rowlink='/annotator/codingjob/{id}')
@@ -52,6 +54,7 @@ def all(request, coder):
     """
     Show all (including finished) jobs
     """
+    print("Hello2")
     jobs = Datatable(CodingJobResource).filter(coder=coder)
 
     ctx = locals()
