@@ -215,7 +215,7 @@ class CodebookSaveChangesetsView(CodebookFormActionView):
 
     def action(self, codebook, form):
 
-        moves, hides, reorders = [form.cleaned_data.get(x) for x in ["moves", "hides", "reorders"]]
+        moves, hides, reorders = [form.cleaned_data.get(x, []) for x in ["moves", "hides", "reorders"]]
         
         codebook.cache()
 
@@ -260,9 +260,75 @@ class CodebookSaveChangesetsView(CodebookFormActionView):
         CodebookHierarchyResource.get_tree(Codebook.objects.get(id=codebook.id), include_labels=False)
 
 
+class CodebookSaveLabelsView(CodebookFormActionView):
+    """
+    View called by code-editor to store new labels. It requests
+    two values in POST:
+
+     - labels: an (json-encoded) list with label-objects
+     - code: an (json-encoded) code object to which the labels belong
+
+    If an extra value 'parent' is included, this view will create
+    a new code and adds the given labels to it.
+    """
+    url_fragment = "save-labels"
+    class form_class(forms.Form):
+        labels = JSONFormField()
+        parent = JSONFormField(required=False)
+
+    def action(self, codebook, form):
+        
+        
+        labels = form.cleaned_data["labels"]
+
+        parent = form.cleaned_data["parent"]
+        
+        if parent:
+            code = Code.objects.create()
+            parent = json.loads(request.POST["parent"])
+
+            CodebookCode.objects.create(
+                parent=None if parent is None else Code.objects.get(id=parent),
+                code=code, codebook=codebook
+            )
+
+        else:
+            code = Code.objects.get(id=int(request.POST['code']))
+
+        # Get changed, deleted and new labels
+        changed_labels_map = { int(lbl.get("id")) : lbl for lbl in labels if lbl.get("id") is not None}
+        changed_labels = set(Label.objects.filter(id__in=changed_labels_map.keys()))
+
+        created_labels = [Label(
+            language=Language.objects.get(id=lbl.get("language")), code=code, label=lbl["label"]
+        ) for lbl in labels if lbl.get("id", None) is None]
+
+        current_labels = set(code.labels.all())
+        deleted_labels = current_labels - changed_labels
+
+        # Deleting requested labels
+        for lbl in deleted_labels:
+            lbl.delete()
+
+        # Create new labels
+        Label.objects.bulk_create(created_labels)
+
+        # Update existing labels
+        for label in changed_labels:
+            label.language = Language.objects.get(id=changed_labels_map[label.id]["language"])
+            label.label = changed_labels_map[label.id]["label"]
+            label.save()
+
+        content = json.dumps(dict(code_id=code.id))
+        return HttpResponse(content=content, status=201, content_type="application/json")
+
+        
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
+
+
 
 from amcat.tools import amcattest
 
@@ -295,7 +361,16 @@ class TestCodebookViews(amcattest.AmCATTestCase):
         # nog geen inhoudelijke test
         url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/save-changesets/".format(**locals())
         data = {'moves' : json.dumps({"bla" : [1,2,{"meerbla" : "abc"}]})}
-        response = self.client.post(url, data)
-        self.assert_status(response)
+        #response = self.client.post(url, data)
+        #self.assert_status(response)
+        
+        
+
+    def test_save_labels(self):
+        # nog geen inhoudelijke test
+        url = "/navigator/projects/{self.cb.project.id}/codebooks/{self.cb.id}/save-labels/".format(**locals())
+        data = {}
+        #response = self.client.post(url, data)
+        #self.assert_status(response)
         
         
