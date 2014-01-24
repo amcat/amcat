@@ -157,10 +157,12 @@ class ArticleSet(AmcatModel):
             name2 = "{name} {i}".format(**locals())
 
     @classmethod
-    def create_set(cls, project, name, articles=None):
+    def create_set(cls, project, name, articles=None, favourite=True):
         aset = cls.objects.create(project=project, name=cls.get_unique_name(project, name))
         if articles:
             aset.add_articles(articles)
+        if not favourite:
+            project.favourite_articlesets.remove(aset)
         return aset
 
 # Legacy

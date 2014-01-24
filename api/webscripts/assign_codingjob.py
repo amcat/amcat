@@ -104,8 +104,7 @@ class AssignCodingJob(WebScript):
         articles = list(keywordsearch.get_ids(self.data))
 
         # Create articleset
-        a = ArticleSet.objects.create(project=self.project, name=self.data['setname'])
-        a.add(*articles)
+        a = ArticleSet.create_set(project=self.project, articles=articles, name=self.data['setname'], favourite=False)
 
         # Split all articles 
         CreateSentences(dict(articlesets=[a.id])).run()
