@@ -90,7 +90,7 @@ class ArticleColumnsForm(forms.Form):
                 #('externalid','External ID'),
                 #('additionalMetadata','Additional Metadata'),
                 ('headline','Headline'),
-                #('byline','Byline'),
+                ('byline','Byline'),
                 ('lead','Lead paragraph'),
                 ('text','Article Text')
             ), initial = ('article_id', 'date', 'medium_id', 'medium_name', 'headline')
