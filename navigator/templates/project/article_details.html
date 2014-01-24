@@ -1,7 +1,9 @@
 {% extends "project/base.html" %}
 
 {% block actions %}
+{% if articleset_id %}
  <a class="btn btn-warning" href="{% url 'article-split' project.id articleset_id article.id %}">Split article</a>
+{% endif %}
 {% endblock %}
 
 {% block content %}
