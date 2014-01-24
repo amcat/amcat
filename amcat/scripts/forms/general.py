@@ -83,7 +83,7 @@ class ArticleColumnsForm(forms.Form):
                 #('project_name','Project Name'),
                 ('pagenr','Page number'),
                 ('section','Section'),
-                ('author','Author'),
+                ('creator','Author'),
                 ('length','Length'),
                 #('url','url'),
                 #('parent_id','Parent Article ID'),

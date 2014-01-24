@@ -176,7 +176,7 @@ class SearchResource(AmCATResource):
         headline = HighlightField()
         mediumid = IntegerField()
         medium = CharField()
-        author = CharField()
+        creator = CharField()
         addressee = CharField()
         section = CharField()
         url = CharField()
