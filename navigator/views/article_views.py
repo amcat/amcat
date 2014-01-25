@@ -64,7 +64,7 @@ class ArticleRemoveFromSetView(ProjectActionRedirectView):
         # user needs to have writer+ on the project of the articleset
         project = ArticleSet.objects.get(pk=remove_set).project
         if not self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, project):
-            raise PermissionDenied("User {self.request.user} has insufficient rights on project {self.project}".format(**locals()))
+            raise PermissionDenied("User {self.request.user} has insufficient rights on project {project}".format(**locals()))
 
             
         articles = [int(kwargs["article_id"])]
