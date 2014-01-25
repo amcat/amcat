@@ -29,6 +29,7 @@ __all__ = ("AmCATViewSetMixin", "get_url_pattern", "AmCATViewSetMixinTest")
 
 from collections import OrderedDict, namedtuple
 from amcat.tools import amcattest
+from . import tablerenderer
 
 ModelKey = namedtuple("ModelKey", ("key", "viewset"))
 
@@ -60,6 +61,11 @@ class AmCATViewSetMixin(object):
     def get_basename(cls):
         return getattr(cls, "base_name", None)
 
+    def finalize_response(self, request, response, *args, **kargs):
+        response = super(AmCATViewSetMixin, self).finalize_response(request, response, *args, **kargs)
+        response = tablerenderer.set_response_content(response)
+        return response
+        
 def _get_model_keys(viewset):
     """
     Get an iterator of all model_key properties in superclasses. This function

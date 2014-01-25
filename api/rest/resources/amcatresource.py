@@ -26,7 +26,7 @@ from rest_framework import generics
 
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
-
+from api.rest import tablerenderer
 
 class AmCATResource(DatatablesMixin, generics.ListAPIView):
     """
@@ -99,15 +99,7 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
 
     def finalize_response(self, request, response, *args, **kargs):
         response = super(AmCATResource, self).finalize_response(request, response, *args, **kargs)
-        extensions = {"text/csv" :  'csv',
-                      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'xslx',
-                      'application/x-spss-sav' : 'sav',
-        }
-        if response.accepted_media_type in extensions:
-            extension = extensions[response.accepted_media_type]
-            response['Content-Type'] = response.accepted_media_type
-            response['Content-Disposition'] = 'attachment; filename="data.{extension}"'.format(**locals())
-
+        response = tablerenderer.set_response_content(response)
         return response
 
 
