@@ -19,13 +19,15 @@
 
 from .articleset_views import ArticleSetDetailsView
 from amcat.models import Article, ArticleSet, Sentence
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView, ProjectActionRedirectView
 from django.views.generic.detail import DetailView
 from django import forms
 from amcat.forms import widgets
 from amcat.nlp import sbd
 from itertools import chain
 from django.shortcuts import render
+from django.core.urlresolvers import reverse
+from amcat.models import authorisation
 
 class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
     parent = ArticleSetDetailsView
@@ -54,7 +56,36 @@ class ProjectArticleDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCru
     def get_view_name(cls):
         return "project-article-details"
 
+class ArticleRemoveFromSetView(ProjectActionRedirectView):
+    parent = ProjectArticleDetailsView
+    url_fragment = "removefromset"
+    def action(self, **kwargs):
+        remove_set = int(self.request.GET["remove_set"])
+        # user needs to have writer+ on the project of the articleset
+        project = ArticleSet.objects.get(pk=remove_set).project
+        if not self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, project):
+            raise PermissionDenied("User {self.request.user} has insufficient rights on project {self.project}".format(**locals()))
 
+            
+        articles = [int(kwargs["article_id"])]
+        ArticleSet.objects.get(pk=remove_set).remove_articles(articles)
+    
+        
+    def get_redirect_url(self, project_id, article_id):
+        remove_set = int(self.request.GET["remove_set"])
+        return_set = self.request.GET.get("return_set")
+        if return_set:
+            return_set = int(return_set)
+            if remove_set != return_set:
+                return reverse(ArticleSetArticleDetailsView.get_view_name(), args=(project_id, return_set, article_id))
+        return super(ArticleRemoveFromSetView, self).get_redirect_url(project_id=project_id, article_id=article_id)
+
+    def success_message(self, result=None):
+        article = self.kwargs["article_id"]
+        remove_set =  int(self.request.GET["remove_set"])
+        return "Removed the current article ({article}) from set {remove_set}".format(**locals())
+        
+        
 ################################################################################
 # Splitting. Yes, it was that much work                                        #
 ################################################################################

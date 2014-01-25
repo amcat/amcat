@@ -103,7 +103,8 @@ urlpatterns = patterns(
 
 
 for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
-             ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleSetUploadView,ArticleSetUploadListView,
+             ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
+             ArticleSetUploadView,ArticleSetUploadListView,
              QueryView, ArticleSetSampleView, ArticleSetEditView,ArticleSetImportView,ArticleSetRefreshView,
              ArticleSetDeleteView,ArticleSetUnlinkView,
              ArticleSplitView,
