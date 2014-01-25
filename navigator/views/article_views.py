@@ -28,6 +28,7 @@ from itertools import chain
 from django.shortcuts import render
 from django.core.urlresolvers import reverse
 from amcat.models import authorisation
+from django.core.exceptions import PermissionDenied
 
 class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
     parent = ArticleSetDetailsView
