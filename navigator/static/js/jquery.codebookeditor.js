@@ -971,7 +971,11 @@ Array.prototype.remove=function(s){
                 codes[index + change] = code;
 
                 // Swap DOM elements
-                $(code.dom_element).before($(swap_with.dom_element));
+                if (change < 0){
+                    $(swap_with.dom_element).before($(code.dom_element));
+                } else {
+                    $(code.dom_element).before($(swap_with.dom_element));
+                }
 
                 // Add to changeset
                 self.changesets.reorders[code.code_id] = code;
