@@ -39,7 +39,12 @@ class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, Brea
         context = super(ArticleSetArticleDetailsView, self).get_context_data(**kwargs)
         context['articleset_id'] = self.kwargs['articleset_id']
         return context
+
     
+    def can_view_text(self):
+        """Checks if the user has the right to edit this project"""
+        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_READER, self.object.project)
+        
 
 class ProjectArticleDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
     model = Article

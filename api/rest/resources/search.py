@@ -80,6 +80,9 @@ class LazyES(object):
             for q in self.queries:
                 for hit in self.es.query_all(q.query, filters=f, fields=[]):
                     result_dict[hit.id].hits[q.label] = hit.score
+
+        # TODO: check permission to see text of articles (see issue #5)
+                    
         result = list(result)
         return result
 

@@ -15,7 +15,7 @@
   {% if can_view_text %}
     {{ article.text|urlizetrunc:30|linebreaks }}
   {% else %}  
-    <div class="alert alert-info">You do not have sufficient access to this project to view the text of the article. Please contact the project administrators to gain access</div>
+    <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
   {% endif %}
  </article>
 </div>
