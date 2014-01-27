@@ -1,16 +1,9 @@
-from django import forms
 from webscript import WebScript
-from django.template.loader import render_to_string
 
-import amcat.scripts.forms
-import amcat.forms
 from amcat.tools import keywordsearch
 
-from amcat.scripts import script
-
-#from amcat.scripts.searchscripts.articlelist import ArticleListScript, ArticleListSpecificForm
-
 from amcat.scripts.searchscripts.articlelist import ArticleListScript
+from amcat.scripts.forms import SelectionForm
 
     
 class ShowSummary(WebScript):
@@ -25,8 +18,10 @@ class ShowSummary(WebScript):
             project_id = int(self.data['projects'])
         else:
             project_id = int(self.data['projects'][0])
-        
-        n = keywordsearch.get_total_n(self.data)
+
+        sf = SelectionForm(self.project, self.data)
+        sf.full_clean()
+        n = keywordsearch.get_total_n(sf.cleaned_data)
         self.progress_monitor.update(39, "Found {n} articles in total".format(**locals()))
         articles = list(ArticleListScript(self.data).run())
         for a in articles:
