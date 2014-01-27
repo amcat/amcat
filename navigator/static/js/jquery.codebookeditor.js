@@ -156,6 +156,14 @@ Array.prototype.remove=function(s){
                     });
                 }
             };
+
+            self._sort_tree = function(tree){
+                /*
+                 * Sort all .children-arrays according to their ordernr.
+                 */
+                tree.children.sort(function(a,b){ return a.ordernr - b.ordernr; });
+                $.map(self._sort_tree, tree.children);
+            };
             
             self._initialize = function (objects) {
                 /*
@@ -178,6 +186,7 @@ Array.prototype.remove=function(s){
                 // Create convenience pointers
                 self._set_parents(self.root);
                 self._set_is_hidden_functions(self.root);
+                self._sort_tree(self.root);
                 self._ensure_order(self.root);
                 self.objects = self._get_descendents(self.root);
 
@@ -761,6 +770,7 @@ Array.prototype.remove=function(s){
 
                 if (this.new_code == true) {
                     callback_data.parent = this.parent.code_id;
+                    callback_data.ordernr = this.parent.children.length;
                     callback_func = self.new_code_created;
                 } else {
                     callback_data.code = this.code.code_id;
@@ -816,6 +826,7 @@ Array.prototype.remove=function(s){
                 new_code.hidden = false;
                 new_code.parent = this.parent;
                 new_code.label = this.labels[0].label;
+                new_code.ordernr = this.parent.children.length;
                 self._set_is_hidden_functions(new_code);
                 this.parent.children.push(new_code);
                 self.objects.push(new_code);

@@ -18,7 +18,7 @@
 ###########################################################################
 
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseBadRequest
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
 from django.views.generic.base import RedirectView
@@ -271,16 +271,20 @@ class CodebookSaveLabelsView(CodebookFormActionView):
         labels = JSONFormField()
         parent = JSONFormField(required=False)
         code = JSONFormField(required=False)
+        ordernr = JSONFormField(required=False)
 
     def action(self, codebook, form):
         labels = form.cleaned_data["labels"]
         parent = form.cleaned_data["parent"]
         code = form.cleaned_data["code"]
+        ordernr = form.cleaned_data["ordernr"]
 
         if parent or not code:
             # This is a new code, because either
             code = Code.objects.create()
-            CodebookCode.objects.create(parent_id=parent, code=code, codebook=codebook)
+            CodebookCode.objects.create(parent_id=parent, code=code, ordernr=ordernr, codebook=codebook)
+        elif ordernr is not None:
+             return HttpResponseBadRequest(content="ordernr != null on existing codes not supported.")
         else:
             code = Code.objects.get(id=code)
 
