@@ -41,6 +41,7 @@ Array.prototype.remove=function(s){
             self.API_URL = api_url;
 
             /* EDITOR STATE VARIABLES */
+            self.read_only = $(this).attr("editable") !== "true";
             self.current_label_lang = null;
             self.codebook = null;
             self.languages = null;
@@ -160,6 +161,13 @@ Array.prototype.remove=function(s){
                 /*
                  * Callback function for getJSON(api_url)
                  */
+                if (self.read_only){
+                    self.btn_save_changes.hide();
+                    self.btn_edit_name.hide();
+                    self.btn_reorder_by_alpha.hide();
+                    self.btn_reorder_by_id.hide();
+                }
+
                 self.root = {
                     "label": "Codebook: ",
                     "code_id": null,
@@ -176,7 +184,7 @@ Array.prototype.remove=function(s){
 
                 // Add main action buttons
                 $(".loading-codebook", self).contents().remove();
-                $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root"));
+                $(self).append($("<ul>").append(self.render_tree(self.root)).addClass("root").css("margin-left", "-30px"));
 
                 self.searchbox.keyup(self.searchbox_keyup);
 
@@ -560,6 +568,8 @@ Array.prototype.remove=function(s){
             };
 
             self.options_mouse_enter = function (event) {
+                if (self.read_only) return;
+
                 if (!self.moving) {
                     $(".options").hide();
                     $(".options", event.currentTarget).fadeIn("fast").css("display", "inline");
@@ -567,6 +577,7 @@ Array.prototype.remove=function(s){
             };
 
             self.options_mouse_leave = function (event) {
+                if (self.read_only) return;
                 $(".options", event.currentTarget).hide();
             };
 
