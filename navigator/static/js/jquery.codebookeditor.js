@@ -337,7 +337,7 @@ Array.prototype.remove=function(s){
                     ).append($(
                         "<td>" +
                             "<div class='btn btn-mini btn-danger'>" +
-                            "<i class='glyphicon-white glyphicon-trash'></i>" +
+                            "<i class='glyphicon glyphicon-trash'></i>" +
                             "</div>" +
                             "</td>"
                     ).click(function (event) {
