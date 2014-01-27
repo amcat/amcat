@@ -194,6 +194,61 @@ annotator = (function(self){
         return $.getJSON("{0}?page_size={1}".f(url, self.API_PAGE_SIZE));
     };
 
+    /*
+     * Counts currently selection of words in article.
+     *
+     * TODO: Cleanup
+     */
+    self.count = function(){
+        // http://stackoverflow.com/questions/6743912/get-the-pure-text-without-html-element-by-javascript
+        var sentence_re = / id="sentence-[0-9]*"/g
+        var html = "";
+
+        if (typeof window.getSelection != "undefined") {
+            var sel = window.getSelection();
+            if (sel.rangeCount) {
+                var container = document.createElement("div");
+                for (var i = 0, len = sel.rangeCount; i < len; ++i) {
+                    container.appendChild(sel.getRangeAt(i).cloneContents());
+                }
+                html = container.innerHTML;
+            }
+        } else if (typeof document.selection != "undefined") {
+            if (document.selection.type == "Text") {
+                html = document.selection.createRange().htmlText;
+            }
+        }
+
+        html = $("<div>" + html.replace(sentence_re, '') + "</div>");
+        $(".annotator-sentencenr", html).remove();
+        $(".highlight", html).remove();
+
+        $.each($(".new-paragraph", html), function(i, el){
+            $(el).removeClass("new-paragraph");
+        });
+
+        var text = "";
+        $.each(html, function(i, el){
+            text += el.innerHTML.replace("</div><div>", " ");
+            text += " ";
+        });
+
+        var count = 0;
+        $.each(text.split(/ /g), function(i, word){
+            // replace functions like strip() in Python
+            if (word.replace(/^\s+|\s+$/g, '') !== "") count++;
+        });
+
+        $("#wordcount").html(count);
+    };
+
+    self.setup_wordcount = function(){
+        $("article").mouseup(function(){
+            window.setTimeout(self.count, 50);
+        });
+    };
+
+
     self.initialise_fields = function(){
         self.loading_dialog.text("Loading fields..").dialog("open");
 
@@ -252,6 +307,7 @@ annotator = (function(self){
                 self.highlighters_fetched();
                 self.schemafields_fetched();
                 self.initialise_sentence_codings_table();
+                self.setup_wordcount();
                 self.loading_dialog.dialog("close");
             }
         );
