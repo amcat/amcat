@@ -66,6 +66,7 @@ class ProjectViewMixin(object):
         context["context"] = self.project # for menu / backwards compat.
         context["can_edit"] = self.can_edit()
         context["is_admin"] = self.is_admin()
+        context["can_view_text"] = self.can_view_text()
         context["main_active"] = 'Projects'
         context["context_category"] = self.get_context_category()
         context["notification"] = self.request.session.pop("notification", None)
@@ -91,6 +92,10 @@ class ProjectViewMixin(object):
         if not self.request.user.get_profile().has_role(self.required_project_permission, self.project):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {self.project}".format(**locals()))
 
+    def can_view_text(self):
+        """Checks if the user has the right to edit this project"""
+        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_READER, self.project)
+        
     def can_edit(self):
         """Checks if the user has the right to edit this project"""
         return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, self.project)
