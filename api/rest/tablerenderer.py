@@ -148,7 +148,7 @@ class CSVRenderer(TableRenderer):
     """
 
     media_type = 'text/csv'
-    format = 'csv'
+    format = extension = 'csv'
 
     def render_table(self, table):
         return table.to_csv()
@@ -162,7 +162,7 @@ class XLSXRenderer(TableRenderer):
     """
 
     media_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-    format = 'xlsx'
+    format = extension = 'xlsx'
 
     def render_table(self, table):
         result = table.export(format='xlsx')
@@ -175,7 +175,24 @@ class SPSSRenderer(TableRenderer):
 
     media_type = 'application/x-spss-sav'
     format = 'spss'
-
+    extension = 'sav'
+    
     def render_table(self, table):
         result = table.export(format='spss')
         return result
+
+        
+EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer]
+
+def set_response_content(response):
+    """
+    Add media type and content disposition to the response if applicable.
+    Cannot be handled by the renderer since that returns data rather than a Response
+    """
+    for exporter in EXPORTERS:
+        if response.accepted_media_type == exporter.media_type:
+            response['Content-Type'] = response.accepted_media_type
+            response['Content-Disposition'] = 'attachment; filename="data.{exporter.extension}"'.format(**locals())
+            break
+    return response
+

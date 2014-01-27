@@ -27,7 +27,7 @@ from django import forms
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
 
-from amcat.models import Coding, CodingJob, CodingSchemaField, Label
+from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchema
 from amcat.models import Article, CodingSchemaFieldType, Sentence
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
@@ -77,6 +77,9 @@ _METAFIELDS = [
     _MetaField("sentence", "parnr", "Paragraph"),
     _MetaField("sentence", "sentnr", "Sentence nr"),
     _MetaField("sentence", "sentence", "Sentence"),
+    _MetaField("subsentence", "rangefrom", "Words from"),
+    _MetaField("subsentence", "rangeto", "Words to"),
+    _MetaField("subsentence", "subsentence", "Words coded"),
     _MetaField("article_coding", "comments", "Comments"),
 ]
 
@@ -126,10 +129,15 @@ class CodingJobResultsForm(CodingjobListForm):
         # Hide fields from step (1)
         self.fields["codingjobs"].widget = forms.MultipleHiddenInput()
         self.fields["export_level"].widget = forms.HiddenInput()
-           
+
+        subsentences = CodingSchema.objects.filter(codingjobs_unit__in=codingjobs, subsentences=True).exists() 
+            
+        
         # Add meta fields
         for field in _METAFIELDS:
-            if export_level == CODING_LEVEL_ARTICLE and field.object == "sentence": continue
+            if field.object == "sentence" and export_level == CODING_LEVEL_ARTICLE: continue
+            if field.object == "subsentence" and (export_level == CODING_LEVEL_ARTICLE or not subsentences): continue
+                
             self.fields["meta_{field.object}_{field.attr}".format(**locals())] = forms.BooleanField(
                 initial=True, required=False, label="Include {field.label}".format(**locals()))
             
@@ -265,10 +273,32 @@ class MetaColumn(table3.ObjectColumn):
         self.field = field
         super(MetaColumn, self).__init__(self.field.label)
     def getCell(self, row):
+        
         obj = getattr(row, self.field.object)
         if obj:
             return unicode(getattr(obj, self.field.attr))
     
+class SubSentenceColumn(table3.ObjectColumn):
+    def __init__(self, field):
+        self.field = field
+        super(SubSentenceColumn, self).__init__(self.field.label)
+    def getCell(self, row):
+        print(self.field.object, self.field.attr, self.field.label)
+        coding = row.sentence_coding
+        if not coding: return None
+        if self.field.attr == "rangefrom": return coding.start
+        if self.field.attr == "rangeto": return coding.end
+        if self.field.attr == "subsentence":
+            # TODO: split the same way as annotator
+            words = row.sentence.sentence.split()
+            if coding.start and coding.end:
+                words = words[coding.start:(coding.end+1)]
+            elif coding.start:
+                words = words[coding.start:]
+            elif coding.end:
+                words = words[:(coding.end+1)]
+            return " ".join(words)
+            
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
@@ -286,7 +316,10 @@ class GetCodingJobResults(Script):
         # Meta field columns
         for field in _METAFIELDS:
             if self.options.get("meta_{field.object}_{field.attr}".format(**locals())):
-                table.addColumn(MetaColumn(field))
+                if field.object == "subsentence":
+                    table.addColumn(SubSentenceColumn(field))
+                else:
+                    table.addColumn(MetaColumn(field))
                 
         # Build columns based on form schemafields
         for schemafield in self.bound_form.schemafields:

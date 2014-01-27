@@ -84,12 +84,6 @@ urlpatterns = patterns(
             template_name="navigator/user/change_password_done.html"
         )),
 
-
-    # Projects (+managers)
-    url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_labels$', 'navigator.views.project.save_labels'),
-    url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_name$', 'navigator.views.project.save_name'),
-    url(r'^project/(?P<project>[0-9]+)/codebook/(?P<codebook>[-0-9]+)/save_changesets$', 'navigator.views.project.save_changesets'),
-
     # Coding
     url(r'^coding/schema-editor$', 'navigator.views.schemas.index'),
     url(r'^coding/codingschema/(?P<id>[0-9]+)$', 'navigator.views.schemas.schema',
@@ -109,7 +103,8 @@ urlpatterns = patterns(
 
 
 for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
-             ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleSetUploadView,ArticleSetUploadListView,
+             ArticleSetArticleDetailsView, ProjectArticleDetailsView, ArticleRemoveFromSetView,
+             ArticleSetUploadView,ArticleSetUploadListView,
              QueryView, ArticleSetSampleView, ArticleSetEditView,ArticleSetImportView,ArticleSetRefreshView,
              ArticleSetDeleteView,ArticleSetUnlinkView,
              ArticleSplitView,

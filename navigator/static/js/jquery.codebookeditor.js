@@ -984,7 +984,7 @@ Array.prototype.remove=function(s){
             self.reorder_confirm = function (sort_func) {
                 var dialog = self._create_modal_window(
                     "reordering-confirm", "Irreversible action",
-                    $("<p>").append("Your changes thusfar are saved, in order to allow reordering.")
+                    $("<p>").append("Your changes need to be saved to allow reordering.")
                 ).modal("show");
 
                 $(".btn-primary", dialog).click(function () {
