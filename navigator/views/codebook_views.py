@@ -214,17 +214,12 @@ class CodebookSaveChangesetsView(CodebookFormActionView):
         reorders = JSONFormField(required=False)
 
     def action(self, codebook, form):
-
         moves, hides, reorders = [form.cleaned_data.get(x, []) for x in ["moves", "hides", "reorders"]]
         
         codebook.cache()
 
         # Keep a list of changed codebookcodes
-        changed_codes = tuple(itertools.chain(
-            set([h["code_id"] for h in hides]),
-            set([r["code_id"] for r in reorders]),
-            set(itertools.chain.from_iterable(m.values() for m in moves))
-        ))
+        changed_codes = [x["code_id"] for x in itertools.chain(hides, reorders, moves)]
 
         # Save reorders
         for reorder in reorders:
