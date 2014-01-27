@@ -774,7 +774,7 @@ Array.prototype.remove=function(s){
                         "labels": labels,
                         "code": this.code,
                         "parent": this.parent
-                    })
+                    }), "json"
                 );
             };
 

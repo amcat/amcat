@@ -275,22 +275,19 @@ class CodebookSaveLabelsView(CodebookFormActionView):
     class form_class(forms.Form):
         labels = JSONFormField()
         parent = JSONFormField(required=False)
+        code = JSONFormField(required=False)
 
     def action(self, codebook, form):
         labels = form.cleaned_data["labels"]
         parent = form.cleaned_data["parent"]
-        
-        if parent:
+        code = form.cleaned_data["code"]
+
+        if parent or not code:
+            # This is a new code, because either
             code = Code.objects.create()
-            parent = json.loads(self.request.POST["parent"])
-
-            CodebookCode.objects.create(
-                parent=None if parent is None else Code.objects.get(id=parent),
-                code=code, codebook=codebook
-            )
-
+            CodebookCode.objects.create(parent_id=parent, code=code, codebook=codebook)
         else:
-            code = Code.objects.get(id=int(self.request.POST['code']))
+            code = Code.objects.get(id=code)
 
         # Get changed, deleted and new labels
         changed_labels_map = { int(lbl.get("id")) : lbl for lbl in labels if lbl.get("id") is not None}
