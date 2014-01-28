@@ -50,8 +50,9 @@ String.prototype.format = String.prototype.f = function() {
 
 amcat.selection = {};
 
-amcat.selection.setMessage = function (msg) {
-    var dialog = $("#select-message").show();
+amcat.selection.setMessage = function (msg, type) {
+    type = (type === undefined) ? "info" : type;
+    var dialog = $("#select-message").removeClass().addClass("message alert alert-{0}".f(type)).show();
 
     if (typeof(msg) === "string"){
         dialog.text(msg);
@@ -61,7 +62,7 @@ amcat.selection.setMessage = function (msg) {
 };
 
 amcat.selection.hideMessage = function () {
-    $('#select-message').hide().removeClass("alert-danger").addClass("alert-info");
+    return $('#select-message').hide();
 };
 
 amcat.selection.current_polls = {};
@@ -111,13 +112,13 @@ amcat.selection.poll = function(task_uuid, callback, timeout, download){
                     dataType : "text",
                     error: function (jqXHR, textStatus) {
                         $(".failure", msg).replaceWith($("<b>").text(jqXHR.responseText));
-                        msg.parent().addClass("alert alert-danger");
+                        msg.parent().removeClass("alert-info").addClass("alert alert-danger");
                     }
                 });
 
                 msg.append($("<p class='failure-details'>").text("Task: {0}, status {1}. ".f(task_uuid, task["status"])));
 
-                amcat.selection.setMessage(msg);
+                amcat.selection.setMessage(msg, "danger");
                 amcat.selection.set_progress(0);
                 modal.dialog("close");
             } else {
@@ -131,7 +132,7 @@ amcat.selection.poll = function(task_uuid, callback, timeout, download){
                     url : "/api/v4/taskresult/" + task_uuid,
                     success : callback,
                     error : function(qXHR){
-                        amcat.selection.setMessage('Error: ' + qXHR.responseText);
+                        amcat.selection.setMessage('Error: ' + qXHR.responseText, "danger");
                     }
                 });
 
@@ -140,7 +141,7 @@ amcat.selection.poll = function(task_uuid, callback, timeout, download){
             }
         },
         error : function() {
-            amcat.selection.setMessage('Error: polling task ' + task_uuid + ' failed.');
+            amcat.selection.setMessage('Error: polling task ' + task_uuid + ' failed.', "danger");
             amcat.selection.set_progress(0);
             modal.dialog("close");
         }
@@ -149,6 +150,7 @@ amcat.selection.poll = function(task_uuid, callback, timeout, download){
 };
 
 amcat.selection.callWebscript = function(name, data, callBack, download){
+    amcat.selection.hideMessage().show();
     var url = amcat.selection.apiUrl + 'webscript/' + name + '/run?delay=&project=' + amcat.selection.get_project();
 
     $.ajax({
@@ -159,7 +161,7 @@ amcat.selection.callWebscript = function(name, data, callBack, download){
       },
       error: function(jqXHR, textStatus){
         console.log('error form data', textStatus);
-        amcat.selection.setMessage('Error loading action ' + textStatus);
+        amcat.selection.setMessage('Error loading action ' + textStatus, "danger");
       },
       data:data,
       dataType: 'json'
@@ -319,7 +321,6 @@ amcat.selection.get_project = function(){
 
 amcat.selection.onFormSubmit = function(event){
     amcat.selection.setMessage('Loading...');
-    $("select-message").removeClass("alert-danger").addClass("alert-info");
     $('#query-time').empty();
     $('#select-result').empty();
     $('#form-errors').empty();
@@ -425,7 +426,7 @@ amcat.selection.addActionToMainForm = function(webscriptClassName, label){
       },
       error: function(jqXHR, textStatus){
         console.log('error form data', textStatus);
-        amcat.selection.setMessage('Error loading action form ' + textStatus);
+        amcat.selection.setMessage('Error loading action form ' + textStatus, "danger");
       },
       dataType: 'html'
     });
@@ -433,7 +434,7 @@ amcat.selection.addActionToMainForm = function(webscriptClassName, label){
 
 amcat.selection.submitAction = function(webscriptClassName, download){
     $('#dialog-message-content').children().appendTo('#hidden-form-extra'); // move form elements to hidden form (to submit everything)
-    
+
     var output = $('#hidden-form select[name=output]').val();
     //console.log('output', output);
     if(output == undefined || output == 'json-html'){ // if output == csv for instance, these buttons should remain visible
@@ -478,7 +479,7 @@ amcat.selection.actionClick = function(webscriptClassName, el, download){
       },
       error: function(jqXHR, textStatus){
         console.log('error form data', textStatus);
-        amcat.selection.setMessage('Error loading action ' + textStatus);
+        amcat.selection.setMessage('Error loading action ' + textStatus, "danger");
       },
       dataType: 'html'
     });
@@ -560,7 +561,7 @@ amcat.selection.setArticleSetAndMediaSelect = function(projectids){
       },
       error: function(jqXHR, textStatus){
         console.log('set error', textStatus);
-        amcat.selection.setMessage('Error loading set data');
+        amcat.selection.setMessage('Error loading set data', "danger");
       },
       dataType: 'json'
     });
@@ -578,7 +579,7 @@ amcat.selection.setArticleSetAndMediaSelect = function(projectids){
       },
       error: function(jqXHR, textStatus){
         console.log('medium error', textStatus);
-        amcat.selection.setMessage('Error loading medium data');
+        amcat.selection.setMessage('Error loading medium data', "danger");
       },
       dataType: 'json'
     });
