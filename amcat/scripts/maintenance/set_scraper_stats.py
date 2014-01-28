@@ -17,69 +17,41 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from datetime import date,timedelta
+
 from amcat.models.scraper import Scraper
 from amcat.models.article import Article
-from django.db.models import Count
-from datetime import date, timedelta
-import logging; log = logging.getLogger(__name__)
-import json
+from amcat.models.medium import Medium
+from amcat.scripts.script import Script
 
-def scraper_ranges(scraper):
-    ranges = [(0,0) for x in range(7)]
-
-    articleset_id = scraper.articleset_id
-    rows = Article.objects.filter(articlesets_set = articleset_id).extra({'date':"date(date)"}).values('date').annotate(created_count=Count('id')).filter(date__gte = date.today() - timedelta(days=210)) 
-    # returns a day and a count for each row
-    
-    if rows.count() < 21:
-        raise ValueError("not enough data on the scraper")
-    
-    for wkday,rows in enumerate(sort_weekdays(rows)):
-        numbers = [row['created_count'] for row in rows]
-        med = median(numbers)
-        ranges[wkday] = (med/1.5, med*1.5)
-        
-    #if a scraper isn't always guaranteed to return anything, the lower range is set to 0
-    for r in ranges:
-        if r[0] < 1:
-            r = (0, r[1])
-
-    return ranges
-
-def sort_weekdays(rows):
-    days = [[] for L in range(7)] #[[]] * 7 provides 7 of the same list, so don't edit
-    for row in rows:
-        wkday = row['date'].weekday()
-        days[wkday].append(row)        
-    return days
-        
-def median(numbers):
-    numbers = sorted(numbers)
-    L = len(numbers)
-    if L == 0:
-        return 0
-    elif L == 1:
-        return numbers[0]
-    else:
-        pointer = int(L*(2.0/4.0))
-        return numbers[pointer]
-
-def set_scraper_stats():
-    for scraper in Scraper.objects.all():
-        try:
-            ranges = scraper_ranges(scraper)
-        except ValueError:
-            continue
-        scraper.statistics = ranges
-        log.info("{scraper}: {scraper.statistics}".format(**locals()))
-        scraper.save()
-
+class UpdateStatisticsScript(Script):
+    def run(self, _input=None):
+        today = date.today()
+        scrapers = Scraper.objects.filter(active=True)
+        for scraper in scrapers:
+            medium_name = scraper.get_scraper_class().medium_name
+            n_scraped = scraper.n_scraped_articles(
+                from_date = today - timedelta(days = 70),
+                to_date = today,
+                medium = Medium.get_or_create(medium_name))
+            by_weekday = self.by_weekday(n_scraped)
+            averages = {wkday : sum(nums) / (len(nums) or 1) for wkday, nums in by_weekday.items()}
+            minima = [avg/1.5 for wkday,avg in averages.items()]
+            maxima = [avg*1.5 for wkday,avg in averages.items()]
+            scraper.statistics = [(minima[x],maxima[x]) for x in range(7)]
+            print("{scraper} -> {scraper.statistics}".format(**locals()))
+            scraper.save()
+            
+    def by_weekday(self, n_scraped):
+        weekdaydict = {i : [] for i in range(7)}
+        for day, n in n_scraped.items():
+            weekdaydict[day.weekday()].append(n)
+        return weekdaydict
 
 
 if __name__ == '__main__':
-    from amcat.tools import amcatlogging
-    amcatlogging.info_module("amcat.scripts.maintenance.set_scraper_stats")
-    set_scraper_stats()
+    from amcat.scripts.tools import cli
+    cli.run_cli(UpdateStatisticsScript)
         
 
     

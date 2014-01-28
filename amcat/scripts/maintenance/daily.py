@@ -52,7 +52,7 @@ class DailyScript(Script):
         if isinstance(controller, ThreadedController):
             controller.run(scrapers)
         else:
-            [a for a in controller.run(scrapers)] #unpack generator
+            for a in controller.run(scrapers): pass
 
     def get_scrapers(self, date=None, days_back=7, **options):
         """
