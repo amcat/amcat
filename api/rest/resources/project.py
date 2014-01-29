@@ -31,5 +31,6 @@ class ProjectResource(AmCATResource):
     def filter_queryset(self, queryset):
         qs = super(ProjectResource, self).filter_queryset(queryset)
         # only show projects that are either public or the user has a role in
-        qs = qs.filter(Q(guest_role__isnull=False) | Q(projectrole__user_id=self.request.user.id))
+        if not self.request.user.is_superuser: 
+            qs = qs.filter(Q(guest_role__isnull=False) | Q(projectrole__user_id=self.request.user.id))
         return qs

@@ -65,6 +65,7 @@ class ProjectPermission(permissions.BasePermission):
         if view.project is None: return True
 
         user = request.user if request.user.is_authenticated() else None
+        if user and user.is_superuser: return True
         required_role_id = getattr(view, 'permission_map', {}).get(request.method)
         if not required_role_id:
             required_role_id = _DEFAULT_PERMISSION_MAP[request.method]
