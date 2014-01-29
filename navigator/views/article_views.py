@@ -29,31 +29,76 @@ from django.shortcuts import render
 from django.core.urlresolvers import reverse
 from amcat.models import authorisation
 from django.core.exceptions import PermissionDenied
+from django.template.defaultfilters import escape
+from navigator.views.project_views import ProjectDetailsView
+from amcat.tools import amcates
 
-class ArticleSetArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
+
+def escape_keepem(text):
+    # hack, escape everything except for em
+     text = escape(text)
+     text = text.replace("&lt;em&gt;", "<em class='highlight'>")
+     text = text.replace("&lt;/em&gt;", "</em>")
+     return text
+
+class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
+    model = Article
+
+    def can_view_text(self):
+        """Checks if the user has the right to edit this project"""
+        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_READER, self.object.project)
+    
+    def get_highlight(self):
+        if not self.last_query: return None
+        try:
+            return self._highlight
+        except AttributeError:
+             self._highlight = amcates.ES().highlight_article(self.object.id, self.last_query)
+             return self._highlight
+
+        
+    def get_headline(self):
+        hl = self.get_highlight()
+        if hl and "headline" in hl:
+            return escape_keepem(hl["headline"])
+        return escape(self.object.headline)
+        
+    def get_text(self):
+        hl = self.get_highlight()
+        if hl and "text" in hl:
+            return escape_keepem(hl["text"])
+        return escape(self.object.text)
+
+    
+    def get_context_data(self, **kwargs):
+        context = super(ArticleDetailsView, self).get_context_data(**kwargs)
+        context['text'] = self.get_text()
+        context['headline'] = self.get_headline()
+        # HACK: put query back on session to allow viewing more articles
+        self.request.session["query"] = self.last_query
+        return context
+    
+    
+class ArticleSetArticleDetailsView(ArticleDetailsView):
     parent = ArticleSetDetailsView
     model = Article
-    context_category = 'Articles'
 
     def get_context_data(self, **kwargs):
         context = super(ArticleSetArticleDetailsView, self).get_context_data(**kwargs)
         context['articleset_id'] = self.kwargs['articleset_id']
+        context['text'] = escape(self.object.text)
         return context
 
     
-    def can_view_text(self):
-        """Checks if the user has the right to edit this project"""
-        return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_READER, self.object.project)
-        
 
-class ProjectArticleDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DetailView):
+    
+class ProjectArticleDetailsView(ArticleDetailsView):
     model = Article
-    parent = None
-    base_url = "projects/(?P<project_id>[0-9]+)"
+    parent = ProjectDetailsView
     context_category = 'Articles'
     template_name = 'project/article_details.html'
     url_fragment = "articles/(?P<article_id>[0-9]+)"
-
+    
     @classmethod
     def _get_breadcrumb_name(cls, kwargs, view):
         a = view.object
@@ -62,6 +107,8 @@ class ProjectArticleDetailsView(HierarchicalViewMixin,ProjectViewMixin, BreadCru
     def get_view_name(cls):
         return "project-article-details"
 
+ 
+    
 class ArticleRemoveFromSetView(ProjectActionRedirectView):
     parent = ProjectArticleDetailsView
     url_fragment = "removefromset"

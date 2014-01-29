@@ -84,6 +84,11 @@ class ProjectViewMixin(object):
 
     def dispatch(self, request, *args, **kwargs):
         self.project = self.get_project()
+        # HACK: remove query from session to prevent 'permanent' highlighting
+        self.last_query = self.request.session.pop("query", None)
+        
+           
+                
         self.check_permission()
         return super(ProjectViewMixin, self).dispatch(
             request, *args, **kwargs)

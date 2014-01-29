@@ -156,6 +156,19 @@ class ES(object):
     def flush(self):
         indices.IndicesClient(self.es).flush()
 
+    def highlight_article(self, aid, query):
+        query = queryparser.parse_to_terms(query).get_dsl()
+        
+        highlight_opts = {"highlight_query" : query, "number_of_fragments": 0}
+        body = dict(filter=build_filter(ids=aid),
+                highlight={"fields" : {"text" : highlight_opts, "headline" : highlight_opts, "byline" : highlight_opts,}})
+        r = self.search(body, fields=[])
+        try:
+            hl = r['hits']['hits'][0]['highlight']
+            return {f : hl[f][0] for f in hl} 
+        except KeyError:
+            log.exception("Could not get highlights from {r!r}".format(**locals()))
+
 
     def clear_cache(self):
         indices.IndicesClient(self.es).clear_cache()

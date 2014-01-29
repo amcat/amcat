@@ -52,3 +52,7 @@ a:hover, a:focus {
   line-height: 1;
   border-radius: 2px;
 }
+
+em.highlight {
+    background-color: yellow; font-style:normal;
+}

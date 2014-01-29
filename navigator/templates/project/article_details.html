@@ -9,11 +9,11 @@
 {% block content %}
 <div class="row">
 <div class="col-md-8 col-sm-12">
- <h1>{{article.headline}}</h1>
+ <h1>{{headline|safe}}</h1>
  <article>
   {% if article.byline %}<h2>{{article.byline}}</h2>{% endif %}
   {% if can_view_text %}
-    {{ article.text|urlizetrunc:30|linebreaks }}
+    {{ text|safe|urlizetrunc:30|linebreaks }}
   {% else %}  
     <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
   {% endif %}
