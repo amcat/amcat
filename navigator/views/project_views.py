@@ -68,8 +68,9 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
 
         table = self.filter_table(table)
         return table
-        
+
 from django import forms
+from amcat.models import Role    
 class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, UpdateView):
     context_category = 'Settings'
     parent = None
@@ -84,6 +85,7 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
                 
         return super(ProjectDetailsView, self).get(*args, **kargs)
 
+    
     def get_success_url(self):
         return reverse(self.get_view_name(), args=(self.project.id,))
 
@@ -97,6 +99,10 @@ class ProjectDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         class Meta:
             model = Project
             exclude = ('codingschemas', 'codebooks', 'articlesets', 'favourite_articlesets')
+        guest_role = forms.ModelChoiceField(queryset = Role.objects.filter(projectlevel=True), required=False,
+                                            help_text="What level of access should people who are not added to the "
+                                            "project have? If you select None, the project and its contents will "
+                                            "not be visible to non-members")
 
 class ProjectAddView(BreadCrumbMixin, ScriptView):
     template_name = "script_base.html"
