@@ -42,10 +42,12 @@ class AmCATViewSetMixin(object):
     model_key = None
 
     def __getattr__(self, item):
+        checked = []
         for model_key, viewset in _get_model_keys(self.__class__):
+            checked.append(model_key)
             if model_key is item:
                 return viewset.model.objects.get(pk=self.kwargs.get(model_key, self.kwargs.get("pk")))
-        raise AttributeError
+        raise AttributeError("Cannot find attribute {item} in keys {checked}".format(**locals()))
 
     @classmethod
     def get_url_pattern(cls):

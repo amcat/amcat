@@ -48,7 +48,11 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
     @cached
     def get_nn(self):
-        sets = list(self.context["view"].object_list.values_list("id", flat=True))
+        view = self.context["view"]
+        if hasattr(view, 'object_list'):
+            sets = list(view.object_list.values_list("id", flat=True))
+        else:
+            sets = [view.object.id]
         return dict(amcates.ES().aggregate_query(filters={'sets' : sets}, group_by='sets'))
 
     def n_articles(self, articleset):

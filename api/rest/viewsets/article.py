@@ -103,7 +103,11 @@ from api.rest.viewsets.project import ProjectViewSetMixin
 from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
 from api.rest.viewsets.project import CannotEditLinkedResource, NotFoundInProject
 
-class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
+class ArticleViewSetMixin(AmCATViewSetMixin):
+    model = Article
+    model_key = "article"
+
+class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Article
     model_key = "article"
     permission_map = {'GET' : ROLE_PROJECT_READER}
