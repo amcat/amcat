@@ -33,7 +33,7 @@ install:
  - elasticsearch-0.90.10/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
  - elasticsearch-0.90.10/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
  - elasticsearch-0.90.10/bin/plugin -install mobz/elasticsearch-head
- - ES_CLASSPATH=hitcount.jar elasticsearch-0.90.5/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
+ - ES_CLASSPATH=hitcount.jar elasticsearch-0.90.10/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
  - pip install -r ./pip_requirements.txt --use-mirrors 
 
 script:
