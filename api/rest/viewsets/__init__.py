@@ -35,6 +35,7 @@ from api.rest.viewsets.coding.codingschemafield import *
 from api.rest.viewsets.project import *
 from api.rest.viewsets.task import *
 from api.rest.viewsets.xtas import *
+from api.rest.viewsets.rules import *
 
 def get_viewsets():
     for cls in globals().values():
