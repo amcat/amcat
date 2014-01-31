@@ -18,11 +18,12 @@ class XTasViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMix
 
         result = amcates.ES().get(aid, doc_type=plugin)
         
-        members = self.request.QUERY_PARAMS.getlist("member")
-        if members:
-            result = {member : result[member] for member in members if member in result}
+        member = self.request.QUERY_PARAMS.get("member")
+        if member:
+            result = result[member]
         
-        return Response(result)
+        
+        return Response({"results" : result})
         
 
     
