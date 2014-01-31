@@ -686,7 +686,30 @@ annotator = (function(self){
         }
     };
 
-    self.save = function(success_callback){
+    /*
+     * Save codings.
+     *
+     * @type success_callback: function
+     * @param success_callback: function called when server replied with non-error code
+     * @required success_callback: no
+     *
+     * @type validate: boolean
+     * @param validate: when true open display when validation fails
+     * @default validate: false
+     */
+    self.save = function(options){
+        if (options === undefined || options.currentTarget !== undefined) options = {};
+
+        options = $.extend({}, {
+            validate : false,
+            success_callback : function(){},
+            error_callback : function(){}
+        }, options);
+
+        var validate = options.validate;
+        var success_callback = options.success_callback;
+        var error_callback = options.error_callback;
+
         $(document.activeElement).blur().focus();
 
         // Get codingvalues
@@ -698,7 +721,7 @@ annotator = (function(self){
         var sentence_codings = $.grep(self.state.sentence_codings, function(sc){ return sc.sentence !== null; })
 
         // Check whether we want to save.
-        var validation = self.validate();
+        var validation = validate ? self.validate() : true;
         if (validation !== true){
             return self.message_dialog.text(validation).dialog("open");
         }
@@ -711,7 +734,7 @@ annotator = (function(self){
             "sentence_codings" : $.map(sentence_codings, function(coding){
                 return self.pre_serialise_coding(coding, sentence_coding_values);
             })
-        }), function(data, textStatus, jqXHR){
+        })).done(function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
 
             // Change article status in table
@@ -722,7 +745,7 @@ annotator = (function(self){
             if (success_callback !== undefined && success_callback.currentTarget === undefined){
                 success_callback(data, textStatus, jqXHR);
             }
-        });
+        }).error(error_callback);
     };
 
     self.set_state = function(state){
@@ -731,7 +754,7 @@ annotator = (function(self){
     };
 
     self.save_and_continue = function () {
-        self.save(self.select_next_article);
+        self.save({ success_callback : self.select_next_article, validate : true });
     };
 
     self.finish_and_continue = function(){
