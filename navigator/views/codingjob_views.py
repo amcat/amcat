@@ -86,6 +86,11 @@ class CodingJobAddView(ProjectScriptView):
         if isinstance(result, CodingJob): result = [result]
         self.request.session['added_codingjob'] = [job.id for job in result]
         return result
+
+    def get_form_kwargs(self):
+        kwargs = super(CodingJobAddView, self).get_form_kwargs()
+        kwargs['project'] = self.project
+        return kwargs
     
     def get_form(self, form_class):
         form = super(CodingJobAddView, self).get_form(form_class)
