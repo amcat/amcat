@@ -158,7 +158,7 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
     self._create_delete_button = function(){
         var btn = $(
             "<div class='delete btn btn-mini btn-danger'>" +
-            "<i class='icon-white icon-trash'></i>" +
+            "<i class='glyphicon glyphicon-trash'></i>" +
             "</div>"
         );
 
