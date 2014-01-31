@@ -48,8 +48,9 @@ class DeduplicateScript(Script):
             print("{} at {}: {} articles".format(medium,date,len(chunk)))
             for duplicates in self._getdupes(chunk).values():
                 if len(duplicates) > 1:
-                    print(duplicates)
-                #self._deduplicate(duplicates)
+                    headline = duplicates[0].headline.encode('utf-8')
+                    print("{} dupes: {}".format(len(duplicates), headline))
+                    self._deduplicate(duplicates)
         
     def _per_medium(self, articles):
         group = []

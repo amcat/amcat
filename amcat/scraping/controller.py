@@ -56,7 +56,12 @@ class Controller(object):
         Run the given scrapers using the control logic of this controller
         @return: a list of tuples: (scraper, manager) per scraper"""
         for scraper in scrapers:
-            scraper._initialize()
+            try:
+                scraper._initialize()
+            except Exception as e:
+                self.errors.append(ScrapeError(None,None,e))
+                log.exception("scraper._initialize failed")
+                continue
             manager = ArticleManager()
             try:
                 units = list(scraper._get_units())
