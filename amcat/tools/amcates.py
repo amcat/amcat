@@ -200,18 +200,22 @@ class ES(object):
         x = cluster.ClusterClient(self.es).health(self.index, wait_for_status='yellow')
 
         
-    def get_article(self, article_id):
+    def get(self, id, **options):
         """
         Get a single article from the index
         """
-        result = self.es.get(index=self.index, id=article_id, doc_type=self.doc_type)
+        kargs = dict(index=self.index, doc_type=self.doc_type)
+        kargs.update(options)
+        result = self.es.get(id=id, **kargs)
         return result['_source']
 
     def search(self, body, **options):
         """
         Perform a 'raw' search on the underlying ES index
         """
-        return self.es.search(index=self.index, doc_type=self.doc_type, body=body, **options)
+        kargs = dict(index=self.index, doc_type=self.doc_type)
+        kargs.update(options)
+        return self.es.search(body=body, **kargs)
         
 
     def query_ids(self, query=None, filters={}, **kwargs):
@@ -670,7 +674,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         ES().add_articles([a.id,b.id,c.id])
         ES().flush()
 
-        es_c = ES().get_article(c.id)
+        es_c = ES().get(c.id)
         self.assertEqual(set(es_c['sets']), {s1.id, s2.id})
 
         ids = ES().query_ids(filters=dict(sets=s1.id))

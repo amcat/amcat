@@ -43,7 +43,7 @@ class AmCATViewSetMixin(object):
 
     def __getattr__(self, item):
         checked = []
-        for model_key, viewset in _get_model_keys(self.__class__):
+        for model_key, viewset in self._get_model_keys():
             checked.append(model_key)
             if model_key is item:
                 return viewset.model.objects.get(pk=self.kwargs.get(model_key, self.kwargs.get("pk")))
@@ -57,7 +57,7 @@ class AmCATViewSetMixin(object):
         @type cls: must inherit from at least one AmCATViewSetMixin
         @rtype: string
         """
-        return "/".join(_get_url_pattern(cls))
+        return "/".join(cls._get_url_pattern())
 
     @classmethod
     def get_basename(cls):
@@ -67,33 +67,40 @@ class AmCATViewSetMixin(object):
         response = super(AmCATViewSetMixin, self).finalize_response(request, response, *args, **kargs)
         response = tablerenderer.set_response_content(response)
         return response
+    
+    @classmethod    
+    def _get_model_keys(cls):
+        """
+        Get an iterator of all model_key properties in superclasses. This function
+        yields an ordered list, working up the inheritance tree according to Pythons
+        MRO algorithm.
+
+        @rtype: ModelKey
+        """
+        model_key = getattr(cls, "model_key", None)
+        if model_key is None:
+            return
+
+        for base in cls.__bases__:
+            if not hasattr(base, '_get_model_keys'): continue
+            for basekey in base._get_model_keys():
+                yield basekey
+
+        yield ModelKey(model_key, cls)
+
+    @classmethod
+    def _get_url_pattern_listname(cls):
+        return r"{model_key}s"
         
-def _get_model_keys(viewset):
-    """
-    Get an iterator of all model_key properties in superclasses. This function
-    yields an ordered list, working up the inheritance tree according to Pythons
-    MRO algorithm.
+    @classmethod
+    def _get_url_pattern(cls):
+        # Deduplicate (while keeping ordering) with OrderedDict
+        model_keys = (mk.key for mk in cls._get_model_keys())
+        model_keys = tuple(OrderedDict.fromkeys(model_keys))
 
-    @rtype: ModelKey
-    """
-    model_key = getattr(viewset, "model_key", None)
-    if model_key is None:
-        return
-
-    for base in viewset.__bases__:
-        for basekey in _get_model_keys(base):
-            yield basekey
-
-    yield ModelKey(model_key, viewset)
-
-def _get_url_pattern(viewset):
-    # Deduplicate (while keeping ordering) with OrderedDict
-    model_keys = (mk.key for mk in _get_model_keys(viewset))
-    model_keys = tuple(OrderedDict.fromkeys(model_keys))
-
-    for model_key in model_keys[:-1]:
-        yield r"{model_key}s/(?P<{model_key}>\d+)".format(**locals())
-    yield r"{model_key}s".format(model_key=model_keys[-1])
+        for model_key in model_keys[:-1]:
+            yield r"{model_key}s/(?P<{model_key}>\d+)".format(**locals())
+        yield r"{model_key}s".format(model_key=model_keys[-1])
 
 
 ######################

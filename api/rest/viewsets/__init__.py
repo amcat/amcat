@@ -17,7 +17,9 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from inspect import isclass
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import ViewSetMixin
+
+from api.rest.viewset import AmCATViewSetMixin
 
 from api.rest.viewsets.analysed_article import *
 from api.rest.viewsets.article import *
@@ -32,10 +34,11 @@ from api.rest.viewsets.coding.codingschemafield import *
 #from api.rest.viewsets.sentence import *
 from api.rest.viewsets.project import *
 from api.rest.viewsets.task import *
+from api.rest.viewsets.xtas import *
 
 def get_viewsets():
     for cls in globals().values():
-        if isclass(cls) and issubclass(cls, GenericViewSet) and cls is not GenericViewSet:
+        if isclass(cls) and issubclass(cls, AmCATViewSetMixin) and cls is not AmCATViewSetMixin:
             yield cls
 
 
