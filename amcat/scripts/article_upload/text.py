@@ -24,7 +24,10 @@ Plugin for uploading plain text files
 
 from __future__ import unicode_literals
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+from django.core.exceptions import ValidationError
+
+log = logging.getLogger(__name__)
 import os.path, tempfile, subprocess
 
 from django import forms
@@ -34,15 +37,25 @@ from amcat.scripts.article_upload import fileupload
 
 from amcat.models.article import Article
 from amcat.models.medium import Medium
-from amcat.tools.djangotoolkit import get_or_create
 from amcat.tools import toolkit
 
 
 class TextForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
-    medium = forms.ModelChoiceField(queryset=Medium.objects.all())
+    medium = forms.ModelChoiceField(required=False, queryset=Medium.objects.all())
+    medium_name = forms.CharField(required=False, help_text="Adds new medium if specified")
     headline = forms.CharField(required=False, help_text='If left blank, use filename (without extension and optional date prefix) as headline')
     date = forms.DateField(required=False, help_text='If left blank, use date from filename, which should be of form "yyyy-mm-dd_name"')
     section = forms.CharField(required=False, help_text='If left blank, use directory name')
+
+    def clean_medium_name(self):
+        if self.cleaned_data["medium"]:
+            self.cleaned_data["medium"] = Medium.objects.get_or_create(name=self.cleaned_data["medium_name"])[0]
+        return self.cleaned_data
+
+    def clean(self):
+        if not self.cleaned_data["medium"]:
+            raise ValidationError("Specify either medium or medium_name")
+        return self.cleaned_data
 
 
 def _convert_docx(file):
