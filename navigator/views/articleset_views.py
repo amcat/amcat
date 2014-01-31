@@ -182,7 +182,7 @@ class ArticleSetUploadListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrum
     
     def filter_table(self, table):
         table = table.rowlink_reverse('article set-upload', args=[self.project.id, '{id}'])
-        return table.filter(plugin_type=UPLOAD_PLUGIN_TYPE).hide('id', 'plugin_type')
+        return table.filter(plugin_type=UPLOAD_PLUGIN_TYPE).hide('id', 'class_name')#, 'plugin_type')
 
 class ArticleSetUploadView(ProjectScriptView):
     parent = ArticleSetUploadListView
@@ -203,6 +203,7 @@ class ArticleSetUploadView(ProjectScriptView):
         return self.render_to_response(self.get_context_data(form=form))
         
     def get_context_data(self, **kwargs):
+        self.script = self.get_script()
         context = super(ArticleSetUploadView, self).get_context_data(**kwargs)
         if getattr(self, 'success', False):
             context['created_set'] = self.script_object.articleset

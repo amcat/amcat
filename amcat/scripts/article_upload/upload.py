@@ -94,14 +94,15 @@ class UploadScript(Scraper):
 
     def get_provenance(self, file, articles):
         n = len(articles)
-        filename = file.name
+        filename = file and file.name
         timestamp = unicode(datetime.datetime.now())[:16]
         return ("[{timestamp}] Uploaded {n} articles from file {filename!r} "
                 "using {self.__class__.__name__}".format(**locals()))
         
     def run(self, _dummy=None):
         file = self.options['file']
-        log.info(u"Importing {self.__class__.__name__} from {file.name} into {self.project}"
+        filename = file and file.name
+        log.info(u"Importing {self.__class__.__name__} from {filename} into {self.project}"
                  .format(**locals()))
         from amcat.scraping.controller import Controller
         self.controller = Controller()

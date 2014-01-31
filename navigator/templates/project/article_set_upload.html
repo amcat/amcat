@@ -41,16 +41,23 @@ some errors where encountered while uploading:
   {% for field in form.visible_fields %}
   <tr {% if field.errors %}class="error-subtle"{% endif %}>
     <td>{{ field.label_tag }}</td>
-    <td>{% if field.help_text %}<p class="icon-question-sign" title="{{field.help_text}}"</p>{% endif %}</td>
-    <td> {{ field }} </td>
+    <td> 
+      {{ field }} 
+      {% if field.help_text %}<br/><span class="helptext">{{field.help_text}}</span>{% endif %}
+    </td>
     <td>{{field.errors}}</td>
   </tr>
   {% endfor %}
  </table>
  <div class="form-actions">
  <input class="btn btn-primary" type="submit" value="Upload"></input>
- <a href="" class="btn">Cancel</a>
+ <a href="{{ cancel_url }}" class="btn">Cancel</a>
  </div>
 </form>
+
+{% if script_doc %}
+<br/>
+<div class="alert alert-info" style="white-space:pre-wrap">{{ script_doc }}</div>
+{% endif %}
 
 {% endblock %}
