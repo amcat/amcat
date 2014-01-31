@@ -37,6 +37,9 @@ from navigator.views.project_views import ProjectDetailsView
     
 
 from api.rest.datatable import FavouriteDatatable
+from django.utils.safestring import SafeText
+from django.template.defaultfilters import escape
+
     
 class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = ArticleSet
@@ -147,8 +150,18 @@ class ArticleSetSampleView(ProjectScriptView):
     parent = ArticleSetDetailsView
     script = SampleSet
     url_fragment = 'sample'
+    
+    def get_success_url(self):
+        return self.parent._get_breadcrumb_url({'project_id' : self.project.id, 'articleset_id' : self.result.id}, self)
         
 
+    def success_message(self, result=None):
+        old = ArticleSet.objects.get(pk=self.kwargs['articleset_id'])
+        return SafeText("Created sample set {newname} as shown below. "
+                        "<a href='{oldurl}'>Return to original set {old.id} : {oldname}</a>"
+                        .format(newname=escape(self.result.name), oldurl=reverse('article set-details', kwargs=self.kwargs),
+                                oldname=escape(old.name), **locals()))
+        
 from amcat.models import Role
 PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 class ArticleSetEditView(ProjectEditView):

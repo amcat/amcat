@@ -253,6 +253,13 @@ class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin
     template_name = "project/script_base.html"
     script = None
 
+    def form_valid(self, form):
+        result = super(ProjectScriptView, self).form_valid(form)
+        if self.success:
+            message = self.success_message(result)
+            self.request.session['notification'] = message
+        return result
+    
     def get_success_url(self):
         return self.parent._get_breadcrumb_url(self.kwargs, self)
         
@@ -265,6 +272,9 @@ class ProjectScriptView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin
         context["cancel_url"] = self.get_cancel_url()
         return context
 
+    def success_message(self, result=None):
+        """Return a message after the action. Result is the return value of action"""
+        return "Succesfully ran action {self.script.__name__}".format(**locals())
         
 class ProjectFormView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, FormView):
     template_name = "project/form_base.html"
