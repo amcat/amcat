@@ -41,14 +41,18 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
                                    name = ws.name,
                                    formAsHtml= ws.formHtml(project=p))
                               for ws in mainScripts]
-        
+
+
         all_articlesets = p.all_articlesets()
 
-        favs = tuple(p.favourite_articlesets.filter(Q(project=p.id) | Q(projects_set=p.id))
+        initial = {int(aset) for aset in self.request.GET.getlist("articlesets") if aset.isnumeric()}
+        initial = initial.intersection(set(all_articlesets.values_list("id", flat=True)))
+
+        favs = set(p.favourite_articlesets.filter(Q(project=p.id) | Q(projects_set=p.id))
                      .values_list("id", flat=True))
         
         no_favourites = not favs
-        favourites = json.dumps(favs)
+        favourites = json.dumps(list(favs | initial))
     
         codingjobs = json.dumps(tuple(CodingJob.objects.filter(articleset__in=all_articlesets).values_list("articleset_id", flat=True)))
         all_sets = json.dumps(tuple(all_articlesets.values_list("id", flat=True)))
