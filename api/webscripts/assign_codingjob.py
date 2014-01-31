@@ -53,7 +53,7 @@ class AssignCodingJobForm(forms.Form):
     unitschema = forms.ModelChoiceField(None)
     articleschema = forms.ModelChoiceField(None)
     insertuser = forms.ModelChoiceField(None)
-
+    
     def __init__(self, project=None, *args, **kwargs):
         super(AssignCodingJobForm, self).__init__(*args, **kwargs)
 
@@ -63,6 +63,7 @@ class AssignCodingJobForm(forms.Form):
         self.fields['coder'].choices = gen_user_choices(project)
         self.fields['unitschema'].queryset = project.get_codingschemas().filter(isarticleschema=False).distinct()
         self.fields['articleschema'].queryset = project.get_codingschemas().filter(isarticleschema=True).distinct()
+        self.fields['insertuser'].queryset = User.objects.all()
 
         req = auth.get_request()
         if req is not None:
@@ -80,11 +81,17 @@ class AssignCodingJob(WebScript):
     form = AssignCodingJobForm
     displayLocation = ('ShowSummary', 'ShowArticleList')
     output_template = None 
+    is_edit = True
 
     @classmethod
     def formHtml(cls, project=None):
         form = AssignCodingJobForm(project)
         return render_to_string(cls.form_template, locals())
+
+    def get_form(self, **kwargs):
+        form = super(AssignCodingJob, self).get_form(**kwargs)
+        self.data["insertuser"] = self.user.id
+        return form
 
     def run(self):
         sel = SelectionForm(project=self.project, data=self.data)
@@ -97,8 +104,7 @@ class AssignCodingJob(WebScript):
         articles = list(keywordsearch.get_ids(self.data))
 
         # Create articleset
-        a = ArticleSet.objects.create(project=self.project, name=self.data['setname'])
-        a.add(*articles)
+        a = ArticleSet.create_set(project=self.project, articles=articles, name=self.data['setname'], favourite=False)
 
         # Split all articles 
         CreateSentences(dict(articlesets=[a.id])).run()
@@ -120,7 +126,7 @@ class AssignCodingJob(WebScript):
 
 
         return HttpResponse(json.dumps({
-            "html" : html % (reverse("codingjob", args=[self.project.id, c.id]), c.id),
+            "html" : html % (reverse("coding job-details", args=[self.project.id, c.id]), c.id),
             "webscriptClassname" : self.__class__.__name__,
             "webscriptName" : self.name,
             "doNotAddActionToMainForm" : True            

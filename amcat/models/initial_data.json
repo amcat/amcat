@@ -290,25 +290,25 @@
     }
   },
   {  "pk" : 0,
-    "model": "amcat.codingstatus",
+    "model": "amcat.codedarticlestatus",
     "fields" : {
       "label" : "Not started"
     }
   },
   {  "pk" : 1,
-    "model": "amcat.codingstatus",
+    "model": "amcat.codedarticlestatus",
     "fields" : {
       "label" : "In Progress"
     }
   },
   {  "pk" : 2,
-    "model": "amcat.codingstatus",
+    "model": "amcat.codedarticlestatus",
     "fields" : {
       "label" : "Finished"
     }
   },
   {  "pk" : 9,
-    "model": "amcat.codingstatus",
+    "model": "amcat.codedarticlestatus",
     "fields" : {
       "label" : "Irrelevant"
     }

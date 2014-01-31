@@ -29,7 +29,9 @@ from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 
-from django.db import models
+from django.db import models, transaction
+from django.db.utils import IntegrityError, DatabaseError
+from django.core.exceptions import ValidationError
 
 import logging;
 
@@ -77,6 +79,9 @@ class Article(AmcatModel):
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
 
+    insertscript = models.CharField(blank=True, null=True, max_length=500)
+    insertdate = models.DateTimeField(blank=True,null=True,auto_now_add=True)
+
     class Meta():
         db_table = 'articles'
         app_label = 'amcat'
@@ -99,14 +104,14 @@ class Article(AmcatModel):
             for word in sentence.words:
                 yield word
 
-    def get_sentence(self, parnr, setnr):
+    def get_sentence(self, parnr, sentnr):
         "@return: a Sentence object with the given paragraph and sentence number"
         for s in self.sentences:
             if s.parnr == parnr and s.sentnr == sentnr:
                 return s
 
     def getSentence(self, parnr, sentnr):
-        return self.get_sentence(parnr, setnr)
+        return self.get_sentence(parnr, sentnr)
 
     ## Auth ##
     def can_read(self, user):
@@ -160,6 +165,8 @@ class Article(AmcatModel):
         add_to_set = set() # duplicate article ids to add to set
         add_new_to_set = set() # new article ids to add to set
         add_to_index = [] # es_dicts to add to index
+        result = [] # return result
+        errors = [] # return errors
         for a in articles:
             dupe = dupes.get(a.es_dict['hash'], None)
             if dupe:
@@ -169,7 +176,17 @@ class Article(AmcatModel):
             else:
                 if a.parent:
                     a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
-                a.save()
+                sid = transaction.savepoint()
+                try:
+                    sid = transaction.savepoint()
+                    a.save()
+                    transaction.savepoint_commit(sid)
+                except (IntegrityError, ValidationError, DatabaseError) as e:
+                    log.warning(str(e))
+                    transaction.savepoint_rollback(sid)
+                    errors.append(e)
+                    continue
+                result.append(a)
                 a.es_dict['id'] = a.pk
                 add_to_index.append(a.es_dict)
                 add_new_to_set.add(a.pk)
@@ -186,6 +203,26 @@ class Article(AmcatModel):
             articleset.add_articles(add_to_set | add_new_to_set, add_to_index=False)
             es.add_to_set(articleset.id, add_to_set)
 
+        return result, errors
+
+    @classmethod
+    def ordered_save(cls, articles, *args, **kwargs):
+        """Figures out parent-child relationships, saves parent first
+        @param articles: a collection of unsaved articles
+        @param articleset: an articleset object
+        @param check_duplicate: if True, duplicates are not added to the database or index
+        """
+        index = {a.text: a for a in articles if a}
+        articles, errors = cls.create_articles(articles, *args, **kwargs)
+        for a in articles:
+            parent = index[a.text].parent
+            for b in articles:
+                if parent and b.text == parent.text:
+                    a.parent = b
+                    a.save()
+        return articles, errors
+            
+            
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

@@ -99,8 +99,6 @@ class BZK(UploadScript):
 
         for item in items:
             article = self.parse_item(item)
-            if not article:
-                continue
             if not article.props.date:
                 article.props.date = docdate
             yield article
@@ -118,19 +116,11 @@ class BZK(UploadScript):
                 article.props.headline = tag.text
             elif tag.tag == "i":
                 bits = tag.text.split()
-                if not bits: # empty knipsel
-                    return
                 if "-" in bits[-1]:
-                    try:
-                        article.props.date = readDate(bits[-1])
-                    except ValueError:
-                        article.props.date = None
+                    article.props.date = readDate(bits[-1])
                     article.props.medium = self.get_medium(" ".join(bits[:-1]))
                 elif bits[-1].isdigit():
-                    try:
-                        article.props.date = readDate(" ".join(bits[-3:]))
-                    except ValueError:
-                        article.props.date = None
+                    article.props.date = readDate(" ".join(bits[-3:]))
                     article.props.medium = self.get_medium(" ".join(bits[:-3]))
                 else:
                     article.props.medium = self.get_medium(" ".join(bits))

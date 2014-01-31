@@ -16,15 +16,16 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-"""Document objects returned by various scraping-functions."""
+"""Document objects returned by various scraping-functions.
+DEPRECATED: Please steer clear of using this. Use dicts or django models instead."""
 
 from amcat.tools.toolkit import deprecated
 from amcat.scraping.toolkit import dictionary
 from html2text import html2text
 from amcat.models.article import Article
 
-from lxml import html
-from lxml import etree
+from lxml import html, etree
+
 
 try:
     # Python 3.x
@@ -41,7 +42,7 @@ import logging; log = logging.getLogger(__name__)
 
 _ARTICLE_PROPS = [
     'date', 'section', 'pagenr', 'headline', 'byline', 'length',
-    'url', 'externalid', 'text', 'parent', 'medium', 'author'
+    'url', 'externalid', 'text', 'parent', 'medium', 'author',
 ]
 class Properties(object):
     pass
@@ -130,7 +131,7 @@ class Document(object):
                 for js in val.cssselect("script"):
                     js.drop_tree()
                 return html2text(html.tostring(val)).strip() 
-            except (parser.HTMLParseError, TypeError) as e:
+            except (parser.HTMLParseError, TypeError, ValueError) as e:
                 log.error('html2text failed')
                 return 'Converting from HTML failed!'
 

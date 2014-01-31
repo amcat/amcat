@@ -56,16 +56,18 @@ class CopyArticleSetScript(Script):
         source_set_id = forms.IntegerField()
         destination_project = forms.ModelChoiceField(queryset=Project.objects.all(), required=False)
         destination_set_id = forms.ModelChoiceField(queryset=ArticleSet.objects.all(), required=False)
-
+        
     def run(self, _input=None):
         self.source_set_id, self.source_host, self.source_db, self.dest_project, self.dest_set = [
             self.options.get(x) for x in ("source_set_id", "source_host", "source_db",
                                           "destination_project", "destination_set_id")]
-
+        self.source_port = 5432
+        
         self.dest_host = settings.DATABASES['default']['HOST']
         self.dest_db = settings.DATABASES['default']['NAME']
+        self.dest_port = settings.DATABASES['default']['PORT']
 
-        if self.dest_host == self.source_host and self.dest_db == self.source_db:
+        if self.dest_host == self.source_host and self.dest_db == self.source_db and self.dest_port == self.source_port:
             raise Exception("Destination and source host are the same: {self.dest_host}:{self.dest_db}"
                             .format(**locals()))
 
@@ -74,8 +76,8 @@ class CopyArticleSetScript(Script):
                 raise Exception("Please specify either destination project or article set id")
             self.dest_project = self.dest_set.project
 
-        log.info("Moving articles from source {self.source_host!r}:{self.source_db} set {self.source_set_id} "
-                 "to destination {self.dest_host!r}:{self.dest_db!r} "
+        log.info("Moving articles from source {self.source_host!r}:{self.source_db}:{self.source_port} set {self.source_set_id} "
+                 "to destination {self.dest_host!r}:{self.dest_db!r}:{self.source_port} "
                  .format(**locals()))
 
         self._assign_uuids()
@@ -186,10 +188,11 @@ class CopyArticleSetScript(Script):
         import_sql = "COPY articles (project_id, {fields}) FROM STDIN WITH BINARY".format(**locals())
 
         dest_host = "-h {self.dest_host}".format(**locals()) if self.dest_host else ""
+        dest_port = "-p {self.dest_port}".format(**locals()) if self.dest_port else ""
         source_host = "-h {self.source_host}".format(**locals()) if self.source_host else ""
         
         cmd = ('psql {source_host} {self.source_db} -c "{export_sql}" '
-               '| psql {dest_host} {self.dest_db} -c "{import_sql}"').format(**locals())
+               '| psql {dest_port} {dest_host} {self.dest_db} -c "{import_sql}"').format(**locals())
 
         log.debug("Copying {n} articles...".format(n=len(aids)))
         #log.debug(cmd)
@@ -201,7 +204,7 @@ class CopyArticleSetScript(Script):
         aids = [aid for (aid,) in Article.objects.filter(uuid__in=uuids).values_list("id")]
         if len(aids) != len(uuids):
             raise Exception("|aids| != |uuids|, something went wrong importing...")
-        self.dest_set.add_articles(aids)
+        self.dest_set.add_articles(aids, add_to_index=False)
         log.debug("... Done!")
         
 if __name__ == '__main__':

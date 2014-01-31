@@ -1,0 +1,19 @@
+{% extends "project/base.html" %}
+
+{% block content %}
+
+<form action="" method="POST">
+   <legend>Edit details of coding job "{{ object.name }}" below.</legend>
+
+   <table>
+    {{ form.as_table }}
+   </table>
+ 
+   <div class="form-actions">
+    <input class="btn btn-primary" type="submit" value="Save"></input>
+    <a href="{{ cancel_url }}" class="btn">Cancel</a>
+   </div>
+</form>
+
+
+{% endblock %}

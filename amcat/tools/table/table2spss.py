@@ -28,7 +28,7 @@ def getSPSSFormat(type):
     if issubclass(type, idlabel.IDLabel): return " (F8.0)"
     #if issubclass(type, cachable.Cachable): return " (F8.0)"
     if type == float: return " (F8.3)"
-    if type == str: return " (A255)"
+    if type in (unicode, str): return " (A255)"
     if type == datetime.datetime: return " (date10)"
     raise Exception("Unknown type: %s" % type)
 
@@ -37,6 +37,7 @@ def getVarName(col, seen):
     fn = fn.replace("-","_")
     fn = re.sub('[^a-zA-Z_]+', '', fn)
     fn = re.sub('^_+', '', fn)
+    fn = fn[:16]
     if fn in seen:
         for i in xrange(400):
             if "%s_%i" % (fn, i) not in seen:
@@ -77,13 +78,12 @@ def table2spss(t, writer=sys.stdout, saveas=None):
              #   else:
             #        valuelabels[col][val.id] = val.label
             #        val = val.id
-            if val and typ == str:
+            if val and (typ in (str, unicode)):
                 val = '"%s"' % clean(val)
             if val and typ == datetime.datetime:
                 val = val.strftime("%d/%m/%Y")
             val = "" if val is None else str(val)
             writer.write(val)
-            #log.debug("Wrote %r --> %s" % (oval, val))
         writer.write("\n")
     writer.write("END DATA.\n")
 

@@ -163,8 +163,8 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
 
     self._create_delete_button = function(){
         var btn = $(
-            "<div class='delete btn btn-mini btn-danger'>" +
-            "<i class='icon-white icon-trash'></i>" +
+            "<div class='delete btn btn-xs btn-danger'>" +
+            "<i class='glyphicon glyphicon-trash'></i>" +
             "</div>"
         );
 

@@ -337,20 +337,26 @@ ACCENTS_MAP =  {u'a': u'\xe0\xe1\xe2\xe3\xe4\xe5',
                 u'e': u'\xe9\xe8\xea\xeb',
                 u'i': u'\xec\xed\xee\xef',
                 u'n': u'\xf1',
-                u'o': u'\xf3\xf2\xf4\xf6',
+                u'o': u'\xf3\xf2\xf4\xf6\xf8',
                 u'u': u'\xf9\xfa\xfb\xfc',
                 u'y': u'\xfd\xff',
-
+                
                 u'A' : u'\xc0\xc1\xc2\xc3\xc4\xc5',
                 u'C' : u'\xc7',
                 u'E' : u'\xc8\xc9\xca\xcb',
                 u'I' : u'\xcc\xcd\xce\xcf',
                 u'N' : u'\xd1',
-                u'O' : u'\xd2\xd3\xd4\xd5\xd6',
+                u'O' : u'\xd2\xd3\xd4\xd5\xd6\xd8',
                 u'U' : u'\xd9\xda\xdb\xdc',
                 u'Y' : u'\xdd\xdf',
+                
                 u's' : u'\u0161\u015f',
                 u'ss' : u'\xdf',
+                u'ae' : u'\xe6',
+                u'AE' : u'\xc6',
+                
+                
+                
                 u'?' : u'\xbf',
                 u"'" : u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb\xb0',
                 u'"' : u'\x93\x94\x84\u201c\u201d\u201e\u201f\xa8',

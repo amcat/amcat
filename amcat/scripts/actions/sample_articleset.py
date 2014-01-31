@@ -68,7 +68,9 @@ class SampleSet(Script):
         target_set.add_articles(ids)
 
         log.info("Done!")
-        
+
+        return target_set
+    
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     result = cli.run_cli()

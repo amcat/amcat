@@ -56,10 +56,6 @@ class AggregationForm(amcat.scripts.forms.SelectionForm):
                             ('quarter', 'Quarter'), 
                             ('year', 'Year')
                         ), initial='month', required=False)
-    counterType = forms.ChoiceField(choices=(
-                        ('numberOfArticles', 'Number of Articles'), 
-                        ('numberOfHits', 'Number of Hits')
-                   ), initial='numberOfArticles')
     relative = forms.BooleanField(label="Make values relative to (and exclude) first column", required=False)
 
 class AggregationScriptForm(AggregationForm, amcat.scripts.forms.SelectionForm):
@@ -77,10 +73,12 @@ class AggregationScript(script.Script):
         xAxis = self.options['xAxis']
         dateInterval = self.options['dateInterval']
 
-        table = keywordsearch.getTable(self.options)
+        table = keywordsearch.getTable(self.options, self.progress_monitor)
         
         if self.options['relative']:
+            q = getattr(table, "queries", None)
             table = RelativeTable(table)
+            table.queries = q
             
         if xAxis == 'date':
             # TODO: fill out on elastic queries

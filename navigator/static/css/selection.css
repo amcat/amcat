@@ -67,13 +67,9 @@ ul em{
     padding:3px !important;
 }
 
-#help-link{
-    float:right; margin-right:70px;
-}
-
 .form-table{
     width:100%;
-    border:1px solid grey;
+
 }
 
 #select-result{
@@ -88,14 +84,6 @@ ul em{
     margin-top:30px;
 }
 
-#tabs .ui-widget-header{
-    background:none;
-    border-bottom: 1px solid gray;
-}
-
-#tabs{
-    margin:15px;
-}
 
 #query-time{
     color:gray;
@@ -113,3 +101,7 @@ ul em{
 .code{
     font-family: "Courier New", Courier, monospace
 }
+
+.query label {white-space:nowrap;}
+table.query {width: 100%}
+.query td:first-child { width: 130px; }

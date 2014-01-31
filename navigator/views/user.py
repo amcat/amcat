@@ -29,7 +29,7 @@ from navigator.utils.auth import check, create_user, check_perm
 from navigator.utils.misc import session_pop
 
 from navigator import forms
-from settings.menu import USER_MENU
+USER_MENU = None
 
 import smtplib, itertools
 
@@ -68,11 +68,14 @@ def view(request, user=None, form=None):
     # Generate projects-table javascript
     projects = Datatable(ProjectResource).filter(projectrole__user=user)
     menu = None if user == request.user else USER_MENU
-
+    main_active = "Current User" if user == request.user else "Users"
+    
+    
     return render(request, "navigator/user/view.html", {'user' : user,
                                                         'form' : form,
                                                         'projects' : projects,
                                                         'success' : success,
+                                                        'main_active' : main_active,
                                                         'menu' : menu})
 
 @check(User, action='update')

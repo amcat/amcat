@@ -16,55 +16,52 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.db.models import Q
 from rest_framework import serializers
 from amcat.models import ArticleSet
 from amcat.tools import amcates
+from amcat.tools.caching import cached
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin
-from api.rest.resources.amcatresource import DatatablesMixin
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from api.rest.viewset import AmCATViewSetMixin
 
-__all__ = ("ArticleSetSerializer", "ArticleSetViewSet")
+__all__ = (
+    "ArticleSetSerializer", "ArticleSetViewSet", "FavouriteArticleSetViewSet",
+    "CodingjobArticleSetViewSet")
 
 class ArticleSetSerializer(AmCATModelSerializer):
     favourite = serializers.SerializerMethodField("is_favourite")
     articles = serializers.SerializerMethodField("n_articles")
 
-    def cache_results(self):
-        """
-        Cache results for favourite projects and articles per set
-        """
-        # Only cache once! (is this a hack?)
-        self.cache_results = lambda : None
-
+    @property
+    def project(self):
         try:
-            # HACK!
-            project = self.context['request'].GET['project_for_favourites']
-        except KeyError:
-            # no project given, so nothing to do :-(
-            self.fav_articlesets = None
-            self.nn = None
-            return
+            return self.context["view"].project
+        except AttributeError:
+            pass
 
-        self.fav_articlesets = set(ArticleSet.objects.filter(favourite_of_projects=project)
-                                   .values_list("id", flat=True))
-        sets = list(ArticleSet.objects.filter(Q(project=project)|Q(projects_set=project)).values_list("id", flat=True))
-        self.nn = dict(amcates.ES().aggregate_query(filters={'sets' : sets}, group_by='sets'))
+    @cached
+    def get_favourite_articlesets(self):
+        if not self.project: return set()
+        return set(self.project.favourite_articlesets.all().values_list("id", flat=True))
 
-        self._cached = True
+    @cached
+    def get_nn(self):
+        view = self.context["view"]
+        if hasattr(view, 'object_list'):
+            sets = list(view.object_list.values_list("id", flat=True))
+        else:
+            sets = [view.object.id]
+        return dict(amcates.ES().aggregate_query(filters={'sets' : sets}, group_by='sets'))
 
     def n_articles(self, articleset):
-        self.cache_results()
-        if self.nn is not None:
-            return self.nn.get(articleset.id)
+        if not articleset: return None
+        return self.get_nn().get(articleset.id)
 
     def is_favourite(self, articleset):
-        self.cache_results()
-        if self.fav_articlesets is None:
-            return None
-        else:
-            return articleset.id in self.fav_articlesets
+        if not articleset or not self.project: return None
+        return articleset.id in self.get_favourite_articlesets()
 
     def restore_fields(self, data, files):
         data = data.copy() # make data mutable
@@ -78,13 +75,49 @@ class ArticleSetSerializer(AmCATModelSerializer):
 
 class _NoProjectRequestedError(ValueError): pass
 
-class ArticleSetViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
-    url = ProjectViewSetMixin.url + "/(?P<project>[0-9]+)/sets"
+class ArticleSetViewSetMixin(AmCATViewSetMixin):
+    model_key = "articleset"
+    model = ArticleSet
+
+class ArticleSetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
     model_serializer_class = ArticleSetSerializer
     model = ArticleSet
     
-
     def filter_queryset(self, queryset):
         queryset = super(ArticleSetViewSet, self).filter_queryset(queryset)
-        return queryset.filter(project=self.project)
-    
+        return queryset.filter(id__in=self.project.all_articlesets())
+
+class FavouriteArticleSetViewSetMixin(AmCATViewSetMixin):
+    model_key = "favourite_articleset"
+    base_name = "favourite_articleset"
+    model = ArticleSet
+
+class FavouriteArticleSetViewSet(ProjectViewSetMixin, FavouriteArticleSetViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model_serializer_class = ArticleSetSerializer
+    model_key = "favourite_articleset"
+    model = ArticleSet
+
+    def filter_queryset(self, queryset):
+        queryset = super(FavouriteArticleSetViewSet, self).filter_queryset(queryset)
+        return queryset.filter(id__in=self.project.favourite_articlesets.all())
+
+    def get_url(cls, base_name=None, view='list', **kwargs):
+        return super(FavouriteArticleSetViewSet, cls).get_url(base_name=cls.base_name, view=view, **kwargs)
+
+class CodingjobArticleSetViewSetMixin(AmCATViewSetMixin):
+    model_key = "codingjob_articleset"
+    base_name = "codingjob_articleset"
+    model = ArticleSet
+
+
+class CodingjobArticleSetViewSet(ProjectViewSetMixin, CodingjobArticleSetViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
+    model_serializer_class = ArticleSetSerializer
+    model_key = "codingjob_articleset"
+    model = ArticleSet
+
+    def filter_queryset(self, queryset):
+        queryset = super(CodingjobArticleSetViewSet, self).filter_queryset(queryset)
+        return queryset.filter(id__in=self.project.all_articlesets(), codingjob_set__id__isnull=False)
+
+    def get_url(cls, base_name=None, view='list', **kwargs):
+        return super(CodingjobArticleSetViewSet, cls).get_url(base_name=cls.base_name, view=view, **kwargs)

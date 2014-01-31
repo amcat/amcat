@@ -49,6 +49,9 @@ def index(request, webscriptName):
         except TypeError:
             called_with = dict(data=from_querydict(data))
             ws = webscriptClass(**called_with)
+        # HACK: put query in session to allow highlighting
+        request.session['query'] = data.get('query')
+
         if "delay" in request.GET:
             task = ws.delay()
             Task.objects.create(

@@ -74,23 +74,23 @@ class ArticleColumnsForm(forms.Form):
             choices=(
                 ('article_id', 'Article ID'),
                 ('hits', 'Hits'),
-                #('keywordInContext', 'Keyword in Context'),
+                ('kwic', 'Keyword in Context'),
                 ('date','Date'),
                 #('interval', 'Interval'),
                 ('medium_id','Medium ID'),
                 ('medium_name','Medium Name'),
                 #('project_id','Project ID'),
                 #('project_name','Project Name'),
-                #('pagenr','Page number'),
-                #('section','Section'),
-                ('author','Author'),
+                ('pagenr','Page number'),
+                ('section','Section'),
+                ('creator','Author'),
                 ('length','Length'),
                 #('url','url'),
                 #('parent_id','Parent Article ID'),
                 #('externalid','External ID'),
                 #('additionalMetadata','Additional Metadata'),
                 ('headline','Headline'),
-                #('byline','Byline'),
+                ('byline','Byline'),
                 ('lead','Lead paragraph'),
                 ('text','Article Text')
             ), initial = ('article_id', 'date', 'medium_id', 'medium_name', 'headline')
@@ -103,4 +103,4 @@ class ArticleColumnsForm(forms.Form):
                 ('quarter', 'Quarter'), 
                 ('year', 'Year')
             ), initial='month', label='Column Interval', required=False)
-
+    

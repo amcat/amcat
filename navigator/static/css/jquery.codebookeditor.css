@@ -11,12 +11,12 @@
     padding-left:5px;
 }
 
-.codebook .options > .icon{
+.codebook .options > .glyphicon{
     margin-right:2px;
     cursor:pointer;
 }
 
-.codebook .options > .icon:hover{
+.codebook .options > .glyphicon:hover{
     background-color:#f2f2f2;
 
 }

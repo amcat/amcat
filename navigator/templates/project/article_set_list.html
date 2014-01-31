@@ -1,0 +1,45 @@
+{% extends "project/base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block actions %}
+{% if can_edit %}
+<a class="btn btn-primary"  href="{% url 'article set-upload-list' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a>
+{% endif %}
+{% endblock actions %}
+
+{% block content %}
+
+{% if deleted %}
+<div class="alert alert-success">Successfully deleted an articleset. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
+{% endif %}
+{% if unlinked %}
+<div class="alert alert-success">Successfully unlinked an articleset.</div>
+{% endif %}
+<ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
+  <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "article set-list" project.id "favourites"%}'>
+    <i class="glyphicon glyphicon-star"></i>Favourite Sets
+  </a></li>
+  <li {% if what == 'own' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "own"%}'>Own Sets</a></li>
+  <li {% if what == 'linked' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "linked"%}'>Linked Sets</a></li>
+  <li {% if what == 'coding' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "coding"%}'>Coding Job Sets</a></li>
+</ul>
+
+{{ table }}
+
+{% if no_sets %}
+<div class="alert alert-success">
+  This project is empty! Use the 'upload articles' button above to add some articles to this
+  project, or navigate to an article set in another project and select
+  'use in another project' to link that set to this project.
+</div>
+
+{% elif no_favourites %}
+<div class="alert alert-success">
+  No favourite sets yet? Use the star icon to add some sets to this
+  list!<br/> (now showing all sets)
+</div>
+{% endif %}
+
+</div>
+{% endblock %}

@@ -69,7 +69,7 @@ jQuery.fn.djangofields = {
     },
     BooleanField : {
         serialise : function(obj){
-            if(obj) return $("<i class='icon-ok'>");
+            if(obj) return $("<i class='glyphicon glyphicon-ok'>");
             return $("<span>");
         },
         to_widget : function(val){

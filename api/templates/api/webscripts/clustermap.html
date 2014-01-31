@@ -13,7 +13,7 @@
 <script type="text/javascript">
     $(document).ready(function(){
         $('map[name=map1] area').click(function(){
-            window.open('article/' + $(this).attr('href'));
+            window.open("../articles/{0}".f($(this).attr("href")));
         });
         
         $('#cluster-table table').dataTable()

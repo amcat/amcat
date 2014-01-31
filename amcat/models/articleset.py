@@ -41,7 +41,7 @@ from amcat.tools.model import AmcatModel
 from amcat.tools import amcates
 from amcat.tools.djangotoolkit import get_or_create, distinct_args
 from amcat.models.article import Article
-
+from amcat.tools.progress import NullMonitor
 log = logging.getLogger(__name__)
 
 
@@ -78,7 +78,7 @@ class ArticleSet(AmcatModel):
         medium_ids = ES().list_media(filters=dict(sets=self.id))
         return Medium.objects.filter(id__in=medium_ids)
 
-    def add_articles(self, articles, add_to_index=True):
+    def add_articles(self, articles, add_to_index=True, monitor=NullMonitor()):
         """
         Add the given articles to this article set
         """
@@ -87,16 +87,18 @@ class ArticleSet(AmcatModel):
         to_add = articles - self.get_article_ids()
         # check that all articles exist:
         to_add = Article.objects.filter(pk__in=to_add).values_list("pk", flat=True)
-
+        monitor.update(10, "{n} articles need to be added".format(n=len(to_add)))
+        
         if not to_add:
             return
         # add to database
         ArticleSetArticle.objects.bulk_create(
             [ArticleSetArticle(articleset=self, article_id=artid) for artid in to_add]
         )
-        
+        monitor.update(20, "{n} articles added in database, adding to index".format(n=len(to_add)))
+                
         if add_to_index:
-            amcates.ES().add_to_set(self.id, to_add)
+            amcates.ES().add_to_set(self.id, to_add, monitor=monitor)
 
     def add(self, *articles):
         """add(*a) is an alias for add_articles(a)"""
@@ -155,10 +157,12 @@ class ArticleSet(AmcatModel):
             name2 = "{name} {i}".format(**locals())
 
     @classmethod
-    def create_set(cls, project, name, articles=None):
+    def create_set(cls, project, name, articles=None, favourite=True):
         aset = cls.objects.create(project=project, name=cls.get_unique_name(project, name))
         if articles:
             aset.add_articles(articles)
+        if not favourite:
+            project.favourite_articlesets.remove(aset)
         return aset
 
 # Legacy

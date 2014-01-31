@@ -56,7 +56,7 @@ class ShowAggregation(WebScript):
     def run(self):
         selection = SelectionForm(project=self.project, data=self.data)
         selection.full_clean()
-        aggrTable = AggregationScript(project=self.project, options=self.data).run()
+        aggrTable = AggregationScript(project=self.project, options=self.data, monitor=self.progress_monitor).run()
         if self.output == 'json-html' or (self.output == 'html' and self.options['graphOnly'] == True):
 
             columns = sorted(aggrTable.getColumns(), key=lambda x:x.id if hasattr(x,'id') else x)
@@ -75,7 +75,7 @@ class ShowAggregation(WebScript):
                 datesDict = {}
 
             labels = {q.label : q.query for q in aggrTable.queries}
-            aggregationType = 'hits' if self.options['counterType'] == 'numberOfHits' else 'articles'
+            aggregationType = 'articles'
             graphOnly = 'true' if self.options['graphOnly'] == True else 'false'
 
             scriptoutput = render_to_string('api/webscripts/aggregation.html', {

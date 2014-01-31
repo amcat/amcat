@@ -62,7 +62,8 @@ class ImportCodebook(Script):
                                                   help_text="Language for new codes")
         codebook_name = forms.CharField(required=False)
         codebook = forms.ModelChoiceField(queryset=Codebook.objects.all(),
-                                          help_text="Update existing codebook")
+                                          help_text="Update existing codebook",
+                                          required=False)
         
         def clean_codebook_name(self):
             """If codebook name is not specified, use file base name instead"""
@@ -179,7 +180,7 @@ from amcat.tools import amcattest
 def _run_test(bytes, **options):
     if 'project' not in options: options['project'] = amcattest.create_test_project().id
     if 'codebook_name' not in options: options['codebook_name'] = 'test'
-    
+    if 'default_language' not in options: options['default_language'] = 1
     from tempfile import NamedTemporaryFile
     from django.core.files import File
     with NamedTemporaryFile(suffix=".txt") as f:

@@ -40,14 +40,15 @@ class SaveAsSet(WebScript):
     form = SaveAsSetWebScriptForm
     displayLocation = ('ShowSummary', 'ShowArticleList')
     output_template = "api/webscripts/save_set.html" 
-    
+    is_edit = True
     
     def run(self):
+        self.progress_monitor.update(1, "Listing articles")
         sf = SelectionForm(self.project, self.data)
         sf.full_clean()
-
         article_ids = list(keywordsearch.get_ids(sf.cleaned_data))
-        result = SaveAsSetScript(self.data).run(article_ids)
+        self.progress_monitor.update(39, "Creating set with {n} articles".format(n=len(article_ids)))
+        result = SaveAsSetScript(self.data, monitor=self.progress_monitor).run(article_ids)
         result.provenance = json.dumps(dict(self.data))
         result.save()
 

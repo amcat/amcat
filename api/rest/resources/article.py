@@ -24,10 +24,10 @@ from rest_framework.viewsets import ModelViewSet
 from django_filters import filters
 
 from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
+from api.rest.mixins import DatatablesMixin
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.filters import AmCATFilterSet, InFilter
-from api.rest.resources.amcatresource import DatatablesMixin
 from api.rest.viewsets.article import ArticleSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin, CannotEditLinkedResource, NotFoundInProject
 
@@ -67,6 +67,8 @@ class ArticleMetaResource(AmCATResource):
 from api.rest.apitestcase import ApiTestCase
 from amcat.tools import amcattest
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
+from api.rest.viewsets.article import ArticleViewSet
+from api.rest.viewsets.articleset import ArticleSetViewSet
 
 class TestArticle(ApiTestCase):
     authentication_classes = (SessionAuthentication, BasicAuthentication)

@@ -9,15 +9,6 @@
 <a href="{% url "project-codingjobs" context.id %}" class="btn btn-large"><i class="icon-picture"></i> Coding Jobs</a>
 </div>
 
-<script type="text/javascript">
- /* Convert each button to a clickable button */
- $.each($('.buttons .button'), function(i, el){
-  var href = $('a', el)[0].href;
-  $(el).click((function(){
-    window.location=this;
-   }).bind(href));
- });
-</script>
 
 <h1>Details</h1>
 

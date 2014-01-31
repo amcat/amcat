@@ -1,0 +1,14 @@
+{% extends "project/base.html" %}
+
+{% block content %}
+<legend>Please provide details for the new schema</legend>
+<form method="POST" action="">
+<table>
+{{ form.as_table }}
+</table>
+
+<div class="form-actions">
+  <input type="submit" name="save" class="btn btn-primary"></input>
+  <a href="{% url 'coding schema-list' project.id  %}" name="save" class="btn">Cancel</a>
+</div>
+{% endblock %}

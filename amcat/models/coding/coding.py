@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from __future__ import print_function
 
 """
 Model module containing Codings
@@ -25,45 +24,57 @@ A coding is a hook for the coding values on a specific article linked
 to a specific coding job set.
 """
 
-import logging; log = logging.getLogger(__name__)
+from __future__ import print_function
+from django.db import transaction
+
+from amcat.tools.toolkit import deprecated
 
 from django.db import models
 
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codingschemafield import CodingSchemaField
-from amcat.models.article import Article
 from amcat.models.sentence import Sentence
 
+import logging
+log = logging.getLogger(__name__)
 
-class CodingStatus(AmcatModel):
-    """
-    Helder class for coding status
-    """
-    id = models.IntegerField(primary_key=True, db_column='status_id')
-    label = models.CharField(max_length=50)
+def create_coding(codingjob, article, **kwargs):
+    from amcat.models.coding.codedarticle import CodedArticle
+    coded_article, _ = CodedArticle.objects.get_or_create(codingjob=codingjob, article=article)
+    return Coding.objects.create(coded_article=coded_article, **kwargs)
 
-    class Meta():
-        db_table = 'codings_status'
-        app_label = 'amcat'
+def coded_article_property(prop):
+    """Returns property object fetches the given property on CodedArticle instaed of Coding."""
+    def get_property(self):
+        log.warning("Getting `{prop}` from Coding deprecated. Use CodedArticle.")
+        return getattr(self.coded_article, prop)
 
+    def set_property(self, value):
+        log.warning("Setting `{prop}` on Coding deprecated. Use CodedArticle.")
+        setattr(self.coded_article, prop, value)
+        self._coded_article_changed = True
 
-STATUS_NOTSTARTED, STATUS_INPROGRESS, STATUS_COMPLETE, STATUS_IRRELEVANT = 0, 1, 2, 9
-        
+    return property(get_property, set_property)
+
 class Coding(AmcatModel):
     """
     Model class for codings. Codings provide the link between a Coding Job 
     and actual Coding Values. 
     """
-
     id = models.AutoField(primary_key=True, db_column='coding_id')
-    
-    codingjob = models.ForeignKey("amcat.CodingJob", related_name="codings")
-    article = models.ForeignKey(Article)
+
+    coded_article = models.ForeignKey("amcat.CodedArticle", related_name="codings")
     sentence = models.ForeignKey(Sentence, null=True)
 
-    comments = models.TextField(blank=True, null=True)
-    status = models.ForeignKey(CodingStatus, default=STATUS_NOTSTARTED)
-    
+    # These values allow subsentence codings. Better names would be from
+    # and to, but from is a reserved keyword in both Python and SQL (?).
+    start = models.SmallIntegerField(null=True)
+    end = models.SmallIntegerField(null=True)
+
+    def __init__(self, *args, **kwargs):
+        super(Coding, self).__init__(*args, **kwargs)
+        self._coded_article_changed = False
+
     class Meta():
         db_table = 'codings'
         app_label = 'amcat'
@@ -71,10 +82,9 @@ class Coding(AmcatModel):
     @property
     def schema(self):
         """Get the coding schema that this coding is based on"""
-        if self.sentence is None:
-            return self.codingjob.articleschema
-        else:
-            return self.codingjob.unitschema
+        if self.sentence_id is None:
+            return self.coded_article.codingjob.articleschema
+        return self.coded_article.codingjob.unitschema
 
     def get_values(self):
         """Return a sequence of field, (deserialized) value pairs"""
@@ -87,7 +97,6 @@ class Coding(AmcatModel):
         for v in self.values.all():
             if v.field_id == field.id:
                 return v
-
         raise CodingValue.DoesNotExist()
 
     def get_value(self, field):
@@ -96,50 +105,41 @@ class Coding(AmcatModel):
             return self.get_value_object(field).get_serialised_value(field=field)
         except CodingValue.DoesNotExist:
             pass
-    
-    def update_values(self, values):
-        """Update the current values
 
-        @param values: mapping of field to serialised value.
-        Fields that are not included in the mapping, or whose value are set to
-        None, will be removed from the values
-        """
-        current = dict((v.field,  v) for v in self.values.all())
+    def _get_coding_value(self, field, value):
+        if isinstance(value, int):
+            return CodingValue(field=field, coding=self, intval=value)
+        return CodingValue(field=field, coding=self, strval=value)
 
-        for field, value in values.items():
-            if field in current:
-                if value is None:
-                    # explicit delete for value None
-                    current[field].delete()
-                else: 
-                    current[field].update_value(value)
-                # This field from current was encountered, so don't delete below                    
-                del current[field]
-            else: 
-                self.set_value(field, value)
-        #delete remaining values in current
-        for value in current.values():
-            # implicit delete by not listing in values mapping 
-            value.delete()
+    @transaction.atomic
+    def update_values(self, values_dict):
+        self.values.all().delete()
+        CodingValue.objects.bulk_create(self._get_coding_value(f, v) for f, v in values_dict.items())
 
+    def save(self, *args, **kwargs):
+        # This is deprecated behaviour intended to
+        if self._coded_article_changed:
+            self.coded_article.save(*args, **kwargs)
+            self._coded_article_changed = False
+        return super(Coding, self).save(*args, **kwargs)
 
+    ##############################################################
+    #                         DEPRECATED                         #
+    ##############################################################
+    status = coded_article_property("status")
+    status_id = coded_article_property("status_id")
+    comments = coded_article_property("comments")
+    article = coded_article_property("article")
+    article_id = coded_article_property("article_id")
+    codingjob = coded_article_property("codingjob")
+    codingjob_id = coded_article_property("codingjob_id")
+
+    @deprecated
     def set_status(self, status):
-        """Set the status of this coding, deserialising status as needed"""
-        if type(status) == int: status = CodingStatus.objects.get(pk=status)
-        self.status = status
-        self.save()
+        return self.coded_article.set_status(status)
 
-    def set_value(self, field, value):
-        """Create a new coding value on this coding
 
-        @param field: the coding schema field
-        @param value: the deserialized value
-        """
-        a = CodingValue(coding=self, field=field)
-        a.update_value(value)
-        a.save()
-        
-        
+
 class CodingValue(AmcatModel):
     """
     Model class for coding values. 
@@ -154,16 +154,13 @@ class CodingValue(AmcatModel):
     intval = models.IntegerField(null=True)
 
     def save(self, *args, **kargs):
-        #Enforce constraint field.schema == coding.schema
-        if self.field.codingschema != self.coding.schema:
-            raise ValueError("Field schema {0!r} and coding schema {1!r} don't match"
-                             .format(self.field.codingschema, self.coding.schema))
         #Enforce constraint (strval IS NOT NULL) OR (intval IS NOT NULL)
         if self.strval is None and self.intval is None:
             raise ValueError("codingvalue.strval and .intval cannot both be None")
+        if self.strval is not None and self.intval is not None:
+            raise ValueError("codingvalue.strval and .intval cannot both be not None")
         super(CodingValue, self).save(*args, **kargs)
 
-    
     @property
     def serialised_value(self):
         return self.get_serialised_value()
@@ -183,15 +180,6 @@ class CodingValue(AmcatModel):
         """Get the 'deserialised' (object) value for this codingvalue"""
         return self.field.serialiser.deserialise(self.serialised_value)
 
-    def update_value(self, value):
-        """Update to the given (deserialised) value by serialising and
-        updating strval or intval, as appropriate"""
-        serval = self.field.serialiser.serialise(value)
-        stype = self.field.serialiser.deserialised_type
-        if stype == unicode: self.strval = serval
-        else: self.intval = serval
-        self.save()
-
     class Meta():
         db_table = 'codings_values'
         app_label = 'amcat'
@@ -203,14 +191,6 @@ class CodingValue(AmcatModel):
 ###########################################################################
         
 from amcat.tools import amcattest
-
-
-def _valuestr(coding):
-    """Dense representation of coding values for quick comparison"""
-    return ";".join("{0.label}:{1!s}".format(*fv) for (fv) in
-                    sorted(coding.get_values(), key=lambda fv:fv[0].label))
-        
-
 
 class TestCoding(amcattest.AmCATTestCase):
 
@@ -240,42 +220,35 @@ class TestCoding(amcattest.AmCATTestCase):
                                               sentence=amcattest.create_test_sentence())
         self.assertEqual(a2.schema, self.schema)
 
+    def test_update_values(self):
+        codebook, codes = amcattest.create_test_codebook_with_codes()
+        schema, codebook, strf, intf, codef = amcattest.create_test_schema_with_fields(codebook=codebook)
+        job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=7)
+        articles = list(job.articleset.articles.all())
 
-    def test_status(self):
-        """Is initial status 0? Can we set it?"""
-        a = amcattest.create_test_coding()
-        self.assertEqual(a.status.id, 0)
-        self.assertEqual(a.status, CodingStatus.objects.get(pk=STATUS_NOTSTARTED))
-        a.set_status(STATUS_INPROGRESS)
-        self.assertEqual(a.status, CodingStatus.objects.get(pk=1))
-        a.set_status(STATUS_COMPLETE)
-        self.assertEqual(a.status, CodingStatus.objects.get(pk=2))
-        a.set_status(STATUS_IRRELEVANT)
-        self.assertEqual(a.status, CodingStatus.objects.get(pk=9))
-        a.set_status(STATUS_NOTSTARTED)
-        self.assertEqual(a.status, CodingStatus.objects.get(pk=0))
-        
-    def test_comments(self):
-        """Can we set and read comments?"""
-        a = amcattest.create_test_coding()
-        self.assertIsNone(a.comments)
+        coding = amcattest.create_test_coding(codingjob=job, article=articles[0])
+        self.assertEqual(0, coding.values.count())
+        coding.update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
+        self.assertEqual(3, coding.values.count())
+        self.assertTrue(strf in dict(coding.get_values()))
+        self.assertTrue(intf in dict(coding.get_values()))
+        self.assertTrue(codef in dict(coding.get_values()))
+        self.assertEqual(1, dict(coding.get_values())[intf])
 
-        for offset in range(4563, 20000, 1000):
-            s = "".join(unichr(offset + c) for c in range(12, 1000, 100))
-            a.comments = s
-            a.save()
-            a = Coding.objects.get(pk=a.id)
-            self.assertEqual(a.comments, s)
-            
+        # Does update_values delete values not present in dict?
+        coding.update_values({strf:"blas"})
+        self.assertEqual(1, coding.values.count())
+        self.assertTrue(strf in dict(coding.get_values()))
+        self.assertEqual("blas", dict(coding.get_values())[strf])
+
+
+
     def test_create_value(self):
         """Can we create an coding value?"""
         a = amcattest.create_test_coding(codingjob=self.job)
-        v = CodingValue.objects.create(coding=a, field=self.strfield,
-                                           intval=1, strval="abc")
-        v2 = CodingValue.objects.create(coding=a, field=self.intfield,
-                                            intval=1, strval="abc")
-        v3 = CodingValue.objects.create(coding=a, field=self.codefield,
-                                            intval=self.c.id)
+        v = CodingValue.objects.create(coding=a, field=self.strfield, strval="abc")
+        v2 = CodingValue.objects.create(coding=a, field=self.intfield, intval=1)
+        v3 = CodingValue.objects.create(coding=a, field=self.codefield, intval=self.c.id)
         
         self.assertIn(v, a.values.all())
         self.assertEqual(v.value, "abc")
@@ -289,47 +262,4 @@ class TestCoding(amcattest.AmCATTestCase):
         self.assertRaises(ValueError, CodingValue.objects.create,
                           coding=amcattest.create_test_coding(codingjob=self.job),
                           field=self.strfield)
-
-        # field does not exist in (newly created) schema
-        self.assertRaises(ValueError, CodingValue.objects.create,
-                          coding=amcattest.create_test_coding(),
-                          field=self.strfield, strval="abc")
-        
-    def test_update_value(self):
-        """Does update_value on a codingvalue work?"""
-        a = amcattest.create_test_coding(codingjob=self.job)
-        v = CodingValue.objects.create(coding=a, field=self.intfield, intval=1)
-        v.update_value("99")
-        self.assertEqual(v.value, 99)
-        self.assertRaises(Exception, v.update_value, "abv")
-        
-        v2 = CodingValue.objects.create(coding=a, field=self.codefield, intval=self.c.id)
-        v2.update_value(self.c2)
-        self.assertEqual(v2.value, self.c2)
-        
-        self.assertRaises(Exception, v2.update_value, "abv")
-        self.assertRaises(ValueError, v2.update_value, None)
-
-        # c3 = amcattest.create_test_code(label="NOT IN CODEBOOK")
-        # TODO CHECK VALIDATION
-
-        
-
-    def test_update_values(self):
-        """Does update_values on an coding work?"""
-        a = amcattest.create_test_coding(codingjob=self.job)
-        self.assertEqual(_valuestr(a), "")
-        a.set_value(self.intfield, 12)
-        self.assertEqual(_valuestr(a), "number:12")
-        a.update_values({self.strfield:"bla"})
-        self.assertEqual(_valuestr(a), "text:bla")
-        a.update_values({self.strfield:None, self.intfield:"999", self.codefield:self.c})
-        
-        self.assertEqual(_valuestr(a), "code:CODED;number:999")
-        
-        newfield = CodingSchemaField.objects.create(
-            codingschema=amcattest.create_test_schema(),
-            label="text", fieldtype=self.strfield.fieldtype)
-        self.assertRaises(ValueError, a.update_values, {newfield : "3"})
-
 

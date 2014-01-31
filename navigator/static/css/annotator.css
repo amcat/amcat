@@ -70,13 +70,11 @@ html {
    
 }
 
-.article-part{
-    /* float:right; */
+article{
     width:29%;
     background:white;
     position:absolute;
     right:10px;
-    /* top:90px; */
     height:90%;
 }
 
@@ -106,7 +104,6 @@ h2{
 
 .sentence{
     margin-top:10px;
-    display:block;
 }
 
 .annotator-sentencenr{

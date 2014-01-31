@@ -20,7 +20,7 @@
 from django.core.urlresolvers import reverse
 
 from amcat.scripts.actions.process_parsing import CheckParsing
-from navigator.views.scriptview import ProjectScriptView
+from navigator.views.projectview import ProjectScriptView
 from amcat.models import ArticleSet, AnalysedArticle
 
 from django.db.models import Count

@@ -35,16 +35,17 @@ from elasticsearch import Elasticsearch, connection
 from elasticsearch.client import indices, cluster
 from django.conf import settings
 from amcat.tools.caching import cached
+from amcat.tools.progress import NullMonitor
 
 def _clean(s):
     if s: return re.sub('[\x00-\x08\x0B\x0C\x0E-\x1F]', ' ', s)
 
 def get_article_dict(art, sets=None):
     date = art.date
-    if isinstance(art.date, (str, unicode)):
-        date = toolkit.readDate(date)
-    date = date.isoformat()
-
+    if date:
+        if isinstance(art.date, (str, unicode)):
+            date = toolkit.readDate(date)
+        date = date.isoformat()
     d = dict(
         # dublin core elements
         id = art.id,
@@ -146,13 +147,32 @@ class Result(object):
         return "{}({})".format(type(self).__name__, ", ".join(items))
     
 class ES(object):
-    def __init__(self, index=None, **args):
+    def __init__(self, index=None, doc_type=None, **args):
         elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
         self.es = Elasticsearch(hosts=[elhost, ], **args)
         self.index = settings.ES_INDEX if index is None else index
+        self.doc_type = settings.ES_ARTICLE_DOCTYPE if doc_type is None else doc_type
 
     def flush(self):
         indices.IndicesClient(self.es).flush()
+
+    def highlight_article(self, aid, query):
+        query = queryparser.parse_to_terms(query).get_dsl()
+        
+        highlight_opts = {"highlight_query" : query, "number_of_fragments": 0}
+        body = dict(filter=build_filter(ids=aid),
+                highlight={"fields" : {"text" : highlight_opts, "headline" : highlight_opts, "byline" : highlight_opts,}})
+        r = self.search(body, fields=[])
+        try:
+            hl = r['hits']['hits'][0]['highlight']
+            return {f : hl[f][0] for f in hl} 
+        except KeyError:
+            log.exception("Could not get highlights from {r!r}".format(**locals()))
+
+
+    def clear_cache(self):
+        indices.IndicesClient(self.es).clear_cache()
+        
     def delete_index(self):
         try:
             indices.IndicesClient(self.es).delete(self.index)
@@ -180,12 +200,22 @@ class ES(object):
         x = cluster.ClusterClient(self.es).health(self.index, wait_for_status='yellow')
 
         
-    def get_article(self, article_id):
+    def get(self, id, **options):
         """
         Get a single article from the index
         """
-        result = self.es.get(index=self.index, id=article_id, doc_type=settings.ES_ARTICLE_DOCTYPE)
+        kargs = dict(index=self.index, doc_type=self.doc_type)
+        kargs.update(options)
+        result = self.es.get(id=id, **kargs)
         return result['_source']
+
+    def search(self, body, **options):
+        """
+        Perform a 'raw' search on the underlying ES index
+        """
+        kargs = dict(index=self.index, doc_type=self.doc_type)
+        kargs.update(options)
+        return self.es.search(body=body, **kargs)
         
 
     def query_ids(self, query=None, filters={}, **kwargs):
@@ -200,7 +230,7 @@ class ES(object):
         log.debug("Query_ids body={body!r}".format(**locals()))
         options = dict(scroll="1m", size=1000, fields="")
         options.update(kwargs)
-        res = self.es.search(index=self.index, search_type='scan', body=body, **options)
+        res = self.search(body, search_type='scan', **options)
         sid = res['_scroll_id']
         while True:
             res = self.es.scroll(scroll_id=sid, scroll="1m")
@@ -227,7 +257,7 @@ class ES(object):
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
 
         log.debug("es.search(body={body}, **{kwargs})".format(**locals()))
-        result = self.es.search(index=self.index, body=body, fields=fields, **kwargs)
+        result = self.search(body, fields=fields, **kwargs)
         return SearchResult(result, fields, score, body)
 
     def query_all(self, *args, **kargs):
@@ -266,11 +296,14 @@ class ES(object):
         for batch in splitlist(article_ids, itemsperbatch=1000):
             self.bulk_update(batch, UPDATE_SCRIPT_REMOVE_FROM_SET, params={'set' : setid})
 
-    def add_to_set(self, setid, article_ids):
+    def add_to_set(self, setid, article_ids, monitor=NullMonitor()):
         """Add the given articles to the given set. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator)."""
         if not article_ids: return
-        for batch in splitlist(article_ids, itemsperbatch=1000):
+        batches = list(splitlist(article_ids, itemsperbatch=1000))
+        nbatches = len(batches)
+        for i, batch in enumerate(batches):
+            monitor.update(40/nbatches, "Added batch {i}/{nbatches}".format(**locals()))
             self.bulk_update(article_ids, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
         
     def bulk_insert(self, dicts):
@@ -361,7 +394,7 @@ class ES(object):
                 "facets" : {"group" : group}}
         log.debug("es.search(body={body})".format(**locals()))
 
-        result = self.es.search(index=self.index, body=body, size=0)
+        result = self.search(body, size=0)
         if group_by == 'date':
             for row in result['facets']['group']['entries']:
                 yield get_date(row['time']), row['count']
@@ -376,7 +409,7 @@ class ES(object):
         """
         body = {"query" : {"constant_score" : dict(build_body(query, filters, query_as_filter=True))}}
         body['facets'] = {'stats' : {'statistical' : {'field' : 'date'}}}
-        stats = self.es.search(index=self.index, body=body, size=0)['facets']['stats']
+        stats = self.search(body, size=0)['facets']['stats']
         result = Result()
         result.n = stats['count']
         if result.n == 0:
@@ -503,8 +536,6 @@ def build_body(query=None, filters={}, query_as_filter=False):
     if filters:
         yield ('filter', combine_filters(filters))
 
-
-    
         
 if __name__ == '__main__':
     ES().check_index()
@@ -535,13 +566,8 @@ class TestAmcatES(amcattest.AmCATTestCase):
         Article.create_articles([a,b,c,d], articleset=s1, check_duplicate=False)
         ES().flush()
         
-        # counts per mediumid
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="mediumid")),
                          {m1.id : 1, m2.id : 3})
-        
-        # counts per medium (name)
-        self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="medium")),
-                         {m1.name : 1, m2.name : 3})
         
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="year")),
                          {datetime(2001,1,1) : 3, datetime(2002,1,1) : 1})
@@ -648,7 +674,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         ES().add_articles([a.id,b.id,c.id])
         ES().flush()
 
-        es_c = ES().get_article(c.id)
+        es_c = ES().get(c.id)
         self.assertEqual(set(es_c['sets']), {s1.id, s2.id})
 
         ids = ES().query_ids(filters=dict(sets=s1.id))
@@ -784,14 +810,15 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(ES().query_ids('"korea-noord"', filters=dict(sets=s1.id))), set())
         self.assertEqual(set(ES().query_ids('"noord-korea"', filters=dict(sets=s1.id))), {a.id})
         
+        # test Rutte's -> rutte s
+        self.assertEqual(set(ES().query_ids("rutte", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids("Rutte", filters=dict(sets=s1.id))), {a.id})
+        
         # test ni\~no -> nino
-        self.assertEqual(set(ES().query_ids(u"ni\xf1o", filters=dict(sets=s1.id))), {a.id})
         self.assertEqual(set(ES().query_ids("nino", filters=dict(sets=s1.id))), {a.id})
+        self.assertEqual(set(ES().query_ids(u"ni\xf1o", filters=dict(sets=s1.id))), {a.id})
 
         # test real kanji
         self.assertEqual(set(ES().query_ids(u"\u6f22\u5b57", filters=dict(sets=s1.id))), {a.id})
 
-        # test Rutte's -> rutte s
-        self.assertEqual(set(ES().query_ids("rutte", filters=dict(sets=s1.id))), {a.id})
-        self.assertEqual(set(ES().query_ids("Rutte", filters=dict(sets=s1.id))), {a.id})
 

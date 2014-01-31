@@ -25,39 +25,44 @@ import datetime
 from functools import partial
 
 from amcat.models.scraper import Scraper
-from api.webscripts.show_aggregation import ShowAggregation
-from django.http import QueryDict
-import json
+
+from amcat.tools.table.table3 import ObjectTable
+from amcat.tools.table.tableoutput import table2htmlDjango
 
 def index(request):
+    daily_scrapers = list(Scraper.objects.filter(run_daily=True,active=True))
+    non_daily_scrapers = list(Scraper.objects.filter(run_daily=False,active=True))
+    inactive_scrapers = list(Scraper.objects.filter(active=False))
+    dates = [datetime.date.today() - datetime.timedelta(days=n) for n in range(14)]
 
-    scrapers = list(Scraper.objects.filter(run_daily=True,active=True))
-    sets = list({str(s.articleset.id) for s in scrapers})
-    start_date = datetime.date(2014, 01, 01)
-    start_date_str = start_date.strftime("%d-%m-%Y")
-    data = {u'yAxis': [u'medium'], u'xAxis': [u'date'],u'dateInterval': [u'day'],
-            u'outputType': [u'table'],
-            u'datetype': [u'after'],  u'multiselect_id_datetype': [u'after'], u'start_date': [start_date_str],
-            u'projects': [u'1'], u'articlesets': sets, u'multiselect_id_articlesets': sets,
-            u'counterType': [u'numberOfArticles'], u'output': [u'html'],
-            }
-    script = ShowAggregation(1, request.user, data)
-    output = script.run().content
+    scraper_lists = {"daily_table":daily_scrapers,
+                     "non_daily_table":non_daily_scrapers,
+                     "inactive_table":inactive_scrapers}
 
-    scrapers = list(Scraper.objects.filter(run_daily=True,active=True))
-    sets = list({str(s.articleset.id) for s in scrapers})
-    weekly_start_date = datetime.date(2013, 12, 02)
-    start_date_str = weekly_start_date.strftime("%d-%m-%Y")
-    data = {u'yAxis': [u'medium'], u'xAxis': [u'date'],u'dateInterval': [u'week'],
-            u'outputType': [u'table'],
-            u'datetype': [u'after'],  u'multiselect_id_datetype': [u'after'], u'start_date': [start_date_str],
-            u'projects': [u'1'], u'articlesets': sets, u'multiselect_id_articlesets': sets,
-            u'counterType': [u'numberOfArticles'], u'output': [u'html'],
-            }
-    script = ShowAggregation(1, request.user, data)
-    weekly_output = script.run().content
+    for s_list in scraper_lists.values():
+        for scraper in s_list:
+            scraper.articles = scraper.n_scraped_articles(from_date=dates[-1], to_date=dates[0])
 
-    scrapers = sorted(scrapers, key=lambda s:(s.articleset.id, s.label))
+    scraper_tables = {name : ObjectTable(rows=s_list, columns=["id", "label"]) for name,s_list in scraper_lists.items()}
+
+    def Set(scraper):
+        s = scraper.articleset
+        if s is None: return ""
+        url = reverse(articleset, args=[s.project.id, s.id])
+        return "<a href='{url}'>{s}</a>".format(**locals())
+
+    for s_table in scraper_tables.values():
+        s_table.addColumn(Set)
+
+    def getdate(date, scraper):
+        return scraper.articles.get(date, 0)
     
+    for date in dates:
+        for s_table in scraper_tables.values():
+            s_table.addColumn(partial(getdate, date), str(date)[-5:])
 
-    return render(request, 'navigator/scrapers/index.html',locals())
+    table_dict = {}
+    for t_name, s_table in scraper_tables.items():
+        table_dict[t_name] = table2htmlDjango(s_table, safe=True)
+
+    return render(request, 'navigator/scrapers/index.html', dict(locals().items() + table_dict.items()))

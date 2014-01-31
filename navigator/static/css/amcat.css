@@ -1,0 +1,58 @@
+.btn-primary {
+    background-color: #60A3FF;	      
+    border-color: #5693E6;
+}
+
+.navbar-brand {
+    background-image: url('/media/img/amcat/amcat-logo.png');
+    background-repeat: no-repeat;
+    background-position: 10px 10px;
+    padding-left: 45px;
+    padding-top: 10px;
+    height: 100%;
+}
+
+.navbar-brand h1 {
+    font-size: 15px;
+    font-weight: bold;
+    margin-top: 0px;
+    margin-bottom: 0px;
+}
+.navbar-brand h2 {
+    color: grey;
+    font-size: 13px;
+    text-align: right;
+    margin-top: 0px;
+    margin-right: 10px;
+    margin-bottom: -10px;
+}
+
+.panel-title {
+font-size: 14px;
+}
+
+a, .panel-title a {
+  color: #5693E6;
+}
+a:hover, a:focus {	      
+    color: #305280;
+}
+
+.query textarea {width: 100%}
+
+.articlelist li {list-style-type: none;}
+
+.article-headline {font-size: 13x; font-weight: bold}
+
+.failure-details {margin-top: 1em; font-decoration: italic; font-size:11px}
+
+.btn-xxs {
+  padding: 0px 3px;
+  font-size: 10px;
+  line-height: 1;
+  border-radius: 2px;
+}
+
+em.highlight {
+    background-color: yellow; font-style:normal;
+}
