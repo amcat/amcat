@@ -38,7 +38,7 @@ jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay )
     return this;
 }
 
-jQuery.fn.dataTableExt.oApi.fnSetRowlink = function(oSettings, sRowlink){
+jQuery.fn.dataTableExt.oApi.fnSetRowlink = function(oSettings, sRowlink, sOpenIn){
     /*
      * Input:       string:sRowlink. URL to link to when a row is clicked,
      *              formatted like:
@@ -51,6 +51,8 @@ jQuery.fn.dataTableExt.oApi.fnSetRowlink = function(oSettings, sRowlink){
      */
     var self = this;
     var re, format;
+
+    sOpenIn = (sOpenIn === undefined) ? "same" : sOpenIn;
 
     if (!sRowlink){
         throw "Error: sRowlink cannot be empty when calling fnSetRowlink()!"
@@ -89,9 +91,13 @@ jQuery.fn.dataTableExt.oApi.fnSetRowlink = function(oSettings, sRowlink){
               } else {
                   /* Find url and redirect! */
                   url = format(sRowlink, cols);
-                  console.log(format('Redirecting to: {0}', [url]))
 
-                  window.location = url;
+                  if (sOpenIn === "same"){
+                      console.log(format('Redirecting to: {0}', [url]))
+                      window.location = url;
+                  } else if (sOpenIn === "new"){
+                      window.open(url, '_blank');
+                  }
               }
            })
            .css("cursor", "pointer");

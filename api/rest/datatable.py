@@ -57,8 +57,8 @@ class Datatable(object):
 
     TODO: Remove Resource-references
     """
-    def __init__(self, resource, rowlink=None, options=None, hidden=None, url=None, ordering=None,
-                 format="json", filters=None, extra_args=None, url_kwargs=()):
+    def __init__(self, resource, rowlink=None, rowlink_open_in="same", options=None, hidden=None, url=None,
+                 ordering=None, format="json", filters=None, extra_args=None, url_kwargs=()):
         """
         Default ordering is "id" if possible.
 
@@ -78,6 +78,7 @@ class Datatable(object):
 
         self.options = options or dict()
         self.rowlink = rowlink or getattr(self.resource, "get_rowlink", lambda  : None)()
+        self.rowlink_open_in = rowlink_open_in
         self.ordering = ordering
 
         self.format = format
@@ -158,6 +159,7 @@ class Datatable(object):
     def _get_copy_kwargs(self, **kwargs):
         kws = {
             'rowlink' : self.rowlink,
+            'rowlink_open_in' : self.rowlink_open_in,
             'options' : self.options,
             'hidden' : self.hidden,
             'url' : self.base_url,
@@ -193,6 +195,7 @@ class Datatable(object):
         return get_template('api/datatables.js.html').render(Context({
             'id' : self.name,
             'rowlink' : self.rowlink,
+            'rowlink_open_in' : self.rowlink_open_in,
             'url' : self.url,
             'options' : options
         }))

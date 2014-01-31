@@ -92,10 +92,10 @@ def filters_from_form(form_data):
         
 
 
-def getDatatable(form, rowlink='article/{id}'):
+def getDatatable(form, rowlink='article/{id}', **kwargs):
     from api.rest.datatable import Datatable
     from api.rest.resources import SearchResource
-    table = Datatable(SearchResource, rowlink=rowlink)
+    table = Datatable(SearchResource, rowlink=rowlink, **kwargs)
     
     for field, val in filters_from_form(form):
         table = table.filter(**{field : val})

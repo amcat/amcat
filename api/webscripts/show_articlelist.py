@@ -54,7 +54,7 @@ class ShowArticleList(WebScript):
             project_id = int(self.data['projects'][0])
 
         
-        t = keywordsearch.getDatatable(self.data)
+        t = keywordsearch.getDatatable(self.data, rowlink_open_in="new")
         t = t.rowlink_reverse("project-article-details", args=[project_id, '{id}'])
         cols = {FORM_FIELDS_TO_ELASTIC.get(f,f) for f in self.data.getlist('columns')}
         for f in list(t.get_fields()):
