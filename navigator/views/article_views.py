@@ -101,7 +101,8 @@ class ProjectArticleDetailsView(ArticleDetailsView):
     
     @classmethod
     def _get_breadcrumb_name(cls, kwargs, view):
-        a = view.object
+        aid = kwargs['article_id']
+        a = Article.objects.get(pk=aid)
         return "Article {a.id} : {a}".format(**locals())
     @classmethod
     def get_view_name(cls):
@@ -288,9 +289,14 @@ def get_sentence_ids(post):
         yield parse_sentence_name(name)
 
 class ArticleSplitView(ProjectFormView):
-    parent = ArticleSetArticleDetailsView
+    parent = ProjectArticleDetailsView
     url_fragment = "split"
     template_name = "project/article_split.html"
+
+
+    @classmethod
+    def _get_breadcrumb_name(cls, kwargs, view):
+         return cls.url_fragment
     
     class form_class(forms.Form):
         add_to_new_set = forms.CharField(required=False) 
