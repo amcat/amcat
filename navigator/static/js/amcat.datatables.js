@@ -68,19 +68,19 @@ $.fn.dataTableExt.sErrMode = 'throw';
  *
  *  "aaSorting" : [["name", "desc"], ["id", "asc"]]
  */
-amcat.datatables.create_rest_table = function(cont, rest_url, optional_args){
+amcat.datatables.create_rest_table = function (cont, rest_url, optional_args) {
     var state = $.extend({
-        cont : $(cont).get(0),
-        rest_url : rest_url,
-        name : rest_url,
-        datatables_options : {},
+        cont: $(cont).get(0),
+        rest_url: rest_url,
+        name: rest_url,
+        datatables_options: {},
 
         // Metadata contains the json returned by the initial
         // OPTIONS call to rest_url.
-        metadata : null,
+        metadata: null,
 
         // Contains metadata of all sorts of types
-        metadatas : {
+        metadatas: {
             //  type : {} mapping for example:
             //
             //  article : {
@@ -89,7 +89,7 @@ amcat.datatables.create_rest_table = function(cont, rest_url, optional_args){
         },
 
         // Store fetched objects here
-        objects : {
+        objects: {
             // type : [] mapping. For example:
             //
             // article : [{
@@ -98,11 +98,11 @@ amcat.datatables.create_rest_table = function(cont, rest_url, optional_args){
         },
 
         // Contains jQuery table element
-        table : null,
+        table: null,
 
         // Contains fnServerData callbacks. It is an
         // sEcho : function mapping.
-        callbacks :  {}
+        callbacks: {}
     }, optional_args);
 
 
@@ -110,27 +110,27 @@ amcat.datatables.create_rest_table = function(cont, rest_url, optional_args){
     // REST API.
     $.extend(state.datatables_options, {
         "sAjaxSource": rest_url,
-        "sAjaxDataProp" : "results",
-        "fnServerData" : amcat.datatables.fnServerData.bind(state),
-        "bServerSide" : true,
-        "bStateSave" : true
+        "sAjaxDataProp": "results",
+        "fnServerData": amcat.datatables.fnServerData.bind(state),
+        "bServerSide": true,
+        "bStateSave": true
     });
 
     // Add our default options
     $.extend(state.datatables_options, _AMCAT_DEFAULT_OPTS, {
-        "sWidth" : "100%"
+        "sWidth": "100%"
     });
 
     console.log("Fetching OPTIONS for table: ", state.name);
 
     $.ajax({
-        dataType : "json",
-        type : "OPTIONS",
-        url : rest_url,
-        success : amcat.datatables.fetched_initial_success.bind(state),
-        error : amcat.datatables.fetched_initial_error.bind(state)
+        dataType: "json",
+        type: "OPTIONS",
+        url: rest_url,
+        success: amcat.datatables.fetched_initial_success.bind(state),
+        error: amcat.datatables.fetched_initial_error.bind(state)
     });
-}
+};
 
 /*
  * This function truncates all cells in the given row.
@@ -172,23 +172,22 @@ amcat.datatables.format = (function(){
 /*
  * Replace, in given results, all ids with labels.
  */
-amcat.datatables.put_labels = function(state, objects, fieldname){
+amcat.datatables.put_labels = function (state, objects, fieldname) {
     var labels = state.objects[fieldname];
 
     // Replace default properties with label properties. Append _id to
     // still keep id values.
-    for (var i in objects){
-        if (objects[i][fieldname] === null){
+    for (var i in objects) {
+        if (objects[i][fieldname] === null) {
             // Skip null fields (field with no label)
             continue;
-        };
-
+        }
         objects[i][fieldname] = amcat.datatables.format(
             state.metadatas[fieldname].label,
             labels[objects[i][fieldname]]
         );
     }
-}
+};
 
 /*
  * Handles new incoming labels. It stores them in the state, and calls
@@ -215,15 +214,15 @@ amcat.datatables.load_labels_success = function(labels, textStatus, jqXHR){
  * Return a boolean indicating if all needed metadatas
  * are present.
  */
-amcat.datatables.metadatas_loaded = function(state){
-    for (var fieldname in state.metadata.models){
-        if (state.metadatas[fieldname] === undefined){
+amcat.datatables.metadatas_loaded = function (state) {
+    for (var fieldname in state.metadata.models) {
+        if (state.metadatas[fieldname] === undefined) {
             return false;
         }
     }
-    
+
     return true;
-}
+};
 
 /*
  * Callback function for whenever an additional metadata call
@@ -329,8 +328,7 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
                 error : amcat.datatables.fetched_initial_error.bind(ctx)
             });
         }
-    };
-
+    }
     return fetching;
 };
 
@@ -341,9 +339,9 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
  */
 amcat.datatables.table_objects_received = function(data, textStatus, jqXHR){
     var callback = {
-        "args" : arguments,
-        "this" : this,
-    }
+        "args": arguments,
+        "this": this
+    };
 
     // Convert to datatables requirements
     data.iDisplayStart = (data.page - 1) * data.per_page;
@@ -360,8 +358,7 @@ amcat.datatables.table_objects_received = function(data, textStatus, jqXHR){
         // If load_metadatas is finished, it should call this function
         // again with the same arguments / this-value as it is now.
         return amcat.datatables.load_metadatas.bind(this)(callback);
-    };
-
+    }
     // Find out whether we need to fetch any labels.
     if (amcat.datatables.fetch_needed_labels.bind(this)(callback)){
         return;
@@ -412,7 +409,7 @@ amcat.datatables.get_order_by_query = function(aoData){
         prop = amcat.datatables._search_oa_props(aoData, _DPROP + col);
 
 	
-        if (dir === undefined | prop === undefined | col === undefined){
+        if (dir === undefined | prop === undefined || col === undefined){
             break;
         }
 
@@ -463,21 +460,21 @@ amcat.datatables.fnServerData = function(sSource, aoData, fnCallback){
  * documentation for more information. This currently renders the
  * properties aTargets, mData.
  */
-amcat.datatables.gen_aoColumnDefs = function(metadata){
+amcat.datatables.gen_aoColumnDefs = function (metadata) {
     var res = [], i = 0;
 
-    for (var fieldname in metadata.fields){
+    for (var fieldname in metadata.fields) {
         res.push({
-            aTargets : [fieldname],
-            mData : fieldname
+            aTargets: [fieldname],
+            mData: fieldname
             // TODO: Add sType
         });
-        
+
         i++;
     }
 
     return res;
-}
+};
 
 /*
  * Columns can either be defined in aoColumns or in
@@ -488,12 +485,12 @@ amcat.datatables.gen_aoColumnDefs = function(metadata){
  *
  * And returns an array of columndefs.
  */
-amcat.datatables.get_columns = function(opts){
+amcat.datatables.get_columns = function (opts) {
     var coldefs = {}, i = 0;
 
     // Process aoColumnDefs
-    $.each(opts.aoColumnDefs, function(i, coldef){
-        $.each(coldef.aTargets, function(i, target){
+    $.each(opts.aoColumnDefs, function (i, coldef) {
+        $.each(coldef.aTargets, function (i, target) {
             if (typeof target == "number") throw _TARGET_ERR;
 
             coldefs[target] = coldefs[target] || {};
@@ -502,30 +499,29 @@ amcat.datatables.get_columns = function(opts){
     });
 
     // Reset aTargets
-    $.each(coldefs, function(i, coldef){
+    $.each(coldefs, function (i, coldef) {
         coldef.aTargets = [coldef.mData];
     });
 
     // Process aoColumns
-    if (opts.aoColumns !== undefined){
-        $.each(opts.aoColumns, function(colnr, coldef){
-            if(coldef.mData === undefined || coldef.mData === null){
+    if (opts.aoColumns !== undefined) {
+        $.each(opts.aoColumns, function (colnr, coldef) {
+            if (coldef.mData === undefined || coldef.mData === null) {
                 throw _TARGET_ERR;
             }
 
             $.extend(true, coldefs[coldef.mData], coldef);
         });
-    };
-
+    }
     // Convert to list
     var res = [], coldef = null;
-    if (opts.aoColumns !== undefined){
+    if (opts.aoColumns !== undefined) {
         // Keep order of aoColumns (and ignore superfluous coldefs defined
         // in aoColumnDefs.
-        for (var i in opts.aoColumns){
+        for (var i in opts.aoColumns) {
             coldef = coldefs[opts.aoColumns[i].mData];
 
-            if (coldef === null || coldef === undefined){
+            if (coldef === null || coldef === undefined) {
                 coldef = opts.aoColumns[i];
                 coldef.aTargets = [coldef.mData];
             }
@@ -534,14 +530,14 @@ amcat.datatables.get_columns = function(opts){
         }
     } else {
         // No aoColumns defined. Display columns in (semi)random fashion.
-        for (var target in coldefs){
+        for (var target in coldefs) {
             res.push(coldefs[target]);
             delete coldefs[target].aTargets;
         }
     }
 
     return res;
-}
+};
 
 /*
  * Create table header element (tr).
@@ -577,16 +573,16 @@ amcat.datatables.create_table_element = function(opts){
 /*
  * This function is executed when the initial call to the api succeeds.
  */
-amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
+amcat.datatables.fetched_initial_success = function (data, textStatus, jqXHR) {
     this.metadata = data;
 
     // Do we need to manually calculate aoColumnDefs?
-    if (this.datatables_options.aoColumnDefs === undefined){
+    if (this.datatables_options.aoColumnDefs === undefined) {
         this.datatables_options.aoColumnDefs = [];
     }
 
     this.datatables_options.aoColumnDefs = amcat.datatables.gen_aoColumnDefs(data)
-                                                .concat(this.datatables_options.aoColumnDefs);
+        .concat(this.datatables_options.aoColumnDefs);
 
     // Merge aoColumnDefs / aoColumns
     this.datatables_options.aoColumns = amcat.datatables.get_columns(this.datatables_options);
@@ -599,10 +595,12 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
     this.table.attr("id", this.name);
 
     // Find out which columns to sort based on given aaSorting
-    $.each(this.datatables_options.aaSorting, (function(i, order){
-        $.each(this.datatables_options.aoColumns, function(columnr, column){
+    $.each(this.datatables_options.aaSorting, (function (i, order) {
+        $.each(this.datatables_options.aoColumns, function (columnr, column) {
             // Replace human-readable name with columnr
-            if(order[0] === column.mData){ order[0] = columnr; }
+            if (order[0] === column.mData) {
+                order[0] = columnr;
+            }
         });
     }).bind(this));
 
@@ -612,10 +610,10 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
 
     // Call callback funtion with our datatables object as its
     // argument.
-    if (this.setup_callback !== undefined && this.setup_callback !== null){
+    if (this.setup_callback !== undefined && this.setup_callback !== null) {
         this.setup_callback(tbl);
     }
-}
+};
 
 /*
  * This function is executed when the initial call to the api fails: it
@@ -623,12 +621,12 @@ amcat.datatables.fetched_initial_success = function(data, textStatus, jqXHR){
  *
  * TODO: Try again a few times before giving up.
  */
-amcat.datatables.fetched_initial_error = function(jqXHR, textStatus, errorThrown){
+amcat.datatables.fetched_initial_error = function (jqXHR, textStatus, errorThrown) {
     console.log(
-        "Could not load table: " + this['name'] + 
-        ". You can find debugging information in the console."
+        "Could not load table: " + this['name'] +
+            ". You can find debugging information in the console."
     );
 
     console.log([jqXHR, textStatus, errorThrown]);
-}
+};
 
