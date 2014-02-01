@@ -54,7 +54,8 @@ class AssignCodingJobForm(forms.Form):
     articleschema = forms.ModelChoiceField(None)
     insertuser = forms.ModelChoiceField(None)
     
-    def __init__(self, project=None, *args, **kwargs):
+    def __init__(self, project=None, skip_existing=False, *args, **kwargs):
+        self.skip_existing = skip_existing
         super(AssignCodingJobForm, self).__init__(*args, **kwargs)
 
         if not project:
@@ -70,8 +71,9 @@ class AssignCodingJobForm(forms.Form):
             del self.fields['insertuser']
 
     def clean_setname(self):
-        if ArticleSet.objects.filter(name__iexact=self.cleaned_data['setname']).exists():
-            raise forms.ValidationError("Set with this name already exists")
+        if not self.skip_existing:
+            if ArticleSet.objects.filter(name__iexact=self.cleaned_data['setname']).exists():
+                raise forms.ValidationError("Set with this name already exists")
 
         return self.cleaned_data
 
@@ -83,13 +85,22 @@ class AssignCodingJob(WebScript):
     output_template = None 
     is_edit = True
 
+    def __init__(self, skip_existing=False, *args,  **kwargs):
+        self.skip_existing = skip_existing
+        super(AssignCodingJob, self).__init__(*args, **kwargs)
+
     @classmethod
     def formHtml(cls, project=None):
-        form = AssignCodingJobForm(project)
+        form = AssignCodingJobForm(project=project)
         return render_to_string(cls.form_template, locals())
 
+    @classmethod
+    def get_called_with(cls, **called_with):
+        called_with["skip_existing"] = True
+        return called_with
+
     def get_form(self, **kwargs):
-        form = super(AssignCodingJob, self).get_form(**kwargs)
+        form = super(AssignCodingJob, self).get_form(skip_existing=self.skip_existing, **kwargs)
         self.data["insertuser"] = self.user.id
         return form
 

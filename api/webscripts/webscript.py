@@ -140,6 +140,13 @@ class WebScript(object):
     def run(self):
         raise NotImplementedError()
 
+    @classmethod
+    def get_called_with(cls, **called_with):
+        # This is called before Task calls __init__ in order to allow webscripts to change
+        # their arguments if needed. (Some parameters may be invalid after executing the
+        # script and may need changing.)
+        return called_with
+
     def get_result(self, result):
         # Webscripts return an HttpResponse object, which we need te contents of
         return result.content

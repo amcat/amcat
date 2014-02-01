@@ -24,10 +24,22 @@ from amcat.scripts.script import Script
 from amcat.tools import amcattest
 from amcat.models import Task
 from celery.task import task
+from api.webscripts.webscript import WebScript
 
 
 class _TestTaskScript(Script):
     pass
+
+class _TestTaskWebScript(WebScript):
+    def __init__(self, *args, **kwargs):
+        self._args = args
+        self._kwargs = kwargs
+        super(_TestTaskWebScript, self).__init__(*args, **kwargs)
+
+    @classmethod
+    def get_called_with(cls, **called_with):
+        called_with["test"] += 1
+        return called_with
 
 
 class TestTask(amcattest.AmCATTestCase):
@@ -48,4 +60,17 @@ class TestTask(amcattest.AmCATTestCase):
         user = amcattest.create_test_user()
         task = Task.objects.create(uuid="bar", task_name="foo", class_name="amcat.tests.test_task._TestTaskScript", user=user)
         self.assertEqual(_TestTaskScript.__name__, task.get_class().__name__)
+
+    def test_get_object(self):
+        user = amcattest.create_test_user()
+        task = Task.objects.create(
+            uuid="bar", task_name="foo", class_name="amcat.tests.test_task._TestTaskWebScript",
+            user=user, called_with='{"test":1,"data":{}}')
+
+        self.assertEqual(task.get_object()._kwargs["test"], 2)
+
+        # Test no raises
+        task = Task.objects.create(uuid="bar", task_name="foo", class_name="amcat.tests.test_task._TestTaskScript", user=user)
+        task.get_object()
+
 

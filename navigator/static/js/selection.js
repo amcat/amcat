@@ -337,22 +337,26 @@ amcat.selection.onFormSubmit = function(event){
 amcat.selection.loadIframe = function(data){ // this is the form submit response
     amcat.selection.hideMessage();
     $('iframe').hide();
-    
-    window.clearTimeout(amcat.selection.loadIframeTimeout);
-    
-    var json = {}
-    if (typeof data == "string") {
-        json_string = data;
-    } else {
-        json_string = $(this).contents().text();
-    }
 
-    try{
-        json = jQuery.parseJSON(json_string);
-    } catch(e){
-       $('iframe').show().css('width','900px').css('height','600px');
-       $('#select-result').html('<div class="error">Received an invalid JSON response</div>');
-       return;
+    window.clearTimeout(amcat.selection.loadIframeTimeout);
+
+    var json = data;
+    if (data.html === undefined){
+        json = {};
+        if (typeof data == "string") {
+            json_string = data;
+        } else {
+            json_string = $(this).contents().text();
+        }
+
+        try{
+            json = jQuery.parseJSON(json_string);
+        } catch(e){
+            $('iframe').show().css('width','900px').css('height','600px');
+            $('#select-result').html('<div class="error">Received an invalid JSON response</div>');
+            return;
+        }
+
     }
 
     if(json.html){

@@ -85,7 +85,8 @@ class Task(AmcatModel):
 
     def get_object(self):
         """Instantiate `class_name` with original arguments."""
-        return self.get_class()(**self.called_with)
+        cls = self.get_class()
+        return cls(**cls.get_called_with(**self.called_with))
 
     def revoke(self, **kwargs):
         """Revoke a task by preventing it from running on workers.
