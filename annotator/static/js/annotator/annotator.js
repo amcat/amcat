@@ -1044,7 +1044,7 @@ annotator = (function(self){
                 _html.addClass('new-paragraph');
             }
             if (s.get_unit() == '1.1') {
-                _html.append($('<h2 />').text(s.text));
+                _html.append($('<h2 />').text(s.sentence));
             } else {
                 _html.append($('<span />').addClass('annotator-sentencenr').text('(' + s.get_unit() + ') '));
                 _html.append(document.createTextNode(s.sentence));
