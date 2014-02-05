@@ -67,10 +67,8 @@ def save(request, project_id, codingjob_id, coded_article_id):
     coded_article.status_id = codings["coded_article"]["status_id"]
     coded_article.comments = codings["coded_article"]["comments"]
     coded_article.save()
+    coded_article.replace_codings(codings["codings"])
 
-    article_coding = codings["article_coding"]
-    sentence_codings = codings["sentence_codings"]
-    coded_article.replace_codings(itertools.chain([article_coding], sentence_codings))
     return HttpResponse(status=201)
 
 def redirect(request, codingjob_id):
