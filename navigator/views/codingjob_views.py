@@ -36,6 +36,7 @@ from django.utils.datastructures import SortedDict
 import datetime
 from django.http import HttpResponse
 import json
+from amcat.models import User
 
 class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = CodingJob
@@ -76,6 +77,14 @@ class CodingJobEditView(ProjectEditView):
     fields = ['project', 'name', 'coder', 'unitschema', 'articleschema']
     
 
+    def get_form(self, form_class):
+        form = super(CodingJobEditView, self).get_form(form_class)
+        form.fields['coder'].queryset = User.objects.filter(projectrole__project=self.project)
+        form.fields['unitschema'].queryset = self.project.get_codingschemas().filter(isarticleschema=False)
+        form.fields['articleschema'].queryset = self.project.get_codingschemas().filter(isarticleschema=True)
+        
+        return form
+        
 class CodingJobAddView(ProjectScriptView):
     parent = CodingJobListView
     script = AddCodingJob
