@@ -449,11 +449,15 @@ annotator = (function(self){
     self._add_row = function(properties){
         var active_row = self.get_active_row();
         var empty_coding = self.get_empty_coding(properties);
+        var new_active_row;
+
         self.state.sentence_codings.push(empty_coding);
         active_row.after(self.get_sentence_coding_html(empty_coding));
         self.set_tab_order();
-        active_row.next().find(".sentence").focus();
-        return active_row.next();
+
+        new_active_row = active_row.nextAll(".coding").first();
+        new_active_row.find(".sentence").focus();
+        return new_active_row;
     };
 
     /*
@@ -548,6 +552,42 @@ annotator = (function(self){
             words: sentence.split(/ +/),
             sentence: sentence
         };
+    };
+
+    self.get_new_coding_value = function(coding, codingschemafield){
+        return {
+            id : null,
+            coding : coding,
+            field : codingschemafield,
+            intval : null,
+            strval : null
+        }
+
+    };
+
+    /*
+     * This function is called after a widget-value has been changed. It updates the
+     * inner state to reflect the "outer" state (DOM).
+     */
+    self.set_coding_value = function(annotator_coding_id, codingschemafield_id, value){
+        var coding = self.state.codings[annotator_coding_id];
+        var codingvalue = coding.values[codingschemafield_id];
+        var codingschemafield = self.models.schemafields[codingschemafield_id];
+
+        // Create codingvalue if needed.
+        if (codingvalue === undefined){
+            coding.values[codingschemafield_id] = self.get_new_coding_value(coding, codingschemafield);
+            return self.set_coding_value(annotator_coding_id, codingschemafield_id, value);
+        }
+
+        codingvalue.intval = null;
+        codingvalue.strval = null;
+
+        if (typeof(value) === "number") {
+            codingvalue.intval = value;
+        } else if (typeof(value) === "string") {
+            codingvalue.strval = value;
+        }
     };
 
     /*
@@ -661,13 +701,11 @@ annotator = (function(self){
     /*
      * Returns 'minimised' version of given coding, which can easily be serialised.
      */
-    self.pre_serialise_coding = function(coding, codingvalues){
-        codingvalues = $.grep(codingvalues, function(v){ return v.coding == coding });
-
+    self.pre_serialise_coding = function(coding){
         return {
             start : coding.start, end : coding.end,
             sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
-            values : $.map(codingvalues, self.pre_serialise_codingvalue)
+            values : $.map(coding.values, self.pre_serialise_codingvalue)
         }
     };
 
@@ -712,14 +750,6 @@ annotator = (function(self){
 
         $(document.activeElement).blur().focus();
 
-        // Get codingvalues
-        var article_coding_values = widgets.get_coding_values(self.article_coding_container);
-        var sentence_coding_values = widgets.get_coding_values(self.sentence_codings_container);
-        sentence_coding_values = $.grep(sentence_coding_values, function(cv) { return cv.sentence !== null; });
-
-        // Get sentence codings (ignore codings without a sentence)
-        var sentence_codings = $.grep(self.state.sentence_codings, function(sc){ return sc.sentence !== null; })
-
         // Check whether we want to save.
         var validation = validate ? self.validate() : true;
         if (validation !== true){
@@ -730,10 +760,7 @@ annotator = (function(self){
         self.loading_dialog.text("Saving codings..").dialog("open");
         $.post("codedarticle/{0}/save".f(self.state.coded_article_id), JSON.stringify({
             "coded_article" : self.pre_serialise_coded_article(),
-            "article_coding" : self.pre_serialise_coding(self.state.article_coding, article_coding_values),
-            "sentence_codings" : $.map(sentence_codings, function(coding){
-                return self.pre_serialise_coding(coding, sentence_coding_values);
-            })
+            "codings" : $.map(self.state.codings, self.pre_serialise_coding)
         })).done(function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
 
@@ -902,14 +929,15 @@ annotator = (function(self){
 
     self.get_empty_coding = function(properties){
         var empty_coding = $.extend({
-            annotator_id: self.get_new_id(),
-            id: null,
             coded_article : self.state.coded_article,
             sentence: null,
             start: null,
-            end: null,
-            values : {} // Included to be consistent with AJAX data
-        }, properties);
+            end: null
+        }, properties, {
+            id: null,
+            annotator_id : self.get_new_id(),
+            values : {}
+        });
 
         self.state.codings[empty_coding.annotator_id] = empty_coding;
         return empty_coding;

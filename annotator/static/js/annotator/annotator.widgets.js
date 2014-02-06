@@ -47,10 +47,16 @@ widgets = (function(self){
         /*
          * Returns exactly one element which is henceforth known as a 'widget'. It is later
          * passed to get_value and set_value.
+         *
+         * Takes an extra argument _default_change which indicates whether the default
+         * procedure of notifying Annotator via set_coding_value shoudl be followed.
          */
-        get_html : function(schemafield, _intval){
+        get_html : function(schemafield, _intval, _type){
             var widget = $("<input>").addClass("codingvalue");
-            return (_intval) ? widget.attr("intval", self.EMPTY_INTVAL) : widget;
+            widget = (_intval) ? widget.attr("intval", self.EMPTY_INTVAL) : widget;
+            widget = widget.change(self[_type||"default"].change);
+
+            return widget;
         },
 
         /*
@@ -81,6 +87,12 @@ widgets = (function(self){
             } else {
                 widget.val(codingvalue.strval);
             }
+        },
+        change : function(){
+            annotator.set_coding_value(
+                $(this).closest("[annotator_coding_id]").attr("annotator_coding_id"),
+                $(this).closest("[schemafield_id]").attr("schemafield_id"), self.get_value($(this).closest(".widget"))
+            );
         }
     };
 
@@ -131,64 +143,68 @@ widgets = (function(self){
     /* BOOLEAN TYPE */
     self.boolean = $.extend({}, self.default, {
         get_html : function(){
-            return self.default.get_html(null, true).attr("type", "checkbox").change(function(){
-                $(this).attr("intval", $(this).prop("checked") ? 1 : 0);
-            });
+            return self.default.get_html(null, true, "boolean").attr("type", "checkbox");
         },
         set_value : function(widget, codingvalue){
             self.default.set_value(widget, codingvalue, true);
             widget.prop("checked", !!codingvalue.intval);
+        },
+        change : function(){
+            $(this).attr("intval", $(this).prop("checked") ? 1 : 0);
+            return self.default.change.bind(this)();
         }
     });
 
     /* NUMBER TYPE */
     self.number = $.extend({}, self.default, {
-        get_html : function(){
-            return self.default.get_html(null, true).attr("type", "number").change(function(){
-                var value = parseInt($(this).val());
-                $(this).attr("intval", isNaN(value) ? self.EMPTY_INTVAL : value);
-            });
+        get_html : function(_, _, _type){
+            return self.default.get_html(null, true, _type||"number").attr("type", "number");
         },
         set_value : function(widget, codingvalue){
             self.default.set_value(widget, codingvalue, true);
+        },
+        change : function(){
+            var value = parseInt($(this).val());
+            $(this).attr("intval", isNaN(value) ? self.EMPTY_INTVAL : value);
+            self.default.change.bind(this)();
         }
     });
 
     /* FROM AND TO TYPES. These are, together with sentence, special types. From / to encode
      * subsentences and highlight them. */
     self.from = $.extend({}, self.number, {
-        get_html : function(){
-            return self.number.get_html().attr("placeholder", "from..").removeClass("codingvalue").addClass("from").change(function(){
-                $(this).closest(".coding").trigger("sentence-changed");
-            });
+        get_html : function(_, _, _type){
+            return self.number.get_html(null, null, _type||"from").attr("placeholder", "from..").removeClass("codingvalue").addClass("from");
+        },
+        change : function(){
+            $(this).closest(".coding").trigger("sentence-changed");
         }
-
     });
 
     self.to = $.extend({}, self.from, {
         get_html : function(){
-            return self.from.get_html().removeClass("from").addClass("to").attr("placeholder", "to..");
+            return self.from.get_html(null, null, "to").removeClass("from").addClass("to").attr("placeholder", "to..");
         }
     });
 
     /* QUALITY TYPE */
     self.quality = $.extend({}, self.default, {
         get_html : function(){
-            var widget = self.default.get_html(null, true);
+            var widget = self.default.get_html(null, true, "quality");
 
             widget.attr("type", "number");
             widget.attr("step", 0.5).attr("min", -1).attr("max", 1);
-            widget.change(function(){
-                var target = $(this);
-                var value = parseFloat(target.val());
-                target.attr("intval", Math.round(value * 10));
-            });
-
             return widget;
         },
         set_value : function(widget, codingvalue){
             self.default.set_value(widget, codingvalue, true);
             $(widget).val(codingvalue.intval / 10)
+        },
+        change : function(){
+            var target = $(this);
+            var value = parseFloat(target.val());
+            target.attr("intval", Math.round(value * 10));
+            return self.default.change.bind(this)();
         }
 
     });
@@ -216,12 +232,13 @@ widgets = (function(self){
                     hidden.trigger("change");
                 });
 
+                hidden.change(self.default.change.bind(hidden));
                 html.append(root).append(descendant).append(hidden);
             } else {
                 var input = $("<input>").attr("intval", self.EMPTY_INTVAL).addClass("codingvalue");
                 autocomplete.set(input, schemafield.choices);
                 html.append(input);
-
+                input.change(self.default.change.bind(input));
             }
 
             return html;
