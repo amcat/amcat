@@ -829,6 +829,9 @@ annotator = (function(self){
     self.coded_article_fetched = function(coded_article, codings, sentences){
         console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
 
+        $("#lost-codes").hide();
+        $("#lost-codes .triggered-by").empty();
+
         $.each(codings[0].results, function(i, coding){
             coding.annotator_id = self.get_new_id();
         });
@@ -1223,6 +1226,8 @@ annotator = (function(self){
     };
 
     self.initialise = function(project_id, codingjob_id, coder_id, language_id){
+        $("#lost-codes").hide();
+
         self.project_id = project_id;
         self.codingjob_id = codingjob_id;
         self.coder_id = coder_id;

@@ -250,6 +250,27 @@ widgets = (function(self){
             var schemafield = annotator.models.schemafields[widget.attr("schemafield_id")];
             var code = schemafield.codebook.codes[codingvalue.intval];
 
+
+            if (code === undefined){
+                // Remove current value
+                codingvalue.intval = null;
+                self.default.set_value(widget, codingvalue, true);
+
+                // Show an error message
+                var lost_codes = $("#lost-codes").show();
+                var triggered_by = $(".triggered-by", lost_codes);
+
+                if (!$("[schemafield_id={0}]".f(schemafield.id), triggered_by).length){
+                    triggered_by.append(
+                        $("<li>")
+                            .text("{0} (with code_id {1})".f(schemafield.label, codingvalue.intval))
+                            .attr("schemafield_id", schemafield.id)
+                    );
+                }
+
+                return;
+            }
+
             var find_code = function(code){
                 return function(choice){
                     return choice.get_code() == code;
