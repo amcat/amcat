@@ -698,14 +698,20 @@ annotator = (function(self){
         return true;
     };
 
+    self.is_nonempty_codingvalue = function(cv){
+        return !(cv.intval === null && cv.strval === null);
+    };
+
     /*
      * Returns 'minimised' version of given coding, which can easily be serialised.
      */
     self.pre_serialise_coding = function(coding){
+        var constant = function(el){ return el; }
+
         return {
             start : coding.start, end : coding.end,
             sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
-            values : $.map(coding.values, self.pre_serialise_codingvalue)
+            values : $.map($.grep($.map(coding.values, constant), self.is_nonempty_codingvalue), self.pre_serialise_codingvalue)
         }
     };
 
