@@ -470,11 +470,13 @@ annotator = (function(self){
 
         // Add new (empty) coding
         var new_row = self._add_row(active_coding);
+        var new_coding = self.state.codings[new_row.attr("annotator_coding_id")];
         var new_widgets = $(".widget", new_row);
 
         // Copy codingvalues to new row
         $.each($(".widget", active_row), function(i, widget){
             var coding_value = widgets.get_codingvalue(active_coding, active_coding.sentence, $(widget));
+            new_coding.values[coding_value.field.id] = coding_value;
             widgets.set_value($(new_widgets.get(i)), coding_value);
         });
     };
