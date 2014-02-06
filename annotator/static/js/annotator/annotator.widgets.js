@@ -252,10 +252,6 @@ widgets = (function(self){
 
 
             if (code === undefined){
-                // Remove current value
-                codingvalue.intval = null;
-                self.default.set_value(widget, codingvalue, true);
-
                 // Show an error message
                 var lost_codes = $("#lost-codes").show();
                 var triggered_by = $(".triggered-by", lost_codes);
@@ -267,6 +263,10 @@ widgets = (function(self){
                             .attr("schemafield_id", schemafield.id)
                     );
                 }
+
+                // Remove current value
+                codingvalue.intval = null;
+                self.default.set_value(widget, codingvalue, true);
 
                 return;
             }
