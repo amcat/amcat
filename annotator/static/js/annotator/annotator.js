@@ -470,11 +470,13 @@ annotator = (function(self){
 
         // Add new (empty) coding
         var new_row = self._add_row(active_coding);
+        var new_coding = self.state.codings[new_row.attr("annotator_coding_id")];
         var new_widgets = $(".widget", new_row);
 
         // Copy codingvalues to new row
         $.each($(".widget", active_row), function(i, widget){
             var coding_value = widgets.get_codingvalue(active_coding, active_coding.sentence, $(widget));
+            new_coding.values[coding_value.field.id] = coding_value;
             widgets.set_value($(new_widgets.get(i)), coding_value);
         });
     };
@@ -698,14 +700,20 @@ annotator = (function(self){
         return true;
     };
 
+    self.is_nonempty_codingvalue = function(cv){
+        return !(cv.intval === null && cv.strval === null);
+    };
+
     /*
      * Returns 'minimised' version of given coding, which can easily be serialised.
      */
     self.pre_serialise_coding = function(coding){
+        var constant = function(el){ return el; }
+
         return {
             start : coding.start, end : coding.end,
             sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
-            values : $.map(coding.values, self.pre_serialise_codingvalue)
+            values : $.map($.grep($.map(coding.values, constant), self.is_nonempty_codingvalue), self.pre_serialise_codingvalue)
         }
     };
 
@@ -820,6 +828,9 @@ annotator = (function(self){
 
     self.coded_article_fetched = function(coded_article, codings, sentences){
         console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
+
+        $("#lost-codes").hide();
+        $("#lost-codes .triggered-by").empty();
 
         $.each(codings[0].results, function(i, coding){
             coding.annotator_id = self.get_new_id();
@@ -1215,6 +1226,8 @@ annotator = (function(self){
     };
 
     self.initialise = function(project_id, codingjob_id, coder_id, language_id){
+        $("#lost-codes").hide();
+
         self.project_id = project_id;
         self.codingjob_id = codingjob_id;
         self.coder_id = coder_id;
