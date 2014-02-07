@@ -780,6 +780,11 @@ annotator = (function(self){
 
         $(document.activeElement).blur().focus();
 
+        // Set status to 'in progress' if current status is 'not started'
+        if (self.state.coded_article.status == self.STATUS.NOT_STARTED){
+            self.set_status(self.STATUS.IN_PROGRESS);
+        }
+
         // Check whether we want to save.
         var validation = validate ? self.validate() : true;
         if (validation !== true){
@@ -808,7 +813,7 @@ annotator = (function(self){
         }).error(error_callback);
     };
 
-    self.set_state = function(state){
+    self.set_status = function(state){
         self.article_status_dropdown.val(state);
         self.article_status_dropdown.trigger("change");
     };
@@ -818,12 +823,12 @@ annotator = (function(self){
     };
 
     self.finish_and_continue = function(){
-        self.set_state(self.STATUS.COMPLETE);
+        self.set_status(self.STATUS.COMPLETE);
         self.save_and_continue();
     };
 
     self.irrelevant_and_continue = function () {
-        self.set_state(self.STATUS.IRRELEVANT);
+        self.set_status(self.STATUS.IRRELEVANT);
         self.save_and_continue();
     };
 
