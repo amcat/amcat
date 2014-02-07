@@ -115,6 +115,7 @@ annotator = (function(self){
     self.codingjob_id = -1;
     self.project_id = -1;
     self.coder_id = -1;
+    self.unsaved = false;
 
     self.dialog_ok = {
         OK : function(){
@@ -169,7 +170,26 @@ annotator = (function(self){
         $(window).trigger("resize");
     };
 
+    self.show_unsaved_changes = function(continue_func){
+        var save_btn = $(".save", self.unsaved_modal);
+        var discard_btn = $(".discard", self.unsaved_modal);
+
+        save_btn.unbind().click(function(){
+            self.save({ success_callback : continue_func });
+            self.unsaved_modal.modal("hide");
+        });
+
+        discard_btn.unbind().click(function(){
+            self.unsaved_modal.modal("hide");
+            self.unsaved = false;
+            continue_func();
+        });
+
+        self.unsaved_modal.modal("show");
+    };
+
     self.initialise_dialogs = function(){
+        self.unsaved_modal = $("#unsaved-changes").modal({ show : false });
         self.loading_dialog = $("<div>Loading..</div>").dialog(self.dialog_defaults);
         self.message_dialog = $("#message-dialog").dialog(self.dialog_defaults);
         self.width_warning_dialog = $("<div>{0}</div>".f(self.width_warning)).dialog(self.dialog_defaults);
@@ -590,6 +610,8 @@ annotator = (function(self){
         } else if (typeof(value) === "string") {
             codingvalue.strval = value;
         }
+
+        self.unsaved = true;
     };
 
     /*
@@ -772,6 +794,9 @@ annotator = (function(self){
         })).done(function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
 
+            // Reset 'unsaved' state
+            self.unsaved = false;
+
             // Change article status in table
             var td_index = self.article_table_container.find("thead th:contains('status')").index();
             var current_row = self.article_table_container.find("tr.row_selected");
@@ -850,6 +875,7 @@ annotator = (function(self){
             });
         });
 
+        self.unsaved = false;
         self.state.sentences = sentences;
         self.state.codings = codings;
         self.state.coded_article = coded_article[0];
@@ -1143,6 +1169,12 @@ annotator = (function(self){
     };
 
     self.datatables_row_clicked = function(row){
+        if(self.unsaved){
+            return self.show_unsaved_changes((function(){
+                self.datatables_row_clicked.bind(this)(row);
+            }).bind(this));
+        }
+
         // Get article id which is stored in the id-column of the datatable
         var coded_article_id = parseInt(row.children('td:first').text());
         self.datatable.find(".row_selected").removeClass("row_selected");
@@ -1225,6 +1257,11 @@ annotator = (function(self){
         });
     };
 
+    self.on_unload = function(){
+        if (!self.unsaved) return;
+        return "You have unsaved changes. Continue?"
+    };
+
     self.initialise = function(project_id, codingjob_id, coder_id, language_id){
         $("#lost-codes").hide();
 
@@ -1239,6 +1276,8 @@ annotator = (function(self){
         self.initialise_shortcuts();
         self.initialise_fields();
         self.initialise_wordcount();
+
+        window.onbeforeunload = self.on_unload;
     };
 
 
