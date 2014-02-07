@@ -799,6 +799,13 @@ annotator = (function(self){
         })).done(function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
 
+            $.pnotify({
+                "title" : "Done",
+                "text" : "Codings saved succesfully.",
+                "type" : "success",
+                "delay" : 500
+            });
+
             // Reset 'unsaved' state
             self.unsaved = false;
 
@@ -834,7 +841,7 @@ annotator = (function(self){
 
     self._select = function(row){
         if (row.length === 0){
-            self.loading_dialog.text("Coding done!");
+            self.loading_dialog.text("Last article reached, coding done!").dialog("open");
             return;
         }
 
