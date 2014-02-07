@@ -18,7 +18,7 @@
 ###########################################################################
 from rest_framework import serializers
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from amcat.models import Sentence, CodedArticle, Article
+from amcat.models import Sentence, CodedArticle, Article, Medium
 from amcat.tools import amcattest
 from amcat.tools.caching import cached
 from api.rest.resources.amcatresource import DatatablesMixin
@@ -37,6 +37,11 @@ def article_property(property_name):
         return getattr(self.get_article(coded_article), property_name)
     return inner
 
+# Hack class to allow queryset to be set, which in turn allows the metadata (OPTIONS) generator
+# to include this field in its models-property.
+class PseudoSerializerMethodField(serializers.SerializerMethodField):
+    queryset = Medium.objects.none()
+
 class CodedArticleSerializer(AmCATModelSerializer):
     model = CodedArticle
 
@@ -45,12 +50,18 @@ class CodedArticleSerializer(AmCATModelSerializer):
     pagenr = serializers.SerializerMethodField("get_pagenr")
     length = serializers.SerializerMethodField("get_length")
     article_id = serializers.SerializerMethodField("get_article_id")
+    medium = PseudoSerializerMethodField("get_medium")
 
     get_headline = article_property("headline")
     get_date = article_property("date")
     get_pagenr = article_property("pagenr")
     get_length = article_property("length")
     get_article_id = article_property("id")
+
+    @classmethod
+    def get_metadata_field_name(self, field):
+        if hasattr(field, "method_name") and field.method_name is self.base_fields["medium"].method_name:
+            return "ModelChoiceField"
 
     def _get_coded_articles(self):
         view = self.context["view"]
@@ -65,6 +76,9 @@ class CodedArticleSerializer(AmCATModelSerializer):
 
     def get_article(self, coded_article):
         return self._get_articles().get(coded_article.article_id)
+
+    def get_medium(self, coded_article):
+        return self.get_article(coded_article).medium_id
 
     class Meta:
         model = CodedArticle

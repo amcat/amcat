@@ -58,8 +58,8 @@ autocomplete = (function(self){
             })[0].descendant_choices;
         }
 
-        // Only display first 20 results (for performance)
-        return callback($.ui.autocomplete.filter(choices, request.term).slice(0, 20));
+        // Only display first 100 results (for performance)
+        return callback($.ui.autocomplete.filter(choices, request.term).slice(0, 100));
     };
 
     /*

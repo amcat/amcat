@@ -33,13 +33,15 @@ class ClassProperty(property):
     def __get__(self, cls, owner):
         return self.fget.__get__(None, owner)()
 
+_field_name_map = {
+    "PrimaryKeyRelatedField" : "ModelChoiceField",
+    "ManyPrimaryKeyRelatedField" : "ModelMultipleChoiceField"
+}
 
 def _get_field_name(field):
     "Return the field name to report in OPTIONS (for datatables)"
     n = field.__class__.__name__
-    return dict(PrimaryKeyRelatedField='ModelChoiceField',
-                ManyPrimaryKeyRelatedField='ModelMultipleChoiceField',
-                ).get(n,n)
+    return _field_name_map.get(n, n)
 
 class AmCATMetadataMixin(object):
     """Give the correct metadata for datatables"""
@@ -49,18 +51,30 @@ class AmCATMetadataMixin(object):
             label=getattr(cls.model, '__label__', 'label')
         )
 
+    def get_metadata_fields(self):
+        serializer = self.get_serializer()
+        for name, field in serializer.get_fields().iteritems():
+            field_name = None
+            if hasattr(serializer, "get_metadata_field_name"):
+                field_name = serializer.get_metadata_field_name(field)
+
+            if not field_name:
+                field_name = _get_field_name(field)
+
+            yield (name, field_name)
+
     def metadata(self, request):
         """This is used by the OPTIONS request; add models, fields, and label for datatables"""
         metadata = super(AmCATMetadataMixin, self).metadata(request)
         metadata['label'] = self.get_label()
         grfm = api.rest.resources.get_resource_for_model
+
+        serializer = self.get_serializer()
         metadata['models'] = {name : grfm(field.queryset.model).get_url()
-                              for (name, field) in self.get_serializer().get_fields().iteritems()
+                              for (name, field) in serializer.get_fields().iteritems()
                               if hasattr(field, 'queryset')}
 
-        metadata['fields'] = {name : _get_field_name(field)
-                              for (name, field) in  self.get_serializer().get_fields().iteritems()}
-
+        metadata["fields"] = dict(self.get_metadata_fields())
         metadata['filter_fields'] = list(self.get_filter_fields())
 
         return metadata

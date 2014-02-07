@@ -46,7 +46,7 @@
             var jqueryElement = $('#article-table-container');
             var url = "{% url "codedarticle-list" project.id codingjob.id %}";
             var columns = [], column_order = [
-                "id", "article_id", "headline", "date", "pagenr",
+                "id", "article_id", "headline", "medium", "date", "pagenr",
                 "length", "status", "comments"
             ];
 
@@ -164,6 +164,25 @@
     <h4>Supported Browsers</h4>
     <p>AmCAT Annotator is tested with the latest versions of Mozilla Firefox, Google Chrome and Internet Explorer.<br />
     Internet Explorer 6, 7, 8 are not recommended.</p>
+</div>
+
+<div id="unsaved-changes" class="modal fade">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Unsaved changes</h4>
+      </div>
+      <div class="modal-body">
+        <p>There are unsaved changes pending. Please choose one of the following options:</p>
+      </div>
+      <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-warning discard">Discard</button>
+          <button type="button" class="btn btn-primary save"><i class="glyphicon glyphicon-floppy-disk"></i> Save</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 
