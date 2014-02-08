@@ -806,6 +806,9 @@ annotator = (function(self){
                 "delay" : 500
             });
 
+            self.set_column_text("status", self.STATUS_TEXT[self.state.coded_article.status]);
+            self.set_column_text("comments", self.state.coded_article.comments);
+
             // Reset 'unsaved' state
             self.unsaved = false;
 
@@ -1161,23 +1164,18 @@ annotator = (function(self){
         });
     };
 
+    /*
+     * Change the contents of the column with `column_name` in the currently active row.
+     */
+    self.set_column_text = function(column_name, value){
+        var column = self.article_table_container.find("thead").find("th:contains('{0}')".f(column_name));
+        var column_index = column.parent().children().index(column);
+        var cell = self.article_table_container.find("tr.row_selected").children(":eq({0})".f(column_index));
+        cell.text(value);
+    };
+
     self.article_status_changed = function(){
         self.state.coded_article.status = parseInt($(this).val());
-
-        // Update article table. This is fugly, sorry..
-        var status_column = self.article_table_container.find("thead").find("td:contains('status')");
-        var status_column_index = status_column.parent().children().index(status_column);
-        var status_cell = self.article_table_container.find("tr.row_selected").children(":eq({0})".f(status_column_index-1));
-
-        var status_text;
-        $.each(self.STATUS, function(text, id){
-            if (self.state.article_coding.status === id){
-                status_text = text;
-                return false;
-            }
-        });
-
-        status_cell.text(status_text);
     };
 
     self.datatables_row_clicked = function(row){
