@@ -61,7 +61,7 @@
 	var settings = {
 		'highlightClass' : 'highlight',
 		'partial' : true,
-		'lenient' : false,
+		'lenient' : true,
 	};
 
 	var methods = {
