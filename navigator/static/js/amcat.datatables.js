@@ -117,7 +117,7 @@ amcat.datatables.create_rest_table = function (cont, rest_url, optional_args) {
     });
 
     // Add our default options
-    $.extend(state.datatables_options, _AMCAT_DEFAULT_OPTS, {
+    state.datatables_options = $.extend(_AMCAT_DEFAULT_OPTS, state.datatables_options, {
         "sWidth": "100%"
     });
 
