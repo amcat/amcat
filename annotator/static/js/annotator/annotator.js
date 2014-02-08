@@ -139,6 +139,7 @@ annotator = (function(self){
         self.article_status_dropdown = $("#article-status").change(self.article_status_changed);
         self.article_comment_textarea = $("#article-comment").change(function(){
             self.state.coded_article.comments = $(this).val();
+            self.unsaved = true;
         });
     };
 
@@ -1176,6 +1177,7 @@ annotator = (function(self){
 
     self.article_status_changed = function(){
         self.state.coded_article.status = parseInt($(this).val());
+        self.unsaved = true;
     };
 
     self.datatables_row_clicked = function(row){
