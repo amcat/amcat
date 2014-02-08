@@ -152,7 +152,6 @@ annotator = (function(self){
         self.irrelevant_btn = $("#irrelevant-button");
         self.copy_btn = $("#copy-coding-button");
         self.delete_btn = $("#delete-button");
-        self.help_btn = $("#help-button");
 
         self.next_btn.click(self.select_next_article);
         self.prev_btn.click(self.select_prev_article);
@@ -162,7 +161,6 @@ annotator = (function(self){
         self.irrelevant_btn.click(self.irrelevant_and_continue);
         self.copy_btn.click(self.copy);
         self.delete_btn.click(self.delete);
-        self.help_btn.click(function(){ self.help_dialog.dialog("open"); });
 
         $(".coding-part").hide();
         $(".sentence-options").hide();
@@ -195,7 +193,6 @@ annotator = (function(self){
         self.message_dialog = $("#message-dialog").dialog(self.dialog_defaults);
         self.width_warning_dialog = $("<div>{0}</div>".f(self.width_warning)).dialog(self.dialog_defaults);
         self.save_dialog = $("#dialog-save").dialog(self.dialog_defaults);
-        self.help_dialog = $("#dialog-help").dialog($.extend({}, self.dialog_defaults, { width: 500 }));
         self.delete_row_dialog = $("#dialog-confirm-delete-row").dialog($.extend({}, self.dialog_defaults, {
             buttons: {
                 "Delete row": function(){
