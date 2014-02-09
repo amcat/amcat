@@ -139,7 +139,7 @@ annotator = (function(self){
         self.article_status_dropdown = $("#article-status").change(self.article_status_changed);
         self.article_comment_textarea = $("#article-comment").change(function(){
             self.state.coded_article.comments = $(this).val();
-            self.unsaved = true;
+            self.set_unsaved();
         });
     };
 
@@ -162,11 +162,15 @@ annotator = (function(self){
         self.copy_btn.click(self.copy);
         self.delete_btn.click(self.delete);
 
-        $(".coding-part").hide();
+        $("#editor").hide();
         $(".sentence-options").hide();
-        $(window).scroll(self.window_scrolled);
-        $(window).resize(self.window_resized);
-        $(window).trigger("resize");
+    };
+
+    self.set_unsaved = function (bool) {
+        self.unsaved = (bool === undefined) ? true : bool;
+        var icon = $("#save-button").find(".glyphicon");
+        icon.removeClass("glyphicon-floppy-disk glyphicon-floppy-saved");
+        icon.addClass("glyphicon-floppy-" + ((self.unsaved) ? "disk" : "saved"));
     };
 
     self.show_unsaved_changes = function(continue_func){
@@ -187,9 +191,18 @@ annotator = (function(self){
         self.unsaved_modal.modal("show");
     };
 
+    self.show_loading = function(text){
+        self.loading_dialog.find(".modal-body p").text(text);
+        self.loading_dialog.modal("show");
+    };
+
+    self.hide_loading = function(){
+        self.loading_dialog.modal("hide");
+    }
+
     self.initialise_dialogs = function(){
         self.unsaved_modal = $("#unsaved-changes").modal({ show : false });
-        self.loading_dialog = $("<div>Loading..</div>").dialog(self.dialog_defaults);
+        self.loading_dialog = $("#loading").modal({show : false, keyboard : false});
         self.message_dialog = $("#message-dialog").dialog(self.dialog_defaults);
         self.width_warning_dialog = $("<div>{0}</div>".f(self.width_warning)).dialog(self.dialog_defaults);
         self.save_dialog = $("#dialog-save").dialog(self.dialog_defaults);
@@ -268,7 +281,7 @@ annotator = (function(self){
 
 
     self.initialise_fields = function(){
-        self.loading_dialog.text("Loading fields..").dialog("open");
+        self.show_loading("Loading fields..")
 
         self._requests = [
             self.from_api(self.get_api_url()),
@@ -326,7 +339,7 @@ annotator = (function(self){
                 self.schemafields_fetched();
                 self.initialise_sentence_codings_table();
                 self.setup_wordcount();
-                self.loading_dialog.dialog("close");
+                self.hide_loading();
             }
         );
 
@@ -609,7 +622,7 @@ annotator = (function(self){
             codingvalue.strval = value;
         }
 
-        self.unsaved = true;
+        self.set_unsaved();
     };
 
     /*
@@ -790,12 +803,12 @@ annotator = (function(self){
         }
 
         // Send coding values to server
-        self.loading_dialog.text("Saving codings..").dialog("open");
+        self.show_loading("Saving codings..");
         $.post("codedarticle/{0}/save".f(self.state.coded_article_id), JSON.stringify({
             "coded_article" : self.pre_serialise_coded_article(),
             "codings" : $.map(self.state.codings, self.pre_serialise_coding)
         })).done(function(data, textStatus, jqXHR){
-            self.loading_dialog.dialog("close");
+            self.hide_loading();
 
             $.pnotify({
                 "title" : "Done",
@@ -808,7 +821,7 @@ annotator = (function(self){
             self.set_column_text("comments", self.state.coded_article.comments);
 
             // Reset 'unsaved' state
-            self.unsaved = false;
+            self.set_unsaved(false);
 
             // Change article status in table
             var td_index = self.article_table_container.find("thead th:contains('status')").index();
@@ -888,7 +901,7 @@ annotator = (function(self){
             });
         });
 
-        self.unsaved = false;
+        self.set_unsaved(false);
         self.state.sentences = sentences;
         self.state.codings = codings;
         self.state.coded_article = coded_article[0];
@@ -912,13 +925,13 @@ annotator = (function(self){
         $('#article-status').find('option:contains("' + coded_article.status + '")').attr("selected", "selected");
 
         // Initialise coding area
-        $(".coding-part").show();
+        $("#editor").show();
         self.sentences_fetched(sentences);
         self.highlight();
         self.codings_fetched();
         self.set_tab_order();
 
-        self.loading_dialog.dialog("close");
+        self.hide_loading();
 
         var container = (self.codingjob.articleschema === null) ? self.sentence_codings_container : self.article_coding_container;
         container.find("input:visible").first().focus();
@@ -949,7 +962,7 @@ annotator = (function(self){
             self.from_api(base_url + "sentences")
         ];
 
-        self.loading_dialog.text("Loading codings..").dialog("open");
+        self.show_loading("Loading codings..");
         $.when.apply(undefined, self.state.requests).then(self.coded_article_fetched);
     };
 
@@ -1190,15 +1203,6 @@ annotator = (function(self){
         self.datatable.parent().scrollTo(row, {offset: -50});
         self.get_article(coded_article_id);
         row.addClass("row_selected");
-    };
-
-    self.window_scrolled = function(){
-        if ($(window).scrollTop() < 85){
-            self.article_container.css("position", "absolute");
-        } else {
-            self.article_container.css("position", "fixed");
-            self.article_container.css("top", "5px");
-        }
     };
 
     self.window_resized = function(){

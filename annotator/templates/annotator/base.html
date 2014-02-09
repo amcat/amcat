@@ -1,49 +1,113 @@
 {% load compress %}
 {% load staticfiles %}
-<!DOCTYPE html>
-<html>
- <head>
-  <title>{% block title %}AmCAT Annotator 3{% endblock %}</title>
-  
-  <link rel="shortcut icon" href="{{ MEDIA_URL }}img/amcat/favicon.png">
 
-  <!--  CSS -->
-  {% compress css %}
-  <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
-  <link href="{% static 'css/base.css' %}" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{% static 'css/datatables.css' %}" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{% static 'css/annotator.css' %}" rel="stylesheet" type="text/css" media="screen" />
-  <link href="{% static 'css/jquery.pnotify.default.css' %}" media="all" rel="stylesheet" type="text/css" />
-  {% endcompress %}
-  {% block css %}{% endblock %}
-  
-  <!--  Javascript -->
-  <script type="text/javascript" src="{% static 'js/annotator/jquery-1.9.1.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/jquery-ui-1.10.3.custom.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/jquery.dataTables.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/jquery.scrollTo-1.4.2-min.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/jquery.hotkeys.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/jquery.easyMark.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/functional.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/annotator.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/annotator.utils.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/annotator.widgets.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/annotator.rules.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/annotator/annotator.autocomplete.js' %}"></script>
-  <script type="text/javascript" src="{% static 'js/jquery.pnotify.min.js' %}"></script>
-  {% block javascript %}{% endblock %}
- </head>
- <body>
-    <div id="message-wrap">
-     {% block message %}{% endblock %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>{% block title %}AmCAT Annotator 3{% endblock %}</title>
+
+    <!-- Custom styles for this template -->
+      {% compress css %}
+          <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
+          <link href="{% static 'css/datatables.css' %}" rel="stylesheet" type="text/css" media="screen" />
+          <link href="{% static 'css/annotator.css' %}" rel="stylesheet" type="text/css" media="screen" />
+          <link href="{% static 'css/jquery.pnotify.default.css' %}" media="all" rel="stylesheet" type="text/css" />
+          <link href="{% static 'css/dashboard.css' %}" rel="stylesheet" type="text/css">
+      {% endcompress %}
+      {% block css %}{% endblock %}
+
+      <!--  Javascript -->
+      <script type="text/javascript" src="{% static 'js/annotator/jquery-1.9.1.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/jquery-ui-1.10.3.custom.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/jquery.dataTables.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/jquery.scrollTo-1.4.2-min.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/jquery.hotkeys.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/jquery.easyMark.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/functional.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/annotator.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/annotator.utils.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/annotator.widgets.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/annotator.rules.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/annotator/annotator.autocomplete.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/jquery.pnotify.min.js' %}"></script>
+      {% block javascript %}{% endblock %}
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">{{ codingjob.id }}. {{ codingjob.name }}</a>
+        </div>
+        <div class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="{% url 'codingjobs' %}">Overview</a></li>
+            <li><a data-toggle="modal" data-target="#help-dialog" href="#">Help</a></li>
+          </ul>
+          <form class="navbar-form navbar-right">
+            <input type="text" class="form-control" placeholder="Search...">
+          </form>
+        </div>
+      </div>
     </div>
-   <div id="content">
-    {% block content %}<p>Not yet implemented.</p>{% endblock %}
-   </div>
- </body>
+
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-sm-3 col-sm-offset-9 col-md-3 sidebar">
+            <article>{% block article %}No article loaded yet.{% endblock %}</article>
+        </div>
+        <div id="content" class="col-sm-9 col-md-9 main">
+          {% block content %}{% endblock %}
+        </div>
+      </div>
+    </div>
+
+    <div class="modal fade" id="help-dialog">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">Keyboard shortcuts</h4>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered">
+                        <tr><th>Key</th><th>Explanation</th></tr>
+                        <tr><td>CTRL + S</td><td>Save</td></tr>
+                        <tr><td>CTRL + D</td><td>Set to complete, save and continue</td></tr>
+                        <tr><td>CTRL + I</td><td>Set to irrelevant, save and continue.</td></tr>
+                        <tr><td>ESCAPE</td><td>Close a dialog</td></tr>
+                        <tr><td>CTRL + ↓</td><td>Add new row in sentence codings table, copying current sentence.</td></tr>
+                        <tr><td>CTRL + SHIFT + ↓</td><td>Add new row in sentence codings table, increase sentencenr by one.</td></tr>
+                        <tr><td>SHIFT + ↓</td><td>Copy current row.</td></tr>
+                        <tr><td>CTRL + SHIFT + d</td><td>Remove row in sentence codings table</td></tr>
+                    </table>
+                    <br>
+                    <h4>Supported Browsers</h4>
+                    <p>AmCAT Annotator is tested with the latest versions of Mozilla Firefox, Google Chrome and Internet Explorer.
+                        Internet Explorer 6 through 10 are not recommended.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+  </body>
 </html>
+

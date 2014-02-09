@@ -20,86 +20,25 @@
 */
 
 body{
-    background-image:none; /* overwrite value from base.css */
+    overflow-x:hidden;
 }
 
-#content{
-    /* overwrite values from base.css */
-    margin-left:5px;
-    width:100%;
-    float:none;
-    position:inline;
-    margin-right:0px;
-}
-
-html {
-    overflow-y: scroll;
-}
-
-#warning{
-    color:red;
-    position:absolute;
-    top:15px;
-    left:550px;
-}
-
-.annotator-content{
-    width:99%;
-    padding:10px 5px;
+#content .row{
+    margin-bottom:10px;
 }
 
 
-.dataTables_wrapper{
-    border: 1px solid gray;
-}
-
-.articlelist-part{
-    overflow-x: scroll;
-    width:69%;
-    background:white;
-    margin-bottom:20px;
-}
-
-.coding-part{
-
-    overflow-x: scroll;
-    width:69%;
-    background:white;
-    
-    max-width:69%;
-   
-}
-
-article{
-    width:29%;
-    background:white;
-    position:absolute;
-    right:10px;
-    height:90%;
+.mark{
+    float:right;
 }
 
 .highlight{
     background-color:yellow;
 }
 
-.sentences{
-    overflow-y:auto;
-    height:100%;
-}
-
-
 h2{
     font-size:15px;
     margin: 5px;
-}
-
-.coding-table{
-    font-size:11px;
-    text-align:left;
-}
-
-.coding-table input{
-    font-size:11px;
 }
 
 .sentence{
@@ -110,26 +49,8 @@ h2{
     color:gray;
 }
 
-.articlelist-part h2{
-    float:left;
-    width:50%;
-}
-
 .article-list-toolbar{
     float:right;
-    width:350px;
-    text-align:right;
-}
-
-.coding-part h2{
-    float:left;
-    width:70px;
-}
-
-.unit-codings-toolbar{
-    float:right;
-    width:800px;
-    text-align:right;
 }
 
 .selected-sentence{
@@ -137,49 +58,8 @@ h2{
     color:white;
 }
 
-#codingjob-list-table{
-    width:800px;
-}
 #codingjob-list-table td{
     padding:5px 2px 5px;
-}
-
-#welcome{
-    margin-bottom:50px;
-}
-
-#article-irrelevant-input{
-    margin-left:40px;
-}
-
-.links{
-    margin:5px;
-}
-
-#coding-type-radios{
-    margin-right:80px !important;
-}
-
-#article-comment-input{
-    width:60%;
-}
-
-#article-comment-form{
-    clear:both;
-    padding-top:10px;
-    margin-bottom:20px;
-}
-
-
-#article-coding{
-    margin-bottom:30px;
-    clear:both;
-}
-
-#unitcoding-table-part{
-    margin-bottom:30px;
-    clear:both;
-    margin-top:5px;
 }
 
 .ui-autocomplete {
@@ -194,11 +74,6 @@ h2{
 #unitcoding-table{
     width:100% !important;
 }
-
-#save-button2{
-    margin-bottom:400px;
-}
-
 
 .articlelist-part tbody tr.even:hover, #codingjob-list-table tbody tr.even:hover{
 	background-color: #ECFFB3;
@@ -259,77 +134,11 @@ h2{
 	background-color: #9FAFD1;
 }
 
-
-.icon-next-article{
-    background-image: url('../img/misc/arrow_down.png') !important;
-}
-
-.icon-previous-article{
-    background-image: url('../img/misc/arrow_up.png') !important;
-}
-
-.icon-edit-article{
-    background-image: url('../img/misc/book_edit.png') !important;
-}
-
-.icon-new-article{
-    background-image: url('../img/misc/book_add.png') !important;
-}
-
-.icon-delete-coding{
-    background-image: url('../img/misc/table_row_delete.png') !important;
-}
-
-.icon-save{
-    background-image: url('../img/misc/disk.png') !important;
-}
-
-.icon-save-continue{
-    background-image: url('../img/misc/page_save.png') !important;
-}
-.icon-irrelevant-continue{
-    background-image: url('../img/misc/page_go.png') !important;
-}
-.icon-add-row{
-    background-image: url('../img/misc/add.png') !important;
-}
-.icon-copy-coding{
-    background-image: url('../img/misc/table_row_insert.png') !important;
-}
-.icon-copy-switch-coding{
-    background-image: url('../img/misc/table_refresh.png') !important;
-}
-
-
-button:focus{
-    border:1px solid blue;
-}
-
-#article-table-container{
-    clear:both;
-    /* max-height:150px;
-    overflow:scroll; */
-   /*  width:95%; */
-}
-#article-table-container td{
-    max-width:200px;
-}
-
-.widthlimit{
-    overflow:hidden;
-    white-space:nowrap;
-}
-
-
 .sentence-text-row td{
     font-size:12px;
     padding:5px !important;
     background:white;
     
-}
-
-.area-widget-input{
-    width:40px;
 }
 
 .new-paragraph{
@@ -340,12 +149,6 @@ button:focus{
     cursor:auto;
 }
 
-.video-container{
-    margin-top:5px;
-}
-
-
-
 /* make sentences table look like a datatable, with colors etc. */
 #unitcoding-table tbody tr:nth-child(odd){
     background-color: #E2E4FF;
@@ -355,22 +158,50 @@ button:focus{
     background-color: white;
 }
 
-#unitcoding-table{
-    border: 1px solid gray;
-}
-
-#unitcoding-table thead tr {
-   /*  background-color: #F0F0F0; */
-}
-
-#unitcoding-table-top{
-    top:0px;
-    left:0px;
-    background-color:white;
-    z-index:2500;
-    height:35px;
-}
-
 input.error{
     border-color:red;
+}
+
+.part {
+   position: relative;
+   margin: 15px 5px;
+   padding: 39px 19px 14px;
+   *padding-top: 19px;
+   background-color: #fff;
+   border: 1px solid #ddd;
+   -webkit-border-radius: 4px;
+   -moz-border-radius: 4px;
+   border-radius: 4px;
+}
+
+.part::after
+{
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    padding: 3px 7px;
+    font-size: 12px;
+    font-weight: bold;
+    background-color: whiteSmoke;
+    border: 1px solid #DDD;
+    color: #9DA0A4;
+    -webkit-border-radius: 4px 0 4px 0;
+    -moz-border-radius: 4px 0 4px 0;
+    border-radius: 4px 0 4px 0;
+}
+
+.coded-article::after{
+    content: "Coded article";
+}
+
+.article-coding::after{
+    content: "Article coding";
+}
+
+.sentence-codings{
+    overflow-x:scroll;
+}
+
+.sentence-codings::after{
+    content: "Sentence codings";
 }
