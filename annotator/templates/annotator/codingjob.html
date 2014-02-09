@@ -27,19 +27,21 @@
 
     </div>
 
-    <div id="editor" style="display:none">
-        <div class="btn-group row mark">
-            <button class="btn btn-default" id="irrelevant-button" title="Mark this article as irrelevant and continue to the next article">Irrelevant &amp; continue</button>
-            <button class="btn btn-default" id="save-continue-button" title="Mark this article as finished and continue to the next article">Finish &amp; continue</button>
-            <button class="btn btn-primary" id="save-button" title="Save the codings for this article"><i class="glyphicon glyphicon-floppy-saved"></i> Save</button>
+    <div class="row" id="editor" style="display:none">
+        <div class="col-md-12 mark">
+            <div class="btn-group">
+                <button class="btn btn-default" id="irrelevant-button" title="Mark this article as irrelevant and continue to the next article">Irrelevant &amp; continue</button>
+                <button class="btn btn-default" id="save-continue-button" title="Mark this article as finished and continue to the next article">Finish &amp; continue</button>
+                <button class="btn btn-primary" id="save-button" title="Save the codings for this article"><i class="glyphicon glyphicon-floppy-saved"></i> Save</button>
+            </div>
         </div>
 
         <!-- Fix float:right of .mark -->
         <div class="clearfix"></div>
 
         <div class="coded-article part" id="coded-article">
-            <select id="article-status" name="status" ></select><br/>
-            <textarea placeholder="Comments" cols="40" id="article-comment" name="comment" rows="4"></textarea>
+            <select class="form-control" id="article-status" name="status" ></select><br/>
+            <textarea class="form-control" placeholder="Comments" cols="40" id="article-comment" name="comment" rows="4"></textarea>
         </div>
 
         <div class="article-coding part" id="article-coding">

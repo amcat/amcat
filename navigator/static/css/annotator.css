@@ -27,10 +27,17 @@ body{
     margin-bottom:10px;
 }
 
+input.form-control{
+    display:inline;
+    width:auto;
+
+}
 
 .mark{
-    float:right;
+    margin:0 auto;
+    text-align: center;
 }
+
 
 .highlight{
     background-color:yellow;
