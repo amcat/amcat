@@ -245,3 +245,23 @@ class SearchResource(AmCATResource):
             yield 'left'
             yield 'keyword'
             yield 'right'
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from api.rest.apitestcase import ApiTestCase
+from amcat.tools import amcattest, toolkit
+        
+class TestSearch(ApiTestCase):
+    @amcattest.use_elastic
+    def test_dates(self):
+        """Test whether date deserialization works, see #66"""
+        import datetime
+        from amcat.tools import amcates
+        for d in ('2001-01-01', '1992-12-31T23:59', '2012-02-29T12:34:56.789', datetime.datetime.now()):
+            a = amcattest.create_test_article(date=d)
+            amcates.ES().flush()
+            res = self.get("/api/v4/search", ids=a.id)
+            self.assertEqual(toolkit.readDate(res['results'][0]['date']), toolkit.readDate(str(d)))
+            

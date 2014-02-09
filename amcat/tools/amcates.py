@@ -136,7 +136,7 @@ class Result(object):
             if len(result.date) == 10:
                 result.date = datetime.strptime(result.date, '%Y-%m-%d')                
             else:
-                result.date = datetime.strptime(result.date, '%Y-%m-%dT%H:%M:%S')
+                result.date = datetime.strptime(result.date[:19], '%Y-%m-%dT%H:%M:%S')
         return result
 
     def __init__(self, **kwargs):

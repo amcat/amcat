@@ -137,3 +137,56 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
         queryset = super(ArticleViewSet, self).filter_queryset(queryset)
         return queryset.filter(articlesets_set=self.articleset)
         return self.object
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from api.rest.apitestcase import ApiTestCase
+from amcat.tools import amcattest, toolkit
+        
+class TestArticleViewSet(ApiTestCase):
+    def test_post(self):
+        """Test whether posting and retrieving an article works correctly"""
+        import datetime
+        p = amcattest.create_test_project()
+        s = amcattest.create_test_set(project=p)
+        a = {
+            'date': datetime.datetime.now().isoformat(),
+            'headline': 'Test child',
+            'medium': 'Fantasy',
+            'text': 'Hello Universe',
+            'pagenr': 1,
+            'url': 'http://example.org',
+        }
+        url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
+        self.post(url, a, as_user=self.user)
+
+        res = self.get(url)["results"]
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]["headline"], a['headline'])
+        self.assertEqual(toolkit.readDate(res[0]["date"]), toolkit.readDate(a['date']))
+
+    @amcattest.use_elastic
+    def test_children(self):
+        p = amcattest.create_test_project()
+        s = amcattest.create_test_set(project=p)
+        # need to json dump the children because the django client does weird stuff with post data
+        children = json.dumps([{'date': '2001-01-02', 'headline': 'Test child',
+                                'medium': 'Fantasy', 'text': 'Hello Universe'}])
+        a = {
+            'date': '2001-01-01',
+            'headline': 'Test parent',
+            'medium': 'My Imagination',
+            'text': 'Hello World',
+            'children': children
+        }
+        url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
+        self.post(url, a, as_user=self.user)
+
+        res = self.get(url)["results"]
+
+        headlines = {a['headline'] : a for a in res}
+        self.assertEqual(set(headlines), {'Test parent', 'Test child'})
+        self.assertEqual(headlines['Test child']['parent'], headlines['Test parent']['id'])
+        
