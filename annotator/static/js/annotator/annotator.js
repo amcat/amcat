@@ -683,12 +683,15 @@ annotator = (function(self){
         var coding_el = $("<tr>").addClass("coding").attr("annotator_coding_id", coding.annotator_id);
 
         // Add sentencenr, from and to.
-        coding_el.append(widgets.sentence.get_html().val((coding.sentence === null) ? "" : coding.sentence.get_unit()));
+        var sentence_td = $("<td>");
+        sentence_td.append(widgets.sentence.get_html().val((coding.sentence === null) ? "" : coding.sentence.get_unit()));
 
         if(self.codingjob.unitschema.subsentences){
-            coding_el.append(widgets.from.get_html().val(coding.start||""));
-            coding_el.append(widgets.to.get_html().val(coding.end||""));
+            sentence_td.append(widgets.from.get_html().val(coding.start||""));
+            sentence_td.append(widgets.to.get_html().val(coding.end||""));
         }
+
+        coding_el.append(sentence_td);
 
         coding_el.append($.map(widgets.get_html(self.sentence_schemafields), function(widget){
             return $("<td>").append(widget);
