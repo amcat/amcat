@@ -147,9 +147,9 @@ annotator = (function(self){
         self.next_btn = $("#next-article-button");
         self.prev_btn = $("#previous-article-button");
         self.select_all_btn = $("#select-all-sentences-button");
-        self.save_btn = $("#save-button");
-        self.save_continue_btn = $("#save-continue-button");
-        self.irrelevant_btn = $("#irrelevant-button");
+        self.save_btn = $(".save-button");
+        self.save_continue_btn = $(".save-continue-button");
+        self.irrelevant_btn = $(".irrelevant-button");
         self.copy_btn = $("#copy-coding-button");
         self.delete_btn = $("#delete-button");
 
@@ -168,7 +168,7 @@ annotator = (function(self){
 
     self.set_unsaved = function (bool) {
         self.unsaved = (bool === undefined) ? true : bool;
-        var icon = $("#save-button").find(".glyphicon");
+        var icon = self.save_btn.find(".glyphicon");
         icon.removeClass("glyphicon-floppy-disk glyphicon-floppy-saved");
         icon.addClass("glyphicon-floppy-" + ((self.unsaved) ? "disk" : "saved"));
     };
@@ -348,13 +348,13 @@ annotator = (function(self){
     /******** KEYBOARD SHORTCUTS *******/
     self.shortcuts = function(){
         return {
-        "ctrl+s" : self.save_btn.trigger.bind(self.save_btn, "click"),
+        "ctrl+s" : self.save_btn.first().trigger.bind(self.save_btn.first(), "click"),
         "ctrl+down" : self.add_row,
         "ctrl+shift+down" : self.add_next_sentence_row,
         "shift+down" : self.copy_row,
         "ctrl+shift+d": self.delete_row,
-        "ctrl+i" : self.irrelevant_btn.trigger.bind(self.irrelevant_btn, "click"),
-        "ctrl+d" : self.save_continue_btn.trigger.bind(self.save_continue_btn, "click")
+        "ctrl+i" : self.irrelevant_btn.first().trigger.bind(self.irrelevant_btn.first(), "click"),
+        "ctrl+d" : self.save_continue_btn.first().trigger.bind(self.save_continue_btn.first(), "click")
     }};
 
     /******** PUBLIC FUNCTIONS *******/

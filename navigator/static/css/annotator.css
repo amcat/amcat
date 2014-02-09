@@ -74,10 +74,6 @@ h2{
     max-width:300px;
 }
 
-#unitcoding-table{
-    width:100% !important;
-}
-
 .articlelist-part tbody tr.even:hover, #codingjob-list-table tbody tr.even:hover{
 	background-color: #ECFFB3;
 }
@@ -124,13 +120,6 @@ h2{
     margin-bottom:5px;
     float:left;
     margin:0px;
-}
-
-.unitcoding-table-toolbar{
-    float:right;
-    width:350px;
-    text-align:right;
-    padding:3px;
 }
 
 #unitcoding-table.display tr.row_selected td {
