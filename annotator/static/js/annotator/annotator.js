@@ -198,14 +198,23 @@ annotator = (function(self){
 
     self.hide_loading = function(){
         self.loading_dialog.modal("hide");
-    }
+    };
+
+    self.show_message = function(title, message){
+        self.message_dialog.find(".modal-title").text(title);
+        self.message_dialog.find(".modal-body p").text(message);
+        self.message_dialog.modal("show");
+    };
+
+    self.hide_message = function(){
+        self.message_dialog.modal("hide");
+    };
 
     self.initialise_dialogs = function(){
         self.unsaved_modal = $("#unsaved-changes").modal({ show : false });
         self.loading_dialog = $("#loading").modal({show : false, keyboard : false});
-        self.message_dialog = $("#message-dialog").dialog(self.dialog_defaults);
-        self.width_warning_dialog = $("<div>{0}</div>".f(self.width_warning)).dialog(self.dialog_defaults);
-        self.save_dialog = $("#dialog-save").dialog(self.dialog_defaults);
+        self.message_dialog = $("#message").modal({ show : false });
+
         self.delete_row_dialog = $("#dialog-confirm-delete-row").dialog($.extend({}, self.dialog_defaults, {
             buttons: {
                 "Delete row": function(){
@@ -802,7 +811,7 @@ annotator = (function(self){
         // Check whether we want to save.
         var validation = validate ? self.validate() : true;
         if (validation !== true){
-            return self.message_dialog.text(validation).dialog("open");
+            return self.show_message("Validation", validation);
         }
 
         // Send coding values to server
@@ -1309,7 +1318,8 @@ annotator = (function(self){
 $(document).ajaxError(function(event, xhr, ajaxOptions) {
     var message = "An error occured while requesting: {0}. Server responded: {1} {2}.";
     message = message.f(ajaxOptions.url, xhr.status, xhr.statusText);
-    $("<div>").text(message).dialog({ modal: true });
+    annotator.hide_loading();
+    annotator.show_message("AJAX error", message);
 });
 
 /*
