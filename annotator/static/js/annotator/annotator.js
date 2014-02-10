@@ -295,7 +295,7 @@ annotator = (function(self){
         // Fill status combobox
         $.each(self.STATUS, function(label, value){
             self.article_status_dropdown.append(
-                $("<option>").attr("value", value).text(label)
+                $("<option>").attr("value", value).text(self.STATUS_TEXT[value])
             );
         });
 
