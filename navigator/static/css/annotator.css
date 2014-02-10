@@ -19,6 +19,14 @@
 ###########################################################################
 */
 
+.article-coding td{
+    padding-right: 5px;
+}
+
+.sentence-codings{
+    line-height: normal;
+}
+
 body{
     overflow-x:hidden;
 }
