@@ -80,7 +80,8 @@ _METAFIELDS = [
     _MetaField("subsentence", "rangefrom", "Words from"),
     _MetaField("subsentence", "rangeto", "Words to"),
     _MetaField("subsentence", "subsentence", "Words coded"),
-    _MetaField("article_coding", "comments", "Comments"),
+    _MetaField("coded_article", "comments", "Comments"),
+    _MetaField("coded_article", "status", "Status"),
 ]
 
 class CodingjobListForm(forms.Form):
@@ -192,7 +193,7 @@ def _get_schemafields(codingjobs, level):
             .select_related("codingschema", "fieldtype"))
     
 
-CodingRow = collections.namedtuple('CodingRow', ['job', 'article', 'sentence', 'article_coding', 'sentence_coding'])
+CodingRow = collections.namedtuple('CodingRow', ['job', 'coded_article', 'article', 'sentence', 'article_coding', 'sentence_coding'])
 
 def _get_rows(jobs, include_sentences=False, include_multiple=True, include_uncoded_articles=False):
     """
@@ -206,43 +207,43 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
         art_filter |= Q(articlesets_set__codingjob_set__in=jobs)
 
     job_articles = { a.id : a for a in Article.objects.filter(art_filter)}
-    article_sentences = { s.id : s for s in Sentence.objects.filter(article__id__in=job_articles.keys())}
+    job_sentences = { s.id : s for s in Sentence.objects.filter(article__id__in=job_articles.keys())}
 
-    # Articles that have been seen in a codingjob already
+    # Articles that have been seen in a codingjob already (so we can skip duplicate codings on the same article)
     seen_articles = set() 
 
-    articles = set()
     for job in jobs:
         # Get all codings in dicts for later lookup
-        articles.clear()
+        coded_articles = set()
+        article_codings = {} # {ca : coding} 
+        sentence_codings = collections.defaultdict(lambda : collections.defaultdict(set)) # {ca : {sentence_id : [codings]}}
 
-        article_codings = {} # {article : coding} 
-        sentence_codings = collections.defaultdict(list) # {sentence : [codings]}
-        coded_sentences = collections.defaultdict(set) # {article : {sentences}}
-
-        for c in job.codings:
-            articles.add(job_articles[c.article_id])
-            if c.sentence_id is None:
-                article_codings[job_articles[c.article_id]] = c
-            else:
-                sentence_codings[article_sentences[c.sentence_id]].append(c)
-                coded_sentences[job_articles[c.article_id]].add(article_sentences[c.sentence_id])
+        for ca in job.coded_articles.order_by('id'):
+            coded_articles.add(ca)
+            for c in ca.codings.all():
+                if c.sentence_id is None:
+                    if ca not in article_codings: # HACK, take first entry of duplicate article codings (#79)
+                        article_codings[ca] = c
+                else:
+                    sentence_codings[ca][ca.sentence_id].append(c)
 
         # output the rows for this job
-        for a in articles:
+        for ca in coded_articles:
+            a = job_articles[ca.article_id]
             if a in seen_articles and not include_multiple:
                 continue
-
-            article_coding = article_codings.get(a)
-            sentences = coded_sentences[a]
-            if include_sentences and sentences:
-                for s in sentences:
-                    for sentence_coding in sentence_codings[s]:
-                        yield CodingRow(job, a, s, article_coding, sentence_coding)
-            elif article_coding:
-                yield CodingRow(job, a, None, article_coding, None)
-
             seen_articles.add(a)
+            
+            article_coding = article_codings.get(ca)
+            sentence_ids = sentence_codings[ca]
+            if include_sentences and sentence_ids:
+                for sid in sentence_ids:
+                    s = job_sentences[sid]
+                    for sentence_coding in sentence_codings[sid]:
+                        yield CodingRow(job, ca, a, s, article_coding, sentence_coding)
+            elif article_coding:
+                yield CodingRow(job, ca, a, None, article_coding, None)
+
 
     if include_uncoded_articles:
         for article in set(job_articles.values()) - seen_articles:
@@ -283,7 +284,6 @@ class SubSentenceColumn(table3.ObjectColumn):
         self.field = field
         super(SubSentenceColumn, self).__init__(self.field.label)
     def getCell(self, row):
-        print(self.field.object, self.field.attr, self.field.label)
         coding = row.sentence_coding
         if not coding: return None
         if self.field.attr == "rangefrom": return coding.start
@@ -306,12 +306,13 @@ class GetCodingJobResults(Script):
         codingjobs = CodingJob.objects.prefetch_related("coded_articles__codings__values").filter(pk__in=codingjobs)
         
         # Get all row of table
-        rows = _get_rows(
+        rows = list(_get_rows(
             codingjobs, include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
             include_multiple=True, include_uncoded_articles=False
-            )
+            ))
+
         
-        table = table3.ObjectTable(rows=list(rows))
+        table = table3.ObjectTable(rows=rows)
 
         # Meta field columns
         for field in _METAFIELDS:
