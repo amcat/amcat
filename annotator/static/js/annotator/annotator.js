@@ -687,10 +687,24 @@ annotator = (function(self){
         return coding_el;
     };
 
-    self.select_all_sentences = function () {
+    /*
+     * Mandetory validation are present to preserve a consistent database state.
+     */
+    self.mandetory_validate = function(){
+        // Check ∀v [(v.sentence === null) => (v.intval === null && v.strval === null)]
+        var codings = self.get_sentence_codings();
+        for (var i=0; i < codings.length; i++){
+            if (any($.values(codings[i].values), self.is_empty_codingvalue)){
+                return "A non-empty coding with no sentence was found.";
+            }
+        }
 
+        return true;
     };
 
+    /*
+     * Checks if all codingschemarules pass.
+     */
     self.validate = function(){
         var article_errors = $("." + rules.ERROR_CLASS, self.article_coding_container);
         var sentence_errors = $("." + rules.ERROR_CLASS, self.sentence_codings_container);
@@ -702,35 +716,25 @@ annotator = (function(self){
             return error.f("sentence");
         }
 
-        // Check ∀v [(v.sentence === null) => (v.intval === null && v.strval === null)]
-        var coding_values;
-        var codings = $(".coding", self.sentence_codings_container);
-        for (var i=0; i < codings.length; i++){
-            coding_values = widgets._get_codingvalues($(codings[i]));
-            if (any(coding_values, function(v){
-                return (v.sentence === null && (v.intval !== null || v.strval !== null));
-            })){
-                return "A non-empty coding with no sentence was found."
-            }
-        }
-
         return true;
     };
 
-    self.is_nonempty_codingvalue = function(cv){
-        return !(cv.intval === null && cv.strval === null);
+    self.is_empty_codingvalue = function(cv){
+        return cv.intval === null && cv.strval === null;
+    };
+
+    self.is_empty_coding = function(coding){
+        return all($.values(coding.values), self.is_empty_codingvalue)
     };
 
     /*
      * Returns 'minimised' version of given coding, which can easily be serialised.
      */
     self.pre_serialise_coding = function(coding){
-        var constant = function(el){ return el; }
-
         return {
             start : coding.start, end : coding.end,
             sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
-            values : $.map($.grep($.map(coding.values, constant), self.is_nonempty_codingvalue), self.pre_serialise_codingvalue)
+            values : $.map($.grep($.values(coding.values), self.is_empty_codingvalue, true), self.pre_serialise_codingvalue)
         }
     };
 
@@ -780,8 +784,14 @@ annotator = (function(self){
             self.set_status(self.STATUS.IN_PROGRESS);
         }
 
-        // Check whether we want to save.
-        var validation = validate ? self.validate() : true;
+        // Check whether we want to save, by first checking the mandetory checks.
+        var validation = self.mandetory_validate();
+        if (validation !== true){
+            return self.message_dialog.text(validation).dialog("open");
+        }
+
+        // Check optional requirements
+        validation = validate ? self.validate() : true;
         if (validation !== true){
             return self.message_dialog.text(validation).dialog("open");
         }
@@ -790,7 +800,7 @@ annotator = (function(self){
         self.loading_dialog.text("Saving codings..").dialog("open");
         $.post("codedarticle/{0}/save".f(self.state.coded_article_id), JSON.stringify({
             "coded_article" : self.pre_serialise_coded_article(),
-            "codings" : $.map(self.state.codings, self.pre_serialise_coding)
+            "codings" : $.map(self.get_codings(), self.pre_serialise_coding)
         })).done(function(data, textStatus, jqXHR){
             self.loading_dialog.dialog("close");
 
@@ -972,6 +982,42 @@ annotator = (function(self){
 
         this.descendants = descendants;
         return this.descendants;
+    };
+
+    /*
+     * Retrieve all coding objects contained in `container`. If `container` is not given,
+     * return all codings.
+     *
+     * @type container: DOM element
+     */
+    self.get_codings = function(container){
+        if (container === undefined){
+            return $.merge([self.get_article_coding()], self.get_sentence_codings());
+        }
+
+        return $.map($(container).find(".coding"), function(coding_el){
+            return self.state.codings[$(coding_el).attr("annotator_coding_id")];
+        });
+    };
+
+    /*
+     * Return all codings which are not the article coding.
+     */
+    self.get_sentence_codings = function(){
+        // Note: this function depends on the presence of DOM elements. This is due to
+        // a bug in earlier versions which duplicated codings. The only reliable way for
+        // now is to match codings with DOM elements.
+        return $.grep(self.get_codings(self.sentence_codings_container), self.is_empty_coding, true);
+    };
+
+    /*
+     * Return article coding
+     */
+    self.get_article_coding = function(){
+        // Note: this function depends on the presence of DOM elements. This is due to
+        // a bug in earlier versions which duplicated codings. The only reliable way for
+        // now is to match codings with DOM elements.
+        return self.get_codings(self.article_coding_container)[0];
     };
 
     self.get_empty_coding = function(properties){

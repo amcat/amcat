@@ -227,8 +227,9 @@ class SelectionForm(forms.Form):
 
         # Check if they can be chosen
         articlesets = self.cleaned_data["articlesets"]
-        all_articles = Article.objects.filter(articlesets_set__in=articlesets).distinct("id")
-        chosen_articles = Article.objects.filter(id__in=article_ids).distinct("id")
+        distinct_args = ["id"] if db_supports_distinct_on() else []
+        all_articles = Article.objects.filter(articlesets_set__in=articlesets).distinct(*distinct_args)
+        chosen_articles = Article.objects.filter(id__in=article_ids).distinct(*distinct_args)
         intersection = all_articles & chosen_articles
 
         if chosen_articles.count() != intersection.count():

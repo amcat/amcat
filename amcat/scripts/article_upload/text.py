@@ -77,13 +77,13 @@ def _convert_doc(file):
         raise Exception("No text from {antiword?}")
     return text.decode("utf-8")
 
-
-import pyPdf
+from PyPDF2 import PdfFileReader
 import StringIO
+
 def _convert_pdf(file):
     _file = StringIO.StringIO()
     _file.write(file.bytes)
-    pdf = pyPdf.PdfFileReader(_file)
+    pdf = PdfFileReader(_file)
     text = ""
     for page in pdf.pages:
         text += page.extractText()

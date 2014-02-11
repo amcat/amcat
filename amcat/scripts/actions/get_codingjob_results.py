@@ -216,38 +216,38 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
         # Get all codings in dicts for later lookup
         coded_articles = set()
         article_codings = {} # {ca : coding} 
-        sentence_codings = collections.defaultdict(lambda : collections.defaultdict(set)) # {ca : {sentence_id : [codings]}}
+        sentence_codings = collections.defaultdict(lambda : collections.defaultdict(list)) # {ca : {sentence_id : [codings]}}
 
-        for ca in job.coded_articles.order_by('id'):
+        for ca in job.coded_articles.order_by('id').prefetch_related("codings"):
             coded_articles.add(ca)
             for c in ca.codings.all():
                 if c.sentence_id is None:
                     if ca not in article_codings: # HACK, take first entry of duplicate article codings (#79)
-                        article_codings[ca] = c
+                        article_codings[ca.id] = c
                 else:
-                    sentence_codings[ca][ca.sentence_id].append(c)
-
+                    sentence_codings[ca.id][c.sentence_id].append(c)
         # output the rows for this job
         for ca in coded_articles:
             a = job_articles[ca.article_id]
             if a in seen_articles and not include_multiple:
                 continue
-            seen_articles.add(a)
             
-            article_coding = article_codings.get(ca)
-            sentence_ids = sentence_codings[ca]
+            article_coding = article_codings.get(ca.id)
+            sentence_ids = sentence_codings[ca.id]
             if include_sentences and sentence_ids:
+                seen_articles.add(a)
                 for sid in sentence_ids:
                     s = job_sentences[sid]
-                    for sentence_coding in sentence_codings[sid]:
+                    for sentence_coding in sentence_codings[ca.id][sid]:
                         yield CodingRow(job, ca, a, s, article_coding, sentence_coding)
             elif article_coding:
+                seen_articles.add(a)
                 yield CodingRow(job, ca, a, None, article_coding, None)
 
 
     if include_uncoded_articles:
         for article in set(job_articles.values()) - seen_articles:
-            yield CodingRow(job, article, None, None, None)
+            yield CodingRow(job, job.get_coded_article(article), article, None, None, None)
 
 class CodingColumn(table3.ObjectColumn):
     def __init__(self, field, label, function):
@@ -384,28 +384,31 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         job = amcattest.create_test_job(unitschema=schema, articleschema=schema, narticles=5)
         articles = list(job.articleset.articles.all())
         c = amcattest.create_test_coding(codingjob=job, article=articles[0])
+        ca = job.get_coded_article(articles[0])
         # simple coding
         rows = set(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=False))
-        self.assertEqual(rows, {(job, articles[0], None, c, None)})
+        self.assertEqual(rows, {(job, ca, articles[0], None, c, None)})
         # test uncoded_articles
         rows = set(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=True))
-        self.assertEqual(rows, {(job, articles[0], None, c, None)} | {(job, a, None, None, None) for a in articles[1:]})
+        self.assertEqual(rows, {(job, ca, articles[0], None, c, None)} | {(job, job.get_coded_article(a), a, None, None, None)
+                                                                          for a in articles[1:]})
         # test sentence
         s = amcattest.create_test_sentence(article=articles[0])
         sc = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s)
         rows = set(_get_rows([job], include_sentences=False, include_multiple=True, include_uncoded_articles=False))
-        self.assertEqual(rows, {(job, articles[0], None, c, None)})
+        self.assertEqual(rows, {(job, ca, articles[0], None, c, None)})
         rows = set(_get_rows([job], include_sentences=True, include_multiple=True, include_uncoded_articles=False))
-        self.assertEqual(rows, {(job, articles[0], s, c, sc)})
+        self.assertEqual(rows, {(job, ca, articles[0], s, c, sc)})
         # multiple sentence codings on the same article should duplicate article(coding)
         s2 = amcattest.create_test_sentence(article=articles[0])
         sc2 = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s2)
         rows = set(_get_rows([job], include_sentences=True, include_multiple=True, include_uncoded_articles=False))
-        self.assertEqual(rows, {(job, articles[0], s, c, sc), (job, articles[0], s2, c, sc2)})        
+        self.assertEqual(rows, {(job, ca, articles[0], s, c, sc), (job, ca, articles[0], s2, c, sc2)})        
         # if an article contains an article coding but no sentence coding, it should still show up with sentence=True
         c2 = amcattest.create_test_coding(codingjob=job, article=articles[1])
         rows = set(_get_rows([job], include_sentences=True, include_multiple=True, include_uncoded_articles=False))
-        self.assertEqual(rows, {(job, articles[0], s, c, sc), (job, articles[0], s2, c, sc2), (job, articles[1], None, c2, None)})
+        self.assertEqual(rows, {(job, ca, articles[0], s, c, sc), (job, ca, articles[0], s2, c, sc2),
+                                (job, job.get_coded_article(articles[1]), articles[1], None, c2, None)})
         
         
 
@@ -506,16 +509,16 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         amcatlogging.debug_module('django.db.backends')
 
         script = self._get_results_script([job], {strf : {}, intf : {}})
-        with self.checkMaxQueries(6):
+        with self.checkMaxQueries(8):
             list(csv.reader(StringIO(script.run())))
 
 
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(ids=True)})
-        with self.checkMaxQueries(6):
+        with self.checkMaxQueries(8):
             list(csv.reader(StringIO(script.run())))
 
 
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(labels=True)})
-        with self.checkMaxQueries(6):
+        with self.checkMaxQueries(8):
             list(csv.reader(StringIO(script.run())))
 

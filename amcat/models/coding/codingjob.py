@@ -80,6 +80,10 @@ class CodingJob(AmcatModel):
         self.project_id = LITTER_PROJECT_ID
         self.coder_id = LITTER_USER_ID
         self.save()
+
+    def get_coded_article(self, article):
+        # probably want to use a cached value if it exists?
+        return self.coded_articles.get(article=article)
                 
 @receiver(post_save, sender=CodingJob)
 def create_coded_articles(sender, instance=None, created=None, **kwargs):

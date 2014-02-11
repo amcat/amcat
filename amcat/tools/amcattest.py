@@ -174,11 +174,10 @@ def create_test_set(articles=0, **kargs):
         s.add_articles(articles)
     return s
 
-def create_test_coded_article(codingjob=None, article=None, **kwargs):
-    from amcat.models import CodedArticle
-    if not codingjob: codingjob = create_test_job()
-    if not article: article = codingjob.articleset.articles.all()[0]
-    return CodedArticle.objects.create(codingjob=codingjob, article=article, **kwargs)
+def create_test_coded_article():
+    # coded_article gets created automatically when a new job is created
+    codingjob = create_test_job()
+    return list(codingjob.coded_articles.all())[0]
 
 
 def create_test_job(narticles=1, **kargs):
