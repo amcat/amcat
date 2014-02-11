@@ -202,8 +202,8 @@ widgets = (function(self){
         },
         change : function(){
             var target = $(this);
-            var value = parseFloat(target.val());
-            target.attr("intval", Math.round(value * 10));
+            var value = Math.round(parseFloat(target.val()) * 10);
+            target.attr("intval", isNaN(value) ? self.EMPTY_INTVAL : value);
             return self.default.change.bind(this)();
         }
 
