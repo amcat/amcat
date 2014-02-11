@@ -77,10 +77,6 @@ annotator = (function(self){
             requests : null,
             coded_article_id: -1,
             coded_article: null,
-            deleted_codings: [],
-            modified_codings: [],
-            sentence_codings_modified: false,
-            article_coding_modified: false,
             article_coding : null,
             sentence_codings: [],
             codings : [],
@@ -161,7 +157,6 @@ annotator = (function(self){
         self.save_continue_btn.click(self.finish_and_continue);
         self.irrelevant_btn.click(self.irrelevant_and_continue);
         self.copy_btn.click(self.copy);
-        self.delete_btn.click(self.delete);
         self.help_btn.click(function(){ self.help_dialog.dialog("open"); });
 
         $(".coding-part").hide();
@@ -457,9 +452,8 @@ annotator = (function(self){
         }
 
         // Register deleted coding
-        self.state.deleted_codings.push(active_coding);
-        remove_from_array(self.state.modified_codings, active_coding);
         active_row.remove();
+        delete self.state.codings[active_row.attr("annotator_coding_id")];
         $("input", next).first().focus();
         self.set_tab_order();
     };
