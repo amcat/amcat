@@ -885,7 +885,6 @@ annotator = (function(self){
             });
         });
 
-        self.unsaved = false;
         self.state.sentences = sentences;
         self.state.codings = codings;
         self.state.coded_article = coded_article[0];
@@ -914,6 +913,7 @@ annotator = (function(self){
         self.highlight();
         self.codings_fetched();
         self.set_tab_order();
+        self.unsaved = false;
 
         self.loading_dialog.dialog("close");
 
