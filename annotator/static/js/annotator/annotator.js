@@ -870,6 +870,14 @@ annotator = (function(self){
         return self._id += 1
     };
 
+    /*
+     * Given two sentences a and b, return if a is "greater than" than b.
+     */
+    self.sentence_greater_than = function(a, b){
+        if (a.parnr > b.parnr) return true;
+        if (a.parnr < b.parnr) return false;
+        return a.sentnr > b.sentnr;
+    };
 
     self.coded_article_fetched = function(coded_article, codings, sentences){
         console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
@@ -881,7 +889,10 @@ annotator = (function(self){
             coding.annotator_id = self.get_new_id();
         });
 
+        // sentences_array holds a list of ordered sentences (by sentnr, parnr)
         self.state.sentences_array = sentences[0].results;
+        self.state.sentences_array.sort(self.sentence_greater_than);
+
         codings = map_ids(codings[0].results, "annotator_id");
         sentences = map_ids(sentences[0].results);
         resolve_ids(codings, sentences, "sentence");
@@ -1044,9 +1055,9 @@ annotator = (function(self){
     /******** EVENTS *******/
     // TODO: Only initialise article coding html once.
     self.codings_fetched = function(){
-        // Determine sentence codings
-        self.state.sentence_codings = $.grep($.values(self.state.codings), function(c){
-            return !self.is_article_coding(c);
+        self.state.sentence_codings = $.grep($.values(self.state.codings), self.is_article_coding, true);
+        self.state.sentence_codings.sort(function(a,b){
+            return self.sentence_greater_than(a.sentence, b.sentence);
         });
 
         // Determine article coding
