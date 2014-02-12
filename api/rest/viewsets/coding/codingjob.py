@@ -25,7 +25,7 @@ from amcat.models.coding.codebook import Codebook
 from amcat.models.coding.codingrule import CodingRule
 from amcat.models.coding.codingschemafield import CodingSchemaField
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT, CodedArticle
+from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT, CodedArticle, STATUS_INPROGRESS, STATUS_NOTSTARTED
 from amcat.nlp import sbd
 from amcat.tools.amcattest import AmCATTestCase
 from amcat.tools.caching import cached
@@ -39,6 +39,7 @@ from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.viewsets.project import ProjectViewSetMixin
 
 STATUS_DONE = (STATUS_COMPLETE, STATUS_IRRELEVANT)
+STATUS_TODO = (STATUS_INPROGRESS, STATUS_NOTSTARTED)
 
 __all__ = ("CodingJobViewSetMixin", "CodingJobSerializer", "CodingJobViewSet",
            "CodingJobArticleViewSet", "CodingJobArticleSentenceViewSet",
@@ -52,8 +53,9 @@ class CodingJobSerializer(AmCATModelSerializer):
     the values per codingjob, we ask the database to aggregate for us
     in one query.
     """
-    n_articles = serializers.SerializerMethodField('get_n_articles')
-    n_codings_done = serializers.SerializerMethodField('get_n_done_jobs')
+    articles = serializers.SerializerMethodField('get_n_articles')
+    complete = serializers.SerializerMethodField('get_n_done_jobs')
+    todo = serializers.SerializerMethodField('get_n_todo_jobs')
 
     def _get_codingjobs(self):
         view = self.context["view"]
@@ -71,6 +73,12 @@ class CodingJobSerializer(AmCATModelSerializer):
                     .values_list("codingjob__id", "n"))
 
     @cached
+    def _get_n_todo_jobs(self):
+        return dict(self._get_coded_articles().filter(status__id__in=STATUS_TODO)
+                    .values("codingjob").annotate(n=Count("codingjob"))
+                    .values_list("codingjob__id", "n"))
+    
+    @cached
     def _get_n_articles(self):
         return dict(self._get_codingjobs().annotate(n=Count("articleset__articles")).values_list("id", "n"))
 
@@ -82,6 +90,10 @@ class CodingJobSerializer(AmCATModelSerializer):
         if not obj: return 0
         return self._get_n_done_jobs().get(obj.id, 0)
 
+    def get_n_todo_jobs(self, obj):
+        if not obj: return 0
+        return self._get_n_todo_jobs().get(obj.id, 0)
+    
     class Meta:
         model = CodingJob
 
@@ -93,6 +105,7 @@ class CodingJobViewSetMixin(AmCATViewSetMixin):
 
 class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = CodingJob
+    model_serializer_class = CodingJobSerializer
 
     def filter_queryset(self, jobs):
         jobs = super(CodingJobViewSet, self).filter_queryset(jobs)
