@@ -48,6 +48,9 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
     def get_datatable(self, **kwargs):
         url_kwargs = dict(project=self.project.id)
         return super(CodingJobListView, self).get_datatable(url_kwargs=url_kwargs, **kwargs)
+    def filter_table(self, table):
+        return table.hide("project", "articleset", "favourite")
+   
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingJobListView, self).get_context_data(**kwargs)
