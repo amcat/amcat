@@ -694,6 +694,8 @@ annotator = (function(self){
         // Check ∀v [(v.sentence === null) => (v.intval === null && v.strval === null)]
         var codings = self.get_sentence_codings();
         for (var i=0; i < codings.length; i++){
+            if (codings[i].sentence !== null) continue;
+
             if (any($.values(codings[i].values), self.is_empty_codingvalue)){
                 return "A non-empty coding with no sentence was found.";
             }
