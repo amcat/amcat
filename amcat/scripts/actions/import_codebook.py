@@ -34,7 +34,7 @@ from amcat.models import Code, Codebook, Language, Project
 
 from amcat.scripts.article_upload.fileupload import CSVUploadForm
 
-LABEL_PREFIX = "label - "
+LABEL_PREFIX = "label"
 
 class ImportCodebook(Script):
     """
@@ -116,11 +116,12 @@ class ImportCodebook(Script):
 
         for col in data:
             if col.startswith(LABEL_PREFIX):
-                lang = col[len(LABEL_PREFIX):]
+                lang = col[len(LABEL_PREFIX):].strip()
+                if lang.startswith('-'): lang = lang[1:].strip()
                 try:
                     lang = int(lang)
                 except ValueError:
-                    lang = Language.objects.get(label=lang).id
+                    lang = Language.get_or_create(label=lang).id
                 for (code, parent), label in zip(parents, data[col]):
                     if label:
                         codes[code].add_label(lang, label)
