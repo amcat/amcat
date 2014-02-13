@@ -874,9 +874,9 @@ annotator = (function(self){
      * Given two sentences a and b, return if a is "greater than" than b.
      */
     self.sentence_greater_than = function(a, b){
-        if (a.parnr > b.parnr) return true;
-        if (a.parnr < b.parnr) return false;
-        return a.sentnr > b.sentnr;
+        if (a.parnr > b.parnr) return 1;
+        if (a.parnr < b.parnr) return -1;
+        return a.sentnr - b.sentnr;
     };
 
     self.coded_article_fetched = function(coded_article, codings, sentences){
