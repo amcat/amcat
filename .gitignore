@@ -40,6 +40,9 @@ nosetests.xml
 \#*\#
 .\#*
 
+# Vim cruft
+*.sw[op]
+
 # PyCharm meuk
 .idea
 
