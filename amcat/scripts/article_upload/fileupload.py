@@ -137,7 +137,33 @@ def namedtuple_csv_reader(csv_file, encoding='utf-8', **kargs):
         csv_file.seek(0)
     
     r = csv.reader(csv_file, **kargs)
-    header = r.next()
+    return namedtuples_from_reader(r, encoding=encoding)
+
+
+def _xlsx_as_csv(file):
+    """
+    Supply a csv reader-like interface to an xlsx file
+    """
+    from openpyxl import load_workbook
+    wb = load_workbook(file)
+    ws = wb.get_sheet_by_name(wb.get_sheet_names()[0])
+    for row in ws.rows:
+        row = [c.value for c in row]
+        yield row
+    
+def namedtuple_xlsx_reader(xlsx_file):
+    """
+    Uses openpyxl to read an xslx file and provide a named-tuple interface to it
+    """
+    reader = _xlsx_as_csv(xlsx_file)
+    return namedtuples_from_reader(reader)
+
+def namedtuples_from_reader(reader, encoding=None):
+    """
+    returns a sequence of namedtuples from a (csv-like) reader which should yield the header followed by value rows
+    """
+    
+    header = reader.next()
     class Row(collections.namedtuple("Row", header, rename=True)):
         column_names=header
         def __getitem__(self, key):
@@ -148,13 +174,14 @@ def namedtuple_csv_reader(csv_file, encoding='utf-8', **kargs):
         def items(self):
             return zip(self.column_names, self)
         
-    for values in r:
+    for values in reader:
         if encoding is not None:
             values = [x.decode(encoding) for x in values]
         if len(values) < len(header):
             values += [None] * (len(header) - len(values))
         yield Row(*values)
-
+    
+        
 class CSVUploadForm(FileUploadForm):
     dialect = forms.ChoiceField(choices=DIALECTS, initial="autodetect", required=False, 
                                 help_text="Select the kind of CSV file")
@@ -164,6 +191,12 @@ class CSVUploadForm(FileUploadForm):
     
     def get_reader(self, reader_class=namedtuple_csv_reader):
         f = self.files['file']
+        
+        if f.name.endswith(".xlsx"):
+            if reader_class != namedtuple_csv_reader:
+                raise Exception("Cannot handle xlsx files with non-default reader, sorry!")
+            return namedtuple_xlsx_reader(f)
+            
         d = self.cleaned_data['dialect']
         if not d: d = "autodetect"
         if d == 'autodetect':

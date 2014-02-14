@@ -39,6 +39,7 @@ from amcat.models.article import Article
 from amcat.models.medium import Medium
 
 from amcat.tools.toolkit import readDate
+import datetime
 
 FIELDS = ("text", "date", "medium", "pagenr", "section", "headline", "byline",  "url", "externalid",
           "author", "addressee", "parent_url", "parent_externalid")
@@ -111,6 +112,32 @@ class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
 
 
 class CSV(UploadScript):
+    """
+    Upload CSV files to AmCAT.
+
+    To tell AmCAT which columns from the csv file to use, you need to specify the name in the file
+    for the AmCAT-fields that you want to import. So, if you have a 'title' column in the csv file
+    that you want to import as the headline, specify 'title' in the "headline field" input box.
+
+    Text and date and required, all other fields are optional.
+
+    If you are encountering difficulties, please make sure that you know how the csv is exported, and
+    manually set encoding and dialect in the options above.
+    
+    Since Excel has quite some difficulties with exporting proper csv, it is often better to use
+    an alternative such as OpenOffice or Google Spreadsheet (but see below for experimental xlsx support).
+    If you must use excel, there is a 'tools' button on the save dialog which allows you to specify the
+    encoding and delimiter used.
+    
+    We have added experimental support for .xlsx files (note: only use .xlsx, not the older .xls file type).
+    This will hopefully alleviate some of the problems with reading Excel-generated csv file. Only the
+    first sheet will be used, and please make sure that the data in that sheet has a header row. Please let
+    us know if you encounter any difficulties at github.com/amcat/amcat/issues. Since you can only attach
+    pictures there, the best way to share the file that you are having difficulty with (if it is not private)
+    is to upload it to dropbox or a file sharing website and paste the link into the issue.
+    """
+    
+    
     options_form = CSVForm
 
     def explain_error(self, error):
@@ -153,7 +180,9 @@ class CSV(UploadScript):
         csvfields = [(fieldname, self.options[fieldname]) for fieldname in FIELDS if self.options[fieldname]]
         for fieldname, csvfield in csvfields:
             val = row[csvfield]
-            if val.strip():
+            if fieldname == 'date' and isinstance(val, datetime.datetime):
+                pass # no need to parse
+            elif val.strip():
                 if fieldname in PARSERS:
                     val = PARSERS[fieldname](val)
             elif is_nullable(fieldname):
