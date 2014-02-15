@@ -254,6 +254,8 @@ class QueryValidationError(ValidationError):
             self.error_list = [self]
 
 def _clean(s):
+    if s is None: return
+    s = unicode(s)
     s = stripAccents(s)
     s = re.sub("[<>+*]"," ", s)
     s = re.sub("\s+"," ", s)
@@ -268,7 +270,6 @@ class SearchQuery(object):
         self.query = stripAccents(query)
         self.declared_label = _clean(label)
         self.label = self.declared_label or _clean(self.query)
-        print(">>>", self.label)
         
 
     @classmethod
