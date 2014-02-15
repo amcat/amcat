@@ -253,6 +253,12 @@ class QueryValidationError(ValidationError):
             self.message = message
             self.error_list = [self]
 
+def _clean(s):
+    s = stripAccents(s)
+    s = re.sub("[<>+*]"," ", s)
+    s = re.sub("\s+"," ", s)
+    return s.strip()
+            
 class SearchQuery(object):
     """
     Represents a query object that contains both a query and
@@ -260,8 +266,9 @@ class SearchQuery(object):
     """
     def __init__(self, query, label=None):
         self.query = stripAccents(query)
-        self.declared_label = stripAccents(label)
-        self.label = self.declared_label or self.query
+        self.declared_label = _clean(label)
+        self.label = self.declared_label or _clean(self.query)
+        print(">>>", self.label)
         
 
     @classmethod
