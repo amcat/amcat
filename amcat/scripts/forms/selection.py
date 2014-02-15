@@ -25,6 +25,9 @@ import logging
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
+
+
 
 from amcat.models import Project, ArticleSet, Medium, AmCAT
 from amcat.models import Codebook, Language, Label, Article
@@ -94,7 +97,7 @@ class SelectionForm(forms.Form):
 
         self.project = project
 
-        codebooks = Codebook.objects.filter(project_id=project.id)
+        codebooks = Codebook.objects.filter(Q(project_id=project.id)|Q(projects_set=project))
         self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook'].queryset = codebooks
 
