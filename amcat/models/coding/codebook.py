@@ -504,6 +504,12 @@ class Codebook(AmcatModel):
             seen.add(parent)
 
             code_id = parent
+
+    def recycle(self):
+        """Move this job to the recycle bin"""
+        from amcat.models.project import LITTER_PROJECT_ID
+        self.project_id = LITTER_PROJECT_ID
+        self.save()
             
 class Function(AmcatModel):
     """Specification of code book parent-child relations"""
