@@ -137,6 +137,10 @@ class ScoreField(IntegerField):
         
 class SearchResource(AmCATResource):
 
+    def post(self, request, *args, **kwargs):
+        # allow for POST requests
+        return self.list(request, *args, **kwargs)
+        
     @property
     @cached
     def columns(self):
