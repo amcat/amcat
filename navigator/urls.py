@@ -98,7 +98,6 @@ urlpatterns = patterns(
 
     url(r'^semanticroles$', 'navigator.views.semanticroles.index', name='semanticroles'),
     url(r'^semanticroles/(?P<id>[0-9]+)$', 'navigator.views.semanticroles.sentence', name='semanticroles-sentence'),
-    url(r'^projects/(?P<project_id>[0-9]+)/codebooks/add$', AddCodebookView.as_view(), name='codebook-add'),
 ) 
 
 
@@ -109,7 +108,7 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              ArticleSetDeleteView,ArticleSetUnlinkView,
              ArticleSplitView,
              CodebookListView, CodebookDetailsView, CodebookImportView, CodebookLinkView, ExportCodebook,
-             CodebookUnlinkView, CodebookDeleteView,
+             CodebookUnlinkView, CodebookDeleteView, CodebookAddView,
              CodebookChangeNameView, CodebookSaveChangesetsView,CodebookSaveLabelsView,
              CodingSchemaListView, CodingSchemaDetailsView, CodingSchemaDeleteView, CodingSchemaCreateView,
              CodingSchemaEditView,CodingSchemaEditFieldsView,CodingSchemaEditRulesView, CodingSchemaNameView,

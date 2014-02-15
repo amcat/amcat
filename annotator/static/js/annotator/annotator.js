@@ -694,6 +694,8 @@ annotator = (function(self){
         // Check ∀v [(v.sentence === null) => (v.intval === null && v.strval === null)]
         var codings = self.get_sentence_codings();
         for (var i=0; i < codings.length; i++){
+            if (codings[i].sentence !== null) continue;
+
             if (any($.values(codings[i].values), self.is_empty_codingvalue)){
                 return "A non-empty coding with no sentence was found.";
             }
@@ -874,9 +876,9 @@ annotator = (function(self){
      * Given two sentences a and b, return if a is "greater than" than b.
      */
     self.sentence_greater_than = function(a, b){
-        if (a.parnr > b.parnr) return true;
-        if (a.parnr < b.parnr) return false;
-        return a.sentnr > b.sentnr;
+        if (a.parnr > b.parnr) return 1;
+        if (a.parnr < b.parnr) return -1;
+        return a.sentnr - b.sentnr;
     };
 
     self.coded_article_fetched = function(coded_article, codings, sentences){

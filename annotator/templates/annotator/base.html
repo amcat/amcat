@@ -19,6 +19,7 @@
   {% block css %}{% endblock %}
   
   <!--  Javascript -->
+  {% compress js %}
   <script type="text/javascript" src="{% static 'js/annotator/jquery-1.9.1.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/annotator/jquery-ui-1.10.3.custom.js' %}"></script>
@@ -37,6 +38,7 @@
   <script type="text/javascript" src="{% static 'js/annotator/annotator.autocomplete.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/jquery.pnotify.min.js' %}"></script>
   {% block javascript %}{% endblock %}
+  {% endcompress %}
  </head>
  <body>
   <div id="header">

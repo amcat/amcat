@@ -41,14 +41,6 @@ from amcat.forms import widgets
 import json
 import itertools
 
-class AddCodebookView(RedirectView):
-    """
-    Add codebook automatically creates an empty codebook and opens the edit codebook page
-    """
-    def get_redirect_url(self, project_id, **kwargs):
-        c = Codebook.objects.create(project_id=project_id, name='New codebook')
-        return reverse(CodebookDetailsView.get_view_name(), args=[project_id, c.id])
-
 
 
 class CodebookListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, ListView):
@@ -131,7 +123,26 @@ class CodebookImportView(ProjectScriptView):
         initial = super(CodebookImportView, self).get_initial()
         initial["codebook"]=self.kwargs.get("codebookid")
         return initial
+
+
+class CodebookAddView(ProjectActionRedirectView):
+    """
+    Add codebook automatically creates an empty codebook and opens the edit codebook page
+    """
+    parent = CodebookListView
+    url_fragment = "add"
+
     
+    def action(self, project_id):
+        self.object = Codebook.objects.create(project_id=project_id, name='New codebook')
+        
+    def get_redirect_url(self, **kwargs):
+        kwargs.update({"codebook_id" : self.object.id})
+        return CodebookDetailsView._get_breadcrumb_url(kwargs, self)
+
+        
+
+        
 class CodebookLinkView(ProjectFormView):
     parent = CodebookListView
     url_fragment = 'link'
@@ -169,7 +180,7 @@ class CodebookDeleteView(ProjectActionRedirectView):
     parent = CodebookDetailsView
     url_fragment = "delete"
 
-    def get_redirect_url(self, project_id, codingschema_id):
+    def get_redirect_url(self, **kwargs):
         return CodebookListView._get_breadcrumb_url(kwargs, self)
 
     def action(self, project_id, codebook_id):

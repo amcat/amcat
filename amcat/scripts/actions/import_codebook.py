@@ -34,7 +34,7 @@ from amcat.models import Code, Codebook, Language, Project
 
 from amcat.scripts.article_upload.fileupload import CSVUploadForm
 
-LABEL_PREFIX = "label - "
+LABEL_PREFIX = "label"
 
 class ImportCodebook(Script):
     """
@@ -45,7 +45,7 @@ class ImportCodebook(Script):
     indented structure.
 
     Optional columns are a uuid column and arbitrary many 'extra' labels which should be called
-    'label - langauge'
+    'label - langauge' or 'label language' (e.g. "label - Dutch" or "label Dutch")
 
     When using uuid, existing codes will be used where possible. Existing labels will not be overwritten
     but new labels will be added
@@ -54,6 +54,19 @@ class ImportCodebook(Script):
     is in addition to any labels given in the 'label - language' columns.
 
     If an existing codebook is selected, that codebook will be updated instead of creating a new codebook.
+
+    Since Excel has quite some difficulties with exporting proper csv, it is often better to use
+    an alternative such as OpenOffice or Google Spreadsheet (but see below for experimental xlsx support).
+    If you must use excel, there is a 'tools' button on the save dialog which allows you to specify the
+    encoding and delimiter used.
+    
+    We have added experimental support for .xlsx files (note: only use .xlsx, not the older .xls file type).
+    This will hopefully alleviate some of the problems with reading Excel-generated csv file. Only the
+    first sheet will be used, and please make sure that the data in that sheet has a header row. Please let
+    us know if you encounter any difficulties at github.com/amcat/amcat/issues. Since you can only attach
+    pictures there, the best way to share the file that you are having difficulty with (if it is not private)
+    is to upload it to dropbox or a file sharing website and paste the link into the issue.
+    
     """
 
     class options_form(CSVUploadForm):
@@ -116,11 +129,12 @@ class ImportCodebook(Script):
 
         for col in data:
             if col.startswith(LABEL_PREFIX):
-                lang = col[len(LABEL_PREFIX):]
+                lang = col[len(LABEL_PREFIX):].strip()
+                if lang.startswith('-'): lang = lang[1:].strip()
                 try:
                     lang = int(lang)
                 except ValueError:
-                    lang = Language.objects.get(label=lang).id
+                    lang = Language.get_or_create(label=lang).id
                 for (code, parent), label in zip(parents, data[col]):
                     if label:
                         codes[code].add_label(lang, label)
