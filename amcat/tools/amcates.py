@@ -128,7 +128,8 @@ class Result(object):
     def from_hit(cls, row, fields, score=True):
         "@param hit: elasticsearch hit dict"
         field_dict = {f: None for f in fields}
-        field_dict.update(row.get('fields', {}))
+        if 'fields' in row:
+            field_dict.update({k : v[0] for (k,v) in row['fields'].iteritems()})
         result =  Result(id=int(row['_id']), **field_dict)
         if score: result.score = int(row['_score'])
         if 'highlight' in row: result.highlight = row['highlight']
@@ -372,7 +373,7 @@ class ES(object):
         Compute the number of items matching the given query / filter
         """
         filters=dict(build_body(query, filters, query_as_filter=True))
-        body = {"constant_score" : filters}
+        body = {"query" : {"constant_score" : filters}}
         result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
         return result["count"]
                       
@@ -438,7 +439,7 @@ class ES(object):
             result = self.es.mget(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE,
                                   body={"ids": batch}, fields=[])
             for doc in result['docs']:
-                if doc['exists']: yield int(doc['_id'])
+                if doc['found']: yield int(doc['_id'])
 
     def duplicate_exists(self, article):
         """
