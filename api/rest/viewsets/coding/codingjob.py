@@ -26,7 +26,7 @@ from amcat.models.coding.codingrule import CodingRule
 from amcat.models.coding.codingschemafield import CodingSchemaField
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models.coding.codedarticle import STATUS_COMPLETE, STATUS_IRRELEVANT, CodedArticle, STATUS_INPROGRESS, STATUS_NOTSTARTED
-from amcat.nlp import sbd
+from amcat.tools import sbd
 from amcat.tools.amcattest import AmCATTestCase
 from amcat.tools.caching import cached
 from api.rest.mixins import DatatablesMixin
@@ -77,7 +77,7 @@ class CodingJobSerializer(AmCATModelSerializer):
         return dict(self._get_coded_articles().filter(status__id__in=STATUS_TODO)
                     .values("codingjob").annotate(n=Count("codingjob"))
                     .values_list("codingjob__id", "n"))
-    
+
     @cached
     def _get_n_articles(self):
         return dict(self._get_codingjobs().annotate(n=Count("articleset__articles")).values_list("id", "n"))
@@ -93,7 +93,7 @@ class CodingJobSerializer(AmCATModelSerializer):
     def get_n_todo_jobs(self, obj):
         if not obj: return 0
         return self._get_n_todo_jobs().get(obj.id, 0)
-    
+
     class Meta:
         model = CodingJob
 

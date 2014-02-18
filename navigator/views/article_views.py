@@ -23,7 +23,7 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from django.views.generic.detail import DetailView
 from django import forms
 from amcat.forms import widgets
-from amcat.nlp import sbd
+from amcat.tools import sbd
 from itertools import chain
 from django.shortcuts import render
 from django.core.urlresolvers import reverse
@@ -47,7 +47,7 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
     def can_view_text(self):
         """Checks if the user has the right to edit this project"""
         return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_READER, self.object.project)
-    
+
     def get_highlight(self):
         if not self.last_query: return None
         try:
@@ -56,20 +56,20 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
              self._highlight = amcates.ES().highlight_article(self.object.id, self.last_query)
              return self._highlight
 
-        
+
     def get_headline(self):
         hl = self.get_highlight()
         if hl and "headline" in hl:
             return escape_keepem(hl["headline"])
         return escape(self.object.headline)
-        
+
     def get_text(self):
         hl = self.get_highlight()
         if hl and "text" in hl:
             return escape_keepem(hl["text"])
         return escape(self.object.text)
 
-    
+
     def get_context_data(self, **kwargs):
         context = super(ArticleDetailsView, self).get_context_data(**kwargs)
         context['text'] = self.get_text()
@@ -77,8 +77,8 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         # HACK: put query back on session to allow viewing more articles
         self.request.session["query"] = self.last_query
         return context
-    
-    
+
+
 class ArticleSetArticleDetailsView(ArticleDetailsView):
     parent = ArticleSetDetailsView
     model = Article
@@ -89,16 +89,16 @@ class ArticleSetArticleDetailsView(ArticleDetailsView):
         context['text'] = escape(self.object.text)
         return context
 
-    
 
-    
+
+
 class ProjectArticleDetailsView(ArticleDetailsView):
     model = Article
     parent = ProjectDetailsView
     context_category = 'Articles'
     template_name = 'project/article_details.html'
     url_fragment = "articles/(?P<article_id>[0-9]+)"
-    
+
     @classmethod
     def _get_breadcrumb_name(cls, kwargs, view):
         aid = kwargs['article_id']
@@ -108,8 +108,8 @@ class ProjectArticleDetailsView(ArticleDetailsView):
     def get_view_name(cls):
         return "project-article-details"
 
- 
-    
+
+
 class ArticleRemoveFromSetView(ProjectActionRedirectView):
     parent = ProjectArticleDetailsView
     url_fragment = "removefromset"
@@ -120,11 +120,11 @@ class ArticleRemoveFromSetView(ProjectActionRedirectView):
         if not self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, project):
             raise PermissionDenied("User {self.request.user} has insufficient rights on project {project}".format(**locals()))
 
-            
+
         articles = [int(kwargs["article_id"])]
         ArticleSet.objects.get(pk=remove_set).remove_articles(articles)
-    
-        
+
+
     def get_redirect_url(self, project_id, article_id):
         remove_set = int(self.request.GET["remove_set"])
         return_set = self.request.GET.get("return_set")
@@ -138,12 +138,12 @@ class ArticleRemoveFromSetView(ProjectActionRedirectView):
         article = self.kwargs["article_id"]
         remove_set =  int(self.request.GET["remove_set"])
         return "Removed the current article ({article}) from set {remove_set}".format(**locals())
-        
-        
+
+
 ################################################################################
 # Splitting. Yes, it was that much work                                        #
 ################################################################################
-        
+
 def get_articles(article, sentences):
     """
     Split `article` with `sentences` as delimeters. For each sentence the text
@@ -164,7 +164,7 @@ def get_articles(article, sentences):
     """
     new_article = copy_article(article)
 
-    # Get sentence, skipping the headline 
+    # Get sentence, skipping the headline
     all_sentences = list(article.sentences.all()[1:])
 
     not_in_article = set(sentences) - set(all_sentences)
@@ -174,7 +174,7 @@ def get_articles(article, sentences):
             .format(**locals())
         )
 
-    prev_parnr = 1 
+    prev_parnr = 1
     for parnr, sentnr in chain(sentences.values_list("parnr", "sentnr"), ((None, None),)):
         # Skip headline paragraph
         if parnr == 1: continue
@@ -210,7 +210,7 @@ def handle_split(form, project, article, sentences):
         sbd.create_sentences(art)
 
     # Context variables for template
-    form_data = form.cleaned_data 
+    form_data = form.cleaned_data
     all_sets = list(project.all_articlesets().filter(articles=article))
 
     # Keep a list of touched sets, so we can invalidate their indices
@@ -240,7 +240,7 @@ def handle_split(form, project, article, sentences):
     if form_data["remove_from_sets"]:
         for aset in form_data["remove_from_sets"]:
             aset.remove_articles([article])
-        
+
     if form_data["remove_from_all_sets"]:
         for aset in ArticleSet.objects.filter(project=project, articles=article).distinct():
             aset.remove_articles([article])
@@ -297,14 +297,14 @@ class ArticleSplitView(ProjectFormView):
     @classmethod
     def _get_breadcrumb_name(cls, kwargs, view):
          return cls.url_fragment
-    
+
     class form_class(forms.Form):
-        add_to_new_set = forms.CharField(required=False) 
+        add_to_new_set = forms.CharField(required=False)
         add_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
-        
+
         remove_from_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
         remove_from_all_sets = forms.BooleanField(initial=True, required=False, help_text="Remove all instances of the original article in this project")
-    
+
         add_splitted_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
         add_splitted_to_new_set = forms.CharField(required=False)
         add_splitted_to_all = forms.BooleanField(initial=False, required=False, help_text="Add new (splitted) articles to all sets containing the original article")
@@ -319,7 +319,7 @@ class ArticleSplitView(ProjectFormView):
     @property
     def article(self):
         return Article.objects.get(pk=self.kwargs['article_id'])
-        
+
     def form_valid(self, form):
         selected_sentence_ids = set(get_sentence_ids(self.request.POST)) - {None,}
         if selected_sentence_ids:
