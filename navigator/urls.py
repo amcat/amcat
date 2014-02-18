@@ -73,7 +73,9 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
              CodingJobExportSelectView, CodingJobExportView,
              ProjectUserListView, ProjectUserAddView,
-         ]:
+             ArticleRuleListView, ArticleRuleDetailsView,
+             ProjectUserListView, ProjectUserAddView,
+             ]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())

@@ -1,4 +1,4 @@
-##########################################################################
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -17,26 +17,27 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.conf.urls import patterns, url, include
-from rest_framework.urlpatterns import format_suffix_patterns
-from rest_framework.routers import DefaultRouter
+"""
+Interface with the xtas NLP processing system
+"""
+from amcat.tools import amcates
 
-from api.rest import resources
-from api.rest.viewsets import get_viewsets
+class ANALYSES:
+    postag = [{"module" : "xtas.tasks.single.tokenize"},
+              {"module": "xtas.tasks.single.pos_tag",
+               "arguments" : {"model" : "nltk"}}]
 
-router = DefaultRouter()
-for vs in get_viewsets():
-    router.register(vs.get_url_pattern(), vs, base_name=vs.get_basename())
+    corenlp = [{"module" : "xtas.tasks.single.corenlp"}]
 
-urlpatterns = format_suffix_patterns(patterns('',
-    url(r'^$', resources.api_root),
-    url(r'^taskresult/(?P<task_id>[0-9]+)$', resources.single_task_result, dict(uuid=False)),
-    url(r'^taskresult/(?P<task_id>[0-9a-zA-Z-]+)$', resources.single_task_result, dict(uuid=True)),
-    url(r'^get_token', 'api.rest.get_token.obtain_auth_token'),
-
-    *tuple(r.get_url_pattern() for r in resources.all_resources())
-))
-
-urlpatterns +=  patterns('',
-    url(r'^', include(router.urls)),
-)
+def get_result(article, analysis, store_intermediate=True, block=True):
+    from xtas.tasks.pipeline import pipeline
+    if not isinstance(article, int): article = article.id
+    if not isinstance(analysis, list): analysis = getattr(ANALYSES, analysis)
+    
+    es = amcates.ES()
+    doc = {'index': es.index, 'type': es.doc_type,
+           'id': article, 'field': 'text'}
+    r = pipeline(doc, analysis,
+                 store_intermediate=store_intermediate, block=block)
+    return r
+    

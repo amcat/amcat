@@ -1,0 +1,23 @@
+{% extends "project/base.html" %}
+
+{% block content %}
+
+<ul>
+{% for sid, s in sentences %}
+ <li> <a href="?sid={{sid}}">{{ s }}</a>
+{% endfor %}
+</ul>
+
+<object type='image/png' data='data:image/png;base64,{{ original_tree | safe }}'></object>
+
+<object type='image/png' data='data:image/png;base64,{{ processed_tree | safe }}'></object>
+
+<pre>
+{{ ruleset_dump }}
+</pre>
+
+<pre>
+{{ saf_dump }}
+</pre>
+
+{% endblock %}

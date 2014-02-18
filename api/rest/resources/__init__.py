@@ -39,6 +39,7 @@ from api.rest.resources.codingrule import CodingRuleResource
 from api.rest.resources.search import SearchResource
 from api.rest.resources.plugin import PluginResource
 from api.rest.resources.aggregate import AggregateResource
+from api.rest.resources.ruleset import RuleSetResource
 from api.rest.resources.task import TaskResource, TaskResultResource, single_task_result
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -60,7 +61,7 @@ MODELS = ['Article', 'AmCAT',
 # Automatically generate resources for these models
 for modelname in MODELS:
     if "." in modelname:
-        package, modelname = modelname.rsplit(".", 1) 
+        package, modelname = modelname.rsplit(".", 1)
     else:
         package, modelname = "amcat.models", modelname
     model = classtools.import_attribute(package, modelname)

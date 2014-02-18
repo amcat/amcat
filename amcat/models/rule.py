@@ -34,47 +34,50 @@ log = logging.getLogger(__name__)
 
 
 class RuleSet(AmcatModel):
+
     """
     Class representing a set of syntax transformation rule
     """
+
     id = models.AutoField(primary_key=True, db_column="rule_id")
     label = models.CharField(max_length=255)
 
     lexicon_codebook = models.ForeignKey("amcat.codebook", related_name="+")
     lexicon_language = models.ForeignKey("amcat.language", related_name="+")
 
+    def get_lexicon(self):
+        cb = self.lexicon_codebook
+        cb.cache_labels()
+        for code in cb.get_codes():
+            labels = {label.language:
+                      label.label for label in code.labels.all()}
+            lemmata = labels.get(self.lexicon_language, '').strip()
+            if lemmata:
+                lemmata = re.split("[ ,]+", lemmata)
+                for lang, label in labels.iteritems():
+                    if lang != self.lexicon_language:
+                        yield {"lexclass": label, "lemma": lemmata}
 
-    @property
-    def lexicon(self):
-        """Return a lemma : {lexclass, ..} dictionary"""
-        
-        SOLR_KEYWORD_SET = {"AND", "OR", "NOT"}
-        def _get_lexical_entries(label):
-            return set(re.findall("[\w*]+", label)) - SOLR_KEYWORD_SET
-        lexicon = getattr(self, "_cached_lexicon", None)
-        if lexicon is None:
-            lexicon = {}
-            labels = Label.objects.filter(code__codebook_codes__codebook=self.lexicon_codebook)
-            all_labels = defaultdict(list)
-            for label in labels:
-                all_labels[label.code_id].append(label)
-            codes = {code_id : sorted(labels, key=lambda l:l.language_id)[0].label
-                     for (code_id, labels) in all_labels.items()}
+    def get_rules(self):
+        for rule in self.rules.order_by("order"):
+            result = {"condition": rule.where}
+            if rule.insert:
+                result['insert'] = rule.insert
+            if rule.remove:
+                result['remove'] = rule.remove
+            yield result
 
-            lexicon = defaultdict(set)
-            for label in labels:
-                if label.language_id == self.lexicon_language.id:
-                    for lemma in _get_lexical_entries(label.label):
-                        lexicon[lemma].add(codes[label.code_id])
-            self._cached_lexicon = lexicon
-        return lexicon
-        
-    
+    def get_ruleset(self):
+        return {"lexicon": list(self.get_lexicon()),
+                "rules": list(self.get_rules())}
+
     class Meta():
         db_table = 'rulesets'
         app_label = 'amcat'
 
+
 class Rule(AmcatModel):
+
     """
     Class representing a syntax transformation rule
     """
@@ -95,3 +98,52 @@ class Rule(AmcatModel):
         db_table = 'rules'
         app_label = 'amcat'
         ordering = ['ruleset', 'order']
+
+
+###########################################################################
+#                          U N I T   T E S T S                            #
+###########################################################################
+
+from amcat.tools import amcattest
+
+
+class TestRules(amcattest.AmCATTestCase):
+
+    def test_lexicon(self):
+        from amcat.models import Language
+        cb = amcattest.create_test_codebook()
+        l1, l2 = [Language.get_or_create(label=x) for x in ["a", 'b']]
+
+        c1 = amcattest.create_test_code(label="a", language=l1)
+        c1.add_label(l2, "A")
+        cb.add_code(c1)
+
+        c2 = amcattest.create_test_code(label="b", language=l1)
+        c2.add_label(l2, "B1, B2")
+        cb.add_code(c2)
+
+        r = RuleSet.objects.create(label="test", lexicon_codebook=cb,
+                                   lexicon_language=l2)
+
+        result = sorted(r.get_lexicon(), key=lambda l: l['lexclass'])
+        self.assertEqual(result, [{"lexclass": "a", "lemma": ["A"]},
+                                  {"lexclass": "b", "lemma": ["B1", "B2"]}])
+
+    def test_rules(self):
+        cb = amcattest.create_test_codebook()
+        lang = amcattest.get_test_language()
+        r = RuleSet.objects.create(label="test", lexicon_codebook=cb,
+                                   lexicon_language=lang)
+        condition = "?x :rel_nsubj ?y"
+        insert = "?x :boe ?y"
+        Rule.objects.create(ruleset=r, label="x", order=2,
+                            where=condition, insert=insert)
+
+        self.assertEqual(list(r.get_rules()),
+                         [{"condition": conditition, "insert": insert}])
+
+        Rule.objects.create(ruleset=r, label="y", order=1,
+                            where="w", insert="i")
+        self.assertEqual(list(r.get_rules()),
+                         [{"condition": "w", "insert": "i"},
+                          {"condition": condition, "insert": insert}])
