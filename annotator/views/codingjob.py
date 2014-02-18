@@ -28,6 +28,8 @@ from django.shortcuts import render
 from django.http import HttpResponseRedirect, HttpResponseBadRequest, HttpResponse
 from django.core.urlresolvers import reverse
 import itertools
+from amcat.models.authorisation import ROLE_PROJECT_ADMIN
+
 
 from amcat.models import CodingJob, Project, Article, CodingValue, Coding, CodedArticle
 
@@ -50,14 +52,16 @@ def save(request, project_id, codingjob_id, coded_article_id):
     """
     coded_article = CodedArticle.objects.select_related("project", "codingjob", "article").get(id=coded_article_id)
 
+    # sanity checks
     if coded_article.codingjob.project_id != int(project_id):
         raise PermissionDenied("Given codingjob ({coded_article.codingjob}) does not belong to project ({coded_article.codingjob.project})!".format(**locals()))
-
-    if coded_article.codingjob.coder_id != request.user.id:
-        raise PermissionDenied("Only {request.user} can edit this codingjob.".format(**locals()))
-
     if coded_article.codingjob_id != int(codingjob_id):
         raise PermissionDenied("CodedArticle has codingjob_id={coded_article.codingjob_id} but {codingjob_id} given in url!")
+
+    if coded_article.codingjob.coder_id != request.user.id:
+        # the user is not the assigned coder. Is s/he project admin?
+        if not request.user.get_profile().has_role(ROLE_PROJECT_ADMIN, coded_article.codingjob.project):
+            raise PermissionDenied("Only {request.user} or project admins can edit this codingjob.".format(**locals()))
 
     try:
         codings = json.loads(request.body)

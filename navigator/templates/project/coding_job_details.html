@@ -1,6 +1,16 @@
 {% extends "project/base.html" %}
 
 {% block actions %}
+{% if user == object.coder or is_admin %}
+<a class="btn btn-primary" href="{% url 'annotator-codingjob' project.id object.id %}"><i class="glyphicon glyphicon-list-alt"></i>
+{% if user == object.coder %}
+  Code
+{% else %} 
+  Inspect codes
+{% endif %}
+</a>
+{% endif %}
+
 {% if can_edit %}
 <a class="btn btn-default" href="{% url "coding job-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit Settings</a>
 <a class="btn btn-danger confirm" href="{% url "coding job-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>

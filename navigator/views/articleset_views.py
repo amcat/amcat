@@ -217,7 +217,7 @@ class ArticleSetRefreshView(ProjectActionRedirectView):
 
     def action(self, project_id, articleset_id):
         # refresh the queryset. Probably not the nicest way to do this (?)
-        ArticleSet.objects.get(pk=project_id).refresh_index(full_refresh=True)
+        ArticleSet.objects.get(pk=articleset_id).refresh_index(full_refresh=True)
         
 from amcat.models.project import LITTER_PROJECT_ID
 import json, datetime
