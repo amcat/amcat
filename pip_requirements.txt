@@ -17,3 +17,4 @@ django_extensions
 html2text
 pypdf2
 django_json_field
+chardet
