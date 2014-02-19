@@ -59,7 +59,7 @@ class LazyES(object):
         if not self._count:
             self._count = self.es.count(self.query, filters=self.filters)
         return self._count
-        
+
     def __getslice__(self, i, j):
         kargs = {}
         fields = self.fields
@@ -67,16 +67,16 @@ class LazyES(object):
             kargs["highlight"] = True
         elif "lead" in fields:
             kargs["lead"] = True
-        fields = [f for f in fields if f != "lead"] 
+        fields = [f for f in fields if f != "lead"]
 
         if "text" in fields and "projectid" not in fields: fields.append("projectid")
-        result = self.es.query(self.query, filters=self.filters, fields=fields, 
+        result = self.es.query(self.query, filters=self.filters, fields=fields,
                                size=(j-i), sort=["id"], from_=i, score=False, **kargs)
         if self.hits:
             def add_hits_column(r):
                 r.hits = {q.label : 0 for q in self.queries}
                 return r
-            
+
             result_dict = {r.id : add_hits_column(r) for r in result}
             f = dict(ids=list(result_dict.keys()))
 
@@ -94,15 +94,15 @@ class LazyES(object):
                 except KeyError:
                     is_reader = user.get_profile().has_role(authorisation.ROLE_PROJECT_READER,
                                                             Project.objects.get(pk=row.projectid))
-                    cache[row.projectid] = is_reader                
+                    cache[row.projectid] = is_reader
             if not is_reader:
                 row.text = None
             return row
-        
+
         result = [_check_text_permission(self.user, row) for row in result] if "text" in fields else list(result)
         return result
 
-        
+
 class HighlightField(CharField):
     def field_to_native(self, obj, field_name):
         # use highlighting if available, otherwise fall back to raw text
@@ -113,13 +113,13 @@ class HighlightField(CharField):
             return " ... ".join(result)
         else:
             return getattr(obj, source, None)
-               
+
 
 class KWICField(CharField):
     def __init__(self, *args, **kargs):
         self.kwic = kargs.pop('kwic')
         super(KWICField, self).__init__(*args, **kargs)
-    
+
     def field_to_native(self, obj, field_name):
         # use highlighting if available, otherwise fall back to raw text
 
@@ -133,57 +133,57 @@ class KWICField(CharField):
 class ScoreField(IntegerField):
     def field_to_native(self, obj, field_name):
         source = self.source or field_name
-        return obj.hits.get(source, 0)
-        
+        return obj and obj.hits.get(source, 0)
+
 class SearchResource(AmCATResource):
 
     def post(self, request, *args, **kwargs):
         # allow for POST requests
         return self.list(request, *args, **kwargs)
-        
+
     @property
     @cached
     def columns(self):
         return self.request.QUERY_PARAMS.getlist("col")
-        
+
     @property
     @cached
     def queries(self):
         params = self.request.QUERY_PARAMS
         return [keywordsearch.SearchQuery.from_string(q)
                 for q in params.getlist("q")]
-        
-    
+
+
     def get_queryset(self):
         fields = self.get_serializer().get_fields().keys()
         if "text" in self.columns: fields += ["text"]
         if "lead" in self.columns: fields += ["lead"]
         if "kwic" in self.columns and "lead" not in fields: fields += ["lead"]
         hits = "hits" in self.columns
-        
+
         return LazyES(self.request.user, self.queries, fields=fields, hits=hits)
-        
+
     def filter_queryset(self, queryset):
         params = self.request.QUERY_PARAMS
         for k in FILTER_FIELDS:
             if k in params:
                 queryset.filter(k, params.getlist(k))
         return queryset
-    
+
     @classmethod
     def get_model_name(cls):
         return "search"
 
     def get_filter_fields(cls):
         return cls.filter_class().filters.keys()
-    
+
     class filter_class(filterset.FilterSet):
         sets = filters.NumberFilter()
         def __init__(self, data=None, queryset=None, prefix=None):
             if queryset is None:
                 queryset = LazyES()
             filterset.FilterSet.__init__(self, data, queryset, prefix)
-            
+
         class Meta:
             order_by=True
 
@@ -191,8 +191,9 @@ class SearchResource(AmCATResource):
         ctx = super(SearchResource, self).get_serializer_context()
         ctx["queries"] = self.queries
         ctx["columns"] = self.columns
+        ctx["minimal"] = self.request.QUERY_PARAMS.get('minimal')
         return ctx
-            
+
     class serializer_class(Serializer):
         id = IntegerField()
         date = DateField()
@@ -206,12 +207,17 @@ class SearchResource(AmCATResource):
         url = CharField()
         length = IntegerField()
         page = IntegerField()
-        
+
         def __init__(self, *args, **kwargs):
             Serializer.__init__(self, *args, **kwargs)
             ctx = kwargs.get("context", {})
             columns = ctx.get("columns", [])
             queries = ctx.get("queries", None)
+
+            if ctx.get('minimal'):
+                for fn in list(self.fields):
+                    if fn != 'id' and fn not in list(columns):
+                        del self.fields[fn]
 
             if "hits" in columns and queries:
                 for q in queries:
@@ -226,8 +232,8 @@ class SearchResource(AmCATResource):
                 self.fields['left'] = KWICField(kwic='left')
                 self.fields['keyword'] = KWICField(kwic='keyword')
                 self.fields['right'] = KWICField(kwic='right')
-        
-                
+
+
     @classmethod
     def extra_fields(cls, args):
         """Used by datatable.py for dynamic fields. Hack?"""
@@ -256,7 +262,7 @@ class SearchResource(AmCATResource):
 
 from api.rest.apitestcase import ApiTestCase
 from amcat.tools import amcattest, toolkit
-        
+
 class TestSearch(ApiTestCase):
     @amcattest.use_elastic
     def test_dates(self):
@@ -268,4 +274,3 @@ class TestSearch(ApiTestCase):
             amcates.ES().flush()
             res = self.get("/api/v4/search", ids=a.id)
             self.assertEqual(toolkit.readDate(res['results'][0]['date']), toolkit.readDate(str(d)))
-            
