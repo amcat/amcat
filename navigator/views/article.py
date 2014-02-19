@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from itertools import chain 
+from itertools import chain
 
 from django.shortcuts import render, redirect
 from django.conf import settings
@@ -34,7 +34,7 @@ from amcat.scripts import article_upload as article_upload_scripts
 
 import logging; log = logging.getLogger(__name__)
 
-from amcat.nlp import syntaxtree, sbd 
+from amcat.nlp import syntaxtree, sbd
 from amcat.models import AnalysisSentence, RuleSet
 from amcat.tools.pysoh.pysoh import SOHServer
 from amcat.models import ArticleSetArticle, Sentence, Article
@@ -53,7 +53,7 @@ def get_paragraphs(sentences):
             parnr = sentence.sentence.parnr
             paragraph = []
         paragraph.append(sentence)
-    
+
 
 @check(AnalysedArticle, args='id')
 @check(Project, args_map={'projectid' : 'id'}, args='projectid')
@@ -62,7 +62,7 @@ def analysedarticle(request, project, analysed_article):
     sentences = sentences.prefetch_related("tokens", "tokens__word", "tokens__word__lemma").select_related("sentence")
 
     paragraphs = list(get_paragraphs(sentences))
-    
+
     menu = PROJECT_MENU
     context = project
     return render(request, "navigator/article/analysedarticle.html", locals())
@@ -91,7 +91,7 @@ def analysedsentence(request, project, sentence, rulesetid=None):
         tree.apply_lexicon(ruleset.lexicon_codebook, ruleset.lexicon_language)
         parsetree = tree.visualise().getHTMLObject()
         grey_rel = lambda triple : ({'color':'grey'} if 'rel_' in triple.predicate else {})
-        
+
         for rule in ruleset.rules.all():
             try:
                 tree.apply_rule(rule)
@@ -103,7 +103,7 @@ def analysedsentence(request, project, sentence, rulesetid=None):
 
         if not ruleset_error:
             finaltree = tree.visualise(triple_args_function=grey_rel).getHTMLObject()
-            
+
 
     return render(request, "navigator/article/analysedsentence.html", locals())
 
@@ -111,7 +111,7 @@ def analysedsentence(request, project, sentence, rulesetid=None):
 @check(ArticleSet, args_map={'articleset_id' : 'id'}, args='articleset_id')
 @check(Project, args_map={'project_id' : 'id'}, args='project_id')
 def view(request, project, articleset, article):
-    
+
     menu = PROJECT_MENU
     context = project
 
@@ -168,7 +168,7 @@ def get_articles(article, sentences):
     """
     new_article = copy_article(article)
 
-    # Get sentence, skipping the headline 
+    # Get sentence, skipping the headline
     all_sentences = list(article.sentences.all()[1:])
 
     not_in_article = set(sentences) - set(all_sentences)
@@ -178,7 +178,7 @@ def get_articles(article, sentences):
             .format(**locals())
         )
 
-    prev_parnr = 1 
+    prev_parnr = 1
     for parnr, sentnr in chain(sentences.values_list("parnr", "sentnr"), ((None, None),)):
         # Skip headline paragraph
         if parnr == 1: continue
@@ -216,7 +216,7 @@ def handle_split(form, project, article, sentences):
         sbd.create_sentences(art)
 
     # Context variables for template
-    form_data = form.cleaned_data 
+    form_data = form.cleaned_data
     all_sets = list(project.all_articlesets().filter(articles=article))
 
     # Keep a list of touched sets, so we can invalidate their indices
@@ -246,7 +246,7 @@ def handle_split(form, project, article, sentences):
     if form_data["remove_from_sets"]:
         for aset in form_data["remove_from_sets"]:
             aset.remove_articles([article])
-        
+
     if form_data["remove_from_all_sets"]:
         for aset in ArticleSet.objects.filter(project=project, articles=article).distinct():
             aset.remove_articles([article])
@@ -263,7 +263,7 @@ def handle_split(form, project, article, sentences):
 
     return locals()
 
-    
+
 @check(Article, args_map={'article_id' : 'id'}, args='article_id')
 @check(Project, args_map={'project_id' : 'id'}, args='project_id')
 def split(request, project, article):
@@ -332,7 +332,7 @@ def _build_option_forms(request, choices):
     """
     for script in choices:
         # Extract form from upload script
-        frm = getattr(article_upload_scripts, script[0]).options_form 
+        frm = getattr(article_upload_scripts, script[0]).options_form
 
         if frm is None:
             # Upload script has no form
@@ -346,54 +346,6 @@ def _build_option_forms(request, choices):
 
         # Form does exist but not selected
         yield (script[0], frm())
-
-
-@check_perm("add_articles", True)
-def upload_article(request, id):
-    """
-    This view gives users the ability to upload articles in various formats,
-    using upload-scripts located in amcat.scripts.article_upload.
-
-    For every script, it generates a form and uses javascript to automatically
-    hide / show it based on the selected one.
-    """
-    error = False 
-
-    project = Project.objects.get(id=id)
-    form = forms.UploadScriptForm(project, request.POST or None, request.FILES or None)
-
-    # Build forms for all scripts
-    option_forms = _build_option_forms(request, form.fields['script'].choices)
-
-    # Only process when submitted
-    if request.POST.get('submit', None) and form.is_valid():
-        # Get script bases on given id
-        script = getattr(article_upload_scripts, form.cleaned_data['script'])
-        script_form = option_forms[form.cleaned_data['script']]
-
-        if script_form is None or script_form.is_valid():
-            # Option form is valid, try saving articles to database
-            for fn, bytes in form.cleaned_data['file']:
-                uni = bytes.decode(form.cleaned_data['encoding'])
-
-                try:
-                    articles = script(request.POST).run(uni)
-                    nset, articles = _save_articles(request, articles,
-                                                    project, form.cleaned_data)
-
-                except Exception as error:
-                    if settings.DEBUG: 
-                        raise
-                else:
-                    return render(request, "navigator/project/upload_article_success.html",
-                                  dict(context=project, set=nset, articles=articles))
-
-
-    return render(request, "navigator/project/upload_article.html", dict(context=project,
-                                                                        form=form,
-                                                                        error=error,
-                                                                        option_forms=option_forms,
-                                                                        menu=PROJECT_MENU))
 
 
 ###########################################################################
@@ -420,7 +372,7 @@ class TestArticleViews(amcattest.AmCATTestCase):
         # Should raise an exception if we try to split on headline
         self.assertRaises(ValueError, _get_articles, article, sentences.filter(parnr=1))
 
-        # Should return a "copy", with byline in "text" property 
+        # Should return a "copy", with byline in "text" property
         arts = _get_articles(article, Sentence.objects.none())
         map(lambda a : a.save(), arts)
 
@@ -441,7 +393,7 @@ class TestArticleViews(amcattest.AmCATTestCase):
         # Check if text on splitted articles contains expected
         self.assertTrue("Einde" not in a.text)
         self.assertTrue("Einde" in b.text)
-        
+
     def test_handle_split(self):
         from amcat.tools import amcattest
         from functools import partial
@@ -457,12 +409,12 @@ class TestArticleViews(amcattest.AmCATTestCase):
                 sbd.create_sentences(_article)
 
         a1, a2 = aset1.articles.all()[0], aset2.articles.all()[0]
-        
+
         aset1.articles.through.objects.create(articleset=aset1, article=article)
         aset3.articles.through.objects.create(articleset=aset3, article=a1)
 
         form = partial(forms.SplitArticleForm, project, article, initial={
-            "remove_from_sets" : False 
+            "remove_from_sets" : False
         })
 
         # Test form defaults (should do nothing!)
@@ -536,4 +488,3 @@ class TestArticleViews(amcattest.AmCATTestCase):
         self.assertFalse(article in aset1.articles.all())
         self.assertFalse(article in aset2.articles.all())
         self.assertTrue(article in aset3.articles.all())
-

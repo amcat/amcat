@@ -1,3 +1,4 @@
+from __future__  import absolute_import
 ###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
@@ -18,20 +19,44 @@
 ###########################################################################
 
 """
-Script to update the index after scraping
+Module for running scrapers
 """
 
-from amcat.scripts.script import Script
-from amcat.models.articleset import ArticleSet
-from amcat.models.scraper import Scraper
+import logging;log = logging.getLogger(__name__)
+from collections import namedtuple
 
-class UpdateIndexScript(Script):
-    def run(self, _input = None):
-        setids = Scraper.objects.filter(active = True).values('articleset')
-        for s in ArticleSet.objects.filter(pk__in = setids):
-            s.refresh_index()
+from amcat.models.article import Article
 
-if __name__ == "__main__":
-    from amcat.scripts.tools import cli
-    cli.run_cli(UpdateIndexScript)
-        
+ScrapeError = namedtuple("ScrapeError", ["i", "unit", "error"])
+
+class Controller(object):
+    def __init__(self):
+        self.errors = []
+        self.articles = []
+
+    def run(self, scraper):
+        try:
+            units = list(scraper._get_units())
+        except Exception as e:
+            self.errors.append(ScrapeError(None,None,e))
+            log.exception("scraper._get_units failed")
+            return self.articles
+
+        for i, unit in enumerate(units):
+            try:
+                articles = list(scraper._scrape_unit(unit))
+            except Exception as e:
+                log.exception("scraper._scrape_unit failed")
+                self.errors.append(ScrapeError(i,unit,e))
+                continue
+            self.articles += articles
+
+        try:
+            self.articles, errors = Article.ordered_save(self.articles, scraper.articleset)
+            for e in errors:
+                self.errors.append(ScrapeError(None,None,e))
+        except Exception as e:
+            self.errors.append(ScrapeError(None,None,e))
+            log.exception("scraper._get_units failed")
+
+        return self.articles
