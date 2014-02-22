@@ -23,14 +23,15 @@ from django.contrib.auth.views import password_change, password_change_done
 from navigator.views.preprocessing_views import ProcessParsingView
 from navigator.views import rule_views
 
-from navigator.views.articleset_views import *
-from navigator.views.article_views import *
-from navigator.views.query import *
-from navigator.views.project_views import *
-from navigator.views.codebook_views import *
-from navigator.views.user_views import *
-from navigator.views.codingjob_views import *
-from navigator.views.codingschema_views import *
+from navigator.views.articleset_views import *  # noqa
+from navigator.views.article_views import *  # noqa
+from navigator.views.query import *  # noqa
+from navigator.views.project_views import *  # noqa
+from navigator.views.codebook_views import *  # noqa
+from navigator.views.user_views import *  # noqa
+from navigator.views.codingjob_views import *  # noqa
+from navigator.views.codingschema_views import *  # noqa
+from navigator.views.rule_views import *  # noqa
 
 urlpatterns = patterns(
     '',
@@ -43,7 +44,7 @@ urlpatterns = patterns(
 
     url(r'^media$', 'navigator.views.report.media', name='media'),
     url(r'^nyi$', 'navigator.views.nyi.index', name='nyi'),
-    
+
     # Articles
     url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
             'navigator.views.article.view', name="article"),
@@ -61,10 +62,10 @@ urlpatterns = patterns(
     url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)/ruleset/(?P<rulesetid>[0-9]+)$',
         'navigator.views.article.analysedsentence', name='analysedsentence-ruleset'),
 
-    
+
     url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),
     url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
-    
+
     # Media
     url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),
     url(r'^medium/add-alias$', 'navigator.views.medium.add_alias', name='medium-alias-add'),
@@ -91,14 +92,14 @@ urlpatterns = patterns(
 
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
     url(r'^codingjobs/(?P<coder_id>\d+)/all$' ,'navigator.views.codingjob.all', name='codingjobs-all'),
-    
+
     # Scrapers
     url(r'^scrapers$', 'navigator.views.scrapers.index', name='scrapers'),
 
 
     url(r'^semanticroles$', 'navigator.views.semanticroles.index', name='semanticroles'),
     url(r'^semanticroles/(?P<id>[0-9]+)$', 'navigator.views.semanticroles.sentence', name='semanticroles-sentence'),
-) 
+)
 
 
 for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
@@ -115,7 +116,8 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              CodingSchemaCopyView,CodingSchemaLinkView,CodingSchemaUnlinkView,
              CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
              CodingJobExportSelectView, CodingJobExportView,
-             ProjectUserListView, ProjectUserAddView]:
+             ProjectUserListView, ProjectUserAddView,
+         ]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
