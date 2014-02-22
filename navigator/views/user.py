@@ -24,7 +24,7 @@ from api.rest.resources import UserResource, ProjectResource
 
 from amcat.models.user import User, Affiliation
 from amcat.models.language import Language
-    
+
 from navigator.utils.auth import check, create_user, check_perm
 from navigator.utils.misc import session_pop
 
@@ -37,7 +37,7 @@ from django import db
 from django import http
 
 def _table_view(request, table, selected=None, menu=USER_MENU):
-    return render(request, "navigator/user/table.html", locals())
+    return render(request, "user/table.html", locals())
 
 def _list_users(request, selected, **filters):
     return _table_view(request, Datatable(UserResource).filter(**filters), selected)
@@ -69,14 +69,14 @@ def view(request, user=None, form=None):
     projects = Datatable(ProjectResource).filter(projectrole__user=user)
     menu = None if user == request.user else USER_MENU
     main_active = "Current User" if user == request.user else "Users"
-    
-    
-    return render(request, "navigator/user/view.html", {'user' : user,
-                                                        'form' : form,
-                                                        'projects' : projects,
-                                                        'success' : success,
-                                                        'main_active' : main_active,
-                                                        'menu' : menu})
+
+
+    return render(request, "user/view.html", {'user' : user,
+                                              'form' : form,
+                                              'projects' : projects,
+                                              'success' : success,
+                                              'main_active' : main_active,
+                                              'menu' : menu})
 
 @check(User, action='update')
 def edit(request, user):
@@ -92,7 +92,7 @@ def add(request):
     add_multiple_form = forms.AddMultipleUsersForm(request)
 
     message = session_pop(request.session, "users_added")
-    return render(request, "navigator/user/add.html", locals())
+    return render(request, "user/add.html", locals())
 
 @db.transaction.commit_on_success
 def _add_multiple_users(request):
@@ -151,8 +151,8 @@ def add_submit(request):
 
         # Validation failed.
         amf, af = resp
-        
-    return render(request, "navigator/user/add.html", {
+
+    return render(request, "user/add.html", {
         'error' : locals().get('message'),
         'add_multiple_form' : amf,
         'add_form' : af,

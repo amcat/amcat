@@ -35,70 +35,26 @@ from navigator.views.rule_views import *  # noqa
 
 urlpatterns = patterns(
     '',
-     url(r'^$', 'navigator.views.report.index', name="index"),
+     url(r'^$', 'navigator.views.index.index', name="index"),
 
-    # User report
-    url(r'^users$', 'navigator.views.user.my_affiliated_active', name='users'),
-    url(r'^users/my_all$', 'navigator.views.user.my_affiliated_all'),
-    url(r'^users/all$', 'navigator.views.user.all', name='all-users'),
-
-    url(r'^media$', 'navigator.views.report.media', name='media'),
-    url(r'^nyi$', 'navigator.views.nyi.index', name='nyi'),
-
-    # Articles
-    url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
-            'navigator.views.article.view', name="article"),
-    url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)/remove_from/(?P<remove_articleset_id>[0-9]+)$',
-            'navigator.views.article.remove_from', name="remove_from_articleset"),
-    #url(r'^project/(?P<project_id>[0-9]+)/article/(?P<article_id>[0-9]+)$',
-    #        'navigator.views.project.article', name="article"),
-    url(r'^project/(?P<projectid>[0-9]+)/processparsing$',
-        ProcessParsingView.as_view(), name="processparsing"),
-    # parses
-    url(r'^project/(?P<projectid>[0-9]+)/analysedarticle/(?P<id>[0-9]+)$',
-        'navigator.views.article.analysedarticle', name='analysedarticle'),
-    url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)$',
-        'navigator.views.article.analysedsentence', name='analysedsentence'),
-    url(r'^project/(?P<projectid>[0-9]+)/analysedsentence/(?P<id>[0-9]+)/ruleset/(?P<rulesetid>[0-9]+)$',
-        'navigator.views.article.analysedsentence', name='analysedsentence-ruleset'),
-
-
-    url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),
-    url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
-
-    # Media
-    url(r'^medium/add$', 'navigator.views.medium.add', name='medium-add'),
-    url(r'^medium/add-alias$', 'navigator.views.medium.add_alias', name='medium-alias-add'),
-
-    # Users
+     # Users
     url(r'^user/(?P<id>[0-9]+)?$', 'navigator.views.user.view', name='user'),
     url(r'^user/edit/(?P<id>[0-9]+)$', 'navigator.views.user.edit', name='user-edit'),
     url(r'^user/add$', 'navigator.views.user.add', name='user-add'),
     url(r'^user/add-submit$', 'navigator.views.user.add_submit', name='user-add-submit'),
     url(r'^user/change-password$', password_change, name='user-change-password',
         kwargs=dict(
-            template_name="navigator/user/change_password.html",
+            template_name="user/change_password.html",
             post_change_redirect='change-password-done'
         )),
     url(r'^user/change-password-done$', password_change_done, name='change-password-done',
         kwargs=dict(
-            template_name="navigator/user/change_password_done.html"
+            template_name="user/change_password_done.html"
         )),
 
-    # Coding
-    url(r'^coding/schema-editor$', 'navigator.views.schemas.index'),
-    url(r'^coding/codingschema/(?P<id>[0-9]+)$', 'navigator.views.schemas.schema',
-        name='codingschema'),
 
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
-    url(r'^codingjobs/(?P<coder_id>\d+)/all$' ,'navigator.views.codingjob.all', name='codingjobs-all'),
 
-    # Scrapers
-    url(r'^scrapers$', 'navigator.views.scrapers.index', name='scrapers'),
-
-
-    url(r'^semanticroles$', 'navigator.views.semanticroles.index', name='semanticroles'),
-    url(r'^semanticroles/(?P<id>[0-9]+)$', 'navigator.views.semanticroles.sentence', name='semanticroles-sentence'),
 )
 
 

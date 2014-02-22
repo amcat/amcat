@@ -1,4 +1,4 @@
-{% extends "navigator/base.html" %}
+{% extends "base.html" %}
 
 {% block title %}{{ what }} projects {% endblock %}
 
@@ -20,4 +20,3 @@
 {% block actions %}
   <a href="{% url "projects-add" %}" class="btn btn-primary"><i class="icon icon-plus"></i>Create Project</a>
 {% endblock %}
-

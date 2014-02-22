@@ -35,7 +35,7 @@
         alert('Cannot sort on this column');
         return null;
     }
-    
+
     var thPosition = 0;
 
     $(document).ready(function(){
@@ -59,33 +59,32 @@
                 return nRow;
             }
         } );
-        
+
         $('#articletable-container table:first th').each(function(i, item){
             if($(item).text() == 'Context before'){
                 thPosition = i+1;
                 return false;
             }
         });
-        
+
     });
-    
+
     function onbeforeRowDraw(row){
         if(thPosition > 0){
             $('td:nth-child(' + thPosition + ')', row).each(function(i, item){
                 $(item).css('text-align', 'right');
             });
         }
-        
+
         row.css('cursor', 'pointer').click(function(){
             var articleid = $(this).find('td:first').text();
             console.log('click', articleid)
             if(articleid && isNaN(articleid) == false){
                 window.open('article/' + articleid)
-                //$('#hidden-link').attr('href', 'navigator/article/' + articleid).click();
             }
         });
     }
-    
+
     function doServerRequest(sSource, aoData, fnCallback){
         var values = amcat.selection.getFormDict();
         $.each(aoData, function(i, obj){
@@ -96,16 +95,16 @@
         values['start'] = values['iDisplayStart'];
         values['length'] = values['iDisplayLength'];
         var sortColumn = getColumn(values['iSortCol_0']);
-        values['sortColumn'] = sortColumn; 
+        values['sortColumn'] = sortColumn;
         values['sortOrder'] = values['sSortDir_0'];
-        
+
         if(!('columns' in values)){
             values['columns'] = ['article_id', 'date', 'medium_id', 'medium_name', 'headline'];
         }
-        
+
         console.log(values);
         var data = $.param(values, true);
-        
+
         $.ajax( {
             dataType: 'json',
             type: "POST",
@@ -113,17 +112,17 @@
             data: data,
             success: function(data, textStatus, jqXHR){
                 console.log(data);
-                
+
                 fnCallback(data, textStatus, jqXHR);
             },
             error:function(jqXHR, textStatus, errorThrown){
                 console.error(textStatus, errorThrown);
                 throw new Exception('Error loading additional data');
-            }            
+            }
         } );
     }
-    
-    
+
+
 </script>
 
 {#<a href="" id="hidden-link" style="display:none" target="_blank">test</a>#}

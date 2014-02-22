@@ -1,4 +1,4 @@
-{% extends "navigator/project/base.html" %}
+{% extends "project/base.html" %}
 
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
@@ -17,7 +17,7 @@ A number of errors where encountered while scraping that may have caused this:
 
 {% if created_set %}
 {% if scraper_errors %}
-<div class="alert alert-warning">Uploaded {{created_n}} article(s) into <a href="{% url "article set-details" created_set.project_id created_set.id %}">article set {{created_set}}</a>. However, 
+<div class="alert alert-warning">Uploaded {{created_n}} article(s) into <a href="{% url "article set-details" created_set.project_id created_set.id %}">article set {{created_set}}</a>. However,
 some errors where encountered while uploading:
 {{scraper_errors|unordered_list}}
 </div>
@@ -41,8 +41,8 @@ some errors where encountered while uploading:
   {% for field in form.visible_fields %}
   <tr {% if field.errors %}class="error-subtle"{% endif %}>
     <td>{{ field.label_tag }}</td>
-    <td> 
-      {{ field }} 
+    <td>
+      {{ field }}
       {% if field.help_text %}<br/><span class="helptext">{{field.help_text}}</span>{% endif %}
     </td>
     <td>{{field.errors}}</td>

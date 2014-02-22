@@ -17,21 +17,13 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from django.shortcuts import render
-from navigator.utils.auth import check
-
-from amcat.models.coding.codingschema import CodingSchema
-from api.rest.resources import CodingSchemaResource
+from django.core.urlresolvers import reverse
 
 from api.rest.datatable import Datatable
+from api.rest.resources import MediumResource
+from amcat.models.medium import Medium
 
 import logging; log = logging.getLogger(__name__)
 
 def index(request):
-    all_schemas = Datatable(CodingSchemaResource, options=dict(iDisplayLength=10))
-    own_schemas = all_schemas.filter(project__in=request.user.projects)
-
-    return render(request, 'navigator/schemas/index.html', locals())
-
-@check(CodingSchema)
-def schema(request, aschema):
-    return render(request, 'navigator/schemas/schema.html', locals())
+    return render(request, 'index.html')

@@ -47,22 +47,4 @@ def index(request, coder=None):
         'selected' : 'unfinished jobs'
     })
 
-    return render(request, 'navigator/report/codingjobs.html', locals())
-
-@check(User, args='coder_id', args_map={'coder_id' : 'id'})
-def all(request, coder):
-    """
-    Show all (including finished) jobs
-    """
-    print("Hello2")
-    jobs = Datatable(CodingJobResource).filter(coder=coder)
-
-    ctx = locals()
-    ctx.update({
-        'jobs' : jobs,
-        'menu' : CODINGJOB_MENU,
-        'context' : coder,
-        'selected' : 'all jobs'
-    })
-
-    return render(request, 'navigator/report/codingjobs.html', ctx)
+    return render(request, 'codingjobs.html', locals())

@@ -7,9 +7,9 @@
   <head>
     <title>AmCAT Navigator 3 - {% block title %}Beta{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
+
     <link rel="shortcut icon" href="{{ MEDIA_URL  }}img/amcat/favicon.png">
-    
+
     <!--  CSS -->
     {% compress css %}
     <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
@@ -23,7 +23,7 @@
     <link href="{% static 'css/amcat.css' %}" rel="stylesheet" type="text/css"  />
     {% endcompress %}
     {% block css %}{% endblock %}
-    
+
     <!--  Javascript -->
     {% compress js %}
     <script type="text/javascript" src="{% static 'js/jquery-1.7.2.min.js' %}"></script>
@@ -52,12 +52,12 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-	  
+
         </div>
         <div class="navbar-collapse collapse">
 
           <ul class="nav navbar-nav navbar-right">
-	    {% include "navigator/main_menu.html" %}
+	    {% include "main_menu.html" %}
           </ul>
           <ul class="nav navbar-nav">
 	    {% block contextmenu %}
@@ -74,7 +74,7 @@
     </header>
 
     <!-- main contents -->
-    <div id="content" class="container"> 
+    <div id="content" class="container">
 
 
       {% if breadcrumbs %}
@@ -101,7 +101,7 @@
       <div class="btn-group" style="margin-bottom: 1em">
 	{% block actions %}{% endblock %}
       </div>
-      
+
       <div style="margin-bottom: 1em">
 	{% block details %}{% endblock %}
       </div>

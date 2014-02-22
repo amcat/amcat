@@ -1,4 +1,4 @@
-{% extends "navigator/base.html" %}
+{% extends "base.html" %}
 
 {% block content %}
 
@@ -7,7 +7,7 @@
    <table>
     {{ form.as_table }}
    </table>
- 
+
    <div class="form-actions">
     <input class="btn btn-primary" type="submit" value="Save"></input>
     <a href="{{ cancel_url }}" class="btn">Cancel</a>

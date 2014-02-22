@@ -1,4 +1,4 @@
-{% extends "navigator/base.html" %}
+{% extends "base.html" %}
 {% block content %}
 
 <div class="login_head">
@@ -29,7 +29,7 @@ or <form method="POST" class="">
     <a href="{% url "accounts-register" %}" class="btn
     btn-primary">Create a new Account</a>
  </form>
-    <small>If you forgot your username or password use 
+    <small>If you forgot your username or password use
            <a href="{% url "accounts-recover" %}">this</a> form.
     </small>
 </p>

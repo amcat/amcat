@@ -8,7 +8,7 @@
     <link href="{% static 'css/jquery.jqplot.min.css' %}" rel="stylesheet" type="text/css" media="screen" />
 {% endcompress %}
 {% endblock %}
-{% block javascript %}    
+{% block javascript %}
 <!--[if lt IE 9]><script type="text/javascript" src="{{MEDIA_URL}}js/jqplot/excanvas.min.js"></script><![endif]-->
   {% compress js %}
   <script type="text/javascript" src="{% static 'js/jqplot/jquery.jqplot.min.js' %}"></script>
@@ -24,7 +24,7 @@
   <script type="text/javascript" src="{% static 'js/jqplot/plugins/jqplot.pointLabels.min.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/jquery.csv-0.71.js' %}"></script>
   <script type="text/javascript" src="{% static 'js/jquery.upload_query.js' %}"></script>
-  
+
   <script src="{% static 'js/selection.js' %}" type="text/javascript"></script>
   {% endcompress %}
 {% endblock %}
@@ -64,8 +64,8 @@
                 <option value="before">Before</option>
               </select>
               <span id="date-start" style="display:none">Start: {{ form.start_date }} </span>
-              <span id="date-end" style="display:none"> End: {{ form.end_date }}</span> 
-              <span id="date-on" style="display:none">{{ form.on_date }}</span> 
+              <span id="date-end" style="display:none"> End: {{ form.end_date }}</span>
+              <span id="date-on" style="display:none">{{ form.on_date }}</span>
 	  </div>
 	</div>
 	<div class="form-group">
@@ -93,7 +93,7 @@
         </div>
         {% endfor %}
         <div id="options-radio-additional" class="output-options col-md-9 col-md-offset-3">
-            
+
         </div>
 
       </div> <!-- col -->
@@ -104,13 +104,13 @@
 	    <div class="panel-heading">
 	      <h4 class="panel-title">
 		<a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
-		  Keyword Search string(s) 
+		  Keyword Search string(s)
 		</a>
 	      </h4>
 	    </div>
 	    <div id="collapseOne" class="panel-collapse collapse in">
 	      <div class="panel-body query">
-		
+
 		{{ form.query }}
 <a id="help-link" class="pull-right" style="font-size:12px" href="#"><i class="glyphicon glyphicon-info-sign"></i>
 Search Syntax Help</a><br />
@@ -142,7 +142,7 @@ Search Syntax Help</a><br />
 	    </div>
 	    <div id="collapseThree" class="panel-collapse collapse">
 	      <div class="panel-body">
-		{{form.codebook.label_tag}} {{form.codebook}}<br/> 
+		{{form.codebook.label_tag}} {{form.codebook}}<br/>
 		{{form.codebook_label_language.label_tag}} {{form.codebook_label_language}}<br/>
 		{{form.codebook_replacement_language.label_tag}} {{form.codebook_replacement_language}}<br/>
 	      </div>
@@ -172,19 +172,19 @@ Search Syntax Help</a><br />
       </div>
     </div>
   </form>
-  
+
   <div id="select-message" class="message"></div>
   <div id="select-result"></div>
-  
+
   <iframe name="formpost" style="display:none"></iframe>
-  
+
   <div id="dialog-message" style="display:none">
     <div id="dialog-message-content"></div>
     <div id="dialog-message-status"></div>
   </div>
-  
+
   </div> <!-- col -->
   </div> <!-- row -->
-  {% include "navigator/selection/querysyntax.html" %}
+  {% include "querysyntax.html" %}
 
 {% endblock %}
