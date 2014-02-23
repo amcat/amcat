@@ -64,7 +64,7 @@ class RuleForm(ModelForm):
 
 class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
     model = RuleSet
-    template_name = "navigator/rule/ruleset.html"
+    template_name = "ruleset.html"
 
     def get(self, request, pk, **kwargs):
         self.object = self.get_object()

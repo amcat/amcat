@@ -54,7 +54,8 @@ urlpatterns = patterns(
 
 
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
-
+    url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),
+    url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
 )
 
 
