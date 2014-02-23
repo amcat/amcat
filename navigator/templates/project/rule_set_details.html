@@ -2,20 +2,33 @@
 
 {% block content %}
 
+<h1>Sentences</h1>
+
 <ul>
-{% for sid, s in sentences %}
- <li> <a href="?sid={{sid}}">{{ s }}</a>
+{% for id, s in sentences %}
+ <li> {% if id == sid %}
+{{id}} : {{s}}
+{% else %}
+<a href="?sid={{id}}">{{id}} : {{ s }}</a>
+{% endif %}
 {% endfor %}
 </ul>
 
-<object type='image/png' data='data:image/png;base64,{{ original_tree | safe }}'></object>
+
+<h1>Processed Tree</h1>
 
 <object type='image/png' data='data:image/png;base64,{{ processed_tree | safe }}'></object>
 
+<h1>Original Tree</h1>
+
+<object type='image/png' data='data:image/png;base64,{{ original_tree | safe }}'></object>
+
+<h2>Ruleset:</h2>
 <pre>
 {{ ruleset_dump }}
 </pre>
 
+<h2>Article SAF</h2>
 <pre>
 {{ saf_dump }}
 </pre>
