@@ -83,14 +83,18 @@ autocomplete = (function(self){
         // - Rest
         // Furthermore, the returned list should be alphabetically sorted.
         var filtered = $.ui.autocomplete.filter(choices, request.term);
-        filtered.sort(function(a, b){
-            a = a.label.toLowerCase();
-            b = b.label.toLowerCase();
+        var do_sort = $(input_element).prop("autocomplete_sort");
 
-            if (a < b) return -1;
-            if (a > b) return 1;
-            return 0;
-        });
+        if (do_sort === true || do_sort === undefined){
+            filtered.sort(function(a, b){
+                a = a.label.toLowerCase();
+                b = b.label.toLowerCase();
+
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            });
+        }
 
         var exact = $.grep(filtered, self.is_exact_match(request.term));
         var startswith = $.grep(filtered, self.startswith_match(request.term));

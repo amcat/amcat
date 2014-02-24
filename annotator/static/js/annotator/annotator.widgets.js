@@ -110,7 +110,7 @@ widgets = (function(self){
                 }
             });
 
-            var widget = $("<input>").addClass("sentence").change(self.sentence.change);
+            var widget = $("<input>").addClass("sentence").change(self.sentence.change).prop("autocomplete_sort", false);
             autocomplete.set(widget, choices);
             return widget;
         },
@@ -176,7 +176,9 @@ widgets = (function(self){
      * subsentences and highlight them. */
     self.from = $.extend({}, self.number, {
         get_html : function(_, _, _type){
-            return self.number.get_html(null, null, _type||"from").attr("placeholder", "from..").removeClass("codingvalue").addClass("from");
+            return self.number.get_html(null, null, _type||"from")
+                .attr("placeholder", "from..").removeClass("codingvalue").addClass("from")
+                .prop("autocomplete_sort", false);
         },
         change : function(){
             $(this).closest(".coding").trigger("sentence-changed");
