@@ -548,6 +548,7 @@ annotator = (function(self){
      */
     self.last_widget_reached = function(event){
         var row = $(event.currentTarget).closest("tr");
+        var active_coding = self.get_active_sentence_coding();
 
         if (shifted){
             // We need to go back, do nothing!
@@ -555,7 +556,7 @@ annotator = (function(self){
             return;
         }
 
-        var empty_coding = self.get_empty_coding();
+        var empty_coding = self.get_empty_coding({ sentence : active_coding.sentence });
         self.state.sentence_codings.push(empty_coding);
 
         if (row.next().length === 0){
