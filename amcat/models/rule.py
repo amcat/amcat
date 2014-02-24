@@ -140,7 +140,7 @@ class TestRules(amcattest.AmCATTestCase):
                             where=condition, insert=insert)
 
         self.assertEqual(list(r.get_rules()),
-                         [{"condition": conditition, "insert": insert}])
+                         [{"condition": condition, "insert": insert}])
 
         Rule.objects.create(ruleset=r, label="y", order=1,
                             where="w", insert="i")
