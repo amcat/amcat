@@ -17,24 +17,29 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from amcat.models import Token, AnalysedArticle
-from api.rest.resources.amcatresource import AmCATResource
-from api.rest.serializer import AmCATModelSerializer
+"""
+Interface with the xtas NLP processing system
+"""
+from amcat.tools import amcates
 
-class TokenResource(AmCATResource):
-    model = Token
-    extra_filters = ["sentence__analysed_article__id"]
+class ANALYSES:
+    postag = [{"module" : "xtas.tasks.single.tokenize"},
+              {"module": "xtas.tasks.single.pos_tag",
+               "arguments" : {"model" : "nltk"}}]
 
-class AnalysedArticleListResource(AmCATResource):
-    model = AnalysedArticle
-    extra_filters = ["article__articlesets_set__id"]
+    corenlp = [{"module" : "xtas.tasks.single.corenlp"}]
 
-    class serializer_class(AmCATModelSerializer):
-        class Meta:
-            model = AnalysedArticle
-            fields = ("id", "article","plugin","done", "error")
+    semafor = [{"module" : "xtas.tasks.single.corenlp"},
+               {"module" : "xtas.tasks.single.semafor"}]
 
-    @classmethod
-    def get_model_name(cls):
+def get_result(article, analysis, store_intermediate=True, block=True):
+    from xtas.tasks.pipeline import pipeline
+    if not isinstance(article, int): article = article.id
+    if not isinstance(analysis, list): analysis = getattr(ANALYSES, analysis)
 
-        return "AnalysedArticleList".lower()
+    es = amcates.ES()
+    doc = {'index': es.index, 'type': es.doc_type,
+           'id': article, 'field': 'text'}
+    r = pipeline(doc, analysis,
+                 store_intermediate=store_intermediate, block=block)
+    return r

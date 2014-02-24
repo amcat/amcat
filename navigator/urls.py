@@ -54,7 +54,8 @@ urlpatterns = patterns(
 
 
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
-
+    url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),
+    url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
 )
 
 
@@ -73,7 +74,9 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
              CodingJobExportSelectView, CodingJobExportView,
              ProjectUserListView, ProjectUserAddView,
-         ]:
+             ArticleRuleListView, ArticleRuleDetailsView,
+             ProjectUserListView, ProjectUserAddView,
+             ]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())

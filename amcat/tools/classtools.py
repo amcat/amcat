@@ -187,7 +187,7 @@ class TestClassTools(amcattest.AmCATTestCase):
         self.assertRaises(ImportError, import_attribute,
                           "amcat.tools.classtools.__wva_does_not_exist")
 
-        self.assertEqual(import_attribute(u"amcat.nlp.frog").__name__, "amcat.nlp.frog")
+        self.assertEqual(import_attribute(u"amcat.models.article").__name__, "amcat.models.article")
 
     def test_get_classes_from_package(self):
         package = self.__module__

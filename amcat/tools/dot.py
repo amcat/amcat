@@ -1,5 +1,7 @@
 import os, sys, toolkit, base64, collections, re
 
+# TODO: replace with pygraphviz. Less code, more good!
+
 class Node(object):
     def __init__(self, id, label=None, weight=1, rank=None):
         self.id = id
@@ -89,8 +91,8 @@ class Graph(object):
             if obj == node:
                 for edge in edges:
                     yield edge
-                        
-        
+
+
 
     def getImage(self, *args, **kargs):
         return dot2img(self.getDot(), *args, **kargs)
@@ -103,7 +105,7 @@ class Graph(object):
         svg = self.getImage(*args, **kargs)
         svg = re.match('.*?(<svg.*</svg>)', svg, re.DOTALL).group(1)
         return svg
-    
+
     def normalizeWeights(self, wmin=1, wmax=10):
         max, min = None, None
         for edges in self.edges.values():
@@ -149,7 +151,7 @@ class DotTheme(object):
         l = self.getEdgeLabel(edge, graph)
         if l: attrs['label'] = l
         l = self.getEdgeLen(edge, graph)
-        if l: attrs['len'] = l 
+        if l: attrs['len'] = l
         a = dotattrs(attrs, style)
         c = self.getConnector(edge, graph)
         return '%s %s %s [%s];' % (self.getNodeID(edge.subj, graph, subgraph), c, self.getNodeID(edge.obj, graph, subgraph), a)
@@ -161,7 +163,7 @@ class DotTheme(object):
         if edge.sign is not None:
             if self.green: return (.167 + .167 * edge.sign,1,1)
             else: return (.833-.167*edge.sign,1,.5)
-        
+
         return None
     def getEdgeWidth(self, edge, graph):
         return 1 + float(self.getEdgeWeight(edge, graph)) * .3333
@@ -226,7 +228,7 @@ class DotTheme(object):
     def getNodeDefaultAttrs(self, graph):
         a = dict(fontname=self.nodefont,shape=self.shape,fontsize=self.fontsize)
         return a
-        
+
 class BWDotTheme(DotTheme):
     def getEdgeColor(self, edge, graph):
         if edge.sign:
@@ -238,7 +240,7 @@ class BWDotTheme(DotTheme):
             style["dashed"] = None
         return style
 
-    
+
 
 
 def dotattrs(attrs, style):
@@ -281,5 +283,5 @@ if __name__ == '__main__':
     g.getNode("b", create=False).label="boer"
 
     print g.getImage(format="png")
-    
+
     #print dot2img(dot)

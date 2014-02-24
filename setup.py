@@ -15,7 +15,7 @@ package = dict(
     name='amcat',
     version='3.3.001',
     packages=['api', 'api.rest', 'api.rest.resources', 'api.webscripts',
-              'amcat', 'amcat.nlp', 'amcat.forms',
+              'amcat', 'amcat.forms',
               'amcat.tests', 'amcat.contrib',
               'amcat.tools', 'amcat.tools.pysoh', 'amcat.tools.table',
               'amcat.models', 'amcat.models.coding',

@@ -18,7 +18,7 @@
 ###########################################################################
 from rest_framework.viewsets import ReadOnlyModelViewSet
 from amcat.models import Sentence
-from amcat.nlp import sbd
+from amcat.tools import sbd
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
@@ -39,5 +39,3 @@ class SentenceViewSet(SentenceViewSetMixin, DatatablesMixin, ReadOnlyModelViewSe
     def filter_queryset(self, queryset):
         qs = super(SentenceViewSet, self).filter_queryset(queryset)
         return qs.filter(article=self.article, id__in=sbd.get_or_create_sentences(self.article))
-
-

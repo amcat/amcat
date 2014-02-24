@@ -323,13 +323,6 @@
   {"pk" : 1,
     "model": "amcat.plugintype",
     "fields" : {
-      "class_name" : "amcat.nlp.analysisscript.AnalysisScript",
-      "label" : "NLP Preprocessing"
-    }
-  },
-  {"pk" : 2,
-    "model": "amcat.plugintype",
-    "fields" : {
 	"class_name" : "amcat.scripts.article_upload.upload.UploadScript",
       "label" : "Article Uploading"
     }
@@ -340,7 +333,7 @@
     "fields": {
       "class_name": "amcat.scripts.article_upload.text.Text",
       "label": "Plain Text",
-      "plugin_type": 2
+      "plugin_type": 1
     }
   },
   {
@@ -349,7 +342,7 @@
     "fields": {
       "class_name": "amcat.scripts.article_upload.lexisnexis.LexisNexis",
       "label": "LexisNexis",
-      "plugin_type": 2
+      "plugin_type": 1
     }
   },
   {
@@ -358,15 +351,6 @@
     "fields": {
       "class_name": "amcat.scripts.article_upload.csv_import.CSV",
       "label": "CSV",
-      "plugin_type": 2
-    }
-  },
-  {
-    "pk": 4,
-    "model": "amcat.plugin",
-    "fields": {
-      "class_name": "amcat.nlp.stanford.StanfordParser",
-      "label": "Stanford",
       "plugin_type": 1
     }
   },
@@ -376,15 +360,6 @@
     "fields": {
       "class_name": "amcat.scripts.article_upload.apa_prof.APA",
       "label": "APA",
-      "plugin_type": 2
-    }
-  },
-  {
-    "pk": 9,
-    "model": "amcat.plugin",
-    "fields": {
-      "class_name": "amcat.nlp.alpino.AlpinoParser",
-      "label": "Alpino",
       "plugin_type": 1
     }
   },
@@ -394,7 +369,7 @@
     "fields": {
       "class_name": "amcat.scripts.article_upload.bzk_html.BZK",
       "label": "BZK HTML",
-      "plugin_type": 2
+      "plugin_type": 1
     }
   },
   {
