@@ -1,7 +1,12 @@
 #!/usr/bin/python
-from django.core.management import execute_from_command_line
 
+import os
 import sys
+
+if 'DJANGO_SETTINGS_MODULE' not in os.environ:
+    os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
+
+from django.core.management import execute_from_command_line
 
 try:
     import settings # Assumed to be in the same directory.

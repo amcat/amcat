@@ -33,8 +33,6 @@ from api.rest.resources.codebook import CodebookHierarchyResource, CodebookResou
 from api.rest.resources.article import ArticleMetaResource
 from api.rest.resources.articleset import ArticleSetResource
 from api.rest.resources.codingjob import CodingJobResource
-from api.rest.resources.analysed_article import AnalysedArticleResource
-from api.rest.resources.token import TokenResource, AnalysedArticleListResource
 from api.rest.resources.codingrule import CodingRuleResource
 from api.rest.resources.search import SearchResource
 from api.rest.resources.plugin import PluginResource
@@ -55,7 +53,6 @@ MODELS = ['Article', 'AmCAT',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
           'PluginType',
           "RuleSet",
-          "Word", "Lemma",
           "CodingRuleAction"]
 
 # Automatically generate resources for these models

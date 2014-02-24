@@ -20,7 +20,6 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views.preprocessing_views import ProcessParsingView
 from navigator.views import rule_views
 
 from navigator.views.articleset_views import *  # noqa
