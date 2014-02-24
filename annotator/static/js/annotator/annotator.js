@@ -614,14 +614,20 @@ annotator = (function(self){
      */
     self.refresh_sentence_text = function(){
         self.sentence_codings_container.find(".sentence-text-row").remove();
+        self.article_container.find(".active").removeClass("active");
+
         var active_row = self.get_active_row();
         var active_coding = self.get_active_sentence_coding();
         if (active_row === null) return;
         if (active_coding.sentence === null) return;
 
+        // Display sentence text above coding
         active_row.before($("<tr>").addClass("sentence-text-row").append($("<td>")
                 .attr("colspan", active_row.closest("table").find("th").size())
                 .text(active_coding.sentence.sentence)));
+
+        // Highlight sentence in article text
+        self.article_container.find("#sentence-{0}".f(active_coding.sentence.id)).addClass("active");
 
         // Set min, max values on from/to widgets
         var sentence = self.parse_sentence(active_coding.sentence.sentence);
@@ -696,7 +702,9 @@ annotator = (function(self){
         for (var i=0; i < codings.length; i++){
             if (codings[i].sentence !== null) continue;
 
-            if (any($.values(codings[i].values), self.is_empty_codingvalue)){
+            if ($.map($.values(codings[i].values), function(cv){
+                return (!self.is_empty_codingvalue(cv)) || null;
+            }).length){
                 return "A non-empty coding with no sentence was found.";
             }
         }

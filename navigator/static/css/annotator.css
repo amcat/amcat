@@ -87,6 +87,9 @@ article{
     height:100%;
 }
 
+.sentences .active{
+    background-color: #d9edf7;
+}
 
 h2{
     font-size:15px;

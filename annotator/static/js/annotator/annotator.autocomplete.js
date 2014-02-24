@@ -83,14 +83,18 @@ autocomplete = (function(self){
         // - Rest
         // Furthermore, the returned list should be alphabetically sorted.
         var filtered = $.ui.autocomplete.filter(choices, request.term);
-        filtered.sort(function(a, b){
-            a = a.label.toLowerCase();
-            b = b.label.toLowerCase();
+        var do_sort = $(input_element).prop("autocomplete_sort");
 
-            if (a < b) return -1;
-            if (a > b) return 1;
-            return 0;
-        });
+        if (do_sort === true || do_sort === undefined){
+            filtered.sort(function(a, b){
+                a = a.label.toLowerCase();
+                b = b.label.toLowerCase();
+
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            });
+        }
 
         var exact = $.grep(filtered, self.is_exact_match(request.term));
         var startswith = $.grep(filtered, self.startswith_match(request.term));
@@ -133,25 +137,19 @@ autocomplete = (function(self){
     self.get_choices = function(codes){
         var get_code = function(){ return this };
 
-        var labels = $.map(codes, function(code){
+        return $.map(codes, function (code) {
             var lbl = self.get_label(code);
 
             return {
                 // We can't store code directly, as it triggers an infinite
                 // loop in some jQuery function (autocomplete).
-                get_code : get_code.bind(code),
-                intval : code.code,
-                label : lbl,
-                value : lbl,
-                descendant_choices : self.get_choices(code.descendants)
+                get_code: get_code.bind(code),
+                intval: code.code,
+                label: lbl,
+                value: lbl,
+                descendant_choices: self.get_choices(code.descendants)
             }
         });
-
-        labels.sort(function(a, b){
-            return a.ordernr - b.ordernr;
-        });
-
-        return labels;
     };
 
     self.set = function(input_element, choices){
