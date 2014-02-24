@@ -137,25 +137,19 @@ autocomplete = (function(self){
     self.get_choices = function(codes){
         var get_code = function(){ return this };
 
-        var labels = $.map(codes, function(code){
+        return $.map(codes, function (code) {
             var lbl = self.get_label(code);
 
             return {
                 // We can't store code directly, as it triggers an infinite
                 // loop in some jQuery function (autocomplete).
-                get_code : get_code.bind(code),
-                intval : code.code,
-                label : lbl,
-                value : lbl,
-                descendant_choices : self.get_choices(code.descendants)
+                get_code: get_code.bind(code),
+                intval: code.code,
+                label: lbl,
+                value: lbl,
+                descendant_choices: self.get_choices(code.descendants)
             }
         });
-
-        labels.sort(function(a, b){
-            return a.ordernr - b.ordernr;
-        });
-
-        return labels;
     };
 
     self.set = function(input_element, choices){
