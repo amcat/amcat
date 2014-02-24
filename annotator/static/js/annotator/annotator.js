@@ -696,7 +696,9 @@ annotator = (function(self){
         for (var i=0; i < codings.length; i++){
             if (codings[i].sentence !== null) continue;
 
-            if (any($.values(codings[i].values), self.is_empty_codingvalue)){
+            if ($.map($.values(codings[i].values), function(cv){
+                return (!self.is_empty_codingvalue(cv)) || null;
+            }).length){
                 return "A non-empty coding with no sentence was found.";
             }
         }
