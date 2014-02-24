@@ -25,7 +25,7 @@ Module for running scrapers
 import logging;log = logging.getLogger(__name__)
 from collections import namedtuple
 
-from amcat.models.article import Article
+from amcat.models import Article, Project
 
 ScrapeError = namedtuple("ScrapeError", ["i", "unit", "error"])
 
@@ -51,6 +51,9 @@ class Controller(object):
                 continue
             self.articles += articles
 
+        for article in self.articles:
+            _set_default(article, 'project', scraper.project)
+
         try:
             self.articles, errors = Article.ordered_save(self.articles, scraper.articleset)
             for e in errors:
@@ -60,3 +63,10 @@ class Controller(object):
             log.exception("scraper._get_units failed")
 
         return self.articles
+
+def _set_default(obj, attr, val):
+    try:
+        if getattr(obj, attr, None) is not None: return
+    except Project.DoesNotExist:
+        pass # django throws DNE on x.y if y is not set and not nullable
+    setattr(obj, attr, val)

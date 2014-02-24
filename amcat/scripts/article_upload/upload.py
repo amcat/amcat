@@ -172,6 +172,7 @@ class UploadScript(script.Script):
         """
         pass
 
+
     def _get_units(self):
         """
         Upload form assumes that the form (!) has a get_entries method, which you get
