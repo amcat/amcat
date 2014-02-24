@@ -339,7 +339,8 @@ annotator = (function(self){
         "shift+down" : self.copy_row,
         "ctrl+shift+d": self.delete_row,
         "ctrl+i" : self.irrelevant_btn.trigger.bind(self.irrelevant_btn, "click"),
-        "ctrl+d" : self.save_continue_btn.trigger.bind(self.save_continue_btn, "click")
+        "ctrl+d" : self.save_continue_btn.trigger.bind(self.save_continue_btn, "click"),
+        "ctrl+del" : self.delete_codingvalue
     }};
 
     /******** PUBLIC FUNCTIONS *******/
@@ -1086,6 +1087,14 @@ annotator = (function(self){
 
         self.initialise_sentence_codings();
         rules.add(self.sentence_codings_container);
+    };
+
+    self.delete_codingvalue = function(){
+        ct = $(document.activeElement);
+
+        // Must be focusable and an input element
+        if (ct.attr("tabindex") === undefined && !ct.is("input")) return;
+        ct.val("").blur().focus();
     };
 
     /*
