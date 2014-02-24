@@ -29,15 +29,17 @@ class ANALYSES:
 
     corenlp = [{"module" : "xtas.tasks.single.corenlp"}]
 
+    semafor = [{"module" : "xtas.tasks.single.corenlp"},
+               {"module" : "xtas.tasks.single.semafor"}]
+
 def get_result(article, analysis, store_intermediate=True, block=True):
     from xtas.tasks.pipeline import pipeline
     if not isinstance(article, int): article = article.id
     if not isinstance(analysis, list): analysis = getattr(ANALYSES, analysis)
-    
+
     es = amcates.ES()
     doc = {'index': es.index, 'type': es.doc_type,
            'id': article, 'field': 'text'}
     r = pipeline(doc, analysis,
                  store_intermediate=store_intermediate, block=block)
     return r
-    

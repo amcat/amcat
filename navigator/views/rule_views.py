@@ -145,7 +145,8 @@ class ArticleRuleDetailsView(ProjectDetailView):
 
         ctx = super(ArticleRuleDetailsView, self).get_context_data(**kwargs)
         # get parse
-        analysis = [{"module": "xtas.tasks.single.corenlp"}]
+        analysis = "semafor"
+
         saf = amcatxtas.get_result(int(self.kwargs['article_id']), analysis)
         sid = int(self.request.GET.get("sid", 1))
         sentences = list(self.get_sentences(saf))
