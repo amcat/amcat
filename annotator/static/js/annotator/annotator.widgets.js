@@ -143,7 +143,9 @@ widgets = (function(self){
     /* BOOLEAN TYPE */
     self.boolean = $.extend({}, self.default, {
         get_html : function(){
-            return self.default.get_html(null, true, "boolean").attr("type", "checkbox");
+            return self.default.get_html(null, true, "boolean").attr("type", "checkbox").keydown(function(event){
+                if (event.keyCode == 13) $(this).click();
+            });
         },
         set_value : function(widget, codingvalue){
             self.default.set_value(widget, codingvalue, true);
