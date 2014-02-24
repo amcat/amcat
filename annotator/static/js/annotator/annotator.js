@@ -77,10 +77,6 @@ annotator = (function(self){
             requests : null,
             coded_article_id: -1,
             coded_article: null,
-            deleted_codings: [],
-            modified_codings: [],
-            sentence_codings_modified: false,
-            article_coding_modified: false,
             article_coding : null,
             sentence_codings: [],
             codings : [],
@@ -160,7 +156,6 @@ annotator = (function(self){
         self.save_continue_btn.click(self.finish_and_continue);
         self.irrelevant_btn.click(self.irrelevant_and_continue);
         self.copy_btn.click(self.copy);
-        self.delete_btn.click(self.delete);
 
         $("#editor").hide();
         $(".sentence-options").hide();
@@ -184,7 +179,7 @@ annotator = (function(self){
 
         discard_btn.unbind().click(function(){
             self.unsaved_modal.modal("hide");
-            self.unsaved = false;
+            self.set_unsaved(false);
             continue_func();
         });
 
@@ -476,9 +471,8 @@ annotator = (function(self){
         }
 
         // Register deleted coding
-        self.state.deleted_codings.push(active_coding);
-        remove_from_array(self.state.modified_codings, active_coding);
         active_row.remove();
+        delete self.state.codings[active_row.attr("annotator_coding_id")];
         $("input", next).first().focus();
         self.set_tab_order();
     };
@@ -639,14 +633,20 @@ annotator = (function(self){
      */
     self.refresh_sentence_text = function(){
         self.sentence_codings_container.find(".sentence-text-row").remove();
+        self.article_container.find(".active").removeClass("active");
+
         var active_row = self.get_active_row();
         var active_coding = self.get_active_sentence_coding();
         if (active_row === null) return;
         if (active_coding.sentence === null) return;
 
+        // Display sentence text above coding
         active_row.before($("<tr>").addClass("sentence-text-row").append($("<td>")
                 .attr("colspan", active_row.closest("table").find("th").size())
                 .text(active_coding.sentence.sentence)));
+
+        // Highlight sentence in article text
+        self.article_container.find("#sentence-{0}".f(active_coding.sentence.id)).addClass("active");
 
         // Set min, max values on from/to widgets
         var sentence = self.parse_sentence(active_coding.sentence.sentence);
@@ -715,10 +715,28 @@ annotator = (function(self){
         return coding_el;
     };
 
-    self.select_all_sentences = function () {
+    /*
+     * Mandetory validation are present to preserve a consistent database state.
+     */
+    self.mandetory_validate = function(){
+        // Check ∀v [(v.sentence === null) => (v.intval === null && v.strval === null)]
+        var codings = self.get_sentence_codings();
+        for (var i=0; i < codings.length; i++){
+            if (codings[i].sentence !== null) continue;
 
+            if ($.map($.values(codings[i].values), function(cv){
+                return (!self.is_empty_codingvalue(cv)) || null;
+            }).length){
+                return "A non-empty coding with no sentence was found.";
+            }
+        }
+
+        return true;
     };
 
+    /*
+     * Checks if all codingschemarules pass.
+     */
     self.validate = function(){
         var article_errors = $("." + rules.ERROR_CLASS, self.article_coding_container);
         var sentence_errors = $("." + rules.ERROR_CLASS, self.sentence_codings_container);
@@ -730,35 +748,25 @@ annotator = (function(self){
             return error.f("sentence");
         }
 
-        // Check ∀v [(v.sentence === null) => (v.intval === null && v.strval === null)]
-        var coding_values;
-        var codings = $(".coding", self.sentence_codings_container);
-        for (var i=0; i < codings.length; i++){
-            coding_values = widgets._get_codingvalues($(codings[i]));
-            if (any(coding_values, function(v){
-                return (v.sentence === null && (v.intval !== null || v.strval !== null));
-            })){
-                return "A non-empty coding with no sentence was found."
-            }
-        }
-
         return true;
     };
 
-    self.is_nonempty_codingvalue = function(cv){
-        return !(cv.intval === null && cv.strval === null);
+    self.is_empty_codingvalue = function(cv){
+        return cv.intval === null && cv.strval === null;
+    };
+
+    self.is_empty_coding = function(coding){
+        return all($.values(coding.values), self.is_empty_codingvalue)
     };
 
     /*
      * Returns 'minimised' version of given coding, which can easily be serialised.
      */
     self.pre_serialise_coding = function(coding){
-        var constant = function(el){ return el; }
-
         return {
             start : coding.start, end : coding.end,
             sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
-            values : $.map($.grep($.map(coding.values, constant), self.is_nonempty_codingvalue), self.pre_serialise_codingvalue)
+            values : $.map($.grep($.values(coding.values), self.is_empty_codingvalue, true), self.pre_serialise_codingvalue)
         }
     };
 
@@ -808,8 +816,14 @@ annotator = (function(self){
             self.set_status(self.STATUS.IN_PROGRESS);
         }
 
-        // Check whether we want to save.
-        var validation = validate ? self.validate() : true;
+        // Check whether we want to save, by first checking the mandetory checks.
+        var validation = self.mandetory_validate();
+        if (validation !== true){
+            return self.message_dialog.text(validation).dialog("open");
+        }
+
+        // Check optional requirements
+        validation = validate ? self.validate() : true;
         if (validation !== true){
             return self.show_message("Validation", validation);
         }
@@ -818,7 +832,7 @@ annotator = (function(self){
         self.show_loading("Saving codings..");
         $.post("codedarticle/{0}/save".f(self.state.coded_article_id), JSON.stringify({
             "coded_article" : self.pre_serialise_coded_article(),
-            "codings" : $.map(self.state.codings, self.pre_serialise_coding)
+            "codings" : $.map(self.get_codings(), self.pre_serialise_coding)
         })).done(function(data, textStatus, jqXHR){
             self.hide_loading();
 
@@ -888,6 +902,14 @@ annotator = (function(self){
         return self._id += 1
     };
 
+    /*
+     * Given two sentences a and b, return if a is "greater than" than b.
+     */
+    self.sentence_greater_than = function(a, b){
+        if (a.parnr > b.parnr) return 1;
+        if (a.parnr < b.parnr) return -1;
+        return a.sentnr - b.sentnr;
+    };
 
     self.coded_article_fetched = function(coded_article, codings, sentences){
         console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
@@ -899,7 +921,10 @@ annotator = (function(self){
             coding.annotator_id = self.get_new_id();
         });
 
+        // sentences_array holds a list of ordered sentences (by sentnr, parnr)
         self.state.sentences_array = sentences[0].results;
+        self.state.sentences_array.sort(self.sentence_greater_than);
+
         codings = map_ids(codings[0].results, "annotator_id");
         sentences = map_ids(sentences[0].results);
         resolve_ids(codings, sentences, "sentence");
@@ -942,6 +967,7 @@ annotator = (function(self){
         self.highlight();
         self.codings_fetched();
         self.set_tab_order();
+        self.set_unsaved(false);
 
         self.hide_loading();
 
@@ -1002,6 +1028,42 @@ annotator = (function(self){
         return this.descendants;
     };
 
+    /*
+     * Retrieve all coding objects contained in `container`. If `container` is not given,
+     * return all codings.
+     *
+     * @type container: DOM element
+     */
+    self.get_codings = function(container){
+        if (container === undefined){
+            return $.merge([self.get_article_coding()], self.get_sentence_codings());
+        }
+
+        return $.map($(container).find(".coding"), function(coding_el){
+            return self.state.codings[$(coding_el).attr("annotator_coding_id")];
+        });
+    };
+
+    /*
+     * Return all codings which are not the article coding.
+     */
+    self.get_sentence_codings = function(){
+        // Note: this function depends on the presence of DOM elements. This is due to
+        // a bug in earlier versions which duplicated codings. The only reliable way for
+        // now is to match codings with DOM elements.
+        return $.grep(self.get_codings(self.sentence_codings_container), self.is_empty_coding, true);
+    };
+
+    /*
+     * Return article coding
+     */
+    self.get_article_coding = function(){
+        // Note: this function depends on the presence of DOM elements. This is due to
+        // a bug in earlier versions which duplicated codings. The only reliable way for
+        // now is to match codings with DOM elements.
+        return self.get_codings(self.article_coding_container)[0];
+    };
+
     self.get_empty_coding = function(properties){
         var empty_coding = $.extend({
             coded_article : self.state.coded_article,
@@ -1026,9 +1088,9 @@ annotator = (function(self){
     /******** EVENTS *******/
     // TODO: Only initialise article coding html once.
     self.codings_fetched = function(){
-        // Determine sentence codings
-        self.state.sentence_codings = $.grep($.values(self.state.codings), function(c){
-            return !self.is_article_coding(c);
+        self.state.sentence_codings = $.grep($.values(self.state.codings), self.is_article_coding, true);
+        self.state.sentence_codings.sort(function(a,b){
+            return self.sentence_greater_than(a.sentence, b.sentence);
         });
 
         // Determine article coding
@@ -1199,7 +1261,7 @@ annotator = (function(self){
 
     self.article_status_changed = function(){
         self.state.coded_article.status = parseInt($(this).val());
-        self.unsaved = true;
+        self.set_unsaved();
     };
 
     self.datatables_row_clicked = function(row){

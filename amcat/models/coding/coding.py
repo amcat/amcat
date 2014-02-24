@@ -47,6 +47,7 @@ def coded_article_property(prop):
     """Returns property object fetches the given property on CodedArticle instaed of Coding."""
     def get_property(self):
         log.warning("Getting `{prop}` from Coding deprecated. Use CodedArticle.")
+        raise Exception("!")
         return getattr(self.coded_article, prop)
 
     def set_property(self, value):
@@ -214,10 +215,10 @@ class TestCoding(amcattest.AmCATTestCase):
         j = amcattest.create_test_job(unitschema=self.schema, articleschema=schema2)
         a = amcattest.create_test_coding(codingjob=j)
         self.assertIsNotNone(a)
-        self.assertIn(a.article, j.articleset.articles.all())
+        self.assertIn(a.coded_article.article, j.articleset.articles.all())
         self.assertEqual(a.schema, schema2)
         a2 = amcattest.create_test_coding(codingjob=j,
-                                              sentence=amcattest.create_test_sentence())
+                                          sentence=amcattest.create_test_sentence())
         self.assertEqual(a2.schema, self.schema)
 
     def test_update_values(self):

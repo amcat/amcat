@@ -98,14 +98,14 @@ class AggregateResource(AmCATResource):
     @property
     @cached
     def axes(self):
-        params = self.request.QUERY_PARAMS
+        params = self.request.QUERY_PARAMS or self.request.DATA
         axes = ("axis{i}".format(**locals()) for i in itertools.count(1))
         return [params[x] for x in itertools.takewhile(params.__contains__, axes)]
     
     @property
     @cached
     def queries(self):
-        params = self.request.QUERY_PARAMS
+        params = self.request.QUERY_PARAMS or self.request.DATA
         return [keywordsearch.SearchQuery.from_string(q)
                 for q in params.getlist("q")]
         
@@ -113,7 +113,8 @@ class AggregateResource(AmCATResource):
         return AggregateES(self.axes, self.queries)
         
     def filter_queryset(self, queryset):
-        params = self.request.QUERY_PARAMS
+        params = self.request.QUERY_PARAMS or self.request.DATA
+        print(">>>> params:", params)
         for k in FILTER_FIELDS:
             if k in params:
                 queryset.filter(k, params.getlist(k))
@@ -128,6 +129,10 @@ class AggregateResource(AmCATResource):
         ctx["axes"] = self.axes
         return ctx
             
+    def post(self, request, *args, **kwargs):
+        # allow for POST requests
+        return self.list(request, *args, **kwargs)
+        
     class serializer_class(Serializer):
         count = IntegerField()
         

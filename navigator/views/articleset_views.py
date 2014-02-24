@@ -17,30 +17,32 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import json
+import datetime
+
 from django.core.urlresolvers import reverse
-
-from amcat.scripts.actions.sample_articleset import SampleSet
-from amcat.scripts.actions.import_articleset import ImportSet
-from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
-
-from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView
-from navigator.views.datatableview import DatatableMixin
-from amcat.models import Project, ArticleSet
-from api.rest.resources import SearchResource
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
-from django.views.generic.edit import UpdateView
-
-from django.views.generic.base import RedirectView
-from django.db.models import Q
-from navigator.views.project_views import ProjectDetailsView
-    
-
-from api.rest.datatable import FavouriteDatatable
 from django.utils.safestring import SafeText
 from django.template.defaultfilters import escape
 
+from api.rest.datatable import FavouriteDatatable
+from api.rest.resources import SearchResource
+from api.rest.resources import PluginResource
+from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
+
+from amcat.models import Project, ArticleSet, Plugin
+from amcat.models.project import LITTER_PROJECT_ID
+
+from amcat.scripts.actions.sample_articleset import SampleSet
+from amcat.scripts.actions.import_articleset import ImportSet
+
+from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView
+from navigator.views.datatableview import DatatableMixin
+from navigator.views.project_views import ProjectDetailsView
     
+UPLOAD_PLUGIN_TYPE=2
+
 class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = ArticleSet
     parent = ProjectDetailsView
@@ -162,16 +164,11 @@ class ArticleSetSampleView(ProjectScriptView):
                         .format(newname=escape(self.result.name), oldurl=reverse('article set-details', kwargs=self.kwargs),
                                 oldname=escape(old.name), **locals()))
         
-from amcat.models import Role
-PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
 class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
     fields = ['project', 'name', 'provenance']
     
 
-from amcat.models import Plugin
-from api.rest.resources import PluginResource
-UPLOAD_PLUGIN_TYPE=2
 
 class ArticleSetUploadListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     parent = ArticleSetListView
@@ -217,10 +214,8 @@ class ArticleSetRefreshView(ProjectActionRedirectView):
 
     def action(self, project_id, articleset_id):
         # refresh the queryset. Probably not the nicest way to do this (?)
-        ArticleSet.objects.get(pk=project_id).refresh_index(full_refresh=True)
+        ArticleSet.objects.get(pk=articleset_id).refresh_index(full_refresh=True)
         
-from amcat.models.project import LITTER_PROJECT_ID
-import json, datetime
 class ArticleSetDeleteView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
     url_fragment = "delete"

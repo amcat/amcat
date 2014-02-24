@@ -36,6 +36,24 @@ autocomplete = (function(self){
         $(this).trigger("change");
     };
 
+    self.is_exact_match = function(term){
+        return function(el){
+            return el.label.toLowerCase() === term.toLowerCase();
+        }
+    };
+
+    self.startswith_match = function(term){
+        var test = new RegExp("^{0}.+$".f(self.escape_regexp(term)), "i");
+        return function(el){
+            return test.test(el.label);
+        }
+    };
+
+    self.escape_regexp = function(str) {
+        // http://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+        return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+    };
+
     /*
      * Most of the times a 'choices' property is defined on schemafield
      * and it can be used directly. In case of a codebook split, however,
@@ -58,8 +76,34 @@ autocomplete = (function(self){
             })[0].descendant_choices;
         }
 
-        // Only display first 100 results (for performance)
-        return callback($.ui.autocomplete.filter(choices, request.term).slice(0, 100));
+
+        // We would like to present the user with options in the following order (as per issue #55):
+        // - Exact match
+        // - Startswith match
+        // - Rest
+        // Furthermore, the returned list should be alphabetically sorted.
+        var filtered = $.ui.autocomplete.filter(choices, request.term);
+        var do_sort = $(input_element).prop("autocomplete_sort");
+
+        if (do_sort === true || do_sort === undefined){
+            filtered.sort(function(a, b){
+                a = a.label.toLowerCase();
+                b = b.label.toLowerCase();
+
+                if (a < b) return -1;
+                if (a > b) return 1;
+                return 0;
+            });
+        }
+
+        var exact = $.grep(filtered, self.is_exact_match(request.term));
+        var startswith = $.grep(filtered, self.startswith_match(request.term));
+        var rest = $.grep(filtered, function(el){
+            // Yes, inArray returns an index.. :|
+            return $.inArray(el, exact) === -1 && $.inArray(el, startswith) === -1;
+        });
+
+        return callback(([]).concat(exact, startswith, rest).slice(0, 100));
     };
 
     /*
@@ -93,25 +137,19 @@ autocomplete = (function(self){
     self.get_choices = function(codes){
         var get_code = function(){ return this };
 
-        var labels = $.map(codes, function(code){
+        return $.map(codes, function (code) {
             var lbl = self.get_label(code);
 
             return {
                 // We can't store code directly, as it triggers an infinite
                 // loop in some jQuery function (autocomplete).
-                get_code : get_code.bind(code),
-                intval : code.code,
-                label : lbl,
-                value : lbl,
-                descendant_choices : self.get_choices(code.descendants)
+                get_code: get_code.bind(code),
+                intval: code.code,
+                label: lbl,
+                value: lbl,
+                descendant_choices: self.get_choices(code.descendants)
             }
         });
-
-        labels.sort(function(a, b){
-            return a.ordernr - b.ordernr;
-        });
-
-        return labels;
     };
 
     self.set = function(input_element, choices){

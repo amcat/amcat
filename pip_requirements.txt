@@ -15,5 +15,5 @@ django_compressor
 django_filter
 django_extensions
 html2text
-pypdf
+pypdf2
 django_json_field

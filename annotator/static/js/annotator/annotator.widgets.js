@@ -110,7 +110,7 @@ widgets = (function(self){
                 }
             });
 
-            var widget = $("<input>").addClass("sentence form-control input-sm").change(self.sentence.change);
+            var widget = $("<input>").addClass("sentence form-control input-sm").change(self.sentence.change).prop("autocomplete_sort", false);
             autocomplete.set(widget, choices);
             return widget;
         },
@@ -143,7 +143,9 @@ widgets = (function(self){
     /* BOOLEAN TYPE */
     self.boolean = $.extend({}, self.default, {
         get_html : function(){
-            return self.default.get_html(null, true, "boolean").attr("type", "checkbox").removeClass("form-control");
+            return self.default.get_html(null, true, "boolean").attr("type", "checkbox").removeClass("form-control").keydown(function(event){
+                if (event.keyCode == 13) $(this).click();
+            });
         },
         set_value : function(widget, codingvalue){
             self.default.set_value(widget, codingvalue, true);
@@ -174,7 +176,9 @@ widgets = (function(self){
      * subsentences and highlight them. */
     self.from = $.extend({}, self.number, {
         get_html : function(_, _, _type){
-            return self.number.get_html(null, null, _type||"from").attr("placeholder", "from..").removeClass("codingvalue").addClass("from");
+            return self.number.get_html(null, null, _type||"from")
+                .attr("placeholder", "from..").removeClass("codingvalue").addClass("from")
+                .prop("autocomplete_sort", false);
         },
         change : function(){
             $(this).closest(".coding").trigger("sentence-changed");
@@ -202,8 +206,8 @@ widgets = (function(self){
         },
         change : function(){
             var target = $(this);
-            var value = parseFloat(target.val());
-            target.attr("intval", Math.round(value * 10));
+            var value = Math.round(parseFloat(target.val()) * 10);
+            target.attr("intval", isNaN(value) ? self.EMPTY_INTVAL : value);
             return self.default.change.bind(this)();
         }
 

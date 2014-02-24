@@ -50,10 +50,3 @@ function resolve_ids(models, target_models, prop) {
     });
 }
 
-function remove_from_array(arr, v){
-    var index = arr.indexOf(v);
-    if (index !== -1){
-        arr.splice(index, 1);
-    }
-    return arr;
-}

@@ -107,7 +107,7 @@ class BZK(UploadScript):
         #item: a list of html tags
         article = HTMLDocument()
         for tag in item:
-            if tag.tag == "p":
+            if tag.tag in ("p","div"):
                 if hasattr(article.props, 'text'):
                     article.props.text.append(tag)
                 else:

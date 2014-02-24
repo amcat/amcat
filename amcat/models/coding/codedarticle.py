@@ -198,16 +198,16 @@ from amcat.tools import amcattest
 class TestCodedArticle(amcattest.AmCATTestCase):
     def test_comments(self):
         """Can we set and read comments?"""
-        from amcat.models import Coding
-        a = amcattest.create_test_coding()
-        self.assertIsNone(a.comments)
+        from amcat.models import CodedArticle
+        ca = amcattest.create_test_coded_article()
+        self.assertIsNone(ca.comments)
 
         for offset in range(4563, 20000, 1000):
             s = "".join(unichr(offset + c) for c in range(12, 1000, 100))
-            a.comments = s
-            a.save()
-            a = Coding.objects.get(pk=a.id)
-            self.assertEqual(a.comments, s)
+            ca.comments = s
+            ca.save()
+            ca = CodedArticle.objects.get(pk=ca.id)
+            self.assertEqual(ca.comments, s)
 
     def _get_coding_dict(self, sentence_id=None, field_id=None, intval=None, strval=None, start=None, end=None):
         return {
@@ -275,18 +275,21 @@ class TestCodedArticle(amcattest.AmCATTestCase):
         self.assertEqual(value.strval, "a")
         self.assertEqual(value.intval, None)
 
+
 class TestCodedArticleStatus(amcattest.AmCATTestCase):
     def test_status(self):
         """Is initial status 0? Can we set it?"""
-        a = amcattest.create_test_coding()
-        self.assertEqual(a.status.id, 0)
-        self.assertEqual(a.status, CodedArticleStatus.objects.get(pk=STATUS_NOTSTARTED))
-        a.set_status(STATUS_INPROGRESS)
-        self.assertEqual(a.status, CodedArticleStatus.objects.get(pk=1))
-        a.set_status(STATUS_COMPLETE)
-        self.assertEqual(a.status, CodedArticleStatus.objects.get(pk=2))
-        a.set_status(STATUS_IRRELEVANT)
-        self.assertEqual(a.status, CodedArticleStatus.objects.get(pk=9))
-        a.set_status(STATUS_NOTSTARTED)
-        self.assertEqual(a.status, CodedArticleStatus.objects.get(pk=0))
+        ca = amcattest.create_test_coded_article()
+        self.assertEqual(ca.status.id, 0)
+        self.assertEqual(ca.status, CodedArticleStatus.objects.get(pk=STATUS_NOTSTARTED))
+        ca.set_status(STATUS_INPROGRESS)
+        self.assertEqual(ca.status, CodedArticleStatus.objects.get(pk=1))
+        ca.set_status(STATUS_COMPLETE)
+        self.assertEqual(ca.status, CodedArticleStatus.objects.get(pk=2))
+        ca.set_status(STATUS_IRRELEVANT)
+        self.assertEqual(ca.status, CodedArticleStatus.objects.get(pk=9))
+        ca.set_status(STATUS_NOTSTARTED)
+        self.assertEqual(ca.status, CodedArticleStatus.objects.get(pk=0))
 
+
+        

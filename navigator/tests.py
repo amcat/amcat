@@ -1,3 +1,3 @@
 from django.test import TestCase
 
-from navigator.views.article import TestArticleViews
+from navigator.views.article_views import TestArticleViews

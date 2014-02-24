@@ -25,8 +25,8 @@ article_patterns = patterns('',
 )
 
 codingjob_patterns = patterns('',
-    url('^$', codingjob.index),
-    url(r'^codedarticle/(?P<coded_article_id>\d+)/', include(article_patterns)),
+                              url('^$', codingjob.index, name="annotator-codingjob"),
+                              url(r'^codedarticle/(?P<coded_article_id>\d+)/', include(article_patterns)),
 )
 
 urlpatterns = patterns('',
