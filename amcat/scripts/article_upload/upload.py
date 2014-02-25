@@ -31,36 +31,83 @@ log = logging.getLogger(__name__)
 from django.db import transaction
 from django import forms
 from django.core.files import File
+from django.forms.widgets import HiddenInput
 
 from amcat.scripts import script
 from amcat.scripts.types import ArticleIterator
-from amcat.models.article import Article
-from amcat.scraping.scraper import ScraperForm, Scraper
-
+from amcat.models import Article, Project, ArticleSet
 from amcat.scripts.article_upload.fileupload import RawFileUploadForm
+from amcat.models.articleset import create_new_articleset
 
 class ParseError(Exception):
     pass
-    
-class UploadForm(ScraperForm, RawFileUploadForm):
+
+class UploadForm(RawFileUploadForm):
+
+    project = forms.ModelChoiceField(queryset=Project.objects.all())
+
+    articleset = forms.ModelChoiceField(
+        queryset=ArticleSet.objects.all(), required=False,
+        help_text="If you choose an existing articleset, the articles will be "
+        "appended to that set. If you leave this empty, a new articleset will be "
+        "created using either the name given below, or using the file name")
+    articleset_name = forms.CharField(
+        max_length=ArticleSet._meta.get_field_by_name('name')[0].max_length,
+        required = False)
     def clean_articleset_name(self):
         """If article set name not specified, use file base name instead"""
         if self.files.get('file') and not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
             fn = os.path.basename(self.files['file'].name)
             return fn
-        return super(UploadForm, self).clean_articleset_name()
-    
-class UploadScript(Scraper):
+        name = self.cleaned_data['articleset_name']
+        if not bool(name) ^ bool(self.cleaned_data['articleset']):
+            raise forms.ValidationError("Please specify either articleset or articleset_name")
+        return name
+
+    @classmethod
+    def get_empty(cls, project=None, post=None, files=None, **_options):
+        f = cls(post, files) if post is not None else cls()
+        if project:
+            f.fields['project'].initial = project.id
+            f.fields['project'].widget = HiddenInput()
+
+            f.fields['articleset'].queryset = ArticleSet.objects.filter(project=project)
+        return f
+
+class UploadScript(script.Script):
     """Base class for Upload Scripts, which are scraper scripts driven by the
     the script input.
 
     For legacy reasons, parse_document and split_text may be used instead of the standard
     get_units and scrape_unit.
     """
-    
+
     input_type = None
     output_type = ArticleIterator
     options_form = UploadForm
+
+    def __init__(self, *args, **kargs):
+        super(UploadScript, self).__init__(*args, **kargs)
+        self.project = self.options['project']
+        for k, v in self.options.items():
+            if type(v) == str:
+                self.options[k] = v.decode('utf-8')
+
+        # avoid django problem/bug with repr(File(open(uncode-string)))
+        # https://code.djangoproject.com/ticket/8156
+        o2 = {k:v for k,v in self.options.iteritems() if k != 'file'}
+        log.debug(u"Articleset: {self.articleset!r}, options: {o2}"
+                  .format(**locals()))
+
+    @property
+    def articleset(self):
+        if self.options['articleset']:
+            return self.options['articleset']
+        if self.options['articleset_name']:
+            aset = create_new_articleset(self.options['articleset_name'], self.project)
+            self.options['articleset'] = aset
+            return aset
+        return
 
     def get_errors(self):
         """return a list of document index, message pairs that explains encountered errors"""
@@ -68,7 +115,7 @@ class UploadScript(Scraper):
             errors = self.controller.errors
         except AttributeError:
             log.exception("Cannot get controller errors")
-            return 
+            return
 
         for error in errors:
             yield self.explain_error(error)
@@ -76,13 +123,13 @@ class UploadScript(Scraper):
     def explain_error(self, error):
         """Explain the error in the context of unit for the end user"""
         return "Error in element {error.i} : {error.error!r}".format(**locals())
-            
+
 
     def decode(self, bytes):
         """Decode the bytes using the encoding from the form"""
         enc, text = self.bound_form.decode(bytes)
         return text
-    
+
     @property
     def uploaded_texts(self):
         """A cached sequence of UploadedFile objects"""
@@ -98,17 +145,16 @@ class UploadScript(Scraper):
         timestamp = unicode(datetime.datetime.now())[:16]
         return ("[{timestamp}] Uploaded {n} articles from file {filename!r} "
                 "using {self.__class__.__name__}".format(**locals()))
-        
+
     def run(self, _dummy=None):
         file = self.options['file']
         filename = file and file.name
         log.info(u"Importing {self.__class__.__name__} from {filename} into {self.project}"
                  .format(**locals()))
-        from amcat.scraping.controller import Controller
+        from amcat.scripts.article_upload.controller import Controller
         self.controller = Controller()
+        arts = self.controller.run(self)
 
-        arts = []
-        [arts.extend(articles) for scraper, articles in self.controller.run([self])]
         if not arts:
             raise Exception("No articles were imported")
         self.postprocess(arts)
@@ -125,24 +171,25 @@ class UploadScript(Scraper):
         article set (if needed, list should be changed in place)
         """
         pass
-    
+
+
     def _get_units(self):
         """
         Upload form assumes that the form (!) has a get_entries method, which you get
         if you subclass you form from one of the fileupload forms. If not, please override
-        this method. 
+        this method.
         """
         for entry in self.bound_form.get_entries():
             for u in self.split_file(entry):
                 yield u
-    
+
     def _scrape_unit(self, document):
         result =  self.parse_document(document)
         if isinstance(result, Article):
             result = [result]
         for art in result:
             yield art
-        
+
     def parse_document(self, document):
         """
         Parse the document as one or more articles, provided for legacy purposes
@@ -194,4 +241,3 @@ class TestUpload(amcattest.AmCATTestCase):
                              file=File(f))
             self.assertEqual({f.name for f in s._get_units()}, {"test.txt", "x/test.txt"})
             self.assertEqual({f.read() for f in s._get_units()}, {"TEST", "TAST"})
-

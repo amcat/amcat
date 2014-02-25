@@ -21,7 +21,6 @@ from rest_framework.viewsets import ViewSetMixin
 
 from api.rest.viewset import AmCATViewSetMixin
 
-from api.rest.viewsets.analysed_article import *
 from api.rest.viewsets.article import *
 from api.rest.viewsets.articleset import *
 from api.rest.viewsets.coding.codingjob import *
@@ -41,5 +40,3 @@ def get_viewsets():
     for cls in globals().values():
         if isclass(cls) and issubclass(cls, AmCATViewSetMixin) and cls is not AmCATViewSetMixin:
             yield cls
-
-

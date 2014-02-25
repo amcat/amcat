@@ -37,7 +37,7 @@ from django import db
 from django import http
 
 def _table_view(request, table, selected=None, menu=USER_MENU):
-    return render(request, "user/table.html", locals())
+    return render(request, "user_table.html", locals())
 
 def _list_users(request, selected, **filters):
     return _table_view(request, Datatable(UserResource).filter(**filters), selected)
@@ -71,7 +71,7 @@ def view(request, user=None, form=None):
     main_active = "Current User" if user == request.user else "Users"
 
 
-    return render(request, "user/view.html", {'user' : user,
+    return render(request, "user_view.html", {'user' : user,
                                               'form' : form,
                                               'projects' : projects,
                                               'success' : success,
@@ -92,7 +92,7 @@ def add(request):
     add_multiple_form = forms.AddMultipleUsersForm(request)
 
     message = session_pop(request.session, "users_added")
-    return render(request, "user/add.html", locals())
+    return render(request, "user_add.html", locals())
 
 @db.transaction.commit_on_success
 def _add_multiple_users(request):
@@ -152,7 +152,7 @@ def add_submit(request):
         # Validation failed.
         amf, af = resp
 
-    return render(request, "user/add.html", {
+    return render(request, "user_add.html", {
         'error' : locals().get('message'),
         'add_multiple_form' : amf,
         'add_form' : af,

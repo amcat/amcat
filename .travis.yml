@@ -24,7 +24,7 @@ before_install:
  - export DJANGO_SETTINGS_MODULE=settings
  - export PYTHONPATH=
 
-install: 
+install:
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
  - sudo service rabbitmq-server start
@@ -34,7 +34,7 @@ install:
  - elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
  - elasticsearch-1.0.0/bin/plugin -install mobz/elasticsearch-head
  - ES_CLASSPATH=hitcount.jar elasticsearch-1.0.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider -d
- - pip install -r ./pip_requirements.txt --use-mirrors 
+ - pip install -r requirements.txt
 
 script:
  - python -m amcat.manage test ${SUITE}.tests

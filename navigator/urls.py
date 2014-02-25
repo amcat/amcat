@@ -20,7 +20,6 @@
 from django.conf.urls import patterns, url
 from django.contrib.auth.views import password_change, password_change_done
 
-from navigator.views.preprocessing_views import ProcessParsingView
 from navigator.views import rule_views
 
 from navigator.views.articleset_views import *  # noqa
@@ -44,17 +43,18 @@ urlpatterns = patterns(
     url(r'^user/add-submit$', 'navigator.views.user.add_submit', name='user-add-submit'),
     url(r'^user/change-password$', password_change, name='user-change-password',
         kwargs=dict(
-            template_name="user/change_password.html",
+            template_name="change_password.html",
             post_change_redirect='change-password-done'
         )),
     url(r'^user/change-password-done$', password_change_done, name='change-password-done',
         kwargs=dict(
-            template_name="user/change_password_done.html"
+            template_name="change_password_done.html"
         )),
 
 
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
-
+    url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),
+    url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
 )
 
 
@@ -73,7 +73,9 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
              CodingJobExportSelectView, CodingJobExportView,
              ProjectUserListView, ProjectUserAddView,
-         ]:
+             ArticleRuleListView, ArticleRuleDetailsView,
+             ProjectUserListView, ProjectUserAddView,
+             ]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())

@@ -49,7 +49,7 @@ class RES:
     HEADER_META = re.compile("([\w -]*):(.*)", re.UNICODE)
 
     # Body meta information. This is the same as HEADER_META, but does not include
-    # lower_case characters 
+    # lower_case characters
     BODY_META = re.compile("([^0-9a-z: ]+):(.*)$", re.UNICODE)
 
     # End of body: a line like 'UPDATE: 2. September 2011' or 'PUBLICATION_TYPE: ...'
@@ -228,7 +228,7 @@ def parse_article(art):
             return next_is_indented(lines[1:])
         return lines[1].startswith(" ")
 
-    
+
     def followed_by_date_block(lines):
         # this text is followed by a date block
         # possibly, there is another line in the first block
@@ -249,7 +249,7 @@ def parse_article(art):
         if not lines[1].strip(): return False
         if lines[1].startswith(" "): return False
         return followed_by_date_block(lines[1:])
-        
+
     def _in_header(lines):
         if not lines: return False
         if not lines[0].strip(): return True # blank line
@@ -265,14 +265,14 @@ def parse_article(art):
             header_headline.append(lines.pop(0))
         else:
             while (not lines[0].startswith(" ")) and followed_by_date_block(lines):
-                header_headline.append(lines.pop(0))            
+                header_headline.append(lines.pop(0))
 
         # check again after possible removal of header_headline
         if not lines: return False
         if not lines[0].strip(): return True # blank line
         if lines[0].startswith(" "): return True # indented line
-        
-    
+
+
     @toolkit.to_list
     def _get_header(lines):
         """Consume and return all lines that are indented (ie the list is changed in place)"""
@@ -341,7 +341,7 @@ def parse_article(art):
         while lines:
             line = lines[0].strip()
             if RES.BODY_END.match(line) or RES.COPYRIGHT.match(line):
-                break # end of body                
+                break # end of body
             yield lines.pop(0)
 
     lines = _strip_article(art).split("\n")
@@ -364,7 +364,7 @@ def parse_article(art):
     meta = _get_meta(lines)
     body = _get_body(lines)
 
-    
+
     meta.update(_get_meta(lines))
 
     date, dateline = None, None
@@ -390,7 +390,7 @@ def parse_article(art):
         for line in lines:
             m = re.search(pattern, line)
             if m: return m
-            
+
     if date is None:
         yearmatch = find_re_in("(.*)(\d{4})$", header)
         if yearmatch:
@@ -402,13 +402,13 @@ def parse_article(art):
             issuematch = find_re_in("[-\d]+[^\d]+\d+", header)
             if issuematch:
                 meta['issue'] = issuematch.group(0)
-            
+
         elif [x.strip() for x in header] in (["India Today"], ["Business Today"]):
             date = meta.pop("load-date")
             source = header[0]
         else:
             raise ParseError("Couldn't find date in header: {header!r}\n{art!r}".format(**locals()))
-    
+
     date = toolkit.readDate(date)
     if dateline is not None and len(header) > dateline+1:
         # next line might contain time
@@ -506,11 +506,11 @@ class LexisNexis(UploadScript):
 
     class options_form(UploadScript.options_form, fileupload.ZipFileUploadForm):
         pass
-    
+
     name = 'Lexis Nexis'
 
     def split_file(self, file):
-        
+
         header, body = split_header(file.text)
         self.ln_query  = get_query(parse_header(header))
         fragments = list(split_body(body))
@@ -522,15 +522,15 @@ class LexisNexis(UploadScript):
 
         if self.ln_query is None:
             return provenance
-        
+
         return "{provenance}; LexisNexis query: {self.ln_query!r}".format(**locals())
-    
+
     def parse_document(self, text):
         fields = parse_article(text)
 
         if fields is None:
             return
-        
+
         try:
             a = body_to_article(*fields)
             a.project = self.options['project']
@@ -540,7 +540,7 @@ class LexisNexis(UploadScript):
             raise
 
 from amcat.tools import amcatlogging; amcatlogging.debug_module()
-        
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli(handle_output=False)
@@ -566,7 +566,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         self.test_header_sols = json.load(open(os.path.join(self.dir, 'test_header_sols.json')))
 
 
-        
+
     def split(self):
         return split_header(self.test_text)
 
@@ -580,7 +580,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         n_found = len(list(split_body(splitted[1])))
         n_sol = len(self.test_body_sols)
-        
+
         self.assertEquals(n_found, n_sol + 1) # +1 for 'defigured' article
 
     def test_parse_header(self):
@@ -593,10 +593,10 @@ class TestLexisNexis(amcattest.AmCATTestCase):
     def test_parse_article(self):
         splitted = self.split()
         texts = split_body(splitted[1])
-        
+
         # Json doesn't do dates
         arts = []
-        
+
         for a in texts:
             art = parse_article(a)
             if art is not None:
@@ -636,14 +636,16 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         art = body_to_article(*articles[0])
         self.assertEquals(art.length, 306)
         self.assertEquals(art.headline, "This is a headline")
-        self.assertEquals(art.byline, "with a byline. The article contains unicode characters.")
+        self.assertEquals(art.byline, ("with a byline. The article "
+                                       "contains unicode characters."))
         self.assertEquals(art.text, articles[0][2])
         self.assertEquals(art.date, datetime.datetime(2011, 8, 31))
         self.assertEquals(art.medium.name, u"B\u00f6rsen-Zeitung")
         self.assertEquals(art.author, "MF Tokio")
-        self.assertEquals(eval(art.metastring), {u'update': u'2. September 2011',
-                                                 u'language': u'GERMAN; DEUTSCH',
-                                                 u'publication-type': u'Zeitung'})
+        self.assertEquals(eval(art.metastring),
+                          {u'update': u'2. September 2011',
+                           u'language': u'GERMAN; DEUTSCH',
+                           u'publication-type': u'Zeitung'})
 
         # Setup environment
         dp = amcattest.create_test_project()
@@ -660,15 +662,17 @@ class TestLexisNexis(amcattest.AmCATTestCase):
     def test_get_query(self):
         header, body =  split_header(self.test_text)
         q = get_query(parse_header(header))
-        query = (u'(((Japan OR Fukushima) AND (Erdbeben OR nuklear OR Tsunami OR Krise\nOR Katastrophe OR Tepco)) '
+        query = (u'(((Japan OR Fukushima) AND (Erdbeben OR nuklear OR Tsunami'
+                 ' OR Krise\nOR Katastrophe OR Tepco)) '
                  ' AND date(geq(7/3/2011) AND leq(31/8/2011)) AND\n'
-                 'pub(B\xf6rsen Zeitung OR  Frankfurter Rundschau OR  taz OR  die tageszeitung))')
+                 'pub(B\xf6rsen Zeitung OR  Frankfurter Rundschau OR  '
+                 'taz OR  die tageszeitung))')
         self.assertEqual(q, query)
 
         header, body =  split_header(self.test_text2)
         q = get_query(parse_header(header))
         self.assertIsNone(q)
-        
+
     def test_parse_no_header(self):
         header, body =  split_header(self.test_text2)
         header = header.replace(u'\ufeff', '').strip()
@@ -676,7 +680,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         n_found = len(list(split_body(body)))
         self.assertEqual(n_found, 1)
-
+    @amcattest.use_elastic
     def test_provenance(self):
         import os.path
         from django.core.files import File
@@ -697,4 +701,3 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         arts = ln.run()
         # no query so provenance is the 'standard' message
         self.assertTrue(ln.articleset.provenance.endswith("test2.txt' using LexisNexis"))
-

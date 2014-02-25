@@ -32,7 +32,6 @@ import traceback
 from amcat.scripts.actions.network import Network
 from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
 from amcat.scripts.actions.query import Query
-from amcat.scripts.actions.features import Features
 from amcat.scripts.actions.get_queries import GetQueries
 from amcat.scripts.script import Script
 from amcat.scripts import scriptmanager
@@ -77,7 +76,7 @@ def handler(request, action):
             log.error("Error on form validation: \nPOST:{request.POST}\nform.data:{form.data}\nerrors:{form.errors}".format(**locals()))
             return HttpResponse(json.dumps(form.errors),
                                 mimetype='application/json', status=400)
-            
+
     else:
         form = script.options_form
         help_text = script.__doc__

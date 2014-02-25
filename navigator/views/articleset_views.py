@@ -163,7 +163,8 @@ class ArticleSetSampleView(ProjectScriptView):
                                 oldname=escape(old.name), **locals()))
 
 from amcat.models import Role
-PROJECT_READ_WRITE = Role.objects.get(projectlevel=True, label="read/write").id
+PROJECT_READ_WRITE = 12
+# Role.objects.get(projectlevel=True, label="read/write").id
 class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
     fields = ['project', 'name', 'provenance']

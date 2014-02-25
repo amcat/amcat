@@ -17,81 +17,152 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+import json
+import base64
+
 from django.forms import Textarea, ModelForm, HiddenInput
 
-from django.core.urlresolvers import reverse
-from django.views.generic.base import View, TemplateResponseMixin, ContextMixin, TemplateView
+from django.views.generic.base import (View, TemplateResponseMixin)
 from django.views.generic.detail import SingleObjectMixin
 
-from amcat.models import RuleSet, Rule
 from django.forms.formsets import formset_factory
 from django.forms.models import BaseModelFormSet
 from django.forms.models import modelform_factory
 
-from api.rest.resources import ProjectResource as RuleSetResource
 from navigator.views.datatableview import DatatableCreateView
+from navigator.views.projectview import ProjectListBaseView, ProjectDetailView
+from navigator.views.article_views import ArticleSetArticleDetailsView
+from navigator.views.datatableview import DatatableMixin
 
-    
+from amcat.models import RuleSet, Rule
+from amcat.tools import amcatxtas
+
+
 class RuleSetTableView(DatatableCreateView):
     model = RuleSet
     rowlink_urlname = "ruleset"
 
-def _normalize_quotes(x):
+
+def _normalize(x):
     for quote in u'\x91\x92\x82\u2018\u2019\u201a\u201b\xab\xbb\xb0':
         x = x.replace(quote, "'")
     for quote in u'\x93\x94\x84\u201c\u201d\u201e\u201f\xa8':
-        x= x.replace(quote, '"')
+        x = x.replace(quote, '"')
     return x
-    
+
+
 class RuleForm(ModelForm):
+
     class Meta:
         model = Rule
-        fields = ["id", "ruleset", "order", "label", "display", "where", "insert", "remove", "remarks"]
-        widgets = {field : Textarea(attrs={'cols': 5, 'rows': 4})
-                   for field in ["insert","remove","where","remarks"]}
+        fields = ["id", "ruleset", "order", "label",
+                  "display", "where", "insert", "remove", "remarks"]
+        widgets = {field: Textarea(attrs={'cols': 5, 'rows': 4})
+                   for field in ["insert", "remove", "where", "remarks"]}
         widgets["ruleset"] = HiddenInput
-    
+
+
 class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
     model = RuleSet
-    template_name = "navigator/rule/ruleset.html"
+    template_name = "ruleset.html"
 
     def get(self, request, pk, **kwargs):
         self.object = self.get_object()
 
         ruleset_form = modelform_factory(RuleSet)(instance=self.object)
-        
-        formset = formset_factory(RuleForm, formset=BaseModelFormSet, can_delete=True)
+
+        formset = formset_factory(RuleForm, formset=BaseModelFormSet,
+                                  can_delete=True)
         formset.model = Rule
         formset = formset(queryset=self.object.rules.all())
-        
-        return self.render_to_response(self.get_context_data(formset=formset, ruleset_form=ruleset_form))
-    
+
+        ctx = self.get_context_data(formset=formset, ruleset_form=ruleset_form)
+        return self.render_to_response(ctx)
+
     def post(self, request, pk, **kwargs):
         self.object = self.get_object()
-        ruleset_id = self.object.id
-        class RuleFormWithRuleset(RuleForm):
+        ruleset = self.object.id
+
+        class _RuleFormWithRuleset(RuleForm):
+
+            """Rule Form that inserts ruleset info"""
+
             def clean(self):
-                # HACK! How to add ruleset info to extra fields in a meaningful way?
+                # HACK! How to add ruleset info to extra fields?
                 cleaned_data = super(RuleForm, self).clean()
-                if "ruleset" not in cleaned_data and len(self._errors.get("ruleset", [])) == 1 and self._errors["ruleset"][0] == u"This field is required.":
-                    cleaned_data["ruleset"] = RuleSet.objects.get(pk=ruleset_id)
+                msg_req = u"This field is required."
+                if (("ruleset" not in cleaned_data
+                     and len(self._errors.get("ruleset", [])) == 1
+                     and self._errors["ruleset"][0] == msg_req)):
+                    cleaned_data["ruleset"] = RuleSet.objects.get(pk=ruleset)
                     del self._errors["ruleset"]
-                for field in ("insert", "remove", "where"):
-                    self.cleaned_data[field] = _normalize_quotes(self.cleaned_data[field])
+                for fld in ("insert", "remove", "where"):
+                    self.cleaned_data[fld] = _normalize(self.cleaned_data[fld])
                 return cleaned_data
-            
-        ruleset_form = modelform_factory(RuleSet)(request.POST, instance=self.object)
+
+        ruleset_form = modelform_factory(RuleSet)(
+            request.POST, instance=self.object)
         if ruleset_form.is_valid():
             ruleset_form.save()
-        
-        formset = formset_factory(RuleFormWithRuleset, formset=BaseModelFormSet, can_delete=True)
+
+        formset = formset_factory(_RuleFormWithRuleset,
+                                  formset=BaseModelFormSet, can_delete=True)
         formset.model = Rule
-        formset = formset(request.POST, request.FILES, queryset=self.object.rules.all())
+        formset = formset(request.POST, request.FILES,
+                          queryset=self.object.rules.all())
         if formset.is_valid():
             formset.save()
-            formset = formset_factory(RuleForm, formset=BaseModelFormSet, can_delete=True)
+            formset = formset_factory(RuleForm, formset=BaseModelFormSet,
+                                      can_delete=True)
             formset.model = Rule
             formset = formset(queryset=self.object.rules.all())
 
+        ctx = self.get_context_data(formset=formset, ruleset_form=ruleset_form)
+        return self.render_to_response(ctx)
 
-        return self.render_to_response(self.get_context_data(formset=formset, ruleset_form=ruleset_form))
+
+class ArticleRuleListView(ProjectListBaseView, DatatableMixin):
+    model = RuleSet
+    parent = ArticleSetArticleDetailsView
+    rowlink = './{id}'
+
+
+class ArticleRuleDetailsView(ProjectDetailView):
+    model = RuleSet
+    parent = ArticleRuleListView
+
+    def get_sentences(self, saf):
+        for sid in sorted(set(t['sentence'] for t in saf['tokens'])):
+            stokens = (t['word']
+                       for t in sorted(saf['tokens'],
+                                       key=lambda t: int(t['offset']))
+                       if t['sentence'] == sid)
+            yield sid, " ".join(stokens)
+
+    def get_context_data(self, **kwargs):
+        from syntaxrules.syntaxtree import SyntaxTree, VIS_GREY_REL
+        from syntaxrules.soh import SOHServer
+
+        ctx = super(ArticleRuleDetailsView, self).get_context_data(**kwargs)
+        # get parse
+        analysis = "semafor"
+
+        saf = amcatxtas.get_result(int(self.kwargs['article_id']), analysis)
+        sid = int(self.request.GET.get("sid", 1))
+        sentences = list(self.get_sentences(saf))
+
+        soh = SOHServer(url="http://localhost:3030/x")
+        t = SyntaxTree(soh)
+        t.load_saf(saf, sid)
+        g = t.get_graphviz()
+        original_tree = base64.b64encode(g.draw(format='png', prog='dot'))
+
+        ruleset = self.object.get_ruleset()
+        t.apply_ruleset(ruleset)
+        g = t.get_graphviz(triple_args_function=VIS_GREY_REL)
+        processed_tree = base64.b64encode(g.draw(format='png', prog='dot'))
+
+        ruleset_dump = json.dumps(ruleset, indent=2)
+        saf_dump = json.dumps(saf, indent=2)
+        ctx.update(locals())
+        return ctx

@@ -243,54 +243,12 @@ def  create_test_codebook_with_codes():
         codebook.add_code(codes[code], codes.get(parent))
     return codebook, codes
 
-def create_test_word(lemma=None, word=None, pos="N"):
-    """Create a test word"""
-    from amcat.models.word import Word, Lemma
-    if not lemma: lemma = "testlemma_%i" % Lemma.objects.count()
-    if not word: word = "testword_%i" % Word.objects.count()
-    l = Lemma.objects.create(pos=pos, lemma=lemma)
-    return Word.objects.create(id=_get_next_id(), lemma=l, word=word)
-
 def create_test_plugin(**kargs):
     from amcat.models import Plugin, PluginType
     if "id" not in kargs: kargs["id"] = _get_next_id()
     if "class_name" not in kargs: kargs["class_name"] = "amcat.tools.amcattest.AmCATTestCase"
     if "plugin_type" not in kargs: kargs["plugin_type"] = PluginType.objects.get(pk=1)
     return Plugin.objects.create(**kargs)
-
-def create_test_analysed_article(**kargs):
-    if "id" not in kargs: kargs["id"] = _get_next_id()
-    from amcat.models.analysis import AnalysedArticle
-    if 'article' not in kargs: kargs['article'] = create_test_article()
-    if 'plugin' not in kargs: kargs['plugin'] = create_test_plugin()
-    return AnalysedArticle.objects.create(**kargs)
-
-def create_test_analysis_sentence(analysed_article=None, **kargs):
-    if "id" not in kargs: kargs["id"] = _get_next_id()
-    from amcat.models.analysis import AnalysisSentence
-    if not analysed_article:
-        analysed_article = create_test_analysed_article()
-    if 'sentence' not in kargs: kargs['sentence'] = create_test_sentence(article=analysed_article.article)
-    return AnalysisSentence.objects.create(analysed_article=analysed_article, **kargs)
-
-
-def create_test_token(**kargs):
-    from amcat.models import Pos, Token
-    if "sentence" not in kargs: kargs['sentence'] = create_test_analysis_sentence()
-    if "word" not in kargs: kargs["word"] = create_test_word()
-    if "pos" not in kargs: kargs["pos"] = Pos.objects.create(major="x", minor="y", pos="p")
-    if "position" not in kargs: kargs["position"] = get_next_id()
-    return Token.objects.create(**kargs)
-
-def create_tokenvalue(analysis_article=None, **kargs):
-    if 'analysis_sentence' not in kargs:
-        kargs['analysis_sentence'] = create_test_analysis_sentence(analysis_article).id
-    for key, default in dict(position=_get_next_id(), word='test_word', lemma='test_lemma',
-                             pos='T', major='test_major', minor='test_minor', namedentity=None).items():
-        if key not in kargs: kargs[key] = default
-    from amcat.models.token import TokenValues
-    return TokenValues(**kargs)
-
 
 class AmCATTestCase(TestCase):
     @contextmanager

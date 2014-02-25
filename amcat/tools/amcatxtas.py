@@ -18,20 +18,28 @@
 ###########################################################################
 
 """
-Script to update the index after scraping
+Interface with the xtas NLP processing system
 """
+from amcat.tools import amcates
 
-from amcat.scripts.script import Script
-from amcat.models.articleset import ArticleSet
-from amcat.models.scraper import Scraper
+class ANALYSES:
+    postag = [{"module" : "xtas.tasks.single.tokenize"},
+              {"module": "xtas.tasks.single.pos_tag",
+               "arguments" : {"model" : "nltk"}}]
 
-class UpdateIndexScript(Script):
-    def run(self, _input = None):
-        setids = Scraper.objects.filter(active = True).values('articleset')
-        for s in ArticleSet.objects.filter(pk__in = setids):
-            s.refresh_index()
+    corenlp = [{"module" : "xtas.tasks.single.corenlp"}]
 
-if __name__ == "__main__":
-    from amcat.scripts.tools import cli
-    cli.run_cli(UpdateIndexScript)
-        
+    semafor = [{"module" : "xtas.tasks.single.corenlp"},
+               {"module" : "xtas.tasks.single.semafor"}]
+
+def get_result(article, analysis, store_intermediate=True, block=True):
+    from xtas.tasks.pipeline import pipeline
+    if not isinstance(article, int): article = article.id
+    if not isinstance(analysis, list): analysis = getattr(ANALYSES, analysis)
+
+    es = amcates.ES()
+    doc = {'index': es.index, 'type': es.doc_type,
+           'id': article, 'field': 'text'}
+    r = pipeline(doc, analysis,
+                 store_intermediate=store_intermediate, block=block)
+    return r
