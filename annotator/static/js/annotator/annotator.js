@@ -965,6 +965,7 @@ annotator = (function(self){
 
         // Initialise coding area
         $("#editor").show();
+        $(".sidebar").scrollTop(0);
         self.sentences_fetched(sentences);
         self.highlight();
         self.codings_fetched();
