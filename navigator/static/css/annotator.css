@@ -209,3 +209,11 @@ input.error{
 .sentence-codings::after{
     content: "Sentence codings";
 }
+
+.article-coding input{
+    width:100%;
+}
+
+.article-coding input[type=checkbox]{
+    width:inherit;
+}
