@@ -43,12 +43,12 @@ urlpatterns = patterns(
     url(r'^user/add-submit$', 'navigator.views.user.add_submit', name='user-add-submit'),
     url(r'^user/change-password$', password_change, name='user-change-password',
         kwargs=dict(
-            template_name="user/change_password.html",
+            template_name="change_password.html",
             post_change_redirect='change-password-done'
         )),
     url(r'^user/change-password-done$', password_change_done, name='change-password-done',
         kwargs=dict(
-            template_name="user/change_password_done.html"
+            template_name="change_password_done.html"
         )),
 
 

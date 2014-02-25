@@ -18,3 +18,5 @@ sh
 cssselect
 colorlog
 psycopg2
+chardet
+html2text

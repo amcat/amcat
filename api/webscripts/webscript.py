@@ -65,7 +65,7 @@ def webscript_task(self, cls, **kwargs):
     webscript = cls(**kwargs)
     webscript.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
     return webscript.run()
-    
+
 
 
 
@@ -88,7 +88,7 @@ class WebScript(object):
             data = to_querydict(data, mutable=True)
 
         self.progress_monitor = ProgressMonitor()
-        
+
         self.initTime = time.time()
         self.data = data
         self.output = data.get('output', 'json')
@@ -165,7 +165,7 @@ class WebScript(object):
                 webscriptform = self.form(data=self.data)
 
         selectionform = SelectionForm(project=self.project, data=self.data)
-        html = render_to_string('navigator/selection/webscriptoutput.html', {
+        html = render_to_string('api/webscriptoutput.html', {
                                     'scriptoutput':scriptoutput,
                                     'actions': actions,
                                     'selectionform':selectionform,
