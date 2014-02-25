@@ -30,7 +30,7 @@ autocomplete = (function(self){
         if (ui.item !== null){
             intval = ui.item.intval;
             label = ui.item.label;
-        } else if ($(this).val() !== null) {
+        } else if ($(this).val() !== "") {
             ui.item = JSON.parse($(this).attr("first_match"));
             if (ui.item !== null){
                 return self.on_change.bind(this)(event, ui);
@@ -178,14 +178,13 @@ autocomplete = (function(self){
             source : function(request, callback){
                 self.get_source(input_element, choices, request, callback);
             },
-            autoFocus: true,
+            autoFocus: false,
             minLength: 0,
             change : self.on_change,
             select : self.on_change,
             delay: 5
         }).focus(function(){
             var value = $(this).val();
-            $(this).autocomplete("option", "autoFocus", value !== "");
             $(this).autocomplete("search", value);
         });
     };
