@@ -846,7 +846,7 @@ annotator = (function(self){
             });
 
             self.set_column_text("status", self.STATUS_TEXT[self.state.coded_article.status]);
-            self.set_column_text("comments", self.state.coded_article.comments);
+            self.set_column_text("comments", self.state.coded_article.comments||"");
 
             // Reset 'unsaved' state
             self.set_unsaved(false);
