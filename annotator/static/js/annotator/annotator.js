@@ -209,18 +209,6 @@ annotator = (function(self){
         self.unsaved_modal = $("#unsaved-changes").modal({ show : false });
         self.loading_dialog = $("#loading").modal({show : false, keyboard : false});
         self.message_dialog = $("#message").modal({ show : false });
-
-        self.delete_row_dialog = $("#dialog-confirm-delete-row").dialog($.extend({}, self.dialog_defaults, {
-            buttons: {
-                "Delete row": function(){
-                    self.delete();
-                    $(this).dialog("close");
-                },
-                Cancel: function(){
-                    $(this).dialog("close");
-                }
-            }
-        }))
     };
 
     /* Calls $.getJSON and returns its output, while appending ?page_size=inf
@@ -821,7 +809,7 @@ annotator = (function(self){
         // Check whether we want to save, by first checking the mandetory checks.
         var validation = self.mandetory_validate();
         if (validation !== true){
-            return self.message_dialog.text(validation).dialog("open");
+            return self.show_message("Validation", validation);
         }
 
         // Check optional requirements
