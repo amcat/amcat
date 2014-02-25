@@ -63,27 +63,56 @@ Now you are ready to start elasticsearch. I usually start it in a secondary term
 ES_CLASSPATH=hitcount.jar elasticsearch-1.0.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
 ```
 
-### Installing AmCAT
+### Installing AmCAT (pip install from git)
 
-Now you are ready to install AmCAT. Clone the project from github:
+Now you are ready to install AmCAT. The easiest way to do this is to `pip install` it direct from github. 
+This is not advised unless you use a virtual environment.
 
+```sh
+pip install git+https://github.com/amcat/amcat.git
+```
+
+### Installing AmCAT (clone)
+
+Alternatively, clone the project from github and pip install the requirements. If you plan to make changes to 
+AmCAT, this is probably the best thing to do. 
+
+```sh
 git clone https://github.com/amcat/amcat.git
-
-Install the requirements:
-
 pip install -r amcat/requirements.txt
+```
 
-AMCAT is a Django application. Call the syncdb command to populate the database and set the elasticsearch mapping:
+If you install amcat via cloning, be sure to add the new directory to the pythonpath, e.g.:
 
-PYTHONPATH=amcat python -m amcat.manage syncdb
+```sh
+export PYTHONPATH=$PYTHONPATH:$HOME/amcat
+```
+
+### Setting up the database
+
+Whichever way you installed AmCAT, you need tocall the syncdb command to populate the database and set the elasticsearch mapping:
+
+```sh
+python -m amcat.manage syncdb
+```
 
 ### Start AmCAT web server
 
 For debugging, it is easiest to start amcat using runserver:
 
-PYTHONPATH=amcat python -m amcat.manage runserver
+```sh
+python -m amcat.manage runserver
+```
 
 ### Start celery worker
+
+Finally, to use the query screen you need to start a celery worker. In a new terminal, type:
+
+```sh
+celery -A amcat.amcatcelery worker -l info -Q amcat
+```
+
+(if you are using a virtual environment, make sure to `activate` that first)
 
 ## Configuring AmCAT
 
