@@ -1090,12 +1090,12 @@ annotator = (function(self){
         rules.add(self.sentence_codings_container);
     };
 
-    self.delete_codingvalue = function(){
+    self.delete_codingvalue = function () {
         ct = $(document.activeElement);
 
         // Must be focusable and an input element
         if (ct.attr("tabindex") === undefined && !ct.is("input")) return;
-        ct.val("").blur().focus();
+        ct.attr("first_match", "null").val("").blur().focus();
     };
 
     /*
