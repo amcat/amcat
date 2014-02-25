@@ -214,6 +214,6 @@ input.error{
     width:100%;
 }
 
-.article-coding input[type=checkbox]{
-    width:inherit;
+.article-coding .row{
+    margin-bottom: 0px !important;
 }

@@ -368,7 +368,7 @@ annotator = (function(self){
     /* Returns (new) DOM representation of the articlecoding */
     self.get_article_coding_html = function(){
         var schemafields = self.article_schemafields;
-        var table = $("<table>")
+        var table = $("<div>")
             .attr("annotator_coding_id", self.state.article_coding.annotator_id)
             .addClass("coding");
 
@@ -381,9 +381,9 @@ annotator = (function(self){
                 widgets.set_value($(widget), value);
             }
 
-            return $("<tr>")
-                .append($("<td>").append(label))
-                .append($("<td>").append(widget));
+            return $("<div>").addClass("row")
+                .append($("<div>").addClass("col-md-3").append(label))
+                .append($("<div>").addClass("col-md-9").append(widget));
         }));
     };
 
