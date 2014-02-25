@@ -24,25 +24,26 @@ Plugin for uploading pdf files of a certain markup, provided by BZK
 from __future__ import unicode_literals, absolute_import
 
 from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scraping.document import Document
-from amcat.scraping.pdf import PDFScraper
+from amcat.models.article import Article
+from amcat.scripts.article_upload.pdf import PDFParser
 from amcat.models.medium import Medium
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
 
 from datetime import date
 import re
 
-class BZKPDFScraper(UploadScript, PDFScraper):
-    
+class BZKPDFScraper(UploadScript):
     def _scrape_unit(self, unit):
+        parser = PDFParser()
         self.index = []
         article_lines = []
         headline = ""
-        for i, p in enumerate(self.process_document(self.doc)):
+        doc = parser.load_document(self.options['file'])
+        for i, p in enumerate(parser.process_document(doc)):
             #is this page an index page?
             index_pattern = re.compile("^[^\(]+\([^\)]+\)..+[0-9]+$")
-            if any([index_pattern.match(line.get_text()) for line in self.get_textlines(p)]):
-                for line in self.get_textlines(p):
+            if any([index_pattern.match(line.get_text()) for line in parser.get_textlines(p)]):
+                for line in parser.get_textlines(p):
                     pattern = re.compile("([^\(]+)(\([0-9]+\))? \(([^\)]+)\).+")
                     text = line.get_text()
                     result = pattern.search(text)
@@ -52,7 +53,7 @@ class BZKPDFScraper(UploadScript, PDFScraper):
                 continue
 
             #if not, scrape lines on page for current article
-            for line in self.get_textlines(p):
+            for line in parser.get_textlines(p):
                 text = line.get_text()
                 if text.lower().strip() in [i[0].lower().strip() for i in self.index]:
 
@@ -71,7 +72,7 @@ class BZKPDFScraper(UploadScript, PDFScraper):
             yield self.getarticle(headline, article_lines)
                         
     def getarticle(self, headline, lines):
-        article = Document(headline = headline)
+        article = Article(headline = headline)
         text = ""
         for line in lines[2:]:
             if len(line) > 2:
@@ -81,10 +82,10 @@ class BZKPDFScraper(UploadScript, PDFScraper):
         text = text.replace("  "," ")
         text = text.replace("\n"," ")
 
-        article.props.text = text
+        article.text = text
         date_pattern = re.compile("([0-9]{2,2})\-([0-9]{2,2})\-([0-9]{4,4})")
         result = date_pattern.search(lines[1])
-        article.props.date = date(
+        article.date = date(
             int(result.group(3)),
             int(result.group(2)),
             int(result.group(1)))
@@ -92,11 +93,11 @@ class BZKPDFScraper(UploadScript, PDFScraper):
         result = pagenum_pattern.search(lines[1])
         if result:
             
-            article.props.pagenr = int(result.group(1))
+            article.pagenr = int(result.group(1))
 
         for h, medium in self.index:
-            if article.props.headline.lower().strip() in h.lower().strip():
-                article.props.medium = self.create_medium(medium)
+            if article.headline.lower().strip() in h.lower().strip():
+                article.medium = self.create_medium(medium)
 
         return article
 
@@ -110,7 +111,6 @@ class BZKPDFScraper(UploadScript, PDFScraper):
 
 if __name__ == "__main__":
     from amcat.tools import amcatlogging
-    amcatlogging.debug_module("amcat.scraping")
     from amcat.scripts.tools import cli
     cli.run_cli(BZKPDFScraper)
 
