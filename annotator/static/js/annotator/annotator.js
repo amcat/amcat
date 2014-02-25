@@ -1159,7 +1159,18 @@ annotator = (function(self){
 
             // Cache descendants
             $.each(codebook.codes, function(i, code) { code.get_descendants() });
+
+            // Set hidden property
+            $.each(self.find_hidden(codebook.codes), function(i, c){
+                c.hidden = true;
+            });
         });
+    };
+
+    self.find_hidden = function(codes){
+        return Array.prototype.concat.apply([], $.map(codes, function(c){
+            return c.hide ? [c].concat($.values(c.get_descendants())) : null;
+        }));
     };
 
     /*
