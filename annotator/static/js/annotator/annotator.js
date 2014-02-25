@@ -358,7 +358,8 @@ annotator = (function(self){
         "shift+down" : self.copy_row,
         "ctrl+shift+d": self.delete_row,
         "ctrl+i" : self.irrelevant_btn.first().trigger.bind(self.irrelevant_btn.first(), "click"),
-        "ctrl+d" : self.save_continue_btn.first().trigger.bind(self.save_continue_btn.first(), "click")
+        "ctrl+d" : self.save_continue_btn.first().trigger.bind(self.save_continue_btn.first(), "click"),
+        "ctrl+del" : self.delete_codingvalue
     }};
 
     /******** PUBLIC FUNCTIONS *******/
@@ -566,6 +567,7 @@ annotator = (function(self){
      */
     self.last_widget_reached = function(event){
         var row = $(event.currentTarget).closest("tr");
+        var active_coding = self.get_active_sentence_coding();
 
         if (shifted){
             // We need to go back, do nothing!
@@ -573,7 +575,7 @@ annotator = (function(self){
             return;
         }
 
-        var empty_coding = self.get_empty_coding();
+        var empty_coding = self.get_empty_coding({ sentence : active_coding.sentence });
         self.state.sentence_codings.push(empty_coding);
 
         if (row.next().length === 0){
@@ -1109,6 +1111,14 @@ annotator = (function(self){
 
         self.initialise_sentence_codings();
         rules.add(self.sentence_codings_container);
+    };
+
+    self.delete_codingvalue = function () {
+        ct = $(document.activeElement);
+
+        // Must be focusable and an input element
+        if (ct.attr("tabindex") === undefined && !ct.is("input")) return;
+        ct.attr("first_match", "null").val("").blur().focus();
     };
 
     /*
