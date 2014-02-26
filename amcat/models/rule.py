@@ -65,6 +65,11 @@ class RuleSet(AmcatModel):
                 result['insert'] = rule.insert
             if rule.remove:
                 result['remove'] = rule.remove
+            if rule.remarks:
+                result['remarks'] = rule.remarks
+            if rule.order:
+                result['order'] = rule.order
+
             yield result
 
     def get_ruleset(self):
