@@ -27,7 +27,7 @@ from django import forms
 from datetime import date
 
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm
-from amcat.scraping.pdf import PDFScraper
+from amcat.scripts.article_upload.pdf import PDFParser
 from amcat.models.article import Article
 from amcat.models.medium import Medium
 
@@ -38,15 +38,16 @@ class RawPDFForm(UploadForm):
     date = forms.DateField(required=False, help_text='If left blank, use current date')
     section = forms.CharField(required=False)
 
-class RawPDFScraper(UploadScript, PDFScraper):
+class RawPDFScraper(UploadScript):
     options_form = RawPDFForm
     def _scrape_unit(self, _file):
         """unit: a pdf document"""
         res = ""
-        doc = self.load_document(_file, self.options['pdf_password'])
-        for page in self.process_document(doc):
+        parser = PDFParser()
+        doc = parser.load_document(_file, self.options['pdf_password'])
+        for page in parser.process_document(doc):
             page_txt = ""
-            for line in self.get_textlines(page):
+            for line in parser.get_textlines(page):
                 page_txt += line.get_text() + "\n"
             res += page_txt + "\n\n"
         article = Article(text = res)
@@ -73,7 +74,6 @@ class RawPDFScraper(UploadScript, PDFScraper):
 
 if __name__ == "__main__":
     from amcat.tools import amcatlogging
-    amcatlogging.info_module("amcat.scraping")
     from amcat.scripts.tools import cli
     cli.run_cli(RawPDFScraper)
         

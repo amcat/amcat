@@ -171,7 +171,6 @@ class Text(UploadScript):
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     amcatlogging.debug_module("amcat.scripts.article_upload.upload")
-    #amcatlogging.debug_module("amcat.scraping.scraper")
     from amcat.scripts.tools.cli import run_cli
     run_cli(handle_output=False)
 
