@@ -968,7 +968,11 @@ annotator = (function(self){
 
     self.highlight = function(){
         console.log("Highlighting ", self.highlight_labels.length ," labels in article..");
-        $("div.sentences").easymark("highlight", self.highlight_labels.join(" "));
+        $("div.sentences").highlight(self.highlight_labels, { lenient : true });
+    };
+
+    self.unhighlight = function(){
+        $("div.sentences").unhighlight();
     };
 
     /*
@@ -1188,12 +1192,14 @@ annotator = (function(self){
             $.each(schema.highlighters, function(i, codebook_id){
                 codebook = self.models.codebooks[codebook_id];
                 $.each(codebook.codes, function(i, code){
-                    labels.push(code.labels[language_id]);
+                    labels.push(code.labels[language_id]||"");
                 });
             });
         });
 
-        self.highlight_labels = labels;
+        self.highlight_labels = $.grep(labels, function(label){
+            return !!label.trim().length;
+        });
     };
 
 
