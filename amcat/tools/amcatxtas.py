@@ -36,7 +36,13 @@ class ANALYSES:
 def get_result(article, analysis, store_intermediate=True, block=True):
     from xtas.tasks.pipeline import pipeline
     if not isinstance(article, int): article = article.id
-    if not isinstance(analysis, list): analysis = getattr(ANALYSES, analysis)
+    if not isinstance(analysis, list):
+        if hasattr(ANALYSES, analysis):
+            analysis = getattr(ANALYSES, analysis)
+        elif "." in analysis:
+            analysis = [{"module" : analysis}]
+        else:
+            raise ValueError("Unknown analysis: {analysis}".format(**locals()))
 
     es = amcates.ES()
     doc = {'index': es.index, 'type': es.doc_type,
