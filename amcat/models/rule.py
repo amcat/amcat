@@ -74,8 +74,11 @@ class RuleSet(AmcatModel):
             yield result
 
     def get_ruleset(self):
-        return {"lexicon": list(self.get_lexicon()),
-                "rules": list(self.get_rules())}
+        r = {"lexicon": list(self.get_lexicon()),
+             "rules": list(self.get_rules())}
+        if self.preprocessing.strip():
+            r["preprocessing"] = self.preprocessing.strip()
+        return r
 
     class Meta():
         db_table = 'rulesets'
@@ -145,11 +148,15 @@ class TestRules(amcattest.AmCATTestCase):
         Rule.objects.create(ruleset=r, label="x", order=2,
                             where=condition, insert=insert)
 
-        self.assertEqual(list(r.get_rules()),
+        getrules = lambda r : [{k:v for k,v in rule.iteritems()
+                                if k in ["condition", "insert"]}
+                               for rule in r.get_rules()]
+
+        self.assertEqual(getrules(r),
                          [{"condition": condition, "insert": insert}])
 
         Rule.objects.create(ruleset=r, label="y", order=1,
                             where="w", insert="i")
-        self.assertEqual(list(r.get_rules()),
+        self.assertEqual(getrules(r),
                          [{"condition": "w", "insert": "i"},
                           {"condition": condition, "insert": insert}])

@@ -28,6 +28,7 @@ class ANALYSES:
                "arguments" : {"model" : "nltk"}}]
 
     corenlp = [{"module" : "xtas.tasks.single.corenlp"}]
+    alpino = [{"module" : "xtas.tasks.single.alpino"}]
 
     semafor = [{"module" : "xtas.tasks.single.corenlp"},
                {"module" : "xtas.tasks.single.semafor"}]

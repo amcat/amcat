@@ -198,10 +198,8 @@ class ArticleRuleDetailsView(ProjectDetailView):
         from syntaxrules.soh import SOHServer
 
         ctx = super(ArticleRuleDetailsView, self).get_context_data(**kwargs)
-        # get parse
-        analysis = "semafor"
-
-        saf = amcatxtas.get_result(int(self.kwargs['article_id']), analysis)
+        saf = amcatxtas.get_result(int(self.kwargs['article_id']),
+                                   self.object.preprocessing)
         sid = int(self.request.GET.get("sid", 1))
         sentences = list(self.get_sentences(saf))
 

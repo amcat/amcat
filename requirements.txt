@@ -20,3 +20,4 @@ colorlog
 psycopg2
 chardet
 html2text
+pypdf2
