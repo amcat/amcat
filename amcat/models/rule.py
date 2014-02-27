@@ -41,6 +41,7 @@ class RuleSet(AmcatModel):
 
     id = models.AutoField(primary_key=True, db_column="rule_id")
     label = models.CharField(max_length=255)
+    preprocessing = models.CharField(max_length=1000)
 
     lexicon_codebook = models.ForeignKey("amcat.codebook", related_name="+")
     lexicon_language = models.ForeignKey("amcat.language", related_name="+")
@@ -67,8 +68,8 @@ class RuleSet(AmcatModel):
                 result['remove'] = rule.remove
             if rule.remarks:
                 result['remarks'] = rule.remarks
-            if rule.order:
-                result['order'] = rule.order
+            result['order'] = rule.order
+            result['label'] = rule.label
 
             yield result
 
