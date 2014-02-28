@@ -28,12 +28,12 @@ install:
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
  - sudo service rabbitmq-server start
- - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.0.tar.gz | tar xvz
+ - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.1.tar.gz | tar xvz
  - wget http://amcat.vu.nl/plain/hitcount.jar
- - elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
- - elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
- - elasticsearch-1.0.0/bin/plugin -install mobz/elasticsearch-head
- - ES_CLASSPATH=hitcount.jar elasticsearch-1.0.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider -d
+ - elasticsearch-1.0.1/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
+ - elasticsearch-1.0.1/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
+ - elasticsearch-1.0.1/bin/plugin -install mobz/elasticsearch-head
+ - ES_CLASSPATH=hitcount.jar elasticsearch-1.0.1/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider -d
  - pip install -r requirements.txt
 
 script:
