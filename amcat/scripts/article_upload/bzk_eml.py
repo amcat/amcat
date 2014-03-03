@@ -64,7 +64,7 @@ class BZKEML(UploadScript):
                     datestr = split[0] + "20" + split[1]
                 if "=" in datestr: # if this is true, the year is not parsable
                     # we take the year the mail was sent, might fail around december
-                    datestr = datestr.split("=")[0] + file_date.year 
+                    datestr = datestr.split("=")[0] + str(file_date.year)
                     article.date = readDate(datestr)
                     if (article.date - file_date).days > 200: #likely a misparse, with the mail being sent the next year
                         article.date -= timedelta(years = 1)
