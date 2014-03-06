@@ -40,7 +40,7 @@ def get_result(article, analysis, store_intermediate=True, block=True):
         if hasattr(ANALYSES, analysis):
             analysis = getattr(ANALYSES, analysis)
         elif "." in analysis:
-            analysis = [{"module" : analysis}]
+            analysis = [{"module" : m} for m in analysis.split('__')]
         else:
             raise ValueError("Unknown analysis: {analysis}".format(**locals()))
 
