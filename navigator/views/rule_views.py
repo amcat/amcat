@@ -87,10 +87,12 @@ class RuleSetView(View, TemplateResponseMixin, SingleObjectMixin):
 
         upload_form = UploadRulesForm
 
-        ctx = self.get_context_data(ruleset_form = ruleset_form,
-                                    ruleset_json = ruleset_json,
-                                    formset = formset,
-                                    upload_form = upload_form)
+        ctx = self.get_context_data(
+            codebook = self.object.lexicon_codebook,
+            ruleset_form = ruleset_form,
+            ruleset_json = ruleset_json,
+            formset = formset,
+            upload_form = upload_form)
 
         return self.render_to_response(ctx)
 
