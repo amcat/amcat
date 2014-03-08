@@ -80,7 +80,7 @@ class BZKEML(UploadScript):
         paragraphs = []
         paragraph = ""
         while True:
-            line = lines.pop(0)
+            line = lines.pop(0).rstrip("=")
             if not line:
                 paragraphs.append(paragraph)
                 paragraph = ""
