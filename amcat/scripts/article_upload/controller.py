@@ -55,14 +55,15 @@ class Controller(object):
             _set_default(article, 'project', scraper.project)
 
         try:
-            self.articles, errors = Article.ordered_save(self.articles, scraper.articleset)
+            articles, errors = Article.create_articles(self.articles, scraper.articleset)
+            self.saved_article_ids = {getattr(a, "duplicate_of", a.id) for a in self.articles}
             for e in errors:
                 self.errors.append(ScrapeError(None,None,e))
         except Exception as e:
             self.errors.append(ScrapeError(None,None,e))
             log.exception("scraper._get_units failed")
 
-        return self.articles
+        return self.saved_article_ids
 
 def _set_default(obj, attr, val):
     try:
