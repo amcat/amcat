@@ -1,47 +1,114 @@
 {% extends "annotator/base.html" %}
 
-{% block content %}
-  
-  <div id="messages">
-   <noscript>
-    <div>
-     <h2>Your browser does not seem to have JavaScript enabled. Please enable it.</h2>
+{% block article %}
+    <div class="sentences">
+        <p>No article selected yet</p>
     </div>
-   </noscript>
-  </div>
+{% endblock %}
 
-  
- <!--[if lt IE 9]>
-<div class="error">Internet Explorer versions 6, 7 and 8 are not officially supported. Please use Internet Explorer 9, Firefox or Google Chrome.</div>
-<![endif]-->
+{% block content %}
+    <div class="row">
+        <div class="articlelist-part">
+            <div id="article-table-container"></div>
+        </div>
+    </div>
 
-  <div class="annotator-content">
-    
-    <article>
-       <div class="sentence-options">
-            <button class="select-all-sentences-button" title="Select all sentences">Select</button>
-            <span>Selected words: <span id="wordcount">0</span></span>
-       </div>
-       <div class="sentences">
-           <h2>Article Text</h2>
-           <p>No article selected yet</p>
-       </div>
-    </article>
-    
-    <div class="articlelist-part">
-        <div class="links">
-            <a href="{% url "codingjobs" %}">&laquo; Back to Overview</a> | 
-            <a href="javascript:;" id="help-button">Help</a>
+    <div class="alert alert-warning row" id="lost-codes">
+        <p><b>Warning</b></p>
+        <p>Some of the codes used in this coded article were not present in the used codebooks, which might
+            result in lost data. This warning typically is the result of moving a code in a codebook, deleting
+            a code from a codebook or changing the type of a codingschemafield. The warning was triggered by
+            the following codingschemafields:</p>
+        <p>
+        <ul class="triggered-by"></ul>
+
+    </div>
+
+    <div class="row" id="editor" style="display:none">
+        {% include "annotator/mark_buttons.html" %}
+
+        <!-- Fix float:right of .mark -->
+        <div class="clearfix"></div>
+
+        <div class="coded-article part" id="coded-article">
+            <select class="form-control" id="article-status" name="status" ></select><br/>
+            <textarea class="form-control" placeholder="Comments" cols="40" id="article-comment" name="comment" rows="4"></textarea>
         </div>
-        <h2>Articles in codingjob {{codingjob.id}} - {{codingjob.name}}</h2>
-        <div class="article-list-toolbar">
-            <button id="next-article-button" title="Go to the next article in the list">Next</button>
-            <button id="previous-article-button" title="Go to the previous article in the list">Previous</button>
+
+        <div class="article-coding part" id="article-coding">
+            <form id="article-coding-form">
+
+            </form>
         </div>
-        <div id="article-table-container">
-        
+
+        {% include "annotator/mark_buttons.html" with style="margin-bottom:15px;" %}
+
+        <div class="sentence-codings part" id="unitcoding-table-part">
+            <table cellpadding="0" cellspacing="0" border="0" class="display" id="unitcoding-table"></table>
         </div>
-        <script type="text/javascript">
+
+        {% include "annotator/mark_buttons.html" %}
+    </div>
+
+    <div id="autocomplete-details" class="ui-corner-all">
+    </div>
+
+    <div id="loading" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h4 class="modal-title">Loading..</h4>
+                </div>
+                <div class="modal-body">
+                    <p>Loading..</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="unsaved-changes" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">Unsaved changes</h4>
+                </div>
+                <div class="modal-body">
+                    <p>There are unsaved changes pending. Please choose one of the following options:</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning discard">Discard</button>
+                    <button type="button" class="btn btn-primary save"><i class="glyphicon glyphicon-floppy-disk"></i> Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="message" class="modal fade" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title"></h4>
+                </div>
+                <div class="modal-body">
+                    <p></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        $(document).ready(function(){
+            annotator.initialise({{ project.id }}, {{ codingjob.id }}, {{ coder.id }}, {{ coder.userprofile.language_id }});
+        });
+    </script>
+
+    <script type="text/javascript">
         $(document).ready(function(){
             var jqueryElement = $('#article-table-container');
             var url = "{% url "codedarticle-list" project.id codingjob.id %}";
@@ -73,128 +140,5 @@
                 }
             });
         });
-        </script>
-    </div>
-
-    <div style="width:70%;" class="alert alert-warning" id="lost-codes">
-        <p><b>Warning</b></p>
-        <p>Some of the codes used in this coded article were not present in the used codebooks, which might
-            result in lost data. This warning typically is the result of moving a code in a codebook, deleting
-            a code from a codebook or changing the type of a codingschemafield. The warning was triggered by
-            the following codingschemafields:</p>
-        <p>
-            <ul class="triggered-by"></ul>
-        </p>
-    </div>
-    
-    <div class="coding-part" style="display:none">
-         <div class="unit-codings-toolbar">
-            <button id="irrelevant-button" title="Mark this article as irrelevant and continue to the next article">Irrelevant &amp; continue</button>
-            <button id="save-continue-button" title="Mark this article as finished and continue to the next article">Finish &amp; continue</button>
-            <button id="save-button" title="Save the codings for this article">Save</button>
-         </div>
-         
-        
-        <div id="article-comment-form">
-            <label for="article-comment">Comments:</label> <textarea cols="40" id="article-comment" name="comment" rows="4"></textarea>
-            <label for="article-status">Article Status:</label><select id="article-status" name="status" ></select>
-        </div>
-        
-         <div id="article-coding">
-            <h3>Article Codings</h3>
-            <form id="article-coding-form">
-            
-            </form>
-         </div>
-         
-         <div id="unitcoding-table-part">
-            <div id="unitcoding-table-top">
-                <h3>Sentence Codings</h3>
-            </div>
-            <div>
-                <table cellpadding="0" cellspacing="0" border="0" class="display" id="unitcoding-table"></table>
-            </div>
-         </div>
-    </div>
-    
-  </div>
-  
-  
-<div id="autocomplete-details" class="ui-corner-all">
-</div>
-
-<div id="article-dialog-form" style="display:none">
-	<div id="article-edit-form"></div>
-	<div id="article-edit-status"></div>
-</div>
-
-<div id="new-sentence-dialog-form" title="Add new Sentence" style="display:none">
-	<div id="new-sentence-nr-placeholder">
-    </div>
-    <input type="text" id="new-sentence-text" />
-	<div id="new-sentence-status"></div>
-</div>
-
-<div id="message-dialog" title="Message" style="display:none">
-	<div id="message-dialog-msg"></div>
-</div>
-  
-<div id="dialog-confirm-delete-row" title="Delete this row" style="display:none">
-	<p>Are you sure you would like to delete this row?</p>
-    <p id="confirm-delete-row-content"></p>
-</div>
-
-<div id="dialog-save" title="Saving" style="display:none">
-    <div id="dialog-save-msg"></div>
-</div>
-
-<div id="dialog-help" title="Help" style="display:none">
-    <h4>Keyboard shortcuts</h4>
-    <table>
-        <tr><th>Key</th><th>Explanation</th></tr>
-        <tr><td>CTRL + S</td><td>Save</td></tr>
-        <tr><td>CTRL + D</td><td>Set to complete, save and continue</td></tr>
-        <tr><td>CTRL + I</td><td>Set to irrelevant, save and continue.</td></tr>
-        <tr><td>ESCAPE</td><td>Close a dialog</td></tr>
-        <tr><td>CTRL + ↓</td><td>Add new row in sentence codings table, copying current sentence.</td></tr>
-        <tr><td>CTRL + SHIFT + ↓</td><td>Add new row in sentence codings table, increase sentencenr by one.</td></tr>
-        <tr><td>SHIFT + ↓</td><td>Copy current row.</td></tr>
-        <tr><td>CTRL + SHIFT + d</td><td>Remove row in sentence codings table</td></tr>
-    </table>
-    <br>
-    <h4>Supported Browsers</h4>
-    <p>AmCAT Annotator is tested with the latest versions of Mozilla Firefox, Google Chrome and Internet Explorer.<br />
-    Internet Explorer 6, 7, 8 are not recommended.</p>
-</div>
-
-<div id="unsaved-changes" class="modal fade">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-        <h4 class="modal-title">Unsaved changes</h4>
-      </div>
-      <div class="modal-body">
-        <p>There are unsaved changes pending. Please choose one of the following options:</p>
-      </div>
-      <div class="modal-footer">
-          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-warning discard">Discard</button>
-          <button type="button" class="btn btn-primary save"><i class="glyphicon glyphicon-floppy-disk"></i> Save</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
- 
-<script type="text/javascript"> 
-    $(document).ready(function(){
-        annotator.initialise({{ project.id }}, {{ codingjob.id }}, {{ coder.id }}, {{ coder.userprofile.language_id }});
-    });
-</script>
-
- </body>
-</html>
-
+    </script>
 {% endblock %}

@@ -135,7 +135,7 @@ annotator = (function(self){
         self.article_status_dropdown = $("#article-status").change(self.article_status_changed);
         self.article_comment_textarea = $("#article-comment").change(function(){
             self.state.coded_article.comments = $(this).val();
-            self.unsaved = true;
+            self.set_unsaved();
         });
     };
 
@@ -143,12 +143,11 @@ annotator = (function(self){
         self.next_btn = $("#next-article-button");
         self.prev_btn = $("#previous-article-button");
         self.select_all_btn = $("#select-all-sentences-button");
-        self.save_btn = $("#save-button");
-        self.save_continue_btn = $("#save-continue-button");
-        self.irrelevant_btn = $("#irrelevant-button");
+        self.save_btn = $(".save-button");
+        self.save_continue_btn = $(".save-continue-button");
+        self.irrelevant_btn = $(".irrelevant-button");
         self.copy_btn = $("#copy-coding-button");
         self.delete_btn = $("#delete-button");
-        self.help_btn = $("#help-button");
 
         self.next_btn.click(self.select_next_article);
         self.prev_btn.click(self.select_prev_article);
@@ -157,13 +156,16 @@ annotator = (function(self){
         self.save_continue_btn.click(self.finish_and_continue);
         self.irrelevant_btn.click(self.irrelevant_and_continue);
         self.copy_btn.click(self.copy);
-        self.help_btn.click(function(){ self.help_dialog.dialog("open"); });
 
-        $(".coding-part").hide();
+        $("#editor").hide();
         $(".sentence-options").hide();
-        $(window).scroll(self.window_scrolled);
-        $(window).resize(self.window_resized);
-        $(window).trigger("resize");
+    };
+
+    self.set_unsaved = function (bool) {
+        self.unsaved = (bool === undefined) ? true : bool;
+        var icon = self.save_btn.find(".glyphicon");
+        icon.removeClass("glyphicon-floppy-disk glyphicon-floppy-saved");
+        icon.addClass("glyphicon-floppy-" + ((self.unsaved) ? "disk" : "saved"));
     };
 
     self.show_unsaved_changes = function(continue_func){
@@ -177,31 +179,36 @@ annotator = (function(self){
 
         discard_btn.unbind().click(function(){
             self.unsaved_modal.modal("hide");
-            self.unsaved = false;
+            self.set_unsaved(false);
             continue_func();
         });
 
         self.unsaved_modal.modal("show");
     };
 
+    self.show_loading = function(text){
+        self.loading_dialog.find(".modal-body p").text(text);
+        self.loading_dialog.modal("show");
+    };
+
+    self.hide_loading = function(){
+        self.loading_dialog.modal("hide");
+    };
+
+    self.show_message = function(title, message){
+        self.message_dialog.find(".modal-title").text(title);
+        self.message_dialog.find(".modal-body p").text(message);
+        self.message_dialog.modal("show");
+    };
+
+    self.hide_message = function(){
+        self.message_dialog.modal("hide");
+    };
+
     self.initialise_dialogs = function(){
         self.unsaved_modal = $("#unsaved-changes").modal({ show : false });
-        self.loading_dialog = $("<div>Loading..</div>").dialog(self.dialog_defaults);
-        self.message_dialog = $("#message-dialog").dialog(self.dialog_defaults);
-        self.width_warning_dialog = $("<div>{0}</div>".f(self.width_warning)).dialog(self.dialog_defaults);
-        self.save_dialog = $("#dialog-save").dialog(self.dialog_defaults);
-        self.help_dialog = $("#dialog-help").dialog($.extend({}, self.dialog_defaults, { width: 500 }));
-        self.delete_row_dialog = $("#dialog-confirm-delete-row").dialog($.extend({}, self.dialog_defaults, {
-            buttons: {
-                "Delete row": function(){
-                    self.delete();
-                    $(this).dialog("close");
-                },
-                Cancel: function(){
-                    $(this).dialog("close");
-                }
-            }
-        }))
+        self.loading_dialog = $("#loading").modal({show : false, keyboard : false});
+        self.message_dialog = $("#message").modal({ show : false });
     };
 
     /* Calls $.getJSON and returns its output, while appending ?page_size=inf
@@ -266,7 +273,7 @@ annotator = (function(self){
 
 
     self.initialise_fields = function(){
-        self.loading_dialog.text("Loading fields..").dialog("open");
+        self.show_loading("Loading fields..")
 
         self._requests = [
             self.from_api(self.get_api_url()),
@@ -280,7 +287,7 @@ annotator = (function(self){
         // Fill status combobox
         $.each(self.STATUS, function(label, value){
             self.article_status_dropdown.append(
-                $("<option>").attr("value", value).text(label)
+                $("<option>").attr("value", value).text(self.STATUS_TEXT[value])
             );
         });
 
@@ -324,7 +331,7 @@ annotator = (function(self){
                 self.schemafields_fetched();
                 self.initialise_sentence_codings_table();
                 self.setup_wordcount();
-                self.loading_dialog.dialog("close");
+                self.hide_loading();
             }
         );
 
@@ -333,13 +340,13 @@ annotator = (function(self){
     /******** KEYBOARD SHORTCUTS *******/
     self.shortcuts = function(){
         return {
-        "ctrl+s" : self.save_btn.trigger.bind(self.save_btn, "click"),
+        "ctrl+s" : self.save_btn.first().trigger.bind(self.save_btn.first(), "click"),
         "ctrl+down" : self.add_row,
         "ctrl+shift+down" : self.add_next_sentence_row,
         "shift+down" : self.copy_row,
         "ctrl+shift+d": self.delete_row,
-        "ctrl+i" : self.irrelevant_btn.trigger.bind(self.irrelevant_btn, "click"),
-        "ctrl+d" : self.save_continue_btn.trigger.bind(self.save_continue_btn, "click"),
+        "ctrl+i" : self.irrelevant_btn.first().trigger.bind(self.irrelevant_btn.first(), "click"),
+        "ctrl+d" : self.save_continue_btn.first().trigger.bind(self.save_continue_btn.first(), "click"),
         "ctrl+del" : self.delete_codingvalue
     }};
 
@@ -361,7 +368,7 @@ annotator = (function(self){
     /* Returns (new) DOM representation of the articlecoding */
     self.get_article_coding_html = function(){
         var schemafields = self.article_schemafields;
-        var table = $("<table>")
+        var table = $("<div>")
             .attr("annotator_coding_id", self.state.article_coding.annotator_id)
             .addClass("coding");
 
@@ -374,9 +381,9 @@ annotator = (function(self){
                 widgets.set_value($(widget), value);
             }
 
-            return $("<tr>")
-                .append($("<td>").append(label))
-                .append($("<td>").append(widget));
+            return $("<div>").addClass("row")
+                .append($("<div>").addClass("col-md-3").append(label))
+                .append($("<div>").addClass("col-md-9").append(widget));
         }));
     };
 
@@ -608,7 +615,7 @@ annotator = (function(self){
             codingvalue.strval = value;
         }
 
-        self.unsaved = true;
+        self.set_unsaved();
     };
 
     /*
@@ -675,12 +682,15 @@ annotator = (function(self){
         var coding_el = $("<tr>").addClass("coding").attr("annotator_coding_id", coding.annotator_id);
 
         // Add sentencenr, from and to.
-        coding_el.append(widgets.sentence.get_html().val((coding.sentence === null) ? "" : coding.sentence.get_unit()));
+        var sentence_td = $("<td>");
+        sentence_td.append(widgets.sentence.get_html().val((coding.sentence === null) ? "" : coding.sentence.get_unit()));
 
         if(self.codingjob.unitschema.subsentences){
-            coding_el.append(widgets.from.get_html().val(coding.start||""));
-            coding_el.append(widgets.to.get_html().val(coding.end||""));
+            sentence_td.append(widgets.from.get_html().val(coding.start||""));
+            sentence_td.append(widgets.to.get_html().val(coding.end||""));
         }
+
+        coding_el.append(sentence_td);
 
         coding_el.append($.map(widgets.get_html(self.sentence_schemafields), function(widget){
             return $("<td>").append(widget);
@@ -799,22 +809,22 @@ annotator = (function(self){
         // Check whether we want to save, by first checking the mandetory checks.
         var validation = self.mandetory_validate();
         if (validation !== true){
-            return self.message_dialog.text(validation).dialog("open");
+            return self.show_message("Validation", validation);
         }
 
         // Check optional requirements
         validation = validate ? self.validate() : true;
         if (validation !== true){
-            return self.message_dialog.text(validation).dialog("open");
+            return self.show_message("Validation", validation);
         }
 
         // Send coding values to server
-        self.loading_dialog.text("Saving codings..").dialog("open");
+        self.show_loading("Saving codings..");
         $.post("codedarticle/{0}/save".f(self.state.coded_article_id), JSON.stringify({
             "coded_article" : self.pre_serialise_coded_article(),
             "codings" : $.map(self.get_codings(), self.pre_serialise_coding)
         })).done(function(data, textStatus, jqXHR){
-            self.loading_dialog.dialog("close");
+            self.hide_loading();
 
             $.pnotify({
                 "title" : "Done",
@@ -824,10 +834,10 @@ annotator = (function(self){
             });
 
             self.set_column_text("status", self.STATUS_TEXT[self.state.coded_article.status]);
-            self.set_column_text("comments", self.state.coded_article.comments);
+            self.set_column_text("comments", self.state.coded_article.comments||"");
 
             // Reset 'unsaved' state
-            self.unsaved = false;
+            self.set_unsaved(false);
 
             // Change article status in table
             var td_index = self.article_table_container.find("thead th:contains('status')").index();
@@ -918,6 +928,7 @@ annotator = (function(self){
             });
         });
 
+        self.set_unsaved(false);
         self.state.sentences = sentences;
         self.state.codings = codings;
         self.state.coded_article = coded_article[0];
@@ -941,14 +952,15 @@ annotator = (function(self){
         $('#article-status').find('option:contains("' + coded_article.status + '")').attr("selected", "selected");
 
         // Initialise coding area
-        $(".coding-part").show();
+        $("#editor").show();
+        $(".sidebar").scrollTop(0);
         self.sentences_fetched(sentences);
         self.highlight();
         self.codings_fetched();
         self.set_tab_order();
-        self.unsaved = false;
+        self.set_unsaved(false);
 
-        self.loading_dialog.dialog("close");
+        self.hide_loading();
 
         var container = (self.codingjob.articleschema === null) ? self.sentence_codings_container : self.article_coding_container;
         container.find("input:visible").first().focus();
@@ -956,7 +968,11 @@ annotator = (function(self){
 
     self.highlight = function(){
         console.log("Highlighting ", self.highlight_labels.length ," labels in article..");
-        $("div.sentences").easymark("highlight", self.highlight_labels.join(" "));
+        $("div.sentences").highlight(self.highlight_labels, { lenient : true });
+    };
+
+    self.unhighlight = function(){
+        $("div.sentences").unhighlight();
     };
 
     /*
@@ -979,7 +995,7 @@ annotator = (function(self){
             self.from_api(base_url + "sentences")
         ];
 
-        self.loading_dialog.text("Loading codings..").dialog("open");
+        self.show_loading("Loading codings..");
         $.when.apply(undefined, self.state.requests).then(self.coded_article_fetched);
     };
 
@@ -1187,12 +1203,14 @@ annotator = (function(self){
             $.each(schema.highlighters, function(i, codebook_id){
                 codebook = self.models.codebooks[codebook_id];
                 $.each(codebook.codes, function(i, code){
-                    labels.push(code.labels[language_id]);
+                    labels.push(code.labels[language_id]||"");
                 });
             });
         });
 
-        self.highlight_labels = labels;
+        self.highlight_labels = $.grep(labels, function(label){
+            return !!label.trim().length;
+        });
     };
 
 
@@ -1259,7 +1277,7 @@ annotator = (function(self){
 
     self.article_status_changed = function(){
         self.state.coded_article.status = parseInt($(this).val());
-        self.unsaved = true;
+        self.set_unsaved();
     };
 
     self.datatables_row_clicked = function(row){
@@ -1275,15 +1293,6 @@ annotator = (function(self){
         self.datatable.parent().scrollTo(row, {offset: -50});
         self.get_article(coded_article_id);
         row.addClass("row_selected");
-    };
-
-    self.window_scrolled = function(){
-        if ($(window).scrollTop() < 85){
-            self.article_container.css("position", "absolute");
-        } else {
-            self.article_container.css("position", "fixed");
-            self.article_container.css("top", "5px");
-        }
     };
 
     self.window_resized = function(){
@@ -1387,7 +1396,8 @@ annotator = (function(self){
 $(document).ajaxError(function(event, xhr, ajaxOptions) {
     var message = "An error occured while requesting: {0}. Server responded: {1} {2}.";
     message = message.f(ajaxOptions.url, xhr.status, xhr.statusText);
-    $("<div>").text(message).dialog({ modal: true });
+    annotator.hide_loading();
+    annotator.show_message("AJAX error", message);
 });
 
 /*

@@ -52,7 +52,7 @@ widgets = (function(self){
          * procedure of notifying Annotator via set_coding_value shoudl be followed.
          */
         get_html : function(schemafield, _intval, _type){
-            var widget = $("<input>").addClass("codingvalue");
+            var widget = $("<input>").addClass("codingvalue form-control input-sm");
             widget = (_intval) ? widget.attr("intval", self.EMPTY_INTVAL) : widget;
             widget = widget.change(self[_type||"default"].change);
 
@@ -110,7 +110,7 @@ widgets = (function(self){
                 }
             });
 
-            var widget = $("<input>").addClass("sentence").change(self.sentence.change).prop("autocomplete_sort", false);
+            var widget = $("<input>").addClass("sentence form-control input-sm").change(self.sentence.change).prop("autocomplete_sort", false);
             autocomplete.set(widget, choices);
             return widget;
         },
@@ -143,7 +143,7 @@ widgets = (function(self){
     /* BOOLEAN TYPE */
     self.boolean = $.extend({}, self.default, {
         get_html : function(){
-            return self.default.get_html(null, true, "boolean").attr("type", "checkbox").keydown(function(event){
+            return self.default.get_html(null, true, "boolean").attr("type", "checkbox").removeClass("form-control").keydown(function(event){
                 if (event.keyCode == 13) $(this).click();
             });
         },
@@ -223,10 +223,10 @@ widgets = (function(self){
                 var descendant = $("<input>");
                 var hidden = $("<input>").attr("intval", self.EMPTY_INTVAL).hide();
 
-                root.addClass("codebook_root").attr("placeholder", "Root..").attr("intval", self.EMPTY_INTVAL);
-                descendant.addClass("codebook_descendant").attr("placeholder", "Descendant..");
+                root.addClass("codebook_root form-control input-sm").attr("placeholder", "Root..").attr("intval", self.EMPTY_INTVAL);
+                descendant.addClass("codebook_descendant form-control input-sm").attr("placeholder", "Descendant..");
                 descendant.attr("intval", self.EMPTY_INTVAL);
-                hidden.addClass("codebook_value").addClass("codingvalue");
+                hidden.addClass("codebook_value codingvalue");
 
                 autocomplete.set(root, schemafield.choices);
                 autocomplete.set(descendant, schemafield.choices);
@@ -239,7 +239,7 @@ widgets = (function(self){
                 hidden.change(self.default.change.bind(hidden));
                 html.append(root).append(descendant).append(hidden);
             } else {
-                var input = $("<input>").attr("intval", self.EMPTY_INTVAL).addClass("codingvalue");
+                var input = $("<input>").attr("intval", self.EMPTY_INTVAL).addClass("codingvalue form-control input-sm");
                 autocomplete.set(input, schemafield.choices);
                 html.append(input);
                 input.change(self.default.change.bind(input));
