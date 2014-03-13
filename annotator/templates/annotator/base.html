@@ -60,7 +60,8 @@
         <div class="navbar-collapse collapse">
           <ul class="nav navbar-nav navbar-right">
             <li><a href="#">Selected words: <span id="wordcount">0</span></a> </li>
-            <li><a href="{% url 'codingjobs' %}">Overview</a></li>
+            <li><a href="{% url 'codingjobs' %}">Codingjobs</a></li>
+            <li><a href="{% url 'project' codingjob.project_id %}articlesets">Project</a></li>
             <li><a data-toggle="modal" data-target="#help-dialog" href="#">Help</a></li>
           </ul>
         </div>
