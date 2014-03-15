@@ -213,8 +213,7 @@ class ES(object):
         """
         kargs = dict(index=self.index, doc_type=self.doc_type)
         kargs.update(options)
-        result = self.es.get(id=id, **kargs)
-        return result['_source']
+        return self.es.get_source(id=id, **kargs)
 
     def search(self, body, **options):
         """
@@ -260,7 +259,11 @@ class ES(object):
             body['query'] = {'constant_score' : {'query' : body['query']}}
 
         if 'sort' in kwargs: body['track_scores'] = True
-        if highlight: body['highlight'] = HIGHLIGHT_OPTIONS
+        if highlight:
+            if isinstance(highlight, dict):
+                body['highlight'] = highlight
+            else:
+                body['highlight'] = HIGHLIGHT_OPTIONS
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD
 
         log.debug("es.search(body={body}, **{kwargs})".format(**locals()))
@@ -457,6 +460,37 @@ class ES(object):
         """
         hash = get_article_dict(article).hash
         return self.query(filters={'hashes' : hash}, fields=["sets"], score=False)
+
+    def find_occurrences(self, query, article):
+        """
+        Find the occurrences of the query in the article (id)
+        @return: a sequence of (offset, word) pairs
+        """
+        if not isinstance(article, int):
+            article = article.id
+        # get highlighted text
+        hl = self.highlight_article(article, query)
+        if not (hl and 'text' in hl):
+            return
+        text = hl['text']
+
+        # parse highlight to return offsets
+        pre_tag, post_tag = "<em>", "</em>"
+        in_tag = False
+        offset = 0
+        for token in re.split("({pre_tag}|{post_tag})".format(**locals()), text):
+            if token == pre_tag:
+                if in_tag:
+                    raise ValueError("Encountered pre_tag while in tag")
+                in_tag = True
+            elif token == post_tag:
+                if not in_tag:
+                    raise ValueError("Encountered post_tag while not in tag")
+                in_tag = False
+            else:
+                if in_tag:
+                    yield offset, token
+                offset += len(token)
 
 def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
