@@ -196,7 +196,7 @@ class ArticleRuleDetailsView(ProjectDetailView):
             yield sid, " ".join(stokens)
 
     def get_context_data(self, **kwargs):
-        from syntaxrules.syntaxtree import SyntaxTree, VIS_GREY_REL
+        from syntaxrules.syntaxtree import SyntaxTree
         from syntaxrules.soh import SOHServer
 
         ctx = super(ArticleRuleDetailsView, self).get_context_data(**kwargs)
@@ -213,7 +213,7 @@ class ArticleRuleDetailsView(ProjectDetailView):
 
         ruleset = self.object.get_ruleset()
         t.apply_ruleset(ruleset)
-        g = t.get_graphviz(triple_args_function=VIS_GREY_REL)
+        g = t.get_graphviz(grey_rel=True)
         processed_tree = base64.b64encode(g.draw(format='png', prog='dot'))
 
         ruleset_dump = json.dumps(ruleset, indent=2)
