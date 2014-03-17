@@ -10,7 +10,7 @@ class HighlighterArticles:
 #variable_keywords: one-dimenstional array of comma-separated keywords
 #variable_pages: array of the page numbers assigned to the variables (index identical to variable_keywords).
 #output: three-dimensional array: paragraph-sentence-variable, meaning that for every sentence in a paragraph we have scores \in [0,1] giving the highlighting for each variable
-	def getHighlightingsArticles(self, article, variable_keywords, variable_pages):
+	def getHighlightingsArticle(self, article, variable_keywords, variable_pages):
 		stemmer = snowballstemmer.stemmer("german")
 		#goodchars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzÄÖÜäöüß'"
 		for i in range(0, len(article)):
