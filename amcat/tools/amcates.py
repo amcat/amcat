@@ -133,7 +133,8 @@ class Result(object):
                 if k != "sets":
                     # elastic 1.0 always returns arrays, we only want
                     # sets in a list, the rest should be 'scalarized'
-                    v = v[0]
+                    if isinstance(k, list):
+                        v = v[0]
                 field_dict[k] = v
 
         result =  Result(id=int(row['_id']), **field_dict)
