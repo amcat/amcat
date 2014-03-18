@@ -100,9 +100,16 @@ class BZKEML(UploadScript):
 
         # Add non-ascii characters
         # Takes the '=AB' occurrences and turns them into latin-1 characters.
+        def character(match):
+            code = match.group()[:1]            
+            char = r"\x{}".format(code).decode('string-escape').decode('latin-1')
+            if code == "92": return "'"
+            elif code == "85": return "..."
+            return char
+
         article.text = re.sub(
             "=[A-Z0-9]{2}",
-            lambda c: r"\x{}".format(c.group()[1:]).decode('string-escape').decode('latin-1'),
+            character,
             article.text)
 
         yield article
