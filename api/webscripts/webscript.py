@@ -21,6 +21,7 @@
 from django.template.loader import render_to_string
 import time
 from amcat.models import Project
+from amcat.models.task import IN_PROGRESS
 import api.webscripts
 from django.db import connection
 import json
@@ -30,6 +31,7 @@ from amcat.scripts.forms import SelectionForm
 from amcat.forms import InvalidFormException
 from django.contrib.auth.models import User
 from amcat.amcatcelery import app
+from amcat.tools.progress import ProgressMonitor
 
 from django.http import QueryDict
 from amcat.tools.djangotoolkit import to_querydict
@@ -48,9 +50,24 @@ mimetypeDict = { #todo: make objects of these
      'datatables':{'extension':'json', 'mime':'text/plain', 'download':False},
 }
 
-@app.task()
-def webscript_task(cls, **kwargs):
-    return cls(**kwargs).run()
+class CeleryProgressUpdater(object):
+    def __init__(self, task_id):
+        self.task_id = task_id
+    def update(self, monitor):
+        app.backend.store_result(self.task_id,
+                                 {"completed": monitor.percent, "message": monitor.message},
+                                 IN_PROGRESS)
+
+@app.task(bind=True)
+def webscript_task(self, cls, **kwargs):
+    task_id = self.request.id
+    # TODO: Dit moet weg, stub code om status door te geven
+    webscript = cls(**kwargs)
+    webscript.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
+    return webscript.run()
+
+
+
 
 class WebScript(object):
     """
@@ -63,10 +80,14 @@ class WebScript(object):
     id = None # id used in webforms
     output_template = None # path to template used for html output
     solrOnly = False # only for Solr output, not on database queries
+    is_edit = False # does the script require edit permission on the project
+    is_download = False # set True if the result should be downloaded by the browser instead of displayed
 
     def __init__(self, project=None, user=None, data=None, **kwargs):
         if not isinstance(data, QueryDict) and data is not None:
             data = to_querydict(data, mutable=True)
+
+        self.progress_monitor = ProgressMonitor()
 
         self.initTime = time.time()
         self.data = data
@@ -77,12 +98,7 @@ class WebScript(object):
         self.user = User.objects.get(id=user) if isinstance(user, int) else user
 
         if self.form:
-
-            try:
-                form = self.form(project=project, data=data, **kwargs)
-            except TypeError:
-                form = self.form(data=data, **kwargs)
-
+            form = self.get_form(**kwargs)
             if not form.is_valid():
                 raise InvalidFormException("Invalid or missing options: %r" % form.errors, form.errors)
             self.options = form.cleaned_data
@@ -90,6 +106,12 @@ class WebScript(object):
         else:
             self.options = None
             self.formInstance = None
+
+    def get_form(self, **kwargs):
+        try:
+            return self.form(project=self.project, data=self.data, **kwargs)
+        except TypeError:
+            return self.form(data=self.data, **kwargs)
 
     @classmethod
     def formHtml(cls, project=None):
@@ -104,15 +126,26 @@ class WebScript(object):
 
 
     def getActions(self):
+        from amcat.models import authorisation
+        can_edit = self.user.get_profile().has_role(authorisation.ROLE_PROJECT_WRITER, self.project)
         for ws in api.webscripts.actionScripts:
-            if self.__class__.__name__ in ws.displayLocation and (ws.solrOnly == False or self.data.get('query')):
-                yield ws.__name__, ws.name
+            if (self.__class__.__name__ in ws.displayLocation
+                and ((not ws.solrOnly) or self.data.get('query'))
+                and ((not ws.is_edit) or can_edit)):
+                yield ws.__name__, ws.name, ws.is_download
 
     def delay(self):
         return webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
 
     def run(self):
         raise NotImplementedError()
+
+    @classmethod
+    def get_called_with(cls, **called_with):
+        # This is called before Task calls __init__ in order to allow webscripts to change
+        # their arguments if needed. (Some parameters may be invalid after executing the
+        # script and may need changing.)
+        return called_with
 
     def get_result(self, result):
         # Webscripts return an HttpResponse object, which we need te contents of
@@ -132,7 +165,7 @@ class WebScript(object):
                 webscriptform = self.form(data=self.data)
 
         selectionform = SelectionForm(project=self.project, data=self.data)
-        html = render_to_string('navigator/selection/webscriptoutput.html', {
+        html = render_to_string('api/webscriptoutput.html', {
                                     'scriptoutput':scriptoutput,
                                     'actions': actions,
                                     'selectionform':selectionform,

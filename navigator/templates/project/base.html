@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+
+
+{% block contextmenu %}
+{% include "project/menu.html" %}
+{% endblock %}
+
+{% block contentcontainer %}
+
+{% block content %}{% endblock %}
+{% endblock contentcontainer %}

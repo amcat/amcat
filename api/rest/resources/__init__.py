@@ -33,11 +33,11 @@ from api.rest.resources.codebook import CodebookHierarchyResource, CodebookResou
 from api.rest.resources.article import ArticleMetaResource
 from api.rest.resources.articleset import ArticleSetResource
 from api.rest.resources.codingjob import CodingJobResource
-from api.rest.resources.analysed_article import AnalysedArticleResource
-from api.rest.resources.token import TokenResource, AnalysedArticleListResource
 from api.rest.resources.codingrule import CodingRuleResource
 from api.rest.resources.search import SearchResource
+from api.rest.resources.plugin import PluginResource
 from api.rest.resources.aggregate import AggregateResource
+from api.rest.resources.ruleset import RuleSetResource
 from api.rest.resources.task import TaskResource, TaskResultResource, single_task_result
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -49,17 +49,16 @@ MODELS = ['Article', 'AmCAT',
           'Role', 'ProjectRole',
           'Medium', 'Language',
           'CodingSchema', 'CodingSchemaField',
-          'CodebookCode', 'CodingSchemaFieldType',
+          'CodebookCode', 'CodingSchemaFieldType', 'CodedArticleStatus',
           'django.contrib.auth.models.Group', 'django.contrib.auth.models.Permission',
-          'Plugin', 'Scraper', 'PluginType',
+          'PluginType',
           "RuleSet",
-          "Word", "Lemma",
           "CodingRuleAction"]
 
 # Automatically generate resources for these models
 for modelname in MODELS:
     if "." in modelname:
-        package, modelname = modelname.rsplit(".", 1) 
+        package, modelname = modelname.rsplit(".", 1)
     else:
         package, modelname = "amcat.models", modelname
     model = classtools.import_attribute(package, modelname)

@@ -55,8 +55,8 @@ def create_admin():
         log.info("\n{line}\n#   A default superuser `amcat` with password `amcat` has been created.   #\n{line}"
                  .format(line="#"*75))
 
-    
-        
+
+
 def initialize(sender, **kwargs):
     """
     Initialize the amcat database by loading data, creating the admin account, and upgrading the db if needed

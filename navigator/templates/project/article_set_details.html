@@ -1,0 +1,55 @@
+{% extends "project/base.html" %}
+
+{% block title %}Project {{project.id}} - {{context.name}}{% endblock %}
+
+{% block actions %}
+<a class="btn btn-primary" href="{% url "query" project.id %}?articlesets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
+{% if can_edit %}
+<a class="btn btn-default" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "article set-refresh" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
+{% endif %}
+<a class="btn btn-default" href="{% url "article set-import" project.id object.id %}"><i class="glyphicon glyphicon-share"></i> Use in another project</a>
+{% if can_edit %}
+  <a class="btn btn-default" href="{% url "article set-sample" project.id object.id %}"><i class="glyphicon glyphicon-filter"></i> Sample</a>
+{% if object.project.id == project.id %}
+<a class="btn btn-default" href="{% url "article set-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit details</a>
+<a class="btn btn-danger confirm" href="{% url "article set-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
+{% else %}
+<a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "article set-unlink" project.id object.id %}"><i class="icon-white icon-remove"></i> Unlink</a>
+{% endif %}
+{% endif %}
+{% endblock actions %}
+
+{% block details %}
+<div class="panel panel-default" style="margin-bottom: 1em">
+  <div class="panel-heading">
+    <h4 class="panel-title">
+      <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+	Article Set Details
+      </a>
+    </h4>
+  </div>
+  <div id="collapseOne" class="panel-collapse collapse">
+    <div class="panel-body">
+      <table class="key_value">
+	<tr>
+	  <td>ID:</td>
+	  <td>{{object.id}}</td>
+	</tr>
+	<tr>
+	  <td>Name:</td>
+	  <td>{{object.name}}</td>
+	</tr>
+	<tr>
+	  <td>Provenance:&nbsp;</td>
+	  <td>{{object.provenance|linebreaks}}</td>
+	</tr>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock details %}
+
+{% block content %}
+<label>Articles</label>
+{{ table }}
+{% endblock %}

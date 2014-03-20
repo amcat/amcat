@@ -24,23 +24,19 @@ coding jobs.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-import collections
 import itertools
 import logging
-import memcache
 
-from django.db.models import Q
-from django.core.cache import cache
-from django.core.exceptions import ImproperlyConfigured
 from django.db import models
+from django.db import connection
 
-from amcat.models import Medium, to_medium_ids
+from amcat.models import Medium
 from amcat.models.amcat import AmCAT
-from amcat.tools.toolkit import splitlist
 from amcat.tools.model import AmcatModel
 from amcat.tools import amcates
-from amcat.tools.djangotoolkit import get_or_create, distinct_args
 from amcat.models.article import Article
+from amcat.tools.progress import NullMonitor
+from amcat.tools.amcates import ES
 
 log = logging.getLogger(__name__)
 
@@ -78,25 +74,27 @@ class ArticleSet(AmcatModel):
         medium_ids = ES().list_media(filters=dict(sets=self.id))
         return Medium.objects.filter(id__in=medium_ids)
 
-    def add_articles(self, articles, add_to_index=True):
+    def add_articles(self, articles, add_to_index=True, monitor=NullMonitor()):
         """
         Add the given articles to this article set
-        If refresh or deduplicate are True, schedule a new celery task to do this
         """
 
         articles = {(art if type(art) is int else art.id) for art in articles}
         to_add = articles - self.get_article_ids()
-
+        # check that all articles exist:
+        to_add = Article.objects.filter(pk__in=to_add).values_list("pk", flat=True)
+        monitor.update(10, "{n} articles need to be added".format(n=len(to_add)))
+        
         if not to_add:
             return
-
         # add to database
         ArticleSetArticle.objects.bulk_create(
             [ArticleSetArticle(articleset=self, article_id=artid) for artid in to_add]
         )
-        
+        monitor.update(20, "{n} articles added in database, adding to index".format(n=len(to_add)))
+                
         if add_to_index:
-            amcates.ES().add_to_set(self.id, to_add)
+            amcates.ES().add_to_set(self.id, to_add, monitor=monitor)
 
     def add(self, *articles):
         """add(*a) is an alias for add_articles(a)"""
@@ -113,18 +111,31 @@ class ArticleSet(AmcatModel):
             to_remove = {(art if type(art) is int else art.id) for art in articles}
             amcates.ES().remove_from_set(self.id, to_remove)
 
-    def get_article_ids(self):
+    def get_article_ids(self, use_elastic=False):
         """
         Return the sequence of ids of articles in this set.
         This is an optimized form of 'return [a.id for a in self.articles.all()]'
+
+        @rtype: set
         """
-        from django.db import connection
+        if use_elastic:
+            return self.get_article_ids_from_elastic()
+
         sql = str(ArticleSet.articles.through.objects.filter(articleset=self).values("article_id").query)
         cursor = connection.cursor()
         cursor.execute(sql)
         result = {aid for (aid,) in cursor.fetchall()}
         cursor.close() # no idea if it's needed, but Martijn told me to do it
         return result
+
+    def get_article_ids_from_elastic(self):
+        """
+        Return the sequence of ids of articles in this set. As opposed to get_article_ids, this
+        method uses elastic to fetch its data.
+
+        @rtype: set
+        """
+        return set(ES().query_ids(filters={"sets" : [self.id]}))
 
     def refresh_index(self, full_refresh=False):
         """
@@ -155,10 +166,12 @@ class ArticleSet(AmcatModel):
             name2 = "{name} {i}".format(**locals())
 
     @classmethod
-    def create_set(cls, project, name, articles=None):
+    def create_set(cls, project, name, articles=None, favourite=True):
         aset = cls.objects.create(project=project, name=cls.get_unique_name(project, name))
         if articles:
             aset.add_articles(articles)
+        if not favourite:
+            project.favourite_articlesets.remove(aset)
         return aset
 
 # Legacy
@@ -169,7 +182,7 @@ ArticleSetArticle = ArticleSet.articles.through
 ###########################################################################
         
 from amcat.tools import amcattest
-from django.test import skipUnlessDBFeature
+
 
 class TestArticleSet(amcattest.AmCATTestCase):
         
@@ -211,7 +224,15 @@ class TestArticleSet(amcattest.AmCATTestCase):
             
         # Test if medium really added
         self.assertEqual(set(aset.get_mediums()), set(media))
-        
+
+    @amcattest.use_elastic
+    def test_get_article_ids(self):
+        aset = amcattest.create_test_set(10)
+
+        ES().flush()
+
+        self.assertEqual(set(aset.articles.all().values_list("id", flat=True)), aset.get_article_ids())
+        self.assertEqual(set(aset.articles.all().values_list("id", flat=True)), aset.get_article_ids(use_elastic=True))
 
 
 

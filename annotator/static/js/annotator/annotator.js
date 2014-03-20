@@ -17,1059 +17,1361 @@
 * License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  *
 ***************************************************************************/
 
+/*
+ * Usage:
+ *
+ * 'Added {0} by {1} to your collection'.f(title, artist)
+ * 'Your balance is {0} USD'.f(77.7)
+ */
+String.prototype.format = String.prototype.f = function() {
+    var s = this,
+        i = arguments.length;
 
-/**************************************************************************
-    This script is split up in multiple files, to keep the script 
-    easier to maintain.
-    This file has dependencies for:
-    annotator.unitcodings.js
-    annotator.articletable.js
-    annotator.fields.js
-    jquery
-    jquery.hotkeys
-    jquery.dataTables
-    jquery-ui
-***************************************************************************/
-
-var annotator = {}
-
-
-var STATUS_NOTSTARTED = 0;
-var STATUS_INPROGRESS = 1;
-var STATUS_COMPLETE = 2;
-var STATUS_IRRELEVANT = 9;
-
-annotator.articleid = 0;
-annotator.articleSentences = null;
-
-annotator.articlecodings = {};
-annotator.articlecodings.articleCodingForm = null;
-
-annotator.commentAndStatus = {};
-
-annotator.previousWidth = 0; // browser width
-
-
-annotator.resetArticleState = function(){ // set state of article to unmodified
-    annotator.unitcodings.deletedRows = []; // list with codedsentence ids
-    annotator.unitcodings.modifiedRows = []; // list with codedsentence ids
-    annotator.articlecodings.modified = false;
-    annotator.unitcodings.modified = false;
-    annotator.commentAndStatus.modified = false;
-}
-
-
-
-
-
-/************* Article codings *************/
-
-annotator.articlecodings.showArticleCodings = function(){
-    //$('#coding-title').html('Article Codings');
-    if(annotator.articlecodings.containsArticleSchema){
-        annotator.articlecodings.writeArticleCodingsTable();
-        $('#article-coding').show();
+    while (i--) {
+        s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i]);
     }
-}
+    return s;
+};
 
 
-annotator.articlecodings.hideArticleCodings = function(){
-    $('#article-coding').hide();
-}
 
-
-annotator.articlecodings.writeArticleCodingsTable = function(){
-    $('#article-coding-form').html('Loading...');
-    
-    $.ajax({
-        "url": "../codingjob/" + annotator.codingjobid + "/article/" + annotator.articleid + "/articlecodings",
-        "success": function(html) {
-            $('#article-coding-form').html(html);
-            annotator.fields.autocompletes.addAutocompletes($('#article-coding-form'));
-            annotator.fields.add_rules.bind(["article"])($('#article-coding-form'));
-            $('#article-coding-form input').change(function(){
-                annotator.articlecodings.onchange($(this));
-            });
-        },
-        "error": function(jqXHR, textStatus, errorThrown){
-            console.debug('error loading article codings');
-            $('#article-coding-form').html('<div class="error">Error loading article codings data from <a href="' + this.url + '" target="_blank">' + this.url + '</a></div>');
-        },
-        "dataType": "html"
+$.values = function(obj) {
+    return $.map(obj, function(value, _) {
+        return value;
     });
-}
+};
+
+// Workaround: focus events don't carry *Key properties, so we don't
+// know for sure if shift is pressed.
+shifted = false;
+$(document).keydown(function(event){
+    shifted = event.shiftKey;
+});
+
+$(document).keyup(function(){
+    shifted = false;
+});
 
 
-annotator.articlecodings.onchange = function(el){
-    console.debug('article coding', el.attr('name'), 'changed to', el.val());
-    annotator.articlecodings.modified = true;
-    annotator.codingsAreModified(true);
-}
+annotator = (function(self){
+    /******** STATE & CONSTANTS *******/
+    self.API_URL = "/api/v4/";
+    self.API_PAGE_SIZE = 999999;
 
+    self.STATUS = {
+        NOT_STARTED: 0,
+        IN_PROGRESS: 1,
+        COMPLETE: 2,
+        IRRELEVANT: 9
+    };
 
-/************* state saving *************/
+    self.STATUS_TEXT = {
+        0 : "Not started",
+        1 : "In progress",
+        2 : "Finished",
+        9 : "Irrelevant"
+    };
 
-
-annotator.codingsAreModified = function(enable){
-    annotator.enableSaveButtons(enable);
-    //annotator.enableContinueButtons(enable);
-    if(enable){
-        $(window).bind("beforeunload", function(){return 'You have unsaved changes. Are you sure you would like to close this page?'});
-    } else {
-        $(window).unbind("beforeunload");
-    }
-}
-
-annotator.enableSaveButtons = function(enable){
-     $('#save-button, #save-button2').button( "option", "disabled", !enable);
-}
-// annotator.enableContinueButtons = function(enable){
-    // $('#save-continue-button2, #save-continue-button').button( "option", "disabled", !enable);
-// }
-
-
-
-
-/*********** Comment & article status ***************/
-
-
-annotator.commentAndStatus.onArticleStatusChange = function(){
-    annotator.commentAndStatus.modified = true;
-    annotator.codingsAreModified(true);
-}
-
-
-annotator.commentAndStatus.onCommentChange = function(){
-    annotator.commentAndStatus.modified = true;
-    annotator.codingsAreModified(true);
-}
-
-
-/************* Storing data *************/
-
-
-annotator.setDialogSuccessButtons = function(){
-    $("#dialog-save").dialog('option', 'buttons', {
-        "Continue Editing": function(){
-            annotator.resetArticleState();
-            annotator.codingsAreModified(false);
-            $(this).dialog("close");
-        },
-        "Go to next article": function(){
-            annotator.resetArticleState();
-            annotator.codingsAreModified(false);
-            $(this).dialog("close");
-            annotator.articletable.goToNextRow();
+    self.get_empty_state = function(){
+        return {
+            requests : null,
+            coded_article_id: -1,
+            coded_article: null,
+            article_coding : null,
+            sentence_codings: [],
+            codings : [],
+            sentences : []
         }
-    });
-    $('.ui-dialog-buttonpane button:first').focus();
-}
+    };
 
+    self.width_warning = "Your window width is lower than 1000 pixels. For Annotator to function ";
+    self.width_warning += "normally, you need to use a wider window.";
 
-annotator.setDialogFailureButtons = function(){
-    $("#dialog-save").dialog('option', 'buttons', {
-        "Return to Article": function(){
-            // annotator.resetArticleState();
-            // annotator.codingsAreModified(false);
+    /*
+     * Contains model objects which are constant for this particular
+     * codingjob. All volatile models are stored in self.state. It is
+     * populated after initialise() finished.
+     */
+    self.models = {
+        "rules" : null,
+        "actions" : null,
+        "codebooks" : null,
+        "schemas" : null,
+        "schemafields" : null
+    };
+
+    self.sentence_schemafields = [];
+    self.article_schemafields = [];
+
+    self.state = self.get_empty_state();
+    self.highlight_labels = null;
+    self.codingjob = null;
+    self.datatable = null;
+    self.previous_width = -1;
+    self.codingjob_id = -1;
+    self.project_id = -1;
+    self.coder_id = -1;
+    self.unsaved = false;
+
+    self.dialog_ok = {
+        OK : function(){
             $(this).dialog("close");
         }
-    });
-    $('.ui-dialog-buttonpane button:first').focus();
-}
+    };
 
-
-annotator.saveCodings = function(goToNext){
-    if(annotator.fields.loadedFromServer == false){
-        annotator.showMessage('Unable to save: ontologies not loaded yet. Please wait a few seconds');
-        return;
-    }
-
-    var error = false;
-    $.each($("input[null=false]"), function(i, input){
-        if (annotator.fields.get_value($(input)).length === 0){
-            annotator.showMessage('Codingschemafield ' + $("label", $(input).parent()).text() + " cannot be null");
-            error = true;
-        };
-    });
-
-    if(error) return;
-
-    var storeDict = {}
-    if(annotator.commentAndStatus.modified){
-        var comment = $('#article-comment').val();
-        var status = $('#article-status').val();
-        
-        // set comment and status in article table
-        var commentPos = annotator.articletable.articleTable.fnGetPosition($('#article-table-container .row_selected td:nth-child(8)').get(0));
-        var statusPos = annotator.articletable.articleTable.fnGetPosition($('#article-table-container .row_selected td:nth-child(7)').get(0));
-        annotator.articletable.articleTable.fnUpdate(comment, commentPos[0], commentPos[1]);
-        annotator.articletable.articleTable.fnUpdate($('#article-status option:selected').text(), statusPos[0], statusPos[1]);
-        
-        // console.debug('set comment', comment, aPos, aData[aPos[1]]);
-        storeDict['commentAndStatus'] = {'comment': comment, 'status':status};
-    }
-    if(annotator.articlecodings.modified){
-        storeDict['articlecodings'] = {}; //amcat.getFormDict($('#article-coding-form'));
-        $('#article-coding-form').find('input:text').each(function(j, input){
-            input = $(input);
-
-            if(input.attr("skip_saving")) return;
-
-
-            var value = input.val();
-            var field = annotator.fields.getFieldByInputName(input.attr('name'));
-            if(field.isOntology && field.split_codebook){
-                if (input.attr("root") === undefined){
-                    input = $('[root="' + input.get(0).id + '"]');
-                }
-            }
-            var validationResult = annotator.validateInput(input, field);
-
-
-            if(validationResult != true){
-                input.addClass("error");
-                if(validationResult != false){ // validationResult is text with error message
-                    console.debug('validation', validationResult);
-                    input.attr('title', validationResult);
-                }
-                input.bind("focus", function(){$(this).removeClass("error")});
-                valid = false;
-            } else {
-                input.removeClass("error");
-                console.log(input);
-                storeDict['articlecodings'][input.attr('name')] = input.parent().children(":hidden").val() ? parseInt(input.parent().children(":hidden").val()) : input.val(); //{'text':input.val(), 'id':input.parent().children(":hidden").val(), 'name':input.attr('name')};
-            }
-        });
-        console.log(storeDict['articlecodings']);
-    }
-    
-    if($('#unitcoding-table').length > 0 && annotator.unitcodings.modified){
-        var valid = true;
-        var formjson = {'delete':annotator.unitcodings.deletedRows, 'modify':[], 'new':[]};
-        var hasAnyValue = false;
-        $('#unitcoding-table tbody tr').each(function(i, row){
-            var rowjson = {};
-            rowjson['codingid'] = $(row).find('input[name=codingid]').val();
-            //console.debug('check row', rowjson['codingid'])
-            if(rowjson['codingid'] == undefined) return; // for row with sentence text
-            $(row).find('input:text').each(function(j, input){
-                //console.debug(input);
-                input = $(input);
-                var value = input.val();
-                var field = annotator.fields.getFieldByInputName(input.attr('name'));
-                if(value.length > 0){
-                    hasAnyValue = true;
-                }
-
-                if(field.isOntology && field.split_codebook){
-                    console.log(input);
-                    if (input.attr("root") === undefined){
-                        input = $('[root="' + input.get(0).id + '"]');
-                    }
-                    console.log(input);
-                }
-
-                //console.log(value, field, input.attr('name'));
-                var validationResult = annotator.validateInput(input, field);
-                
-                if(validationResult != true){
-                    console.log(validationResult);
-                    annotator.markInputError(input, validationResult || '');
-                    valid = false;
-                } else {
-                    input.removeClass("error");
-                    rowjson[input.attr('name')] = input.parent().children(":hidden").val() || input.val();//{'text':input.val(), 'id':input.parent().children(":hidden").val(), 'name':input.attr('name')};
-                }
-            });
-            if(!valid) return;
-            if($.inArray(rowjson.codingid, annotator.unitcodings.modifiedRows) != -1){
-                formjson['modify'].push(rowjson);
-            } else if(rowjson.codingid.substring(0,3) == 'new'){
-                formjson['new'].push(rowjson);
-            } else { // unmodified sentence
-                //console.debug('unmodified codedsentence', rowjson.codingid);
-            }
-        });
-        if(!valid && $('#unitcoding-table tbody tr').length == 1 && hasAnyValue == false){
-            //valid = true; // if there is only one row without any values added, it is still a valid sentence table (since completely empty)
-            console.debug('ignoring empty sentence table');
-        }
-        else if(valid && (formjson['delete'].length > 0 || formjson['modify'].length > 0 || formjson['new'].length > 0)){
-            //$("#dialog-save").dialog("open");
-            console.debug('valid sentence coding form');
-            //var data = JSON.stringify(formjson);
-            //console.debug(annotator.unitcodings.codedarticleid, formjson);
-            storeDict['unitcodings'] = formjson;
-            
-            
-        } else if(!valid){
-            console.debug('invalid sentence coding form');
-            $('#message-dialog-msg').text('Unable to save: An invalid entry has been found in Sentence Codings');
-            $('#message-dialog').dialog('open');
-            return;
-        }
-    }
-    
-    $("#dialog-save-msg").html('Saving...');
-    $("#dialog-save").dialog("open");
-    var data = JSON.stringify(storeDict);
-    if(data == '{}'){ // empty dict
-        console.debug('no codings data to send');
-        //return;
-    }
-    
-    $.ajax({
-      type: 'POST',
-      url: "../codingjob/" + annotator.codingjobid + "/article/" + annotator.articleid + "/storecodings",
-      data: data,
-      success: function(json, textStatus, jqXHR){
-          console.debug('saved!' + json.response);
-          if(json.response == 'ok'){
-            annotator.resetArticleState();
-            $("#dialog-save-msg").html('<h3>Successfully saved codings!</h3>');
-            if(goToNext){
-                $("#dialog-save").dialog("close");
-                annotator.articletable.goToNextRow();
-            } else {
-                for(var oldid in json.codedsentenceMapping){
-                    $('input[name="codingid"][value="' + oldid + '"]').val(json.codedsentenceMapping[oldid]);
-                    console.debug('mapping sentenceid', oldid, 'to', json.codedsentenceMapping[oldid]);
-                }
-                
-                annotator.codingsAreModified(false);
-                annotator.setDialogSuccessButtons();
-            }
-          } else {
-            var errorMsg = '<h3>Error while saving, invalid form</h3>';
-            if(json.id && json.fields){
-                errorMsg += '<p>The fields in error are marked in red</p>';
-            }
-            if(json.message){
-                errorMsg += '<p>' + json.message + '</p>'; // TODO: escape HTML, security issue
-            }
-            console.debug(errorMsg);
-            $("#dialog-save-msg").html(errorMsg);
-            annotator.setDialogFailureButtons();
-            if(json.id){
-                if(json.id == 'articlecodings'){
-                    $.each(json.fields, function(name, errors){
-                        var el = $('input[name=' + name + ']');
-                        annotator.markInputError(el, errors[0]);
-                    });
-                } else if (json.id == 'commentAndStatus'){
-                    $.each(json.fields, function(name, errors){
-                        var el = $('input[name=' + name + ']');
-                        annotator.markInputError(el, errors[0]);
-                    });
-                } else {
-                    var row = $('input[value=' + json.id + ']').parents('tr').first();
-                    $.each(json.fields, function(name, errors){
-                        var el = $('input[name=' + name + ']', row);
-                        console.log(name, errors, el);
-                        annotator.markInputError(el, errors[0]);
-                    });
-                }
-            }
-         }
-      }, error: function(jqXHR, textStatus, errorThrown){
-          console.debug('error!' + textStatus);
-          $("#dialog-save-msg").html('<h3>Error while saving, server error</h3><p>' + textStatus + '</p><br />');
-          annotator.setDialogFailureButtons();
-      },
-      dataType: 'json'
-    });
-}   
-
-
-
-annotator.markInputError = function(input, errorText){
-    input.addClass("error");
-    input.attr('title', errorText);
-    input.bind("focus", function(){$(this).removeClass("error")});
-}
-
-
-annotator.validateInput = function(input, field){
-    /* this will check if the text value of input and the related hidden input contain valid data (based on the allowed items of the field)
-    it will also set the hidden value if it is outdated */
-    var items = field.items;
-    
-    if(items.length == 0){
-        console.log('no items for autocomplete');
-        return true;
-    }
-    
-    var value = input.val();
-    
-    if(value == ''){
-        input.parent().children(":hidden").val(''); // if text input is empty, hidden field should be cleared
-        return true;
-    }
-    
-    var id = input.parent().children(":hidden").val(); // value of hidden input
-
-    var found = [];
-    for(var i=0; i<items.length; i++){
-        // martijn: why is label used as identifier??
-        if (value === items[i].label){
-            if (id == items[i].value) return true;
-            found.push(items[i]);
-        }
-    }
-
-    if (found.length == 0){
-        return 'Value not found in list of allowed values';
-    }
-
-    if (found.length > 1){
-        return "More than one label found for " + value;
-    }
-
-    input.parent().children(":hidden").val(found[0].value);
-    return true;
-
-    // This is actually the correct response, but id's dont' get filled when initialising
-    // this can happen.
-    return "Hidden ID not correct, but label is. Bug?"
-}
-
-
-/************* General functions *************/
-
-
-
-annotator.selectText = function(obj){
-    annotator.deselectText();
-    if(document.selection){
-        var range = document.body.createTextRange();
-        range.moveToElementText(obj);
-        range.select();
-    } else if(window.getSelection){
-        var range = document.createRange();
-        range.selectNode(obj);
-        window.getSelection().addRange(range);
-    }
-}
-
-annotator.deselectText = function(){
-    if(document.selection){
-        document.selection.empty(); 
-    } else if(window.getSelection){
-        window.getSelection().removeAllRanges();
-    }
-}
-
-
-annotator.showMessage = function(text){
-    $('#message-dialog-msg').text(text);
-    $('#message-dialog').dialog('open');
-}
-
-
-
-
-annotator.sortLabels = function(a, b){ // natural sort on the labels
-    a = a.label.toLowerCase();
-    var asplit = a.split(/(\-?[0-9]+)/g);
-    b = b.label.toLowerCase();
-    var bsplit = b.split(/(\-?[0-9]+)/g);
-    for(var i=0; i<asplit.length; i++){
-        var diff = parseInt(asplit[i]) - parseInt(bsplit[i]);
-        if(isNaN(diff)){
-            diff = asplit[i].localeCompare(bsplit[i]);
-        }
-        if(diff != 0){
-            return diff;
-        }
-    }
-    return 0;
-}
-
-
-
-annotator.findSentenceByUnit = function(unit){
-    var result = null;
-    $.each(annotator.articleSentences, function(i, sentence){
-        if(sentence.unit == unit){
-            result = sentence;
-            return false;
-        }
-    });
-    return result;
-}
-
-
-annotator.findSentenceById = function(sentenceid){
-    var result = null;
-    $.each(annotator.articleSentences, function(i, sentence){
-        if(sentence.id == sentenceid){
-            result = sentence;
-            return true;
-        }
-    });
-    return result;
-}
-
-
-annotator.stripIdAttribute = function(id){ // used for sentence numbers that contain dots. does not work as 'id' attributes..
-    return id.replace(/\./g, '-')
-}
-
-
-// This function is not yet implemented
-annotator.getNextSentenceNumber = function(sentencenumber){
-    var result = null;
-    $.each(annotator.articleSentences, function(i, sentence){
-        if(sentence.unit == sentencenumber){
-            //console.debug('sentences length', annotator.articleSentences.length,i+1);
-            if(annotator.articleSentences.length > i+1){
-                result = annotator.articleSentences[i+1].unit;
-                console.log('next unit found', result);
-            }
-            return false;
-        }
-    });
-    if(result == null) console.debug('next sentence not found');
-    return result;
-}
-
-
-// This function is not yet implemented
-annotator.findNextAvailableSentences = function(){
-    var availableSentencenrs = [];
-    var parnr = 0;
-    $.each(annotator.articleSentences, function(i, sentence){
-        parnr = parseInt(sentence.unit.split('.')[0]);
-        var sentnr = parseInt(sentence.unit.split('.')[1]);
-        var nextSentencenr = parnr + '.' + (sentnr+1);
-        var exists = false;
-        $.each(annotator.articleSentences, function(j, sentence2){
-            if(sentence2.unit == nextSentencenr){
-                exists = true;
-                return true;
-            }
-        });
-        if(!exists){
-            availableSentencenrs.push(nextSentencenr);
-        }
-    });
-    availableSentencenrs.push((parnr + 1) + '.1');
-    return availableSentencenrs;
-}
-
-// This function is not yet implemented
-annotator.showNewSentenceDialog = function(){
-    if(!annotator.confirmArticleChange()) return;
-    $('#new-sentence-text').val('DUMMY');
-    var availableSentencenrs = annotator.findNextAvailableSentences();
-    console.debug('available', availableSentencenrs);
-    var html = $('<select id="new-sentence-nr" />');
-    $.each(availableSentencenrs, function(i, nr){
-        //html.append('<option value="' + nr + '">' + nr + '</option>');
-        html.append($('<option />').attr('value', nr).text(nr));
-    });
-    $('#new-sentence-nr-placeholder').html(html);
-    $("#new-sentence-dialog-form").dialog("open");
-}
-
-// This function is not yet implemented
-annotator.saveNewSentenceDialog = function(){
-    var text = $('#new-sentence-text').val();
-    var sentencenr = $('#new-sentence-nr').val();
-    
-    var data = JSON.stringify({'text':text, 'sentencenr':sentencenr});
-    
-    $.ajax({
-      type: 'POST',
-      url: 'annotator/addSentence/' + annotator.articleid,
-      data: {'jsonparams' : data},
-      success: function(json, textStatus, jqXHR){
-          console.debug('saved!' + json.response);
-          if(json.response == 'ok'){
-            console.debug('ok recieved');
-            annotator.articletable.showArticleFromRow($('#article-table-container .row_selected'));
-            $("#new-sentence-dialog-form").dialog("close");
-          } else {
-            var errorMsg = '<h3>Error while saving</h3>' + $('<span />').text(json.errormsg).html();
-            console.debug(errorMsg);
-            $("#new-sentence-status").html(errorMsg);
-          }
-      }, error: function(jqXHR, textStatus, errorThrown){
-          console.debug('error!' + textStatus);
-          $("#new-sentence-status").html('Error while adding sentence! ' + textStatus + '<br />');
-      },
-      dataType: 'json'
-    });
-}
-
-
-
-annotator.writeArticleSentences = function(sentences){
-    var html = $('<div />');
-    var previousParnr = 1;
-    $.each(sentences, function(i, sentence){
-        var sentenceHtml = $('<div />').attr('id', 'sentence-' + sentence.id);
-        var parnr = sentence.unit.split('.')[0];
-        if(parnr != previousParnr){
-            sentenceHtml.addClass('new-paragraph');
-        }
-        if(sentence.unit == '1.1'){
-            sentenceHtml.append($('<h2 />').text(sentence.text));
-        } else {
-            sentenceHtml.append($('<span />').addClass('annotator-sentencenr').text('(' + sentence.unit + ') '));
-            sentenceHtml.append(document.createTextNode(sentence.text));
-        }
-        previousParnr = parnr;
-        html.append(sentenceHtml);
-    });
-    
-    if(sentences.length == 0){
-        html.append('No sentences found for this article');
-    }
-
-    $('.sentence-options').show();
-    $('.sentences').html(html);
-    
-}
-
-// This function is not yet implemented
-annotator.showSplitArticleDialog = function(){ //TODO make nice form out of this
-    if(!annotator.confirmArticleChange()) return;
-    $("#article-dialog-form").dialog("option", "title", "Create new article based on split");
-    var html = $('<div />');
-    
-    var headline = $('#article-table-container .row_selected td:nth-child(3)').text(); // get headline from article table
-    html.append($('<label />').text('Headline'));
-    html.append($('<input />', {'value':headline, 'name':'headline'})).append('<br />');
-    var selecthtml1 = $('<select />', {'name':'startSentence'});
-    var selecthtml2 = $('<select />', {'name':'endSentence'});
-    $.each(annotator.articleSentences, function(i, sentence){
-        selecthtml1.append($('<option />', {'value': sentence.id}).text(sentence.unit));
-        selecthtml2.append($('<option />', {'value': sentence.id}).text(sentence.unit));
-    });
-    html.append($('<label />').text('Start Sentence'));
-    html.append(selecthtml1).append('<br />');
-    html.append($('<label />').text('End Sentence'));
-    html.append(selecthtml2).append('<br />');
-    
-    $('#article-edit-form').html(html);
-    $("#article-dialog-form").dialog('option', 'buttons', {
-        "Save": annotator.saveSplitArticle,
-        "Cancel": function(){
-            $(this).dialog("close");
-        }
-    });
-    $("#article-dialog-form").dialog('open');
-}
-
-// This function is not yet implemented
-annotator.saveSplitArticle = function(){
-    var headline = $("#article-dialog-form input[name='headline']").val();
-    var startSentence = $("#article-dialog-form select[name='startSentence']").val();
-    var endSentence = $("#article-dialog-form select[name='endSentence']").val();
-    
-    if(!headline){
-        $('#article-edit-status').html('Please insert a headline');
-        return;
-    }
-            
-    var data = JSON.stringify({
-        'headline':headline,
-        'startSentence':startSentence,
-        'endSentence':endSentence,
-        'codingjobid':annotator.codingjobid,
-        'setnr':annotator.setnr
-    });
-    
-    $.ajax({
-      type: 'POST',
-      url: 'annotator/createSplit/' + annotator.articleid,
-      data: {'jsonparams' : data},
-      success: function(json, textStatus, jqXHR){
-          console.debug('saved!' + json.response);
-          if(json.response == 'ok'){
-            console.debug('ok recieved');
-            $('#article-edit-status').html('Saved!');
-            $("#article-dialog-form").dialog('option', 'buttons', {
-                "OK": function(){
-                    //$(this).dialog("close");
-                    location.reload();
-                }
-            });
-          } else {
-            var errorMsg = '<h3>Error while saving</h3>' + $('<span />').text(json.errormsg).html();
-            console.debug(errorMsg);
-            $("#article-edit-status").html(errorMsg);
-          }
-      }, error: function(jqXHR, textStatus, errorThrown){
-          console.debug('error!' + textStatus);
-          $("#article-edit-status").html('Server error! ' + textStatus + '<br />');
-      },
-      dataType: 'json'
-    });
-}
-
-
-annotator.confirmArticleChange = function(){
-    if(annotator.articlecodings.modified || annotator.unitcodings.modified || annotator.commentAndStatus.modified){
-        return confirm('You have unsaved changes. Are you sure you would like to change article?');
-    }
-    return true;
-}
-
-
-annotator.checkWindowWidth = function(){
-    var widthMessage = 'Your browser width is lower than 1000 pixels. Please use a higher resolution for a better layout.'
-    if($(window).width() < 1000){
-        if($('#messages:contains("' + widthMessage + '")').length == 0){ // message not already visible
-            $('#messages').append('<div>' + widthMessage + '</div>')
-        }
-    } else {
-        $('#messages div:contains("' + widthMessage + '")').remove();
-    }
-}
-
-annotator.initPage = function(){
-    annotator.resetArticleState();
-    
-    
-    /*** Hide currently unused elements ***/
-    $('.coding-part').hide();
-    $('.sentence-options').hide();
-    
-    
-    /*** Initialize all buttons ***/
-    $('#next-article-button').button({
-        icons:{primary:'icon-next-article'},
-        disabled: true
-    });
-    $('#previous-article-button').button({
-        icons:{primary:'icon-previous-article'},
-        disabled: true
-    });
-    $('#edit-article-button').button({
-        icons:{primary:'icon-edit-article'},
-        disabled: true
-    });
-    $('#new-article-button').button({
-        icons:{primary:'icon-new-article'},
-        disabled: false
-    });
-    $('#delete-coding-button, #delete-coding-button2').button({
-        icons:{primary:'icon-delete-coding'},
-        disabled: true
-    });
-    $('#copy-coding-button, #copy-coding-button2').button({
-        icons:{primary:'icon-copy-coding'},
-        disabled: true
-    });
-    $('#copy-switch-coding-button, #copy-switch-coding-button2').button({
-        icons:{primary:'icon-copy-switch-coding'},
-        disabled: true
-    });
-    $('#save-button, #save-button2').button({
-        icons:{primary:'icon-save'},
-        disabled: true
-    });
-    $('#save-continue-button, #save-continue-button2').button({
-        icons:{primary:'icon-save-continue'},
-        disabled: false
-    });
-    $('#irrelevant-button').button({
-        icons:{primary:'icon-irrelevant-continue'}
-    });
-    
-	$(".sentence-options .add-sentence-button").button({
-        icons:{primary:'ui-icon-plus'}
-    });
-	$(".sentence-options .select-all-sentences-button").button({
-        icons:{primary:'ui-icon-arrow-4-diag'}}
-    );
-	$(".sentence-options .split-sentences-button").button({
-        icons:{primary:'ui-icon-scissors'}}
-    );
-    
-    
-    
-    // $("#coding-type-radios").buttonset();
-    // if(!annotator.articlecodings.containsArticleSchema || !annotator.unitcodings.containsUnitSchema){
-        // $("#coding-type-radios").hide();
-    // }
-    if(!annotator.articlecodings.containsArticleSchema){
-        $("#article-coding").hide();
-    }
-    if(!annotator.unitcodings.containsUnitSchema){
-        $("#sentence-coding-table-part").hide();
-    }
-    if(!annotator.unitcodings.isNETcoding){ // only enable for net codings
-        $('#copy-switch-coding-button, #copy-switch-coding-button2').hide();
-    }
-    
-    //$('#new-article-button').hide(); // todo: make it work
-    
-    
-    
-    /*** set click events of buttons ***/
-    $('#save-button, #save-button2').click(function(event){
-        if($('#article-status').val() == STATUS_NOTSTARTED){
-            $('#article-status').val(STATUS_INPROGRESS);
-            annotator.commentAndStatus.onArticleStatusChange();
-        }
-        annotator.saveCodings();
-    });
-    $('#save-continue-button, #save-continue-button2').click(function(event){
-        $('#article-status').val(STATUS_COMPLETE);
-        annotator.commentAndStatus.onArticleStatusChange();
-        annotator.saveCodings(true);
-    });
-    $('#irrelevant-button').click(function(event){
-        $('#article-status').val(STATUS_IRRELEVANT);
-        annotator.commentAndStatus.onArticleStatusChange();
-        annotator.saveCodings(true);
-    });
-    $('#next-article-button').click(function(event){
-        annotator.articletable.goToNextRow();
-    });
-    $('#delete-coding-button, #delete-coding-button2').click(function(event){
-        $("#dialog-confirm-delete-row").dialog("open");
-    });
-    $('#copy-coding-button, #copy-coding-button2').click(function(event){
-        annotator.unitcodings.copySelectedRow();
-    });
-    $('#copy-switch-coding-button, #copy-switch-coding-button2').click(function(event){
-        annotator.unitcodings.copySelectedRow();
-        annotator.unitcodings.switchSubjectObject();
-    });
-    $('#previous-article-button').click(function(event){
-        annotator.articletable.goToPreviousRow();
-    });
-    // $('#article-coding-radio, #sentence-coding-radio, #both-coding-radio').click(function(){
-        // if(!annotator.confirmArticleChange()) return;
-        // annotator.codingTypeSet();
-    // });
-    
-    $('#help-button').click(function(event){
-        $("#dialog-help").dialog("open");
-    });
-    $(".sentence-options .add-sentence-button").click(annotator.showNewSentenceDialog);
-    $(".sentence-options .split-sentences-button").click(annotator.showSplitArticleDialog);
-    $(".sentence-options .select-all-sentences-button").click(function(){
-        annotator.selectText($('.sentences').get(0));
-    });
-        
-        
-    /*** Initialize dialogs ***/
-    
-    $("#dialog-save").dialog({
+    self.dialog_defaults = {
         resizable: false,
-        autoOpen: false,
-        modal: true
-    });
-    $("#article-dialog-form").dialog({
-        resizable: false,
-        autoOpen: false,
         modal: true,
-        open: function(){
-            $('#article-edit-status').html('');
-            $('#article-edit-form').show();
-        },
-        buttons: {
-            "Save Article Details": function(){
-                annotator.articletable.saveEditArticleDetails();
-            },
-            Cancel: function(){
-                $(this).dialog("close");
-            }
-        }
-    });
-    $("#new-sentence-dialog-form").dialog({
-        resizable: false,
         autoOpen: false,
-        modal: true,
-        open: function(){
-            $('#new-sentence-status').html('');
-        },
-        buttons:{
-            "Add new Sentence": function(){
-                    annotator.saveNewSentenceDialog();
+        buttons : self.dialog_ok
+    };
+
+    /* Containers & dialogs. These can only be set if DOM is ready. */
+    self.initialise_containers = function(){
+        self.article_coding_container = $("#article-coding");
+        self.sentence_codings_container = $("#unitcoding-table-part");
+        self.article_table_container = $("#article-table-container");
+        self.article_container = $("article");
+        self.article_status_dropdown = $("#article-status").change(self.article_status_changed);
+        self.article_comment_textarea = $("#article-comment").change(function(){
+            self.state.coded_article.comments = $(this).val();
+            self.unsaved = true;
+        });
+    };
+
+    self.initialise_buttons = function(){
+        self.next_btn = $("#next-article-button");
+        self.prev_btn = $("#previous-article-button");
+        self.select_all_btn = $("#select-all-sentences-button");
+        self.save_btn = $("#save-button");
+        self.save_continue_btn = $("#save-continue-button");
+        self.irrelevant_btn = $("#irrelevant-button");
+        self.copy_btn = $("#copy-coding-button");
+        self.delete_btn = $("#delete-button");
+        self.help_btn = $("#help-button");
+
+        self.next_btn.click(self.select_next_article);
+        self.prev_btn.click(self.select_prev_article);
+        self.select_all_btn.click(self.select_all_sentences);
+        self.save_btn.click(self.save);
+        self.save_continue_btn.click(self.finish_and_continue);
+        self.irrelevant_btn.click(self.irrelevant_and_continue);
+        self.copy_btn.click(self.copy);
+        self.help_btn.click(function(){ self.help_dialog.dialog("open"); });
+
+        $(".coding-part").hide();
+        $(".sentence-options").hide();
+        $(window).scroll(self.window_scrolled);
+        $(window).resize(self.window_resized);
+        $(window).trigger("resize");
+    };
+
+    self.show_unsaved_changes = function(continue_func){
+        var save_btn = $(".save", self.unsaved_modal);
+        var discard_btn = $(".discard", self.unsaved_modal);
+
+        save_btn.unbind().click(function(){
+            self.save({ success_callback : continue_func });
+            self.unsaved_modal.modal("hide");
+        });
+
+        discard_btn.unbind().click(function(){
+            self.unsaved_modal.modal("hide");
+            self.unsaved = false;
+            continue_func();
+        });
+
+        self.unsaved_modal.modal("show");
+    };
+
+    self.initialise_dialogs = function(){
+        self.unsaved_modal = $("#unsaved-changes").modal({ show : false });
+        self.loading_dialog = $("<div>Loading..</div>").dialog(self.dialog_defaults);
+        self.message_dialog = $("#message-dialog").dialog(self.dialog_defaults);
+        self.width_warning_dialog = $("<div>{0}</div>".f(self.width_warning)).dialog(self.dialog_defaults);
+        self.save_dialog = $("#dialog-save").dialog(self.dialog_defaults);
+        self.help_dialog = $("#dialog-help").dialog($.extend({}, self.dialog_defaults, { width: 500 }));
+        self.delete_row_dialog = $("#dialog-confirm-delete-row").dialog($.extend({}, self.dialog_defaults, {
+            buttons: {
+                "Delete row": function(){
+                    self.delete();
+                    $(this).dialog("close");
                 },
                 Cancel: function(){
                     $(this).dialog("close");
                 }
-        }
-    });
-        
-    $("#message-dialog").dialog({
-        resizable: false,
-        autoOpen: false,
-        modal: true,
-        buttons: {
-            "OK": function(){
-                $(this).dialog("close");
+            }
+        }))
+    };
+
+    /* Calls $.getJSON and returns its output, while appending ?page_size=inf
+     * to the url to prevent cut-offs.*/
+    self.from_api = function(url){
+        return $.getJSON("{0}?page_size={1}".f(url, self.API_PAGE_SIZE));
+    };
+
+    /*
+     * Counts currently selection of words in article.
+     *
+     * TODO: Cleanup
+     */
+    self.count = function(){
+        // http://stackoverflow.com/questions/6743912/get-the-pure-text-without-html-element-by-javascript
+        var sentence_re = / id="sentence-[0-9]*"/g
+        var html = "";
+
+        if (typeof window.getSelection != "undefined") {
+            var sel = window.getSelection();
+            if (sel.rangeCount) {
+                var container = document.createElement("div");
+                for (var i = 0, len = sel.rangeCount; i < len; ++i) {
+                    container.appendChild(sel.getRangeAt(i).cloneContents());
+                }
+                html = container.innerHTML;
+            }
+        } else if (typeof document.selection != "undefined") {
+            if (document.selection.type == "Text") {
+                html = document.selection.createRange().htmlText;
             }
         }
-     });
-        
-    $("#dialog-help").dialog({
-        resizable: false,
-        autoOpen: false,
-        width:500,
-        modal: true,
-        buttons: {
-            "OK": function(){
-                $(this).dialog("close");
+
+        html = $("<div>" + html.replace(sentence_re, '') + "</div>");
+        $(".annotator-sentencenr", html).remove();
+        $(".highlight", html).remove();
+
+        $.each($(".new-paragraph", html), function(i, el){
+            $(el).removeClass("new-paragraph");
+        });
+
+        var text = "";
+        $.each(html, function(i, el){
+            text += el.innerHTML.replace("</div><div>", " ");
+            text += " ";
+        });
+
+        var count = 0;
+        $.each(text.split(/ /g), function(i, word){
+            // replace functions like strip() in Python
+            if (word.replace(/^\s+|\s+$/g, '') !== "") count++;
+        });
+
+        $("#wordcount").html(count);
+    };
+
+    self.setup_wordcount = function(){
+        $("article").mouseup(function(){
+            window.setTimeout(self.count, 50);
+        });
+    };
+
+
+    self.initialise_fields = function(){
+        self.loading_dialog.text("Loading fields..").dialog("open");
+
+        self._requests = [
+            self.from_api(self.get_api_url()),
+            self.from_api(self.get_api_url() + "coding_rules"),
+            self.from_api(self.get_api_url() + "codebooks"),
+            self.from_api(self.get_api_url() + "codingschemas"),
+            self.from_api(self.get_api_url() + "codingschemafields"),
+            self.from_api(self.API_URL + "coding_rule_actions")
+        ];
+
+        // Fill status combobox
+        $.each(self.STATUS, function(label, value){
+            self.article_status_dropdown.append(
+                $("<option>").attr("value", value).text(label)
+            );
+        });
+
+
+        $.when.apply(undefined, self._requests).then(function (codingjob, rules, codebooks, schemas, schemafields, actions) {
+                // Check if all request completed successfully. (If not, an
+                // error is already thrown, but we need not continue processing
+                // the data.
+                if (!all(self._requests, function (request) {
+                    return request.statusText === "OK";
+                })) {
+                    throw "Not all requests completed successfully.";
+                }
+
+                // Extract results from response
+                self.models.rules = map_ids(rules[0].results);
+                self.models.actions = map_ids(actions[0].results);
+                self.models.codebooks = map_ids(codebooks[0].results);
+                self.models.schemas = map_ids(schemas[0].results);
+                self.models.schemafields = map_ids(schemafields[0].results);
+                self.codingjob = codingjob[0];
+
+                // Convert codebook.codes (array) to mapping code_id -> code
+                $.each(self.models.codebooks, function(codebook_id, codebook){
+                    codebook.codes = map_ids(codebook.codes, "code");
+                    resolve_ids(codebook.codes, codebook.codes, "parent");
+                });
+
+                // Resolve a bunch of foreign keys
+                resolve_ids(self.models.rules, self.models.actions, "action");
+                resolve_ids(self.models.rules, self.models.schemas, "codingschema");
+                resolve_ids(self.models.rules, self.models.schemafields, "field");
+                resolve_ids(self.models.schemafields, self.models.schemas, "codingschema");
+                resolve_ids(self.models.schemafields, self.models.codebooks, "codebook");
+                resolve_id(self.codingjob, self.models.schemas, "articleschema");
+                resolve_id(self.codingjob, self.models.schemas, "unitschema");
+
+                // Initialize data
+                self.codebooks_fetched();
+                self.highlighters_fetched();
+                self.schemafields_fetched();
+                self.initialise_sentence_codings_table();
+                self.setup_wordcount();
+                self.loading_dialog.dialog("close");
+            }
+        );
+
+    };
+
+    /******** KEYBOARD SHORTCUTS *******/
+    self.shortcuts = function(){
+        return {
+        "ctrl+s" : self.save_btn.trigger.bind(self.save_btn, "click"),
+        "ctrl+down" : self.add_row,
+        "ctrl+shift+down" : self.add_next_sentence_row,
+        "shift+down" : self.copy_row,
+        "ctrl+shift+d": self.delete_row,
+        "ctrl+i" : self.irrelevant_btn.trigger.bind(self.irrelevant_btn, "click"),
+        "ctrl+d" : self.save_continue_btn.trigger.bind(self.save_continue_btn, "click")
+    }};
+
+    /******** PUBLIC FUNCTIONS *******/
+    /* Returns true if a coding was modified (article or sentence) */
+    self.modified = function(){
+        return self.sentence_codings_modified() | self.state.article_coding_modified;
+    };
+
+    self.sentence_codings_modified = function(){
+        return !!(self.state.deleted_codings.length || self.state.modified_codings.length);
+    };
+
+    /* Returns absolute url pointing to this codingjob (slash-terminated)  */
+    self.get_api_url = function(){
+        return "{0}projects/{1}/codingjobs/{2}/".f(self.API_URL, self.project_id, self.codingjob_id);
+    };
+
+    /* Returns (new) DOM representation of the articlecoding */
+    self.get_article_coding_html = function(){
+        var schemafields = self.article_schemafields;
+        var table = $("<table>")
+            .attr("annotator_coding_id", self.state.article_coding.annotator_id)
+            .addClass("coding");
+
+        return table.append($.map(widgets.get_html(schemafields, null), function(widget, i){
+            var schemafield = schemafields[i];
+            var label = widgets.get_label_html(schemafield, widget);
+            var value = self.state.article_coding.values[schemafield.id];
+
+            if (value !== undefined){
+                widgets.set_value($(widget), value);
+            }
+
+            return $("<tr>")
+                .append($("<td>").append(label))
+                .append($("<td>").append(widget));
+        }));
+    };
+
+    /*
+     * Initialises table headers (sentence + fields + action) (columns)
+     */
+    self.initialise_sentence_codings_table = function () {
+        var table_header = $("<tr>");
+        table_header.append($("<th>").text("Sentence"));
+        table_header.append(
+            $.map(self.sentence_schemafields, function(schemafield){
+                return $("<th>").text(schemafield.label);
+            })
+        );
+
+        // Used to 'steal' focus so we know we need to add another row / switch to next row
+        table_header.append($("<th>"));
+
+        self.sentence_codings_container.find("table")
+            .append($("<thead>").append(table_header))
+            .append($("<tbody>"));
+    };
+
+
+    self.initialise_sentence_codings = function () {
+        if (self.codingjob.unitschema === null) return $("<div>");
+
+        if (self.state.sentence_codings.length === 0){
+            var empty_coding = self.get_empty_coding();
+            self.state.sentence_codings.push(empty_coding);
+        }
+
+        $.map(self.state.sentence_codings, self.append_sentence_coding);
+    };
+
+    /*
+     * Create new row, and append it to existing table
+     */
+    self.append_sentence_coding = function(coding){
+        var coding_el = self.get_sentence_coding_html(coding);
+        self.sentence_codings_container.find("tbody").append(coding_el);
+        self.set_sentence_codingvalues(coding_el, coding.values||[], coding.sentence);
+        self.set_tab_order();
+    };
+
+    self.set_sentence_codingvalues = function(coding_el, values, sentence){
+        var widget;
+        $.each(values, function(_, codingvalue){
+            widget = widgets.find(codingvalue.field, coding_el);
+            widgets.set_value(widget, codingvalue);
+        });
+
+        if (sentence !== undefined && sentence !== null){
+            widgets.sentence.set_value($(".sentence", coding_el), sentence);
+        }
+    };
+
+    self.delete_row = function(){
+        var active_row = self.get_active_row();
+        var active_coding = self.get_active_sentence_coding();
+        if (active_row === null) return;
+
+        // Select a row which need to be focused after the
+        // deletion of the currently active row.
+        var next = active_row.next();
+        if (!next.length){
+            // No next row, set previous row
+            next = active_row.prevAll(".coding").first();
+        }
+
+        if (!next.length){
+            // No previous row either
+            next = self._add_row({});
+        }
+
+        // Register deleted coding
+        active_row.remove();
+        delete self.state.codings[active_row.attr("annotator_coding_id")];
+        $("input", next).first().focus();
+        self.set_tab_order();
+    };
+
+    /*
+     * Adds new row after currently active row, with `properties`.
+     */
+    self._add_row = function(properties){
+        var active_row = self.get_active_row();
+        var empty_coding = self.get_empty_coding(properties);
+        var new_active_row;
+
+        self.state.sentence_codings.push(empty_coding);
+        active_row.after(self.get_sentence_coding_html(empty_coding));
+        self.set_tab_order();
+
+        new_active_row = active_row.nextAll(".coding").first();
+        new_active_row.find(".sentence").focus();
+        return new_active_row;
+    };
+
+    /*
+     * Add new row after current active one, and copy its contents
+     */
+    self.copy_row = function(){
+        var active_coding = self.get_active_sentence_coding();
+        var active_row = self.get_active_row();
+        if (active_coding === null) return;
+
+        // Add new (empty) coding
+        var new_row = self._add_row(active_coding);
+        var new_coding = self.state.codings[new_row.attr("annotator_coding_id")];
+        var new_widgets = $(".widget", new_row);
+
+        // Copy codingvalues to new row
+        $.each($(".widget", active_row), function(i, widget){
+            var coding_value = widgets.get_codingvalue(active_coding, active_coding.sentence, $(widget));
+            new_coding.values[coding_value.field.id] = coding_value;
+            widgets.set_value($(new_widgets.get(i)), coding_value);
+        });
+    };
+
+    /*
+     * Add new row after currently active row. Does nothing if no row is active
+     */
+    self.add_row = function(event){
+        var active_coding = self.get_active_sentence_coding();
+        if (active_coding === null) return;
+        return self._add_row({ sentence : active_coding.sentence });
+    };
+
+    /*
+     * Adds a row after currently active row, and copies its sentence.
+     */
+    self.add_next_sentence_row = function(){
+        var coding = self.get_active_sentence_coding();
+        if (coding === null) return;
+
+        var sentence_index = self.state.sentences_array.indexOf(coding.sentence);
+        if (sentence_index + 1 === self.state.sentences_array.length){
+            // This was the last sentences, just use previous one?
+            sentence_index -= 1;
+        }
+
+        self._add_row({
+            sentence : self.state.sentences_array[sentence_index + 1]
+        });
+    };
+
+    self.get_active_row = function(){
+        var focused = $(document.activeElement);
+
+        if (!focused.closest("#unitcoding-table").length){
+            // No sentence activated.
+            return null;
+        }
+
+        var coding = focused.closest("tr.coding");
+        return (coding.length ? coding : null);
+    };
+
+    self.get_active_sentence_coding = function(){
+        var active_row = self.get_active_row();
+        if (active_row === null) return null;
+        return self.state.codings[active_row.attr("annotator_coding_id")];
+    };
+
+    /*
+     * Last widget reached, and TAB was pressed. We need to either add a row
+     * or move to the next one available.
+     */
+    self.last_widget_reached = function(event){
+        var row = $(event.currentTarget).closest("tr");
+
+        if (shifted){
+            // We need to go back, do nothing!
+            $(event.currentTarget).prev().find("input").first().focus();
+            return;
+        }
+
+        var empty_coding = self.get_empty_coding();
+        self.state.sentence_codings.push(empty_coding);
+
+        if (row.next().length === 0){
+            self.append_sentence_coding(empty_coding);
+        }
+
+        row.next().find("input.sentence").focus();
+    };
+
+    self.parse_sentence = function(sentence){
+        return {
+            words: sentence.split(/ +/),
+            sentence: sentence
+        };
+    };
+
+    self.get_new_coding_value = function(coding, codingschemafield){
+        return {
+            id : null,
+            coding : coding,
+            field : codingschemafield,
+            intval : null,
+            strval : null
+        }
+
+    };
+
+    /*
+     * This function is called after a widget-value has been changed. It updates the
+     * inner state to reflect the "outer" state (DOM).
+     */
+    self.set_coding_value = function(annotator_coding_id, codingschemafield_id, value){
+        var coding = self.state.codings[annotator_coding_id];
+        var codingvalue = coding.values[codingschemafield_id];
+        var codingschemafield = self.models.schemafields[codingschemafield_id];
+
+        // Create codingvalue if needed.
+        if (codingvalue === undefined){
+            coding.values[codingschemafield_id] = self.get_new_coding_value(coding, codingschemafield);
+            return self.set_coding_value(annotator_coding_id, codingschemafield_id, value);
+        }
+
+        codingvalue.intval = null;
+        codingvalue.strval = null;
+
+        if (typeof(value) === "number") {
+            codingvalue.intval = value;
+        } else if (typeof(value) === "string") {
+            codingvalue.strval = value;
+        }
+
+        self.unsaved = true;
+    };
+
+    /*
+     * Display sentence text above currently active coding and update from to elements.
+     */
+    self.refresh_sentence_text = function(){
+        self.sentence_codings_container.find(".sentence-text-row").remove();
+        self.article_container.find(".active").removeClass("active");
+
+        var active_row = self.get_active_row();
+        var active_coding = self.get_active_sentence_coding();
+        if (active_row === null) return;
+        if (active_coding.sentence === null) return;
+
+        // Display sentence text above coding
+        active_row.before($("<tr>").addClass("sentence-text-row").append($("<td>")
+                .attr("colspan", active_row.closest("table").find("th").size())
+                .text(active_coding.sentence.sentence)));
+
+        // Highlight sentence in article text
+        self.article_container.find("#sentence-{0}".f(active_coding.sentence.id)).addClass("active");
+
+        // Set min, max values on from/to widgets
+        var sentence = self.parse_sentence(active_coding.sentence.sentence);
+        var from = $(".from", active_row);
+        var to = $(".to", active_row);
+
+        from.attr("min", 0).attr("max", sentence.words.length - 2);
+        to.attr("min", 1).attr("max", sentence.words.length - 1);
+
+        var fromv = parseInt(from.val());
+        if (!isNaN(fromv)){
+            to.attr("min", fromv+1);
+        }
+
+        var tov = parseInt(to.val());
+        if (!isNaN(tov)){
+            from.attr("max", tov-1);
+        }
+
+        active_coding.start = fromv || null;
+        active_coding.end = tov || null;
+
+        // Highlight selected part
+        if (isNaN(fromv) && isNaN(tov)) return;
+        if (isNaN(fromv)) fromv = 0;
+        if (isNaN(tov)) tov = sentence.words.length;
+
+        var prefix = sentence.words.slice(0, fromv).join(" ");
+        var middle = sentence.words.slice(fromv, tov+1).join(" ");
+        var remainer = sentence.words.slice(tov+1, sentence.words.length).join(" ");
+
+        $("td", active_row.prev()).html(
+            $("<span>")
+                .append($("<span>").text(prefix))
+                .append($("<code>").text(middle))
+                .append($("<span>").text(remainer))
+        );
+    };
+
+
+    /* Returns (new) DOM representation of a single sentence coding */
+    self.get_sentence_coding_html = function(coding){
+        var coding_el = $("<tr>").addClass("coding").attr("annotator_coding_id", coding.annotator_id);
+
+        // Add sentencenr, from and to.
+        coding_el.append(widgets.sentence.get_html().val((coding.sentence === null) ? "" : coding.sentence.get_unit()));
+
+        if(self.codingjob.unitschema.subsentences){
+            coding_el.append(widgets.from.get_html().val(coding.start||""));
+            coding_el.append(widgets.to.get_html().val(coding.end||""));
+        }
+
+        coding_el.append($.map(widgets.get_html(self.sentence_schemafields), function(widget){
+            return $("<td>").append(widget);
+        }));
+
+        coding_el.append($("<td>").addClass("focus-stealer").focus(self.last_widget_reached));
+        coding_el.on("sentence-changed", self.refresh_sentence_text);
+        coding_el.find("input").focus(function(){
+            $(this).closest(".coding").trigger("sentence-changed");
+        });
+
+        return coding_el;
+    };
+
+    /*
+     * Mandetory validation are present to preserve a consistent database state.
+     */
+    self.mandetory_validate = function(){
+        // Check ∀v [(v.sentence === null) => (v.intval === null && v.strval === null)]
+        var codings = self.get_sentence_codings();
+        for (var i=0; i < codings.length; i++){
+            if (codings[i].sentence !== null) continue;
+
+            if ($.map($.values(codings[i].values), function(cv){
+                return (!self.is_empty_codingvalue(cv)) || null;
+            }).length){
+                return "A non-empty coding with no sentence was found.";
             }
         }
-     });
-    $("#dialog-confirm-delete-row").dialog({
-        resizable: false,
-        autoOpen: false,
-        modal: true,
-        buttons: {
-            "Delete Row": function(){
-                annotator.unitcodings.deleteSelectedRow();
-                $(this).dialog("close");
-            },
-            Cancel: function(){
-                $(this).dialog("close");
+
+        return true;
+    };
+
+    /*
+     * Checks if all codingschemarules pass.
+     */
+    self.validate = function(){
+        var article_errors = $("." + rules.ERROR_CLASS, self.article_coding_container);
+        var sentence_errors = $("." + rules.ERROR_CLASS, self.sentence_codings_container);
+        var error = "An error occured while validating {0} codings. Erroneous fields have been marked red.";
+
+        if (article_errors.length > 0){
+            return error.f("article");
+        } else if (sentence_errors.length > 0){
+            return error.f("sentence");
+        }
+
+        return true;
+    };
+
+    self.is_empty_codingvalue = function(cv){
+        return cv.intval === null && cv.strval === null;
+    };
+
+    self.is_empty_coding = function(coding){
+        return all($.values(coding.values), self.is_empty_codingvalue)
+    };
+
+    /*
+     * Returns 'minimised' version of given coding, which can easily be serialised.
+     */
+    self.pre_serialise_coding = function(coding){
+        return {
+            start : coding.start, end : coding.end,
+            sentence_id : (coding.sentence === null) ? null : coding.sentence.id,
+            values : $.map($.grep($.values(coding.values), self.is_empty_codingvalue, true), self.pre_serialise_codingvalue)
+        }
+    };
+
+    self.pre_serialise_codingvalue = function(codingvalue){
+        return {
+            codingschemafield_id : codingvalue.field.id,
+            intval : codingvalue.intval,
+            strval : codingvalue.strval
+        }
+    };
+
+    self.pre_serialise_coded_article = function () {
+        return {
+            status_id : self.state.coded_article.status,
+            comments : self.state.coded_article.comments
+        }
+    };
+
+    /*
+     * Save codings.
+     *
+     * @type success_callback: function
+     * @param success_callback: function called when server replied with non-error code
+     * @required success_callback: no
+     *
+     * @type validate: boolean
+     * @param validate: when true open display when validation fails
+     * @default validate: false
+     */
+    self.save = function(options){
+        if (options === undefined || options.currentTarget !== undefined) options = {};
+
+        options = $.extend({}, {
+            validate : false,
+            success_callback : function(){},
+            error_callback : function(){}
+        }, options);
+
+        var validate = options.validate;
+        var success_callback = options.success_callback;
+        var error_callback = options.error_callback;
+
+        $(document.activeElement).blur().focus();
+
+        // Set status to 'in progress' if current status is 'not started'
+        if (self.state.coded_article.status == self.STATUS.NOT_STARTED){
+            self.set_status(self.STATUS.IN_PROGRESS);
+        }
+
+        // Check whether we want to save, by first checking the mandetory checks.
+        var validation = self.mandetory_validate();
+        if (validation !== true){
+            return self.message_dialog.text(validation).dialog("open");
+        }
+
+        // Check optional requirements
+        validation = validate ? self.validate() : true;
+        if (validation !== true){
+            return self.message_dialog.text(validation).dialog("open");
+        }
+
+        // Send coding values to server
+        self.loading_dialog.text("Saving codings..").dialog("open");
+        $.post("codedarticle/{0}/save".f(self.state.coded_article_id), JSON.stringify({
+            "coded_article" : self.pre_serialise_coded_article(),
+            "codings" : $.map(self.get_codings(), self.pre_serialise_coding)
+        })).done(function(data, textStatus, jqXHR){
+            self.loading_dialog.dialog("close");
+
+            $.pnotify({
+                "title" : "Done",
+                "text" : "Codings saved succesfully.",
+                "type" : "success",
+                "delay" : 500
+            });
+
+            self.set_column_text("status", self.STATUS_TEXT[self.state.coded_article.status]);
+            self.set_column_text("comments", self.state.coded_article.comments);
+
+            // Reset 'unsaved' state
+            self.unsaved = false;
+
+            // Change article status in table
+            var td_index = self.article_table_container.find("thead th:contains('status')").index();
+            var current_row = self.article_table_container.find("tr.row_selected");
+            $("td:eq({0})".f(td_index), current_row).text(self.STATUS_TEXT[self.state.coded_article.status]);
+
+            if (success_callback !== undefined && success_callback.currentTarget === undefined){
+                success_callback(data, textStatus, jqXHR);
             }
+        }).error(error_callback);
+    };
+
+    self.set_status = function(state){
+        self.article_status_dropdown.val(state);
+        self.article_status_dropdown.trigger("change");
+    };
+
+    self.save_and_continue = function () {
+        self.save({ success_callback : self.select_next_article, validate : true });
+    };
+
+    self.finish_and_continue = function(){
+        self.set_status(self.STATUS.COMPLETE);
+        self.save_and_continue();
+    };
+
+    self.irrelevant_and_continue = function () {
+        self.set_status(self.STATUS.IRRELEVANT);
+        self.save_and_continue();
+    };
+
+    self._select = function(row){
+        if (row.length === 0){
+            self.loading_dialog.text("Last article reached, coding done!").dialog("open");
+            return;
         }
-     });
-        
-    $('#edit-article-button').click(function(){
-        $("#article-dialog-form").dialog("option", "title", "Edit article");
-        annotator.articletable.showEditArticleDialog(annotator.articleid);
-    });
 
-    $('#new-article-button').click(function(){
-        $("#article-dialog-form").dialog("option", "title", "Add new article");
-        annotator.articletable.showEditArticleDialog(0);
-    });
-  
-    
-    
-    
-    /*** misc initialization ***/
-    
-    $('#article-status').change(annotator.commentAndStatus.onArticleStatusChange);
-    $('#article-comment').change(annotator.commentAndStatus.onCommentChange);
-    
-    
-    $('#next-article-button').focus();
-        
-    annotator.checkWindowWidth();
-    annotator.fields.initFieldData();
+        row.trigger("click");
+    };
 
-    $("<div id='loading_fields'>Initiatlising fields, please wait..</div>" ).dialog({
-      dialogClass: "no-close",
-      modal : true,
-      title : "Loading...",
-      
-    });
+    self.select_next_article = function () {
+        self._select(self.article_table_container.find(".row_selected").next());
+    };
 
-    $(window).bind('resize', function () {
-        if(annotator.previousWidth != $(window).width()){
-            annotator.articletable.articleTable.fnAdjustColumnSizing();
-            //if(annotator.unitcodings.sentenceTable) annotator.unitcodings.sentenceTable.fnAdjustColumnSizing();
-            
-            annotator.checkWindowWidth();
-            annotator.previousWidth = $(window).width();
-            console.debug('resized to ' + $(window).width());
+    self.select_prev_article = function () {
+        self._select(self.article_table_container.find(".row_selected").prev());
+    };
+
+    /* Returns an every increasing (unique) integer */
+    self._id = 0;
+    self.get_new_id = function(){
+        return self._id += 1
+    };
+
+    /*
+     * Given two sentences a and b, return if a is "greater than" than b.
+     */
+    self.sentence_greater_than = function(a, b){
+        if (a.parnr > b.parnr) return 1;
+        if (a.parnr < b.parnr) return -1;
+        return a.sentnr - b.sentnr;
+    };
+
+    self.coded_article_fetched = function(coded_article, codings, sentences){
+        console.log("Retrieved " + codings.length + " codings and " + sentences.length + " sentences");
+
+        $("#lost-codes").hide();
+        $("#lost-codes .triggered-by").empty();
+
+        $.each(codings[0].results, function(i, coding){
+            coding.annotator_id = self.get_new_id();
+        });
+
+        // sentences_array holds a list of ordered sentences (by sentnr, parnr)
+        self.state.sentences_array = sentences[0].results;
+        self.state.sentences_array.sort(self.sentence_greater_than);
+
+        codings = map_ids(codings[0].results, "annotator_id");
+        sentences = map_ids(sentences[0].results);
+        resolve_ids(codings, sentences, "sentence");
+
+        $.each(codings, function(_, coding){
+            coding.values = map_ids(coding.values, "field");
+            resolve_ids(coding.values, self.models.schemafields, "field");
+
+            $.each(coding.values, function(_, value){
+                value.coding = coding;
+            });
+        });
+
+        self.state.sentences = sentences;
+        self.state.codings = codings;
+        self.state.coded_article = coded_article[0];
+
+        self.article_status_dropdown.val(self.state.coded_article.status).trigger("changed");
+        self.article_comment_textarea.val(self.state.coded_article.comments).trigger("changed");
+
+        var get_unit = function () {
+            return "{0}.{1}".f(this.parnr, this.sentnr);
+        };
+
+        $.each(sentences, function(_, sentence){
+            sentence.get_unit = get_unit.bind(sentence);
+        });
+
+        // Set buttons
+        // $('#next-article-button').button("option", "disabled", row.next().length == 0);
+        //$('#previous-article-button').button("option", "disabled", row.prev().length == 0);
+
+        $("#article-comment").text(coded_article.comments || "");
+        $('#article-status').find('option:contains("' + coded_article.status + '")').attr("selected", "selected");
+
+        // Initialise coding area
+        $(".coding-part").show();
+        self.sentences_fetched(sentences);
+        self.highlight();
+        self.codings_fetched();
+        self.set_tab_order();
+        self.unsaved = false;
+
+        self.loading_dialog.dialog("close");
+
+        var container = (self.codingjob.articleschema === null) ? self.sentence_codings_container : self.article_coding_container;
+        container.find("input:visible").first().focus();
+    };
+
+    self.highlight = function(){
+        console.log("Highlighting ", self.highlight_labels.length ," labels in article..");
+        $("div.sentences").easymark("highlight", self.highlight_labels.join(" "));
+    };
+
+    /*
+     * Resets internal state and fetches new coded article, which consists of:
+     *  - coded_article
+     *  - codings + values
+     *  - sentences
+     * coded_article_fetched is called when requests finished
+     */
+    self.get_article = function(coded_article_id){
+        var base_url = self.get_api_url() + "coded_articles/" + coded_article_id + "/";
+
+        self.state = self.get_empty_state();
+        self.sentence_codings_container.find("table tbody").html("");
+        self.state.coded_article_id = coded_article_id;
+
+        self.state.requests = [
+            self.from_api(base_url),
+            self.from_api(base_url + "codings"),
+            self.from_api(base_url + "sentences")
+        ];
+
+        self.loading_dialog.text("Loading codings..").dialog("open");
+        $.when.apply(undefined, self.state.requests).then(self.coded_article_fetched);
+    };
+
+
+    /*
+     * Get descendants. Needs to be bound to a code object. This call is
+     * automatically cached, and stored in code.descendants.
+     */
+    self.get_descendants = function(depth){
+        depth = (depth === undefined) ? 0 : depth;
+
+        if (depth >= 1000){
+            throw "Maximum recursion depth exceeded, loop in codes?";
         }
-    });
-    
-    
-    $('#unitcoding-table input:text').live('focus', annotator.unitcodings.focusCodingRow);
-    $('#unitcoding-table input:text').live('hover', function(){
-        var el = $(this);
-        if(el.val().length > 10){
-            el.attr('title', el.val());
-        } else if(el.hasClass('error') == false){
-            el.removeAttr('title');
-        }
-    });
 
-   
-    
-    $(window).bind('scroll', function(){
-        if($(window).scrollTop() < 85){
-            $('.article-part').css('position', 'absolute');
-            //$('.article-part').css('top', '90px');
-            //$('.article-part').css('height', ($(window).height() - 90) + 'px');
+        if (this.children.length === 0) return {};
+        if (this.descendants !== undefined) return this.descendants;
+
+        var descendants = $.extend({}, this.children);
+        $.each(this.children, function(code_id, code){
+            $.extend(descendants, code.get_descendants(depth+1));
+        });
+
+        this.descendants = descendants;
+        return this.descendants;
+    };
+
+    /*
+     * Retrieve all coding objects contained in `container`. If `container` is not given,
+     * return all codings.
+     *
+     * @type container: DOM element
+     */
+    self.get_codings = function(container){
+        if (container === undefined){
+            return $.merge([self.get_article_coding()], self.get_sentence_codings());
+        }
+
+        return $.map($(container).find(".coding"), function(coding_el){
+            return self.state.codings[$(coding_el).attr("annotator_coding_id")];
+        });
+    };
+
+    /*
+     * Return all codings which are not the article coding.
+     */
+    self.get_sentence_codings = function(){
+        // Note: this function depends on the presence of DOM elements. This is due to
+        // a bug in earlier versions which duplicated codings. The only reliable way for
+        // now is to match codings with DOM elements.
+        return $.grep(self.get_codings(self.sentence_codings_container), self.is_empty_coding, true);
+    };
+
+    /*
+     * Return article coding
+     */
+    self.get_article_coding = function(){
+        // Note: this function depends on the presence of DOM elements. This is due to
+        // a bug in earlier versions which duplicated codings. The only reliable way for
+        // now is to match codings with DOM elements.
+        return self.get_codings(self.article_coding_container)[0];
+    };
+
+    self.get_empty_coding = function(properties){
+        var empty_coding = $.extend({
+            coded_article : self.state.coded_article,
+            sentence: null,
+            start: null,
+            end: null
+        }, properties, {
+            id: null,
+            annotator_id : self.get_new_id(),
+            values : {}
+        });
+
+        self.state.codings[empty_coding.annotator_id] = empty_coding;
+        return empty_coding;
+    };
+
+    self.is_article_coding = function(coding){
+        return coding.sentence === null;
+    };
+
+
+    /******** EVENTS *******/
+    // TODO: Only initialise article coding html once.
+    self.codings_fetched = function(){
+        self.state.sentence_codings = $.grep($.values(self.state.codings), self.is_article_coding, true);
+        self.state.sentence_codings.sort(function(a,b){
+            return self.sentence_greater_than(a.sentence, b.sentence);
+        });
+
+        // Determine article coding
+        var article_coding = $.grep($.values(self.state.codings), self.is_article_coding);
+
+        if (article_coding.length === 0){
+            self.state.article_coding = self.get_empty_coding();
+            self.article_status_dropdown.trigger("change");
         } else {
-            $('.article-part').css('position', 'fixed');
-            $('.article-part').css('top', '5px');
-            //$('.article-part').css('height', '100%');
+            self.state.article_coding = article_coding[0];
         }
-    });
-    
-    
-    $(document).bind('keydown', 'ctrl+s', function(event){
-        event.preventDefault();
-        try{
-            if($('#save-button').button("option", "disabled") == false){
-                $('#save-button').click();
+
+        // Create html content
+        self.article_coding_container.html(self.get_article_coding_html());
+        rules.add(self.article_coding_container);
+
+        self.initialise_sentence_codings();
+        rules.add(self.sentence_codings_container);
+    };
+
+    /*
+     * Registers property 'choiches' on each schemafield, which can be used
+     * for autocompletes.
+     *
+     * TODO: Move to autocomplete
+     */
+    self.schemafields_fetched = function(){
+        var codes;
+
+        $.each(self.models.schemafields, function(id, schemafield){
+            if (schemafield.choices !== undefined) return;
+            if (widgets.SCHEMATYPES[schemafield.fieldtype] === "codebook"){
+                codes = (schemafield.split_codebook ? schemafield.codebook.roots : schemafield.codebook.codes);
+                schemafield.choices = autocomplete.get_choices(codes);
             }
-        } catch(e){
-            console.error('error', e);
-        }
-        return false;
-    });
-    
-    
-    $(document).bind('keydown', 'ctrl+down', function(event){
-        var el = $(event.target);
-        if(el.is('input, button') && el.parents('#unitcoding-table').length > 0){ // pressed in sentences table
-            event.preventDefault();
-            el.blur();
-            el.parents('tr').find('.add-row-button').click();
-            return false;
-        }
-    })
-    $(document).bind('keydown', 'ctrl+shift+down', function(event){
-         var el = $(event.target);
-        if(el.is('input, button') && el.parents('#unitcoding-table').length > 0){ // pressed in sentences table
-            event.preventDefault();
-            el.blur();
-            console.debug('ctrl + sift');
-            var currentUnit = $('#unitcoding-table .row_selected input:first').val();
-            var newUnit = annotator.getNextSentenceNumber(currentUnit);
-            el.parents('tr').find('.add-row-button').trigger('click', newUnit);
-            return false;
-        }
-    });
-    $(document).bind('keydown', 'shift+down', function(event){
-        var el = $(event.target);
-        if(el.is('input, button') && el.parents('#unitcoding-table').length > 0){ // pressed in sentences table
-            event.preventDefault();
-            el.blur();
-            $('#copy-coding-button').click();
-            return false;
-        }
-    });
-    $(document).bind('keydown', 'alt+down', function(event){
-        var el = $(event.target);
-        if(el.is('input, button') && el.parents('#unitcoding-table').length > 0){ // pressed in sentences table
-            event.preventDefault();
-            el.blur();
-            $('#copy-switch-coding-button').click();
-            return false;
-        }
-    });
+        });
 
-    $(document).bind("keydown", "ctrl+i", function(event){
-        event.preventDefault();
-        $("#irrelevant-button").click();
-    });
+        // Categorize schemafields
+        var articleschema = self.codingjob.articleschema;
+        $.each(self.models.schemafields, function(id, schemafield){
+            if (schemafield.codingschema === articleschema){
+                self.article_schemafields.push(schemafield);
+            } else {
+                self.sentence_schemafields.push(schemafield)
+            }
+        });
 
-    $(document).bind("keydown", "ctrl+d", function(event){
-        event.preventDefault();
-        $("#save-continue-button").click();
-    });
-    
-    // $(document).bind('keydown', 'ctrl+a', function(event){ // disabled since it's annoying not able to select all text in an input (it has a button anyways)
-        // event.preventDefault();
-        // annotator.selectText($('.sentences').get(0));
-        // return false;
-    // });
-} 
+        // Sort schemafields according to fieldnr
+        self.sentence_schemafields.sort(function(f1, f2){ return f1.fieldnr - f2.fieldnr });
+        self.article_schemafields.sort(function(f1, f2){ return f1.fieldnr - f2.fieldnr });
+    };
+
+    /*
+     * Called when codebooks are fetched. Codebooks include all labels and all
+     * functions. codebooks_fetched converts the flat codebookcodes into an
+     * hierarchy.
+     */
+    self.codebooks_fetched = function(){
+        // Set `roots` property on each codebook which contains a mapping
+        // of code_id -> code.
+        $.each(self.models.codebooks, function(codebook_id, codebook){
+            codebook.roots = filter(function(code){ return code.parent === null }, codebook.codes);
+            codebook.roots = map_ids(codebook.roots, "code");
+        });
+
+        $.each(self.models.codebooks, function(codebook_id, codebook){
+            // Initialise children property, and register get_descendants
+            $.each(codebook.codes, function(code_id, code){
+                code.children = {};
+                code.get_descendants = self.get_descendants.bind(code);
+            });
+
+            // Add property 'children' to each code, and call get_descendants for
+            // caching purposes.
+            $.each(codebook.codes, function(code_id, code){
+                if (code.parent === null) return;
+                code.parent.children[code_id] = code;
+            });
+
+            // Cache descendants
+            $.each(codebook.codes, function(i, code) { code.get_descendants() });
+        });
+    };
+
+    /*
+     * Initialise highlighters by preparing self.highlighter_labels. May
+     * push 'undefined' if no label is available in the codebook for the requested
+     * language.
+     */
+    self.highlighters_fetched = function(){
+        var labels = [];
+        var language_id, codebook;
+
+        $.each(self.models.schemas, function(schema_id, schema){
+            language_id = schema.highlight_language;
+            $.each(schema.highlighters, function(i, codebook_id){
+                codebook = self.models.codebooks[codebook_id];
+                $.each(codebook.codes, function(i, code){
+                    labels.push(code.labels[language_id]);
+                });
+            });
+        });
+
+        self.highlight_labels = labels;
+    };
+
+
+    // TODO: Remove legacy code (get_unit() logic, etc.)
+    self.sentences_fetched = function(sentences) {
+        var html = $('<div>');
+        var prev_parnr = 1;
+
+        $.each(sentences, function (i, s) {
+            var _html = $('<div />').attr('id', 'sentence-' + s.id);
+            if (s.parnr != prev_parnr) {
+                _html.addClass('new-paragraph');
+            }
+            if (s.get_unit() == '1.1') {
+                _html.append($('<h2 />').text(s.sentence));
+            } else {
+                _html.append($('<span />').addClass('annotator-sentencenr').text('(' + s.get_unit() + ') '));
+                _html.append(document.createTextNode(s.sentence));
+            }
+            prev_parnr = s.parnr;
+            html.append(_html);
+        });
+
+        if (sentences.length == 0) {
+            html.append('No sentences found for this article');
+        }
+
+        $('.sentence-options').show();
+        $('.sentences').html(html);
+    };
+
+    /*
+     * Sets tabindex-properties to all focusable elements, which are:
+     *  - comment textarea
+     *  - article codingvalues (visible input elements)
+     *  - sentence codingvalues (visible input elements)
+     *  - additional "focus stealer" at the end of each codingrow, which is used to determine when
+     *    a user reached the end of a coding (and we need to add another coding).
+     */
+    self.set_tab_order = function(){
+        var tabindex = 1;
+
+        var set_tabindex = function(_, el) {
+            $(el).attr("tabindex", tabindex);
+            tabindex += 1;
+        };
+
+        $.each(self.article_comment_textarea, set_tabindex);
+        $.each($("input:visible", self.article_coding_container), set_tabindex);
+        $.each($("tbody tr", self.sentence_codings_container), function(_, row){
+            $.each($("input:visible, .focus-stealer", row), set_tabindex);
+        });
+    };
+
+    /*
+     * Change the contents of the column with `column_name` in the currently active row.
+     */
+    self.set_column_text = function(column_name, value){
+        var column = self.article_table_container.find("thead").find("th:contains('{0}')".f(column_name));
+        var column_index = column.parent().children().index(column);
+        var cell = self.article_table_container.find("tr.row_selected").children(":eq({0})".f(column_index));
+        cell.text(value);
+    };
+
+    self.article_status_changed = function(){
+        self.state.coded_article.status = parseInt($(this).val());
+        self.unsaved = true;
+    };
+
+    self.datatables_row_clicked = function(row){
+        if(self.unsaved){
+            return self.show_unsaved_changes((function(){
+                self.datatables_row_clicked.bind(this)(row);
+            }).bind(this));
+        }
+
+        // Get article id which is stored in the id-column of the datatable
+        var coded_article_id = parseInt(row.children('td:first').text());
+        self.datatable.find(".row_selected").removeClass("row_selected");
+        self.datatable.parent().scrollTo(row, {offset: -50});
+        self.get_article(coded_article_id);
+        row.addClass("row_selected");
+    };
+
+    self.window_scrolled = function(){
+        if ($(window).scrollTop() < 85){
+            self.article_container.css("position", "absolute");
+        } else {
+            self.article_container.css("position", "fixed");
+            self.article_container.css("top", "5px");
+        }
+    };
+
+    self.window_resized = function(){
+        var width = $(window).width();
+        if (self.previous_width !== width)
+            return;
+
+        // We need to adjust to the new browser width
+        self.previous_width = width;
+        self.datatable.fnAdjustColumnSizing();
+        self.width_warning_dialog.dialog((width < 1000) ? "open" : "close");
+    };
+
+    self.initialise_shortcuts = function(){
+        var doc = $(document);
+        $.each(self.shortcuts(), function(keys, callback){
+            doc.bind("keydown", keys, function(event){
+                event.preventDefault();
+                callback(event);
+            });
+        })
+    };
+
+    // TODO: Clean, comment on magic
+    self.initialise_wordcount = function(){
+        // http://stackoverflow.com/questions/6743912/get-the-pure-text-without-html-element-by-javascript
+        var sentence_re = / id="sentence-[0-9]*"/g;
+        var count = function () {
+            var html = "";
+            if (typeof window.getSelection != "undefined") {
+                var sel = window.getSelection();
+                if (sel.rangeCount) {
+                    var container = document.createElement("div");
+                    for (var i = 0, len = sel.rangeCount; i < len; ++i) {
+                        container.appendChild(sel.getRangeAt(i).cloneContents());
+                    }
+                    html = container.innerHTML;
+                }
+            } else if (typeof document.selection != "undefined") {
+                if (document.selection.type == "Text") {
+                    html = document.selection.createRange().htmlText;
+                }
+            }
+
+            html = $("<div>" + html.replace(sentence_re, '') + "</div>");
+            $(".annotator-sentencenr", html).remove();
+
+            var text = "";
+            $.each(html, function (i, el) {
+                text += el.innerHTML.replace("</div><div>", " ");
+                text += " ";
+            });
+
+            var count = 0;
+            $.each(text.split(/ /g), function (i, word) {
+                // replace functions like strip() in Python
+                if (word.replace(/^\s+|\s+$/g, '') !== "") count++;
+            });
+
+            $("#wordcount").html(count);
+        };
+
+        $(".article-part").find(".sentences").mouseup(function () {
+            window.setTimeout(count, 50);
+        });
+    };
+
+    self.on_unload = function(){
+        if (!self.unsaved) return;
+        return "You have unsaved changes. Continue?"
+    };
+
+    self.initialise = function(project_id, codingjob_id, coder_id, language_id){
+        $("#lost-codes").hide();
+
+        self.project_id = project_id;
+        self.codingjob_id = codingjob_id;
+        self.coder_id = coder_id;
+        self.language_id = language_id;
+
+        self.initialise_containers();
+        self.initialise_buttons();
+        self.initialise_dialogs();
+        self.initialise_shortcuts();
+        self.initialise_fields();
+        self.initialise_wordcount();
+
+        window.onbeforeunload = self.on_unload;
+    };
+
+
+    return self;
+})({});
+
+
+/************* Storing data *************/
+/*
+ * For all AJAX errors, display a generic error messages. This eliminates
+ * lots of boiler-plate code in functions which use AJAX calls.
+ */
+$(document).ajaxError(function(event, xhr, ajaxOptions) {
+    var message = "An error occured while requesting: {0}. Server responded: {1} {2}.";
+    message = message.f(ajaxOptions.url, xhr.status, xhr.statusText);
+    $("<div>").text(message).dialog({ modal: true });
+});
+
+/*
+ * Ask user to confirm quitting in the case of unsaved changes
+ */
+$(window).bind("beforeunload", function(){
+    return annotator.modified() ? "Unsaved changes present. Continue quitting?" : undefined;
+});

@@ -30,7 +30,7 @@ def _redirect_login(request):
         return redirect(next1)
 
     # Redirect to frontpage
-    return redirect("navigator.views.report.index")
+    return redirect("navigator.views.index.index")
 
 
 def login(request):
@@ -43,7 +43,7 @@ def login(request):
 
     system = AmCAT.get_instance()
     announcements = [system.server_warning, system.global_announcement]
-    
+
     announcement = "<hr/>".join(a for a in announcements if a is not None)
 
     if request.method == "POST":
@@ -71,7 +71,7 @@ def logout(request):
 
 def register(request):
     """
-    Let the user fill in a registration form or process such a form. 
+    Let the user fill in a registration form or process such a form.
     """
     form = AddUserForm(request, data=request.POST or None)
 
@@ -89,7 +89,7 @@ def register(request):
             form.cleaned_data['language'],
             Role.objects.get(id=1)
         )
-        
+
         form = AddUserForm(request)
 
     return render(request, "accounts/register.html", locals())
@@ -116,4 +116,3 @@ def recover_confirm(request, uidb64, token):
             uidb64=uidb64, token=token,
             template_name="accounts/recover_confirm.html",
             post_reset_redirect=reverse(login))
-

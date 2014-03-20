@@ -1,0 +1,32 @@
+{% extends "project/base.html" %}
+
+{% block content %}
+
+{% if can_edit %}
+
+<form action="" method="POST">
+    <legend>Edit project details of project {{project.id}}: "{{ project.name }}"</legend>
+   <table>
+    {{ form.as_table }}
+   </table>
+ 
+   <div class="form-actions">
+    <input class="btn btn-primary" type="submit" value="Save"></input>
+    <a href="{% url "project" project.id %}" class="btn">Cancel</a>
+   </div>
+</form>
+
+{% else %}
+
+<legend>Project Details</legend>
+<table class="key_value">
+
+ {% for field in form %}
+<tr>
+<th>{{ field.label }}</th><td> {{field.value}}</td>
+</tr>
+ {% endfor %}
+</table>
+{% endif %}
+
+{% endblock %}

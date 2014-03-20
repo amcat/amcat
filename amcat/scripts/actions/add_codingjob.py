@@ -57,7 +57,7 @@ class AddCodingJob(Script):
         job = self.bound_form.save(commit=False)
         
         if not job_size:
-            job.articleset = ArticleSet.create_set(project=project, name=name, articles=articleset.articles.all())
+            job.articleset = ArticleSet.create_set(project=project, name=name, articles=articleset.articles.all(), favourite=False)
             job.save()
             return job
 
@@ -65,8 +65,9 @@ class AddCodingJob(Script):
         result = []
         for i, start in enumerate(range(0, n, job_size)):
             job.pk = None
-            job.articleset = ArticleSet.create_set(project=project, articles=articleset.articles.all()[start : start + job_size],
-                                                   name="{name} - {j}".format(j=i+1, **locals()))
+            articles = articleset.articles.all()[start : start + job_size]
+            set_name = "{name} - {j}".format(j=i+1, **locals())
+            job.articleset = ArticleSet.create_set(project=project, articles=articles, name=set_name, favourite=False)
             job.name = "{name} - {j}".format(j=i+1, **locals())
             job.save()
             result.append(CodingJob.objects.get(pk=job.pk))

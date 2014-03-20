@@ -136,7 +136,7 @@ class Project(AmcatModel):
     def save(self, *args, **kargs):
         if self.insert_user_id is None:
             # Import at top causes a circular import, unfortunately
-            from amcatnavigator.utils.auth import get_request
+            from navigator.utils.auth import get_request
 
             # No insert user is set, try to retrieve it
             req = get_request()
@@ -150,12 +150,20 @@ class Project(AmcatModel):
         Return the role id that this user has, by his own right or as guest
         If user is None, returns the guest role id
         """
+        project_role = None
+        guest_role = self.guest_role_id
+        
         if user:
             try:
-                return self.projectrole_set.get(user=user).role_id
+                project_role = self.projectrole_set.get(user=user).role_id
             except ProjectRole.DoesNotExist:
                 pass
-        return self.guest_role_id
+
+        # int > None is removed in python3, so avoid direct comparison
+        if project_role is None: return guest_role
+        if guest_role is None: return project_role
+        return max(project_role, guest_role)
+
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

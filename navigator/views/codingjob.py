@@ -25,7 +25,7 @@ from api.rest.datatable import Datatable
 from navigator.utils.auth import check
 from amcat.models.user import User
 
-from settings.menu import CODINGJOB_MENU
+CODINGJOB_MENU=None
 from api.rest.resources import CodingJobResource
 
 @check(User, args='coder_id', args_map={'coder_id' : 'id'})
@@ -33,6 +33,8 @@ def index(request, coder=None):
     """
     Show unfinished jobs
     """
+    is_firefox = "Firefox" in request.META["HTTP_USER_AGENT"]
+
     coder = coder if coder is not None else request.user
 
     jobs = Datatable(CodingJobResource, rowlink='/annotator/codingjob/{id}')
@@ -45,21 +47,4 @@ def index(request, coder=None):
         'selected' : 'unfinished jobs'
     })
 
-    return render(request, 'navigator/report/codingjobs.html', locals())
-
-@check(User, args='coder_id', args_map={'coder_id' : 'id'})
-def all(request, coder):
-    """
-    Show all (including finished) jobs
-    """
-    jobs = Datatable(CodingJobResource).filter(coder=coder)
-
-    ctx = locals()
-    ctx.update({
-        'jobs' : jobs,
-        'menu' : CODINGJOB_MENU,
-        'context' : coder,
-        'selected' : 'all jobs'
-    })
-
-    return render(request, 'navigator/report/codingjobs.html', ctx)
+    return render(request, 'codingjobs.html', locals())

@@ -18,15 +18,17 @@
 ###########################################################################
 from django.core.urlresolvers import reverse
 from rest_framework import serializers, permissions, exceptions, status
-from rest_framework.viewsets import ModelViewSet
+from rest_framework.viewsets import ModelViewSet, ViewSetMixin
 from amcat.models import Project, Role
 from amcat.tools.caching import cached
-from api.rest.resources.amcatresource import DatatablesMixin
+from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from amcat.models.authorisation import (ROLE_PROJECT_READER, ROLE_PROJECT_WRITER,
                                         ROLE_PROJECT_ADMIN, ROLE_PROJECT_METAREADER)
 
 import logging
+from api.rest.viewset import AmCATViewSetMixin
+
 log = logging.getLogger(__name__)
 
 __all__ = ("CannotEditLinkedResource", "NotFoundInProject", "ProjectPermission",
@@ -63,6 +65,7 @@ class ProjectPermission(permissions.BasePermission):
         if view.project is None: return True
 
         user = request.user if request.user.is_authenticated() else None
+        if user and user.is_superuser: return True
         required_role_id = getattr(view, 'permission_map', {}).get(request.method)
         if not required_role_id:
             required_role_id = _DEFAULT_PERMISSION_MAP[request.method]
@@ -86,8 +89,12 @@ class ProjectSerializer(AmCATModelSerializer):
     @cached
     def favourite_projects(self):
         """List of id's of all favourited projects by the currently logged in user"""
-        return set(self.context['request'].user.userprofile
-                    .favourite_projects.values_list("id", flat=True))
+        user = self.context['request'].user
+        if user.is_anonymous():
+            return set()
+        else:
+            return set(self.context['request'].user.userprofile
+                       .favourite_projects.values_list("id", flat=True))
 
     def is_favourite(self, project):
         if project is None: return
@@ -102,19 +109,11 @@ class ProjectSerializer(AmCATModelSerializer):
     class Meta:
         model = Project
 
-class ProjectViewSetMixin(object):
+class ProjectViewSetMixin(AmCATViewSetMixin):
     permission_classes = (ProjectPermission,)
     model_serializer_class = ProjectSerializer
-    url = "projects"
-
-    @property
-    def project(self):
-        if not hasattr(self, "_project"):
-            self._project = None
-            if "project" in self.kwargs:
-                project_id = int(self.kwargs['project'])
-                self._project = Project.objects.get(pk=project_id)
-        return self._project
+    model_key = "project"
+    model = Project
 
     @classmethod
     def get_url(cls, base_name=None, view='list', **kwargs):
@@ -126,9 +125,20 @@ class ProjectViewSetMixin(object):
 class ProjectViewSet(ProjectViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Project
 
+    @property
+    def project(self):
+        if 'pk' in self.kwargs:
+            return Project.objects.get(pk=self.kwargs['pk'])
+        else:
+            return None # no permissions needed. Not a very elegant signal?
+    
     def filter_queryset(self, queryset):
         qs = super(ProjectViewSet, self).filter_queryset(queryset)
-        role = Role.objects.get(label="reader", projectlevel=True)
-        return qs.filter(id__in=self.request.user.get_profile().get_projects(role))
+        role = Role.objects.get(label="metareader", projectlevel=True)
+        if self.request.user.is_anonymous():
+            return qs.filter(guest_role__id__gte=role.id)
+
+        else:
+            return qs.filter(id__in=self.request.user.get_profile().get_projects(role))
 
 

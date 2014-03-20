@@ -1,0 +1,62 @@
+{% extends "project/base.html" %}
+
+{% block actions %}
+{% if user == object.coder or is_admin %}
+<a class="btn btn-primary" href="{% url 'annotator-codingjob' project.id object.id %}"><i class="glyphicon glyphicon-list-alt"></i>
+{% if user == object.coder %}
+  Code
+{% else %} 
+  Inspect codes
+{% endif %}
+</a>
+{% endif %}
+
+{% if can_edit %}
+<a class="btn btn-default" href="{% url "coding job-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit Settings</a>
+<a class="btn btn-danger confirm" href="{% url "coding job-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
+{% endif %}
+{% endblock actions %}
+
+{% block details %}
+<div class="panel panel-default" style="margin-bottom: 1em">
+  <div class="panel-heading">
+    <h4 class="panel-title">
+      <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+	Coding Job Details
+      </a>
+    </h4>
+  </div>
+  <div id="collapseOne" class="panel-collapse collapse in">
+    <div class="panel-body">
+      <table class="key_value">
+	<tr>
+	  <td>ID:</td>
+	  <td>{{object.id}}</td>
+	</tr>
+	<tr>
+	  <td>Name:</td>
+	  <td>{{object.name}}</td>
+	</tr>
+	<tr>
+	  <td>Coder:&nbsp;</td>
+	  <td>{{object.coder}}</td>
+	</tr>
+	
+	<tr>
+	  <td>Unit Schema:&nbsp;</td>
+	  <td>{{object.unitschema}}</td>
+	</tr>
+	<tr>
+	  <td>Article Schema:&nbsp;</td>
+	  <td>{{object.articleschema}}</td>
+	</tr>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock details %}
+
+{% block content %}
+<label>Articles included:</label>
+{{ table }}
+{% endblock %}

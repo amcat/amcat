@@ -49,9 +49,8 @@ class CodingSchema(AmcatModel):
     comment = models.TextField(null=True)
     keywords = models.TextField(null=True)
 
-    isnet = models.BooleanField(default=False)
     isarticleschema = models.BooleanField(default=False)
-    quasisentences = models.BooleanField(default=False)
+    subsentences = models.BooleanField(default=False, help_text="Allow subsentences to be coded.")
 
     project = models.ForeignKey("amcat.Project")
     highlighters = models.ManyToManyField("amcat.Codebook")

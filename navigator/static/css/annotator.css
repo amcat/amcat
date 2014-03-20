@@ -70,13 +70,11 @@ html {
    
 }
 
-.article-part{
-    /* float:right; */
+article{
     width:29%;
     background:white;
     position:absolute;
     right:10px;
-    /* top:90px; */
     height:90%;
 }
 
@@ -89,6 +87,9 @@ html {
     height:100%;
 }
 
+.sentences .active{
+    background-color: #d9edf7;
+}
 
 h2{
     font-size:15px;
@@ -106,7 +107,6 @@ h2{
 
 .sentence{
     margin-top:10px;
-    display:block;
 }
 
 .annotator-sentencenr{
@@ -192,14 +192,6 @@ h2{
     overflow-x: hidden;
     font-size:11px;
     max-width:300px;
-}
-
-/* .ui-autocomplete li a{
-    margin:1px;
-} */
-
-#unitcoding-table  input{
-    width:60px;
 }
 
 #unitcoding-table{

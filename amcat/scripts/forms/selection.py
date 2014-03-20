@@ -25,6 +25,9 @@ import logging
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
+
+
 
 from amcat.models import Project, ArticleSet, Medium, AmCAT
 from amcat.models import Codebook, Language, Label, Article
@@ -94,10 +97,14 @@ class SelectionForm(forms.Form):
 
         self.project = project
 
-        codebooks = Codebook.objects.filter(project_id=project.id)
+        codebooks = Codebook.objects.filter(Q(project_id=project.id)|Q(projects_set=project))
         self.fields['mediums'].queryset = self._get_mediums()
         self.fields['codebook'].queryset = codebooks
-        self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
+
+        if data and data.get("output") == "html":
+            self.fields['articlesets'].queryset = ArticleSet.objects.all()
+        else:
+            self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
 
         distinct_args = ["id"] if db_supports_distinct_on() else []
 
@@ -223,14 +230,16 @@ class SelectionForm(forms.Form):
 
         # Check if they can be chosen
         articlesets = self.cleaned_data["articlesets"]
-        all_articles = Article.objects.filter(articlesets_set__in=articlesets).distinct("id")
-        chosen_articles = Article.objects.filter(id__in=article_ids).distinct("id")
+        distinct_args = ["id"] if db_supports_distinct_on() else []
+        all_articles = Article.objects.filter(articlesets_set__in=articlesets).distinct(*distinct_args)
+        chosen_articles = Article.objects.filter(id__in=article_ids).distinct(*distinct_args)
         intersection = all_articles & chosen_articles
 
         if chosen_articles.count() != intersection.count():
             # Find offenders (skipping non-existing, which we can only find when
             # fetching all possible articles)
-            offenders = chosen_articles.exclude(all_articles).values_list("id", flat=True)
+            existing = all_articles.values_list("id", flat=True)
+            offenders = chosen_articles.exclude(id__in=existing).values_list("id", flat=True)
             raise ValidationError(
                 ("Articles {offenders} not in chosen articlesets or some non-existent"
                     .format(**locals())), code="invalid")
@@ -281,8 +290,23 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         p, c, form = self.get_form()
         form.full_clean()
         self.assertEqual(set(p.get_mediums()), set(form.cleaned_data["mediums"]))
-        
 
+    @amcattest.use_elastic
+    def test_clean_article_ids(self):
+        p, _, form = self.get_form()
+        aset = amcattest.create_test_set(1)
+        article = aset.articles.all()[0]
+        p.articlesets.add(aset)
+
+        self.assertTrue(form.is_valid())
+        _, _, form = self.get_form(project=p, article_ids=str(article.id))
+        self.assertTrue(form.is_valid())
+        _, _, form = self.get_form(project=p, article_ids=str(article.id + 1))
+        self.assertTrue(form.is_valid())
+
+        article2 = amcattest.create_test_set(1).articles.all()[0]
+        _, _, form = self.get_form(project=p, article_ids=str(article2.id))
+        self.assertFalse(form.is_valid())
 
 
     def test_field_ordering(self):

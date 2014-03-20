@@ -20,12 +20,11 @@
 # Django settings for amcatnavigator project.
 from django.templatetags.static import get_static_prefix
 import os
-
-from amcat.tools.toolkit import random_alphanum
-from amcat.tools import hg
 from os import path
 
-import setup
+from amcat import __version__
+from amcat.tools.toolkit import random_alphanum
+from amcat.tools import hg
 
 # Python 2.x vs 3.x
 try:
@@ -49,7 +48,7 @@ TEMPLATE_DEBUG = DEBUG
 
 APPNAME = 'navigator'
 APPNAME_VERBOSE = 'AmCAT Navigator'
-AMCAT_VERSION = setup.package['version']
+AMCAT_VERSION = __version__
 ROOT = path.abspath(path.join(path.dirname(path.abspath(__file__)), '..'))
 
 DATABASE_OPTIONS = {
@@ -163,13 +162,14 @@ INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',
     'accounts',
     'annotator',
     'navigator',
     'api',
     'amcat',
     'django_extensions',
-    'compressor'
+    'compressor',
 ]
                     
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
@@ -220,10 +220,14 @@ REST_FRAMEWORK = {
     'FILTER_BACKEND' : 'api.rest.filters.AmCATFilterBackend',
     'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.BrowsableAPIRenderer',
                                  'rest_framework.renderers.JSONRenderer',
-                                 'api.rest.csvrenderer.CSVRenderer', ),
+                                 'api.rest.tablerenderer.CSVRenderer', 
+                                 'api.rest.tablerenderer.XLSXRenderer',
+                                 'api.rest.tablerenderer.SPSSRenderer',
+                             ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'api.rest.tokenauth.ExpiringTokenAuthentication',
     )
 }
 
@@ -323,3 +327,4 @@ if 'DJANGO_LOG_FILE' in os.environ:
         'formatter': 'color',
         }
     LOGGING['loggers']['']['handlers'] += ['logfile']
+

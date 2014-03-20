@@ -29,7 +29,9 @@ from amcat.tools import amcates
 from amcat.models.authorisation import Role
 from amcat.models.medium import Medium
 
-from django.db import models
+from django.db import models, transaction
+from django.db.utils import IntegrityError, DatabaseError
+from django.core.exceptions import ValidationError
 
 import logging;
 
@@ -67,7 +69,7 @@ class Article(AmcatModel):
     author = models.TextField(blank=True, null=True, max_length=100)
     addressee = models.TextField(blank=True, null=True, max_length=100)
     uuid = PostgresNativeUUIDField(db_index=True, unique=True)
-    
+
     #sets = models.ManyToManyField("amcat.Set", db_table="sets_articles")
 
     text = models.TextField()
@@ -76,6 +78,9 @@ class Article(AmcatModel):
                                db_index=True, blank=True)
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
+
+    insertscript = models.CharField(blank=True, null=True, max_length=500)
+    insertdate = models.DateTimeField(blank=True,null=True,auto_now_add=True)
 
     class Meta():
         db_table = 'articles'
@@ -99,14 +104,14 @@ class Article(AmcatModel):
             for word in sentence.words:
                 yield word
 
-    def get_sentence(self, parnr, setnr):
+    def get_sentence(self, parnr, sentnr):
         "@return: a Sentence object with the given paragraph and sentence number"
         for s in self.sentences:
             if s.parnr == parnr and s.sentnr == sentnr:
                 return s
 
     def getSentence(self, parnr, sentnr):
-        return self.get_sentence(parnr, setnr)
+        return self.get_sentence(parnr, sentnr)
 
     ## Auth ##
     def can_read(self, user):
@@ -135,7 +140,7 @@ class Article(AmcatModel):
         Article objects can contain a 'custom' nested_articles attribute. In that case,
         this should be a list of article-like objects that will also be saved, and will
         have the .parent set to the containing article
-        
+
         @param articles: a collection of objects with the necessary properties (.headline etc)
         @param articleset: an articleset object
         @param check_duplicate: if True, duplicates are not added to the database or index
@@ -151,15 +156,17 @@ class Article(AmcatModel):
 
         if check_duplicate:
             hashes = [a.es_dict['hash'] for a in articles]
-            results =es.query(filters={'hashes' : hashes}, fields=["hash", "sets"], score=False) 
+            results =es.query(filters={'hashes' : hashes}, fields=["hash", "sets"], score=False)
             dupes = {r.hash : r for r in results}
         else:
             dupes = {}
 
-        # add all non-dupes to the db, needed actions        
+        # add all non-dupes to the db, needed actions
         add_to_set = set() # duplicate article ids to add to set
         add_new_to_set = set() # new article ids to add to set
         add_to_index = [] # es_dicts to add to index
+        result = [] # return result
+        errors = [] # return errors
         for a in articles:
             dupe = dupes.get(a.es_dict['hash'], None)
             if dupe:
@@ -169,7 +176,17 @@ class Article(AmcatModel):
             else:
                 if a.parent:
                     a.parent_id = a.parent.duplicate_of if hasattr(a.parent, 'duplicate_of') else a.parent.id
-                a.save()
+                sid = transaction.savepoint()
+                try:
+                    sid = transaction.savepoint()
+                    a.save()
+                    transaction.savepoint_commit(sid)
+                except (IntegrityError, ValidationError, DatabaseError) as e:
+                    log.warning(str(e))
+                    transaction.savepoint_rollback(sid)
+                    errors.append(e)
+                    continue
+                result.append(a)
                 a.es_dict['id'] = a.pk
                 add_to_index.append(a.es_dict)
                 add_new_to_set.add(a.pk)
@@ -180,11 +197,31 @@ class Article(AmcatModel):
         # add to index
         if add_to_index:
             es.bulk_insert(add_to_index)
-                
+
         if articleset:
             # add to articleset (db and index)
             articleset.add_articles(add_to_set | add_new_to_set, add_to_index=False)
             es.add_to_set(articleset.id, add_to_set)
+
+        return result, errors
+
+    @classmethod
+    def ordered_save(cls, articles, *args, **kwargs):
+        """Figures out parent-child relationships, saves parent first
+        @param articles: a collection of unsaved articles
+        @param articleset: an articleset object
+        @param check_duplicate: if True, duplicates are not added to the database or index
+        """
+        index = {a.text: a for a in articles if a}
+        articles, errors = cls.create_articles(articles, *args, **kwargs)
+        for a in articles:
+            parent = index[a.text].parent
+            for b in articles:
+                if parent and b.text == parent.text:
+                    a.parent = b
+                    a.save()
+        return articles, errors
+
 
 
 ###########################################################################
@@ -194,7 +231,7 @@ class Article(AmcatModel):
 from amcat.tools import amcattest
 
 class TestArticle(amcattest.AmCATTestCase):
-    
+
     @amcattest.use_elastic
     def test_create(self):
         """Can we create/store/index an article object?"""
@@ -207,7 +244,7 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertEqual(a.headline, es_a.headline)
         self.assertEqual('2010-12-31T00:00:00', db_a.date.isoformat())
         self.assertEqual('2010-12-31T00:00:00', es_a.date.isoformat())
-        
+
 
     @amcattest.use_elastic
     def test_deduplication(self):
@@ -216,7 +253,7 @@ class TestArticle(amcattest.AmCATTestCase):
                    medium=amcattest.create_test_medium(),
                    project=amcattest.create_test_project(),
                    )
-        
+
         a1 = amcattest.create_test_article(**art)
         def q(**filters):
             amcates.ES().flush()
@@ -233,7 +270,7 @@ class TestArticle(amcattest.AmCATTestCase):
         # should be added to that set
         s1 = amcattest.create_test_set()
         a3 = amcattest.create_test_article(check_duplicate=True,articleset=s1, **art)
-        
+
         self.assertFalse(Article.objects.filter(pk=a2.id).exists())
         self.assertEqual(a3.duplicate_of, a1.id)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
@@ -245,8 +282,8 @@ class TestArticle(amcattest.AmCATTestCase):
         self.assertTrue(Article.objects.filter(pk=a4.id).exists())
         self.assertFalse(hasattr(a4, 'duplicate_of'))
         self.assertIn(a4.id, q(mediumid=art['medium']))
-        
-        
+
+
     def test_unicode_word_len(self):
         """Does the word counter eat unicode??"""
         u = u'Kim says: \u07c4\u07d0\u07f0\u07cb\u07f9'
@@ -254,7 +291,7 @@ class TestArticle(amcattest.AmCATTestCase):
 
         b = b'Kim did not say: \xe3\xe3k'
         self.assertEqual(word_len(b), 5)
-        
+
     @amcattest.use_elastic
     def test_unicode(self):
         """Test unicode headlines"""
@@ -270,4 +307,3 @@ class TestArticle(amcattest.AmCATTestCase):
         a = amcattest.create_test_article(medium=m)
         r = amcates.ES().query(filters={"id" : a.id}, fields=["medium"])
         print(r)
-                                                             

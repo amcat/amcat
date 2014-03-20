@@ -27,17 +27,12 @@ from amcat.models.articleset import *
 from amcat.models.user import *
 from amcat.models.project import *
 from amcat.models.sentence import *
-from amcat.models.sentiment import *  
 from amcat.models.amcat import *
 from amcat.models.task import *
 
 from amcat.models.plugin import *
 
-from amcat.models.word import *
-from amcat.models.analysis import *
-from amcat.models.token import *
-
-
+from amcat.models.coding.codedarticle import *
 from amcat.models.coding.codingschema import *
 from amcat.models.coding.codingschemafield import *
 from amcat.models.coding.codingjob import *

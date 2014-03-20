@@ -1,20 +1,20 @@
 {% if not page %}
-<h2>Found {{ n }} articles</h2>
+<b>Found {{ n }} articles</b>
 {% endif %}
 
 <ul class="articlelist">
 {% for a in articlelist %}
    <li>
-     <h3 class="article-headline">
+     <div class="article-headline">
         {% if a.totalHits %} <span class="hit-count">{{a.totalHits}} hits - </span>{% endif %}
-        <a href="{% url "navigator.views.article.view" a.hack_project_id a.id %}" target="_blank">
+        <a href="{% url "project-article-details" a.hack_project_id a.id %}" target="_blank">
              {% if a.highlight.headline %}
                 {{ a.highlight.headline|first|safe|default:"[No headline]"}}
                {% else %}
                 {{ a.headline|default:"[No headline]"}}
              {% endif %}
         </a>
-     </h3>
+     </div>
      <div class="article-meta">
         {{ a.date|date:"d-m-Y" }} | 
 {#        articleid: {{a.id}} |   #}
@@ -55,7 +55,7 @@
             values['start'] = resultCount;
             console.log('results start from', values['start']);
             var data = $.param(values, true);
-            amcat.selection.callWebscript('ShowArticleList', data, function(data, textStatus, jqXHR){
+            amcat.selection.callWebscript('ShowSummary', data, function(data, textStatus, jqXHR){
                 el.before(data);
                 el.remove();
              });

@@ -23,10 +23,11 @@ Plugin for uploading html files of a certain markup, provided by BZK
 
 from __future__ import unicode_literals, absolute_import
 from amcat.scripts.article_upload.upload import UploadScript
-from amcat.scraping.document import HTMLDocument
 from amcat.tools.toolkit import readDate
 from amcat.models.medium import Medium
+from amcat.models.article import Article
 from lxml import html
+from html2text import html2text
 import re
 import logging; log = logging.getLogger(__name__)
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES
@@ -46,38 +47,41 @@ class BZK(UploadScript):
         if title:
             title_text = title[0].text.lower().strip()
             if "intranet/rss" in title_text or "werkmap" in title_text:
-                for article in self.scrape_old(etree, title_text):
+                for article in self.scrape_1(etree, title_text):
                     yield article
+        elif etree.cssselect("h1"):
+            for article in self.scrape_2(etree):
+                yield article
         else:
-            for article in self.scrape_new(etree):
+            for article in self.scrape_3(etree):
                 yield article
 
-    def scrape_old(self, _html, t):
-        """Old format"""
+    def scrape_1(self, _html, t):
+        """format of mostly 2013"""
         if "werkmap" in t:
             divs = _html.cssselect("#articleTable div")
         elif "intranet/rss" in t:
             divs = [div for div in _html.cssselect("#sort div") if "sort_" in div.get('id')]
             
         for div in divs:
-            article = HTMLDocument()
-            article.props.html = div
-            article.props.headline = div.cssselect("#articleTitle")[0].text_content()
-            article.props.text = div.cssselect("#articleIntro")[0]
+            article = Article(metastring = {})
+            article.metastring['html'] = div
+            article.headline = div.cssselect("#articleTitle")[0].text_content()
+            article.text = div.cssselect("#articleIntro")[0]
             articlepage = div.cssselect("#articlePage")
             if articlepage:
-                article.props.pagenr, article.props.section = self.get_pagenum(articlepage[0].text)
+                article.pagenr, article.section = self.get_pagenum(articlepage[0].text)
 
-            article.props.medium = self.get_medium(div.cssselect("#sourceTitle")[0].text)
+            article.medium = self.get_medium(div.cssselect("#sourceTitle")[0].text)
             date_str = div.cssselect("#articleDate")[0].text
             try:
-                article.props.date = readDate(date_str)
+                article.date = readDate(date_str)
             except ValueError:
                 log.error("parsing date \"{date_str}\" failed".format(**locals()))
             else:
                 yield article
 
-    def scrape_new(self, _html):
+    def scrape_2(self, _html):
         """New format as of 2014 and a few days before"""
 
         docdate = readDate(_html.cssselect("h1")[0].text.split("-")[1])
@@ -99,32 +103,61 @@ class BZK(UploadScript):
 
         for item in items:
             article = self.parse_item(item)
-            if not article.props.date:
-                article.props.date = docdate
+            if not article.date:
+                article.date = docdate
             yield article
+
+    def scrape_3(self, _html):
+        """Some ugly MS Word format, as of 2014-03-03"""
+        # Partition articles
+        part = []
+        articles = []
+        for tag in _html.cssselect("body > div > *"):
+            if tag.cssselect("hr"):
+                articles.append(part)
+                part = []
+            else:
+                part.append(tag)
+        for tags in articles[1:]:
+            article = Article()
+            dateline = tags[1].text_content().strip()
+            article = self.parse_dateline(dateline, article)
+            article.headline = tags[1].text_content().strip()
+            html_str = "".join([html.tostring(t) for t in tags[2:]])
+            article.text = html2text(html_str)
+            article.metastring = {'html': html_str}
+            
+            yield article
+
+
+    def parse_dateline(self, text, article):
+        bits = text.split()
+        if "-" in bits[-1]:
+            article.date = readDate(bits[-1])
+            article.medium = self.get_medium(" ".join(bits[:-1]))
+        elif bits[-1].isdigit():
+            article.date = readDate(" ".join(bits[-3:]))
+            article.medium = self.get_medium(" ".join(bits[:-3]))
+        else:
+            article.medium = self.get_medium(" ".join(bits))
+            article.date = None
+        return article
 
     def parse_item(self, item):
         #item: a list of html tags
-        article = HTMLDocument()
+        article = Article(metastring = {})
         for tag in item:
-            if tag.tag == "p":
-                if hasattr(article.props, 'text'):
-                    article.props.text.append(tag)
+            if tag.tag in ("p","div"):
+                if not (hasattr(article,'text') or article.text):
+                    article.text.append(tag)
                 else:
-                    article.props.text = [tag]
+                    article.text = [tag]
             elif tag.tag == "h2":
-                article.props.headline = tag.text
+                article.headline = tag.text
             elif tag.tag == "i":
-                bits = tag.text.split()
-                if "-" in bits[-1]:
-                    article.props.date = readDate(bits[-1])
-                    article.props.medium = self.get_medium(" ".join(bits[:-1]))
-                elif bits[-1].isdigit():
-                    article.props.date = readDate(" ".join(bits[-3:]))
-                    article.props.medium = self.get_medium(" ".join(bits[:-3]))
-                else:
-                    article.props.medium = self.get_medium(" ".join(bits))
-                    article.props.date = None
+                article = self.parse_dateline(tag.text, article)
+        #process html
+        article.text = "\n".join([html2text(html.tostring(bit)) for bit in article.text])
         return article
 
     def get_medium(self, text):
@@ -142,7 +175,6 @@ class BZK(UploadScript):
         if section:
             section = section.strip()
         return int(pagenum), section
-
 
 if __name__ == "__main__":
     from amcat.scripts.tools import cli
@@ -173,8 +205,8 @@ class TestBZK(amcattest.AmCATTestCase):
             # headline, text, pagenr, section, medium, date
             must_props = ('headline', 'text', 'medium', 'date')
             may_props = ('pagenr','section')
-            must_props = [[getattr(a.props, prop) for a in self.result] for prop in must_props]
-            may_props = [[getattr(a.props, prop) for a in self.result] for prop in may_props]
+            must_props = [[getattr(a,prop) for a in self.result] for prop in must_props]
+            may_props = [[getattr(a,prop) for a in self.result] for prop in may_props]
 
             for proplist in must_props:
                 self.assertTrue(all(proplist))

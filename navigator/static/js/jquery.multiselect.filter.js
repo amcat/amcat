@@ -159,7 +159,9 @@
 				
 				this._trigger( "filter", e, $.map(cache, function(v,i){
 					if( v.search(regex) !== -1 ){
-						rows.eq(i).show();
+					        // if first row is 'None' dummy, skip it
+					        rownr = (rows[0].innerText.indexOf("----") == 0)?i+1:i;
+					        rows.eq(rownr).show();
 						return inputs.get(i);
 					}
 					

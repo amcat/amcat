@@ -59,8 +59,8 @@ function confirm_dialog(event) {
         event.preventDefault();
        
         var dialog = $('' +
-            '<div class="modal hide fade">' +
-                '<div class="modal-header">' +
+            '<div class="modal fade">' +
+                '<div class="modal-dialog"><div class="modal-content"><div class="modal-header">' +
                         '<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>' +
                         '<h3 class="noline">Irreversible action</h3>' +
                 '</div>' +
@@ -71,7 +71,7 @@ function confirm_dialog(event) {
                     '<a href="#" class="btn cancel-button">Cancel</a>' +
                     '<a href="' +  $(event.currentTarget).attr("href") + '" class="btn btn-danger">Proceed</a>' +
                 '</div>' +
-            '</div>').modal("show");
+            '</div></div></div>').modal("show");
 
         $(".cancel-button", dialog).click((function(){
             this.modal("hide");

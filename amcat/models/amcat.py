@@ -38,7 +38,7 @@ SINGLETON_ID = 1
 
 # Increment to current db version to trigger db upgrades that syncdb can't handle
 # See amcat.tools.db_upgrader
-CURRENT_DB_VERSION = 17
+CURRENT_DB_VERSION = 22
 
 MEDIUM_CACHE_ENABLED = "medium_cache_enabled"
 TIMEOUT_INFINITY = 31536000 # One year, actually. By then we should have upgraded to Django
@@ -91,7 +91,7 @@ class AmCAT(AmcatModel):
         except AmCAT.DoesNotExist:
             # create singleton here - don't use initial data as that will override db_version on syncdb
             return AmCAT.objects.create(db_version = CURRENT_DB_VERSION, id=SINGLETON_ID)
-            
+
 
     class Meta():
         db_table = 'amcat_system'
@@ -115,4 +115,3 @@ class TestAmCAT(amcattest.AmCATTestCase):
 
         os.environ['AMCAT_SERVER_STATUS']="production"
         self.assertEqual(a.server_warning, None)
-

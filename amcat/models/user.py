@@ -24,7 +24,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from django.db.models.signals import post_save
 from amcat.models.language import Language
-from amcat.models.authorisation import Role, ProjectRole
+from amcat.models.authorisation import Role, ProjectRole, ADMIN_ROLE
 from amcat.models import authorisation as auth
 from amcat.models.project import Project
 
@@ -95,20 +95,25 @@ class UserProfile(AmcatModel):
     def has_role(self, role, onproject=None):
         """
         Returns whether the user has the given role. If project is given, check for a project-specific role
+        If user is site-admin, always return True
         @param role: a role instance, ID, or label
         """
+        if self.role_id >= ADMIN_ROLE:
+            return True
+            
         if isinstance(role, Role):
             role = role.id
         elif isinstance(role, (str, unicode)):
             role = Role.objects.get(label=role).id
                             
         if onproject:
-            actual_role_id = onproject.get_role_id(user=self)
+            actual_role_id = onproject.get_role_id(user=self.user)
         else:
             actual_role_id = self.role_id
 
-        log.info("{self} has role {actual_role_id} on project {onproject}, >=? {role}".format(**locals()))
-            
+        log.info("{self.user.id}:{self.user.username} has role {actual_role_id} on project {onproject}, >=? {role}"
+                 .format(**locals()))
+        
         return actual_role_id >= role
         
     

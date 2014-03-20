@@ -1,4 +1,4 @@
-############################################################################
+###########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -38,6 +38,7 @@ from amcat.tools.toolkit import stripAccents,readDate
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
 from amcat.models import Project
+from amcat.tools.progress import NullMonitor
 
 log = logging.getLogger(__name__)
 
@@ -60,7 +61,7 @@ def filters_from_form(form_data):
     if form_data.get('datetype') == 'on':
         d = readDate(form_data.get('on_date'))
         yield 'start_date', d.isoformat()
-        yield 'end_date', (d + relativedelta(days=2)).isoformat()
+        yield 'end_date', (d + relativedelta(days=1)).isoformat()
     elif form_data.get('datetype') == 'between':
         yield 'start_date', form_data.get('start_date')
         yield 'end_date', form_data.get('end_date')
@@ -91,10 +92,10 @@ def filters_from_form(form_data):
         
 
 
-def getDatatable(form, rowlink='article/{id}'):
+def getDatatable(form, rowlink='article/{id}', **kwargs):
     from api.rest.datatable import Datatable
     from api.rest.resources import SearchResource
-    table = Datatable(SearchResource, rowlink=rowlink)
+    table = Datatable(SearchResource, rowlink=rowlink, **kwargs)
     
     for field, val in filters_from_form(form):
         table = table.filter(**{field : val})
@@ -136,8 +137,8 @@ def getArticles(form, **kargs):
         raise NotImplementedError()
 
     query = query_from_form(form)
-    if form['highlight']:
-        kargs["highlight" if query else "lead"] = True
+
+    kargs["highlight" if query else "lead"] = True
         
     filters = dict(filters_from_form(form))
 
@@ -162,7 +163,7 @@ def getArticles(form, **kargs):
 
     return result
     
-def getTable(form):
+def getTable(form, progress_monitor=NullMonitor):
     table = table3.DictTable(default=0)
     table.rowNamesRequired = True
     dateInterval = form['dateInterval']
@@ -176,6 +177,7 @@ def getTable(form):
     yAxis = form['yAxis']
     if yAxis == 'total':
         _add_column(table, 'total', query, filters, group_by, dateInterval)
+        progress_monitor.update(90, "Got results")
     elif yAxis == 'medium':
         media = Medium.objects.filter(pk__in=ES().list_media(query, filters)).only("name")
         
@@ -183,9 +185,11 @@ def getTable(form):
             filters['mediumid'] = medium.id
             name = u"{medium.id} - {}".format(medium.name.replace(",", " ").replace(".", " "), **locals())
             _add_column(table, name, query, filters, group_by, dateInterval)
+            progress_monitor.update(90 / len(media), "Got results for medium {medium.id}".format(**locals()))
     elif yAxis == 'searchTerm':
         for q in queries:
             _add_column(table, q.label, q.query, filters, group_by, dateInterval)
+            progress_monitor.update(90 / len(queries), "Got results for {q.label!r}".format(**locals()))
     else:
         raise Exception('yAxis {yAxis} not recognized'.format(**locals()))
 
@@ -213,7 +217,7 @@ def _add_column(table, column_name, query, filters, group_by, dateInterval):
 
         for group, n in results:
             table.addValue(unicode(group), column_name, n)
-        
+    table.columnTypes[column_name] = int
     
 
 def get_total_n(form):
@@ -225,8 +229,38 @@ def get_statistics(form):
     query = query_from_form(form)
     filters = dict(filters_from_form(form))
     return ES().statistics(query, filters)
-    
 
+class QueryError(Exception):
+    pass
+
+    
+class QueryValidationError(ValidationError):
+    # ugly hack inspired on https://github.com/django/django/commit/a8f4553aaecc7bc6775e0fd54f8c615c792b3d97
+    
+    def __init__(self, message, code=None, params=None):
+        """
+        ValidationError can be passed any object that can be printed (usually
+        a string), a list of objects or a dictionary.
+        """
+        Exception.__init__(self, message, code, params)
+        if isinstance(message, dict):
+            self.error_dict = message
+        elif isinstance(message, list):
+            self.error_list = message
+        else:
+            self.code = code
+            self.params = params
+            self.message = message
+            self.error_list = [self]
+
+def _clean(s):
+    if s is None: return
+    s = unicode(s)
+    s = stripAccents(s)
+    s = re.sub("[<>+*]"," ", s)
+    s = re.sub("\s+"," ", s)
+    return s.strip()
+            
 class SearchQuery(object):
     """
     Represents a query object that contains both a query and
@@ -234,8 +268,8 @@ class SearchQuery(object):
     """
     def __init__(self, query, label=None):
         self.query = stripAccents(query)
-        self.declared_label = stripAccents(label)
-        self.label = self.declared_label or self.query
+        self.declared_label = _clean(label)
+        self.label = self.declared_label or _clean(self.query)
         
 
     @classmethod
@@ -259,12 +293,12 @@ class SearchQuery(object):
             lbl, q = re.split(pattern, query, 1)
 
             if len(lbl) == 0:
-                raise ValidationError("Delimiter ({label_delimiter!r}) was used, but no label given!"
+                raise QueryValidationError("Delimiter ({label_delimiter!r}) was used, but no label given!"
                                       "Query was: {query!r}".format(**locals()), code="invalid")
             if len(lbl) > 80:
-                raise ValidationError("Label too long: {lbl!r}".format(**locals()), code="invalid")
+                raise QueryValidationError("Label too long: {lbl!r}".format(**locals()), code="invalid")
             if not len(query):
-                raise ValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
+                raise QueryValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
                                       .format(**locals()), code="invalid")
             return SearchQuery(q.strip(), label=lbl.strip())
 
@@ -346,15 +380,15 @@ def resolve_reference(reference, recursive, queries, codebook=None, labels=None,
         else:
             return code.get_label(rlanguage, fallback=False)
     except Label.DoesNotExist:
-        raise ValidationError("Code with label '{reference}' has no label in replacement-language."
+        raise QueryValidationError("Code with label '{reference}' has no label in replacement-language."
                               .format(**locals()), code="invalid")
     except KeyError:
-        raise ValidationError("No code with label '{reference}' found in {codebook}"
+        raise QueryValidationError("No code with label '{reference}' found in {codebook}"
                               .format(**locals()), code="invalid")
     except TypeError:
         log.warn(reference)
-        raise ValidationError("<{reference}> does not refer to either a code or a query-label. "
-                              "Did you forget to set a codebook?".format(**locals()), code="invalid")
+        raise QueryValidationError("<{reference}> does not refer to either a code or a query-label. "
+                            "Did you forget to set a codebook?".format(**locals()), code="invalid")
 
     if not recursive:
         return label
@@ -383,7 +417,7 @@ def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
             codebook, labels, rlanguage
         )
         if not replacement:
-            raise Exception("Empty replacement: {query.label}: {query.query} -> {replacement!r}".format(**locals()))
+            raise QueryError("Empty replacement: {query.label}: {query.query} -> {replacement!r}".format(**locals()))
 
         replacement = "(" + replacement + ")"
         query.query = query.query.replace(mo.group(0), replacement, 1)

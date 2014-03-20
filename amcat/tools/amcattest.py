@@ -29,14 +29,15 @@ functions create_test_* create test objects for use in unit tests
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-import os.path, os, inspect
+import os
 from contextlib import contextmanager
 from functools import wraps
+
 try:
     from django.test import TestCase
 except ImportError:
     from unittest import TestCase
-import unittest 
+import unittest
 import logging; log = logging.getLogger(__name__)
 
 from django.conf import settings
@@ -70,7 +71,6 @@ def create_test_user(**kargs):
     if 'role' not in kargs:
         kargs['role'] = get_test_role()
     if 'password' not in kargs:
-        from django.contrib.auth.hashers import make_password
         kargs['password'] =  'test'
     #if "id" not in kargs: kargs["id"] = _get_next_id()
     return create_user(**kargs)
@@ -86,7 +86,7 @@ def create_test_project(**kargs):
     p = Project.objects.create(**kargs)
     ProjectRole.objects.create(project=p, user=p.owner, role_id=ROLE_PROJECT_ADMIN)
     return p
-    
+
 def create_test_schema(**kargs):
     """Create a test schema to be used in unit testing"""
     from amcat.models.coding.codingschema import CodingSchema
@@ -100,7 +100,7 @@ def create_test_schema_with_fields(codebook=None, **kargs):
     Returns codebook, schema, textfield, numberfield, codefield
     """
     from amcat.models import CodingSchemaFieldType, CodingSchemaField
-    
+
     if codebook is None:
         codebook = create_test_codebook()
     schema = create_test_schema(**kargs)
@@ -115,7 +115,7 @@ def create_test_schema_with_fields(codebook=None, **kargs):
         f = CodingSchemaField.objects.create(codingschema=schema, fieldnr=i, label=label,
                                              fieldtype=fieldtype, codebook=cb)
         fields.append(f)
-    
+
     return (schema, codebook) + tuple(fields)
 
 def get_test_language(**kargs):
@@ -134,7 +134,7 @@ def create_test_medium(**kargs):
     if "id" not in kargs: kargs["id"] = _get_next_id()
     if "name" not in kargs: kargs["name"] = "Medium_%i" % kargs["id"]
     return Medium.objects.create(**kargs)
-    
+
 def create_test_article(create=True, articleset=None, check_duplicate=False, **kargs):
     """Create a test article"""
     from amcat.models.article import Article
@@ -150,10 +150,10 @@ def create_test_article(create=True, articleset=None, check_duplicate=False, **k
     return a
 
 def create_test_sentence(**kargs):
-    """Create a test sentence"""    
+    """Create a test sentence"""
     from amcat.models.sentence import Sentence
     if "article" not in kargs: kargs["article"] = create_test_article()
-    if "sentence" not in kargs: 
+    if "sentence" not in kargs:
         kargs["sentence"] = "Test sentence %i." % _get_next_id()
     if "parnr" not in kargs: kargs["parnr"] = 1
     if "sentnr" not in kargs: kargs["sentnr"] = _get_next_id()
@@ -173,7 +173,12 @@ def create_test_set(articles=0, **kargs):
     elif articles:
         s.add_articles(articles)
     return s
-            
+
+def create_test_coded_article():
+    # coded_article gets created automatically when a new job is created
+    codingjob = create_test_job()
+    return list(codingjob.coded_articles.all())[0]
+
 
 def create_test_job(narticles=1, **kargs):
     """Create a test Coding Job"""
@@ -189,14 +194,14 @@ def create_test_job(narticles=1, **kargs):
 
 def create_test_coding(**kargs):
     """Create a test coding object"""
-    from amcat.models.coding.coding import Coding
+    from amcat.models.coding.coding import create_coding
 
     if "codingjob" not in kargs:
         kargs["codingjob"] = create_test_job()
-        
+
     if "article" not in kargs: kargs["article"] = kargs["codingjob"].articleset.articles.all()[0]
     if "id" not in kargs: kargs["id"] = _get_next_id()
-    return Coding.objects.create(**kargs)
+    return create_coding(**kargs)
 
 def create_test_code(label=None, language=None, codebook=None, parent=None, **kargs):
     """Create a test code with a label"""
@@ -230,21 +235,13 @@ def  create_test_codebook_with_codes():
     B
      B1
     @return: A pair of the codebook and the {label : code} dict
-    """ 
-    parents = {"A1a":"A1", "A1b":"A1", "A1":"A", "A2":"A", "B1":"B", "A":None, "B":None} 
+    """
+    parents = {"A1a":"A1", "A1b":"A1", "A1":"A", "A2":"A", "B1":"B", "A":None, "B":None}
     codes = {l : create_test_code(label=l) for l in parents}
     codebook = create_test_codebook()
     for code, parent in parents.items():
         codebook.add_code(codes[code], codes.get(parent))
     return codebook, codes
-
-def create_test_word(lemma=None, word=None, pos="N"):
-    """Create a test word"""
-    from amcat.models.word import Word, Lemma
-    if not lemma: lemma = "testlemma_%i" % Lemma.objects.count()
-    if not word: word = "testword_%i" % Word.objects.count()
-    l = Lemma.objects.create(pos=pos, lemma=lemma)
-    return Word.objects.create(id=_get_next_id(), lemma=l, word=word)
 
 def create_test_plugin(**kargs):
     from amcat.models import Plugin, PluginType
@@ -252,40 +249,6 @@ def create_test_plugin(**kargs):
     if "class_name" not in kargs: kargs["class_name"] = "amcat.tools.amcattest.AmCATTestCase"
     if "plugin_type" not in kargs: kargs["plugin_type"] = PluginType.objects.get(pk=1)
     return Plugin.objects.create(**kargs)
-
-def create_test_analysed_article(**kargs):
-    if "id" not in kargs: kargs["id"] = _get_next_id()
-    from amcat.models.analysis import AnalysedArticle
-    if 'article' not in kargs: kargs['article'] = create_test_article()
-    if 'plugin' not in kargs: kargs['plugin'] = create_test_plugin()
-    return AnalysedArticle.objects.create(**kargs)
-
-def create_test_analysis_sentence(analysed_article=None, **kargs):
-    if "id" not in kargs: kargs["id"] = _get_next_id()
-    from amcat.models.analysis import AnalysisSentence
-    if not analysed_article:
-        analysed_article = create_test_analysed_article()
-    if 'sentence' not in kargs: kargs['sentence'] = create_test_sentence(article=analysed_article.article)
-    return AnalysisSentence.objects.create(analysed_article=analysed_article, **kargs)
-
-
-def create_test_token(**kargs):
-    from amcat.models import Pos, Token
-    if "sentence" not in kargs: kargs['sentence'] = create_test_analysis_sentence()
-    if "word" not in kargs: kargs["word"] = create_test_word()
-    if "pos" not in kargs: kargs["pos"] = Pos.objects.create(major="x", minor="y", pos="p")
-    if "position" not in kargs: kargs["position"] = get_next_id()
-    return Token.objects.create(**kargs)
-
-def create_tokenvalue(analysis_article=None, **kargs):
-    if 'analysis_sentence' not in kargs:
-        kargs['analysis_sentence'] = create_test_analysis_sentence(analysis_article).id
-    for key, default in dict(position=_get_next_id(), word='test_word', lemma='test_lemma',
-                             pos='T', major='test_major', minor='test_minor', namedentity=None).items():
-        if key not in kargs: kargs[key] = default
-    from amcat.models.token import TokenValues
-    return TokenValues(**kargs)
-
 
 class AmCATTestCase(TestCase):
     @contextmanager
@@ -295,13 +258,13 @@ class AmCATTestCase(TestCase):
         from amcat.tools.djangotoolkit import list_queries
         with list_queries(**outputargs) as l:
             yield
-        m = len(l)     
+        m = len(l)
         if m > n:
             msg = """{} should take at most {} queries, but used {}""".format(action, n, m)
             for i, q in enumerate(l):
                 msg += "\n({}) {}".format(i+1, q["sql"])
             self.fail(msg)
-    
+
     @classmethod
     def tearDownClass(cls):
         if settings.ES_INDEX.endswith("__unittest"):
@@ -314,7 +277,7 @@ def require_postgres(func):
             raise unittest.SkipTest("Test function {func.__name__} requires postgres".format(**locals()))
         return func(self, *args, **kargs)
     return run_or_skip
-    
+
 def skip_TODO(reason):
     def inner(func):
         def skip(self, *args, **kargs):

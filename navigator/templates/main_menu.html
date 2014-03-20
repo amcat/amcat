@@ -1,0 +1,16 @@
+<li {% if main_active == 'Projects' %}class="active"{% endif %}><a href="{% url 'projects' %}">Projects</a></li>
+<li {% if main_active == 'Coding' %}class="active"{% endif %}><a href="{% url 'codingjobs' %}">Annotator</a></li>
+<li class="dropdown{% if main_active == 'Current User' %} active{% endif %}">
+  <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+{% if request.user.first_name %}
+{{ request.user.first_name }} {{ request.user.last_name }}
+{% else %}
+{{ request.user.username }}
+{% endif %}
+<b class="caret"></b></a>
+  <ul class="dropdown-menu">
+    <li><a href="{% url 'user' %}">Account details</a></li>
+    <li><a href="{% url 'accounts-logout' %}">Log out</a></li>
+  </ul>
+</li>
+

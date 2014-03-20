@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="jumbotron">
+<h1>Welcome to AmCAT 3!</h1>
+
+<div class="btn-group btn-group-lg">
+  <a class="btn btn-primary" href="{% url "projects" %}">Manage Projects</a></span>
+</div>
+<div class="btn-group btn-group-lg">
+  <a class="btn btn-primary" href="{% url "codingjobs" %}">Annotator</a></span>
+</div>
+</div>
+
+{% endblock %}

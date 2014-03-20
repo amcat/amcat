@@ -25,7 +25,7 @@ from django.contrib.auth import authenticate, login
 
 from django.core.exceptions import PermissionDenied
 from django.http import Http404
- 
+
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from functools import wraps
@@ -58,15 +58,15 @@ def create_user(username, first_name, last_name, email, affiliation, language, r
     """
     password = toolkit.random_alphanum(7)
     log.info("Creating new user: {username}".format(**locals()))
-    
+
     u = _create_user(
         username, first_name, last_name, email,
         affiliation, language, role, password=password
     )
-    
+
     log.info("Created new user, sending email...")
-    html = render(get_request(), "utils/welcome_email.html", locals()).content
-    text = render(get_request(), "utils/welcome_email.txt", locals()).content
+    html = render(get_request(), "welcome_email.html", locals()).content
+    text = render(get_request(), "welcome_email.txt", locals()).content
     sendmail.sendmail(settings.DEFAULT_FROM_EMAIL, email, 'Welcome to AmCAT!',
                       html, text)
     log.info("Email sent, done!")

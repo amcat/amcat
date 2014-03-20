@@ -36,9 +36,9 @@ class DatatableMixin(ContextMixin):
         return context
 
     
-    def get_datatable(self):
+    def get_datatable(self, **kwargs):
         """Create the Datatable object"""
-        table = Datatable(self.get_resource(), rowlink=self.get_rowlink())
+        table = Datatable(self.get_resource(), rowlink=self.get_rowlink(), **kwargs)
         table = self.filter_table(table)
         return table
 

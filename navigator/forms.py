@@ -68,10 +68,11 @@ def gen_user_choices(project=None):
 
     See: https://docs.djangoproject.com/en/dev/ref/models/fields/#field-choices"""
     users = User.objects.all().select_related('userprofile__affiliation__name').only(
-        'username', 'first_name', 'last_name' 
+        'username', 'first_name', 'last_name'
     )
 
-    users = users.filter(projectrole__project=project) if project else users
+    if project:
+        users = users.filter(projectrole__project=project)
     vals = toolkit.multidict(((u.userprofile.affiliation, u) for u in users), ltype=list)
 
     for aff, users in sorted(vals.items(), key=name_sort):
@@ -100,7 +101,7 @@ def gen_coding_choices(user, model):
         yield(project, [(x.id, x.name) for x in objs])
 
 class SplitArticleForm(forms.Form):
-    add_to_new_set = forms.CharField(required=False) 
+    add_to_new_set = forms.CharField(required=False)
     add_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
 
     remove_from_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
@@ -196,7 +197,7 @@ class AddMultipleUsersForm(AddUserForm):
 
         for field in ("username", "email", "last_name", "first_name"):
             del self.fields[field]
-            
+
     def full_clean(self, *args, **kwargs):
         self.fields['csv'].set_delimiter(self.data.get('delimiter', ','))
         return super(AddMultipleUsersForm, self).full_clean(*args, **kwargs)
@@ -226,106 +227,6 @@ class AddProjectForm(ProjectForm):
     def __init__(self, owner=None, *args, **kwargs):
         super(AddProjectForm, self).__init__(*args, **kwargs)
         self.fields['owner'].initial = owner.id if owner else None
-
-class ProjectRoleForm(forms.ModelForm):
-    user = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
-
-    def __init__(self, project=None, user=None, data=None, **kwargs):
-        super(ProjectRoleForm, self).__init__(data=data, **kwargs)
-
-        self.fields['user'].choices = gen_user_choices()
-
-        if project is not None:
-            # Disable self.project
-            del self.fields['project']
-
-            choices = ((r.id, r.label) for r in Role.objects.filter(projectlevel=True))
-            self.fields['role'].choices = choices
-
-            if user is not None:
-                del self.fields['user']
-
-    class Meta:
-        model = ProjectRole
-
-class UploadScriptForm(forms.Form):
-    file = forms.FileField(help_text="Supported archives: zip")
-    encoding = forms.ChoiceField(choices=((1, "ISO-8859-15"), (2, "UTF-8"), (3, "LATIN-1")),
-                                 initial=1, help_text="Try to change this value when character"+
-                                                      " issues arise.")
-
-
-    exi_set = forms.ModelChoiceField(queryset=ArticleSet.objects.all(),
-                                     label="Existing set", required=False)
-
-    new_set = forms.CharField(max_length=100, required=False)
-    script = forms.ChoiceField(choices=[(sc, sc) for sc in article_upload.__all__])
-
-    def __init__(self, project, *args, **kwargs):
-        super(UploadScriptForm, self).__init__(*args, **kwargs)
-
-        exi = self.fields['exi_set']
-        exi.queryset = exi.queryset.filter(project=project)
-
-        self.project = project
-
-    def _get_zip_files(self, fo):
-        zip = zipfile.ZipFile(fo)
-
-        for fi in zip.infolist():
-            if fi.filename.split('.')[-1].lower in ALLOWED_EXTENSIONS:
-                yield fi.filename, zip.read(fi)
-            else:
-                logger.debug("%s not in ALLOWED_EXTENSIONS, skipping.." % fi.filename)
-
-    def clean_new_set(self):
-        if not (self.cleaned_data['new_set'] or self.cleaned_data['exi_set']):
-            raise forms.ValidationError("Either choose an existing set from the list above or\
-                                         fill in this field to create a new set.")
-
-        new_set = ArticleSet.objects.filter(project=self.project,
-                                            name=self.cleaned_data['new_set'])
-
-        if len(new_set) != 0:
-            raise forms.ValidationError("Set already exists!")
-
-        return self.cleaned_data['new_set']
-
-
-    def clean_file(self):
-        data = self.cleaned_data['file']
-        ext = unicode(data).split('.')[-1]
-
-        if ext.lower() not in ALLOWED_EXTENSIONS + ['zip']:
-            raise forms.ValidationError("%s is not a supported format" % ext)
-
-        # Extract all txt-files from archive
-        if ext.lower() == 'zip':
-            try:
-                return list(self._get_zip_files(data))
-            except zipfile.BadZipfile:
-                raise forms.ValidationError("%s is not a zipfile" % data)
-
-        # Read txt file
-        elif ext.lower() in ALLOWED_EXTENSIONS:
-            return [(unicode(data), data.read())]
-
-    def clean_encoding(self):
-        ident = self.cleaned_data['encoding']
-        enc = dict(self.fields['encoding'].choices).get(int(ident))
-
-        if 'file' not in self.cleaned_data:
-            # Fail silently, as 'file' will fail anyway
-            return enc
-
-        # Test encoding
-        for fn, bytes in self.cleaned_data['file']:
-            try:
-                bytes.decode(enc)
-            except UnicodeDecodeError:
-                raise ValidationError("Couldn't decode '%s' with '%s'" % (fn, enc))
-
-        return enc
 
 class MediumForm(forms.ModelForm):
     class Meta:
@@ -374,12 +275,6 @@ class CodingJobForm(forms.ModelForm):
     class Meta:
         model = CodingJob
 
-class ImportCodebook(forms.Form):
-    codebooks = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
-
-    def __init__(self, user, *args, **kwargs):
-        super(ImportCodebook, self).__init__(*args, **kwargs)
-        self.fields['codebooks'].choices = gen_coding_choices(user, Codebook)
 
 class ImportCodingSchema(forms.Form):
     schemas = forms.MultipleChoiceField(widget=widgets.JQueryMultipleSelect)
@@ -441,115 +336,3 @@ class ArticleSetForm(forms.ModelForm):
 class CodingSchemaForm(forms.HideFieldsForm):
     class Meta:
         model = CodingSchema
-
-class CodingRuleForm(forms.ModelForm):
-    def __init__(self, codingschema, *args, **kwargs):
-        super(CodingRuleForm, self).__init__(*args, **kwargs)
-        self.fields["action"].required = False
-        self.fields["field"].required = False
-        self.fields["field"].queryset = codingschema.fields.all()
-
-        self.codingschema = codingschema
-
-    def clean_condition(self):
-        condition = self.cleaned_data["condition"]
-
-        try:
-            tree = codingruletoolkit.parse(CodingRule(condition=condition))
-        except (Code.DoesNotExist, CodingSchemaField.DoesNotExist, CodingRule.DoesNotExist) as e:
-            raise ValidationError(e)
-        except SyntaxError as e:
-            raise ValidationError(e)
-
-        if tree is not None:
-            codingruletoolkit.clean_tree(self.codingschema, tree)
-
-        return condition
-
-    class Meta:
-        model = CodingRule
-
-class CodingSchemaFieldForm(forms.ModelForm):
-    label = forms.CharField()
-    default = forms.CharField(required=False)
-
-    def __init__(self, schema, *args, **kwargs):
-        super(CodingSchemaFieldForm, self).__init__(*args, **kwargs)
-        self.fields['codebook'].required = False
-        self.fields['codebook'].queryset = schema.project.get_codebooks()
-
-    def _to_bool(self, val):
-        if val is None:
-            return 
-
-        if str(val).lower() in ("true", "1", "yes"):
-            return True
-        elif str(val).lower() in ("false", "0", "no"):
-            return False
-
-    def clean_codebook(self):
-        db_type = CodingSchemaFieldType.objects.get(name__iexact="Codebook")
-
-        if 'fieldtype' not in self.cleaned_data:
-            raise ValidationError("Fieldtype must be set in order to check this field")
-        elif self.cleaned_data['fieldtype'] == db_type:
-            if not self.cleaned_data['codebook']:
-                raise ValidationError("Codebook must be set when fieldtype is '{}'".format(db_type))
-        elif self.cleaned_data['codebook']:
-            raise ValidationError("Codebook must not be set when fieldtype is '{}'".format(self.cleaned_data['fieldtype']))
-
-        return self.cleaned_data['codebook']
-
-    def clean_default(self):
-        # Differentiate between '' and None
-        value = self.cleaned_data['default']
-
-        if 'fieldtype' not in self.cleaned_data:
-            raise ValidationError("Fieldtype must be set in order to check this field")
-
-        if self.data['default'] is None:
-            return 
-
-        # Fieldtype is set
-        fieldtype = self.cleaned_data['fieldtype']
-        if fieldtype.serialiserclass == BooleanSerialiser:
-            value = self._to_bool(value)
-
-            if value is None:
-                raise ValidationError(
-                    ("When fieldtype is of type {}, default needs " + 
-                    "to be empty, true or false.").format(fieldtype))
-
-        serialiser = fieldtype.serialiserclass(CodingSchemaField(**self.cleaned_data))
-
-        try:
-            return serialiser.serialise(value)
-        except:
-            if fieldtype.serialiserclass == CodebookSerialiser:
-                try:
-                    value = int(value)
-                except ValueError:
-                    raise ValidationError("This value needs to be a code_id.")
-
-                # possible_values doesn't return a queryset, so we need to iterate :(
-                if value in (code.id for code in serialiser.possible_values):
-                    return value
-
-                raise ValidationError("'{}' is not a valid value.".format(value))
-
-            # Can't catch specific error
-            possible_values = serialiser.possible_values
-
-            if possible_values is not None:
-                raise ValidationError(
-                    "'{}' is not a valid value. Options: {}".format(
-                        self.cleaned_data['default'], possible_values
-                    )
-                )
-
-            raise ValidationError("'{}' is not a valid value".format(value))
-
-        return value
-
-    class Meta:
-        model = CodingSchemaField
