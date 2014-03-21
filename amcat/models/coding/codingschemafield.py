@@ -85,6 +85,8 @@ class CodingSchemaField(AmcatModel):
     fieldnr = models.IntegerField(default=0)
     
     label = models.TextField()
+    description = models.TextField(null=True, blank=True)
+    keywords = models.TextField(null=True, blank=True, default='')
     required = models.BooleanField(default=True)
     fieldtype = models.ForeignKey(CodingSchemaFieldType)
     
