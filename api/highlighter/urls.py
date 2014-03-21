@@ -5,6 +5,3 @@ urlpatterns = patterns('',
     
     url(r'^highlight$', 'api.highlighter.highlighter.highlight')
 )
-
-def foo(req, res):
-	pass
