@@ -21,6 +21,7 @@ from django.conf.urls import patterns, url, include
 from django.shortcuts import redirect
 
 import api.rest
+import api.highlighter
 
 urlpatterns = patterns(
     '',
@@ -29,6 +30,7 @@ urlpatterns = patterns(
     (r'^webscript/(?P<webscriptName>\w+)/run$', 'api.webscripts.handler.index'),
     (r'^webscript/(?P<webscriptName>\w+)/form$', 'api.webscripts.handler.getWebscriptForm'),
     (r'^v4/', include('api.rest.urls')),
+    (r'^highlighter/', include('api.highlighter.urls')),
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
 )
 
