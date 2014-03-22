@@ -701,8 +701,7 @@ annotator = (function(self){
 
     /* Returns (new) DOM representation of a single sentence coding */
     self.get_sentence_coding_html = function get_sentence_coding_html(coding){
-        var coding_el = $("<tr class='coding'>")
-        var coding_el = $("<tr>").attr("annotator_coding_id", coding.annotator_id);
+        var coding_el = $("<tr class='coding'>").attr("annotator_coding_id", coding.annotator_id);
 
         // Add sentencenr, from and to.
         var sentence_td = $("<td>");
