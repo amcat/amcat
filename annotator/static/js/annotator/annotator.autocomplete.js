@@ -30,6 +30,11 @@ autocomplete = (function(self){
         if (ui.item !== null){
             intval = ui.item.intval;
             label = ui.item.label;
+        } else if ($(this).val() !== "") {
+            ui.item = JSON.parse($(this).attr("first_match"));
+            if (ui.item !== null){
+                return self.on_change.bind(this)(event, ui);
+            }
         }
 
         $(this).attr("intval", intval).val(label||"");
@@ -52,6 +57,16 @@ autocomplete = (function(self){
     self.escape_regexp = function(str) {
         // http://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
         return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
+    };
+
+    self.stringify_item = function(item){
+        if (item === undefined) return JSON.stringify(null);
+
+        return JSON.stringify({
+            label : item.label,
+            value : item.value,
+            intval : item.intval
+        })
     };
 
     /*
@@ -103,7 +118,13 @@ autocomplete = (function(self){
             return $.inArray(el, exact) === -1 && $.inArray(el, startswith) === -1;
         });
 
-        return callback(([]).concat(exact, startswith, rest).slice(0, 100));
+        var result = ([]).concat(exact, startswith, rest).slice(0, 100);
+
+        // Store first match serialized on input element, so we can use it later in
+        // on_change as a default choice.
+        $(input_element).attr("first_match", self.stringify_item(result[0]));
+
+        return callback(result);
     };
 
     /*
@@ -157,14 +178,13 @@ autocomplete = (function(self){
             source : function(request, callback){
                 self.get_source(input_element, choices, request, callback);
             },
-            autoFocus: true,
+            autoFocus: false,
             minLength: 0,
             change : self.on_change,
             select : self.on_change,
             delay: 5
         }).focus(function(){
             var value = $(this).val();
-            $(this).autocomplete("option", "autoFocus", value !== "");
             $(this).autocomplete("search", value);
         });
     };
