@@ -950,12 +950,37 @@ annotator = (function(self){
 
         var container = (self.codingjob.articleschema === null) ? self.sentence_codings_container : self.article_coding_container;
         container.find("input:visible").first().focus();
+        $.when.apply(undefined, [self.get_schema_field_highlighting()]).then(self.highlight_schema_fields);
     };
 
     self.highlight = function(){
         console.log("Highlighting ", self.highlight_labels.length ," labels in article..");
         $("div.sentences").easymark("highlight", self.highlight_labels.join(" "));
     };
+
+    self.get_schema_field_highlighting = function() {
+        var base_highlighter_url = "/api/highlighter/highlight";
+        var article_id = self.state.coded_article.article_id;
+        var highlighter_url = "{0}?codingjob_id={1}&article_id={2}".f(base_highlighter_url, self.codingjob_id, article_id);
+        return $.getJSON(highlighter_url);
+    }
+
+    self.highlight_schema_fields = function(highlighting) {
+        self.article_coding_container.find("tr")
+            .css('cursor', 'pointer')
+            .unbind("click")
+            .bind("click", function() {
+                var field_index = $(this).index();
+                var sentence_id = 0;
+                $.each(highlighting, function(pIndex, sentences) {
+                    $.each(sentences, function(sIndex, fields) {
+                        sentence_id += 1;
+                        var yellow = Math.round(fields[field_index] * 255);
+                        $("#sentence-{0}".f(sentence_id)).css("background-color", "rgb(255,255,{0})".f(yellow))
+                    })
+                })
+            })
+    }
 
     /*
      * Resets internal state and fetches new coded article, which consists of:
