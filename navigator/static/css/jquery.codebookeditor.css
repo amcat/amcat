@@ -32,8 +32,8 @@
 
 .codebook .code.hide{
     /* Override other css settings */
-    visibility:inherit;
-    display:block;
+    visibility:inherit !important;
+    display:block !important;
     text-decoration: line-through;
 }
 

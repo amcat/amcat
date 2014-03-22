@@ -91,6 +91,10 @@ autocomplete = (function(self){
             })[0].descendant_choices;
         }
 
+        // Do not display hidden codes
+        choices = $.grep(choices, function(choice){
+            return !(choice.get_code !== undefined && choice.get_code().hidden);
+        });
 
         // We would like to present the user with options in the following order (as per issue #55):
         // - Exact match

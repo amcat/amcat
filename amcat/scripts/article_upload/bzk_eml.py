@@ -98,6 +98,20 @@ class BZKEML(UploadScript):
             if p.startswith("(") and len(p.split(",")) > 1: #laatste regel van normale content
                 break
 
+        # Add non-ascii characters
+        # Takes the '=AB' occurrences and turns them into latin-1 characters.
+        def character(match):
+            code = match.group()[1:]    
+            char = r"\x{}".format(code).decode('string-escape').decode('latin-1')
+            if code == "92": return "'"
+            elif code == "85": return "..."
+            return char
+
+        article.text = re.sub(
+            "=[A-Z0-9]{2}",
+            character,
+            article.text)
+
         yield article
 
 if __name__ == "__main__":
