@@ -1,6 +1,7 @@
 from django.http import HttpResponse, HttpResponseBadRequest
 from amcat.models.coding.CodingJob import CodingJob
 from amcat.models.Article import Article
+from django.core.cache import cache
 import json
 import snowballstemmer
 import random
@@ -33,10 +34,39 @@ def highlight(request):
         article_matrix[-1].append(sentence.sentence)
 
     # get and respond with highlighting scores
-    ha = HighlighterArticles()
-    result = ha.getHighlightingsArticle(article_matrix, keywords, None)   
+    hash_value = highlighting_hash(article_matrix, keywords)
+    result = from_cache(article_id, codingjob_id, hash_value)
+    if result is None:
+        ha = HighlighterArticles()
+        result = ha.getHighlightingsArticle(article_matrix, keywords, None)
+        to_cache(article_id, codingjob_id, hash_value, result)
     return HttpResponse(json.dumps(result), content_type='application/json')
 
+
+def highlighting_hash(article_matrix, keywords):
+    return hash(str(article_matrix) + ":" + str(keywords))
+
+
+def from_cache(article_id, codingjob_id, hash_value):
+    article_cache = cache.get("highlighting-{0}".format(article_id))
+    if article_cache is None:
+        return None
+    codingjob_cache = article_cache[codingjob_id]
+    if codingjob_cache is None:
+        return None
+    if not codingjob_cache['hash'] == hash_value:
+        return None
+    return codingjob_cache['value']
+
+def to_cache(article_id, codingjob_id, hash_value, result):
+    article_cache = cache.get("highlighting-{0}".format(article_id))
+    if article_cache is None:
+        article_cache = {}
+    article_cache[codingjob_id] = {}
+    article_cache[codingjob_id]['hash'] = hash_value
+    article_cache[codingjob_id]['value'] = result
+    cache.set("highlighting-{0}".format(article_id), article_cache)
+    cache.close()
 
 
 class HighlighterArticles:
