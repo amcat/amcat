@@ -96,6 +96,14 @@ h2{
     margin: 5px;
 }
 
+.coding td{
+    vertical-align: text-top;
+}
+
+.coding label {
+    cursor: pointer;
+}
+
 .coding-table{
     font-size:11px;
     text-align:left;
