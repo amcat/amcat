@@ -60,6 +60,27 @@ h2{
     margin: 5px;
 }
 
+.coding td{
+    vertical-align: text-top;
+}
+
+.coding label {
+    cursor: pointer;
+}
+
+.coding-table{
+    font-size:11px;
+    text-align:left;
+}
+
+.coding-table input{
+    font-size:11px;
+}
+
+.sentence{
+    margin-top:10px;
+}
+
 .annotator-sentencenr{
     color:gray;
 }

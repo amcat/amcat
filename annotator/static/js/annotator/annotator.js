@@ -400,9 +400,18 @@ annotator = (function(self){
                 widgets.set_value($(widget), value);
             }
 
+            var details = $('<div>')
+                .addClass('schema-field-details')
+                .append($('<strong>').append('Keywords: '))
+                .append(schemafield.keywords)
+                .append($('<br>'))
+                .append($('<strong>').append('Description: '))
+                .append(schemafield.description)
+                .hide();
+
             return $("<div>").addClass("row")
                 .append($("<div>").addClass("col-md-3").append(label))
-                .append($("<div>").addClass("col-md-9").append(widget));
+                .append($("<div>").addClass("col-md-9").append(widget).append(details));
         }));
     };
 
@@ -1048,10 +1057,15 @@ annotator = (function(self){
 
     self.highlight_schema_fields = function(highlighting) {
         self.article_coding_container.find("tr")
-            .css('cursor', 'pointer')
             .unbind("click")
             .bind("click", function() {
                 var field_index = $(this).index();
+                if (self.state.selected_schema_field == field_index) {
+                    return;
+                }
+                self.state.selected_schema_field = field_index;
+                $('.schema-field-details:not(:nth(' + (field_index) +'))').hide(300);
+                $('.schema-field-details:nth(' + (field_index) +')').show(300);
                 var sentence_id = 0;
                 $.each(highlighting, function(pIndex, sentences) {
                     $.each(sentences, function(sIndex, fields) {
