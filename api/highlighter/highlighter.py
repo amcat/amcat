@@ -5,7 +5,7 @@ import json
 import snowballstemmer
 import random
 
-def highlight(request, num="1"):
+def highlight(request):
     codingjob_id = request.GET.get('codingjob_id')
     article_id = request.GET.get('article_id')
 
