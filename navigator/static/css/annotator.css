@@ -97,6 +97,7 @@ h2{
 }
 
 .coding td{
+    padding:2px;
     vertical-align: text-top;
 }
 
@@ -185,6 +186,20 @@ h2{
 #article-coding{
     margin-bottom:30px;
     clear:both;
+    float: left;
+}
+
+#coding-details{
+    float: right;
+    width: 66%;
+    height: 200px;
+    border: solid 1px grey;
+    border-radius: 5px;
+    padding: 4px;
+}
+
+#coding-details hr {
+    margin: 5px;
 }
 
 #unitcoding-table-part{

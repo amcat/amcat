@@ -6,7 +6,13 @@ import json
 import snowballstemmer
 import random
 
-def highlight(request):
+def articleschema(request):
+    return highlight(request, 'articleschema')
+
+def unitschema(request):
+    return highlight(request, 'unitschema')
+
+def highlight(request, schematype):
     codingjob_id = request.GET.get('codingjob_id')
     article_id = request.GET.get('article_id')
 
@@ -20,7 +26,11 @@ def highlight(request):
     keywords = []
 
     # create variable keywords list
-    for csf in cj.articleschema.fields.all():
+    if schematype == "articleschema":
+        schema = cj.articleschema
+    else:
+        schema = cj.unitschema
+    for csf in schema.fields.all():
         keywords.append(csf.keywords)
 
     article_matrix = []
@@ -35,11 +45,11 @@ def highlight(request):
 
     # get and respond with highlighting scores
     hash_value = highlighting_hash(article_matrix, keywords)
-    result = from_cache(article_id, codingjob_id, hash_value)
+    result = from_cache(article_id, schema.id, hash_value)
     if result is None:
         ha = HighlighterArticles()
         result = ha.getHighlightingsArticle(article_matrix, keywords, None)
-        to_cache(article_id, codingjob_id, hash_value, result)
+        to_cache(article_id, schema.id, hash_value, result)
     return HttpResponse(json.dumps(result), content_type='application/json')
 
 
@@ -47,24 +57,26 @@ def highlighting_hash(article_matrix, keywords):
     return hash(str(article_matrix) + ":" + str(keywords))
 
 
-def from_cache(article_id, codingjob_id, hash_value):
+def from_cache(article_id, schema_id, hash_value):
     article_cache = cache.get("highlighting-{0}".format(article_id))
     if article_cache is None:
         return None
-    codingjob_cache = article_cache[codingjob_id]
+    codingjob_cache = None
+    if schema_id in article_cache:
+        codingjob_cache = article_cache[schema_id]
     if codingjob_cache is None:
         return None
     if not codingjob_cache['hash'] == hash_value:
         return None
     return codingjob_cache['value']
 
-def to_cache(article_id, codingjob_id, hash_value, result):
+def to_cache(article_id, schema_id, hash_value, result):
     article_cache = cache.get("highlighting-{0}".format(article_id))
     if article_cache is None:
         article_cache = {}
-    article_cache[codingjob_id] = {}
-    article_cache[codingjob_id]['hash'] = hash_value
-    article_cache[codingjob_id]['value'] = result
+    article_cache[schema_id] = {}
+    article_cache[schema_id]['hash'] = hash_value
+    article_cache[schema_id]['value'] = result
     cache.set("highlighting-{0}".format(article_id), article_cache)
     cache.close()
 
