@@ -61,6 +61,7 @@ h2{
 }
 
 .coding td{
+    padding:2px;
     vertical-align: text-top;
 }
 
@@ -96,6 +97,59 @@ h2{
 
 #codingjob-list-table td{
     padding:5px 2px 5px;
+}
+
+
+#welcome{
+    margin-bottom:50px;
+}
+
+#article-irrelevant-input{
+    margin-left:40px;
+}
+
+.links{
+    text-align:center;
+}
+
+#coding-type-radios{
+    margin-right:80px !important;
+}
+
+#article-comment-input{
+    width:60%;
+}
+
+#article-comment-form{
+    clear:both;
+    padding-top:10px;
+    margin-bottom:20px;
+}
+
+
+#article-coding{
+    margin-bottom:30px;
+    clear:both;
+    float: left;
+}
+
+#coding-details{
+    float: right;
+    width: 66%;
+    height: 200px;
+    border: solid 1px grey;
+    border-radius: 5px;
+    padding: 4px;
+}
+
+#coding-details hr {
+    margin: 5px;
+}
+
+#unitcoding-table-part{
+    margin-bottom:30px;
+    clear:both;
+    margin-top:5px;
 }
 
 .ui-autocomplete {
