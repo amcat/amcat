@@ -1,5 +1,5 @@
 from django.http import HttpResponse, HttpResponseBadRequest
-from amcat.models.coding.CodingJob import CodingJob
+from amcat.models.coding.codingjob import CodingJob
 from amcat.models.Article import Article
 from django.core.cache import cache
 import json
