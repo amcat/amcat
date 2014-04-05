@@ -31,9 +31,7 @@ from amcat.models import CodedArticle
 from amcat.tools.model import AmcatModel
 from amcat.tools.table import table3
 
-from amcat.models.coding.codingschema import CodingSchema
 from amcat.models.user import User
-from amcat.models.articleset import ArticleSet
 
 from django.db import models
 
@@ -54,14 +52,14 @@ class CodingJob(AmcatModel):
 
     name = models.CharField(max_length=100)
 
-    unitschema = models.ForeignKey(CodingSchema, related_name='codingjobs_unit')
-    articleschema = models.ForeignKey(CodingSchema, related_name='codingjobs_article')
+    unitschema = models.ForeignKey("amcat.CodingSchema", related_name='codingjobs_unit')
+    articleschema = models.ForeignKey("amcat.CodingSchema", related_name='codingjobs_article')
 
     insertdate = models.DateTimeField(auto_now_add=True)
     insertuser = models.ForeignKey(User, related_name="+")
 
     coder = models.ForeignKey(User)
-    articleset = models.ForeignKey(ArticleSet, related_name="codingjob_set")
+    articleset = models.ForeignKey("amcat.ArticleSet", related_name="codingjob_set")
     
     class Meta():
         db_table = 'codingjobs'

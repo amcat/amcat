@@ -17,22 +17,21 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+from itertools import chain
+
+from django.views.generic.detail import DetailView
+from django.shortcuts import render
+from django.core.urlresolvers import reverse
+from django.core.exceptions import PermissionDenied
+from django.template.defaultfilters import escape
+
 from navigator.views.articleset_views import ArticleSetDetailsView
 from amcat.models import Article, ArticleSet, Sentence
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectFormView, ProjectActionRedirectView
-from django.views.generic.detail import DetailView
-from django import forms
-from amcat.forms import widgets
 from amcat.nlp import sbd
-from itertools import chain
-from django.shortcuts import render
-from django.core.urlresolvers import reverse
 from amcat.models import authorisation
-from django.core.exceptions import PermissionDenied
-from django.template.defaultfilters import escape
 from navigator.views.project_views import ProjectDetailsView
 from amcat.tools import amcates
-
 import navigator.forms
 
 
@@ -218,29 +217,15 @@ def handle_split(form, project, article, sentences):
     form_data = form.cleaned_data 
     all_sets = list(project.all_articlesets().filter(articles=article))
 
-    # Keep a list of touched sets, so we can invalidate their indices
-    dirty_sets = ArticleSet.objects.none()
-
     # Add splitted articles to existing sets
-    ArticleSet.articles.through.objects.bulk_create([
-        ArticleSet.articles.through(articleset=aset, article=art) for
-            art in articles for aset in form_data["add_splitted_to_sets"]
-    ])
-
-    # Collect changed sets
-    for field in ("add_splitted_to_sets", "remove_from_sets", "add_to_sets"):
-        dirty_sets |= form_data[field]
+    for aset in form_data["add_splitted_to_sets"]:
+        aset.add_articles(articles)
 
     # Add splitted articles to sets wherin the original article live{d,s}
     if form_data["add_splitted_to_all"]:
-        articlesetarts = ArticleSet.articles.through.objects.filter(article=article, articleset__project=project)
-
-        ArticleSet.articles.through.objects.bulk_create([
-            ArticleSet.articles.through(articleset=asetart.articleset, article=art)
-                for art in articles for asetart in articlesetarts
-        ])
-
-        dirty_sets |= project.all_articlesets().filter(articles=article).only("id")
+        asets = project.all_articlesets().filter(articles=article).only("id")
+        for aset in asets:
+            aset.add_articles(articles)
 
     if form_data["remove_from_sets"]:
         for aset in form_data["remove_from_sets"]:
@@ -259,9 +244,6 @@ def handle_split(form, project, article, sentences):
 
     if form_data["add_to_new_set"]:
         new_set = ArticleSet.create_set(project, form_data["add_to_new_set"], [article])
-
-    for ds in dirty_sets:
-        ds.refresh_index()
 
     return locals()
 
@@ -300,23 +282,12 @@ class ArticleSplitView(ProjectFormView):
     parent = ProjectArticleDetailsView
     url_fragment = "split"
     template_name = "project/article_split.html"
-
+    form_class = navigator.forms.SplitArticleForm
 
     @classmethod
     def _get_breadcrumb_name(cls, kwargs, view):
          return cls.url_fragment
     
-    class form_class(forms.Form):
-        add_to_new_set = forms.CharField(required=False) 
-        add_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
-        
-        remove_from_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
-        remove_from_all_sets = forms.BooleanField(initial=True, required=False, help_text="Remove all instances of the original article in this project")
-    
-        add_splitted_to_sets = forms.ModelMultipleChoiceField(queryset=ArticleSet.objects.none(), widget=widgets.JQueryMultipleSelect, required=False)
-        add_splitted_to_new_set = forms.CharField(required=False)
-        add_splitted_to_all = forms.BooleanField(initial=False, required=False, help_text="Add new (splitted) articles to all sets containing the original article")
-
     def get_form(self, form_class):
         form = super(ArticleSplitView, self).get_form(form_class)
         form.fields["add_splitted_to_sets"].queryset = self.project.all_articlesets()
@@ -349,17 +320,134 @@ class ArticleSplitView(ProjectFormView):
 
 from amcat.tools import amcattest
 
-class TestArticleViews(amcattest.AmCATTestCase):
+class TestSplitArticles(amcattest.AmCATTestCase):
     def create_test_sentences(self):
         article = amcattest.create_test_article(byline="foo", text="Dit is. Tekst.\n\n"*3 + "Einde.")
         sbd.create_sentences(article)
         return article, article.sentences.all()
 
-    def article_in(self, articleset, article):
+    @amcattest.use_elastic
+    def test_handle_split(self):
+        from amcat.tools import amcattest
+        from functools import partial
+
+        article, sentences = self.create_test_sentences()
+        project = amcattest.create_test_project()
+        aset1 = amcattest.create_test_set(4, project=project)
+        aset2 = amcattest.create_test_set(5, project=project)
+        aset3 = amcattest.create_test_set(0)
+
+        # Creates a codingjob for each articleset, as handle_split should account
+        # for "codedarticlesets" as well.
+        cj1 = amcattest.create_test_job(articleset=aset1)
+        cj2 = amcattest.create_test_job(articleset=aset2)
+        cj3 = amcattest.create_test_job(articleset=aset3)
+
+        for _set in [aset1, aset2]:
+            for _article in _set.articles.all():
+                sbd.create_sentences(_article)
+
+        a1, a2 = aset1.articles.all()[0], aset2.articles.all()[0]
+
+        aset1.add_articles([article])
+        aset3.add_articles([a1])
+
+        form = partial(navigator.forms.SplitArticleForm, project, article, initial={
+            "remove_from_sets": False
+        })
+
+        # Test form defaults (should do nothing!)
+        f = form(dict())
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+
+        self.assertEquals(5, aset1.articles.all().count())
+        self.assertEquals(5, aset2.articles.all().count())
+        self.assertEquals(1, aset3.articles.all().count())
+
+        self.assertTrue(self.article_in(cj1, aset1, article))
+        self.assertFalse(self.article_in(cj2, aset2, article))
+        self.assertFalse(self.article_in(cj3, aset3, article))
+
+        # Passing invalid form should raise exception
+        f = form(dict(add_to_sets=[-1]))
+        self.assertFalse(f.is_valid())
+        self.assertRaises(ValueError, handle_split, f, project, article, Sentence.objects.none())
+
+        # Test add_to_new_set
+        f = form(dict(add_to_new_set="New Set 1"))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        aset = project.all_articlesets().filter(name="New Set 1")
+        self.assertTrue(aset.exists())
+        self.assertEquals(project, aset[0].project)
+
+        # Test add_to_sets
+        f = form(dict(add_to_sets=[aset3.id]))
+        self.assertFalse(f.is_valid())
+        f = form(dict(add_to_sets=[aset2.id]))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        self.assertTrue(self.article_in(cj2, aset2, article))
+
+        # Test add_splitted_to_new_set
+        f = form(dict(add_splitted_to_new_set="New Set 2"))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        aset = project.all_articlesets().filter(name="New Set 2")
+        self.assertTrue(aset.exists())
+        self.assertEquals(project, aset[0].project)
+        self.assertEquals(1, aset[0].articles.count())
+        self.assertFalse(self.article_in(None, aset[0], article))
+
+        # Test add_splitted_to_sets
+        f = form(dict(add_splitted_to_sets=[aset2.id]))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        self.assertTrue(article in aset2.articles.all())
+
+        # Test remove_from_sets
+        f = form(dict(remove_from_sets=[aset1.id]))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+        self.assertTrue(article not in aset1.articles.all())
+
+        # Test remove_from_all_sets
+        aset1.add_articles([article])
+        aset2.add_articles([article])
+        aset3.add_articles([article])
+
+        f = form(dict(remove_from_all_sets=True))
+        self.assertTrue(f.is_valid())
+        handle_split(f, project, article, Sentence.objects.none())
+
+        self.assertTrue(aset1 in project.all_articlesets())
+        self.assertTrue(aset2 in project.all_articlesets())
+        self.assertFalse(aset3 in project.all_articlesets())
+
+        self.assertFalse(self.article_in(cj1, aset1, article))
+        self.assertFalse(self.article_in(cj2, aset2, article))
+        self.assertTrue(self.article_in(cj3, aset3, article))
+
+
+
+    def article_in(self, codingjob, articleset, article):
         from amcat.tools.amcates import ES
         ES().flush()
 
+        if codingjob is not None:
+            if not codingjob.coded_articles.filter(article=article):
+                return False
+
         return article.id in (articleset.get_article_ids() & articleset.get_article_ids(use_elastic=True))
+
+
+
+class TestArticleViews(amcattest.AmCATTestCase):
+    def create_test_sentences(self):
+        article = amcattest.create_test_article(byline="foo", text="Dit is. Tekst.\n\n"*3 + "Einde.")
+        sbd.create_sentences(article)
+        return article, article.sentences.all()
 
     @amcattest.use_elastic
     def test_get_articles(self):
@@ -395,103 +483,5 @@ class TestArticleViews(amcattest.AmCATTestCase):
         # Check if text on splitted articles contains expected
         self.assertTrue("Einde" not in a.text)
         self.assertTrue("Einde" in b.text)
-
-    @amcattest.use_elastic
-    def test_handle_split(self):
-        from amcat.tools.amcates import ES
-        from amcat.tools import amcattest
-        from functools import partial
-
-        article, sentences = self.create_test_sentences()
-        project = amcattest.create_test_project()
-        aset1 = amcattest.create_test_set(4, project=project)
-        aset2 = amcattest.create_test_set(5, project=project)
-        aset3 = amcattest.create_test_set(0)
-
-        for _set in [aset1, aset2]:
-            for _article in _set.articles.all():
-                sbd.create_sentences(_article)
-
-        a1, a2 = aset1.articles.all()[0], aset2.articles.all()[0]
-
-        aset1.add_articles([article])
-        aset3.add_articles([a1])
-
-        form = partial(navigator.forms.SplitArticleForm, project, article, initial={
-            "remove_from_sets" : False
-        })
-
-        # Test form defaults (should do nothing!)
-        f = form(dict())
-        self.assertTrue(f.is_valid())
-        handle_split(f, project, article, Sentence.objects.none())
-
-        self.assertEquals(5, aset1.articles.all().count())
-        self.assertEquals(5, aset2.articles.all().count())
-        self.assertEquals(1, aset3.articles.all().count())
-
-        self.assertTrue(self.article_in(aset1, article))
-        self.assertFalse(self.article_in(aset2, article))
-        self.assertFalse(self.article_in(aset3, article))
-
-        # Passing invalid form should raise exception
-        f = form(dict(add_to_sets=[-1]))
-        self.assertFalse(f.is_valid())
-        self.assertRaises(ValueError, handle_split, f, project, article, Sentence.objects.none())
-
-        # Test add_to_new_set
-        f = form(dict(add_to_new_set="New Set 1"))
-        self.assertTrue(f.is_valid())
-        handle_split(f, project, article, Sentence.objects.none())
-        aset = project.all_articlesets().filter(name="New Set 1")
-        self.assertTrue(aset.exists())
-        self.assertEquals(project, aset[0].project)
-
-        # Test add_to_sets
-        f = form(dict(add_to_sets=[aset3.id]))
-        self.assertFalse(f.is_valid())
-        f = form(dict(add_to_sets=[aset2.id]))
-        self.assertTrue(f.is_valid())
-        handle_split(f, project, article, Sentence.objects.none())
-        self.assertTrue(self.article_in(aset2, article))
-
-        # Test add_splitted_to_new_set
-        f = form(dict(add_splitted_to_new_set="New Set 2"))
-        self.assertTrue(f.is_valid())
-        handle_split(f, project, article, Sentence.objects.none())
-        aset = project.all_articlesets().filter(name="New Set 2")
-        self.assertTrue(aset.exists())
-        self.assertEquals(project, aset[0].project)
-        self.assertEquals(1, aset[0].articles.count())
-        self.assertFalse(self.article_in(aset[0], article))
-
-        # Test add_splitted_to_sets
-        f = form(dict(add_splitted_to_sets=[aset2.id]))
-        self.assertTrue(f.is_valid())
-        handle_split(f, project, article, Sentence.objects.none())
-        self.assertTrue(article in aset2.articles.all())
-
-        # Test remove_from_sets
-        f = form(dict(remove_from_sets=[aset1.id]))
-        self.assertTrue(f.is_valid())
-        handle_split(f, project, article, Sentence.objects.none())
-        self.assertTrue(article not in aset1.articles.all())
-
-        # Test remove_from_all_sets
-        aset1.add_articles([article])
-        aset2.add_articles([article])
-        aset3.add_articles([article])
-
-        f = form(dict(remove_from_all_sets=True))
-        self.assertTrue(f.is_valid())
-        handle_split(f, project, article, Sentence.objects.none())
-
-        self.assertTrue(aset1 in project.all_articlesets())
-        self.assertTrue(aset2 in project.all_articlesets())
-        self.assertFalse(aset3 in project.all_articlesets())
-
-        self.assertFalse(self.article_in(aset1, article))
-        self.assertFalse(self.article_in(aset2, article))
-        self.assertTrue(self.article_in(aset3, article))
 
 
