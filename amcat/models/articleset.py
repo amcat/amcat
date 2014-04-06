@@ -30,7 +30,8 @@ import logging
 from django.db import models
 from django.db import connection
 
-from amcat.models import Medium
+from amcat.models.medium import Medium
+from amcat.models.coding.codedarticle import CodedArticle
 from amcat.models.amcat import AmCAT
 from amcat.tools.model import AmcatModel
 from amcat.tools import amcates
@@ -57,7 +58,7 @@ class ArticleSet(AmcatModel):
 
     name = models.CharField(max_length=200)
     project = models.ForeignKey("amcat.Project", related_name='articlesets_set')
-    articles = models.ManyToManyField(Article, related_name="articlesets_set")
+    articles = models.ManyToManyField("amcat.Article", related_name="articlesets_set")
 
     provenance = models.TextField(null=True)
     
@@ -76,23 +77,33 @@ class ArticleSet(AmcatModel):
 
     def add_articles(self, articles, add_to_index=True, monitor=NullMonitor()):
         """
-        Add the given articles to this article set
-        """
+        Add the given articles to this article set. Implementation is exists of three parts:
 
+          1. Adding ArticleSetArticle objects
+          2. Adding CodedArticle objects
+          3. Updating index
+
+        @param articles: articles to be removed
+        @type articles: iterable with indexing of integers or Article objects
+
+        @param add_to_index: notify elasticsearch of changes
+        @type add_to_index: bool
+        """
         articles = {(art if type(art) is int else art.id) for art in articles}
         to_add = articles - self.get_article_ids()
-        # check that all articles exist:
         to_add = Article.objects.filter(pk__in=to_add).values_list("pk", flat=True)
+
         monitor.update(10, "{n} articles need to be added".format(n=len(to_add)))
-        
-        if not to_add:
-            return
-        # add to database
         ArticleSetArticle.objects.bulk_create(
             [ArticleSetArticle(articleset=self, article_id=artid) for artid in to_add]
         )
-        monitor.update(20, "{n} articles added in database, adding to index".format(n=len(to_add)))
-                
+
+        monitor.update(20, "{n} articles added to articlesets, adding to codingjobs".format(n=len(to_add)))
+        CodedArticle.objects.bulk_create(
+            [CodedArticle(codingjob=c, article_id=a) for c, a in itertools.product(self.codingjob_set.all(), to_add)]
+        )
+
+        monitor.update(30, "{n} articles added to codingjobs, adding to index".format(n=len(to_add)))
         if add_to_index:
             amcates.ES().add_to_set(self.id, to_add, monitor=monitor)
 
@@ -102,11 +113,18 @@ class ArticleSet(AmcatModel):
             
     def remove_articles(self, articles, remove_from_index=True):
         """
-        Add the given articles to this article set
-        If refresh or deduplicate are True, schedule a new celery task to do this
+        Remove article from this articleset. Also removes CodedArticles (from codingjobs) and updates
+        index if `remove_from_index` is True.
+
+        @param articles: articles to be removed
+        @type articles: iterable with indexing of integers or Article objects
+
+        @param remove_from_index: notify elasticsearch of changes
+        @type remove_from_index: bool
         """
         ArticleSetArticle.objects.filter(articleset=self, article__in=articles).delete()
-        
+        CodedArticle.objects.filter(codingjob__articleset=self, article__in=articles).delete()
+
         if remove_from_index:
             to_remove = {(art if type(art) is int else art.id) for art in articles}
             amcates.ES().remove_from_set(self.id, to_remove)
@@ -209,6 +227,18 @@ class TestArticleSet(amcattest.AmCATTestCase):
         s.refresh_index()
         self.assertEqual(set(s.get_mediums()), {a.medium for a in arts})
 
+    @amcattest.use_elastic
+    def test_add_codedarticles(self):
+        """Does add() also update codingjobs?"""
+        cj = amcattest.create_test_job(3)
+        a1 = amcattest.create_test_article()
+
+        self.assertEqual(3, cj.articleset.articles.all().count())
+        self.assertEqual(3, CodedArticle.objects.filter(codingjob=cj).count())
+
+        cj.articleset.add_articles([a1])
+        self.assertEqual(4, cj.articleset.articles.all().count())
+        self.assertEqual(4, CodedArticle.objects.filter(codingjob=cj).count())
 
     @amcattest.use_elastic
     def test_get_mediums(self):

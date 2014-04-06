@@ -36,13 +36,11 @@ from django.db.models import Q
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.code import Code, Label
 from amcat.models import Language
-from django.core.exceptions import ValidationError
-from amcat.tools import toolkit
 from amcat.tools.djangotoolkit import distinct_args
 
 import collections
 
-from itertools import product, chain, takewhile
+from itertools import product, chain
 
 # Used in Codebook.get_tree()
 TreeItem = collections.namedtuple("TreeItem", ["code_id", "codebookcode_id", "children", "hidden", "label", "ordernr"])
