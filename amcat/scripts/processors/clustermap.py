@@ -66,7 +66,7 @@ class ClustermapScript(script.Script):
              <Objects objectIDs="%s" />
             </Classification>""" % (keywordQuote, keywordStr, articleidStr))
         classifications = '\n'.join(classifications)
-        
+
         allArticleidStr = ' '.join(map(str, allArticleids))
         clusterXml = u"""<?xml version="1.0" encoding="utf-8"?>
         <ClassificationTree version="1.0">
@@ -79,16 +79,16 @@ class ClustermapScript(script.Script):
           </ClassificationSet>
         </ClassificationTree>
         """ % (objects, allArticleidStr, classifications)
-        
+
         imgfiledesc, imgfilepath = tempfile.mkstemp()
         os.close(imgfiledesc)
-        
+
         xmlfiledesc, xmlfilepath = tempfile.mkstemp()
-        os.write(xmlfiledesc, clusterXml)
+        os.write(xmlfiledesc, clusterXml.encode('utf-8'))
         os.close(xmlfiledesc)
-        
+
         log.debug('temp files: %s and %s' % (imgfilepath, xmlfilepath))
-        
+
         cmd = """ \
         java -Xmx800M \
         -classpath ../../contrib/java:../../contrib/java/aduna-clustermap-2006.1.jar:../../contrib/java/aduna-clustermap-2006.1-resources.jar \
@@ -104,35 +104,35 @@ class ClustermapScript(script.Script):
         mapHtml = re.sub('<AREA', '<AREA onclick="return false"', mapHtml)
         mapHtml = re.sub('onMouseOut="JavaScript:clearAll\(\);"', '', mapHtml)
         mapHtml = re.sub('onMouseOver="JavaScript:setTitleAndUrl\(.*?\);"', '', mapHtml)
-        
+
         articleCount = len(allArticleids)
-        
+
         image = open(imgfilepath).read()
-        
+
         os.remove(xmlfilepath)
         os.remove(imgfilepath)
-        
+
         clusterTable = ClustermapTableScript().run(articleidDict)
-        
+
         return types.ImageMap(mapHtml, image, articleCount, clusterTable)
-        
-        
-        
+
+
+
 def increaseCounter(table, x, y):
     table.addValue(x, y, table.getValue(x, y) + 1)
-    
-        
+
+
 class ClustermapTableScript(script.Script):
     """creates a clustermap as table"""
-    
+
     input_type = types.ArticleidDictPerQuery
     options_form = None
     output_type = table.table3.Table
-        
+
     def run(self, articleidDict):
         if len(articleidDict.keys()) < 2:
             raise Exception('Needs at least two queries')
-        
+
         allArticleids = set(itertools.chain(*articleidDict.values()))
         counterDict = collections.defaultdict(lambda:0)
         for aid in allArticleids:
@@ -143,7 +143,7 @@ class ClustermapTableScript(script.Script):
                 else:
                     key.append(0)
             counterDict[tuple(key)] += 1
-        
+
         resultTable = table.table3.DictTable('')#table3.Table(columns=articleidDict.keys() + ['total'])
         i = 0
         for key, total in counterDict.items():
@@ -152,7 +152,7 @@ class ClustermapTableScript(script.Script):
             resultTable.addValue(i, '[total]', total)
             i += 1
         return resultTable
-        
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     cli.run_cli(ClustermapScript)
