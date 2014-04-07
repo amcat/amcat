@@ -133,7 +133,7 @@ class Result(object):
                 if k != "sets":
                     # elastic 1.0 always returns arrays, we only want
                     # sets in a list, the rest should be 'scalarized'
-                    if isinstance(k, list):
+                    if isinstance(v, list):
                         v = v[0]
                 field_dict[k] = v
 
