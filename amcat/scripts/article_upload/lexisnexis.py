@@ -42,8 +42,8 @@ import logging; log = logging.getLogger(__name__)
 
 # Regular expressions used for parsing document
 class RES:
-    # Match at least 20 whitespace characters, followed by # of # DOCUMENTS.
-    DOCUMENT_COUNT = re.compile(" {20,}(FOCUS -)? *\d* of \d* DOCUMENT")
+    # Match at least 20 whitespace characters or at least 7 tabs, followed by # of # DOCUMENTS.
+    DOCUMENT_COUNT = re.compile("( {20,}|\t{7,})(FOCUS -)? *\d* of \d* DOCUMENTS?")
 
     # Header meta information group match
     HEADER_META = re.compile("([\w -]*):(.*)", re.UNICODE)
