@@ -83,15 +83,17 @@ class BZK(UploadScript):
 
     def scrape_2(self, _html):
         """New format as of 2014 and a few days before"""
-
         docdate = readDate(_html.cssselect("h1")[0].text.split("-")[1])
 
         #split body by <hr>
         items = []
         item = []
-        tags = set()
-        for child in _html.cssselect("body > *"):
-            tags.add(child.tag)
+        if len(_html.cssselect("body > *")) == 1:
+            tags = _html.cssselect("body > div > *") #extra div wrapper as of 2014-04-08
+        else:
+            tags = _html.cssselect("body > *")
+
+        for child in tags:
             if child.tag == "hr":
                 items.append(item)
                 item = []
@@ -100,7 +102,6 @@ class BZK(UploadScript):
 
         #first item is the index
         items = items[1:]
-
         for item in items:
             article = self.parse_item(item)
             if not article.date:
@@ -135,7 +136,7 @@ class BZK(UploadScript):
         if "-" in bits[-1]:
             article.date = readDate(bits[-1])
             article.medium = self.get_medium(" ".join(bits[:-1]))
-        elif bits[-1].isdigit():
+        elif bits[-1].isdigit() and bits[-3].isdigit():
             article.date = readDate(" ".join(bits[-3:]))
             article.medium = self.get_medium(" ".join(bits[:-3]))
         else:
@@ -155,7 +156,7 @@ class BZK(UploadScript):
             elif tag.tag == "h2":
                 article.headline = tag.text
             elif tag.tag == "i":
-                article = self.parse_dateline(tag.text, article)
+                article = self.parse_dateline(tag.text_content(), article)
         #process html
         article.text = "\n".join([html2text(html.tostring(bit)) for bit in article.text])
         return article
