@@ -79,15 +79,17 @@ class BZK(UploadScript):
 
     def scrape_new(self, _html):
         """New format as of 2014 and a few days before"""
-
         docdate = readDate(_html.cssselect("h1")[0].text.split("-")[1])
 
         #split body by <hr>
         items = []
         item = []
-        tags = set()
-        for child in _html.cssselect("body > *"):
-            tags.add(child.tag)
+        if len(_html.cssselect("body > *")) == 1:
+            tags = _html.cssselect("body > div > *") #extra div wrapper as of 2014-04-08
+        else:
+            tags = _html.cssselect("body > *")
+
+        for child in tags:
             if child.tag == "hr":
                 items.append(item)
                 item = []
@@ -96,7 +98,6 @@ class BZK(UploadScript):
 
         #first item is the index
         items = items[1:]
-
         for item in items:
             article = self.parse_item(item)
             if not article.props.date:
@@ -115,11 +116,11 @@ class BZK(UploadScript):
             elif tag.tag == "h2":
                 article.props.headline = tag.text
             elif tag.tag == "i":
-                bits = tag.text.split()
+                bits = tag.text_content().split()
                 if "-" in bits[-1]:
                     article.props.date = readDate(bits[-1])
                     article.props.medium = self.get_medium(" ".join(bits[:-1]))
-                elif bits[-1].isdigit():
+                elif bits[-1].isdigit() and bits[-3].isdigit():
                     article.props.date = readDate(" ".join(bits[-3:]))
                     article.props.medium = self.get_medium(" ".join(bits[:-3]))
                 else:
