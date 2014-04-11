@@ -29,6 +29,8 @@ class ANALYSES:
 
     corenlp = [{"module" : "xtas.tasks.single.corenlp"}]
     alpino = [{"module" : "xtas.tasks.single.alpino"}]
+    tadpole = [{"module" : "xtas.tasks.single.tadpole"}]
+    corenlp_lemmatize = [{"module" : "xtas.tasks.single.corenlp_lemmatize"}]
 
     semafor = [{"module" : "xtas.tasks.single.corenlp"},
                {"module" : "xtas.tasks.single.semafor"}]
