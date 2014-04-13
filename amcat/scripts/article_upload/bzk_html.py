@@ -62,7 +62,7 @@ class BZK(UploadScript):
             divs = _html.cssselect("#articleTable div")
         elif "intranet/rss" in t:
             divs = [div for div in _html.cssselect("#sort div") if "sort_" in div.get('id')]
-            
+
         for div in divs:
             article = Article(metastring = {})
             article.metastring['html'] = div
@@ -127,7 +127,7 @@ class BZK(UploadScript):
             html_str = "".join([html.tostring(t) for t in tags[2:]])
             article.text = html2text(html_str)
             article.metastring = {'html': html_str}
-            
+
             yield article
 
 
@@ -159,6 +159,7 @@ class BZK(UploadScript):
                 article = self.parse_dateline(tag.text_content(), article)
         #process html
         article.text = "\n".join([html2text(html.tostring(bit)) for bit in article.text])
+
         return article
 
     def get_medium(self, text):
@@ -180,8 +181,8 @@ class BZK(UploadScript):
 if __name__ == "__main__":
     from amcat.scripts.tools import cli
     cli.run_cli(BZK)
-        
-        
+
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -200,7 +201,7 @@ class TestBZK(amcattest.AmCATTestCase):
 
         def test_scrape_unit(self):
             self.assertTrue(self.result)
-        
+
         def test_scrape_file(self):
             #props to check for:
             # headline, text, pagenr, section, medium, date
@@ -214,5 +215,3 @@ class TestBZK(amcattest.AmCATTestCase):
             for proplist in may_props:
                 #assuming at least one of the articles has the property. if not, break
                 self.assertTrue(any(proplist))
-
-            
