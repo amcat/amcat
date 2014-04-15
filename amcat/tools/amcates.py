@@ -260,6 +260,7 @@ class ES(object):
             body['query'] = {'constant_score' : {'query' : body['query']}}
 
         if 'sort' in kwargs: body['track_scores'] = True
+
         if highlight:
             if isinstance(highlight, dict):
                 body['highlight'] = highlight
@@ -383,11 +384,7 @@ class ES(object):
         Compute the number of items matching the given query / filter
         """
         filters=dict(build_body(query, filters, query_as_filter=True))
-
-        if settings.ES_09:
-            body = {"constant_score" : filters}
-        else:
-            body = {"query" : {"constant_score" : filters}}
+        body = {"query" : {"constant_score" : filters}}
         result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
         return result["count"]
 
