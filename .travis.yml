@@ -24,17 +24,17 @@ before_install:
  - export DJANGO_SETTINGS_MODULE=settings
  - export PYTHONPATH=
 
-install: 
+install:
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
  - sudo service rabbitmq-server start
- - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-0.90.10.tar.gz | tar xvz
+ - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.1.0.tar.gz | tar xvz
  - wget http://amcat.vu.nl/plain/hitcount.jar
- - elasticsearch-0.90.10/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
- - elasticsearch-0.90.10/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
- - elasticsearch-0.90.10/bin/plugin -install mobz/elasticsearch-head
- - ES_CLASSPATH=hitcount.jar elasticsearch-0.90.10/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
- - pip install -r ./pip_requirements.txt --use-mirrors 
+ - elasticsearch-1.1.0/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
+ - elasticsearch-1.1.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
+ - elasticsearch-1.1.0/bin/plugin -install mobz/elasticsearch-head
+ - ES_CLASSPATH=hitcount.jar elasticsearch-1.1.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider -d
+ - pip install -r ./pip_requirements.txt --use-mirrors
 
 script:
  - python ./manage.py test ${SUITE}.tests
