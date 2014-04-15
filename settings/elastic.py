@@ -47,7 +47,7 @@ ES_MAPPING = {"properties" : {"id":{"type":"long"},
                           },
 #              TODO: possibly interesting global options to consider
 #              "_source" : {"enabled" : false}
-#              "_routing" : {"required" : True, "path" : "mediumid"}    
+#              "_routing" : {"required" : True, "path" : "mediumid"}
 #              "_timestamp" : {"enabled" : true, "path" : "date"}
 }
 ES_SETTINGS = {"analysis": {
@@ -69,3 +69,5 @@ ES_SETTINGS = {"analysis": {
             }
         }
     }
+
+ES_09 = os.environ.get('ES_09', 'N') in ("1","Y", "ON")
