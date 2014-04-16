@@ -69,5 +69,3 @@ ES_SETTINGS = {"analysis": {
             }
         }
     }
-
-ES_09 = os.environ.get('ES_09', 'N') in ("1","Y", "ON")

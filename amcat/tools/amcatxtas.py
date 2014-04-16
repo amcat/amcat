@@ -50,5 +50,5 @@ def get_result(article, analysis, store_intermediate=True, block=True):
     doc = {'index': es.index, 'type': es.doc_type,
            'id': article, 'field': 'text'}
     r = pipeline(doc, analysis,
-                 store_intermediate=store_intermediate, block=block)
+                 store_intermediate=store_intermediate)
     return r
