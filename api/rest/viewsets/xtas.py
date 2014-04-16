@@ -65,7 +65,7 @@ class ArticleLemmataSerializer(Serializer):
 
     def get_article_lemmata(self, pk):
         saf = get_result(pk, self.module)
-        for token in saf['tokens']:
+        for token in saf.get('tokens', []):
             token["aid"] = pk
             if self.output_token(token):
                 yield token
