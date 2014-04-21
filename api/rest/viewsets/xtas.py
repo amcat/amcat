@@ -33,14 +33,7 @@ from amcat.models import Article, ArticleSet
 from rest_framework.viewsets import ModelViewSet
 import itertools
 
-class ArticleLemmataSerializer(Serializer):
-
-    def field_to_native(self, obj, field_name):
-        result =  super(ArticleLemmataSerializer, self).field_to_native(obj, field_name)
-        if field_name == "results":
-            # flatting lists of tokens
-            result = itertools.chain(*result)
-        return result
+class ArticleXTasSerializer(Serializer):
 
     @property
     def module(self):
@@ -52,10 +45,22 @@ class ArticleLemmataSerializer(Serializer):
             raise Exception("Unknown module: {module}".format(**locals()))
         return module
 
+    def field_to_native(self, obj, field_name):
+        result =  super(ArticleXTasSerializer, self).field_to_native(obj, field_name)
+        if field_name == "results":
+            # flatting lists of tokens
+            result = itertools.chain(*result)
+        return result
+
+    def to_native(self, article):
+        saf = get_result(article.pk, self.module)
+        return list(self.get_xtas_results(article.pk, saf))
+
+class ArticleLemmataSerializer(ArticleXTasSerializer):
+
     @property
     def filter_pos(self):
         return self.context['request'].GET.get('pos1')
-
 
     def output_token(self, token):
         for key, vals in self.context['request'].GET.iterlists():
@@ -63,19 +68,12 @@ class ArticleLemmataSerializer(Serializer):
                 return False
         return True
 
-    def get_article_lemmata(self, pk):
-        saf = get_result(pk, self.module)
+    def get_xtas_results(self, aid, saf):
         for token in saf.get('tokens', []):
-            token["aid"] = pk
+            token["aid"] = aid
             if self.output_token(token):
                 yield token
 
-    def to_native(self, article):
-        result = list(self.get_article_lemmata(article.pk))
-        from django.db import connection
-        print connection.queries
-        connection.queries = []
-        return result
 
 
 class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
@@ -85,6 +83,47 @@ class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Datatables
 
     def filter_queryset(self, queryset):
         queryset = super(XTasLemmataViewSet, self).filter_queryset(queryset)
+        # only(.) would be better on serializer, but meh
+        queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
+        return queryset
+
+
+class ArticleSourcesSerializer(ArticleXTasSerializer):
+
+    @property
+    def filter_pos(self):
+        return self.context['request'].GET.get('pos1')
+
+    def output_token(self, token):
+        for key, vals in self.context['request'].GET.iterlists():
+            if key in token and token[key] not in vals:
+                return False
+        return True
+
+    def get_xtas_results(self, aid, saf):
+        if not 'tokens' in saf and 'sources' in saf:
+            return
+        tokendict = {t['id'] : t for t in saf['tokens']}
+        for sid, source in enumerate(saf['sources']):
+            for place, tokens in source.iteritems():
+                for tid in tokens:
+                    token = tokendict[tid]
+                    token["aid"] = aid
+                    token["source_id"] = sid
+                    token["source_place"] = place
+                    yield token
+
+
+
+
+
+class XTasSourcesViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
+    model_key = "source"
+    model = Article
+    model_serializer_class = ArticleSourcesSerializer
+
+    def filter_queryset(self, queryset):
+        queryset = super(XTasSourcesViewSet, self).filter_queryset(queryset)
         # only(.) would be better on serializer, but meh
         queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
         return queryset
