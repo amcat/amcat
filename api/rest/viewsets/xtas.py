@@ -89,10 +89,11 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
             for place, tokens in source.iteritems():
                 for tid in tokens:
                     token = tokendict[tid]
-                    token["aid"] = aid
-                    token["source_id"] = sid
-                    token["source_place"] = place
-                    yield token
+                    if self.output_token(token):
+                        token["aid"] = aid
+                        token["source_id"] = sid
+                        token["source_place"] = place
+                        yield token
 
 
 class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
