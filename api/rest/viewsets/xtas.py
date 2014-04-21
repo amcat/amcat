@@ -69,38 +69,19 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
         return True
 
     def get_xtas_results(self, aid, saf):
+        if self.context['request'].GET.get('sources'):
+            return self.get_sources(aid, saf)
+        else:
+            return self.get_tokens(aid, saf)
+
+
+    def get_tokens(self, aid, saf):
         for token in saf.get('tokens', []):
             token["aid"] = aid
             if self.output_token(token):
                 yield token
 
-
-
-class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
-    model_key = "token"
-    model = Article
-    model_serializer_class = ArticleLemmataSerializer
-
-    def filter_queryset(self, queryset):
-        queryset = super(XTasLemmataViewSet, self).filter_queryset(queryset)
-        # only(.) would be better on serializer, but meh
-        queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
-        return queryset
-
-
-class ArticleSourcesSerializer(ArticleXTasSerializer):
-
-    @property
-    def filter_pos(self):
-        return self.context['request'].GET.get('pos1')
-
-    def output_token(self, token):
-        for key, vals in self.context['request'].GET.iterlists():
-            if key in token and token[key] not in vals:
-                return False
-        return True
-
-    def get_xtas_results(self, aid, saf):
+    def get_sources(self, aid, saf):
         if not 'tokens' in saf and 'sources' in saf:
             return
         tokendict = {t['id'] : t for t in saf['tokens']}
@@ -114,16 +95,13 @@ class ArticleSourcesSerializer(ArticleXTasSerializer):
                     yield token
 
 
-
-
-
-class XTasSourcesViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
-    model_key = "source"
+class XTasLemmataViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
+    model_key = "token"
     model = Article
-    model_serializer_class = ArticleSourcesSerializer
+    model_serializer_class = ArticleLemmataSerializer
 
     def filter_queryset(self, queryset):
-        queryset = super(XTasSourcesViewSet, self).filter_queryset(queryset)
+        queryset = super(XTasLemmataViewSet, self).filter_queryset(queryset)
         # only(.) would be better on serializer, but meh
         queryset = queryset.filter(articlesets_set=self.articleset).only("pk")
         return queryset
