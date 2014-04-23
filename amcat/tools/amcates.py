@@ -260,16 +260,12 @@ class ES(object):
             body['query'] = {'constant_score' : {'query' : body['query']}}
 
         if 'sort' in kwargs: body['track_scores'] = True
-<<<<<<< HEAD
-
+        
         if highlight:
             if isinstance(highlight, dict):
                 body['highlight'] = highlight
             else:
                 body['highlight'] = HIGHLIGHT_OPTIONS
-=======
-        if highlight: body['highlight'] = HIGHLIGHT_OPTIONS
->>>>>>> release-3.3
         if lead: body['script_fields'] = LEAD_SCRIPT_FIELD
 
         log.debug("es.search(body={body}, **{kwargs})".format(**locals()))
@@ -467,7 +463,6 @@ class ES(object):
         hash = get_article_dict(article).hash
         return self.query(filters={'hashes' : hash}, fields=["sets"], score=False)
 
-<<<<<<< HEAD
     def find_occurrences(self, query, article):
         """
         Find the occurrences of the query in the article (id)
@@ -499,8 +494,6 @@ class ES(object):
                     yield offset, token
                 offset += len(token)
 
-=======
->>>>>>> release-3.3
 def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
