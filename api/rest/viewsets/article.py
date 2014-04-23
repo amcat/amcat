@@ -58,6 +58,15 @@ class ArticleSerializer(AmCATModelSerializer):
         return super(ArticleSerializer, self).restore_fields(data, files)
 
     def from_native(self, data, files):
+        if "id" in data:
+            # add existing ID rather than new
+            id = int(data['id'])
+            try:
+                return Article.objects.get(pk=int(data["id"]))
+            except Article.DoesNotExist:
+                from rest_framework.exceptions import APIException
+                raise APIException("Requested article id {id} does not exist"
+                                   .format(**locals()))
         result = super(ArticleSerializer, self).from_native(data, files)
 
         # deserialize children (if needed)

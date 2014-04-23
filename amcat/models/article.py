@@ -149,25 +149,32 @@ class Article(AmcatModel):
         # TODO: test parent logic (esp. together with hash/dupes)
         es = amcates.ES()
 
+        # existing / duplicate article ids to add to set
+        add_to_set = set() 
         # add dict (+hash) as property on articles so we know who is who
         sets = [articleset.id] if articleset else None
+        todo = []
         for a in articles:
-            a.es_dict = amcates.get_article_dict(a, sets=sets)
+            if a.id:
+                # article already exists, only add to set
+                add_to_set.add(a.id)
+            else:
+                a.es_dict = amcates.get_article_dict(a, sets=sets)
+                todo.append(a)
 
         if check_duplicate:
-            hashes = [a.es_dict['hash'] for a in articles]
+            hashes = [a.es_dict['hash'] for a in todo]
             results =es.query(filters={'hashes' : hashes}, fields=["hash", "sets"], score=False)
             dupes = {r.hash : r for r in results}
         else:
             dupes = {}
 
         # add all non-dupes to the db, needed actions
-        add_to_set = set() # duplicate article ids to add to set
         add_new_to_set = set() # new article ids to add to set
         add_to_index = [] # es_dicts to add to index
         result = [] # return result
         errors = [] # return errors
-        for a in articles:
+        for a in todo:
             dupe = dupes.get(a.es_dict['hash'], None)
             if dupe:
                 a.duplicate_of = dupe.id
@@ -191,7 +198,7 @@ class Article(AmcatModel):
                 add_to_index.append(a.es_dict)
                 add_new_to_set.add(a.pk)
 
-        log.info("Considered {} articles: {} saved to db, {} new to add to index, {} duplicates to add to set"
+        log.info("Considered {} articles: {} saved to db, {} new to add to index, {} existing/duplicates to add to set"
                  .format(len(articles), len(add_new_to_set), len(add_to_index), len(add_to_set)))
 
         # add to index
