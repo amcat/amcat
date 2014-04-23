@@ -53,7 +53,7 @@ def get_article_dict(art, sets=None):
         text=_clean(art.text),
         date=date,
         creator=_clean(art.author),
-        
+
         # other elements
         projectid=art.project_id,
         mediumid=art.medium_id,
@@ -120,7 +120,7 @@ class SearchResult(object):
     def as_dicts(self):
         "Return the results as fieldname : value dicts"
         return [r.__dict__ for r in self]
-        
+
 
 class Result(object):
     """Simple class to hold arbitrary values"""
@@ -128,13 +128,21 @@ class Result(object):
     def from_hit(cls, row, fields, score=True):
         "@param hit: elasticsearch hit dict"
         field_dict = {f: None for f in fields}
-        field_dict.update(row.get('fields', {}))
+        if 'fields' in row:
+            for (k, v) in row['fields'].iteritems():
+                if k != "sets":
+                    # elastic 1.0 always returns arrays, we only want
+                    # sets in a list, the rest should be 'scalarized'
+                    if isinstance(v, list):
+                        v = v[0]
+                field_dict[k] = v
+
         result =  Result(id=int(row['_id']), **field_dict)
         if score: result.score = int(row['_score'])
         if 'highlight' in row: result.highlight = row['highlight']
         if hasattr(result, 'date'):
             if len(result.date) == 10:
-                result.date = datetime.strptime(result.date, '%Y-%m-%d')                
+                result.date = datetime.strptime(result.date, '%Y-%m-%d')
             else:
                 result.date = datetime.strptime(result.date[:19], '%Y-%m-%dT%H:%M:%S')
         return result
@@ -145,7 +153,7 @@ class Result(object):
         keys = sorted(self.__dict__)
         items = ("{}={!r}".format(k, self.__dict__[k]) for k in keys)
         return "{}({})".format(type(self).__name__, ", ".join(items))
-    
+
 class ES(object):
     def __init__(self, index=None, doc_type=None, **args):
         elhost = {"host":settings.ES_HOST, "port":settings.ES_PORT}
@@ -158,28 +166,28 @@ class ES(object):
 
     def highlight_article(self, aid, query):
         query = queryparser.parse_to_terms(query).get_dsl()
-        
+
         highlight_opts = {"highlight_query" : query, "number_of_fragments": 0}
         body = dict(filter=build_filter(ids=aid),
                 highlight={"fields" : {"text" : highlight_opts, "headline" : highlight_opts, "byline" : highlight_opts,}})
         r = self.search(body, fields=[])
         try:
             hl = r['hits']['hits'][0]['highlight']
-            return {f : hl[f][0] for f in hl} 
+            return {f : hl[f][0] for f in hl}
         except KeyError:
             log.exception("Could not get highlights from {r!r}".format(**locals()))
 
 
     def clear_cache(self):
         indices.IndicesClient(self.es).clear_cache()
-        
+
     def delete_index(self):
         try:
             indices.IndicesClient(self.es).delete(self.index)
         except Exception, e:
             if 'IndexMissingException' in unicode(e): return
             raise
-        
+
     def create_index(self):
         body = {
             "settings" : settings.ES_SETTINGS,
@@ -199,7 +207,7 @@ class ES(object):
             self.create_index()
         x = cluster.ClusterClient(self.es).health(self.index, wait_for_status='yellow')
 
-        
+
     def get(self, id, **options):
         """
         Get a single article from the index
@@ -216,7 +224,7 @@ class ES(object):
         kargs = dict(index=self.index, doc_type=self.doc_type)
         kargs.update(options)
         return self.es.search(body=body, **kargs)
-        
+
 
     def query_ids(self, query=None, filters={}, **kwargs):
         """
@@ -254,7 +262,7 @@ class ES(object):
 
         if 'sort' in kwargs: body['track_scores'] = True
         if highlight: body['highlight'] = HIGHLIGHT_OPTIONS
-        if lead: body['script_fields'] = LEAD_SCRIPT_FIELD 
+        if lead: body['script_fields'] = LEAD_SCRIPT_FIELD
 
         log.debug("es.search(body={body}, **{kwargs})".format(**locals()))
         result = self.search(body, fields=fields, **kwargs)
@@ -288,7 +296,7 @@ class ES(object):
             dicts = (get_article_dict(article, list(all_sets.get(article.id, [])))
                      for article in Article.objects.filter(pk__in=batch))
             self.bulk_insert(dicts)
-   
+
     def remove_from_set(self, setid, article_ids, flush=True):
         """Remove the given articles from the given set. This is done in batches, so there
         is no limit on the length of article_ids (which can be a generator)."""
@@ -305,7 +313,7 @@ class ES(object):
         for i, batch in enumerate(batches):
             monitor.update(40/nbatches, "Added batch {i}/{nbatches}".format(**locals()))
             self.bulk_update(article_ids, UPDATE_SCRIPT_ADD_TO_SET, params={'set' : setid})
-        
+
     def bulk_insert(self, dicts):
         """
         Add the given article dict objects to the index using a bulk insert call
@@ -315,11 +323,11 @@ class ES(object):
                 yield serialize(dict(index={'_id' : article_dict['id']}))
                 yield serialize(article_dict)
         r = self.es.bulk(body=get_bulk_body(dicts), index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
-        
-        
+
+
     def bulk_update(self, article_ids, script, params):
         """
-        Execute a bulk update script with the given params on the given article ids. 
+        Execute a bulk update script with the given params on the given article ids.
         """
         payload = serialize(dict(script=script, params=params))
         def get_bulk_body(article_ids, payload):
@@ -328,7 +336,7 @@ class ES(object):
                 yield payload
         body = ("\n".join(get_bulk_body(article_ids, payload))) + "\n"
         r = self.es.bulk(body=body, index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE)
-        
+
     def synchronize_articleset(self, aset, full_refresh=False):
         """
         Make sure the given article set is correctly stored in the index
@@ -336,7 +344,7 @@ class ES(object):
                              after changing properties of articles
         """
         self.check_index() # make sure index exists and is at least 'yellow'
-        
+
         log.debug("Getting SOLR ids from set")
         solr_set_ids = set(self.query_ids(filters=dict(sets=aset.id)))
         log.debug("Getting DB ids")
@@ -372,11 +380,11 @@ class ES(object):
         Compute the number of items matching the given query / filter
         """
         filters=dict(build_body(query, filters, query_as_filter=True))
-        body = {"constant_score" : filters}
+        body = {"query" : {"constant_score" : filters}}
         result = self.es.count(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE, body=body)
         return result["count"]
-                      
-                               
+
+
     def aggregate_query(self, query=None, filters=None, group_by=None, date_interval='month'):
         """
         Compute an aggregate query, e.g. select count(*) where <filters> group by <group_by>
@@ -450,7 +458,7 @@ class ES(object):
         """
         hash = get_article_dict(article).hash
         return self.query(filters={'hashes' : hash}, fields=["sets"], score=False)
-            
+
 def get_date(timestamp):
     d = datetime.fromtimestamp(timestamp/1000)
     return datetime(d.year, d.month, d.day)
@@ -474,7 +482,7 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
         if isinstance(d, (str, unicode)):
             d = toolkit.readDate(d)
         return d.isoformat()
-        
+
     # Allow singulars as alias for plurals
     f = {}
     for singular, plural in [("mediumid", "mediumids"),
@@ -490,7 +498,7 @@ def get_filter_clauses(start_date=None, end_date=None, on_date=None, **filters):
 
     if filters:
         raise TypeError("Unknown filter keywords: {filters}".format(**locals()))
-    
+
     if 'set' in f: yield dict(terms={'sets' : _list(f['set'])})
     if 'mediumid' in f: yield dict(terms={'mediumid' : _list(f['mediumid'])})
     if 'id' in f: yield dict(ids={'values' : _list(f['id'])})
@@ -512,7 +520,7 @@ def combine_filters(filters):
         return filters[0]
     else:
         return {'bool' : {'must' : filters}}
-       
+
 def build_filter(*args, **kargs):
     filters = list(get_filter_clauses(*args, **kargs))
     return combine_filters(filters)
@@ -536,7 +544,7 @@ def build_body(query=None, filters={}, query_as_filter=False):
     if filters:
         yield ('filter', combine_filters(filters))
 
-        
+
 if __name__ == '__main__':
     ES().check_index()
 
@@ -556,7 +564,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         m1 = amcattest.create_test_medium(name="De Nep-Krant")
         m2, m3 = [amcattest.create_test_medium() for _ in range(2)]
         s1 = amcattest.create_test_set()
-        s2 = amcattest.create_test_set() 
+        s2 = amcattest.create_test_set()
         unused = amcattest.create_test_article(text='aap noot mies', medium=m3, articleset=s2)
         a = amcattest.create_test_article(text='aap noot mies', medium=m1, date='2001-01-01', create=False)
         b = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date='2001-02-01', create=False)
@@ -565,16 +573,16 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         Article.create_articles([a,b,c,d], articleset=s1, check_duplicate=False)
         ES().flush()
-        
+
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="mediumid")),
                          {m1.id : 1, m2.id : 3})
-        
+
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="year")),
                          {datetime(2001,1,1) : 3, datetime(2002,1,1) : 1})
-        
+
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="date", date_interval="month")),
                          {datetime(2001,1,1) : 1, datetime(2002,1,1) : 1, datetime(2001,2,1) : 2})
-        
+
         # set statistics
         stats = ES().statistics(filters=dict(sets=s1.id))
         self.assertEqual(stats.n, 4)
@@ -591,7 +599,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         from amcat.models import Article
         media =  [amcattest.create_test_medium() for _ in range(20)]
         arts = [amcattest.create_test_article(medium=m, create=False) for m in media]
-        
+
         s1 = amcattest.create_test_set()
         Article.create_articles(arts[:5], articleset=s1, check_duplicate=False)
         ES().flush()
@@ -601,7 +609,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         Article.create_articles(arts[5:], articleset=s2, check_duplicate=False)
         ES().flush()
         self.assertEqual(set(s2.get_mediums()), set(media[5:]))
-        
+
         self.assertEqual(set(s1.project.get_mediums()), set(media))
 
 
@@ -616,13 +624,13 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         r = ES().query(filters=dict(sets=s.id), size=10)
         self.assertEqual(len(list(r)), 10)
-        
+
         r = ES().query_all(filters=dict(sets=s.id), size=10)
         self.assertEqual(len(list(r)), len(arts))
-        
-        
-        
-        
+
+
+
+
     @amcattest.use_elastic
     def test_filters(self):
         """
@@ -632,7 +640,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         a = amcattest.create_test_article(text='aap noot mies', medium=m1, date="2001-01-01")
         b = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date="2002-01-01")
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2, date="2003-01-01")
-        
+
         s1 = amcattest.create_test_set(articles=[a,b,c])
         s2 = amcattest.create_test_set(articles=[a,b])
         ES().flush()
@@ -641,18 +649,18 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         # MEDIUM FILTER
         self.assertEqual(q(mediumid=m2.id), {b.id, c.id})
-        
+
         #### DATE FILTERS
         self.assertEqual(q(sets=s1.id, start_date='2001-06-01'), {b.id, c.id})
         # start is inclusive
         self.assertEqual(q(sets=s1.id, start_date='2002-01-01', end_date="2002-06-01"), {b.id})
         # end is exclusive
         self.assertEqual(q(sets=s1.id, start_date='2001-01-01', end_date="2003-01-01"), {a.id, b.id})
-                         
+
         # COMBINATION
         self.assertEqual(q(sets=s2.id, start_date='2001-06-01'), {b.id})
         self.assertEqual(q(end_date='2002-06-01', mediumid=m2.id), {b.id})
-        
+
     @amcattest.use_elastic
     def test_query(self):
         "Do query and query_ids work properly?"
@@ -664,7 +672,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         ids = set(ES().query_ids(filters=dict(mediumid=a.medium_id)))
         self.assertEqual(ids, {a.id})
 
-        
+
     @amcattest.use_elastic
     def test_articlesets(self):
         a, b, c = [amcattest.create_test_article() for _x in range(3)]
@@ -687,7 +695,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         # so refresh isn't really used. Rewrite to add to db manually
         s = amcattest.create_test_set()
         a = amcattest.create_test_article()
-            
+
         s.add(a)
         self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s.id))))
         s.refresh_index()
@@ -700,13 +708,13 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s2.id))))
         # check that removing of articles from a set works and does not affect
         # other sets
-        s2.remove_articles([a])        
+        s2.remove_articles([a])
         s2.refresh_index()
         self.assertEqual(set(), set(ES().query_ids(filters=dict(sets=s2.id))))
         self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
-        
-        
-        
+
+
+
         s.remove_articles([a])
         self.assertEqual({a.id}, set(ES().query_ids(filters=dict(sets=s.id))))
         s.refresh_index()
@@ -731,7 +739,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         arts[1].medium = amcattest.create_test_medium()
         arts[1].save()
 
-        
+
     @amcattest.use_elastic
     def test_full_refresh(self):
         "test full refresh, e.g. document content change"
@@ -753,7 +761,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m2.id))), {a.id})
 
     def test_scores(self):
-        "test if scores (and matches) are as expected for various queries" 
+        "test if scores (and matches) are as expected for various queries"
         s = amcattest.create_test_set(articles=[
                 amcattest.create_test_article(headline="a", text='dit is een test'),
                 ])
@@ -762,7 +770,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         def q(query):
             result = ES().query(query, filters={'sets':s.id}, fields=["headline"])
             return {a.headline : a.score for a in result}
-        
+
         self.assertEqual(q("test"), {"a" : 1})
 
         m1, m2 = [amcattest.create_test_medium() for _ in range(2)]
@@ -772,7 +780,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         d = amcattest.create_test_article(text='ik woon in een sociale huurwoning, net als anderen', medium=m2)
         ES().add_articles([a.id, b.id, c.id, d.id])
         ES().flush()
-        
+
         self.assertEqual(set(ES().query_ids("no*")), {a.id, b.id})
         self.assertEqual(set(ES().query_ids("no*", filters=dict(mediumid=m2.id))), {b.id})
         self.assertEqual(set(ES().query_ids("zus AND jet", filters=dict(mediumid=m2.id))), {c.id})
@@ -782,8 +790,8 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         self.assertEqual(set(ES().query_ids('"sociale huur*"', filters=dict(mediumid=m2.id))), {d.id})
         self.assertEqual(set(ES().query_ids('"sociale huur*"', filters=dict(mediumid=m2.id))), {d.id})
-        
-        
+
+
     @skip("ComplexPhraseQueryParser does not work for elastic")
     def test_complex_phrase_query(self):
         """Test complex phrase queries. DOES NOT WORK YET"""
@@ -794,7 +802,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         ES().add_articles([a.id, b.id, c.id])
         self.assertEqual(set(ES().query_ids('"mi* wi*"~5', filters=dict(sets=s1.id))), {b.id, c.id})
 
-        
+
     @amcattest.use_elastic
     def test_tokenizer(self):
         text = u"Rutte's Fu\xdf.d66,  50plus, 50+, el ni\xf1o, kanji (\u6f22\u5b57) en Noord-Korea"
@@ -809,16 +817,14 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(ES().query_ids("korea", filters=dict(sets=s1.id))), {a.id})
         self.assertEqual(set(ES().query_ids('"korea-noord"', filters=dict(sets=s1.id))), set())
         self.assertEqual(set(ES().query_ids('"noord-korea"', filters=dict(sets=s1.id))), {a.id})
-        
+
         # test Rutte's -> rutte s
         self.assertEqual(set(ES().query_ids("rutte", filters=dict(sets=s1.id))), {a.id})
         self.assertEqual(set(ES().query_ids("Rutte", filters=dict(sets=s1.id))), {a.id})
-        
+
         # test ni\~no -> nino
         self.assertEqual(set(ES().query_ids("nino", filters=dict(sets=s1.id))), {a.id})
         self.assertEqual(set(ES().query_ids(u"ni\xf1o", filters=dict(sets=s1.id))), {a.id})
 
         # test real kanji
         self.assertEqual(set(ES().query_ids(u"\u6f22\u5b57", filters=dict(sets=s1.id))), {a.id})
-
-
