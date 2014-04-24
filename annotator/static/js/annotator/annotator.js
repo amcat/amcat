@@ -363,7 +363,7 @@ annotator = (function(self){
         var table = $("<table>")
             .attr("annotator_coding_id", self.state.article_coding.annotator_id)
             .addClass("coding");
-
+        $("#coding").show()
         return table.append($.map(widgets.get_html(schemafields, null), function(widget, i){
             var schemafield = schemafields[i];
             var label = widgets.get_label_html(schemafield, widget);
@@ -1341,12 +1341,12 @@ annotator = (function(self){
     };
 
     self.window_scrolled = function(){
-        if ($(window).scrollTop() < 85){
-            self.article_container.css("position", "absolute");
-        } else {
-            self.article_container.css("position", "fixed");
-            self.article_container.css("top", "5px");
-        }
+        // if ($(window).scrollTop() < 85){
+        //     self.article_container.css("position", "absolute");
+        // } else {
+        //     self.article_container.css("position", "fixed");
+        //     self.article_container.css("top", "5px");
+        // }
     };
 
     self.window_resized = function(){

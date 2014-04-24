@@ -53,29 +53,43 @@ html {
     border: 1px solid gray;
 }
 
+#coding {
+    display: none;
+}
+
+#coding h1 {
+    border-style: none;
+}
+
 .articlelist-part{
-    overflow-x: scroll;
-    width:69%;
+    overflow-x:scroll;
+    width:100%;
     background:white;
     margin-bottom:20px;
 }
 
-.coding-part{
-
-    overflow-x: scroll;
-    width:69%;
+.coding-part, #coding-details{
+    width:350px;
     background:white;
-    
-    max-width:69%;
-   
+    float:left;
+    height: 100%;
+}
+
+.coding-part{
+    border:none 3px #ccc;
+    border-right-style:solid;
+    margin-right:5px;
 }
 
 article{
-    width:29%;
+    overflow: hidden;
     background:white;
-    position:absolute;
     right:10px;
     height:90%;
+    border:none 3px #ccc;
+    border-left-style:solid;
+    margin-left:5px;
+    padding-left: 7px;
 }
 
 .highlight{
@@ -101,7 +115,11 @@ h2{
     vertical-align: text-top;
 }
 
-.coding label {
+#article-comment-form label{
+    margin-right: 5px;
+}
+
+.coding label{
     cursor: pointer;
 }
 
@@ -139,8 +157,7 @@ h2{
 }
 
 .unit-codings-toolbar{
-    float:right;
-    width:800px;
+    float:left;
     text-align:right;
 }
 
@@ -187,15 +204,6 @@ h2{
     margin-bottom:30px;
     clear:both;
     float: left;
-}
-
-#coding-details{
-    float: right;
-    width: 66%;
-    height: 200px;
-    border: solid 1px grey;
-    border-radius: 5px;
-    padding: 4px;
 }
 
 #coding-details hr {
