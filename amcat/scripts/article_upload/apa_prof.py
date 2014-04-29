@@ -38,26 +38,21 @@ given an RTF file):
     6. to_article(): given the metadata and text it will return a Article object.
 
 """
-from tempfile import NamedTemporaryFile, mkstemp
-from collections import defaultdict
-from lxml.html.soupparser import fromstring
+from tempfile import NamedTemporaryFile
+from lxml.html import fromstring
+
+import re
+import sys
+import itertools
+import lxml.html
+import logging
 
 from amcat.models import Article, Medium
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.article_upload import fileupload
+from amcat.tools.toolkit import read_date
 
-import re
-import subprocess
-import sys
-import StringIO
-import datetime
-import itertools
-import lxml.html
-
-import htmlentitydefs
-
-import StringIO
-import logging; log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 FS20 = "\\fs20"
 PAGE_BREAK = "page-break"
@@ -66,6 +61,10 @@ STOP_AT = re.compile(ur"((Gespeicherter Anhang:)|(Der gegenst\xc3\xa4ndliche Tex
 # 11.05.2004
 _RE_DATE = "(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4})"
 RE_DATE = re.compile(_RE_DATE)
+
+# 15.Aug 2013
+_RE_DATE2 = "(?P<day>\d{2})\.(?P<month>\w{3}) (?P<year>\d{4})"
+RE_DATE2 = re.compile(_RE_DATE2)
 
 # 11.05.2004 18.00 Uhr
 _RE_DATETIME = "(?P<day>\d{2})\.(?P<month>\d{2})\.(?P<year>\d{4}) (?P<hour>\d{2})\.(?P<minute>\d{2}) Uhr"
@@ -86,7 +85,7 @@ RE_SECTION = re.compile("Ressort: *(?P<section>[^;:.?!-]+)")
 RE_AUTHOR = re.compile("^Von (?P<author>[^0-9]+)$")
 
 # All regular expressions which can match metadata
-META_RE = (RE_DATE, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE)
+META_RE = (RE_DATE, RE_DATE2, RE_DATETIME, RE_PAGENR, RE_SECTION, RE_AUTHOR, RE_MEDIUM, RE_MEDIUM_QUOTE)
 
 UNDECODED = bytes("NON_DECODED_CHARACTER")
 UNDECODED_UNICODE = bytes(b"NON_DECODED_UNICODE_CHARACTER")
@@ -135,12 +134,9 @@ def to_html(original_rtf, fixed_rtf):
     html = None
     from sh import unrtf
 
-
     with NamedTemporaryFile() as xml:
         xml.write(fixed_rtf)
         xml.flush()
-        from sh import unrtf
-
         html = bytes(unrtf(xml.name))
 
     for u in get_unencoded(original_rtf):
@@ -151,7 +147,7 @@ def to_html(original_rtf, fixed_rtf):
     for match, correct in get_unencoded_unicode(original_rtf):
         html = html.replace(UNDECODED_UNICODE, correct, 1)
 
-    return html
+    return html.replace("&gt;", ">").replace("&lt;", "<")
 
 def parse_html(html):
     # See issue #574. Splitting the RTF in multiple documents considered too
@@ -261,14 +257,20 @@ def parse_page(doc_elements):
         metadata["byline"] = " - ".join(m.text for m in meta)
 
     # Convert date properties to datetime object
-    _date = {}
+    year, month, day = metadata["year"], metadata["month"], metadata["day"]
+    hour, minute = metadata.get("hour"), metadata.get("minute")
+
+    datestring = "{day} {month} {year}"
+    if hour is not None and minute is not None:
+        datestring += ", {hour}:{minute}"
+
+    metadata["date"] = read_date(datestring.format(**locals()))
     for prop in ("year", "month", "day", "hour", "minute"):
-        _date[prop] = int(metadata.get(prop, 0))
-        if prop in metadata: del metadata[prop]
-    metadata["date"] = datetime.datetime(**_date)
+        if prop in metadata:
+            del metadata[prop]
 
     # Clean data and get headline
-    metadata["medium"] = metadata["medium"].strip().strip('"')
+    metadata["medium"] = metadata.get("medium", "APA - Unknown").strip().strip('"')
     medium, headline = metadata["medium"], "".join(["".join(e.itertext()) for e in headline])
 
     if medium in headline:
@@ -297,18 +299,21 @@ class APA(UploadScript):
         original_rtf, fixed_rtf = file.bytes, fix_rtf(file.bytes)
         doc = parse_html(to_html(original_rtf, fixed_rtf))
 
-        for page in get_pages(doc):
+        for i, page in enumerate(get_pages(doc)):
             yield doc, page
 
 """if __name__ == '__main__':
     original_rtf = open(sys.argv[1], 'rb').read()
     fixed_rtf = fix_rtf(original_rtf)
-    doc = parse_html(to_html(original_rtf, fixed_rtf))
+    html = to_html(original_rtf, fixed_rtf)
+    #html = open("blaat.html").read()
+    doc = parse_html(html)
     pages = list(get_pages(doc))
 
-    metadata, text = parse_page((doc, pages[0]))
-
-    print(text)"""
+    for page in pages:
+        metadata, text = parse_page((doc, page))
+        print(text)
+        print("-----")"""
 
 
 if __name__ == '__main__':
