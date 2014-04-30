@@ -6,6 +6,7 @@ from api.rest.viewsets.project import ProjectViewSetMixin
 from api.rest.viewsets.article import ArticleViewSetMixin
 from api.rest.mixins import DatatablesMixin
 
+from amcat.models import RuleSet
 from amcat.tools.amcatxtas import ANALYSES, get_result
 import json
 
@@ -53,6 +54,7 @@ class ArticleXTasSerializer(Serializer):
         return result
 
     def to_native(self, article):
+        if article is None: return {}
         saf = get_result(article.pk, self.module)
         return list(self.get_xtas_results(article.pk, saf))
 
@@ -69,11 +71,26 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
         return True
 
     def get_xtas_results(self, aid, saf):
+        rules = self.context['request'].GET.get('rules')
+        if rules:
+            return self.get_transformed(aid, saf, rules)
         if self.context['request'].GET.get('sources'):
             return self.get_sources(aid, saf)
         else:
             return self.get_tokens(aid, saf)
 
+    def get_transformed(self, aid, saf, rules):
+        print(saf)
+        ruleset = RuleSet.objects.get(label=rules)
+        from syntaxrules.soh import SOHServer
+        from syntaxrules.syntaxtree import SyntaxTree
+        soh = SOHServer("http://localhost:3030/x")
+        t = SyntaxTree(soh)
+        for sid in {token['sentence'] for token in saf['tokens']}:
+            print("@@@", sid)
+            t.load_saf(saf, sid)
+            t.apply_ruleset(ruleset.get_ruleset())
+            yield sid
 
     def get_tokens(self, aid, saf):
         for token in saf.get('tokens', []):
