@@ -146,7 +146,7 @@ def create_test_article(create=True, articleset=None, check_duplicate=False, **k
 
     a = Article(**kargs)
     if create:
-        Article.create_articles([a], articleset, check_duplicate=check_duplicate)
+        Article.create_articles([a], articleset, check_duplicate=check_duplicate, create_id=True)
     return a
 
 def create_test_sentence(**kargs):
@@ -169,7 +169,7 @@ def create_test_set(articles=0, **kargs):
     s = ArticleSet.objects.create(**kargs)
     if type(articles) == int:
         articles = [create_test_article(create=False) for _x in range(articles)]
-        Article.create_articles(articles, articleset=s, check_duplicate=False)
+        Article.create_articles(articles, articleset=s, check_duplicate=False, create_id=True)
     elif articles:
         s.add_articles(articles)
     return s

@@ -133,7 +133,7 @@ class Article(AmcatModel):
         return "<Article %s: %r>" % (self.id, self.headline)
 
     @classmethod
-    def create_articles(cls, articles, articleset=None, check_duplicate=True):
+    def create_articles(cls, articles, articleset=None, check_duplicate=True, create_id=False):
         """
         Add the given articles to the database, the index, and the given set
 
@@ -144,6 +144,7 @@ class Article(AmcatModel):
         @param articles: a collection of objects with the necessary properties (.headline etc)
         @param articleset: an articleset object
         @param check_duplicate: if True, duplicates are not added to the database or index
+        @param create_id: if True, also create articles that have an .id (for testing)
         (the 'existing' article *is* added to the set.
         """
         # TODO: test parent logic (esp. together with hash/dupes)
@@ -155,7 +156,7 @@ class Article(AmcatModel):
         sets = [articleset.id] if articleset else None
         todo = []
         for a in articles:
-            if a.id:
+            if a.id and not create_id:
                 # article already exists, only add to set
                 add_to_set.add(a.id)
             else:
@@ -243,7 +244,7 @@ class TestArticle(amcattest.AmCATTestCase):
     def test_create(self):
         """Can we create/store/index an article object?"""
         a = amcattest.create_test_article(create=False, date='2010-12-31', headline=u'\ua000abcd\u07b4')
-        Article.create_articles([a])
+        Article.create_articles([a], create_id=True)
         db_a = Article.objects.get(pk=a.id)
         amcates.ES().flush()
         es_a = list(amcates.ES().query(filters={'ids': [a.id]}, fields=["date", "headline"]))[0]
