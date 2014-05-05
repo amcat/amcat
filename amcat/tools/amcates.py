@@ -571,7 +571,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         c = amcattest.create_test_article(text='mies bla bla bla wim zus jet', medium=m2, date='2002-01-01', create=False)
         d = amcattest.create_test_article(text='noot mies wim zus', medium=m2, date='2001-02-03', create=False)
 
-        Article.create_articles([a,b,c,d], articleset=s1, check_duplicate=False)
+        Article.create_articles([a,b,c,d], articleset=s1, check_duplicate=False, create_id=True)
         ES().flush()
 
         self.assertEqual(dict(ES().aggregate_query(filters=dict(sets=s1.id), group_by="mediumid")),
@@ -601,12 +601,12 @@ class TestAmcatES(amcattest.AmCATTestCase):
         arts = [amcattest.create_test_article(medium=m, create=False) for m in media]
 
         s1 = amcattest.create_test_set()
-        Article.create_articles(arts[:5], articleset=s1, check_duplicate=False)
+        Article.create_articles(arts[:5], articleset=s1, check_duplicate=False, create_id=True)
         ES().flush()
         self.assertEqual(set(s1.get_mediums()), set(media[:5]))
 
         s2 = amcattest.create_test_set(project=s1.project)
-        Article.create_articles(arts[5:], articleset=s2, check_duplicate=False)
+        Article.create_articles(arts[5:], articleset=s2, check_duplicate=False, create_id=True)
         ES().flush()
         self.assertEqual(set(s2.get_mediums()), set(media[5:]))
 
@@ -619,7 +619,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         from amcat.models import Article
         arts = [amcattest.create_test_article(create=False) for _ in range(20)]
         s = amcattest.create_test_set()
-        Article.create_articles(arts, articleset=s, check_duplicate=False)
+        Article.create_articles(arts, articleset=s, check_duplicate=False, create_id=True)
         ES().flush()
 
         r = ES().query(filters=dict(sets=s.id), size=10)
@@ -666,6 +666,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         "Do query and query_ids work properly?"
         a = amcattest.create_test_article(headline="bla", text="artikel artikel een", date="2001-01-01")
         ES().flush()
+        print(list(ES().query("een", fields=["date", "headline"])))
         es_a, = ES().query("een", fields=["date", "headline"])
         self.assertEqual(es_a.headline, "bla")
         self.assertEqual(es_a.id, a.id)
@@ -760,6 +761,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m1.id))), set())
         self.assertEqual(set(ES().query_ids(filters=dict(sets=s.id, mediumid=m2.id))), {a.id})
 
+    @amcattest.use_elastic
     def test_scores(self):
         "test if scores (and matches) are as expected for various queries"
         s = amcattest.create_test_set(articles=[
