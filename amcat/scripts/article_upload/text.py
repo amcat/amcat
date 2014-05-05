@@ -240,7 +240,7 @@ class TestUploadText(amcattest.AmCATTestCase):
             f.flush()
             
             s = Text(file=File(f),date='2010-01-01', **base)
-            arts = s.run()
+            arts = [Article.objects.get(pk=aid) for aid in s.run()]
             self.assertEqual({a.headline for a in arts}, {"headline1","headline2"})
             self.assertEqual({a.section for a in arts}, {'',"x"})
             self.assertEqual({a.text for a in arts}, {"TEXT1", "TEXT2"})
