@@ -446,7 +446,7 @@ class ES(object):
             result = self.es.mget(index=self.index, doc_type=settings.ES_ARTICLE_DOCTYPE,
                                   body={"ids": batch}, fields=[])
             for doc in result['docs']:
-                if doc['exists']: yield int(doc['_id'])
+                if doc['found']: yield int(doc['_id'])
 
     def duplicate_exists(self, article):
         """
