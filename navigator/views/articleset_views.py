@@ -41,7 +41,7 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from navigator.views.datatableview import DatatableMixin
 from navigator.views.project_views import ProjectDetailsView
     
-UPLOAD_PLUGIN_TYPE=2
+UPLOAD_PLUGIN_TYPE=1
 
 class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = ArticleSet
