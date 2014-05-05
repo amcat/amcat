@@ -38,7 +38,6 @@ from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
 
 from navigator.views.project_views import ProjectDetailsView
-
 UPLOAD_PLUGIN_TYPE = 1
 
 from api.rest.datatable import FavouriteDatatable
