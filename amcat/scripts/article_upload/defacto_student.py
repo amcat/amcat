@@ -21,7 +21,7 @@
 """
 Plugin for uploading De Facto files (student edition) in HTML format
 To use this plugin, choose to  'print' the articles and save the source
-of the popup window as HTML. 
+of the popup window as HTML.
 """
 
 
@@ -40,15 +40,16 @@ import re
 import os
 import sys
 from amcat.tools.toolkit import readDate
+from cStringIO import StringIO
 
 
 
 class DeFactoStudent(UploadScript):
-    
+
     def split_file(self, f):
         html = get_html(f)
         return split_html(html)
-    
+
 
     def _scrape_unit(self, element):
         yield get_article(element)
@@ -59,7 +60,7 @@ def get_article(e):
     medium, date, page = get_meta(e)
     section = get_section(e)
     medium = get_or_create(Medium, name=medium)
-    
+
     return Article(headline=headline, text=body, date=date, pagenr=page, section=section, medium=medium)
 
 
@@ -69,7 +70,7 @@ def parse_ressort(text):
         return m.group(1).strip()
     else:
         raise ValueError("Cannot parse ressort string {text!r}".format(**locals()))
-    
+
 def parse_meta(text):
      m = re.match(r"(.*?)\s*(Nr. \d+)? vom (\d\d\.\d\d\.\d\d\d\d)( \d\d[.:]\d\d\b)?(.*)", text)
      if not m:
@@ -77,7 +78,7 @@ def parse_meta(text):
      medium, nr, date, time, pagestr= m.groups()
      if medium.startswith('"') and medium.endswith('"'):
          medium = medium[1:-1]
-     
+
      if time:
          date = date + time.replace(".", ":")
      date = toolkit.readDate(date)
@@ -89,17 +90,17 @@ def parse_meta(text):
 
      return medium, date, page
 
-     
+
 def get_html(html_bytes):
     parser = etree.HTMLParser()
-    return etree.parse(html_bytes, parser)
-        
-def split_html(html):   
+    return etree.parse(StringIO(html_bytes), parser)
+
+def split_html(html):
     return html.xpath("//div[@class='eintrag']")
 
 def get_meta(div):
     return parse_meta(div.find("pre").text)
-    
+
 
 def get_headline(div):
     return div.find("h3").text.strip()
@@ -117,7 +118,7 @@ if __name__ == '__main__':
     from amcat.scripts.tools.cli import run_cli
     run_cli(handle_output=False)
 
-    
+
 def stringify_children(node):
     """http://stackoverflow.com/questions/4624062/get-all-text-inside-a-tag-in-lxml"""
     from lxml.etree import tostring
@@ -136,7 +137,7 @@ def stringify_children(node):
 
 from amcat.tools import amcattest
 import os.path, datetime
-    
+
 class TestUploadText(amcattest.AmCATTestCase):
 
     def setUp(self):
@@ -155,14 +156,14 @@ class TestUploadText(amcattest.AmCATTestCase):
         arts2 = [get_article(x) for x in split_html(self.test2_html)]
         self.assertEqual(arts2[-1].headline, 'Cafe Puls News 08:00 (08:00) - Peter Kaiser wird angelobt')
         self.assertEqual(arts2[-1].date, datetime.datetime(2013,4,2,8,0))
-        
-         
-        
+
+
+
     def test_parse(self):
         elems = split_html(self.test1_html)
 
         self.assertEqual(get_meta(elems[0]), ("Der Standard", datetime.datetime(2013,4,2), 1))
-        self.assertEqual(get_headline(elems[0]), u'SP und VP k\xf6nnten dritte Partei f\xfcr Koalition brauchen')        
+        self.assertEqual(get_headline(elems[0]), u'SP und VP k\xf6nnten dritte Partei f\xfcr Koalition brauchen')
         self.assertEqual(get_section(elems[0]), u'SEITE 1')
         body = get_body(elems[0])
         self.assertTrue(body.startswith(u'Wien - SP\xd6 und \xd6VP'))
