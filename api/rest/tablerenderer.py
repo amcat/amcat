@@ -45,10 +45,13 @@ class TableRenderer(BaseRenderer):
         """
         Renders serialized *data* into target format
         """
-        if data is None or 'results' not in data:
+        if data is None:
+            return ''
+        if 'results' in data:
+            data = data['results']
+        elif not isinstance(data, list):
             return ''
         
-        data = data['results']
         table = self.tablize(data)
         return self.render_table(table)
         

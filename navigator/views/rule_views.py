@@ -197,7 +197,6 @@ class ArticleRuleDetailsView(ProjectDetailView):
 
     def get_context_data(self, **kwargs):
         from syntaxrules.syntaxtree import SyntaxTree
-        from syntaxrules.soh import SOHServer
 
         ctx = super(ArticleRuleDetailsView, self).get_context_data(**kwargs)
         saf = amcatxtas.get_result(int(self.kwargs['article_id']),
@@ -205,9 +204,7 @@ class ArticleRuleDetailsView(ProjectDetailView):
         sid = int(self.request.GET.get("sid", 1))
         sentences = list(self.get_sentences(saf))
 
-        soh = SOHServer(url="http://localhost:3030/x")
-        t = SyntaxTree(soh)
-        t.load_saf(saf, sid)
+        t = SyntaxTree(saf, sid)
         g = t.get_graphviz()
         original_tree = base64.b64encode(g.draw(format='png', prog='dot'))
 
