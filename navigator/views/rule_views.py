@@ -198,6 +198,7 @@ class ArticleRuleDetailsView(ProjectDetailView):
     def get_context_data(self, **kwargs):
         from syntaxrules.syntaxtree import SyntaxTree
 
+
         ctx = super(ArticleRuleDetailsView, self).get_context_data(**kwargs)
         saf = amcatxtas.get_result(int(self.kwargs['article_id']),
                                    self.object.preprocessing)
@@ -207,6 +208,13 @@ class ArticleRuleDetailsView(ProjectDetailView):
         t = SyntaxTree(saf, sid)
         g = t.get_graphviz()
         original_tree = base64.b64encode(g.draw(format='png', prog='dot'))
+
+        if 'preprocess' in self.request.GET:
+            prep = RuleSet.objects.get(pk=int(self.request.GET['preprocess']))
+            t.apply_ruleset(prep.get_ruleset())
+            g = t.get_graphviz(grey_rel=True)
+            preprocessed_tree = base64.b64encode(g.draw(format='png', prog='dot'))
+
 
         ruleset = self.object.get_ruleset()
         t.apply_ruleset(ruleset)

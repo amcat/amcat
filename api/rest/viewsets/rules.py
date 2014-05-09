@@ -44,8 +44,13 @@ class RulesetSerializer(AmCATModelSerializer):
             # Get parse
             module = ruleset.preprocessing
             saf = get_result(self.context['article'], module)
-            # Apply rules
             t = SyntaxTree(saf)
+
+            if self.context['preprocess']:
+                r = RuleSet.objects.get(pk=int(self.context['preprocess']))
+                t.apply_ruleset(r.get_ruleset())
+
+            # Apply rules
             t.apply_ruleset(ruleset.get_ruleset())
             return list(t.get_roles())
 
@@ -60,4 +65,5 @@ class ArticleRulesetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Article
     def get_serializer_context(self):
         ctx = super(ArticleRulesetViewSet, self).get_serializer_context()
         ctx['article'] = int(self.kwargs['article'])
+        ctx['preprocess'] = int(self.request.GET.get('preprocess'))
         return ctx
