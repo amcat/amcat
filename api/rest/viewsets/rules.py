@@ -35,11 +35,11 @@ class RuleViewSet(RulesetViewSetMixin, RuleViewSetMixin, ReadOnlyModelViewSet):
 
 from rest_framework.serializers import Serializer
 from api.rest.serializer import AmCATModelSerializer
-from syntaxrules import SyntaxTree
 
 class RulesetSerializer(AmCATModelSerializer):
 
     def to_native(self, ruleset):
+        from syntaxrules import SyntaxTree
         if self.many is False: # explicit compare because we don't want None
             # Get parse
             module = ruleset.preprocessing
