@@ -111,8 +111,12 @@ class ArticleSerializer(AmCATModelSerializer):
 
     def to_native(self, data):
         result = super(ArticleSerializer, self).to_native(data)
-        result['mediumid'] = result['medium']
-        result['medium'] = self.medium_names[result['medium']]
+        mid = result['medium']
+        result['mediumid'] = mid
+        if mid not in self.medium_names:
+            # this should not occur, but happens e.g. if index is not flushed
+            self.medium_names[mid] = Medium.objects.get(pk=mid).name
+        result['medium'] = self.medium_names[mid]
         return result
 
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
@@ -162,8 +166,10 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
 
 from api.rest.apitestcase import ApiTestCase
 from amcat.tools import amcattest, toolkit
-
+from amcat.tools import amcates
 class TestArticleViewSet(ApiTestCase):
+
+    @amcattest.use_elastic
     def test_post(self):
         """Test whether posting and retrieving an article works correctly"""
         import datetime
@@ -179,6 +185,8 @@ class TestArticleViewSet(ApiTestCase):
         }
         url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
         self.post(url, a, as_user=self.user)
+
+        amcates.ES().flush()
 
         res = self.get(url)["results"]
         self.assertEqual(len(res), 1)
@@ -201,6 +209,7 @@ class TestArticleViewSet(ApiTestCase):
         }
         url = "/api/v4/projects/{p.id}/articlesets/{s.id}/articles/".format(**locals())
         self.post(url, a, as_user=self.user)
+        amcates.ES().flush()
 
         res = self.get(url)["results"]
 
