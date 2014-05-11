@@ -68,6 +68,8 @@ class RuleSet(AmcatModel):
                 result['remove'] = rule.remove
             if rule.remarks:
                 result['remarks'] = rule.remarks
+            if rule.display:
+                result['display'] = rule.display
             result['order'] = rule.order
             result['label'] = rule.label
 

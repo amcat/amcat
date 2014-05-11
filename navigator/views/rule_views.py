@@ -216,8 +216,20 @@ class ArticleRuleDetailsView(ProjectDetailView):
             preprocessed_tree = base64.b64encode(g.draw(format='png', prog='dot'))
 
 
+        trees = []  # [(name, tree), ] for intermediate trees
         ruleset = self.object.get_ruleset()
-        t.apply_ruleset(ruleset)
+
+        updates = [t._get_lexicon_update(ruleset['lexicon'])]
+        for rule in ruleset['rules']:
+            updates.append(rule)
+            if rule.get('display'):
+                t.apply_updates(updates)
+                updates = []
+                g = t.get_graphviz(grey_rel=True)
+                png = base64.b64encode(g.draw(format='png', prog='dot'))
+                trees.append(('After '+rule['label'], png))
+
+        t.apply_updates(updates)
         g = t.get_graphviz(grey_rel=True)
         processed_tree = base64.b64encode(g.draw(format='png', prog='dot'))
 

@@ -19,6 +19,11 @@
 
 <object type='image/png' data='data:image/png;base64,{{ processed_tree | safe }}'></object>
 
+{% for name, tree in trees %}
+<h1>{{ name }}</h1>
+
+<object type='image/png' data='data:image/png;base64,{{ tree | safe }}'></object>
+{% endfor %}
 
 {% if preprocessed_tree %}
 <h1>Preprocessed Tree</h1>
@@ -26,9 +31,6 @@
 <object type='image/png' data='data:image/png;base64,{{ preprocessed_tree | safe }}'></object>
 {% endif %}
 
-<h1>Original Tree</h1>
-
-<object type='image/png' data='data:image/png;base64,{{ original_tree | safe }}'></object>
 
 <h2>Ruleset:</h2>
 <pre>
