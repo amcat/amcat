@@ -33,6 +33,9 @@ class ArticleSerializer(AmCATModelSerializer):
     def __init__(self, instance=None, data=None, files=None, **kwargs):
         kwargs['many'] = isinstance(data, list)
         super(ArticleSerializer, self).__init__(instance, data, files, **kwargs)
+        media = self.context['view'].articleset.get_mediums()
+        self.medium_names = {m.id : m.name for m in media}
+        self.medium_ids = {m.name : m.id for m in media}
 
     def restore_fields(self, data, files):
         # convert media from name to id, if needed
@@ -41,12 +44,12 @@ class ArticleSerializer(AmCATModelSerializer):
             try:
                 int(data['medium'])
             except ValueError:
-                if not hasattr(self, 'media'):
-                    self.media = {}
                 m = data['medium']
-                if m not in self.media:
-                    self.media[m] = Medium.get_or_create(m).id
-                data['medium'] = self.media[m]
+                if m not in self.medium_ids:
+                    mid = Medium.get_or_create(m).id
+                    self.medium_ids[m] = mid
+                    self.medium_names[mid] = m
+                data['medium'] = self.medium_ids[m]
 
         # add time part to date, if needed
         if 'date' in data and len(data['date']) == 10:
@@ -105,7 +108,13 @@ class ArticleSerializer(AmCATModelSerializer):
         # make sure that self.many is True for serializing result
         self.many = True
         return self.object
-        
+
+    def to_native(self, data):
+        result = super(ArticleSerializer, self).to_native(data)
+        result['mediumid'] = result['medium']
+        result['medium'] = self.medium_names[result['medium']]
+        return result
+
 from api.rest.viewsets.articleset import ArticleSetViewSetMixin
 from rest_framework.viewsets import ModelViewSet
 from api.rest.viewsets.project import ProjectViewSetMixin
@@ -121,7 +130,7 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
     model_key = "article"
     permission_map = {'GET' : ROLE_PROJECT_READER}
     model_serializer_class = ArticleSerializer
-    
+
     def check_permissions(self, request):
         # make sure that the requested set is available in the projec, raise 404 otherwiset
         # sets linked_set to indicate whether the current set is owned by the project
@@ -133,8 +142,8 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
         else:
             raise NotFoundInProject()
         return super(ArticleViewSet, self).check_permissions(request)
-    
-    
+
+
     @property
     def articleset(self):
         if not hasattr(self, '_articleset'):
@@ -153,7 +162,7 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
 
 from api.rest.apitestcase import ApiTestCase
 from amcat.tools import amcattest, toolkit
-        
+
 class TestArticleViewSet(ApiTestCase):
     def test_post(self):
         """Test whether posting and retrieving an article works correctly"""
@@ -198,4 +207,3 @@ class TestArticleViewSet(ApiTestCase):
         headlines = {a['headline'] : a for a in res}
         self.assertEqual(set(headlines), {'Test parent', 'Test child'})
         self.assertEqual(headlines['Test child']['parent'], headlines['Test parent']['id'])
-        
