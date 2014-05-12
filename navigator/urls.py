@@ -31,6 +31,7 @@ from navigator.views.codebook_views import *
 from navigator.views.user_views import *
 from navigator.views.codingjob_views import *
 from navigator.views.codingschema_views import *
+from navigator.views.task import TaskDetailsView, TaskListView
 
 urlpatterns = patterns(
     '',
@@ -115,8 +116,9 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              CodingSchemaCopyView,CodingSchemaLinkView,CodingSchemaUnlinkView,
              CodingJobListView, CodingJobAddView, CodingJobDetailsView,CodingJobDeleteView,CodingJobEditView,
              CodingJobExportSelectView, CodingJobExportView,
-             ProjectUserListView, ProjectUserAddView]:
-    for pattern in view.get_url_patterns():
+             ProjectUserListView, ProjectUserAddView,
+             TaskDetailsView, TaskListView]:
+   for pattern in view.get_url_patterns():
         urlpatterns += patterns('',
                                 url(pattern, view.as_view(), name=view.get_view_name())
                             )

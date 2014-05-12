@@ -27,7 +27,7 @@ a command line script.
 """
 
 from django import forms
-from django.http import QueryDict
+from django.http import QueryDict, HttpResponse
 from django.utils.datastructures import MergeDict
 from amcat.forms import validate
 from amcat.models.plugin import Plugin, PluginType
@@ -72,7 +72,6 @@ class Script(object):
     def _validate_form(self):
         """Validate self.bound_form, raising an exception if invalid"""
         validate(self.bound_form)
-
 
     def _bind_form(self, options=None,  **kargs):
         """
@@ -120,6 +119,12 @@ class Script(object):
         # their arguments if needed. (Some parameters may be invalid after executing the
         # script and may need changing.)
         return called_with
+
+    def get_result(self, result):
+        return result
+
+    def get_response(self, result):
+        return HttpResponse(result)
 
     @classmethod
     def name(cls):

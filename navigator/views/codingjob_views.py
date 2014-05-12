@@ -204,14 +204,5 @@ class CodingJobExportView(ProjectScriptView):
         return context
 
     def form_valid(self, form):
-        results = self.run_form(form)
-        eformat = {f.label : f for f in EXPORT_FORMATS}[form.cleaned_data["export_format"]]
-        jobs = form.cleaned_data["codingjobs"]
-        if eformat.mimetype is not None:
-            if len(jobs) > 3:
-                jobs = jobs[:3] + ["etc"]
-            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in jobs), now=datetime.datetime.now(), ext=eformat.label)
-            response = HttpResponse(content_type=eformat.mimetype, status=200)
-            response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
-            response.write(results)
-            return response
+        return self.run_form_delayed(self.project, form)
+

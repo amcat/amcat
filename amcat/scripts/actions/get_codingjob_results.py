@@ -19,7 +19,8 @@
 ###########################################################################
 
 from __future__ import unicode_literals, print_function, absolute_import
-
+import datetime
+from django.http import HttpResponse
 
 from amcat.scripts.forms import ModelMultipleChoiceFieldWithIdLabel
 
@@ -27,7 +28,7 @@ from django import forms
 from django.utils.datastructures import MultiValueDict
 from django.db.models import Q
 
-from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchema
+from amcat.models import Coding, CodingJob, CodingSchemaField, Label, CodingSchema, Project
 from amcat.models import Article, CodingSchemaFieldType, Sentence
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
@@ -95,10 +96,13 @@ class CodingjobListForm(forms.Form):
         
         @param project: Restrict list of codingjobs to this project
         @type project: models.Project"""
-        self.project = kwargs.pop("project")
+        self.project = kwargs.pop("project", None)
 
         super(CodingjobListForm, self).__init__(data, files, **kwargs)
-        self.fields["codingjobs"].queryset = self.project.codingjob_set.all()
+        if self.project:
+            if isinstance(self.project, int):
+                self.project = Project.objects.get(id=self.project)
+            self.fields["codingjobs"].queryset = self.project.codingjob_set.all()
         self.data = self.data or MultiValueDict()
 
 
@@ -123,7 +127,8 @@ class CodingJobResultsForm(CodingjobListForm):
         export_level = kwargs.pop("export_level", None)
         super(CodingJobResultsForm, self).__init__(data, files, **kwargs)
         if codingjobs is None: # is this necessary?
-            codingjobs = self.fields["codingjobs"].clean(self.data.getlist("codingjobs", codingjobs))
+            data = self.data.getlist("codingjobs", codingjobs)
+            codingjobs = self.fields["codingjobs"].clean(data)
         if export_level is None:
             export_level = int(self.fields["export_level"].clean(self.data['export_level']))
 
@@ -301,6 +306,29 @@ class SubSentenceColumn(table3.ObjectColumn):
             
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
+
+    @classmethod
+    def get_called_with(cls, **called_with):
+        codingjobs = called_with['data']['codingjobs']
+        if not isinstance(codingjobs, list):
+            called_with['data']['codingjobs'] = [codingjobs]
+        return dict(options=cls.options_form(**called_with))
+
+    def get_response(self, result):
+        form = self.bound_form
+        formats = {f.label: f for f in EXPORT_FORMATS}
+        format = formats[form.cleaned_data["export_format"]]
+        jobs = form.cleaned_data["codingjobs"]
+
+        if format.mimetype is not None:
+            if len(jobs) > 3:
+                jobs = jobs[:3] + ["etc"]
+            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in jobs), now=datetime.datetime.now(), ext=format.label)
+            response = HttpResponse(result, content_type=format.mimetype, status=200)
+            response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
+            return response
+
+        raise ValueError("Not a known format '{format}'".format(**locals()))
 
     def get_table(self, codingjobs, export_level, **kargs):
         codingjobs = CodingJob.objects.prefetch_related("coded_articles__codings__values").filter(pk__in=codingjobs)
