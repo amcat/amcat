@@ -88,12 +88,12 @@ _METAFIELDS = [
 class CodingjobListForm(forms.Form):
     codingjobs = ModelMultipleChoiceFieldWithIdLabel(queryset=CodingJob.objects.all(), required=True)
     export_level = forms.ChoiceField(label="Level of codings to export", choices=CODING_LEVELS, initial=CODING_LEVEL_ARTICLE)
-    
+
     def __init__(self, data=None, files=None, **kwargs):
         """
         Offers a form with a list of codingjobs. Raises a KeyError if keyword-
         argument project is not given.
-        
+
         @param project: Restrict list of codingjobs to this project
         @type project: models.Project"""
         self.project = kwargs.pop("project", None)
@@ -106,7 +106,7 @@ class CodingjobListForm(forms.Form):
         self.data = self.data or MultiValueDict()
 
 
-                
+
 class CodingJobResultsForm(CodingjobListForm):
     """
     This is a dynamically rendered form, which consists of a static part (general
@@ -136,17 +136,17 @@ class CodingJobResultsForm(CodingjobListForm):
         self.fields["codingjobs"].widget = forms.MultipleHiddenInput()
         self.fields["export_level"].widget = forms.HiddenInput()
 
-        subsentences = CodingSchema.objects.filter(codingjobs_unit__in=codingjobs, subsentences=True).exists() 
-            
-        
+        subsentences = CodingSchema.objects.filter(codingjobs_unit__in=codingjobs, subsentences=True).exists()
+
+
         # Add meta fields
         for field in _METAFIELDS:
             if field.object == "sentence" and export_level == CODING_LEVEL_ARTICLE: continue
             if field.object == "subsentence" and (export_level == CODING_LEVEL_ARTICLE or not subsentences): continue
-                
+
             self.fields["meta_{field.object}_{field.attr}".format(**locals())] = forms.BooleanField(
                 initial=True, required=False, label="Include {field.label}".format(**locals()))
-            
+
         # Insert dynamic fields based on schemafields
         self.schemafields = _get_schemafields(codingjobs, export_level)
         self.fields.update(self.get_form_fields(self.schemafields))
@@ -177,7 +177,7 @@ class CodingJobResultsForm(CodingjobListForm):
 
 def _get_field_prefix(schemafield):
     return  "schemafield_{schemafield.codingschema_id}_{schemafield.fieldnr}".format(**locals())
-            
+
 def _get_schemafields(codingjobs, level):
     unitfilter = Q(codingschema__codingjobs_unit__in=codingjobs)
     articlefilter = Q(codingschema__codingjobs_article__in=codingjobs)
@@ -196,7 +196,7 @@ def _get_schemafields(codingjobs, level):
     # Get fields based on given codingjobs and unit_codings setting
     return (fields.order_by("id").distinct()
             .select_related("codingschema", "fieldtype"))
-    
+
 
 CodingRow = collections.namedtuple('CodingRow', ['job', 'coded_article', 'article', 'sentence', 'article_coding', 'sentence_coding'])
 
@@ -215,12 +215,12 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
     job_sentences = { s.id : s for s in Sentence.objects.filter(article__id__in=job_articles.keys())}
 
     # Articles that have been seen in a codingjob already (so we can skip duplicate codings on the same article)
-    seen_articles = set() 
+    seen_articles = set()
 
     for job in jobs:
         # Get all codings in dicts for later lookup
         coded_articles = set()
-        article_codings = {} # {ca : coding} 
+        article_codings = {} # {ca : coding}
         sentence_codings = collections.defaultdict(lambda : collections.defaultdict(list)) # {ca : {sentence_id : [codings]}}
 
         for ca in job.coded_articles.order_by('id').prefetch_related("codings"):
@@ -236,7 +236,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
             a = job_articles[ca.article_id]
             if a in seen_articles and not include_multiple:
                 continue
-            
+
             article_coding = article_codings.get(ca.id)
             sentence_ids = sentence_codings[ca.id]
             if include_sentences and sentence_ids:
@@ -279,11 +279,11 @@ class MetaColumn(table3.ObjectColumn):
         self.field = field
         super(MetaColumn, self).__init__(self.field.label)
     def getCell(self, row):
-        
+
         obj = getattr(row, self.field.object)
         if obj:
             return unicode(getattr(obj, self.field.attr))
-    
+
 class SubSentenceColumn(table3.ObjectColumn):
     def __init__(self, field):
         self.field = field
@@ -303,7 +303,7 @@ class SubSentenceColumn(table3.ObjectColumn):
             elif coding.end:
                 words = words[:(coding.end+1)]
             return " ".join(words)
-            
+
 class GetCodingJobResults(Script):
     options_form = CodingJobResultsForm
 
@@ -332,14 +332,14 @@ class GetCodingJobResults(Script):
 
     def get_table(self, codingjobs, export_level, **kargs):
         codingjobs = CodingJob.objects.prefetch_related("coded_articles__codings__values").filter(pk__in=codingjobs)
-        
+
         # Get all row of table
         rows = list(_get_rows(
             codingjobs, include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
             include_multiple=True, include_uncoded_articles=False
             ))
 
-        
+
         table = table3.ObjectTable(rows=rows)
 
         # Meta field columns
@@ -349,27 +349,29 @@ class GetCodingJobResults(Script):
                     table.addColumn(SubSentenceColumn(field))
                 else:
                     table.addColumn(MetaColumn(field))
-                
+
         # Build columns based on form schemafields
         for schemafield in self.bound_form.schemafields:
             prefix = _get_field_prefix(schemafield)
             if self.options[prefix+"_included"]:
                 options = {k[len(prefix)+1:] :v for (k,v) in self.options.iteritems() if k.startswith(prefix)}
-                
+
                 for label, function in schemafield.serialiser.get_export_columns(**options):
                     table.addColumn(CodingColumn(schemafield, label, function))
         return table
 
     def _run(self, export_format, **kargs):
+        self.progress_monitor.update(50, "Bla!")
+        import time; time.sleep(2)
         table = self.get_table(**kargs)
-
+        self.progress_monitor.update(80, "Blx!")
         format_dict = {f.label : f.function for f in EXPORT_FORMATS}
         return format_dict[export_format](table)
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
     result = cli.run_cli()
-    
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
@@ -387,7 +389,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         from amcat.forms import validate
         jobs = list(jobs)
 
-        
+
         data = dict(codingjobs=[job.id for job in jobs],
                     export_format=[export_format],
                     export_level=[str(export_level)],
@@ -397,7 +399,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
             data["{prefix}_included".format(**locals())] = [True]
             for k, v in opts.items():
                 data["{prefix}_{k}".format(**locals())] = [v]
-            
+
         f = CodingJobResultsForm(data=MultiValueDict(data), project=jobs[0].project)
         validate(f)
         return GetCodingJobResults(f)
@@ -431,14 +433,14 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         s2 = amcattest.create_test_sentence(article=articles[0])
         sc2 = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s2)
         rows = set(_get_rows([job], include_sentences=True, include_multiple=True, include_uncoded_articles=False))
-        self.assertEqual(rows, {(job, ca, articles[0], s, c, sc), (job, ca, articles[0], s2, c, sc2)})        
+        self.assertEqual(rows, {(job, ca, articles[0], s, c, sc), (job, ca, articles[0], s2, c, sc2)})
         # if an article contains an article coding but no sentence coding, it should still show up with sentence=True
         c2 = amcattest.create_test_coding(codingjob=job, article=articles[1])
         rows = set(_get_rows([job], include_sentences=True, include_multiple=True, include_uncoded_articles=False))
         self.assertEqual(rows, {(job, ca, articles[0], s, c, sc), (job, ca, articles[0], s2, c, sc2),
                                 (job, job.get_coded_article(articles[1]), articles[1], None, c2, None)})
-        
-        
+
+
 
     def test_results(self):
         codebook, codes = amcattest.create_test_codebook_with_codes()
@@ -446,7 +448,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         sschema, codebook, sstrf, sintf, scodef = amcattest.create_test_schema_with_fields(codebook=codebook)
         job = amcattest.create_test_job(unitschema=sschema, articleschema=schema, narticles=5)
         articles = list(job.articleset.articles.all())
-        
+
         c = amcattest.create_test_coding(codingjob=job, article=articles[0])
 
         # test simple coding with a codebook code
@@ -464,11 +466,11 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         s = amcattest.create_test_sentence(article=articles[0])
         sc = amcattest.create_test_coding(codingjob=job, article=articles[0], sentence=s)
         sc.update_values({sstrf:"z", sintf:-1, scodef:codes["A"].id})
-                
+
         self.assertEqual(set(self._get_results([job], {strf : {}, sstrf : {}, sintf : {}}, export_level=2)),
                          {('bla', 'z', -1), ('blx', None, None)})
-        
-        
+
+
 
     def test_unicode(self):
         """Test whether the export can handle unicode in column names and cell values"""
@@ -482,7 +484,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
 
         articles = list(job.articleset.articles.all())
         amcattest.create_test_coding(codingjob=job, article=articles[0]).update_values({f:s2})
-        
+
         # test csv
         s = self._get_results_script([job], {f : {}}, export_format='csv')
         table = [[cell.decode('utf-8') for cell in row] for row in csv.reader(StringIO(s.run()))]
@@ -492,13 +494,13 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         s = self._get_results_script([job], {f : {}}, export_format='json')
         self.assertEqual(json.loads(s.run()), [[s2]]) # json export has no header (?)
 
-    def test_unicode_excel(self):        
+    def test_unicode_excel(self):
         """Test whether the export can handle unicode in column names and cell values"""
         try:
             import openpyxl
         except ImportError:
             raise unittest.SkipTest("OpenPyxl not installed, skipping excel test")
-        
+
         schema = amcattest.create_test_schema(isarticleschema=True)
         s1 = u'S1 \xc4\u0193 \u02a2 \u038e\u040e'
         s2 = u'S2 \u053e\u06a8 \u090c  \u0b8f\u0c8a'
@@ -515,7 +517,7 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         # test excel, can't test content but we can test output and no error
         s = self._get_results_script([job], {f : {}}, export_format='xlsx')
         self.assertTrue(s.run())
-        
+
     def test_nqueries(self):
         from amcat.tools import amcatlogging
         amcatlogging.setup()
@@ -549,4 +551,3 @@ class TestGetCodingJobResults(amcattest.AmCATTestCase):
         script = self._get_results_script([job], {strf : {}, intf : {}, codef : dict(labels=True)})
         with self.checkMaxQueries(8):
             list(csv.reader(StringIO(script.run())))
-

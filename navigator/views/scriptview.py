@@ -29,19 +29,24 @@ from amcat.models import Task
 
 from amcat.tools.table import table3
 from amcat.amcatcelery import app
-
+from amcat.tools.progress import ProgressMonitor
+from api.webscripts.webscript import CeleryProgressUpdater
 
 @app.task(bind=True)
 def script_task(self, script_cls, form_cls, form_kwargs):
+    task_id = self.request.id
     form = form_cls(**form_kwargs)
-    return script_cls(form).run()
+    script = script_cls(form)
+    script.progress_monitor = ProgressMonitor()
+    script.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
+    script.run()
 
 class ScriptMixin(FormMixin):
     script = None # plugin/script to base the view on
 
     def get_script(self):
         return self.script
-    
+
     def get_form_class(self):
         return self.get_script().options_form
 
@@ -72,7 +77,7 @@ class ScriptMixin(FormMixin):
         self.result =  self.script_object.run()
         self.success = True
         return self.result
-    
+
     def form_valid(self, form):
         self.run_form(form)
         return super(ScriptMixin, self).form_valid(form)
@@ -82,7 +87,7 @@ class ScriptMixin(FormMixin):
         context['script'] = self.get_script()
         context['script_name'] = self.get_script().name # for some reason {{ script.name }} in a template instantiates script...
         return context
-    
+
 
 class ScriptView(ProcessFormView, ScriptMixin, TemplateResponseMixin):
     pass
@@ -93,14 +98,14 @@ class TableExportMixin():
     def export_filename(self, form):
         """Return the filename to export as (without extension)"""
         return self.__class__.__name__
-        
+
     def get_form_class(self):
-        
+
         class ExportFormWrapper(self.script.options_form):
             format = forms.ChoiceField(choices = [(k, v.name) for (k,v) in table3.EXPORTERS.items()],
                                        label = "Export format")
         return ExportFormWrapper
-        
+
     def form_valid(self, form):
         table = self.get_script().run_script(form)
         exporter = table3.EXPORTERS[form.cleaned_data["format"]]
