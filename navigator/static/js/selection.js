@@ -663,7 +663,9 @@ amcat.selection.aggregation.click = function(x, y, count){
     var title = count + ' ' + amcat.selection.aggregation.aggregationType + ' ';
 
     if (amcat.selection.aggregation.xAxis == "date"){
-        var date_clicked = start_date = end_date = new Date(x);
+        // Firefox doesn't accept YYYY-MM-DD MM:SS:mm. Because MM/SS/mm is always zero,
+        // we can split the date on a space and fetch only YYYY-MM-DD, which Firefox accepts.
+        var date_clicked = start_date = end_date = new Date(x.split(" ")[0]);
         var datetype = amcat.selection.aggregation.dateType;
         if(datetype == "day"){
             added_form_values["datetype"] = "on";
