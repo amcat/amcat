@@ -35,6 +35,7 @@ from amcat.tools.table import table3
 
 from amcat.scripts.output.xlsx import table_to_xlsx
 from amcat.scripts.output.csv_output import table_to_csv
+from amcat.tools.progress import NullMonitor
 
 import logging
 log = logging.getLogger(__name__)
@@ -200,7 +201,7 @@ def _get_schemafields(codingjobs, level):
 
 CodingRow = collections.namedtuple('CodingRow', ['job', 'coded_article', 'article', 'sentence', 'article_coding', 'sentence_coding'])
 
-def _get_rows(jobs, include_sentences=False, include_multiple=True, include_uncoded_articles=False):
+def _get_rows(jobs, include_sentences=False, include_multiple=True, include_uncoded_articles=False, progress_monitor=NullMonitor()):
     """
     @param jobs: output rows for these jobs. Make sure this is a QuerySet object with .prefetch_related("codings__values")
     @param sentences: include sentence level codings (if False, row.sentence and .sentence_coding are always None)
@@ -217,7 +218,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
     # Articles that have been seen in a codingjob already (so we can skip duplicate codings on the same article)
     seen_articles = set()
 
-    for job in jobs:
+    for i, job in enumerate(jobs):
         # Get all codings in dicts for later lookup
         coded_articles = set()
         article_codings = {} # {ca : coding}
@@ -334,13 +335,16 @@ class GetCodingJobResults(Script):
         codingjobs = CodingJob.objects.prefetch_related("coded_articles__codings__values").filter(pk__in=codingjobs)
 
         # Get all row of table
+        self.progress_monitor.update(5, "Preparing Jobs")
         rows = list(_get_rows(
             codingjobs, include_sentences=(int(export_level) != CODING_LEVEL_ARTICLE),
-            include_multiple=True, include_uncoded_articles=False
+            include_multiple=True, include_uncoded_articles=False,
+            progress_monitor=self.progress_monitor
             ))
 
 
         table = table3.ObjectTable(rows=rows)
+        self.progress_monitor.update(5, "Preparing columns")
 
         # Meta field columns
         for field in _METAFIELDS:
@@ -360,13 +364,36 @@ class GetCodingJobResults(Script):
                     table.addColumn(CodingColumn(schemafield, label, function))
         return table
 
-    def _run(self, export_format, **kargs):
-        self.progress_monitor.update(50, "Bla!")
-        import time; time.sleep(2)
-        table = self.get_table(**kargs)
-        self.progress_monitor.update(80, "Blx!")
+    def _run(self, export_format, codingjobs, **kargs):
+        self.progress_monitor.update(5, "Starting Export")
+        table = self.get_table(codingjobs, **kargs)
+        self.progress_monitor.update(5, "Preparing Results File")
         format_dict = {f.label : f.function for f in EXPORT_FORMATS}
-        return format_dict[export_format](table)
+        table = ProgressTable(table, len(codingjobs), self.progress_monitor)
+        result = format_dict[export_format](table)
+        self.progress_monitor.update(20, "Results file ready")
+
+        return result
+
+from amcat.tools.table.table3 import WrappedTable
+class ProgressTable(WrappedTable):
+
+    def __init__(self, table, njobs, monitor):
+        super(ProgressTable, self).__init__(table)
+        self.njobs = njobs
+        self.monitor = monitor
+        self.seen_jobs = set()
+
+    def getValue(self, row, col):
+        jobid = row.job.id
+        if jobid not in self.seen_jobs:
+            self.seen_jobs.add(jobid)
+            tick = int(60. / self.njobs)
+            i = len(self.seen_jobs)
+            self.monitor.update(tick, "Exporting job {i} / {self.njobs}: {row.job.name}"
+                                .format(**locals()))
+        return super(ProgressTable, self).getValue(row, col)
+
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
