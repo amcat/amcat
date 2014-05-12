@@ -16,19 +16,25 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from urllib import urlencode
+from django.core.urlresolvers import reverse
+from django.shortcuts import redirect
 
 from django.views.generic.edit import FormMixin, ProcessFormView
 from django.views.generic.base import TemplateResponseMixin
 
-from django.forms.widgets import HiddenInput
-
-from django.core.urlresolvers import reverse
 from django.http import HttpResponse
 from django import forms
+from amcat.models import Task
 
-from navigator.utils.auth import check
-from amcat.models import Project
 from amcat.tools.table import table3
+from amcat.amcatcelery import app
+
+
+@app.task(bind=True)
+def script_task(self, script_cls, form_cls, form_kwargs):
+    form = form_cls(**form_kwargs)
+    return script_cls(form).run()
 
 class ScriptMixin(FormMixin):
     script = None # plugin/script to base the view on
@@ -43,7 +49,23 @@ class ScriptMixin(FormMixin):
         initial = {k.replace("_id", "")  : v for (k,v) in self.kwargs.iteritems()}
         initial.update(super(ScriptMixin, self).get_initial())
         return initial
-                
+
+    def run_form_delayed(self, project, form):
+        script = self.get_script()
+        kwargs = self.get_form_kwargs()
+
+        task = script_task.delay(script, self.get_form_class(), kwargs)
+        kwargs['project'] = project.id
+
+        task = Task.objects.create(
+            task_name=task.task_name, uuid=task.task_id, called_with=kwargs, project=project,
+            class_name=".".join((script.__module__, script.__name__)), user=self.request.user
+        )
+
+        url = reverse("task-details", args=[project.id, task.id])
+        next = urlencode(dict(next=self.request.get_full_path()))
+        return redirect("{url}?{next}".format(**locals()), permanent=False)
+
     def run_form(self, form):
         self.form = form
         self.script_object = self.get_script()(form)

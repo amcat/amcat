@@ -1,0 +1,89 @@
+{% extends "project/base.html" %}
+{% load staticfiles %}
+
+{% block javascript %}
+    <script type="text/javascript" src="{% static 'js/task.js' %}"></script>
+    <script type="text/javascript">task("{{ task.uuid }}");</script>
+{% endblock %}
+
+
+{% block details %}
+<div class="panel panel-default" style="margin-bottom: 1em">
+  <div class="panel-heading">
+    <h4 class="panel-title">
+      <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+          Task details
+      </a>
+    </h4>
+  </div>
+  <div id="collapseOne" class="panel-collapse collapse in">
+    <div class="panel-body">
+      <table class="key_value">
+	<tr>
+	  <td>ID:</td>
+	  <td>{{object.id}}</td>
+	</tr>
+	<tr>
+	  <td>UUID:</td>
+	  <td>{{object.uuid}}</td>
+	</tr>
+	<tr>
+	  <td>Class</td>
+	  <td>{{object.class_name}}</td>
+	</tr>
+
+	<tr>
+	  <td>Issued at&NonBreakingSpace;</td>
+	  <td>{{object.issued_at}}</td>
+	</tr>
+	<tr>
+	  <td>By</td>
+	  <td>{{object.user}}</td>
+	</tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock details %}
+
+{% block content %}
+
+<div class="panel panel-default" style="margin-bottom: 1em">
+  <div class="panel-heading">
+    <h4 class="panel-title">
+      Task progress
+    </h4>
+  </div>
+  <div id="collapseOne" class="panel-collapse collapse in">
+    <div class="panel-body">
+      <table class="key_value">
+        <tr>
+          <td>Status:</td>
+          <td id="status">PENDING</td>
+        </tr>
+        <tr class="hide-if-success">
+          <td>Message:</td>
+          <td id="message">{{ async_result.progress.message }}</td>
+        </tr>
+        <tr class="hide-if-success">
+          <td>Progress:</td>
+          <td id="completed">{{ async_result.progress.completed }}</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if next %}
+<a href="{{ next }}" class="btn btn-primary">
+    Return to previous page
+</a>
+{% endif %}
+
+<a style="display:none;" href="{% url 'api-v4-taskresult' %}/{{ task.uuid }}" id="results" class="btn btn-success">
+    <i class="glyphicon-download"></i>
+    Download results
+</a>
+
+{% endblock %}
