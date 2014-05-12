@@ -157,7 +157,10 @@ class HierarchicalViewMixin(object):
         
     @classmethod
     def get_model_key(cls):
-        return cls.get_model()._meta.get_field("id").db_column
+        # Accessing db_column may result in None, as it only appears when explicitly
+        # set on model definition.
+        _, db_column = cls.get_model()._meta.get_field("id").get_attname_column()
+        return db_column
 
     @classmethod
     def get_model_name(cls):
