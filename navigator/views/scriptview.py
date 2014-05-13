@@ -39,7 +39,7 @@ def script_task(self, script_cls, form_cls, form_kwargs):
     script = script_cls(form)
     script.progress_monitor = ProgressMonitor()
     script.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
-    script.run()
+    return script.run()
 
 class ScriptMixin(FormMixin):
     script = None # plugin/script to base the view on
