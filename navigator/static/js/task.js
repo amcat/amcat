@@ -25,7 +25,7 @@ task = (function(uuid){
     }
 
     function poll_success(data){
-        self.timeout = (timeout >= 3000) ? timeout : timeout + 500;
+        timeout = (timeout >= 3000) ? timeout : timeout + 500;
 
         var task = data["results"][0];
         if (!task.ready && task.status === "INPROGRESS" && task.progress !== null){
