@@ -193,7 +193,9 @@ class ArticleRuleDetailsView(ProjectDetailView):
                        for t in sorted(saf['tokens'],
                                        key=lambda t: int(t['offset']))
                        if t['sentence'] == sid)
-            yield sid, " ".join(stokens)
+            errors = [err for err in saf.get('errors', [])
+                      if err['sentence'] == sid]
+            yield sid, " ".join(stokens), errors
 
     def get_context_data(self, **kwargs):
         from syntaxrules.syntaxtree import SyntaxTree
@@ -204,6 +206,7 @@ class ArticleRuleDetailsView(ProjectDetailView):
                                    self.object.preprocessing)
         sid = int(self.request.GET.get("sid", 1))
         sentences = list(self.get_sentences(saf))
+
 
         t = SyntaxTree(saf, sid)
         g = t.get_graphviz()

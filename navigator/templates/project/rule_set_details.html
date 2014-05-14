@@ -5,11 +5,16 @@
 <h1>Sentences</h1>
 
 <ul>
-{% for id, s in sentences %}
+{% for id, s, errs in sentences %}
  <li> {% if id == sid %}
 {{id}} : {{s}}
 {% else %}
-<a href="?sid={{id}}">{{id}} : {{ s }}</a>
+<a href="?sid={{id}}">{{id}} : {{ s }} </a>
+{% endif %}
+{% if errs %}
+  <em style="color: red; font-weight: bold">ERRORS:
+    {% for err in errs %} {{ err.module }} : {{ err.error }} {% endfor %}
+  </em>
 {% endif %}
 {% endfor %}
 </ul>

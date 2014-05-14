@@ -39,7 +39,7 @@ from api.rest.serializer import AmCATModelSerializer
 class RulesetSerializer(AmCATModelSerializer):
 
     def to_native(self, ruleset):
-        from syntaxrules import SyntaxTree
+        from syntaxrules import SyntaxTree, get_struct_tokens
         if self.many is False: # explicit compare because we don't want None
             # Get parse
             module = ruleset.preprocessing
@@ -52,7 +52,7 @@ class RulesetSerializer(AmCATModelSerializer):
 
             # Apply rules
             t.apply_ruleset(ruleset.get_ruleset())
-            return list(t.get_roles())
+            return list(get_struct_tokens(t.get_structs()))
 
         res = super(RulesetSerializer,self).to_native(ruleset)
         return res
@@ -65,5 +65,6 @@ class ArticleRulesetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, Article
     def get_serializer_context(self):
         ctx = super(ArticleRulesetViewSet, self).get_serializer_context()
         ctx['article'] = int(self.kwargs['article'])
-        ctx['preprocess'] = int(self.request.GET.get('preprocess'))
+        prep = self.request.GET.get('preprocess')
+        ctx['preprocess'] = int(prep) if prep is not None else None
         return ctx
