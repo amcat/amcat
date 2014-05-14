@@ -36,6 +36,9 @@ class ANALYSES:
 
     semafor = [{"module" : "xtas.tasks.single.corenlp"},
                {"module" : "xtas.tasks.single.semafor"}]
+    sources_en = [{"module" : "xtas.tasks.single.corenlp"},
+                  {"module" : "xtas.tasks.single.semafor"},
+                  {"module" : "xtas.tasks.single.sources_en"}]
 
 def get_result(article, analysis, store_intermediate=True, block=True):
     from xtas.tasks.pipeline import pipeline
