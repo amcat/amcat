@@ -87,7 +87,6 @@ class ArticleLemmataSerializer(ArticleXTasSerializer):
         soh = SOHServer("http://localhost:3030/x")
         t = SyntaxTree(soh)
         for sid in {token['sentence'] for token in saf['tokens']}:
-            print("@@@", sid)
             t.load_saf(saf, sid)
             t.apply_ruleset(ruleset.get_ruleset())
             yield sid
