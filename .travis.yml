@@ -10,13 +10,6 @@ services:
 virtualenv:
   system_site_packages: true
 
-env:
-  - SUITE=api
-  - SUITE=accounts
-  - SUITE=annotator
-  - SUITE=amcat
-  - SUITE=navigator
-
 before_install:
  - psql -c 'create database amcat;' -U postgres
  - export DJANGO_DB_USER=postgres
@@ -37,4 +30,4 @@ install:
  - pip install -r requirements.txt
 
 script:
- - python -m amcat.manage test ${SUITE}.tests
+ - python -m amcat.manage test
