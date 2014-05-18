@@ -663,11 +663,14 @@ amcat.selection.aggregation.click = function(x, y, count){
     var title = count + ' ' + amcat.selection.aggregation.aggregationType + ' ';
 
     if (amcat.selection.aggregation.xAxis == "date"){
-        // Firefox doesn't accept YYYY-MM-DD MM:SS:mm. Because MM/SS/mm is always zero,
-        // we can split the date on a space and fetch only YYYY-MM-DD, which Firefox accepts.
-        var date_clicked = start_date = end_date = new Date(x.split(" ")[0]);
+        var date_clicked = start_date = end_date = new Date(x);
         var datetype = amcat.selection.aggregation.dateType;
         if(datetype == "day"){
+            // Firefox doesn't accept YYYY-MM-DD MM:SS:mm. Because MM/SS/mm is always zero,
+            // we can split the date on a space and fetch only YYYY-MM-DD, which Firefox accepts.
+            if (isNaN(date_clicked)){
+                date_clicked = start_date = end_date = new Date(x.split(" ")[0]);
+            }
             added_form_values["datetype"] = "on";
             var on_date = start_date.getFullYear() + "-" + (start_date.getMonth() + 1) + "-" + start_date.getDate();
             added_form_values["on_date"] = amcat.selection.aggregation.reverseDateOrder(on_date);
