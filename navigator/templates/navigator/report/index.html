@@ -1,8 +1,11 @@
 {% extends "navigator/base.html" %}
 {% block content %}
 <div class="jumbotron">
+{% if theme %}
+<h1>Happy Birthday!</h1>
+{% else %}
 <h1>Welcome to AmCAT 3!</h1>
-
+{% endif %}
 <div class="btn-group btn-group-lg">
   <a class="btn btn-primary" href="{% url "projects" %}">Manage Projects</a></span>
 </div>

@@ -27,7 +27,7 @@ def extra(request):
     if count < DISPLAY_COUNT:
         request.session[COUNT_KEY] = count
 
-    theme = "_pink"
+    theme = "pink" if request.user.username in ('nel', 'martijn') else None
 
     return dict(request=request, warning=AmCAT.get_instance().server_warning,
                 announcement=announcement, theme=theme)

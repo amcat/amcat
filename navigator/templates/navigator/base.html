@@ -19,8 +19,12 @@
     <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'css/jquery.multiselect.css' %}" rel="stylesheet" type="text/css"  />
     <link href="{% static 'css/jquery.multiselect.filter.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/jquery.pnotify.default.css' %}" media="all" rel="stylesheet" type="text/css" />
-    <link href="{% static 'css/amcat' %}{{theme}}.css" rel="stylesheet" type="text/css"  />
+    <link href="{% static 'css/jquery.pnotify.default.css' %}"
+    media="all" rel="stylesheet" type="text/css" />
+    <link href="{% static 'css/amcat.css' %}" rel="stylesheet" type="text/css"  />
+    {% if theme %}
+      <link href="{% static 'css/amcat_' %}{{theme}}.css" rel="stylesheet" type="text/css"  />
+    {% endif %}
     {% endcompress %}
     {% block css %}{% endblock %}
     
