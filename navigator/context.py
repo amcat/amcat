@@ -27,7 +27,10 @@ def extra(request):
     if count < DISPLAY_COUNT:
         request.session[COUNT_KEY] = count
 
-    theme = "pink" if request.user.username in ('nel', 'martijn') else None
+    if request.user.is_anonymous():
+        theme = 'amcat'
+    else:
+        theme = getattr(request.user.get_profile(), 'theme', 'amcat').lower()
 
     return dict(request=request, warning=AmCAT.get_instance().server_warning,
                 announcement=announcement, theme=theme)
