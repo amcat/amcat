@@ -18,9 +18,9 @@ h6,
   color: #805;
 }
 
-body {background-color: #fde;
-      xbackground-image: url('/media/img/amcat/boat2.jpg')
-     }
+body {
+    background: #fde url('http://i.imgur.com/p4e827L.png') no-repeat 80% 0;
+}
 
 a, .panel-title a, a:hover, a:focus {
   color: #a27;
