@@ -70,8 +70,7 @@ class UserProfile(AmcatModel):
 
     favourite_projects = models.ManyToManyField("amcat.project", related_name="favourite_users")
 
-    theme = models.CharField(max_length=255,
-                             choices=[(t,t) for t in THEMES])
+    theme = models.CharField(max_length=255, choices=[(t, t) for t in THEMES], default="AmCAT")
 
     @property
     def projects(self):
