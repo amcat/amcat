@@ -14,7 +14,7 @@ def extra(request):
     except:
         log.exception("Cannot get announcement")
         return dict(request=request)
-    
+
     last_announcement = request.session.get(ANNOUNCE_KEY)
     count = int(request.session.get(COUNT_KEY, 0)) + 1
 
@@ -27,4 +27,10 @@ def extra(request):
     if count < DISPLAY_COUNT:
         request.session[COUNT_KEY] = count
 
-    return dict(request=request, warning=AmCAT.get_instance().server_warning, announcement=announcement)
+    if request.user.is_anonymous():
+        theme = 'amcat'
+    else:
+        theme = getattr(request.user.get_profile(), 'theme', 'amcat').lower()
+
+    return dict(request=request, warning=AmCAT.get_instance().server_warning,
+                announcement=announcement, theme=theme)

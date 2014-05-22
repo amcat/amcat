@@ -29,7 +29,7 @@ from django.core.exceptions import ValidationError
 
 from amcat.models.authorisation import Role, ProjectRole
 from amcat.models.project import Project
-from amcat.models.user import Affiliation
+from amcat.models.user import Affiliation, THEMES
 from amcat.models.articleset import ArticleSet
 from amcat.models.article import Article
 from amcat.models.language import Language
@@ -127,6 +127,7 @@ class UserForm(forms.ModelForm):
     affiliation = forms.ModelChoiceField(queryset=Affiliation.objects.all())
     role = forms.ModelChoiceField(queryset=Role.objects.all())
     language = forms.ModelChoiceField(queryset=Language.objects.all())
+    theme = forms.ChoiceField(choices=[(t,t) for t in THEMES])
 
     def __init__(self, request, editing=True, *args, **kwargs):
         super(UserForm, self).__init__(*args, **kwargs)
@@ -143,6 +144,7 @@ class UserForm(forms.ModelForm):
             self.fields['role'].initial = uprofile.role if not editing else kwargs['instance'].get_profile().role
             self.fields['affiliation'].initial = uprofile.affiliation
             self.fields['language'].initial = uprofile.language
+            self.fields['theme'].initial = uprofile.theme
 
         # We don't use Django groups and permissions
         for fi in ("groups", "user_permissions"):
@@ -159,6 +161,7 @@ class UserForm(forms.ModelForm):
         up.affiliation = self.cleaned_data['affiliation']
         up.role = self.cleaned_data['role']
         up.language = self.cleaned_data['language']
+        up.theme = self.cleaned_data['theme']
         up.save()
 
         return u
