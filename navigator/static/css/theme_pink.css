@@ -29,7 +29,7 @@ a, .panel-title a, a:hover, a:focus {
     background-image: url('/media/img/amcat/amcat-logo-pink.png');
 }
 
-.jumbotron {background-color: #f9d;}
+.jumbotron {background-color: #f9d; opacity: .8}
 
 
 
@@ -38,6 +38,7 @@ a, .panel-title a, a:hover, a:focus {
 .btn-primary {
     background-color: #f5a;
     border-color: #ecd;
+  opacity: .6;
 }
 
 .btn-primary:hover,
@@ -48,12 +49,14 @@ a, .panel-title a, a:hover, a:focus {
   color: #ffffff;
   background-color: #c39;
   border-color: #ecd;
+
 }
 
 .btn-default {
   color: #333333;
   background-color: #fde;
   border-color: #ecd;
+  opacity: .6;
 }
 
 
@@ -70,10 +73,9 @@ a, .panel-title a, a:hover, a:focus {
 
 /* Navigation */
 
-.breadcrumb, .navbar {background-color: #f9d;
+.breadcrumb, .navbar {background-color: #f9d; }
 
-}
-
+.breadcrumb {opacity: .7}
 .dropdown-menu {
   background-color: #fcd
 }
@@ -99,10 +101,14 @@ a, .panel-title a, a:hover, a:focus {
   background-color: #f5a;
   border: 1px solid #dddddd;
   border-bottom-color: transparent;
+  opacity: .6;
+
 }
 
 .nav-tabs > li > a:hover {
     background-color: #f7c;
+  opacity: .6;
+
 }
 
 
