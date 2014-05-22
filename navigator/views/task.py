@@ -30,8 +30,14 @@ class TaskDetailsView(ProjectDetailView):
     parent = TaskListView
     model = Task
 
+
+    @classmethod
+    def _get_breadcrumb_name(cls, kwargs, view):
+        obj = cls._get_object(kwargs)
+        name = obj.class_name.split(".")[-1]
+        return "{obj.id} : {name}".format(**locals())
+
     def get_context_data(self, **kwargs):
         async_result = self.object.get_async_result()
         next = self.request.GET.get("next")
         return super(TaskDetailsView, self).get_context_data(async_result=async_result, next=next, **kwargs)
-
