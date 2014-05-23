@@ -104,7 +104,7 @@ class ExportCodebookXML(ProjectScriptView):
         return "Codebook {c.id} {c}.xml".format(**locals())
 
     def get_initial(self):
-        return dict(codebook=self.url_data["codebookid"])
+        return dict(codebook=self.kwargs["codebook_id"])
 
     def form_valid(self, form):
         super(ExportCodebookXML, self).form_valid(form)
