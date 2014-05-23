@@ -34,10 +34,7 @@ from contextlib import contextmanager
 from functools import wraps
 from django.test.runner import DiscoverRunner
 
-try:
-    from django.test import TestCase
-except ImportError:
-    from unittest import TestCase
+from django.test import TestCase
 import unittest
 import logging; log = logging.getLogger(__name__)
 
@@ -270,6 +267,7 @@ class AmCATTestCase(TestCase):
     def tearDownClass(cls):
         if settings.ES_INDEX.endswith("__unittest"):
             settings.ES_INDEX = settings.ES_INDEX[:len("__unittest")]
+        super(AmCATTestCase, cls).tearDownClass()
 
 def require_postgres(func):
     def run_or_skip(self, *args, **kargs):
