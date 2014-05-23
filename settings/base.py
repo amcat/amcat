@@ -18,13 +18,11 @@
 ###########################################################################
 
 # Django settings for amcatnavigator project.
-from django.templatetags.static import get_static_prefix
 import os
 from os import path
 
 from amcat import __version__
 from amcat.tools.toolkit import random_alphanum
-from amcat.tools import hg
 
 # Python 2.x vs 3.x
 try:
@@ -245,10 +243,6 @@ if not DEBUG:
 else:
     ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-
-
-import os
 
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
                  

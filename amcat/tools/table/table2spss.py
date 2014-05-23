@@ -1,26 +1,31 @@
 #from amcat.models.coding import codingjob
-from amcat.tools.table import table3
+import tempfile
+
 from amcat.tools import toolkit, idlabel
-#from amcat.tools.cachable import cachable
 from amcat.tools import amcatlogging
 
-
-import sys, csv
+import sys
 import re
 import datetime
 import collections
 import os.path
-import logging; log = logging.getLogger(__name__)
+import logging;
+
+log = logging.getLogger(__name__)
 
 amcatlogging.debugModule()
 
+
 def clean(s, maxchars=None):
     if type(s) == str: s = s.decode('latin-1')
-    if type(s) == unicode: s = s.encode('ascii','replace')
-    else: s = str(s)
-    s= re.sub("[^\w, :-]","",str(s).strip())
-    if maxchars and len(s) > maxchars: s = s[:maxchars-1]
+    if type(s) == unicode:
+        s = s.encode('ascii', 'replace')
+    else:
+        s = str(s)
+    s = re.sub("[^\w, :-]", "", str(s).strip())
+    if maxchars and len(s) > maxchars: s = s[:maxchars - 1]
     return s
+
 
 def getSPSSFormat(type):
     log.debug("Determining format of %s" % type)
@@ -32,9 +37,10 @@ def getSPSSFormat(type):
     if type == datetime.datetime: return " (date10)"
     raise Exception("Unknown type: %s" % type)
 
+
 def getVarName(col, seen):
-    fn = str(col).replace(" ","_")
-    fn = fn.replace("-","_")
+    fn = str(col).replace(" ", "_")
+    fn = fn.replace("-", "_")
     fn = re.sub('[^a-zA-Z_]+', '', fn)
     fn = re.sub('^_+', '', fn)
     fn = fn[:16]
@@ -45,39 +51,34 @@ def getVarName(col, seen):
                 break
     seen.add(fn)
     return fn
-    
+
+
 def _getVarDef(varname, vartype):
     """Remove duplicates and spaces from field names"""
     vardef = "%s%s" % (varname, getSPSSFormat(vartype))
     return vardef
 
+
 def table2spss(t, writer=sys.stdout, saveas=None):
     cols = list(t.getColumns())
     seen = set()
-    varnames = {col : getVarName(col, seen) for col in cols}
-    vartypes = {col : t.getColumnType(col) or str for col in cols}
-    
-    vardefs = " ".join(_getVarDef(varnames[col],vartypes[col]) for col in cols)
+    varnames = {col: getVarName(col, seen) for col in cols}
+    vartypes = {col: t.getColumnType(col) or str for col in cols}
+
+    vardefs = " ".join(_getVarDef(varnames[col], vartypes[col]) for col in cols)
 
     log.debug("Writing var list")
     log.info(vardefs)
     writer.write("DATA LIST LIST\n / %s .\nBEGIN DATA.\n" % vardefs)
 
-
     log.debug("Writing data")
-    valuelabels = collections.defaultdict(dict) # col : id : label
+    valuelabels = collections.defaultdict(dict)  # col : id : label
     for row in t.getRows():
         for i, col in enumerate(cols):
             if i: writer.write(",")
             typ = vartypes[col]
             val = t.getValue(row, col)
             oval = val
-            #if val and issubclass(col.fieldtype, (idlabel.IDLabel, )):
-            #    if type(val) == int:
-            #        valuelabels[col][val] = "?%i" % val
-             #   else:
-            #        valuelabels[col][val.id] = val.label
-            #        val = val.id
             if val and (typ in (str, unicode)):
                 val = '"%s"' % clean(val)
             if val and typ == datetime.datetime:
@@ -103,27 +104,23 @@ def table2spss(t, writer=sys.stdout, saveas=None):
         log.debug("Saving file")
         writer.write("SAVE OUTFILE='%s'.\n" % saveas)
 
+
 class EchoWriter(object):
     def __init__(self, writer):
         self.writer = writer
-        fn = toolkit.tempfilename(".sps","data")
-        self.log = open(fn, "w")
-        log.warn("Writing spss commands to %s" % fn)
-        
+        self.log, filename = tempfile.mkstemp(suffix=".sps", prefix="data-")
+        log.warn("Writing spss commands to %s" % filename)
+
     def write(self, bytes):
         self.log.write(bytes)
         self.writer.write(bytes)
-        
+
+
 def table2sav(t, filename=None):
-    if filename is None: filename = toolkit.tempfilename(suffix=".sav",prefix="table-")
+    if filename is None:
+        _, filename = tempfile.mkstemp(suffix=".save", prefix="table-")
 
     log.debug("Creating SPSS syntax")
-    #import StringIO
-    #writer = StringIO.StringIO()
-    #table2spss(t, writer=writer, saveas=filename, monitor=monitor.submonitor(80))
-    #sps = writer.getvalue()
-    #log.debug("Wrote syntax:\n%s\n" % (sps))
-
     log.debug("Executing PSPP")
     pspp = toolkit.executepipe("pspp -b")
     writer = pspp.next()
@@ -134,13 +131,13 @@ def table2sav(t, filename=None):
     out, err = pspp.next()
     log.debug("PSPPP err: %s" % err)
     log.debug("PSPPP out: %s" % out)
-    err = err.replace('pspp: error creating "pspp.jnl": Permission denied','')
-    err = err.replace('pspp: ascii: opening output file "pspp.list": Permission denied','')
+    err = err.replace('pspp: error creating "pspp.jnl": Permission denied', '')
+    err = err.replace('pspp: ascii: opening output file "pspp.list": Permission denied', '')
     if err.strip():
         raise Exception(err)
     if "error:" in out.lower():
-        raise Exception("PSPP Exited with error: \n\n%s"  % out)
+        raise Exception("PSPP Exited with error: \n\n%s" % out)
     if not os.path.exists(filename):
-        raise Exception("PSPP Exited without errors, but file was not saved.\n\nOut=%r\n\nErr=%r"% (out, err))
+        raise Exception("PSPP Exited without errors, but file was not saved.\n\nOut=%r\n\nErr=%r" % (out, err))
     return filename
 

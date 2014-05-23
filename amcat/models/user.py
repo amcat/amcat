@@ -20,19 +20,21 @@
 """ORM Module representing users"""
 
 from __future__ import print_function, absolute_import
+import logging
+import string
+import random
+
 from django.contrib.auth.models import User
 from django.db.models import Q
 from django.db.models.signals import post_save
+
 from amcat.models.language import Language
-from amcat.models.authorisation import Role, ProjectRole, ADMIN_ROLE
+from amcat.models.authorisation import Role, ADMIN_ROLE
 from amcat.models import authorisation as auth
 from amcat.models.project import Project
 
-import logging;
 
 log = logging.getLogger(__name__)
-
-import string, random
 
 from django.db import models
 from amcat.tools.model import AmcatModel

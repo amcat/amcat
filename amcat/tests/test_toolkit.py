@@ -21,11 +21,11 @@
 Test module for amcat.tools.toolkit
 """
 
-from amcat.tools import toolkit, amcattest, amcatlogging
 import datetime
-import random
 import inspect
-import logging
+
+from amcat.tools import toolkit, amcattest
+
 
 class TestToolkit(amcattest.AmCATTestCase):
     TARGET_MODULE = toolkit
@@ -83,9 +83,6 @@ class TestToolkit(amcattest.AmCATTestCase):
             self.assertEqual(toolkit.writeDateTime(date), isotime)
 
     def test_splitlist(self):
-        def plusone(l):
-            for i,e in enumerate(l):
-                l[i] = e+1
         for input, output, itemsperbatch in (
             ([1,2,3], [[1,2], [3]], 2),
             ([1,2,3], [[1,2, 3]], 20),
@@ -95,38 +92,10 @@ class TestToolkit(amcattest.AmCATTestCase):
             o = toolkit.splitlist(input, itemsperbatch)
             self.assertEqual(list(o), output)
 
-    def test_sortbyvalue(self):
-        for input, output in (
-            ({"a" : 12, "b" : 6, "c" : 99}, [("b", 6), ("a" , 12), ("c", 99)]),
-            ({"a" : 12, "b" : 6, "c" : 99}.items(), [("b", 6), ("a" , 12), ("c", 99)]),
-            ({"a" : 12, "b" : 6, "c" : 99}.iteritems(), [("b", 6), ("a" , 12), ("c", 99)]),
-            ):
-            o = toolkit.sortByValue(input)
-            self.assertEqual(o, output)
-
     def test_head(self):
-        for input, filter, output in (
-            ([1,2,3], None, 1),
-            ([], None, None),
-            ([1,2,3,4], lambda x : not x%2, 2),
-            ([4,3,2,1], lambda x : not x%2, 4),
-            ([3,1], lambda x : not x%2, None),
-
-            ):
-            self.assertEqual(output, toolkit.head(input, filter))
-            self.assertEqual(output, toolkit.head(tuple(input), filter))
-            self.assertEqual(output, toolkit.head((i for i in input), filter))
-            s = set(input)
-            out = toolkit.head(s, filter)
-            if out is None:
-                if filter:
-                    self.assertTrue(not [x for x in s if filter(x)])
-                else:
-                    self.assertFalse(s)
-            else:
-                self.assertTrue(out in s, "%r not in %s" % (out, s))
-                if filter:
-                    self.assertTrue(filter(out))
+        it = iter(range(10))
+        self.assertEqual(0, toolkit.head(it))
+        self.assertEqual(1, toolkit.head([1, 2]))
 
     def test_to_list(self):
         @toolkit.to_list
@@ -142,5 +111,3 @@ class TestToolkit(amcattest.AmCATTestCase):
 
         self.assertEqual(gen(n=3), sum(range(3)))
 
-if __name__ == '__main__':
-    amcattest.main()

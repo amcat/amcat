@@ -24,7 +24,8 @@ Plugin for uploading plain text files
 
 from __future__ import unicode_literals
 
-import logging;
+import logging
+import StringIO
 
 log = logging.getLogger(__name__)
 import os.path, tempfile, subprocess
@@ -38,6 +39,8 @@ from amcat.models.article import Article
 from amcat.models.medium import Medium
 from amcat.tools import toolkit
 from django.core.exceptions import ValidationError
+
+from PyPDF2 import PdfFileReader
 
 
 class TextForm(UploadScript.options_form, fileupload.ZipFileUploadForm):
@@ -83,8 +86,7 @@ def _convert_doc(file):
     return text.decode("utf-8")
 
 
-from PyPDF2 import PdfFileReader
-import StringIO
+
 
 
 def _convert_pdf(file):
@@ -101,11 +103,6 @@ def _convert_multiple(file, convertors):
     errors = []
     for convertor in convertors:
         return convertor(file)
-        try:
-            return convertor(file)
-        except Exception, e:
-            log.exception("Error on converting {file.name} using {convertor}".format(**locals()))
-            errors.append("{convertor}:{e}".format(**locals()))
     raise Exception("\n".join(errors))
 
 
