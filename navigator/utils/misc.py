@@ -89,7 +89,6 @@ def set_notice(request, title, text, type="info", hide=None):
     """
 
     """
-    print(locals())
     if hide is None: hide = (type != "error")
     notice = dict(settings.PNOTIFY_DEFAULTS, title=title, text=text, type=type, hide=hide)
     request.session["notice"] = json.dumps(notice)
