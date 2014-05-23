@@ -21,42 +21,37 @@
 Plugin for uploading csv files
 """
 
-
-
 from __future__ import unicode_literals, absolute_import
 
 import csv
-from cStringIO import StringIO
-from types import NoneType
+import datetime
 
 from django import forms
 from django.db.models.fields import FieldDoesNotExist
 
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.article_upload import fileupload
-
 from amcat.models.article import Article
 from amcat.models.medium import Medium
-
 from amcat.tools.toolkit import readDate
-import datetime
 
-FIELDS = ("text", "date", "medium", "pagenr", "section", "headline", "byline",  "url", "externalid",
+FIELDS = ("text", "date", "medium", "pagenr", "section", "headline", "byline", "url", "externalid",
           "author", "addressee", "parent_url", "parent_externalid")
 REQUIRED = [True] * 2 + [False] * (len(FIELDS) - 2)
 
 PARSERS = {
-    "date" : readDate,
-    "pagenr" : int,
-    "externalid" : int,
-    "parent_externalid" : int,
-    "medium" : Medium.get_or_create
+    "date": readDate,
+    "pagenr": int,
+    "externalid": int,
+    "parent_externalid": int,
+    "medium": Medium.get_or_create
 }
 
 HELP_TEXTS = {
-    "parent_url" : "Column name for the URL of the parent article, which should be in the same CSV file",
-    "parent_externalid" : "Column name for the External ID of the parent article, which should be in the same CSV file",
-    }
+    "parent_url": "Column name for the URL of the parent article, which should be in the same CSV file",
+    "parent_externalid": "Column name for the External ID of the parent article, which should be in the same CSV file",
+}
+
 
 def is_nullable(field_name):
     try:
@@ -64,10 +59,11 @@ def is_nullable(field_name):
     except FieldDoesNotExist:
         return True
 
+
 class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
     medium_name = forms.CharField(
         max_length=Article._meta.get_field_by_name('medium')[0].max_length,
-        required = False)
+        required=False)
     medium_existing = forms.ModelChoiceField(
         queryset=Medium.objects.all(), required=False,
         help_text="Use this option if you want to choose one medium for all uploaded articles."
@@ -98,7 +94,7 @@ class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
 
             initial = fieldname if required else None
 
-            field = forms.CharField(help_text = help_text, required=required,
+            field = forms.CharField(help_text=help_text, required=required,
                                     initial=initial, label=label)
             self.fields.insert(7, fieldname, field)
 
@@ -108,7 +104,6 @@ class CSVForm(UploadScript.options_form, fileupload.CSVUploadForm):
         if idfield and self.cleaned_data['parent_externalid']:
             raise forms.ValidationError("Cannot specify both external id and URL for parents")
         return idfield
-
 
 
 class CSV(UploadScript):
@@ -137,12 +132,12 @@ class CSV(UploadScript):
     is to upload it to dropbox or a file sharing website and paste the link into the issue.
     """
 
-
     options_form = CSVForm
 
     def explain_error(self, error):
         if isinstance(error.error, KeyError):
-            return "Field {error.error} not found in row {error.i}. Check field name and/or csv dialect".format(**locals())
+            return "Field {error.error} not found in row {error.i}. Check field name and/or csv dialect".format(
+                **locals())
         return super(CSV, self).explain_error(error)
 
     def run(self, *args, **kargs):
@@ -155,8 +150,8 @@ class CSV(UploadScript):
             self.id_field, self.parent_field = None, None
 
         if self.parent_field:
-            self.parents = {} # id/url : id/url
-            self.articles = {} # id/url : article
+            self.parents = {}  # id/url : id/url
+            self.articles = {}  # id/url : article
 
         return super(CSV, self).run(*args, **kargs)
 
@@ -176,12 +171,12 @@ class CSV(UploadScript):
         raise ValueError("No medium specified!")
 
     def parse_document(self, row):
-        kargs = dict(medium = self._medium, metastring = {})
+        kargs = dict(medium=self._medium, metastring={})
         csvfields = [(fieldname, self.options[fieldname]) for fieldname in FIELDS if self.options[fieldname]]
         for fieldname, csvfield in csvfields:
             val = row[csvfield]
             if fieldname == 'date' and isinstance(val, datetime.datetime):
-                pass # no need to parse
+                pass  # no need to parse
             elif val.strip():
                 if fieldname in PARSERS:
                     val = PARSERS[fieldname](val)
@@ -226,8 +221,10 @@ class CSV(UploadScript):
                 doc.save()
         super(CSV, self).postprocess(articles)
 
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
+
     cli.run_cli(CSV)
 
 ###########################################################################
@@ -242,29 +239,33 @@ def _run_test_csv(header, rows, **options):
     p = amcattest.create_test_project()
     from tempfile import NamedTemporaryFile
     from django.core.files import File
+
     with NamedTemporaryFile(suffix=".txt") as f:
         w = csv.writer(f)
         for row in [header] + list(rows):
             w.writerow([field and field.encode('utf-8') for field in row])
         f.flush()
 
-        aids =  CSV(dict(file=File(open(f.name)), encoding=0, project=p.id,
-                         medium_name=options.pop("medium_name", 'testmedium'), **options)).run()
+        aids = CSV(dict(file=File(open(f.name)), encoding=0, project=p.id,
+                        medium_name=options.pop("medium_name", 'testmedium'), **options)).run()
     return [Article.objects.get(pk=aid) for aid in aids]
 
 
 class TestCSV(amcattest.AmCATTestCase):
-
     @amcattest.use_elastic
     def test_csv(self):
         header = ('kop', 'datum', 'tekst', 'pagina')
         data = [('kop1', '2001-01-01', 'text1', '12'), ('kop2', '10 maart 1980', 'text2', None)]
         articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum", pagenr='pagina')
         self.assertEqual(len(articles), 2)
-        self.assertEqual(articles[0].headline, 'kop1')
-        self.assertEqual(articles[0].pagenr, 12)
-        self.assertEqual(articles[1].date.isoformat()[:10], '1980-03-10')
-        self.assertEqual(articles[1].pagenr, None)
+
+        # Scraper is not guarenteed to return articles in order.
+        self.assertEqual({articles[0].headline, articles[1].headline}, {'kop1', 'kop2'})
+        self.assertEqual({articles[0].pagenr, articles[1].pagenr}, {12, None})
+
+        date1 = articles[0].date.isoformat()[:10]
+        date2 = articles[1].date.isoformat()[:10]
+        self.assertTrue('1980-03-10' in {date1, date2})
 
     @amcattest.use_elastic
     def test_text(self):
@@ -277,6 +278,7 @@ class TestCSV(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_medium(self):
         import functools
+
         header = ('kop', 'datum', 'tekst', 'med')
         data = [('kop1', '2001-01-01', '', 'Bla')]
 
@@ -309,7 +311,7 @@ class TestCSV(amcattest.AmCATTestCase):
             ('kop2', '2001-01-01', 'text2', "12", None, 'jan')
         ]
         articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum",
-                                 externalid='id',  parent_externalid='parent', author='van')
+                                 externalid='id', parent_externalid='parent', author='van')
 
 
         # for strange reasons, it seems that the order is sometimes messed up
@@ -322,15 +324,13 @@ class TestCSV(amcattest.AmCATTestCase):
         self.assertEqual(articles[0].author, 'piet')
         self.assertEqual(articles[0].addressee, None)
 
-
         self.assertEqual(articles[1].parent, None)
         self.assertEqual(articles[1].externalid, 12)
         self.assertEqual(articles[1].author, 'jan')
         self.assertEqual(articles[1].addressee, None)
 
-
         articles = _run_test_csv(header, data, text="tekst", headline="kop", date="datum",
-                                 externalid='id',  parent_externalid='parent', author='van',
+                                 externalid='id', parent_externalid='parent', author='van',
                                  addressee_from_parent=True)
 
         # see above
@@ -352,8 +352,7 @@ class TestCSV(amcattest.AmCATTestCase):
             ("2001-01-01", None, "2001-01-01"),
             ("10/03/80", None, "1980-03-10"),
             ("15/08/2008", None, "2008-08-15"),
-            ]:
-
+        ]:
             data = [(datestr, "text")]
             a, = _run_test_csv(header, data, date="date", text="text")
             self.assertEqual(a.date.isoformat()[:10], expected)

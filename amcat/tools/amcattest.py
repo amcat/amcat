@@ -29,14 +29,13 @@ functions create_test_* create test objects for use in unit tests
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+from django.utils.unittest.loader import TestLoader
 import os
 from contextlib import contextmanager
 from functools import wraps
+from django.test.runner import DiscoverRunner
 
-try:
-    from django.test import TestCase
-except ImportError:
-    from unittest import TestCase
+from django.test import TestCase
 import unittest
 import logging; log = logging.getLogger(__name__)
 
@@ -269,6 +268,7 @@ class AmCATTestCase(TestCase):
     def tearDownClass(cls):
         if settings.ES_INDEX.endswith("__unittest"):
             settings.ES_INDEX = settings.ES_INDEX[:len("__unittest")]
+        super(AmCATTestCase, cls).tearDownClass()
 
 def require_postgres(func):
     def run_or_skip(self, *args, **kargs):
@@ -304,22 +304,9 @@ def use_elastic(func):
         return func(*args, **kargs)
     return inner
 
-def get_tests_from_suite(suite):
-    for e in suite:
-        if isinstance(e, unittest.TestSuite):
-            for test in get_tests_from_suite(e):
-                yield test
-        elif str(type(e)) == "<class 'unittest.loader.ModuleImportFailure'>":
-            try:
-                getattr(e, e._testMethodName)()
-            except:
-                log.exception("Exception on importing test class")
-        elif isinstance(e, unittest.TestCase):
-            yield e
-        else:
-            raise ValueError("Cannot parse type {e!r}".format(**locals()))
+class TestRunner(DiscoverRunner):
+    def __init__(self, pattern=None, toplevel=None, **kwargs):
+        # Force runner to look for tests in all Python files. File must start with and
+        # alphabetical character, as unittest breaks when trying to test __init__ files.
+        super(TestRunner, self).__init__(pattern="[a-zA-Z][a-zA-Z0-9_]*.py", **kwargs)
 
-def get_test_classes(module="amcat"):
-    tests = unittest.defaultTestLoader.discover(start_dir=module, pattern="*.py")
-    for test in get_tests_from_suite(tests):
-        yield test.__class__

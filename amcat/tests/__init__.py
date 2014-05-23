@@ -24,10 +24,4 @@ Please don't include test cases here directly, but place them in an appropriate
 location: either the module that it is testing (for straightforward test cases)
 or a special module in the amcat.tests package. 
 """
-#from amcat.tools import amcatlogging
-#amcatlogging.setup()
-
-from amcat.tools.amcattest import get_test_classes
-for cls in get_test_classes("amcat"):
-    locals()[cls.__name__] = cls
 

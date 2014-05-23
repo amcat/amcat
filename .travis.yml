@@ -10,13 +10,6 @@ services:
 virtualenv:
   system_site_packages: true
 
-env:
-  - SUITE=api
-  - SUITE=accounts
-  - SUITE=annotator
-  - SUITE=amcat
-  - SUITE=navigator
-
 before_install:
  - psql -c 'create database amcat;' -U postgres
  - export DJANGO_DB_USER=postgres
@@ -35,6 +28,11 @@ install:
  - elasticsearch-1.1.0/bin/plugin -install mobz/elasticsearch-head
  - ES_CLASSPATH=hitcount.jar elasticsearch-1.1.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider -d
  - pip install -r requirements.txt
+ - pip install coverage coveralls
 
 script:
- - python -m amcat.manage test ${SUITE}.tests
+ - coverage run --source=. --omit=*/migrations/*,settings/* -m amcat.manage test
+
+after_success:
+ - coverage report -m
+ - coveralls

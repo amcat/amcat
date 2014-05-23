@@ -10,3 +10,4 @@ postgresql-server-dev-9.1
 postgresql-contrib-9.1
 git
 curl
+python-pdfminer

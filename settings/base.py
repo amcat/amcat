@@ -109,6 +109,9 @@ API_URL = '/api/'
 # Examples: "http://foo.com/media/", "/media/".
 ADMIN_MEDIA_PREFIX = '/media/admin/'
 
+# A test runner defines which tests are executed
+TEST_RUNNER = "amcat.tools.amcattest.TestRunner"
+
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
