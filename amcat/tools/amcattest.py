@@ -29,6 +29,7 @@ functions create_test_* create test objects for use in unit tests
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+from django.utils.unittest.loader import TestLoader
 import os
 from contextlib import contextmanager
 from functools import wraps
@@ -303,8 +304,9 @@ def use_elastic(func):
         return func(*args, **kargs)
     return inner
 
-
 class TestRunner(DiscoverRunner):
-    def __init__(self, pattern=None, **kwargs):
-        # Force runner to look for tests in all Python files.
-        super(TestRunner, self).__init__(pattern="[a-zA-Z_]*.py", **kwargs)
+    def __init__(self, pattern=None, toplevel=None, **kwargs):
+        # Force runner to look for tests in all Python files. File must start with and
+        # alphabetical character, as unittest breaks when trying to test __init__ files.
+        super(TestRunner, self).__init__(pattern="[a-zA-Z][a-zA-Z0-9_]*.py", **kwargs)
+
