@@ -20,14 +20,12 @@
 
 import logging; log = logging.getLogger(__name__)
 
-import csv, collections
 from lxml import etree
 from lxml.etree import Element 
 
 from django import forms
-from django.forms import widgets
 
-from amcat.models import Code, Codebook, Language
+from amcat.models import Codebook
 from amcat.scripts.script import Script
 
 def _create_element(tag, value):
