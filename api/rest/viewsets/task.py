@@ -28,6 +28,7 @@ __all__ = ("TaskSerializer", "TaskResultSerializer")
 class TaskSerializer(AmCATModelSerializer):
     """Represents a Task object defined in amcat.models.task.Task. Adds two
     fields to the model: status and ready."""
+    description = serializers.SerializerMethodField('get_description')
     status = serializers.SerializerMethodField('get_status')
     ready = serializers.SerializerMethodField('get_ready')
     progress = serializers.SerializerMethodField('get_progress')
@@ -59,6 +60,9 @@ class TaskSerializer(AmCATModelSerializer):
         if status == IN_PROGRESS and isinstance(result, dict):
             return result
 
+    def get_description(self, task):
+        return task.class_name.split(".")[-1]
+
     class Meta:
         model = Task
 
@@ -68,7 +72,7 @@ class TaskResultSerializer(AmCATModelSerializer):
     ready = serializers.SerializerMethodField('get_ready')
 
     def get_ready(self, task):
-        return task.get_async_result().ready()
+        return task.ready
 
     def get_result(self, task):
         if not self.get_ready(task):

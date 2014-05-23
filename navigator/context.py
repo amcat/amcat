@@ -1,5 +1,7 @@
 
 import logging
+from navigator.utils import session_pop
+
 log = logging.getLogger(__name__)
 from amcat.models import AmCAT
 
@@ -7,14 +9,13 @@ DISPLAY_COUNT = 3
 ANNOUNCE_KEY = "last_announcement"
 COUNT_KEY = "last_announcement_count"
 
-# Extra context variables
-def extra(request):
-    try:
-        announcement = AmCAT.get_instance().global_announcement
-    except:
-        log.exception("Cannot get announcement")
-        return dict(request=request)
-    
+def get_announcement(request):
+    """
+    A announcement can be placed in the amcat_system table, which will be displayed
+    to each user DISPLAY_COUNT times.
+    """
+    announcement = AmCAT.get_instance().global_announcement
+
     last_announcement = request.session.get(ANNOUNCE_KEY)
     count = int(request.session.get(COUNT_KEY, 0)) + 1
 
@@ -27,4 +28,12 @@ def extra(request):
     if count < DISPLAY_COUNT:
         request.session[COUNT_KEY] = count
 
-    return dict(request=request, warning=AmCAT.get_instance().server_warning, announcement=announcement)
+    return announcement
+
+
+# Extra context variables
+def extra(request):
+    announcement = get_announcement(request)
+    warning = AmCAT.get_instance().server_warning
+    notice = session_pop(request.session, "notice")
+    return locals()

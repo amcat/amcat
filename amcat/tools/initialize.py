@@ -34,10 +34,9 @@ from django.core.management.commands.loaddata import Command
 from django.contrib.auth import models as auth_models
 from django.contrib.auth.management import create_superuser
 from amcat.models.authorisation import Role
-from amcat.models.plugin import PluginType, Plugin
 
 import amcat.models
-from amcat.tools import classtools, db_upgrader, amcates
+from amcat.tools import db_upgrader, amcates
 
 INITIAL_DATA_MODULE = amcat.models
 INITIAL_DATA_FILE = "initial_data.json"

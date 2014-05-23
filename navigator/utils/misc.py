@@ -16,13 +16,15 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import json
 import os
 import random
 import string
 import types
 from hashlib import sha1
-import logging;
+import logging
 
+from django.conf import settings
 from django.core.cache import cache
 
 log = logging.getLogger(__name__)
@@ -81,3 +83,13 @@ def cache_function(length):
                 return result
         return inner_func
     return decorator
+
+
+def set_notice(request, title, text, type="info", hide=None):
+    """
+
+    """
+    print(locals())
+    if hide is None: hide = (type != "error")
+    notice = dict(settings.PNOTIFY_DEFAULTS, title=title, text=text, type=type, hide=hide)
+    request.session["notice"] = json.dumps(notice)

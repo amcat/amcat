@@ -97,6 +97,9 @@ class Task(AmcatModel):
         @param signal: signal to send to running process (used in combination with terminate). Default: SIGKILL"""
         return self.get_async_result().revoke(**kwargs)
 
+    @property
+    def ready(self):
+        return self.get_async_result().ready()
 
     class Meta:
         db_table = "tasks"

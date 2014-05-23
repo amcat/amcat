@@ -2,6 +2,7 @@
 
 <li {% is_active 'Articles' %}><a href="{% url 'article set-list' project.id %}">Articles</a></li>
 <li {% is_active 'Query' %}><a href="{% url 'query' project.id %}">Query</a></li>
+<li {% is_active 'Tasks' %}><a href="{% url 'task-list' project.id %}">Tasks</a></li>
 <li {% is_active 'Coding' classnames="dropdown" %}>
   <a href="#" class="dropdown-toggle" data-toggle="dropdown">Coding<b class="caret"></b></a>
   <ul class="dropdown-menu">

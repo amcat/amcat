@@ -325,3 +325,12 @@ if 'DJANGO_LOG_FILE' in os.environ:
         }
     LOGGING['loggers']['']['handlers'] += ['logfile']
 
+# Pnotify is a javascript library to show (unintrusive) popups
+PNOTIFY_DEFAULTS = {
+    "type": "info",
+    "delay": 1000,
+    "nonblock": {
+        "nonblock": True,
+        "nonblock_opacity": .2
+    }
+}

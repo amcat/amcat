@@ -90,7 +90,7 @@ class AmCAT(AmcatModel):
             return cls.objects.get(pk=SINGLETON_ID)
         except AmCAT.DoesNotExist:
             # create singleton here - don't use initial data as that will override db_version on syncdb
-            return AmCAT.objects.create(db_version = CURRENT_DB_VERSION, id=SINGLETON_ID)
+            return AmCAT.objects.create(db_version=CURRENT_DB_VERSION, id=SINGLETON_ID)
 
 
     class Meta():

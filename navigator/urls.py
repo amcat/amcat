@@ -27,7 +27,7 @@ from navigator.views.article_views import *  # noqa
 from navigator.views.query import *  # noqa
 from navigator.views.project_views import *  # noqa
 from navigator.views.codebook_views import *  # noqa
-from navigator.views.task import TaskDetailsView, TaskListView
+from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck
 from navigator.views.user_views import *  # noqa
 from navigator.views.codingjob_views import *  # noqa
 from navigator.views.codingschema_views import *  # noqa
@@ -56,6 +56,10 @@ urlpatterns = patterns(
     url(r'^codingjobs/(?P<coder_id>\d+)?$' ,'navigator.views.codingjob.index', name='codingjobs'),
     url(r'^ruleset/(?P<pk>[0-9]+)$', rule_views.RuleSetView.as_view(), name='ruleset'),
     url(r'^ruleset$', rule_views.RuleSetTableView.as_view(), name='ruleset-list'),
+
+    # Task actions
+    url(r'^projects/(?P<project_id>[0-9]+)/tasks/clean_ready', clean_ready, name='task-clean-ready'),
+    url(r'^projects/(?P<project_id>[0-9]+)/tasks/clean_stuck', clean_stuck, name='task-clean-stuck'),
 )
 
 

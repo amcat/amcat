@@ -208,7 +208,7 @@ class Datatable(object):
             def __repr__(self):
                 return 'true' if self else "false"
 
-        return self.options.get('aoColumns', [dict(mData=n, bSortable=jsbool(self.can_order_by(n)))
+        return self.options.get('aoColumns', [dict(mData=str(n), bSortable=jsbool(self.can_order_by(n)))
                                               for n in self.fields])
 
     def get_aoColumnDefs(self):

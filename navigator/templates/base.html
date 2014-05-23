@@ -113,6 +113,12 @@
   </body>
 </html>
 
+{% if notice %}
+    <script type="text/javascript">
+        $(function(){ $.pnotify({{ notice|safe }}); });
+    </script>
+{% endif %}
+
 {% if announcement %}
 <script type="text/javascript">
   $(function(){
