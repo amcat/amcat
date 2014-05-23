@@ -39,26 +39,6 @@ def import_attribute(module, attribute=None):
     except AttributeError:
         raise ImportError("Module %r has no attribute %r" % (module, attribute))
 
-def guess_module(filename):
-    """
-    'Guess' te module name represented by the filename by getting its shortest route
-    to the system path, *skipping the first member* if it is the current working directory
-    """
-    filename = os.path.abspath(filename)
-
-    path = sys.path
-    if path[0] == os.getcwd(): del path[0]
-    path = set(path)
-    dirname, filename = os.path.split(filename)
-    module = [os.path.splitext(filename)[0]]
-    while True:
-        tail, head = os.path.split(dirname)
-        module.insert(0, head)
-        if dirname in path:
-            return ".".join(module)
-        if tail == dirname: raise ValueError("Cannot find module for %s" % filename)
-        dirname = tail
-
 
 def get_classes_from_module(module, superclass=None):
     """
@@ -162,20 +142,6 @@ class TestClassTools(amcattest.AmCATTestCase):
 
         from amcat.models.article import Article
         self.assertRaises(ValueError, get_class_from_module, m, Article.__class__)
-
-    def test_guess_module(self):
-        # test this module and a random other module
-        f = __file__
-        self.assertEqual(guess_module(f), "amcat.tools.classtools")
-        f = os.path.dirname(f)
-        self.assertEqual(guess_module(f), "amcat.tools")
-        from amcat.models import article
-        f = article.__file__
-        self.assertEqual(guess_module(f), "amcat.models.article")
-        f = os.path.dirname(f)
-        self.assertEqual(guess_module(f), "amcat.models")
-        self.assertRaises(ValueError, guess_module,
-                          "/__wva_does_not_exist/amcat/tools/toolkit.py")
 
     def test_import_attribute(self):
         t = import_attribute("amcat.tools.classtools", "TestClassTools")
