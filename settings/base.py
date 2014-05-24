@@ -224,6 +224,7 @@ REST_FRAMEWORK = {
                                  'api.rest.tablerenderer.CSVRenderer', 
                                  'api.rest.tablerenderer.XLSXRenderer',
                                  'api.rest.tablerenderer.SPSSRenderer',
+                                 'api.rest.tablerenderer.XHTMLRenderer',
                              ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.BasicAuthentication',

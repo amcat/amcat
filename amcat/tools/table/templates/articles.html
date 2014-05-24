@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Exported articles</title>
+    <meta http-equiv="Content-Type" content="text/html; charset={{ encoding }}">
+    <style>h2{font-size:1em;}</style>
+</head>
+<body>
+    {% for a in articles %}
+        <article>
+            {% comment %}Should move to separate file?{% endcomment %}
+            {% if a.headline %}<h1>{{ a.headline }}</h1>{% endif %}
+            {% if a.byline %}<h2>{{ a.byline }}</h2>{% endif %}
+            {% if a.text %}{{ a.text|linebreaks }}{% endif %}
+        </article>
+    {% endfor %}
+</body>
+</html>

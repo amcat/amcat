@@ -21,6 +21,9 @@
 
 from cStringIO import StringIO
 import csv, zipfile, io
+import os
+from django.template import Context, Template
+
 
 class TableExporter():
     """
@@ -105,16 +108,29 @@ class XLSX(TableExporter):
         buffer.flush()
         return buffer.getvalue()
 
+HTML_FILENAME = os.path.join(os.path.dirname(__file__), "templates/articles.html")
+
+class HTML(TableExporter):
+    extension = "html"
+    template = Template(open(HTML_FILENAME).read())
+
+    def to_bytes(self, table, encoding):
+        context = Context(dict(articles=table.getRows(), encoding=encoding))
+        return self.template.render(context).encode(encoding)
+
 class SPSS(TableExporter):
     extension = 'spss'
+
     def to_bytes(self, table, **kargs):
         from . import table2spss
-        
+
         filename = table2spss.table2sav(table)
         return open(filename, 'rb').read()
-        
-EXPORTERS = {'csv' : CSV(),
-             'csv2' : CSV_semicolon(),
-             'xlsx' : XLSX(),
-             'spss' : SPSS(),
-             }
+
+EXPORTERS = {
+    'csv': CSV(),
+    'csv2': CSV_semicolon(),
+    'xlsx': XLSX(),
+    'spss': SPSS(),
+    'html': HTML()
+}

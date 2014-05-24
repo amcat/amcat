@@ -21,13 +21,13 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import csv
-from collections import defaultdict
-from rest_framework.renderers import *
-from StringIO import StringIO
-from amcat.tools.table import table3
 from functools import partial
 import collections
+
+from rest_framework.renderers import *
+
+from amcat.tools.table import table3
+
 
 class TableRenderer(BaseRenderer):
     """
@@ -184,8 +184,21 @@ class SPSSRenderer(TableRenderer):
         result = table.export(format='spss')
         return result
 
+class XHTMLRenderer(TableRenderer):
+    """
+    Renderer which serialises to HTML
+    """
+    media_type = 'application/html'
+    format = 'xhtml'
+    extension = 'html'
+
+    def render_table(self, table):
+        result = table.export(format='html')
+        return result
+
+
         
-EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer]
+EXPORTERS = [CSVRenderer, XLSXRenderer, SPSSRenderer, XHTMLRenderer]
 
 def set_response_content(response):
     """
