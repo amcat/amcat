@@ -53,6 +53,6 @@ a:hover, a:focus {
   border-radius: 2px;
 }
 
-em.highlight {
+article em {
     background-color: yellow; font-style:normal;
 }

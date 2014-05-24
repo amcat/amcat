@@ -18,8 +18,8 @@
 ###########################################################################
 
 from itertools import chain
-from django.test import Client
 
+from django.test import Client
 from django.views.generic.detail import DetailView
 from django.shortcuts import render
 from django.core.urlresolvers import reverse
@@ -32,16 +32,8 @@ from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin,
 from amcat.tools import sbd
 from amcat.models import authorisation
 from navigator.views.project_views import ProjectDetailsView
-from amcat.tools import amcates
 import navigator.forms
 
-
-def escape_keepem(text):
-    # hack, escape everything except for em
-     text = escape(text)
-     text = text.replace("&lt;em&gt;", "<em class='highlight'>")
-     text = text.replace("&lt;/em&gt;", "</em>")
-     return text
 
 class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DetailView):
     model = Article
@@ -50,32 +42,19 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         """Checks if the user has the right to edit this project"""
         return self.request.user.get_profile().has_role(authorisation.ROLE_PROJECT_READER, self.object.project)
 
-    def get_highlight(self):
-        if not self.last_query: return None
-        try:
-            return self._highlight
-        except AttributeError:
-             self._highlight = amcates.ES().highlight_article(self.object.id, self.last_query)
-             return self._highlight
-
-
-    def get_headline(self):
-        hl = self.get_highlight()
-        if hl and "headline" in hl:
-            return escape_keepem(hl["headline"])
-        return escape(self.object.headline)
-
-    def get_text(self):
-        hl = self.get_highlight()
-        if hl and "text" in hl:
-            return escape_keepem(hl["text"])
-        return escape(self.object.text)
-
+    def highlight(self):
+        if not self.last_query:
+            return None
+        self.object.highlight(self.last_query)
 
     def get_context_data(self, **kwargs):
         context = super(ArticleDetailsView, self).get_context_data(**kwargs)
-        context['text'] = self.get_text()
-        context['headline'] = self.get_headline()
+
+        # Highlight headline / text
+        self.highlight()
+        context['text'] = self.object.text
+        context['headline'] = self.object.headline
+
         # HACK: put query back on session to allow viewing more articles
         self.request.session["query"] = self.last_query
         return context
