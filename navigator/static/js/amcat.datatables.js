@@ -141,7 +141,18 @@ amcat.datatables.truncate_row = function(row, limit){
     $.each($("td", row), function(i, cell){
         txt = $(cell).text();
 
-        if (txt.length > 30){
+	// HACK: treat kwic 'left' context differently, better would be to specify this as an option/class somehow
+
+	th = $('table.datatable').find('th').eq($(cell).index());
+	header = $(th).attr('aria-label');
+
+	if (header == 'left') {
+	    if (txt.length > 30) {
+		$(cell).attr("title", txt);
+		$(cell).text("..."+txt.substring(txt.length - 30));
+	    }
+	    $(cell).css('text-align', 'right');
+	} else if (txt.length > 30) {
             $(cell).attr("title", txt);
             $(cell).text(txt.substring(0,30)+"...");
         }
@@ -150,7 +161,7 @@ amcat.datatables.truncate_row = function(row, limit){
     return row;
 };
 
-/* 
+/*
  * Python(ish) string fomratting. Examples:
  *
  *  >>> format('{0}', ['zzz'])
@@ -266,14 +277,14 @@ amcat.datatables.load_metadatas = function(callback){
  * turn needed to generate labels.
  *
  * @return: array with (or without!) labelobject ids.
- */ 
+ */
 amcat.datatables.get_load_labels = function(fieldname, objects, label_objects){
     var res = [], lbl_obj_id;
 
     for (var i in objects){
         // Add fieldname_id property
         if(objects[i][fieldname + "_id"] === undefined){
-            objects[i][fieldname + "_id"] = objects[i][fieldname]; 
+            objects[i][fieldname + "_id"] = objects[i][fieldname];
         }
 
         lbl_obj_id = objects[i][fieldname + "_id"];
@@ -408,7 +419,7 @@ amcat.datatables.get_order_by_query = function(aoData){
         dir = amcat.datatables._search_oa_props(aoData, _SORTDIR + i);
         prop = amcat.datatables._search_oa_props(aoData, _DPROP + col);
 
-	
+
         if (dir === undefined | prop === undefined || col === undefined){
             break;
         }
@@ -629,4 +640,3 @@ amcat.datatables.fetched_initial_error = function (jqXHR, textStatus, errorThrow
 
     console.log([jqXHR, textStatus, errorThrown]);
 };
-
