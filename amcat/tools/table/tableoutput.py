@@ -1,16 +1,18 @@
 from __future__ import with_statement, absolute_import
 
-from amcat.tools import toolkit, idlabel
-import sys, csv, StringIO, traceback, json
-
-from amcat.tools import amcatlogging;
+import sys
+import csv
+import StringIO
+import traceback
+import json
 
 from django.template import Template, Context
-import functools
 
-#amcatlogging.debugModule()
+from amcat.tools import toolkit
 
-import logging; log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
+
 
 def getTable(table, colnames=None):
     if isinstance(table, (list, tuple)):
@@ -239,35 +241,6 @@ def getstr(val):
     if type(val) == str: return val
     if type(val) == unicode: return val.encode('utf-8')
     return str(val)
-
-"""
-commented this code, since it is overwritten by following function anyway..
-def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
-              tabseparated=False, monitor=progress.NullMonitor()):
-    with monitor.monitored("Exporting to CSV", 100) as pm:
-        table = getTable(table, colnames)
-        if csvwriter is None:
-            dialect = csv.excel_tab if tabseparated else csv.excel
-            csvwriter = csv.writer(outfile, dialect=dialect)
-        pm.worked(5)
-        cols = list(table.getColumns())
-        if writecolnames == True: writecolnames =str 
-        if writerownames == True: writerownames = str            
-        if writecolnames:
-            c = ([""] + cols) if writerownames else cols
-            csvwriter.writerow(map(writecolnames, c))
-        pm.worked(5)
-        rows = table.getRows()
-        log.debug("Starting export")
-        
-        with monitor.monitored("Exporting to CSV", 100, submonitorwork=90) as m:
-            for i, row in enumerate(rows):
-                n = table.estimateRows()
-                m.workedto(100 * i / n)
-                values = [writerownames(row)] if writerownames else []
-                values += map(getstr, (table.getValue(row,col) for col in cols))
-                csvwriter.writerow(values)
-"""
 
 def table2csv(table, colnames=None, csvwriter=None, outfile=sys.stdout, writecolnames=True, writerownames=False,
               tabseparated=False, encoding='utf-8'):
