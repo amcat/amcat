@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.contrib.auth.models import User
 
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -340,7 +341,8 @@ from amcat.tools import amcattest
 class TestCodebookViews(amcattest.AmCATTestCase):
 
     def setUp(self):
-        create_test_user(username='amcat', password='amcat')
+        if not User.objects.filter(username='amcat').exists():
+            create_test_user(username='amcat', password='amcat')
         self.cb = amcattest.create_test_codebook()
         from django.test import Client
         self.client = Client()
