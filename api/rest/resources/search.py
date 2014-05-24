@@ -122,7 +122,7 @@ class KWICField(CharField):
 
     def field_to_native(self, obj, field_name):
         # use highlighting if available, otherwise fall back to raw text
-
+        if obj is None: return None
         hl = obj.highlight.get('headline')
         if not hl: hl = obj.highlight.get('text')
         if hl:
