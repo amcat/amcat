@@ -115,7 +115,10 @@ class HTML(TableExporter):
     template = Template(open(HTML_FILENAME).read())
 
     def to_bytes(self, table, encoding):
-        context = Context(dict(articles=table.getRows(), encoding=encoding))
+        context = Context({
+            "articles": table.getRows(), "encoding": encoding,
+            "non_meta": {"text", "headline", "byline"}
+        })
         return self.template.render(context).encode(encoding)
 
 class SPSS(TableExporter):
