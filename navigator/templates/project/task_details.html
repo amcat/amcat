@@ -16,9 +16,9 @@
       </a>
     </h4>
   </div>
-  <div id="collapseOne" class="panel-collapse collapse in">
+  <div id="collapseOne" class="panel-collapse collapse">
     <div class="panel-body">
-      <table class="key_value">
+      <table class="key_value" style="width:100%">
 	<tr>
 	  <td>ID:</td>
 	  <td>{{object.id}}</td>
@@ -28,18 +28,10 @@
 	  <td>{{object.uuid}}</td>
 	</tr>
 	<tr>
-	  <td>Class</td>
+	  <td>Class:</td>
 	  <td>{{object.class_name}}</td>
 	</tr>
 
-	<tr>
-	  <td>Issued at&NonBreakingSpace;</td>
-	  <td>{{object.issued_at}}</td>
-	</tr>
-	<tr>
-	  <td>By</td>
-	  <td>{{object.user}}</td>
-	</tr>
       </table>
     </div>
   </div>
@@ -57,7 +49,12 @@
   </div>
   <div id="collapseOne" class="panel-collapse collapse in">
     <div class="panel-body">
-      <table class="key_value">
+      <table class="key_value" style="width:100%">
+
+	<tr>
+	  <td>Task started:&NonBreakingSpace;</td>
+	  <td>{{object.issued_at}} by {{object.user}}</td>
+	</tr>
         <tr>
           <td>Status:</td>
           <td id="status">PENDING</td>
@@ -66,9 +63,16 @@
           <td>Message:</td>
           <td id="message">{{ async_result.progress.message }}</td>
         </tr>
-        <tr class="hide-if-success">
+        <tr>
           <td>Progress:</td>
-          <td id="completed">{{ async_result.progress.completed }}</td>
+          <td id="completed">{{ async_result.progress.completed }}
+<div class="progress progress-striped active" style="margin: 1em 1em 1em 0em">
+  <div class="progress-bar" id="progressbar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+    <span class="sr-only"><span id="progressalt">0</span>% Complete</span>
+  </div>
+</div>
+
+</td>
         </tr>
       </table>
     </div>

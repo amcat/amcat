@@ -59,6 +59,7 @@ class Affiliation(AmcatModel):
     def can_update(self, user):
         return user.haspriv('manage_users')
 
+THEMES = ['AmCAT', 'Pink', 'Pink Dreamliner', 'Darkly', 'Amelia']
 class UserProfile(AmcatModel):
     """
     Additional user information is stored here
@@ -70,7 +71,9 @@ class UserProfile(AmcatModel):
     role = models.ForeignKey(Role, default=0)
 
     favourite_projects = models.ManyToManyField("amcat.project", related_name="favourite_users")
-    
+
+    theme = models.CharField(max_length=255, choices=[(t, t) for t in THEMES], default="AmCAT")
+
     @property
     def projects(self):
         return Project.objects.filter(projectrole__user=self.user)
@@ -102,12 +105,12 @@ class UserProfile(AmcatModel):
         """
         if self.role_id >= ADMIN_ROLE:
             return True
-            
+
         if isinstance(role, Role):
             role = role.id
         elif isinstance(role, (str, unicode)):
             role = Role.objects.get(label=role).id
-                            
+
         if onproject:
             actual_role_id = onproject.get_role_id(user=self.user)
         else:
@@ -115,10 +118,10 @@ class UserProfile(AmcatModel):
 
         log.info("{self.user.id}:{self.user.username} has role {actual_role_id} on project {onproject}, >=? {role}"
                  .format(**locals()))
-        
+
         return actual_role_id >= role
-        
-    
+
+
     def haspriv(self, privilege, onproject=None):
         """
         @type privilege: Privilege object, id, or str
@@ -159,7 +162,7 @@ class UserProfile(AmcatModel):
         # TODO / CHALLANGE: find the solution that doesn't skip a superclass
         return super(AmcatModel, self).save(**kwargs)
 
-        
+
 
     class Meta():
         db_table = 'auth_user_profile'

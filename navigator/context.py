@@ -15,7 +15,6 @@ def get_announcement(request):
     to each user DISPLAY_COUNT times.
     """
     announcement = AmCAT.get_instance().global_announcement
-
     last_announcement = request.session.get(ANNOUNCE_KEY)
     count = int(request.session.get(COUNT_KEY, 0)) + 1
 
@@ -36,4 +35,8 @@ def extra(request):
     announcement = get_announcement(request)
     warning = AmCAT.get_instance().server_warning
     notice = session_pop(request.session, "notice")
+    if request.user.is_anonymous():
+        theme = 'amcat'
+    else:
+        theme = getattr(request.user.get_profile(), 'theme', 'amcat').lower().replace(" ", "_")
     return locals()
