@@ -30,7 +30,7 @@ def extra(request):
     if request.user.is_anonymous():
         theme = 'amcat'
     else:
-        theme = getattr(request.user.get_profile(), 'theme', 'amcat').lower()
+        theme = getattr(request.user.get_profile(), 'theme', 'amcat').lower().replace(" ", "_")
 
     return dict(request=request, warning=AmCAT.get_instance().server_warning,
                 announcement=announcement, theme=theme)

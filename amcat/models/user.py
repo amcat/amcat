@@ -57,7 +57,7 @@ class Affiliation(AmcatModel):
     def can_update(self, user):
         return user.haspriv('manage_users')
 
-THEMES = ['AmCAT', 'Pink', 'Darkly', 'Amelia']
+THEMES = ['AmCAT', 'Pink', 'Pink Dreamliner', 'Darkly', 'Amelia']
 class UserProfile(AmcatModel):
     """
     Additional user information is stored here
