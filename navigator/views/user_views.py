@@ -45,7 +45,7 @@ class ProjectRoleForm(forms.ModelForm):
             # Disable self.project
             del self.fields['project']
 
-            choices = ((r.id, r.label) for r in Role.objects.filter(projectlevel=True))
+            choices = [(r.id, r.label) for r in Role.objects.filter(projectlevel=True)] + [(None, "Remove user")]
             self.fields['role'].choices = choices
 
             if user is not None:
@@ -53,7 +53,7 @@ class ProjectRoleForm(forms.ModelForm):
 
     class Meta:
         model = ProjectRole
-        
+
 class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = User
     parent = None
@@ -61,8 +61,7 @@ class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixi
     context_category = 'Settings'
     url_fragment = "users"
     resource = ProjectRoleResource
-    rowlink = './{id}'
-    
+
     @classmethod
     def get_view_name(cls):
         return "user-list"
@@ -72,7 +71,7 @@ class ProjectUserListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixi
         context['add_user'] = ProjectRoleForm(self.project)
         return context
 
-    
+
     def filter_table(self, table):
         return table.filter(project=self.project).hide('project', 'id')
 
@@ -82,10 +81,21 @@ class ProjectUserAddView(ProjectViewMixin, HierarchicalViewMixin, RedirectView):
     parent = ProjectUserListView
     url_fragment = "add"
     model = User
-    
+
     def get_redirect_url(self, project_id):
         project = Project.objects.get(id=project_id)
-        role = Role.objects.get(id=self.request.POST['role'], projectlevel=True)
+        role = self.request.POST['role']
+        role = None if role == 'None' else Role.objects.get(id=self.request.POST['role'], projectlevel=True)
         for user in User.objects.filter(id__in=self.request.REQUEST.getlist('user')):
-            ProjectRole(project=project, user=user, role=role).save()
+            try:
+                r = ProjectRole.objects.get(project=project, user=user)
+                if role is None:
+                    r.delete()
+                else:
+                    r.role = role
+                    r.save()
+            except ProjectRole.DoesNotExist:
+                if role is not None:
+                    r = ProjectRole(project=project, user=user, role=role)
+                    r.save()
         return reverse("user-list", args=[project_id])

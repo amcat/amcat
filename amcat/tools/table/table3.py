@@ -70,11 +70,20 @@ class Table(object):
                          if getValue is overridden.
         @param rowNamesRequired: a hint to output functions that rownames should be printed
         """
-        self.columns = columns or []
-        self.rows = rows or []
+        if columns is None:
+            columns = []
+
+        if rows is None:
+            rows = []
+
+        if columnTypes is None:
+            columnTypes = {}
+
+        self.columns = columns
+        self.rows = rows
         self.cellfunc = cellfunc
         self.rowNamesRequired = rowNamesRequired
-        self.columnTypes = columnTypes or {}
+        self.columnTypes = columnTypes
 
     # Basic table interface
     def getValue(self, row, column):
@@ -528,6 +537,12 @@ def _striplines(x):
 
 
 class TestTable(amcattest.AmCATTestCase):
+    def test_init(self):
+        """Does init use 'empty' parameters?"""
+        a = []
+        t = Table(columns=a)
+        self.assertIs(t.columns, a)
+
     def test_list_table(self):
         """Can we create a list table and output as ascii"""
         t = ListTable(colnames=["a1", "a2", "a3"],

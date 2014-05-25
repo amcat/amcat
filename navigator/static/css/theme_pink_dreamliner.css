@@ -1,0 +1,140 @@
+@import url(http://fonts.googleapis.com/css?family=Dancing+Script:700);
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  font-family: 'Dancing Script', cursive;
+  font-weight: 700;
+  line-height: 1.1;
+  color: #805;
+}
+
+body {
+    background: #fde url('http://i.imgur.com/p4e827L.png') no-repeat 80% 0;
+}
+
+a, .panel-title a, a:hover, a:focus {
+  color: #a27;
+}
+.navbar-brand {
+    background-image: url('/media/img/amcat/amcat-logo-pink.png');
+}
+
+.jumbotron {background-color: #f9d; opacity: .8}
+
+
+
+/* Buttons */
+
+.btn-primary {
+    background-color: #f5a;
+    border-color: #ecd;
+  opacity: .6;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:active,
+.btn-primary.active,
+.open .dropdown-toggle.btn-primary {
+  color: #ffffff;
+  background-color: #c39;
+  border-color: #ecd;
+
+}
+
+.btn-default {
+  color: #333333;
+  background-color: #fde;
+  border-color: #ecd;
+  opacity: .6;
+}
+
+
+.btn-default:hover,
+.btn-default:focus,
+.btn-default:active,
+.btn-default.active,
+.open .dropdown-toggle.btn-default {
+  color: #333333;
+  background-color: #fcd;
+  border-color: #fcd;
+}
+
+
+/* Navigation */
+
+.breadcrumb, .navbar {background-color: #f9d; }
+
+.breadcrumb {opacity: .7}
+.dropdown-menu {
+  background-color: #fcd
+}
+
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > a:focus {
+  background-color: #fed;
+}
+
+
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .active > a:focus {
+  color: white;
+  background-color: #f5a;
+}
+
+.nav-tabs > li.active > a,
+.nav-tabs > li.active > a:hover,
+.nav-tabs > li.active > a:focus {
+  color: white;
+  cursor: default;
+  background-color: #f5a;
+  border: 1px solid #dddddd;
+  border-bottom-color: transparent;
+  opacity: .6;
+
+}
+
+.nav-tabs > li > a:hover {
+    background-color: #f7c;
+  opacity: .6;
+
+}
+
+
+/* Panel */
+
+.panel {background-color: #ffe6f1}
+.panel-default > .panel-heading {background-color: #f9d}
+
+/* Tables */
+
+table.display thead, table.display tfoot {
+	background-color:#f5a;
+	color:white;
+}
+
+table.display tbody tr:hover, table.display tbody tr td.highlighted ,
+table.display tr:hover td.sorting_1,
+table.display tr:hover td.sorting_2,
+table.display tr:hover td.sorting_3 {
+	background-color: #e7b;
+}
+
+table.display tr.odd,  tr.odd td.sorting_1 {
+	background-color: #fde;
+}
+
+table.display tr.even, tr.even td.sorting_1{
+	background-color: #ecd
+}

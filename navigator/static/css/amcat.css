@@ -1,9 +1,4 @@
-.btn-primary {
-    background-color: #60A3FF;	      
-    border-color: #5693E6;
-}
-
-.navbar-brand {
+a .navbar-brand {
     background-image: url('/media/img/amcat/amcat-logo.png');
     background-repeat: no-repeat;
     background-position: 10px 10px;
@@ -30,14 +25,6 @@
 .panel-title {
 font-size: 14px;
 }
-
-a, .panel-title a {
-  color: #5693E6;
-}
-a:hover, a:focus {	      
-    color: #305280;
-}
-
 .query textarea {width: 100%}
 
 .articlelist li {list-style-type: none;}

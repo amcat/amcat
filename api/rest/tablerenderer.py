@@ -21,17 +21,16 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
+from collections import OrderedDict
 from functools import partial
-import collections
 
 from rest_framework.renderers import *
-
 from amcat.tools.table import table3
 
 
 class TableRenderer(BaseRenderer):
     """
-    Generic (abstract) renderer which flattens the table before writing. 
+    Generic (abstract) renderer which flattens the table before writing.
     """
     level_sep = '.'
 
@@ -40,7 +39,7 @@ class TableRenderer(BaseRenderer):
         Serialize the table3.Table into the target format
         """
         raise NotImplementedError
-    
+
     def render(self, data, media_type=None, renderer_context=None):
         """
         Renders serialized *data* into target format
@@ -51,10 +50,10 @@ class TableRenderer(BaseRenderer):
             data = data['results']
         elif not isinstance(data, list):
             return ''
-        
+
         table = self.tablize(data)
         return self.render_table(table)
-        
+
     def tablize(self, data):
         """
         Convert a list of data into a table.
@@ -66,14 +65,15 @@ class TableRenderer(BaseRenderer):
         data = self.flatten_data(data)
 
         # Get the set of all unique headers, and sort them.
-        headers = collections.defaultdict(set)
+        headers = OrderedDict()
         for item in data:
             for k, v in item.iteritems():
+                if k not in headers:
+                    headers[k] = set()
                 headers[k].add(type(v))
-                
-        
+
         table = table3.ObjectTable(rows=data)
-        for header in sorted(headers):
+        for header in headers:
             fieldtype = headers[header]
             if len(fieldtype) == 1:
                 fieldtype = list(fieldtype)[0]
@@ -95,7 +95,6 @@ class TableRenderer(BaseRenderer):
         for item in data:
             flat_item = self.flatten_item(item)
             flat_data.append(flat_item)
-
         return flat_data
 
     def flatten_item(self, item):
@@ -136,7 +135,7 @@ class TableRenderer(BaseRenderer):
         return flat_list
 
     def flatten_dict(self, d):
-        flat_dict = {}
+        flat_dict = OrderedDict()
         for key, item in d.iteritems():
             key = str(key)
             flat_item = self.flatten_item(item)
@@ -144,7 +143,7 @@ class TableRenderer(BaseRenderer):
             flat_dict.update(nested_item)
         return flat_dict
 
-    
+
 class CSVRenderer(TableRenderer):
     """
     Renderer which serializes to CSV
@@ -179,7 +178,7 @@ class SPSSRenderer(TableRenderer):
     media_type = 'application/x-spss-sav'
     format = 'spss'
     extension = 'sav'
-    
+
     def render_table(self, table):
         result = table.export(format='spss')
         return result
@@ -211,4 +210,3 @@ def set_response_content(response):
             response['Content-Disposition'] = 'attachment; filename="data.{exporter.extension}"'.format(**locals())
             break
     return response
-

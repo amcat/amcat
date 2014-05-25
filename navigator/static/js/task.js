@@ -47,20 +47,29 @@ task = (function(uuid){
 
     function update_progress(task){
         $("#status").text(task.status);
-
+	console.log(task);
         if (task.progress !== null){
-            $("#message").text(task.message);
-            $("#progress").text(task.progress);
+	    progress = task.progress.completed;
+            $("#message").text(task.progress.message);
+            //$("#completed").text(progress);
+	    if (progress != null) {
+		$("#progressbar").css('width', progress+'%').attr('aria-valuenow', progress);
+		$("#progressalt").text(progress);
+	    }
         }
     }
 
     function task_failed(task){
         console.log("failed")
-    }
+	$('#progressbar').removeClass("progress-bar-info").addClass("progress-bar-danger");
 
+    }
+task_failed
     function task_success(task){
         $(".hide-if-success").hide();
         $("#results").show();
+	$("#progressbar").css('width', '100%').attr('aria-valuenow', "100");
+	$('#progressbar').removeClass("progress-bar-info").addClass("progress-bar-success");
     }
 
     poll();

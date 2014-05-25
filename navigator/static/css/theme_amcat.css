@@ -1,0 +1,13 @@
+
+
+.btn-primary {
+    background-color: #60A3FF;
+    border-color: #5693E6;
+}
+
+a, .panel-title a {
+  color: #5693E6;
+}
+a:hover, a:focus {
+    color: #305280;
+}
