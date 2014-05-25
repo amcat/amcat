@@ -12,31 +12,37 @@
 
     <!--  CSS -->
     {% compress css %}
-    <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/datatables.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/forms.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/tabs.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/jquery.multiselect.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/jquery.multiselect.filter.css' %}" rel="stylesheet" type="text/css"  />
-    <link href="{% static 'css/jquery.pnotify.default.css' %}" media="all" rel="stylesheet" type="text/css" />
-    <link href="{% static 'css/amcat.css' %}" rel="stylesheet" type="text/css"  />
+        <!-- Bower dependencies -->
+        <link href="{% static 'components/bootstrap/dist/css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
+        <link href="{% static 'components/datatables/media/css/jquery.dataTables.css' %}" rel="stylesheet" type="text/css"  />
+        <link href="{% static 'components/pnotify/pnotify.core.css' %}" rel="stylesheet" type="text/css"  />
+
+        <!-- AmCAT code -->
+        <link href="{% static 'css/forms.css' %}" rel="stylesheet" type="text/css"  />
+        <link href="{% static 'css/tabs.css' %}" rel="stylesheet" type="text/css"  />
+        <link href="{% static 'css/jquery.multiselect.css' %}" rel="stylesheet" type="text/css"  />
+        <link href="{% static 'css/jquery.multiselect.filter.css' %}" rel="stylesheet" type="text/css"  />
+        <link href="{% static 'css/amcat.css' %}" rel="stylesheet" type="text/css"  />
+        <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css"  />
     {% endcompress %}
     {% block css %}{% endblock %}
 
     <!--  Javascript -->
     {% compress js %}
-    <script type="text/javascript" src="{% static 'js/jquery-1.7.2.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/jquery-ui-1.8.22.custom.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/jquery.multiselect.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/jquery.multiselect.filter.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/jquery.dataTables.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/bootstrap.scrollspy.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/jquery.pnotify.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
-    <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
+        <script type="text/javascript" src="{% static 'components/jquery/dist/jquery.js' %}"></script>
+        <script type="text/javascript" src="{% static 'components/jquery-ui/ui/jquery-ui.js' %}"></script>
+        <script type="text/javascript" src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
+        <script type="text/javascript" src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
+        <script type="text/javascript" src="{% static 'components/bootstrap/js/scrollspy.js' %}"></script>
+        <script type="text/javascript" src="{% static 'components/pnotify/pnotify.core.js' %}"></script>
+        <script type="text/javascript" src="{% static 'components/pnotify/pnotify.nonblock.js' %}"></script>
+
+        <!-- AmCAT code -->
+        <script type="text/javascript" src="{% static 'js/jquery.multiselect.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/jquery.multiselect.filter.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
+        <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
     {% endcompress %}
     {% block javascript %}{% endblock %}
 

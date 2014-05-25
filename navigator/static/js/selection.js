@@ -257,16 +257,9 @@ $(document).ready(function(){
     
     $('#form-submit').button();
     $('#webscripts').buttonset();
-    // $('#save-query-button').button();
-    // $('#load-query-button').button();
-    // $('#show-query-form-button').button().click(function(){
-        // $('#query-form').show();
-        // $(this).hide();
-    // });
-    
     $('.output-options').hide();
-    
-    $('#webscripts input').live('click', function(){
+
+    $(document).on("click", "#webscripts input", function(){
         $('.output-options').hide();
         $('#options-' + $(this).attr('id')).show();
     });
@@ -339,6 +332,7 @@ amcat.selection.loadIframe = function(data){ // this is the form submit response
     $('iframe').hide();
 
     window.clearTimeout(amcat.selection.loadIframeTimeout);
+    var modal = $("#dialog-message").closest('.ui-dialog-content')
 
     var json = data;
     if (data.html === undefined){
@@ -361,15 +355,15 @@ amcat.selection.loadIframe = function(data){ // this is the form submit response
 
     if(json.html){
         $('#select-result').html(json.html);
-        if($("#dialog-message").dialog('isOpen') == true){
-            $("#dialog-message").dialog('close');
+        if(modal.dialog('isOpen') == true){
+            modal.dialog('close');
 
             if (json.doNotAddActionToMainForm !== true){            
                 amcat.selection.addActionToMainForm(json.webscriptClassname, json.webscriptName);
             }
         }
     } else {
-        if($("#dialog-message").dialog('isOpen') == true){
+        if(modal.dialog('isOpen') == true){
             //nothing needed?
         } else {
             $('#select-result').empty();
@@ -377,7 +371,7 @@ amcat.selection.loadIframe = function(data){ // this is the form submit response
     }
 
     if(json.error){
-        var el = $("#dialog-message").dialog('isOpen') == true ? $('#dialog-message-status') : $('#select-result');
+        var el = modal.dialog('isOpen') == true ? $('#dialog-message-status') : $('#select-result');
         console.log(json.error, el);
         el.show().html('<div class="error">Error found</div>').append($('<div />').text(json.error.message));
         if(json.error.fields){
@@ -387,7 +381,7 @@ amcat.selection.loadIframe = function(data){ // this is the form submit response
                 ul.append($('<li />').text(field + ': ' + errors.join(', ')));
             }
         }
-        if($("#dialog-message").dialog('isOpen')){
+        if(modal.dialog('isOpen')){
             amcat.selection.setDialogButtons();
         }
     }
