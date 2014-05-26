@@ -198,8 +198,7 @@ class ArticleSetUploadView(ProjectScriptView):
             return super(ArticleSetUploadView, self).get_form(form_class)
 
     def form_valid(self, form):
-        self.run_form(form)
-        return self.render_to_response(self.get_context_data(form=form))
+        return self.run_form_delayed(self.project, form, callback=self.__class__)
 
     def get_context_data(self, **kwargs):
         self.script = self.get_script()
@@ -209,6 +208,15 @@ class ArticleSetUploadView(ProjectScriptView):
             context['created_n'] = len(self.result)
 
         return context
+
+    @classmethod
+    def get_redirect_url(cls, task):
+        setid = task._get_raw_result()
+        return reverse("article set-details", args=[task.project.id, setid])
+
+    @classmethod
+    def get_redirect_name(cls, task):
+        return "View Set"
 
 class ArticleSetRefreshView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
