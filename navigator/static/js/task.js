@@ -68,6 +68,9 @@ task_failed
     function task_success(task){
         $(".hide-if-success").hide();
         $("#results").show();
+	$("#results").attr('href',  task.redirect_url)
+	$("#results span").text(task.redirect_message)
+
 	$("#progressbar").css('width', '100%').attr('aria-valuenow', "100");
 	$('#progressbar').removeClass("progress-bar-info").addClass("progress-bar-success");
     }

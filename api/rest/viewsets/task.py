@@ -22,6 +22,7 @@ from amcat.models.task import IN_PROGRESS
 from amcat.models import Task
 from amcat.tools import amcattest
 from api.rest.serializer import AmCATModelSerializer
+from django.core.urlresolvers import reverse
 
 __all__ = ("TaskSerializer", "TaskResultSerializer")
 
@@ -32,6 +33,8 @@ class TaskSerializer(AmCATModelSerializer):
     status = serializers.SerializerMethodField('get_status')
     ready = serializers.SerializerMethodField('get_ready')
     progress = serializers.SerializerMethodField('get_progress')
+    redirect_url = serializers.SerializerMethodField('get_redirect_url')
+    redirect_message = serializers.SerializerMethodField('get_redirect_message')
 
     def __init__(self, *args, **kwargs):
         super(TaskSerializer, self).__init__(*args, **kwargs)
@@ -63,6 +66,22 @@ class TaskSerializer(AmCATModelSerializer):
     def get_description(self, task):
         return task.class_name.split(".")[-1]
 
+    def get_redirect_url(self, task):
+        ready, _, _ = self.get_status_ready(task)
+        if ready:
+            if task.callback_class_name:
+                return task.get_callback_class().get_redirect_url(task)
+            else:
+                return reverse("api-v4-taskresult") + "/" + task.uuid
+
+    def get_redirect_message(self, task):
+        ready, _, _ = self.get_status_ready(task)
+        if ready:
+            if task.callback_class_name:
+                return task.get_callback_class().get_redirect_name(task)
+            else:
+                return "Download results"
+
     class Meta:
         model = Task
 
@@ -77,7 +96,7 @@ class TaskResultSerializer(AmCATModelSerializer):
     def get_result(self, task):
         if not self.get_ready(task):
             return None
-        
+
         return task.get_result()
 
     class Meta:
@@ -142,4 +161,3 @@ class TestTaskSerializer(amcattest.AmCATTestCase):
         self.assertEqual("PENDING", ts.get_status(mt4))
         self.assertEqual(False, ts.get_ready(mt4))
         self.assertEqual(True, mt4._ready)
-
