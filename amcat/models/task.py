@@ -49,6 +49,7 @@ class Task(AmcatModel):
     class_name = models.TextField()
     issued_at = models.DateTimeField(auto_now_add=True)
     called_with = JSONField()
+    callback_class_name = models.TextField(null=True)
 
     project = models.ForeignKey(Project, null=True)
     user = models.ForeignKey(User, null=False)
@@ -82,6 +83,9 @@ class Task(AmcatModel):
 
     def get_class(self):
         return classtools.import_attribute(self.class_name)
+
+    def get_callback_class(self):
+        return classtools.import_attribute(self.callback_class_name)
 
     def get_object(self):
         """Instantiate `class_name` with original arguments."""
