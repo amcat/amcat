@@ -43,12 +43,18 @@ class Task(AmcatModel):
     A Task represents a Script (see: amcat.scripts.Script) which was ran asynchronously
     using Celery. Because Celery fails to remember task-names when submitted, they are
     stored here together with the class which executed the task.
+
+    A 'handler' class (or module) can be given to specify what should be done after the
+    task is complete. This class/module should have the following method:
+    get_redirect(task) returns the (url, name) for a redirect link
+    Note: this is implemented as a class/module to allow expansion
     """
     uuid = models.CharField(max_length=36, db_index=True)
     task_name = models.TextField()
     class_name = models.TextField()
     issued_at = models.DateTimeField(auto_now_add=True)
     called_with = JSONField()
+    handler_class_name = models.TextField(null=True)
 
     project = models.ForeignKey(Project, null=True)
     user = models.ForeignKey(User, null=False)
@@ -82,6 +88,9 @@ class Task(AmcatModel):
 
     def get_class(self):
         return classtools.import_attribute(self.class_name)
+
+    def get_handler(self):
+        return classtools.import_attribute(self.handler_class_name)
 
     def get_object(self):
         """Instantiate `class_name` with original arguments."""
