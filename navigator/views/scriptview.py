@@ -55,20 +55,29 @@ class ScriptMixin(FormMixin):
         initial.update(super(ScriptMixin, self).get_initial())
         return initial
 
-    def run_form_delayed(self, project, form, callback=None):
+    def run_form_delayed(self, project, form, handler=None):
+        """
+        Run the given form as a celery task
+        @param project: the context project
+        @param form: the form to use [NOTE: This does not seem to be used???]
+        @param handler: an optional handler (class, instance, or fully qualified name)
+                        see amcat.models.Task
+        """
         script = self.get_script()
         kwargs = self.get_form_kwargs()
 
         task = script_task.delay(script, self.get_form_class(), kwargs)
         kwargs['project'] = project.id
 
-        if isinstance(callback, type):
-            callback = ".".join([callback.__module__, callback.__name__])
+        if not isinstance(handler, (str, unicode)):
+            if not isinstance(handler, type):
+                handler = handler.__class__
+            handler = ".".join([handler.__module__, handler.__name__])
 
         task = Task.objects.create(
             task_name=task.task_name, uuid=task.task_id, called_with=kwargs, project=project,
             class_name=".".join((script.__module__, script.__name__)), user=self.request.user,
-            callback_class_name=callback
+            handler_class_name=handler
         )
 
         url = reverse("task-details", args=[project.id, task.id])

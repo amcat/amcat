@@ -66,21 +66,24 @@ class TaskSerializer(AmCATModelSerializer):
     def get_description(self, task):
         return task.class_name.split(".")[-1]
 
-    def get_redirect_url(self, task):
+    def _get_redirect(self, task):
         ready, _, _ = self.get_status_ready(task)
         if ready:
-            if task.callback_class_name:
-                return task.get_callback_class().get_redirect_url(task)
+            handler = task.get_handler()
+            if handler:
+                return task.get_handler().get_redirect(task)
             else:
-                return reverse("api-v4-taskresult") + "/" + task.uuid
+                return "Download results", reverse("api-v4-taskresult") + "/" + task.uuid
+
+    def get_redirect_url(self, task):
+        redirect = self._get_redirect(task)
+        if redirect:
+            return redirect[0]
 
     def get_redirect_message(self, task):
-        ready, _, _ = self.get_status_ready(task)
-        if ready:
-            if task.callback_class_name:
-                return task.get_callback_class().get_redirect_name(task)
-            else:
-                return "Download results"
+        redirect = self._get_redirect(task)
+        if redirect:
+            return redirect[1]
 
     class Meta:
         model = Task
