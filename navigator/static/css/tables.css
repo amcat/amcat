@@ -11,3 +11,68 @@
     font-size:12px;
 
 }
+
+table.dataTable thead, table.dataTable tfoot {
+	background-color:#60a3ff;
+	color:white;
+}
+
+table.dataTable tr.odd.gradeA {
+	background-color: #ddffdd;
+}
+
+table.dataTable tr.even.gradeA {
+	background-color: #eeffee;
+}
+
+table.dataTable tr.odd.gradeC {
+	background-color: #ddddff;
+}
+
+table.dataTable tr.even.gradeC {
+	background-color: #eeeeff;
+}
+
+table.dataTable tr.odd.gradeX {
+	background-color: #ffdddd;
+}
+
+table.dataTable tr.even.gradeX {
+	background-color: #ffeeee;
+}
+
+table.dataTable tr.odd.gradeU {
+	background-color: #ddd;
+}
+
+table.dataTable tr.even.gradeU {
+	background-color: #eee;
+}
+
+table.dataTable tr.odd { background-color: #e9e9e9; }
+table.dataTable tr.even { background-color: white; }
+
+table.dataTable tr.odd td.sorting_1 { background-color: #e0e0e0; }
+table.dataTable tr.odd td.sorting_2 { background-color: #DADCFF; }
+table.dataTable tr.odd td.sorting_3 { background-color: #E0E2FF; }
+table.dataTable tr.even td.sorting_1 { background-color: #efefef; }
+table.dataTable tr.even td.sorting_2 { background-color: #F2F3FF; }
+table.dataTable tr.even td.sorting_3 { background-color: #F9F9FF; }
+
+table.dataTable thead th{
+    border-bottom: none;
+}
+
+table.display tr.even.row_selected td {
+	background-color: #B0BED9;
+}
+
+table.display tr.odd.row_selected td {
+	background-color: #9FAFD1;
+}
+
+
+table.display tbody tr:hover,
+table.display tbody tr td.highlighted {
+    background-color: #bbd8ff;
+}
