@@ -50,7 +50,7 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
         return super(CodingJobListView, self).get_datatable(url_kwargs=url_kwargs, **kwargs)
     def filter_table(self, table):
         return table.hide("project", "articleset", "favourite")
-   
+
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingJobListView, self).get_context_data(**kwargs)
@@ -68,7 +68,7 @@ class CodingJobDetailsView(ProjectDetailView, DatatableMixin):
     parent = CodingJobListView
     resource = SearchResource
     rowlink = './{id}'
-    
+
     def filter_table(self, table):
         table = table.filter(sets=self.object.articleset.id)
         table = table.rowlink_reverse('article-details', args=[self.project.id, self.object.articleset.id, '{id}'])
@@ -78,16 +78,16 @@ class CodingJobDetailsView(ProjectDetailView, DatatableMixin):
 class CodingJobEditView(ProjectEditView):
     parent = CodingJobDetailsView
     fields = ['project', 'name', 'coder', 'unitschema', 'articleschema']
-    
+
 
     def get_form(self, form_class):
         form = super(CodingJobEditView, self).get_form(form_class)
         form.fields['coder'].queryset = User.objects.filter(projectrole__project=self.project)
         form.fields['unitschema'].queryset = self.project.get_codingschemas().filter(isarticleschema=False)
         form.fields['articleschema'].queryset = self.project.get_codingschemas().filter(isarticleschema=True)
-        
+
         return form
-        
+
 class CodingJobAddView(ProjectScriptView):
     parent = CodingJobListView
     script = AddCodingJob
@@ -103,7 +103,7 @@ class CodingJobAddView(ProjectScriptView):
         kwargs = super(CodingJobAddView, self).get_form_kwargs()
         kwargs['project'] = self.project
         return kwargs
-    
+
     def get_form(self, form_class):
         form = super(CodingJobAddView, self).get_form(form_class)
         form.fields['insertuser'].initial = self.request.user
@@ -117,7 +117,7 @@ class CodingJobDeleteView(ProjectActionRedirectView):
 
     def action(self, project_id, codingjob_id):
         CodingJob.objects.get(pk=codingjob_id).recycle()
-        
+
     def get_redirect_url(self, **kwargs):
         return CodingJobListView._get_breadcrumb_url(kwargs, self)
 
@@ -135,7 +135,7 @@ class CodingJobExportSelectView(ProjectFormView):
         self.jobs = form.cleaned_data["codingjobs"]
         self.level = form.cleaned_data["export_level"]
         return super(CodingJobExportSelectView, self).form_valid(form)
-    
+
     def get_success_url(self):
         url = reverse(CodingJobExportView.get_view_name(), args=[self.project.id])
         if len(self.jobs) < 100:
@@ -143,9 +143,9 @@ class CodingJobExportSelectView(ProjectFormView):
         else:
             codingjobs_url = "use_session=1"
             self.request.session['export_job_ids'] = json.dumps([c.id for c in self.jobs])
-            
+
         return "{url}?export_level={self.level}&{codingjobs_url}".format(**locals())
-    
+
 class CodingJobExportView(ProjectScriptView):
     script = GetCodingJobResults
     parent = CodingJobListView
@@ -159,11 +159,11 @@ class CodingJobExportView(ProjectScriptView):
             jobs = self.request.GET.getlist("codingjobs")
         level = int(self.request.GET["export_level"])
         return jobs, level
-    
+
     def get_form_kwargs(self):
         kwargs = super(CodingJobExportView, self).get_form_kwargs()
         jobs, level = self.read_get()
-        kwargs.update(dict(project=self.project, codingjobs=jobs, export_level=level))
+        kwargs.update(dict(project=self.project.id, codingjobs=jobs, export_level=level))
         return kwargs
 
     def get_initial(self):
@@ -192,17 +192,16 @@ class CodingJobExportView(ProjectScriptView):
         codingfields = sorted(sections["Field options"])
         sections["Field options"].sort()
 
-        for name in form.fields: # add subordinate fields        
+        for name in form.fields: # add subordinate fields
             prefix = name.split("_")[0]
             if prefix == "schemafield" and not name.endswith("_included"):
                 subfields[name.rsplit("_", 1)[0] + "_included"].append((name, form[name]))
 
         for flds in subfields.values():
             flds.sort()
-            
+
         context['sections'] = sections
         return context
 
     def form_valid(self, form):
-        return self.run_form_delayed(self.project, form)
-
+        return self.run_form_delayed(self.project)

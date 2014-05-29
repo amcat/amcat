@@ -40,6 +40,9 @@ def import_attribute(module, attribute=None):
         raise ImportError("Module %r has no attribute %r" % (module, attribute))
 
 
+def get_qualified_name(cls):
+    return ".".join([cls.__module__, cls.__name__])
+
 def get_classes_from_module(module, superclass=None):
     """
     Get all classes in the given module.

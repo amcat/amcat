@@ -32,7 +32,7 @@ from amcat.forms import InvalidFormException
 from django.contrib.auth.models import User
 from amcat.amcatcelery import app
 from amcat.tools.progress import ProgressMonitor
-
+from amcat.tools import classtools
 from django.http import QueryDict
 from amcat.tools.djangotoolkit import to_querydict
 
@@ -62,6 +62,8 @@ class CeleryProgressUpdater(object):
 def webscript_task(self, cls, **kwargs):
     task_id = self.request.id
     # TODO: Dit moet weg, stub code om status door te geven
+    if isinstance(cls, (str, unicode)):
+        cls = classtools.import_attribute(cls)
     webscript = cls(**kwargs)
     webscript.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
     return webscript.run()
@@ -135,7 +137,8 @@ class WebScript(object):
                 yield ws.__name__, ws.name, ws.is_download
 
     def delay(self):
-        return webscript_task.delay(self.__class__, project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
+        return webscript_task.delay(classtools.get_qualified_name(self.__class__),
+                                    project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
 
     def run(self):
         raise NotImplementedError()

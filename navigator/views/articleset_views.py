@@ -31,6 +31,8 @@ from amcat.scripts.actions.import_articleset import ImportSet
 from api.rest.viewsets import FavouriteArticleSetViewSet, ArticleSetViewSet, CodingjobArticleSetViewSet
 
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView
+from navigator.views.scriptview import ScriptHandler
+
 from navigator.views.datatableview import DatatableMixin
 from amcat.models import Project, ArticleSet
 from api.rest.resources import SearchResource
@@ -183,6 +185,11 @@ class ArticleSetUploadListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrum
         table = table.rowlink_reverse('article set-upload', args=[self.project.id, '{id}'])
         return table.filter(plugin_type=UPLOAD_PLUGIN_TYPE).hide('id', 'class_name')#, 'plugin_type')
 
+class ArticleSetRedirectHandler(ScriptHandler):
+    def get_redirect(self):
+        setid = self.task._get_raw_result()
+        return reverse("article set-details", args=[self.task.project.id, setid]), "View Set"
+
 class ArticleSetUploadView(ProjectScriptView):
     parent = ArticleSetUploadListView
     view_name = "article set-upload"
@@ -198,7 +205,7 @@ class ArticleSetUploadView(ProjectScriptView):
             return super(ArticleSetUploadView, self).get_form(form_class)
 
     def form_valid(self, form):
-        return self.run_form_delayed(self.project, form, handler=self)
+        return self.run_form_delayed(self.project, handler=ArticleSetRedirectHandler)
 
     def get_context_data(self, **kwargs):
         self.script = self.get_script()
@@ -208,11 +215,6 @@ class ArticleSetUploadView(ProjectScriptView):
             context['created_n'] = len(self.result)
 
         return context
-
-    @classmethod
-    def get_redirect(cls, task):
-        setid = task._get_raw_result()
-        return reverse("article set-details", args=[task.project.id, setid]), "View Set"
 
 class ArticleSetRefreshView(ProjectActionRedirectView):
     parent = ArticleSetDetailsView
