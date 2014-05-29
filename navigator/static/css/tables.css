@@ -89,3 +89,7 @@ table.dataTable thead th{
     padding-bottom:2px;
 
 }
+
+.dataTables_wrapper .dataTables_paginate .paginate_button{
+    padding:4px 4px 4px 4px;
+}

@@ -131,6 +131,11 @@ class CodingJobExportSelectView(ProjectFormView):
         kwargs.update(project=self.project)
         return kwargs
 
+    def get_initial(self):
+        initial = super(CodingJobExportSelectView, self).get_initial()
+        initial["codingjobs"] = self.request.GET.getlist("id")
+        return initial
+
     def form_valid(self, form):
         self.jobs = form.cleaned_data["codingjobs"]
         self.level = form.cleaned_data["export_level"]

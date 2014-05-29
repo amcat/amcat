@@ -36,7 +36,6 @@ _DPROP = "mDataProp_";
 
 // Default options passed to datatables.
 _AMCAT_DEFAULT_OPTS = {
-    bScrollInfinite: true,
     bScrollCollapse: true,
     sScrollY: "300px",
     fnRowCallback : function(nRow){
@@ -623,6 +622,7 @@ amcat.datatables.fetched_initial_success = function (data, textStatus, jqXHR) {
 
     // Call datatables
     console.log("Calling dataTable with options: ", this.datatables_options);
+    console.log(this.table)
     tbl = this.table.dataTable(this.datatables_options);
 
     // Call callback funtion with our datatables object as its
