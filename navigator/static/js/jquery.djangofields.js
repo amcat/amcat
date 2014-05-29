@@ -48,7 +48,7 @@ jQuery.fn.djangofields = {
             return $("<input type='text' value='" + (current_value||'') + "' />");
         },
         from_widget : function(widget, choices){
-            return widget.attr("value");
+            return widget.val();
         },
         serialise : function(obj, choices){
             if (obj === null){
@@ -77,7 +77,7 @@ jQuery.fn.djangofields = {
             return (val) ? checkbox.attr("checked", "checked") : checkbox;
         },
         from_widget : function(widget){
-            return widget.attr("checked") == "checked";
+            return widget.is(":checked");
         }
     },
     ModelChoiceField : {
@@ -113,7 +113,7 @@ jQuery.fn.djangofields = {
             return select;
         },
         from_widget : function(val, choices){
-            return choices[parseInt(val.attr("value"))].id;
+            return choices[parseInt(val.val())].id;
         }
     }
 };

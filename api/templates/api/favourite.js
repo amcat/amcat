@@ -31,7 +31,7 @@
                 });
             });
 
-            row.__notify = $.pnotify({ 
+            row.__notify = new PNotify({
                 type : "info",
                 text : (row.favourite ? "Setting" : "Removing") + " {{ label }} " + row.id + " as a favourite..",
                 nonblock: true,

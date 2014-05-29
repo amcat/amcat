@@ -25,7 +25,6 @@ from collections import OrderedDict
 from functools import partial
 
 from rest_framework.renderers import *
-
 from amcat.tools.table import table3
 
 

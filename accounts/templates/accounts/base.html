@@ -5,11 +5,11 @@
  <head>
   <title>AmCAT {% block page %}{% endblock %}</title>
 {% compress css %}
-  <link type="text/css" rel="stylesheet" href="{% static 'css/bootstrap.css' %}" />
+  <link href="{% static 'components/bootstrap/dist/css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
   <link type="text/css" rel="stylesheet" href="{% static 'css/accounts.css' %}" />
 {% endcompress %}
 {% compress js %}
-  <script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
+   <script type="text/javascript" src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
 {% endcompress %}
  </head>
  <body>

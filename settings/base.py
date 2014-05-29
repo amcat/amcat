@@ -31,7 +31,7 @@ except ImportError:
     import configparser
 
 if os.environ.get('DJANGO_DEBUG', None) is not None:
-    DEBUG = (os.environ['DJANGO_DEBUG'] in ("1","Y", "ON"))
+    DEBUG = (os.environ['DJANGO_DEBUG'] in ("1", "Y", "ON"))
 else:
     DEBUG = not (os.environ.get('APACHE_RUN_USER', '') == 'www-data'
                  or os.environ.get('UPSTART_JOB', '') == 'amcat_wsgi')
@@ -50,19 +50,19 @@ AMCAT_VERSION = __version__
 ROOT = path.abspath(path.join(path.dirname(path.abspath(__file__)), '..'))
 
 DATABASE_OPTIONS = {
-   "init_command" : "set transaction isolation level read uncommitted"
+    "init_command": "set transaction isolation level read uncommitted"
 }
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,.amcat.nl,.vu.nl").split(",")
 
 DATABASES = dict(default=dict(
-        ENGINE = os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
-        NAME = os.environ.get("DJANGO_DB_NAME", 'amcat'),
-        USER =  os.environ.get("DJANGO_DB_USER", ''),           
-        PASSWORD = os.environ.get("DJANGO_DB_PASSWORD", ''),           
-        HOST = os.environ.get("DJANGO_DB_HOST", ''),
-        PORT = os.environ.get("DJANGO_DB_PORT", ''),
-    ))
+    ENGINE=os.environ.get("DJANGO_DB_ENGINE", 'django.db.backends.postgresql_psycopg2'),
+    NAME=os.environ.get("DJANGO_DB_NAME", 'amcat'),
+    USER=os.environ.get("DJANGO_DB_USER", ''),
+    PASSWORD=os.environ.get("DJANGO_DB_PASSWORD", ''),
+    HOST=os.environ.get("DJANGO_DB_HOST", ''),
+    PORT=os.environ.get("DJANGO_DB_PORT", ''),
+))
 
 CACHES = {
     'default': {
@@ -102,6 +102,13 @@ STATIC_URL = '/media/static/'
 ACCOUNTS_URL = "/accounts/"
 API_URL = '/api/'
 
+STATICFILES_DIRS = (
+    # Explicit paths make PyCharm pick up on it.
+    os.path.join(ROOT, "annotator/static"),
+    os.path.join(ROOT, "navigator/static"),
+    os.path.join(ROOT, "static"),
+)
+
 # URL prefix for admin media -- CSS, JavaScript and images. Make sure to use a
 # trailing slash.
 # Examples: "http://foo.com/media/", "/media/".
@@ -130,9 +137,9 @@ MIDDLEWARE_CLASSES = [
 ]
 
 STATICFILES_FINDERS = (
-        'django.contrib.staticfiles.finders.FileSystemFinder',
-        'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-        'compressor.finders.CompressorFinder',
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'compressor.finders.CompressorFinder',
 )
 
 AUTHENTICATION_BACKENDS = (
@@ -172,7 +179,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'compressor',
 ]
-                    
+
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -185,6 +192,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 )
 
 DEFAULT_FROM_EMAIL = "wat200@vu.nl"
+
 
 def get_secret():
     """
@@ -203,29 +211,30 @@ def get_secret():
                 raise
         else:
             print("%r is not a file." % sfile)
-            raise(Exception())
+            raise (Exception())
 
     with open(sfile, 'w') as sfile:
         sfile.write(random_alphanum(40))
 
     return get_secret()
 
+
 SECRET_KEY = get_secret()
 FIXTURE_DIRS = (os.path.join(ROOT, "amcat/models"),)
 
 REST_FRAMEWORK = {
     'PAGINATE_BY': 10,
-    'PAGINATE_BY_PARAM': 'page_size', 
-    'DEFAULT_PAGINATION_SERIALIZER_CLASS' : 'api.rest.serializer.AmCATPaginationSerializer',
-    'DEFAULT_MODEL_SERIALIZER_CLASS' : 'api.rest.serializer.AmCATModelSerializer',
-    'FILTER_BACKEND' : 'api.rest.filters.AmCATFilterBackend',
+    'PAGINATE_BY_PARAM': 'page_size',
+    'DEFAULT_PAGINATION_SERIALIZER_CLASS': 'api.rest.serializer.AmCATPaginationSerializer',
+    'DEFAULT_MODEL_SERIALIZER_CLASS': 'api.rest.serializer.AmCATModelSerializer',
+    'FILTER_BACKEND': 'api.rest.filters.AmCATFilterBackend',
     'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.BrowsableAPIRenderer',
                                  'rest_framework.renderers.JSONRenderer',
-                                 'api.rest.tablerenderer.CSVRenderer', 
+                                 'api.rest.tablerenderer.CSVRenderer',
                                  'api.rest.tablerenderer.XLSXRenderer',
                                  'api.rest.tablerenderer.SPSSRenderer',
                                  'api.rest.tablerenderer.XHTMLRenderer',
-                             ),
+    ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',
@@ -239,63 +248,63 @@ if not DEBUG:
     EMAIL_PORT = os.environ.get("DJANGO_EMAIL_PORT", 587)
     EMAIL_HOST_USER = os.environ.get("DJANGO_EMAIL_USER", '')
     EMAIL_HOST_PASSWORD = os.environ.get("DJANGO_EMAIL_PASSWORD", '')
-    EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_TLS", 'Y') in ("1","Y", "ON")
+    EMAIL_USE_TLS = os.environ.get("DJANGO_EMAIL_TLS", 'Y') in ("1", "Y", "ON")
 
 else:
     ALLOWED_HOSTS.append("*")
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 LOG_LEVEL = os.environ.get('DJANGO_LOG_LEVEL', 'DEBUG' if DEBUG else 'INFO')
-                 
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': True,
     'formatters': {
-'color': {
-    '()': 'colorlog.ColoredFormatter',
-    'format' : "%(log_color)s[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
-    'log_colors': {
-        'DEBUG':    'bold_black',
-        'INFO':     'white',
-        'WARNING':  'yellow',
-        'ERROR':    'bold_red',
-        'CRITICAL': 'bold_red',
-    },
-},
+        'color': {
+            '()': 'colorlog.ColoredFormatter',
+            'format': "%(log_color)s[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
+            'log_colors': {
+                'DEBUG': 'bold_black',
+                'INFO': 'white',
+                'WARNING': 'yellow',
+                'ERROR': 'bold_red',
+                'CRITICAL': 'bold_red',
+            },
+        },
 
-        
+
         'standard': {
-            'format' : "[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
-            'datefmt' : "%Y-%m-%d %H:%M:%S"
+            'format': "[%(asctime)s %(levelname)s %(name)s:%(lineno)s] %(message)s",
+            'datefmt': "%Y-%m-%d %H:%M:%S"
         },
     },
     'handlers': {
         'null': {
-            'level':LOG_LEVEL,
-            'class':'django.utils.log.NullHandler',
+            'level': LOG_LEVEL,
+            'class': 'django.utils.log.NullHandler',
         },
-        'console':{
-            'level':LOG_LEVEL,
-            'class':'logging.StreamHandler',
+        'console': {
+            'level': LOG_LEVEL,
+            'class': 'logging.StreamHandler',
             'formatter': 'color'
         },
     },
     'loggers': {
-        'urllib3': { # avoid annoying 'starting new connection' messages
-            'handlers':['console'],
-            'propagate': True,
-            'level':'WARN',
+        'urllib3': {  # avoid annoying 'starting new connection' messages
+                      'handlers': ['console'],
+                      'propagate': True,
+                      'level': 'WARN',
         },
-        'elasticsearch': { # avoid annoying 'starting new connection' messages
-            'handlers':['console'],
-            'propagate': True,
-            'level':'WARN',
+        'elasticsearch': {  # avoid annoying 'starting new connection' messages
+                            'handlers': ['console'],
+                            'propagate': True,
+                            'level': 'WARN',
         },
-            
+
         'django': {
-            'handlers':['console'],
+            'handlers': ['console'],
             'propagate': True,
-            'level':'WARN',
+            'level': 'WARN',
         },
         'django.db.backends': {
             'handlers': ['console'],
@@ -317,13 +326,13 @@ if 'DJANGO_LOG_FILE' in os.environ:
     LOG_FILE = os.environ['DJANGO_LOG_FILE']
 
     LOGGING['handlers']['logfile'] = {
-        'level':LOG_LEVEL,
-        'class':'logging.handlers.RotatingFileHandler',
+        'level': LOG_LEVEL,
+        'class': 'logging.handlers.RotatingFileHandler',
         'filename': LOG_FILE,
         'maxBytes': 50000,
         'backupCount': 2,
         'formatter': 'color',
-        }
+    }
     LOGGING['loggers']['']['handlers'] += ['logfile']
 
 # Pnotify is a javascript library to show (unintrusive) popups

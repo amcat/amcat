@@ -11,26 +11,36 @@
 
     <!-- Custom styles for this template -->
       {% compress css %}
-          <link href="{% static 'css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
-          <link href="{% static 'css/datatables.css' %}" rel="stylesheet" type="text/css" media="screen" />
+          <!-- Bower dependencies -->
+          <link href="{% static 'components/bootstrap/dist/css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
+          <link href="{% static 'components/datatables/media/css/jquery.dataTables.css' %}" rel="stylesheet" type="text/css"  />
+          <link href="{% static 'components/pnotify/pnotify.core.css' %}" rel="stylesheet" type="text/css"  />
+
+          <!-- AmCAT code -->
           <link href="{% static 'css/annotator.css' %}" rel="stylesheet" type="text/css" media="screen" />
-          <link href="{% static 'css/jquery.pnotify.default.css' %}" media="all" rel="stylesheet" type="text/css" />
           <link href="{% static 'css/dashboard.css' %}" rel="stylesheet" type="text/css">
-          <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css" media="screen" />
+          <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css">
+          <link href="{% static 'css/tables.css' %}" rel="stylesheet" type="text/css">
       {% endcompress %}
+
       {% block css %}{% endblock %}
 
       <!--  Javascript -->
       {% compress js %}
-          <script type="text/javascript" src="{% static 'js/annotator/jquery-1.9.1.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/bootstrap.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/jquery-ui-1.10.3.custom.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/jquery.dataTables.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
+          <!-- Bower dependencies -->
+          <script type="text/javascript" src="{% static 'components/jquery/dist/jquery.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/jquery-ui/ui/jquery-ui.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/pnotify/pnotify.core.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/pnotify/pnotify.nonblock.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/jquery.scrollTo/jquery.scrollTo.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/jquery.hotkeys/jquery.hotkeys.js' %}"></script>
+
+          <!-- AmCAT code -->
           <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/jquery.scrollTo-1.4.2-min.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/annotator/jquery.hotkeys.js' %}"></script>
+          <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/jquery.highlight.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/functional.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/annotator.js' %}"></script>
@@ -38,7 +48,6 @@
           <script type="text/javascript" src="{% static 'js/annotator/annotator.widgets.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/annotator.rules.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/annotator.autocomplete.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/jquery.pnotify.min.js' %}"></script>
           {% block javascript %}{% endblock %}
       {% endcompress %}
   </head>

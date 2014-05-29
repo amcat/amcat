@@ -3,14 +3,14 @@
 <!-- Table initializer (javascript) -->
 {{ js|safe }}
 {% if links %}
-<div class="table-download" style="color: rgb(128, 128, 128); font-size: 12px;" >
-Open results in <a href="{{ links.api }}">API viewer</a>
-<span style="float:right">Download results as 
-<a href="{{ links.xlsx }}">Excel</a> |
-<a href="{{ links.spss }}">SPSS</a> |
-<a href="{{ links.csv }}">CSV</a> |
-<a href="{{ links.json }}">JSON</a> |
-<a href="{{ links.xhtml }}">(X)HTML</a>
-</span>
-</div>
+    <div class="table-download">
+        <div>Download results as
+            <a href="{{ links.xlsx }}">Excel</a> |
+            <a href="{{ links.spss }}">SPSS</a> |
+            <a href="{{ links.csv }}">CSV</a> |
+            <a href="{{ links.json }}">JSON</a> |
+            <a href="{{ links.xhtml }}">(X)HTML</a>
+        </div>
+        <div>Open results in <a href="{{ links.api }}">API viewer</a></div>
+    </div>
 {% endif %}

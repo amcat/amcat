@@ -180,9 +180,8 @@ jQuery.fn.highlight = function (words, options) {
         pattern = "\\b" + pattern + "\\b";
     }
     var re = new RegExp(pattern, flag);
-    
+
     return this.each(function () {
         jQuery.highlight(this, re, settings.element, settings.className);
     });
 };
-

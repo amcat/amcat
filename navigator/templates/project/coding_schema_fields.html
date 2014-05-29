@@ -6,7 +6,7 @@
 {% compress js %}
  <script src="{% static 'js/jquery.djangofields.js' %}"></script>
  <script src="{% static 'js/jquery.schemaeditor.js' %}"></script>
- <script src="{% static 'js/jquery.tablednd.0.7.min.js' %}"></script>
+ <script src="{% static 'components/TableDnD/js/jquery.tablednd.0.7.min.js' %}"></script>
 {% endcompress %}
  <script>$(function(){ jQuery.fn.schemaeditor("{% url "api" %}v4/", {{object.id}}, {{context.id}}, {{rules_valid}}).main(); });</script>
  {% endblock %}

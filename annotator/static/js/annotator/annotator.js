@@ -359,14 +359,14 @@ annotator = (function(self){
     /******** KEYBOARD SHORTCUTS *******/
     self.shortcuts = function shortcuts(){
         return {
-        "ctrl+s" : self.save_btn.first().trigger.bind(self.save_btn.first(), "click"),
-        "ctrl+down" : self.add_row,
-        "ctrl+shift+down" : self.add_next_sentence_row,
-        "shift+down" : self.copy_row,
-        "ctrl+shift+d": self.delete_row,
-        "ctrl+i" : self.irrelevant_btn.first().trigger.bind(self.irrelevant_btn.first(), "click"),
-        "ctrl+d" : self.save_continue_btn.first().trigger.bind(self.save_continue_btn.first(), "click"),
-        "ctrl+del" : self.delete_codingvalue
+        "ctrl_s" : self.save_btn.first().trigger.bind(self.save_btn.first(), "click"),
+        "ctrl_down" : self.add_row,
+        "ctrl_shift_down" : self.add_next_sentence_row,
+        "shift_down" : self.copy_row,
+        "ctrl_shift_d": self.delete_row,
+        "ctrl_i" : self.irrelevant_btn.first().trigger.bind(self.irrelevant_btn.first(), "click"),
+        "ctrl_d" : self.save_continue_btn.first().trigger.bind(self.save_continue_btn.first(), "click"),
+        "ctrl_del" : self.delete_codingvalue
     }};
 
     /******** PUBLIC FUNCTIONS *******/
@@ -848,7 +848,7 @@ annotator = (function(self){
         })).done(function(data, textStatus, jqXHR){
             self.hide_loading();
 
-            $.pnotify({
+            new PNotify({
                 "title" : "Done",
                 "text" : "Codings saved succesfully.",
                 "type" : "success",
@@ -1373,9 +1373,8 @@ annotator = (function(self){
     };
 
     self.initialise_shortcuts = function initialise_shortcuts(){
-        var doc = $(document);
         $.each(self.shortcuts(), function(keys, callback){
-            doc.bind("keydown", keys, function(event){
+            $(document).bind('keydown.' + keys, function(event){
                 event.preventDefault();
                 callback(event);
             });
