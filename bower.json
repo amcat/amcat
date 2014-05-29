@@ -4,7 +4,7 @@
     "jquery": "~2.1.1",
     "bootstrap": "3.1.1",
     "bootstrap-modal": "2.2.5",
-    "datatables": "1.9.4",
+    "datatables": "1.10",
     "pnotify": "2.0.1",
     "jquery-ui": "1.10.4",
     "jqplot-bower": "1.0.8",

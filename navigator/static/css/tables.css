@@ -59,8 +59,14 @@ table.dataTable tr.even td.sorting_1 { background-color: #efefef; }
 table.dataTable tr.even td.sorting_2 { background-color: #F2F3FF; }
 table.dataTable tr.even td.sorting_3 { background-color: #F9F9FF; }
 
-table.dataTable thead th{
+table.dataTable thead th,
+.dataTables_wrapper.no-footer div.dataTables_scrollBody table{
     border-bottom: none;
+}
+
+.dataTables_wrapper.no-footer .dataTables_scrollBody{
+    border-bottom-width: 1px;
+    border-bottom-color: #d3d3d3;
 }
 
 table.display tr.even.row_selected td {
@@ -75,4 +81,11 @@ table.display tr.odd.row_selected td {
 table.display tbody tr:hover,
 table.display tbody tr td.highlighted {
     background-color: #bbd8ff;
+}
+
+table.dataTable tbody td,
+table.dataTable thead th{
+    padding-top:2px;
+    padding-bottom:2px;
+
 }
