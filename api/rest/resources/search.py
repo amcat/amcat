@@ -19,19 +19,15 @@
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-import math
 import re
 
-from django.conf.urls import patterns, url
-from rest_framework.views import APIView
-from rest_framework.response import Response
 from rest_framework.fields import DateField, CharField, IntegerField
 from rest_framework.serializers import Serializer
+from django_filters import filters, filterset
+
 from amcat.tools import amcates, keywordsearch
 from api.rest.resources.amcatresource import AmCATResource
-from django_filters import filters, filterset
 from amcat.tools.caching import cached
-
 from amcat.models import Project, authorisation
 
 FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets"

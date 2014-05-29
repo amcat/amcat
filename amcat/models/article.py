@@ -23,6 +23,7 @@ articles database table.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+from amcat.tools.amcattest import create_test_article
 
 from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.tools import amcates
@@ -33,8 +34,9 @@ from django.db import models, transaction
 from django.db.utils import IntegrityError, DatabaseError
 from django.core.exceptions import ValidationError
 
-import logging;
+from django.template.defaultfilters import escape as escape_filter
 
+import logging
 log = logging.getLogger(__name__)
 
 import re
@@ -42,12 +44,24 @@ import re
 WORD_RE = re.compile('[{L}{N}]+') # {L} --> All (unicode) letters
                                   # {N} --> All numbers
 
+
 def word_len(txt):
     """Count words in `txt`
 
     @type txt: str or unicode"""
     if not txt: return 0 # Safe handling of txt=None
     return len(re.sub(WORD_RE, ' ', txt).split())
+
+
+def unescape_em(txt):
+    """
+    @param txt: text to be unescaped
+    @type txt: unicode
+    """
+    return (txt
+        .replace("&lt;em&gt;", "<em>")
+        .replace("&lt;/em&gt;", "</em>"))
+
 
 class Article(AmcatModel):
     """
@@ -82,9 +96,50 @@ class Article(AmcatModel):
     insertscript = models.CharField(blank=True, null=True, max_length=500)
     insertdate = models.DateTimeField(blank=True,null=True,auto_now_add=True)
 
+    def __init__(self, *args, **kwargs):
+        super(Article, self).__init__(*args, **kwargs)
+        self._highlighted = False
+
     class Meta():
         db_table = 'articles'
         app_label = 'amcat'
+
+    def highlight(self, query, escape=True, keep_em=True):
+        """
+        Highlight headline and text property by inserting HTML tags (em). You won't be able to
+        call save() after calling this method.
+
+        @param query: elastic query used for highlighting
+        @type query: unicode
+
+        @param escape: escape html entities in result
+        @type escape: bool
+
+        @param keep_em: has no effect if escape is False. Will unescape em tags, which
+                        are used for highlighting.
+        @type keep_em: bool
+        """
+        if self._highlighted: return
+        self._highlighted = True
+
+        highlighted = amcates.ES().highlight_article(self.id, query)
+
+        if not highlighted:
+            # No hits for this search query
+            return
+
+        self.text = highlighted.get("text", self.text)
+        self.headline = highlighted.get("headline", self.headline)
+
+        if escape:
+            self.text = escape_filter(self.text)
+            self.headline = escape_filter(self.headline)
+
+            if keep_em:
+                self.text = unescape_em(self.text)
+                self.headline = unescape_em(self.headline)
+
+        return highlighted
 
     @property
     def children(self):
@@ -92,6 +147,9 @@ class Article(AmcatModel):
         return Article.objects.filter(parent=self)
 
     def save(self, *args, **kwargs):
+        if self._highlighted:
+            raise ValueError("Cannot save a highlighted article.")
+
         if self.length is None:
             self.length = word_len(self.text) + word_len(self.headline) + word_len(self.byline)
 
@@ -237,6 +295,51 @@ class Article(AmcatModel):
 ###########################################################################
 
 from amcat.tools import amcattest
+
+def _setup_highlighting():
+    from amcat.tools.amcates import ES
+    article = create_test_article(text="<p>foo</p>", headline="<p>bar</p>")
+    ES().flush()
+    return article
+
+
+class TestArticleHighlighting(amcattest.AmCATTestCase):
+    @amcattest.use_elastic
+    def test_defaults(self):
+        """Test if default highlighting works."""
+        article = _setup_highlighting()
+        article.highlight("foo")
+        self.assertEqual("&lt;p&gt;<em>foo</em>&lt;/p&gt;", article.text)
+        self.assertEqual("&lt;p&gt;bar&lt;/p&gt;", article.headline)
+
+    @amcattest.use_elastic
+    def test_no_escape(self):
+        article = _setup_highlighting()
+        article.highlight("foo", escape=False)
+        self.assertEqual("<p><em>foo</em></p>", article.text)
+        self.assertEqual("<p>bar</p>", article.headline)
+
+    @amcattest.use_elastic
+    def test_no_keepem(self):
+        article = _setup_highlighting()
+        article.highlight("foo", keep_em=False)
+        self.assertEqual("&lt;p&gt;&lt;em&gt;foo&lt;/em&gt;&lt;/p&gt;", article.text)
+        self.assertEqual("&lt;p&gt;bar&lt;/p&gt;", article.headline)
+
+    @amcattest.use_elastic
+    def test_save(self):
+        article = _setup_highlighting()
+        article.highlight("foo")
+        self.assertRaises(ValueError, article.save)
+
+    @amcattest.use_elastic
+    def test_no_results_query(self):
+        article = _setup_highlighting()
+        article.highlight("test")
+        self.assertEqual("<p>foo</p>", article.text)
+        self.assertEqual("<p>bar</p>", article.headline)
+
+
 
 class TestArticle(amcattest.AmCATTestCase):
 
