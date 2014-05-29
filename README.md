@@ -88,6 +88,21 @@ If you install amcat via cloning, be sure to add the new directory to the python
 export PYTHONPATH=$PYTHONPATH:$HOME/amcat
 ```
 
+### Collecting static files
+
+AmCAT uses [bower](http://bower.io/) to install javascript/CSS libraries. On Ubuntu, you need to install a recent version of `nodejs` first, and then install bower by using `npm`:
+
+```sh
+sudo add-apt-repository ppa:chris-lea/node.js
+sudo npm install -g bower
+```
+
+Then, in the top-directory of AmCAT itself run:
+
+```sh
+bower install
+```
+
 ### Setting up the database
 
 Whichever way you installed AmCAT, you need tocall the syncdb command to populate the database and set the elasticsearch mapping:
