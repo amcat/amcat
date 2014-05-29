@@ -33,7 +33,7 @@ _keymap = {
     46 : "delete",  // Enter
     83 : "save",    // s
     45 : "insert",  // insert
-    65 : "insert",  // a
+    65 : "insert"  // a
 }
 
 jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
@@ -63,6 +63,7 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
 
     // Pnotify balloon
     self.current_message = null;
+    self.td_hovered_msg = null;
 
     // JSON data
     self.rules;
@@ -70,7 +71,7 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
 
     self.model_choices = {
         action : [], // CodingRuleAction
-        field : [], // CodingSchemaField
+        field : [] // CodingSchemaField
     }
 
     // Statekeeping values
@@ -257,7 +258,7 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
         field = (field === undefined) ? {} : field;
 
         var defaults = {
-            "delete" : self._create_delete_button,
+            "delete" : self._create_delete_button
         }
 
         tr = $("<tr>").attr("id", field.id);
@@ -458,12 +459,8 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
         var type = this[0];
         var msgs = this[1];
 
-        if (self.current_message == null){
-            self.current_message = $;
-        }
-
         if (msgs.length != 1){
-            self.current_message.pnotify({
+            new PNotify({
                 "title" : "Whoops.",
                 "text" : "Multiple error messages per cell are not yet supported.",
                 "type" : "error",
@@ -476,11 +473,14 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
             return;
         }
 
-        self.current_message = self.current_message.pnotify({
-            "title" : type, "type" : type, "text" : self._escape(msgs[0]), "shadow" : false, 
-            nonblock: true, hide: false,closer: false, sticker: false
-        });
-
+        if(self.td_hovered_msg !== null){
+            self.td_hovered_msg.text_container.text(msgs[0]);
+        } else {
+            self.td_hovered_msg = new PNotify({
+                "title" : type, "type" : type, "text" : msgs[0], "shadow" : false,
+                nonblock: true, hide: false,closer: false, sticker: false
+            });
+        }
     }
 
     self.save_callback = function(all_errors){
@@ -493,7 +493,7 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
             // Uncomment line below to enable redirecting
             //window.location = all_errors['schema_url'];
             //return;
-            $.pnotify({
+            new PNotify({
                 "title" : "Done",
                 "text" : "Schema saved succesfully.",
                 "type" : "success",
@@ -520,15 +520,14 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
             }
         });
 
-        if(!errors_found && self.current_message !== null){
-           self.current_message.pnotify_remove(); 
-           self.current_message = null;
+        if(!errors_found){
+            PNotify.removeAll();
         } else if (errors_found) {
             self.td_hovered.bind(["info", [info_msg]])();            
-            $.pnotify({
+            new PNotify({
                 "title" : "Schema cannot be saved.",
                 "text" : "Errors occured while checking this schema for errors.",
-                "type" : "error",
+                "type" : "error"
             });
         }
     
@@ -672,7 +671,7 @@ jQuery.fn.ruleeditor = function(api_url, schemaid, projectid){
             });
 
             if(found){
-                $.pnotify({
+                new PNotify({
                     "title" : "Duplicate",
                     "text" : "There is already a field named '" + value + "'. Are you sure you wan't to continue?",
                     "type" : "warning"

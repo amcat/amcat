@@ -19,6 +19,7 @@
           <!-- AmCAT code -->
           <link href="{% static 'css/annotator.css' %}" rel="stylesheet" type="text/css" media="screen" />
           <link href="{% static 'css/dashboard.css' %}" rel="stylesheet" type="text/css">
+          <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css">
       {% endcompress %}
 
       {% block css %}{% endblock %}
@@ -27,17 +28,19 @@
       {% compress js %}
           <!-- Bower dependencies -->
           <script type="text/javascript" src="{% static 'components/jquery/dist/jquery.js' %}"></script>
+          <script type="text/javascript" src="{% static 'components/jquery-ui/ui/jquery-ui.js' %}"></script>
           <script type="text/javascript" src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
           <script type="text/javascript" src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
           <script type="text/javascript" src="{% static 'components/pnotify/pnotify.core.js' %}"></script>
           <script type="text/javascript" src="{% static 'components/pnotify/pnotify.nonblock.js' %}"></script>
           <script type="text/javascript" src="{% static 'components/jquery.scrollTo/jquery.scrollTo.js' %}"></script>
           <script type="text/javascript" src="{% static 'components/jquery.hotkeys/jquery.hotkeys.js' %}"></script>
-          <script type="text/javascript" src="{% static 'components/highlight/src/highlight.js' %}"></script>
 
           <!-- AmCAT code -->
-          <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
+          <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
+          <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
+          <script type="text/javascript" src="{% static 'js/annotator/jquery.highlight.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/functional.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/annotator.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/annotator.utils.js' %}"></script>

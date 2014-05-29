@@ -59,17 +59,17 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
     self.table = $("table[name=schema]");
 
     // Pnotify balloon
-    self.current_message = null;
-    self.rules_valid = $.pnotify({
+    self.rules_valid_message = {
         title : 'Errors in codingrules',
         text  : "Errors were found in one or more codingrules" +
-                    " belonging to this codingschema. You can" +
-                    " inspect the error by clicking 'edit rules'" +
-                    " on the previous page.",
-        hide  : false
-    });
+            " belonging to this codingschema. You can" +
+            " inspect the error by clicking 'edit rules'" +
+            " on the previous page."
+    }
 
-    if (rules_valid) self.rules_valid.hide();
+    if (!rules_valid){
+        new PNotify(self.rules_valid_message);
+    }
 
     // JSON data
     self.fields;
@@ -83,6 +83,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
     self.loading_percent = 0;
     self.editing = false;
     self.active_cell = { x: 0, y : 0 };
+    self.td_hovered_msg = null;
 
     // PRIVATE FUNCTIONS //
     self._set_progress = function(){
@@ -469,12 +470,8 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         var type = this[0];
         var msgs = this[1];
 
-        if (self.current_message == null){
-            self.current_message = $;
-        }
-
         if (msgs.length != 1){
-            self.current_message.pnotify({
+            new PNotify({
                 "title" : "Whoops.",
                 "text" : "Multiple error messages per cell are not yet supported.",
                 "type" : "error",
@@ -487,22 +484,24 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
             return;
         }
 
-        self.current_message = self.current_message.pnotify({
-            "title" : type, "type" : type, "text" : msgs[0], "shadow" : false, 
-            nonblock: true, hide: false,closer: false, sticker: false
-        });
-
-    }
+        if(self.td_hovered_msg !== null){
+            self.td_hovered_msg.text_container.text(msgs[0]);
+        } else {
+            self.td_hovered_msg = new PNotify({
+                "title" : type, "type" : type, "text" : msgs[0], "shadow" : false,
+                nonblock: true, hide: false,closer: false, sticker: false
+            });
+        }
+    };
 
     self.save_callback = function(all_errors){
         // Errors found?
         var errors_found = false;
-        $.each(all_errors.fields, function(){ errors_found = true; }); 
+        $.each(all_errors.fields, function(){ errors_found = true; });
 
-        if (all_errors.rules_valid){
-            self.rules_valid.hide();
-        } else {
-            self.rules_valid.show();
+        PNotify.removeAll();
+        if (!all_errors.rules_valid){
+            new PNotify(self.rules_valid_message);
         }
 
         // Should we redirect?
@@ -510,7 +509,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
             // Uncomment line below to enable redirecting
             //window.location = all_errors['schema_url'];
             //return;
-            $.pnotify({
+            new PNotify({
                 "title" : "Done",
                 "text" : "Schema saved succesfully.",
                 "type" : "success",
@@ -537,15 +536,12 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
             }
         });
 
-        if(!errors_found && self.current_message !== null){
-           self.current_message.pnotify_remove(); 
-           self.current_message = null;
-        } else if (errors_found) {
+        if (errors_found) {
             self.td_hovered.bind(["info", [info_msg]])();            
-            $.pnotify({
+            new PNotify({
                 "title" : "Schema cannot be saved.",
                 "text" : "Errors occured while checking this schema for errors.",
-                "type" : "error",
+                "type" : "error"
             });
         }
     
@@ -624,7 +620,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
         });
 
         if (textfield === null){
-            $.pnotify({
+            new PNotify({
                 "title" : "Bug",
                 "text" : "Could not find textfieldtype id in btn_add_field_clicked(). Please file a bug report including this information.",
                 "type" : "error"
@@ -736,7 +732,7 @@ jQuery.fn.schemaeditor = function(api_url, schemaid, projectid, rules_valid){
             });
 
             if(found){
-                $.pnotify({
+                new PNotify({
                     "title" : "Duplicate",
                     "text" : "There is already a field named '" + value + "'. Are you sure you wan't to continue?",
                     "type" : "warning"
