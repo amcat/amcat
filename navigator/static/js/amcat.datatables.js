@@ -36,16 +36,22 @@ _DPROP = "mDataProp_";
 
 // Default options passed to datatables.
 _AMCAT_DEFAULT_OPTS = {
-    "bScrollInfinite": true,
-    "bScrollCollapse": true,
-    "sScrollY": "300px",
-    "fnRowCallback" : function(nRow){
+    bScrollInfinite: true,
+    bScrollCollapse: true,
+    sScrollY: "300px",
+    fnRowCallback : function(nRow){
         amcat.datatables.truncate_row(nRow);
     },
-    "bDeferRender": true,
-    "bFilter" : false,
-    "iDisplayLength" : 100,
-    "bProcessing" : true
+    bDeferRender: true,
+    bFilter: false,
+    iDisplayLength : 100,
+    bProcessing: true,
+    dom: 'T<"clear">lfrtip',
+    tableTools: {
+        sRowSelect: "os",
+        aButtons: ["select_all", "select_none"]
+    },
+    "lengthMenu": [[100, 300, 1000, 10000000], [100, 300, 1000, "All"]]
 };
 
 $.fn.dataTableExt.sErrMode = 'throw';
