@@ -687,7 +687,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
                          file=File(open(os.path.join(self.dir, 'test.txt'))),
                          articleset=articleset.id)
 
-        arts = ln.run()
+        arts = list(ln.run().articles.all())
         self.assertEqual(len(arts), len(self.test_body_sols))
         self.assertIn("LexisNexis query: u'(((Japan OR Fukushima)", ln.articleset.provenance)
 

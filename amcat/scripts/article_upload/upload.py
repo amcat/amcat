@@ -163,7 +163,7 @@ class UploadScript(script.Script):
         self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
         self.articleset.save()
 
-        return self.articleset.id
+        return self.articleset
 
     def postprocess(self, articles):
         """
