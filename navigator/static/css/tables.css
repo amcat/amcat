@@ -1,0 +1,13 @@
+.table-download{
+    text-align: right;
+}
+
+.dataTables_info, .table-download{
+    color:rgb(128, 128, 128);
+    font-size:12px;
+}
+
+.dataTables_wrapper{
+    font-size:12px;
+
+}
