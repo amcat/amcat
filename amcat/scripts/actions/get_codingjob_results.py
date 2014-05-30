@@ -45,6 +45,7 @@ import collections
 import itertools
 import functools
 import json
+import base64
 
 from cStringIO import StringIO
 
@@ -60,7 +61,7 @@ ExportFormat = collections.namedtuple('ExportFormat', ["label", "function", "mim
 EXPORT_FORMATS = (#ExportFormat(label="ascii", function=lambda t:t.output(), mimetype=None),
            ExportFormat(label="csv", function=table_to_csv, mimetype="text/csv"),
            ExportFormat(label="xlsx", function=table_to_xlsx, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-           ExportFormat(label="json", function=lambda t:json.dumps(list(t.to_list())), mimetype="application/json"),
+           ExportFormat(label="json", function=lambda t:json.dumps(list(t.to_list())), mimetype=None),
            )
 
 _MetaField = collections.namedtuple("MetaField", ["object", "attr", "label"])
@@ -315,22 +316,6 @@ class GetCodingJobResults(Script):
             called_with['data']['codingjobs'] = [codingjobs]
         return dict(options=cls.options_form(**called_with))
 
-    def get_response(self, result):
-        form = self.bound_form
-        formats = {f.label: f for f in EXPORT_FORMATS}
-        format = formats[form.cleaned_data["export_format"]]
-        jobs = form.cleaned_data["codingjobs"]
-
-        if format.mimetype is not None:
-            if len(jobs) > 3:
-                jobs = jobs[:3] + ["etc"]
-            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in jobs), now=datetime.datetime.now(), ext=format.label)
-            response = HttpResponse(result, content_type=format.mimetype, status=200)
-            response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**locals())
-            return response
-
-        raise ValueError("Not a known format '{format}'".format(**locals()))
-
     def get_table(self, codingjobs, export_level, **kargs):
         codingjobs = CodingJob.objects.prefetch_related("coded_articles__codings__values").filter(pk__in=codingjobs)
 
@@ -368,10 +353,22 @@ class GetCodingJobResults(Script):
         self.progress_monitor.update(5, "Starting Export")
         table = self.get_table(codingjobs, **kargs)
         self.progress_monitor.update(5, "Preparing Results File")
-        format_dict = {f.label : f.function for f in EXPORT_FORMATS}
+        format = {f.label : f for f in EXPORT_FORMATS}[export_format]
         table = ProgressTable(table, len(codingjobs), self.progress_monitor)
-        result = format_dict[export_format](table)
-        self.progress_monitor.update(20, "Results file ready")
+        result = format.function(table)
+        self.progress_monitor.update(15, "Encoding result")
+
+        if format.mimetype:
+            if len(codingjobs) > 3:
+                codingjobs = codingjobs[:3] + ["etc"]
+            filename = "Codingjobs {j} {now}.{ext}".format(j=",".join(str(j) for j in codingjobs),
+                                                           now=datetime.datetime.now(), ext=format.label)
+            result = {"type": "download",
+                      "encoding": "base64",
+                      "content_type": format.mimetype,
+                      "filename": filename,
+                      "data": base64.b64encode(result)}
+        self.progress_monitor.update(5, "Results file ready")
 
         return result
 

@@ -69,11 +69,7 @@ class TaskSerializer(AmCATModelSerializer):
     def _get_redirect(self, task):
         ready, _, _ = self.get_status_ready(task)
         if ready:
-            handler = task.get_handler()
-            if handler:
-                return task.get_handler().get_redirect(task)
-            else:
-                return reverse("api-v4-taskresult") + "/" + task.uuid, "Download results"
+            return task.get_handler().get_redirect()
 
     def get_redirect_url(self, task):
         redirect = self._get_redirect(task)

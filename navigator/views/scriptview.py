@@ -19,6 +19,7 @@
 from urllib import urlencode
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
+import base64
 
 from django.views.generic.edit import FormMixin, ProcessFormView
 from django.views.generic.base import TemplateResponseMixin
@@ -26,20 +27,64 @@ from django.views.generic.base import TemplateResponseMixin
 from django.http import HttpResponse
 from django import forms
 from amcat.models import Task
-
+from django.db import models
+from django.http import QueryDict
 from amcat.tools.table import table3
-from amcat.amcatcelery import app
 from amcat.tools.progress import ProgressMonitor
 from api.webscripts.webscript import CeleryProgressUpdater
+from amcat.tools import classtools
 
-@app.task(bind=True)
-def script_task(self, script_cls, form_cls, form_kwargs):
-    task_id = self.request.id
-    form = form_cls(**form_kwargs)
-    script = script_cls(form)
-    script.progress_monitor = ProgressMonitor()
-    script.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
-    return script.run()
+from amcat.models.task import TaskHandler
+
+class ScriptHandler(TaskHandler):
+
+    def get_form_kwargs(self):
+        """
+        Get the kwargs to pass to the form for this script.
+        By default, returns the task arguments, with 'data' list entries converted into a querydict
+        """
+        kwargs = self.task.arguments
+        if 'data' in kwargs:
+            d = QueryDict('').copy()
+            for k, v in kwargs['data'].iteritems():
+                if isinstance(v, list):
+                    d.setlist(k, v)
+                else:
+                    d[k] = v
+            kwargs['data'] = d
+        return kwargs
+
+    def get_script(self):
+        script_cls = self.task.get_class()
+        form = script_cls.options_form(**self.get_form_kwargs())
+        return script_cls(form)
+
+    def run_task(self):
+        script = self.get_script()
+        script.progress_monitor = ProgressMonitor()
+        script.progress_monitor.add_listener(CeleryProgressUpdater(self.task.uuid).update)
+        result = script.run()
+        if isinstance(result, models.Model):
+            result = result.pk
+        return result
+
+    def get_redirect(self):
+        "Default: provide redirect to download location"
+        return reverse("api-v4-taskresult") + "/" + self.task.uuid, "Download results"
+
+    def get_response(self):
+        "Default: instantiate the script and ask it to provide response"
+        result = self.task._get_raw_result()
+        if isinstance(result, dict) and result.get('type') == 'download':
+            data = base64.b64decode(result['data'])
+            response = HttpResponse(data, content_type=result['content_type'], status=200)
+            response['Content-Disposition'] = 'attachment; filename="{filename}"'.format(**result)
+            return response
+        else:
+
+            response = HttpResponse(result, content_type='application/json', status=200)
+            return response
+
 
 class ScriptMixin(FormMixin):
     script = None # plugin/script to base the view on
@@ -55,32 +100,20 @@ class ScriptMixin(FormMixin):
         initial.update(super(ScriptMixin, self).get_initial())
         return initial
 
-    def run_form_delayed(self, project, form, handler=None):
+    def run_form_delayed(self, project, handler=ScriptHandler):
         """
         Run the given form as a celery task
         @param project: the context project
-        @param form: the form to use [NOTE: This does not seem to be used???]
-        @param handler: an optional handler (class, instance, or fully qualified name)
-                        see amcat.models.Task
+        @param handler: the handler (see amcat.models.Task)
         """
-        script = self.get_script()
+        # get kwargs and deal with querydict lists
+        # (which json truncates since it thinks it's a dict)
         kwargs = self.get_form_kwargs()
-
-        task = script_task.delay(script, self.get_form_class(), kwargs)
-        kwargs['project'] = project.id
-
-        if not isinstance(handler, (str, unicode)):
-            if not isinstance(handler, type):
-                handler = handler.__class__
-            handler = ".".join([handler.__module__, handler.__name__])
-
-        task = Task.objects.create(
-            task_name=task.task_name, uuid=task.task_id, called_with=kwargs, project=project,
-            class_name=".".join((script.__module__, script.__name__)), user=self.request.user,
-            handler_class_name=handler
-        )
-
-        url = reverse("task-details", args=[project.id, task.id])
+        if isinstance(kwargs.get('data'), QueryDict):
+            kwargs['data'] = dict(kwargs['data'].iterlists())
+        t = handler.call(target_class=self.get_script(), arguments=kwargs,
+                         project=project, user=self.request.user)
+        url = reverse("task-details", args=[project.id, t.task.id])
         next = urlencode(dict(next=self.request.get_full_path()))
         return redirect("{url}?{next}".format(**locals()), permanent=False)
 

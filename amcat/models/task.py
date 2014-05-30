@@ -30,10 +30,20 @@ from django.db import models
 from amcat.models import Project
 from amcat.tools import classtools
 from amcat.tools.caching import cached
-from amcat.tools.model import AmcatModel
+from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.forms.fields import JSONField
+from amcat.amcatcelery import app
+
 
 IN_PROGRESS = "INPROGRESS"
+
+
+@app.task(bind=True)
+def amcat_task(self):
+    t = Task.objects.get(uuid=self.request.id)
+    handler = t.get_handler()
+    return handler.run_task()
+
 
 class TaskPending(Exception):
     pass
@@ -44,20 +54,16 @@ class Task(AmcatModel):
     using Celery. Because Celery fails to remember task-names when submitted, they are
     stored here together with the class which executed the task.
 
-    A 'handler' class (or module) can be given to specify what should be done after the
-    task is complete. This class/module should have the following method:
-    get_redirect(task) returns the (url, name) for a redirect link
-    Note: this is implemented as a class/module to allow expansion
+    The 'handler' class should inherit from TaskHandler or provide the same interface.
     """
-    uuid = models.CharField(max_length=36, db_index=True)
-    task_name = models.TextField()
+    uuid = PostgresNativeUUIDField(db_index=True, unique=True)
+    handler_class_name = models.TextField(null=False, blank=False)
     class_name = models.TextField()
-    issued_at = models.DateTimeField(auto_now_add=True)
-    called_with = JSONField()
-    handler_class_name = models.TextField(null=True)
+    arguments = JSONField()
 
     project = models.ForeignKey(Project, null=True)
     user = models.ForeignKey(User, null=False)
+    issued_at = models.DateTimeField(auto_now_add=True)
 
     # A Task is persistent if it important to keep it around (example: saved queries)
     persistent = models.BooleanField(default=False)
@@ -78,24 +84,13 @@ class Task(AmcatModel):
     @cached
     def get_async_result(self):
         """Returns Celery AsyncResult object belonging to this Task."""
-        return AsyncResult(id=self.uuid, task_name=self.task_name)
-
-    def get_result(self):
-        return self.get_object().get_result(self._get_raw_result())
-
-    def get_response(self):
-        return self.get_object().get_response(self._get_raw_result())
+        return AsyncResult(id=self.uuid, task_name=amcat_task.name)
 
     def get_class(self):
         return classtools.import_attribute(self.class_name)
 
     def get_handler(self):
-        return classtools.import_attribute(self.handler_class_name)
-
-    def get_object(self):
-        """Instantiate `class_name` with original arguments."""
-        cls = self.get_class()
-        return cls(**cls.get_called_with(**self.called_with))
+        return classtools.import_attribute(self.handler_class_name)(self)
 
     def revoke(self, **kwargs):
         """Revoke a task by preventing it from running on workers.
@@ -113,6 +108,56 @@ class Task(AmcatModel):
     class Meta:
         db_table = "tasks"
         app_label = "amcat"
+
+class TaskHandler(object):
+    """
+    Handler for tasks. run_task is called in a celery thread,
+    the get_* methods can be called later to interpret the results
+    """
+
+    def __init__(self, task):
+        self.task = task
+
+    @classmethod
+    def call(cls, target_class, arguments, user, project=None):
+        """
+        Create a new task object and start it using this class as handler
+        @return: an handler object instantiated with the created task
+        """
+        if not isinstance(target_class, (str, unicode)):
+            target_class = classtools.get_qualified_name(target_class)
+        task = Task.objects.create(handler_class_name=classtools.get_qualified_name(cls),
+                                   class_name=target_class, arguments=arguments,
+                                   user=user, project=project)
+        amcat_task.apply_async(task_id=task.uuid)
+        return cls(task)
+
+    def run_task(self):
+        """
+        Run the task and return the (json serializable) results
+        """
+        raise NotImplementedError()
+
+    def get_redirect(self):
+        """
+        Return a (url, name) pair for redirection after completion
+        raises TaskPending if task is not complete yet.
+        """
+        raise NotImplementedError()
+
+    def get_result(self):
+        """
+        Return the raw result.
+        raises TaskPending if task is not complete yet.
+        """
+        return self.task._get_raw_result()
+
+    def get_response(self):
+        """
+        Return a suitable HTTP Response for viewing
+        raises TaskPending if task is not complete yet.
+        """
+        raise NotImplementedError()
 
 
 ###########################################################################
