@@ -56,7 +56,7 @@ class TestTask(amcattest.AmCATTestCase):
 
     def test_get_class(self):
         user = amcattest.create_test_user()
-        task = Task.objects.create(uuid="bar", class_name="amcat.tests.test_task._TestTaskScript", user=user)
+        task = Task.objects.create(class_name="amcat.tests.test_task._TestTaskScript", user=user)
         self.assertEqual(_TestTaskScript.__name__, task.get_class().__name__)
 
     def test_get_handler(self):
