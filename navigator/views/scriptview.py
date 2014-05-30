@@ -106,16 +106,14 @@ class ScriptMixin(FormMixin):
         @param project: the context project
         @param handler: the handler (see amcat.models.Task)
         """
-        script = classtools.get_qualified_name(self.get_script())
-        handler = classtools.get_qualified_name(handler)
         # get kwargs and deal with querydict lists
         # (which json truncates since it thinks it's a dict)
         kwargs = self.get_form_kwargs()
         if isinstance(kwargs.get('data'), QueryDict):
             kwargs['data'] = dict(kwargs['data'].iterlists())
-        t = Task.call(class_name=script, handler_class_name=handler,
-                      arguments=kwargs, project=project, user=self.request.user)
-        url = reverse("task-details", args=[project.id, t.id])
+        t = handler.call(target_class=self.get_script(), arguments=kwargs,
+                         project=project, user=self.request.user)
+        url = reverse("task-details", args=[project.id, t.task.id])
         next = urlencode(dict(next=self.request.get_full_path()))
         return redirect("{url}?{next}".format(**locals()), permanent=False)
 

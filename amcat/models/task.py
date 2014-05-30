@@ -57,7 +57,7 @@ class Task(AmcatModel):
     The 'handler' class should inherit from TaskHandler or provide the same interface.
     """
     uuid = PostgresNativeUUIDField(db_index=True, unique=True)
-    handler_class_name = models.TextField()
+    handler_class_name = models.TextField(null=False, blank=False)
     class_name = models.TextField()
     arguments = JSONField()
 
@@ -109,15 +109,6 @@ class Task(AmcatModel):
         db_table = "tasks"
         app_label = "amcat"
 
-    @classmethod
-    def call(cls, *args, **kwargs):
-        """
-        Create a task object and put the related amcat_task on the celery queue
-        """
-        task = cls.objects.create(*args, **kwargs)
-        amcat_task.apply_async(task_id=task.uuid)
-        return task
-
 class TaskHandler(object):
     """
     Handler for tasks. run_task is called in a celery thread,
@@ -126,6 +117,20 @@ class TaskHandler(object):
 
     def __init__(self, task):
         self.task = task
+
+    @classmethod
+    def call(cls, target_class, arguments, user, project=None):
+        """
+        Create a new task object and start it using this class as handler
+        @return: an handler object instantiated with the created task
+        """
+        if not isinstance(target_class, (str, unicode)):
+            target_class = classtools.get_qualified_name(target_class)
+        task = Task.objects.create(handler_class_name=classtools.get_qualified_name(cls),
+                                   class_name=target_class, arguments=arguments,
+                                   user=user, project=project)
+        amcat_task.apply_async(task_id=task.uuid)
+        return cls(task)
 
     def run_task(self):
         """

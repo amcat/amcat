@@ -18,6 +18,7 @@
 ###########################################################################
 import json
 from amcat.models import Task
+from amcat.tools.classtools import get_qualified_name
 from amcat.tools.djangotoolkit import from_querydict
 
 from api import webscripts
@@ -27,8 +28,32 @@ from django.http import HttpResponse
 from amcat.forms import InvalidFormException
 from amcat.models.project import Project
 
+from navigator.views.scriptview import ScriptHandler
+
 import logging
 log = logging.getLogger(__name__)
+
+
+class WebScriptHandler(ScriptHandler):
+    def get_script(self):
+        return self.task.get_class()(**self.get_form_kwargs())
+
+    def run_task(self):
+        response = super(WebScriptHandler, self).run_task()
+        result = {"content": response.content,
+                  "status": response.status_code,
+                  "headers": response.items()}
+        print(result)
+        return result
+
+    def get_response(self):
+        raw = self.task._get_raw_result()
+        result = HttpResponse(raw['content'], status=raw['status'])
+        for header, val in raw['headers']:
+            result[header] = val
+        return result
+
+
 
 def index(request, webscriptName):
     if not hasattr(webscripts, webscriptName) or webscriptName not in webscripts.webscriptNames:
@@ -53,12 +78,8 @@ def index(request, webscriptName):
         request.session['query'] = data.get('query')
 
         if "delay" in request.GET:
-            task = ws.delay()
-            Task.objects.create(
-                task_name=task.task_name, uuid=task.task_id, called_with=called_with, project=project,
-                class_name=".".join((ws.__class__.__module__, ws.__class__.__name__)), user=user
-            )
-            return HttpResponse(json.dumps({"task_uuid" : task.task_id}), content_type="application/json")
+            h = WebScriptHandler.call(target_class=ws.__class__, arguments=called_with, project=project, user=user)
+            return HttpResponse(json.dumps({"task_uuid" : h.task.uuid}), content_type="application/json")
         else:
             return ws.run()
     except InvalidFormException, e:
@@ -71,9 +92,9 @@ def index(request, webscriptName):
             e.reason = 'This query could not be parsed.'
 
         return showErrorMsg('error running webscript: %s' % e, 'json')
-        
-    
-    
+
+
+
 def getWebscriptForm(request, webscriptName):
     if not hasattr(webscripts, webscriptName) or webscriptName not in webscripts.webscriptNames:
         return showErrorMsg('invalid webscript name', 'json')
@@ -84,8 +105,8 @@ def getWebscriptForm(request, webscriptName):
         project = Project.objects.get(id=request.GET.get('project'))
 
     return HttpResponse(webscriptClass.formHtml(project))
-    
-    
+
+
 def model(request, modelName):
     data = request.POST if request.method == "POST" else request.GET
     data = data.copy()
@@ -98,4 +119,3 @@ def model(request, modelName):
     except Exception, e:
         log.exception('model webscript exception')
         return showErrorMsg('error running webscript: %s' % e, 'json')
-    
