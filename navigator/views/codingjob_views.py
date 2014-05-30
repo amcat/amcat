@@ -189,8 +189,8 @@ class CodingJobExportView(ProjectScriptView):
             sections.setdefault(section, []).append((name, form[name], subfields[name]))
 
         # sort coding fields
-        codingfields = sorted(sections["Field options"])
-        sections["Field options"].sort()
+        if 'Field options' in sections:
+            sections["Field options"].sort()
 
         for name in form.fields: # add subordinate fields
             prefix = name.split("_")[0]

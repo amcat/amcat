@@ -17,17 +17,18 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-"""
-A Job
-"""
+
 from amcat.scripts.script import Script
 from amcat.tools import amcattest
-from amcat.models import Task
+from amcat.models import Task, TaskHandler
 from celery.task import task
 from api.webscripts.webscript import WebScript
 
 
 class _TestTaskScript(Script):
+    pass
+
+class _TestHandler(TaskHandler):
     pass
 
 class _TestTaskWebScript(WebScript):
@@ -41,36 +42,28 @@ class _TestTaskWebScript(WebScript):
         called_with["test"] += 1
         return called_with
 
-
+#TODO: Test handler operations
 class TestTask(amcattest.AmCATTestCase):
     def _get_task(self):
         return task(lambda : None).delay()
 
-    def test_get_result(self):
+    def test_get_async_result(self):
         user = amcattest.create_test_user()
 
         task = self._get_task()
-        task_model = Task.objects.create(uuid=task.id, task_name=task.task_name, class_name=":)", user=user)
-        self.assertEqual(task.id, task_model.uuid)
+        task_model = Task.objects.create(uuid=task.id, class_name=":)", user=user)
         self.assertEqual(task.id, task_model.get_async_result().id)
-        self.assertEqual(task.task_name, task_model.get_async_result().task_name)
-        self.assertEqual(task, task_model.get_async_result())
 
     def test_get_class(self):
         user = amcattest.create_test_user()
-        task = Task.objects.create(uuid="bar", task_name="foo", class_name="amcat.tests.test_task._TestTaskScript", user=user)
+        task = Task.objects.create(uuid="bar", class_name="amcat.tests.test_task._TestTaskScript", user=user)
         self.assertEqual(_TestTaskScript.__name__, task.get_class().__name__)
 
-    def test_get_object(self):
+    def test_get_handler(self):
         user = amcattest.create_test_user()
         task = Task.objects.create(
-            uuid="bar", task_name="foo", class_name="amcat.tests.test_task._TestTaskWebScript",
-            user=user, called_with='{"test":1,"data":{}}')
+            class_name="amcat.tests.test_task._TestTaskWebScript",
+            handler_class_name="amcat.tests.test_task._TestHandler",
+            user=user)
 
-        self.assertEqual(task.get_object()._kwargs["test"], 2)
-
-        # Test no raises
-        task = Task.objects.create(uuid="bar", task_name="foo", class_name="amcat.tests.test_task._TestTaskScript", user=user)
-        task.get_object()
-
-
+        self.assertEqual(task.get_handler().__class__, _TestHandler)
