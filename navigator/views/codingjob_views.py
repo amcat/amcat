@@ -129,12 +129,13 @@ class CodingJobExportSelectView(ProjectFormView):
     def get_form_kwargs(self):
         kwargs = super(CodingJobExportSelectView, self).get_form_kwargs()
         kwargs.update(project=self.project)
-        return kwargs
 
-    def get_initial(self):
-        initial = super(CodingJobExportSelectView, self).get_initial()
-        initial["codingjobs"] = self.request.GET.getlist("id")
-        return initial
+        if "data" in kwargs and "codingjobs" not in kwargs["data"]:
+            all_jobs = self.project.codingjob_set.all().values_list("id", flat=True)
+            kwargs["data"] = kwargs["data"].copy()
+            kwargs["data"].setlist("codingjobs", all_jobs)
+
+        return kwargs
 
     def form_valid(self, form):
         self.jobs = form.cleaned_data["codingjobs"]
