@@ -50,7 +50,7 @@ $ sudo apt-get install oracle-java7-installer
 Next, download and extract elasticsearch and our custom hitcount jar, and install the required plugins:
 
 ```sh
-curl  https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.0.tar.gz | tar xvz
+wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.0.tar.gz -O - | tar xvz
 wget http://amcat.vu.nl/plain/hitcount.jar
 elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
 elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
