@@ -7,7 +7,36 @@
 {% if can_edit %}
   <a href="{% url "coding job-add" context.id %}" class="btn btn-primary"><i class="icon-certificate"></i> New codingjob</a>
 {% endif %}
-  <a href="{% url "coding job-export-select" context.id %}"  class="btn btn-default" id="export-codingjobs">Export codingjobs</a>
+  <!-- Because GET can only handle so much ids, we need to use POST. -->
+  <form id="export-codingjobs" class="btn-group" method="post"
+        action="{% url "coding job-export-select" context.id %}"
+        data-id-field="[name=codingjobs]" data-table="#all-codingjobs">
+
+    <input type="hidden" name="codingjobs" />
+    <input type="hidden" name="export_level" />
+    <input class="hide" type="submit" />
+
+    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
+      Export selected codingjobs
+      <span class="caret"></span>
+    </button>
+    <ul class="dropdown-menu">
+      <li><a name="0" href="#">Article codings</a></li>
+      <li><a name="1" href="#">Sentence codings</a></li>
+      <li><a name="2" href="#">Article and sentence codings</a></li>
+    </ul>
+  </form>
+
+  <!-- Set inputfield 'submit' when clicking on one of the dropdown options,
+       according to their 'name' attribute. -->
+  <script type="text/javascript">
+    $("#export-codingjobs a").click(function(event){
+      var target = $(event.currentTarget);
+      var form = target.parents("form");
+      form.find("[name=export_level]").val(target.attr("name"));
+      form.submit();
+    });
+  </script>
 {% endblock %}
 
 {% block javascript %}
@@ -37,7 +66,7 @@
 </div>
 
 <script type="text/javascript">
-    exportids($("#all-codingjobs"), $("#export-codingjobs"));
+  exportids($("#export-codingjobs"));
 </script>
 
 {% endblock %}
