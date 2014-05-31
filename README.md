@@ -95,8 +95,8 @@ AmCAT uses [bower](http://bower.io/) to install javascript/CSS libraries. On Ubu
 ```sh
 sudo add-apt-repository ppa:chris-lea/node.js
 sudo apt-get update
-sudo apt-get install npm
-sudo apt-get upgrade npm
+sudo apt-get install nodejs
+sudo apt-get upgrade nodejs
 sudo npm install -g bower
 ```
 
