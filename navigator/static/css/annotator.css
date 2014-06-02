@@ -62,7 +62,7 @@ html {
 }
 
 .articlelist-part{
-    overflow-x:scroll;
+    overflow-x:auto;
     width:100%;
     background:white;
     margin-bottom:20px;
@@ -143,6 +143,7 @@ h2{
 .articlelist-part h2{
     float:left;
     width:50%;
+    border: none;
 }
 
 .article-list-toolbar{
@@ -208,6 +209,10 @@ h2{
 
 #coding-details hr {
     margin: 5px;
+}
+
+#coding-details h1 {
+    margin-top: 0px;
 }
 
 #unitcoding-table-part{
