@@ -23,7 +23,7 @@
             <a href="{% url "codingjobs" %}">&laquo; Back to Overview</a> | 
             <a href="javascript:;" id="help-button">Help</a>
         </div>
-        <h2>Articles in codingjob {{codingjob.id}} - {{codingjob.name}}</h2>
+        <h2>Articles in codingjob {{codingjob.id}} - {{codingjob.name}} <i id="hide-articles-button" class="fa fa-chevron-up" title="hide"></i> </h2>
         <div class="article-list-toolbar">
             <button id="next-article-button" title="Go to the next article in the list">Next</button>
             <button id="previous-article-button" title="Go to the previous article in the list">Previous</button>
@@ -46,7 +46,7 @@
 
             amcat.datatables.create_rest_table(jqueryElement, url, {
                 datatables_options: {
-                    aaSorting: [[0, "asc"]],
+                    aaSorting: [],
                     iDisplayLength: 100000,
                     aoColumns: columns,
                     sScrollY: "100px",
@@ -65,7 +65,7 @@
         });
         </script>
     </div>
-
+    <hr>
     <div id="coding">
 
       <div style="width:70%;" class="alert alert-warning" id="lost-codes">
@@ -80,7 +80,7 @@
       </div>
       
       <div class="coding-part" style="display:none">
-           <h1>Controls</h1>
+           
            <div class="unit-codings-toolbar">
               <button id="irrelevant-button" title="Mark this article as irrelevant and continue to the next article">Irrelevant &amp; continue</button>
               <button id="save-continue-button" title="Mark this article as finished and continue to the next article">Finish &amp; continue</button>
@@ -124,7 +124,6 @@
       </div>
 
       <article>
-        <h1>Article</h1>
          <div class="sentence-options">
               <button class="select-all-sentences-button" title="Select all sentences">Select</button>
               <span>Selected words: <span id="wordcount">0</span></span>
