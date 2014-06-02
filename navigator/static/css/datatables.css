@@ -512,7 +512,7 @@ div.box {
 }
 
 table.display tbody tr:hover, table.display tbody tr td.highlighted {
-	background-color: #bbd8ff;
+	
 }
 
 table.display tr:hover td.sorting_1,

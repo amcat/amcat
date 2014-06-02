@@ -107,8 +107,9 @@ article{
 
 .coding td{
     -moz-border-radius:10px 0 0 10px;
-    padding:2px;
+    padding:1px 5px !important;
     vertical-align: text-top;
+    width: 105px;
 }
 
 #article-comment-form label{
@@ -129,7 +130,7 @@ article{
 }
 
 .sentence{
-    margin-top:10px;
+    
 }
 
 .annotator-sentencenr{
@@ -390,16 +391,15 @@ table.display thead th {
 
 /* make sentences table look like a datatable, with colors etc. */
 #unitcoding-table tbody tr {
-    background-color: #E2E4FF;
-    border-bottom: 1px solid gray;
+    
 }
 
 #unitcoding-table{
-    border: 1px solid gray;
+    
 }
 
-#unitcoding-table thead tr {
-   /*  background-color: #F0F0F0; */
+#unitcoding-table thead tr:hover {
+   background-color: inherit !important;
 }
 
 #unitcoding-table-top{
@@ -407,7 +407,7 @@ table.display thead th {
     left:0px;
     background-color:white;
     z-index:2500;
-    height:35px;
+    height:25px;
 }
 
 input.error{

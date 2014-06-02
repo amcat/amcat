@@ -467,11 +467,32 @@ annotator = (function(self){
         //   console.log(i);
         //   console.log(bar);  
         // });
+        console.log(">>>>>>")
+        console.log(JSON.stringify(self.sentence_schemafields))
+        console.log("<<<<<<")
         self.sentence_codings_container.find("tbody").
-            append($("<tr>").append(sentence_input));
+            append($("<tr>")
+                .append($("<td>")
+                    .append($("<label>")
+                        .append($("<u>")
+                            .append("Sentence:")
+                        )
+                    )
+                )
+                .append($("<td>")
+                    .append(sentence_input)
+                )
+            );
         sentence_variables.each(function(i, bar) {
             self.sentence_codings_container.find("tbody").
-                append($("<tr>").append(bar))
+                append($("<tr>")
+                    .append($("<td>")
+                        .append($("<label>")
+                            .append(self.sentence_schemafields[i]["label"])
+                        )
+                    )
+                    .append(bar)
+                )
         })
         self.set_sentence_codingvalues(coding_el, coding.values||[], coding.sentence);
         self.set_tab_order();
