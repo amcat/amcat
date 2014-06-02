@@ -188,7 +188,7 @@ table.display td.center {
 }
 
 .sorting {
-	background: url('/media/img/dataTables/sort_both.png') no-repeat center right;
+	/*background: url('/media/img/dataTables/sort_both.png') no-repeat center right;*/
 }
 
 .sorting_asc_disabled {
