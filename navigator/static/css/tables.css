@@ -59,15 +59,24 @@ table.dataTable tr.even td.sorting_1 { background-color: #efefef; }
 table.dataTable tr.even td.sorting_2 { background-color: #F2F3FF; }
 table.dataTable tr.even td.sorting_3 { background-color: #F9F9FF; }
 
-table.dataTable thead th{
+table.dataTable thead th,
+.dataTables_wrapper.no-footer div.dataTables_scrollBody table{
     border-bottom: none;
 }
 
-table.display tr.even.row_selected td {
+.dataTables_wrapper.no-footer .dataTables_scrollBody{
+    border-bottom-width: 1px;
+    border-bottom-color: #d3d3d3;
+}
+
+table.display tr.even.row_selected td,
+table.display tr.even.active td
+{
 	background-color: #B0BED9;
 }
 
-table.display tr.odd.row_selected td {
+table.display tr.odd.row_selected td,
+table.display tr.odd.active td{
 	background-color: #9FAFD1;
 }
 
@@ -75,4 +84,55 @@ table.display tr.odd.row_selected td {
 table.display tbody tr:hover,
 table.display tbody tr td.highlighted {
     background-color: #bbd8ff;
+}
+
+table.dataTable tbody td,
+table.dataTable thead th{
+    padding-top:2px;
+    padding-bottom:2px;
+
+}
+
+table tr{
+    max-height:1em;
+}
+
+table td{
+    overflow:hidden;
+    white-space: nowrap;
+}
+
+.pagination{
+    margin-top:10px;
+}
+
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+.dataTables_wrapper .dataTables_paginate .paginate_button:active {
+    background: none;
+    border-color:transparent;
+
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button{
+    padding:0;
+    margin:0;
+}
+
+.DTTT_dropdown a{
+    cursor: pointer;
+}
+
+.pagination > li > a{
+    margin-left:-3px;
+}
+
+
+tr.active{
+    background-color: red;
+}
+
+.DTTT{
+    float:right;
+    margin-bottom:5px;
 }

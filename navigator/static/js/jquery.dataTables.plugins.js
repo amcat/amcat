@@ -1,4 +1,24 @@
 
+/*
+ * When listening to an onclick event, it is impossible to know whether
+ * ctrl is pressed. This sets a global variable, which listens for ctrl
+ * keypress events.
+ */
+var control = false;
+$(document).keydown(function(e) {
+  if (e.ctrlKey) control = true;
+}).keyup(function(e){
+    if (!shift) control = false;
+});
+
+var shift = false;
+$(document).keydown(function(e) {
+  if (e.shiftKey) shift = true;
+}).keyup(function(){
+    shift = false;
+});
+
+
 jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay ) {
     /*
      * Inputs:      object:oSettings - dataTables settings object - automatically given
@@ -73,6 +93,8 @@ jQuery.fn.dataTableExt.oApi.fnSetRowlink = function(oSettings, sRowlink, sOpenIn
        "fn"  : function(){
            $('tbody > tr', oSettings.aanFeatures.t).unbind('click').click(function(event){
               var cols={}, data, name, url;
+
+              if (control||shift) return;
 
               data = self.fnGetData(event.currentTarget);
               if (typeof(data) != "object"){

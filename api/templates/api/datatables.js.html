@@ -9,6 +9,8 @@ $(document).ready(function(){
         },
         "name" : "{{ id }}",
         "datatables_options" : {{ options|safe }}
-    })
+    });
+
+    $("#{{ id }}-wrapper").data("url", "{{ url|safe }}").addClass("amcat-table-wrapper");
  });
 </script>
