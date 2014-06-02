@@ -34,6 +34,15 @@ _SORTCOL = "iSortCol_";
 _SORTDIR = "sSortDir_";
 _DPROP = "mDataProp_";
 
+function __redirect(format){
+    return function(){
+        var url = $(this.dom.table).parents(".amcat-table-wrapper").data("url");
+        window.location = url + "&format=" + format;
+    }
+}
+
+
+
 // Default options passed to datatables.
 _AMCAT_DEFAULT_OPTS = {
     sScrollY: "300px",
@@ -48,9 +57,38 @@ _AMCAT_DEFAULT_OPTS = {
     dom: 'T<"clear">lfrtip',
     tableTools: {
         sRowSelect: "os",
-        aButtons: ["select_all", "select_none"]
+        aButtons: ["select_all", "select_none", {
+            "sExtends": "collection",
+            "sButtonText": "Export as..",
+            "aButtons": [
+            {
+                sExtends: "text",
+                "sButtonText": "CSV",
+                "fnClick": __redirect("csv")
+            },
+            {
+                sExtends: "text",
+                "sButtonText": "Excel",
+                "fnClick": __redirect("xlsx")
+            },
+            {
+                sExtends: "text",
+                "sButtonText": "JSON",
+                "fnClick": __redirect("json")
+            },
+            {
+                sExtends: "text",
+                "sButtonText": "SPSS",
+                "fnClick": __redirect("spss")
+            },
+            {
+                sExtends: "text",
+                "sButtonText": "HTML",
+                "fnClick": __redirect("xhtml")
+            }]
+        }]
     },
-    "lengthMenu": [[100, 300, 1000, 10000000], [100, 300, 1000, "All"]]
+    "lengthMenu": [[100, 300, 1000, 10000000], [100, 300, 1000, "All"]],
 };
 
 $.fn.dataTableExt.sErrMode = 'throw';

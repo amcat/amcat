@@ -9,8 +9,10 @@ function exportids(form){
         var table = $($(this).data("table"));
         var field = $($(this).data("id-field"));
 
-        $.each($.map(table.find(".selected"), function(row){
+        $.each($.map(table.find("tr.selected, tr.active"), function(row){
             // Select first column of row, and fetch its text (probably an ID)
+            console.log(1)
+
             return $("td", row).first().text();
         }), function(i, id){
             // For each id, create a input element
