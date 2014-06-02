@@ -93,3 +93,12 @@ table.dataTable thead th{
 .dataTables_wrapper .dataTables_paginate .paginate_button{
     padding:4px 4px 4px 4px;
 }
+
+table tr{
+    max-height:1em;
+}
+
+table td{
+    overflow:hidden;
+    white-space: nowrap;
+}

@@ -36,7 +36,6 @@ _DPROP = "mDataProp_";
 
 // Default options passed to datatables.
 _AMCAT_DEFAULT_OPTS = {
-    bScrollCollapse: true,
     sScrollY: "300px",
     fnRowCallback : function(nRow){
         amcat.datatables.truncate_row(nRow);
@@ -45,6 +44,7 @@ _AMCAT_DEFAULT_OPTS = {
     bFilter: false,
     iDisplayLength : 100,
     bProcessing: true,
+    "scrollX": "100%",
     dom: 'T<"clear">lfrtip',
     tableTools: {
         sRowSelect: "os",
