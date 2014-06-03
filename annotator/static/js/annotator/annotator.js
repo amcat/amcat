@@ -169,6 +169,59 @@ annotator = (function(self){
 
     };
 
+    self.post_record_entries = function(record_entries) {
+        console.log("Sending " + record_entries.length + " entries...");
+        $.post("/api/recorder/record", JSON.stringify(record_entries));
+    };
+
+    self.add_record_entry = function(record_entry) {
+        self.state.recorded_events.push(record_entry);
+        if (self.state.recorded_events.length >= 25) {
+            var to_post = self.state.recorded_events;
+            self.post_record_entries(to_post);
+            self.state.recorded_events = [];
+        }
+    };
+
+    self.record_event = function(e) {
+        var categories = ["keywords", "description", "variable", "sentence"];
+        var $target = $(e.currentTarget)
+        var target_classes = $target.attr("class").split(" ");
+        var target_categories = target_classes.filter(function(target_class) {
+            return categories.indexOf(target_class) != -1;
+        });
+        
+        if (target_categories.length == 0) {
+            return;
+        }
+        var record_entry = {
+            'event_type': e.type, 
+            'ts': new Date(),
+            'codingjob_id': self.codingjob_id,
+            'article_id': self.state.coded_article.article_id
+        };
+        var target_category = target_categories[0];
+        record_entry["category"] = target_category;
+
+        if (target_category == "variable") {
+            record_entry["target_id"] = $target.attr("data-id");
+        }
+        if (target_category == "sentence") {
+            record_entry["target_id"] = $target.attr("id").split("-")[1];   
+        }
+        record_entry['selected_schema_field_id'] = self.state.selected_schema_field_id;
+        self.add_record_entry(record_entry);
+    };
+
+    self.initialise_recorder_handlers = function() {
+        self.state.recorded_events = [];
+        $('.sentence, .keywords, .description, .variable, button, #sentence-selection')
+            .on('click mouseover mouseleave', function(e) {
+                self.record_event(e);
+            });
+
+    };
+
     self.show_unsaved_changes = function(continue_func){
         var save_btn = $(".save", self.unsaved_modal);
         var discard_btn = $(".discard", self.unsaved_modal);
@@ -402,9 +455,12 @@ annotator = (function(self){
             else
                 var nice_description = "<i>No description.</i>"
 
+
             return $("<tr>")
+                .attr("data-id", schemafield.id)
                 .attr("data-keywords", nice_keywords)
                 .attr("data-description", nice_description)
+                .addClass("variable")
                 .append($("<td>").append(label))
                 .append($("<td>").append(widget));
         }));
@@ -457,6 +513,7 @@ annotator = (function(self){
                 .append($("<td>")
                     .append(sentence_input)
                 )
+                .attr('id', 'sentence-selection')
             );
         sentence_variables.each(function(i, bar) {
             var schemafield = self.sentence_schemafields[i];
@@ -468,6 +525,7 @@ annotator = (function(self){
                     var nice_description = schemafield.description
                 else
                     var nice_description = "<i>No description.</i>"
+
             self.sentence_codings_container.find("tbody").
                 append($("<tr>")
                     .append($("<td>")
@@ -476,8 +534,10 @@ annotator = (function(self){
                         )
                     )
                     .append(bar)
+                    .attr("data-id", schemafield.id)
                     .attr("data-keywords", nice_keywords)
                     .attr("data-description", nice_description)
+                    .addClass("variable")
                 )
         })
         self.set_sentence_codingvalues(coding_el, coding.values||[], coding.sentence);
@@ -1008,6 +1068,7 @@ annotator = (function(self){
         self.set_tab_order();
         self.unsaved = false;
 
+        self.initialise_recorder_handlers();
         self.loading_dialog.dialog("close");
 
         var container = (self.codingjob.articleschema === null) ? self.sentence_codings_container : self.article_coding_container;
@@ -1034,6 +1095,7 @@ annotator = (function(self){
             .unbind("click")
             .bind("click", function() {
                 var that = this;
+                self.state.selected_schema_field_id = $(that).attr('data-id');
                 var field_index = $(this).index() - 1;
                 var sentence_id = 0;
                 var keywords = $(that).attr("data-keywords");
@@ -1063,6 +1125,7 @@ annotator = (function(self){
                 if (self.state.selected_schema_field == field_index) {
                     return;
                 }
+                self.state.selected_schema_field_id = $(that).attr('data-id'); 
                 self.state.selected_schema_field = field_index;
                 var keywords = $(that).attr("data-keywords")
                 var description = $(that).attr("data-description")
@@ -1305,7 +1368,7 @@ annotator = (function(self){
         var prev_parnr = 1;
 
         $.each(sentences, function (i, s) {
-            var _html = $('<div />').attr('id', 'sentence-' + s.id);
+            var _html = $('<div />').attr('id', 'sentence-' + s.id).addClass('sentence');
             if (s.parnr != prev_parnr) {
                 _html.addClass('new-paragraph');
             }

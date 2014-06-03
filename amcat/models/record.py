@@ -17,22 +17,30 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django.conf.urls import patterns, url, include
-from django.shortcuts import redirect
+"""ORM Module annotation-event records"""
 
-import api.rest
-import api.highlighter
-import api.recorder 
+from __future__ import print_function, absolute_import
 
-urlpatterns = patterns(
-    '',
-    url(r'^$', lambda r : redirect("v4/"), name="api"),
-    url(r'^action/(?P<action>\w+)$', 'api.action.handler'),
-    (r'^webscript/(?P<webscriptName>\w+)/run$', 'api.webscripts.handler.index'),
-    (r'^webscript/(?P<webscriptName>\w+)/form$', 'api.webscripts.handler.getWebscriptForm'),
-    (r'^v4/', include('api.rest.urls')),
-    (r'^highlighter/', include('api.highlighter.urls')),
-    (r'^recorder/', include('api.recorder.urls')),
-    url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
-)
+from amcat.tools.model import AmcatModel
+from django.contrib.auth.models import User
 
+from django.db import models
+
+class Record(AmcatModel):
+    """Model for records.
+
+    """
+    __label__ = 'record'
+    
+    id = models.AutoField(primary_key=True, db_column="record_id")
+    category = models.CharField(max_length=200)
+    event_type = models.CharField(max_length=200)
+    target_id = models.IntegerField()
+    ts = models.DateTimeField()
+    article = models.ForeignKey("amcat.Article", null=True)
+    codingjob = models.ForeignKey("amcat.CodingJob", null=True)
+    user = models.ForeignKey(User, null=True)
+
+    class Meta():
+        db_table = 'records'
+        app_label = 'amcat'
