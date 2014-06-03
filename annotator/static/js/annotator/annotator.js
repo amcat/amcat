@@ -417,24 +417,6 @@ annotator = (function(self){
     self.initialise_sentence_codings_table = function () {
         amcat.datatables.done = true;
         var table_header = $("<tr>");
-        table_header.append($("<th>").text("Sentence"));
-        table_header.append(
-            $.map(self.sentence_schemafields, function(schemafield){
-                
-                if (schemafield.keywords)
-                    var nice_keywords = schemafield.keywords.split(",").join(", ");
-                else
-                    var nice_keywords = "<i>No keywords.</i>"
-                if (schemafield.description)
-                    var nice_description = schemafield.description
-                else
-                    var nice_description = "<i>No description.</i>"
-                return $("<tr>")
-                    .attr("data-keywords", nice_keywords)
-                    .attr("data-description", nice_description)
-                    .text(schemafield.label);
-            })
-        );
 
         // Used to 'steal' focus so we know we need to add another row / switch to next row
         table_header.append($("<th>"));
@@ -463,13 +445,6 @@ annotator = (function(self){
         var coding_el = self.get_sentence_coding_html(coding);
         var sentence_input = $(coding_el).find("> input")
         var sentence_variables = $(coding_el).find("> td").slice(0, -1);
-        // $(coding_el).children().each(function(i, bar) {
-        //   console.log(i);
-        //   console.log(bar);  
-        // });
-        console.log(">>>>>>")
-        console.log(JSON.stringify(self.sentence_schemafields))
-        console.log("<<<<<<")
         self.sentence_codings_container.find("tbody").
             append($("<tr>")
                 .append($("<td>")
@@ -484,14 +459,25 @@ annotator = (function(self){
                 )
             );
         sentence_variables.each(function(i, bar) {
+            var schemafield = self.sentence_schemafields[i];
+            if (schemafield.keywords)
+                    var nice_keywords = schemafield.keywords.split(",").join(", ");
+                else
+                    var nice_keywords = "<i>No keywords.</i>"
+                if (schemafield.description)
+                    var nice_description = schemafield.description
+                else
+                    var nice_description = "<i>No description.</i>"
             self.sentence_codings_container.find("tbody").
                 append($("<tr>")
                     .append($("<td>")
                         .append($("<label>")
-                            .append(self.sentence_schemafields[i]["label"])
+                            .append(schemafield.label)
                         )
                     )
                     .append(bar)
+                    .attr("data-keywords", nice_keywords)
+                    .attr("data-description", nice_description)
                 )
         })
         self.set_sentence_codingvalues(coding_el, coding.values||[], coding.sentence);
@@ -1044,7 +1030,7 @@ annotator = (function(self){
     }
 
     self.highlight_unit_schema_fields = function(highlighting) {
-        $("#unitcoding-table").find("th")
+        $("#unitcoding-table").find("tr")
             .unbind("click")
             .bind("click", function() {
                 var that = this;
@@ -1056,7 +1042,7 @@ annotator = (function(self){
                 var description = $(that).attr("data-description");
                 $('#coding-details .keywords > div').html(keywords);
                 $('#coding-details .description > div').html(description);
-                $(that).closest("table").find("th").css('background-color', '#60A3FF');
+                $(".coding-part tr").css('background-color', 'white');
                 $(that).css('background-color', '#9FAFD1');
                 $.each(highlighting, function(pIndex, sentences) {
                     $.each(sentences, function(sIndex, fields) {
@@ -1082,7 +1068,7 @@ annotator = (function(self){
                 var description = $(that).attr("data-description")
                 $('#coding-details .keywords > div').html(keywords);
                 $('#coding-details .description > div').html(description);
-                $(that).closest("table").find("tr").css('background-color', 'white');
+                $(".coding-part tr").css('background-color', 'white');
                 $(that).css('background-color', '#9FAFD1');
                 var sentence_id = 0;
                 $.each(highlighting, function(pIndex, sentences) {
