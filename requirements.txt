@@ -21,3 +21,4 @@ psycopg2
 chardet
 html2text
 pypdf2
+django-method-override

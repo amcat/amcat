@@ -134,6 +134,7 @@ MIDDLEWARE_CLASSES = [
     'navigator.utils.auth.NginxRequestMethodFixMiddleware',
     #'navigator.utils.misc.UUIDLogMiddleware',
     #'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'method_override.middleware.MethodOverrideMiddleware'
 ]
 
 STATICFILES_FINDERS = (
@@ -178,6 +179,7 @@ INSTALLED_APPS = [
     'amcat',
     'django_extensions',
     'compressor',
+    'method_override'
 ]
 
 SESSION_ENGINE = "django.contrib.sessions.backends.cached_db"
