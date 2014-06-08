@@ -371,15 +371,20 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
 
             // Determine url by adding the correct filtering paramters
             url = this.metadata.models[fieldname];
-            url += "?pk=" + needed_labels.join("&pk=");
-            url += "&page_size=999999";
 
             $.ajax({
-                dataType : "json",
-                type : "GET",
-                url : url,
-                success : amcat.datatables.load_labels_success.bind(ctx),
-                error : amcat.datatables.fetched_initial_error.bind(ctx)
+                type: "POST",
+                url: url,
+                success: amcat.datatables.load_labels_success.bind(ctx),
+                error: amcat.datatables.fetched_initial_error.bind(ctx),
+                headers: {
+                    "X-HTTP-METHOD-OVERRIDE": "GET"
+                },
+                data: {
+                    pk: needed_labels,
+                    page_size: 999999,
+                    format: "json"
+                }
             });
         }
     }
