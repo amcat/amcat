@@ -95,11 +95,7 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
             no_sets = True
         if not self.project.favourite_articlesets.exists():
             no_favourites = True
-
-        if what == 'favourites':
-            favaction = "unsetfav"
-        else:
-            favaction ="setfav"
+        favaction = "unsetfav" if what == 'favourites' else "setfav"
 
         context.update(locals())
         return context

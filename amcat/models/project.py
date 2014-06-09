@@ -80,11 +80,11 @@ class Project(AmcatModel):
 
     def get_codebooks(self):
         """
-        Return all codebooks connected to this project. This returns codebooks 
+        Return all codebooks connected to this project. This returns codebooks
         owned by it and linked to it.
         """
         return Codebook.objects.filter(Q(projects_set=self)|Q(project=self)).distinct()
-    
+
     def can_read(self, user):
         return (self in user.get_profile().projects
                 or user.get_profile().haspriv('view_all_projects')
@@ -110,7 +110,7 @@ class Project(AmcatModel):
         or contained in a set owned by this project
         """
         return Article.objects.filter(Q(articlesets_set__project=self)|Q(project=self)).distinct()
-            
+
     def get_all_article_ids(self):
         """
         Get a sequence of article ids either owned by this project
@@ -152,7 +152,7 @@ class Project(AmcatModel):
         """
         project_role = None
         guest_role = self.guest_role_id
-        
+
         if user:
             try:
                 project_role = self.projectrole_set.get(user=user).role_id
@@ -168,17 +168,17 @@ class Project(AmcatModel):
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestProject(amcattest.AmCATTestCase):
-        
+
     def test_create(self):
         """Can we create a project and access its attributes?"""
         p = amcattest.create_test_project(name="Test")
         self.assertEqual(p.name, "Test")
 
-        
+
     def test_all_articles(self):
         """Does getting all articles work?"""
         from django.db.models.query import QuerySet
@@ -187,7 +187,7 @@ class TestProject(amcattest.AmCATTestCase):
         a1, a2 = [amcattest.create_test_article(project=p) for p in [p1, p2]]
         self.assertEqual(set(p1.get_all_article_ids()), set([a1.id]))
         self.assertEqual(set(p1.all_articles()), set([a1]))
-        
+
         s = amcattest.create_test_set(project=p1)
         self.assertEqual(set(p1.get_all_article_ids()), set([a1.id]))
         self.assertEqual(set(p1.all_articles()), set([a1]))
@@ -221,7 +221,7 @@ class TestProject(amcattest.AmCATTestCase):
         p2.codingschemas.add(cs)
         class TestForm(forms.Form):
             c = forms.ModelChoiceField(queryset=p.get_codingschemas())
-        
+
         self.assertEqual(len(p.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p2.get_codingschemas().filter(pk=cs.id)), 1)
         self.assertEqual(len(p3.get_codingschemas().filter(pk=cs.id)), 0)
@@ -232,7 +232,7 @@ class TestProject(amcattest.AmCATTestCase):
         set2 = amcattest.create_test_set(2, project=set1.project)
         set3 = amcattest.create_test_set(2)
         [s.refresh_index() for s in [set1, set2, set3]]
-        
+
         media = set(set1.project.get_mediums())
         self.assertEqual(
             set(set1.project.get_mediums()),
@@ -241,4 +241,3 @@ class TestProject(amcattest.AmCATTestCase):
 
         # can we get_mediums on an empty project?
         self.assertEqual(list(amcattest.create_test_project().get_mediums()), [])
-

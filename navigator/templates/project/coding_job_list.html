@@ -12,6 +12,7 @@
         action="{% url "coding job-export-select" context.id %}"
         data-id-field="[name=codingjobs]" data-table="#all-codingjobs">
 
+    <input type="hidden" name="what" value="{{what}}" />
     <input type="hidden" name="codingjobs" />
     <input type="hidden" name="export_level" />
     <input class="hide" type="submit" />
@@ -26,6 +27,17 @@
       <li><a name="2" href="#">Article and sentence codings</a></li>
     </ul>
   </form>
+
+<form id="set-favourite" class="btn-group"
+   action=""
+   data-id-field="[name=ids]" data-table="#all-codingjobs" data-require-selection="1">
+  <input type="hidden" name="favaction" value="{{ favaction }}">
+    <input type="hidden" name="ids" />
+
+  <input type="submit" id="favourite" class="btn btn-default"
+value="{% if favaction == 'setfav' %}Activate Job(s){% else %}Archive Job(s){% endif %}" />
+  </form>
+
 
   <!-- Set inputfield 'submit' when clicking on one of the dropdown options,
        according to their 'name' attribute. -->
@@ -56,10 +68,18 @@
  {% if added %}
     <div class="alert alert-success">
       {% for job in added %}
-      Created job: <a href='{% url "coding job-details" context.id job.id %}'>{{job.id}} : {{job}}</a><br/> 
+      Created job: <a href='{% url "coding job-details" context.id job.id %}'>{{job.id}} : {{job}}</a><br/>
       {% endfor %}
     </div>
  {% endif %}
+
+
+<ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
+  <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "coding job-list" project.id "favourites"%}'>
+    <i class="glyphicon glyphicon-star"></i>Active Jobs
+  </a></li>
+  <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "coding job-list" project.id "archived"%}'>Archived Jobs</a></li>
+</ul>
 
 <div id="all-codingjobs">
  {{ table|safe }}
@@ -67,6 +87,7 @@
 
 <script type="text/javascript">
   exportids($("#export-codingjobs"));
+  exportids($("#set-favourite"));
 </script>
 
 {% endblock %}

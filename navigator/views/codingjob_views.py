@@ -45,10 +45,32 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
     resource = CodingJobViewSet
     rowlink = './{id}'
 
+
+
+    def get(self, *args, **kargs):
+        favaction = self.request.GET.get('favaction')
+        if (favaction is not None):
+            ids = {int(id) for id in self.request.GET.getlist('ids')}
+            CodingJob.objects.filter(pk__in=ids).update(archived=(favaction != "setfav"))
+
+        return super(CodingJobListView, self).get(*args, **kargs)
+
+    @property
+    def what(self):
+        return self.kwargs.get("what", "favourites")
+
+    @classmethod
+    def get_url_patterns(cls):
+        patterns = list(super(CodingJobListView, cls).get_url_patterns())
+        patterns.append(patterns[0][:-1] + "(?P<what>|favourites|archived)?/?$")
+        return patterns
+
     def get_datatable(self, **kwargs):
         url_kwargs = dict(project=self.project.id)
         return super(CodingJobListView, self).get_datatable(url_kwargs=url_kwargs, **kwargs)
+
     def filter_table(self, table):
+        table = table.filter(archived=(self.what != "favourites"))
         return table.hide("project", "articleset", "favourite")
 
 
@@ -59,7 +81,8 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
         added = session_pop(self.request.session, "added_codingjob")
         if added:
             added = [CodingJob.objects.get(pk=i) for i in added]
-
+        what = self.what
+        favaction = "unsetfav" if what == 'favourites' else "setfav"
         ctx.update(**locals())
         return ctx
 
@@ -131,7 +154,8 @@ class CodingJobExportSelectView(ProjectFormView):
         kwargs.update(project=self.project)
 
         if "data" in kwargs and "codingjobs" not in kwargs["data"]:
-            all_jobs = self.project.codingjob_set.all().values_list("id", flat=True)
+            archived = kwargs['data']['what'] != 'favourites'
+            all_jobs = self.project.codingjob_set.filter(archived=archived).values_list("id", flat=True)
             kwargs["data"] = kwargs["data"].copy()
             kwargs["data"].setlist("codingjobs", all_jobs)
 

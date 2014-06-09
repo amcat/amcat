@@ -39,7 +39,7 @@ from amcat.models.user import LITTER_USER_ID
 from amcat.models.project import LITTER_PROJECT_ID
 
 import logging; log = logging.getLogger(__name__)
-            
+
 class CodingJob(AmcatModel):
     """
     Model class for table codingjobs. A Coding Job is a container of sets of articles
@@ -60,7 +60,9 @@ class CodingJob(AmcatModel):
 
     coder = models.ForeignKey(User)
     articleset = models.ForeignKey("amcat.ArticleSet", related_name="codingjob_set")
-    
+
+    archived = models.BooleanField(default=False)
+
     class Meta():
         db_table = 'codingjobs'
         app_label = 'amcat'
@@ -82,7 +84,7 @@ class CodingJob(AmcatModel):
     def get_coded_article(self, article):
         # probably want to use a cached value if it exists?
         return self.coded_articles.get(article=article)
-                
+
 @receiver(post_save, sender=CodingJob)
 def create_coded_articles(sender, instance=None, created=None, **kwargs):
     """
@@ -105,11 +107,11 @@ class SchemaFieldColumn(table3.ObjectColumn):
         self.field = field
     def getCell(self, coding):
         return coding.get_value(field=self.field)
-    
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
 class TestCodingJob(amcattest.AmCATTestCase):
@@ -128,4 +130,3 @@ class TestCodingJob(amcattest.AmCATTestCase):
     def test_post_create(self):
         job = amcattest.create_test_job(10)
         self.assertEqual(CodedArticle.objects.filter(codingjob=job).count(), 10)
-
