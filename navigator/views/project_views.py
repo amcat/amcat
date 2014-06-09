@@ -39,7 +39,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
             ids = {int(id) for id in self.request.GET.getlist('ids')}
             favs = self.request.user.get_profile().favourite_projects
             favids = set(favs.values_list("pk", flat=True))
-            if favaction == "Set":
+            if favaction == "setfav":
                 ids -= favids
                 func = favs.add
             else:
@@ -53,7 +53,7 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super(ProjectListView, self).get_context_data(**kwargs)
         context["what"] = self.kwargs.get('what', 'favourites')
-        context["favaction"] = "Unset" if context['what'] == 'favourites' else "Set"
+        context["favaction"] = "unsetfav" if context['what'] == 'favourites' else "setfav"
         context["main_active"] = 'Projects'
         return context
 
@@ -63,19 +63,24 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     def filter_table(self, table):
         table = table.rowlink_reverse('article set-list', args=['{id}'])
         what = self.kwargs.get('what', 'favourites')
-        if what == 'favourites':
-            # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
-            # (or use api request.user to add only current user's favourite status). But good enough for now...
-            ids = self.request.user.get_profile().favourite_projects.all().values_list("id")
-            ids = [id for (id, ) in ids]
-            if ids:
-                return table.filter(pk=ids, active=True)
-            else:
-                return table.filter(name="This is a really stupid way to force an empty table (so sue me!)")
-        elif what == "own":
-            return table.filter(projectrole__user=self.request.user, active=True)
-        elif what == "all":
+        if what == 'all':
             return table
+
+        # ugly solution - get project ids that are favourite and use that to filter, otherwise would have to add many to many to api?
+        # (or use api request.user to add only current user's favourite status). But good enough for now...
+        table = table.hide('favourite', 'active')
+        favids = self.request.user.get_profile().favourite_projects.all()
+        favids = favids.values_list("id", flat=True)
+        if what == 'favourites':
+            ids = favids
+        else:
+            ids = Project.objects.filter(projectrole__user=self.request.user).exclude(pk__in=favids)
+            ids = ids.values_list("id", flat=True)
+
+        if ids:
+            return table.filter(pk=ids, active=True)
+        else:
+            return table.filter(name="This is a really stupid way to force an empty table (so sue me!)")
 
 
 

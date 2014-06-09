@@ -16,7 +16,8 @@
   <input type="hidden" name="favaction" value="{{ favaction }}">
     <input type="hidden" name="ids" />
 
-  <input type="submit" id="favourite" class="btn btn-default" value="{{ favaction_label }}" />
+  <input type="submit" id="favourite" class="btn btn-default"
+value="{% if favaction == 'setfav' %}Activate Set(s){% else %}Archive Set(s){% endif %}" />
   </form>
 {% endif %}
 {% endblock actions %}
@@ -31,7 +32,7 @@
 {% endif %}
 <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
   <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "article set-list" project.id "favourites"%}'>
-    <i class="glyphicon glyphicon-star"></i>Favourite Sets
+    <i class="glyphicon glyphicon-star"></i>Active Sets
   </a></li>
   <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "archived"%}'>Archived Sets</a></li>
   <li {% if what == 'coding' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "coding"%}'>Coding Job Sets</a></li>

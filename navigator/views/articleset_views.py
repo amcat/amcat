@@ -97,10 +97,8 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
             no_favourites = True
 
         if what == 'favourites':
-            favaction_label = "Archive selected sets"
             favaction = "unsetfav"
         else:
-            favaction_label = "Make selected sets favourite"
             favaction ="setfav"
 
         context.update(locals())
