@@ -1,10 +1,23 @@
 {% extends "project/base.html" %}
+{% load static %}
+
+{% block javascript %}
+    <script type="text/javascript" src="{% static 'js/jquery.exportids.js' %}"></script>
+{% endblock %}
 
 {% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
 
 {% block actions %}
 {% if can_edit %}
 <a class="btn btn-primary"  href="{% url 'article set-upload-list' project.id %}" ><i class="glyphicon glyphicon-upload"></i> Upload articles</a>
+<form id="set-favourite" class="btn-group"
+   action=""
+   data-id-field="[name=ids]" data-table="#datatable" data-require-selection="1">
+  <input type="hidden" name="favaction" value="{{ favaction }}">
+    <input type="hidden" name="ids" />
+
+  <input type="submit" id="favourite" class="btn btn-default" value="{{ favaction_label }}" />
+  </form>
 {% endif %}
 {% endblock actions %}
 
@@ -20,26 +33,30 @@
   <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "article set-list" project.id "favourites"%}'>
     <i class="glyphicon glyphicon-star"></i>Favourite Sets
   </a></li>
-  <li {% if what == 'own' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "own"%}'>Own Sets</a></li>
-  <li {% if what == 'linked' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "linked"%}'>Linked Sets</a></li>
+  <li {% if what == 'archived' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "archived"%}'>Archived Sets</a></li>
   <li {% if what == 'coding' %}class="active"{% endif %}><a  href='{% url "article set-list" project.id "coding"%}'>Coding Job Sets</a></li>
 </ul>
 
+<div id="datatable">
 {{ table }}
+</div>
 
 {% if no_sets %}
-<div class="alert alert-success">
+<div class="alert alert-info">
   This project is empty! Use the 'upload articles' button above to add some articles to this
   project, or navigate to an article set in another project and select
   'use in another project' to link that set to this project.
 </div>
-
 {% elif no_favourites %}
-<div class="alert alert-success">
-  No favourite sets yet? Use the star icon to add some sets to this
-  list!<br/> (now showing all sets)
+<div class="alert alert-info">
+  No favourite sets yet? Use the 'set favourites' button to add sets to the favourite list!
 </div>
 {% endif %}
 
 </div>
+
+
+<script type="text/javascript">
+  exportids($("#set-favourite"));
+</script>
 {% endblock %}

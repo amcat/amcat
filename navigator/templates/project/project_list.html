@@ -1,7 +1,26 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}{{ what }} projects {% endblock %}
 
+{% block javascript %}
+    <script type="text/javascript" src="{% static 'js/jquery.exportids.js' %}"></script>
+{% endblock %}
+
+
+{% block actions %}
+  <a href="{% url "projects-add" %}" class="btn btn-primary"><i class="icon icon-plus"></i>Create Project</a>
+
+<form id="set-favourite" class="btn-group"
+   action=""
+   data-id-field="[name=ids]" data-table="#project-table" data-require-selection="1">
+  <input type="hidden" name="favaction" value="{{ favaction }}">
+    <input type="hidden" name="ids" />
+
+  <input type="submit" id="favourite" class="btn btn-default" value="{{ favaction }} favourite" />
+  </form>
+
+{% endblock %}
 
 
 {% block content %}
@@ -14,9 +33,13 @@
   <li {% if what == 'all' %}class="active"{% endif %}><a  href='{% url "projects" "all"%}'>All Projects</a></li>
 </ul>
 
+<div id="project-table">
 {{ table|safe }}
-{% endblock %}
+</div>
 
-{% block actions %}
-  <a href="{% url "projects-add" %}" class="btn btn-primary"><i class="icon icon-plus"></i>Create Project</a>
+
+<script type="text/javascript">
+  exportids($("#set-favourite"));
+</script>
+
 {% endblock %}

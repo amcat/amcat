@@ -21,6 +21,7 @@ import json
 import datetime
 
 from django.core.urlresolvers import reverse
+from django.db.models import Q
 from api.rest.resources import PluginResource
 
 from amcat.models import Plugin
@@ -42,7 +43,6 @@ from django.views.generic.list import ListView
 from navigator.views.project_views import ProjectDetailsView
 UPLOAD_PLUGIN_TYPE = 1
 
-from api.rest.datatable import FavouriteDatatable
 from django.utils.safestring import SafeText
 from django.template.defaultfilters import escape
 
@@ -53,32 +53,58 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
     context_category = 'Articles'
     rowlink = './{id}'
 
+
+
+    def get(self, *args, **kargs):
+        favaction = self.request.GET.get('favaction')
+        if (favaction is not None):
+            ids = {int(id) for id in self.request.GET.getlist('ids')}
+            favs = self.project.favourite_articlesets
+            favids = set(favs.values_list("pk", flat=True))
+            if favaction == "setfav":
+                ids -= favids
+                func = favs.add
+            else:
+                ids &= favids
+                func = favs.remove
+            if ids:
+                [func(id) for id in ids]
+
+        return super(ArticleSetListView, self).get(*args, **kargs)
+
     @classmethod
     def get_url_patterns(cls):
         patterns = list(super(ArticleSetListView, cls).get_url_patterns())
-        patterns.append(patterns[0][:-1] + "(?P<what>|favourites|own|linked|coding)?/?$")
+        patterns.append(patterns[0][:-1] + "(?P<what>|favourites|archived|coding)?/?$")
         return patterns
 
     @property
     def what(self):
-        return self.kwargs.get("what", "favourites")
+        default = "favourites" if self.project.favourite_articlesets.exists() else "archived"
+        return self.kwargs.get("what", default)
 
     def get_context_data(self, **kwargs):
         context = super(ArticleSetListView, self).get_context_data(**kwargs)
         tables = [("favourite", '<i class="icon-star"></i> <b>Favourites</b>'),
-                  ("own", "Own Sets"),
-                  ("linked", "Linked Sets"),
+                  ("archived", "Archived Sets"),
                   ("codingjob", "Coding Job Sets"),
                   ]
+        what = self.what
+        if not ArticleSet.objects.filter(Q(projects_set=self.project)
+                                         | Q(project=self.project)).exists():
+            no_sets = True
+        if not self.project.favourite_articlesets.exists():
+            no_favourites = True
+
+        if what == 'favourites':
+            favaction_label = "Archive selected sets"
+            favaction = "unsetfav"
+        else:
+            favaction_label = "Make selected sets favourite"
+            favaction ="setfav"
+
         context.update(locals())
-        context.update({"what" : self.what})
         return context
-
-    def filter_linked_table(self, table):
-        return table.filter(projects_set=self.project)
-
-    def filter_own_table(self, table):
-        return table.filter(project=self.project, codingjob_set__id='null')
 
     def get_resource(self):
         if self.what == "favourites":
@@ -89,19 +115,23 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
             return ArticleSetViewSet
 
     def filter_table(self, table):
-        return getattr(self, "filter_{}_table".format(self.what), lambda t : t)(table)
+        print(type(table))
+        if self.what == 'archived':
+            sets = ArticleSet.objects.filter(Q(projects_set=self.project) | Q(project=self.project))
+            sets = sets.filter(codingjob_set__isnull=True)
+            sets = sets.exclude(id__in=self.project.favourite_articlesets.all())
 
+            sets = list(sets.values_list("pk", flat=True))
+            table = table.filter(pk__in=sets)
 
-    def get_datatable(self):
-        """Create the Datatable object"""
-        url = reverse('article set-details', args=[self.project.id, 123])
-        table = FavouriteDatatable(resource=self.get_resource(), label="article set",
-                                   set_url=url + "?star=1", unset_url=url+"?star=0",
-                                   url_kwargs={"project" : self.project.id})
         table = table.rowlink_reverse('article set-details', args=[self.project.id, '{id}'])
         table = table.hide("project")
-        table = self.filter_table(table)
+        table = table.hide("favourite")
         return table
+
+    def get_datatable_kwargs(self):
+        return {"url_kwargs": {"project" : self.project.id}}
+
 
 
 
