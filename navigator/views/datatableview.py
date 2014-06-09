@@ -28,14 +28,18 @@ from api.rest.datatable import Datatable
 
 
 class DatatableMixin(ContextMixin):
+
+    def get_datatable_kwargs(self):
+        return {}
+
     def get_context_data(self, **kwargs):
         context = super(DatatableMixin, self).get_context_data(**kwargs)
         context["model"] = getattr(self, "model", None)
         context["model_name"] = self.model.__name__ if hasattr(self, "model") else None
-        context["table"] = self.get_datatable()
+        context["table"] = self.get_datatable(**self.get_datatable_kwargs())
         return context
 
-    
+
     def get_datatable(self, **kwargs):
         """Create the Datatable object"""
         table = Datatable(self.get_resource(), rowlink=self.get_rowlink(), **kwargs)
@@ -53,7 +57,7 @@ class DatatableMixin(ContextMixin):
     def filter_table(self, table):
         """Perform any needed postprocessing on the table and return it"""
         return table
-    
+
     def get_rowlink(self):
         try:
             return self.rowlink
@@ -64,7 +68,7 @@ class DatatableMixin(ContextMixin):
                 return None
             else:
                 return reverse(urlname, args=[999]).replace("999", "{id}")
-            
+
         return getattr(self, "rowlink", None)
 
 class DatatableView(TemplateView, DatatableMixin):
@@ -72,7 +76,7 @@ class DatatableView(TemplateView, DatatableMixin):
 
 class DatatableCreateView(CreateView, DatatableMixin):
     template_name = "datatable.html"
-    
+
     def get_form_class(self):
         form_class = getattr(self, "form_class", None)
         if form_class is None:
@@ -86,4 +90,3 @@ class DatatableCreateView(CreateView, DatatableMixin):
             return super(DatatableCreateView, self).get_success_url()
         else:
             return reverse(urlname, args=[self.object.pk])
-        
