@@ -16,7 +16,7 @@ class ProgressMonitor(object):
 
     def do_update(self):
         self.percent = int(100. * self.worked / self.total)
-        log.info("[{self.percent}%] {self.worked} / {self.total} {self.message}".format(**locals()))
+        log.info("[{self.percent}%] {self.worked} / {self.total} {self.message!r}".format(**locals()))
         for listener in self.listeners:
             listener(self)
 
@@ -29,7 +29,7 @@ class ProgressMonitor(object):
 class NullMonitor(ProgressMonitor):
     def update(self, *args, **kargs):
         pass
-        
+
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
     from django.conf import settings
@@ -42,4 +42,3 @@ if __name__ == '__main__':
     p.update(15, "nog steeds")
     p.remove_listener(listen)
     p.update(10, 'Ja')
-    
