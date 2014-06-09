@@ -37,7 +37,7 @@ _DPROP = "mDataProp_";
 function __redirect(format){
     return function(){
         var url = $(this.dom.table).parents(".amcat-table-wrapper").data("url");
-        window.location = url + "&format=" + format;
+        window.location = url + "&format=" + format + "&page_size=999999";
     }
 }
 
