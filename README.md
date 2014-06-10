@@ -47,12 +47,15 @@ $ createdb amcat
 AmCAT uses elasticsearch for searching articles. Since we use a custom similarity to provide hit counts instead of relevance, this needs to be installed 'by hand'. You can probably skip this and rely on a pre-packaged elasticsearch if you don't care about hit counts, although you still need to install the elasticsearch plugins.
 
 First, install oracle java (from http://www.webupd8.org/2012/01/install-oracle-java-jdk-7-in-ubuntu-via.html)
+For java 8 visit: http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html
 
 ```sh
 $ sudo add-apt-repository ppa:webupd8team/java
 $ sudo apt-get update
-$ sudo apt-get install oracle-java7-installer
+$ sudo apt-get install oracle-java7-installer #for java 7
+$ sudo apt-get install oracle-java8-installer #for java 8
 ```
+
 
 Next, download and extract elasticsearch and our custom hitcount jar, and install the required plugins:
 
@@ -134,7 +137,7 @@ python -m amcat.manage runserver
 Finally, to use the query screen you need to start a celery worker. In a new terminal, type:
 
 ```sh
-celery -A amcat.amcatcelery worker -l info -Q amcat
+DJANGO_SETTINGS_MODULE=settings celery -A amcat.amcatcelery worker -l info -Q amcat
 ```
 
 (if you are using a virtual environment, make sure to `activate` that first)
