@@ -35,9 +35,22 @@ _SORTDIR = "sSortDir_";
 _DPROP = "mDataProp_";
 
 function export_clicked(){
+    var table = this.table.DataTable();
+    var pks = [];
+
+    if ($(".active", this.table).length !== 0){
+        // Get data from ID column
+        pks = $.map(table.rows(".active").data(), function(o){ return o.id; });
+    }
+
     var url = this.table.parents(".amcat-table-wrapper").data("url");
     url += "&format=" + this.format.val();
     url += "&page_size=" + this.page_size.val();
+
+    if(pks.length){
+        url += "&pk=" + pks.join("&pk=");
+    }
+
     window.location = url;
     this.modal.modal("hide");
 }
@@ -66,7 +79,7 @@ function open_export_dialog(event){
         table: $(this.dom.table)
     };
 
-    $("[name=export]", modal).click(export_clicked.bind(data));
+    $("[name=export]", modal).unbind().click(export_clicked.bind(data));
 
     modal.modal();
 }
