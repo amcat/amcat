@@ -118,15 +118,21 @@ class BZK(UploadScript):
             elif tag.tag == "i":
                 bits = tag.text_content().split()
                 if "-" in bits[-1]:
-                    article.props.date = readDate(bits[-1])
+                    article.props.date = self.getdate(bits[-1])
                     article.props.medium = self.get_medium(" ".join(bits[:-1]))
                 elif bits[-1].isdigit() and bits[-3].isdigit():
-                    article.props.date = readDate(" ".join(bits[-3:]))
+                    article.props.date = self.getdate(" ".join(bits[-3:]))
                     article.props.medium = self.get_medium(" ".join(bits[:-3]))
                 else:
                     article.props.medium = self.get_medium(" ".join(bits))
                     article.props.date = None
         return article
+
+    def getdate(self, string):
+        try:
+            return readDate(string)
+        except Exception:
+            pass
 
     def get_medium(self, text):
         if not text:
