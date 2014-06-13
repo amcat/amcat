@@ -739,7 +739,7 @@ annotator = (function(self){
             if ($.map($.values(codings[i].values), function(cv){
                 return (!self.is_empty_codingvalue(cv)) || null;
             }).length){
-                return "A non-empty coding with no sentence was found.";
+                return "Cannot save data.1) Make sure all coded sentences have a sentence number.2) Make sure no codings are left empty if your project does not allow this.";
             }
         }
 
@@ -893,7 +893,7 @@ annotator = (function(self){
 
     self._select = function _select(row){
         if (row.length === 0){
-            self.loading_dialog.text("Last article reached, coding done!").dialog("open");
+            self.loading_dialog.text("Last article finished, coding done!").dialog("open");
             return;
         }
 
