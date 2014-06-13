@@ -739,7 +739,7 @@ annotator = (function(self){
             if ($.map($.values(codings[i].values), function(cv){
                 return (!self.is_empty_codingvalue(cv)) || null;
             }).length){
-                return "Cannot save data.1) Make sure all coded sentences have a sentence number.2) Make sure no codings are left empty if your project does not allow this.";
+                return "Cannot save data.\n 1) Make sure all coded sentences have a sentence number.2) Make sure no codings are left empty if your project does not allow this.";
             }
         }
 
