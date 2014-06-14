@@ -301,6 +301,10 @@ amcat.datatables.load_metadatas = function(callback){
     var ctx;
 
     for (var fieldname in this.metadata.models){
+        if (!amcat.datatables.is_visible_column(this.datatables_options, fieldname)){
+            continue;
+        }
+
         ctx = $.extend({}, callback, {
             fieldname : fieldname
         });
@@ -342,6 +346,28 @@ amcat.datatables.get_load_labels = function(fieldname, objects, label_objects){
 };
 
 /*
+ * Returns array of visible column names.
+ *
+ * @param datatables_options: options of datatables containing `aoColumns`
+ * @return: array of strings
+ */
+amcat.datatables.get_visible_columns = function(datatables_options){
+    return  $.map(datatables_options.aoColumns, function(el){
+        return el.mData;
+    });
+};
+
+/*
+ * Returns whether column `fieldname` is visible.
+ *
+ * @param datatables_options: options of datatables containing `aoColumns`
+ * @param fieldname: fieldname to determine visibility for
+ */
+amcat.datatables.is_visible_column = function(datatables_options, fieldname){
+    return $.inArray(fieldname, amcat.datatables.get_visible_columns(datatables_options)) != -1;
+};
+
+/*
  * Fetch labels if necessary. Returns true if loading labels was needed, false
  * if is was not.
  *
@@ -352,6 +378,10 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
 
     var needed_labels, ctx, url;
     for (var fieldname in this.metadata.models){
+        if (!amcat.datatables.is_visible_column(this.datatables_options, fieldname)){
+            continue;
+        }
+
         needed_labels = amcat.datatables.get_load_labels(
             fieldname, callback.args[0].results,
             this.objects[fieldname]
@@ -424,6 +454,9 @@ amcat.datatables.table_objects_received = function(data, textStatus, jqXHR){
     } else {
         // Render labels from cache
         for (var fieldname in this.metadata.models){
+            if (!amcat.datatables.is_visible_column(this.datatables_options, fieldname)){
+                continue;
+            }
             amcat.datatables.put_labels(this, data.results, fieldname);
         }
     }
