@@ -28,9 +28,7 @@ import zipfile
 
 log = logging.getLogger(__name__)
 
-from django.db import transaction
 from django import forms
-from django.core.files import File
 from django.forms.widgets import HiddenInput
 
 from amcat.scripts import script
@@ -219,7 +217,7 @@ amcatlogging.debug_module("amcat.scripts.article_upload.upload")
 
 class TestUpload(amcattest.AmCATTestCase):
     def todo_test_zip_file(self):
-        from tempfile import NamedTemporaryFile, mkstemp
+        from tempfile import NamedTemporaryFile
         from django.core.files import File
         # does _get_units perform normally
         with NamedTemporaryFile(prefix=u"upload_test", suffix=".txt") as f:

@@ -53,11 +53,9 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
     context_category = 'Articles'
     rowlink = './{id}'
 
-
-
     def get(self, *args, **kargs):
         favaction = self.request.GET.get('favaction')
-        if (favaction is not None):
+        if favaction is not None:
             ids = {int(id) for id in self.request.GET.getlist('ids')}
             favs = self.project.favourite_articlesets
             favids = set(favs.values_list("pk", flat=True))
@@ -109,7 +107,6 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
             return ArticleSetViewSet
 
     def filter_table(self, table):
-        print(type(table))
         if self.what == 'archived':
             sets = ArticleSet.objects.filter(Q(projects_set=self.project) | Q(project=self.project))
             sets = sets.filter(codingjob_set__isnull=True)
@@ -126,9 +123,6 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
     def get_datatable_kwargs(self):
         return {"url_kwargs": {"project" : self.project.id}}
 
-
-
-
 class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
     parent = ArticleSetListView
     resource = SearchResource
@@ -143,7 +137,7 @@ class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbM
 
         star = self.request.GET.get("star")
         starred = self.project.favourite_articlesets.filter(pk=self.object.id).exists()
-        if (star is not None):
+        if star is not None:
             if bool(int(star)) != starred:
                 starred = not starred
                 if starred:
@@ -195,8 +189,6 @@ class ArticleSetSampleView(ProjectScriptView):
 class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
     fields = ['project', 'name', 'provenance']
-
-
 
 class ArticleSetUploadListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     parent = ArticleSetListView
@@ -259,9 +251,9 @@ class ArticleSetDeleteView(ProjectActionRedirectView):
         aset.project = Project.objects.get(id=LITTER_PROJECT_ID)
         aset.indexed = False
         aset.provenance = json.dumps({
-            "provenance" : aset.provenance,
-            "project" : project.id,
-            "deleted_on" : datetime.datetime.now().isoformat()
+            "provenance": aset.provenance,
+            "project": project.id,
+            "deleted_on": datetime.datetime.now().isoformat()
         })
         aset.save()
         project.favourite_articlesets.remove(aset)

@@ -43,7 +43,6 @@ class WebScriptHandler(ScriptHandler):
         result = {"content": response.content,
                   "status": response.status_code,
                   "headers": response.items()}
-        print(result)
         return result
 
     def get_response(self):

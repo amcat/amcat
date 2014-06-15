@@ -96,8 +96,11 @@ class Script(object):
             raise ValueError("Invalid options form type: {0}".format(self.options_form))
         if not isinstance(options, (dict, QueryDict, MergeDict)):
             options = kargs
+
         # specify options as file as well, django will pick it from the right place
         # (why does django distinguish between POST and FILES as both are dicts...?)
+        #
+        # @"django will pick it from the right place": no it doesn't....?
         return self.options_form(data=options, files=options)
 
     @classmethod
