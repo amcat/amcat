@@ -16,32 +16,35 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import tempfile
 from urllib import urlencode
+import base64
+from django.core.files.uploadedfile import SimpleUploadedFile
+
+from django.utils.datastructures import MultiValueDict
 from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
-import base64
-
 from django.views.generic.edit import FormMixin, ProcessFormView
 from django.views.generic.base import TemplateResponseMixin
-
 from django.http import HttpResponse
 from django import forms
-from amcat.models import Task
 from django.db import models
 from django.http import QueryDict
+
 from amcat.tools.table import table3
 from amcat.tools.progress import ProgressMonitor
 from api.webscripts.webscript import CeleryProgressUpdater
-from amcat.tools import classtools
-
 from amcat.models.task import TaskHandler
 
-class ScriptHandler(TaskHandler):
 
+class ScriptHandler(TaskHandler):
     def get_form_kwargs(self):
         """
-        Get the kwargs to pass to the form for this script.
-        By default, returns the task arguments, with 'data' list entries converted into a querydict
+        Get the kwargs to pass to the form for this script. By default, returns the task
+        arguments.
+
+        - 'data' list entries converted into a querydict.
+        - 'files' list entries converted to File objects
         """
         kwargs = self.task.arguments
         if 'data' in kwargs:
@@ -52,10 +55,25 @@ class ScriptHandler(TaskHandler):
                 else:
                     d[k] = v
             kwargs['data'] = d
+
+        # Convert file dictionaries (as supplied by get_temporary_file_dict) to
+        # SimpleUploadedFile objects which Django understands.
+        if 'files' in kwargs:
+            files = MultiValueDict(kwargs['files'])
+            for filedict_list in files.viewvalues():
+                for i, fdict in enumerate(filedict_list):
+                    if isinstance(fdict, dict):
+                        fdict = dict(fdict)
+                        fdict["content"] = open(fdict["path"], "rb").read()
+                        filedict_list[i] = SimpleUploadedFile.from_dict(fdict)
+            kwargs['files'] = files
+
         return kwargs
 
     def get_script(self):
         script_cls = self.task.get_class()
+        print(self.get_form_kwargs())
+        print(script_cls.options_form)
         form = script_cls.options_form(**self.get_form_kwargs())
         return script_cls(form)
 
@@ -69,11 +87,11 @@ class ScriptHandler(TaskHandler):
         return result
 
     def get_redirect(self):
-        "Default: provide redirect to download location"
+        """Default: provide redirect to download location"""
         return reverse("api-v4-taskresult") + "/" + self.task.uuid, "Download results"
 
     def get_response(self):
-        "Default: instantiate the script and ask it to provide response"
+        """Default: instantiate the script and ask it to provide response"""
         result = self.task._get_raw_result()
         if isinstance(result, dict) and result.get('type') == 'download':
             data = base64.b64decode(result['data'])
@@ -85,6 +103,22 @@ class ScriptHandler(TaskHandler):
             response = HttpResponse(result, content_type='application/json', status=200)
             return response
 
+def get_temporary_file_dict(fo):
+    """
+    Creates a non-deleting, named, temporary file for `fo`.
+
+    @type fo: method .chunks() should return list of list of bytes
+    @rtype: string
+    """
+    with tempfile.NamedTemporaryFile(delete=False) as dest:
+        for chunk in fo.chunks():
+            dest.write(chunk)
+
+        return {
+            "filename": fo.name,
+            "path": dest.name,
+            "content_type": fo.content_type
+        }
 
 class ScriptMixin(FormMixin):
     script = None # plugin/script to base the view on
@@ -96,7 +130,7 @@ class ScriptMixin(FormMixin):
         return self.get_script().options_form
 
     def get_initial(self):
-        initial = {k.replace("_id", "")  : v for (k,v) in self.kwargs.iteritems()}
+        initial = {k.replace("_id", ""): v for (k, v) in self.kwargs.iteritems()}
         initial.update(super(ScriptMixin, self).get_initial())
         return initial
 
@@ -106,14 +140,22 @@ class ScriptMixin(FormMixin):
         @param project: the context project
         @param handler: the handler (see amcat.models.Task)
         """
-        # get kwargs and deal with querydict lists
-        # (which json truncates since it thinks it's a dict)
+        # Get kwargs and deal with querydict lists (which json truncates since
+        # it thinks it's a dict)
         kwargs = self.get_form_kwargs()
         if isinstance(kwargs.get('data'), QueryDict):
             kwargs['data'] = dict(kwargs['data'].iterlists())
-        t = handler.call(target_class=self.get_script(), arguments=kwargs,
-                         project=project, user=self.request.user)
-        url = reverse("task-details", args=[project.id, t.task.id])
+
+        # Convert file objects to temporary filenames
+        if isinstance(kwargs.get('files'), MultiValueDict):
+            for file_object_list in kwargs['files'].viewvalues():
+                for i, fo in enumerate(file_object_list):
+                    file_object_list[i] = get_temporary_file_dict(fo)
+            kwargs['files'] = dict(kwargs['files'])
+
+        task = handler.call(target_class=self.get_script(), arguments=kwargs,
+                            project=project, user=self.request.user)
+        url = reverse("task-details", args=[project.id, task.task.id])
         next = urlencode(dict(next=self.request.get_full_path()))
         return redirect("{url}?{next}".format(**locals()), permanent=False)
 
