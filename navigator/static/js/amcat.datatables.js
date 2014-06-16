@@ -301,9 +301,9 @@ amcat.datatables.load_metadatas = function(callback){
     var ctx;
 
     for (var fieldname in this.metadata.models){
-        if (!amcat.datatables.is_visible_column(this.datatables_options, fieldname)){
-            continue;
-        }
+        //if (!amcat.datatables.is_visible_column(this.datatables_options, fieldname)){
+        //    continue;
+        //}
 
         ctx = $.extend({}, callback, {
             fieldname : fieldname
