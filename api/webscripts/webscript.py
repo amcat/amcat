@@ -30,7 +30,6 @@ from django.http import HttpResponse
 from amcat.scripts.forms import SelectionForm
 from amcat.forms import InvalidFormException
 from django.contrib.auth.models import User
-from amcat.amcatcelery import app
 from amcat.tools.progress import ProgressMonitor
 from amcat.tools import classtools
 from django.http import QueryDict
@@ -49,26 +48,6 @@ mimetypeDict = { #todo: make objects of these
      'spss':{'extension':'sav', 'mime':'application/octet-stream', 'download':True},
      'datatables':{'extension':'json', 'mime':'text/plain', 'download':False},
 }
-
-class CeleryProgressUpdater(object):
-    def __init__(self, task_id):
-        self.task_id = task_id
-    def update(self, monitor):
-        app.backend.store_result(self.task_id,
-                                 {"completed": monitor.percent, "message": monitor.message},
-                                 IN_PROGRESS)
-
-@app.task(bind=True)
-def webscript_task(self, cls, **kwargs):
-    task_id = self.request.id
-    # TODO: Dit moet weg, stub code om status door te geven
-    if isinstance(cls, (str, unicode)):
-        cls = classtools.import_attribute(cls)
-    webscript = cls(**kwargs)
-    webscript.progress_monitor.add_listener(CeleryProgressUpdater(task_id).update)
-    return webscript.run()
-
-
 
 
 class WebScript(object):
@@ -136,10 +115,6 @@ class WebScript(object):
                 and ((not ws.is_edit) or can_edit)):
                 yield ws.__name__, ws.name, ws.is_download
 
-    def delay(self):
-        return webscript_task.delay(classtools.get_qualified_name(self.__class__),
-                                    project=self.project.id, user=self.user.id, data=self.data, **self.kwargs)
-
     def run(self):
         raise NotImplementedError()
 
@@ -201,7 +176,6 @@ class WebScript(object):
             #cnf = {'template':self.output_template} if self.output == 'html' else None
             mimetype = mimetypeDict[self.output]
             out = cls(outputFormData).run(data)
-
             response = HttpResponse(mimetype=mimetype['mime'])
             response.write(out)
             if filename or mimetype['download'] == True:

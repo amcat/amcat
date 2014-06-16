@@ -33,9 +33,18 @@ from django.http import QueryDict
 
 from amcat.tools.table import table3
 from amcat.tools.progress import ProgressMonitor
-from api.webscripts.webscript import CeleryProgressUpdater
-from amcat.models.task import TaskHandler
+from amcat.models.task import TaskHandler, IN_PROGRESS
+from amcat.amcatcelery import app
 
+class CeleryProgressUpdater(object):
+    def __init__(self, task_id):
+        self.task_id = task_id
+    def update(self, monitor):
+        app.backend.store_result(
+            self.task_id,
+            {"completed": monitor.percent, "message": monitor.message},
+            IN_PROGRESS
+        )
 
 class ScriptHandler(TaskHandler):
     def get_form_kwargs(self):
