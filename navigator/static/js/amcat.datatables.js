@@ -381,7 +381,6 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
         if (!amcat.datatables.is_visible_column(this.datatables_options, fieldname)){
             continue;
         }
-
         needed_labels = amcat.datatables.get_load_labels(
             fieldname, callback.args[0].results,
             this.objects[fieldname]
