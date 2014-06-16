@@ -1,7 +1,7 @@
 python-dateutil
 python-memcached
 django
-djangorestframework>=2.3.8
+djangorestframework==2.3.8
 django-boolean-sum
 django_compressor
 django_filter
