@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-import json
+import json, re, tempfile
 from amcat.models import Task
 from amcat.tools.classtools import get_qualified_name
 from amcat.tools.djangotoolkit import from_querydict
@@ -40,13 +40,26 @@ class WebScriptHandler(ScriptHandler):
 
     def run_task(self):
         response = super(WebScriptHandler, self).run_task()
-        result = {"content": response.content,
-                  "status": response.status_code,
-                  "headers": response.items()}
+        disp = response.get('Content-Disposition', '')
+        m = re.match('attachment; filename="(.*)"', disp)
+        if m:
+            # note: we don't actually need filename as it is also encoded in headers
+            with tempfile.NamedTemporaryFile(delete=False) as dest:
+                dest.write(response.content)
+            result = {"path": dest.name,
+                      "headers": response.items(),
+                      "status": response.status_code}
+        else:
+            result = {"content": response.content,
+                      "status": response.status_code,
+                      "headers": response.items()}
         return result
 
     def get_response(self):
         raw = self.task._get_raw_result()
+        if 'path' in raw:
+            raw['content'] = open(raw['path']).read()
+
         result = HttpResponse(raw['content'], status=raw['status'])
         for header, val in raw['headers']:
             result[header] = val
