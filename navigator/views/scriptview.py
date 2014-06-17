@@ -55,7 +55,7 @@ class ScriptHandler(TaskHandler):
         - 'data' list entries converted into a querydict.
         - 'files' list entries converted to File objects
         """
-        kwargs = self.task.arguments
+        kwargs = self.task.arguments.copy() # don't modify self.task.arguments['data']
         if 'data' in kwargs:
             d = QueryDict('').copy()
             for k, v in kwargs['data'].iteritems():
@@ -81,9 +81,8 @@ class ScriptHandler(TaskHandler):
 
     def get_script(self):
         script_cls = self.task.get_class()
-        print(self.get_form_kwargs())
-        print(script_cls.options_form)
-        form = script_cls.options_form(**self.get_form_kwargs())
+        kwargs = self.get_form_kwargs()
+        form = script_cls.options_form(**kwargs)
         return script_cls(form)
 
     def run_task(self):
