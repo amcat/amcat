@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-import tempfile
+import tempfile, os
 from urllib import urlencode
 import base64
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -122,11 +122,12 @@ def get_temporary_file_dict(fo):
         for chunk in fo.chunks():
             dest.write(chunk)
 
-        return {
-            "filename": fo.name,
-            "path": dest.name,
-            "content_type": fo.content_type
-        }
+    os.chmod(dest.name, 0644)
+    return {
+        "filename": fo.name,
+        "path": dest.name,
+        "content_type": fo.content_type
+    }
 
 class ScriptMixin(FormMixin):
     script = None # plugin/script to base the view on
