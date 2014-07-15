@@ -1014,15 +1014,12 @@ annotator = (function(self){
 
         var container = (self.codingjob.articleschema === null) ? self.sentence_codings_container : self.article_coding_container;
         container.find("input:visible").first().focus();
-<<<<<<< HEAD
 
         self.log("Done.")
         
-=======
         $.when.apply(undefined, [self.get_schema_field_highlighting("articleschema")]).then(self.highlight_schema_fields);
         $.when.apply(undefined, [self.get_schema_field_highlighting("unitschema")]).then(self.highlight_unit_schema_fields);
 
->>>>>>> refactoring, add shighlighting for sentence codings
     };
 
     self.highlight = function highlight(){
