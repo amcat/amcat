@@ -46,8 +46,6 @@ class CodingSchema(AmcatModel):
     
     name = models.CharField(max_length=75)
     description = models.TextField(null=True)
-    comment = models.TextField(null=True)
-    keywords = models.TextField(null=True)
 
     isarticleschema = models.BooleanField(default=False)
     subsentences = models.BooleanField(default=False, help_text="Allow subsentences to be coded.")
