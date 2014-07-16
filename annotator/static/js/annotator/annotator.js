@@ -413,7 +413,7 @@ annotator = (function(self){
                 .attr("data-keywords", nice_keywords)
                 .attr("data-description", nice_description)
                 .append($("<div>").addClass("col-md-3").append(label))
-                .append($("<div>").addClass("col-md-9").append(widget).append(details));
+                .append($("<div>").addClass("col-md-9").append(widget));
         }));
     };
 
@@ -1071,55 +1071,39 @@ annotator = (function(self){
         return $.getJSON(highlighter_url);
     }
 
+    self.highlight_fields = function(that, highlighting, field_index) {
+        var sentence_id = 0;
+        var keywords = $(that).attr("data-keywords");
+        if (typeof keywords === 'undefined')
+            return;
+        var description = $(that).attr("data-description");
+        $('#coding-details').show()
+        $('#coding-details .keywords > div').html(keywords);
+        $('#coding-details .description > div').html(description);
+        $("*").removeClass("highlighted-variable");
+        $(that).addClass("highlighted-variable");
+        $.each(highlighting, function(pIndex, sentences) {
+            $.each(sentences, function(sIndex, fields) {
+                sentence_id += 1;
+                var yellow = Math.round(fields[field_index] * 255);
+                $("#sentence-{0}".f(sentence_id)).css("background-color", "rgb(255,255,{0})".f(yellow));
+            })
+        })
+    }
+
     self.highlight_unit_schema_fields = function(highlighting) {
         $("#unitcoding-table").find("th")
             .unbind("click")
             .bind("click", function() {
-                var that = this;
-                var field_index = $(this).index() - 1;
-                var sentence_id = 0;
-                var keywords = $(that).attr("data-keywords");
-                if (typeof keywords === 'undefined')
-                    return;
-                var description = $(that).attr("data-description");
-                $('#coding-details .keywords > div').html(keywords);
-                $('#coding-details .description > div').html(description);
-                $(that).closest("table").find("th").css('background-color', '#60A3FF');
-                $(that).css('background-color', '#9FAFD1');
-                $.each(highlighting, function(pIndex, sentences) {
-                    $.each(sentences, function(sIndex, fields) {
-                        sentence_id += 1;
-                        var yellow = Math.round(fields[field_index] * 255);
-                        $("#sentence-{0}".f(sentence_id)).css("background-color", "rgb(255,255,{0})".f(yellow));
-                    })
-                })
+                self.highlight_fields(this, highlighting, $(this).index() - 1);
             })
     }
 
     self.highlight_schema_fields = function(highlighting) {
-        self.article_coding_container.find("tr")
+        self.article_coding_container.find(".row")
             .unbind("click")
             .bind("click", function() {
-                var that = this;
-                var field_index = $(this).index();
-                if (self.state.selected_schema_field == field_index) {
-                    return;
-                }
-                self.state.selected_schema_field = field_index;
-                var keywords = $(that).attr("data-keywords")
-                var description = $(that).attr("data-description")
-                $('#coding-details .keywords > div').html(keywords);
-                $('#coding-details .description > div').html(description);
-                $(that).closest("table").find("tr").css('background-color', 'white');
-                $(that).css('background-color', '#9FAFD1');
-                var sentence_id = 0;
-                $.each(highlighting, function(pIndex, sentences) {
-                    $.each(sentences, function(sIndex, fields) {
-                        sentence_id += 1;
-                        var yellow = Math.round(fields[field_index] * 255);
-                        $("#sentence-{0}".f(sentence_id)).css("background-color", "rgb(255,255,{0})".f(yellow))
-                    })
-                })
+                self.highlight_fields(this, highlighting, $(this).index());
             })
     }
 
