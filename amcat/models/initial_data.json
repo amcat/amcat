@@ -373,6 +373,24 @@
     }
   },
   {
+      "pk": 7,
+      "model": "amcat.plugin",
+      "fields": {
+          "class_name": "amcat.scripts.article_upload.defacto_student.DeFactoStudent",
+          "label": "DeFacto student (html)",
+          "plugin_type": 1
+      }
+  },
+  {
+      "pk": 8,
+      "model": "amcat.plugin",
+      "fields": {
+          "class_name": "amcat.scripts.article_upload.defacto_prof.DeFactoProfessional",
+          "label": "DeFacto professional (rtf)",
+          "plugin_type": 1
+      }
+  },
+  {
     "pk": 1,
     "model": "amcat.codingruleaction",
     "fields": {
