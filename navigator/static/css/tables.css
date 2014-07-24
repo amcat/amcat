@@ -136,3 +136,8 @@ tr.active{
     float:right;
     margin-bottom:5px;
 }
+
+.row-checkbox{
+    position:absolute;
+    left:-20px;
+}

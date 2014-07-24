@@ -57,6 +57,17 @@ _AMCAT_DEFAULT_OPTS = {
     dom: 'T<"clear">lfrtip',
     tableTools: {
         sRowSelect: "os",
+        // Also select checkbox in front of row.
+        fnRowSelected: function(nodes){
+            $.each(nodes, function(i, row){
+                $(row).find(".row-checkbox").prop("checked", true)
+            });
+        },
+        fnRowDeselected: function(nodes){
+            $.each(nodes, function(i, row){
+                $(row).find(".row-checkbox").prop("checked", false)
+            });
+        },
         aButtons: ["select_all", "select_none", {
             "sExtends": "collection",
             "sButtonText": "Export as..",

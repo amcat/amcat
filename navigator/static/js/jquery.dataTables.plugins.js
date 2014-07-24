@@ -56,7 +56,24 @@ jQuery.fn.dataTableExt.oApi.fnSetFilteringDelay = function ( oSettings, iDelay )
         return this;
     } );
     return this;
-}
+};
+
+jQuery.fn.dataTableExt.oApi.fnRowCheckbox = function(oSettings){
+    oSettings.aoDrawCallback.push({
+        "fn": function () {
+            $('tbody > tr', oSettings.aanFeatures.t).each(function(i, row){
+                // Add handler for clicking on checkbox
+                $(row.firstChild).append(
+                    $("<input type=checkbox class=row-checkbox>").click(function(event){
+                        event.ctrlKey = true;
+                        event.stopPropagation();
+                        $(row).toggleClass("active");
+                    })
+                );
+            });
+        }
+    });
+};
 
 jQuery.fn.dataTableExt.oApi.fnSetRowlink = function(oSettings, sRowlink, sOpenIn){
     /*

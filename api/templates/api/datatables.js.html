@@ -1,11 +1,15 @@
 <script>
 $(document).ready(function(){
     amcat.datatables.create_rest_table($("#{{ id }}-wrapper"), "{{ url|safe }}", {
-        "setup_callback" : function(tbl){ 
+        "setup_callback" : function(tbl){
+            // Setup clickable (redirecting) rows
             {% if rowlink %}
                 tbl.fnSetRowlink("{{ rowlink }}", "{{ rowlink_open_in }}");
             {% endif %}
-            console.log("{{ rowlink }}"); 
+            console.log("{{ rowlink }}");
+
+            // Setup checkboxes for selecting rows.
+            tbl.fnRowCheckbox();
         },
         "name" : "{{ id }}",
         "datatables_options" : {{ options|safe }}
