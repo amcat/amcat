@@ -372,11 +372,7 @@ annotator = (function(self){
     /******** PUBLIC FUNCTIONS *******/
     /* Returns true if a coding was modified (article or sentence) */
     self.modified = function modified(){
-        return self.sentence_codings_modified() | self.state.article_coding_modified;
-    };
-
-    self.sentence_codings_modified = function sentence_codings_modified(){
-        return !!(self.state.deleted_codings.length || self.state.modified_codings.length);
+        return self.unsaved;
     };
 
     /* Returns absolute url pointing to this codingjob (slash-terminated)  */
@@ -1374,8 +1370,9 @@ annotator = (function(self){
 
     self.initialise_shortcuts = function initialise_shortcuts(){
         $.each(self.shortcuts(), function(keys, callback){
-            $(document).bind('keydown.' + keys, function(event){
+            $(document).delegate('*', 'keydown.' + keys, function(event){
                 event.preventDefault();
+                event.stopPropagation();
                 callback(event);
             });
         })
