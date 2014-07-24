@@ -63,7 +63,7 @@ jQuery.fn.dataTableExt.oApi.fnRowCheckbox = function(oSettings){
         "fn": function () {
             $('tbody > tr', oSettings.aanFeatures.t).each(function(i, row){
                 // Add handler for clicking on checkbox
-                $(row.firstChild).append(
+                $(row.firstChild).prepend(
                     $("<input type=checkbox class=row-checkbox>").click(function(event){
                         event.ctrlKey = true;
                         event.stopPropagation();
