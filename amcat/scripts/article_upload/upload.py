@@ -202,7 +202,7 @@ class UploadScript(script.Script):
         Split the file into one or more fragments representing individual documents.
         Default implementation returns a single fragment containing the unicode text.
 
-        @type text: unicode string
+        @type file: file like object
         @return: a sequence of objects (e.g. strings) to pass to parse_documents
         """
         return [file]

@@ -24,35 +24,30 @@ To use this plugin, choose to  'print' the articles and save the source
 of the popup window as HTML.
 """
 
+import re
+import os
+from lxml import etree
+from cStringIO import StringIO
 
 from amcat.scripts.article_upload.upload import UploadScript
-
 from amcat.models.article import Article
 from amcat.models.medium import Medium
 from amcat.tools.djangotoolkit import get_or_create
+
 from amcat.tools import toolkit
 
-from cStringIO import StringIO
-import subprocess
-from tempfile import NamedTemporaryFile, mkstemp
-from lxml import etree
-import re
-import os
-import sys
-from amcat.tools.toolkit import readDate
-from cStringIO import StringIO
-
-
-
 class DeFactoStudent(UploadScript):
-
     def split_file(self, f):
-        html = get_html(f)
+        html = get_html(to_buffer(f))
         return split_html(html)
-
 
     def _scrape_unit(self, element):
         yield get_article(element)
+
+def to_buffer(file):
+    if hasattr(file, "read"):
+        return file.read()
+    return file
 
 def get_article(e):
     headline = get_headline(e)
