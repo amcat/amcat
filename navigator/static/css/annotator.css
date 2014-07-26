@@ -217,3 +217,19 @@ input.error{
 .article-coding .row{
     margin-bottom: 0px !important;
 }
+
+.navbar-inverse{
+    background-color: #F8F8F8;
+    border-color: #E7E7E7;
+    color:#777;
+}
+
+.navbar-inverse .navbar-brand:hover,
+.navbar-inverse .navbar-nav > li > a:hover{
+    color:black;
+}
+
+.navbar-inverse .navbar-brand,
+.navbar-inverse .navbar-nav > li > a{
+    color:#333;
+}
