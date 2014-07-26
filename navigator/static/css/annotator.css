@@ -233,3 +233,7 @@ input.error{
 .navbar-inverse .navbar-nav > li > a{
     color:#333;
 }
+
+input.sentence{
+    width:75px;
+}
