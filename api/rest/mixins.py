@@ -18,7 +18,6 @@
 ###########################################################################
 import api.rest
 
-from django.db.models import Q
 from django.db.models.fields.related import RelatedField
 from django.db.models.related import RelatedObject
 
@@ -47,37 +46,6 @@ def _get_field_name(field):
     """Return the field name to report in OPTIONS (for datatables)"""
     n = field.__class__.__name__
     return _field_name_map.get(n, n)
-
-
-class SearchViewSetMixin(object):
-    """
-    Overrides filter_queryset to provide a general search parameter to the API.
-    """
-    # GET parameter to look for
-    search_parameter = "search"
-    search_fields = ()
-
-    def search(self, queryset, term, filter=Q()):
-        """
-        This method assumes the inheriting class is a model viewset,
-
-        @param term: term to search for
-        @type term: string
-
-        @param queryset: queryset to filter.
-        @type queryset: django.db.models.QuerySet (if model viewset)
-        """
-        for field in self.search_fields:
-            filter_field = "%s__icontains" % field
-            filter |= Q(**{filter_field: term})
-        return queryset.filter(filter)
-
-    def filter_queryset(self, queryset):
-        """Calls self.search() if a parameter `search_parameter` exists, and is not empty."""
-        term = self.request.QUERY_PARAMS.get(self.search_parameter)
-        queryset = super(SearchViewSetMixin, self).filter_queryset(queryset)
-        return self.search(queryset, term) if term else queryset
-
 
 class AmCATMetadataMixin(object):
     """Give the correct metadata for datatables"""
@@ -145,60 +113,7 @@ class AmCATFilterMixin(object):
     filter_fields = ClassProperty(get_filter_fields)
 
 
-class DatatablesMixin(AmCATFilterMixin, AmCATMetadataMixin, SearchViewSetMixin):
+class DatatablesMixin(AmCATFilterMixin, AmCATMetadataMixin):
     pass
 
 
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-from amcat.tools import amcattest
-from django.test import Client
-import json
-
-
-class TestSearchViewSetMixin(amcattest.AmCATTestCase):
-    def setUp(self):
-        project = amcattest.create_test_project()
-        amcattest.create_test_set(name="foo", project=project)
-        amcattest.create_test_set(name="bar", project=project)
-
-        self.url = "/api/v4/projects/{project.id}/articlesets/?format=json"
-        self.url = self.url.format(**locals())
-
-    def _get_json(self, url):
-        c = Client()
-        return json.loads(c.get(url).content)
-
-    def test_basic(self):
-        # No search parameter
-        results = self._get_json(self.url)
-        self.assertEqual(2, results['total'])
-
-        # Foo parameter
-        results = self._get_json(self.url + "&search=foo")
-        self.assertEqual(1, results['total'])
-        self.assertEqual("foo", results["results"][0]["name"])
-
-        # Bar paramter
-        results = self._get_json(self.url + "&search=bar")
-        self.assertEqual(1, results['total'])
-        self.assertEqual("bar", results["results"][0]["name"])
-
-    def test_case_insensitivity(self):
-        results = self._get_json(self.url + "&search=BaR")
-        self.assertEqual(1, results['total'])
-        self.assertEqual("bar", results["results"][0]["name"])
-
-    def test_partial(self):
-        results = self._get_json(self.url + "&search=fo")
-        self.assertEqual(1, results['total'])
-        self.assertEqual("foo", results["results"][0]["name"])
-
-        results = self._get_json(self.url + "&search=oo")
-        self.assertEqual(1, results['total'])
-        self.assertEqual("foo", results["results"][0]["name"])
-
-        results = self._get_json(self.url + "&search=a")
-        self.assertEqual(1, results['total'])
-        self.assertEqual("bar", results["results"][0]["name"])

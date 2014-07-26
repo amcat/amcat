@@ -142,8 +142,6 @@ class Datatable(object):
                 hasattr(self.resource, "model") and self.resource.model:
             # Try to keep order defined on model if and only if fields
             # is not explicitly defined.
-            ofields = []
-
             for field in self.resource.model._meta.fields:
                 if field.name in fields:
                     fields.remove(field.name)
@@ -194,7 +192,7 @@ class Datatable(object):
         options['aaSorting'] = [list(order_by(f)) for f in ordering]
         options['aoColumns'] = self.get_aoColumns()
         options['aoColumnDefs'] = self.get_aoColumnDefs()
-        options['searching'] = bool(getattr(self.resource, "search_fields"))
+        options['searching'] = bool(getattr(self.resource, "search_fields", None))
 
         return get_template('api/datatables.js.html').render(Context({
             'id': self.name,

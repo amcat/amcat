@@ -24,6 +24,7 @@ from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewsets.project import ProjectViewSetMixin
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+from rest_framework import filters
 from api.rest.viewset import AmCATViewSetMixin
 
 __all__ = (
@@ -78,6 +79,7 @@ class _NoProjectRequestedError(ValueError): pass
 class ArticleSetViewSetMixin(AmCATViewSetMixin):
     model_key = "articleset"
     model = ArticleSet
+    filter_backends = (filters.SearchFilter,)
     search_fields = ("id", "name", "provenance")
 
 class ArticleSetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesMixin, ModelViewSet):
@@ -91,6 +93,7 @@ class ArticleSetViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, DatatablesM
 class FavouriteArticleSetViewSetMixin(AmCATViewSetMixin):
     model_key = "favourite_articleset"
     base_name = "favourite_articleset"
+    filter_backends = (filters.SearchFilter,)
     search_fields = ("id", "name", "provenance")
     model = ArticleSet
 
@@ -109,6 +112,7 @@ class FavouriteArticleSetViewSet(ProjectViewSetMixin, FavouriteArticleSetViewSet
 class CodingjobArticleSetViewSetMixin(AmCATViewSetMixin):
     model_key = "codingjob_articleset"
     base_name = "codingjob_articleset"
+    filter_backends = (filters.SearchFilter,)
     search_fields = ("id", "name", "provenance")
     model = ArticleSet
 

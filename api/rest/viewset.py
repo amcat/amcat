@@ -28,7 +28,6 @@ and multiple times for viewsets with the same model, but a different scope.
 __all__ = ("AmCATViewSetMixin", "get_url_pattern", "AmCATViewSetMixinTest")
 
 from collections import OrderedDict, namedtuple
-from amcat.tools import amcattest
 from . import tablerenderer
 
 ModelKey = namedtuple("ModelKey", ("key", "viewset"))
@@ -108,6 +107,9 @@ class AmCATViewSetMixin(object):
 ######################
 ##### UNIT TESTS #####
 ######################
+from amcat.tools import amcattest
+from django.test import Client
+import json
 
 class AmCATViewSetMixinTest(amcattest.AmCATTestCase):
     def test_get_url_pattern(self):
@@ -130,3 +132,49 @@ class AmCATViewSetMixinTest(amcattest.AmCATTestCase):
         self.assertEquals(r"projects/(?P<project>\d+)/codebooks", BViewSet.get_url_pattern())
         self.assertEquals(r"codebooks/(?P<codebook>\d+)/projects", CViewSet.get_url_pattern())
 
+
+class TestSearchViewSetMixin(amcattest.AmCATTestCase):
+    def setUp(self):
+        project = amcattest.create_test_project()
+        amcattest.create_test_set(name="foo", project=project)
+        amcattest.create_test_set(name="bar", project=project)
+
+        self.url = "/api/v4/projects/{project.id}/articlesets/?format=json"
+        self.url = self.url.format(**locals())
+
+    def _get_json(self, url):
+        c = Client()
+        return json.loads(c.get(url).content)
+
+    def test_basic(self):
+        # No search parameter
+        results = self._get_json(self.url)
+        self.assertEqual(2, results['total'])
+
+        # Foo parameter
+        results = self._get_json(self.url + "&search=foo")
+        self.assertEqual(1, results['total'])
+        self.assertEqual("foo", results["results"][0]["name"])
+
+        # Bar paramter
+        results = self._get_json(self.url + "&search=bar")
+        self.assertEqual(1, results['total'])
+        self.assertEqual("bar", results["results"][0]["name"])
+
+    def test_case_insensitivity(self):
+        results = self._get_json(self.url + "&search=BaR")
+        self.assertEqual(1, results['total'])
+        self.assertEqual("bar", results["results"][0]["name"])
+
+    def test_partial(self):
+        results = self._get_json(self.url + "&search=fo")
+        self.assertEqual(1, results['total'])
+        self.assertEqual("foo", results["results"][0]["name"])
+
+        results = self._get_json(self.url + "&search=oo")
+        self.assertEqual(1, results['total'])
+        self.assertEqual("foo", results["results"][0]["name"])
+
+        results = self._get_json(self.url + "&search=a")
+        self.assertEqual(1, results['total'])
+        self.assertEqual("bar", results["results"][0]["name"])
