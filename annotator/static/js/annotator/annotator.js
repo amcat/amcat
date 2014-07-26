@@ -396,7 +396,18 @@ annotator = (function(self){
                 widgets.set_value($(widget), value);
             }
 
+            if (schemafield.keywords)
+                var nice_keywords = schemafield.keywords.split(",").join(", ");
+            else
+                var nice_keywords = "<i>No keywords.</i>"
+            if (schemafield.description)
+                var nice_description = schemafield.description
+            else
+                var nice_description = "<i>No description.</i>"
+
             return $("<div>").addClass("row")
+                .attr("data-keywords", nice_keywords)
+                .attr("data-description", nice_description)
                 .append($("<div>").addClass("col-md-3").append(label))
                 .append($("<div>").addClass("col-md-9").append(widget));
         }));
@@ -410,7 +421,18 @@ annotator = (function(self){
         table_header.append($("<th>").text("Sentence"));
         table_header.append(
             $.map(self.sentence_schemafields, function(schemafield){
-                return $("<th>").text(schemafield.label);
+                if (schemafield.keywords)
+                    var nice_keywords = schemafield.keywords.split(",").join(", ");
+                else
+                    var nice_keywords = "<i>No keywords.</i>"
+                if (schemafield.description)
+                    var nice_description = schemafield.description
+                else
+                    var nice_description = "<i>No description.</i>"
+                return $("<th>")
+                    .attr("data-keywords", nice_keywords)
+                    .attr("data-description", nice_description)
+                    .text(schemafield.label);
             })
         );
 
@@ -990,6 +1012,10 @@ annotator = (function(self){
         container.find("input:visible").first().focus();
 
         self.log("Done.")
+        
+        $.when.apply(undefined, [self.get_schema_field_highlighting("articleschema")]).then(self.highlight_schema_fields);
+        $.when.apply(undefined, [self.get_schema_field_highlighting("unitschema")]).then(self.highlight_unit_schema_fields);
+
     };
 
     self.highlight = function highlight(){
@@ -1033,6 +1059,49 @@ annotator = (function(self){
         $("> td", from.prevAll()).hide();
         $("> td", to.nextAll()).hide();
     };
+
+    self.get_schema_field_highlighting = function(schematype) {
+        var base_highlighter_url = "/api/highlighter/" + schematype;
+        var article_id = self.state.coded_article.article_id;
+        var highlighter_url = "{0}?codingjob_id={1}&article_id={2}".f(base_highlighter_url, self.codingjob_id, article_id);
+        return $.getJSON(highlighter_url);
+    }
+
+    self.highlight_fields = function(that, highlighting, field_index) {
+        var sentence_id = 0;
+        var keywords = $(that).attr("data-keywords");
+        if (typeof keywords === 'undefined')
+            return;
+        var description = $(that).attr("data-description");
+        $('#coding-details').show()
+        $('#coding-details .keywords > div').html(keywords);
+        $('#coding-details .description > div').html(description);
+        $("*").removeClass("highlighted-variable");
+        $(that).addClass("highlighted-variable");
+        $.each(highlighting, function(pIndex, sentences) {
+            $.each(sentences, function(sIndex, fields) {
+                sentence_id += 1;
+                var yellow = Math.round(fields[field_index] * 255);
+                $("#sentence-{0}".f(sentence_id)).css("background-color", "rgb(255,255,{0})".f(yellow));
+            })
+        })
+    }
+
+    self.highlight_unit_schema_fields = function(highlighting) {
+        $("#unitcoding-table").find("th")
+            .unbind("click")
+            .bind("click", function() {
+                self.highlight_fields(this, highlighting, $(this).index() - 1);
+            })
+    }
+
+    self.highlight_schema_fields = function(highlighting) {
+        self.article_coding_container.find(".row")
+            .unbind("click")
+            .bind("click", function() {
+                self.highlight_fields(this, highlighting, $(this).index());
+            })
+    }
 
     /*
      * Resets internal state and fetches new coded article, which consists of:

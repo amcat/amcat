@@ -60,6 +60,28 @@ h2{
     margin: 5px;
 }
 
+.coding td{
+    padding:2px;
+    vertical-align: text-top;
+}
+
+.coding label {
+    cursor: pointer;
+}
+
+.coding-table{
+    font-size:11px;
+    text-align:left;
+}
+
+.coding-table input{
+    font-size:11px;
+}
+
+.sentence{
+    margin-top:10px;
+}
+
 .annotator-sentencenr{
     color:gray;
 }
@@ -75,6 +97,60 @@ h2{
 
 #codingjob-list-table td{
     padding:5px 2px 5px;
+}
+
+
+#welcome{
+    margin-bottom:50px;
+}
+
+#article-irrelevant-input{
+    margin-left:40px;
+}
+
+.links{
+    text-align:center;
+}
+
+#coding-type-radios{
+    margin-right:80px !important;
+}
+
+#article-comment-input{
+    width:60%;
+}
+
+#article-comment-form{
+    clear:both;
+    padding-top:10px;
+    margin-bottom:20px;
+}
+
+
+#article-coding{
+    margin-bottom:30px;
+    clear:both;
+    float: left;
+}
+
+#coding-details{
+    float: left;
+    width: 100%;
+    height: 150px;
+    overflow: scroll;
+    padding: 4px;
+    padding-top: 25px;
+    display: none;
+}
+
+#coding-details hr {
+    margin: 5px;
+}
+
+#unitcoding-table-part{
+    margin-bottom:30px;
+    clear:both;
+    margin-top:5px;
 }
 
 .ui-autocomplete {
@@ -202,6 +278,10 @@ input.error{
     content: "Article coding";
 }
 
+.coding-details::after{
+    content: "Variable details";
+}
+
 .sentence-codings{
     overflow-x:auto;
 }
@@ -216,4 +296,8 @@ input.error{
 
 .article-coding .row{
     margin-bottom: 0px !important;
+}
+
+.highlighted-variable {
+    background-color: #9FAFD1;
 }
