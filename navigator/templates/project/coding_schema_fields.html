@@ -19,7 +19,13 @@
 {% endblock %}
 
 {% block content %}
+<style type="text/css">
+    td.active{ background-color: #60A3FF !important; color:white; }
+</style>
+
 <p><span class="label label-warning">Resetting</span> Resetting only reverts changes which are not saved.</p>
+<p><span class="label label-info">Navigation</span> The active cell is marked <span class="active">blue</span>. You can
+use arrow keys to move around.</p>
 
 <h1>Editing codingschema {{object.id}}: {{object.name}}</h1>
 <p name="field_errors"></p>
