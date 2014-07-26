@@ -117,8 +117,13 @@
                 "length", "status", "comments"
             ];
 
+            var sortable = ["id", "comments"];
+
             $.each(column_order, function(i, colname){
-                columns.push({ mData : colname, aTargets : [colname]});
+                columns.push({
+                    bSortable: sortable.indexOf(colname) !== -1,
+                    mData : colname, aTargets : [colname]
+                });
             });
 
             amcat.datatables.create_rest_table(jqueryElement, url, {

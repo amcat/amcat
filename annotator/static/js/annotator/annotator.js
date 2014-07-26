@@ -1343,6 +1343,11 @@ annotator = (function(self){
     };
 
     self.datatables_row_clicked = function datatables_row_clicked(row){
+        // Do nothing if header is clicked
+        if (row.closest("thead").length){
+            return;
+        }
+
         if(self.unsaved){
             return self.show_unsaved_changes((function(){
                 self.datatables_row_clicked.bind(this)(row);
