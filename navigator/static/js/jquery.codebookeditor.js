@@ -690,8 +690,8 @@ Array.prototype.remove=function(s){
                     var cells = $("td", row);
 
                     label.id = $(row).attr("label_id");
-                    label.language = $(":selected", cells[0]).attr("value");
-                    label.label = $("input", row).attr("value");
+                    label.language = $(":selected", cells[0]).val();
+                    label.label = $("input", row).val();
 
                     if (label.label === undefined) {
                         // Last row, probably
@@ -769,7 +769,7 @@ Array.prototype.remove=function(s){
                 var callback_func = null;
 
                 if (this.new_code == true) {
-                    callback_data.parent = this.parent.code_id;
+                    callback_data.parent = JSON.stringify(this.parent.code_id);
                     callback_data.ordernr = this.parent.children.length;
                     callback_func = self.new_code_created;
                 } else {
@@ -777,7 +777,6 @@ Array.prototype.remove=function(s){
                     callback_func = self.labels_updated;
                 }
 
-                // Send results to server
                 $.post(
                     window.location.href + "save-labels/",
                     callback_data, callback_func.bind({
