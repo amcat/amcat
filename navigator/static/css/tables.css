@@ -140,3 +140,7 @@ tr.active{
 .row-checkbox{
     margin: 0px 5px 0px 0px !important;
 }
+
+.dataTables_filter{
+    padding-right: 5px;
+}

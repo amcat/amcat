@@ -33,6 +33,8 @@ from . import tablerenderer
 
 ModelKey = namedtuple("ModelKey", ("key", "viewset"))
 
+
+
 class AmCATViewSetMixin(object):
     """
     All ViewSet used in the AmCAT API should inherit from this class, or at least

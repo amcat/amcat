@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import copy
+import json
 import logging
 import types
 import collections
@@ -183,7 +184,6 @@ class Datatable(object):
         kwargs = self._get_copy_kwargs(**kwargs)
         return self.__class__(resource=self.resource, **kwargs)
 
-
     def get_js(self):
         """Returns a string with rendered javascript"""
         ordering = self.ordering
@@ -194,13 +194,14 @@ class Datatable(object):
         options['aaSorting'] = [list(order_by(f)) for f in ordering]
         options['aoColumns'] = self.get_aoColumns()
         options['aoColumnDefs'] = self.get_aoColumnDefs()
+        options['searching'] = bool(getattr(self.resource, "search_fields"))
 
         return get_template('api/datatables.js.html').render(Context({
             'id': self.name,
             'rowlink': self.rowlink,
             'rowlink_open_in': self.rowlink_open_in,
             'url': self.url,
-            'options': options
+            'options': json.dumps(options)
         }))
 
     def get_aoColumns(self):
@@ -501,8 +502,8 @@ class TestDatatable(amcattest.AmCATTestCase):
 
         d = Datatable(ProjectResource).order_by("name")
         self.assertTrue("name" in unicode(d))
-        self.assertTrue("['name', 'asc']" in unicode(d))
-        self.assertTrue("['name', 'desc']" in unicode(d.order_by("-name")))
+        self.assertTrue('["name", "asc"]' in unicode(d))
+        self.assertTrue('["name", "desc"]' in unicode(d.order_by("-name")))
 
         with self.assertRaises(ValueError):
             d.order_by("bla")
@@ -510,3 +511,14 @@ class TestDatatable(amcattest.AmCATTestCase):
         with self.assertRaises(ValueError):
             d.order_by("?name")
 
+    def test_search(self):
+        from api.rest.resources import ProjectResource
+        from api.rest.viewsets import ArticleSetViewSet
+
+        # Resources are not searchable (yet?)
+        d = Datatable(ProjectResource)
+        self.assertIn('"searching": false', unicode(d))
+
+        # Articleset viewsets are searchable
+        d = Datatable(ArticleSetViewSet, url_kwargs={"project": 1})
+        self.assertIn('"searching": true', unicode(d))

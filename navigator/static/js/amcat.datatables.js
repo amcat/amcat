@@ -49,6 +49,7 @@ _AMCAT_DEFAULT_OPTS = {
     fnRowCallback : function(nRow){
         amcat.datatables.truncate_row(nRow);
     },
+    searching: true,
     bDeferRender: true,
     bFilter: false,
     iDisplayLength : 100,
@@ -167,7 +168,20 @@ amcat.datatables.create_rest_table = function (cont, rest_url, optional_args) {
         "sAjaxDataProp": "results",
         "fnServerData": amcat.datatables.fnServerData.bind(state),
         "bServerSide": true,
-        "bStateSave": true
+        "bStateSave": true,
+        "initComplete": function(settings){
+            // Set placeholder for search input field
+            var filter_wrapper = $(settings.nTableWrapper).find(".dataTables_filter > label");
+
+            // Remove text nodes
+            filter_wrapper.contents().filter(function() {
+                // Node.TEXT_NODE
+                return this.nodeType === 3;
+            }).remove();
+
+            // Add placeholder
+            filter_wrapper.find("input").prop("placeholder", "Search..");
+        }
     });
 
     // Add our default options
@@ -537,9 +551,12 @@ amcat.datatables.fnServerData = function(sSource, aoData, fnCallback){
     sSource += ((sSource.indexOf("?") !== -1) ? "&" : "?");
     sSource += "page=" + page + "&page_size=" + page_size;
     sSource += "&datatables_options=" + encodeURIComponent(JSON.stringify({
-        sSearch : search,
         sEcho : echo
     }));
+
+    if (search !== undefined){
+        sSource += "&search=" + search;
+    }
 
     // Add ordering
     sSource += "&" + amcat.datatables.get_order_by_query(aoData);
@@ -708,7 +725,6 @@ amcat.datatables.fetched_initial_success = function (data, textStatus, jqXHR) {
 
     // Call datatables
     console.log("Calling dataTable with options: ", this.datatables_options);
-    console.log(this.table)
     tbl = this.table.dataTable(this.datatables_options);
 
     // Call callback funtion with our datatables object as its
