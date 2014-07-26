@@ -102,6 +102,10 @@ class CodingJobViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodingJobSerializer
     model_key = "codingjob"
     model = CodingJob
+    search_fields = (
+        "id", "name", "unitschema__name", "articleschema__name",
+        "insertuser__username", "coder__username"
+    )
 
 class CodingJobViewSet(ProjectViewSetMixin, CodingJobViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = CodingJob

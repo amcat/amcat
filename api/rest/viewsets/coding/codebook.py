@@ -69,6 +69,7 @@ class CodebookViewSetMixin(AmCATViewSetMixin):
     model_serializer_class = CodebookSerializer
     model_key = "codebook"
     model = Codebook
+    search_fields = ("id", "project__name", "name")
 
 class CodebookViewSet(ProjectViewSetMixin, CodebookViewSetMixin, DatatablesMixin, ReadOnlyModelViewSet):
     model = Codebook
