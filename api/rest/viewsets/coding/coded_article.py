@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from rest_framework import serializers
+from rest_framework import serializers, filters
 from rest_framework.viewsets import ReadOnlyModelViewSet
+
 from amcat.models import Sentence, CodedArticle, Article, Medium
 from amcat.tools import amcattest
 from amcat.tools.caching import cached
@@ -93,6 +94,7 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
     model = CodedArticle
     model_serializer_class = CodedArticleSerializer
     extra_filters = ("article__pagenr",)
+    ordering_fields = ('id', 'article__headline')
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleViewSet, self).filter_queryset(queryset)

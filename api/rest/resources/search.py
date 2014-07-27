@@ -149,7 +149,6 @@ class SearchResource(AmCATResource):
         return [keywordsearch.SearchQuery.from_string(q)
                 for q in params.getlist("q")]
 
-
     def get_queryset(self):
         fields = self.get_serializer().get_fields().keys()
         if "text" in self.columns: fields += ["text"]
@@ -181,7 +180,7 @@ class SearchResource(AmCATResource):
             filterset.FilterSet.__init__(self, data, queryset, prefix)
 
         class Meta:
-            order_by=True
+            order_by = True
 
     def get_serializer_context(self):
         ctx = super(SearchResource, self).get_serializer_context()

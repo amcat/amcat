@@ -33,8 +33,17 @@ class AmCATResource(DatatablesMixin, generics.ListAPIView):
     Base class for the AmCAT REST API
     Subclassing modules should specify the model that the view is based on
     """
-
     model = None
+    ordering_fields = ("id",)
+
+    def __init__(self, *args, **kwargs):
+        super(AmCATResource, self).__init__(*args, **kwargs)
+
+        # TODO: Remove this hack. Djangorestframework uses serializer_class to determine
+        # TODO: the fields a resource has, but does not bother to call get_serializer_class,
+        # TODO: resulting in errors.
+        if self.serializer_class is None:
+            self.serializer_class = self.get_serializer_class()
 
     @classmethod
     def get_url_pattern(cls):

@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 import copy
+from django.core.exceptions import ImproperlyConfigured
 import json
 import logging
 import types
@@ -35,6 +36,13 @@ from amcat.tools.caching import cached
 from api.rest.resources import get_resource_for_model, AmCATResource
 from api.rest import filters
 
+FILTER_FIELDS = {
+    # Resource : set(fields)
+}
+
+ORDERING_FIELDS = {
+    # Resource : set(fields)
+}
 
 FIELDS_EMPTY = (None, [])
 log = logging.getLogger(__name__)
@@ -49,6 +57,56 @@ def order_by(field):
         (field[1:] if field.startswith(("+", "-")) else field),
         ("desc" if field.startswith("-") else "asc")
     )
+
+
+def _get_valid_fields(queryset, view):
+    """
+    This is a copy of a part of OrderingFilter.remove_invalid_fields(). It
+    determines which fields are orderable. A pull request is pending for
+    djangorestframework which would remove this function:
+
+       https://github.com/tomchristie/django-rest-framework/pull/1709
+
+    TODO: Remove function.
+    """
+    valid_fields = getattr(view, 'ordering_fields', None)
+
+    if valid_fields is None:
+        # Default to allowing filtering on serializer fields
+        serializer_class = (
+            getattr(view, 'serializer_class') or
+            view.get_serializer_class())
+
+        if serializer_class is None:
+            msg = ("Cannot use %s on a view which does not have either a "
+                   "'serializer_class' or 'ordering_fields' attribute.")
+            import pdb; pdb.set_trace()
+            raise ImproperlyConfigured(msg % view.__class__.__name__)
+
+        valid_fields = [
+            field.source or field_name
+            for field_name, field in serializer_class().fields.items()
+            if not getattr(field, 'write_only', False)
+        ]
+
+    elif valid_fields == '__all__':
+        # View explictly allows filtering on any model field
+        valid_fields = [field.name for field in queryset.model._meta.fields]
+        valid_fields += queryset.query.aggregates.keys()
+
+    return set(valid_fields)
+
+
+def get_valid_fields(queryset, view):
+    """Caching wrapper around _get_valid_fields()"""
+    # Can we get results from cache?
+    if view.__class__ in ORDERING_FIELDS:
+        return ORDERING_FIELDS[view.__class__]
+
+    # Put results in cache and return
+    fields = _get_valid_fields(queryset, view)
+    ORDERING_FIELDS[view.__class__] = fields
+    return fields
 
 
 class Datatable(object):
@@ -203,16 +261,11 @@ class Datatable(object):
         }))
 
     def get_aoColumns(self):
-        """
-        Returns a list with (default) columns.
-        """
-
-        class jsbool(int):
-            def __repr__(self):
-                return 'true' if self else "false"
-
-        return self.options.get('aoColumns', [dict(mData=str(n), bSortable=jsbool(self.can_order_by(n)))
-                                              for n in self.fields])
+        """Returns a list with (default) columns."""
+        return self.options.get('aoColumns', [{
+            "mData": str(n),
+            "bSortable": self.can_order_by(n)
+        } for n in self.fields])
 
     def get_aoColumnDefs(self):
         """Use this method to override when providing special colums"""
@@ -253,13 +306,19 @@ class Datatable(object):
         try:
             fc = r.filter_class
         except AttributeError:
-            fc = filters.AmCATFilterBackend().get_filter_class(r, queryset=r.model.objects.all())
+            fc = filters.DjangoPrimaryKeyFilterBackend().get_filter_class(r, queryset=r.model.objects.all())
         return fc()
 
     def can_order_by(self, field):
-        return any(f == field for (f, label) in self._get_filter_class().get_ordering_field().choices)
+        # We can't sort if this is not backed by a DBMS
+        if self.resource.model is None:
+            return False
+
+        valid = get_valid_fields(self.resource.model.objects.none(), self.resource)
+        return order_by(field)[0] in valid
 
     def can_filter(self, field):
+        import pdb; pdb.set_trace()
         return any(f == field for f in self._get_filter_class().filters.keys())
 
     def order_by(self, *fields):
@@ -278,7 +337,6 @@ class Datatable(object):
                 raise ValueError("Cannot order by field '{}', column does not exist on this table".format(field))
 
         return self.copy(ordering=tuple(fields))
-
 
     def _filter(self, selector, value, check_can_filter=True):
         """
@@ -334,7 +392,6 @@ class Datatable(object):
         url += "".join(['&%s' % self._filter(sel, val) for (sel, val) in self.filters])
         url += "".join(['&%s' % self._filter(sel, val, check_can_filter=False) for (sel, val) in self.extra_args])
         return url
-
 
     def __unicode__(self):
         links = {}
@@ -421,7 +478,6 @@ class TestDatatable(amcattest.AmCATTestCase):
         from amcat.models import Project
 
         d = Datatable(ProjectResource)
-
         self.assertEqual(set(d.fields), TestDatatable.PROJECT_FIELDS)
 
         # Test order of fields.

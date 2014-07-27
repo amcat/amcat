@@ -531,7 +531,7 @@ amcat.datatables.get_order_by_query = function(aoData){
 
         res.push(((dir == "desc") ? "-" : "") + prop);
     }
-    return "order_by=" + res.join("&order_by=");
+    return "order_by=" + res.join(",");
 };
 
 /*

@@ -225,18 +225,32 @@ SECRET_KEY = get_secret()
 FIXTURE_DIRS = (os.path.join(ROOT, "amcat/models"),)
 
 REST_FRAMEWORK = {
+    # Pagination
     'PAGINATE_BY': 10,
     'PAGINATE_BY_PARAM': 'page_size',
     'DEFAULT_PAGINATION_SERIALIZER_CLASS': 'api.rest.serializer.AmCATPaginationSerializer',
+
+    # Filtering / models
+    'ORDERING_PARAM': 'order_by',
+    'SEARCH_PARAM': 'search',
     'DEFAULT_MODEL_SERIALIZER_CLASS': 'api.rest.serializer.AmCATModelSerializer',
-    'FILTER_BACKEND': 'api.rest.filters.AmCATFilterBackend',
-    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.BrowsableAPIRenderer',
-                                 'rest_framework.renderers.JSONRenderer',
-                                 'api.rest.tablerenderer.CSVRenderer',
-                                 'api.rest.tablerenderer.XLSXRenderer',
-                                 'api.rest.tablerenderer.SPSSRenderer',
-                                 'api.rest.tablerenderer.XHTMLRenderer',
+    'DEFAULT_FILTER_BACKENDS': (
+        'api.rest.filters.DjangoPrimaryKeyFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+        'rest_framework.filters.SearchFilter',
     ),
+
+    # Rendering
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.BrowsableAPIRenderer',
+        'rest_framework.renderers.JSONRenderer',
+        'api.rest.tablerenderer.CSVRenderer',
+        'api.rest.tablerenderer.XLSXRenderer',
+        'api.rest.tablerenderer.SPSSRenderer',
+        'api.rest.tablerenderer.XHTMLRenderer',
+    ),
+
+    # Auth
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework.authentication.BasicAuthentication',
         'rest_framework.authentication.SessionAuthentication',

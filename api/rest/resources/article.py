@@ -20,33 +20,33 @@
 import json
 import logging
 
-from rest_framework.viewsets import ModelViewSet
-from django_filters import filters
+from django_filters import filters, FilterSet
 
-from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
-from api.rest.mixins import DatatablesMixin
+from amcat.models import Article, ArticleSet
 from api.rest.resources.amcatresource import AmCATResource
 from api.rest.serializer import AmCATModelSerializer
-from api.rest.filters import AmCATFilterSet, InFilter
-from api.rest.viewsets.article import ArticleSerializer
-from api.rest.viewsets.project import ProjectViewSetMixin, CannotEditLinkedResource, NotFoundInProject
+from api.rest.filters import InFilter, DjangoPrimaryKeyFilterBackend
 
 log = logging.getLogger(__name__)
 
-class ArticleMetaFilter(AmCATFilterSet):
+
+class ArticleMetaFilter(DjangoPrimaryKeyFilterBackend.default_filter_set):
     date_from = filters.DateFilter(name='date', lookup_type='gte')
     date_to = filters.DateFilter(name='date', lookup_type='lt')
     articleset = InFilter(name='articlesets_set', queryset=ArticleSet.objects.all())
 
     class Meta:
         model = Article
-        order_by=True
+
 
 class ArticleMetaSerializer(AmCATModelSerializer):
     class Meta:
         model = Article
-        fields = ("id", "date", "project", "medium", "headline",
-                    "section", "pagenr", "author", "length")
+        fields = (
+            "id", "date", "project", "medium", "headline",
+            "section", "pagenr", "author", "length"
+        )
+
 
 class ArticleMetaResource(AmCATResource):
     model = Article
@@ -56,8 +56,6 @@ class ArticleMetaResource(AmCATResource):
     @classmethod
     def get_model_name(cls):
         return "ArticleMeta".lower()
-
-
 
 
 ###########################################################################

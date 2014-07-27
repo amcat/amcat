@@ -16,26 +16,35 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import collections
 import json
-from amcat.models import Medium, Article
+
+from rest_framework.viewsets import ModelViewSet
+
+from amcat.models import Medium
 from api.rest.mixins import DatatablesMixin
 from api.rest.serializer import AmCATModelSerializer
 from api.rest.viewset import AmCATViewSetMixin
+from api.rest.viewsets.articleset import ArticleSetViewSetMixin
+from api.rest.viewsets.project import ProjectViewSetMixin
+from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
+from api.rest.viewsets.project import CannotEditLinkedResource, NotFoundInProject
 
 __all__ = ("ArticleSerializer", "ArticleViewSet")
+
 
 class ArticleViewSetMixin(AmCATViewSetMixin):
     model_key = "article"
     model = Article
 
-class ArticleSerializer(AmCATModelSerializer):
 
+class ArticleSerializer(AmCATModelSerializer):
     def __init__(self, instance=None, data=None, files=None, **kwargs):
         kwargs['many'] = isinstance(data, list)
         super(ArticleSerializer, self).__init__(instance, data, files, **kwargs)
         media = self.context['view'].articleset.get_mediums()
-        self.medium_names = {m.id : m.name for m in media}
-        self.medium_ids = {m.name : m.id for m in media}
+        self.medium_names = {m.id: m.name for m in media}
+        self.medium_ids = {m.name: m.id for m in media}
 
     def restore_fields(self, data, files):
         # convert media from name to id, if needed
@@ -89,7 +98,6 @@ class ArticleSerializer(AmCATModelSerializer):
         return result
 
     def save(self, **kwargs):
-        import collections
         def _flatten(l):
             """Turn either an object or a (recursive/irregular/jagged) list-of-lists into a flat list"""
             # inspired by http://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists-in-python
@@ -119,20 +127,11 @@ class ArticleSerializer(AmCATModelSerializer):
         result['medium'] = self.medium_names[mid]
         return result
 
-from api.rest.viewsets.articleset import ArticleSetViewSetMixin
-from rest_framework.viewsets import ModelViewSet
-from api.rest.viewsets.project import ProjectViewSetMixin
-from amcat.models import Article, ArticleSet, ROLE_PROJECT_READER
-from api.rest.viewsets.project import CannotEditLinkedResource, NotFoundInProject
-
-class ArticleViewSetMixin(AmCATViewSetMixin):
-    model = Article
-    model_key = "article"
 
 class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSetMixin, DatatablesMixin, ModelViewSet):
     model = Article
     model_key = "article"
-    permission_map = {'GET' : ROLE_PROJECT_READER}
+    permission_map = {'GET': ROLE_PROJECT_READER}
     model_serializer_class = ArticleSerializer
 
     def check_permissions(self, request):
@@ -147,7 +146,6 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
             raise NotFoundInProject()
         return super(ArticleViewSet, self).check_permissions(request)
 
-
     @property
     def articleset(self):
         if not hasattr(self, '_articleset'):
@@ -158,7 +156,6 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
     def filter_queryset(self, queryset):
         queryset = super(ArticleViewSet, self).filter_queryset(queryset)
         return queryset.filter(articlesets_set=self.articleset)
-        return self.object
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -167,8 +164,8 @@ class ArticleViewSet(ProjectViewSetMixin, ArticleSetViewSetMixin, ArticleViewSet
 from api.rest.apitestcase import ApiTestCase
 from amcat.tools import amcattest, toolkit
 from amcat.tools import amcates
-class TestArticleViewSet(ApiTestCase):
 
+class TestArticleViewSet(ApiTestCase):
     @amcattest.use_elastic
     def test_post(self):
         """Test whether posting and retrieving an article works correctly"""

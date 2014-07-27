@@ -22,106 +22,51 @@ AmCAT-specific adaptations to rest_framework filters
 (using django_filters)
 activated by settings.REST_FRAMEWORK['FILTER_BACKEND']
 """
-from api.rest import count
-from rest_framework import filters
-from django_filters import filterset
-from django_filters.filters import Filter
+import logging
 
+from django_filters import filterset, FilterSet
 from django_filters.filters import NumberFilter
 from django.db import models
-from django import forms
+from django.conf import settings
+from rest_framework.filters import DjangoFilterBackend, OrderingFilter
+
+from api.rest import count
+
+log = logging.getLogger(__name__)
+
 # Monkey patch filterset for autofield - no idea why it's not in that list
 filterset.FILTER_FOR_DBFIELD_DEFAULTS[models.AutoField] = dict(filter_class=NumberFilter)
 
-from django.forms import ValidationError
+# Should listen to ORDERING_PARAM (says documentation) but it doesn't :-(
+OrderingFilter.ordering_param = settings.REST_FRAMEWORK['ORDERING_PARAM']
 
-import logging; log = logging.getLogger(__name__) 
-
-ORDER_BY_FIELD = "order_by"
 
 class InFilter(filterset.ModelMultipleChoiceFilter):
     """Filter for {'pk':[1,2,3]} / pk=1&pk=2 queries"""
 
     def filter(self, qs, value):
-        if not value: return qs
-        values = [obj.id for obj in value]
-        return qs.filter(**{'%s__in' % (self.name): value})
+        # Perform 'IN' query on given primary keys
+        return qs if not value else qs.filter(**{'%s__in' % self.name: value})
 
-class AmCATFilterSet(filterset.FilterSet):
-    """
-    - Allow descending /  ascending order
-    - Allow filtering on pk and ordering by default
-    """
-    
+
+class PrimaryKeyFilterSet(FilterSet):
     pk = InFilter(name='id', queryset=None)
 
-    # This overrides the default FilterSet value
-    order_by_field = ORDER_BY_FIELD
-
-    def __init__(self, *args, **kargs):
-        super(AmCATFilterSet, self).__init__(*args, **kargs)
+    def __init__(self, *args, **kwargs):
+        super(PrimaryKeyFilterSet, self).__init__(*args, **kwargs)
         self.filters["pk"].field.queryset = self.queryset
-    
+
+
+class DjangoPrimaryKeyFilterBackend(DjangoFilterBackend):
+    """
+    Overrides default_filter_set on on DjangoFilterBackend to add a `pk` property
+    refering to InFilter, which allows filtering on primary keys with an OR filter.
+    """
+    default_filter_set = PrimaryKeyFilterSet
+
     def __len__(self):
-        """Default implementation does len(self.qs)  which runs the whole query..."""
+        # Quick hack to prevent fetching all objects from database for root queryset
         return count.count(self.qs)
-
-    def get_ordering_field(self):
-        """
-        - Add descending order (-field) to the list of valid choices
-        - Make MultipleChoiceField to allow for ordering on more than one field
-          (requires changing the order_by behaviour in qs below)
-        """
-        field = super(AmCATFilterSet, self).get_ordering_field()
-        if field:
-            choices = field.choices + [("-"+key, label + " (Desc)") for (key, label) in field.choices]
-            return forms.MultipleChoiceField(label=field.label, required=field.required, choices=choices)
-        return field
-
-    @property
-    def qs(self):
-        # 'Monkey patch' to allow order by to take muliple values from MultipleChoiceField
-        # function is copy/paste from filterset.py except for import, order_by, and silent validation exceptions
-        from django.utils import six
-        if not hasattr(self, '_qs'):
-            qs = self.queryset.all()
-            for name, filter_ in six.iteritems(self.filters):
-                try:
-                    if self.is_bound:
-                        data = self.form[name].data
-                    else:
-                        data = self.form.initial.get(
-                            name, self.form[name].field.initial)
-                    # change    
-                    val = None if data == 'null' else self.form.fields[name].clean(data)
-                    # end of change
-                    qs = filter_.filter(qs, val)
-                except forms.ValidationError:
-                    raise# was: pass
-            if self._meta.order_by:
-                try:
-                    order_field = self.form.fields[self.order_by_field]
-                    data = self.form[self.order_by_field].data
-                    # changes
-                    if data and data != ['']:
-                        value = order_field.clean(data)
-                        if value:
-                            qs = qs.order_by(*value)
-                    # end of changes
-                except forms.ValidationError:
-                    raise# was:pass
-            self._qs = qs
-        return self._qs
-
-
-class AmCATFilterBackend(filters.DjangoFilterBackend):    
-    default_filter_set = AmCATFilterSet
-    def get_filter_class(self, view, *args, **kargs):
-        
-        filter_class = super(AmCATFilterBackend, self).get_filter_class(view, *args, **kargs)
-        filter_class._meta.order_by = True
-        return filter_class
-
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
@@ -146,7 +91,7 @@ class TestFilters(ApiTestCase):
         as1.add(a1)
         as2.add(a1)
 
-        arts =  self._get_ids(ArticleResource, list, articlesets_set__id=[as1.id, as2.id])
+        arts = self._get_ids(ArticleResource, list, articlesets_set__id=[as1.id, as2.id])
 
         self.assertEquals(1, len(arts))
 
@@ -167,10 +112,10 @@ class TestFilters(ApiTestCase):
         self.assertEqual([p["name"] for p in res['results']], ["c", "b", "a"])
 
         # Multiple order by
-        res = self.get(ProjectResource, order_by=["active", "name"])
+        res = self.get(ProjectResource, order_by="active,name")
         self.assertEqual([p["name"] for p in res['results']], ["c", "a", "b"])
 
-        res = self.get(ProjectResource, order_by=["active", "-name"])
+        res = self.get(ProjectResource, order_by="active,-name")
         self.assertEqual([p["name"] for p in res['results']], ["c", "b", "a"])
         
     def test_filter(self):

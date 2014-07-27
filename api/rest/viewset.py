@@ -33,7 +33,6 @@ from . import tablerenderer
 ModelKey = namedtuple("ModelKey", ("key", "viewset"))
 
 
-
 class AmCATViewSetMixin(object):
     """
     All ViewSet used in the AmCAT API should inherit from this class, or at least
@@ -41,6 +40,16 @@ class AmCATViewSetMixin(object):
     mixin. A default implementation is given for this superclass.
     """
     model_key = None
+    ordering_fields = ("id",)
+
+    def __init__(self, *args, **kwargs):
+        super(AmCATViewSetMixin, self).__init__(*args, **kwargs)
+
+        # TODO: Remove this hack. Djangorestframework uses serializer_class to determine
+        # TODO: the fields a resource has, but does not bother to call get_serializer_class,
+        # TODO: resulting in errors.
+        if self.serializer_class is None:
+            self.serializer_class = self.get_serializer_class()
 
     def __getattr__(self, item):
         checked = []
