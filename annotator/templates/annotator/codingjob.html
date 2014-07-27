@@ -117,7 +117,10 @@
                 "length", "status", "comments"
             ];
 
-            var sortable = ["id", "comments"];
+            var sortable = [
+                "id", "headline", "comments", "article_id", "medium", "date",
+                "pagenr", "length"
+            ];
 
             $.each(column_order, function(i, colname){
                 columns.push({

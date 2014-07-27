@@ -68,6 +68,58 @@ class DjangoPrimaryKeyFilterBackend(DjangoFilterBackend):
         # Quick hack to prevent fetching all objects from database for root queryset
         return count.count(self.qs)
 
+
+def _strip_direction(field):
+    return field[1:] if field.startswith("-") else field
+
+
+def _get_ordering(mapping, fields):
+    for field in fields:
+        # We need to check for signs in front of the field which indicate direction
+        mapped_field = mapping.get(_strip_direction(field), field)
+
+        if field.startswith("-") and not mapped_field.startswith("-"):
+            yield "-" + mapped_field
+        else:
+            yield mapped_field
+
+
+class MappingOrderingFilter(OrderingFilter):
+    """
+    Just like OrderingFilter, this filter provides a way of ordering query results.
+    However, it also accounts for an extra property `ordering_mapping` which can
+    translate 'view' columns to 'real' database columns.
+
+    Consider the following pseudo-code:
+
+    >>> class ArticleSerializer:
+    >>>     aset_name = Field(lambda a: a.articleset.name)
+    >>>
+    >>> class ArticleViewSet:
+    >>>     serializer_class = ArticleSerializer
+
+    We would like to allow ordering on 'aset_name', even though the user of
+    the API shouldn't need to know about the origin of the property (thus abstracting
+    database models). In order to do this, we define a property:
+
+    >>> class ArticleViewSet:
+    >>>     serializer_class = ArticleSerializer
+    >>>     ordering_fields = ("aset_name", "articleset__name")
+    >>>     ordering_mapping = {"aset_name": "articleset__name"}
+    """
+    def get_ordering(self, request):
+        ordering = super(MappingOrderingFilter, self).get_ordering(request)
+
+        # Determine mapped values if ordering is a list
+        if ordering is not None:
+            mapping = getattr(self.view, "ordering_mapping", {})
+            return list(_get_ordering(mapping, ordering))
+
+    def filter_queryset(self, request, queryset, view):
+        # Allow get_ordering to access current view
+        self.view = view
+        return super(MappingOrderingFilter, self).filter_queryset(request, queryset, view)
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

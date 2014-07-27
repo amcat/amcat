@@ -236,7 +236,7 @@ REST_FRAMEWORK = {
     'DEFAULT_MODEL_SERIALIZER_CLASS': 'api.rest.serializer.AmCATModelSerializer',
     'DEFAULT_FILTER_BACKENDS': (
         'api.rest.filters.DjangoPrimaryKeyFilterBackend',
-        'rest_framework.filters.OrderingFilter',
+        'api.rest.filters.MappingOrderingFilter',
         'rest_framework.filters.SearchFilter',
     ),
 

@@ -73,7 +73,7 @@ class CodedArticleSerializer(AmCATModelSerializer):
     def _get_articles(self):
         aids = self._get_coded_articles().values_list("article__id", flat=True)
         articles = Article.objects.filter(id__in=aids).only("headline", "date", "pagenr", "length")
-        return { a.id : a for a in articles }
+        return {a.id: a for a in articles}
 
     def get_article(self, coded_article):
         return self._get_articles().get(coded_article.article_id)
@@ -94,7 +94,19 @@ class CodedArticleViewSet(ProjectViewSetMixin, CodingJobViewSetMixin,
     model = CodedArticle
     model_serializer_class = CodedArticleSerializer
     extra_filters = ("article__pagenr",)
-    ordering_fields = ('id', 'article__headline')
+
+    ordering_mapping = {
+        "headline": "article__headline",
+        "medium": "article__medium__name",
+        "date": "article__date",
+        "pagenr": "article__pagenr",
+        "length": "article__length",
+        "article_id": "article__id"
+    }
+
+    ordering_fields = (('id', "article_id")
+                        + tuple(ordering_mapping.keys())
+                        + tuple(ordering_mapping.values()))
 
     def filter_queryset(self, queryset):
         qs = super(CodedArticleViewSet, self).filter_queryset(queryset)

@@ -16,8 +16,9 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-import copy
 from django.core.exceptions import ImproperlyConfigured
+
+import copy
 import json
 import logging
 import types
