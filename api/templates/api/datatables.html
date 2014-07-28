@@ -1,4 +1,42 @@
 <div id="{{ id }}-wrapper"></div>
 
+<div id="{{ id }}-export-dialog" class="modal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+        <h4 class="modal-title">Export table</h4>
+      </div>
+      <div class="modal-body">
+        <p>You're about to export <strong class="num_items">68</strong> item(s). Options:</p>
+        <p>Export as:
+            <select name="format">
+                <option value="csv">CSV</option>
+                <option value="xlsx">Excel</option>
+                <option value="json">JSON</option>
+                <option value="spss">SPSS</option>
+                <option value="xhtml">HTML</option>
+            </select>
+        </p>
+        <p>
+            Limit to <input name="page_size" min="0" type="number" /> results.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <div class="btn-group">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          <!--<button type="button" class="btn btn-default">
+              <i class="glyphicon glyphicon-tasks"></i> Submit as task
+          </button>-->
+          <a type="button" name="export" class="btn btn-primary">
+              <i class="glyphicon glyphicon-download-alt"></i> Export
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- Table initializer (javascript) -->
 {{ js|safe }}

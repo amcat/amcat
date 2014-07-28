@@ -34,11 +34,54 @@ _SORTCOL = "iSortCol_";
 _SORTDIR = "sSortDir_";
 _DPROP = "mDataProp_";
 
-function __redirect(format){
-    return function(){
-        var url = $(this.dom.table).parents(".amcat-table-wrapper").data("url");
-        window.location = url + "&format=" + format + "&page_size=999999";
+function export_clicked(){
+    var table = this.table.DataTable();
+    var pks = [];
+
+    if ($(".active", this.table).length !== 0){
+        // Get data from ID column
+        pks = $.map(table.rows(".active").data(), function(o){ return o.id; });
     }
+
+    var url = this.table.parents(".amcat-table-wrapper").data("url");
+    url += "&format=" + this.format.val();
+    url += "&page_size=" + this.page_size.val();
+
+    if(pks.length){
+        url += "&pk=" + pks.join("&pk=");
+    }
+
+    window.location = url;
+    this.modal.modal("hide");
+}
+
+/*
+ * Open dialog after clicking 'export' at top of table.
+ */
+function open_export_dialog(event){
+    var id = this.dom.table.id + "-export-dialog";
+    var modal = $("#" + id);
+    var amount = $(".active", this.dom.table).length;
+
+    if (amount === 0){
+        // No rows selected: we're exporting all items.
+        amount = $(this.dom.table).DataTable().page.info().recordsTotal;
+    }
+
+    $("[name=page_size]", modal).attr("max", amount).val(amount);
+    $(".num_items", modal).text(amount);
+
+    var data = {
+        format: $("[name=format]", modal),
+        page_size: $("[name=page_size]", modal),
+        task: false,
+        modal: modal,
+        table: $(this.dom.table)
+    };
+
+    $("[name=export]", modal).unbind().click(export_clicked.bind(data));
+
+    modal.modal();
 }
 
 
@@ -70,34 +113,9 @@ _AMCAT_DEFAULT_OPTS = {
             });
         },
         aButtons: ["select_all", "select_none", {
-            "sExtends": "collection",
-            "sButtonText": "Export as..",
-            "aButtons": [
-            {
-                sExtends: "text",
-                "sButtonText": "CSV",
-                "fnClick": __redirect("csv")
-            },
-            {
-                sExtends: "text",
-                "sButtonText": "Excel",
-                "fnClick": __redirect("xlsx")
-            },
-            {
-                sExtends: "text",
-                "sButtonText": "JSON",
-                "fnClick": __redirect("json")
-            },
-            {
-                sExtends: "text",
-                "sButtonText": "SPSS",
-                "fnClick": __redirect("spss")
-            },
-            {
-                sExtends: "text",
-                "sButtonText": "HTML",
-                "fnClick": __redirect("xhtml")
-            }]
+            "sExtends": "text",
+            "sButtonText": "Export",
+            "fnClick": open_export_dialog
         }]
     },
     "lengthMenu": [[100, 300, 1000, 10000000], [100, 300, 1000, "All"]],
