@@ -26,8 +26,7 @@ def extra(request):
 
     if count < DISPLAY_COUNT:
         request.session[COUNT_KEY] = count
-
-    if request.user.is_anonymous():
+    if (not hasattr(request, "user")) or request.user.is_anonymous():
         theme = 'amcat'
     else:
         theme = getattr(request.user.get_profile(), 'theme', 'amcat').lower().replace(" ", "_")
