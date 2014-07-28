@@ -17,23 +17,20 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from django import forms
+import logging
+from django.core.exceptions import ValidationError
+
 from webscript import WebScript
-
-from amcat.scripts.searchscripts.articlelist import ArticleListScript
-from amcat.scripts.processors.articlelist_to_table import ArticleListToTable
 import amcat.scripts.forms
-
-from amcat.models import ArticleSet
 from amcat.models import Project
 from amcat.tools import keywordsearch
+from amcat.scripts.forms import SelectionForm
 
-import logging
 log = logging.getLogger(__name__)
 
 FORM_FIELDS_TO_ELASTIC = {'article_id' : "id", "medium_name" : "medium", "medium_id" : "mediumid",
                           "pagenr" : "page"}
-    
+
 class ShowArticleList(WebScript):
     name = "Article List"
     form_template = "api/webscripts/articlelistform.html"
@@ -53,8 +50,15 @@ class ShowArticleList(WebScript):
         else:
             project_id = int(self.data['projects'][0])
 
-        
-        t = keywordsearch.getDatatable(self.data, rowlink_open_in="new")
+
+        formData["start_date"] = formData["start_date"].split("T")[0]
+        formData["end_date"] = formData["end_date"].split("T")[0]
+
+        sf = SelectionForm(self.project, formData)
+        if not sf.is_valid():
+            raise ValueError(dict(sf._errors))
+
+        t = keywordsearch.getDatatable(sf.cleaned_data, rowlink_open_in="new")
         t = t.rowlink_reverse("project-article-details", args=[project_id, '{id}'])
         cols = {FORM_FIELDS_TO_ELASTIC.get(f,f) for f in self.data.getlist('columns')}
         for f in list(t.get_fields()):
