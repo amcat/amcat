@@ -82,10 +82,23 @@ def _get_hash(article_dict):
             c.update(v)
     return c.hexdigest()
 
-HIGHLIGHT_OPTIONS = {'fields' : {'text' : {"fragment_size" : 100, "number_of_fragments" : 3},
-                                 'headline' : {}}}
-LEAD_SCRIPT_FIELD = {"lead" : {'lang' : 'python',
-                               "script" : '_source["text"] and _source["text"][:300] + "..."'}}
+HIGHLIGHT_OPTIONS = {
+    'fields': {
+        'text': {
+            "fragment_size": 100,
+            "number_of_fragments": 3
+        },
+        'headline': {}
+    }
+}
+
+LEAD_SCRIPT_FIELD = {
+    "lead": {
+        'lang': 'python',
+        "script": r'_source["text"].replace("\r", "").split("\n\n")[0]'
+    }
+}
+
 UPDATE_SCRIPT_REMOVE_FROM_SET = 'ctx._source.sets = ($ in ctx._source.sets if $ != set)'
 UPDATE_SCRIPT_ADD_TO_SET = 'if (!(ctx._source.sets contains set)) {ctx._source.sets += set}'
 
