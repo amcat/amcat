@@ -20,21 +20,18 @@
 
 from itertools import ifilterfalse
 import datetime
-import re
 import logging
 
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 
-
-
-from amcat.models import Project, ArticleSet, Medium, AmCAT
-from amcat.models import Codebook, Language, Label, Article
+from amcat.models import Project, ArticleSet, Medium
+from amcat.models import Codebook, Language, Article
 from amcat.forms.forms import order_fields
-from amcat.tools.toolkit import to_datetime, stripAccents
+from amcat.tools.toolkit import to_datetime
 from amcat.tools.djangotoolkit import db_supports_distinct_on
-from amcat.tools import keywordsearch
+
 
 log = logging.getLogger(__name__)
 
@@ -75,10 +72,10 @@ class SelectionForm(forms.Form):
     articlesets = ModelMultipleChoiceFieldWithIdLabel(queryset=ArticleSet.objects.none(), required=False, initial=())
     mediums = ModelMultipleChoiceFieldWithIdLabel(queryset=Medium.objects.all(), required=False, initial=())
     article_ids = forms.CharField(widget=forms.Textarea, required=False)
-    start_date = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
-    end_date = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
+    start_date = forms.DateField(required=False)
+    end_date = forms.DateField(required=False)
     datetype = forms.ChoiceField(choices=DATETYPES.items(), initial='all', required=True)
-    on_date = forms.DateField(input_formats=('%d-%m-%Y',), required=False)
+    on_date = forms.DateField(required=False)
     
     codebook_replacement_language = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False, label="Language which is used to replace keywords")
     codebook_label_language = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False, label="Language for keywords")
@@ -271,6 +268,32 @@ class TestSelectionForm(amcattest.AmCATTestCase):
             project = codebook.project
 
         return project, codebook, SelectionForm(project, data=kwargs)
+
+    def test_date_formats(self):
+        dates = (
+            "2006-10-25", "2006/10/25", "25-10-2006", "25/10/2006",
+            "Oct 25 2006", "Oct 25, 2006", "25 Oct 2006", "25 Oct, 2006",
+            "October 25 2006", "October 25, 2006", "25 October 2006",
+            "25 October, 2006"
+        )
+
+        project = amcattest.create_test_project()
+
+        for date in dates:
+            p, c, form = self.get_form(start_date=date, project=project)
+            form.full_clean()
+            self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["start_date"].date())
+
+        for date in dates:
+            p, c, form = self.get_form(on_date=date, project=project, datetype="on")
+            form.full_clean()
+            self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["start_date"].date())
+            self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["end_date"].date())
+
+        for date in dates:
+            p, c, form = self.get_form(end_date=date, project=project)
+            form.full_clean()
+            self.assertEqual(datetime.date(2006, 10, 25), form.cleaned_data["end_date"].date())
 
     @amcattest.use_elastic
     def test_defaults(self):
