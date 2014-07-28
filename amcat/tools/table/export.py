@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -20,9 +20,18 @@
 # exportfunction(table, outfile
 
 from cStringIO import StringIO
-import csv, zipfile, io
+import csv
+import zipfile
+import io
 import os
+
 from django.template import Context, Template
+from openpyxl import Workbook
+from openpyxl.writer.dump_worksheet import ExcelDumpWriter
+import re
+
+# Used in _get_value()
+FLOAT_RE = re.compile('^(\+|-)?[0-9]*\.[0-9]+$')
 
 
 class TableExporter():
@@ -30,6 +39,7 @@ class TableExporter():
     General export class for tables
     Subclasses or instantiators should provide either a to_stream or a to_bytes method
     """
+
     def __init__(self, to_stream=None, to_bytes=None, name=None):
         if to_stream is not None: self.to_stream = to_stream
         if to_bytes is not None: self.to_bytes = to_bytes
@@ -39,7 +49,7 @@ class TableExporter():
     def name(self):
         # overwritten by self.name
         return self.__class__.__name__
-    
+
     def export(self, table, stream=None, encoding="utf-8", **kargs):
         """
         Export the table to the given stream. 
@@ -61,54 +71,78 @@ class TableExporter():
             else:
                 return bytes
 
+
 class CSV(TableExporter):
-    extension="csv"
+    extension = "csv"
     dialect = csv.excel
+
     def to_stream(self, table, stream, encoding):
         def encode(val):
             if val is None: return val
             return unicode(val).encode(encoding)
-        
+
         csvwriter = csv.writer(stream, dialect=self.dialect)
-        
+
         cols = list(table.getColumns())
         csvwriter.writerow([encode(col) for col in cols])
-        for row in table.getRows():            
+        for row in table.getRows():
             csvwriter.writerow([encode(table.getValue(row, col)) for col in cols])
+
 
 class CSV_semicolon(CSV):
     name = "CSV (semicolon)"
+
     class dialect(csv.excel):
         delimiter = ";"
 
 
+def _convert_value(value):
+    if not isinstance(value, basestring):
+        return value
+
+    if FLOAT_RE.match(value) is not None:
+        return float(value)
+
+    return value
+
+
+def _get_values(table, row):
+    # TODO: Remove hacks by accessing type info?
+    if table.rowNamesRequired:
+        yield unicode(row)
+
+    for column in table.getColumns():
+        yield _convert_value(table.getValue(row, column))
+
+
 class XLSX(TableExporter):
     extension = "xlsx"
-    def to_bytes(self, table, **kargs):
-        # Import openpyxl "lazy" to prevent global dependency
-        from openpyxl.workbook import Workbook
-        from openpyxl.writer.dump_worksheet import ExcelDumpWriter
 
-        wb = Workbook(optimized_write = True)
+    def to_bytes(self, table, **kargs):
+        wb = Workbook(optimized_write=True)
         ws = wb.create_sheet()
-        
-        ws.append(([""] if table.rowNamesRequired else []) + map(unicode, list(table.getColumns()))) # write column names
-        
+
+        # Determine columns. We may need an extra (first) column which 'names' the row
+        columns = list(map(unicode, list(table.getColumns())))
+        if table.rowNamesRequired:
+            columns.insert(0, u"")
+        ws.append(columns)
+
+        # Write rows to worksheet
         for row in table.getRows():
-            values = [unicode(row)] if table.rowNamesRequired else []
-            values += [table.getValue(row, column) for column in table.getColumns()]
-            ws.append(values)
+            ws.append(tuple(_get_values(table, row)))
         writer = ExcelDumpWriter(wb)
-        # need to do a little bit more work here, since the openpyxl library only supports writing to a filename, while we need a buffer here..
-        #buffer = StringIO()
+
+        # Need to do a little bit more work here, since the openpyxl library only
+        # supports writing to a filename, while we need a buffer here..
         buffer = io.BytesIO()
-        zf = zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED)
-        writer.write_data(zf)
-        zf.close()
-        buffer.flush()
+        with zipfile.ZipFile(buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
+            writer.write_data(zf)
         return buffer.getvalue()
 
+
 HTML_FILENAME = os.path.join(os.path.dirname(__file__), "templates/articles.html")
+
 
 class HTML(TableExporter):
     extension = "html"
@@ -121,6 +155,7 @@ class HTML(TableExporter):
         })
         return self.template.render(context).encode(encoding)
 
+
 class SPSS(TableExporter):
     extension = 'spss'
 
@@ -129,6 +164,7 @@ class SPSS(TableExporter):
 
         filename = table2spss.table2sav(table)
         return open(filename, 'rb').read()
+
 
 EXPORTERS = {
     'csv': CSV(),

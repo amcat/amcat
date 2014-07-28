@@ -45,4 +45,3 @@ class ArticleListToXlsx(script.Script):
     def run(self, articleList):
         tableObj = ArticleListToTable(self.options).run(articleList)
         return tableObj.export(format='xlsx')
-        

@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -29,15 +29,19 @@ Deserialised Value: a domain object, possibly a django Model instance
 
 """
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+
+log = logging.getLogger(__name__)
 
 from amcat.models.coding.code import Code
 from amcat.models.coding.codebook import Codebook
 from django import forms
 import functools
 
+
 class BaseSerialiser(object):
     """Base class for serialisation support for schema fields"""
+
     def __init__(self, field, deserialised_type=str, serialised_type=str):
         self.field = field
         self.deserialised_type = deserialised_type
@@ -93,46 +97,62 @@ class BaseSerialiser(object):
         @param **options: the form values of the fields specified by get_export_fields
         """
         yield "", self.deserialise
-    
+
+
 class TextSerialiser(BaseSerialiser):
     """Simple str - str serialiser"""
+
     def __init__(self, field):
         super(TextSerialiser, self).__init__(field, unicode, unicode)
 
+
 class IntSerialiser(BaseSerialiser):
     """Simple int - int serialiser"""
+
     def __init__(self, field):
         super(IntSerialiser, self).__init__(field, int, int)
 
+
 class BooleanSerialiser(BaseSerialiser):
     """Boolean serialiser with 'possible values'"""
+
     def __init__(self, field):
         super(BooleanSerialiser, self).__init__(self, bool, int)
 
     @property
     def possible_values(self):
         return [True, False]
-        
+
+
 class QualitySerialiser(BaseSerialiser):
     """Boolean serialiser with 'possible values'"""
+
     def __init__(self, field):
         super(QualitySerialiser, self).__init__(self, int, int)
+
     @property
     def possible_values(self):
-        return range(-10, 15, 5) # 15 because end point is ommitted
+        return range(-10, 15, 5)  # 15 because end point is ommitted
+
     def value_label(self, value, language=None):
         if value == 0: return "0"
         if value is None: return value
         return "%+1.1f" % (value / 10.)
+
     def get_export_columns(self, **options):
         yield "", self.value_label
-        
+
+
 class IntervalSerialiser(BaseSerialiser):
     """Stub for interval serialiser"""
+
     def __init__(self, field):
         super(IntervalSerialiser, self).__init__(field, int, int)
 
+
 _memo = {}
+
+
 def CodebookSerialiser(field):
     """Retrieve/Create a memoized codebooksereialiser for the given field.codebook"""
     # no harm if threads access concurrently, so no need to use local store or mutex
@@ -143,11 +163,12 @@ def CodebookSerialiser(field):
         return _memo[codebookid]
     except KeyError:
         _memo[codebookid] = _CodebookSerialiser(field)
-        return  _memo[codebookid]
-        
-    
+        return _memo[codebookid]
+
+
 class _CodebookSerialiser(BaseSerialiser):
     """int - amcat.models.coding.Code serialiser"""
+
     def __init__(self, field):
         super(_CodebookSerialiser, self).__init__(field, Code, int)
 
@@ -156,25 +177,25 @@ class _CodebookSerialiser(BaseSerialiser):
         try:
             return self._codebook
         except AttributeError:
-            self._codebook = list(Codebook.objects.filter(pk = self.field.codebook_id)
+            self._codebook = list(Codebook.objects.filter(pk=self.field.codebook_id)
                                   .prefetch_related("codebookcode_set"))[0]
             return self._codebook
-        
+
     def deserialise(self, value):
         try:
             return self.codebook.get_code(value)
         except Code.DoesNotExist:
             # code was removed from codebook
             return Code.objects.get(pk=value)
-            
+
     def serialise(self, value):
         if value is None: return None
         return value.id
-    
+
     @property
     def possible_values(self):
         return self.field.codebook.codes
-    
+
     def value_label(self, value, language=None):
         #self.field.codebook.cache_labels(language)
         return value.get_label(language)
@@ -193,8 +214,6 @@ class _CodebookSerialiser(BaseSerialiser):
         ancestor_id = ancestors[max(0, len(ancestors) - i - 1)]
         return self.value_label(self.deserialise(ancestor_id)) if label else ancestor_id
 
-                             
-        
     def get_export_columns(self, ids, labels, parents, **options):
         if parents:
             for i in range(parents):
@@ -203,22 +222,25 @@ class _CodebookSerialiser(BaseSerialiser):
                 if labels:
                     yield "_parent_{i}_label".format(**locals()), functools.partial(self._get_ancestor, i=i, label=True)
         if ids:
-            yield " (id)", lambda x:x
+            yield " (id)", lambda x: x
         if labels:
-            yield "", lambda x:self.value_label(self.deserialise(x))
-            
-        
+            yield "", lambda x: self.value_label(self.deserialise(x))
+
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
+
 
 class _DummyField(object):
     """Dummy coding schema field object with codebook"""
+
     def __init__(self, codebook):
         self.codebook = codebook
         self.codebook_id = codebook.id
+
 
 class TestSerialiser(amcattest.AmCATTestCase):
     def test_textserialiser(self):
@@ -227,6 +249,7 @@ class TestSerialiser(amcattest.AmCATTestCase):
         self.assertEqual(t.deserialise(12), '12')
         self.assertEqual(t.serialise('abc'), 'abc')
         self.assertIsNone(t.possible_values)
+
     def test_intserialiser(self):
         """Test the int serialiser"""
         t = IntSerialiser(None)
@@ -234,7 +257,7 @@ class TestSerialiser(amcattest.AmCATTestCase):
         self.assertEqual(t.serialise('-99'), -99)
         self.assertRaises(ValueError, t.serialise, 'abc')
         self.assertIsNone(t.possible_values)
-        
+
     def test_codebookserialiser_memoisation(self):
         """Does memoisation work?"""
         A = amcattest.create_test_codebook(name="A")
@@ -254,19 +277,20 @@ class TestSerialiser(amcattest.AmCATTestCase):
         self.assertEqual(b.deserialise(1), True)
         self.assertEqual(b.serialise(False), 0)
         self.assertEqual(b.deserialise(0), False)
-    
+
     def test_qualityserialiser(self):
         """Test the boolean serialiser"""
         b = QualitySerialiser(None)
         self.assertEqual(set(b.value_label(l) for l in b.possible_values),
-                         {'-1.0', '-0.5', '0' , '+0.5', '+1.0'})
+                         {'-1.0', '-0.5', '0', '+0.5', '+1.0'})
         for x in b.possible_values:
             self.assertEqual(b.deserialise(b.serialise(x)), x)
 
-        
+
     def test_codebookserialiser(self):
         """Test the codebook serialiser"""
         from amcat.models.language import Language
+
         A = amcattest.create_test_codebook(name="A")
         c = amcattest.create_test_code(label="bla")
 
@@ -284,9 +308,9 @@ class TestSerialiser(amcattest.AmCATTestCase):
         self.assertEqual(s.deserialise(d.id), d)
 
         self.assertRaises(Exception, s.deserialise, -9999999999999999)
-        
+
         self.assertEqual(set([c]), set(s.possible_values))
-        
+
         self.assertEqual("bla", s.value_label(c))
         self.assertEqual("blx", s.value_label(c, l2))
         
