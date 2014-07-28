@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import hashlib
 from django.core.exceptions import ImproperlyConfigured
 
 import copy
@@ -173,8 +174,11 @@ class Datatable(object):
             - underscores ("_")
             - colons (":")
             - and periods (".").
+
+        It is now implemented as the hash of `self.url` prepended with the character
+        'd'. This prevents names from becoming too long.
         """
-        return "d" + re.sub(r'[^0-9A-Za-z_:.-]', '__', self.url)
+        return "d" + hashlib.sha256(self.url).hexdigest()
 
     def get_default_ordering(self):
         return ("-id",) if "id" in self.get_fields() else ()
