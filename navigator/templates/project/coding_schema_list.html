@@ -14,10 +14,10 @@
     <div class="alert alert-success">Successfully deleted a schema. If this wasn't your intention, please contact your system administrator as it may still reside in the litter bin.</div>
  {% endif %}
 
+<h1>Owned schemas</h1>
+{{ owned_schemas|safe }}
+
  <h1>Imported schemas</h1>
  {{ linked_schemas|safe }}
-
- <h1>Owned schemas</h1>
- {{ owned_schemas|safe }}
 
 {% endblock %}
