@@ -85,11 +85,12 @@ class BZK(UploadScript):
         """New format as of 2014 and a few days before"""
         docdate = readDate(_html.cssselect("h1")[0].text.split("-")[1])
 
-        #split body by <hr>
+        # split body by <hr>
         items = []
         item = []
         if len(_html.cssselect("body > *")) == 1:
-            tags = _html.cssselect("body > div > *") #extra div wrapper as of 2014-04-08
+            # extra div wrapper as of 2014-04-08
+            tags = _html.cssselect("body > div > *")
         else:
             tags = _html.cssselect("body > *")
 
@@ -144,21 +145,20 @@ class BZK(UploadScript):
             article.date = None
         return article
 
+    def _parse_text(self, item):
+        paragraphs = (tag for tag in item if tag.tag in ("p", "div"))
+        return "\n".join(html2text(html.tostring(p)) for p in paragraphs)
+
     def parse_item(self, item):
         #item: a list of html tags
-        article = Article(metastring = {})
+        article = Article(metastring={})
+        article.text = self._parse_text(item)
+
         for tag in item:
-            if tag.tag in ("p","div"):
-                if not (hasattr(article,'text') or article.text):
-                    article.text.append(tag)
-                else:
-                    article.text = [tag]
-            elif tag.tag == "h2":
+            if tag.tag == "h2":
                 article.headline = tag.text
             elif tag.tag == "i":
                 article = self.parse_dateline(tag.text_content(), article)
-        #process html
-        article.text = "\n".join([html2text(html.tostring(bit)) for bit in article.text])
 
         return article
 
