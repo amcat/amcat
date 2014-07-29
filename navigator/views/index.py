@@ -17,13 +17,17 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from django.shortcuts import render
-from django.core.urlresolvers import reverse
 
-from api.rest.datatable import Datatable
-from api.rest.resources import MediumResource
-from amcat.models.medium import Medium
-
-import logging; log = logging.getLogger(__name__)
 
 def index(request):
+    try:
+        fluid = int(request.GET['fluid'])
+    except (ValueError, KeyError):
+        pass
+    else:
+        print(request.user.userprofile.fluid)
+        request.user.userprofile.fluid = fluid > 0
+        request.user.userprofile.save()
+        print(request.user.userprofile.fluid)
+
     return render(request, 'index.html')

@@ -39,7 +39,7 @@ SINGLETON_ID = 1
 # Increment to current db version to trigger db upgrades that syncdb can't handle
 # See amcat.tools.db_upgrader
 
-CURRENT_DB_VERSION = 26
+CURRENT_DB_VERSION = 27
 
 MEDIUM_CACHE_ENABLED = "medium_cache_enabled"
 TIMEOUT_INFINITY = 31536000 # One year, actually. By then we should have upgraded to Django

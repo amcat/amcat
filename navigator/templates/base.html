@@ -58,7 +58,7 @@
   <body>
     <!-- navbar -->
     <header class="navbar navbar-default" role="navigation">
-      <div class="container">
+      <div class="container{% if request.user.userprofile.fluid %}-fluid{% endif %}">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
             <span class="sr-only">Toggle navigation</span>
@@ -88,7 +88,7 @@
     </header>
 
     <!-- main contents -->
-    <div id="content" class="container">
+    <div id="content" class="container{% if request.user.userprofile.fluid %}-fluid{% endif %}">
 
 
       {% if breadcrumbs %}

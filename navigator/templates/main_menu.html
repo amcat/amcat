@@ -14,3 +14,14 @@
   </ul>
 </li>
 
+<li id="layout-switcher">
+    {% if request.user.userprofile.fluid %}
+        <a title="Switch to static layout" href="">
+            <i class="glyphicon glyphicon-resize-small"></i>
+        </a>
+    {% else %}
+        <a title="Switch to flexible layout" href="">
+            <i class="glyphicon glyphicon-resize-full"></i>
+        </a>
+    {% endif %}
+</li>

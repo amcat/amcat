@@ -391,4 +391,22 @@ amcat.getFormDict = function(form){
     return o;
 }
 
+/* Switch layouts */
+$(function(){
+    $("#layout-switcher").click(function(event){
+        event.preventDefault();
+        // Switch classes, etc.
+        $(".container,.container-fluid").toggleClass("container container-fluid");
+        $("#layout-switcher i").toggleClass("glyphicon-resize-small glyphicon-resize-full")
+        $("body").focus();
 
+        // Resize datatables
+        $.each($.fn.dataTable.tables(), function(i, table){
+            var settings = $(table).DataTable().settings()[0];
+            settings.oApi._fnAdjustColumnSizing(settings);
+        });
+
+        // Make change permanent. TODO: Make it an API call.
+        $.get("/navigator/?fluid=" + $("body > .container-fluid").length)
+    });
+});
