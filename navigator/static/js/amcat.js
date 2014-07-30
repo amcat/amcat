@@ -73,6 +73,15 @@ function confirm_dialog(event) {
                 '</div>' +
             '</div></div></div>').modal("show");
 
+        // Submit form if button has type=submit
+        var btn = $(event.currentTarget);
+        if(btn.is("[type=submit]")){
+            dialog.find("a.btn-danger").click(function(event){
+                event.preventDefault();
+                btn.closest("form").submit();
+            });
+        }
+
         $(".cancel-button", dialog).click((function(){
             this.modal("hide");
         }).bind(dialog))

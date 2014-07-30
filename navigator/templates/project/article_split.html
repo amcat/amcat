@@ -2,38 +2,35 @@
 
 {% block content %}
 
-<style>
-article input:checked{
- width:100%;
- display:block;
-}
+    <style>
+        article input:checked{
+            width:100%;
+            display:block;
+        }
+    </style>
 
-</style>
+    <div style="float:left; width:65%">
+        <form action="" method="POST">
+            <div>
+                {% include "project/article_split_button.html" %}
+            </div>
+            <hr/>
+            <table>{{ form }}</table>
+            <hr/>
+            <article id="article-{{article.id}}">
+                <p>
+                    {% for sentence, new in sentences %}
+                        {% if new %}</p><p>{% endif %}
+                        {{ sentence }}.<input name="sentence-{{ sentence.id }}" type="checkbox" />
+                    {% endfor %}
+                    </p>
+            </article>
+            <hr/>
+            <div>
+                {% include "project/article_split_button.html" %}
+            </div>
 
-<div style="float:left; width:65%">
- <form action="" method="POST">
- <div>
-  <input class="btn btn-primary" type="submit" value="Split"></input>
-  <input class="btn" value="Cancel"></input>
- </div>
- <hr/>
- <table>{{ form }}</table>
- <hr/>
- <article id="article-{{article.id}}">
-  <p>
-  {% for sentence, new in sentences %}
-   {% if new %}</p><p>{% endif %}
-    {{ sentence }}.<input name="sentence-{{ sentence.id }}" type="checkbox" />
-  {% endfor %}
-  </p>
- </article>
- <hr/>
- <div>
-  <input class="btn btn-primary" type="submit" value="Split"></input>
-  <input class="btn" value="Cancel"></input>
- </div>
-
- </form>
-</div>
+        </form>
+    </div>
 
 {% endblock %}

@@ -285,7 +285,9 @@ class ArticleSplitView(ProjectFormView):
         if selected_sentence_ids:
             sentences = Sentence.objects.filter(id__in=selected_sentence_ids)
             context = handle_split(form, self.project, self.article, sentences)
+            context = dict(self.get_context_data(**context))
             return render(self.request, "project/article_split_done.html", context)
+        return render(self.request, "project/article_split_empty.html", self.get_context_data())
 
     def get_context_data(self, **kwargs):
         ctx = super(ArticleSplitView, self).get_context_data(**kwargs)
