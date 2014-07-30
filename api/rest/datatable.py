@@ -335,7 +335,6 @@ class Datatable(object):
         return order_by(field)[0] in valid
 
     def can_filter(self, field):
-        import pdb; pdb.set_trace()
         return any(f == field for f in self._get_filter_class().filters.keys())
 
     def order_by(self, *fields):

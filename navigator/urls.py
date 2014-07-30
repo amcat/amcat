@@ -84,7 +84,7 @@ for view in [ProjectDetailsView, ArticleSetListView, ArticleSetDetailsView,
              ProjectUserListView, ProjectUserAddView,
              ArticleRuleListView, ArticleRuleDetailsView,
              ProjectUserListView, ProjectUserAddView,
-             TaskDetailsView, TaskListView
+             TaskDetailsView, TaskListView, MultipleArticleSetDestinationView
              ]:
     for pattern in view.get_url_patterns():
         urlpatterns += patterns('',

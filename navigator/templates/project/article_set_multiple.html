@@ -1,0 +1,17 @@
+{% extends "project/base.html" %}
+{% load static %}
+
+{% block title %}Project {{context.id}} - {{context.name}}{% endblock %}
+
+{% block content %}
+
+<div class="alert alert-info">
+  Your articles have been uploaded to multiple sets.
+</div>
+
+
+<div id="datatable">
+    {{ table }}
+</div>
+
+{% endblock %}

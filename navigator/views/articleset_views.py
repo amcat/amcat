@@ -194,7 +194,7 @@ class ArticleSetEditView(ProjectEditView):
     parent = ArticleSetDetailsView
     fields = ['project', 'name', 'provenance']
 
-class ArticleSetUploadListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+class ArticleSetUploadListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     parent = ArticleSetListView
     model = Plugin
     resource = PluginResource
@@ -207,8 +207,28 @@ class ArticleSetUploadListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrum
 
 class ArticleSetRedirectHandler(ScriptHandler):
     def get_redirect(self):
-        setid = self.task._get_raw_result()
-        return reverse("article set-details", args=[self.task.project.id, setid]), "View Set"
+        aset_ids = self.task._get_raw_result()
+
+        if len(aset_ids) == 1:
+            return reverse("article set-details", args=[self.task.project.id, aset_ids[0]]), "View set"
+
+        # Multiple articlesets
+        url = reverse("article set-multiple", args=[self.task.project.id])
+        return url + "?set=" + "&set=".join(map(str, aset_ids)), "View sets"
+
+class MultipleArticleSetDestinationView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
+    """
+    If a user selected multiple articlesets upon uploading, (s)he will be redirected here for
+    an overview of those sets.
+    """
+    model = ArticleSet
+    parent = ArticleSetListView
+    context_category = 'Articles'
+    rowlink = './../{id}'
+    url_fragment = 'multiple'
+
+    def filter_table(self, table):
+        return table.filter(pk=self.request.GET.getlist('set'), project=self.project)
 
 class ArticleSetUploadView(ProjectScriptView):
     parent = ArticleSetUploadListView

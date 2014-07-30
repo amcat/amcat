@@ -63,6 +63,12 @@ class Controller(object):
             self.errors.append(ScrapeError(None,None,e))
             log.exception("scraper._get_units failed")
 
+        # Do we need to save these id's to more sets?
+        if hasattr(scraper, "articlesets"):
+            for aset in scraper.articlesets:
+                log.info("Adding scraped articles to extra set %s" % aset)
+                aset.add_articles(self.saved_article_ids)
+
         return self.saved_article_ids
 
 def _set_default(obj, attr, val):

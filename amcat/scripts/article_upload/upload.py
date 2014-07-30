@@ -20,11 +20,11 @@
 """
 Base module for article upload scripts
 """
-
 import os.path
 import datetime
 import logging
 import zipfile
+from amcat.forms.widgets import JQueryMultipleSelect
 
 log = logging.getLogger(__name__)
 
@@ -37,21 +37,24 @@ from amcat.models import Article, Project, ArticleSet
 from amcat.scripts.article_upload.fileupload import RawFileUploadForm
 from amcat.models.articleset import create_new_articleset
 
+
 class ParseError(Exception):
     pass
 
-class UploadForm(RawFileUploadForm):
 
+class UploadForm(RawFileUploadForm):
     project = forms.ModelChoiceField(queryset=Project.objects.all())
 
-    articleset = forms.ModelChoiceField(
+    articlesets = forms.ModelMultipleChoiceField(
         queryset=ArticleSet.objects.all(), required=False,
         help_text="If you choose an existing articleset, the articles will be "
         "appended to that set. If you leave this empty, a new articleset will be "
         "created using either the name given below, or using the file name")
+
     articleset_name = forms.CharField(
         max_length=ArticleSet._meta.get_field_by_name('name')[0].max_length,
-        required = False)
+        required=False)
+
     def clean_articleset_name(self):
         """If article set name not specified, use file base name instead"""
         if self.files.get('file') and not (self.cleaned_data.get('articleset_name') or self.cleaned_data.get('articleset')):
@@ -68,9 +71,9 @@ class UploadForm(RawFileUploadForm):
         if project:
             f.fields['project'].initial = project.id
             f.fields['project'].widget = HiddenInput()
-
-            f.fields['articleset'].queryset = ArticleSet.objects.filter(project=project)
+            f.fields['articlesets'].queryset = ArticleSet.objects.filter(project=project)
         return f
+
 
 class UploadScript(script.Script):
     """Base class for Upload Scripts, which are scraper scripts driven by the
@@ -94,18 +97,24 @@ class UploadScript(script.Script):
         # avoid django problem/bug with repr(File(open(uncode-string)))
         # https://code.djangoproject.com/ticket/8156
         o2 = {k:v for k,v in self.options.iteritems() if k != 'file'}
-        log.debug(u"Articleset: {self.articleset!r}, options: {o2}"
+        log.debug(u"Articleset: {self.articlesets!r}, options: {o2}"
                   .format(**locals()))
 
     @property
     def articleset(self):
-        if self.options['articleset']:
-            return self.options['articleset']
+        return self.articlesets[0]
+
+    @property
+    def articlesets(self):
+        if self.options['articlesets']:
+            return self.options['articlesets']
+
         if self.options['articleset_name']:
             aset = create_new_articleset(self.options['articleset_name'], self.project)
             self.options['articleset'] = aset
-            return aset
-        return
+            return (aset,)
+
+        return ()
 
     def get_errors(self):
         """return a list of document index, message pairs that explains encountered errors"""
@@ -121,7 +130,6 @@ class UploadScript(script.Script):
     def explain_error(self, error):
         """Explain the error in the context of unit for the end user"""
         return "Error in element {error.i} : {error.error!r}".format(**locals())
-
 
     def decode(self, bytes):
         """Decode the bytes using the encoding from the form"""
@@ -155,13 +163,15 @@ class UploadScript(script.Script):
 
         if not arts:
             raise Exception("No articles were imported")
-        self.postprocess(arts)
-        old_provenance = [] if self.articleset.provenance is None else [self.articleset.provenance]
-        new_provenance = self.get_provenance(file, arts)
-        self.articleset.provenance = "\n".join([new_provenance] + old_provenance)
-        self.articleset.save()
 
-        return self.articleset
+        self.postprocess(arts)
+
+        for aset in self.articlesets:
+            new_provenance = self.get_provenance(file, arts)
+            aset.provenance = ("%s\n%s" % (aset.provenance or "", new_provenance)).strip()
+            aset.save()
+
+        return [aset.id for aset in self.articlesets]
 
     def postprocess(self, articles):
         """
@@ -169,7 +179,6 @@ class UploadScript(script.Script):
         article set (if needed, list should be changed in place)
         """
         pass
-
 
     def _get_units(self):
         """
