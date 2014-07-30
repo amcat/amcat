@@ -122,7 +122,7 @@ class Datatable(object):
     """
 
     def __init__(self, resource, rowlink=None, rowlink_open_in="same", options=None, hidden=None, url=None,
-                 ordering=None, format="json", filters=None, extra_args=None, url_kwargs=()):
+                 ordering=None, format="json", filters=None, checkboxes=False, extra_args=None, url_kwargs=()):
         """
         Default ordering is "id" if possible.
 
@@ -135,6 +135,9 @@ class Datatable(object):
         @param filters: an optional list of selector/value pairs for filtering
         @param extra_args: an optional list of field/value pairs for extra 'get' options
         @param url_kwargs: if a ViewSet is given, also provide url_kwargs which are used to determine the url
+
+        @param checkboxes: indicates whether checkboxes should be displayed
+        @type checkboxes: bool
         """
         if inspect.isclass(resource) and issubclass(resource, Model):
             resource = get_resource_for_model(resource)
@@ -144,6 +147,7 @@ class Datatable(object):
         self.rowlink = rowlink or getattr(self.resource, "get_rowlink", lambda: None)()
         self.rowlink_open_in = rowlink_open_in
         self.ordering = ordering
+        self.checkboxes = checkboxes
 
         self.format = format
         self.hidden = set(hidden) if isinstance(hidden, collections.Iterable) else set()
@@ -232,6 +236,7 @@ class Datatable(object):
             'filters': self.filters,
             'extra_args': self.extra_args,
             'format': self.format,
+            'checkboxes': self.checkboxes
         }
         kws.update(kwargs)
         return kws
@@ -262,7 +267,8 @@ class Datatable(object):
             'rowlink': self.rowlink,
             'rowlink_open_in': self.rowlink_open_in,
             'url': self.url,
-            'options': json.dumps(options)
+            'options': json.dumps(options),
+            'checkboxes': self.checkboxes
         }))
 
     def get_aoColumns(self):

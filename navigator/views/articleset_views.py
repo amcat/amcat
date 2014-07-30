@@ -83,10 +83,11 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
 
     def get_context_data(self, **kwargs):
         context = super(ArticleSetListView, self).get_context_data(**kwargs)
-        tables = [("favourite", '<i class="icon-star"></i> <b>Favourites</b>'),
-                  ("archived", "Archived Sets"),
-                  ("codingjob", "Coding Job Sets"),
-                  ]
+        tables = [
+            ("favourite", '<i class="icon-star"></i> <b>Favourites</b>'),
+            ("archived", "Archived Sets"),
+            ("codingjob", "Coding Job Sets"),
+        ]
         what = self.what
         if not ArticleSet.objects.filter(Q(projects_set=self.project)
                                          | Q(project=self.project)).exists():
@@ -121,7 +122,10 @@ class ArticleSetListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin
         return table
 
     def get_datatable_kwargs(self):
-        return {"url_kwargs": {"project" : self.project.id}}
+        return {
+            "url_kwargs": {"project": self.project.id},
+            "checkboxes": True
+        }
 
 class ArticleSetDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, DetailView):
     parent = ArticleSetListView
