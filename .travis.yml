@@ -22,7 +22,7 @@ install:
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
  - sudo service rabbitmq-server start
  - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.1.0.tar.gz | tar xvz
- - wget http://amcat.vu.nl/plain/hitcount.jar
+ - wget http://amcat.nl/plain/hitcount.jar
  - elasticsearch-1.1.0/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
  - elasticsearch-1.1.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
  - elasticsearch-1.1.0/bin/plugin -install mobz/elasticsearch-head
