@@ -58,7 +58,7 @@ class ShowArticleList(WebScript):
         if not sf.is_valid():
             raise ValueError(dict(sf._errors))
 
-        t = keywordsearch.getDatatable(sf.cleaned_data, rowlink_open_in="new")
+        t = keywordsearch.getDatatable(sf.cleaned_data, rowlink_open_in="new", allow_html_export=True)
         t = t.rowlink_reverse("project-article-details", args=[project_id, '{id}'])
         cols = {FORM_FIELDS_TO_ELASTIC.get(f,f) for f in self.data.getlist('columns')}
         for f in list(t.get_fields()):

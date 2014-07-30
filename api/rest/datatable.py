@@ -122,7 +122,8 @@ class Datatable(object):
     """
 
     def __init__(self, resource, rowlink=None, rowlink_open_in="same", options=None, hidden=None, url=None,
-                 ordering=None, format="json", filters=None, checkboxes=False, extra_args=None, url_kwargs=()):
+                 ordering=None, format="json", filters=None, checkboxes=False, allow_html_export=False,
+                 extra_args=None, url_kwargs=()):
         """
         Default ordering is "id" if possible.
 
@@ -138,6 +139,9 @@ class Datatable(object):
 
         @param checkboxes: indicates whether checkboxes should be displayed
         @type checkboxes: bool
+
+        @param allow_html_export: display 'xhtml' as export option
+        @type allow_html_export: bool
         """
         if inspect.isclass(resource) and issubclass(resource, Model):
             resource = get_resource_for_model(resource)
@@ -148,6 +152,7 @@ class Datatable(object):
         self.rowlink_open_in = rowlink_open_in
         self.ordering = ordering
         self.checkboxes = checkboxes
+        self.allow_html_export = allow_html_export
 
         self.format = format
         self.hidden = set(hidden) if isinstance(hidden, collections.Iterable) else set()
@@ -236,7 +241,8 @@ class Datatable(object):
             'filters': self.filters,
             'extra_args': self.extra_args,
             'format': self.format,
-            'checkboxes': self.checkboxes
+            'checkboxes': self.checkboxes,
+            'allow_html_export': self.allow_html_export
         }
         kws.update(kwargs)
         return kws
@@ -415,6 +421,7 @@ class Datatable(object):
             'id': self.name,
             'cols': self.fields,
             'links': links,
+            'allow_html_export': self.allow_html_export
         }))
 
     def __repr__(self):

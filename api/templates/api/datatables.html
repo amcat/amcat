@@ -15,7 +15,9 @@
                 <option value="xlsx">Excel</option>
                 <option value="json">JSON</option>
                 <option value="spss">SPSS</option>
-                <option value="xhtml">HTML</option>
+                {% if allow_html_export %}
+                    <option value="xhtml">HTML</option>
+                {% endif %}
             </select>
         </p>
         <p>
