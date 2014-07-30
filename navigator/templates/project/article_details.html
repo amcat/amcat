@@ -1,113 +1,118 @@
 {% extends "project/base.html" %}
+{% load staticfiles %}
 
 {% block actions %}
-{% if can_edit %}
- <a class="btn btn-warning" href="{% url 'article-split' project.id article.id %}">Split article</a>
-{% endif %}
+    {% if can_edit %}
+        <a class="btn btn-warning" href="{% url 'article-split' project.id article.id %}">Split article</a>
+    {% endif %}
+{% endblock %}
+
+{% block css %}
+    <link href="{% static 'css/tree.css' %}" rel="stylesheet" type="text/css"  />
 {% endblock %}
 
 {% block content %}
-<div class="row">
-<div class="col-md-8 col-sm-12">
- <h1>{{headline|safe}}</h1>
- <article>
-  {% if article.byline %}<h2>{{article.byline}}</h2>{% endif %}
-  {% if can_view_text %}
-    {{ text|safe|urlizetrunc:30|linebreaks }}
-  {% else %}  
-    <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
-  {% endif %}
- </article>
-</div>
-<div class="col-md-4 col-sm-12">
- <h1>Article details</h1>
+    <div class="row">
+        <div class="col-md-8 col-sm-12">
+            <h1>{{headline|safe}}</h1>
+            <article>
+                {% if article.byline %}<h2>{{article.byline}}</h2>{% endif %}
+                {% if can_view_text %}
+                    {{ text|safe|urlizetrunc:30|linebreaks }}
+                {% else %}
+                    <div class="alert alert-warning">You do not have sufficient access to this project to view the full text of the article. Please contact an administrator of <a href="{% url "user-list" article.project_id %}">project {{article.project_id}} - {{article.project}}</a> to gain access</div>
+                {% endif %}
+            </article>
+        </div>
+        <div class="col-md-4 col-sm-12">
+            <h1>Article details</h1>
 
-<style type="text/css">
- table tr td:first-child{ font-weight:bold; }
-</style>
+            <style type="text/css">
+                table tr td:first-child{ font-weight:bold; }
+            </style>
 
-<table>
- <tr>
-  <td>articleID:</td>
-  <td>{{article.id}}</td>
- </tr>
- <tr>
-  <td>UUID:</td>
-  <td style="white-space: nowrap">{{article.uuid}}</td>
- </tr>
- <tr>
-  <td>Date:</td>
-  <td>{{article.date|date:"d-m-Y H:i"}}</td>
- </tr> 
- <tr>
-  <td>Project:</td>
-  <td><a href="{% url "project" article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
- </tr>
- {% if article.section %}
- <tr>
-  <td>Section:</td>
-  <td>{{article.section}}</td>
- </tr>
- {% endif %}
- <tr>
-  <td>Medium:</td>
-  <td>{{article.medium_id}} - {{article.medium}}</td>
- </tr>
- {% if article.pagenr %}
- <tr>
-  <td>Page:</td>
-  <td>{{article.pagenr}}</td>
- </tr>
- {% endif %}
- <tr>
-  <td>Length:</td>
-  <td>{{article.length}} words</td>
- </tr>
- {% if article.url %}
- <tr>
-  <td>URL:</td>
-  <td>{{article.url|urlizetrunc:20}}</td>
- </tr>
- {% endif %}
+            <table>
+                <tr>
+                    <td>ID:</td>
+                    <td>{{article.id}}</td>
+                </tr>
+                <tr>
+                    <td>UUID:</td>
+                    <td style="white-space: nowrap">{{article.uuid}}</td>
+                </tr>
+                <tr>
+                    <td>Date:</td>
+                    <td>{{article.date|date:"d-m-Y H:i"}}</td>
+                </tr>
+                <tr>
+                    <td>Project:</td>
+                    <td><a href="{% url "project" article.project_id %}">{{article.project_id}} - {{article.project}}</a></td>
+                </tr>
+                {% if article.section %}
+                    <tr>
+                        <td>Section:</td>
+                        <td>{{article.section}}</td>
+                    </tr>
+                {% endif %}
+                <tr>
+                    <td>Medium:</td>
+                    <td>{{article.medium_id}} - {{article.medium}}</td>
+                </tr>
+                {% if article.pagenr %}
+                    <tr>
+                        <td>Page:</td>
+                        <td>{{article.pagenr}}</td>
+                    </tr>
+                {% endif %}
+                <tr>
+                    <td>Length:</td>
+                    <td>{{article.length}} words</td>
+                </tr>
+                {% if article.url %}
+                    <tr>
+                        <td>URL:</td>
+                        <td>{{article.url|urlizetrunc:20}}</td>
+                    </tr>
+                {% endif %}
 
- {% if article.author %}
- <tr>
-  <td>Author:</td>
-  <td>{{article.author}}</td>
- </tr>
- {% endif %}
-
-
- <tr class="hbreak"><td colspan="2"></td></tr>
- <tr>
-  <td>In&nbsp;articlesets:</td>
-  <td>
-  {% for aset in article.articlesets_set.all.distinct %}
-    <a href="{% url "article set-details" project.id aset.id %}">{{aset.id}} - {{aset}}</a>
-    {% if can_edit %}
-    <a href="{% url "article-removefromset" project.id article.id %}?remove_set={{aset.id}}&return_set={{articleset_id}}" class="btn btn-warning btn-xxs"><i class="glyphicon glyphicon-trash"></i></a>
-    {% endif %}
-    <br/>
-  {% empty %}
-    This article does not occur in any set
-  {% endfor %}
-  </td>
-  </tr>
- <tr>
-  <td>Preprocessed:</td>
-  <td>
-  {% for aa in article.analysedarticle_set.all.distinct %}
-    <a href="{% url "analysedarticle" context.id aa.id %}">{{aa.plugin.id}} - {{aa.plugin}}</a><br/>
-  {% empty %}
-    This article does not occur in any set
-  {% endfor %}
-  </td>
-  </tr>
-
-</table>
-</div>
+                {% if article.author %}
+                    <tr>
+                        <td>Author:</td>
+                        <td>{{article.author}}</td>
+                    </tr>
+                {% endif %}
 
 
-</div>
-
+                <tr class="hbreak"><td colspan="2"></td></tr>
+                <tr>
+                    <td>In&nbsp;articlesets:</td>
+                    <td>
+                        {% for aset in article.articlesets_set.all.distinct %}
+                            <a href="{% url "article set-details" project.id aset.id %}">{{aset.id}} - {{aset}}</a>
+                            {% if can_edit %}
+                                <a href="{% url "article-removefromset" project.id article.id %}?remove_set={{aset.id}}&return_set={{articleset_id}}" class="btn btn-warning btn-xxs"><i class="glyphicon glyphicon-trash"></i></a>
+                            {% endif %}
+                            <br/>
+                        {% empty %}
+                            This article does not occur in any set
+                        {% endfor %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>Tree:</td>
+                    <td>{{ tree|default:"No children or parents." }}</td>
+                </tr>
+                <tr>
+                    <td>Preprocessed:</td>
+                    <td>
+                        {% for aa in article.analysedarticle_set.all.distinct %}
+                            <a href="{% url "analysedarticle" context.id aa.id %}">{{aa.plugin.id}} - {{aa.plugin}}</a><br/>
+                        {% empty %}
+                            This article does not occur in any set
+                        {% endfor %}
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
 {% endblock %}

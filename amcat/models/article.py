@@ -23,6 +23,10 @@ articles database table.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+from collections import namedtuple
+from django.template.loader import get_template
+from django.template import Context
+
 from amcat.tools.amcattest import create_test_article
 
 from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
@@ -63,6 +67,38 @@ def unescape_em(txt):
         .replace("&lt;/em&gt;", "</em>"))
 
 
+class ArticleTree(namedtuple("ArticleTree", ["article", "children"])):
+    """
+    Represents a tree of articles, based on their
+    """
+    def get_ids(self):
+        """Returns a generator containing all ids in this tree"""
+        yield self.article.id
+        for child in self.children:
+            for id in child.get_ids():
+                yield id
+
+    def get_html(self, active=None, articleset=None):
+        """
+        Returns tree represented as HTML.
+
+        @param active: highlight this article (wrap in em-tags)
+        @type active: amcat.models.Article
+
+        @param articleset: for all articles in this tree which are also in this
+                           articleset, created a hyperlink.
+        @type articleset: amcat.models.ArticleSet
+        @rtype: compiled Template object
+        """
+        articles = set()
+        if articleset is not None:
+            articles = articleset.articles.filter(id__in=self.get_ids())
+            articles = set(articles.values_list("id", flat=True))
+
+        context = Context(dict(locals(), tree=self))
+        return get_template("amcat/article_tree_root.html").render(context)
+
+
 class Article(AmcatModel):
     """
     Class representing a newspaper article
@@ -89,7 +125,7 @@ class Article(AmcatModel):
     text = models.TextField()
 
     parent = models.ForeignKey("self", null=True, db_column="parent_article_id",
-                               db_index=True, blank=True)
+                               db_index=True, blank=True, related_name="children")
     project = models.ForeignKey("amcat.Project", db_index=True, related_name="articles")
     medium = models.ForeignKey(Medium, db_index=True)
 
@@ -288,6 +324,26 @@ class Article(AmcatModel):
                     a.save()
         return articles, errors
 
+    def get_tree(self, include_parents=True, fields=("id",)):
+        """
+        Returns a deterministic (sorted by id) tree of articles, based on their parent
+        property. It runs O(2n) database queries, where `n` depth of tree queries.
+
+        @param include_parents: start at root of tree, instead of this node
+        @type include_parents: bool
+
+        @param fields:
+        @type fields: tuple of string
+
+        @rtype: ArticleTree
+        """
+        # Do we need to render the complete tree?
+        if include_parents and self.parent:
+            return self.parent.get_tree(include_parents=True)
+
+        children = self.children.order_by("id").only(*fields)
+        return ArticleTree(self, [c.get_tree(include_parents=False) for c in children])
+
 
 
 ###########################################################################
@@ -418,3 +474,40 @@ class TestArticle(amcattest.AmCATTestCase):
         a = amcattest.create_test_article(medium=m)
         r = amcates.ES().query(filters={"id" : a.id}, fields=["medium"])
         print(r)
+
+    @amcattest.use_elastic
+    def test_get_tree(self):
+        article1 = amcattest.create_test_article()
+        self.assertEqual(article1.get_tree(), ArticleTree(article1, []))
+
+        # Equals does not compare nested
+        article2 = amcattest.create_test_article(parent=article1)
+        self.assertEqual(
+            str(article1.get_tree()),
+            str(ArticleTree(article1, [ArticleTree(article2, [])]))
+        )
+
+        # Test default include_parent = True
+        self.assertEqual(
+            str(article2.get_tree()),
+            str(ArticleTree(article1, [ArticleTree(article2, [])]))
+        )
+
+        # Test include_parents = False
+        self.assertEqual(
+            str(article2.get_tree(include_parents=False)),
+            str(ArticleTree(article2, []))
+        )
+
+
+class TestArticleTree(amcattest.TestCase):
+    def test_get_ids(self):
+        tree = ArticleTree(
+            Article(id=3), [
+                ArticleTree(Article(id=5), []), ArticleTree(Article(id=6), [
+                    ArticleTree(Article(id=7), [])
+                ])
+            ]
+        )
+
+        self.assertEqual({3, 5, 6, 7}, set(tree.get_ids()))

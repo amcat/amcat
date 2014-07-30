@@ -54,6 +54,11 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         self.highlight()
         context['text'] = self.object.text
         context['headline'] = self.object.headline
+        context['articleset'] = ArticleSet.objects.get(id=self.kwargs['articleset_id'])
+
+        tree = self.object.get_tree()
+        if tree.children:
+            context['tree'] = tree.get_html(active=self.object, articleset=context['articleset'])
 
         # HACK: put query back on session to allow viewing more articles
         self.request.session["query"] = self.last_query

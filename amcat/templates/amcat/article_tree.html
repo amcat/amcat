@@ -1,0 +1,26 @@
+{% comment %}Used in models.article.ArticleTree.get_html(){% endcomment %}
+<li>
+    {% if tree.article.id in articles %}
+        <a href="{% url 'article-details' articleset.project_id articleset.id tree.article.id %}">
+    {% endif %}
+
+    {% if tree.article.id == active.id %}
+        <em>{{ tree.article.id }}</em>
+    {% else %}
+        {{ tree.article.id }}
+    {% endif %}
+
+    {% if tree.article.id in articles %}
+        </a>
+    {% endif %}
+
+    {% if tree.children %}
+    <ul>
+        {% for child in tree.children  %}
+            {% with template="amcat/article_tree.html" %}
+                {% include template with tree=child %}
+            {% endwith %}
+        {% endfor %}
+    </ul>
+    {% endif %}
+</li>
