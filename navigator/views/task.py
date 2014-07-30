@@ -18,6 +18,7 @@
 ###########################################################################
 from operator import attrgetter
 from datetime import timedelta, datetime
+from django.core.urlresolvers import reverse
 from django.shortcuts import redirect
 from django.views.generic import ListView, DetailView
 from amcat.models import Task
@@ -45,6 +46,10 @@ def clean_stuck(request, project_id):
     tasks.delete()
     set_notice(request, title="Cleaned", text="Deleted %s task(s)." % tasks_count)
     return redirect(request.META["HTTP_REFERER"], permanent=False)
+
+def uuid_redirect(request, project_id, uuid):
+    task_id = Task.objects.get(uuid=uuid.lower()).id
+    return redirect(reverse("task-details", args=[project_id, task_id]), permanent=True)
 
 class TaskListView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
     model = Task

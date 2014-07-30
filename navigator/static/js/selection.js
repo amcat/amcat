@@ -67,6 +67,10 @@ amcat.selection.hideMessage = function () {
 
 amcat.selection.current_polls = {};
 amcat.selection.modal_html =
+    '<p class="task">This job is executed in the background. You may watch its progress either here, or by visiting ' +
+    '<a href="">this page</a>. Feel free to close this tab if needed.</p>' +
+    '<p>Note: the current implementation is quite limited. If your results are normally displayed here, do not ' +
+    'navigate away.</p>' +
     '<div class="message"></div>' +
     '<div class="progress">' +
         '<div class="progress-bar" role="progressbar" aria-valuenow="0" valuemin="0" aria-valuemax="100" style="width:0%;"></div>' +
@@ -88,6 +92,7 @@ amcat.selection.poll = function(task_uuid, callback, timeout, download){
 
     var modal = amcat.selection.modal;
     modal.dialog("open");
+    $("p.task a", modal).attr("href", "../tasks/" + task_uuid);
 
     $.ajax({
         url : "/api/v4/task?uuid=" + task_uuid,

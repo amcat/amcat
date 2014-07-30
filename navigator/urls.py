@@ -27,11 +27,14 @@ from navigator.views.article_views import *  # noqa
 from navigator.views.query import *  # noqa
 from navigator.views.project_views import *  # noqa
 from navigator.views.codebook_views import *  # noqa
-from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck
+from navigator.views.task import TaskDetailsView, TaskListView, clean_ready, clean_stuck, uuid_redirect
 from navigator.views.user_views import *  # noqa
 from navigator.views.codingjob_views import *  # noqa
 from navigator.views.codingschema_views import *  # noqa
 from navigator.views.rule_views import *  # noqa
+
+
+UUID_RE = "[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}"
 
 urlpatterns = patterns(
     '',
@@ -60,6 +63,7 @@ urlpatterns = patterns(
     # Task actions
     url(r'^projects/(?P<project_id>[0-9]+)/tasks/clean_ready', clean_ready, name='task-clean-ready'),
     url(r'^projects/(?P<project_id>[0-9]+)/tasks/clean_stuck', clean_stuck, name='task-clean-stuck'),
+    url(r'^projects/(?P<project_id>[0-9]+)/tasks/(?P<uuid>%s)' % UUID_RE, uuid_redirect, name='task-uuid'),
 )
 
 
