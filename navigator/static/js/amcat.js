@@ -44,15 +44,12 @@ if(!window.console.trace){
 /* Enable multiselect */
 $(function(){
    $.each($("select.multiselect"), function(i, el){
-      el = $(el).multiselect({
+      $(el).multiselect({
          minWidth : 300,
          multiple : el.multiple,
-         header : '',
          selectedList : 5
       }).multiselectfilter({filter: amcat.multiselectCheckIfMatches});
-
    });
-   
 });
 
 function confirm_dialog(event) {

@@ -204,8 +204,7 @@ $(document).ready(function(){
        selectedList: 6,
        minWidth: 360,
        noneSelectedText:'All Article Sets',
-       header:'',
-       height:'auto',
+       height:'auto'
     }).multiselectfilter({filter: amcat.multiselectCheckIfMatches}); 
     
     $('#id_datetype').multiselect({
@@ -244,8 +243,7 @@ $(document).ready(function(){
        selectedList: 6,
        minWidth: 360,
        noneSelectedText:'All Mediums',
-       header:'',
-       height:'auto',
+       height:'auto'
     }).multiselectfilter({filter: amcat.multiselectCheckIfMatches});
     
     
