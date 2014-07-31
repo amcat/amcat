@@ -18,11 +18,10 @@
 ###########################################################################
 import functools
 from rest_framework import serializers
-from amcat.models.task import IN_PROGRESS
+from amcat.models.task import IN_PROGRESS, FAILED
 from amcat.models import Task
 from amcat.tools import amcattest
 from api.rest.serializer import AmCATModelSerializer
-from django.core.urlresolvers import reverse
 
 __all__ = ("TaskSerializer", "TaskResultSerializer")
 
@@ -67,8 +66,8 @@ class TaskSerializer(AmCATModelSerializer):
         return task.class_name.split(".")[-1]
 
     def _get_redirect(self, task):
-        ready, _, _ = self.get_status_ready(task)
-        if ready:
+        ready, _, status = self.get_status_ready(task)
+        if ready and status != FAILED:
             return task.get_handler().get_redirect()
 
     def get_redirect_url(self, task):

@@ -36,6 +36,7 @@ from amcat.amcatcelery import app
 
 
 IN_PROGRESS = "INPROGRESS"
+FAILED = "FAILURE"
 
 
 @app.task(bind=True)
