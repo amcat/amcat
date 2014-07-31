@@ -273,7 +273,7 @@ class ES(object):
             body['query'] = {'constant_score' : {'query' : body['query']}}
 
         if 'sort' in kwargs: body['track_scores'] = True
-        
+
         if highlight:
             if isinstance(highlight, dict):
                 body['highlight'] = highlight
@@ -878,3 +878,19 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
         # test real kanji
         self.assertEqual(set(ES().query_ids(u"\u6f22\u5b57", filters=dict(sets=s1.id))), {a.id})
+
+    @amcattest.use_elastic
+    def test_byline(self):
+        aset = amcattest.create_test_set()
+        amcattest.create_test_article(byline="bob", text="eve", articleset=aset)
+
+        ES().flush()
+
+        q = lambda query: set(ES().query_ids(query, filters={"sets": aset.id}))
+
+        self.assertEqual(1, len(q("byline:bob")))
+        self.assertEqual(0, len(q("byline:eve")))
+        self.assertEqual(1, len(q("bob")))
+
+
+
