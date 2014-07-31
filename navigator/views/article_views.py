@@ -54,7 +54,10 @@ class ArticleDetailsView(HierarchicalViewMixin, ProjectViewMixin, BreadCrumbMixi
         self.highlight()
         context['text'] = self.object.text
         context['headline'] = self.object.headline
-        context['articleset'] = ArticleSet.objects.get(id=self.kwargs['articleset_id'])
+
+        context['articleset'] = None
+        if 'articleset_id' in self.kwargs:
+            context['articleset'] = ArticleSet.objects.get(id=self.kwargs['articleset_id'])
 
         tree = self.object.get_tree()
         if tree.children:
