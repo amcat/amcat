@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -41,19 +41,20 @@ from django.core.exceptions import ValidationError
 from django.template.defaultfilters import escape as escape_filter
 
 import logging
+
 log = logging.getLogger(__name__)
 
 import re
 
-WORD_RE = re.compile('[{L}{N}]+') # {L} --> All (unicode) letters
-                                  # {N} --> All numbers
+WORD_RE = re.compile('[{L}{N}]+')  # {L} --> All (unicode) letters
+# {N} --> All numbers
 
 
 def word_len(txt):
     """Count words in `txt`
 
     @type txt: str or unicode"""
-    if not txt: return 0 # Safe handling of txt=None
+    if not txt: return 0  # Safe handling of txt=None
     return len(re.sub(WORD_RE, ' ', txt).split())
 
 
@@ -63,14 +64,15 @@ def unescape_em(txt):
     @type txt: unicode
     """
     return (txt
-        .replace("&lt;em&gt;", "<em>")
-        .replace("&lt;/em&gt;", "</em>"))
+            .replace("&lt;em&gt;", "<em>")
+            .replace("&lt;/em&gt;", "</em>"))
 
 
 class ArticleTree(namedtuple("ArticleTree", ["article", "children"])):
     """
     Represents a tree of articles, based on their
     """
+
     def get_ids(self):
         """Returns a generator containing all ids in this tree"""
         yield self.article.id
@@ -130,7 +132,7 @@ class Article(AmcatModel):
     medium = models.ForeignKey(Medium, db_index=True)
 
     insertscript = models.CharField(blank=True, null=True, max_length=500)
-    insertdate = models.DateTimeField(blank=True,null=True,auto_now_add=True)
+    insertdate = models.DateTimeField(blank=True, null=True, auto_now_add=True)
 
     def __init__(self, *args, **kwargs):
         super(Article, self).__init__(*args, **kwargs)
@@ -245,7 +247,7 @@ class Article(AmcatModel):
         es = amcates.ES()
 
         # existing / duplicate article ids to add to set
-        add_to_set = set() 
+        add_to_set = set()
         # add dict (+hash) as property on articles so we know who is who
         sets = [articleset.id] if articleset else None
         todo = []
@@ -259,16 +261,16 @@ class Article(AmcatModel):
 
         if check_duplicate:
             hashes = [a.es_dict['hash'] for a in todo]
-            results =es.query(filters={'hashes' : hashes}, fields=["hash", "sets"], score=False)
-            dupes = {r.hash : r for r in results}
+            results = es.query(filters={'hashes': hashes}, fields=["hash", "sets"], score=False)
+            dupes = {r.hash: r for r in results}
         else:
             dupes = {}
 
         # add all non-dupes to the db, needed actions
-        add_new_to_set = set() # new article ids to add to set
-        add_to_index = [] # es_dicts to add to index
-        result = [] # return result
-        errors = [] # return errors
+        add_new_to_set = set()  # new article ids to add to set
+        add_to_index = []  # es_dicts to add to index
+        result = []  # return result
+        errors = []  # return errors
         for a in todo:
             dupe = dupes.get(a.es_dict['hash'], None)
             if dupe:
@@ -345,15 +347,16 @@ class Article(AmcatModel):
         return ArticleTree(self, [c.get_tree(include_parents=False) for c in children])
 
 
-
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
 from amcat.tools import amcattest
 
+
 def _setup_highlighting():
     from amcat.tools.amcates import ES
+
     article = create_test_article(text="<p>foo</p>", headline="<p>bar</p>")
     ES().flush()
     return article
@@ -396,9 +399,7 @@ class TestArticleHighlighting(amcattest.AmCATTestCase):
         self.assertEqual("<p>bar</p>", article.headline)
 
 
-
 class TestArticle(amcattest.AmCATTestCase):
-
     @amcattest.use_elastic
     def test_create(self):
         """Can we create/store/index an article object?"""
@@ -419,16 +420,18 @@ class TestArticle(amcattest.AmCATTestCase):
         art = dict(headline="test", byline="test", date='2001-01-01',
                    medium=amcattest.create_test_medium(),
                    project=amcattest.create_test_project(),
-                   )
+        )
 
         a1 = amcattest.create_test_article(**art)
+
         def q(**filters):
             amcates.ES().flush()
             return set(amcates.ES().query_ids(filters=filters))
+
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
 
         # duplicate articles should not be added
-        a2 = amcattest.create_test_article(check_duplicate=True,**art)
+        a2 = amcattest.create_test_article(check_duplicate=True, **art)
         self.assertFalse(Article.objects.filter(pk=a2.id).exists())
         self.assertEqual(a2.duplicate_of, a1.id)
         self.assertEqual(q(mediumid=art['medium']), {a1.id})
@@ -436,7 +439,7 @@ class TestArticle(amcattest.AmCATTestCase):
         # however, if an articleset is given the 'existing' article
         # should be added to that set
         s1 = amcattest.create_test_set()
-        a3 = amcattest.create_test_article(check_duplicate=True,articleset=s1, **art)
+        a3 = amcattest.create_test_article(check_duplicate=True, articleset=s1, **art)
 
         self.assertFalse(Article.objects.filter(pk=a2.id).exists())
         self.assertEqual(a3.duplicate_of, a1.id)
@@ -472,7 +475,7 @@ class TestArticle(amcattest.AmCATTestCase):
     def test_medium_name(self):
         m = amcattest.create_test_medium(name="de testkrant")
         a = amcattest.create_test_article(medium=m)
-        r = amcates.ES().query(filters={"id" : a.id}, fields=["medium"])
+        r = amcates.ES().query(filters={"id": a.id}, fields=["medium"])
         print(r)
 
     @amcattest.use_elastic

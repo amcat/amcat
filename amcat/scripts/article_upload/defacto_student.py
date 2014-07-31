@@ -33,8 +33,8 @@ from amcat.scripts.article_upload.upload import UploadScript
 from amcat.models.article import Article
 from amcat.models.medium import Medium
 from amcat.tools.djangotoolkit import get_or_create
-
 from amcat.tools import toolkit
+
 
 class DeFactoStudent(UploadScript):
     def split_file(self, f):
@@ -130,11 +130,12 @@ def stringify_children(node):
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
+import os.path
+import datetime
 from amcat.tools import amcattest
-import os.path, datetime
+
 
 class TestUploadText(amcattest.AmCATTestCase):
-
     def setUp(self):
         self.test_dir = os.path.join(os.path.dirname(__file__), 'test_files', 'defacto')
         self.test1 = os.path.join(self.test_dir, 'DeFacto-Campus - Ausdruck1.htm')

@@ -45,4 +45,3 @@ class ViewModel(WebScript):
 
         return self.outputResponse(result, ObjectsToTable.output_type)
         
-    

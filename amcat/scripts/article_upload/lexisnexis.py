@@ -1,5 +1,5 @@
 #!/usr/bin/python
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -23,6 +23,7 @@ This module contains a (semi-machine readable) lexisnexis parser.
 """
 
 from __future__ import unicode_literals
+from amcat.models import ArticleSet
 
 from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ParseError
 from amcat.scripts.article_upload import fileupload
@@ -38,7 +39,9 @@ import StringIO
 from itertools import takewhile, count
 from string import strip
 
-import logging; log = logging.getLogger(__name__)
+import logging;
+
+log = logging.getLogger(__name__)
 
 # Regular expressions used for parsing document
 class RES:
@@ -53,15 +56,17 @@ class RES:
     BODY_META = re.compile("([^0-9a-z: ]+):(.*)$", re.UNICODE)
 
     # End of body: a line like 'UPDATE: 2. September 2011' or 'PUBLICATION_TYPE: ...'
-    BODY_END = re.compile(r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:[^:]*$|^LANGUE:[^:]*$|^RUBRIK:", re.UNICODE)
+    BODY_END = re.compile(
+        r"[^0-9a-z: ]+:.*[ -]\d{4}$|^PUBLICATION-TYPE:|^SECTION:|^LENGTH:[^:]*$|^LANGUE:[^:]*$|^RUBRIK:", re.UNICODE)
     # Copyright notice
     COPYRIGHT = re.compile("^Copyright \d{4}.*")
+
 
 MONTHS = dict(spring=3,
               summer=6,
               fall=9,
               winter=12,
-              )
+)
 
 WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "L\xc4NGE", "UPDATE", "SPRACHE",
                         "PUBLICATION-TYPE", "CODE-REVUE", "AUTEUR", "RUBRIQUE",
@@ -70,20 +75,20 @@ WELL_KNOWN_BODY_KEYS = ["AUTOR", "RUBRIK", "L\xc4NGE", "UPDATE", "SPRACHE",
 
 BODY_KEYS_MAP = {
     # LexisNexis --> Article model
-    "autor" : "author",
-    "rubrik" : "section",
-    "l\xe4nge" : "length",
-    "sprache" : "language",
-    "auteur" : "author",
-    "rubrique" : "section",
-    "langue" : "language",
-    "longueur" : "length",
-    "length" : "length",
-    "language" : "language",
-    "section" : "section",
-    "author" : "author",
-    "titre" : "title",
-    "name" : "byline"
+    "autor": "author",
+    "rubrik": "section",
+    "l\xe4nge": "length",
+    "sprache": "language",
+    "auteur": "author",
+    "rubrique": "section",
+    "langue": "language",
+    "longueur": "length",
+    "length": "length",
+    "language": "language",
+    "section": "section",
+    "author": "author",
+    "titre": "title",
+    "name": "byline"
 }
 
 
@@ -153,7 +158,8 @@ def parse_header(header):
         i += 1
 
     # Clean values and create 'real' dict
-    return {key.strip() : "\n".join(vals).strip() for key, vals in meta.items()}
+    return {key.strip(): "\n".join(vals).strip() for key, vals in meta.items()}
+
 
 def split_body(body):
     """
@@ -177,6 +183,7 @@ def split_body(body):
 
     yield art.getvalue()
 
+
 def _strip_article(art):
     """
     Remove prepending and "post"pending empty lines and remove
@@ -189,6 +196,7 @@ def _strip_article(art):
             del art[i]
 
     return "\n".join(art).replace("\r", "")
+
 
 def _is_date(string):
     try:
@@ -219,7 +227,7 @@ def parse_article(art):
 
     header_headline = []
 
-    def next_is_indented(lines, skipblank = True):
+    def next_is_indented(lines, skipblank=True):
         if len(lines) <= 1: return False
         if not lines[1].strip():
             if not skipblank: return False
@@ -236,13 +244,13 @@ def parse_article(art):
         # (blank line)
         if len(lines) < 5: return False
         if ((not lines[1].strip()) and
-            lines[2].startswith(" ") and
-            (not lines[3].strip())):
+                lines[2].startswith(" ") and
+                (not lines[3].strip())):
             return True
         if ((not lines[1].strip()) and
-            lines[2].startswith(" ") and
-            lines[2].startswith(" ") and
-            (not lines[4].strip())):
+                lines[2].startswith(" ") and
+                lines[2].startswith(" ") and
+                (not lines[4].strip())):
             return True
         if not lines[1].strip(): return False
         if lines[1].startswith(" "): return False
@@ -250,7 +258,7 @@ def parse_article(art):
 
     def _in_header(lines):
         if not lines: return False
-        if not lines[0].strip(): return True # blank line
+        if not lines[0].strip(): return True  # blank line
 
         # indented line spanning page width: header
         if (not lines[0].startswith(" ")
@@ -267,8 +275,8 @@ def parse_article(art):
 
         # check again after possible removal of header_headline
         if not lines: return False
-        if not lines[0].strip(): return True # blank line
-        if lines[0].startswith(" "): return True # indented line
+        if not lines[0].strip(): return True  # blank line
+        if lines[0].startswith(" "): return True  # indented line
 
 
     @toolkit.to_list
@@ -339,7 +347,7 @@ def parse_article(art):
         while lines:
             line = lines[0].strip()
             if RES.BODY_END.match(line) or RES.COPYRIGHT.match(line):
-                break # end of body
+                break  # end of body
             yield lines.pop(0)
 
     lines = _strip_article(art).split("\n")
@@ -348,11 +356,10 @@ def parse_article(art):
         # Something is wrong with this article, skip it
         return
 
-
     if header_headline:
         headline = re.sub("\s+", " ", " ".join(header_headline)).strip()
         if ";" in headline:
-            headline, byline = [x.strip() for x in headline.split(";",1)]
+            headline, byline = [x.strip() for x in headline.split(";", 1)]
         else:
             byline = None
         if re.match("[A-Z]+:", headline):
@@ -362,7 +369,6 @@ def parse_article(art):
     meta = _get_meta(lines)
     body = _get_body(lines)
 
-
     meta.update(_get_meta(lines))
 
     date, dateline = None, None
@@ -371,13 +377,13 @@ def parse_article(art):
             date = line
             dateline = i
             source = header[0 if i > 0 else 1]
-    if date is None: # try looking for only month - year notation by preprending a 1
+    if date is None:  # try looking for only month - year notation by preprending a 1
         for i, line in enumerate(header):
             line = "1 {line}".format(**locals())
             if _is_date(line):
                 date = line
                 source = header[0 if i > 0 else 1]
-    if date is None: # try looking for season names
+    if date is None:  # try looking for season names
         #TODO: Hack, reimplement more general!
         for i, line in enumerate(header):
             if line.strip() == "Winter 2008/2009":
@@ -393,7 +399,7 @@ def parse_article(art):
         yearmatch = find_re_in("(.*)(\d{4})$", header)
         if yearmatch:
             month, year = yearmatch.groups()
-            month = MONTHS.get(month.replace(",","").strip().lower(), 1)
+            month = MONTHS.get(month.replace(",", "").strip().lower(), 1)
             date = "{year}-{month:02}-01".format(**locals())
             source = header[0]
             # this is probably a journal, let's see if we can find an issue
@@ -408,9 +414,9 @@ def parse_article(art):
             raise ParseError("Couldn't find date in header: {header!r}\n{art!r}".format(**locals()))
 
     date = toolkit.readDate(date)
-    if dateline is not None and len(header) > dateline+1:
+    if dateline is not None and len(header) > dateline + 1:
         # next line might contain time
-        timeline = header[dateline+1]
+        timeline = header[dateline + 1]
         m = re.search(r"\b\d?\d:\d\d\s(PM\b)?", timeline)
         if m and date.time().isoformat() == '00:00:00':
             date = toolkit.readDate(" ".join([date.isoformat()[:10], m.group(0)]))
@@ -429,7 +435,7 @@ def parse_article(art):
         if 'title' in meta:
             headline = re.sub("\s+", " ", meta.pop('title')).strip()
             if ";" in headline and not byline:
-                headline, byline = [x.strip() for x in headline.split(";",1)]
+                headline, byline = [x.strip() for x in headline.split(";", 1)]
         else:
             headline = "No headline found!"
 
@@ -438,8 +444,8 @@ def parse_article(art):
             headline += "; %s" % byline
         byline = meta.pop('byline')
 
-
     return headline.strip(), byline, text, date, source, meta
+
 
 def body_to_article(headline, byline, text, date, source, meta):
     """
@@ -488,8 +494,9 @@ def body_to_article(headline, byline, text, date, source, meta):
 
     return art
 
+
 def get_query(header):
-    header = {k.lower().strip() : v for k,v in header.iteritems()}
+    header = {k.lower().strip(): v for k, v in header.iteritems()}
     for key in ["zoektermen", "query", "terms"]:
         if key in header:
             return header[key]
@@ -510,7 +517,7 @@ class LexisNexis(UploadScript):
     def split_file(self, file):
 
         header, body = split_header(file.text)
-        self.ln_query  = get_query(parse_header(header))
+        self.ln_query = get_query(parse_header(header))
         fragments = list(split_body(body))
         return fragments
 
@@ -537,10 +544,14 @@ class LexisNexis(UploadScript):
             log.error("Error on processing fields: {fields}".format(**locals()))
             raise
 
-from amcat.tools import amcatlogging; amcatlogging.debug_module()
+
+from amcat.tools import amcatlogging;
+
+amcatlogging.debug_module()
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
+
     cli.run_cli(handle_output=False)
 
 
@@ -552,9 +563,11 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 import datetime
 
+
 class TestLexisNexis(amcattest.AmCATTestCase):
     def setUp(self):
         import os.path, json
+
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'lexisnexis')
 
         self.test_text = open(os.path.join(self.dir, 'test.txt')).read().decode('utf-8')
@@ -562,7 +575,6 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
         self.test_body_sols = json.load(open(os.path.join(self.dir, 'test_body_sols.json')))
         self.test_header_sols = json.load(open(os.path.join(self.dir, 'test_header_sols.json')))
-
 
 
     def split(self):
@@ -579,7 +591,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
         n_found = len(list(split_body(splitted[1])))
         n_sol = len(self.test_body_sols)
 
-        self.assertEquals(n_found, n_sol + 1) # +1 for 'defigured' article
+        self.assertEquals(n_found, n_sol + 1)  # +1 for 'defigured' article
 
     def test_parse_header(self):
         splitted = self.split()
@@ -610,6 +622,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
 
     def _create_medium(self, source):
         from amcat.models import Language
+
         try:
             Medium.objects.get(name__iexact=source)
         except Medium.DoesNotExist:
@@ -658,7 +671,7 @@ class TestLexisNexis(amcattest.AmCATTestCase):
             p.full_clean()
 
     def test_get_query(self):
-        header, body =  split_header(self.test_text)
+        header, body = split_header(self.test_text)
         q = get_query(parse_header(header))
         query = (u'(((Japan OR Fukushima) AND (Erdbeben OR nuklear OR Tsunami'
                  ' OR Krise\nOR Katastrophe OR Tepco)) '
@@ -667,34 +680,36 @@ class TestLexisNexis(amcattest.AmCATTestCase):
                  'taz OR  die tageszeitung))')
         self.assertEqual(q, query)
 
-        header, body =  split_header(self.test_text2)
+        header, body = split_header(self.test_text2)
         q = get_query(parse_header(header))
         self.assertIsNone(q)
 
     def test_parse_no_header(self):
-        header, body =  split_header(self.test_text2)
+        header, body = split_header(self.test_text2)
         header = header.replace(u'\ufeff', '').strip()
         self.assertFalse(bool(header))
 
         n_found = len(list(split_body(body)))
         self.assertEqual(n_found, 1)
+
     @amcattest.use_elastic
     def test_provenance(self):
         import os.path
         from django.core.files import File
-        articleset = amcattest.create_test_set()
-        ln =  LexisNexis(project=amcattest.create_test_project().id,
-                         file=File(open(os.path.join(self.dir, 'test.txt'))),
-                         articleset=articleset.id)
 
-        arts = list(ln.run().articles.all())
+        articleset = amcattest.create_test_set()
+        ln = LexisNexis(project=amcattest.create_test_project().id,
+                        file=File(open(os.path.join(self.dir, 'test.txt'))),
+                        articlesets=[articleset.id])
+
+        arts = list(ArticleSet.objects.get(id=ln.run()[0]).articles.all())
         self.assertEqual(len(arts), len(self.test_body_sols))
         self.assertIn("LexisNexis query: u'(((Japan OR Fukushima)", ln.articleset.provenance)
 
         articleset = amcattest.create_test_set()
-        ln =  LexisNexis(project=amcattest.create_test_project().id,
-                         file=File(open(os.path.join(self.dir, 'test2.txt'))),
-                         articleset=articleset.id)
+        ln = LexisNexis(project=amcattest.create_test_project().id,
+                        file=File(open(os.path.join(self.dir, 'test2.txt'))),
+                        articlesets=[articleset.id])
 
         arts = ln.run()
         # no query so provenance is the 'standard' message

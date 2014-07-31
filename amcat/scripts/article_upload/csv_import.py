@@ -28,11 +28,13 @@ import datetime
 
 from django import forms
 from django.db.models.fields import FieldDoesNotExist
+from amcat.models import ArticleSet
 
 from amcat.scripts.article_upload.upload import UploadScript
 from amcat.scripts.article_upload import fileupload
 from amcat.models.article import Article
 from amcat.models.medium import Medium
+from amcat.tools.amcates import ES
 from amcat.tools.toolkit import readDate
 
 FIELDS = ("text", "date", "medium", "pagenr", "section", "headline", "byline", "url", "externalid",
@@ -236,7 +238,9 @@ import unittest
 
 
 def _run_test_csv(header, rows, **options):
-    p = amcattest.create_test_project()
+    project = amcattest.create_test_project()
+    articleset = amcattest.create_test_set(project=project)
+
     from tempfile import NamedTemporaryFile
     from django.core.files import File
 
@@ -246,9 +250,11 @@ def _run_test_csv(header, rows, **options):
             w.writerow([field and field.encode('utf-8') for field in row])
         f.flush()
 
-        set = CSV(dict(file=File(open(f.name)), encoding=0, project=p.id,
-                       medium_name=options.pop("medium_name", 'testmedium'), **options)).run()
-    return set.articles.all()
+        set = CSV(dict(file=File(open(f.name)), encoding=0, project=project.id,
+                       medium_name=options.pop("medium_name", 'testmedium'),
+                       articlesets=[articleset.id], **options)).run()
+
+    return ArticleSet.objects.get(id=set[0]).articles.all()
 
 
 class TestCSV(amcattest.AmCATTestCase):

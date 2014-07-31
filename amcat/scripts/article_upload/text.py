@@ -26,6 +26,7 @@ from __future__ import unicode_literals
 
 import logging
 import StringIO
+from amcat.models import ArticleSet
 
 log = logging.getLogger(__name__)
 import os.path, tempfile, subprocess
@@ -243,7 +244,7 @@ class TestUploadText(amcattest.AmCATTestCase):
         import zipfile
 
         base = dict(project=amcattest.create_test_project().id,
-                    articleset=amcattest.create_test_set().id,
+                    articlesets=[amcattest.create_test_set().id],
                     medium=amcattest.create_test_medium().id)
 
         with NamedTemporaryFile(prefix=u"upload_test", suffix=".zip") as f:
@@ -253,7 +254,7 @@ class TestUploadText(amcattest.AmCATTestCase):
             f.flush()
 
             s = Text(file=File(f), date='2010-01-01', **base)
-            arts = list(s.run().articles.all())
+            arts = list(ArticleSet.objects.get(id=s.run()[0]).articles.all())
             self.assertEqual({a.headline for a in arts}, {"headline1", "headline2"})
             self.assertEqual({a.section for a in arts}, {'', "x"})
             self.assertEqual({a.text for a in arts}, {"TEXT1", "TEXT2"})
