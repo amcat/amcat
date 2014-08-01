@@ -209,10 +209,17 @@ amcat.datatables.create_rest_table = function (cont, rest_url, optional_args) {
 
     console.log("Fetching OPTIONS for table: ", state.name);
 
+    // We'll use POST to tranmit our GET parameters
+    var urldata = amcat.datatables.getDataUrl(rest_url);
+
     $.ajax({
         dataType: "json",
-        type: "OPTIONS",
-        url: rest_url,
+        type: "POST",
+        data: urldata[1],
+        headers: {
+            "X-HTTP-METHOD-OVERRIDE": "OPTIONS"
+        },
+        url: urldata[0],
         success: amcat.datatables.fetched_initial_success.bind(state),
         error: amcat.datatables.fetched_initial_error.bind(state)
     });
@@ -354,7 +361,10 @@ amcat.datatables.load_metadatas = function(callback){
 
         $.ajax({
             dataType : "json",
-            type : "OPTIONS",
+            type : "POST",
+            headers: {
+                "X-HTTP-METHOD-OVERRIDE": "OPTIONS"
+            },
             url : this.metadata.models[fieldname],
             success : amcat.datatables.load_metadata_success.bind(ctx),
             error : amcat.datatables.fetched_initial_error.bind(ctx)
@@ -553,6 +563,21 @@ amcat.datatables.get_order_by_query = function(aoData){
 };
 
 /*
+ * Returns a tuple (url, data) for a given url. For example:
+ *
+ * 'blaat?a=b&c=d' => ['blaat', 'a=b&c=d'],
+ */
+amcat.datatables.getDataUrl = function(url){
+    var parser = document.createElement('a');
+    parser.href = url;
+
+    return [
+        parser.protocol + "//" + parser.host + parser.pathname,
+        (parser.search[0] === '?') ? parser.search.substring(1) : parser.search
+    ]
+};
+
+/*
  * This function overrides the default datatables function for retrieving
  * data. It translates requested paramaters to suitable ones for our REST
  * API. Furthermore, it selects amcat.datatables.table_objects_received as
@@ -583,10 +608,17 @@ amcat.datatables.fnServerData = function(sSource, aoData, fnCallback){
     this.callbacks[echo].fnCallback= fnCallback;
     this.callbacks[echo].aoData = aoData;
 
+    // We'll use POST to tranmit our GET parameters
+    var urldata = amcat.datatables.getDataUrl(sSource);
+
     $.ajax({
         dataType : "json",
-        type : "GET",
-        url : sSource,
+        type : "POST",
+        data : urldata[1],
+        headers: {
+            "X-HTTP-METHOD-OVERRIDE": "GET"
+        },
+        url : urldata[0],
         success : amcat.datatables.table_objects_received.bind(this),
         error : amcat.datatables.fetched_initial_error.bind(this)
     });
