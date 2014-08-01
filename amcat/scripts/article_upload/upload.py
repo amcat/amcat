@@ -61,7 +61,7 @@ class UploadForm(RawFileUploadForm):
             fn = os.path.basename(self.files['file'].name)
             return fn
         name = self.cleaned_data['articleset_name']
-        if not bool(name) ^ bool(self.cleaned_data['articleset']):
+        if not bool(name) ^ bool(self.cleaned_data['articlesets']):
             raise forms.ValidationError("Please specify either articleset or articleset_name")
         return name
 
@@ -111,7 +111,7 @@ class UploadScript(script.Script):
 
         if self.options['articleset_name']:
             aset = create_new_articleset(self.options['articleset_name'], self.project)
-            self.options['articleset'] = aset
+            self.options['articlesets'] = (aset,)
             return (aset,)
 
         return ()
