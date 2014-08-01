@@ -18,20 +18,18 @@
 ###########################################################################
 
 from django.core.urlresolvers import reverse
+from django.views.generic.list import ListView
+from django.views.generic.edit import UpdateView
 
 from navigator.views.datatableview import DatatableMixin
-from django.views.generic.list import ListView
-from api.rest.datatable import Datatable
 from amcat.models import Project
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
-from django.views.generic.edit import UpdateView
 from navigator.views.scriptview import ScriptView
 from amcat.scripts.actions.add_project import AddProject
 
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
     template_name = "project/project_list.html"
-
 
     def get(self, *args, **kargs):
         favaction = self.request.GET.get('favaction')
@@ -49,6 +47,9 @@ class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
                 [func(id) for id in ids]
 
         return super(ProjectListView, self).get(*args, **kargs)
+
+    def get_datatable_kwargs(self):
+        return {"checkboxes": True}
 
     def get_context_data(self, **kwargs):
         context = super(ProjectListView, self).get_context_data(**kwargs)

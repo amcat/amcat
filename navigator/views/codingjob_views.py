@@ -16,7 +16,12 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import json
+
 from django.views.generic.list import ListView
+from django import forms
+from django.core.urlresolvers import reverse
+from django.utils.datastructures import SortedDict
 
 from api.rest.viewsets import CodingJobViewSet
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectActionRedirectView, ProjectEditView, ProjectDetailView, ProjectFormView
@@ -25,17 +30,9 @@ from amcat.models import CodingJob
 from navigator.utils.misc import session_pop
 from navigator.views.project_views import ProjectDetailsView
 from api.rest.resources import SearchResource
-
 from amcat.scripts.actions.add_codingjob import AddCodingJob
 from amcat.forms.widgets import convert_to_jquery_select
-from django import forms
-from django.core.urlresolvers import reverse
-
-from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, EXPORT_FORMATS, GetCodingJobResults
-from django.utils.datastructures import SortedDict
-import datetime
-from django.http import HttpResponse
-import json
+from amcat.scripts.actions.get_codingjob_results import CodingjobListForm, GetCodingJobResults
 from amcat.models import User
 
 class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin, DatatableMixin, ListView):
@@ -44,8 +41,6 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
     context_category = 'Coding'
     resource = CodingJobViewSet
     rowlink = './{id}'
-
-
 
     def get(self, *args, **kargs):
         favaction = self.request.GET.get('favaction')
@@ -73,6 +68,8 @@ class CodingJobListView(HierarchicalViewMixin,ProjectViewMixin, BreadCrumbMixin,
         table = table.filter(archived=(self.what != "favourites"))
         return table.hide("project", "articleset", "favourite")
 
+    def get_datatable_kwargs(self):
+        return {"checkboxes": True}
 
     def get_context_data(self, **kwargs):
         ctx = super(CodingJobListView, self).get_context_data(**kwargs)
