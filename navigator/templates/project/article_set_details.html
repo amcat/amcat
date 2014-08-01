@@ -1,55 +1,88 @@
 {% extends "project/base.html" %}
+{% load staticfiles %}
 
 {% block title %}Project {{project.id}} - {{context.name}}{% endblock %}
 
+{% block javascript %}
+    <script src="{% static 'js/actions/articleset_details.js' %}"></script>
+{% endblock %}
+
 {% block actions %}
-<a class="btn btn-primary" href="{% url "query" project.id %}?articlesets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
-{% if can_edit %}
-<a class="btn btn-default" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "article set-refresh" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
-{% endif %}
-<a class="btn btn-default" href="{% url "article set-import" project.id object.id %}"><i class="glyphicon glyphicon-share"></i> Use in another project</a>
-{% if can_edit %}
-  <a class="btn btn-default" href="{% url "article set-sample" project.id object.id %}"><i class="glyphicon glyphicon-filter"></i> Sample</a>
-{% if object.project.id == project.id %}
-<a class="btn btn-default" href="{% url "article set-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit details</a>
-<a class="btn btn-danger confirm" href="{% url "article set-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
-{% else %}
-<a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "article set-unlink" project.id object.id %}"><i class="icon-white icon-remove"></i> Unlink</a>
-{% endif %}
-{% endif %}
+    <a class="btn btn-primary" href="{% url "query" project.id %}?articlesets={{ object.id }}"><i class="glyphicon glyphicon-cog"></i>Query</a>
+    {% if can_edit %}
+        <a class="btn btn-default" data-confirm="You're about to refresh the index for <i>{{ object.name }}</i>. This action can take a while, and all articles in the index will be unavailable for search in the meantime." href="{% url "article set-refresh" project.id object.id %}"><i class="glyphicon glyphicon-refresh"></i> Refresh Index</a>
+    {% endif %}
+    <a class="btn btn-default" href="{% url "article set-import" project.id object.id %}"><i class="glyphicon glyphicon-share"></i> Use in another project</a>
+    {% if can_edit %}
+        <a class="btn btn-default" href="{% url "article set-sample" project.id object.id %}"><i class="glyphicon glyphicon-filter"></i> Sample</a>
+
+        {% if object.project.id == project.id %}
+            <a class="btn btn-default" href="{% url "article set-edit" project.id object.id %}"><i class="glyphicon glyphicon-edit"></i> Edit details</a>
+            <a class="btn btn-danger confirm" href="{% url "article set-delete" project.id  object.id %}" data-confirm="You're about to delete <i>{{ object.name }}</i>. This action is not reversible."> <i class="glyphicon glyphicon-trash"></i> Delete</a>
+        {% else %}
+            <a class="btn btn-warning confirm" data-confirm="You're about to unlink <i>{{ object.name }}</i>." href="{% url "article set-unlink" project.id object.id %}"><i class="glyphicon glyphicon-remove"></i> Unlink</a>
+        {% endif %}
+
+    {% endif %}
+
 {% endblock actions %}
 
 {% block details %}
-<div class="panel panel-default" style="margin-bottom: 1em">
-  <div class="panel-heading">
-    <h4 class="panel-title">
-      <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
-	Article Set Details
-      </a>
-    </h4>
-  </div>
-  <div id="collapseOne" class="panel-collapse collapse">
-    <div class="panel-body">
-      <table class="key_value">
-	<tr>
-	  <td>ID:</td>
-	  <td>{{object.id}}</td>
-	</tr>
-	<tr>
-	  <td>Name:</td>
-	  <td>{{object.name}}</td>
-	</tr>
-	<tr>
-	  <td>Provenance:&nbsp;</td>
-	  <td>{{object.provenance|linebreaks}}</td>
-	</tr>
-      </table>
+    <div style="display:none;" class="btn-group" id="{{ table.get_name }}-actions">
+        <btn onclick="remove_from_set(event);" class="btn btn-default disabled"><i class="glyphicon glyphicon-remove"></i> Remove</btn>
+        <btn onclick="add_to_set(event, {{ project.id }});" class="btn btn-default disabled" data-toggle="modal" data-target="#add_to_set_modal">
+            <i class="glyphicon glyphicon-plus"></i> Add to other
+        </btn>
     </div>
-  </div>
-</div>
+
+    <div id="add_to_set_modal" class="modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">Add <span class="num"></span> article(s) to another set</h4>
+                </div>
+                <div class="modal-body">
+                    <p></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary"><i class="glyphicon glyphicon-plus"></i> Add</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel panel-default" style="margin-bottom: 1em">
+        <div class="panel-heading">
+            <h4 class="panel-title">
+                <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne">
+                    Article Set Details
+                </a>
+            </h4>
+        </div>
+        <div id="collapseOne" class="panel-collapse collapse">
+            <div class="panel-body">
+                <table class="key_value">
+                    <tr>
+                        <td>ID:</td>
+                        <td>{{object.id}}</td>
+                    </tr>
+                    <tr>
+                        <td>Name:</td>
+                        <td>{{object.name}}</td>
+                    </tr>
+                    <tr>
+                        <td>Provenance:&nbsp;</td>
+                        <td>{{object.provenance|linebreaks}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
 {% endblock details %}
 
 {% block content %}
-<label>Articles</label>
-{{ table }}
+    <label>Articles</label>
+    {{ table }}
 {% endblock %}

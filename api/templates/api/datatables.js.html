@@ -8,10 +8,13 @@ $(document).ready(function(){
             {% endif %}
             console.log("{{ rowlink }}");
 
+            // Setup checkboxes for selecting rows.
             {% if checkboxes %}
-                // Setup checkboxes for selecting rows.
                 tbl.fnRowCheckbox();
             {% endif %}
+
+            // Consider table actions
+            tbl.fnTableActions($("#{{ id }}-actions"));
         },
         "name" : "{{ id }}",
         "datatables_options" : {{ options|safe }}

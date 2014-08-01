@@ -85,6 +85,15 @@ function open_export_dialog(event){
 }
 
 
+function _set_action_buttons(table){
+    table = table.closest(".amcat-table-wrapper");
+
+    if($(table).find("tr.active").length){
+        $(".actions .btn", table).removeClass("disabled");
+    } else {
+        $(".actions .btn", table).addClass("disabled");
+    }
+}
 
 // Default options passed to datatables.
 _AMCAT_DEFAULT_OPTS = {
@@ -98,7 +107,7 @@ _AMCAT_DEFAULT_OPTS = {
     iDisplayLength : 100,
     bProcessing: true,
     "scrollX": "100%",
-    dom: 'T<"clear">lfrtip',
+    dom: 'T<"actions"><"clear">lfrtip',
     tableTools: {
         sRowSelect: "os",
         // Also select checkbox in front of row.
@@ -106,11 +115,15 @@ _AMCAT_DEFAULT_OPTS = {
             $.each(nodes, function(i, row){
                 $(row).find(".row-checkbox").prop("checked", true)
             });
+
+            _set_action_buttons($(this.dom.table));
         },
         fnRowDeselected: function(nodes){
             $.each(nodes, function(i, row){
                 $(row).find(".row-checkbox").prop("checked", false)
             });
+
+            _set_action_buttons($(this.dom.table));
         },
         aButtons: ["select_all", "select_none", {
             "sExtends": "text",
