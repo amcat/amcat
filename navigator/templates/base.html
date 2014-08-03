@@ -80,12 +80,14 @@
 	  <a href="{% url 'index' %}">
             <div class="nav navbar-brand navbar-right">
 	      <h1>AmCAT Navigator</h1>
-	      <h2>3.3.0-rc1</h2>
+	      <h2>3.3.2-rc1</h2>
 	    </div>
 	  </a>
 	</div>
       </div>
     </header>
+
+    {% block outer %}
 
     <!-- main contents -->
     <div id="content" class="container{% if annotator or request.user.userprofile.fluid %}-fluid{% endif %}">
@@ -124,6 +126,7 @@
       {% block content %}<h1>Sorry, this feature is not yet implemented.</h1>{% endblock %}
       {% endblock %}
     </div>
+   {% endblock %}
   </body>
 </html>
 

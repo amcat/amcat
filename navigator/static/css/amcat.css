@@ -1,3 +1,11 @@
+
+/* Move down content because we have a fixed navbar that is 50px tall */
+
+body {
+padding-top: 70px;
+}
+
+
 a .navbar-brand {
     background-image: url('/media/img/amcat/amcat-logo.png');
     background-repeat: no-repeat;

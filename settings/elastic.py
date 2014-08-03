@@ -23,8 +23,8 @@ Configuration options to change how AmCAT uses elastic
 import os
 
 # Host/port on which elastic can be reached:
-ES_HOST='localhost'
-ES_PORT=os.environ.get("DJANGO_ES_PORT", 9200)
+ES_HOST=os.environ.get("AMCAT_ES_HOST", 'localhost')
+ES_PORT=os.environ.get("AMCAT_ES_PORT", 9200)
 
 ES_INDEX =os.environ.get('AMCAT_ES_INDEX', 'amcat')
 ES_ARTICLE_DOCTYPE='article'

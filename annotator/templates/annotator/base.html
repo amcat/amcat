@@ -33,17 +33,17 @@
             <li><a href="#">Selected words: <span id="wordcount">0</span></a> </li>
 {% endblock %}
 
-{% block contentcontainer %}
+{% block outer %}
 
       <div class="row">
         <div class="col-sm-3 col-sm-offset-9 col-md-3 sidebar">
             <article>{% block article %}No article loaded yet.{% endblock %}</article>
         </div>
-        <div id="content" class="col-sm-9 col-md-9 main">
+        <div id="content" class="col-sm-9 col-md-9 main annotator">
           {% block content %}{% endblock %}
         </div>
       </div>
 
       {% include "annotator/help.html" %}
 
-{% endblock contentcontainer %}
+{% endblock outer %}
