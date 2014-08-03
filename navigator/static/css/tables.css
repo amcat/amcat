@@ -141,6 +141,6 @@ tr.active{
     margin: 0px 5px 0px 0px !important;
 }
 
-.dataTables_filter, .actions > .btn-group{
+.dataTables_filter, .actions > .btn-group, .actions > div{
     padding-right: 5px;
 }
