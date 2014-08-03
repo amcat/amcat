@@ -56,7 +56,7 @@ Array.prototype.remove=function(s){
  
             /* ELEMENTS */
             self.root_el = this;
-            self.searchbox = $("<input placeholder='Search..' type='text'>");
+            self.searchbox = $("input[type=search]");
 
             // Buttons
             self.btn_save_changes = $(".save-changes", this);
