@@ -184,6 +184,12 @@ annotator = (function(self){
         var icon = self.save_btn.find(".glyphicon");
         icon.removeClass("glyphicon-floppy-disk glyphicon-floppy-saved");
         icon.addClass("glyphicon-floppy-" + ((self.unsaved) ? "disk" : "saved"));
+
+        if (self.unsaved){
+            self.save_btn.removeClass("disabled");
+        } else {
+            self.save_btn.addClass("disabled");
+        }
     };
 
     self.show_unsaved_changes = function show_unsaved_changes(continue_func){
@@ -793,6 +799,17 @@ annotator = (function(self){
         }
     };
 
+    self.warn_for_unfinished = function warn_for_unfinished(){
+        if (self.state.coded_article.status !== self.STATUS.IN_PROGRESS){
+            new PNotify({
+                "type": "warning",
+                "text": "Setting status to 'unfinished' while field validation failed."
+            });
+        }
+
+        self.set_status(self.STATUS.IN_PROGRESS);
+    };
+
     /*
      * Save codings.
      *
@@ -827,13 +844,15 @@ annotator = (function(self){
         // Check whether we want to save, by first checking the mandetory checks.
         var validation = self.mandetory_validate();
         if (validation !== true){
+            self.warn_for_unfinished();
             return self.show_message("Validation", validation);
         }
 
         // Check optional requirements
         validation = validate ? self.validate() : true;
         if (validation !== true){
-            return self.show_message("Validation", validation);
+            self.warn_for_unfinished();
+            self.show_message("Validation", validation);
         }
 
         // Send coding values to server
