@@ -1,11 +1,14 @@
+import json
 from webscript import WebScript
-
-from amcat.tools import keywordsearch
-
 from amcat.scripts.searchscripts.articlelist import ArticleListScript
 from amcat.scripts.forms import SelectionForm
+from amcat.tools import keywordsearch
 
-    
+import logging
+
+stats_log = logging.getLogger("statistics:" + __name__)
+
+
 class ShowSummary(WebScript):
     name = "Summary"
     form_template = None
@@ -28,6 +31,10 @@ class ShowSummary(WebScript):
             a.hack_project_id = project_id
         self.output_template = 'api/webscripts/articlelist.html'
         self.progress_monitor.update(40, "Created summary")
+
+        stats_log.info(json.dumps({
+            "action": "query:summary", "user": self.user.username,
+            "project_id": self.project.id, "project_name": self.project.name
+        }))
             
         return self.outputResponse(dict(articlelist=articles, n=n, page=self.data.get('start')), ArticleListScript.output_type)
-        

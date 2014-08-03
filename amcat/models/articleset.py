@@ -25,6 +25,7 @@ coding jobs.
 
 from __future__ import unicode_literals, print_function, absolute_import
 import itertools
+import json
 import logging
 
 from django.db import models
@@ -40,6 +41,7 @@ from amcat.tools.progress import NullMonitor
 from amcat.tools.amcates import ES
 
 log = logging.getLogger(__name__)
+stats_log = logging.getLogger("statistics:" + __name__)
 
 
 def create_new_articleset(name, project):
@@ -167,12 +169,19 @@ class ArticleSet(AmcatModel):
     def save(self, *args, **kargs):
         new = not self.pk
         super(ArticleSet, self).save(*args, **kargs)
+
         if new:
             # new article set, add as fav to parent project
             # (I run parent first because I guess it needs a pk to add it, but didn't test whether
             #  this is needed...)
             self.project.favourite_articlesets.add(self)
             self.project.save()
+
+            stats_log.info(json.dumps({
+                "action": "articleset_added", "id": self.id,
+                "name": self.name, "project_id": self.project_id,
+                "project__name": self.project.name
+            }))
 
     @classmethod
     def get_unique_name(cls, project, name):

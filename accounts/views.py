@@ -1,4 +1,5 @@
 # Create your views here.
+import json
 from django.shortcuts import render, redirect
 from django.core.urlresolvers import reverse
 from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout
@@ -12,6 +13,9 @@ from navigator.utils.auth import create_user
 from amcat.models.user import Affiliation
 from amcat.models.authorisation import Role
 from amcat.models import AmCAT
+
+import logging
+log = logging.getLogger("statistics" + __name__)
 
 def _login(request, error, username, announcement):
     """
@@ -59,6 +63,7 @@ def login(request):
         # Credentials OK, log user in
         auth_login(request, user)
         signals.user_logged_in.send(sender=user.__class__, request=request, user=user)
+        log.info(json.dumps({"action": "login", "user": username}))
         return _redirect_login(request)
 
     # GET request, send empty form
@@ -67,6 +72,7 @@ def login(request):
 def logout(request):
     auth_logout(request)
     signals.user_logged_out.send(sender=request.user.__class__, request=request, user=request.user)
+    log.info(json.dumps({"action": "logout", "user": request.user.username}))
     return redirect(login)
 
 def register(request):
@@ -91,6 +97,7 @@ def register(request):
         )
 
         form = AddUserForm(request)
+        log.info(json.dumps({"action": "register", "user": user.username}))
 
     return render(request, "accounts/register.html", locals())
 

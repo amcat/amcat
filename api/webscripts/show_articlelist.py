@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -16,9 +16,11 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import json
 
 import logging
-from django.core.exceptions import ValidationError
+
+from django.http import HttpResponse
 
 from webscript import WebScript
 import amcat.scripts.forms
@@ -26,21 +28,22 @@ from amcat.models import Project
 from amcat.tools import keywordsearch
 from amcat.scripts.forms import SelectionForm
 
+stats_log = logging.getLogger("statistics:" + __name__)
 log = logging.getLogger(__name__)
 
-FORM_FIELDS_TO_ELASTIC = {'article_id' : "id", "medium_name" : "medium", "medium_id" : "mediumid",
-                          "pagenr" : "page"}
+FORM_FIELDS_TO_ELASTIC = {'article_id': "id", "medium_name": "medium", "medium_id": "mediumid",
+                          "pagenr": "page"}
+
 
 class ShowArticleList(WebScript):
     name = "Article List"
     form_template = "api/webscripts/articlelistform.html"
     form = amcat.scripts.forms.ArticleColumnsForm
-    output_template = None 
-    
-    
+    output_template = None
+
     def run(self):
-        formData = self.data.copy() # copy needed since formData is inmutable
-        
+        formData = self.data.copy()  # copy needed since formData is inmutable
+
         if "articlesets" not in formData:
             artsets = [str(aset.id) for aset in Project.objects.get(id=formData['projects']).all_articlesets()]
             formData.setlist("articlesets", artsets)
@@ -49,7 +52,6 @@ class ShowArticleList(WebScript):
             project_id = int(self.data['projects'])
         else:
             project_id = int(self.data['projects'][0])
-
 
         formData["start_date"] = formData["start_date"].split("T")[0]
         formData["end_date"] = formData["end_date"].split("T")[0]
@@ -60,20 +62,24 @@ class ShowArticleList(WebScript):
 
         t = keywordsearch.getDatatable(sf.cleaned_data, rowlink_open_in="new", allow_html_export=True)
         t = t.rowlink_reverse("project-article-details", args=[project_id, '{id}'])
-        cols = {FORM_FIELDS_TO_ELASTIC.get(f,f) for f in self.data.getlist('columns')}
+        cols = {FORM_FIELDS_TO_ELASTIC.get(f, f) for f in self.data.getlist('columns')}
         for f in list(t.get_fields()):
             if f not in cols:
                 t = t.hide(f)
 
         if 'kwic' in cols and not self.data.get('query'):
             raise Exception("Cannot provide Keyword in Context without query")
-                
+
         for col in cols & {'hits', 'text', 'lead', 'kwic'}:
             t = t.add_arguments(col=col)
         html = unicode(t)
-        #html += "Download results as : "
+
+        stats_log.info(json.dumps({
+            "actions": "query:articlelist", "user": self.user.username,
+            "project_id": self.project.id, "project__name": self.project.name
+        }))
+
         if self.output == "html":
-            from django.http import HttpResponse
             response = HttpResponse(mimetype='text/html')
             response.write(html)
             return response

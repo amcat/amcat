@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+import json
 
 from django.core.urlresolvers import reverse
 from django.views.generic.list import ListView
@@ -26,6 +27,9 @@ from amcat.models import Project
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
 from navigator.views.scriptview import ScriptView
 from amcat.scripts.actions.add_project import AddProject
+
+import logging
+log = logging.getLogger("statistics:" + __name__)
 
 class ProjectListView(BreadCrumbMixin, DatatableMixin, ListView):
     model = Project
@@ -128,4 +132,9 @@ class ProjectAddView(BreadCrumbMixin, ScriptView):
             return super(ProjectAddView, self).get_form(form_class)
 
     def get_success_url(self):
+        log.info(json.dumps({
+            "action": "project_added", "project_id": self.result.id,
+            "name": self.result.name, "description": self.result.description,
+            "insert_user": self.result.insert_user.username
+        }))
         return reverse('article set-list', args=[self.result.id])
