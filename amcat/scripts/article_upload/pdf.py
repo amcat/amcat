@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -21,31 +21,33 @@
 A PDF parser
 """
 
-from pdfminer.pdfparser import PDFParser as module_parser, PDFDocument
+from pdfminer.pdfdocument import PDFDocument
+from pdfminer.pdfparser import PDFParser as module_parser
 from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
-from pdfminer.pdfdevice import PDFDevice
 from pdfminer.converter import PDFPageAggregator
 from pdfminer.layout import LAParams, LTTextBox, LTTextLine, LTFigure
 
-import logging; log = logging.getLogger(__name__)
+import logging
+log = logging.getLogger(__name__)
+
 
 class PDFParser(object):
-    def load_document(self, _file, password = ""):
+    def load_document(self, _file, password=""):
         """turn the file into a PDFMiner document"""
         log.info("loading document...")
         parser = module_parser(_file)
         doc = PDFDocument()
         parser.set_document(doc)
         doc.set_parser(parser)
-        
+
         doc.initialize(password)
 
         if not doc.is_extractable:
             raise ValueError("PDF text extraction not allowed")
 
         return doc
-         
-    def process_page(self, page, params = None):
+
+    def process_page(self, page, params=None):
         """processes a page using the parameters given
         params should be passed in a dictionary, and are named as follows:
             char_margin 
@@ -58,14 +60,14 @@ class PDFParser(object):
         if params:
             params = LAParams(**params)
         resourcemanager = PDFResourceManager()
-        device = PDFPageAggregator(resourcemanager, laparams = params)
+        device = PDFPageAggregator(resourcemanager, laparams=params)
         interpreter = PDFPageInterpreter(resourcemanager, device)
-                
+
         interpreter.process_page(page)
         return device.get_result()
 
-    def process_document(self, doc, params = None):
-        for i,page in enumerate(doc.get_pages()):
+    def process_document(self, doc, params=None):
+        for i, page in enumerate(doc.get_pages()):
             log.info("processing page {i}".format(**locals()))
             yield self.process_page(page, params)
 
@@ -81,7 +83,7 @@ class PDFParser(object):
                 result.append(self.parse_layout(obj._objs))
         return result
 
-    def get_textlines(self, page, params = None):
+    def get_textlines(self, page, params=None):
         if not params:
             params = {}
         if not isinstance(params, LAParams):
@@ -90,7 +92,7 @@ class PDFParser(object):
         for line in page.get_textlines(params, objects):
             yield line
 
-    def get_textboxes(self, page, params = None):
+    def get_textboxes(self, page, params=None):
         if not params:
             params = {}
         if not isinstance(params, LAParams):
@@ -98,15 +100,3 @@ class PDFParser(object):
         lines = self.get_textlines(page, params)
         for textbox in page.get_textboxes(params, list(lines)):
             yield textbox
-
-
-
-
-
-
-
-
-
-
-
-                                  
