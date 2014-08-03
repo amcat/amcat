@@ -35,6 +35,13 @@
         </btn>
     </div>
 
+    <style type="text/css">
+        .modal-extra-footer{
+            text-align: center;
+            border-bottom: 1px groove grey;
+        }
+    </style>
+
     <div id="add_to_set_modal" class="modal">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -42,12 +49,12 @@
                     <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
                     <h4 class="modal-title">Add <span class="num"></span> article(s) to another set</h4>
                 </div>
-                <div class="modal-body">
-                    <p></p>
-                </div>
-                <div class="modal-footer">
+                <div class="modal-body modal-extra-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary"><i class="glyphicon glyphicon-plus"></i> Add</button>
+                </div>
+                <div class="modal-body">
+                    <p></p>
                 </div>
             </div>
         </div>
