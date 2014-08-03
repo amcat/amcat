@@ -28,16 +28,6 @@
     </ul>
   </form>
 
-<form id="set-favourite" class="btn-group"
-   action=""
-   data-id-field="[name=ids]" data-table="#all-codingjobs" data-require-selection="1">
-  <input type="hidden" name="favaction" value="{{ favaction }}">
-    <input type="hidden" name="ids" />
-
-  <input type="submit" id="favourite" class="btn btn-default"
-value="{% if favaction == 'setfav' %}Activate Job(s){% else %}Archive Job(s){% endif %}" />
-  </form>
-
 
   <!-- Set inputfield 'submit' when clicking on one of the dropdown options,
        according to their 'name' attribute. -->
@@ -56,6 +46,16 @@ value="{% if favaction == 'setfav' %}Activate Job(s){% else %}Archive Job(s){% e
 {% endblock %}
 
 {% block content %}
+    <div id="{{ table.get_name }}-actions">
+        <form id="set-favourite" action=""
+              data-id-field="[name=ids]" data-table="#all-codingjobs" data-require-selection="1">
+            <input type="hidden" name="favaction" value="{{ favaction }}">
+            <input type="hidden" name="ids" />
+            <input type="submit" id="favourite" class="btn btn-default"
+                   value="{% if favaction == 'setfav' %}Activate Job(s){% else %}Archive Job(s){% endif %}" />
+        </form>
+    </div>
+
     <p>
         <span class="label label-info">Note</span>
         You can select rows by holding <code>ctrl</code> or <code>shift</code>
