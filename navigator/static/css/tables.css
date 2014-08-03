@@ -144,3 +144,12 @@ tr.active{
 .dataTables_filter, .actions > .btn-group, .actions > div{
     padding-right: 5px;
 }
+
+.actions .dropdown-menu{
+    left:inherit;
+    top:inherit;
+}
+
+.actions form{
+    display: inline-block;
+}

@@ -11,9 +11,9 @@ function exportids(form){
         var cancel = $(this).data("require-selection") == 1;
 
 	var ids = $.map(table.find("tr.selected, tr.active"), function(row){
-            // Select first column of row, and fetch its text (probably an ID)
-            return $("td", row).first().text();
-        });
+        // Select first column of row, and fetch its text (probably an ID)
+        return $("td", row).first().text();
+    });
 
 	if (ids.length == 0 && cancel) {
 	    //TODO: change into popover/tooltip
