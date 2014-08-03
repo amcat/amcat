@@ -1,46 +1,22 @@
-{% load compress %}
+{% extends "base.html" %}
+
 {% load staticfiles %}
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+{% load compress %}
 
-    <title>{% block title %}AmCAT Annotator 3{% endblock %}</title>
+{% block title %}Annotator{% endblock %}
 
-    <!-- Custom styles for this template -->
+{% block css %}
       {% compress css %}
-          <!-- Bower dependencies -->
-          <link href="{% static 'components/bootstrap/dist/css/bootstrap.css' %}" rel="stylesheet" type="text/css"  />
-          <link href="{% static 'components/datatables/media/css/jquery.dataTables.css' %}" rel="stylesheet" type="text/css"  />
-          <link href="{% static 'components/pnotify/pnotify.core.css' %}" rel="stylesheet" type="text/css"  />
-
-          <!-- AmCAT code -->
           <link href="{% static 'css/annotator.css' %}" rel="stylesheet" type="text/css" media="screen" />
           <link href="{% static 'css/dashboard.css' %}" rel="stylesheet" type="text/css">
-          <link href="{% static 'css/jquery-ui.css' %}" rel="stylesheet" type="text/css">
-          <link href="{% static 'css/tables.css' %}" rel="stylesheet" type="text/css">
       {% endcompress %}
+{% endblock %}
 
-      {% block css %}{% endblock %}
-
-      <!--  Javascript -->
+{% block javascript %}
       {% compress js %}
-          <!-- Bower dependencies -->
-          <script type="text/javascript" src="{% static 'components/jquery/dist/jquery.js' %}"></script>
-          <script type="text/javascript" src="{% static 'components/jquery-ui/ui/jquery-ui.js' %}"></script>
-          <script type="text/javascript" src="{% static 'components/datatables/media/js/jquery.dataTables.js' %}"></script>
-          <script type="text/javascript" src="{% static 'components/bootstrap/dist/js/bootstrap.js' %}"></script>
-          <script type="text/javascript" src="{% static 'components/pnotify/pnotify.core.js' %}"></script>
-          <script type="text/javascript" src="{% static 'components/pnotify/pnotify.nonblock.js' %}"></script>
           <script type="text/javascript" src="{% static 'components/jquery.scrollTo/jquery.scrollTo.js' %}"></script>
           <script type="text/javascript" src="{% static 'components/jquery.hotkeys/jquery.hotkeys.js' %}"></script>
 
-          <!-- AmCAT code -->
-          <script type="text/javascript" src="{% static 'js/amcat.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/amcat.datatables.js' %}"></script>
-          <script type="text/javascript" src="{% static 'js/jquery.dataTables.plugins.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/jquery.highlight.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/functional.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/annotator.js' %}"></script>
@@ -48,39 +24,17 @@
           <script type="text/javascript" src="{% static 'js/annotator/annotator.widgets.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/annotator.rules.js' %}"></script>
           <script type="text/javascript" src="{% static 'js/annotator/annotator.autocomplete.js' %}"></script>
-          {% block javascript %}{% endblock %}
       {% endcompress %}
-  </head>
+{% endblock %}
 
-  <body>
 
-    <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
-      <div class="container-fluid">
-        <div class="navbar-header">
-          <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          </button>
-          <a class="navbar-brand" href="#">{{ codingjob.id }}. {{ codingjob.name }}</a>
-        </div>
-        <div class="navbar-collapse collapse">
-          <ul class="nav navbar-nav navbar-right">
-            <li><a href="#">Selected words: <span id="wordcount">0</span></a> </li>
-            <li><a href="{% url 'codingjobs' %}">Codingjobs</a></li>
-            <li><a href="{% url 'project' codingjob.project_id %}articlesets">Project</a></li>
+{% block contextmenu %}
             <li><a data-toggle="modal" data-target="#help-dialog" href="#">Help</a></li>
-            <li><a href="{% url 'accounts-logout' %}">
-                <i class="glyphicon glyphicon-log-out"></i> Logout
-            </a></li>
-          </ul>
-        </div>
-      </div>
-    </div>
+            <li><a href="#">Selected words: <span id="wordcount">0</span></a> </li>
+{% endblock %}
 
-    <div class="container-fluid">
+{% block contentcontainer %}
+
       <div class="row">
         <div class="col-sm-3 col-sm-offset-9 col-md-3 sidebar">
             <article>{% block article %}No article loaded yet.{% endblock %}</article>
@@ -89,38 +43,7 @@
           {% block content %}{% endblock %}
         </div>
       </div>
-    </div>
 
-    <div class="modal fade" id="help-dialog" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
-                    <h4 class="modal-title">Keyboard shortcuts</h4>
-                </div>
-                <div class="modal-body">
-                    <table class="table table-bordered">
-                        <tr><th>Key</th><th>Explanation</th></tr>
-                        <tr><td>CTRL + S</td><td>Save</td></tr>
-                        <tr><td>CTRL + D</td><td>Set to complete, save and continue</td></tr>
-                        <tr><td>CTRL + I</td><td>Set to irrelevant, save and continue.</td></tr>
-                        <tr><td>ESCAPE</td><td>Close a dialog</td></tr>
-                        <tr><td>CTRL + ↓</td><td>Add new row in sentence codings table, copying current sentence.</td></tr>
-                        <tr><td>CTRL + SHIFT + ↓</td><td>Add new row in sentence codings table, increase sentencenr by one.</td></tr>
-                        <tr><td>SHIFT + ↓</td><td>Copy current row.</td></tr>
-                        <tr><td>CTRL + SHIFT + d</td><td>Remove row in sentence codings table</td></tr>
-                    </table>
-                    <br>
-                    <h4>Supported Browsers</h4>
-                    <p>AmCAT Annotator is tested with the latest versions of Mozilla Firefox, Google Chrome and Internet Explorer.
-                        Internet Explorer 6 through 10 are not recommended.</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">OK</button>
-                </div>
-            </div>
-        </div>
-    </div>
-  </body>
-</html>
+      {% include "annotator/help.html" %}
 
+{% endblock contentcontainer %}

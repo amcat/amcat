@@ -57,8 +57,8 @@
   </head>
   <body>
     <!-- navbar -->
-    <header class="navbar navbar-default" role="navigation">
-      <div class="container{% if request.user.userprofile.fluid %}-fluid{% endif %}">
+    <header class="navbar navbar-default navbar-fixed-top" role="navigation">
+      <div class="container{% if annotator or request.user.userprofile.fluid %}-fluid{% endif %}">
         <div class="navbar-header">
           <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
             <span class="sr-only">Toggle navigation</span>
@@ -88,7 +88,7 @@
     </header>
 
     <!-- main contents -->
-    <div id="content" class="container{% if request.user.userprofile.fluid %}-fluid{% endif %}">
+    <div id="content" class="container{% if annotator or request.user.userprofile.fluid %}-fluid{% endif %}">
 
 
       {% if breadcrumbs %}

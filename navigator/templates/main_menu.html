@@ -15,6 +15,7 @@
 </li>
 
 <li id="layout-switcher">
+{% if not annotator %}
     {% if request.user.userprofile.fluid %}
         <a title="Switch to static layout" href="">
             <i class="glyphicon glyphicon-resize-small"></i>
@@ -24,4 +25,5 @@
             <i class="glyphicon glyphicon-resize-full"></i>
         </a>
     {% endif %}
+{% endif %}
 </li>

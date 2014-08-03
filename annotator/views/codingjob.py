@@ -41,6 +41,7 @@ def index(request, project_id, codingjob_id):
         'codingjob': CodingJob.objects.get(id=codingjob_id),
         'project': Project.objects.get(id=project_id),
         'coder' : request.user,
+        'annotator': True
     })
 
 @transaction.atomic
