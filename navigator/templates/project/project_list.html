@@ -9,22 +9,20 @@
 
 
 {% block actions %}
-  <a href="{% url "projects-add" %}" class="btn btn-primary"><i class="icon icon-plus"></i>Create Project</a>
-
-<form id="set-favourite" class="btn-group"
-   action=""
-   data-id-field="[name=ids]" data-table="#project-table" data-require-selection="1">
-  <input type="hidden" name="favaction" value="{{ favaction }}">
-    <input type="hidden" name="ids" />
-
-  <input type="submit" id="favourite" class="btn btn-default"
-value="{% if favaction == 'setfav' %}Activate Project(s){% else %}Archive Project(s){% endif %}" />
-  </form>
-
+  <a href="{% url "projects-add" %}" class="btn btn-primary"><i class="glyphicon glyphicon-plus"></i> Create Project</a>
 {% endblock %}
 
 
 {% block content %}
+<div id="{{ table.get_name }}-actions">
+  <form id="set-favourite" action="" data-id-field="[name=ids]" data-table="#project-table" data-require-selection="1">
+    <input type="hidden" name="favaction" value="{{ favaction }}">
+    <input type="hidden" name="ids" />
+    <input type="submit" id="favourite" class="btn btn-default" value="{% if favaction == 'setfav' %}Activate Project(s){% else %}Archive Project(s){% endif %}" />
+  </form>
+
+</div>
+
 
 <ul class="nav nav-tabs nav-justified" style="margin-bottom: 1em">
   <li {% if what == 'favourites' %}class="active"{% endif %}><a href='{% url "projects" "favourites"%}'>
