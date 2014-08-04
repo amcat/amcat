@@ -282,7 +282,7 @@ Array.prototype.remove=function(s){
                  * Create base modal window (hidden by default).
                  */
                 var dialog = $(
-                 '<div class="modal">' +
+                 '<div class="modal" tabindex="-1">' +
                   '<div class="modal-dialog">' +
                     '<div class="modal-content">' +
                       '<div class="modal-header">' +
