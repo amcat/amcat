@@ -119,9 +119,14 @@ class CodebookImportView(ProjectScriptView):
     parent = CodebookListView
     url_fragment = 'import'
 
+    def get_form(self, form_class):
+        form = super(CodebookImportView, self).get_form(form_class)
+        form.fields['codebook'].queryset = self.project.codebook_set.all()
+        return form
+
     def get_initial(self):
         initial = super(CodebookImportView, self).get_initial()
-        initial["codebook"]=self.kwargs.get("codebookid")
+        initial["codebook"] = self.kwargs.get("codebookid")
         return initial
 
 
