@@ -67,7 +67,7 @@ class Factivia(UploadScript):
 
         # Parse metadata. Loop through each 'div' within an article, along with
         # its field name according to META (thus based on its position)
-        for field_name, element in zip(metadata, document.cssselect("* > div")):
+        for field_name, element in zip(metadata, divs):
             if field_name is None:
                 continue
 
