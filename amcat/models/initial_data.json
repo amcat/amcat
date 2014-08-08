@@ -373,6 +373,15 @@
     }
   },
   {
+    "pk": 12,
+    "model": "amcat.plugin",
+    "fields": {
+      "class_name": "amcat.scripts.article_upload.factivia.Factivia",
+      "label": "Factivia",
+      "plugin_type": 1
+    }
+  },
+  {
       "pk": 7,
       "model": "amcat.plugin",
       "fields": {
