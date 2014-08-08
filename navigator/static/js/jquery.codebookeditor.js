@@ -315,7 +315,7 @@ Array.prototype.remove=function(s){
                 var select = $("<select>").css("width", "100px");
 
                 $.each(self.languages, function (i, lan) {
-                    var option = $("<option>").attr("value", lan.id).append(
+                    var option = $("<option>").val(lan.id).append(
                         $(document.createTextNode(lan.label))
                     );
 
@@ -342,7 +342,7 @@ Array.prototype.remove=function(s){
                 return $("<tr>").attr("label_id", label.id).append(
                         $("<td>").append(self._create_label_languages(label.language))
                     ).append(
-                        $("<td>").append($("<input>").attr("value", label.label))
+                        $("<td>").append($("<input>").val(label.label))
                     ).append($(
                         "<td>" +
                             "<div class='btn btn-mini btn-danger'>" +
@@ -1050,7 +1050,7 @@ Array.prototype.remove=function(s){
                  */
                 var wdw = self._create_modal_window("edit_name", "Edit name of this codebook", $(
                     "<input class='input' type='text'>"
-                ).attr("value", self.codebook.name)).modal();
+                ).val(self.codebook.name)).modal();
 
                 $(".btn-primary", wdw).click(self.edit_name_save);
             };
@@ -1060,7 +1060,7 @@ Array.prototype.remove=function(s){
                  * This function is fired when "save changes" is clicked on
                  * the modal created in self.btn_edit_name_clicked.
                  */
-                var name = $(".modal-body input", $("#edit_name")).attr("value").trim();
+                var name = $(".modal-body input", $("#edit_name")).val().trim();
 
                 if (name.length <= 0) {
                     alert("Codebook names can't be empty");
@@ -1081,14 +1081,15 @@ Array.prototype.remove=function(s){
                 $(".modal-body", loading_modal).html("Saving codebook name..");
 
                 // Send name to server
-                $.post(
-                    window.location.href + "change-name/",
-                    {"codebook_name": name}, (function () {
-                        self.root.label = "Codebook: <i>" + self._escape(name) + "</i>";
-                        self.update_label(self.root);
-                        $("#loading_modal").modal("hide").remove();
-                    }).bind(name)
-                );
+                $.ajax({
+                    type: "POST",
+                    url: window.location.href + "change-name/",
+                    data: { codebook_name: name }
+                }).done(function(){
+                    self.root.label = "Codebook: <i>" + self._escape(name) + "</i>";
+                    self.update_label(self.root);
+                    $("#loading_modal").modal("hide").remove();
+                });
             };
 
             self.btn_edit_name.click(self.btn_edit_name_clicked);
