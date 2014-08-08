@@ -60,17 +60,17 @@ $ sudo apt-get install oracle-java8-installer #for java 8
 Next, download and extract elasticsearch and our custom hitcount jar, and install the required plugins:
 
 ```sh
-wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.0.tar.gz -O - | tar xvz
+wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.1.0.tar.gz -O - | tar xvz
 wget http://amcat.vu.nl/plain/hitcount.jar
-elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
-elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
-elasticsearch-1.0.0/bin/plugin -install mobz/elasticsearch-head
+elasticsearch-1.1.0/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
+elasticsearch-1.1.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
+elasticsearch-1.1.0/bin/plugin -install mobz/elasticsearch-head
 ```
 
 Now you are ready to start elasticsearch. I usually start it in a secondary terminal if I am running AmCAT locally so I can directly inspect error messages, but you could also run it as a daemon:
 
 ```sh
-ES_CLASSPATH=hitcount.jar elasticsearch-1.0.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
+ES_CLASSPATH=hitcount.jar elasticsearch-1.1.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
 ```
 
 ### Installing AmCAT (pip install from git)
