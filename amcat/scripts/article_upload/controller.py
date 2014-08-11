@@ -73,7 +73,7 @@ class Controller(object):
             log.exception("scraper._get_units failed")
 
         # Do we need to save these id's to more sets?
-        if hasattr(scraper, "articlesets"):
+        if hasattr(scraper, "articlesets") and hasattr(self, "saved_article_ids"):
             for aset in scraper.articlesets:
                 stats_log.info(json.dumps({
                     "action": "add_scraped_articles", "articleset_id": aset.id,
@@ -82,7 +82,7 @@ class Controller(object):
                 }))
                 aset.add_articles(self.saved_article_ids)
 
-        return self.saved_article_ids
+        return getattr(self, "saved_article_ids", ())
 
 
 def _set_default(obj, attr, val):
