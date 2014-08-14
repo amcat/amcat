@@ -89,3 +89,7 @@ select.wide,
     margin-right: 15px;
     margin-bottom: 15px;
 }
+
+svg > text:last-child{
+    display:none;
+}

@@ -1,0 +1,22 @@
+<script type="text/javascript">
+  $(function () {
+    $('#date-aggregation').highcharts({
+      chart: { zoomType: 'x', type: 'column' },
+      title: { text: 'Articles aggregated by day.' },
+      xAxis: { type: 'datetime' },
+      yAxis: {
+        title: { text: 'Number of articles' },
+        floor: 0
+      },
+      legend: { enabled: false },
+      series: [{
+        name: 'Articles',
+        data: [
+          {% for date, count in date_aggr %}
+            [Date.UTC({{ date.year }}, {{ date.month }}, {{ date.day }}), {{ count }}],
+          {% endfor %}
+        ]
+      }]
+    });
+  });
+</script>

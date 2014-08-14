@@ -31,7 +31,7 @@ from dateutil.relativedelta import relativedelta
 
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
-from amcat.models import Label, Article
+from amcat.models import Label, Article, Medium
 from amcat.tools.toolkit import stripAccents
 
 
@@ -55,6 +55,7 @@ class SelectionSearch:
         Form *must* be valid before passing.
         @type form: SelectionForm
         """
+        self.es = ES()
         self.form = form
         self.data = SelectionData(form.cleaned_data)
 
@@ -115,11 +116,24 @@ class SelectionSearch:
 
     @cached
     def get_count(self):
-        return ES().count(self.get_query(), self.get_filters())
+        return self.es.count(self.get_query(), self.get_filters())
 
     @cached
     def get_statistics(self):
-        return ES().statistics(self.get_query(), self.get_filters())
+        return self.es.statistics(self.get_query(), self.get_filters())
+
+    @cached
+    def get_mediums(self):
+        return Medium.objects.filter(id__in=self.get_medium_ids())
+
+    def get_aggregate(self, group_by, interval="month"):
+        return self.es.aggregate_query(
+            query=self.get_query(), filters=self.get_filters(),
+            group_by=group_by, date_interval=interval
+        )
+
+    def get_medium_ids(self):
+        return self.es.list_media(self.get_query(), self.get_filters())
 
     def get_article_ids(self):
         return ES().query_ids(self.get_query(), self.get_filters())

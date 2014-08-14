@@ -16,12 +16,16 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+
 from django.forms import IntegerField
 from django.template import Context
 from django.template.loader import get_template
+
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
 from amcat.tools.keywordsearch import SelectionSearch
+from amcat.tools.toolkit import Timer
+
 
 TEMPLATE = get_template('query/summary.html')
 
@@ -43,12 +47,17 @@ class SummaryAction(QueryAction):
         size = form.cleaned_data['size']
         offset = form.cleaned_data['offset']
 
-        selection = SelectionSearch(form)
-        self.monitor.update(1, "Creating summary")
-        narticles = selection.get_count()
-        self.monitor.update(39, "Found {narticles} articles in total".format(**locals()))
-        articles = selection.get_articles(size=size, offset=offset)
-        self.monitor.update(79, "Rendering results..".format(**locals()))
+        with Timer() as timer:
+            selection = SelectionSearch(form)
+            self.monitor.update(1, "Executing query..")
+            narticles = selection.get_count()
+            self.monitor.update(39, "Fetching mediums..".format(**locals()))
+            mediums = selection.get_mediums()
+            self.monitor.update(59, "Fetching articles..".format(**locals()))
+            articles = selection.get_articles(size=size, offset=offset)
+            self.monitor.update(69, "Aggregating..".format(**locals()))
+            date_aggr = selection.get_aggregate("date", interval="day")
+            self.monitor.update(79, "Rendering results..".format(**locals()))
 
         return TEMPLATE.render(Context(dict(locals(), **{
             "project": self.project, "user": self.user

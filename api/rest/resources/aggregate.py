@@ -1,21 +1,20 @@
-import math
+import itertools
+import collections
 
-from django.conf.urls import patterns, url
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.fields import DateField, CharField, IntegerField
+from rest_framework.fields import CharField, IntegerField
 from rest_framework.serializers import Serializer
+
 from amcat.tools import amcates, keywordsearch
+
 from api.rest.resources.amcatresource import AmCATResource
-from django_filters import filters, filterset
 from amcat.tools.caching import cached
-import itertools, collections
 from amcat.models import Medium
 
-DATES = ['year','quarter','month','week','day']
-FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets"
 
-#TODO: Copypasta: AggregateES/lazyES and AggregateResource/SearchResource should share common ancestors
+DATES = ['year', 'quarter', 'month', 'week', 'day']
+FILTER_FIELDS = "start_date", "end_date", "mediumid", "ids", "sets"
+
+# TODO: Copypasta: AggregateES/lazyES and AggregateResource/SearchResource should share common ancestors
 
 class AggregateES(object):
     def __init__(self, axes, queries=None, filters=None):
@@ -36,7 +35,7 @@ class AggregateES(object):
     def _get_results(self):
         if not self.axes:
             # give raw count
-            yield {"count" : self.es.count(query=self.query, filters=self.filters)}
+            yield {"count": self.es.count(query=self.query, filters=self.filters)}
             return
 
         if len(self.axes) > 2: raise NotImplementedError("Aggregation on >2 axes currently not supported")
@@ -47,7 +46,7 @@ class AggregateES(object):
         if y is None:
             for (group, n) in self._get_counts(x):
                 yield self.result_type(group, n)
-        elif y in ("mediumid","medium"):
+        elif y in ("mediumid", "medium"):
             medium_ids = self.es.list_media(self.query, self.filters)
             if y == "medium":
                 medium_ids = list(medium_ids)
@@ -63,55 +62,54 @@ class AggregateES(object):
             for q in self.queries:
                 for group, n in self._get_counts(x, query=q.query):
                     yield self.result_type(group, q.label, n)
-            
+
         else:
-            raise ValueError("Cannot aggregate on axes2="+y)
-            
-        
+            raise ValueError("Cannot aggregate on axes2=" + y)
+
 
     def _get_counts(self, axis, query=None, **extra_filters):
         if axis in DATES:
             interval = axis
             axis = 'date'
         else:
-            interval=None
-            
+            interval = None
+
         if query is None: query = self.query
-        
+
         filters = self.filters.copy()
         filters.update(extra_filters)
         return self.es.aggregate_query(query, filters, axis, interval)
-            
+
     @property
     @cached
     def result(self):
         return list(self._get_results())
-        
+
     def __len__(self):
         return len(self.result)
 
     def __getitem__(self, i):
         return self.result[i]
 
-class AggregateResource(AmCATResource):
 
+class AggregateResource(AmCATResource):
     @property
     @cached
     def axes(self):
         params = self.request.QUERY_PARAMS or self.request.DATA
         axes = ("axis{i}".format(**locals()) for i in itertools.count(1))
         return [params[x] for x in itertools.takewhile(params.__contains__, axes)]
-    
+
     @property
     @cached
     def queries(self):
         params = self.request.QUERY_PARAMS or self.request.DATA
         return [keywordsearch.SearchQuery.from_string(q)
                 for q in params.getlist("q")]
-        
+
     def get_queryset(self):
         return AggregateES(self.axes, self.queries)
-        
+
     def filter_queryset(self, queryset):
         params = self.request.QUERY_PARAMS or self.request.DATA
         print(">>>> params:", params)
@@ -119,7 +117,7 @@ class AggregateResource(AmCATResource):
             if k in params:
                 queryset.filter(k, params.getlist(k))
         return queryset
-    
+
     @classmethod
     def get_model_name(cls):
         return "aggregate"
@@ -128,14 +126,14 @@ class AggregateResource(AmCATResource):
         ctx = super(AggregateResource, self).get_serializer_context()
         ctx["axes"] = self.axes
         return ctx
-            
+
     def post(self, request, *args, **kwargs):
         # allow for POST requests
         return self.list(request, *args, **kwargs)
-        
+
     class serializer_class(Serializer):
         count = IntegerField()
-        
+
         def __init__(self, *args, **kwargs):
             Serializer.__init__(self, *args, **kwargs)
             for x in kwargs["context"]["axes"]:

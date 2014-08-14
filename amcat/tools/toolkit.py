@@ -40,6 +40,7 @@ this organisation!
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+import time
 import warnings
 import random
 import types
@@ -626,6 +627,15 @@ def is_sequence(obj, exclude_strings=False):
 ##                         Misc. functions                               ##
 ###########################################################################
 # Please try to keep this one clean...
+
+class Timer:
+    def __enter__(self):
+        self.start = time.clock()
+        return self
+
+    def __exit__(self, *args):
+        self.end = time.clock()
+        self.interval = self.end - self.start
 
 def htmlImageObject(bytes, format='png'):
     """Create embedded html image object"""

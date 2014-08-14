@@ -3,13 +3,28 @@
         No articles found.
     </div>
 {% else %}
-    <h2>Found {{ narticles }} articles in {{ duration }} seconds.</h2>
+    <h2>Found {{ narticles }} articles in {{ timer.interval|floatformat:3 }} seconds.</h2>
 
-    <ul class="articles">
-        {% for a in articles %}
-        <li>{% include "query/summary_article.html" %}</li>
-        {% endfor %}
-    </ul>
+    <div class="row">
+        <div class="col-md-6">
+            <ul class="articles">
+                {% for a in articles %}
+                    <li>{% include "query/summary_article.html" %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        <div id="date-aggregation" class="col-md-6">
+          {% include "query/summary_chart.html" %}
+        </div>
+    </div>
 
 {% endif %}
 
+<style>
+    h2{margin-top:0;}
+    ul.articles{
+        list-style-type: none;
+        margin-left:0;
+        padding-left:10px;
+    }
+</style>

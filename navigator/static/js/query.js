@@ -43,7 +43,8 @@ $((function(){
     var scripts_container = $("#scripts");
     var script_form = $("#script-form");
     var loading_dialog = $("#loading-dialog");
-    var loading_body = loading_dialog.find(".panel-body");
+    var message_element = loading_dialog.find(".message");
+    var progress_bar = loading_dialog.find(".progress-bar");
 
     var PROJECT = query_screen.data("project");
     var SETS = query_screen.data("sets");
@@ -95,6 +96,10 @@ $((function(){
      * Called when 'run query' is clicked.
      */
     function run_query() {
+        loading_dialog.modal({keyboard: false, backdrop: 'static'});
+        progress_bar.css("width", 0);
+        message_element.text(message_element.attr("placeholder"));
+
         $.ajax({
             type: "POST", dataType: "json",
             url: get_api_url(scripts_container.find("select").val()),
@@ -109,13 +114,6 @@ $((function(){
     }
 
     function init_poll(uuid){
-        var message_element = loading_dialog.find(".message");
-        var progress_bar = loading_dialog.find(".progress-bar");
-
-        progress_bar.css("width", 0);
-        message_element.text(message_element.attr("placeholder"));
-        loading_dialog.modal({keyboard: false, backdrop: 'static'});
-
         Poll(uuid).done(function(){
             progress_bar.css("width", "100%");
             message_element.text("Fetching results..")
@@ -125,8 +123,6 @@ $((function(){
             $(".result .panel-body").html(data);
             loading_dialog.modal("hide");
         }).progress_bar(message_element, progress_bar);
-
-
     }
 
     function init_dates(){
