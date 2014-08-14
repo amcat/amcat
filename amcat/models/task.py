@@ -49,6 +49,7 @@ def amcat_task(self):
 class TaskPending(Exception):
     pass
 
+
 class Task(AmcatModel):
     """
     A Task represents a Script (see: amcat.scripts.Script) which was ran asynchronously
@@ -93,6 +94,10 @@ class Task(AmcatModel):
     def get_handler(self):
         return classtools.import_attribute(self.handler_class_name)(self)
 
+    def get_arguments(self):
+        """Returns `arguments` deserialised by handler."""
+        return self.get_handler().deserialise_arguments(self.arguments)
+
     def revoke(self, **kwargs):
         """Revoke a task by preventing it from running on workers.
 
@@ -109,6 +114,7 @@ class Task(AmcatModel):
     class Meta:
         db_table = "tasks"
         app_label = "amcat"
+
 
 class TaskHandler(object):
     """
@@ -127,9 +133,13 @@ class TaskHandler(object):
         """
         if not isinstance(target_class, (str, unicode)):
             target_class = classtools.get_qualified_name(target_class)
-        task = Task.objects.create(handler_class_name=classtools.get_qualified_name(cls),
-                                   class_name=target_class, arguments=arguments,
-                                   user=user, project=project)
+
+        task = Task.objects.create(
+            handler_class_name=classtools.get_qualified_name(cls),
+            class_name=target_class, user=user, project=project,
+            arguments=cls.serialise_arguments(arguments)
+        )
+
         amcat_task.apply_async(task_id=task.uuid)
         return cls(task)
 
@@ -160,6 +170,15 @@ class TaskHandler(object):
         """
         raise NotImplementedError()
 
+    @classmethod
+    def serialise_arguments(cls, arguments):
+        """Returns object suitable for serialisation by json.dumps()."""
+        return arguments.copy()
+
+    @classmethod
+    def deserialise_arguments(cls, arguments):
+        """Inverse of `serialise_arguments`."""
+        return arguments.copy()
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
