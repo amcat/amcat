@@ -25,7 +25,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.db.models import Q
 import itertools
-from amcat.models import Medium, ProjectRole
+from amcat.models import Medium, ProjectRole, get_mediums
 
 from amcat.tools.model import AmcatModel
 from amcat.models.coding.codebook import Codebook
@@ -127,11 +127,7 @@ class Project(AmcatModel):
         )
 
     def get_mediums(self):
-        from amcat.tools.amcates import ES
-        sets = [s.id for s in self.all_articlesets()]
-        if not sets: return Medium.objects.none()
-        medium_ids = ES().list_media(filters=dict(sets=sets))
-        return Medium.objects.filter(id__in=medium_ids)
+        return get_mediums(self.all_articlesets().values_list("id", flat=True))
 
     class Meta():
         db_table = 'projects'

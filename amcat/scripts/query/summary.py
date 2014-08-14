@@ -16,28 +16,41 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from django.forms import IntegerField
+from django.template import Context
+from django.template.loader import get_template
+from amcat.forms.forms import order_fields
+from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.tools.keywordsearch import SelectionSearch
 
-from django.conf.urls import patterns, url, include
-from rest_framework.urlpatterns import format_suffix_patterns
-from rest_framework.routers import DefaultRouter
+TEMPLATE = get_template('query/summary.html')
 
-from api.rest import resources
-from api.rest.viewsets import get_viewsets
 
-router = DefaultRouter()
-for vs in get_viewsets():
-    router.register(vs.get_url_pattern(), vs, base_name=vs.get_basename())
+@order_fields(("offset", "size"))
+class SummaryActionForm(QueryActionForm):
+    size = IntegerField(initial=20)
+    offset = IntegerField(initial=0)
 
-urlpatterns = format_suffix_patterns(patterns('',
-    url(r'^query/', include("api.rest.query.urls")),
-    url(r'^$', resources.api_root),
-    url(r'^taskresult/(?P<task_id>[0-9]+)$', resources.single_task_result, dict(uuid=False)),
-    url(r'^taskresult/(?P<task_id>[0-9a-zA-Z-]+)$', resources.single_task_result, dict(uuid=True)),
-    url(r'^get_token', 'api.rest.get_token.obtain_auth_token'),
 
-    *tuple(r.get_url_pattern() for r in resources.all_resources())
-))
+class SummaryAction(QueryAction):
+    """
+    This is the docstring of SummaryAction!
+    """
+    output_types = (("text/html", "Inline"),)
+    form_class = SummaryActionForm
 
-urlpatterns +=  patterns('',
-    url(r'^', include(router.urls)),
-)
+    def run(self, form):
+        size = form.cleaned_data['size']
+        offset = form.cleaned_data['offset']
+
+        selection = SelectionSearch(form)
+        self.monitor.update(1, "Creating summary")
+        narticles = selection.get_count()
+        self.monitor.update(39, "Found {narticles} articles in total".format(**locals()))
+        articles = selection.get_articles(size=size, offset=offset)
+        self.monitor.update(79, "Rendering results..".format(**locals()))
+
+        return TEMPLATE.render(Context(dict(locals(), **{
+            "project": self.project, "user": self.user
+        })))
+

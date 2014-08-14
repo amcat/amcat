@@ -1,0 +1,108 @@
+<!--<div class="alert alert-info" role="alert">
+    You have selected {{ articlesets|length }} articlesets for querying.
+</div>-->
+
+<p class="btn-group">
+    <a class="btn btn-default">
+        <i class="glyphicon glyphicon-open"></i> Load
+    </a>
+    <a class="btn btn-default">
+        <i class="glyphicon glyphicon-cog"></i> Settings
+    </a>
+    <a class="btn btn-danger disabled">
+        <i class="glyphicon glyphicon-trash"></i> Delete
+    </a>
+
+    <h4 class="name" style="float:right;">Unsaved query</h4>
+</p>
+
+<div class="row equal" id="query-screen" data-sets="{{ articleset_ids }}" data-project="{{ project.id }}">
+    <div class="col-md-4 filters-tab">
+        <div class="panel panel-default">
+            <div class="panel-heading">Filters</div>
+            <div class="panel-body">
+                <div class="row">
+                    {% include "project/query/dates.html" %}
+                </div>
+                <br/>
+                <div class="row mediums">
+                    <div class="col-md-3"><label>Mediums</label></div>
+                    <div class="col-md-9">{{ form.mediums }}</div>
+                </div>
+                <br/>
+                <div class="row">
+                    <div class="col-md-3"><label>ID's</label></div>
+                    <div class="col-md-9">
+                        <textarea placeholder="ID's" name="articleids"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8 query-tab">
+        <div class="panel panel-default">
+            <div class="panel-heading">Query</div>
+            <div class="panel-body">
+                {% include "project/query/query_tab.html" %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row equal">
+    <div class="col-md-4 output">
+        <div class="panel panel-default">
+            <div class="panel-heading">Output</div>
+            <div class="panel-body">
+                <div class="row">
+                    <div class="col-md-3"><label>Script</label></div>
+                    <div class="col-md-9" id="scripts"><i>Loading options..</i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8 output-options">
+        <div class="panel panel-default">
+            <div class="panel-heading">Output options</div>
+            <div class="panel-body" id="script-form">
+                Choose an output script to the left.
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row query-submit">
+    <div class="btn-group">
+        <a class="btn btn-default disabled">Save as..</a>
+        <a class="btn btn-default disabled">Save</a>
+        <a class="btn btn-success" id="run-query">
+            <i class="glyphicon glyphicon-cog"></i> Query
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="result">
+            <div class="panel panel-default">
+                <div class="panel-heading">Results</div>
+                <div class="panel-body"><i>No results yet</i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    $(function() {
+        var inputs = [
+            "#id_datetype", "[name=on_date]", "[name=start_date]", "[name=end_date]",
+            "#id_mediums", "[type=query]", "[name=articleids]"
+        ];
+        $.each(inputs, function (i, el) { $(el).prop("tabindex", i+1); });
+
+        $(inputs[0]).focus();
+    });
+</script>
+
+
+{% include "project/query/syntax_help.html" %}

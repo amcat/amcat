@@ -1,0 +1,15 @@
+{% if not articles %}
+    <div class="alert alert-warning" role="alert">
+        No articles found.
+    </div>
+{% else %}
+    <h2>Found {{ narticles }} articles in {{ duration }} seconds.</h2>
+
+    <ul class="articles">
+        {% for a in articles %}
+        <li>{% include "query/summary_article.html" %}</li>
+        {% endfor %}
+    </ul>
+
+{% endif %}
+

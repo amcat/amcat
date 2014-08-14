@@ -47,32 +47,32 @@ task = (function(uuid){
 
     function update_progress(task){
         $("#status").text(task.status);
-	console.log(task);
+        console.log(task);
         if (task.progress !== null){
-	    progress = task.progress.completed;
+            progress = task.progress.completed;
             $("#message").text(task.progress.message);
             //$("#completed").text(progress);
-	    if (progress != null) {
-		$("#progressbar").css('width', progress+'%').attr('aria-valuenow', progress);
-		$("#progressalt").text(progress);
-	    }
+            if (progress != null) {
+                $("#progressbar").css('width', progress+'%').attr('aria-valuenow', progress);
+                $("#progressalt").text(progress);
+            }
         }
     }
 
     function task_failed(task){
         console.log("failed")
-	$('#progressbar').removeClass("progress-bar-info").addClass("progress-bar-danger");
+        $('#progressbar').removeClass("progress-bar-info").addClass("progress-bar-danger");
 
     }
-task_failed
+
     function task_success(task){
         $(".hide-if-success").hide();
         $("#results").show();
-	$("#results").attr('href',  task.redirect_url)
-	$("#results span").text(task.redirect_message)
+        $("#results").attr('href',  task.redirect_url)
+        $("#results span").text(task.redirect_message)
 
-	$("#progressbar").css('width', '100%').attr('aria-valuenow', "100");
-	$('#progressbar').removeClass("progress-bar-info").addClass("progress-bar-success");
+        $("#progressbar").css('width', '100%').attr('aria-valuenow', "100");
+        $('#progressbar').removeClass("progress-bar-info").addClass("progress-bar-success");
     }
 
     poll();

@@ -19,89 +19,73 @@
 ###########################################################################
 */
 
-.ui-buttonset .ui-state-active{
-    font-weight:bold;
+textarea{
+    max-width: 100%;
+    min-width: 100%;
+    width:100%;
+    height:100%;
 }
 
-.ui-widget{
-    font-size:12px;
+input{
+    max-width: 100%;
+    min-width: 100%;
+    width:100%;
 }
 
-.ui-multiselect-checkboxes{
-    overflow-y:auto;
-    max-height:300px;
+select.wide,
+.panel,
+.mediums select{
+    width:100%;
 }
 
-.article-meta{
-    color:gray;
+.row{
+    margin-bottom: -5px;
 }
 
-.action-buttons{
+.formatting-help{
+    font-size:0.9em;
+    color:grey;
+}
+
+.query{
+    padding-right: 0;
+}
+
+.query-tab, .output-options{
+    padding-left:0px;
+}
+
+.syntax-help,
+.codebook-options{
+    cursor:pointer;
+}
+
+.syntax-help{
+    font-size:0.9em;
     float:right;
 }
 
-ul em{
-    color:red;
+.equal, .equal > div[class*='col-'] {
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: flex;
+    flex:1 0 auto;
 }
 
-.article-headline{
-    margin-bottom:3px;
-    margin-top:15px;
+.panel-heading{
+    display: none;
 }
 
-.output-result{
-    clear:both;
+.codebook-options select{
+    width:calc(33% - 9px);
 }
 
-.hit-count{
-    font-weight:normal;
+[name=on_date]{
+    text-align: center;
 }
 
-#query-form textarea{
-    width:90%;
+.query-submit .btn-group{
+    float:right;
+    margin-right: 15px;
+    margin-bottom: 15px;
 }
-
-.jqplot-highlighter-tooltip {
-    background-color: white !important;
-    border: 1px solid gray !important;
-    padding:3px !important;
-}
-
-.form-table{
-    width:100%;
-
-}
-
-#select-result{
-    clear:both;
-    margin-top:5px;
-}
-
-.more-articlelist-results{
-    border: 2px solid #205CA7;
-    padding:5px;
-    cursor:pointer;
-    margin-top:30px;
-}
-
-
-#query-time{
-    color:gray;
-}
-
-.output-options-td{
-    display: block;
-    min-height: 70px;
-}
-
-#selection{
-    font-size:12px;
-}
-
-.code{
-    font-family: "Courier New", Courier, monospace
-}
-
-.query label {white-space:nowrap;}
-table.query {width: 100%}
-.query td:first-child { width: 130px; }

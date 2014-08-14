@@ -21,20 +21,24 @@
 Controller that handles calling plugin scripts as web services
 """
 
+import logging;
+
 from django.shortcuts import render
 from django.http import HttpResponse
 
-import logging; log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 import json
 import traceback
 
-from amcat.scripts.actions.network import Network
-from amcat.scripts.actions.get_codingjob_results import GetCodingJobResults
-from amcat.scripts.actions.query import Query
-from amcat.scripts.actions.get_queries import GetQueries
 from amcat.scripts.script import Script
 from amcat.scripts import scriptmanager
+
+from amcat.models import ArticleSet
+def sync(id):
+    ArticleSet.objects.get(id=id).refresh_index()
+    open("/tmp/sets/{id}".format(**locals()), "w").close()
+    return "a"
 
 def get_script(action):
     for name, obj in globals().iteritems():

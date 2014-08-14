@@ -1,0 +1,37 @@
+<div class="col-md-3">
+    <label>Datetype</label>
+</div>
+
+<div id="dates" class="col-md-9">
+    <select class="wide" tabindex="1" name="datetype" id="id_datetype">
+        <option selected="selected" value="all">All</option>
+        <option value="on">On</option>
+        <option value="after">After</option>
+        <option value="between">Between</option>
+        <option value="before">Before</option>
+    </select>
+
+    <input disabled name="on_date" placeholder="On" class="input-sm form-control" type="text"/>
+
+    <div class="input-daterange input-group">
+        <input disabled name="start_date" placeholder="Start" type="text" class="input-sm form-control" />
+        <input disabled name="end_date" placeholder="End" type="text" class="input-sm form-control"/>
+    </div>
+
+    <div class="formatting-help">
+        For example: 20-01-1993
+    </div>
+</div>
+
+<script type="text/javascript">
+    var opts = {
+        format: "dd-mm-yyyy",
+        calendarWeeks: true,
+        todayHighlight: true,
+        startDate: "{{ statistics.start_date|date:"d-m-Y" }}",
+        endDate: "{{ statistics.end_date|date:"d-m-Y" }}"
+    };
+
+    $('.input-daterange').datepicker(opts);
+    $('[name=on_date]').datepicker(opts);
+</script>

@@ -32,14 +32,11 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 
 import logging;
-from django.db import models
 
 log = logging.getLogger(__name__)
 from functools import wraps, partial
 
 from django.conf import settings
-from django.core.cache import cache
-from django.db.models import signals
 
 SIMPLE_CACHE_SECONDS = getattr(settings, 'SIMPLE_CACHE_SECONDS', 2592000)
 

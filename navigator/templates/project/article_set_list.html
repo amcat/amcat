@@ -12,19 +12,24 @@
 {% endblock %}
 
 {% block content %}
-    {% if can_edit %}
     <div id="{{ table.get_name }}-actions">
-        <form id="set-favourite"
-              action=""
-              data-id-field="[name=ids]" data-table="#datatable" data-require-selection="1">
-            <input type="hidden" name="favaction" value="{{ favaction }}">
-            <input type="hidden" name="ids" />
+        <a id="use-in-query" class="btn btn-default">
+            <i class="glyphicon glyphicon-search"></i> Use in query
+        </a>
 
-            <input type="submit" id="favourite" class="btn btn-default"
-                   value="{% if favaction == 'setfav' %}Activate Set(s){% else %}Archive Set(s){% endif %}" />
-        </form>
+        {% if can_edit %}
+            <form id="set-favourite"
+                  action=""
+                  data-id-field="[name=ids]" data-table="#datatable" data-require-selection="1">
+                <input type="hidden" name="favaction" value="{{ favaction }}">
+                <input type="hidden" name="ids" />
+
+                <input type="submit" id="favourite" class="btn btn-default"
+                       value="{% if favaction == 'setfav' %}Activate Set(s){% else %}Archive Set(s){% endif %}" />
+            </form>
+        {% endif %}
+
     </div>
-    {% endif %}
 
 
     {% if deleted %}
@@ -62,5 +67,14 @@
 
     <script type="text/javascript">
         exportids($("#set-favourite"));
+    </script>
+
+    <script type="text/javascript">
+        $("#use-in-query").click(function(event){
+            var wrapper = $(event.currentTarget).closest(".dataTables_wrapper");
+            var api = wrapper.find(".dataTables_scrollBody > .dataTable").DataTable();
+            var ids = $.map(api.rows('.active').data(), function(r){ return r.id; });
+            window.location = "{% url 'query' project.id %}?sets=" + ids.join(",");
+        });
     </script>
 {% endblock %}

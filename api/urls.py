@@ -24,11 +24,9 @@ import api.rest
 
 urlpatterns = patterns(
     '',
-    url(r'^$', lambda r : redirect("v4/"), name="api"),
-    url(r'^action/(?P<action>\w+)$', 'api.action.handler'),
-    (r'^webscript/(?P<webscriptName>\w+)/run$', 'api.webscripts.handler.index'),
-    (r'^webscript/(?P<webscriptName>\w+)/form$', 'api.webscripts.handler.getWebscriptForm'),
+    url(r'^$', lambda r: redirect("v4/"), name="api"),
     (r'^v4/', include('api.rest.urls')),
+    url(r'^action/(?P<action>\w+)$', 'api.action.handler'),
     url(r'^restframework', include('rest_framework.urls', namespace='rest_framework')),
 )
 

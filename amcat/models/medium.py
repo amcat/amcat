@@ -19,9 +19,11 @@
 from __future__ import unicode_literals, print_function, absolute_import
 
 from django.db import models
-from django.db.models.query import QuerySet
+from django.db.models.query import QuerySet, ValuesQuerySet
+from amcat.tools.amcates import ES
 
 from amcat.tools.model import AmcatModel
+
 
 def to_medium_ids(mediums):
     """
@@ -39,12 +41,33 @@ def to_medium_ids(mediums):
 
     return ((m.id if isinstance(m, Medium) else m) for m in mediums)
 
+
+def get_mediums(articlesets):
+    """
+    Gets medium objects based on articlesets.
+
+    @param articlesets: articlesets to look into. If None, return all mediums.
+    @type articlesets: QuerySet, iterable of int
+
+    @rtype: QuerySet
+    """
+    if isinstance(articlesets, QuerySet) and not isinstance(articlesets, ValuesQuerySet):
+        articlesets = articlesets.values_list("id", flat=True)
+
+    if not articlesets:
+        return Medium.objects.none()
+
+    articlesets = ES().list_media(filters={"sets": tuple(articlesets)})
+    return Medium.objects.filter(id__in=articlesets)
+
+
 class MediumSourcetype(AmcatModel):
     id = models.AutoField(primary_key=True, db_column="medium_source_id")
     label = models.CharField(max_length=20)
 
     class Meta():
         db_table = 'media_sourcetypes'
+
 
 class Medium(AmcatModel):
     __label__ = 'name'
@@ -87,14 +110,15 @@ class Medium(AmcatModel):
         """
         if medium_name is None: return None
         try:
-            return cls.get_by_name(medium_name, ignore_case = False)
+            return cls.get_by_name(medium_name, ignore_case=False)
         except cls.DoesNotExist:
-            return cls.objects.create(name = medium_name)
+            return cls.objects.create(name=medium_name)
 
     class Meta():
         db_table = 'media'
         verbose_name_plural = 'media'
         app_label = 'amcat'
+
 
 class MediumAlias(AmcatModel):
     """
@@ -117,13 +141,13 @@ class MediumAlias(AmcatModel):
 
 from amcat.tools import amcattest
 
-class TestMedium(amcattest.AmCATTestCase):
 
+class TestMedium(amcattest.AmCATTestCase):
     def test_to_medium_ids(self):
         arts = amcattest.create_test_set(2).articles.all()
         m1, m2 = amcattest.create_test_medium(), amcattest.create_test_medium()
-        self.assertEqual(set(to_medium_ids(m1)), {m1.id,})
-        self.assertEqual(set(to_medium_ids([m1,m2])), {m1.id, m2.id})
+        self.assertEqual(set(to_medium_ids(m1)), {m1.id, })
+        self.assertEqual(set(to_medium_ids([m1, m2])), {m1.id, m2.id})
         self.assertEqual(set(to_medium_ids(Medium.objects.filter(id__in=[m1.id, m2.id]))), {m1.id, m2.id})
         self.assertEqual(set(to_medium_ids(arts.values_list("medium__id", flat=True))), {a.medium_id for a in arts})
 

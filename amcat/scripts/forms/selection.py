@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -21,14 +21,15 @@
 from itertools import ifilterfalse
 import datetime
 import logging
+from operator import itemgetter
 
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 
-from amcat.models import Project, ArticleSet, Medium
-from amcat.models import Codebook, Language, Article
+from amcat.models import Codebook, Language, Article, ArticleSet
+from amcat.models.medium import Medium, get_mediums
 from amcat.forms.forms import order_fields
+from amcat.tools.caching import cached
 from amcat.tools.toolkit import to_datetime
 from amcat.tools.djangotoolkit import db_supports_distinct_on
 
@@ -36,11 +37,11 @@ from amcat.tools.djangotoolkit import db_supports_distinct_on
 log = logging.getLogger(__name__)
 
 DATETYPES = {
-    "all" : "All Dates",
-    "on" : "On",
-    "before" : "Before",
-    "after" : "After",
-    "between" : "Between",
+    "all": "All Dates",
+    "on": "On",
+    "before": "Before",
+    "after": "After",
+    "between": "Between",
 }
 
 __all__ = [
@@ -55,17 +56,19 @@ DAY_DELTA = datetime.timedelta(hours=23, minutes=59, seconds=59, milliseconds=99
 class ModelMultipleChoiceFieldWithIdLabel(forms.ModelMultipleChoiceField):
     def label_from_instance(self, obj):
         return "%s - %s" % (obj.id, obj.name)
-        
+
+
 class ModelChoiceFieldWithIdLabel(forms.ModelChoiceField):
     def label_from_instance(self, obj):
         return "%s - %s" % (obj.id, obj)
-        
+
 
 def _add_to_dict(dict, key, value):
     if hasattr(dict, "getlist") and isinstance(value, (list, tuple)):
         return dict.setlist(key, value)
     dict[key] = value
-            
+
+
 @order_fields()
 class SelectionForm(forms.Form):
     include_all = forms.BooleanField(label="Include articles not matched by any keyword", required=False, initial=False)
@@ -76,37 +79,31 @@ class SelectionForm(forms.Form):
     end_date = forms.DateField(required=False)
     datetype = forms.ChoiceField(choices=DATETYPES.items(), initial='all', required=True)
     on_date = forms.DateField(required=False)
-    
-    codebook_replacement_language = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False, label="Language which is used to replace keywords")
-    codebook_label_language = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False, label="Language for keywords")
+
+    codebook_replacement_language = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False,
+                                                                label="Language which is used to replace keywords")
+    codebook_label_language = ModelChoiceFieldWithIdLabel(queryset=Language.objects.all(), required=False,
+                                                          label="Language for keywords")
     codebook = ModelChoiceFieldWithIdLabel(queryset=Codebook.objects.all(), required=False, label="Use Codebook")
 
     query = forms.CharField(widget=forms.Textarea, required=False)
 
-    def __init__(self, project=None, data=None, *args, **kwargs):
+    def __init__(self, project=None, articlesets=None, data=None, *args, **kwargs):
+        """
+        @param project: project to generate this form for
+        @type project: amcat.models.Project
+
+        @param articlesets: determines limitation of mediums / articlesets
+        @type articlesets: django.db.QuerySet
+        """
         super(SelectionForm, self).__init__(data, *args, **kwargs)
 
-        if data and "projects" in data and project is None:
-            log.warning("Passing 'projects' in `data` deprecated. Use project parameter on __init__ instead.")
-            project = Project.objects.get(id=data.pop("projects")[0])
-        elif project is None:
-            raise ValueError("Project cannot be None")
-
         self.project = project
-
-        codebooks = Codebook.objects.filter(Q(project_id=project.id)|Q(projects_set=project))
+        self.fields['articlesets'].queryset = articlesets.order_by('-pk')
+        self.fields['codebook'].queryset = project.get_codebooks()
         self.fields['mediums'].queryset = self._get_mediums()
-        self.fields['codebook'].queryset = codebooks
-
-        if data and data.get("output") == "html":
-            self.fields['articlesets'].queryset = ArticleSet.objects.all()
-        else:
-            self.fields['articlesets'].queryset = project.all_articlesets().order_by('-pk')
-
-        distinct_args = ["id"] if db_supports_distinct_on() else []
-
         self.fields['codebook_label_language'].queryset = self.fields['codebook_replacement_language'].queryset = (
-            Language.objects.filter(labels__code__codebook_codes__codebook__in=codebooks).distinct(*distinct_args)
+            Language.objects.filter(labels__code__codebook_codes__codebook__in=project.get_codebooks()).distinct()
         )
 
         if data is not None:
@@ -125,18 +122,9 @@ class SelectionForm(forms.Form):
                 _add_to_dict(data, field_name, field.initial)
         return data
 
+    @cached
     def _get_mediums(self):
-        return self.project.get_mediums()
-
-    @property
-    def use_index(self):
-        """
-        Should query use the index?
-        @raises: ValidationError if form not valid
-        """
-        self.full_clean()
-        query = self.cleaned_data.get("query")
-        return bool(query) and query != "()"
+        return get_mediums(self.fields["articlesets"].queryset)
 
     def clean_codebook_label_language(self):
         return self.cleaned_data.get("codebook_label_language")
@@ -164,7 +152,8 @@ class SelectionForm(forms.Form):
 
         if datetype == "between":
             if not (start_date and end_date):
-                raise ValidationError("Both a start and an end date need to be defined when datetype is 'between'", code="missing")
+                raise ValidationError("Both a start and an end date need to be defined when datetype is 'between'",
+                                      code="missing")
             if end_date and not (start_date < end_date):
                 raise ValidationError("End date should be greater than start date")
 
@@ -185,17 +174,18 @@ class SelectionForm(forms.Form):
 
     def clean_on_date(self):
         on_date = self.cleaned_data["on_date"]
-        if on_date: on_date = to_datetime(on_date)
+        if on_date:
+            on_date = to_datetime(on_date)
 
         if "datetype" not in self.cleaned_data:
             # Don't bother checking, datetype raised ValidationError
             return on_date
-        
+
         datetype = self.cleaned_data["datetype"]
 
         if datetype == "on" and not on_date:
             raise ValidationError("'On date' should be defined when dateype is 'on'", code="missing")
-            
+
         if datetype == "on":
             self.cleaned_data["datetype"] = "between"
             self.cleaned_data["start_date"] = on_date
@@ -212,7 +202,6 @@ class SelectionForm(forms.Form):
         if not self.cleaned_data["mediums"]:
             return self._get_mediums()
         return self.cleaned_data["mediums"]
-
 
     def clean_article_ids(self):
         article_ids = self.cleaned_data["article_ids"].split("\n")
@@ -239,23 +228,16 @@ class SelectionForm(forms.Form):
             offenders = chosen_articles.exclude(id__in=existing).values_list("id", flat=True)
             raise ValidationError(
                 ("Articles {offenders} not in chosen articlesets or some non-existent"
-                    .format(**locals())), code="invalid")
+                 .format(**locals())), code="invalid")
 
         return article_ids
-
-    def clean(self):
-        cleaned_data = { k:v for k,v in self.cleaned_data.iteritems() if v is not None }
-
-        cleaned_data['projects'] = [self.project.id]
-
-        return cleaned_data
-
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
 from amcat.tools import amcattest
+
 
 class TestSelectionForm(amcattest.AmCATTestCase):
     def get_form(self, **kwargs):
@@ -298,6 +280,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
     @amcattest.use_elastic
     def test_defaults(self):
         from django.core.cache import cache
+
         cache.clear()
 
         set1 = amcattest.create_test_set(1)
@@ -403,7 +386,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
     @amcattest.skip_TODO("moved functionality to keywordsearch, move tests there as well")
     def test_clean_query(self):
         import functools
-        
+
         p, c, form = self.get_form(query="  Bla   #  Balkenende")
         self.assertTrue(form.is_valid())
         self.assertEquals(len(list(form.queries)), 1)
@@ -418,7 +401,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         # Label can't be defined twice
         p, c, form = self.get_form(query="Bla#Balkenende\nBla#Balkie")
         self.assertFalse(form.is_valid())
-        
+
         p, c, form = self.get_form(query="Bla#Balkenende\nBla#Balkie")
 
         code = c.get_codes()[0]
@@ -429,8 +412,8 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         code.add_label(lan2, "Replacement")
 
         _form = functools.partial(self.get_form,
-            codebook=c.id, codebook_label_language=lan1.id,
-            codebook_replacement_language=lan2.id, project=p
+                                  codebook=c.id, codebook_label_language=lan1.id,
+                                  codebook_replacement_language=lan2.id, project=p
         )
 
         p, _, form = _form(query="<Referral>")
@@ -453,14 +436,14 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         # Should be able to handle recursion when defined on label
         p, _, form = _form(query="<{}+>".format(root.get_label(lan0.id)))
         self.assertTrue(form.is_valid())
-        self.assertEquals(3, form.keyword_query.count("(")) # Three levels of nesting
+        self.assertEquals(3, form.keyword_query.count("("))  # Three levels of nesting
         for label in ["A", "A2", "A1", "A1b", "A1a"]:
             self.assertTrue(label in form.keyword_query)
 
         # Should be able to handle recursion when defined on id
         p, _, form = _form(query="<{}+>".format(root.id))
         self.assertTrue(form.is_valid())
-        self.assertEquals(3, form.keyword_query.count("(")) # Three levels of nesting
+        self.assertEquals(3, form.keyword_query.count("("))  # Three levels of nesting
         for label in ["A", "A2", "A1", "A1b", "A1a"]:
             self.assertTrue(label in form.keyword_query)
 

@@ -16,17 +16,15 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
+from __future__ import unicode_literals
 
-import json
+from django.views.generic.base import TemplateView
+from amcat.tools.amcates import ES
 
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin
-from django.views.generic.base import TemplateView
-from api.webscripts import mainScripts
-from django.db.models import Q
-
-from amcat.models import CodingJob
 from amcat.scripts.forms import SelectionForm
 from navigator.views.project_views import ProjectDetailsView
+
 
 class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, TemplateView):
     context_category = 'Query'
@@ -35,28 +33,23 @@ class QueryView(ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, Templa
     view_name = 'query'
     
     def get_context_data(self, **kwargs):
-        context = super(QueryView, self).get_context_data(**kwargs)
-        p = self.project
-        outputs = [dict(id = ws.__name__,
-                                   name = ws.name,
-                                   formAsHtml= ws.formHtml(project=p))
-                              for ws in mainScripts]
+        articleset_ids = map(int, filter(unicode.isdigit, self.request.GET.get("sets", "").split(",")))
+        articlesets = self.project.all_articlesets().filter(id__in=articleset_ids)
+        articlesets = articlesets.only("id", "name")
 
+        statistics = ES().statistics(query="*", filters={
+            "sets": [aset.id for aset in articlesets]
+        })
 
-        all_articlesets = p.all_articlesets()
+        form = SelectionForm(
+            project=self.project,
+            articlesets=articlesets,
+            data=self.request.GET,
+            initial={
+                "datetype": "all",
+                "articlesets": articlesets
+            }
+        )
 
-        initial = {int(aset) for aset in self.request.GET.getlist("articlesets") if aset.isnumeric()}
-        initial = initial.intersection(set(all_articlesets.values_list("id", flat=True)))
-
-        favs = set(p.favourite_articlesets.filter(Q(project=p.id) | Q(projects_set=p.id))
-                     .values_list("id", flat=True))
-        
-        no_favourites = not favs
-        favourites = json.dumps(list(favs | initial))
-    
-        codingjobs = json.dumps(tuple(CodingJob.objects.filter(articleset__in=all_articlesets).values_list("articleset_id", flat=True)))
-        all_sets = json.dumps(tuple(all_articlesets.values_list("id", flat=True)))
-
-        form = SelectionForm(project=p, data=self.request.GET, initial={"datetype" : "all" })
-        context.update(locals())
-        return context
+        form.fields["articlesets"].widget.attrs['disabled'] = 'disabled'
+        return dict(super(QueryView, self).get_context_data(), **locals())

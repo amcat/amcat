@@ -11,8 +11,8 @@
     "jquery.scrollTo": "1.4.12",
     "TableDnD": "",
     "jquery-csv": "",
-    "jquery.hotkeys": ""
-
+    "jquery.hotkeys": "",
+    "bootstrap-datepicker": ""
   },
   "resolutions": {
     "jquery": "~2.x",

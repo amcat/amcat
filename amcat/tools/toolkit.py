@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
+
 """
 Toolkit of useful methods for AmCAT
 
@@ -50,6 +51,7 @@ import subprocess
 import base64
 import logging
 import string
+
 
 try:
     import mx.DateTime

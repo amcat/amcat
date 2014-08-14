@@ -173,6 +173,7 @@ ROOT_URLCONF = 'settings.urls'
 
 TEMPLATE_DIRS = (
     os.path.join(ROOT, 'templates'),
+    os.path.join(ROOT, 'amcat/scripts/query/templates')
 )
 
 INSTALLED_APPS = [
