@@ -1,0 +1,40 @@
+{% load jsonify %}
+
+<script type="text/javascript">
+  $(function () {
+    $('#medium-aggregation').highcharts({
+      chart: { zoomType: 'x', type: 'column' },
+      title: { text: 'Articles aggregated per medium per day.' },
+      xAxis: { type: 'datetime' },
+      yAxis: {
+        title: { text: 'Number of articles' },
+        floor: 0
+      },
+      plotOptions: {
+        column: {
+          stacking: 'normal',
+          dataLabels: {
+            enabled: true,
+            color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white',
+            style: {
+              textShadow: '0 0 3px black, 0 0 3px black'
+            }
+          }
+        }
+      },
+      series: [
+        {% for serie, data in medium_aggr %}
+          {
+            type: 'column',
+            name: {{ serie|jsonify }},
+            data: [
+              {% for date, count in data %}
+                [Date.UTC({{ date.year }}, {{ date.month }}, {{ date.day }}), {{ count }}],
+              {% endfor %}
+            ]
+          },
+        {% endfor %}
+      ]
+    });
+  });
+</script>

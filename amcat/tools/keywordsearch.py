@@ -18,7 +18,8 @@
 ###########################################################################
 
 """
-Utility module for keyword searches
+Utility module for keyword searches. This module is full of misnomers, maybe
+move it to 'queryparser'?
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
@@ -28,6 +29,7 @@ import re
 
 from django.core.exceptions import ValidationError
 from dateutil.relativedelta import relativedelta
+from amcat.tools.aggregate import aggregate
 
 from amcat.tools.amcates import ES
 from amcat.tools.caching import cached
@@ -88,6 +90,7 @@ class SelectionSearch:
         """
         return ' OR '.join('(%s)' % q.query for q in self.get_queries()) or None
 
+    @cached
     def get_queries(self):
         """Get SearchQuery objects
 
@@ -112,7 +115,7 @@ class SelectionSearch:
             replacement_language=replacement_lan
         )
 
-        return (q for q in resolved if not q.label.startswith("_"))
+        return [q for q in resolved if not q.label.startswith("_")]
 
     @cached
     def get_count(self):
@@ -126,10 +129,11 @@ class SelectionSearch:
     def get_mediums(self):
         return Medium.objects.filter(id__in=self.get_medium_ids())
 
-    def get_aggregate(self, group_by, interval="month"):
-        return self.es.aggregate_query(
-            query=self.get_query(), filters=self.get_filters(),
-            group_by=group_by, date_interval=interval
+    def get_aggregate(self, x_axis, y_axis, interval="month"):
+        return aggregate(
+            query=self.get_query(), queries=self.get_queries(),
+            filters=self.get_filters(), x_axis=x_axis, y_axis=y_axis,
+            interval=interval
         )
 
     def get_medium_ids(self):

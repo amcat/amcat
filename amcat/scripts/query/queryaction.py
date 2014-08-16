@@ -26,6 +26,8 @@ from amcat.tools.caching import cached
 from amcat.tools.progress import ProgressMonitor
 from navigator.views.scriptview import CeleryProgressUpdater
 
+DOWNLOAD_HEADER = "Content-Disposition: attachment; "
+
 
 def to_querydict(dict):
     """
@@ -40,6 +42,7 @@ def to_querydict(dict):
 
 class QueryActionForm(SelectionForm):
     output_type = forms.ChoiceField(choices=())
+    download = forms.BooleanField(initial=False, required=False)
 
 
 class QueryActionHandler(TaskHandler):
@@ -79,9 +82,15 @@ class QueryActionHandler(TaskHandler):
         query_action.monitor.add_listener(updater.update)
         return query_action.run(query_action.get_form())
 
+    def _get_content_type(self):
+        form = self.get_query_action().get_form()
+        return form.cleaned_data["output_type"]
+
     def get_response(self):
-        content_type = self.get_query_action().get_form().cleaned_data["output_type"]
-        return HttpResponse(content=self.get_result(), content_type=content_type)
+        response = HttpResponse(content=self.get_result())
+        response["Content-Disposition"] = "attachment"
+        response["Content-Type"] = self._get_content_type()
+        return response
 
     def get_redirect(self):
         return reverse("queryaction-index"), "No redirect"
@@ -125,6 +134,10 @@ class QueryAction(object):
     def get_form(self):
         form = self.form_class(**self.get_form_kwargs())
         form.fields["output_type"].choices = self.output_types
+
+        if len(self.output_types) <= 1:
+            form.fields["output_type"].widget.attrs["type"] = "hidden"
+
         return form
 
     def run(self, form):

@@ -49,15 +49,26 @@
     </div>
 </div>
 
-<div class="row equal">
+<div class="row">
     <div class="col-md-4 output">
         <div class="panel panel-default">
             <div class="panel-heading">Output</div>
             <div class="panel-body">
                 <div class="row">
-                    <div class="col-md-3"><label>Script</label></div>
-                    <div class="col-md-9" id="scripts"><i>Loading options..</i></div>
+                    <div class="col-md-6"><label>Script</label></div>
+                    <div class="col-md-6" id="scripts"><i>Loading options..</i></div>
                 </div>
+                <div class="row">
+                    <div class="col-md-6"><label>Download results</label></div>
+                    <div class="col-md-6" id="scripts">
+                      <input name="download" type="checkbox" />
+                    </div>
+                </div>
+              <p><small style="color:grey">
+                Scripts may force downloads, if the resulting type cannot be
+                rendered in-browser. Supported types can be found
+                <a href="#">here</a>.
+              </small></p>
             </div>
         </div>
     </div>

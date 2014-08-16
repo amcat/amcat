@@ -19,11 +19,13 @@ _Poll = (function(uuid, opts){
     var result_callback = nop;
     var progress_callback = nop;
     var task_fail_callback = nop;
+    var always_callback = nop;
+
+    // Trust server to return attachment header?
+    var download = opts.download | false;
 
     var TASK_API = "/api/v4/task?uuid=" + uuid + "&format=json";
     var RESULT_API = "/api/v4/taskresult/" + uuid + "?format=json";
-
-    $.merge(this, opts|{});
 
     function poll(){
         $.get(TASK_API).done(_poll_done).fail(_poll_fail);
@@ -89,6 +91,16 @@ _Poll = (function(uuid, opts){
     }
 
     /**
+     * Defines which function should always be called, even at failure.
+     *
+     * @param callback function()
+     */
+    function always(callback){
+        always_callback = callback;
+        return this;
+    }
+
+    /**
      *
      *
      * @param message_element
@@ -106,7 +118,13 @@ _Poll = (function(uuid, opts){
 
         if (task.ready){
             if (task.status === STATUS.SUCCESS){
-                $.ajax(RESULT_API).done(_result_done).fail(_result_fail);
+                if (download){
+                    window.location = RESULT_API;
+                    always_callback();
+                } else {
+                    $.ajax(RESULT_API).done(_result_done).fail(_result_fail);
+                }
+
             } else if(task.status === STATUS.FAILED){
                 _result_fail(data, textStatus, jqXHR);
             } else {
@@ -130,20 +148,24 @@ _Poll = (function(uuid, opts){
 
     function _poll_fail(jqXHR, textStatus, errorThrown){
         fail_callback(jqXHR, textStatus, errorThrown);
+        always_callback();
     }
 
     function _result_fail(data, textStatus, jqXHR){
-        fail_callback(data, textStatus, errorThrown);
+        fail_callback(data, textStatus, jqXHR);
+        always_callback();
     }
 
     function _result_done(data, textStatus, jqXHR){
         result_callback(data, textStatus, jqXHR);
+        always_callback();
     }
 
     // Go!
     poll();
 
     // Public functions
+    this.always = always;
     this.done = done;
     this.fail = fail;
     this.result = result;
@@ -159,6 +181,6 @@ _Poll = (function(uuid, opts){
  * >>>     alert("Succesfully fetched task result!");
  * >>> });
  */
-Poll = function(opts){
-    return _Poll.call({}, opts);
+Poll = function(uuid, opts){
+    return _Poll.call({}, uuid, opts);
 };

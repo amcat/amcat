@@ -26,7 +26,7 @@ textarea{
     height:100%;
 }
 
-input{
+.filters-tab input{
     max-width: 100%;
     min-width: 100%;
     width:100%;
@@ -38,7 +38,7 @@ select.wide,
     width:100%;
 }
 
-.row{
+form > .row{
     margin-bottom: -5px;
 }
 
@@ -93,3 +93,4 @@ select.wide,
 svg > text:last-child{
     display:none;
 }
+

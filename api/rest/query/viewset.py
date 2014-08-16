@@ -82,7 +82,7 @@ class QueryActionView(APIView):
         return get_action_name(self).title()
 
     def get_view_description(self, html=False):
-        return self.query_action.__doc__.strip()
+        return (self.query_action.__doc__ or "").strip()
 
     def dispatch(self, request, *args, **kwargs):
         return super(QueryActionView, self).dispatch(request, *args, **kwargs)
@@ -100,5 +100,5 @@ class QueryActionView(APIView):
 
         return {
             "help_text": self.get_view_description(),
-            "form": dict(zip(field_names, map(unicode, fields)))
+            "form": dict(zip(field_names, [f.as_widget() for f in fields]))
         }

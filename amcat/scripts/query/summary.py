@@ -23,6 +23,7 @@ from django.template.loader import get_template
 
 from amcat.forms.forms import order_fields
 from amcat.scripts.query import QueryAction, QueryActionForm
+from amcat.tools.aggregate import transpose, sort
 from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 
@@ -40,7 +41,7 @@ class SummaryAction(QueryAction):
     """
     This is the docstring of SummaryAction!
     """
-    output_types = (("text/html", "Inline"),)
+    output_types = (("text/html", "HTML"),)
     form_class = SummaryActionForm
 
     def run(self, form):
@@ -56,8 +57,14 @@ class SummaryAction(QueryAction):
             self.monitor.update(59, "Fetching articles..".format(**locals()))
             articles = selection.get_articles(size=size, offset=offset)
             self.monitor.update(69, "Aggregating..".format(**locals()))
-            date_aggr = selection.get_aggregate("date", interval="day")
+            date_aggr = selection.get_aggregate(x_axis="date", y_axis="total", interval="day")
+            medium_aggr = selection.get_aggregate(x_axis="date", y_axis="medium", interval="day")
             self.monitor.update(79, "Rendering results..".format(**locals()))
+
+
+        # Highcharts needs series -> (date, count), instead of
+        date_aggr = tuple(sort(date_aggr))[0][1]
+        medium_aggr = sort(transpose(medium_aggr))
 
         return TEMPLATE.render(Context(dict(locals(), **{
             "project": self.project, "user": self.user

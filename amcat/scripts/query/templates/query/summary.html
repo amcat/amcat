@@ -13,8 +13,13 @@
                 {% endfor %}
             </ul>
         </div>
-        <div id="date-aggregation" class="col-md-6">
-          {% include "query/summary_chart.html" %}
+        <div class="col-md-6">
+          <div id="date-aggregation">
+            {% include "query/summary_count_chart.html" %}
+          </div>
+          <div id="medium-aggregation">
+            {% include "query/summary_medium_chart.html" %}
+          </div>
         </div>
     </div>
 

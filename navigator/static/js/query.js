@@ -20,13 +20,87 @@ function log(txt){
     console.log(txt);
 }
 
+/**
+ * Shamelessly stolen from: http://stackoverflow.com/a/1186309
+ */
+$.fn.serializeObject = function()
+{
+    var o = {};
+    var a = this.serializeArray();
+    $.each(a, function() {
+        if (o[this.name] !== undefined) {
+            if (!o[this.name].push) {
+                o[this.name] = [o[this.name]];
+            }
+            o[this.name].push(this.value || '');
+        } else {
+            o[this.name] = this.value || '';
+        }
+    });
+    return o;
+};
+
+/**
+ * Provides convience functions for aggregation-data returned by server
+ * @param data returned by server (json)
+ * @param form_data form data at the time of submitting query
+ */
+function _Aggregation(form_data, data){
+    /**
+     * Get column names from aggregation data. Can be used as 'categories'
+     * on a heapmap.
+     *
+     * @returns {*}
+     */
+    this.getColumns = function(){
+        var columns = {};
+        $.each(data, function(_, serie){
+            $.each(serie[1], function(_, value){
+                columns[value[0]] = null;
+            });
+        });
+
+        return $.map(columns, function(_, column_name){
+            return column_name;
+        });
+    };
+
+    /**
+     * Return mapping { column_name -> column_index }
+     */
+    this.getColumnIndices = function(){
+        var columns = this.getColumns();
+        var column_indices = {};
+        $.each(columns, function(i, column_name){
+            column_indices[column_name] = i;
+        });
+        return column_indices;
+    };
+
+    /**
+     * Returns row names (first column of each row)
+     */
+    this.getRowNames = function(){
+        return $.map(data, function(serie){
+            return serie[0];
+        });
+    };
+
+    return this;
+}
+
+Aggregation = function(form_data, data){
+    return _Aggregation.bind({})(form_data, data);
+};
+
 $((function(){
+    var DEFAULT_SCRIPT = "summary";
     var QUERY_API_URL = "/api/v4/query/";
     var SELECTION_FORM_FIELDS = [
         "include_all", "articlesets", "mediums", "article_ids",
         "start_date", "end_date", "datetype", "on_date",
         "codebook_replacement_language", "codebook_label_language",
-        "codebook", "query"
+        "codebook", "query", "download"
     ];
 
     var dates_enabling = {
@@ -46,8 +120,97 @@ $((function(){
     var message_element = loading_dialog.find(".message");
     var progress_bar = loading_dialog.find(".progress-bar");
 
+    /**
+     * At each query, data will be stored here to make sure we
+     * can access form data as it were at the time of querying.
+     */
+    var form_data = null;
+
     var PROJECT = query_screen.data("project");
     var SETS = query_screen.data("sets");
+
+    function getType(axis){
+        return (axis === "date") ? "datetime" : "category";
+    }
+
+    var renderers = {
+        /**
+         * Inserts given html into container, without processing it further.
+         */
+        "text/html": function(container, data){
+            container.html(data);
+        },
+
+        /**
+         * Renders aggregation as stacked column chart
+         *   http://www.highcharts.com/demo/heatmap
+         */
+        "text/json+aggregation+graph": function(container, data){
+            // We get our data transposed! :)
+            container.highcharts({
+                title: "",
+                chart: { type: 'column', zoomType: 'xy' },
+                plotOptions: {
+                    column: {
+                        stacking: 'normal',
+                        dataLabels: {
+                            enabled: true,
+                            color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white',
+                            style: { textShadow: '0 0 3px black, 0 0 3px black' }
+                        }
+                    }
+                },
+                xAxis: { allowDecimals: false, type: getType(form_data["x_axis"]) },
+                yAxis: { allowDecimals: false, type: getType(form_data["y_axis"]) },
+                series: $.map(data, function(serie){
+                    return {
+                        type: 'column',
+                        name: serie[0],
+                        data: serie[1]
+                    }
+                })
+            });
+        },
+
+        /**
+         * Renders aggregation as table.
+         */
+        "text/json+aggregation+table": function(container, data){
+            var row_template, columns, column_indices, table, thead, tbody, row;
+
+            var aggregation = Aggregation(form_data, data);
+            columns = aggregation.getColumns();
+            column_indices = aggregation.getColumnIndices();
+
+            // Adding header
+            thead = $("<thead>").append($("<th>"));
+            $.map(columns, function(column_name){
+                thead.append($("<th>").text(column_name));
+            });
+
+            // Adding rows. Using row templates to prevent lots of small inserts
+            row_template = (new Array(columns.length + 1)).join("<td>0</td>");
+            row_template = "<tr><th></th>" + row_template + "</tr>";
+
+            tbody = $("<tbody>");
+            $.map(data, function(serie){
+                row = $(row_template);
+                row.find("th").text(serie[0]);
+
+                $.map(serie[1], function(value){
+                    row.find("td").eq(column_indices[value[0]] + 1).text(value[1]);
+                });
+
+                tbody.append(row);
+            });
+
+            // Putting it together
+            table = $("<table class='table table-striped table-condensed table-aggregation'>");
+            table.append(thead).append(tbody);
+            container.html(table);
+            return table;
+        }
+    };
 
     function datetype_changed(){
         date_inputs.prop("disabled", true);
@@ -71,6 +234,10 @@ $((function(){
     function script_form_loaded(data){
         script_form.html("");
 
+        if (data.help_text) {
+            script_form.append($("<div class='well'>").text(data.help_text));
+        }
+
         // Determine fields which are *NOT* in the normal selection form.
         // Btw: who the hell thought it would be a good idea to let inArray
         // return an *index*?!
@@ -83,6 +250,9 @@ $((function(){
             var label = $("<label class='col-md-3'>").text(field_name);
             var widget = $("<div class='col-md-9'>").html(data.form[field_name]);
             script_form.append(row.append(label).append(widget));
+
+            var is_hidden = widget.find("[type=hidden]").length;
+            if (is_hidden) row.css("height", 0).css("overflow", "hidden");
         });
     }
 
@@ -90,6 +260,29 @@ $((function(){
         action = (action === undefined) ? "" : action;
         var base_url = QUERY_API_URL + action + "?format=json&";
         return base_url + "project=" + PROJECT + "&sets=" + SETS.join(",");
+    }
+
+    function get_accepted_mimetypes(){
+        return $.map(renderers, function(_, mimetype){ return mimetype; });
+    }
+
+    /**
+     * Should we offer the user to download the result? I.e., can we expect the server to
+     * inlcude the 'attachment' header?
+     *
+     * @returns boolean
+     */
+    function download_result(){
+        var download = $("form [name=download]").is(":checked");
+
+        if (download){
+            // User explicitly indicated wanting to download
+            return true;
+        }
+
+        // If we cannot render the selected output type, we should offer download option
+        var outputType = $("form [name=output_type]").val();
+        return $.inArray(outputType, get_accepted_mimetypes()) === -1;
     }
 
     /*
@@ -100,10 +293,16 @@ $((function(){
         progress_bar.css("width", 0);
         message_element.text(message_element.attr("placeholder"));
 
+        form_data = $("form").serializeObject();
+        $(".result .panel-body").html("<i>No results yet</i>");
+
         $.ajax({
             type: "POST", dataType: "json",
             url: get_api_url(scripts_container.find("select").val()),
-            data: $("form").serialize()
+            data: $("form").serialize(),
+            headers: {
+                "X-Available-Renderers": get_accepted_mimetypes().join(",")
+            }
         }).done(function(data){
             // Form accepted, we've been given a task uuid
             init_poll(data.uuid);
@@ -114,13 +313,25 @@ $((function(){
     }
 
     function init_poll(uuid){
-        Poll(uuid).done(function(){
+        var poll = Poll(uuid, {download: download_result()});
+
+        poll.done(function(){
             progress_bar.css("width", "100%");
             message_element.text("Fetching results..")
-        }).fail(function(){
+        }).fail(function(data, textStatus, _){
+            show_error("Server replied with " + data.status + " error: " + data.responseText);
+        }).result(function(data, textStatus, jqXHR){
+            var contentType = jqXHR.getResponseHeader("Content-Type");
+            var body = $(".result .panel-body").html("");
+            var renderer = renderers[contentType];
 
-        }).result(function(data){
-            $(".result .panel-body").html(data);
+            if(renderer === undefined){
+                show_error("Server replied with unknown datatype: " + contentType);
+            } else {
+                renderer(body, data);
+            }
+
+        }).always(function() {
             loading_dialog.modal("hide");
         }).progress_bar(message_element, progress_bar);
     }
@@ -135,8 +346,8 @@ $((function(){
             .trigger("change");
     }
 
-    function show_error(msg){
-        new PNotify({type: "error", hide: false, text: msg});
+    function show_error(msg, hide){
+        new PNotify({type: "error", hide: (hide === undefined) ? false : hide, text: msg});
     }
 
     function init_scripts(){
@@ -153,7 +364,13 @@ $((function(){
             var select = $("<select>");
 
             $.each(data, function(name, url){
-                select.append($("<option>").text(name).val(name))
+                var option = $("<option>").text(name).val(name);
+
+                //if (name === DEFAULT_SCRIPT){
+                //    option.attr("selected", "selected");
+                //}
+
+                select.append(option);
             });
 
             scripts_container.html(select);
