@@ -45,7 +45,7 @@ $.fn.serializeObject = function()
  * @param data returned by server (json)
  * @param form_data form data at the time of submitting query
  */
-function _Aggregation(form_data, data){
+function _Aggregation(data){
     /**
      * Get column names from aggregation data. Can be used as 'categories'
      * on a heapmap.
@@ -89,8 +89,8 @@ function _Aggregation(form_data, data){
     return this;
 }
 
-Aggregation = function(form_data, data){
-    return _Aggregation.bind({})(form_data, data);
+Aggregation = function(data){
+    return _Aggregation.bind({})(data);
 };
 
 $((function(){
@@ -145,21 +145,46 @@ $((function(){
          * Renders aggregation as stacked column chart
          *   http://www.highcharts.com/demo/heatmap
          */
+        "text/json+aggregation+heatmap": function(container, data){
+            var aggregation = Aggregation(data);
+            var heatmap_data = [];
+            var columnIndices = aggregation.getColumnIndices();
+
+            $.each(data, function(i, row){
+                $.each(row[1], function(_, values){
+                    heatmap_data.push([i, columnIndices[values[0]], values[1]])
+                });
+            });
+
+            container.highcharts({
+                title: "",
+                chart: { type: 'heatmap' },
+                colorAxis: {
+                    min: 0,
+                    minColor: '#FFFFFF',
+                    maxColor: Highcharts.getOptions().colors[0]
+                },
+                xAxis: {
+                    allowDecimals: false,
+                    type: "datetime",
+                    categories: aggregation.getRowNames()
+                },
+                yAxis: {
+                    allowDecimals: false,
+                    type: "datetime",
+                    categories: aggregation.getColumns()
+                },
+                series: [{
+                    name: "x",
+                    data: heatmap_data
+                }]
+            });
+        },
+
         "text/json+aggregation+graph": function(container, data){
-            // We get our data transposed! :)
             container.highcharts({
                 title: "",
                 chart: { type: 'column', zoomType: 'xy' },
-                plotOptions: {
-                    column: {
-                        stacking: 'normal',
-                        dataLabels: {
-                            enabled: true,
-                            color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white',
-                            style: { textShadow: '0 0 3px black, 0 0 3px black' }
-                        }
-                    }
-                },
                 xAxis: { allowDecimals: false, type: getType(form_data["x_axis"]) },
                 yAxis: { allowDecimals: false, type: getType(form_data["y_axis"]) },
                 series: $.map(data, function(serie){
@@ -178,7 +203,7 @@ $((function(){
         "text/json+aggregation+table": function(container, data){
             var row_template, columns, column_indices, table, thead, tbody, row;
 
-            var aggregation = Aggregation(form_data, data);
+            var aggregation = Aggregation(data);
             columns = aggregation.getColumns();
             column_indices = aggregation.getColumnIndices();
 
@@ -204,8 +229,23 @@ $((function(){
                 tbody.append(row);
             });
 
+            // Render dates as dates
+            var dates;
+            if (getType(form_data["x_axis"]) === "datetime"){
+                dates = $("th", tbody);
+            } else if (getType(form_data["x_axis"]) === "datetime"){
+                dates = $("th", thead);
+            }
+
+            var date;
+            $.each(dates, function(i, el){
+                date = new Date(parseInt($(el).text()));
+                el.innerHTML = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
+            });
+
+
             // Putting it together
-            table = $("<table class='table table-striped table-condensed table-aggregation'>");
+            table = $("<table class=dataTable>");
             table.append(thead).append(tbody);
             container.html(table);
             return table;
