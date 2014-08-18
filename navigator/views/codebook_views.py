@@ -16,18 +16,16 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-from django.contrib.auth.models import User
+import json
+import itertools
 
-from django.core.urlresolvers import reverse
+from django.contrib.auth.models import User
 from django.http import HttpResponse, HttpResponseBadRequest
 from django.views.generic.list import ListView
-from django.views.generic.detail import DetailView
-from django.views.generic.base import RedirectView
-
 from django import forms
 from json_field.forms import JSONFormField
-from amcat.tools.amcattest import create_test_user
 
+from amcat.tools.amcattest import create_test_user
 from api.rest.datatable import Datatable
 from amcat.models import Language, Project, Code, CodebookCode, Label
 from amcat.scripts.actions.import_codebook import ImportCodebook
@@ -40,8 +38,6 @@ from navigator.views.scriptview import TableExportMixin
 from navigator.views.projectview import ProjectViewMixin, HierarchicalViewMixin, BreadCrumbMixin, ProjectScriptView, ProjectFormView, ProjectDetailView, ProjectActionRedirectView
 from amcat.models import Codebook
 from amcat.forms import widgets
-import json
-import itertools
 
 
 
@@ -81,6 +77,8 @@ class ExportCodebook(TableExportMixin, ProjectScriptView):
         # Modify form class to also contain XML output
         form_class = super(ExportCodebook, self).get_form_class()
         form_class.base_fields['format'].choices.append(("xml", "XML"))
+        form_class.base_fields['format'].choices.remove(("spss", "SPSS"))
+        form_class.base_fields['format'].choices.remove(("html", "HTML"))
         return form_class
 
     def get_form(self, *args, **kargs):
@@ -121,9 +119,14 @@ class CodebookImportView(ProjectScriptView):
     parent = CodebookListView
     url_fragment = 'import'
 
+    def get_form(self, form_class):
+        form = super(CodebookImportView, self).get_form(form_class)
+        form.fields['codebook'].queryset = self.project.codebook_set.all()
+        return form
+
     def get_initial(self):
         initial = super(CodebookImportView, self).get_initial()
-        initial["codebook"]=self.kwargs.get("codebookid")
+        initial["codebook"] = self.kwargs.get("codebookid")
         return initial
 
 

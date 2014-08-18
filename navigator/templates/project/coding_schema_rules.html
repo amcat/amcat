@@ -8,7 +8,6 @@
 {% compress js %}
  <script src="{% static 'js/jquery.djangofields.js' %}"></script>
  <script src="{% static 'js/jquery.ruleeditor.js' %}"></script>
- <script src="{% static 'js/jquery.tablednd.0.7.min.js' %}"></script>
 {% endcompress %}
  <script>$(function(){ jQuery.fn.ruleeditor("{% url "api" %}v4/", {{codingschema.id}}, {{project.id}}).main(); });</script>
 {% endblock %}

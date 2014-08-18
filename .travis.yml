@@ -21,12 +21,18 @@ install:
  - sudo apt-get update
  - cat apt_requirements.txt | tr '\n' ' ' | xargs sudo apt-get install -y
  - sudo service rabbitmq-server start
- - curl https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.1.0.tar.gz | tar xvz
- - wget http://amcat.nl/plain/hitcount.jar
- - elasticsearch-1.1.0/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
- - elasticsearch-1.1.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
- - elasticsearch-1.1.0/bin/plugin -install mobz/elasticsearch-head
- - ES_CLASSPATH=hitcount.jar elasticsearch-1.1.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider -d
+
+ # Elasticsearch
+ - wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar
+ - wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.1.tar.gz -O - | tar xvz
+ - cd elasticsearch-1*
+ - bin/plugin -install elasticsearch/elasticsearch-lang-python/2.3.0
+ - bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.3.0
+ - bin/plugin -install mobz/elasticsearch-head
+ # I'm absolutely, thorougly annoyed by the syntax below.
+ - "tee -a ./config/elasticsearch.yml <<< 'script.disable_dynamic: false'"
+ - cd ..
+ - ES_CLASSPATH=hitcount.jar elasticsearch-1*/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider -d
  - pip install -r requirements.txt
  - pip install coverage coveralls
 

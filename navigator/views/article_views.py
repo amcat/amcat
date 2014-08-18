@@ -455,7 +455,7 @@ class TestSplitArticles(amcattest.AmCATTestCase):
             if not codingjob.coded_articles.filter(article=article):
                 return False
 
-        return article.id in (articleset.get_article_ids() & articleset.get_article_ids(use_elastic=True))
+        return article.id in (articleset.get_article_ids() | articleset.get_article_ids(use_elastic=True))
 
 
 

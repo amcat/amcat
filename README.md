@@ -60,17 +60,36 @@ $ sudo apt-get install oracle-java8-installer #for java 8
 Next, download and extract elasticsearch and our custom hitcount jar, and install the required plugins:
 
 ```sh
-wget https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.0.0.tar.gz -O - | tar xvz
-wget http://amcat.vu.nl/plain/hitcount.jar
-elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-lang-python/1.2.0
-elasticsearch-1.0.0/bin/plugin -install elasticsearch/elasticsearch-analysis-icu/1.12.0
-elasticsearch-1.0.0/bin/plugin -install mobz/elasticsearch-head
-```
+cd /tmp
 
-Now you are ready to start elasticsearch. I usually start it in a secondary terminal if I am running AmCAT locally so I can directly inspect error messages, but you could also run it as a daemon:
+# Download and install elasticsearch
+wget "https://download.elasticsearch.org/elasticsearch/elasticsearch/elasticsearch-1.3.2.deb"
+sudo dpkg -i elasticsearch-1.3.2.deb
 
-```sh
-ES_CLASSPATH=hitcount.jar elasticsearch-1.0.0/bin/elasticsearch -Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
+# Install plugins
+cd /usr/share/elasticsearch
+sudo bin/plugin -install elasticsearch/elasticsearch-lang-python/2.3.0
+sudo bin/plugin -install elasticsearch/elasticsearch-analysis-icu/2.3.0
+sudo bin/plugin -install mobz/elasticsearch-head
+sudo wget http://hmbastiaan.nl/martijn/amcat/hitcount.jar
+
+# Allow dynamic scripting
+cd /etc/elasticsearch
+echo -e "\nscript.disable_dynamic: false" | sudo tee -a elasticsearch.yml
+
+# Make sure elasticsearch detects hitcount.jar
+sudo editor /etc/init.d/elasticsearch
+
+# Add after ES_HOME:
+ES_CLASSPATH=$ES_HOME/hitcount.jar
+export ES_CLASSPATH
+
+# Add to DAEMON_OPTS:
+-Des.index.similarity.default.type=nl.vu.amcat.HitCountSimilarityProvider
+
+# Save file and close editor
+# Restart elasticsearch
+sudo service elasticsearch restart
 ```
 
 ### Installing AmCAT (pip install from git)
