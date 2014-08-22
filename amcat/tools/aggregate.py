@@ -24,10 +24,10 @@ Contains all logic for
 # We might want to be a bit more clever here: we assume querying per medium / term is always
 # more efficient than querying per interval. This is not true for a large amount of mediums and
 # a small amount of dates (status reports for scrapers tend to have this).
-from collections import defaultdict
 from operator import itemgetter
 from amcat.models import Medium
 from amcat.tools.amcates import ES
+from amcat.tools.toolkit import DefaultOrderedDict
 
 
 VALID_X_AXES = {"medium", "term"}
@@ -62,7 +62,7 @@ def transpose(aggregate):
         (2000, ((1000000008, 1),))
     )
     """
-    transposed = defaultdict(list)
+    transposed = DefaultOrderedDict(list)
 
     for x_value, y_values in aggregate:
         for y_value, aggregate_value in y_values:
@@ -163,12 +163,14 @@ def _aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
 def _set_medium_labels(aggregate):
     mediums = Medium.objects.filter(id__in=[a[0] for a in aggregate])
     mediums = dict(mediums.values_list("id", "name"))
-    return [({'id': mid, 'label': mediums[mid]}, rest) for mid, rest in aggregate]
+    return [({'id': mid, 'label': mediums[mid]}, rest)
+            for mid, rest in aggregate]
 
 
 def _set_term_labels(aggregate, queries):
     queries = {q.label: q.query for q in queries}
-    return [({'id': label, 'label': queries[label]}, rest) for label, rest in aggregate]
+    return [({'id': label, 'label': queries[label]}, rest)
+            for label, rest in aggregate]
 
 
 def _set_labels(aggregate, queries, axis):
@@ -190,8 +192,8 @@ def set_labels(aggregate, queries, x_axis, y_axis):
     :param y_axis:
     """
     x_axis = _set_labels(aggregate, queries, x_axis)
-    y_axis = dict(transpose(_set_labels(transpose(aggregate), queries, y_axis)))
-    return [(x[0], y_axis[x[0]]) for x in x_axis]
+    y_axis = transpose(_set_labels(transpose(aggregate), queries, y_axis))
+    return [(x[0], y[1]) for x, y in zip(x_axis, y_axis)]
 
 
 def aggregate(query, queries, filters, x_axis, y_axis, interval="month", include_labels=True):
