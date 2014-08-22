@@ -230,9 +230,12 @@ $((function(){
 
             $.each(data, function(i, row){
                 $.each(row[1], function(_, values){
-                    heatmap_data.push([i, columnIndices[values[0]], values[1]])
+                    heatmap_data.push([i, columnIndices[values[0].id||values[0]], values[1]])
                 });
             });
+
+            var x_renderer = value_renderer[form_data["x_axis"]];
+            var y_renderer = value_renderer[form_data["y_axis"]];
 
             container.highcharts({
                 title: "",
@@ -244,13 +247,11 @@ $((function(){
                 },
                 xAxis: {
                     allowDecimals: false,
-                    type: "datetime",
-                    categories: aggregation.getRowNames()
+                    categories: $.map(aggregation.getRowNames(), x_renderer)
                 },
                 yAxis: {
                     allowDecimals: false,
-                    type: "datetime",
-                    categories: aggregation.getColumns()
+                    categories: $.map(aggregation.getColumns(), y_renderer)
                 },
                 series: [{
                     name: "x",
