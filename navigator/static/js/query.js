@@ -260,19 +260,28 @@ $((function(){
         },
 
         "text/json+aggregation+graph": function(container, data){
-            container.highcharts({
+            var x_type = getType(form_data["x_axis"]);
+            var chart = {
                 title: "",
                 chart: { type: 'column', zoomType: 'xy' },
-                xAxis: { allowDecimals: false, type: getType(form_data["x_axis"]) },
-                yAxis: { allowDecimals: false, type: getType(form_data["y_axis"]) },
+                xAxis: { allowDecimals: false, type: x_type },
+                yAxis: { allowDecimals: false, title: "total" },
                 series: $.map(data, function(serie){
                     return {
                         type: 'column',
-                        name: serie[0],
+                        name: value_renderer[form_data["y_axis"]](serie[0]),
                         data: serie[1]
                     }
                 })
-            });
+            };
+
+            // We need category labels if x_axis is not of type datetime
+            var renderer = value_renderer[form_data["x_axis"]];
+            if (x_type === 'category'){
+                chart.xAxis.categories = $.map(Aggregation(data).getColumns(), renderer);
+            }
+
+            container.highcharts(chart);
         },
 
         /**
