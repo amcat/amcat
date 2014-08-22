@@ -1,9 +1,3 @@
-from amcat.tools import toolkit
-
-from django.core.urlresolvers import reverse
-
-from django.core.cache import cache
-from django.conf import settings
 from django import template
 register = template.Library()
 
