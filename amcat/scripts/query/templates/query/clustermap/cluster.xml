@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ClassificationTree version="1.0">
+    <ObjectSet>
+        {% include "query/clustermap/objects.xml" %}
+    </ObjectSet>
+    <ClassificationSet>
+        <Classification ID="root">
+            <Name>Root</Name><Objects objectIDs="{{ all_article_ids|join:' ' }}" />
+        </Classification>
+
+        {% include "query/clustermap/classifications.xml" %}
+    </ClassificationSet>
+</ClassificationTree>

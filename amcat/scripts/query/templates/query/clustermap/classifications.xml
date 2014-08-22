@@ -1,0 +1,8 @@
+{% load xmlutil %}
+{% for query, article_ids in queries.items %}
+    <Classification ID="{{ query.query|xmlescape }}">
+        <Name>{{ query.label|quoteattr }}</Name>
+        <SuperClass refs="root" />
+        <Objects objectIDs="{{ article_ids|join:' ' }}" />
+    </Classification>
+{% endfor %}

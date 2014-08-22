@@ -104,3 +104,7 @@ select.error,
 textarea.error{
     border-color: red;
 }
+
+map area:hover{
+    cursor:pointer;
+}

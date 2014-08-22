@@ -1,0 +1,6 @@
+{% for id in all_article_ids %}
+    <Object ID="{{ id }}">
+        <Name>Click to view article</Name>
+        <Location>{{ id }}</Location>
+    </Object>
+{% endfor %}

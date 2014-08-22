@@ -129,6 +129,7 @@ class QueryAction(object):
         return self.form_class
 
     def get_task_handler(self):
+        print(self.task_handler)
         return self.task_handler
 
     @cached
@@ -160,7 +161,7 @@ class QueryAction(object):
         if not form.is_valid():
             raise ValidationError(form._errors)
 
-        return QueryActionHandler.call(
+        return self.get_task_handler().call(
             target_class=self.__class__, user=self.user,
             project=self.project, arguments={
                 "user": self.user, "project": self.project,

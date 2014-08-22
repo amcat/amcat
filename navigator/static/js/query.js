@@ -212,6 +212,39 @@ $((function(){
     };
 
     var renderers = {
+        "application/json+clustermap": function(container, data){
+            var img = $("<img>")
+                .attr("src", "data:image/png;base64," + data.image)
+                .attr("usemap", "#clustermap");
+
+            var map = $("<map>").attr("name", "clustermap");
+
+            // Store for each clickable coordinate its article id
+            var area;
+            $.map(data.coords, function(coord){
+                area = $("<area>");
+                area.attr("shape", "rect");
+                area.attr("coords", coord.coords.join(","));
+                area.data("article_id", coord.article_id);
+                map.append(area);
+            });
+
+            // Register click event for each article
+            $("area", map).click(function(event){
+                log($(event.currentTarget).data("article_id"));
+            });
+
+            $("area", map).each(function(_, e){
+                $(e).tooltip({
+                    title: "Article #" + $(e).data("article_id")
+                });
+            });
+
+            container.append(img).append(map);
+        },
+        "image/png+base64": function(container, data){
+            container.append($("<img>").attr("src", "data:image/png;base64," + data));
+        },
         /**
          * Inserts given html into container, without processing it further.
          */

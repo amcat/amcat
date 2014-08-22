@@ -142,6 +142,13 @@ class SelectionSearch:
     def get_article_ids(self):
         return ES().query_ids(self.get_query(), self.get_filters())
 
+    def _get_article_ids_per_query(self):
+        for q in self.get_queries():
+            yield q, list(ES().query_ids(q.query, self.get_filters()))
+
+    def get_article_ids_per_query(self):
+        return dict(self._get_article_ids_per_query())
+
     def get_articles(self, size=None, offset=0):
         """
 

@@ -29,6 +29,9 @@ from amcat.models import Medium
 from amcat.tools.amcates import ES
 from amcat.tools.toolkit import DefaultOrderedDict
 
+import logging
+log = logging.getLogger(__name__)
+
 
 VALID_X_AXES = {"medium", "term"}
 VALID_Y_AXES = {"date", "total"}
@@ -38,6 +41,11 @@ VALID_AXES = VALID_X_AXES | VALID_Y_AXES
 
 # Natively supported by elasticsearch.
 VALID_INTERVALS = {'year', 'quarter', 'month', 'week', 'day'}
+
+
+class _HashDict(dict):
+    def __hash__(self):
+        return hash(frozenset(self.iteritems()))
 
 
 def sort(aggregate, func=itemgetter(0), reverse=False):
@@ -163,13 +171,13 @@ def _aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
 def _set_medium_labels(aggregate):
     mediums = Medium.objects.filter(id__in=[a[0] for a in aggregate])
     mediums = dict(mediums.values_list("id", "name"))
-    return [({'id': mid, 'label': mediums[mid]}, rest)
+    return [(_HashDict({'id': mid, 'label': mediums[mid]}), rest)
             for mid, rest in aggregate]
 
 
 def _set_term_labels(aggregate, queries):
     queries = {q.label: q.query for q in queries}
-    return [({'id': label, 'label': queries[label]}, rest)
+    return [(_HashDict({'id': label, 'label': queries[label]}), rest)
             for label, rest in aggregate]
 
 

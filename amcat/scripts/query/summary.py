@@ -28,7 +28,7 @@ from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import Timer
 
 
-TEMPLATE = get_template('query/summary.html')
+TEMPLATE = get_template('query/summary/summary.html')
 
 
 @order_fields(("offset", "size"))

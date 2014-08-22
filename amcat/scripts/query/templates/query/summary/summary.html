@@ -9,16 +9,16 @@
         <div class="col-md-6">
             <ul class="articles">
                 {% for a in articles %}
-                    <li>{% include "query/summary_article.html" %}</li>
+                    <li>{% include "query/summary/summary_article.html" %}</li>
                 {% endfor %}
             </ul>
         </div>
         <div class="col-md-6">
           <div id="date-aggregation">
-            {% include "query/summary_count_chart.html" %}
+            {% include "query/summary/summary_count_chart.html" %}
           </div>
           <div id="medium-aggregation">
-            {% include "query/summary_medium_chart.html" %}
+            {% include "query/summary/summary_medium_chart.html" %}
           </div>
         </div>
     </div>
