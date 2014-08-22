@@ -94,3 +94,13 @@ svg > text:last-child{
     display:none;
 }
 
+table.aggregation td:hover{
+    cursor: pointer;
+    background-color: #d3d3d3;
+}
+
+input.error,
+select.error,
+textarea.error{
+    border-color: red;
+}

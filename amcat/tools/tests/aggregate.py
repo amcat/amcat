@@ -24,15 +24,19 @@ class TestAggregate(amcattest.AmCATTestCase):
         # Test converting x-axis
         aggregate = [(m1.id, ((2, 3),)), (m2.id, ((4, 5),))]
         self.assertEqual(
-            [(m1.name, ((2, 3),)), (m2.name, ((4, 5),))],
-            set_labels(aggregate, "medium", None)
+            [({"id": m1.id, "label": m1.name}, ((2, 3),)),
+             ({"id": m2.id, "label": m2.name}, ((4, 5),))],
+            set_labels(aggregate, [], "medium", None)
         )
 
         # Test converting y-axis
         aggregate = [(1, ((m1.id, 5), (m2.id, 6))), (2, ((m1.id, 9),))]
         self.assertEqual(
-            [(1, ((m1.name, 5), (m2.name, 6))), (2, ((m1.name, 9),))],
-            set_labels(aggregate, None, "medium")
+            [(1, (
+                ({"id": m1.id, "label": m1.name}, 5),
+                ({"id": m2.id, "label": m2.name}, 6))),
+             (2, (({"id": m1.id, "label": m1.name}, 9),))],
+            set_labels(aggregate, [], None, "medium")
         )
 
     @amcattest.use_elastic

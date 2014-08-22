@@ -16,6 +16,8 @@
 
   {% compress js %}
       <!-- Bower dependencies -->
+      <script type="text/javascript" src="{% static 'components/moment/moment.js' %}"></script>
+      <script type="text/javascript" src="{% static 'js/query_dates.js' %}"></script>
       <script type="text/javascript" src="{% static 'js/query.js' %}"></script>
       <script type="text/javascript" src="{% static 'js/poll.js' %}"></script>
       <script type="text/javascript" src="{% static 'components/jquery-csv/src/jquery.csv.js' %}"></script>
@@ -37,6 +39,7 @@
       </form>
 
       {% include "project/query/loading_dialog.html" %}
+      {% include "project/query/articlelist_dialog.html" %}
   {% endif %}
 
 

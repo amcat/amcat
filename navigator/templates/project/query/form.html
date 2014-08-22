@@ -1,7 +1,3 @@
-<!--<div class="alert alert-info" role="alert">
-    You have selected {{ articlesets|length }} articlesets for querying.
-</div>-->
-
 <p class="btn-group">
     <a class="btn btn-default">
         <i class="glyphicon glyphicon-open"></i> Load
@@ -15,6 +11,18 @@
 
     <h4 class="name" style="float:right;">Unsaved query</h4>
 </p>
+
+<div style="display:none;" class="alert alert-danger" id="global-error" role="alert">
+    <p>A global form error has occured:</p>
+    <ul></ul>
+</div>
+
+{% comment %}Legacy{% endcomment %}
+{% for aset_id in articleset_ids %}
+    <input type="hidden" name="articlesets" value="{{ aset_id }}" />
+{% endfor %}
+
+
 
 <div class="row equal" id="query-screen" data-sets="{{ articleset_ids }}" data-project="{{ project.id }}">
     <div class="col-md-4 filters-tab">
@@ -33,7 +41,7 @@
                 <div class="row">
                     <div class="col-md-3"><label>ID's</label></div>
                     <div class="col-md-9">
-                        <textarea placeholder="ID's" name="articleids"></textarea>
+                        <textarea placeholder="ID's" name="article_ids"></textarea>
                     </div>
                 </div>
             </div>
@@ -86,7 +94,7 @@
     <div class="btn-group">
         <a class="btn btn-default disabled">Save as..</a>
         <a class="btn btn-default disabled">Save</a>
-        <a class="btn btn-success" id="run-query">
+        <a class="btn btn-success disabled" id="run-query">
             <i class="glyphicon glyphicon-cog"></i> Query
         </a>
     </div>

@@ -56,13 +56,13 @@ function _Aggregation(data){
         var columns = {};
         $.each(data, function(_, serie){
             $.each(serie[1], function(_, value){
-                columns[value[0]] = null;
+                // Some objects are (notably mediums and articlesets) are
+                // represented as an object with properties 'id' and 'label'.
+                columns[value[0].id || value[0]] = value[0];
             });
         });
 
-        return $.map(columns, function(_, column_name){
-            return column_name;
-        });
+        return $.map(columns, function(column){ return column; });
     };
 
     /**
@@ -71,9 +71,11 @@ function _Aggregation(data){
     this.getColumnIndices = function(){
         var columns = this.getColumns();
         var column_indices = {};
-        $.each(columns, function(i, column_name){
-            column_indices[column_name] = i;
+
+        $.each(columns, function(i, column){
+            column_indices[column.id || column] = i;
         });
+
         return column_indices;
     };
 
@@ -96,6 +98,7 @@ Aggregation = function(data){
 $((function(){
     var DEFAULT_SCRIPT = "summary";
     var QUERY_API_URL = "/api/v4/query/";
+    var SEARCH_API_URL = "/api/v4/search";
     var SELECTION_FORM_FIELDS = [
         "include_all", "articlesets", "mediums", "article_ids",
         "start_date", "end_date", "datetype", "on_date",
@@ -132,6 +135,81 @@ $((function(){
     function getType(axis){
         return (axis === "date") ? "datetime" : "category";
     }
+
+    /**
+     * Convert form field / values to their search API counterpart. For
+     * example:
+     *     mediums -> mediumid
+     *     query -> q
+     * @param filters
+     */
+    function getSearchFilters(filters){
+        var new_filters = {};
+
+        var field_map = {
+            mediums: "mediumid", query: "q", article_ids: "ids",
+            start_date: "start_date", end_date: "end_date",
+            articlesets: "sets"
+        };
+
+        var value_map = {
+            ids: function(aids){ return $.map(aids.split("\n"), $.trim); },
+            start_date: value_renderer.date,
+            end_date: value_renderer.date
+        };
+
+        $.each(field_map, function(k, v){
+            if (filters[k] === null || filters[k] === undefined || filters[k] === ""){
+                return;
+            }
+
+            new_filters[v] = filters[k];
+            if (value_map[v] !== undefined){
+                new_filters[v] = value_map[v](new_filters[v]);
+            }
+        });
+
+        return new_filters;
+    }
+
+    var value_renderer = {
+        "medium": function(medium){
+            return medium.id + " - " + medium.label;
+        },
+        "date": function(date){
+            return moment(date).format("DD-MM-YYYY");
+        },
+        "total": function(total){
+            return total;
+        },
+        "term": function(term){
+            return term.id;
+        }
+    };
+
+    var elastic_filters = {
+        date: function(form_data, value){
+            var range = QueryDates.merge([
+                QueryDates.get_range_from_form(form_data),
+                QueryDates.get_range(value, form_data["interval"])
+            ]);
+
+            return {
+                datetype: "between",
+                start_date: range.start_date,
+                end_date: range.end_date
+            };
+        },
+        medium: function(form_data, value){
+            return {mediums: [value.id]};
+        },
+        total: function(){
+            return {};
+        },
+        term: function(form_data, value){
+            return {query: value.label};
+        }
+    };
 
     var renderers = {
         /**
@@ -198,10 +276,18 @@ $((function(){
         },
 
         /**
-         * Renders aggregation as table.
+         * Renders aggregation as table. Each 'th' element has a data property 'value',
+         * which can be used to access the original server data for that particular
+         * element. For example, for a medium:
+         *
+         *    { id: 1, label: "test" }
+         *
+         * or a date:
+         *
+         *    1371160800000
          */
         "text/json+aggregation+table": function(container, data){
-            var row_template, columns, column_indices, table, thead, tbody, row;
+            var row_template, columns, column_indices, table, thead, tbody, row, renderer;
 
             var aggregation = Aggregation(data);
             columns = aggregation.getColumns();
@@ -209,8 +295,9 @@ $((function(){
 
             // Adding header
             thead = $("<thead>").append($("<th>"));
-            $.map(columns, function(column_name){
-                thead.append($("<th>").text(column_name));
+            renderer = value_renderer[form_data["y_axis"]];
+            $.map(columns, function(column){
+                thead.append($("<th>").text(renderer(column)).data("value", column));
             });
 
             // Adding rows. Using row templates to prevent lots of small inserts
@@ -218,39 +305,71 @@ $((function(){
             row_template = "<tr><th></th>" + row_template + "</tr>";
 
             tbody = $("<tbody>");
+            renderer = value_renderer[form_data["x_axis"]];
             $.map(data, function(serie){
                 row = $(row_template);
-                row.find("th").text(serie[0]);
+                row.find("th").text(renderer(serie[0])).data("value", serie[0]);
 
+                var index;
                 $.map(serie[1], function(value){
-                    row.find("td").eq(column_indices[value[0]] + 1).text(value[1]);
+                    index = column_indices[value[0].id || value[0]];
+                    row.find("td").eq(index).text(value[1]);
                 });
 
                 tbody.append(row);
             });
 
-            // Render dates as dates
-            var dates;
-            if (getType(form_data["x_axis"]) === "datetime"){
-                dates = $("th", tbody);
-            } else if (getType(form_data["x_axis"]) === "datetime"){
-                dates = $("th", thead);
-            }
-
-            var date;
-            $.each(dates, function(i, el){
-                date = new Date(parseInt($(el).text()));
-                el.innerHTML = date.getFullYear() + "-" + (date.getMonth() + 1) + "-" + date.getDate();
-            });
-
-
             // Putting it together
-            table = $("<table class=dataTable>");
+            table = $("<table class='aggregation dataTable'>");
             table.append(thead).append(tbody);
             container.html(table);
+
+            // Register click event (on table)
+            table.click(function(event){
+                var td = $(event.target);
+                if (td.prop("tagName") === "TD"){
+                    var x_type = form_data["x_axis"];
+                    var y_type = form_data["y_axis"];
+
+                    var col = td.closest('table').find('thead th').eq(td.index());
+                    var row = td.parent().children().eq(0);
+
+                    var filters = {};
+                    filters[x_type] = row.data('value');
+                    filters[y_type] = col.data('value');
+                    articles_popup(filters);
+                }
+            });
+
             return table;
         }
     };
+
+    /**
+     * Renders popup with a list of articles, based on given filters.
+     * @param filters mapping { type -> filter }. For example:
+     *        { medium : 1, date: 1402005600000 }
+     */
+    function articles_popup(filters){
+        var data = $.extend({}, form_data);
+
+        $.each(filters, function(type, value){
+            $.extend(data, elastic_filters[type](form_data, value));
+        });
+
+        var dialog = $("#articlelist-dialog").modal("show");
+        var table = dialog.find(".articlelist").find(".dataTables_scrollBody table");
+
+        if (table.length > 0){
+            table.DataTable().destroy();
+        }
+
+        amcat.datatables.create_rest_table(
+            dialog.find(".articlelist").html(""),
+            SEARCH_API_URL + "?" + $.param(getSearchFilters(data), true)
+        )
+
+    }
 
     function datetype_changed(){
         date_inputs.prop("disabled", true);
@@ -260,12 +379,13 @@ $((function(){
     }
 
     function script_changed(){
+        $(".query-submit .btn").addClass("disabled");
         var url = get_api_url($("select", scripts_container).val());
         $.ajax({
             "type": "OPTIONS", url: url, dateType: "json"
         }).done(script_form_loaded).error(function(){
             // TODO: fill in error
-            show_error("");
+            show_error("Hallo =D");
         });
 
         script_form.text("Loading script form..");
@@ -294,6 +414,8 @@ $((function(){
             var is_hidden = widget.find("[type=hidden]").length;
             if (is_hidden) row.css("height", 0).css("overflow", "hidden");
         });
+
+        $(".query-submit .btn").removeClass("disabled");
     }
 
     function get_api_url(action){
@@ -325,10 +447,36 @@ $((function(){
         return $.inArray(outputType, get_accepted_mimetypes()) === -1;
     }
 
+    function form_invalid(data){
+        // Add error class to all
+        $.each(data, function(field_name, errors){
+            $("[name=" + field_name + "]", $("form"))
+                .addClass("error")
+                .prop("title", errors[0])
+                .data("toggle", "tooltip")
+                .tooltip();
+
+            if (field_name === '__all__'){
+                var ul = $("#global-error").show().find("ul").html("");
+                $.each(errors, function(i, error){
+                    ul.append($("<li>").text(error));
+                });
+            }
+        });
+
+        loading_dialog.modal("hide");
+        show_error("Invalid form. Please change the red input fields" +
+            " to contain valid values.", true)
+    }
+
     /*
      * Called when 'run query' is clicked.
      */
     function run_query() {
+        $(".error").removeClass("error").tooltip("destroy");
+        $("#global-error").hide();
+        PNotify.removeAll();
+
         loading_dialog.modal({keyboard: false, backdrop: 'static'});
         progress_bar.css("width", 0);
         message_element.text(message_element.attr("placeholder"));
@@ -346,8 +494,14 @@ $((function(){
         }).done(function(data){
             // Form accepted, we've been given a task uuid
             init_poll(data.uuid);
-        }).fail(function(){
-            // Form not accepted or other type of error
+        }).fail(function(jqXHR, textStatus, errorThrown){
+            if(jqXHR.status === 400){
+                // Form not accepted or other type of error
+                form_invalid(JSON.parse(jqXHR.responseText));
+            } else {
+                // Unknown error
+                show_jqXHR_error(jqXHR, errorThrown);
+            }
 
         });
     }
@@ -384,6 +538,14 @@ $((function(){
             .keyup(datetype_changed)
             // Check initial value
             .trigger("change");
+    }
+
+    function show_jqXHR_error(jqXHR, error, hide){
+        show_error(
+            "Unknown error. Server replied with status code " +
+            jqXHR.status + ": " + error
+        );
+
     }
 
     function show_error(msg, hide){

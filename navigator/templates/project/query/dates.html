@@ -13,7 +13,7 @@
 
     <input disabled name="on_date" placeholder="On" class="input-sm form-control" type="text"/>
 
-    <div class="input-daterange input-group">
+    <div data-min="{{ statistics.start_date|date:'c' }}" data-max="{{ statistics.end_date|date:'c' }}" class="input-daterange input-group">
         <input disabled name="start_date" placeholder="Start" type="text" class="input-sm form-control" />
         <input disabled name="end_date" placeholder="End" type="text" class="input-sm form-control"/>
     </div>

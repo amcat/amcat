@@ -191,19 +191,15 @@ class SearchQuery(object):
 
         if len(lbl) == 0:
             raise QueryValidationError("Delimiter ({label_delimiter!r}) was used, but no label given!"
-                                       "Query was: {query!r}".format(**locals()), code="invalid")
+                                       .format(**locals()), code="invalid")
         if len(lbl) > 80:
             raise QueryValidationError("Label too long: {lbl!r}".format(**locals()), code="invalid")
 
         if not len(query):
-            raise QueryValidationError("Invalid label (before the {label_delimiter}). Query was: {query!r}"
+            raise QueryValidationError("Invalid label (before the {label_delimiter})."
                                        .format(**locals()), code="invalid")
 
         return SearchQuery(q.strip(), label=lbl.strip())
-
-
-class QueryError(Exception):
-    pass
 
 
 class QueryValidationError(ValidationError):
@@ -250,7 +246,7 @@ def get_date_filters(start_date, end_date, on_date, datetype):
     elif datetype == 'end_date':
         yield 'end_date', end_date
 
-        # No filter given.
+    # No filter given.
 
 
 def _clean(s):
@@ -341,7 +337,7 @@ def resolve_query(query, queries, codebook=None, labels=None, rlanguage=None):
             codebook, labels, rlanguage
         )
         if not replacement:
-            raise QueryError("Empty replacement: {query.label}: {query.query} -> {replacement!r}".format(**locals()))
+            raise QueryValidationError("Empty replacement: {query.label}: {query.query} -> {replacement!r}".format(**locals()))
 
         query.query = query.query.replace(mo.group(0), "(%s)" % replacement, 1)
 

@@ -25,6 +25,7 @@ Also paves the way for more customization, i.e. allowing Lexis style queries
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
+from django.core.exceptions import ValidationError
 from pyparsing import ParseResults, ParserElement
 import itertools, collections
 from amcat.tools.toolkit import stripAccents
@@ -308,7 +309,7 @@ def simplify(term):
         term.terms = new_terms
     return term
 
-class QueryParseError(Exception):
+class QueryParseError(ValidationError):
     pass
         
 def parse_to_terms(s, simplify_terms=True, strip_accents=True):

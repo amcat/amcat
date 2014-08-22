@@ -19,6 +19,7 @@
 from __future__ import unicode_literals
 from functools import partial
 from operator import getitem
+from django.core.exceptions import ValidationError
 
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
@@ -91,8 +92,12 @@ class QueryActionView(APIView):
         return Response({"details": "POST/OPTIONS only."})
 
     def post(self, request, format=None):
-        task_handler = self.get_query_action().run_delayed()
-        return Response({"uuid": task_handler.task.uuid})
+        try:
+           task_handler = self.get_query_action().run_delayed()
+        except ValidationError as e:
+            return Response(e.message_dict, status=400)
+        else:
+            return Response({"uuid": task_handler.task.uuid})
 
     def metadata(self, request):
         field_names = self.get_form().fields.keys()

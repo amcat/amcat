@@ -17,6 +17,7 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
 from django.http import QueryDict, HttpResponse
 from amcat.models import Project, ArticleSet, TaskHandler
@@ -155,7 +156,10 @@ class QueryAction(object):
         @raises: django.core.exceptions.ValidationError if form invalid
         @rtype: QueryActionHandler
         """
-        self.get_form().full_clean()
+        form = self.get_form()
+        if not form.is_valid():
+            raise ValidationError(form._errors)
+
         return QueryActionHandler.call(
             target_class=self.__class__, user=self.user,
             project=self.project, arguments={

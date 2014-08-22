@@ -30,6 +30,7 @@ from amcat.models import Codebook, Language, Article, ArticleSet
 from amcat.models.medium import Medium, get_mediums
 from amcat.forms.forms import order_fields
 from amcat.tools.caching import cached
+from amcat.tools.keywordsearch import SelectionSearch
 from amcat.tools.toolkit import to_datetime
 from amcat.tools.djangotoolkit import db_supports_distinct_on
 
@@ -170,7 +171,7 @@ class SelectionForm(forms.Form):
 
     def clean_end_date(self):
         if self.cleaned_data["end_date"]:
-            return to_datetime(self.cleaned_data["end_date"]) + DAY_DELTA
+            return to_datetime(self.cleaned_data["end_date"])
 
     def clean_on_date(self):
         on_date = self.cleaned_data["on_date"]
@@ -231,6 +232,12 @@ class SelectionForm(forms.Form):
                  .format(**locals())), code="invalid")
 
         return article_ids
+
+    def clean(self):
+        # This is a bit of a hack. We need all the other fields to be correclty validated
+        # in order to validate the query field.
+        SelectionSearch(self).get_query()
+        return self.cleaned_data
 
 ###########################################################################
 #                          U N I T   T E S T S                            #

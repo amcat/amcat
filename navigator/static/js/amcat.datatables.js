@@ -159,7 +159,9 @@ amcat.datatables.create_rest_table = function (cont, rest_url, optional_args) {
         cont: $(cont).get(0),
         rest_url: rest_url,
         name: rest_url,
-        datatables_options: {},
+        datatables_options: {
+            aaSorting: []
+        },
 
         // Metadata contains the json returned by the initial
         // OPTIONS call to rest_url.
@@ -479,7 +481,8 @@ amcat.datatables.fetch_needed_labels = function(callback, dummy){
                     pk: needed_labels,
                     page_size: 999999,
                     format: "json"
-                }
+                },
+                traditional: true
             });
         }
     }

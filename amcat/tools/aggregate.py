@@ -134,7 +134,7 @@ def aggregate_by_term(queries, filters, group_by=None, interval="month"):
     es = ES()
 
     queries = (q for q in queries if q.declared_label is not None)
-    queries = ((q.declared_label, q.query) for q in queries)
+    queries = ((q.label, q.query) for q in queries)
 
     for term, query in queries:
         yield term, _aggregate_query(es, query, filters, group_by, interval)
@@ -160,16 +160,28 @@ def _aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
     raise ValueError("Invalid x_axis '{x_axis}'".format(**locals()))
 
 
-def _set_labels(aggregate, axis):
-    if axis != "medium":
-        return aggregate
-
+def _set_medium_labels(aggregate):
     mediums = Medium.objects.filter(id__in=[a[0] for a in aggregate])
     mediums = dict(mediums.values_list("id", "name"))
-    return [(mediums[mid], rest) for mid, rest in aggregate]
+    return [({'id': mid, 'label': mediums[mid]}, rest) for mid, rest in aggregate]
 
 
-def set_labels(aggregate, x_axis, y_axis):
+def _set_term_labels(aggregate, queries):
+    queries = {q.label: q.query for q in queries}
+    return [({'id': label, 'label': queries[label]}, rest) for label, rest in aggregate]
+
+
+def _set_labels(aggregate, queries, axis):
+    if axis == "medium":
+        return _set_medium_labels(aggregate)
+
+    if axis == "term":
+        return _set_term_labels(aggregate, queries)
+
+    return aggregate
+
+
+def set_labels(aggregate, queries, x_axis, y_axis):
     """
     Replace id's in aggregation with labels.
 
@@ -177,9 +189,9 @@ def set_labels(aggregate, x_axis, y_axis):
     :param x_axis:
     :param y_axis:
     """
-    x_axis = _set_labels(aggregate, x_axis)
-    y_axis = transpose(_set_labels(transpose(aggregate), y_axis))
-    return [(x[0], y[1]) for x, y in zip(x_axis, y_axis)]
+    x_axis = _set_labels(aggregate, queries, x_axis)
+    y_axis = dict(transpose(_set_labels(transpose(aggregate), queries, y_axis)))
+    return [(x[0], y_axis[x[0]]) for x in x_axis]
 
 
 def aggregate(query, queries, filters, x_axis, y_axis, interval="month", include_labels=True):
@@ -225,7 +237,7 @@ def aggregate(query, queries, filters, x_axis, y_axis, interval="month", include
         aggr = _aggregate(query, queries, filters, x_axis, y_axis, interval)
 
     if include_labels:
-        aggr = set_labels(list(aggr), x_axis, y_axis)
+        aggr = set_labels(list(aggr), queries, x_axis, y_axis)
 
     return list(aggr)
 

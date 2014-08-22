@@ -74,7 +74,7 @@ class LazyES(object):
                 return r
 
             result_dict = {r.id : add_hits_column(r) for r in result}
-            f = dict(ids=list(result_dict.keys()))
+            f = {'ids': list(result_dict.keys())}
 
             for q in self.queries:
                 for hit in self.es.query_all(q.query, filters=f, fields=[]):
@@ -147,7 +147,7 @@ class SearchResource(AmCATResource):
     def queries(self):
         params = self.request.QUERY_PARAMS
         return [keywordsearch.SearchQuery.from_string(q)
-                for q in params.getlist("q")]
+                for q in filter(bool, params.getlist("q"))]
 
     def get_queryset(self):
         fields = self.get_serializer().get_fields().keys()

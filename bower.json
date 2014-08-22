@@ -12,7 +12,8 @@
     "jquery-csv": "",
     "jquery.hotkeys": "",
     "bootstrap-datepicker": "",
-    "highcharts": ""
+    "highcharts": "",
+    "moment": ""
   },
   "resolutions": {
     "jquery": "~2.x",

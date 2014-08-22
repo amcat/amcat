@@ -47,9 +47,9 @@ class AggregationAction(QueryAction):
     Aggregate articles based on their properties. Make sure x_axis != y_axis.
     """
     output_types = (
+        ("text/json+aggregation+table", "Table"),
         ("text/json+aggregation+graph", "Graph"),
         ("text/json+aggregation+heatmap", "Heatmap"),
-        ("text/json+aggregation+table", "Table"),
         ("text/csv", "CSV (Download)"),
     )
     form_class = AggregationActionForm
