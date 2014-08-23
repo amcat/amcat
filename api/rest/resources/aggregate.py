@@ -13,7 +13,7 @@ import itertools, collections
 from amcat.models import Medium
 
 DATES = ['year','quarter','month','week','day']
-FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets"
+FILTER_FIELDS = "start_date","end_date","mediumid","ids","sets","insertscript"
 
 #TODO: Copypasta: AggregateES/lazyES and AggregateResource/SearchResource should share common ancestors
 
