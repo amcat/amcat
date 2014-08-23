@@ -48,6 +48,24 @@ class _HashDict(dict):
         return hash(frozenset(self.iteritems()))
 
 
+def _get_pivot(row, column):
+    for c, value in row:
+        if c == column:
+            return float(value)
+    return 0.0
+
+
+def make_relative(aggregation, column):
+    # TODO: We should probably make aggregation an ordered dict of ordered
+    # TODO: dicts, thus making this algorithm run more cheaply.
+    pivots = (_get_pivot(row[1], column) for row in aggregation)
+    for pivot, (row, row_values) in zip(pivots, aggregation):
+        if not pivot:
+            continue
+
+        yield row, tuple((col, value / pivot) for col, value in row_values)
+
+
 def sort(aggregate, func=itemgetter(0), reverse=False):
     for x, y_values in sorted(aggregate, key=func, reverse=reverse):
         yield x, sorted(y_values, key=func, reverse=reverse)
@@ -204,7 +222,7 @@ def set_labels(aggregate, queries, x_axis, y_axis):
     return [(x[0], y[1]) for x, y in zip(x_axis, y_axis)]
 
 
-def aggregate(query, queries, filters, x_axis, y_axis, interval="month", include_labels=True):
+def aggregate(query, queries, filters, x_axis, y_axis, interval="month"):
     """
     Elasticsearch doesn't support aggregating on two variables by default, so we need to
     work around it by querying multiple times for each point on `x_axis`.
@@ -245,9 +263,6 @@ def aggregate(query, queries, filters, x_axis, y_axis, interval="month", include
         aggr = transpose(_aggregate(query, queries, filters, y_axis, x_axis, interval))
     else:
         aggr = _aggregate(query, queries, filters, x_axis, y_axis, interval)
-
-    if include_labels:
-        aggr = set_labels(list(aggr), queries, x_axis, y_axis)
 
     return list(aggr)
 

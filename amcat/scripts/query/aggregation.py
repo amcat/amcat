@@ -1,4 +1,4 @@
-##########################################################################
+# #########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -19,9 +19,12 @@
 import json
 from datetime import datetime
 from time import mktime
-from django.forms import ChoiceField
+from django.core.exceptions import ValidationError, MultipleObjectsReturned
+from django.forms import ChoiceField, CharField
+from amcat.models import Medium
 from amcat.scripts.query import QueryAction, QueryActionForm
-from amcat.tools.aggregate import sort, transpose
+from amcat.tools.aggregate import sort, transpose, set_labels, make_relative
+from amcat.tools.djangotoolkit import parse_date
 from amcat.tools.keywordsearch import SelectionSearch
 
 AXES = tuple((c, c.title()) for c in ("date", "medium", "total", "term"))
@@ -36,10 +39,65 @@ class DatetimeEncoder(json.JSONEncoder):
         return super(DatetimeEncoder, self).default(obj)
 
 
+MEDIUM_ERR = "Could not find medium with id={column} or name={column}"
+
+
+def _get_medium(column):
+    if column.isdigit():
+        try:
+            return Medium.objects.get(id=int(column))
+        except Medium.DoesNotExist:
+            pass
+
+    try:
+        return Medium.objects.get(name=column)
+    except Medium.DoesNotExist:
+        raise ValidationError(MEDIUM_ERR.format(column=column))
+    except MultipleObjectsReturned:
+        raise ValidationError("Found multiple mediums for name={column}".format(**locals()))
+
+
 class AggregationActionForm(QueryActionForm):
-    x_axis = ChoiceField(choices=AXES, initial="date")
-    y_axis = ChoiceField(choices=AXES, initial="medium")
-    interval = ChoiceField(choices=INTERVALS, help_text="Test", required=False, initial="day")
+    x_axis = ChoiceField(label="X-axis (rows)", choices=AXES, initial="date")
+    y_axis = ChoiceField(label="Y-axis (columns)", choices=AXES, initial="medium")
+    interval = ChoiceField(choices=INTERVALS, required=False, initial="day")
+    relative_to = CharField(required=False, help_text=(
+        "Enter medium, term or date for which to make the counts "
+        "relative to. Accepted: medium id, medium label, DD-MM-YYYY, term. "))
+
+    def clean_relative_to(self):
+        column = self.cleaned_data['relative_to']
+        y_axis = self.cleaned_data['y_axis']
+
+        if not column:
+            return None
+
+        if y_axis == "medium":
+            medium = _get_medium(column)
+            if medium not in self.cleaned_data["mediums"]:
+                raise ValidationError(MEDIUM_ERR.format(column=column))
+            return medium.id
+
+        if y_axis == "date":
+            try:
+                date = parse_date(column)
+            except ValueError:
+                raise ValidationError("Not a valid date.")
+
+            if date is None:
+                raise ValidationError("Not a valid date.")
+
+            # TODO: We should check whether date is within bounds, but it is not certain
+            # TODO: those values are in cleaned_data yet. Just error upon rendering..?
+            return datetime.combine(date, datetime.min.time())
+
+        if y_axis == "term":
+            queries = SelectionSearch(self).get_queries()
+            if column not in (q.label for q in queries):
+                raise ValidationError("Term '{column}' not found in search terms.".format(column=column))
+            return column
+
+        raise ValidationError("Not a valid column name.")
 
 
 class AggregationAction(QueryAction):
@@ -60,10 +118,25 @@ class AggregationAction(QueryAction):
         narticles = selection.get_count()
         self.monitor.update(10, "Found {narticles} articles. Aggregating..".format(**locals()))
 
+        # Get aggregation
         aggregation = selection.get_aggregate(
             form.cleaned_data['x_axis'],
             form.cleaned_data['y_axis'],
             form.cleaned_data['interval']
+        )
+
+        #
+        self.monitor.update(20, "Calculating relative values..".format(**locals()))
+        column = form.cleaned_data['relative_to']
+        print(aggregation)
+        if column is not None:
+            aggregation = list(make_relative(aggregation, column))
+
+        # Convert id values to dicts -> {id: x, label: y}
+        self.monitor.update(30, "Setting labels..".format(**locals()))
+        aggregation = set_labels(
+            aggregation, selection.get_queries(),
+            form.cleaned_data['x_axis'], form.cleaned_data['y_axis'],
         )
 
         if form.cleaned_data["output_type"] in TRANSPOSE:

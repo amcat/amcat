@@ -71,6 +71,14 @@ class AdunaException(Exception):
     pass
 
 
+class ClusterMapHandler(QueryActionHandler):
+    def get_result(self):
+        result = super(ClusterMapHandler, self).get_result()
+        if self.task.arguments["data"]["output_type"][0] == "image/png":
+            return b64decode(result)
+        return result
+
+
 class ClusterMapForm(QueryActionForm):
     def clean(self):
         queries = self.cleaned_data["query"].split("\n")
@@ -92,6 +100,7 @@ def clustermap_html_to_coords(_html):
 
 class ClusterMapAction(QueryAction):
     form_class = ClusterMapForm
+    task_handler = ClusterMapHandler
     output_types = (
         ("application/json+clustermap", "Inline (interactive)"),
         ("image/png+base64", "Inline (image only)"),

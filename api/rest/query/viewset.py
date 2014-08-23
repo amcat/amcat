@@ -18,7 +18,7 @@
 ###########################################################################
 from __future__ import unicode_literals
 from functools import partial
-from operator import getitem
+from operator import getitem, attrgetter
 from django.core.exceptions import ValidationError
 
 from rest_framework.exceptions import APIException
@@ -104,6 +104,8 @@ class QueryActionView(APIView):
         fields = map(partial(getitem, self.get_form()), field_names)
 
         return {
-            "help_text": self.get_view_description(),
-            "form": dict(zip(field_names, [f.as_widget() for f in fields]))
+            "help_texts": dict(zip(field_names, [f.help_text.strip() or None for f in fields])),
+            "form": dict(zip(field_names, [f.as_widget() for f in fields])),
+            "labels": dict(zip(field_names, [f.label for f in fields])),
+            "help_text": self.get_view_description()
         }

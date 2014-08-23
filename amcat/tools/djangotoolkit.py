@@ -23,6 +23,8 @@ Useful functions for dealing with django (models)x
 
 from __future__ import unicode_literals, print_function, absolute_import
 
+from datetime import datetime
+
 import collections
 from django.http import QueryDict
 import re
@@ -35,9 +37,20 @@ from django.db.models.fields.related import ForeignKey, OneToOneField, ManyToMan
 from django.db import models
 from django.db import connections
 from contextlib import contextmanager
+from django.conf import settings
 
 
 from amcat.tools.table.table3 import ObjectTable, SortedTable
+
+def parse_date(date):
+    """Parse date according to DATE_INPUT_FORMATS in settings"""
+    for format in settings.DATE_INPUT_FORMATS:
+        try:
+            return datetime.strptime(date, format).date()
+        except (ValueError, TypeError):
+            continue
+
+    raise ValueError("Not a valid date found for {date}. Tried: {settings.DATE_INPUT_FORMATS}.".format(**locals()))
 
 def to_querydict(d, mutable=False):
     """Convert a normal dictionary to a querydict. The dictionary can have lists as values,

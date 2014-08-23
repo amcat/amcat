@@ -355,8 +355,10 @@ $((function(){
 
                 var index;
                 $.map(serie[1], function(value){
+                    // Check for float / integer. And wtf javascript, why not float type?!
                     index = column_indices[value[0].id || value[0]];
-                    row.find("td").eq(index).text(value[1]);
+                    value = (value[1] % 1 === 0) ? value[1] : value[1].toFixed(2);
+                    row.find("td").eq(index).text(value);
                 });
 
                 tbody.append(row);
@@ -450,9 +452,17 @@ $((function(){
 
         $.each(fields, function(i, field_name){
             var row = $("<div>").addClass("row");
-            var label = $("<label class='col-md-3'>").text(field_name);
+            var label = $("<label class='col-md-3'>").text(data.labels[field_name]);
             var widget = $("<div class='col-md-9'>").html(data.form[field_name]);
             script_form.append(row.append(label).append(widget));
+
+            // Add help text
+            var help_text = data.help_texts[field_name];
+            if (help_text){
+                var icon = $("<i class='glyphicon glyphicon-question-sign'>");
+                widget.append(icon);
+                icon.tooltip({title: help_text})
+            }
 
             var is_hidden = widget.find("[type=hidden]").length;
             if (is_hidden) row.css("height", 0).css("overflow", "hidden");
