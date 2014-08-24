@@ -762,7 +762,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_query(self):
-        "Do query and query_ids work properly?"
+        """Do query and query_ids work properly?"""
         a = amcattest.create_test_article(headline="bla", text="artikel artikel een", date="2001-01-01")
         ES().flush()
         print(list(ES().query("een", fields=["date", "headline"])))
@@ -840,7 +840,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_full_refresh(self):
-        "test full refresh, e.g. document content change"
+        """test full refresh, e.g. document content change"""
         m1, m2 = [amcattest.create_test_medium() for _ in range(2)]
         a = amcattest.create_test_article(text='aap noot mies', medium=m1)
         s = amcattest.create_test_set()
@@ -860,7 +860,7 @@ class TestAmcatES(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_scores(self):
-        "test if scores (and matches) are as expected for various queries"
+        """test if scores (and matches) are as expected for various queries"""
         s = amcattest.create_test_set(articles=[
             amcattest.create_test_article(headline="a", text='dit is een test'),
         ])

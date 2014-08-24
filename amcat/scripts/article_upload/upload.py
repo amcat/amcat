@@ -32,7 +32,6 @@ from django import forms
 from django.forms.widgets import HiddenInput
 
 from amcat.scripts import script
-from amcat.scripts.types import ArticleIterator
 from amcat.models import Article, Project, ArticleSet
 from amcat.scripts.article_upload.fileupload import RawFileUploadForm
 from amcat.models.articleset import create_new_articleset
@@ -84,7 +83,6 @@ class UploadScript(script.Script):
     """
 
     input_type = None
-    output_type = ArticleIterator
     options_form = UploadForm
 
     def __init__(self, *args, **kargs):

@@ -93,17 +93,18 @@ class TestAggregate(amcattest.AmCATTestCase):
         ))
 
         self.assertEqual([
-            ('',    datetime(2000, 1, 1, 0, 0), datetime(2014, 1, 1, 0, 0), datetime(2015, 1, 1, 0, 0)),
-            (m1.id, 0,                          1,                          1),
-            (m2.id, 1,                          0,                          0)
+            ('', m2.id, m1.id),
+            (datetime(2014, 1, 1, 0, 0), 0, 1),
+            (datetime(2015, 1, 1, 0, 0), 0, 1),
+            (datetime(2000, 1, 1, 0, 0), 1, 0)
         ], list(to_table(aggr)))
 
     def test_transpose(self):
         self.assertEqual(
             (
-                (8, (('c', 9),          )),
                 (1, (('a', 5), ('b', 7),)),
-                (2, (('a', 6), ('b', 4),))
+                (2, (('a', 6), ('b', 4),)),
+                (8, (('c', 9),          ))
             ),
             transpose((
                 ("a", ((1, 5), (2, 6))),

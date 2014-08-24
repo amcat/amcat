@@ -99,6 +99,9 @@ class SelectionForm(forms.Form):
         """
         super(SelectionForm, self).__init__(data, *args, **kwargs)
 
+        if articlesets is None:
+            articlesets = project.all_articlesets(distinct=True)
+
         self.project = project
         self.fields['articlesets'].queryset = articlesets.order_by('-pk')
         self.fields['codebook'].queryset = project.get_codebooks()
@@ -367,7 +370,7 @@ class TestSelectionForm(amcattest.AmCATTestCase):
         p, c, form = self.get_form(datetype="between", end_date=now)
         self.assertFalse(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now, start_date=now)
-        self.assertTrue(form.is_valid())
+        self.assertFalse(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now - datetime.timedelta(days=1), start_date=now)
         self.assertFalse(form.is_valid())
         p, c, form = self.get_form(datetype="between", end_date=now + datetime.timedelta(days=1), start_date=now)

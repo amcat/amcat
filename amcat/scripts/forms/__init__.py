@@ -17,5 +17,4 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-from .general import *
 from .selection import *

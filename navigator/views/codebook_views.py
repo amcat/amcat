@@ -193,7 +193,7 @@ class CodebookDeleteView(ProjectActionRedirectView):
         cb.recycle()
 
 class CodebookFormActionView(ProjectFormView):
-    "Base class for simple form based actions on codebooks"
+    """Base class for simple form based actions on codebooks"""
     parent = CodebookDetailsView
     def form_invalid(self, form):
         error = {
@@ -210,7 +210,7 @@ class CodebookFormActionView(ProjectFormView):
         result = self.action(codebook, form)
         return HttpResponse(content=result, status=200)
     def action(self, codebook, form):
-        "Perform the action. An optional return value will become the HttpResponse 201 content"
+        """Perform the action. An optional return value will become the HttpResponse 201 content"""
         raise NotImplementedError()
     
 class CodebookChangeNameView(CodebookFormActionView):

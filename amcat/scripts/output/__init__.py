@@ -16,11 +16,4 @@
 # You should have received a copy of the GNU Affero General Public        #
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
-
-from amcat.scripts.output.commandline import *
-from amcat.scripts.output._json import *
-from amcat.scripts.output.html import *
-from amcat.scripts.output.csv_output import *
-from amcat.scripts.output.xlsx import *
-from amcat.scripts.output.spss import *
-from amcat.scripts.output.datatables import *
+from csv_output import *

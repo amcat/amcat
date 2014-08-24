@@ -195,13 +195,13 @@ class Article(AmcatModel):
 
 
     def words(self):
-        "@return: a generator yielding all words in all sentences"
+        """@return: a generator yielding all words in all sentences"""
         for sentence in self.sentences:
             for word in sentence.words:
                 yield word
 
     def get_sentence(self, parnr, sentnr):
-        "@return: a Sentence object with the given paragraph and sentence number"
+        """@return: a Sentence object with the given paragraph and sentence number"""
         for s in self.sentences:
             if s.parnr == parnr and s.sentnr == sentnr:
                 return s

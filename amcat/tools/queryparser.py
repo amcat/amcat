@@ -33,7 +33,7 @@ from amcat.tools.toolkit import stripAccents
 ParserElement.enablePackrat()
 
 def c(s):
-    "Clean ('analyze') the provided string"
+    """Clean ('analyze') the provided string"""
     return s.lower()
 
 def query_filter(dsl, cache=False):
@@ -210,7 +210,7 @@ class Span(Boolean, FieldTerm):
         return query_filter(self.get_dsl())
 
 def lucene_span(quote, field, slop):
-    '''Create a span query from a lucene style string, i.e. "terms"~10'''
+    """Create a span query from a lucene style string, i.e. "terms"~10"""
     clause = parse_to_terms(quote, simplify_terms=False)
     if not (isinstance(clause, Boolean) and clause.operator == "OR" and clause.implicit):
         raise ParseError("Lucene-style proximity queries must contain a list of terms, not {clause!r}"

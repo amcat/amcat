@@ -78,11 +78,11 @@ class Node(object):
                 yield parent, rel
     @property
     def parent(self):
-        "In a tree, a single parent is useful"
+        """In a tree, a single parent is useful"""
         for parent, rel  in self.parents: return parent, rel
     @property
     def parentNode(self):
-        "In a tree, a single parent is useful"
+        """In a tree, a single parent is useful"""
         for parent in self.parentNodes: return parent
 
     def getDescendants(self, stoplist=set()):

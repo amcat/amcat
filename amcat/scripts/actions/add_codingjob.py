@@ -27,7 +27,6 @@ import logging; log = logging.getLogger(__name__)
 from django import forms
 from amcat.scripts.script import Script
 from amcat.models import CodingJob, User, ArticleSet
-from amcat.scripts.actions.create_sentences import CreateSentences
 
 class AddCodingJob(Script):
     class options_form(forms.ModelForm):
@@ -53,7 +52,6 @@ class AddCodingJob(Script):
 
             
     def _run(self, job_size, articleset, name, project, **args):
-        CreateSentences(dict(articlesets=[articleset.id])).run()
         job = self.bound_form.save(commit=False)
         
         if not job_size:
@@ -105,4 +103,3 @@ class TestAddJob(amcattest.AmCATTestCase):
         self.assertEqual(len(jobs), 3)
         self.assertEqual(sorted(j.articleset.articles.count() for j in jobs), sorted([4, 4, 2]))
         self.assertEqual({j.name for j in jobs}, {"test - 1", "test - 2", "test - 3"})
-        

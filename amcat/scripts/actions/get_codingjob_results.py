@@ -31,7 +31,6 @@ from amcat.models import CodingJob, CodingSchemaField, CodingSchema, Project
 from amcat.models import Article, Sentence
 from amcat.scripts.script import Script
 from amcat.tools.table import table3
-from amcat.scripts.output.xlsx import table_to_xlsx
 from amcat.scripts.output.csv_output import table_to_csv
 from amcat.tools.progress import NullMonitor
 
@@ -58,7 +57,7 @@ ExportFormat = collections.namedtuple('ExportFormat', ["label", "function", "mim
 
 EXPORT_FORMATS = (
     ExportFormat(label="csv", function=table_to_csv, mimetype="text/csv"),
-    ExportFormat(label="xlsx", function=table_to_xlsx, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    ExportFormat(label="xlsx", function=lambda t: t.export(format='xlsx'), mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
     ExportFormat(label="json", function=lambda t: json.dumps(list(t.to_list())), mimetype=None),
 )
 

@@ -427,41 +427,6 @@ class Datatable(object):
         return u"DataTable(%r)" % self.resource
 
 
-class ReprString(unicode):
-    """Unicode object were __repr__ == __unicode__"""
-
-    def __repr__(self): return unicode(self)
-
-
-class FavouriteDatatable(Datatable):
-    """
-    Datatable that renders the favourite column as a star with set/unset actions
-    """
-
-    def __init__(self, set_url, unset_url, label, *args, **kargs):
-        """
-        @param set_url: url for the GET request to set a target as favourite
-        @param unset_url: url for the GET request to unset a target as favourite
-        @param label: name to display in the notification 
-        """
-        super(FavouriteDatatable, self).__init__(*args, **kargs)
-        self.set_url = set_url
-        self.unset_url = unset_url
-        self.label = label
-
-    def _get_copy_kwargs(self, **kwargs):
-        kw = super(FavouriteDatatable, self)._get_copy_kwargs(**kwargs)
-        kw.update(dict(set_url=self.set_url, unset_url=self.unset_url, label=self.label))
-        return kw
-
-    def get_aoColumnDefs(self):
-        template = get_template("api/favourite.js")
-        js = template.render(Context(self.__dict__))
-        return {
-            "aTargets": ["favourite"],
-            "mRender": ReprString(js),
-        }
-
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################

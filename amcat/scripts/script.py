@@ -48,7 +48,6 @@ class Script(object):
 
     input_type = None
     options_form = None
-    output_type = None
 
     def __init__(self, options=None, monitor=NullMonitor(), **kargs):
         """Default __init__ validates and stores the options form"""
