@@ -96,9 +96,9 @@ def STLtoText(txt):
         tmp = re.sub(r'[\x00-\x1f|\x80-\x9f]+', '', TTI['TF'])
         tmp = re.sub(r'\W{2,}', ' ', tmp)
         if TTI['EBN'] == 255:
-            tmp = tmp + '\n'
+            tmp += '\n'
         elif TTI['EBN'] == 254:
             #This is a comment, show it that way
             tmp = "Comment-subtitle: %s" % tmp
-        body = body + tmp
+        body += tmp
     return body

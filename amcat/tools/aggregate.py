@@ -143,7 +143,8 @@ def aggregate_by_medium(query, filters, group_by=None, interval="month"):
     :return:
     """
     es = ES()
-    for medium_id in es.list_media(query, filters):
+
+    for medium_id in sorted(es.list_media(query, filters)):
         filters["mediumid"] = [medium_id]
         yield medium_id, _aggregate_query(es, query, filters, group_by, interval)
 

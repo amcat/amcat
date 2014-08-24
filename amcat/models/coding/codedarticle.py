@@ -168,7 +168,7 @@ class CodedArticle(models.Model):
         coding_dicts = tuple(coding_dicts)
 
         values = tuple(itertools.chain.from_iterable(cd["values"] for cd in coding_dicts))
-        if any(v.get("intval") == v.get("strval") == None for v in values):
+        if any(v.get("intval") == v.get("strval") is None for v in values):
             raise ValueError("intval and strval cannot both be None")
 
         if any(v.get("intval") is not None and v.get("strval") is not None for v in values):

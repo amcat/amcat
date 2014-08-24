@@ -55,16 +55,12 @@ import string
 
 from collections import OrderedDict, Callable
 
-try:
-    import mx.DateTime
-except:
-    pass
-
 log = logging.getLogger(__name__)
 
 ###########################################################################
 ##                               Decorators                              ##
 ###########################################################################
+
 
 def _deprecationwarning(msg):
     warnings.warn(DeprecationWarning(msg))
@@ -159,15 +155,11 @@ def head(seq):
 
 
 def totuple(v):
-    """Function to convert `value` to a tuple.
-
-    @type idcolumn: tuple, list, str, int, unicode, or None
-    @param idcolumn: value to convert to a tuple"""
+    """Function to convert `value` to a tuple."""
     if v is None:
         return ()
     elif type(v) in (str, unicode, int, long):
-        return (v,)
-
+        return v,
     return v
 
 
@@ -277,7 +269,7 @@ class DefaultOrderedDict(OrderedDict):
         return type(self)(self.default_factory,
                           copy.deepcopy(self.items()))
 
-    def __repr__(self):
+    def __repr__(self, **kwargs):
         return 'OrderedDefaultDict(%s, %s)' % (self.default_factory,
                                         OrderedDict.__repr__(self))
 
@@ -398,9 +390,9 @@ class _DateFormat(object):
         y, m, d = map(int, (y, m, d))
         # 2-digit year logic:
         if y < 40:
-            y = 2000 + y
+            y += 2000
         elif y < 100:
-            y = 1900 + y
+            y += 1900
         # dmy vs mdy
         if american and self.swapamerican:
             m, d = d, m
@@ -444,7 +436,7 @@ def read_date(string, lax=False, rejectPre1970=False, american=False):
     @param american: prefer MDY over DMY
     @return: a \C{datetime.datetime} object
     """
-    if string == None: return None
+    if string is None: return None
     try:
         datestr = string
 

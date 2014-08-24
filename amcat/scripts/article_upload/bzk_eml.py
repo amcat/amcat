@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -22,9 +22,9 @@ Plugin for uploading .eml (outlook & others) files of a certain markup, provided
 """
 from __future__ import unicode_literals, absolute_import
 
-from lxml import html
 import re
-import logging; log = logging.getLogger(__name__)
+import logging
+
 from datetime import timedelta
 
 from amcat.scripts.article_upload.upload import UploadScript
@@ -32,6 +32,9 @@ from amcat.tools.toolkit import readDate
 from amcat.models.medium import Medium
 from amcat.models.article import Article
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES
+
+log = logging.getLogger(__name__)
+
 
 class BZKEML(UploadScript):
     def _scrape_unit(self, _file):
@@ -46,28 +49,29 @@ class BZKEML(UploadScript):
                 lines.append(line.rstrip("\r\n"))
             else:
                 mail_header.append(line)
-            if line.startswith("1red"): #actual content starts
+            if line.startswith("1red"):  #actual content starts
                 lines.append("")
 
-        article = Article(metastring = {'mail_header': "".join(mail_header)})
+        article = Article(metastring={'mail_header': "".join(mail_header)})
 
-        while True: #loop through lines up to and including headline
+        while True:  #loop through lines up to and including headline
             line = lines.pop(0)
-            if line.isupper(): #headline
+            if line.isupper():  #headline
                 article.headline = line
                 break
-            elif line: #first non-empty line, contains metadata
+            elif line:  #first non-empty line, contains metadata
                 data = line.split(", ")
                 datestr = data[0]
                 if "'" in datestr:
                     split = datestr.split("'")
                     datestr = split[0] + "20" + split[1]
-                if "=" in datestr: # if this is true, the year is not parsable
+                if "=" in datestr:  # if this is true, the year is not parsable
                     # we take the year the mail was sent, might fail around december
                     datestr = datestr.split("=")[0] + str(file_date.year)
                     article.date = readDate(datestr)
-                    if (article.date - file_date).days > 200: #likely a misparse, with the mail being sent the next year
-                        article.date -= timedelta(years = 1)
+                    if (
+                                article.date - file_date).days > 200:  #likely a misparse, with the mail being sent the next year
+                        article.date -= timedelta(years=1)
                 else:
                     article.date = readDate(datestr)
                 if data[2] in BZK_ALIASES.keys():
@@ -84,7 +88,7 @@ class BZKEML(UploadScript):
             if not line:
                 paragraphs.append(paragraph)
                 paragraph = ""
-            elif line.isupper(): #subheader
+            elif line.isupper():  #subheader
                 paragraph += line + "\n"
             else:
                 paragraph += line
@@ -95,16 +99,18 @@ class BZKEML(UploadScript):
         article.text = ""
         for p in paragraphs:
             article.text += p + "\n\n"
-            if p.startswith("(") and len(p.split(",")) > 1: #laatste regel van normale content
+            if p.startswith("(") and len(p.split(",")) > 1:  #laatste regel van normale content
                 break
 
         # Add non-ascii characters
         # Takes the '=AB' occurrences and turns them into latin-1 characters.
         def character(match):
-            code = match.group()[1:]    
+            code = match.group()[1:]
             char = r"\x{}".format(code).decode('string-escape').decode('latin-1')
-            if code == "92": return "'"
-            elif code == "85": return "..."
+            if code == "92":
+                return "'"
+            elif code == "85":
+                return "..."
             return char
 
         article.text = re.sub(
@@ -114,37 +120,39 @@ class BZKEML(UploadScript):
 
         yield article
 
+
 if __name__ == "__main__":
     from amcat.scripts.tools import cli
+
     cli.run_cli(BZKEML)
-        
-        
+
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
 
 from amcat.tools import amcattest
 
+
 class TestBZK(amcattest.AmCATTestCase):
     def setUp(self):
         from django.core.files import File
-        import os.path, json
+        import os.path
+
         self.dir = os.path.join(os.path.dirname(__file__), 'test_files', 'bzk')
-        self.bzk = BZKEML(project = amcattest.create_test_project().id,
-                  file = File(open(os.path.join(self.dir, 'test.html'))),
-                  articleset = amcattest.create_test_set().id)
+        self.bzk = BZKEML(project=amcattest.create_test_project().id,
+                          file=File(open(os.path.join(self.dir, 'test.html'))),
+                          articleset=amcattest.create_test_set().id)
         self.result = self.bzk.run()
 
-        def test_scrape_unit(self):
-            self.assertTrue(self.result)
-        
-        def test_scrape_file(self):
-            #props to check for:
-            # headline, text, section, medium, date
-            must_props = ('headline', 'text', 'medium', 'date','section')
-            must_props = [[getattr(a,prop) for a in self.result] for prop in must_props]
+    def todo_test_scrape_unit(self):
+        self.assertTrue(self.result)
 
-            for proplist in must_props:
-                self.assertTrue(all(proplist))
+    def todo_test_scrape_file(self):
+        #props to check for:
+        # headline, text, section, medium, date
+        must_props = ('headline', 'text', 'medium', 'date', 'section')
+        must_props = [[getattr(a, prop) for a in self.result] for prop in must_props]
 
-            
+        for proplist in must_props:
+            self.assertTrue(all(proplist))

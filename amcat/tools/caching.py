@@ -1,5 +1,5 @@
-###########################################################################
-#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+# ##########################################################################
+# (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
 #                                                                         #
@@ -30,8 +30,7 @@ Use reset and set_cache to manually clear and set the cache
 
 from __future__ import unicode_literals, print_function, absolute_import
 
-
-import logging;
+import logging
 
 log = logging.getLogger(__name__)
 from functools import wraps, partial
@@ -47,12 +46,14 @@ SIMPLE_CACHE_SECONDS = getattr(settings, 'SIMPLE_CACHE_SECONDS', 2592000)
 
 CACHE_PREFIX = "_amcat_tools_caching_cache_"
 
+
 def cached(func, cache_attr=CACHE_PREFIX):
     """Memoise the output of func
 
     @type func: method without parameters
-    @param key: if given, use this key as object attribute to store the cache on
+    @param cache_attr: if given, use this key as object attribute to store the cache on
     """
+
     @wraps(func)
     def inner(self):
         """Decorator inner function: Return the cached value or execute func and cache results"""
@@ -63,25 +64,32 @@ def cached(func, cache_attr=CACHE_PREFIX):
         except KeyError:
             log.debug("Not found, setting cache for %r.%s" % (self, cache_attr))
             return _set_cache_value(cache, func.__name__, func(self))
+
     return inner
+
 
 def cached_named(cache_attr):
     """Creates a cached decorator with a different cache attribute"""
     return partial(cached, cache_attr=CACHE_PREFIX + cache_attr)
 
+
 def invalidates(func, cache_attr=CACHE_PREFIX):
     """Invalidate the cache before the func is run"""
+
     @wraps(func)
     def inner(self, *args, **kargs):
         """Decorator inner function: reset the cache and run func as normal"""
         f = func(self, *args, **kargs)
         _reset(self, cache_attr)
         return f
+
     return inner
+
 
 def invalidates_named(cache_attr):
     """Creates a cached invalidator with a different cache attribute"""
     return partial(invalidates, cache_attr=CACHE_PREFIX + cache_attr)
+
 
 def _reset(obj, cache_attr):
     """Reset the cache on the object in this value"""
@@ -89,9 +97,11 @@ def _reset(obj, cache_attr):
 
     setattr(obj, cache_attr, {})
 
+
 def reset(obj, cache_attr=""):
     """Reset the cache on the given object"""
     _reset(obj, CACHE_PREFIX + cache_attr)
+
 
 def _get_cache(obj, cache_attr=CACHE_PREFIX):
     """Get or create the cache dictionary on obj"""
@@ -101,16 +111,16 @@ def _get_cache(obj, cache_attr=CACHE_PREFIX):
         setattr(obj, cache_attr, {})
         return getattr(obj, cache_attr)
 
+
 def _set_cache_value(cache, name, value):
     """Set the cache to value for the func, returning value"""
     cache[name] = value
     return value
-    
+
+
 def set_cache(obj, name, value, cache_attr=""):
     """Set the value as the cached value for func"""
     _set_cache_value(_get_cache(obj, CACHE_PREFIX + cache_attr), name, value)
-    
-
 
 
 ###########################################################################
@@ -119,7 +129,9 @@ def set_cache(obj, name, value, cache_attr=""):
 
 # Setup thread-local cache for codebooks
 import threading
+
 _object_cache = threading.local()
+
 
 def _get_object_cache(model):
     key = CACHE_PREFIX + model.__name__
@@ -130,6 +142,7 @@ def _get_object_cache(model):
         setattr(_object_cache, key, cache)
         return cache
 
+
 def get_object(model, pk, create_if_needed=True, pkname='pk'):
     """Create the model object with the given pk, possibly retrieving it
     from cache"""
@@ -138,7 +151,7 @@ def get_object(model, pk, create_if_needed=True, pkname='pk'):
         return cache[pk]
     except KeyError:
         if create_if_needed:
-            cache[pk] = model.objects.get(**{pkname : pk})
+            cache[pk] = model.objects.get(**{pkname: pk})
             return cache[pk]
 
 
@@ -159,11 +172,13 @@ def get_objects(model, pks):
     for obj in model.objects.filter(pk__in=todo):
         cache[obj.id] = obj
         yield obj
-    
+
+
 def clear_cache(model):
     """Clear the local codebook cache manually, ie in between test runs"""
     key = CACHE_PREFIX + model.__name__
-    setattr(_object_cache, key , {})
+    setattr(_object_cache, key, {})
+
 
 ###########################################################################
 #                  D J A N G O  M O D E L  C A C H I N G                  #
@@ -174,37 +189,41 @@ def _get_cache_key(model, id):
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
-class TestCaching(amcattest.AmCATTestCase):
 
+class TestCaching(amcattest.AmCATTestCase):
     class TestClass(object):
         def __init__(self, x=1, y=2):
             self.changed = False
             self.x = x
             self.y = y
+
         @property
         @cached
         def xprop(self):
             """Cached property"""
             self.changed = True
             return self.x
+
         @invalidates
         def set_x(self, x):
             """Invalidating setter"""
             self.x = x
             return x
+
         @cached_named("y_cache")
         def get_y(self):
             """Func for testing named cache"""
             self.changed = True
             return self.y
+
         @invalidates_named("y_cache")
         def set_y(self, y):
             """Func for testing invalidate named cache"""
             self.y = y
-    
+
     def test_cached(self):
         """Does caching work"""
         t = TestCaching.TestClass(x=4)
@@ -213,7 +232,7 @@ class TestCaching(amcattest.AmCATTestCase):
         t.changed = False
         self.assertEqual(t.xprop, 4)
         self.assertFalse(t.changed)
-        t.x = 7 # manual change, does not invalidate cache
+        t.x = 7  # manual change, does not invalidate cache
         self.assertEqual(t.xprop, 4)
         self.assertFalse(t.changed)
 
@@ -238,8 +257,7 @@ class TestCaching(amcattest.AmCATTestCase):
         reset(t)
         self.assertEqual(t.xprop, 17)
         self.assertTrue(t.changed)
-        
-        
+
     def test_named(self):
         """Do named caches work?"""
         t = TestCaching.TestClass(x=4)
@@ -257,7 +275,7 @@ class TestCaching(amcattest.AmCATTestCase):
         t.set_y(1)
         self.assertEqual(x, t.xprop)
         self.assertFalse(t.changed)
-        
+
         # ... but it should invalidate the cache for y        
         self.assertEqual(t.get_y(), 1)
         self.assertTrue(t.changed)
@@ -271,8 +289,6 @@ class TestCaching(amcattest.AmCATTestCase):
         self.assertEqual(t.get_y(), 9)
         self.assertTrue(t.changed)
 
-        
-        
     def test_set_cache(self):
         """Can we manually set the cache?"""
         t = TestCaching.TestClass(x=4, y=1)
@@ -297,6 +313,7 @@ class TestCaching(amcattest.AmCATTestCase):
 
     def test_object_cache(self):
         from amcat.models.project import Project
+
         pid = amcattest.create_test_project().id
         with self.checkMaxQueries(1, "Get project"):
             p = get_object(Project, pid)
@@ -309,18 +326,19 @@ class TestCaching(amcattest.AmCATTestCase):
             p3 = get_object(Project, pid)
         self.assertIsNot(p, p3)
         self.assertEqual(p, p3)
-        
+
     def test_get_objects(self):
         from amcat.models.project import Project
+
         pids = [amcattest.create_test_project().id for _x in range(10)]
-        
+
         with self.checkMaxQueries(1, "Get multiple projects"):
             ps = list(get_objects(Project, pids))
-        
+
         with self.checkMaxQueries(0, "Get multiple cached projects"):
             ps = list(get_objects(Project, pids))
-        
+
         with self.checkMaxQueries(0, "Get multiple cached projects one by one"):
             ps = [get_objects(Project, pid) for pid in pids]
-        
+
 #from amcat.tools import amcatlogging; amcatlogging.infoModule()

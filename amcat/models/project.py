@@ -186,15 +186,15 @@ class TestProject(amcattest.AmCATTestCase):
 
         p1, p2 = [amcattest.create_test_project() for _x in [1,2]]
         a1, a2 = [amcattest.create_test_article(project=p) for p in [p1, p2]]
-        self.assertEqual(set(p1.get_all_article_ids()), set([a1.id]))
-        self.assertEqual(set(p1.all_articles()), set([a1]))
+        self.assertEqual(set(p1.get_all_article_ids()), {a1.id})
+        self.assertEqual(set(p1.all_articles()), {a1})
 
         s = amcattest.create_test_set(project=p1)
-        self.assertEqual(set(p1.get_all_article_ids()), set([a1.id]))
-        self.assertEqual(set(p1.all_articles()), set([a1]))
+        self.assertEqual(set(p1.get_all_article_ids()), {a1.id})
+        self.assertEqual(set(p1.all_articles()), {a1})
         s.add(a2)
-        self.assertEqual(set(p1.get_all_article_ids()), set([a1.id, a2.id]))
-        self.assertEqual(set(p1.all_articles()), set([a1, a2]))
+        self.assertEqual(set(p1.get_all_article_ids()), {a1.id, a2.id})
+        self.assertEqual(set(p1.all_articles()), {a1, a2})
         self.assertTrue(isinstance(p1.all_articles(), QuerySet))
 
     def test_all_articlesets(self):
@@ -205,7 +205,7 @@ class TestProject(amcattest.AmCATTestCase):
         a1 = amcattest.create_test_set(5, project=p1)
         a2 = amcattest.create_test_set(5, project=p2)
 
-        self.assertEqual(set([a1]), set(p1.all_articlesets()))
+        self.assertEqual({a1}, set(p1.all_articlesets()))
         p1.articlesets.add(a2)
         self.assertEqual({a1, a2}, set(p1.all_articlesets()))
         self.assertTrue(isinstance(p1.all_articlesets(), QuerySet))

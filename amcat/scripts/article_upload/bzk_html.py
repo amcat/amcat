@@ -30,7 +30,7 @@ from amcat.models.article import Article
 from lxml import html
 from html2text import html2text
 import re
-import logging;
+import logging
 
 log = logging.getLogger(__name__)
 from amcat.scripts.article_upload.bzk_aliases import BZK_ALIASES as MEDIUM_ALIASES

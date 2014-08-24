@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -21,14 +21,15 @@
 Simple regex-based sentence boundary detection
 """
 
-import re, collections
-from amcat.tools import toolkit
+import collections
+import re
 
-abbrevs = ["ir","mr","dr","dhr","ing","drs","mrs","sen","sens","gov","st",
-           "jr","rev","vs","gen","adm","sr","lt","sept"]
+abbrevs = ["ir", "mr", "dr", "dhr", "ing", "drs", "mrs", "sen", "sens", "gov", "st",
+           "jr", "rev", "vs", "gen", "adm", "sr", "lt", "sept"]
 months = ["Jan", "Feb", "Mar", "Apr", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 from amcat.models.sentence import Sentence
+
 
 def get_split_regex():
     global _split_regex
@@ -36,7 +37,7 @@ def get_split_regex():
         return _split_regex
     except NameError:
         lenmap = collections.defaultdict(list)
-        for a in abbrevs+months:
+        for a in abbrevs + months:
             lenmap[len(a)].append(a)
             lenmap[len(a)].append(a.title())
         expr = r"(?<!\b[A-Za-z])"
@@ -47,6 +48,7 @@ def get_split_regex():
         expr += r"|(?<=%s)\. (?=[^\d])" % "|".join(months)
         _split_regex = re.compile(expr)
         return _split_regex
+
 
 def get_or_create_sentences(article):
     """
@@ -60,14 +62,16 @@ def get_or_create_sentences(article):
         create_sentences(article)
     return article.sentences.all()
 
+
 def _create_sentences(article):
     pars = [article.headline]
     if article.byline: pars += [article.byline]
     pars += re.split(r"\n\s*\n[\s\n]*", article.text.strip())
     for parnr, par in enumerate(pars):
         for sentnr, sent in enumerate(split(par)):
-            yield Sentence(parnr=parnr+1, sentnr=sentnr+1,
-                            article=article, sentence=sent)
+            yield Sentence(parnr=parnr + 1, sentnr=sentnr + 1,
+                           article=article, sentence=sent)
+
 
 def create_sentences(article):
     """
@@ -99,27 +103,25 @@ def split(text):
 
 from amcat.tools import amcattest
 
+
 class TestSBD(amcattest.AmCATTestCase):
     def test_split(self):
         """Does splitting a text work correctly?"""
         for text, sentences in [
             ("Wat een zin! En nu s.v.p. nog een zin.",
              ["Wat een zin", "En nu s.v.p. nog een zin"]),
-            ]:
+        ]:
             result = list(split(text))
             self.assertEqual(result, sentences)
 
     def test_create_sentences(self):
         hl = "This is the headline"
-        text="A sentence.\n\nAnother sentence. And yet a third"
+        text = "A sentence.\n\nAnother sentence. And yet a third"
         a = amcattest.create_test_article(headline=hl, text=text)
         create_sentences(a)
         sents = Sentence.objects.filter(article=a.id)
         sents = set((s.parnr, s.sentnr, s.sentence) for s in sents)
-        self.assertEqual(sents, {(1,1,hl),
-                                 (2,1,"A sentence"),
-                                 (3,1,"Another sentence"),
-                                 (3,2,"And yet a third")})
-
-                                          
-        
+        self.assertEqual(sents, {(1, 1, hl),
+                                 (2, 1, "A sentence"),
+                                 (3, 1, "Another sentence"),
+                                 (3, 2, "And yet a third")})

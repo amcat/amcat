@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -21,7 +21,10 @@
 Toolkit of methods to deal with python classes and modules
 """
 
-import os.path, sys, types, inspect
+import os.path
+import types
+import inspect
+
 
 def import_attribute(module, attribute=None):
     """
@@ -42,6 +45,7 @@ def import_attribute(module, attribute=None):
 
 def get_qualified_name(cls):
     return ".".join([cls.__module__, cls.__name__])
+
 
 def get_classes_from_module(module, superclass=None):
     """
@@ -67,7 +71,7 @@ def get_classes_from_package(package, superclass=None):
     for c in get_classes_from_module(package, superclass):
         yield c
     p = import_attribute(package)
-    if not "__init__.py" in p.__file__: return # not a package -> done
+    if not "__init__.py" in p.__file__: return  # not a package -> done
     dirname = os.path.dirname(p.__file__)
     for item in os.listdir(dirname):
         fn = os.path.join(dirname, item)
@@ -89,14 +93,16 @@ def get_class_from_module(module, superclass=None):
         return obj
     raise ValueError("Cannot find a %s subclass in %r" % (superclass.__name__, module))
 
+
 def get_caller(depth=1):
     """Return the filename, lineno, function of the caller
 
     @param depth: A depth of 1 return the caller of the function calling this function;
                   depth 2 would be its caller etc.
     """
-    depth = depth + 1 # me, caller, caller's caller
+    depth += 1  # me, caller, caller's caller
     return inspect.stack()[depth][1:4]
+
 
 def get_calling_module(depth=1):
     """Return the module name of the caller
@@ -104,8 +110,8 @@ def get_calling_module(depth=1):
     @param depth: A depth of 1 return caller of the function calling this function;
                   depth two would mean that function's caller etc.
     """
-    depth = depth + 1 # me, caller, caller's caller
-    caller = inspect.stack()[depth][0] # mod, file, line, function
+    depth += 1  # me, caller, caller's caller
+    caller = inspect.stack()[depth][0]  # mod, file, line, function
     return caller.f_globals['__name__']
 
 
@@ -115,19 +121,22 @@ def get_calling_module(depth=1):
 
 from amcat.tools import amcattest
 
+
 class _TestClass(object):
     pass
 
-class TestClassTools(amcattest.AmCATTestCase):
 
+class TestClassTools(amcattest.AmCATTestCase):
     def test_get_caller(self):
         fn, line, func = get_caller(depth=0)
-        self.assertEqual(fn, __file__.replace(".pyc",".py"))
+        self.assertEqual(fn, __file__.replace(".pyc", ".py"))
         self.assertEqual(func, "test_get_caller")
+
         def _test():
             return get_caller()
+
         fn, line, func = _test()
-        self.assertEqual(fn, __file__.replace(".pyc",".py"))
+        self.assertEqual(fn, __file__.replace(".pyc", ".py"))
         self.assertEqual(func, "test_get_caller")
 
     def test_get_calling_module(self):
@@ -140,10 +149,12 @@ class TestClassTools(amcattest.AmCATTestCase):
         cls = get_class_from_module(m, TestClassTools)
         self.assertEqual(cls, TestClassTools)
         import unittest
+
         cls = get_class_from_module(m, unittest.TestCase)
         self.assertEqual(cls, TestClassTools)
 
         from amcat.models.article import Article
+
         self.assertRaises(ValueError, get_class_from_module, m, Article.__class__)
 
     def test_import_attribute(self):
@@ -160,8 +171,9 @@ class TestClassTools(amcattest.AmCATTestCase):
 
     def test_get_classes_from_package(self):
         package = self.__module__
-        self.assertEqual(set(get_classes_from_package(package)), set([_TestClass, TestClassTools]))
+        self.assertEqual(set(get_classes_from_package(package)), {_TestClass, TestClassTools})
         from unittest import TestCase
+
         self.assertEqual(set(get_classes_from_package(package, superclass=TestCase)),
-                         set([TestClassTools]))
+                         {TestClassTools})
         self.assertEqual(set(get_classes_from_package(package, superclass=dict)), set())

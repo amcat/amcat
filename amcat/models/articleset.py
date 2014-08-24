@@ -251,10 +251,6 @@ class TestArticleSet(amcattest.AmCATTestCase):
 
     @amcattest.use_elastic
     def test_get_mediums(self):
-        from django.core.cache import cache
-        cache.clear()
-        AmCAT.enable_mediums_cache()
-
         aset = amcattest.create_test_set(0)
         media = [amcattest.create_test_medium(name="Test__"+str(i)) for i in range(10)]
         for m in media:

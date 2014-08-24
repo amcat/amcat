@@ -23,23 +23,18 @@ This module contains a (semi-machine readable) lexisnexis parser.
 """
 
 from __future__ import unicode_literals
-from amcat.models import ArticleSet
-
-from amcat.scripts.article_upload.upload import UploadScript, UploadForm, ParseError
-from amcat.scripts.article_upload import fileupload
-
-from amcat.tools import toolkit
-
-from amcat.models.article import Article
-from amcat.models.medium import Medium
-
-import re, os.path
+import re
+import os.path
 import collections
 import StringIO
-from itertools import takewhile, count
-from string import strip
+import logging
 
-import logging;
+from amcat.models import ArticleSet
+from amcat.scripts.article_upload.upload import UploadScript, ParseError
+from amcat.scripts.article_upload import fileupload
+from amcat.tools import toolkit
+from amcat.models.article import Article
+from amcat.models.medium import Medium
 
 log = logging.getLogger(__name__)
 
@@ -545,7 +540,7 @@ class LexisNexis(UploadScript):
             raise
 
 
-from amcat.tools import amcatlogging;
+from amcat.tools import amcatlogging
 
 amcatlogging.debug_module()
 

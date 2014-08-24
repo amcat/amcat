@@ -21,7 +21,7 @@
 
 from __future__ import unicode_literals
 
-import logging;
+import logging
 from amcat.tools import amcattest
 from amcat.tools.amcattest import AmCATTestCase
 

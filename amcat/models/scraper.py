@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -20,12 +20,13 @@ from __future__ import unicode_literals, print_function, absolute_import
 
 """ORM Module representing scrapers"""
 
-import datetime
 from django.db import models
 from amcat.tools.model import AmcatModel
 from amcat.tools.djangotoolkit import JsonField
-import json
-import logging; log = logging.getLogger(__name__)
+import logging;
+
+log = logging.getLogger(__name__)
+
 
 class Scraper(AmcatModel):
     __label__ = 'label'
@@ -59,16 +60,16 @@ class Scraper(AmcatModel):
         scraper_class = self.get_scraper_class()
 
         scraper_options = {
-            'username' : self.username,
-            'password' : self.password,
-            'project' : self.articleset.project.id,
-            'articleset' : self.articleset.id
+            'username': self.username,
+            'password': self.password,
+            'project': self.articleset.project.id,
+            'articleset': self.articleset.id
         }
 
         scraper_options.update(options)
         return scraper_class(**scraper_options)
 
-    def n_scraped_articles(self, from_date=None, to_date=None, medium = None):
+    def n_scraped_articles(self, from_date=None, to_date=None, medium=None):
         """
         Get the number of scraped articles per day for the given period.
         """
@@ -82,9 +83,9 @@ class Scraper(AmcatModel):
         if first and first.insertscript:
             # It's safe to use the 'insertscript' attribute, which was added later
             scraper_class = self.get_scraper_class()
-            q = q.filter(insertscript = scraper_class.__name__)
+            q = q.filter(insertscript=scraper_class.__name__)
         else:
-            if medium: q = q.filter(medium = medium.id)
+            if medium: q = q.filter(medium=medium.id)
 
         # aggregate count group by date, return as dict
         q = q.extra(select=dict(d="cast(date as date)")).values_list("d")
@@ -99,27 +100,28 @@ from amcat.tools import amcattest
 
 
 class TestScrapers(amcattest.AmCATTestCase):
-
     def test_get_scraper(self):
         """Can we get a scraper from the db?"""
 
-        s =Scraper.objects.create(module='amcat.models.scraper',
-                                  class_name='TestScrapers')
+        s = Scraper.objects.create(module='amcat.models.scraper',
+                                   class_name='TestScrapers')
         self.assertEqual(s.get_scraper_class().__name__, 'TestScrapers')
 
     def test_recent_articles(self):
         # DOES NOT WORK WITH SQLITE
         import settings
+
         if settings.DATABASES['default']['ENGINE'] == 'django.db.backends.sqlite3':
             return
         s = amcattest.create_test_set()
-        sc =Scraper.objects.create(module='amcat.models.scraper',
-                                  class_name='TestScraperModel', articleset=s)
+        sc = Scraper.objects.create(module='amcat.models.scraper',
+                                    class_name='TestScraperModel', articleset=s)
         for date in ['2010-01-01'] * 3 + ['2010-01-03'] * 5 + ['2009-01-01'] * 6:
             s.add(amcattest.create_test_article(date=date))
 
         from amcat.tools.toolkit import writeDate
-        normalize = lambda nn : dict((writeDate(k), v) for (k,v,) in nn.items())
+
+        normalize = lambda nn: dict((writeDate(k), v) for (k, v,) in nn.items())
         self.assertEqual(normalize(sc.n_scraped_articles()),
                          {'2010-01-03': 5, '2010-01-01': 3, '2009-01-01': 6})
         self.assertEqual(normalize(sc.n_scraped_articles(from_date='2010-01-01')),

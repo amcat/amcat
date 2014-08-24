@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -36,18 +36,21 @@ from amcat.models.coding.codingschemafield import CodingSchemaField
 from amcat.models.sentence import Sentence
 
 import logging
+
 log = logging.getLogger(__name__)
+
 
 def create_coding(codingjob, article, **kwargs):
     from amcat.models.coding.codedarticle import CodedArticle
     coded_article, _ = CodedArticle.objects.get_or_create(codingjob=codingjob, article=article)
     return Coding.objects.create(coded_article=coded_article, **kwargs)
 
+
 def coded_article_property(prop):
     """Returns property object fetches the given property on CodedArticle instaed of Coding."""
+
     def get_property(self):
         log.warning("Getting `{prop}` from Coding deprecated. Use CodedArticle.")
-        raise Exception("!")
         return getattr(self.coded_article, prop)
 
     def set_property(self, value):
@@ -56,6 +59,7 @@ def coded_article_property(prop):
         self._coded_article_changed = True
 
     return property(get_property, set_property)
+
 
 class Coding(AmcatModel):
     """
@@ -90,8 +94,8 @@ class Coding(AmcatModel):
     def get_values(self):
         """Return a sequence of field, (deserialized) value pairs"""
         return [(v.field, v.value) for v in (
-                self.values.order_by('field__fieldnr')
-                .select_related("field__fieldtype", "value__strval", "value__intval"))]
+            self.values.order_by('field__fieldnr')
+            .select_related("field__fieldtype", "value__strval", "value__intval"))]
 
     def get_value_object(self, field):
         """Return the Value object correspoding to this field"""
@@ -140,12 +144,11 @@ class Coding(AmcatModel):
         return self.coded_article.set_status(status)
 
 
-
 class CodingValue(AmcatModel):
     """
     Model class for coding values. 
     """
-    
+
     id = models.AutoField(primary_key=True, db_column='codingvalue_id')
 
     coding = models.ForeignKey(Coding, related_name='values')
@@ -165,7 +168,7 @@ class CodingValue(AmcatModel):
     @property
     def serialised_value(self):
         return self.get_serialised_value()
-    
+
     def get_serialised_value(self, field=None):
         """Get the 'serialised' (raw) value for this codingvalue
         @param field: for optimization, specify the field if it is known
@@ -186,29 +189,29 @@ class CodingValue(AmcatModel):
         app_label = 'amcat'
         unique_together = ("coding", "field")
 
-    
+
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
 
-class TestCoding(amcattest.AmCATTestCase):
 
+class TestCoding(amcattest.AmCATTestCase):
     def setUp(self):
         """Set up a simple coding schema with fields to use for testing"""
         super(TestCoding, self).setUp()
 
-        self.schema, self.codebook,  self.strfield, self.intfield, self.codefield = (
+        self.schema, self.codebook, self.strfield, self.intfield, self.codefield = (
             amcattest.create_test_schema_with_fields())
 
         self.c = amcattest.create_test_code(label="CODED")
         self.c2 = amcattest.create_test_code(label="CODE2")
         self.codebook.add_code(self.c)
         self.codebook.add_code(self.c2)
-        
+
         self.job = amcattest.create_test_job(unitschema=self.schema, articleschema=self.schema)
-        
+
     def test_create(self):
         """Can we create an coding?"""
         schema2 = amcattest.create_test_schema()
@@ -229,7 +232,7 @@ class TestCoding(amcattest.AmCATTestCase):
 
         coding = amcattest.create_test_coding(codingjob=job, article=articles[0])
         self.assertEqual(0, coding.values.count())
-        coding.update_values({strf:"bla", intf:1, codef:codes["A1b"].id})
+        coding.update_values({strf: "bla", intf: 1, codef: codes["A1b"].id})
         self.assertEqual(3, coding.values.count())
         self.assertTrue(strf in dict(coding.get_values()))
         self.assertTrue(intf in dict(coding.get_values()))
@@ -237,11 +240,10 @@ class TestCoding(amcattest.AmCATTestCase):
         self.assertEqual(1, dict(coding.get_values())[intf])
 
         # Does update_values delete values not present in dict?
-        coding.update_values({strf:"blas"})
+        coding.update_values({strf: "blas"})
         self.assertEqual(1, coding.values.count())
         self.assertTrue(strf in dict(coding.get_values()))
         self.assertEqual("blas", dict(coding.get_values())[strf])
-
 
 
     def test_create_value(self):
@@ -250,7 +252,7 @@ class TestCoding(amcattest.AmCATTestCase):
         v = CodingValue.objects.create(coding=a, field=self.strfield, strval="abc")
         v2 = CodingValue.objects.create(coding=a, field=self.intfield, intval=1)
         v3 = CodingValue.objects.create(coding=a, field=self.codefield, intval=self.c.id)
-        
+
         self.assertIn(v, a.values.all())
         self.assertEqual(v.value, "abc")
         self.assertEqual(v2.value, 1)

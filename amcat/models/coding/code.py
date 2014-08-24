@@ -1,5 +1,5 @@
-###########################################################################
-#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+# ##########################################################################
+# (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
 #                                                                         #
@@ -26,7 +26,9 @@ be included in different Codebooks.
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-import logging; log = logging.getLogger(__name__)
+import logging;
+
+log = logging.getLogger(__name__)
 
 from django.db import models
 
@@ -34,6 +36,7 @@ from amcat.tools.model import AmcatModel, PostgresNativeUUIDField
 from amcat.models.language import Language
 
 PARTYMEMBER_FUNCTIONID = 0
+
 
 class Code(AmcatModel):
     """
@@ -48,7 +51,7 @@ class Code(AmcatModel):
 
     id = models.AutoField(primary_key=True, db_column='code_id')
     uuid = PostgresNativeUUIDField(db_index=True, unique=True)
-    
+
     class Meta():
         db_table = 'codes'
         app_label = 'amcat'
@@ -58,7 +61,7 @@ class Code(AmcatModel):
         super(Code, self).__init__(*args, **kargs)
         self._labelcache = {}
         self._all_labels_cached = False
-        
+
     @property
     def label(self):
         """Get the (cached, not-None) label with the lowest language id, or a repr-like string"""
@@ -71,7 +74,8 @@ class Code(AmcatModel):
         if self._labelcache:
             for key in sorted(self._labelcache):
                 l = self.get_label(key)
-                if l != None: return l
+                if l is not None:
+                    return l
 
             # All labels are cached, and all are None
             if self._all_labels_cached:
@@ -81,7 +85,7 @@ class Code(AmcatModel):
             return self.labels.all().order_by('language__id')[0].label
         except IndexError:
             return repr_like_string
-        
+
     def _get_label(self, language):
         """Get the label (string) for the given language object, or raise label.DoesNotExist"""
         if type(language) != int: language = language.id
@@ -104,7 +108,7 @@ class Code(AmcatModel):
     def label_is_cached(self, language):
         if type(language) != int: language = language.id
         return language in self._labelcache
-            
+
     def get_label(self, *languages, **kargs):
         """
         @param lan: language to get label for
@@ -133,7 +137,7 @@ class Code(AmcatModel):
                     return self.labels.all().order_by('language__id')[0].label
                 except IndexError:
                     pass
-                
+
     def add_label(self, language, label, replace=True):
         """
         Add the label in the given language
@@ -164,6 +168,7 @@ class Code(AmcatModel):
         Label.objects.create(label=label, language=language, code=code)
         return code
 
+
 class Label(AmcatModel):
     """Model class for table labels. Essentially a many-to-many relation
     between codes and langauges with a label attribute"""
@@ -177,15 +182,16 @@ class Label(AmcatModel):
     class Meta():
         db_table = 'codes_labels'
         app_label = 'amcat'
-        unique_together = ('code','language')
+        unique_together = ('code', 'language')
         ordering = ("language__id",)
 
 
 ###########################################################################
 #                          U N I T   T E S T S                            #
 ###########################################################################
-        
+
 from amcat.tools import amcattest
+
 
 class TestCode(amcattest.AmCATTestCase):
     def test_label(self):
@@ -224,7 +230,7 @@ class TestCode(amcattest.AmCATTestCase):
             self.assertEqual(o.get_label(5), None)
 
         with self.checkMaxQueries(0, "Getting label with _all_cached=True"):
-            self.assertEqual(o.label, "<Code: {id}>".format(id=o.id) )
+            self.assertEqual(o.label, "<Code: {id}>".format(id=o.id))
 
         o._cache_label(l, "bla2")
         self.assertEqual(o.get_label(5), "bla2")
@@ -234,7 +240,7 @@ class TestCode(amcattest.AmCATTestCase):
 
         # If all labels are cached, and _labelcache contains codes with None and
         # a code with a string, get_label should return the string
-        o._labelcache = {1 : None, 2 : "grr"}
+        o._labelcache = {1: None, 2: "grr"}
         o._all_labels_cached = True
 
         self.assertEqual(o.label, "grr")

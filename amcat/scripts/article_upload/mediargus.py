@@ -27,11 +27,6 @@ Plugin for uploading mediargus text files
 
 from __future__ import unicode_literals, absolute_import
 
-import csv
-from cStringIO import StringIO
-
-from django import forms
-
 from amcat.scripts.article_upload.upload import UploadScript
 
 from amcat.models.article import Article
@@ -55,10 +50,11 @@ class Mediargus(UploadScript):
         meta, body = tupleText
         meta = meta.strip()
         meta = meta.split('\n')
-        kargs = {}
-        kargs['externalid'] = int(meta[0].split('.')[0].lstrip('?'))
-        kargs['headline'] = meta[0].partition('. ')[2]
-        
+        kargs = {
+            'externalid': int(meta[0].split('.')[0].lstrip('?')),
+            'headline': meta[0].partition('. ')[2]
+        }
+
         medium_name, date, pagenr, length = meta[2].split(', ')
         kargs['medium'] = Medium.get_or_create(medium_name)
         kargs['date'] = readDate(date)
@@ -76,35 +72,4 @@ class Mediargus(UploadScript):
 
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
-    a = cli.run_cli(Mediargus, handle_output=False)
-
-
-
-###########################################################################
-#                          U N I T   T E S T S                            #
-###########################################################################
-
-from amcat.tools import amcattest
-
-class TestMediargus(amcattest.AmCATTestCase):
-
-    def setUp(self):
-        import os.path
-        self.test_file = os.path.join(os.path.dirname(__file__), 'test_files', 'mediargus.txt')
-        self.test_text = open(self.test_file).read().decode('latin-1')
-        return
-        self.script = Mediargus(project=amcattest.create_test_project().id,
-                                articleset=amcattest.create_test_set().id)
-
-    def test_split(self):
-        return
-        articles = Mediargus(project=amcattest.create_test_project().id).split_text(self.test_text)
-        self.assertEqual(len(articles), 100)
-        for article in articles:
-            self.assertEqual(len(article), 2)
-
-    def todo_test_parse(self):
-        m = Mediargus(project=amcattest.create_test_project().id)
-        articles = m.split_text(self.test_text)
-        a = m.parse_document(articles[99])
-        self.assertEqual(a.headline, 'Maatschappijkritiek en actualiteit als inspiratie')
+    cli.run_cli(Mediargus, handle_output=False)

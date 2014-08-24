@@ -34,7 +34,7 @@ import re
 FLOAT_RE = re.compile('^(\+|-)?[0-9]*\.[0-9]+$')
 
 
-class TableExporter():
+class TableExporter:
     """
     General export class for tables
     Subclasses or instantiators should provide either a to_stream or a to_bytes method
@@ -43,12 +43,12 @@ class TableExporter():
     def __init__(self, to_stream=None, to_bytes=None, name=None):
         if to_stream is not None: self.to_stream = to_stream
         if to_bytes is not None: self.to_bytes = to_bytes
-        if name: self.name = name
+        if name:
+            self._name = name
 
     @property
     def name(self):
-        # overwritten by self.name
-        return self.__class__.__name__
+        return self._name or self.__class__.__name__
 
     def export(self, table, stream=None, encoding="utf-8", **kargs):
         """

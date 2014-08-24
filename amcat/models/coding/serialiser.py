@@ -29,7 +29,7 @@ Deserialised Value: a domain object, possibly a django Model instance
 
 """
 
-import logging;
+import logging
 
 log = logging.getLogger(__name__)
 
@@ -272,7 +272,7 @@ class TestSerialiser(amcattest.AmCATTestCase):
     def test_booleanserialiser(self):
         """Test the boolean serialiser"""
         b = BooleanSerialiser(None)
-        self.assertEqual(set(b.value_label(l) for l in b.possible_values), set(['True', 'False']))
+        self.assertEqual(set(b.value_label(l) for l in b.possible_values), {'True', 'False'})
         self.assertEqual(b.serialise(True), 1)
         self.assertEqual(b.deserialise(1), True)
         self.assertEqual(b.serialise(False), 0)
@@ -309,7 +309,7 @@ class TestSerialiser(amcattest.AmCATTestCase):
 
         self.assertRaises(Exception, s.deserialise, -9999999999999999)
 
-        self.assertEqual(set([c]), set(s.possible_values))
+        self.assertEqual({c}, set(s.possible_values))
 
         self.assertEqual("bla", s.value_label(c))
         self.assertEqual("blx", s.value_label(c, l2))

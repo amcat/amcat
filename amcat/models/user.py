@@ -1,5 +1,5 @@
-###########################################################################
-#          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
+# ##########################################################################
+# (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
 #                                                                         #
@@ -38,6 +38,7 @@ log = logging.getLogger(__name__)
 
 from django.db import models
 from amcat.tools.model import AmcatModel
+
 LITTER_USER_ID = 1
 
 
@@ -59,7 +60,10 @@ class Affiliation(AmcatModel):
     def can_update(self, user):
         return user.haspriv('manage_users')
 
+
 THEMES = ['AmCAT', 'Pink', 'Pink Dreamliner', 'Darkly', 'Amelia']
+
+
 class UserProfile(AmcatModel):
     """
     Additional user information is stored here
@@ -94,7 +98,7 @@ class UserProfile(AmcatModel):
             return self.projects
 
         return Project.objects.filter(
-            Q(projectrole__user=self.user)|
+            Q(projectrole__user=self.user) |
             Q(guest_role__id__lte=role.id)
         )
 
@@ -132,7 +136,8 @@ class UserProfile(AmcatModel):
 
         @return: True or False
         """
-        try: auth.check(self.user, privilege, onproject)
+        try:
+            auth.check(self.user, privilege, onproject)
         except auth.AccessDenied:
             return False
         return True
@@ -140,17 +145,17 @@ class UserProfile(AmcatModel):
     def can_read(self, user):
         profile = user.get_profile()
 
-        return (self == profile) or\
-               (profile.affiliation == self.affiliation and\
-                profile.haspriv("view_users_same_affiliation")) or\
+        return (self == profile) or \
+               (profile.affiliation == self.affiliation and
+                profile.haspriv("view_users_same_affiliation")) or \
                (profile.haspriv("view_users"))
 
     def can_update(self, user):
         profile = user.get_profile()
 
-        return (self == profile) or\
-               (profile.affiliation == self.affiliation and\
-                profile.haspriv("manage_users_same_affiliation")) or\
+        return (self == profile) or \
+               (profile.affiliation == self.affiliation and
+                profile.haspriv("manage_users_same_affiliation")) or \
                (profile.haspriv("manage_users"))
 
     def can_delete(self, user):
@@ -164,14 +169,14 @@ class UserProfile(AmcatModel):
         return super(AmcatModel, self).save(**kwargs)
 
 
-
     class Meta():
         db_table = 'auth_user_profile'
         app_label = "amcat"
 
+
 def create_user(username, first_name, last_name, email, affiliation, language, role,
                 password=None):
-        """
+    """
         Create a user with the given attributes, creating both the db user and
         the entry in the users table.
 
@@ -179,26 +184,26 @@ def create_user(username, first_name, last_name, email, affiliation, language, r
         @return: A User object with the .password field set.
                  If the db user already existed, full_clean will raise an error
         """
-        # create and validate the User object before creating the db user
-        fields = dict((k, v) for (k,v) in locals().items()
-                  if k in ("username","first_name", "last_name", "email"))
+    # create and validate the User object before creating the db user
+    fields = dict((k, v) for (k, v) in locals().items()
+                  if k in ("username", "first_name", "last_name", "email"))
 
-        # Create user
-        password = password or _random_password()
+    # Create user
+    password = password or _random_password()
 
-        u = User.objects.create_user(username, email, password)
-        u.first_name = first_name
-        u.last_name = last_name
-        u.save()
+    u = User.objects.create_user(username, email, password)
+    u.first_name = first_name
+    u.last_name = last_name
+    u.save()
 
-        # Correct profile
-        prof = u.get_profile()
-        prof.role = role
-        prof.affiliation = affiliation
-        prof.language = language
-        prof.save(force_permissions=True)
+    # Correct profile
+    prof = u.get_profile()
+    prof.role = role
+    prof.affiliation = affiliation
+    prof.language = language
+    prof.save(force_permissions=True)
 
-        return u
+    return u
 
 
 def create_user_profile(sender, instance, created, **kwargs):
@@ -208,7 +213,9 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
 
+
 post_save.connect(create_user_profile, sender=User, dispatch_uid="create_user_profile")
+
 
 def _random_password(length=8, chars=string.letters + string.digits):
     #http://code.activestate.com/recipes/59873/
@@ -219,6 +226,7 @@ def _random_password(length=8, chars=string.letters + string.digits):
 ###########################################################################
 
 from amcat.tools import amcattest
+
 
 class TestUser(amcattest.AmCATTestCase):
     def test_create(self):

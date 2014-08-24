@@ -1,4 +1,4 @@
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -18,6 +18,7 @@
 ###########################################################################
 
 from django.forms import BaseForm
+
 
 class InvalidFormException(Exception):
     """ exception which is raised when the form contains one or more fields in error.
@@ -41,6 +42,7 @@ class InvalidFormException(Exception):
         """Returns the fields containing errors as dict, with the fieldname as key
         and the errors as value (in a list, there can be more than one)"""
         return dict([(field, [unicode(e) for e in errorList]) for field, errorList in self.errors.items()])
+
 
 def validate(form):
     """Validate the given form, raising an InvalidFormException if invalid"""

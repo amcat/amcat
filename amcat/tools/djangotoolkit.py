@@ -139,13 +139,14 @@ def get_or_create(model_class, **attributes):
 
 
 @contextmanager
-def list_queries(dest=None, output=False, printtime=False, outputopts={}):
+def list_queries(dest=None, output=False, printtime=False, outputopts=None):
     """Context manager to print django queries
 
     Any queries that were used in the context are placed in dest,
     which is also yielded.
     Note: this will set settings.DEBUG to True temporarily.
     """
+    outputopts = outputopts or {}
     t = time.time()
     if dest is None: dest = []
     from django.conf import settings

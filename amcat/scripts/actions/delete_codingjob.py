@@ -40,7 +40,7 @@ class DeleteCodingJob(Script):
     class options_form(forms.Form):
         job = forms.ModelChoiceField(queryset=CodingJob.objects.all())
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def run(self, _input=None):
         j = self.options['job']
 

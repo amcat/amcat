@@ -208,7 +208,7 @@ def _get_rows(jobs, include_sentences=False, include_multiple=True, include_unco
               progress_monitor=NullMonitor()):
     """
     @param jobs: output rows for these jobs. Make sure this is a QuerySet object with .prefetch_related("codings__values")
-    @param sentences: include sentence level codings (if False, row.sentence and .sentence_coding are always None)
+    @param include_sentences: include sentence level codings (if False, row.sentence and .sentence_coding are always None)
     @param include_multiple: include multiple codedarticles per article
     @param include_uncoded_articles: include articles without corresponding codings
     """

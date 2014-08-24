@@ -9,7 +9,7 @@ import re
 import datetime
 import collections
 import os.path
-import logging;
+import logging
 
 log = logging.getLogger(__name__)
 
@@ -31,10 +31,16 @@ def getSPSSFormat(type):
     log.debug("Determining format of %s" % type)
     if type == int: return " (F8.0)"
     if issubclass(type, idlabel.IDLabel): return " (F8.0)"
-    #if issubclass(type, cachable.Cachable): return " (F8.0)"
-    if type == float: return " (F8.3)"
-    if type in (unicode, str): return " (A255)"
-    if type == datetime.datetime: return " (date10)"
+
+    if type == float:
+        return " (F8.3)"
+
+    if type in (unicode, str):
+        return " (A255)"
+
+    if type == datetime.datetime:
+        return " (date10)"
+
     raise Exception("Unknown type: %s" % type)
 
 

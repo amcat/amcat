@@ -2,7 +2,7 @@
 # (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 # #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
-#                                                                         #
+# #
 # AmCAT is free software: you can redistribute it and/or modify it under  #
 # the terms of the GNU Affero General Public License as published by the  #
 # Free Software Foundation, either version 3 of the License, or (at your  #
@@ -291,7 +291,7 @@ class ES(object):
         """
         body = dict(build_body(query, filters, query_as_filter=(not (highlight or score))))
         if highlight and not score:
-            body['query'] = {'constant_score':{'query': body['query']}}
+            body['query'] = {'constant_score': {'query': body['query']}}
 
         if 'sort' in kwargs:
             body['track_scores'] = True
@@ -360,6 +360,7 @@ class ES(object):
         """
         Add the given article dict objects to the index using a bulk insert call
         """
+
         def get_bulk_body():
             for article_dict in dicts:
                 yield serialize(dict(index={'_id': article_dict['id']}))
@@ -627,7 +628,7 @@ def build_body(query=None, filters={}, query_as_filter=False):
     Construct the query body from the query and/or filter(s)
     (call with dict(build_body)
     @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
-    @param filter: field filter DSL query dict, defaults to build_filter(**filters)
+    @param filters: field filter DSL query dict, defaults to build_filter(**filters)
     @param query_as_filter: if True, use the query as a filter (faster but not score/relevance)
     """
     filters = list(get_filter_clauses(**filters))

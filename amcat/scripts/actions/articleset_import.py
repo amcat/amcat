@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -19,13 +19,15 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import logging; log = logging.getLogger(__name__)
+import logging
+
+log = logging.getLogger(__name__)
 
 from django import forms
-from django.db import transaction
 
 from amcat.scripts.script import Script
 from amcat.models import ArticleSet, Project
+
 
 class ImportSet(Script):
     class options_form(forms.Form):
@@ -35,9 +37,10 @@ class ImportSet(Script):
     def _run(self, articleset, project):
         project.articlesets.add(articleset)
 
-        
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
+
     result = cli.run_cli()
     #print result.output()
 

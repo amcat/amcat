@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-###########################################################################
+# ##########################################################################
 #          (C) Vrije Universiteit, Amsterdam (the Netherlands)            #
 #                                                                         #
 # This file is part of AmCAT - The Amsterdam Content Analysis Toolkit     #
@@ -19,14 +19,14 @@
 # License along with AmCAT.  If not, see <http://www.gnu.org/licenses/>.  #
 ###########################################################################
 
-import logging; log = logging.getLogger(__name__)
+import logging
+
+log = logging.getLogger(__name__)
 
 import csv
 import os.path
 
 from django import forms
-from django.forms import widgets
-from django.db import transaction
 
 from amcat.scripts.script import Script
 from django.db import transaction
@@ -35,6 +35,7 @@ from amcat.models import Code, Codebook, Language, Project
 from amcat.scripts.article_upload.fileupload import CSVUploadForm
 
 LABEL_PREFIX = "label"
+
 
 class ImportCodebook(Script):
     """
@@ -77,21 +78,20 @@ class ImportCodebook(Script):
         codebook = forms.ModelChoiceField(queryset=Codebook.objects.all(),
                                           help_text="Update existing codebook",
                                           required=False)
-        
+
         def clean_codebook_name(self):
             """If codebook name is not specified, use file base name instead"""
             fn = None
             if self.files.get('file') and not self.cleaned_data.get('codebook_name'):
-                fn =  os.path.splitext(os.path.basename(self.files['file'].name))[0]
+                fn = os.path.splitext(os.path.basename(self.files['file'].name))[0]
             if fn:
                 return fn
             return self.cleaned_data.get('codebook_name')
-            
 
-    @transaction.commit_on_success
+    @transaction.atomic
     def _run(self, file, project, codebook_name, default_language, codebook, **kargs):
         data = csv_as_columns(self.bound_form.get_reader())
-        
+
         # build code, parent pairs
         if "parent" in data:
             parents = zip(data["code"], data["parent"])
@@ -109,7 +109,7 @@ class ImportCodebook(Script):
             log.info("Updating {codebook.id} : {codebook}".format(**locals()))
 
         # create/retrieve codes
-        codes = {code : Code.get_or_create(uuid=uuid or None) for ((code, parent), uuid) in zip(parents, uuids)}
+        codes = {code: Code.get_or_create(uuid=uuid or None) for ((code, parent), uuid) in zip(parents, uuids)}
 
         to_add = []
         for code, parent in parents:
@@ -126,7 +126,6 @@ class ImportCodebook(Script):
                     cbc.save()
         codebook.add_codes(to_add)
 
-
         for col in data:
             if col.startswith(LABEL_PREFIX):
                 lang = col[len(LABEL_PREFIX):].strip()
@@ -140,22 +139,25 @@ class ImportCodebook(Script):
                         codes[code].add_label(lang, label)
         return codebook
 
+
 def get_indented_columns(data):
     prefix = 'code-' if 'code-1' in data else 'c'
     prefix = 'code-' if 'code-1' in data else 'c'
     colnames = sorted((k for k in data if k.startswith(prefix)),
-                      key = lambda k : int(k[len(prefix):]))
+                      key=lambda k: int(k[len(prefix):]))
     return map(data.get, colnames)
-            
+
+
 def csv_as_columns(rows):
     """Read a csv file as a dictionary of name : [values] columns"""
     result = None
     for row in rows:
         if result is None:
-            result = {name.lower() : [] for name in row.column_names}
+            result = {name.lower(): [] for name in row.column_names}
         for name, val in row.items():
             result[name.lower()].append(val)
     return result
+
 
 def get_index(cols, row):
     for i in range(len(cols)):
@@ -163,9 +165,10 @@ def get_index(cols, row):
             if cols[i][row]:
                 return i
         except IndexError:
-            pass # incomplete rows
+            pass  # incomplete rows
     raise ValueError("Cannot parse row {row}".format(**locals()))
-        
+
+
 def get_parents_from_columns(cols):
     """Assuming cols are inented list, return a list of code, parent pairs in the same order as cols"""
     parents = []
@@ -176,9 +179,11 @@ def get_parents_from_columns(cols):
         parent = parents[-1] if parents else None
         parents.append(code)
         yield code, parent
-    
+
+
 if __name__ == '__main__':
     from amcat.scripts.tools import cli
+
     result = cli.run_cli()
     #print result.output()
 
@@ -190,13 +195,13 @@ if __name__ == '__main__':
 from amcat.tools import amcattest
 
 
-
 def _run_test(bytes, **options):
     if 'project' not in options: options['project'] = amcattest.create_test_project().id
     if 'codebook_name' not in options: options['codebook_name'] = 'test'
     if 'default_language' not in options: options['default_language'] = 1
     from tempfile import NamedTemporaryFile
     from django.core.files import File
+
     with NamedTemporaryFile(suffix=".txt") as f:
         f.write(bytes)
         f.flush()
@@ -207,33 +212,34 @@ def _run_test(bytes, **options):
 def _csv_bytes(rows, encoding="utf-8", **kargs):
     def encode(x):
         if x is None or isinstance(x, str): return x
-        return unicode(x).encode(encoding)    
+        return unicode(x).encode(encoding)
+
     from cStringIO import StringIO
+
     out = StringIO()
     w = csv.writer(out, **kargs)
     for row in rows:
         w.writerow(map(encode, row))
     return out.getvalue()
-    
-    
+
+
 class TestImportCodebook(amcattest.AmCATTestCase):
-
-
     def _standardize_cb(self, codebook, **kargs):
         """return a dense hierarchy serialiseation for easier comparisons"""
         return ";".join(sorted(set("{0}:{1}".format(*cp)
                                    for cp in codebook.get_hierarchy(**kargs))))
-            
+
     def test_import(self):
-        c = [("Code-1","Code-2","Code-3"),
-             ("root",None, None),
+        c = [("Code-1", "Code-2", "Code-3"),
+             ("root", None, None),
              (None, "sub1", None),
              (None, None, u"sub1a")]
         b = _csv_bytes(c)
         self.assertEqual(self._standardize_cb(_run_test(b)), u"root:None;sub1:root;sub1a:sub1")
-        
+
     def test_unicode(self):
         from amcat.scripts.article_upload.fileupload import ENCODINGS
+
         c = [("c1",),
              (u"code_\xe9",)]
         for encoding in ('UTF-8', 'Latin-1'):
@@ -247,21 +253,21 @@ class TestImportCodebook(amcattest.AmCATTestCase):
             self.assertEqual(label.label, u"code_\xe9")
 
     def test_uuid(self):
-        c = [("Code-1","uuid"),
+        c = [("Code-1", "uuid"),
              ("x", "{acf728b0-e31a-11e2-a28f-0800200c9a66}")]
 
         b = _csv_bytes(c)
         cb = _run_test(b)
-        id,  = [c.id for c in cb.get_codes()]
+        id, = [c.id for c in cb.get_codes()]
 
-        c = [("Code-1","Code-2","uuid"),
+        c = [("Code-1", "Code-2", "uuid"),
              ("y", "x", "{acf728b0-e31a-11e2-a28f-0800200c9a67}"),
              ("x", None, "{acf728b0-e31a-11e2-a28f-0800200c9a66}")]
-        
+
         b = _csv_bytes(c)
         cb = _run_test(b)
         ids2 = [c.id for c in cb.get_codes()]
         self.assertIn(id, ids2)
         self.assertEqual(len(ids2), 2)
-        self.assertEqual(len(set(ids2) - set([id])), 1)
+        self.assertEqual(len(set(ids2) - {id}), 1)
 

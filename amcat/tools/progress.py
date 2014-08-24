@@ -1,6 +1,8 @@
 from __future__ import print_function
 import logging
+
 log = logging.getLogger(__name__)
+
 
 class ProgressMonitor(object):
     def __init__(self, total=100, message="In progress"):
@@ -26,17 +28,21 @@ class ProgressMonitor(object):
     def remove_listener(self, func):
         self.listeners.remove(func)
 
+
 class NullMonitor(ProgressMonitor):
     def update(self, *args, **kargs):
         pass
 
+
 if __name__ == '__main__':
     from amcat.tools import amcatlogging
-    from django.conf import settings
+
     amcatlogging.setup()
     p = ProgressMonitor()
+
     def listen(pm):
-        print (pm.percent, pm.message)
+        print(pm.percent, pm.message)
+
     p.add_listener(listen)
     p.update(15, "bezig")
     p.update(15, "nog steeds")

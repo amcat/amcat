@@ -29,7 +29,6 @@ functions create_test_* create test objects for use in unit tests
 """
 
 from __future__ import unicode_literals, print_function, absolute_import
-from django.utils.unittest.loader import TestLoader
 import os
 from contextlib import contextmanager
 from functools import wraps
