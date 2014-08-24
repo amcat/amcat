@@ -124,13 +124,25 @@ class Boolean(object):
     def __str__(self):
         return unicode(self).encode('utf-8')
 
+    def _get_not_dsl(self, func="get_dsl"):
+        if len(self.terms) == 1:
+            # This is an unary operation, meaning it was used at the start of
+            # a term. For example: NOT (foo OR bar).
+            return {"bool": {"must_not": getattr(self.terms[0], func)()}}
+
+        return {
+            # In lucene, NOT is binary rather than unary, so x NOT y
+            # means x AND (NOT y) or +x -y. We interpret x NOT y NOT z
+            # as x AND (NOT y) AND (NOT z) or +x -y -z
+            "bool": {
+                "must": [getattr(self.terms[0], func)()],
+                "must_not": [getattr(t, func)() for t in self.terms[1:]]
+            }
+        }
+
     def get_dsl(self):
         if self.operator == "NOT":
-            # in lucene, NOT is binary rather than unary, so
-            # x NOT y means x AND (NOT y) or +x -y.
-            # We interpret x NOT y NOT z  as x AND (NOT y) AND (NOT z) or +x -y -z
-            return {"bool": {"must": [self.terms[0].get_dsl()],
-                             "must_not": [t.get_dsl() for t in self.terms[1:]]}}
+            return self._get_not_dsl("get_dsl")
         else:
             op = dict(OR="should", AND="must", NOT="must_not")[self.operator]
             return {"bool": {op: [term.get_dsl() for term in self.terms]}}
@@ -150,11 +162,7 @@ class Boolean(object):
             return {"bool": {"should": clauses}}
 
         if self.operator == "NOT":
-            # in lucene, NOT is binary rather than unary, so
-            # x NOT y means x AND (NOT y) or +x -y.
-            # We interpret x NOT y NOT z  as x AND (NOT y) AND (NOT z) or +x -y -z
-            return {"bool": {"must": [self.terms[0].get_filter_dsl()],
-                             "must_not": [t.get_filter_dsl() for t in self.terms[1:]]}}
+            return self._get_not_dsl("get_filter_dsl")
         else:
             op = dict(OR="should", AND="must", NOT="must_not")[self.operator]
             return {"bool": {op: [term.get_filter_dsl() for term in self.terms]}}
@@ -299,7 +307,7 @@ def get_grammar():
         # literals
         AND = Literal("AND")
         OR = Literal("OR")
-        NOT = Literal("NOT")
+        NOT = Literal("NOT").setResultsName("operator")
         SPAN = (Literal("W/") + Word(nums).setResultsName("slop"))
         OP = Optional(AND | OR | NOT | SPAN, default="implicit_OR").setResultsName("operator")
 
@@ -320,6 +328,7 @@ def get_grammar():
 
         # boolean combination
         boolean_expr = operatorPrecedence(fterm, [
+            (NOT, 1, opAssoc.RIGHT),
             (OP, 2, opAssoc.LEFT)
         ])
         boolean_expr.setParseAction(get_boolean_or_term)
@@ -381,6 +390,9 @@ class TestQueryParser(amcattest.AmCATTestCase):
         self.assertEqual(q('a NOT b'), 'NOT[_all::a _all::b]')
         self.assertEqual(q('a AND (b c)'), 'AND[_all::a OR[_all::b _all::c]]')
         self.assertEqual(q('(a AND b) c'), 'OR[AND[_all::a _all::b] _all::c]')
+
+        # starting with NOT
+        self.assertEqual(q('NOT a'), 'NOT[_all::a]')
 
         # quotes
         self.assertEqual(q('"a b"'), '_all::QUOTE[a b]')

@@ -627,7 +627,7 @@ def build_body(query=None, filters={}, query_as_filter=False):
     """
     Construct the query body from the query and/or filter(s)
     (call with dict(build_body)
-    @param query: a elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
+    @param query: an elastic query string (i.e. lucene syntax, e.g. 'piet AND (ja* OR klaas)')
     @param filters: field filter DSL query dict, defaults to build_filter(**filters)
     @param query_as_filter: if True, use the query as a filter (faster but not score/relevance)
     """
@@ -943,5 +943,18 @@ class TestAmcatES(amcattest.AmCATTestCase):
         self.assertEqual(0, len(q("byline:eve")))
         self.assertEqual(1, len(q("bob")))
 
+    @amcattest.use_elastic
+    def test_not(self):
+        aset = amcattest.create_test_set()
+        eve = amcattest.create_test_article(text="eve", articleset=aset)
+        paul = amcattest.create_test_article(text="paul", articleset=aset)
+        adam = amcattest.create_test_article(text="adam", articleset=aset)
 
+        ES().flush()
 
+        q = lambda query: set(ES().query_ids(query, filters={"sets": aset.id}))
+
+        self.assertEqual({eve.id}, q("eve"))
+        self.assertEqual({paul.id, adam.id}, q("NOT eve"))
+        self.assertEqual({paul.id, adam.id}, q("* NOT eve"))
+        self.assertEqual({eve.id}, q("NOT (NOT eve)"))
