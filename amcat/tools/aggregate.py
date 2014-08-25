@@ -108,7 +108,7 @@ def _get_row(columns, row, default):
 
 
 def _to_table(aggregate, default):
-    columns = tuple(set(_get_columns(aggregate)))
+    columns = tuple(sorted(set(_get_columns(aggregate))))
 
     yield ("",) + columns
     for row_name, row_values in aggregate:

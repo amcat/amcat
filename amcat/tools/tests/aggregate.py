@@ -19,7 +19,8 @@
 
 from datetime import datetime
 from amcat.tools import amcattest
-from amcat.tools.aggregate import transpose, to_table, aggregate_by_medium, aggregate_by_term, aggregate, set_labels
+from amcat.tools.aggregate import transpose, to_table, aggregate_by_medium, aggregate_by_term, aggregate, set_labels, \
+    sort
 from amcat.tools.amcates import ES
 
 
